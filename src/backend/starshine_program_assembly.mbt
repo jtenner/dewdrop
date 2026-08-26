@@ -1303,18 +1303,49 @@ pub fn emit_starshine_program_binary(
   }
   match @validate.validate_module(module_) {
     Ok(_) => ()
-    Err(error) => return Err(StarshineProgramValidationError(error))
-  }
-  let module_ = match
-    @passes.run_hot_pipeline(module_, @passes.HotPipelineOptions::new(), [
-      "heap2local",
-    ]) {
-    Ok(value) => value
-    Err(error) => return Err(StarshineProgramOptimizationError(error))
-  }
-  match @validate.validate_module(module_) {
-    Ok(_) => ()
-    Err(error) => return Err(StarshineProgramValidationError(error))
+    Err(error) => {
+      match @binary.encode_module(module_) {
+        Ok(bytes) =>
+          @fs.write_bytes_to_file(".tmp/native-invalid.wasm", bytes) catch {
+            _ => ()
+          }
+        Err(_) => ()
+      }
+      ignore(
+        @validate.validate_module_with_trace(
+          module_,
+          fn(line) { println(line) },
+          trace_all_funcs=false,
+        ),
+      )
+      match @validate.validation_error_func_idx(error) {
+        Some(@lib.FuncIdx(index)) => {
+          println(
+            module_.pretty_print_func(@lib.FuncIdx::new(index)),
+          )
+          let physical = index.reinterpret_as_int()
+          for function_ in planned.functions {
+            if function_.function_index == physical {
+              let body = match function_.kind {
+                @semantic.PlannedWasmDefinedFunction(value) => value
+                _ => 0UL
+              }
+              return Err(
+                StarshineProgramMappedValidationError(
+                  error,
+                  function_.declaration,
+                  body,
+                  function_.name,
+                  function_.specialization_abi_key,
+                ),
+              )
+            }
+          }
+        }
+        None => ()
+      }
+      return Err(StarshineProgramValidationError(error))
+    }
   }
   match @binary.encode_module(module_) {
     Ok(bytes) => Ok(bytes)

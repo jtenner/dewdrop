@@ -618,16 +618,22 @@ fn BasicBodyInferencer::constrain_members(
           !self.consumed_member_roots[self.expression_index(expression)] {
           match self.names.expression_references[expression] {
             VariantNameReference(_) => {
-              let variant_index = self.select_value_variant(
+              match self.select_value_variant(
                 name,
                 self.expression_type(expression),
                 expression,
                 offset,
-              )
-              if variant_index < 0 {
-                self.fail_expression_selection(expression)
-              } else {
-                self.infer_unit_variant_value(expression, variant_index, offset)
+              ) {
+                SelectedLocalValueVariant(variant_index) =>
+                  self.infer_unit_variant_value(
+                    expression, variant_index, offset,
+                  )
+                SelectedImportedValueVariant(variant) =>
+                  self.infer_imported_unit_variant_value(
+                    expression, variant, offset,
+                  )
+                NoSelectedValueVariant =>
+                  self.fail_expression_selection(expression)
               }
             }
             _ => ()

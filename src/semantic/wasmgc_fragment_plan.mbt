@@ -2617,8 +2617,7 @@ fn wasmgc_direct_builtin_of(
   }
   let expression = match lowering.block_items[block.items.start].kind {
     PlannedExpressionItem(expression) => expression
-    PlannedLetItem(_, _, _) | PlannedElidedLetItem(_) | PlannedReturnItem(_) =>
-      return b""
+    PlannedLetItem(_, _, _) | PlannedElidedLetItem(_) => return b""
   }
   let (target, arguments) = match lowering.expressions[expression].kind {
     PlannedDirectCall(target, receiver, arguments, type_arguments)

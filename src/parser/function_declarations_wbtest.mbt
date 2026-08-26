@@ -31,8 +31,8 @@ test "public generic functions preserve parameters return type and body" {
         _ => fail("expected mutable function-local let")
       }
       match declaration.body.items[1] {
-        ReturnItem(Some(NameExpr("current", _)), _) => ()
-        _ => fail("expected explicit return")
+        ExpressionItem(ReturnExpr(Some(NameExpr("current", _)), _), _) => ()
+        _ => fail("expected explicit return expression")
       }
     }
     _ => fail("expected public generic function")
@@ -79,7 +79,10 @@ test "return without a value is represented explicitly" {
   match
     Parser::from_bytes(b"fn stop() -> Unit {\n  return\n}\n").parse_declaration() {
     Ok(Function(declaration)) =>
-      assert_eq(declaration.body.items, [ReturnItem(None, 22UL)])
+      assert_eq(
+        declaration.body.items,
+        [ExpressionItem(ReturnExpr(None, 22UL), 22UL)],
+      )
     _ => fail("expected empty return")
   }
 }

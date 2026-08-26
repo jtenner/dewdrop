@@ -120,8 +120,12 @@ test "function blocks lower items into contiguous spans" {
     _ => fail("expected lowered let item")
   }
   match collected.block_items[block.items.start + 1] {
-    HirReturnItem(value, _) => assert_true(value >= 0)
-    _ => fail("expected lowered return item")
+    HirExpressionItem(expression, _) =>
+      match collected.expressions[expression] {
+        HirReturnExpr(value, _) => assert_true(value >= 0)
+        _ => fail("expected lowered return expression")
+      }
+    _ => fail("expected return expression item")
   }
 }
 
@@ -223,8 +227,12 @@ test "body HIR preserves every literal kind and empty returns" {
   }
   let function_block = collected.blocks[function_root]
   match collected.block_items[function_block.items.start] {
-    HirReturnItem(-1, _) => ()
-    _ => fail("expected empty return sentinel")
+    HirExpressionItem(expression, _) =>
+      match collected.expressions[expression] {
+        HirReturnExpr(-1, _) => ()
+        _ => fail("expected empty return expression sentinel")
+      }
+    _ => fail("expected empty return expression item")
   }
 }
 

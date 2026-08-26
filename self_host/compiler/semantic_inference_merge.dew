@@ -197,8 +197,14 @@ fn self_host_merge_type_array(
   type_base: U32,
 ) -> SelfHostHirSpan {
   let start = target.length()
-  for type_ in source {
-    target.push(self_host_merge_type(type_, type_base))
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < source.length() {
+      target.push(self_host_merge_type(source[current], type_base))
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   self_host_merge_span(start, target.length() - start)
 }

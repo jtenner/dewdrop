@@ -47,8 +47,8 @@ arenas. This gives Starshine explicit effect order and avoids stack-carried
 aggregate values across nested calls.
 
 The `collections/nested-array-set-runtime` snapshot also locks in ordinary nested
-Array-set evaluation in Node and Wago. Production `heap2local` remains enabled,
-and the focused type resolver suite passes after optimization.
+Array-set evaluation in Node and Wago. Current Dew assembly emits validated,
+unoptimized debug modules, and the focused type resolver suite passes on them.
 
 ## Current boundary
 

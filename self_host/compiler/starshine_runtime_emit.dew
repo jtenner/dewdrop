@@ -1,0 +1,1797 @@
+fn self_host_linked_text_runtime_base(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> U32 {
+  self_host_u32_add(
+    self_host_u32_add(link.types.length(), link.functions.length()),
+    2u32,
+  )
+}
+
+fn self_host_linked_nominal_ref_type(type_index: U32) -> StarshineRef0 {
+  StarshineFfi.ffi_ffi_bridge_nominal_ref_type(
+    self_host_u32_to_i32(type_index),
+    0i32,
+  )
+}
+
+fn self_host_linked_append_text_struct_type(
+  rec_types: StarshineRef33,
+  chunk_reference: StarshineRef0,
+  mutable: Bool,
+) -> Unit {
+  let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+  let mutability = if mutable {
+    StarshineFfi.ffi_lib_Mut_var_()
+  } else {
+    StarshineFfi.ffi_lib_Mut_const_()
+  }
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(chunk_reference),
+      mutability,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        StarshineFfi.ffi_lib_ValType_i32(),
+      ),
+      mutability,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        StarshineFfi.ffi_lib_ValType_i32(),
+      ),
+      mutability,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_comp_type(
+        StarshineFfi.ffi_lib_CompType_struct_(fields),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+}
+
+fn self_host_linked_append_text_runtime_types(
+  link: SelfHostPlannedProgramWasmGCLink,
+  rec_types: StarshineRef33,
+) -> Unit {
+  let base = self_host_linked_text_runtime_base(link)
+  let chunks = StarshineFfi.ffi_lib_FieldType_new(
+    StarshineFfi.ffi_lib_StorageType_val_type(
+      StarshineFfi.ffi_lib_ValType_v128(),
+    ),
+    StarshineFfi.ffi_lib_Mut_var_(),
+  )
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_comp_type(
+        StarshineFfi.ffi_lib_CompType_array(chunks),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+  let chunk_reference = self_host_linked_nominal_ref_type(base)
+  self_host_linked_append_text_struct_type(rec_types, chunk_reference, false)
+  self_host_linked_append_text_struct_type(rec_types, chunk_reference, false)
+  self_host_linked_append_text_struct_type(rec_types, chunk_reference, false)
+  self_host_linked_append_text_struct_type(rec_types, chunk_reference, true)
+  self_host_linked_append_text_struct_type(rec_types, chunk_reference, true)
+}
+
+fn self_host_linked_array_runtime_base(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> U32 {
+  self_host_linked_text_runtime_base(link) + 6u32
+}
+
+fn self_host_linked_array_wrapper_type(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> U32 {
+  self_host_linked_array_runtime_base(link) + 6u32
+}
+
+fn self_host_linked_runtime_carrier_value_type(
+  carrier: I32,
+) -> StarshineRef0 {
+  match carrier {
+    0 => StarshineFfi.ffi_lib_ValType_i32()
+    1 => StarshineFfi.ffi_lib_ValType_i64()
+    2 => StarshineFfi.ffi_lib_ValType_f32()
+    3 => StarshineFfi.ffi_lib_ValType_f64()
+    4 => StarshineFfi.ffi_lib_ValType_v128()
+    _ => self_host_linked_eqref_value_type()
+  }
+}
+
+fn self_host_linked_append_array_backing_type(
+  rec_types: StarshineRef33,
+  value_type: StarshineRef0,
+) -> Unit {
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_comp_type(
+        StarshineFfi.ffi_lib_CompType_array(
+          StarshineFfi.ffi_lib_FieldType_new(
+            StarshineFfi.ffi_lib_StorageType_val_type(value_type),
+            StarshineFfi.ffi_lib_Mut_var_(),
+          ),
+        ),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+}
+
+fn self_host_linked_append_option_runtime_subtype(
+  rec_types: StarshineRef33,
+  base: U32,
+  value_type: Option<StarshineRef0>,
+) -> Unit {
+  let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+  match value_type {
+    Option::Some(value) => StarshineFfi.ffi_ffi_bridge_field_types_push(
+      fields,
+      StarshineFfi.ffi_lib_FieldType_new(
+        StarshineFfi.ffi_lib_StorageType_val_type(value),
+        StarshineFfi.ffi_lib_Mut_const_(),
+      ),
+    )
+    Option::None => {}
+  }
+  let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+  StarshineFfi.ffi_ffi_bridge_type_indices_push(
+    supers,
+    StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(base)),
+  )
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_new(
+        1i32,
+        supers,
+        StarshineFfi.ffi_lib_CompType_struct_(fields),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+}
+
+fn self_host_linked_append_array_runtime_types(
+  link: SelfHostPlannedProgramWasmGCLink,
+  rec_types: StarshineRef33,
+) -> Unit {
+  self_host_linked_append_array_backing_type(
+    rec_types,
+    StarshineFfi.ffi_lib_ValType_i32(),
+  )
+  self_host_linked_append_array_backing_type(
+    rec_types,
+    StarshineFfi.ffi_lib_ValType_i64(),
+  )
+  self_host_linked_append_array_backing_type(
+    rec_types,
+    StarshineFfi.ffi_lib_ValType_f32(),
+  )
+  self_host_linked_append_array_backing_type(
+    rec_types,
+    StarshineFfi.ffi_lib_ValType_f64(),
+  )
+  self_host_linked_append_array_backing_type(
+    rec_types,
+    StarshineFfi.ffi_lib_ValType_v128(),
+  )
+  self_host_linked_append_array_backing_type(
+    rec_types,
+    self_host_linked_eqref_value_type(),
+  )
+  let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        self_host_linked_eqref_value_type(),
+      ),
+      StarshineFfi.ffi_lib_Mut_var_(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        StarshineFfi.ffi_lib_ValType_i32(),
+      ),
+      StarshineFfi.ffi_lib_Mut_var_(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        StarshineFfi.ffi_lib_ValType_i32(),
+      ),
+      StarshineFfi.ffi_lib_Mut_var_(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_comp_type(
+        StarshineFfi.ffi_lib_CompType_struct_(fields),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+  let iterator_fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    iterator_fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        self_host_linked_eqref_value_type(),
+      ),
+      StarshineFfi.ffi_lib_Mut_var_(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    iterator_fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        StarshineFfi.ffi_lib_ValType_i32(),
+      ),
+      StarshineFfi.ffi_lib_Mut_var_(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_comp_type(
+        StarshineFfi.ffi_lib_CompType_struct_(iterator_fields),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+  let map_fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    map_fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        self_host_linked_eqref_value_type(),
+      ),
+      StarshineFfi.ffi_lib_Mut_var_(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    map_fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        self_host_linked_eqref_value_type(),
+      ),
+      StarshineFfi.ffi_lib_Mut_var_(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_comp_type(
+        StarshineFfi.ffi_lib_CompType_struct_(map_fields),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+  let option_base = self_host_linked_array_runtime_base(link) + 9u32
+  let option_base_fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+  let option_base_supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_new(
+        0i32,
+        option_base_supers,
+        StarshineFfi.ffi_lib_CompType_struct_(option_base_fields),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    option_base,
+    Option::None,
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    option_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_i32()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    option_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_i64()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    option_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_f32()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    option_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_f64()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    option_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_v128()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    option_base,
+    Option::Some(self_host_linked_eqref_value_type()),
+  )
+  let result_base = self_host_linked_array_runtime_base(link) + 17u32
+  let result_base_fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+  let result_base_supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_new(
+        0i32,
+        result_base_supers,
+        StarshineFfi.ffi_lib_CompType_struct_(result_base_fields),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_i32()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_i64()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_f32()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_f64()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_v128()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(self_host_linked_eqref_value_type()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_i32()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_i64()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_f32()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_f64()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(StarshineFfi.ffi_lib_ValType_v128()),
+  )
+  self_host_linked_append_option_runtime_subtype(
+    rec_types,
+    result_base,
+    Option::Some(self_host_linked_eqref_value_type()),
+  )
+  let mut pair = 0u32
+  let _ = while pair {
+    current => if current < 36u32 {
+      let left = self_host_u32_to_i32(current / 6u32)
+      let right = self_host_u32_to_i32(current % 6u32)
+      let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+      StarshineFfi.ffi_ffi_bridge_field_types_push(
+        fields,
+        StarshineFfi.ffi_lib_FieldType_new(
+          StarshineFfi.ffi_lib_StorageType_val_type(
+            self_host_linked_runtime_carrier_value_type(left),
+          ),
+          StarshineFfi.ffi_lib_Mut_const_(),
+        ),
+      )
+      StarshineFfi.ffi_ffi_bridge_field_types_push(
+        fields,
+        StarshineFfi.ffi_lib_FieldType_new(
+          StarshineFfi.ffi_lib_StorageType_val_type(
+            self_host_linked_runtime_carrier_value_type(right),
+          ),
+          StarshineFfi.ffi_lib_Mut_const_(),
+        ),
+      )
+      StarshineFfi.ffi_ffi_bridge_rec_types_push(
+        rec_types,
+        StarshineFfi.ffi_lib_RecType_new(
+          StarshineFfi.ffi_lib_SubType_comp_type(
+            StarshineFfi.ffi_lib_CompType_struct_(fields),
+            wasm_ref_null(),
+          ),
+        ),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_linked_runtime_function_index_for_carrier(
+  link: SelfHostPlannedProgramWasmGCLink,
+  name: Bytes,
+  carrier: I32,
+) -> I32 {
+  for linked in link.functions {
+    let module_ = link.fragments.modules[linked.module_index]
+    if linked.fragment_index < module_.functions.length() {
+      let function_ = module_.functions[linked.fragment_index]
+      match function_.kind {
+        SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(
+          candidate,
+        ) => if candidate.equals(name) && self_host_linked_runtime_function_carrier(
+          link,
+          linked,
+          module_,
+          function_,
+        ) == carrier {
+          return self_host_u32_to_i32(
+            self_host_linked_physical_function_index(linked.function_index),
+          )
+        }
+        _ => {}
+      }
+    }
+  }
+  -1i32
+}
+
+fn self_host_linked_runtime_function_index_for_carriers(
+  link: SelfHostPlannedProgramWasmGCLink,
+  name: Bytes,
+  carrier: I32,
+  second_carrier: I32,
+) -> I32 {
+  for linked in link.functions {
+    let module_ = link.fragments.modules[linked.module_index]
+    if linked.fragment_index < module_.functions.length() {
+      let function_ = module_.functions[linked.fragment_index]
+      match function_.kind {
+        SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(
+          candidate,
+        ) => if candidate.equals(name) {
+          let first = self_host_linked_runtime_function_carrier(
+            link,
+            linked,
+            module_,
+            function_,
+          )
+          if first == carrier && self_host_linked_runtime_second_carrier(
+            link,
+            linked,
+            module_,
+            function_,
+            first,
+          ) == second_carrier {
+            return self_host_u32_to_i32(
+              self_host_linked_physical_function_index(linked.function_index),
+            )
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+  -1i32
+}
+
+fn self_host_linked_runtime_function_index(
+  link: SelfHostPlannedProgramWasmGCLink,
+  name: Bytes,
+) -> I32 {
+  for linked_function in link.functions {
+    let fragment_module = link.fragments.modules[linked_function.module_index]
+    let fragment = self_host_program_link_fragment_function(
+      fragment_module,
+      linked_function.fragment_index,
+    )
+    match fragment.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(
+        candidate,
+      ) => if candidate.equals(name) {
+        return self_host_u32_to_i32(
+          self_host_linked_physical_function_index(
+            linked_function.function_index,
+          ),
+        )
+      }
+      _ => {}
+    }
+  }
+  -1i32
+}
+
+fn self_host_linked_import_function_index(
+  link: SelfHostPlannedProgramWasmGCLink,
+  library: Bytes,
+  field: Bytes,
+) -> I32 {
+  for linked_function in link.functions {
+    let fragment_module = link.fragments.modules[linked_function.module_index]
+    let fragment = self_host_program_link_fragment_function(
+      fragment_module,
+      linked_function.fragment_index,
+    )
+    match fragment.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(
+        candidate_library,
+        candidate_field,
+      ) => if candidate_library.equals(library) && candidate_field.equals(field) {
+        return self_host_u32_to_i32(
+          self_host_linked_physical_function_index(
+            linked_function.function_index,
+          ),
+        )
+      }
+      _ => {}
+    }
+  }
+  -1i32
+}
+
+fn self_host_linked_append_runtime_function_name(
+  builder: StarshineRef2472,
+  name: Bytes,
+) -> Unit {
+  let _ = while 0u32 {
+    index => if index < name.byte_length() {
+      StarshineFfi.ffi_ffi_bridge_RuntimeFunctionBuilder_push_name_byte(
+        builder,
+        u8_into_i32(name.byte_at(index)),
+      )
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_linked_array_carrier_from_shape(
+  shape: SelfHostPlannedValueShape,
+) -> I32 {
+  match self_host_specialization_canonical_scalar(shape) {
+    SelfHostPlannedValueShape::I32PlannedValueShape => 0i32
+    SelfHostPlannedValueShape::I64PlannedValueShape => 1i32
+    SelfHostPlannedValueShape::F32PlannedValueShape => 2i32
+    SelfHostPlannedValueShape::F64PlannedValueShape => 3i32
+    SelfHostPlannedValueShape::V128PlannedValueShape => 4i32
+    _ => 5i32
+  }
+}
+
+fn self_host_linked_array_carrier_from_value_type(
+  value: SelfHostPlannedWasmValueType,
+) -> I32 {
+  match value {
+    SelfHostPlannedWasmValueType::WasmI32Value => 0i32
+    SelfHostPlannedWasmValueType::WasmI64Value => 1i32
+    SelfHostPlannedWasmValueType::WasmF32Value => 2i32
+    SelfHostPlannedWasmValueType::WasmF64Value => 3i32
+    SelfHostPlannedWasmValueType::WasmV128Value => 4i32
+    SelfHostPlannedWasmValueType::WasmNullableEqRefValue => 5i32
+  }
+}
+
+fn self_host_linked_runtime_function_carrier(
+  link: SelfHostPlannedProgramWasmGCLink,
+  linked_function: SelfHostPlannedProgramWasmFunction,
+  fragment_module: SelfHostPlannedModuleWasmGCFragments,
+  fragment: SelfHostPlannedWasmFunctionFragment,
+) -> I32 {
+  match fragment.kind {
+    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if name.starts_with(
+      b"dew_map_",
+    ) && self_host_u32_greater(fragment.parameters.length, 1u32) {
+      let parameter = self_host_u32_add(fragment.parameters.start, 1u32)
+      if parameter < fragment_module.function_value_types.length() {
+        return self_host_linked_array_carrier_from_value_type(
+          fragment_module.function_value_types[parameter],
+        )
+      }
+    }
+    _ => {}
+  }
+  if !self_host_u32_equal(linked_function.specialization, 4294967295u32) &&
+    linked_function.specialization < link.fragments.specialization.requests.length() {
+    let request = link.fragments.specialization.requests[
+      linked_function.specialization
+    ]
+    if self_host_u32_greater(request.shapes.length, 0u32) {
+      return self_host_linked_array_carrier_from_shape(
+        link.fragments.specialization.shapes[request.shapes.start],
+      )
+    }
+  }
+  if self_host_u32_greater(fragment.results.length, 0u32) {
+    let index = fragment.results.start
+    if index < fragment_module.function_value_types.length() {
+      let carrier = self_host_linked_array_carrier_from_value_type(
+        fragment_module.function_value_types[index],
+      )
+      if carrier != 5i32 {
+        return carrier
+      }
+    }
+  }
+  let mut parameter = fragment.parameters.length
+  let _ = while parameter {
+    current => if self_host_u32_greater(current, 0u32) {
+      let index = self_host_u32_add(fragment.parameters.start, current - 1u32)
+      if index < fragment_module.function_value_types.length() {
+        let carrier = self_host_linked_array_carrier_from_value_type(
+          fragment_module.function_value_types[index],
+        )
+        if carrier != 5i32 {
+          return carrier
+        }
+      }
+      continue current - 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  5i32
+}
+
+fn self_host_linked_runtime_second_carrier(
+  link: SelfHostPlannedProgramWasmGCLink,
+  linked_function: SelfHostPlannedProgramWasmFunction,
+  fragment_module: SelfHostPlannedModuleWasmGCFragments,
+  fragment: SelfHostPlannedWasmFunctionFragment,
+  fallback: I32,
+) -> I32 {
+  if !self_host_u32_greater(fragment.results.length, 0u32) &&
+    self_host_u32_greater(fragment.parameters.length, 2u32) {
+    let parameter = self_host_u32_add(fragment.parameters.start, 2u32)
+    if parameter < fragment_module.function_value_types.length() {
+      return self_host_linked_array_carrier_from_value_type(
+        fragment_module.function_value_types[parameter],
+      )
+    }
+  }
+  if !self_host_u32_equal(linked_function.specialization, 4294967295u32) &&
+    linked_function.specialization < link.fragments.specialization.requests.length() {
+    let request = link.fragments.specialization.requests[
+      linked_function.specialization
+    ]
+    if self_host_u32_greater(request.shapes.length, 1u32) {
+      return self_host_linked_array_carrier_from_shape(
+        link.fragments.specialization.shapes[
+          self_host_u32_add(request.shapes.start, 1u32)
+        ],
+      )
+    }
+  }
+  fallback
+}
+
+fn self_host_linked_option_none_type_index(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> I32 {
+  self_host_u32_to_i32(self_host_linked_array_runtime_base(link) + 10u32)
+}
+
+fn self_host_linked_option_some_type_index(
+  link: SelfHostPlannedProgramWasmGCLink,
+  carrier: I32,
+) -> I32 {
+  self_host_u32_to_i32(
+    self_host_linked_array_runtime_base(link) + 11u32 + self_host_i32_to_u32(carrier),
+  )
+}
+
+fn self_host_linked_append_runtime_function(
+  link: SelfHostPlannedProgramWasmGCLink,
+  functions: StarshineRef70,
+  name: Bytes,
+  carrier: I32,
+  second_carrier: I32,
+) -> Bool {
+  let builder = StarshineFfi.ffi_ffi_bridge_runtime_function_builder_new(
+    self_host_u32_to_i32(self_host_linked_text_runtime_base(link)),
+    self_host_linked_runtime_function_index(
+      link,
+      b"dew_bytes_is_valid_utf8",
+    ),
+    0i32,
+    1i32,
+    carrier,
+    second_carrier,
+    self_host_linked_option_none_type_index(link),
+    self_host_linked_option_some_type_index(link, second_carrier),
+  )
+  self_host_linked_append_runtime_function_name(builder, name)
+  StarshineFfi.ffi_ffi_bridge_funcs_push_runtime(functions, builder) != 0i32
+}
+
+fn self_host_emit_linked_map_contains_key(
+  base: U32,
+  carrier: I32,
+  scratch: U32,
+  destination: StarshineRef45,
+) -> Bool {
+  let wrapper_type = self_host_u32_add(base, 6u32)
+  let map_type = self_host_u32_add(base, 8u32)
+  let array_type = self_host_u32_add(base, self_host_i32_to_u32(carrier))
+  let map_local = scratch
+  let key_local = self_host_u32_add(scratch, 1u32)
+  let keys_local = self_host_u32_add(scratch, 2u32)
+  let index_local = self_host_u32_add(scratch, 3u32)
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(key_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(map_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(map_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(map_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_struct_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(map_type)),
+      0i32,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(keys_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(keys_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(wrapper_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_struct_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+      1i32,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  let loop_body = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_i32_eqz(),
+  )
+  let absent = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    absent,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(0i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    absent,
+    StarshineFfi.ffi_lib_Instruction_br(
+      StarshineFfi.ffi_lib_LabelIdx_new(2i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_ffi_bridge_instruction_if(
+      StarshineFfi.ffi_lib_BlockType_void_(),
+      absent,
+      StarshineFfi.ffi_ffi_bridge_instructions_new(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(1i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_i32_sub(),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(keys_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(wrapper_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_struct_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+      0i32,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(array_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_array_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(array_type)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(key_local)),
+    ),
+  )
+  let comparison = match carrier {
+    0 => StarshineFfi.ffi_lib_Instruction_i32_eq()
+    1 => StarshineFfi.ffi_lib_Instruction_i64_eq()
+    2 => StarshineFfi.ffi_lib_Instruction_f32_eq()
+    3 => StarshineFfi.ffi_lib_Instruction_f64_eq()
+    4 => StarshineFfi.ffi_lib_Instruction_i8x16_eq()
+    _ => StarshineFfi.ffi_lib_Instruction_ref_eq()
+  }
+  StarshineFfi.ffi_ffi_bridge_instructions_push(loop_body, comparison)
+  if carrier == 4i32 {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      loop_body,
+      StarshineFfi.ffi_lib_Instruction_i16x8_all_true(),
+    )
+  }
+  let found = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(1i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_lib_Instruction_br(
+      StarshineFfi.ffi_lib_LabelIdx_new(2i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_ffi_bridge_instruction_if(
+      StarshineFfi.ffi_lib_BlockType_void_(),
+      found,
+      StarshineFfi.ffi_ffi_bridge_instructions_new(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_br(
+      StarshineFfi.ffi_lib_LabelIdx_new(0i32),
+    ),
+  )
+  let block_body = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    block_body,
+    StarshineFfi.ffi_lib_Instruction_loop_(
+      StarshineFfi.ffi_lib_BlockType_void_(),
+      StarshineFfi.ffi_lib_Expr_new(loop_body),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    block_body,
+    StarshineFfi.ffi_lib_Instruction_unreachable_(),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_block(
+      StarshineFfi.ffi_lib_BlockType_val_type(
+        StarshineFfi.ffi_lib_ValType_i32(),
+      ),
+      StarshineFfi.ffi_lib_Expr_new(block_body),
+    ),
+  )
+  true
+}
+
+fn self_host_emit_linked_map_get(
+  base: U32,
+  key_carrier: I32,
+  value_carrier: I32,
+  scratch: U32,
+  destination: StarshineRef45,
+) -> Bool {
+  let wrapper_type = self_host_u32_add(base, 6u32)
+  let map_type = self_host_u32_add(base, 8u32)
+  let key_array_type = self_host_u32_add(
+    base,
+    self_host_i32_to_u32(key_carrier),
+  )
+  let value_array_type = self_host_u32_add(
+    base,
+    self_host_i32_to_u32(value_carrier),
+  )
+  let none_type = self_host_u32_add(base, 10u32)
+  let some_type = self_host_u32_add(
+    base,
+    self_host_u32_add(11u32, self_host_i32_to_u32(value_carrier)),
+  )
+  let map_local = scratch
+  let key_local = self_host_u32_add(scratch, 1u32)
+  let keys_local = self_host_u32_add(scratch, 2u32)
+  let values_local = self_host_u32_add(scratch, 3u32)
+  let index_local = self_host_u32_add(scratch, 4u32)
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(key_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(map_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(map_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(map_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_struct_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(map_type)),
+      0i32,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(keys_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(map_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(map_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_struct_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(map_type)),
+      1i32,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(values_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(keys_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(wrapper_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_struct_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+      1i32,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  let loop_body = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_i32_eqz(),
+  )
+  let absent = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    absent,
+    StarshineFfi.ffi_lib_Instruction_struct_new(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(none_type)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    absent,
+    StarshineFfi.ffi_lib_Instruction_br(
+      StarshineFfi.ffi_lib_LabelIdx_new(2i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_ffi_bridge_instruction_if(
+      StarshineFfi.ffi_lib_BlockType_void_(),
+      absent,
+      StarshineFfi.ffi_ffi_bridge_instructions_new(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(1i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_i32_sub(),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_set(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(keys_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(wrapper_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_struct_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+      0i32,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(key_array_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_array_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(key_array_type)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(key_local)),
+    ),
+  )
+  let comparison = match key_carrier {
+    0 => StarshineFfi.ffi_lib_Instruction_i32_eq()
+    1 => StarshineFfi.ffi_lib_Instruction_i64_eq()
+    2 => StarshineFfi.ffi_lib_Instruction_f32_eq()
+    3 => StarshineFfi.ffi_lib_Instruction_f64_eq()
+    4 => StarshineFfi.ffi_lib_Instruction_i8x16_eq()
+    _ => StarshineFfi.ffi_lib_Instruction_ref_eq()
+  }
+  StarshineFfi.ffi_ffi_bridge_instructions_push(loop_body, comparison)
+  if key_carrier == 4i32 {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      loop_body,
+      StarshineFfi.ffi_lib_Instruction_i16x8_all_true(),
+    )
+  }
+  let found = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(values_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(wrapper_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_lib_Instruction_struct_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+      0i32,
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+      self_host_u32_to_i32(value_array_type),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_lib_Instruction_local_get(
+      StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(index_local)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_lib_Instruction_array_get(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(value_array_type)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_lib_Instruction_struct_new(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(some_type)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    found,
+    StarshineFfi.ffi_lib_Instruction_br(
+      StarshineFfi.ffi_lib_LabelIdx_new(2i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_ffi_bridge_instruction_if(
+      StarshineFfi.ffi_lib_BlockType_void_(),
+      found,
+      StarshineFfi.ffi_ffi_bridge_instructions_new(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    loop_body,
+    StarshineFfi.ffi_lib_Instruction_br(
+      StarshineFfi.ffi_lib_LabelIdx_new(0i32),
+    ),
+  )
+  let block_body = StarshineFfi.ffi_ffi_bridge_instructions_new()
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    block_body,
+    StarshineFfi.ffi_lib_Instruction_loop_(
+      StarshineFfi.ffi_lib_BlockType_void_(),
+      StarshineFfi.ffi_lib_Expr_new(loop_body),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    block_body,
+    StarshineFfi.ffi_lib_Instruction_unreachable_(),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_block(
+      StarshineFfi.ffi_lib_BlockType_val_type(
+        self_host_linked_eqref_value_type(),
+      ),
+      StarshineFfi.ffi_lib_Expr_new(block_body),
+    ),
+  )
+  true
+}
+
+fn self_host_emit_linked_array_empty(
+  wrapper_type: U32,
+  destination: StarshineRef45,
+) -> Unit {
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_ref_null(
+      StarshineFfi.ffi_lib_HeapType_abs(
+        StarshineFfi.ffi_lib_AbsHeapType_eq(),
+      ),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(0i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(0i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_struct_new(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+    ),
+  )
+}
+
+fn self_host_emit_linked_map_empty(
+  base: U32,
+  destination: StarshineRef45,
+) -> Unit {
+  let wrapper_type = self_host_u32_add(base, 6u32)
+  self_host_emit_linked_array_empty(wrapper_type, destination)
+  self_host_emit_linked_array_empty(wrapper_type, destination)
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_struct_new(
+      StarshineFfi.ffi_lib_TypeIdx_new(
+        self_host_u32_to_i32(self_host_u32_add(base, 8u32)),
+      ),
+    ),
+  )
+}
+
+fn self_host_emit_linked_array_builtin(
+  name: Bytes,
+  wrapper_type: U32,
+  destination: StarshineRef45,
+) -> Bool {
+  if name.equals(b"dew_array_length") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+        self_host_u32_to_i32(wrapper_type),
+      ),
+    )
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_struct_get(
+        StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+        1i32,
+      ),
+    )
+  } else if name.equals(b"dew_array_capacity") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+        self_host_u32_to_i32(wrapper_type),
+      ),
+    )
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_struct_get(
+        StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+        2i32,
+      ),
+    )
+  } else if name.equals(b"dew_array_clear") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+        self_host_u32_to_i32(wrapper_type),
+      ),
+    )
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_i32_const(
+        StarshineFfi.ffi_lib_I32_new(0i32),
+      ),
+    )
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_struct_set(
+        StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+        1i32,
+      ),
+    )
+  } else {
+    return false
+  }
+  true
+}
+
+fn self_host_linked_shape_name(shape: SelfHostPlannedValueShape) -> String {
+  match shape {
+    SelfHostPlannedValueShape::ErrorPlannedValueShape => "error"
+    SelfHostPlannedValueShape::UnitPlannedValueShape => "unit"
+    SelfHostPlannedValueShape::I8PlannedValueShape => "i8"
+    SelfHostPlannedValueShape::I16PlannedValueShape => "i16"
+    SelfHostPlannedValueShape::I32PlannedValueShape => "i32"
+    SelfHostPlannedValueShape::I64PlannedValueShape => "i64"
+    SelfHostPlannedValueShape::U8PlannedValueShape => "u8"
+    SelfHostPlannedValueShape::U16PlannedValueShape => "u16"
+    SelfHostPlannedValueShape::U32PlannedValueShape => "u32"
+    SelfHostPlannedValueShape::U64PlannedValueShape => "u64"
+    SelfHostPlannedValueShape::F32PlannedValueShape => "f32"
+    SelfHostPlannedValueShape::F64PlannedValueShape => "f64"
+    SelfHostPlannedValueShape::Swar32PlannedValueShape => "swar32"
+    SelfHostPlannedValueShape::Swar64PlannedValueShape => "swar64"
+    SelfHostPlannedValueShape::V128PlannedValueShape => "v128"
+    SelfHostPlannedValueShape::RefPlannedValueShape => "ref"
+    SelfHostPlannedValueShape::GenericPlannedValueShape => "generic"
+    SelfHostPlannedValueShape::ProductPlannedValueShape(_) => "product"
+    SelfHostPlannedValueShape::NeverPlannedValueShape => "never"
+  }
+}
+
+fn self_host_linked_default_conversion_target(
+  source: SelfHostPlannedValueShape,
+) -> SelfHostPlannedValueShape {
+  match self_host_specialization_canonical_scalar(source) {
+    SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedValueShape::F64PlannedValueShape => SelfHostPlannedValueShape::F32PlannedValueShape
+    SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedValueShape::F64PlannedValueShape
+    SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
+    _ => source
+  }
+}
+
+fn self_host_linked_conversion_source_is_signed(
+  shape: SelfHostPlannedValueShape,
+) -> Bool {
+  shape is SelfHostPlannedValueShape::I8PlannedValueShape ||
+  shape is SelfHostPlannedValueShape::I16PlannedValueShape ||
+  shape is SelfHostPlannedValueShape::I32PlannedValueShape ||
+  shape is SelfHostPlannedValueShape::I64PlannedValueShape
+}
+
+fn self_host_emit_linked_conversion(
+  source: SelfHostPlannedValueShape,
+  target: SelfHostPlannedValueShape,
+  destination: StarshineRef45,
+) -> Bool {
+  if source is SelfHostPlannedValueShape::ErrorPlannedValueShape &&
+    target is SelfHostPlannedValueShape::ErrorPlannedValueShape {
+    return true
+  }
+  if target is SelfHostPlannedValueShape::UnitPlannedValueShape {
+    if !(source is SelfHostPlannedValueShape::ErrorPlannedValueShape) &&
+      !(source is SelfHostPlannedValueShape::UnitPlannedValueShape) &&
+      !(source is SelfHostPlannedValueShape::NeverPlannedValueShape) {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_drop(),
+      )
+    }
+    return true
+  }
+  let source_scalar = self_host_specialization_canonical_scalar(source)
+  if target is SelfHostPlannedValueShape::U8PlannedValueShape ||
+    target is SelfHostPlannedValueShape::U16PlannedValueShape ||
+    target is SelfHostPlannedValueShape::U32PlannedValueShape {
+    match source_scalar {
+      SelfHostPlannedValueShape::I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_wrap_i64(),
+      )
+      SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_trunc_f32u(),
+      )
+      SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_trunc_f64u(),
+      )
+      SelfHostPlannedValueShape::I32PlannedValueShape => {}
+      _ => {
+        return false
+      }
+    }
+    let mask = if target is SelfHostPlannedValueShape::U8PlannedValueShape {
+      255i32
+    } else if target is SelfHostPlannedValueShape::U16PlannedValueShape {
+      65535i32
+    } else {
+      -1i32
+    }
+    if mask >= 0i32 {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_const(
+          StarshineFfi.ffi_lib_I32_new(mask),
+        ),
+      )
+      StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_and(),
+      )
+    }
+    return true
+  }
+  if target is SelfHostPlannedValueShape::I64PlannedValueShape ||
+    target is SelfHostPlannedValueShape::U64PlannedValueShape {
+    match source_scalar {
+      SelfHostPlannedValueShape::I32PlannedValueShape => {
+        if self_host_linked_conversion_source_is_signed(source) {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_i64_extend_i32s(),
+          )
+        } else {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_i64_extend_i32u(),
+          )
+        }
+      }
+      SelfHostPlannedValueShape::F32PlannedValueShape => {
+        if target is SelfHostPlannedValueShape::I64PlannedValueShape {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_i64_trunc_f32s(),
+          )
+        } else {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_i64_trunc_f32u(),
+          )
+        }
+      }
+      SelfHostPlannedValueShape::F64PlannedValueShape => {
+        if target is SelfHostPlannedValueShape::I64PlannedValueShape {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_i64_trunc_f64s(),
+          )
+        } else {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_i64_trunc_f64u(),
+          )
+        }
+      }
+      SelfHostPlannedValueShape::I64PlannedValueShape => {}
+      _ => {
+        return false
+      }
+    }
+    return true
+  }
+  if target is SelfHostPlannedValueShape::Swar32PlannedValueShape ||
+    target is SelfHostPlannedValueShape::Swar64PlannedValueShape ||
+    target is SelfHostPlannedValueShape::V128PlannedValueShape {
+    return true
+  }
+  match target {
+    SelfHostPlannedValueShape::I8PlannedValueShape => {
+      match source_scalar {
+        SelfHostPlannedValueShape::I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_i32_wrap_i64(),
+        )
+        SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_i32_trunc_f32s(),
+        )
+        SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_i32_trunc_f64s(),
+        )
+        SelfHostPlannedValueShape::I32PlannedValueShape => {}
+        _ => {
+        return false
+      }
+      }
+      StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_extend8s(),
+      )
+    }
+    SelfHostPlannedValueShape::I16PlannedValueShape => {
+      match source_scalar {
+        SelfHostPlannedValueShape::I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_i32_wrap_i64(),
+        )
+        SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_i32_trunc_f32s(),
+        )
+        SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_i32_trunc_f64s(),
+        )
+        SelfHostPlannedValueShape::I32PlannedValueShape => {}
+        _ => {
+        return false
+      }
+      }
+      StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_extend16s(),
+      )
+    }
+    SelfHostPlannedValueShape::I32PlannedValueShape => match source_scalar {
+      SelfHostPlannedValueShape::I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_wrap_i64(),
+      )
+      SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_trunc_f32s(),
+      )
+      SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_i32_trunc_f64s(),
+      )
+      SelfHostPlannedValueShape::I32PlannedValueShape => {}
+      _ => {
+        return false
+      }
+    }
+    SelfHostPlannedValueShape::F32PlannedValueShape => match source_scalar {
+      SelfHostPlannedValueShape::I32PlannedValueShape => {
+        if self_host_linked_conversion_source_is_signed(source) {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f32_convert_i32s(),
+          )
+        } else {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f32_convert_i32u(),
+          )
+        }
+      }
+      SelfHostPlannedValueShape::I64PlannedValueShape => {
+        if self_host_linked_conversion_source_is_signed(source) {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f32_convert_i64s(),
+          )
+        } else {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f32_convert_i64u(),
+          )
+        }
+      }
+      SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_f32_demote_f64(),
+      )
+      SelfHostPlannedValueShape::F32PlannedValueShape => {}
+      _ => {
+        return false
+      }
+    }
+    SelfHostPlannedValueShape::F64PlannedValueShape => match source_scalar {
+      SelfHostPlannedValueShape::I32PlannedValueShape => {
+        if self_host_linked_conversion_source_is_signed(source) {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f64_convert_i32s(),
+          )
+        } else {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f64_convert_i32u(),
+          )
+        }
+      }
+      SelfHostPlannedValueShape::I64PlannedValueShape => {
+        if self_host_linked_conversion_source_is_signed(source) {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f64_convert_i64s(),
+          )
+        } else {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(
+            destination,
+            StarshineFfi.ffi_lib_Instruction_f64_convert_i64u(),
+          )
+        }
+      }
+      SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_f64_promote_f32(),
+      )
+      SelfHostPlannedValueShape::F64PlannedValueShape => {}
+      _ => {
+        return false
+      }
+    }
+    _ => {
+        return false
+      }
+  }
+  true
+}
+
+fn self_host_linked_text_lane(value: Bytes, index: U32) -> I32 {
+  if index < value.byte_length() {
+    u8_into_i32(value.byte_at(index))
+  } else {
+    0i32
+  }
+}
+
+fn self_host_emit_linked_text_constant(
+  link: SelfHostPlannedProgramWasmGCLink,
+  value: Bytes,
+  string_: Bool,
+  destination: StarshineRef45,
+) -> Unit {
+  let base = self_host_linked_text_runtime_base(link)
+  let chunk_count = (value.byte_length() + 15u32) / 16u32
+  let _ = while 0u32 {
+    chunk => if chunk < chunk_count {
+      let start = chunk * 16u32
+      StarshineFfi.ffi_ffi_bridge_instructions_push(
+        destination,
+        StarshineFfi.ffi_lib_Instruction_v128_const(
+          self_host_linked_text_lane(value, start),
+          self_host_linked_text_lane(value, start + 1u32),
+          self_host_linked_text_lane(value, start + 2u32),
+          self_host_linked_text_lane(value, start + 3u32),
+          self_host_linked_text_lane(value, start + 4u32),
+          self_host_linked_text_lane(value, start + 5u32),
+          self_host_linked_text_lane(value, start + 6u32),
+          self_host_linked_text_lane(value, start + 7u32),
+          self_host_linked_text_lane(value, start + 8u32),
+          self_host_linked_text_lane(value, start + 9u32),
+          self_host_linked_text_lane(value, start + 10u32),
+          self_host_linked_text_lane(value, start + 11u32),
+          self_host_linked_text_lane(value, start + 12u32),
+          self_host_linked_text_lane(value, start + 13u32),
+          self_host_linked_text_lane(value, start + 14u32),
+          self_host_linked_text_lane(value, start + 15u32),
+        ),
+      )
+      continue chunk + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_array_new_fixed(
+      StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(base)),
+      StarshineFfi.ffi_lib_U32_new(self_host_u32_to_i32(chunk_count)),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(0i32),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_i32_const(
+      StarshineFfi.ffi_lib_I32_new(self_host_u32_to_i32(value.byte_length())),
+    ),
+  )
+  let type_offset = if string_ {
+    1u32
+  } else {
+    2u32
+  }
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_struct_new(
+      StarshineFfi.ffi_lib_TypeIdx_new(
+        self_host_u32_to_i32(self_host_u32_add(base, type_offset)),
+      ),
+    ),
+  )
+}

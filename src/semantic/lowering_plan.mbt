@@ -57,6 +57,7 @@ pub enum PlannedExpressionKind {
   PlannedIfExpression(ExprId, BlockId, ExprId)
   PlannedMatchExpression(ExprId, HirSpan)
   PlannedWhileExpression(ControlId, ExprId, HirSpan)
+  PlannedReturnExpression(ExprId)
   PlannedBreakExpression(ControlId, ExprId)
   PlannedContinueExpression(ControlId, ExprId)
   PlannedPrefixExpression(HirPrefixOperator, ExprId)
@@ -235,7 +236,6 @@ pub struct PlannedExpression {
 pub enum PlannedBlockItemKind {
   PlannedLetItem(LocalId, Bool, ExprId)
   PlannedElidedLetItem(LocalId)
-  PlannedReturnItem(ExprId)
   PlannedExpressionItem(ExprId)
 } derive(Eq, Debug)
 
@@ -1034,6 +1034,7 @@ fn plan_expression_kind(
         initial,
         arms,
       )
+    HirReturnExpr(value, _) => PlannedReturnExpression(value)
     HirBreakExpr(value, _) =>
       PlannedBreakExpression(names.transfer_targets[expression], value)
     HirContinueExpr(value, _) =>
@@ -1780,13 +1781,10 @@ fn plan_body_lowering_job(
       kind: match source {
         HirLetItem(mutable_, _, _, value, _) =>
           PlannedLetItem(names.block_item_locals[item], mutable_, value)
-        HirReturnItem(value, _) => PlannedReturnItem(value)
         HirExpressionItem(value, _) => PlannedExpressionItem(value)
       },
       offset: match source {
-        HirLetItem(_, _, _, _, offset)
-        | HirReturnItem(_, offset)
-        | HirExpressionItem(_, offset) => offset
+        HirLetItem(_, _, _, _, offset) | HirExpressionItem(_, offset) => offset
       },
     })
   }

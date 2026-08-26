@@ -651,7 +651,7 @@ pub fn link_core_wasm_gc_modules(
     }
   }
   if options.run_cleanup {
-    let candidate = @passes.rume_run_module_pass(
+    let candidate = @rume.rume_run_module_pass(
       module_,
       traps_never_happen=false,
       closed_world=false,

@@ -101,7 +101,6 @@ pub struct SelfHostHirObjectField {
 
 pub enum SelfHostHirBlockItem {
   LetItem(Bool, U32, U32, U32, U32)
-  ReturnItem(U32, U32)
   ExpressionItem(U32, U32)
 }
 
@@ -212,6 +211,7 @@ pub enum SelfHostHirExpr {
   IfExpr(U32, U32, U32, U32)
   MatchExpr(U32, SelfHostHirSpan, U32)
   WhileExpr(U32, SelfHostHirSpan, U32)
+  ReturnExpr(U32, U32)
   BreakExpr(U32, U32)
   ContinueExpr(U32, U32)
   PrefixExpr(SelfHostHirPrefixOperator, U32, U32)
@@ -252,6 +252,7 @@ impl SelfHostHirExpr {
       SelfHostHirExpr::IfExpr(_, _, _, offset) => offset
       SelfHostHirExpr::MatchExpr(_, _, offset) => offset
       SelfHostHirExpr::WhileExpr(_, _, offset) => offset
+      SelfHostHirExpr::ReturnExpr(_, offset) => offset
       SelfHostHirExpr::BreakExpr(_, offset) => offset
       SelfHostHirExpr::ContinueExpr(_, offset) => offset
       SelfHostHirExpr::PrefixExpr(_, _, offset) => offset

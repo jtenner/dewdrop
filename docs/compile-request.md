@@ -11,7 +11,7 @@ third-party API.
 ## Invocation
 
 ```text
-moon run --target native --release src/dew_cli -- --compile-request REQUEST
+tools/run-dew-cli-host.sh --compile-request REQUEST
 ```
 
 The compiler reads `REQUEST` once. Build responses are written to the explicit

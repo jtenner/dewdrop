@@ -277,6 +277,13 @@ impl SelfHostCollectionBuilder {
           SelfHostHirExpr::WhileExpr(scrutinee_id, arm_span, offset),
         )
       }
+      SelfHostExpr::ReturnExpr(value, offset) => {
+        let value_id = match value {
+          Option::Some(expression) => self.lower_expression(expression)
+          Option::None => 4294967295u32
+        }
+        self.emit_expression(SelfHostHirExpr::ReturnExpr(value_id, offset))
+      }
       SelfHostExpr::BreakExpr(value, offset) => {
         let value_id = self.lower_expression(value)
         self.emit_expression(SelfHostHirExpr::BreakExpr(value_id, offset))
@@ -523,15 +530,6 @@ impl SelfHostCollectionBuilder {
             offset,
           )
           lowered_items.push(lowered)
-        }
-        SelfHostBlockItem::ReturnItem(value, offset) => {
-          let value_id = match value {
-            Option::Some(expression) => self.lower_expression(expression)
-            Option::None => 4294967295u32
-          }
-          lowered_items.push(
-            SelfHostHirBlockItem::ReturnItem(value_id, offset),
-          )
         }
         SelfHostBlockItem::AssignmentItem(target, value, offset) => {
           let target_id = self.lower_expression(target)

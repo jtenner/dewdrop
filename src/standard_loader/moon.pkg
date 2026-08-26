@@ -13,7 +13,8 @@ import {
 options(
   targets: {
     "parse_event_cache_platform_native.mbt": [ "native", "llvm" ],
-    "parse_event_cache_platform_stub.mbt": [ "wasm", "wasm-gc", "js" ],
+    "parse_event_cache_platform_js.mbt": [ "js" ],
+    "parse_event_cache_platform_stub.mbt": [ "wasm", "wasm-gc" ],
   },
   "native-stub": [ "parse_event_cache_platform.c" ],
 )

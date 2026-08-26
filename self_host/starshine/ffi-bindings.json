@@ -1,11 +1,11 @@
 {
   "version": 1,
   "provider": "starshine",
-  "submodule_revision": "af50e1de1ee0864ecea9eafed3534488b505f57c",
+  "submodule_revision": "f4de6d9d6428368ecd670522af714756b0510ca1",
   "wasm_path": "starshine-mb/dist/ffi/starshine-ffi.wasm",
-  "wasm_sha256": "4962d9f6508efee18831f8327998bdd6d50ac1b91991daca6c2554685ab397fc",
-  "available_export_count": 3369,
-  "binding_count": 144,
+  "wasm_sha256": "b2ef045aee116340a76eac43d7fff0392f213359dfa215f66e5cf425045befdd",
+  "available_export_count": 3409,
+  "binding_count": 378,
   "interfaces": [
     {
       "path": "src/lib/pkg.generated.mbti",
@@ -21,1166 +21,3038 @@
     },
     {
       "path": "src/ffi_bridge/pkg.generated.mbti",
-      "sha256": "93947e2f924aec360d47480c842faf244a4fb34a2ef4a1abcd2fbeda90d23406"
+      "sha256": "b78782cdbf69b352a7686b87b6b4b8f79f21ca717ac2d2f997c6168686975fc4"
     }
   ],
   "fingerprint": {
     "algorithm": "blake3-256",
     "domain": "DEW_SELF_HOST_COMPILER_FINGERPRINT_V1",
-    "prefix_sha256": "485a1e8f08bcc64fb5197828c35bd70d4a68cd1a3f7da5567173a1072629e316",
+    "prefix_sha256": "e2b359182584ba227a291c07f212a2dfd05fe3cc616ffcd6092209ed203abcac",
     "provider_input": "exact wasm bytes appended after the prefix"
   },
   "exports": [
     {
-      "ordinal": 3295,
-      "function_index": 3663,
+      "ordinal": 3318,
+      "function_index": 3691,
       "internal_name": "ffi_ffi_bridge_val_types_new",
       "export_name": "ffi_bridge::val_types_new",
-      "signature": "() -> (ref 46)",
+      "signature": "() -> (ref 110)",
       "status": "bound"
     },
     {
-      "ordinal": 3294,
-      "function_index": 3661,
+      "ordinal": 3317,
+      "function_index": 3689,
       "internal_name": "ffi_ffi_bridge_val_types_push",
       "export_name": "ffi_bridge::val_types_push",
-      "signature": "((ref 46), (ref 0)) -> Unit",
+      "signature": "((ref 110), (ref 0)) -> Unit",
       "status": "bound"
     },
     {
-      "ordinal": 1509,
-      "function_index": 1836,
+      "ordinal": 1524,
+      "function_index": 1851,
       "internal_name": "ffi_lib_ValType_i32",
       "export_name": "ValType::i32",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2497,
-      "function_index": 2831,
+      "ordinal": 2512,
+      "function_index": 2846,
       "internal_name": "ffi_lib_CompType_func",
       "export_name": "CompType::func",
-      "signature": "((ref 46), (ref 46)) -> (ref 0)",
+      "signature": "((ref 110), (ref 110)) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1695,
-      "function_index": 2022,
+      "ordinal": 1710,
+      "function_index": 2037,
       "internal_name": "ffi_lib_SubType_comp_type",
       "export_name": "SubType::comp_type",
-      "signature": "((ref 0), (ref null 910)) -> (ref 0)",
+      "signature": "((ref 0), (ref null 918)) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1736,
-      "function_index": 2063,
+      "ordinal": 1751,
+      "function_index": 2078,
       "internal_name": "ffi_lib_RecType_new",
       "export_name": "RecType::new",
       "signature": "((ref 0)) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 3299,
-      "function_index": 3669,
+      "ordinal": 3334,
+      "function_index": 3712,
+      "internal_name": "ffi_ffi_bridge_instruction_ref_test_nominal",
+      "export_name": "ffi_bridge::instruction_ref_test_nominal",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3336,
+      "function_index": 3714,
+      "internal_name": "ffi_ffi_bridge_instruction_memory_builtin",
+      "export_name": "ffi_bridge::instruction_memory_builtin",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3335,
+      "function_index": 3713,
+      "internal_name": "ffi_ffi_bridge_instruction_ref_cast_nominal",
+      "export_name": "ffi_bridge::instruction_ref_cast_nominal",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3331,
+      "function_index": 3707,
+      "internal_name": "ffi_ffi_bridge_instructions_push_array_iter_next",
+      "export_name": "ffi_bridge::instructions_push_array_iter_next",
+      "signature": "((ref 45), i32, i32, i32) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3330,
+      "function_index": 3705,
+      "internal_name": "ffi_ffi_bridge_instructions_push_array_push",
+      "export_name": "ffi_bridge::instructions_push_array_push",
+      "signature": "((ref 45), i32, i32, i32) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3324,
+      "function_index": 3699,
+      "internal_name": "ffi_ffi_bridge_nominal_ref_type",
+      "export_name": "ffi_bridge::nominal_ref_type",
+      "signature": "(i32, i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3323,
+      "function_index": 3698,
       "internal_name": "ffi_ffi_bridge_rec_types_new",
       "export_name": "ffi_bridge::rec_types_new",
-      "signature": "() -> (ref 180)",
+      "signature": "() -> (ref 33)",
       "status": "bound"
     },
     {
-      "ordinal": 3298,
-      "function_index": 3667,
+      "ordinal": 3322,
+      "function_index": 3696,
       "internal_name": "ffi_ffi_bridge_rec_types_push",
       "export_name": "ffi_bridge::rec_types_push",
-      "signature": "((ref 180), (ref 0)) -> Unit",
+      "signature": "((ref 33), (ref 0)) -> Unit",
       "status": "bound"
     },
     {
-      "ordinal": 1674,
-      "function_index": 2001,
+      "ordinal": 1689,
+      "function_index": 2016,
       "internal_name": "ffi_lib_TypeSec_new",
       "export_name": "TypeSec::new",
-      "signature": "((ref 180)) -> (ref 180)",
+      "signature": "((ref 33)) -> (ref 33)",
       "status": "bound"
     },
     {
-      "ordinal": 1679,
-      "function_index": 2006,
+      "ordinal": 1694,
+      "function_index": 2021,
       "internal_name": "ffi_lib_TypeIdx_new",
       "export_name": "TypeIdx::new",
       "signature": "(i32) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 3297,
-      "function_index": 3666,
+      "ordinal": 3320,
+      "function_index": 3694,
       "internal_name": "ffi_ffi_bridge_type_indices_new",
       "export_name": "ffi_bridge::type_indices_new",
-      "signature": "() -> (ref 140)",
+      "signature": "() -> (ref 44)",
       "status": "bound"
     },
     {
-      "ordinal": 3296,
-      "function_index": 3664,
+      "ordinal": 3319,
+      "function_index": 3692,
       "internal_name": "ffi_ffi_bridge_type_indices_push",
       "export_name": "ffi_bridge::type_indices_push",
-      "signature": "((ref 140), (ref 0)) -> Unit",
+      "signature": "((ref 44), (ref 0)) -> Unit",
       "status": "bound"
     },
     {
-      "ordinal": 2444,
-      "function_index": 2778,
+      "ordinal": 2459,
+      "function_index": 2793,
       "internal_name": "ffi_lib_FuncSec_new",
       "export_name": "FuncSec::new",
-      "signature": "((ref 140)) -> (ref 140)",
+      "signature": "((ref 44)) -> (ref 44)",
       "status": "bound"
     },
     {
-      "ordinal": 2420,
-      "function_index": 2754,
+      "ordinal": 2435,
+      "function_index": 2769,
       "internal_name": "ffi_lib_I32_new",
       "export_name": "I32::new",
       "signature": "(i32) -> i32",
       "status": "bound"
     },
     {
-      "ordinal": 2188,
-      "function_index": 2522,
+      "ordinal": 2203,
+      "function_index": 2537,
       "internal_name": "ffi_lib_Instruction_i32_const",
       "export_name": "Instruction::i32_const",
       "signature": "(i32) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 3302,
-      "function_index": 3673,
+      "ordinal": 3333,
+      "function_index": 3711,
       "internal_name": "ffi_ffi_bridge_instructions_new",
       "export_name": "ffi_bridge::instructions_new",
-      "signature": "() -> (ref 125)",
+      "signature": "() -> (ref 45)",
       "status": "bound"
     },
     {
-      "ordinal": 3301,
-      "function_index": 3671,
+      "ordinal": 3332,
+      "function_index": 3709,
       "internal_name": "ffi_ffi_bridge_instructions_push",
       "export_name": "ffi_bridge::instructions_push",
-      "signature": "((ref 125), (ref 0)) -> Unit",
+      "signature": "((ref 45), (ref 0)) -> Unit",
       "status": "bound"
     },
     {
-      "ordinal": 2474,
-      "function_index": 2808,
+      "ordinal": 2489,
+      "function_index": 2823,
       "internal_name": "ffi_lib_Expr_new",
       "export_name": "Expr::new",
-      "signature": "((ref 125)) -> (ref 125)",
+      "signature": "((ref 45)) -> (ref 45)",
       "status": "bound"
     },
     {
-      "ordinal": 1801,
-      "function_index": 2133,
+      "ordinal": 1816,
+      "function_index": 2148,
       "internal_name": "ffi_lib_Locals_empty",
       "export_name": "Locals::empty",
-      "signature": "() -> (ref 348)",
+      "signature": "() -> (ref 293)",
       "status": "bound"
     },
     {
-      "ordinal": 2449,
-      "function_index": 2783,
+      "ordinal": 2464,
+      "function_index": 2798,
       "internal_name": "ffi_lib_Func_new",
       "export_name": "Func::new",
-      "signature": "((ref 348), (ref 125)) -> (ref 0)",
+      "signature": "((ref 293), (ref 45)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3345,
+      "function_index": 3725,
+      "internal_name": "ffi_ffi_bridge_funcs_new",
+      "export_name": "ffi_bridge::funcs_new",
+      "signature": "() -> (ref 70)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3344,
+      "function_index": 3723,
+      "internal_name": "ffi_ffi_bridge_funcs_push",
+      "export_name": "ffi_bridge::funcs_push",
+      "signature": "((ref 70), (ref 0)) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3321,
+      "function_index": 3695,
+      "internal_name": "ffi_ffi_bridge_runtime_function_builder_new",
+      "export_name": "ffi_bridge::runtime_function_builder_new",
+      "signature": "(i32, i32, i32, i32, i32, i32, i32, i32) -> (ref 2472)",
       "status": "bound"
     },
     {
       "ordinal": 3305,
-      "function_index": 3677,
-      "internal_name": "ffi_ffi_bridge_funcs_new",
-      "export_name": "ffi_bridge::funcs_new",
-      "signature": "() -> (ref 200)",
+      "function_index": 3672,
+      "internal_name": "ffi_ffi_bridge_RuntimeFunctionBuilder_push_name_byte",
+      "export_name": "RuntimeFunctionBuilder::push_name_byte",
+      "signature": "((ref 2472), i32) -> Unit",
       "status": "bound"
     },
     {
-      "ordinal": 3304,
-      "function_index": 3675,
-      "internal_name": "ffi_ffi_bridge_funcs_push",
-      "export_name": "ffi_bridge::funcs_push",
-      "signature": "((ref 200), (ref 0)) -> Unit",
+      "ordinal": 3343,
+      "function_index": 3722,
+      "internal_name": "ffi_ffi_bridge_funcs_push_runtime",
+      "export_name": "ffi_bridge::funcs_push_runtime",
+      "signature": "((ref 70), (ref 2472)) -> i32",
       "status": "bound"
     },
     {
-      "ordinal": 2500,
-      "function_index": 2834,
+      "ordinal": 2515,
+      "function_index": 2849,
       "internal_name": "ffi_lib_CodeSec_new",
       "export_name": "CodeSec::new",
-      "signature": "((ref 200)) -> (ref 200)",
+      "signature": "((ref 70)) -> (ref 70)",
       "status": "bound"
     },
     {
-      "ordinal": 3300,
-      "function_index": 3670,
+      "ordinal": 3329,
+      "function_index": 3704,
       "internal_name": "ffi_ffi_bridge_module_new",
       "export_name": "ffi_bridge::module_new",
-      "signature": "() -> (ref 207)",
+      "signature": "() -> (ref 78)",
       "status": "bound"
     },
     {
-      "ordinal": 1755,
-      "function_index": 2082,
+      "ordinal": 3327,
+      "function_index": 3702,
+      "internal_name": "ffi_ffi_bridge_module_with_default_memory",
+      "export_name": "ffi_bridge::module_with_default_memory",
+      "signature": "((ref 78)) -> (ref 78)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1770,
+      "function_index": 2097,
       "internal_name": "ffi_lib_Module_with_type_sec",
       "export_name": "Module::with_type_sec",
-      "signature": "((ref 207), (ref 180)) -> (ref 207)",
+      "signature": "((ref 78), (ref 33)) -> (ref 78)",
       "status": "bound"
     },
     {
-      "ordinal": 1765,
-      "function_index": 2092,
+      "ordinal": 1780,
+      "function_index": 2107,
       "internal_name": "ffi_lib_Module_with_func_sec",
       "export_name": "Module::with_func_sec",
-      "signature": "((ref 207), (ref 140)) -> (ref 207)",
+      "signature": "((ref 78), (ref 44)) -> (ref 78)",
       "status": "bound"
     },
     {
-      "ordinal": 1772,
-      "function_index": 2099,
+      "ordinal": 1787,
+      "function_index": 2114,
       "internal_name": "ffi_lib_Module_with_code_sec",
       "export_name": "Module::with_code_sec",
-      "signature": "((ref 207), (ref 200)) -> (ref 207)",
+      "signature": "((ref 78), (ref 70)) -> (ref 78)",
       "status": "bound"
     },
     {
-      "ordinal": 3293,
-      "function_index": 3660,
+      "ordinal": 3316,
+      "function_index": 3688,
       "internal_name": "ffi_ffi_bridge_validate_module",
       "export_name": "ffi_bridge::validate_module",
-      "signature": "((ref 207)) -> i32",
+      "signature": "((ref 78)) -> i32",
       "status": "bound"
     },
     {
-      "ordinal": 3308,
-      "function_index": 3681,
+      "ordinal": 3348,
+      "function_index": 3729,
       "internal_name": "ffi_ffi_bridge_encode_module",
       "export_name": "ffi_bridge::encode_module",
-      "signature": "((ref 207)) -> (ref 3858)",
+      "signature": "((ref 78)) -> (ref 3885)",
       "status": "bound"
     },
     {
-      "ordinal": 3290,
-      "function_index": 3657,
+      "ordinal": 3310,
+      "function_index": 3682,
       "internal_name": "ffi_ffi_bridge_EncodedModule_is_ok",
       "export_name": "EncodedModule::is_ok",
-      "signature": "((ref 3858)) -> i32",
+      "signature": "((ref 3885)) -> i32",
       "status": "bound"
     },
     {
-      "ordinal": 3291,
-      "function_index": 3658,
+      "ordinal": 3311,
+      "function_index": 3683,
       "internal_name": "ffi_ffi_bridge_EncodedModule_byte_length",
       "export_name": "EncodedModule::byte_length",
-      "signature": "((ref 3858)) -> i32",
+      "signature": "((ref 3885)) -> i32",
       "status": "bound"
     },
     {
-      "ordinal": 3292,
-      "function_index": 3659,
+      "ordinal": 3312,
+      "function_index": 3684,
       "internal_name": "ffi_ffi_bridge_EncodedModule_byte_at",
       "export_name": "EncodedModule::byte_at",
-      "signature": "((ref 3858), i32) -> i32",
+      "signature": "((ref 3885), i32) -> i32",
       "status": "bound"
     },
     {
-      "ordinal": 2183,
-      "function_index": 2517,
+      "ordinal": 2198,
+      "function_index": 2532,
       "internal_name": "ffi_lib_Instruction_i32_eqz",
       "export_name": "Instruction::i32_eqz",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2184,
-      "function_index": 2518,
+      "ordinal": 2199,
+      "function_index": 2533,
       "internal_name": "ffi_lib_Instruction_i32_eq",
       "export_name": "Instruction::i32_eq",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2166,
-      "function_index": 2500,
+      "ordinal": 2181,
+      "function_index": 2515,
       "internal_name": "ffi_lib_Instruction_i32_ne",
       "export_name": "Instruction::i32_ne",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2169,
-      "function_index": 2503,
+      "ordinal": 2184,
+      "function_index": 2518,
       "internal_name": "ffi_lib_Instruction_i32_lt_s",
       "export_name": "Instruction::i32_lt_s",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2168,
-      "function_index": 2502,
+      "ordinal": 2183,
+      "function_index": 2517,
       "internal_name": "ffi_lib_Instruction_i32_lt_u",
       "export_name": "Instruction::i32_lt_u",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2178,
-      "function_index": 2512,
+      "ordinal": 2193,
+      "function_index": 2527,
       "internal_name": "ffi_lib_Instruction_i32_gt_s",
       "export_name": "Instruction::i32_gt_s",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2177,
-      "function_index": 2511,
+      "ordinal": 2192,
+      "function_index": 2526,
       "internal_name": "ffi_lib_Instruction_i32_gt_u",
       "export_name": "Instruction::i32_gt_u",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2176,
-      "function_index": 2510,
+      "ordinal": 2191,
+      "function_index": 2525,
       "internal_name": "ffi_lib_Instruction_i32_le_s",
       "export_name": "Instruction::i32_le_s",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2175,
-      "function_index": 2509,
+      "ordinal": 2190,
+      "function_index": 2524,
       "internal_name": "ffi_lib_Instruction_i32_le_u",
       "export_name": "Instruction::i32_le_u",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2180,
-      "function_index": 2514,
+      "ordinal": 2195,
+      "function_index": 2529,
       "internal_name": "ffi_lib_Instruction_i32_ge_s",
       "export_name": "Instruction::i32_ge_s",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2179,
-      "function_index": 2513,
+      "ordinal": 2194,
+      "function_index": 2528,
       "internal_name": "ffi_lib_Instruction_i32_ge_u",
       "export_name": "Instruction::i32_ge_u",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2197,
-      "function_index": 2531,
+      "ordinal": 2212,
+      "function_index": 2546,
       "internal_name": "ffi_lib_Instruction_i32_add",
       "export_name": "Instruction::i32_add",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2152,
-      "function_index": 2486,
+      "ordinal": 2167,
+      "function_index": 2501,
       "internal_name": "ffi_lib_Instruction_i32_sub",
       "export_name": "Instruction::i32_sub",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2167,
-      "function_index": 2501,
+      "ordinal": 2409,
+      "function_index": 2743,
+      "internal_name": "ffi_lib_Instruction_array_set",
+      "export_name": "Instruction::array_set",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2421,
+      "function_index": 2755,
+      "internal_name": "ffi_lib_Instruction_array_get",
+      "export_name": "Instruction::array_get",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1958,
+      "function_index": 2292,
+      "internal_name": "ffi_lib_Instruction_ref_eq",
+      "export_name": "Instruction::ref_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2182,
+      "function_index": 2516,
       "internal_name": "ffi_lib_Instruction_i32_mul",
       "export_name": "Instruction::i32_mul",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2186,
-      "function_index": 2520,
+      "ordinal": 2201,
+      "function_index": 2535,
       "internal_name": "ffi_lib_Instruction_i32_div_s",
       "export_name": "Instruction::i32_div_s",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2185,
-      "function_index": 2519,
+      "ordinal": 2200,
+      "function_index": 2534,
       "internal_name": "ffi_lib_Instruction_i32_div_u",
       "export_name": "Instruction::i32_div_u",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2162,
-      "function_index": 2496,
+      "ordinal": 2177,
+      "function_index": 2511,
       "internal_name": "ffi_lib_Instruction_i32_rem_s",
       "export_name": "Instruction::i32_rem_s",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2161,
-      "function_index": 2495,
+      "ordinal": 2176,
+      "function_index": 2510,
       "internal_name": "ffi_lib_Instruction_i32_rem_u",
       "export_name": "Instruction::i32_rem_u",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2196,
-      "function_index": 2530,
+      "ordinal": 2211,
+      "function_index": 2545,
       "internal_name": "ffi_lib_Instruction_i32_and",
       "export_name": "Instruction::i32_and",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2165,
-      "function_index": 2499,
+      "ordinal": 2180,
+      "function_index": 2514,
       "internal_name": "ffi_lib_Instruction_i32_or",
       "export_name": "Instruction::i32_or",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2142,
-      "function_index": 2476,
+      "ordinal": 2157,
+      "function_index": 2491,
       "internal_name": "ffi_lib_Instruction_i32_xor",
       "export_name": "Instruction::i32_xor",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2158,
-      "function_index": 2492,
-      "internal_name": "ffi_lib_Instruction_i32_shl",
-      "export_name": "Instruction::i32_shl",
+      "ordinal": 1896,
+      "function_index": 2230,
+      "internal_name": "ffi_lib_Instruction_v128_and",
+      "export_name": "Instruction::v128_and",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2157,
-      "function_index": 2491,
-      "internal_name": "ffi_lib_Instruction_i32_shr_s",
-      "export_name": "Instruction::i32_shr_s",
+      "ordinal": 1873,
+      "function_index": 2207,
+      "internal_name": "ffi_lib_Instruction_v128_or",
+      "export_name": "Instruction::v128_or",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2156,
-      "function_index": 2490,
-      "internal_name": "ffi_lib_Instruction_i32_shr_u",
-      "export_name": "Instruction::i32_shr_u",
+      "ordinal": 1867,
+      "function_index": 2201,
+      "internal_name": "ffi_lib_Instruction_v128_xor",
+      "export_name": "Instruction::v128_xor",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1782,
-      "function_index": 2109,
-      "internal_name": "ffi_lib_Locals_single",
-      "export_name": "Locals::single",
-      "signature": "(i32, (ref 0)) -> (ref 348)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1809,
-      "function_index": 2143,
-      "internal_name": "ffi_lib_LocalIdx_new",
-      "export_name": "LocalIdx::new",
-      "signature": "(i32) -> i32",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1962,
-      "function_index": 2296,
-      "internal_name": "ffi_lib_Instruction_local_get",
-      "export_name": "Instruction::local_get",
-      "signature": "(i32) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1961,
-      "function_index": 2295,
-      "internal_name": "ffi_lib_Instruction_local_set",
-      "export_name": "Instruction::local_set",
-      "signature": "(i32) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1960,
-      "function_index": 2294,
-      "internal_name": "ffi_lib_Instruction_local_tee",
-      "export_name": "Instruction::local_tee",
-      "signature": "(i32) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2373,
-      "function_index": 2707,
-      "internal_name": "ffi_lib_Instruction_drop",
-      "export_name": "Instruction::drop",
+      "ordinal": 2202,
+      "function_index": 2536,
+      "internal_name": "ffi_lib_Instruction_i32_ctz",
+      "export_name": "Instruction::i32_ctz",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2445,
-      "function_index": 2779,
-      "internal_name": "ffi_lib_FuncIdx_new",
-      "export_name": "FuncIdx::new",
-      "signature": "(i32) -> i32",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2379,
-      "function_index": 2713,
-      "internal_name": "ffi_lib_Instruction_call",
-      "export_name": "Instruction::call",
-      "signature": "(i32) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2511,
-      "function_index": 2845,
-      "internal_name": "ffi_lib_BlockType_val_type",
-      "export_name": "BlockType::val_type",
-      "signature": "((ref 0)) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 3303,
-      "function_index": 3674,
-      "internal_name": "ffi_ffi_bridge_instruction_if",
-      "export_name": "ffi_bridge::instruction_if",
-      "signature": "((ref 0), (ref 125), (ref 125)) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1928,
-      "function_index": 2262,
-      "internal_name": "ffi_lib_Instruction_return_",
-      "export_name": "Instruction::return_",
+      "ordinal": 2196,
+      "function_index": 2530,
+      "internal_name": "ffi_lib_Instruction_i32_extend8s",
+      "export_name": "Instruction::i32_extend8s",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1882,
-      "function_index": 2216,
-      "internal_name": "ffi_lib_Instruction_unreachable_",
-      "export_name": "Instruction::unreachable_",
+      "ordinal": 2197,
+      "function_index": 2531,
+      "internal_name": "ffi_lib_Instruction_i32_extend16s",
+      "export_name": "Instruction::i32_extend16s",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2510,
-      "function_index": 2844,
-      "internal_name": "ffi_lib_BlockType_void_",
-      "export_name": "BlockType::void_",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2389,
-      "function_index": 2723,
-      "internal_name": "ffi_lib_Instruction_block",
-      "export_name": "Instruction::block",
-      "signature": "((ref 0), (ref 125)) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1959,
-      "function_index": 2293,
-      "internal_name": "ffi_lib_Instruction_loop_",
-      "export_name": "Instruction::loop_",
-      "signature": "((ref 0), (ref 125)) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1851,
-      "function_index": 2185,
-      "internal_name": "ffi_lib_LabelIdx_new",
-      "export_name": "LabelIdx::new",
-      "signature": "(i32) -> i32",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2388,
-      "function_index": 2722,
-      "internal_name": "ffi_lib_Instruction_br",
-      "export_name": "Instruction::br",
-      "signature": "(i32) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1508,
-      "function_index": 1835,
-      "internal_name": "ffi_lib_ValType_i64",
-      "export_name": "ValType::i64",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1514,
-      "function_index": 1841,
-      "internal_name": "ffi_lib_ValType_f32",
-      "export_name": "ValType::f32",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1513,
-      "function_index": 1840,
-      "internal_name": "ffi_lib_ValType_f64",
-      "export_name": "ValType::f64",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 1789,
-      "function_index": 2117,
-      "internal_name": "ffi_lib_Locals_push",
-      "export_name": "Locals::push",
-      "signature": "((ref 348), (ref 0)) -> Unit",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2419,
-      "function_index": 2753,
-      "internal_name": "ffi_lib_I64_new",
-      "export_name": "I64::new",
-      "signature": "(i64) -> i64",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2455,
-      "function_index": 2789,
-      "internal_name": "ffi_lib_F32_new",
-      "export_name": "F32::new",
-      "signature": "(f32) -> f32",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2454,
-      "function_index": 2788,
-      "internal_name": "ffi_lib_F64_new",
-      "export_name": "F64::new",
-      "signature": "(f64) -> f64",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2082,
-      "function_index": 2416,
-      "internal_name": "ffi_lib_Instruction_i64_const",
-      "export_name": "Instruction::i64_const",
-      "signature": "(i64) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2077,
-      "function_index": 2411,
-      "internal_name": "ffi_lib_Instruction_i64_eqz",
-      "export_name": "Instruction::i64_eqz",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2078,
-      "function_index": 2412,
-      "internal_name": "ffi_lib_Instruction_i64_eq",
-      "export_name": "Instruction::i64_eq",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2055,
-      "function_index": 2389,
-      "internal_name": "ffi_lib_Instruction_i64_ne",
-      "export_name": "Instruction::i64_ne",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2058,
-      "function_index": 2392,
-      "internal_name": "ffi_lib_Instruction_i64_lt_s",
-      "export_name": "Instruction::i64_lt_s",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2057,
-      "function_index": 2391,
-      "internal_name": "ffi_lib_Instruction_i64_lt_u",
-      "export_name": "Instruction::i64_lt_u",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2069,
-      "function_index": 2403,
-      "internal_name": "ffi_lib_Instruction_i64_gt_s",
-      "export_name": "Instruction::i64_gt_s",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2068,
-      "function_index": 2402,
-      "internal_name": "ffi_lib_Instruction_i64_gt_u",
-      "export_name": "Instruction::i64_gt_u",
+      "ordinal": 2178,
+      "function_index": 2512,
+      "internal_name": "ffi_lib_Instruction_i32_reinterpret_f32",
+      "export_name": "Instruction::i32_reinterpret_f32",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
       "ordinal": 2067,
       "function_index": 2401,
-      "internal_name": "ffi_lib_Instruction_i64_le_s",
-      "export_name": "Instruction::i64_le_s",
+      "internal_name": "ffi_lib_Instruction_i64_reinterpret_f64",
+      "export_name": "Instruction::i64_reinterpret_f64",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2066,
-      "function_index": 2400,
-      "internal_name": "ffi_lib_Instruction_i64_le_u",
-      "export_name": "Instruction::i64_le_u",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2071,
-      "function_index": 2405,
-      "internal_name": "ffi_lib_Instruction_i64_ge_s",
-      "export_name": "Instruction::i64_ge_s",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2070,
-      "function_index": 2404,
-      "internal_name": "ffi_lib_Instruction_i64_ge_u",
-      "export_name": "Instruction::i64_ge_u",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2093,
-      "function_index": 2427,
-      "internal_name": "ffi_lib_Instruction_i64_add",
-      "export_name": "Instruction::i64_add",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2040,
-      "function_index": 2374,
-      "internal_name": "ffi_lib_Instruction_i64_sub",
-      "export_name": "Instruction::i64_sub",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2056,
-      "function_index": 2390,
-      "internal_name": "ffi_lib_Instruction_i64_mul",
-      "export_name": "Instruction::i64_mul",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2080,
-      "function_index": 2414,
-      "internal_name": "ffi_lib_Instruction_i64_div_s",
-      "export_name": "Instruction::i64_div_s",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2079,
-      "function_index": 2413,
-      "internal_name": "ffi_lib_Instruction_i64_div_u",
-      "export_name": "Instruction::i64_div_u",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2051,
-      "function_index": 2385,
-      "internal_name": "ffi_lib_Instruction_i64_rem_s",
-      "export_name": "Instruction::i64_rem_s",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2050,
-      "function_index": 2384,
-      "internal_name": "ffi_lib_Instruction_i64_rem_u",
-      "export_name": "Instruction::i64_rem_u",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2092,
-      "function_index": 2426,
-      "internal_name": "ffi_lib_Instruction_i64_and",
-      "export_name": "Instruction::i64_and",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2054,
-      "function_index": 2388,
-      "internal_name": "ffi_lib_Instruction_i64_or",
-      "export_name": "Instruction::i64_or",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2031,
-      "function_index": 2365,
-      "internal_name": "ffi_lib_Instruction_i64_xor",
-      "export_name": "Instruction::i64_xor",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2047,
-      "function_index": 2381,
-      "internal_name": "ffi_lib_Instruction_i64_shl",
-      "export_name": "Instruction::i64_shl",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2046,
-      "function_index": 2380,
-      "internal_name": "ffi_lib_Instruction_i64_shr_s",
-      "export_name": "Instruction::i64_shr_s",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2045,
-      "function_index": 2379,
-      "internal_name": "ffi_lib_Instruction_i64_shr_u",
-      "export_name": "Instruction::i64_shr_u",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2367,
-      "function_index": 2701,
-      "internal_name": "ffi_lib_Instruction_f32_const",
-      "export_name": "Instruction::f32_const",
-      "signature": "(f32) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2359,
-      "function_index": 2693,
-      "internal_name": "ffi_lib_Instruction_f32_eq",
-      "export_name": "Instruction::f32_eq",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2349,
-      "function_index": 2683,
-      "internal_name": "ffi_lib_Instruction_f32_ne",
-      "export_name": "Instruction::f32_ne",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2353,
-      "function_index": 2687,
-      "internal_name": "ffi_lib_Instruction_f32_lt",
-      "export_name": "Instruction::f32_lt",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2356,
-      "function_index": 2690,
-      "internal_name": "ffi_lib_Instruction_f32_gt",
-      "export_name": "Instruction::f32_gt",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2355,
-      "function_index": 2689,
-      "internal_name": "ffi_lib_Instruction_f32_le",
-      "export_name": "Instruction::f32_le",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2357,
-      "function_index": 2691,
-      "internal_name": "ffi_lib_Instruction_f32_ge",
-      "export_name": "Instruction::f32_ge",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2369,
-      "function_index": 2703,
-      "internal_name": "ffi_lib_Instruction_f32_add",
-      "export_name": "Instruction::f32_add",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2343,
-      "function_index": 2677,
-      "internal_name": "ffi_lib_Instruction_f32_sub",
-      "export_name": "Instruction::f32_sub",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2350,
-      "function_index": 2684,
-      "internal_name": "ffi_lib_Instruction_f32_mul",
-      "export_name": "Instruction::f32_mul",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2360,
-      "function_index": 2694,
-      "internal_name": "ffi_lib_Instruction_f32_div",
-      "export_name": "Instruction::f32_div",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2347,
-      "function_index": 2681,
-      "internal_name": "ffi_lib_Instruction_f32_neg",
-      "export_name": "Instruction::f32_neg",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2307,
-      "function_index": 2641,
-      "internal_name": "ffi_lib_Instruction_f64_const",
-      "export_name": "Instruction::f64_const",
-      "signature": "(f64) -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2300,
-      "function_index": 2634,
-      "internal_name": "ffi_lib_Instruction_f64_eq",
-      "export_name": "Instruction::f64_eq",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2290,
-      "function_index": 2624,
-      "internal_name": "ffi_lib_Instruction_f64_ne",
-      "export_name": "Instruction::f64_ne",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2294,
-      "function_index": 2628,
-      "internal_name": "ffi_lib_Instruction_f64_lt",
-      "export_name": "Instruction::f64_lt",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2297,
-      "function_index": 2631,
-      "internal_name": "ffi_lib_Instruction_f64_gt",
-      "export_name": "Instruction::f64_gt",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2296,
-      "function_index": 2630,
-      "internal_name": "ffi_lib_Instruction_f64_le",
-      "export_name": "Instruction::f64_le",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2298,
-      "function_index": 2632,
-      "internal_name": "ffi_lib_Instruction_f64_ge",
-      "export_name": "Instruction::f64_ge",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2309,
-      "function_index": 2643,
-      "internal_name": "ffi_lib_Instruction_f64_add",
-      "export_name": "Instruction::f64_add",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2283,
-      "function_index": 2617,
-      "internal_name": "ffi_lib_Instruction_f64_sub",
-      "export_name": "Instruction::f64_sub",
-      "signature": "() -> (ref 0)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 2291,
-      "function_index": 2625,
-      "internal_name": "ffi_lib_Instruction_f64_mul",
-      "export_name": "Instruction::f64_mul",
+      "ordinal": 2361,
+      "function_index": 2695,
+      "internal_name": "ffi_lib_Instruction_f32_reinterpret_i32",
+      "export_name": "Instruction::f32_reinterpret_i32",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
       "ordinal": 2301,
       "function_index": 2635,
+      "internal_name": "ffi_lib_Instruction_f64_reinterpret_i64",
+      "export_name": "Instruction::f64_reinterpret_i64",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2385,
+      "function_index": 2719,
+      "internal_name": "ffi_lib_Instruction_f32_abs",
+      "export_name": "Instruction::f32_abs",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2360,
+      "function_index": 2694,
+      "internal_name": "ffi_lib_Instruction_f32_sqrt",
+      "export_name": "Instruction::f32_sqrt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2383,
+      "function_index": 2717,
+      "internal_name": "ffi_lib_Instruction_f32_ceil",
+      "export_name": "Instruction::f32_ceil",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2373,
+      "function_index": 2707,
+      "internal_name": "ffi_lib_Instruction_f32_floor",
+      "export_name": "Instruction::f32_floor",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2357,
+      "function_index": 2691,
+      "internal_name": "ffi_lib_Instruction_f32_trunc",
+      "export_name": "Instruction::f32_trunc",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2363,
+      "function_index": 2697,
+      "internal_name": "ffi_lib_Instruction_f32_nearest",
+      "export_name": "Instruction::f32_nearest",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2325,
+      "function_index": 2659,
+      "internal_name": "ffi_lib_Instruction_f64_abs",
+      "export_name": "Instruction::f64_abs",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2300,
+      "function_index": 2634,
+      "internal_name": "ffi_lib_Instruction_f64_sqrt",
+      "export_name": "Instruction::f64_sqrt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2323,
+      "function_index": 2657,
+      "internal_name": "ffi_lib_Instruction_f64_ceil",
+      "export_name": "Instruction::f64_ceil",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2314,
+      "function_index": 2648,
+      "internal_name": "ffi_lib_Instruction_f64_floor",
+      "export_name": "Instruction::f64_floor",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2297,
+      "function_index": 2631,
+      "internal_name": "ffi_lib_Instruction_f64_trunc",
+      "export_name": "Instruction::f64_trunc",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2304,
+      "function_index": 2638,
+      "internal_name": "ffi_lib_Instruction_f64_nearest",
+      "export_name": "Instruction::f64_nearest",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2158,
+      "function_index": 2492,
+      "internal_name": "ffi_lib_Instruction_i32_wrap_i64",
+      "export_name": "Instruction::i32_wrap_i64",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2088,
+      "function_index": 2422,
+      "internal_name": "ffi_lib_Instruction_i64_extend_i32s",
+      "export_name": "Instruction::i64_extend_i32s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2087,
+      "function_index": 2421,
+      "internal_name": "ffi_lib_Instruction_i64_extend_i32u",
+      "export_name": "Instruction::i64_extend_i32u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2381,
+      "function_index": 2715,
+      "internal_name": "ffi_lib_Instruction_f32_convert_i32s",
+      "export_name": "Instruction::f32_convert_i32s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2380,
+      "function_index": 2714,
+      "internal_name": "ffi_lib_Instruction_f32_convert_i32u",
+      "export_name": "Instruction::f32_convert_i32u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2379,
+      "function_index": 2713,
+      "internal_name": "ffi_lib_Instruction_f32_convert_i64s",
+      "export_name": "Instruction::f32_convert_i64s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2378,
+      "function_index": 2712,
+      "internal_name": "ffi_lib_Instruction_f32_convert_i64u",
+      "export_name": "Instruction::f32_convert_i64u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2321,
+      "function_index": 2655,
+      "internal_name": "ffi_lib_Instruction_f64_convert_i32s",
+      "export_name": "Instruction::f64_convert_i32s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2320,
+      "function_index": 2654,
+      "internal_name": "ffi_lib_Instruction_f64_convert_i32u",
+      "export_name": "Instruction::f64_convert_i32u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2319,
+      "function_index": 2653,
+      "internal_name": "ffi_lib_Instruction_f64_convert_i64s",
+      "export_name": "Instruction::f64_convert_i64s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2318,
+      "function_index": 2652,
+      "internal_name": "ffi_lib_Instruction_f64_convert_i64u",
+      "export_name": "Instruction::f64_convert_i64u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2166,
+      "function_index": 2500,
+      "internal_name": "ffi_lib_Instruction_i32_trunc_f32s",
+      "export_name": "Instruction::i32_trunc_f32s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2165,
+      "function_index": 2499,
+      "internal_name": "ffi_lib_Instruction_i32_trunc_f32u",
+      "export_name": "Instruction::i32_trunc_f32u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2164,
+      "function_index": 2498,
+      "internal_name": "ffi_lib_Instruction_i32_trunc_f64s",
+      "export_name": "Instruction::i32_trunc_f64s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2163,
+      "function_index": 2497,
+      "internal_name": "ffi_lib_Instruction_i32_trunc_f64u",
+      "export_name": "Instruction::i32_trunc_f64u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2054,
+      "function_index": 2388,
+      "internal_name": "ffi_lib_Instruction_i64_trunc_f32s",
+      "export_name": "Instruction::i64_trunc_f32s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2053,
+      "function_index": 2387,
+      "internal_name": "ffi_lib_Instruction_i64_trunc_f32u",
+      "export_name": "Instruction::i64_trunc_f32u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2052,
+      "function_index": 2386,
+      "internal_name": "ffi_lib_Instruction_i64_trunc_f64s",
+      "export_name": "Instruction::i64_trunc_f64s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2051,
+      "function_index": 2385,
+      "internal_name": "ffi_lib_Instruction_i64_trunc_f64u",
+      "export_name": "Instruction::i64_trunc_f64u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2302,
+      "function_index": 2636,
+      "internal_name": "ffi_lib_Instruction_f64_promote_f32",
+      "export_name": "Instruction::f64_promote_f32",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2376,
+      "function_index": 2710,
+      "internal_name": "ffi_lib_Instruction_f32_demote_f64",
+      "export_name": "Instruction::f32_demote_f64",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2173,
+      "function_index": 2507,
+      "internal_name": "ffi_lib_Instruction_i32_shl",
+      "export_name": "Instruction::i32_shl",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2172,
+      "function_index": 2506,
+      "internal_name": "ffi_lib_Instruction_i32_shr_s",
+      "export_name": "Instruction::i32_shr_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2171,
+      "function_index": 2505,
+      "internal_name": "ffi_lib_Instruction_i32_shr_u",
+      "export_name": "Instruction::i32_shr_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1797,
+      "function_index": 2124,
+      "internal_name": "ffi_lib_Locals_single",
+      "export_name": "Locals::single",
+      "signature": "(i32, (ref 0)) -> (ref 293)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1824,
+      "function_index": 2158,
+      "internal_name": "ffi_lib_LocalIdx_new",
+      "export_name": "LocalIdx::new",
+      "signature": "(i32) -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1977,
+      "function_index": 2311,
+      "internal_name": "ffi_lib_Instruction_local_get",
+      "export_name": "Instruction::local_get",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1976,
+      "function_index": 2310,
+      "internal_name": "ffi_lib_Instruction_local_set",
+      "export_name": "Instruction::local_set",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1975,
+      "function_index": 2309,
+      "internal_name": "ffi_lib_Instruction_local_tee",
+      "export_name": "Instruction::local_tee",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2265,
+      "function_index": 2599,
+      "internal_name": "ffi_lib_Instruction_global_get",
+      "export_name": "Instruction::global_get",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2264,
+      "function_index": 2598,
+      "internal_name": "ffi_lib_Instruction_global_set",
+      "export_name": "Instruction::global_set",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2447,
+      "function_index": 2781,
+      "internal_name": "ffi_lib_GlobalIdx_new",
+      "export_name": "GlobalIdx::new",
+      "signature": "(i32) -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2388,
+      "function_index": 2722,
+      "internal_name": "ffi_lib_Instruction_drop",
+      "export_name": "Instruction::drop",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2460,
+      "function_index": 2794,
+      "internal_name": "ffi_lib_FuncIdx_new",
+      "export_name": "FuncIdx::new",
+      "signature": "(i32) -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2394,
+      "function_index": 2728,
+      "internal_name": "ffi_lib_Instruction_call",
+      "export_name": "Instruction::call",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2392,
+      "function_index": 2726,
+      "internal_name": "ffi_lib_Instruction_call_ref",
+      "export_name": "Instruction::call_ref",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1957,
+      "function_index": 2291,
+      "internal_name": "ffi_lib_Instruction_ref_func",
+      "export_name": "Instruction::ref_func",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1953,
+      "function_index": 2287,
+      "internal_name": "ffi_lib_Instruction_ref_null",
+      "export_name": "Instruction::ref_null",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2794,
+      "function_index": 3128,
+      "internal_name": "ffi_lib_AbsHeapType_func",
+      "export_name": "AbsHeapType::func",
+      "signature": "() -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2526,
+      "function_index": 2860,
+      "internal_name": "ffi_lib_BlockType_val_type",
+      "export_name": "BlockType::val_type",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3337,
+      "function_index": 3715,
+      "internal_name": "ffi_ffi_bridge_instruction_if",
+      "export_name": "ffi_bridge::instruction_if",
+      "signature": "((ref 0), (ref 45), (ref 45)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3341,
+      "function_index": 3720,
+      "internal_name": "ffi_ffi_bridge_global_builder_new",
+      "export_name": "ffi_bridge::global_builder_new",
+      "signature": "() -> (ref 1652)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3308,
+      "function_index": 3678,
+      "internal_name": "ffi_ffi_bridge_GlobalBuilder_push",
+      "export_name": "GlobalBuilder::push",
+      "signature": "((ref 1652), i32) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3326,
+      "function_index": 3701,
+      "internal_name": "ffi_ffi_bridge_module_with_globals",
+      "export_name": "ffi_bridge::module_with_globals",
+      "signature": "((ref 78), (ref 1652)) -> (ref 78)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3325,
+      "function_index": 3700,
+      "internal_name": "ffi_ffi_bridge_module_with_start_function",
+      "export_name": "ffi_bridge::module_with_start_function",
+      "signature": "((ref 78), i32) -> (ref 78)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3342,
+      "function_index": 3721,
+      "internal_name": "ffi_ffi_bridge_function_reference_builder_new",
+      "export_name": "ffi_bridge::function_reference_builder_new",
+      "signature": "() -> (ref 3855)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3309,
+      "function_index": 3680,
+      "internal_name": "ffi_ffi_bridge_FunctionReferenceBuilder_push",
+      "export_name": "FunctionReferenceBuilder::push",
+      "signature": "((ref 3855), i32) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3328,
+      "function_index": 3703,
+      "internal_name": "ffi_ffi_bridge_module_with_declarative_functions",
+      "export_name": "ffi_bridge::module_with_declarative_functions",
+      "signature": "((ref 78), (ref 3855)) -> (ref 78)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3339,
+      "function_index": 3718,
+      "internal_name": "ffi_ffi_bridge_imports_new",
+      "export_name": "ffi_bridge::imports_new",
+      "signature": "() -> (ref 77)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3340,
+      "function_index": 3719,
+      "internal_name": "ffi_ffi_bridge_import_builder_new",
+      "export_name": "ffi_bridge::import_builder_new",
+      "signature": "(i32) -> (ref 1481)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3306,
+      "function_index": 3674,
+      "internal_name": "ffi_ffi_bridge_ImportBuilder_push_module_byte",
+      "export_name": "ImportBuilder::push_module_byte",
+      "signature": "((ref 1481), i32) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3307,
+      "function_index": 3676,
+      "internal_name": "ffi_ffi_bridge_ImportBuilder_push_field_byte",
+      "export_name": "ImportBuilder::push_field_byte",
+      "signature": "((ref 1481), i32) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3338,
+      "function_index": 3716,
+      "internal_name": "ffi_ffi_bridge_imports_push_builder",
+      "export_name": "ffi_bridge::imports_push_builder",
+      "signature": "((ref 77), (ref 1481)) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2432,
+      "function_index": 2766,
+      "internal_name": "ffi_lib_ImportSec_new",
+      "export_name": "ImportSec::new",
+      "signature": "((ref 77)) -> (ref 77)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1778,
+      "function_index": 2105,
+      "internal_name": "ffi_lib_Module_with_import_sec",
+      "export_name": "Module::with_import_sec",
+      "signature": "((ref 78), (ref 77)) -> (ref 78)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1943,
+      "function_index": 2277,
+      "internal_name": "ffi_lib_Instruction_return_",
+      "export_name": "Instruction::return_",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1897,
+      "function_index": 2231,
+      "internal_name": "ffi_lib_Instruction_unreachable_",
+      "export_name": "Instruction::unreachable_",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2525,
+      "function_index": 2859,
+      "internal_name": "ffi_lib_BlockType_void_",
+      "export_name": "BlockType::void_",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2404,
+      "function_index": 2738,
+      "internal_name": "ffi_lib_Instruction_block",
+      "export_name": "Instruction::block",
+      "signature": "((ref 0), (ref 45)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1974,
+      "function_index": 2308,
+      "internal_name": "ffi_lib_Instruction_loop_",
+      "export_name": "Instruction::loop_",
+      "signature": "((ref 0), (ref 45)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1866,
+      "function_index": 2200,
+      "internal_name": "ffi_lib_LabelIdx_new",
+      "export_name": "LabelIdx::new",
+      "signature": "(i32) -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2403,
+      "function_index": 2737,
+      "internal_name": "ffi_lib_Instruction_br",
+      "export_name": "Instruction::br",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1523,
+      "function_index": 1850,
+      "internal_name": "ffi_lib_ValType_i64",
+      "export_name": "ValType::i64",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1529,
+      "function_index": 1856,
+      "internal_name": "ffi_lib_ValType_f32",
+      "export_name": "ValType::f32",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1528,
+      "function_index": 1855,
+      "internal_name": "ffi_lib_ValType_f64",
+      "export_name": "ValType::f64",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1804,
+      "function_index": 2132,
+      "internal_name": "ffi_lib_Locals_push",
+      "export_name": "Locals::push",
+      "signature": "((ref 293), (ref 0)) -> Unit",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2434,
+      "function_index": 2768,
+      "internal_name": "ffi_lib_I64_new",
+      "export_name": "I64::new",
+      "signature": "(i64) -> i64",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2470,
+      "function_index": 2804,
+      "internal_name": "ffi_lib_F32_new",
+      "export_name": "F32::new",
+      "signature": "(f32) -> f32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2469,
+      "function_index": 2803,
+      "internal_name": "ffi_lib_F64_new",
+      "export_name": "F64::new",
+      "signature": "(f64) -> f64",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2097,
+      "function_index": 2431,
+      "internal_name": "ffi_lib_Instruction_i64_const",
+      "export_name": "Instruction::i64_const",
+      "signature": "(i64) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2092,
+      "function_index": 2426,
+      "internal_name": "ffi_lib_Instruction_i64_eqz",
+      "export_name": "Instruction::i64_eqz",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2093,
+      "function_index": 2427,
+      "internal_name": "ffi_lib_Instruction_i64_eq",
+      "export_name": "Instruction::i64_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2070,
+      "function_index": 2404,
+      "internal_name": "ffi_lib_Instruction_i64_ne",
+      "export_name": "Instruction::i64_ne",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2073,
+      "function_index": 2407,
+      "internal_name": "ffi_lib_Instruction_i64_lt_s",
+      "export_name": "Instruction::i64_lt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2072,
+      "function_index": 2406,
+      "internal_name": "ffi_lib_Instruction_i64_lt_u",
+      "export_name": "Instruction::i64_lt_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2084,
+      "function_index": 2418,
+      "internal_name": "ffi_lib_Instruction_i64_gt_s",
+      "export_name": "Instruction::i64_gt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2083,
+      "function_index": 2417,
+      "internal_name": "ffi_lib_Instruction_i64_gt_u",
+      "export_name": "Instruction::i64_gt_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2082,
+      "function_index": 2416,
+      "internal_name": "ffi_lib_Instruction_i64_le_s",
+      "export_name": "Instruction::i64_le_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2081,
+      "function_index": 2415,
+      "internal_name": "ffi_lib_Instruction_i64_le_u",
+      "export_name": "Instruction::i64_le_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2086,
+      "function_index": 2420,
+      "internal_name": "ffi_lib_Instruction_i64_ge_s",
+      "export_name": "Instruction::i64_ge_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2085,
+      "function_index": 2419,
+      "internal_name": "ffi_lib_Instruction_i64_ge_u",
+      "export_name": "Instruction::i64_ge_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2108,
+      "function_index": 2442,
+      "internal_name": "ffi_lib_Instruction_i64_add",
+      "export_name": "Instruction::i64_add",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2055,
+      "function_index": 2389,
+      "internal_name": "ffi_lib_Instruction_i64_sub",
+      "export_name": "Instruction::i64_sub",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2071,
+      "function_index": 2405,
+      "internal_name": "ffi_lib_Instruction_i64_mul",
+      "export_name": "Instruction::i64_mul",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2095,
+      "function_index": 2429,
+      "internal_name": "ffi_lib_Instruction_i64_div_s",
+      "export_name": "Instruction::i64_div_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2094,
+      "function_index": 2428,
+      "internal_name": "ffi_lib_Instruction_i64_div_u",
+      "export_name": "Instruction::i64_div_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2066,
+      "function_index": 2400,
+      "internal_name": "ffi_lib_Instruction_i64_rem_s",
+      "export_name": "Instruction::i64_rem_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2065,
+      "function_index": 2399,
+      "internal_name": "ffi_lib_Instruction_i64_rem_u",
+      "export_name": "Instruction::i64_rem_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2107,
+      "function_index": 2441,
+      "internal_name": "ffi_lib_Instruction_i64_and",
+      "export_name": "Instruction::i64_and",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2069,
+      "function_index": 2403,
+      "internal_name": "ffi_lib_Instruction_i64_or",
+      "export_name": "Instruction::i64_or",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2046,
+      "function_index": 2380,
+      "internal_name": "ffi_lib_Instruction_i64_xor",
+      "export_name": "Instruction::i64_xor",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2062,
+      "function_index": 2396,
+      "internal_name": "ffi_lib_Instruction_i64_shl",
+      "export_name": "Instruction::i64_shl",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2061,
+      "function_index": 2395,
+      "internal_name": "ffi_lib_Instruction_i64_shr_s",
+      "export_name": "Instruction::i64_shr_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2060,
+      "function_index": 2394,
+      "internal_name": "ffi_lib_Instruction_i64_shr_u",
+      "export_name": "Instruction::i64_shr_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2382,
+      "function_index": 2716,
+      "internal_name": "ffi_lib_Instruction_f32_const",
+      "export_name": "Instruction::f32_const",
+      "signature": "(f32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2374,
+      "function_index": 2708,
+      "internal_name": "ffi_lib_Instruction_f32_eq",
+      "export_name": "Instruction::f32_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2364,
+      "function_index": 2698,
+      "internal_name": "ffi_lib_Instruction_f32_ne",
+      "export_name": "Instruction::f32_ne",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2368,
+      "function_index": 2702,
+      "internal_name": "ffi_lib_Instruction_f32_lt",
+      "export_name": "Instruction::f32_lt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2371,
+      "function_index": 2705,
+      "internal_name": "ffi_lib_Instruction_f32_gt",
+      "export_name": "Instruction::f32_gt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2370,
+      "function_index": 2704,
+      "internal_name": "ffi_lib_Instruction_f32_le",
+      "export_name": "Instruction::f32_le",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2372,
+      "function_index": 2706,
+      "internal_name": "ffi_lib_Instruction_f32_ge",
+      "export_name": "Instruction::f32_ge",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2384,
+      "function_index": 2718,
+      "internal_name": "ffi_lib_Instruction_f32_add",
+      "export_name": "Instruction::f32_add",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2358,
+      "function_index": 2692,
+      "internal_name": "ffi_lib_Instruction_f32_sub",
+      "export_name": "Instruction::f32_sub",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2365,
+      "function_index": 2699,
+      "internal_name": "ffi_lib_Instruction_f32_mul",
+      "export_name": "Instruction::f32_mul",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2375,
+      "function_index": 2709,
+      "internal_name": "ffi_lib_Instruction_f32_div",
+      "export_name": "Instruction::f32_div",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2362,
+      "function_index": 2696,
+      "internal_name": "ffi_lib_Instruction_f32_neg",
+      "export_name": "Instruction::f32_neg",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2322,
+      "function_index": 2656,
+      "internal_name": "ffi_lib_Instruction_f64_const",
+      "export_name": "Instruction::f64_const",
+      "signature": "(f64) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2315,
+      "function_index": 2649,
+      "internal_name": "ffi_lib_Instruction_f64_eq",
+      "export_name": "Instruction::f64_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2305,
+      "function_index": 2639,
+      "internal_name": "ffi_lib_Instruction_f64_ne",
+      "export_name": "Instruction::f64_ne",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2309,
+      "function_index": 2643,
+      "internal_name": "ffi_lib_Instruction_f64_lt",
+      "export_name": "Instruction::f64_lt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2312,
+      "function_index": 2646,
+      "internal_name": "ffi_lib_Instruction_f64_gt",
+      "export_name": "Instruction::f64_gt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2311,
+      "function_index": 2645,
+      "internal_name": "ffi_lib_Instruction_f64_le",
+      "export_name": "Instruction::f64_le",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2313,
+      "function_index": 2647,
+      "internal_name": "ffi_lib_Instruction_f64_ge",
+      "export_name": "Instruction::f64_ge",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2324,
+      "function_index": 2658,
+      "internal_name": "ffi_lib_Instruction_f64_add",
+      "export_name": "Instruction::f64_add",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2298,
+      "function_index": 2632,
+      "internal_name": "ffi_lib_Instruction_f64_sub",
+      "export_name": "Instruction::f64_sub",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2306,
+      "function_index": 2640,
+      "internal_name": "ffi_lib_Instruction_f64_mul",
+      "export_name": "Instruction::f64_mul",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2316,
+      "function_index": 2650,
       "internal_name": "ffi_lib_Instruction_f64_div",
       "export_name": "Instruction::f64_div",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2288,
-      "function_index": 2622,
+      "ordinal": 2303,
+      "function_index": 2637,
       "internal_name": "ffi_lib_Instruction_f64_neg",
       "export_name": "Instruction::f64_neg",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 3307,
-      "function_index": 3680,
+      "ordinal": 3347,
+      "function_index": 3728,
       "internal_name": "ffi_ffi_bridge_field_types_new",
       "export_name": "ffi_bridge::field_types_new",
-      "signature": "() -> (ref 1009)",
+      "signature": "() -> (ref 1003)",
       "status": "bound"
     },
     {
-      "ordinal": 3306,
-      "function_index": 3678,
+      "ordinal": 3346,
+      "function_index": 3726,
       "internal_name": "ffi_ffi_bridge_field_types_push",
       "export_name": "ffi_bridge::field_types_push",
-      "signature": "((ref 1009), (ref 1007)) -> Unit",
+      "signature": "((ref 1003), (ref 1001)) -> Unit",
       "status": "bound"
     },
     {
-      "ordinal": 2496,
-      "function_index": 2830,
+      "ordinal": 2511,
+      "function_index": 2845,
       "internal_name": "ffi_lib_CompType_struct_",
       "export_name": "CompType::struct_",
-      "signature": "((ref 1009)) -> (ref 0)",
+      "signature": "((ref 1003)) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1714,
-      "function_index": 2041,
+      "ordinal": 2514,
+      "function_index": 2848,
+      "internal_name": "ffi_lib_CompType_array",
+      "export_name": "CompType::array",
+      "signature": "((ref 1001)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1729,
+      "function_index": 2056,
       "internal_name": "ffi_lib_StorageType_val_type",
       "export_name": "StorageType::val_type",
       "signature": "((ref 0)) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2451,
-      "function_index": 2785,
+      "ordinal": 2466,
+      "function_index": 2800,
       "internal_name": "ffi_lib_FieldType_new",
       "export_name": "FieldType::new",
-      "signature": "((ref 0), i32) -> (ref 1007)",
+      "signature": "((ref 0), i32) -> (ref 1001)",
       "status": "bound"
     },
     {
-      "ordinal": 1753,
-      "function_index": 2080,
+      "ordinal": 1768,
+      "function_index": 2095,
       "internal_name": "ffi_lib_Mut_const_",
       "export_name": "Mut::const_",
       "signature": "() -> i32",
       "status": "bound"
     },
     {
-      "ordinal": 1752,
-      "function_index": 2079,
+      "ordinal": 1767,
+      "function_index": 2094,
       "internal_name": "ffi_lib_Mut_var_",
       "export_name": "Mut::var_",
       "signature": "() -> i32",
       "status": "bound"
     },
     {
-      "ordinal": 1899,
-      "function_index": 2233,
+      "ordinal": 1914,
+      "function_index": 2248,
       "internal_name": "ffi_lib_Instruction_struct_new",
       "export_name": "Instruction::struct_new",
       "signature": "((ref 0)) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1902,
-      "function_index": 2236,
+      "ordinal": 2410,
+      "function_index": 2744,
+      "internal_name": "ffi_lib_Instruction_array_new_fixed",
+      "export_name": "Instruction::array_new_fixed",
+      "signature": "((ref 0), i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1892,
+      "function_index": 2226,
+      "internal_name": "ffi_lib_Instruction_v128_const",
+      "export_name": "Instruction::v128_const",
+      "signature": "(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1688,
+      "function_index": 2015,
+      "internal_name": "ffi_lib_U32_new",
+      "export_name": "U32::new",
+      "signature": "(i32) -> i32",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1917,
+      "function_index": 2251,
       "internal_name": "ffi_lib_Instruction_struct_get",
       "export_name": "Instruction::struct_get",
       "signature": "((ref 0), i32) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1895,
-      "function_index": 2229,
+      "ordinal": 1910,
+      "function_index": 2244,
       "internal_name": "ffi_lib_Instruction_struct_set",
       "export_name": "Instruction::struct_set",
       "signature": "((ref 0), i32) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 2782,
-      "function_index": 3116,
+      "ordinal": 2797,
+      "function_index": 3131,
       "internal_name": "ffi_lib_AbsHeapType_eq",
       "export_name": "AbsHeapType::eq",
       "signature": "() -> i32",
       "status": "bound"
     },
     {
-      "ordinal": 2429,
-      "function_index": 2763,
+      "ordinal": 2444,
+      "function_index": 2778,
       "internal_name": "ffi_lib_HeapType_abs",
       "export_name": "HeapType::abs",
       "signature": "(i32) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1503,
-      "function_index": 1830,
+      "ordinal": 1518,
+      "function_index": 1845,
       "internal_name": "ffi_lib_ValType_ref_null",
       "export_name": "ValType::ref_null",
       "signature": "((ref 0)) -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1497,
-      "function_index": 1824,
+      "ordinal": 1514,
+      "function_index": 1841,
+      "internal_name": "ffi_lib_ValType_ref_type",
+      "export_name": "ValType::ref_type",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1743,
+      "function_index": 2070,
+      "internal_name": "ffi_lib_RefType_new",
+      "export_name": "RefType::new",
+      "signature": "(i32, (ref 0), i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2437,
+      "function_index": 2771,
+      "internal_name": "ffi_lib_HeapType_new",
+      "export_name": "HeapType::new",
+      "signature": "((ref 0)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1512,
+      "function_index": 1839,
       "internal_name": "ffi_lib_ValType_v128",
       "export_name": "ValType::v128",
       "signature": "() -> (ref 0)",
       "status": "bound"
     },
     {
-      "ordinal": 1690,
-      "function_index": 2017,
+      "ordinal": 1705,
+      "function_index": 2032,
       "internal_name": "ffi_lib_SubType_new",
       "export_name": "SubType::new",
-      "signature": "(i32, (ref 140), (ref 0), (ref null 910)) -> (ref 0)",
+      "signature": "(i32, (ref 44), (ref 0), (ref null 918)) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2356,
+      "function_index": 2690,
+      "internal_name": "ffi_lib_Instruction_f32x4_abs",
+      "export_name": "Instruction::f32x4_abs",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2355,
+      "function_index": 2689,
+      "internal_name": "ffi_lib_Instruction_f32x4_add",
+      "export_name": "Instruction::f32x4_add",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2354,
+      "function_index": 2688,
+      "internal_name": "ffi_lib_Instruction_f32x4_ceil",
+      "export_name": "Instruction::f32x4_ceil",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2350,
+      "function_index": 2684,
+      "internal_name": "ffi_lib_Instruction_f32x4_div",
+      "export_name": "Instruction::f32x4_div",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2349,
+      "function_index": 2683,
+      "internal_name": "ffi_lib_Instruction_f32x4_eq",
+      "export_name": "Instruction::f32x4_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2347,
+      "function_index": 2681,
+      "internal_name": "ffi_lib_Instruction_f32x4_floor",
+      "export_name": "Instruction::f32x4_floor",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2346,
+      "function_index": 2680,
+      "internal_name": "ffi_lib_Instruction_f32x4_ge",
+      "export_name": "Instruction::f32x4_ge",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2345,
+      "function_index": 2679,
+      "internal_name": "ffi_lib_Instruction_f32x4_gt",
+      "export_name": "Instruction::f32x4_gt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2344,
+      "function_index": 2678,
+      "internal_name": "ffi_lib_Instruction_f32x4_le",
+      "export_name": "Instruction::f32x4_le",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2343,
+      "function_index": 2677,
+      "internal_name": "ffi_lib_Instruction_f32x4_lt",
+      "export_name": "Instruction::f32x4_lt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2342,
+      "function_index": 2676,
+      "internal_name": "ffi_lib_Instruction_f32x4_max",
+      "export_name": "Instruction::f32x4_max",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2341,
+      "function_index": 2675,
+      "internal_name": "ffi_lib_Instruction_f32x4_min",
+      "export_name": "Instruction::f32x4_min",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2340,
+      "function_index": 2674,
+      "internal_name": "ffi_lib_Instruction_f32x4_mul",
+      "export_name": "Instruction::f32x4_mul",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2339,
+      "function_index": 2673,
+      "internal_name": "ffi_lib_Instruction_f32x4_ne",
+      "export_name": "Instruction::f32x4_ne",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2338,
+      "function_index": 2672,
+      "internal_name": "ffi_lib_Instruction_f32x4_nearest",
+      "export_name": "Instruction::f32x4_nearest",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2337,
+      "function_index": 2671,
+      "internal_name": "ffi_lib_Instruction_f32x4_neg",
+      "export_name": "Instruction::f32x4_neg",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2336,
+      "function_index": 2670,
+      "internal_name": "ffi_lib_Instruction_f32x4_pmax",
+      "export_name": "Instruction::f32x4_pmax",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2335,
+      "function_index": 2669,
+      "internal_name": "ffi_lib_Instruction_f32x4_pmin",
+      "export_name": "Instruction::f32x4_pmin",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2329,
+      "function_index": 2663,
+      "internal_name": "ffi_lib_Instruction_f32x4_splat",
+      "export_name": "Instruction::f32x4_splat",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2328,
+      "function_index": 2662,
+      "internal_name": "ffi_lib_Instruction_f32x4_sqrt",
+      "export_name": "Instruction::f32x4_sqrt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2327,
+      "function_index": 2661,
+      "internal_name": "ffi_lib_Instruction_f32x4_sub",
+      "export_name": "Instruction::f32x4_sub",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2326,
+      "function_index": 2660,
+      "internal_name": "ffi_lib_Instruction_f32x4_trunc",
+      "export_name": "Instruction::f32x4_trunc",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2296,
+      "function_index": 2630,
+      "internal_name": "ffi_lib_Instruction_f64x2_abs",
+      "export_name": "Instruction::f64x2_abs",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2295,
+      "function_index": 2629,
+      "internal_name": "ffi_lib_Instruction_f64x2_add",
+      "export_name": "Instruction::f64x2_add",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2294,
+      "function_index": 2628,
+      "internal_name": "ffi_lib_Instruction_f64x2_ceil",
+      "export_name": "Instruction::f64x2_ceil",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2291,
+      "function_index": 2625,
+      "internal_name": "ffi_lib_Instruction_f64x2_div",
+      "export_name": "Instruction::f64x2_div",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2290,
+      "function_index": 2624,
+      "internal_name": "ffi_lib_Instruction_f64x2_eq",
+      "export_name": "Instruction::f64x2_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2288,
+      "function_index": 2622,
+      "internal_name": "ffi_lib_Instruction_f64x2_floor",
+      "export_name": "Instruction::f64x2_floor",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2287,
+      "function_index": 2621,
+      "internal_name": "ffi_lib_Instruction_f64x2_ge",
+      "export_name": "Instruction::f64x2_ge",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2286,
+      "function_index": 2620,
+      "internal_name": "ffi_lib_Instruction_f64x2_gt",
+      "export_name": "Instruction::f64x2_gt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2285,
+      "function_index": 2619,
+      "internal_name": "ffi_lib_Instruction_f64x2_le",
+      "export_name": "Instruction::f64x2_le",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2284,
+      "function_index": 2618,
+      "internal_name": "ffi_lib_Instruction_f64x2_lt",
+      "export_name": "Instruction::f64x2_lt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2283,
+      "function_index": 2617,
+      "internal_name": "ffi_lib_Instruction_f64x2_max",
+      "export_name": "Instruction::f64x2_max",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2282,
+      "function_index": 2616,
+      "internal_name": "ffi_lib_Instruction_f64x2_min",
+      "export_name": "Instruction::f64x2_min",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2281,
+      "function_index": 2615,
+      "internal_name": "ffi_lib_Instruction_f64x2_mul",
+      "export_name": "Instruction::f64x2_mul",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2280,
+      "function_index": 2614,
+      "internal_name": "ffi_lib_Instruction_f64x2_ne",
+      "export_name": "Instruction::f64x2_ne",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2279,
+      "function_index": 2613,
+      "internal_name": "ffi_lib_Instruction_f64x2_nearest",
+      "export_name": "Instruction::f64x2_nearest",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2278,
+      "function_index": 2612,
+      "internal_name": "ffi_lib_Instruction_f64x2_neg",
+      "export_name": "Instruction::f64x2_neg",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2277,
+      "function_index": 2611,
+      "internal_name": "ffi_lib_Instruction_f64x2_pmax",
+      "export_name": "Instruction::f64x2_pmax",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2276,
+      "function_index": 2610,
+      "internal_name": "ffi_lib_Instruction_f64x2_pmin",
+      "export_name": "Instruction::f64x2_pmin",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2269,
+      "function_index": 2603,
+      "internal_name": "ffi_lib_Instruction_f64x2_splat",
+      "export_name": "Instruction::f64x2_splat",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2268,
+      "function_index": 2602,
+      "internal_name": "ffi_lib_Instruction_f64x2_sqrt",
+      "export_name": "Instruction::f64x2_sqrt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2267,
+      "function_index": 2601,
+      "internal_name": "ffi_lib_Instruction_f64x2_sub",
+      "export_name": "Instruction::f64x2_sub",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2266,
+      "function_index": 2600,
+      "internal_name": "ffi_lib_Instruction_f64x2_trunc",
+      "export_name": "Instruction::f64x2_trunc",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2263,
+      "function_index": 2597,
+      "internal_name": "ffi_lib_Instruction_i16x8_abs",
+      "export_name": "Instruction::i16x8_abs",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2262,
+      "function_index": 2596,
+      "internal_name": "ffi_lib_Instruction_i16x8_add",
+      "export_name": "Instruction::i16x8_add",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2261,
+      "function_index": 2595,
+      "internal_name": "ffi_lib_Instruction_i16x8_add_sat_s",
+      "export_name": "Instruction::i16x8_add_sat_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2260,
+      "function_index": 2594,
+      "internal_name": "ffi_lib_Instruction_i16x8_add_sat_u",
+      "export_name": "Instruction::i16x8_add_sat_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2259,
+      "function_index": 2593,
+      "internal_name": "ffi_lib_Instruction_i16x8_all_true",
+      "export_name": "Instruction::i16x8_all_true",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2258,
+      "function_index": 2592,
+      "internal_name": "ffi_lib_Instruction_i16x8_avgr_u",
+      "export_name": "Instruction::i16x8_avgr_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2257,
+      "function_index": 2591,
+      "internal_name": "ffi_lib_Instruction_i16x8_bitmask",
+      "export_name": "Instruction::i16x8_bitmask",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2256,
+      "function_index": 2590,
+      "internal_name": "ffi_lib_Instruction_i16x8_eq",
+      "export_name": "Instruction::i16x8_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2243,
+      "function_index": 2577,
+      "internal_name": "ffi_lib_Instruction_i16x8_ge_s",
+      "export_name": "Instruction::i16x8_ge_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2242,
+      "function_index": 2576,
+      "internal_name": "ffi_lib_Instruction_i16x8_ge_u",
+      "export_name": "Instruction::i16x8_ge_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2241,
+      "function_index": 2575,
+      "internal_name": "ffi_lib_Instruction_i16x8_gt_s",
+      "export_name": "Instruction::i16x8_gt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2240,
+      "function_index": 2574,
+      "internal_name": "ffi_lib_Instruction_i16x8_gt_u",
+      "export_name": "Instruction::i16x8_gt_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2239,
+      "function_index": 2573,
+      "internal_name": "ffi_lib_Instruction_i16x8_le_s",
+      "export_name": "Instruction::i16x8_le_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2238,
+      "function_index": 2572,
+      "internal_name": "ffi_lib_Instruction_i16x8_le_u",
+      "export_name": "Instruction::i16x8_le_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2237,
+      "function_index": 2571,
+      "internal_name": "ffi_lib_Instruction_i16x8_lt_s",
+      "export_name": "Instruction::i16x8_lt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2236,
+      "function_index": 2570,
+      "internal_name": "ffi_lib_Instruction_i16x8_lt_u",
+      "export_name": "Instruction::i16x8_lt_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2235,
+      "function_index": 2569,
+      "internal_name": "ffi_lib_Instruction_i16x8_max_s",
+      "export_name": "Instruction::i16x8_max_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2234,
+      "function_index": 2568,
+      "internal_name": "ffi_lib_Instruction_i16x8_max_u",
+      "export_name": "Instruction::i16x8_max_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2233,
+      "function_index": 2567,
+      "internal_name": "ffi_lib_Instruction_i16x8_min_s",
+      "export_name": "Instruction::i16x8_min_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2232,
+      "function_index": 2566,
+      "internal_name": "ffi_lib_Instruction_i16x8_min_u",
+      "export_name": "Instruction::i16x8_min_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2231,
+      "function_index": 2565,
+      "internal_name": "ffi_lib_Instruction_i16x8_mul",
+      "export_name": "Instruction::i16x8_mul",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2228,
+      "function_index": 2562,
+      "internal_name": "ffi_lib_Instruction_i16x8_ne",
+      "export_name": "Instruction::i16x8_ne",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2227,
+      "function_index": 2561,
+      "internal_name": "ffi_lib_Instruction_i16x8_neg",
+      "export_name": "Instruction::i16x8_neg",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2222,
+      "function_index": 2556,
+      "internal_name": "ffi_lib_Instruction_i16x8_shl",
+      "export_name": "Instruction::i16x8_shl",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2221,
+      "function_index": 2555,
+      "internal_name": "ffi_lib_Instruction_i16x8_shr_s",
+      "export_name": "Instruction::i16x8_shr_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2220,
+      "function_index": 2554,
+      "internal_name": "ffi_lib_Instruction_i16x8_shr_u",
+      "export_name": "Instruction::i16x8_shr_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2219,
+      "function_index": 2553,
+      "internal_name": "ffi_lib_Instruction_i16x8_splat",
+      "export_name": "Instruction::i16x8_splat",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2218,
+      "function_index": 2552,
+      "internal_name": "ffi_lib_Instruction_i16x8_sub",
+      "export_name": "Instruction::i16x8_sub",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2217,
+      "function_index": 2551,
+      "internal_name": "ffi_lib_Instruction_i16x8_sub_sat_s",
+      "export_name": "Instruction::i16x8_sub_sat_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2216,
+      "function_index": 2550,
+      "internal_name": "ffi_lib_Instruction_i16x8_sub_sat_u",
+      "export_name": "Instruction::i16x8_sub_sat_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2156,
+      "function_index": 2490,
+      "internal_name": "ffi_lib_Instruction_i32x4_abs",
+      "export_name": "Instruction::i32x4_abs",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2155,
+      "function_index": 2489,
+      "internal_name": "ffi_lib_Instruction_i32x4_add",
+      "export_name": "Instruction::i32x4_add",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2154,
+      "function_index": 2488,
+      "internal_name": "ffi_lib_Instruction_i32x4_all_true",
+      "export_name": "Instruction::i32x4_all_true",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2153,
+      "function_index": 2487,
+      "internal_name": "ffi_lib_Instruction_i32x4_bitmask",
+      "export_name": "Instruction::i32x4_bitmask",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2151,
+      "function_index": 2485,
+      "internal_name": "ffi_lib_Instruction_i32x4_eq",
+      "export_name": "Instruction::i32x4_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2139,
+      "function_index": 2473,
+      "internal_name": "ffi_lib_Instruction_i32x4_ge_s",
+      "export_name": "Instruction::i32x4_ge_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2138,
+      "function_index": 2472,
+      "internal_name": "ffi_lib_Instruction_i32x4_ge_u",
+      "export_name": "Instruction::i32x4_ge_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2137,
+      "function_index": 2471,
+      "internal_name": "ffi_lib_Instruction_i32x4_gt_s",
+      "export_name": "Instruction::i32x4_gt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2136,
+      "function_index": 2470,
+      "internal_name": "ffi_lib_Instruction_i32x4_gt_u",
+      "export_name": "Instruction::i32x4_gt_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2135,
+      "function_index": 2469,
+      "internal_name": "ffi_lib_Instruction_i32x4_le_s",
+      "export_name": "Instruction::i32x4_le_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2134,
+      "function_index": 2468,
+      "internal_name": "ffi_lib_Instruction_i32x4_le_u",
+      "export_name": "Instruction::i32x4_le_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2133,
+      "function_index": 2467,
+      "internal_name": "ffi_lib_Instruction_i32x4_lt_s",
+      "export_name": "Instruction::i32x4_lt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2132,
+      "function_index": 2466,
+      "internal_name": "ffi_lib_Instruction_i32x4_lt_u",
+      "export_name": "Instruction::i32x4_lt_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2131,
+      "function_index": 2465,
+      "internal_name": "ffi_lib_Instruction_i32x4_max_s",
+      "export_name": "Instruction::i32x4_max_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2130,
+      "function_index": 2464,
+      "internal_name": "ffi_lib_Instruction_i32x4_max_u",
+      "export_name": "Instruction::i32x4_max_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2129,
+      "function_index": 2463,
+      "internal_name": "ffi_lib_Instruction_i32x4_min_s",
+      "export_name": "Instruction::i32x4_min_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2128,
+      "function_index": 2462,
+      "internal_name": "ffi_lib_Instruction_i32x4_min_u",
+      "export_name": "Instruction::i32x4_min_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2127,
+      "function_index": 2461,
+      "internal_name": "ffi_lib_Instruction_i32x4_mul",
+      "export_name": "Instruction::i32x4_mul",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2126,
+      "function_index": 2460,
+      "internal_name": "ffi_lib_Instruction_i32x4_ne",
+      "export_name": "Instruction::i32x4_ne",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2125,
+      "function_index": 2459,
+      "internal_name": "ffi_lib_Instruction_i32x4_neg",
+      "export_name": "Instruction::i32x4_neg",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2117,
+      "function_index": 2451,
+      "internal_name": "ffi_lib_Instruction_i32x4_shl",
+      "export_name": "Instruction::i32x4_shl",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2116,
+      "function_index": 2450,
+      "internal_name": "ffi_lib_Instruction_i32x4_shr_s",
+      "export_name": "Instruction::i32x4_shr_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2115,
+      "function_index": 2449,
+      "internal_name": "ffi_lib_Instruction_i32x4_shr_u",
+      "export_name": "Instruction::i32x4_shr_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2114,
+      "function_index": 2448,
+      "internal_name": "ffi_lib_Instruction_i32x4_splat",
+      "export_name": "Instruction::i32x4_splat",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2113,
+      "function_index": 2447,
+      "internal_name": "ffi_lib_Instruction_i32x4_sub",
+      "export_name": "Instruction::i32x4_sub",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2045,
+      "function_index": 2379,
+      "internal_name": "ffi_lib_Instruction_i64x2_abs",
+      "export_name": "Instruction::i64x2_abs",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2044,
+      "function_index": 2378,
+      "internal_name": "ffi_lib_Instruction_i64x2_add",
+      "export_name": "Instruction::i64x2_add",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2043,
+      "function_index": 2377,
+      "internal_name": "ffi_lib_Instruction_i64x2_all_true",
+      "export_name": "Instruction::i64x2_all_true",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2042,
+      "function_index": 2376,
+      "internal_name": "ffi_lib_Instruction_i64x2_bitmask",
+      "export_name": "Instruction::i64x2_bitmask",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2041,
+      "function_index": 2375,
+      "internal_name": "ffi_lib_Instruction_i64x2_eq",
+      "export_name": "Instruction::i64x2_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2031,
+      "function_index": 2365,
+      "internal_name": "ffi_lib_Instruction_i64x2_ge_s",
+      "export_name": "Instruction::i64x2_ge_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2030,
+      "function_index": 2364,
+      "internal_name": "ffi_lib_Instruction_i64x2_gt_s",
+      "export_name": "Instruction::i64x2_gt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2029,
+      "function_index": 2363,
+      "internal_name": "ffi_lib_Instruction_i64x2_le_s",
+      "export_name": "Instruction::i64x2_le_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2028,
+      "function_index": 2362,
+      "internal_name": "ffi_lib_Instruction_i64x2_lt_s",
+      "export_name": "Instruction::i64x2_lt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2027,
+      "function_index": 2361,
+      "internal_name": "ffi_lib_Instruction_i64x2_mul",
+      "export_name": "Instruction::i64x2_mul",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2026,
+      "function_index": 2360,
+      "internal_name": "ffi_lib_Instruction_i64x2_ne",
+      "export_name": "Instruction::i64x2_ne",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2025,
+      "function_index": 2359,
+      "internal_name": "ffi_lib_Instruction_i64x2_neg",
+      "export_name": "Instruction::i64x2_neg",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2022,
+      "function_index": 2356,
+      "internal_name": "ffi_lib_Instruction_i64x2_shl",
+      "export_name": "Instruction::i64x2_shl",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2021,
+      "function_index": 2355,
+      "internal_name": "ffi_lib_Instruction_i64x2_shr_s",
+      "export_name": "Instruction::i64x2_shr_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2020,
+      "function_index": 2354,
+      "internal_name": "ffi_lib_Instruction_i64x2_shr_u",
+      "export_name": "Instruction::i64x2_shr_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2019,
+      "function_index": 2353,
+      "internal_name": "ffi_lib_Instruction_i64x2_splat",
+      "export_name": "Instruction::i64x2_splat",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2018,
+      "function_index": 2352,
+      "internal_name": "ffi_lib_Instruction_i64x2_sub",
+      "export_name": "Instruction::i64x2_sub",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2017,
+      "function_index": 2351,
+      "internal_name": "ffi_lib_Instruction_i8x16_abs",
+      "export_name": "Instruction::i8x16_abs",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2016,
+      "function_index": 2350,
+      "internal_name": "ffi_lib_Instruction_i8x16_add",
+      "export_name": "Instruction::i8x16_add",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2015,
+      "function_index": 2349,
+      "internal_name": "ffi_lib_Instruction_i8x16_add_sat_s",
+      "export_name": "Instruction::i8x16_add_sat_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2014,
+      "function_index": 2348,
+      "internal_name": "ffi_lib_Instruction_i8x16_add_sat_u",
+      "export_name": "Instruction::i8x16_add_sat_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2013,
+      "function_index": 2347,
+      "internal_name": "ffi_lib_Instruction_i8x16_all_true",
+      "export_name": "Instruction::i8x16_all_true",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2012,
+      "function_index": 2346,
+      "internal_name": "ffi_lib_Instruction_i8x16_avgr_u",
+      "export_name": "Instruction::i8x16_avgr_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2011,
+      "function_index": 2345,
+      "internal_name": "ffi_lib_Instruction_i8x16_bitmask",
+      "export_name": "Instruction::i8x16_bitmask",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2010,
+      "function_index": 2344,
+      "internal_name": "ffi_lib_Instruction_i8x16_eq",
+      "export_name": "Instruction::i8x16_eq",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2007,
+      "function_index": 2341,
+      "internal_name": "ffi_lib_Instruction_i8x16_ge_s",
+      "export_name": "Instruction::i8x16_ge_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2006,
+      "function_index": 2340,
+      "internal_name": "ffi_lib_Instruction_i8x16_ge_u",
+      "export_name": "Instruction::i8x16_ge_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2005,
+      "function_index": 2339,
+      "internal_name": "ffi_lib_Instruction_i8x16_gt_s",
+      "export_name": "Instruction::i8x16_gt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2004,
+      "function_index": 2338,
+      "internal_name": "ffi_lib_Instruction_i8x16_gt_u",
+      "export_name": "Instruction::i8x16_gt_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2003,
+      "function_index": 2337,
+      "internal_name": "ffi_lib_Instruction_i8x16_le_s",
+      "export_name": "Instruction::i8x16_le_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2002,
+      "function_index": 2336,
+      "internal_name": "ffi_lib_Instruction_i8x16_le_u",
+      "export_name": "Instruction::i8x16_le_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2001,
+      "function_index": 2335,
+      "internal_name": "ffi_lib_Instruction_i8x16_lt_s",
+      "export_name": "Instruction::i8x16_lt_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2000,
+      "function_index": 2334,
+      "internal_name": "ffi_lib_Instruction_i8x16_lt_u",
+      "export_name": "Instruction::i8x16_lt_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1999,
+      "function_index": 2333,
+      "internal_name": "ffi_lib_Instruction_i8x16_max_s",
+      "export_name": "Instruction::i8x16_max_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1998,
+      "function_index": 2332,
+      "internal_name": "ffi_lib_Instruction_i8x16_max_u",
+      "export_name": "Instruction::i8x16_max_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1997,
+      "function_index": 2331,
+      "internal_name": "ffi_lib_Instruction_i8x16_min_s",
+      "export_name": "Instruction::i8x16_min_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1996,
+      "function_index": 2330,
+      "internal_name": "ffi_lib_Instruction_i8x16_min_u",
+      "export_name": "Instruction::i8x16_min_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1993,
+      "function_index": 2327,
+      "internal_name": "ffi_lib_Instruction_i8x16_ne",
+      "export_name": "Instruction::i8x16_ne",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1992,
+      "function_index": 2326,
+      "internal_name": "ffi_lib_Instruction_i8x16_neg",
+      "export_name": "Instruction::i8x16_neg",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1991,
+      "function_index": 2325,
+      "internal_name": "ffi_lib_Instruction_i8x16_popcnt",
+      "export_name": "Instruction::i8x16_popcnt",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1987,
+      "function_index": 2321,
+      "internal_name": "ffi_lib_Instruction_i8x16_shl",
+      "export_name": "Instruction::i8x16_shl",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1986,
+      "function_index": 2320,
+      "internal_name": "ffi_lib_Instruction_i8x16_shr_s",
+      "export_name": "Instruction::i8x16_shr_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1985,
+      "function_index": 2319,
+      "internal_name": "ffi_lib_Instruction_i8x16_shr_u",
+      "export_name": "Instruction::i8x16_shr_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1983,
+      "function_index": 2317,
+      "internal_name": "ffi_lib_Instruction_i8x16_splat",
+      "export_name": "Instruction::i8x16_splat",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1982,
+      "function_index": 2316,
+      "internal_name": "ffi_lib_Instruction_i8x16_sub",
+      "export_name": "Instruction::i8x16_sub",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1981,
+      "function_index": 2315,
+      "internal_name": "ffi_lib_Instruction_i8x16_sub_sat_s",
+      "export_name": "Instruction::i8x16_sub_sat_s",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1980,
+      "function_index": 2314,
+      "internal_name": "ffi_lib_Instruction_i8x16_sub_sat_u",
+      "export_name": "Instruction::i8x16_sub_sat_u",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1895,
+      "function_index": 2229,
+      "internal_name": "ffi_lib_Instruction_v128_andnot",
+      "export_name": "Instruction::v128_andnot",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1894,
+      "function_index": 2228,
+      "internal_name": "ffi_lib_Instruction_v128_any_true",
+      "export_name": "Instruction::v128_any_true",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1893,
+      "function_index": 2227,
+      "internal_name": "ffi_lib_Instruction_v128_bitselect",
+      "export_name": "Instruction::v128_bitselect",
+      "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 1874,
+      "function_index": 2208,
+      "internal_name": "ffi_lib_Instruction_v128_not",
+      "export_name": "Instruction::v128_not",
+      "signature": "() -> (ref 0)",
       "status": "bound"
     }
   ]

@@ -1,7 +1,6 @@
 ///|
 pub enum BlockItem {
   LetItem(Bool, String, UInt64, Expr, UInt64)
-  ReturnItem(Expr?, UInt64)
   AssignmentItem(Expr, Expr, UInt64)
   IndexSetItem(Expr, Expr, UInt64)
   ExpressionItem(Expr, UInt64)
@@ -11,7 +10,6 @@ pub enum BlockItem {
 pub fn BlockItem::offset(self : BlockItem) -> UInt64 {
   match self {
     LetItem(_, _, _, _, offset)
-    | ReturnItem(_, offset)
     | AssignmentItem(_, _, offset)
     | IndexSetItem(_, _, offset)
     | ExpressionItem(_, offset) => offset
@@ -259,25 +257,6 @@ fn Parser::parse_block_let_item(
 }
 
 ///|
-fn Parser::parse_block_return_item(
-  self : Parser,
-  open_offset : UInt64,
-  return_offset : UInt64,
-) -> Result[BlockItem, RecoveryFailure] {
-  if self.consume_newline_token() {
-    return Ok(ReturnItem(None, return_offset))
-  }
-  let value = match self.parse_expression_recoverable() {
-    Ok(expression) => expression
-    Err(error) => return Err(error)
-  }
-  match self.finish_block_item_line(open_offset) {
-    Ok(_) => Ok(ReturnItem(Some(value), return_offset))
-    Err(error) => Err(error)
-  }
-}
-
-///|
 fn Parser::parse_block_after_left_brace(
   self : Parser,
   open_offset : UInt64,
@@ -350,13 +329,6 @@ fn Parser::parse_block_after_left_brace(
         }
         self.skip_newlines()
         continue
-      }
-      @tokenizer.Keyword(@tokenizer.Return) => {
-        self.consume_lookahead()
-        match self.parse_block_return_item(open_offset, offset) {
-          Ok(value) => value
-          Err(error) => return Err(error)
-        }
       }
       _ => {
         let expression = match self.parse_expression_recoverable() {

@@ -162,6 +162,7 @@ pub enum SelfHostExpr {
   IsExpr(SelfHostExpr, SelfHostPattern, U32)
   IsGuardExpr(SelfHostExpr, SelfHostPattern, SelfHostExpr, U32)
   WhileExpr(SelfHostExpr, Array<SelfHostPatternArm>, U32)
+  ReturnExpr(Option<SelfHostExpr>, U32)
   BreakExpr(SelfHostExpr, U32)
   ContinueExpr(SelfHostExpr, U32)
   PrefixExpr(SelfHostPrefixOperator, SelfHostExpr, U32)
@@ -203,6 +204,7 @@ impl SelfHostExpr {
       SelfHostExpr::IsExpr(_, _, offset) => offset
       SelfHostExpr::IsGuardExpr(_, _, _, offset) => offset
       SelfHostExpr::WhileExpr(_, _, offset) => offset
+      SelfHostExpr::ReturnExpr(_, offset) => offset
       SelfHostExpr::BreakExpr(_, offset) => offset
       SelfHostExpr::ContinueExpr(_, offset) => offset
       SelfHostExpr::PrefixExpr(_, _, offset) => offset
@@ -219,7 +221,6 @@ impl SelfHostExpr {
 
 pub enum SelfHostBlockItem {
   LetItem(Bool, String, U32, SelfHostExpr, U32)
-  ReturnItem(Option<SelfHostExpr>, U32)
   AssignmentItem(SelfHostExpr, SelfHostExpr, U32)
   IndexSetItem(SelfHostExpr, SelfHostExpr, U32)
   ExpressionItem(SelfHostExpr, U32)

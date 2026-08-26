@@ -7,6 +7,17 @@ work=$root/.tmp/self-host-bootstrap
 provider=starshine-mb/dist/ffi/starshine-ffi.wasm
 fingerprint=self_host/starshine/fingerprint-prefix.bin
 root_module=self_host.compiler
+build_cache_args=()
+case "${1:-}" in
+  "") ;;
+  --clean) build_cache_args=(--no-build-cache) ;;
+  *)
+    echo "usage: tools/check-self-host-bootstrap.sh [--clean]" >&2
+    exit 2
+    ;;
+esac
+
+source tools/self-host-common.sh
 
 mapfile -t compiler_sources < <(
   find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' | sort
@@ -20,43 +31,47 @@ sources=(
 rm -rf "$work"
 mkdir -p "$work/a" "$work/b" "$work/c"
 
-tools/starshine-ffi.sh build
-python3 tools/generate_starshine_ffi_consumer.py --check
+self_host_ensure_starshine_ffi
 
-tools/dew build \
+self_host_measure "compiler A build" tools/dew build \
   --link-wasm starshine "$provider" \
-  --no-build-cache \
+  "${build_cache_args[@]}" \
   -o "$work/a/compiler.wasm" \
   "${sources[@]}"
-wasm-tools validate --features all "$work/a/compiler.wasm"
+self_host_measure "compiler A validation" \
+  wasm-tools validate --features all "$work/a/compiler.wasm"
 
 write_request() {
   local directory=$1
   local output=$2
-  moon run --target native --release src/self_host_bootstrap_fixture -- \
-    "$directory/request.bin" \
-    "$provider" \
-    "$fingerprint" \
-    "$output" \
-    "$root_module" \
-    "${sources[@]}"
+  self_host_measure "compiler request build: $(basename "$directory")" \
+    moon run --target native --release src/self_host_bootstrap_fixture -- \
+      "$directory/request.bin" \
+      "$provider" \
+      "$fingerprint" \
+      "$output" \
+      "$root_module" \
+      "${sources[@]}"
 }
 
 run_stage() {
   local compiler=$1
   local request=$2
-  NODE_NO_WARNINGS=1 node tools/run-dew-wasi.mjs "$compiler" "$request"
+  self_host_measure "compiler execution: $(basename "$(dirname "$compiler")")" \
+    self_host_run_wasi_cached_failure "$compiler" "$request"
 }
 
 write_request "$work/a" compiler-b.wasm
 run_stage "$work/a/compiler.wasm" "$work/a/request.bin"
 mv "$work/a/compiler-b.wasm" "$work/b/compiler.wasm"
-wasm-tools validate --features all "$work/b/compiler.wasm"
+self_host_measure "compiler B validation" \
+  wasm-tools validate --features all "$work/b/compiler.wasm"
 
 write_request "$work/b" compiler-c.wasm
 run_stage "$work/b/compiler.wasm" "$work/b/request.bin"
 mv "$work/b/compiler-c.wasm" "$work/c/compiler.wasm"
-wasm-tools validate --features all "$work/c/compiler.wasm"
+self_host_measure "compiler C validation" \
+  wasm-tools validate --features all "$work/c/compiler.wasm"
 
 cmp "$work/b/compiler.wasm" "$work/c/compiler.wasm"
 

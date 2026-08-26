@@ -9,8 +9,7 @@ fn optimization_test_body_tail(
     BlockBodyRoot(block) => {
       let items = module_.blocks[block].items
       match module_.block_items[items.start + items.length - 1].kind {
-        PlannedExpressionItem(expression) | PlannedReturnItem(expression) =>
-          expression
+        PlannedExpressionItem(expression) => expression
         _ => abort("expected optimization test body tail")
       }
     }

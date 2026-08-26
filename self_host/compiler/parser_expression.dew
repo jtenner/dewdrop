@@ -223,6 +223,13 @@ fn self_host_parse_group_expression(
   open_offset: U32,
 ) -> Option<SelfHostExpr> {
   self_host_parser_skip_newlines(parser)
+  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+    return Option::Some(SelfHostExpr::BlockExpr(SelfHostBlock::{
+      items: self_host_empty_block_items()
+      offset: open_offset
+    }))
+  } else {
+  }
   let first = match self_host_parse_expression_context(parser, 0u32, false) {
     Option::Some(value) => value
     Option::None => {
@@ -436,7 +443,7 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
     }
     SelfHostTokenKind::Symbol(SelfHostSymbol::Plus) => {
       parser.index = parser.index + 1u32
-      match self_host_parse_primary(parser) {
+      match self_host_parse_expression_context(parser, 14u32, true) {
         Option::Some(value) => Option::Some(
           SelfHostExpr::PrefixExpr(
             SelfHostPrefixOperator::Positive,
@@ -449,7 +456,7 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
     }
     SelfHostTokenKind::Symbol(SelfHostSymbol::Minus) => {
       parser.index = parser.index + 1u32
-      match self_host_parse_primary(parser) {
+      match self_host_parse_expression_context(parser, 14u32, true) {
         Option::Some(value) => Option::Some(
           SelfHostExpr::PrefixExpr(
             SelfHostPrefixOperator::Negative,
@@ -462,7 +469,7 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
     }
     SelfHostTokenKind::Symbol(SelfHostSymbol::Bang) => {
       parser.index = parser.index + 1u32
-      match self_host_parse_primary(parser) {
+      match self_host_parse_expression_context(parser, 14u32, true) {
         Option::Some(value) => Option::Some(
           SelfHostExpr::PrefixExpr(
             SelfHostPrefixOperator::LogicalNot,
@@ -509,6 +516,26 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
     SelfHostTokenKind::Keyword(SelfHostKeyword::For) => {
       parser.index = parser.index + 1u32
       self_host_parse_for_expression(parser, token.offset)
+    }
+    SelfHostTokenKind::Keyword(SelfHostKeyword::Return) => {
+      parser.index = parser.index + 1u32
+      let value = match self_host_parser_peek(parser) {
+        Option::None => Option::Some(Option::None)
+        Option::Some(next) => match next.kind {
+          SelfHostTokenKind::Newline => Option::Some(Option::None)
+          SelfHostTokenKind::Symbol(SelfHostSymbol::RightBrace) => Option::Some(Option::None)
+          _ => match self_host_parse_expression_context(parser, 0u32, false) {
+            Option::Some(expression) => Option::Some(Option::Some(expression))
+            Option::None => Option::None
+          }
+        }
+      }
+      match value {
+        Option::Some(return_value) => Option::Some(
+          SelfHostExpr::ReturnExpr(return_value, token.offset),
+        )
+        Option::None => Option::None
+      }
     }
     SelfHostTokenKind::Keyword(SelfHostKeyword::Break) => {
       parser.index = parser.index + 1u32

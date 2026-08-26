@@ -1,0 +1,2517 @@
+open dew.std.map
+open dew.std.option
+open dew.std.string_builder
+
+pub enum SelfHostWasmBodyCarrier {
+  UnresolvedBodyCarrier
+  UnitBodyCarrier
+  NeverBodyCarrier
+  I32BodyCarrier
+  I64BodyCarrier
+  F32BodyCarrier
+  F64BodyCarrier
+  V128BodyCarrier
+  EqRefBodyCarrier
+  FuncRefBodyCarrier
+}
+
+pub struct SelfHostPlannedPhysicalExpressionCarrier {
+  expression: U32
+  carrier: SelfHostWasmBodyCarrier
+  selected_type_index: U32
+  selected_field_index: U32
+  selected_storage: Option<SelfHostPlannedWasmStorageType>
+  call_function_index: U32
+}
+
+pub struct SelfHostPlannedPhysicalScratchCarrier {
+  expression: U32
+  ordinal: U32
+  carrier: SelfHostWasmBodyCarrier
+  context: String
+}
+
+pub struct SelfHostPhysicalCarrierDiagnostic {
+  module_id: U64
+  declaration: U64
+  declaration_name: Bytes
+  body: U64
+  lambda: U32
+  physical_function_index: U32
+  specialization: U32
+  specialization_key: String
+  expression: U32
+  entity: U64
+  source_offset: U32
+  expression_kind: String
+  source_name: String
+  context: String
+  logical_type: I32
+  logical_shape: SelfHostPlannedValueShape
+  selected_owner: U64
+  expected: SelfHostWasmBodyCarrier
+  actual: SelfHostWasmBodyCarrier
+}
+
+pub struct SelfHostPlannedPhysicalBodyCarrierPlan {
+  module_index: U32
+  module_id: U64
+  declaration: U64
+  body: U64
+  lambda: U32
+  physical_function_index: U32
+  specialization: U32
+  specialization_key: String
+  result_carrier: SelfHostWasmBodyCarrier
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>
+  locals: Array<SelfHostWasmBodyCarrier>
+  control_states: Array<SelfHostWasmBodyCarrier>
+  control_results: Array<SelfHostWasmBodyCarrier>
+  scratches: Array<SelfHostPlannedPhysicalScratchCarrier>
+}
+
+pub struct SelfHostPlannedProgramWasmBodyPlan {
+  bodies: Array<SelfHostPlannedPhysicalBodyCarrierPlan>
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>
+}
+
+struct SelfHostPhysicalFieldCarrier {
+  type_index: U32
+  field_index: U32
+  storage: SelfHostPlannedWasmStorageType
+  owner: U64
+}
+
+struct SelfHostPhysicalBodyIndexes {
+  type_by_declaration: Map<U64, U32>
+  type_by_variant: Map<U64, U32>
+  field_by_declaration: Map<U64, SelfHostPhysicalFieldCarrier>
+  function_by_declaration: Map<U64, U32>
+  specialized_calls_by_body: Map<U64, Map<U64, U32>>
+}
+
+fn self_host_body_carrier_equal(
+  left: SelfHostWasmBodyCarrier,
+  right: SelfHostWasmBodyCarrier,
+) -> Bool {
+  match left {
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier => right is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    SelfHostWasmBodyCarrier::UnitBodyCarrier => right is SelfHostWasmBodyCarrier::UnitBodyCarrier
+    SelfHostWasmBodyCarrier::NeverBodyCarrier => right is SelfHostWasmBodyCarrier::NeverBodyCarrier
+    SelfHostWasmBodyCarrier::I32BodyCarrier => right is SelfHostWasmBodyCarrier::I32BodyCarrier
+    SelfHostWasmBodyCarrier::I64BodyCarrier => right is SelfHostWasmBodyCarrier::I64BodyCarrier
+    SelfHostWasmBodyCarrier::F32BodyCarrier => right is SelfHostWasmBodyCarrier::F32BodyCarrier
+    SelfHostWasmBodyCarrier::F64BodyCarrier => right is SelfHostWasmBodyCarrier::F64BodyCarrier
+    SelfHostWasmBodyCarrier::V128BodyCarrier => right is SelfHostWasmBodyCarrier::V128BodyCarrier
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier => right is SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    SelfHostWasmBodyCarrier::FuncRefBodyCarrier => right is SelfHostWasmBodyCarrier::FuncRefBodyCarrier
+  }
+}
+
+fn self_host_body_carrier_is_value(
+  carrier: SelfHostWasmBodyCarrier,
+) -> Bool {
+  !(carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
+    !(carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) &&
+    !(carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier)
+}
+
+fn self_host_body_carrier_from_shape(
+  shape: SelfHostPlannedValueShape,
+) -> SelfHostWasmBodyCarrier {
+  match shape {
+    SelfHostPlannedValueShape::ErrorPlannedValueShape => {
+      return SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    }
+    SelfHostPlannedValueShape::GenericPlannedValueShape => {
+      return SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    }
+    SelfHostPlannedValueShape::ProductPlannedValueShape(_) => {
+      return SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    }
+    _ => {}
+  }
+  match self_host_specialization_canonical_scalar(shape) {
+    SelfHostPlannedValueShape::UnitPlannedValueShape => SelfHostWasmBodyCarrier::UnitBodyCarrier
+    SelfHostPlannedValueShape::NeverPlannedValueShape => SelfHostWasmBodyCarrier::NeverBodyCarrier
+    SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostWasmBodyCarrier::I32BodyCarrier
+    SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostWasmBodyCarrier::I64BodyCarrier
+    SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostWasmBodyCarrier::F32BodyCarrier
+    SelfHostPlannedValueShape::F64PlannedValueShape => SelfHostWasmBodyCarrier::F64BodyCarrier
+    SelfHostPlannedValueShape::V128PlannedValueShape => SelfHostWasmBodyCarrier::V128BodyCarrier
+    SelfHostPlannedValueShape::RefPlannedValueShape => SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    _ => SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+  }
+}
+
+fn self_host_body_carrier_from_value_type(
+  type_: SelfHostPlannedWasmValueType,
+) -> SelfHostWasmBodyCarrier {
+  match type_ {
+    SelfHostPlannedWasmValueType::WasmI32Value => SelfHostWasmBodyCarrier::I32BodyCarrier
+    SelfHostPlannedWasmValueType::WasmI64Value => SelfHostWasmBodyCarrier::I64BodyCarrier
+    SelfHostPlannedWasmValueType::WasmF32Value => SelfHostWasmBodyCarrier::F32BodyCarrier
+    SelfHostPlannedWasmValueType::WasmF64Value => SelfHostWasmBodyCarrier::F64BodyCarrier
+    SelfHostPlannedWasmValueType::WasmV128Value => SelfHostWasmBodyCarrier::V128BodyCarrier
+    SelfHostPlannedWasmValueType::WasmNullableEqRefValue => SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    SelfHostPlannedWasmValueType::WasmNullableFuncRefValue => SelfHostWasmBodyCarrier::FuncRefBodyCarrier
+  }
+}
+
+fn self_host_body_carrier_from_storage(
+  storage: SelfHostPlannedWasmStorageType,
+) -> SelfHostWasmBodyCarrier {
+  match storage {
+    SelfHostPlannedWasmStorageType::WasmI32Storage => SelfHostWasmBodyCarrier::I32BodyCarrier
+    SelfHostPlannedWasmStorageType::WasmI64Storage => SelfHostWasmBodyCarrier::I64BodyCarrier
+    SelfHostPlannedWasmStorageType::WasmF32Storage => SelfHostWasmBodyCarrier::F32BodyCarrier
+    SelfHostPlannedWasmStorageType::WasmF64Storage => SelfHostWasmBodyCarrier::F64BodyCarrier
+    SelfHostPlannedWasmStorageType::WasmV128Storage => SelfHostWasmBodyCarrier::V128BodyCarrier
+    SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage => SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage => SelfHostWasmBodyCarrier::FuncRefBodyCarrier
+  }
+}
+
+fn self_host_body_specialization_shape(
+  link: SelfHostPlannedProgramWasmGCLink,
+  specialization: U32,
+  shape: SelfHostPlannedValueShape,
+) -> SelfHostPlannedValueShape {
+  if !(shape is SelfHostPlannedValueShape::GenericPlannedValueShape) ||
+    specialization == 4294967295u32 ||
+    specialization >= link.fragments.specialization.requests.length() {
+    return shape
+  }
+  let request = link.fragments.specialization.requests[specialization]
+  if self_host_u32_equal(request.shapes.length, 1u32) &&
+    self_host_u32_greater(
+      link.fragments.specialization.shapes.length(),
+      request.shapes.start,
+    ) {
+    link.fragments.specialization.shapes[request.shapes.start]
+  } else {
+    shape
+  }
+}
+
+fn self_host_body_specialization_key(
+  link: SelfHostPlannedProgramWasmGCLink,
+  declaration: U64,
+  specialization: U32,
+) -> String {
+  let output = StringBuilder::new()
+  output.append_u64(declaration)
+  output.append(":")
+  if specialization == 4294967295u32 ||
+    specialization >= link.fragments.specialization.requests.length() {
+    output.append("plain")
+  } else {
+    let request = link.fragments.specialization.requests[specialization]
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < request.shapes.length {
+        if self_host_u32_greater(current, 0u32) {
+          output.append(",")
+        }
+        let shape = link.fragments.specialization.shapes[
+          self_host_u32_add(request.shapes.start, current)
+        ]
+        output.append(match self_host_specialization_canonical_scalar(shape) {
+          SelfHostPlannedValueShape::I32PlannedValueShape => "i32"
+          SelfHostPlannedValueShape::I64PlannedValueShape => "i64"
+          SelfHostPlannedValueShape::F32PlannedValueShape => "f32"
+          SelfHostPlannedValueShape::F64PlannedValueShape => "f64"
+          SelfHostPlannedValueShape::V128PlannedValueShape => "v128"
+          SelfHostPlannedValueShape::UnitPlannedValueShape => "unit"
+          SelfHostPlannedValueShape::NeverPlannedValueShape => "never"
+          _ => "eqref"
+        })
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+  output.finish()
+}
+
+fn self_host_body_call_key(specialization: U32, expression: U32) -> U64 {
+  (u32_into_u64(specialization) << 32u64) | u32_into_u64(expression)
+}
+
+fn self_host_body_empty_u64_u32_map() -> Map<U64, U32> {
+  Map::empty()
+}
+
+fn self_host_body_empty_u64_field_map(
+) -> Map<U64, SelfHostPhysicalFieldCarrier> {
+  Map::empty()
+}
+
+fn self_host_body_empty_u64_call_map() -> Map<U64, Map<U64, U32>> {
+  Map::empty()
+}
+
+fn self_host_body_fragment_module(
+  link: SelfHostPlannedProgramWasmGCLink,
+  index: U32,
+) -> SelfHostPlannedModuleWasmGCFragments {
+  link.fragments.modules[index]
+}
+
+fn self_host_body_physical_type(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmPhysicalType {
+  module_.physical_types[index]
+}
+
+fn self_host_body_physical_field(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmField {
+  module_.fields[index]
+}
+
+fn self_host_body_function_fragment(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmFunctionFragment {
+  module_.functions[index]
+}
+
+fn self_host_body_function_value_type(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmValueType {
+  module_.function_value_types[index]
+}
+
+fn self_host_build_physical_body_indexes(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> SelfHostPhysicalBodyIndexes {
+  let type_by_declaration = self_host_body_empty_u64_u32_map()
+  let type_by_variant = self_host_body_empty_u64_u32_map()
+  let field_by_declaration = self_host_body_empty_u64_field_map()
+  let function_by_declaration = self_host_body_empty_u64_u32_map()
+  let specialized_calls_by_body = self_host_body_empty_u64_call_map()
+  for linked_type in link.types {
+    let module_ = self_host_body_fragment_module(
+      link,
+      linked_type.module_index,
+    )
+    let physical = self_host_body_physical_type(
+      module_,
+      linked_type.fragment_index,
+    )
+    let owner = match physical.kind {
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(declaration) => {
+        type_by_declaration[declaration] = linked_type.type_index
+        declaration
+      }
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(declaration) => {
+        type_by_declaration[declaration] = linked_type.type_index
+        declaration
+      }
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
+        declaration,
+        variant,
+        _,
+      ) => {
+        type_by_variant[variant] = linked_type.type_index
+        declaration
+      }
+      _ => 0u64
+    }
+    let mut field = 0u32
+    let _ = while field {
+      current => if current < physical.fields.length {
+        let source = self_host_body_physical_field(
+          module_,
+          self_host_u32_add(physical.fields.start, current),
+        )
+        match source.role {
+          SelfHostPlannedWasmFieldRole::WasmStructField(field) => if !self_host_u64_equal(
+            field,
+            0u64,
+          ) {
+            match field_by_declaration.get(field) {
+              Option::Some(_) => {}
+              Option::None => {
+                field_by_declaration[field] = SelfHostPhysicalFieldCarrier::{
+                  type_index: linked_type.type_index
+                  field_index: source.physical_index
+                  storage: source.storage
+                  owner: owner
+                }
+              }
+            }
+          }
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+  for function_ in link.functions {
+    if self_host_u32_equal(function_.specialization, 4294967295u32) {
+      function_by_declaration[function_.declaration] = function_.function_index
+    }
+  }
+  for call in link.specialized_calls {
+    let calls = match specialized_calls_by_body.get(call.caller_body) {
+      Option::Some(value) => value
+      Option::None => {
+        let value = self_host_body_empty_u64_u32_map()
+        specialized_calls_by_body[call.caller_body] = value
+        value
+      }
+    }
+    calls[self_host_body_call_key(call.caller_specialization, call.expression)] = call.function_index
+  }
+  SelfHostPhysicalBodyIndexes::{
+    type_by_declaration: type_by_declaration
+    type_by_variant: type_by_variant
+    field_by_declaration: field_by_declaration
+    function_by_declaration: function_by_declaration
+    specialized_calls_by_body: specialized_calls_by_body
+  }
+}
+
+fn self_host_body_function_result_carrier(
+  link: SelfHostPlannedProgramWasmGCLink,
+  logical_function_index: U32,
+) -> SelfHostWasmBodyCarrier {
+  for function_ in link.functions {
+    if self_host_u32_equal(function_.function_index, logical_function_index) {
+      let module_ = self_host_body_fragment_module(
+        link,
+        function_.module_index,
+      )
+      let fragment = self_host_body_function_fragment(
+        module_,
+        function_.fragment_index,
+      )
+      if self_host_u32_equal(fragment.results.length, 0u32) {
+        return SelfHostWasmBodyCarrier::UnitBodyCarrier
+      }
+      if self_host_u32_equal(fragment.results.length, 1u32) &&
+        self_host_u32_greater(
+          module_.function_value_types.length(),
+          fragment.results.start,
+        ) {
+        return self_host_body_carrier_from_value_type(
+          self_host_body_function_value_type(module_, fragment.results.start),
+        )
+      }
+      return SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    }
+  }
+  SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+}
+
+fn self_host_body_function_parameter_carrier(
+  link: SelfHostPlannedProgramWasmGCLink,
+  logical_function_index: U32,
+  parameter: U32,
+) -> SelfHostWasmBodyCarrier {
+  for function_ in link.functions {
+    if self_host_u32_equal(function_.function_index, logical_function_index) {
+      let module_ = self_host_body_fragment_module(link, function_.module_index)
+      let fragment = self_host_body_function_fragment(
+        module_,
+        function_.fragment_index,
+      )
+      if parameter < fragment.parameters.length {
+        let index = self_host_u32_add(fragment.parameters.start, parameter)
+        if self_host_u32_greater(module_.function_value_types.length(), index) {
+          return self_host_body_carrier_from_value_type(
+            self_host_body_function_value_type(module_, index),
+          )
+        }
+      }
+      return SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    }
+  }
+  SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+}
+
+fn self_host_body_call_function(
+  indexes: SelfHostPhysicalBodyIndexes,
+  body: U64,
+  specialization: U32,
+  expression: U32,
+  declaration: U64,
+) -> U32 {
+  match indexes.specialized_calls_by_body.get(body) {
+    Option::Some(calls) => match calls.get(
+      self_host_body_call_key(specialization, expression),
+    ) {
+      Option::Some(value) => return value
+      Option::None => {}
+    }
+    Option::None => {}
+  }
+  match indexes.function_by_declaration.get(declaration) {
+    Option::Some(value) => value
+    Option::None => 4294967295u32
+  }
+}
+
+fn self_host_body_function_declaration(
+  link: SelfHostPlannedProgramWasmGCLink,
+  function_index: U32,
+) -> U64 {
+  for function_ in link.functions {
+    if self_host_u32_equal(function_.function_index, function_index) {
+      return function_.declaration
+    }
+  }
+  0u64
+}
+
+fn self_host_body_unique_function_for_last_parameter_carrier(
+  link: SelfHostPlannedProgramWasmGCLink,
+  declaration: U64,
+  carrier: SelfHostWasmBodyCarrier,
+) -> U32 {
+  if carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier ||
+    carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier ||
+    carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    return 4294967295u32
+  }
+  let mut selected = 4294967295u32
+  for function_ in link.functions {
+    if self_host_u64_equal(function_.declaration, declaration) {
+      let module_ = self_host_body_fragment_module(link, function_.module_index)
+      let fragment = self_host_body_function_fragment(
+        module_,
+        function_.fragment_index,
+      )
+      if self_host_u32_greater(fragment.parameters.length, 0u32) {
+        let parameter = fragment.parameters.length - 1u32
+        if self_host_body_function_parameter_carrier(
+          link,
+          function_.function_index,
+          parameter,
+        ) is carrier {
+          if self_host_u32_equal(selected, 4294967295u32) {
+            selected = function_.function_index
+          }
+        }
+      }
+    }
+  }
+  selected
+}
+
+fn self_host_body_plan_set_call_function(
+  body: SelfHostPlannedBodyLowering,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  expression: U32,
+  function_index: U32,
+) -> Unit {
+  if self_host_u32_equal(function_index, 4294967295u32) ||
+    expression < body.expressions.start || expression >= self_host_u32_add(
+      body.expressions.start,
+      body.expressions.length,
+    ) {
+    return
+  }
+  let slot = self_host_body_expression_slot(body, expression)
+  let source = expressions[slot]
+  expressions[slot] = SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: source.expression
+    carrier: source.carrier
+    selected_type_index: source.selected_type_index
+    selected_field_index: source.selected_field_index
+    selected_storage: source.selected_storage
+    call_function_index: function_index
+  }
+}
+
+fn self_host_body_lookup(
+  module_: SelfHostPlannedModuleLowering,
+  body_id: U64,
+) -> Option<SelfHostPlannedBodyLowering> {
+  for body in module_.bodies {
+    if self_host_u64_equal(body.body, body_id) {
+      return Option::Some(body)
+    }
+  }
+  Option::None
+}
+
+fn self_host_body_lambda_lookup(
+  module_: SelfHostPlannedModuleLowering,
+  lambda_id: U32,
+) -> Option<SelfHostPlannedBodyLowering> {
+  for lambda in module_.lambdas {
+    if self_host_u32_equal(lambda.lambda, lambda_id) {
+      return Option::Some(SelfHostPlannedBodyLowering::{
+        body: lambda.root_body
+        declaration: 18446744073709551615u64
+        kind: SelfHostHirBodyKind::FunctionBody
+        root: lambda.root
+        root_type: lambda.root_type
+        root_shape: lambda.root_shape
+        result_shape: lambda.result_shape
+        flow: lambda.flow
+        locals: lambda.locals
+        expressions: lambda.expressions
+        blocks: lambda.blocks
+        patterns: lambda.patterns
+        pattern_arms: lambda.pattern_arms
+      })
+    }
+  }
+  Option::None
+}
+
+fn self_host_body_expression_slot(
+  body: SelfHostPlannedBodyLowering,
+  expression: U32,
+) -> U32 {
+  expression - body.expressions.start
+}
+
+fn self_host_body_local_slot(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  local_id: U32,
+) -> U32 {
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < body.locals.length {
+      let local = module_.locals[self_host_u32_add(body.locals.start, current)]
+      if self_host_u32_equal(local.local_id, local_id) {
+        return current
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  4294967295u32
+}
+
+fn self_host_body_merge_carrier(
+  left: SelfHostWasmBodyCarrier,
+  right: SelfHostWasmBodyCarrier,
+) -> SelfHostWasmBodyCarrier {
+  if left is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    return right
+  }
+  if right is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    return left
+  }
+  if left is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
+    return right
+  }
+  if right is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
+    return left
+  }
+  if self_host_body_carrier_equal(left, right) {
+    left
+  } else {
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+  }
+}
+
+fn self_host_body_qualified_call_declaration(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  expression: U32,
+) -> U64 {
+  if expression >= module_.expressions.length() {
+    return 0u64
+  }
+  let target = match module_.expressions[expression].kind {
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(value, _) => value
+    _ => {
+      return 0u64
+    }
+  }
+  if target == 0u32 || target >= module_.expressions.length() {
+    return 0u64
+  }
+  let owner = match module_.expressions[target - 1u32].reference {
+    SelfHostBodyNameReference::ModuleTypeNameReference(declaration) => declaration
+    _ => {
+      return 0u64
+    }
+  }
+  let name = module_.expressions[target].source_name
+  if name >= self_host_linked_module_name_count(module_) {
+    return 0u64
+  }
+  let spelling = self_host_linked_module_name_at(module_, name)
+  let mut selected = 0u64
+  for candidate_module in link.fragments.specialization.lowering.modules {
+    for callable in candidate_module.functions.callables {
+      if !callable.has_receiver && bytes_to_string(callable.name) == spelling &&
+        self_host_u64_equal(
+          self_host_linked_resolved_nominal_declaration(
+            candidate_module,
+            callable.self_type,
+          ),
+          owner,
+        ) {
+        if !self_host_u64_equal(selected, 0u64) &&
+          !self_host_u64_equal(selected, callable.declaration) {
+          return 0u64
+        }
+        selected = callable.declaration
+      }
+    }
+  }
+  selected
+}
+
+fn self_host_body_seed_expression(
+  link: SelfHostPlannedProgramWasmGCLink,
+  indexes: SelfHostPhysicalBodyIndexes,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  specialization: U32,
+  expression: U32,
+) -> SelfHostPlannedPhysicalExpressionCarrier {
+  let planned = module_.expressions[expression]
+  let mut carrier = self_host_body_carrier_from_shape(
+    self_host_body_specialization_shape(link, specialization, planned.shape),
+  )
+  let mut selected_type_index = 4294967295u32
+  let mut selected_field_index = 4294967295u32
+  let mut selected_storage = Option::None
+  let mut call_function_index = 4294967295u32
+  let mut constructor_selection = false
+  match planned.selection {
+    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+      declaration,
+      _,
+    ) => {
+      constructor_selection = true
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+      match indexes.type_by_declaration.get(declaration) {
+        Option::Some(value) => {
+          selected_type_index = value
+        }
+        Option::None => {}
+      }
+    }
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      variant,
+      _,
+      _,
+    ) => {
+      constructor_selection = true
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+      match indexes.type_by_variant.get(variant) {
+        Option::Some(value) => {
+          selected_type_index = value
+        }
+        Option::None => {}
+      }
+    }
+    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _) => match indexes.field_by_declaration.get(
+      field,
+    ) {
+      Option::Some(value) => {
+        selected_type_index = value.type_index
+        selected_field_index = value.field_index
+        selected_storage = Option::Some(value.storage)
+        carrier = self_host_body_carrier_from_storage(value.storage)
+      }
+      Option::None => {}
+    }
+    _ => {}
+  }
+  match planned.kind {
+    SelfHostPlannedExpressionKind::PlannedI8Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedI16Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedI32Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedU8Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedU16Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedU32Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedBoolConst(_) => {
+      carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedI64Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::I64BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedU64Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::I64BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedF32Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::F32BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedF64Const(_) => {
+      carrier = SelfHostWasmBodyCarrier::F64BodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedStringConst(_) => {
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedBytesConst(_) => {
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedProductNew(_) => {
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => {
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedLambdaClosure(_) => {
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedObjectNew(_) => {
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedConstruct(_, _, _) => {
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedReturnExpression(_) => {
+      carrier = SelfHostWasmBodyCarrier::NeverBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedBreakExpression(_, _) => {
+      carrier = SelfHostWasmBodyCarrier::NeverBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedContinueExpression(_, _) => {
+      carrier = SelfHostWasmBodyCarrier::NeverBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => if !constructor_selection {
+      call_function_index = self_host_body_call_function(
+        indexes,
+        body.body,
+        specialization,
+        expression,
+        declaration,
+      )
+      if call_function_index != 4294967295u32 {
+        carrier = self_host_body_function_result_carrier(
+          link,
+          call_function_index,
+        )
+      }
+      let physical_call_index = if call_function_index == 4294967295u32 {
+        4294967295u32
+      } else {
+        self_host_linked_physical_function_index(call_function_index)
+      }
+      if self_host_linked_call_returns_array_element(
+        link,
+        body.body,
+        specialization,
+        expression,
+      ) ||
+        (physical_call_index != 4294967295u32 &&
+          self_host_linked_physical_function_name(
+            link,
+            physical_call_index,
+          ).ends_with(b"get_unchecked")) {
+        let element_shape = match self_host_linked_call_first_type_argument_shape(
+          module_,
+          planned,
+        ) {
+          Option::Some(shape) => Option::Some(shape)
+          Option::None => match planned.kind {
+            SelfHostPlannedExpressionKind::PlannedDirectCall(
+              _,
+              _,
+              arguments,
+              _,
+            ) => self_host_linked_call_base_element_shape(module_, arguments)
+            _ => Option::None
+          }
+        }
+        match element_shape {
+          Option::Some(shape) => {
+            let element_carrier = self_host_body_carrier_from_shape(shape)
+            if !(element_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+              carrier = element_carrier
+            }
+          }
+          Option::None => {}
+        }
+      }
+    }
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, declaration, _, _, _) => {
+      call_function_index = self_host_body_call_function(
+        indexes,
+        body.body,
+        specialization,
+        expression,
+        declaration,
+      )
+      if call_function_index != 4294967295u32 {
+        carrier = self_host_body_function_result_carrier(
+          link,
+          call_function_index,
+        )
+      }
+    }
+    SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, _, _, _, _) => {
+      call_function_index = self_host_body_call_function(
+        indexes,
+        body.body,
+        specialization,
+        expression,
+        declaration,
+      )
+      if call_function_index != 4294967295u32 {
+        carrier = self_host_body_function_result_carrier(
+          link,
+          call_function_index,
+        )
+      }
+    }
+    SelfHostPlannedExpressionKind::PlannedLocalSet(_, _) => {
+      carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedCaptureSet(_, _) => {
+      carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedFieldSet(_, _, _) => {
+      carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedIndexSet(_, _, _, _) => {
+      carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => {
+      let qualified_declaration = self_host_body_qualified_call_declaration(
+        link,
+        module_,
+        expression,
+      )
+      call_function_index = self_host_body_call_function(
+        indexes,
+        body.body,
+        specialization,
+        expression,
+        qualified_declaration,
+      )
+      if call_function_index != 4294967295u32 {
+        carrier = self_host_body_function_result_carrier(
+          link,
+          call_function_index,
+        )
+      }
+      match self_host_linked_unresolved_get_result_shape(
+        link,
+        module_,
+        body,
+        expression,
+      ) {
+        Option::Some(shape) => {
+          carrier = self_host_body_carrier_from_shape(shape)
+        }
+        Option::None => {}
+      }
+    }
+    SelfHostPlannedExpressionKind::PlannedIndexGet(base, _, _) => match self_host_linked_expression_container_element_shape(
+      link,
+      module_,
+      body,
+      base,
+    ) {
+      Option::Some(shape) => {
+        carrier = self_host_body_carrier_from_shape(shape)
+      }
+      Option::None => {}
+    }
+    SelfHostPlannedExpressionKind::PlannedProductField(base, field, _) => match self_host_linked_product_field_shape(
+      link,
+      module_,
+      body,
+      specialization,
+      base,
+      field,
+    ) {
+      Option::Some(shape) => {
+        carrier = self_host_body_carrier_from_shape(shape)
+      }
+      Option::None => {}
+    }
+    SelfHostPlannedExpressionKind::PlannedFieldGet(field, _, _) => match indexes.field_by_declaration.get(
+      field,
+    ) {
+      Option::Some(value) => {
+        selected_type_index = value.type_index
+        selected_field_index = value.field_index
+        selected_storage = Option::Some(value.storage)
+        carrier = self_host_body_carrier_from_storage(value.storage)
+      }
+      Option::None => {}
+    }
+    _ => {}
+  }
+  SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: expression
+    carrier: carrier
+    selected_type_index: selected_type_index
+    selected_field_index: selected_field_index
+    selected_storage: selected_storage
+    call_function_index: call_function_index
+  }
+}
+
+fn self_host_body_plan_force_expression_carrier(
+  body: SelfHostPlannedBodyLowering,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  expression: U32,
+  carrier: SelfHostWasmBodyCarrier,
+) -> Bool {
+  if expression < body.expressions.start || expression >= self_host_u32_add(
+    body.expressions.start,
+    body.expressions.length,
+  ) || carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
+    return false
+  }
+  let slot = self_host_body_expression_slot(body, expression)
+  if self_host_body_carrier_equal(expressions[slot].carrier, carrier) {
+    return false
+  }
+  let source = expressions[slot]
+  expressions[slot] = SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: source.expression
+    carrier: carrier
+    selected_type_index: source.selected_type_index
+    selected_field_index: source.selected_field_index
+    selected_storage: source.selected_storage
+    call_function_index: source.call_function_index
+  }
+  true
+}
+
+fn self_host_body_plan_set_local_carrier(
+  locals: Array<SelfHostWasmBodyCarrier>,
+  local: U32,
+  carrier: SelfHostWasmBodyCarrier,
+) -> Bool {
+  if local >= locals.length() ||
+    carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier ||
+    self_host_body_carrier_equal(locals[local], carrier) {
+    return false
+  }
+  if locals[local] is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
+    locals[local] = carrier
+    return true
+  }
+  false
+}
+
+fn self_host_body_plan_set_expression_carrier(
+  body: SelfHostPlannedBodyLowering,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  expression: U32,
+  carrier: SelfHostWasmBodyCarrier,
+) -> Bool {
+  if expression < body.expressions.start || expression >= self_host_u32_add(
+    body.expressions.start,
+    body.expressions.length,
+  ) {
+    return false
+  }
+  let slot = self_host_body_expression_slot(body, expression)
+  if self_host_body_carrier_equal(expressions[slot].carrier, carrier) {
+    return false
+  }
+  if expressions[slot].carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
+    let source = expressions[slot]
+    expressions[slot] = SelfHostPlannedPhysicalExpressionCarrier::{
+      expression: source.expression
+      carrier: carrier
+      selected_type_index: source.selected_type_index
+      selected_field_index: source.selected_field_index
+      selected_storage: source.selected_storage
+      call_function_index: source.call_function_index
+    }
+    return true
+  }
+  false
+}
+
+fn self_host_body_block_tail_expression(
+  module_: SelfHostPlannedModuleLowering,
+  block: U32,
+) -> U32 {
+  if block >= module_.blocks.length() {
+    return 4294967295u32
+  }
+  let items = module_.blocks[block].items
+  if self_host_u32_equal(items.length, 0u32) {
+    return 4294967295u32
+  }
+  match module_.block_items[
+    self_host_u32_subtract(self_host_u32_add(items.start, items.length), 1u32)
+  ].kind {
+    SelfHostPlannedBlockItemKind::PlannedExpressionItem(expression) => expression
+    _ => 4294967295u32
+  }
+}
+
+fn self_host_body_block_carrier(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  block: U32,
+) -> SelfHostWasmBodyCarrier {
+  if block >= module_.blocks.length() {
+    return SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+  }
+  let items = module_.blocks[block].items
+  if self_host_u32_equal(items.length, 0u32) {
+    return SelfHostWasmBodyCarrier::UnitBodyCarrier
+  }
+  let item = module_.block_items[
+    self_host_u32_subtract(self_host_u32_add(items.start, items.length), 1u32)
+  ]
+  match item.kind {
+    SelfHostPlannedBlockItemKind::PlannedExpressionItem(expression) => if expression >= body.expressions.start &&
+      expression < self_host_u32_add(body.expressions.start, body.expressions.length) {
+      expressions[self_host_body_expression_slot(body, expression)].carrier
+    } else {
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    }
+    _ => SelfHostWasmBodyCarrier::UnitBodyCarrier
+  }
+}
+
+fn self_host_body_physical_field_carrier(
+  link: SelfHostPlannedProgramWasmGCLink,
+  type_index: U32,
+  field_index: U32,
+) -> SelfHostWasmBodyCarrier {
+  for linked_type in link.types {
+    if self_host_u32_equal(linked_type.type_index, type_index) {
+      let module_ = self_host_body_fragment_module(
+        link,
+        linked_type.module_index,
+      )
+      let physical = self_host_body_physical_type(
+        module_,
+        linked_type.fragment_index,
+      )
+      if field_index < physical.fields.length {
+        return self_host_body_carrier_from_storage(
+          self_host_body_physical_field(
+            module_,
+            self_host_u32_add(physical.fields.start, field_index),
+          ).storage,
+        )
+      }
+    }
+  }
+  SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+}
+
+fn self_host_body_force_pattern_carriers(
+  link: SelfHostPlannedProgramWasmGCLink,
+  indexes: SelfHostPhysicalBodyIndexes,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  root: U32,
+  carrier: SelfHostWasmBodyCarrier,
+  locals: Array<SelfHostWasmBodyCarrier>,
+) -> Bool {
+  let patterns = [root]
+  let carriers = [carrier]
+  let mut changed = false
+  let _ = while patterns.length() {
+    length => if self_host_u32_greater(length, 0u32) {
+      let pattern = match patterns.pop() {
+        Option::Some(value) => value
+        Option::None => 4294967295u32
+      }
+      let value_carrier = match carriers.pop() {
+        Option::Some(value) => value
+        Option::None => SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+      }
+      if pattern < module_.patterns.length() {
+        let source = module_.patterns[pattern]
+        match source.reference {
+          SelfHostBodyPatternReference::PatternBindingReference(local_id) => {
+            let local = self_host_body_local_slot(module_, body, local_id)
+            let planned_carrier = self_host_body_carrier_from_shape(source.shape)
+            let binding_carrier = if !(planned_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+              planned_carrier
+            } else if local != 4294967295u32 &&
+              !(locals[local] is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+              locals[local]
+            } else {
+              value_carrier
+            }
+            if local != 4294967295u32 &&
+              !(binding_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
+              !self_host_body_carrier_equal(locals[local], binding_carrier) {
+              locals[local] = binding_carrier
+              changed = true
+            }
+          }
+          _ => {}
+        }
+        match source.source {
+          SelfHostHirPattern::TuplePattern(_, children, _) => {
+            let mut selected_type = 4294967295u32
+            match source.selected_constructor {
+              SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+                constructor,
+                variant,
+                _,
+              ) => if variant {
+                match indexes.type_by_variant.get(constructor) {
+                  Option::Some(value) => {
+                    selected_type = value
+                  }
+                  Option::None => {}
+                }
+              }
+              _ => {}
+            }
+            let mut child = children.length
+            let _ = while child {
+              current => if self_host_u32_greater(current, 0u32) {
+                let previous = self_host_u32_subtract(current, 1u32)
+                let child_index = self_host_u32_add(children.start, previous)
+                if child_index < module_.pattern_children.length() {
+                  patterns.push(module_.pattern_children[child_index])
+                  carriers.push(
+                    if selected_type != 4294967295u32 {
+                      self_host_body_physical_field_carrier(
+                        link,
+                        selected_type,
+                        previous,
+                      )
+                    } else {
+                      value_carrier
+                    },
+                  )
+                }
+                continue previous
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
+            patterns.push(first)
+            carriers.push(value_carrier)
+            let mut alternative = 0u32
+            let _ = while alternative {
+              current => if current < alternatives.length {
+                let index = self_host_u32_add(alternatives.start, current)
+                if index < module_.pattern_children.length() {
+                  patterns.push(module_.pattern_children[index])
+                  carriers.push(value_carrier)
+                }
+                continue current + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          _ => {}
+        }
+      }
+      continue patterns.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  changed
+}
+
+fn self_host_body_add_scratch(
+  scratches: Array<SelfHostPlannedPhysicalScratchCarrier>,
+  expression: U32,
+  carrier: SelfHostWasmBodyCarrier,
+  context: String,
+) -> Unit {
+  scratches.push(SelfHostPlannedPhysicalScratchCarrier::{
+    expression: expression
+    ordinal: 0u32
+    carrier: carrier
+    context: context
+  })
+}
+
+fn self_host_plan_one_physical_body(
+  link: SelfHostPlannedProgramWasmGCLink,
+  indexes: SelfHostPhysicalBodyIndexes,
+  linked_function: SelfHostPlannedProgramWasmFunction,
+  body: SelfHostPlannedBodyLowering,
+  lambda: U32,
+) -> SelfHostPlannedPhysicalBodyCarrierPlan {
+  let module_ = link.fragments.specialization.lowering.modules[
+    linked_function.module_index
+  ]
+  let fragment_module = self_host_body_fragment_module(
+    link,
+    linked_function.module_index,
+  )
+  let fragment = self_host_body_function_fragment(
+    fragment_module,
+    linked_function.fragment_index,
+  )
+  let expressions = []
+  let mut expression = body.expressions.start
+  let expression_end = self_host_u32_add(body.expressions.start, body.expressions.length)
+  let _ = while expression {
+    current => if current < expression_end {
+      expressions.push(
+        self_host_body_seed_expression(
+          link,
+          indexes,
+          module_,
+          body,
+          linked_function.specialization,
+          current,
+        ),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let locals = []
+  let mut parameter_index = if lambda == 4294967295u32 {
+    0u32
+  } else {
+    1u32
+  }
+  let mut local = 0u32
+  let _ = while local {
+    current => if current < body.locals.length {
+      let source = module_.locals[self_host_u32_add(body.locals.start, current)]
+      if source.kind is SelfHostBodyLocalKind::ParameterLocal &&
+        parameter_index < fragment.parameters.length {
+        let value_index = self_host_u32_add(fragment.parameters.start, parameter_index)
+        if self_host_u32_greater(
+          fragment_module.function_value_types.length(),
+          value_index,
+        ) {
+          locals.push(
+            self_host_body_carrier_from_value_type(
+              self_host_body_function_value_type(
+                fragment_module,
+                value_index,
+              ),
+            ),
+          )
+        } else {
+          locals.push(SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+        }
+        parameter_index = self_host_u32_add(parameter_index, 1u32)
+      } else {
+        locals.push(
+          self_host_body_carrier_from_shape(
+            self_host_body_specialization_shape(
+              link,
+              linked_function.specialization,
+              source.shape,
+            ),
+          ),
+        )
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let control_states = []
+  let control_results = []
+  let mut maximum_control = 0u32
+  for planned in expressions {
+    match module_.expressions[planned.expression].kind {
+      SelfHostPlannedExpressionKind::PlannedWhileExpression(control, _, _) => if control != 4294967295u32 &&
+        control >= maximum_control {
+        maximum_control = self_host_u32_add(control, 1u32)
+      }
+      _ => {}
+    }
+  }
+  let mut control = 0u32
+  let _ = while control {
+    current => if current < maximum_control {
+      control_states.push(SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+      control_results.push(SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let physical_result_carrier = if self_host_u32_equal(
+    fragment.results.length,
+    0u32,
+  ) {
+    SelfHostWasmBodyCarrier::UnitBodyCarrier
+  } else if self_host_u32_equal(fragment.results.length, 1u32) &&
+    self_host_u32_greater(
+      fragment_module.function_value_types.length(),
+      fragment.results.start,
+    ) {
+    self_host_body_carrier_from_value_type(
+      self_host_body_function_value_type(
+        fragment_module,
+        fragment.results.start,
+      ),
+    )
+  } else {
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+  }
+  match body.root {
+    SelfHostHirBodyRoot::ExpressionBodyRoot(root) => {
+      let _ = self_host_body_plan_force_expression_carrier(
+        body,
+        expressions,
+        root,
+        physical_result_carrier,
+      )
+    }
+    SelfHostHirBodyRoot::BlockBodyRoot(block) => {
+      let tail = self_host_body_block_tail_expression(module_, block)
+      if tail != 4294967295u32 {
+        let _ = self_host_body_plan_force_expression_carrier(
+          body,
+          expressions,
+          tail,
+          physical_result_carrier,
+        )
+      }
+    }
+  }
+  let mut changed = true
+  let mut pass = 0u32
+  let _ = while pass {
+    current_pass => if current_pass < 8u32 && changed {
+      changed = false
+      let mut block_offset = 0u32
+      let _ = while block_offset {
+        current_block => if current_block < body.blocks.length {
+          let block_index = self_host_u32_add(body.blocks.start, current_block)
+          let items = module_.blocks[block_index].items
+          let mut item_offset = 0u32
+          let _ = while item_offset {
+            current_item => if current_item < items.length {
+              let item = module_.block_items[
+                self_host_u32_add(items.start, current_item)
+              ]
+              match item.kind {
+                SelfHostPlannedBlockItemKind::PlannedLetItem(
+                  local_id,
+                  _,
+                  initializer,
+                ) => {
+                  let local_slot = self_host_body_local_slot(
+                    module_,
+                    body,
+                    local_id,
+                  )
+                  if local_slot != 4294967295u32 &&
+                    initializer >= body.expressions.start &&
+                    initializer < expression_end {
+                    let expression_slot = self_host_body_expression_slot(
+                      body,
+                      initializer,
+                    )
+                    let initializer_carrier = expressions[expression_slot].carrier
+                    if self_host_body_plan_set_local_carrier(
+                      locals,
+                      local_slot,
+                      initializer_carrier,
+                    ) {
+                      changed = true
+                    }
+                    if self_host_body_plan_force_expression_carrier(
+                      body,
+                      expressions,
+                      initializer,
+                      locals[local_slot],
+                    ) {
+                      changed = true
+                    }
+                  }
+                }
+                _ => {}
+              }
+              continue current_item + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          continue current_block + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      expression = body.expressions.start
+      let _ = while expression {
+        current => if current < expression_end {
+          let slot = self_host_body_expression_slot(body, current)
+          match module_.expressions[current].kind {
+            SelfHostPlannedExpressionKind::PlannedPrefixExpression(
+              operator,
+              operand,
+            ) => if operand >= body.expressions.start && operand < expression_end {
+              let operand_carrier = expressions[
+                self_host_body_expression_slot(body, operand)
+              ].carrier
+              let result_carrier = if operator is SelfHostHirPrefixOperator::LogicalNot {
+                SelfHostWasmBodyCarrier::I32BodyCarrier
+              } else {
+                operand_carrier
+              }
+              if self_host_body_plan_set_expression_carrier(
+                body,
+                expressions,
+                current,
+                result_carrier,
+              ) {
+                changed = true
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedBinaryExpression(
+              operator,
+              left,
+              right,
+            ) => if left >= body.expressions.start && left < expression_end {
+              let result_carrier = match operator {
+                SelfHostHirBinaryOperator::LogicalOr => SelfHostWasmBodyCarrier::I32BodyCarrier
+                SelfHostHirBinaryOperator::LogicalAnd => SelfHostWasmBodyCarrier::I32BodyCarrier
+                SelfHostHirBinaryOperator::Equal => SelfHostWasmBodyCarrier::I32BodyCarrier
+                SelfHostHirBinaryOperator::NotEqual => SelfHostWasmBodyCarrier::I32BodyCarrier
+                SelfHostHirBinaryOperator::Less => SelfHostWasmBodyCarrier::I32BodyCarrier
+                SelfHostHirBinaryOperator::LessEqual => SelfHostWasmBodyCarrier::I32BodyCarrier
+                SelfHostHirBinaryOperator::Greater => SelfHostWasmBodyCarrier::I32BodyCarrier
+                SelfHostHirBinaryOperator::GreaterEqual => SelfHostWasmBodyCarrier::I32BodyCarrier
+                _ => expressions[
+                  self_host_body_expression_slot(body, left)
+                ].carrier
+              }
+              if self_host_body_plan_set_expression_carrier(
+                body,
+                expressions,
+                current,
+                result_carrier,
+              ) {
+                changed = true
+              }
+              if right >= body.expressions.start && right < expression_end {
+                let left_carrier = expressions[
+                  self_host_body_expression_slot(body, left)
+                ].carrier
+                let right_carrier = expressions[
+                  self_host_body_expression_slot(body, right)
+                ].carrier
+                let operand_carrier = if !(
+                  right_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+                ) {
+                  right_carrier
+                } else if !(
+                  left_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+                ) {
+                  left_carrier
+                } else {
+                  expressions[slot].carrier
+                }
+                if self_host_body_plan_force_expression_carrier(
+                  body,
+                  expressions,
+                  left,
+                  operand_carrier,
+                ) {
+                  changed = true
+                }
+                if self_host_body_plan_force_expression_carrier(
+                  body,
+                  expressions,
+                  right,
+                  operand_carrier,
+                ) {
+                  changed = true
+                }
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedLocalGet(local_id) => {
+              let local_slot = self_host_body_local_slot(module_, body, local_id)
+              if local_slot != 4294967295u32 {
+                let get_carrier = expressions[slot].carrier
+                if !(get_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
+                  !self_host_body_carrier_equal(
+                    locals[local_slot],
+                    get_carrier,
+                  ) {
+                  locals[local_slot] = get_carrier
+                  changed = true
+                }
+                if self_host_body_plan_force_expression_carrier(
+                  body,
+                  expressions,
+                  current,
+                  locals[local_slot],
+                ) {
+                  changed = true
+                }
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedLocalSet(local_id, value) => {
+              let local_slot = self_host_body_local_slot(module_, body, local_id)
+              if local_slot != 4294967295u32 && value >= body.expressions.start &&
+                value < expression_end {
+                let value_slot = self_host_body_expression_slot(body, value)
+                let value_carrier = expressions[value_slot].carrier
+                if !(value_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
+                  !self_host_body_carrier_equal(
+                    locals[local_slot],
+                    value_carrier,
+                  ) {
+                  locals[local_slot] = value_carrier
+                  changed = true
+                }
+                if self_host_body_plan_set_expression_carrier(
+                  body,
+                  expressions,
+                  value,
+                  locals[local_slot],
+                ) {
+                  changed = true
+                }
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => if self_host_body_plan_set_expression_carrier(
+              body,
+              expressions,
+              current,
+              self_host_body_block_carrier(module_, body, expressions, block),
+            ) {
+              changed = true
+            }
+            SelfHostPlannedExpressionKind::PlannedIfExpression(
+              _,
+              then_block,
+              else_expression,
+            ) => {
+              let then_carrier = self_host_body_block_carrier(
+                module_,
+                body,
+                expressions,
+                then_block,
+              )
+              let else_carrier = if else_expression >= body.expressions.start &&
+                else_expression < expression_end {
+                expressions[
+                  self_host_body_expression_slot(body, else_expression)
+                ].carrier
+              } else {
+                SelfHostWasmBodyCarrier::UnitBodyCarrier
+              }
+              if self_host_body_plan_set_expression_carrier(
+                body,
+                expressions,
+                current,
+                self_host_body_merge_carrier(then_carrier, else_carrier),
+              ) {
+                changed = true
+              }
+              let expected = expressions[slot].carrier
+              let then_tail = self_host_body_block_tail_expression(
+                module_,
+                then_block,
+              )
+              if then_tail != 4294967295u32 &&
+                self_host_body_plan_set_expression_carrier(
+                  body,
+                  expressions,
+                  then_tail,
+                  expected,
+                ) {
+                changed = true
+              }
+              if else_expression >= body.expressions.start &&
+                else_expression < expression_end &&
+                self_host_body_plan_set_expression_carrier(
+                  body,
+                  expressions,
+                  else_expression,
+                  expected,
+                ) {
+                changed = true
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedMatchExpression(
+              subject,
+              arms,
+            ) => {
+              let subject_carrier = if subject >= body.expressions.start &&
+                subject < expression_end {
+                expressions[self_host_body_expression_slot(body, subject)].carrier
+              } else {
+                SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+              }
+              let mut merged = SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+              let mut arm = 0u32
+              let _ = while arm {
+                current_arm => if current_arm < arms.length {
+                  let child = self_host_u32_add(arms.start, current_arm)
+                  if child < module_.arm_children.length() {
+                    let arm_index = module_.arm_children[child]
+                    if arm_index < module_.pattern_arms.length() {
+                      let source_arm = module_.pattern_arms[arm_index]
+                      if self_host_body_force_pattern_carriers(
+                        link,
+                        indexes,
+                        module_,
+                        body,
+                        source_arm.pattern,
+                        subject_carrier,
+                        locals,
+                      ) {
+                        changed = true
+                      }
+                      let arm_body = source_arm.body
+                      if arm_body >= body.expressions.start && arm_body < expression_end {
+                        let arm_slot = self_host_body_expression_slot(
+                          body,
+                          arm_body,
+                        )
+                        merged = self_host_body_merge_carrier(
+                          merged,
+                          expressions[arm_slot].carrier,
+                        )
+                        if self_host_body_plan_set_expression_carrier(
+                          body,
+                          expressions,
+                          arm_body,
+                          expressions[slot].carrier,
+                        ) {
+                          changed = true
+                        }
+                      }
+                    }
+                  }
+                  continue current_arm + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              if self_host_body_plan_set_expression_carrier(
+                body,
+                expressions,
+                current,
+                merged,
+              ) {
+                changed = true
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedWhileExpression(
+              loop_control,
+              initial,
+              arms,
+            ) => if loop_control < control_states.length() &&
+              initial >= body.expressions.start && initial < expression_end {
+              let initial_carrier = expressions[
+                self_host_body_expression_slot(body, initial)
+              ].carrier
+              if self_host_body_plan_set_local_carrier(
+                control_states,
+                loop_control,
+                initial_carrier,
+              ) {
+                changed = true
+              }
+              if self_host_body_plan_set_expression_carrier(
+                body,
+                expressions,
+                initial,
+                control_states[loop_control],
+              ) {
+                changed = true
+              }
+              if self_host_body_plan_set_local_carrier(
+                control_results,
+                loop_control,
+                expressions[slot].carrier,
+              ) {
+                changed = true
+              }
+              let mut arm = 0u32
+              let _ = while arm {
+                current_arm => if current_arm < arms.length {
+                  let child = self_host_u32_add(arms.start, current_arm)
+                  if child < module_.arm_children.length() {
+                    let arm_index = module_.arm_children[child]
+                    if arm_index < module_.pattern_arms.length() &&
+                      self_host_body_force_pattern_carriers(
+                        link,
+                        indexes,
+                        module_,
+                        body,
+                        module_.pattern_arms[arm_index].pattern,
+                        control_states[loop_control],
+                        locals,
+                      ) {
+                      changed = true
+                    }
+                  }
+                  continue current_arm + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              if self_host_body_plan_set_expression_carrier(
+                body,
+                expressions,
+                current,
+                control_results[loop_control],
+              ) {
+                changed = true
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedBreakExpression(
+              loop_control,
+              value,
+            ) => if loop_control < control_results.length() &&
+              value >= body.expressions.start && value < expression_end {
+              let value_slot = self_host_body_expression_slot(body, value)
+              if self_host_body_plan_set_local_carrier(
+                control_results,
+                loop_control,
+                expressions[value_slot].carrier,
+              ) {
+                changed = true
+              }
+              if self_host_body_plan_set_expression_carrier(
+                body,
+                expressions,
+                value,
+                control_results[loop_control],
+              ) {
+                changed = true
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedContinueExpression(
+              loop_control,
+              value,
+            ) => if loop_control < control_states.length() &&
+              value >= body.expressions.start && value < expression_end {
+              let value_slot = self_host_body_expression_slot(body, value)
+              if self_host_body_plan_set_local_carrier(
+                control_states,
+                loop_control,
+                expressions[value_slot].carrier,
+              ) {
+                changed = true
+              }
+              if self_host_body_plan_set_expression_carrier(
+                body,
+                expressions,
+                value,
+                control_states[loop_control],
+              ) {
+                changed = true
+              }
+            }
+            SelfHostPlannedExpressionKind::PlannedReturnExpression(value) => if value != 4294967295u32 &&
+              value >= body.expressions.start && value < expression_end &&
+              self_host_body_plan_force_expression_carrier(
+                body,
+                expressions,
+                value,
+                physical_result_carrier,
+              ) {
+              changed = true
+            }
+            _ => {
+              let _ = slot
+            }
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_pass + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  for expression_plan in expressions {
+    let planned_expression = module_.expressions[expression_plan.expression]
+    match planned_expression.kind {
+      SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => if self_host_u32_greater(
+        arguments.length,
+        0u32,
+      ) {
+        let declaration = match planned_expression.call_target {
+          SelfHostBasicCallTarget::SelectedBasicCallTarget(value, _) => value
+          _ => self_host_body_function_declaration(
+            link,
+            expression_plan.call_function_index,
+          )
+        }
+        if !self_host_u64_equal(declaration, 0u64) {
+          let child_index = self_host_u32_add(
+            arguments.start,
+            arguments.length - 1u32,
+          )
+          if child_index < module_.expression_children.length() {
+            let argument_expression = module_.expression_children[child_index]
+            if argument_expression >= body.expressions.start &&
+              argument_expression < expression_end {
+              let argument_carrier = expressions[
+                self_host_body_expression_slot(body, argument_expression)
+              ].carrier
+              self_host_body_plan_set_call_function(
+                body,
+                expressions,
+                expression_plan.expression,
+                self_host_body_unique_function_for_last_parameter_carrier(
+                  link,
+                  declaration,
+                  argument_carrier,
+                ),
+              )
+            }
+          }
+        }
+      }
+      _ => {}
+    }
+  }
+  let scratches = []
+  for expression_plan in expressions {
+    match module_.expressions[expression_plan.expression].kind {
+      SelfHostPlannedExpressionKind::PlannedMatchExpression(subject, _) => {
+        let carrier = if subject >= body.expressions.start && subject < expression_end {
+          expressions[self_host_body_expression_slot(body, subject)].carrier
+        } else {
+          SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+        }
+        self_host_body_add_scratch(
+          scratches,
+          expression_plan.expression,
+          carrier,
+          "match subject",
+        )
+      }
+      SelfHostPlannedExpressionKind::PlannedWhileExpression(loop_control, _, _) => if loop_control < control_states.length() {
+        self_host_body_add_scratch(
+          scratches,
+          expression_plan.expression,
+          control_states[loop_control],
+          "loop state",
+        )
+      }
+      SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) => self_host_body_add_scratch(
+        scratches,
+        expression_plan.expression,
+        SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+        "function value",
+      )
+      SelfHostPlannedExpressionKind::PlannedProductField(_, _, _) => self_host_body_add_scratch(
+        scratches,
+        expression_plan.expression,
+        expression_plan.carrier,
+        "product projection",
+      )
+      SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => self_host_body_add_scratch(
+        scratches,
+        expression_plan.expression,
+        SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+        "array literal",
+      )
+      _ => {}
+    }
+  }
+  let result_carrier = physical_result_carrier
+  SelfHostPlannedPhysicalBodyCarrierPlan::{
+    module_index: linked_function.module_index
+    module_id: module_.module_id
+    declaration: linked_function.declaration
+    body: body.body
+    lambda: lambda
+    physical_function_index: self_host_u32_add(
+      linked_function.function_index,
+      2u32,
+    )
+    specialization: linked_function.specialization
+    specialization_key: self_host_body_specialization_key(
+      link,
+      linked_function.declaration,
+      linked_function.specialization,
+    )
+    result_carrier: result_carrier
+    expressions: expressions
+    locals: locals
+    control_states: control_states
+    control_results: control_results
+    scratches: scratches
+  }
+}
+
+fn self_host_body_plan_expression(
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  expression: U32,
+) -> Option<SelfHostPlannedPhysicalExpressionCarrier> {
+  for source in plan.expressions {
+    if self_host_u32_equal(source.expression, expression) {
+      return Option::Some(source)
+    }
+  }
+  Option::None
+}
+
+fn self_host_body_expression_kind_name(
+  kind: SelfHostPlannedExpressionKind,
+) -> String {
+  match kind {
+    SelfHostPlannedExpressionKind::PlannedLocalGet(_) => "local.get"
+    SelfHostPlannedExpressionKind::PlannedLocalSet(_, _) => "local.set"
+    SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => "direct.call"
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, _, _) => "builtin.call"
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => "unresolved.call"
+    SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _) => "field.get"
+    SelfHostPlannedExpressionKind::PlannedUnresolvedField(_, _) => "unresolved.field"
+    SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _) => "if"
+    SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) => "match"
+    SelfHostPlannedExpressionKind::PlannedWhileExpression(_, _, _) => "while"
+    SelfHostPlannedExpressionKind::PlannedReturnExpression(_) => "return"
+    SelfHostPlannedExpressionKind::PlannedProductField(_, _, _) => "product.field"
+    SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, _) => "index.get"
+    _ => "expression"
+  }
+}
+
+fn self_host_body_add_diagnostic(
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  expression: U32,
+  entity: U64,
+  context: String,
+  expected: SelfHostWasmBodyCarrier,
+  actual: SelfHostWasmBodyCarrier,
+) -> Unit {
+  let source = if expression < module_.expressions.length() {
+    module_.expressions[expression]
+  } else {
+    self_host_lowering_error_expression()
+  }
+  let declaration_name = match self_host_program_specialization_callable(
+    module_,
+    plan.declaration,
+  ) {
+    Option::Some(callable) => callable.name
+    Option::None => b""
+  }
+  diagnostics.push(SelfHostPhysicalCarrierDiagnostic::{
+    module_id: plan.module_id
+    declaration: plan.declaration
+    declaration_name: declaration_name
+    body: plan.body
+    lambda: plan.lambda
+    physical_function_index: plan.physical_function_index
+    specialization: plan.specialization
+    specialization_key: plan.specialization_key
+    expression: expression
+    entity: entity
+    source_offset: source.offset
+    expression_kind: self_host_body_expression_kind_name(source.kind)
+    source_name: if source.source_name < module_.names.length() {
+      module_.names[source.source_name]
+    } else {
+      ""
+    }
+    context: context
+    logical_type: source.type_
+    logical_shape: source.shape
+    selected_owner: source.nominal
+    expected: expected
+    actual: actual
+  })
+}
+
+fn self_host_verify_body_call_result(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  expression_plan: SelfHostPlannedPhysicalExpressionCarrier,
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+) -> Unit {
+  if expression_plan.call_function_index == 4294967295u32 {
+    return
+  }
+  match module_.expressions[expression_plan.expression].selection {
+    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(_, _) => {
+      return
+    }
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _) => {
+      return
+    }
+    _ => {}
+  }
+  let expected = self_host_body_function_result_carrier(
+    link,
+    expression_plan.call_function_index,
+  )
+  if !self_host_body_carrier_equal(expected, expression_plan.carrier) {
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      expression_plan.expression,
+      u32_into_u64(expression_plan.call_function_index),
+      "call result",
+      expected,
+      expression_plan.carrier,
+    )
+  }
+}
+
+fn self_host_body_expression_is_embedded_target(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expression: U32,
+) -> Bool {
+  let mut relative = 0u32
+  let end = self_host_u32_add(body.expressions.start, body.expressions.length)
+  let _ = while relative {
+    current => if current < body.expressions.length {
+      let parent = self_host_u32_add(body.expressions.start, current)
+      if parent < end {
+        match module_.expressions[parent].kind {
+          SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => if self_host_u32_equal(
+            target,
+            expression,
+          ) {
+            return true
+          }
+          SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, target, _, _) => if self_host_u32_equal(
+            target,
+            expression,
+          ) {
+            return true
+          }
+          SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, _, _) => if self_host_u32_equal(
+            target,
+            expression,
+          ) {
+            return true
+          }
+          SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => if self_host_u32_equal(
+            target,
+            expression,
+          ) {
+            return true
+          }
+          SelfHostPlannedExpressionKind::PlannedConstruct(target, _, _) => if self_host_u32_equal(
+            target,
+            expression,
+          ) {
+            return true
+          }
+          _ => {}
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  false
+}
+
+fn self_host_verify_one_physical_body(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+) -> Unit {
+  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let body = match self_host_body_lookup(module_, plan.body) {
+    Option::Some(value) => value
+    Option::None => match self_host_body_lambda_lookup(module_, plan.lambda) {
+      Option::Some(value) => value
+      Option::None => {
+        return
+      }
+    }
+  }
+  for expression_plan in plan.expressions {
+    let expression = expression_plan.expression
+    let source = module_.expressions[expression]
+    let _ = self_host_body_expression_is_embedded_target(
+      module_,
+      body,
+      expression,
+    )
+    match source.kind {
+      SelfHostPlannedExpressionKind::PlannedLocalGet(local_id) => {
+        let slot = self_host_body_local_slot(module_, body, local_id)
+        if slot != 4294967295u32 && !self_host_body_carrier_equal(
+          plan.locals[slot],
+          expression_plan.carrier,
+        ) {
+          self_host_body_add_diagnostic(
+            diagnostics,
+            plan,
+            module_,
+            expression,
+            u32_into_u64(local_id),
+            "local get",
+            plan.locals[slot],
+            expression_plan.carrier,
+          )
+        }
+      }
+      SelfHostPlannedExpressionKind::PlannedLocalSet(local_id, value) => {
+        let slot = self_host_body_local_slot(module_, body, local_id)
+        match self_host_body_plan_expression(plan, value) {
+          Option::Some(actual) => if slot != 4294967295u32 &&
+            !self_host_body_carrier_equal(plan.locals[slot], actual.carrier) &&
+            !(actual.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) {
+            self_host_body_add_diagnostic(
+              diagnostics,
+              plan,
+              module_,
+              expression,
+              u32_into_u64(local_id),
+              "local set",
+              plan.locals[slot],
+              actual.carrier,
+            )
+          }
+          Option::None => {}
+        }
+      }
+      SelfHostPlannedExpressionKind::PlannedReturnExpression(value) => if value != 4294967295u32 {
+        match self_host_body_plan_expression(plan, value) {
+          Option::Some(actual) => if !self_host_body_carrier_equal(
+            plan.result_carrier,
+            actual.carrier,
+          ) && !(actual.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) {
+            self_host_body_add_diagnostic(
+              diagnostics,
+              plan,
+              module_,
+              expression,
+              0u64,
+              "return operand",
+              plan.result_carrier,
+              actual.carrier,
+            )
+          }
+          Option::None => {}
+        }
+      }
+      SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _) => match expression_plan.selected_storage {
+        Option::Some(storage) => {
+          let expected = self_host_body_carrier_from_storage(storage)
+          if !self_host_body_carrier_equal(expected, expression_plan.carrier) {
+            self_host_body_add_diagnostic(
+              diagnostics,
+              plan,
+              module_,
+              expression,
+              match source.kind {
+                SelfHostPlannedExpressionKind::PlannedFieldGet(field, _, _) => field
+                _ => u32_into_u64(expression_plan.selected_field_index)
+              },
+              "field load",
+              expected,
+              expression_plan.carrier,
+            )
+          }
+        }
+        Option::None => self_host_body_add_diagnostic(
+          diagnostics,
+          plan,
+          module_,
+          expression,
+          0u64,
+          "field load has no selected physical field",
+          SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+          SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+        )
+      }
+      SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => self_host_verify_body_call_result(
+        link,
+        plan,
+        module_,
+        expression_plan,
+        diagnostics,
+      )
+      SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, _, _) => self_host_verify_body_call_result(
+        link,
+        plan,
+        module_,
+        expression_plan,
+        diagnostics,
+      )
+      SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, _, _, _) => self_host_verify_body_call_result(
+        link,
+        plan,
+        module_,
+        expression_plan,
+        diagnostics,
+      )
+      SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => self_host_verify_body_call_result(
+        link,
+        plan,
+        module_,
+        expression_plan,
+        diagnostics,
+      )
+      _ => {}
+    }
+  }
+  let mut block_offset = 0u32
+  let _ = while block_offset {
+    current_block => if current_block < body.blocks.length {
+      let block_index = self_host_u32_add(body.blocks.start, current_block)
+      let items = module_.blocks[block_index].items
+      let mut item_offset = 0u32
+      let _ = while item_offset {
+        current_item => if current_item < items.length {
+          let item = module_.block_items[
+            self_host_u32_add(items.start, current_item)
+          ]
+          match item.kind {
+            SelfHostPlannedBlockItemKind::PlannedLetItem(
+              local_id,
+              _,
+              initializer,
+            ) => {
+              let slot = self_host_body_local_slot(module_, body, local_id)
+              match self_host_body_plan_expression(plan, initializer) {
+                Option::Some(actual) => if slot != 4294967295u32 &&
+                  !self_host_body_carrier_equal(plan.locals[slot], actual.carrier) &&
+                  !(actual.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) {
+                  self_host_body_add_diagnostic(
+                    diagnostics,
+                    plan,
+                    module_,
+                    initializer,
+                    u32_into_u64(local_id),
+                    "local initialization",
+                    plan.locals[slot],
+                    actual.carrier,
+                  )
+                }
+                Option::None => {}
+              }
+            }
+            _ => {}
+          }
+          continue current_item + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_block + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let root_carrier = match body.root {
+    SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => match self_host_body_plan_expression(
+      plan,
+      expression,
+    ) {
+      Option::Some(value) => value.carrier
+      Option::None => SelfHostWasmBodyCarrier::UnitBodyCarrier
+    }
+    SelfHostHirBodyRoot::BlockBodyRoot(block) => self_host_body_block_carrier(
+      module_,
+      body,
+      plan.expressions,
+      block,
+    )
+  }
+  if !(plan.result_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) &&
+    !self_host_body_carrier_equal(plan.result_carrier, root_carrier) &&
+    !(root_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) {
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      match body.root {
+        SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => expression
+        SelfHostHirBodyRoot::BlockBodyRoot(_) => body.expressions.start
+      },
+      0u64,
+      "function result",
+      plan.result_carrier,
+      root_carrier,
+    )
+  }
+}
+
+pub fn self_host_plan_program_wasm_bodies(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> SelfHostPlannedProgramWasmBodyPlan {
+  let indexes = self_host_build_physical_body_indexes(link)
+  let bodies = []
+  let diagnostics = []
+  for function_ in link.functions {
+    let fragment_module = self_host_body_fragment_module(
+      link,
+      function_.module_index,
+    )
+    let fragment = self_host_body_function_fragment(
+      fragment_module,
+      function_.fragment_index,
+    )
+    let module_ = link.fragments.specialization.lowering.modules[
+      function_.module_index
+    ]
+    let (body, lambda) = match fragment.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(body_id) => match self_host_body_lookup(
+        module_,
+        body_id,
+      ) {
+        Option::Some(value) => (Option::Some(value), 4294967295u32)
+        Option::None => (Option::None, 4294967295u32)
+      }
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(
+        lambda_id,
+      ) => (self_host_body_lambda_lookup(module_, lambda_id), lambda_id)
+      _ => (Option::None, 4294967295u32)
+    }
+    match body {
+      Option::Some(value) => {
+        let plan = self_host_plan_one_physical_body(
+          link,
+          indexes,
+          function_,
+          value,
+          lambda,
+        )
+        self_host_verify_one_physical_body(link, plan, diagnostics)
+        bodies.push(plan)
+      }
+      Option::None => {}
+    }
+  }
+  SelfHostPlannedProgramWasmBodyPlan::{
+    bodies: bodies
+    diagnostics: diagnostics
+  }
+}
+
+pub fn self_host_body_carrier_shape(
+  carrier: SelfHostWasmBodyCarrier,
+) -> SelfHostPlannedValueShape {
+  match carrier {
+    SelfHostWasmBodyCarrier::UnitBodyCarrier => SelfHostPlannedValueShape::UnitPlannedValueShape
+    SelfHostWasmBodyCarrier::NeverBodyCarrier => SelfHostPlannedValueShape::NeverPlannedValueShape
+    SelfHostWasmBodyCarrier::I32BodyCarrier => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostWasmBodyCarrier::I64BodyCarrier => SelfHostPlannedValueShape::I64PlannedValueShape
+    SelfHostWasmBodyCarrier::F32BodyCarrier => SelfHostPlannedValueShape::F32PlannedValueShape
+    SelfHostWasmBodyCarrier::F64BodyCarrier => SelfHostPlannedValueShape::F64PlannedValueShape
+    SelfHostWasmBodyCarrier::V128BodyCarrier => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostWasmBodyCarrier::FuncRefBodyCarrier => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier => SelfHostPlannedValueShape::ErrorPlannedValueShape
+  }
+}
+
+fn self_host_body_carrier_name(carrier: SelfHostWasmBodyCarrier) -> String {
+  match carrier {
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier => "unresolved"
+    SelfHostWasmBodyCarrier::UnitBodyCarrier => "unit"
+    SelfHostWasmBodyCarrier::NeverBodyCarrier => "never"
+    SelfHostWasmBodyCarrier::I32BodyCarrier => "i32"
+    SelfHostWasmBodyCarrier::I64BodyCarrier => "i64"
+    SelfHostWasmBodyCarrier::F32BodyCarrier => "f32"
+    SelfHostWasmBodyCarrier::F64BodyCarrier => "f64"
+    SelfHostWasmBodyCarrier::V128BodyCarrier => "v128"
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier => "eqref"
+    SelfHostWasmBodyCarrier::FuncRefBodyCarrier => "funcref"
+  }
+}
+
+pub fn self_host_program_wasm_body_plan_error_report(
+  plan: SelfHostPlannedProgramWasmBodyPlan,
+) -> String {
+  let output = StringBuilder::new()
+  output.append("physical body carrier verifier: ")
+  output.append_u32(plan.diagnostics.length())
+  output.append(" error(s)")
+  for diagnostic in plan.diagnostics {
+    output.append("\nmodule=")
+    output.append_u64(diagnostic.module_id)
+    output.append(" declaration=")
+    output.append_u64(diagnostic.declaration)
+    output.append(" name=")
+    output.append(bytes_to_string(diagnostic.declaration_name))
+    output.append(" body=")
+    output.append_u64(diagnostic.body)
+    output.append(" lambda=")
+    output.append_u32(diagnostic.lambda)
+    output.append(" function=")
+    output.append_u32(diagnostic.physical_function_index)
+    output.append(" specialization=")
+    output.append(diagnostic.specialization_key)
+    output.append(" expression=")
+    output.append_u32(diagnostic.expression)
+    output.append(" entity=")
+    output.append_u64(diagnostic.entity)
+    output.append(" offset=")
+    output.append_u32(diagnostic.source_offset)
+    output.append(" kind=")
+    output.append(diagnostic.expression_kind)
+    output.append(" source_name=")
+    output.append(diagnostic.source_name)
+    output.append(" context=")
+    output.append(diagnostic.context)
+    output.append(" expected=")
+    output.append(self_host_body_carrier_name(diagnostic.expected))
+    output.append(" actual=")
+    output.append(self_host_body_carrier_name(diagnostic.actual))
+  }
+  output.finish()
+}
+
+pub fn self_host_program_wasm_body_plan_for_identity(
+  plan: SelfHostPlannedProgramWasmBodyPlan,
+  module_id: U64,
+  body_id: U64,
+  specialization: U32,
+) -> Option<SelfHostPlannedPhysicalBodyCarrierPlan> {
+  for body in plan.bodies {
+    if self_host_u64_equal(body.module_id, module_id) &&
+      self_host_u64_equal(body.body, body_id) &&
+      self_host_u32_equal(body.specialization, specialization) {
+      return Option::Some(body)
+    }
+  }
+  Option::None
+}
+
+pub fn self_host_program_wasm_body_plan_for_function(
+  plan: SelfHostPlannedProgramWasmBodyPlan,
+  physical_function_index: U32,
+) -> Option<SelfHostPlannedPhysicalBodyCarrierPlan> {
+  for body in plan.bodies {
+    if self_host_u32_equal(
+      body.physical_function_index,
+      physical_function_index,
+    ) {
+      return Option::Some(body)
+    }
+  }
+  Option::None
+}

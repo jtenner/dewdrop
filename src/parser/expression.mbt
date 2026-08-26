@@ -875,6 +875,27 @@ fn Parser::parse_expression_context(
                 values.push(expression)
                 mode = SeekingBinaryOperator
               }
+              @tokenizer.Keyword(@tokenizer.Return) => {
+                self.consume_lookahead()
+                let value = match self.peek_token() {
+                  None => None
+                  Some(next) =>
+                    match next.kind() {
+                      @tokenizer.Newline
+                      | @tokenizer.Symbol(@tokenizer.RightBrace) => None
+                      _ =>
+                        match self.parse_expression_recoverable() {
+                          Ok(expression) => Some(expression)
+                          Err(error) =>
+                            return Err(
+                              error.inside_parentheses_count(nested_groups),
+                            )
+                        }
+                    }
+                }
+                values.push(ReturnExpr(value, offset))
+                mode = SeekingBinaryOperator
+              }
               @tokenizer.Keyword(@tokenizer.Break) => {
                 self.consume_lookahead()
                 let expression = match self.parse_break_expression(offset) {
@@ -893,6 +914,28 @@ fn Parser::parse_expression_context(
                     return Err(error.inside_parentheses_count(nested_groups))
                 }
                 values.push(expression)
+                mode = SeekingBinaryOperator
+              }
+              @tokenizer.Symbol(@tokenizer.RightParen) if nested_groups > 0 &&
+                group_element_counts[group_element_counts.length() - 1] == 0 &&
+                values.length() == group_value_starts[group_value_starts.length() - 1] => {
+                let start = group_value_starts.pop().unwrap()
+                ignore(group_element_counts.pop())
+                let open_offset = group_offsets.pop().unwrap()
+                if values.length() != start ||
+                  operator_codes.length() == 0 ||
+                  operator_codes[operator_codes.length() - 1] != pending_group_code {
+                  return Err(
+                    expression_failure(InvalidOperatorState(offset)).inside_parentheses_count(
+                      nested_groups,
+                    ),
+                  )
+                }
+                ignore(operator_codes.pop())
+                ignore(operator_offsets.pop())
+                values.push(BlockExpr({ items: [], offset: open_offset }))
+                self.consume_lookahead()
+                nested_groups -= 1
                 mode = SeekingBinaryOperator
               }
               @tokenizer.Symbol(@tokenizer.RightParen) if nested_groups > 0 &&
