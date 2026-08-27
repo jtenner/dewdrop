@@ -8,6 +8,7 @@ pub struct ForeignTypeDeclaration {
 
 ///|
 pub struct ForeignLibraryMember {
+  visibility : DeclarationVisibility
   name : String
   name_offset : UInt64
   parameters : Array[FnParameter]
@@ -97,6 +98,7 @@ fn Parser::parse_foreign_library_parameters(
 ///|
 fn Parser::parse_foreign_library_member(
   self : Parser,
+  visibility : DeclarationVisibility,
   member_offset : UInt64,
 ) -> Result[ForeignLibraryMember, RecoveryFailure] {
   let (name, name_offset) = match self.parse_identifier(FunctionName) {
@@ -156,6 +158,7 @@ fn Parser::parse_foreign_library_member(
   match self.finish_declaration_line() {
     Ok(_) =>
       Ok({
+        visibility,
         name,
         name_offset,
         parameters,
@@ -185,23 +188,31 @@ fn Parser::parse_foreign_library_body(
     if self.consume_right_brace_for_declaration() {
       return Ok(members)
     }
-    let member_offset = match self.peek_token() {
+    let (visibility, member_offset) = match self.peek_token() {
       Some(token) => {
         let offset = token.offset()
         match token.kind() {
-          @tokenizer.Keyword(@tokenizer.Pub) =>
-            return Err(
-              declaration_failure(PublicForeignLibraryMemberNotAllowed(offset)),
-            )
-          @tokenizer.Keyword(@tokenizer.Fn) => self.consume_lookahead()
+          @tokenizer.Keyword(@tokenizer.Pub) => {
+            self.consume_lookahead()
+            match self.peek_token() {
+              Some(fn_token) if fn_token.kind()
+                is @tokenizer.Keyword(@tokenizer.Fn) => self.consume_lookahead()
+              _ =>
+                return Err(self.declaration_error(ForeignLibraryMemberKeyword))
+            }
+            (Public, offset)
+          }
+          @tokenizer.Keyword(@tokenizer.Fn) => {
+            self.consume_lookahead()
+            (ModuleVisible, offset)
+          }
           _ => return Err(self.declaration_error(ForeignLibraryMemberKeyword))
         }
-        offset
       }
       None => return Err(declaration_failure(UnclosedImpl(declaration_offset)))
     }
     let foreign_member = match
-      self.parse_foreign_library_member(member_offset) {
+      self.parse_foreign_library_member(visibility, member_offset) {
       Ok(value) => value
       Err(error) => return Err(error)
     }

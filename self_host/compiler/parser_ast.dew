@@ -317,6 +317,7 @@ pub struct SelfHostForeignTypeDeclaration {
 }
 
 pub struct SelfHostForeignLibraryMember {
+  visibility: SelfHostDeclarationVisibility
   name: String
   name_offset: U32
   parameters: Array<SelfHostFnParameter>

@@ -14,31 +14,26 @@ The pinned canonical declarations are stored in `tools/facet-imports.wat`.
 
 ## Dew namespaces
 
-The low-level bindings are split by operation group:
+One module owns all raw foreign imports. The public wrappers use broad operation
+groups:
 
 ```text
 dew.std.facet
+dew.std.facet.imports
+dew.std.facet.core
+dew.std.facet.fs
 dew.std.facet.process
 dew.std.facet.clock
 dew.std.facet.random
-dew.std.facet.fs.preopen
-dew.std.facet.fs.descriptor
-dew.std.facet.fs.read
-dew.std.facet.fs.write
-dew.std.facet.fs.position
-dew.std.facet.fs.sync
-dew.std.facet.fs.path
-dew.std.facet.fs.directory
-dew.std.facet.fs.link
-dew.std.facet.net.socket
-dew.std.facet.net.datagram
-dew.std.facet.net.dns
 dew.std.facet.poll
+dew.std.facet.net
 ```
 
-`dew.std.facet.fs.sync` exposes `fd_sync` and `fd_datasync`.
-The existing provider-neutral `dew.std.fs.facet` and
-`dew.std.process.facet` modules remain supported.
+`dew.std.facet.imports` declares the raw adapter functions as public foreign
+library members. The grouped modules call them through an import alias without
+an extra forwarding function. `dew.std.facet.fs` includes `fd_sync` and
+`fd_datasync`. The old fine-grained Facet modules and the old
+`dew.std.fs.facet` and `dew.std.process.facet` adapters were removed.
 
 ## Representation rules
 
@@ -68,5 +63,7 @@ Run the complete smoke gate with:
 tools/check-facet.sh
 ```
 
-The smoke module references every low-level function and requires exactly the
-261 canonical `facet` imports after static linking.
+The smoke module references every grouped public function and requires exactly
+the 261 canonical `facet` imports after static linking. Parser, interface, and
+semantic tests also require public foreign library members to survive an import
+alias and remain directly callable.

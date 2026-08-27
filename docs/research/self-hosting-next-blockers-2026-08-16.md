@@ -1,5 +1,9 @@
 # Next self-hosting blockers — August 16, 2026
 
+> Facet namespace note, August 27, 2026: the old `dew.std.fs.facet` and
+> `dew.std.process.facet` adapters were removed. Use the grouped
+> `dew.std.facet.*` modules; `dew.std.facet.imports` owns the raw imports.
+
 ## Status after the compiler-library tranche
 
 The Array, FixedArray equality, deterministic Show, integer builder output,

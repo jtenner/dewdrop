@@ -933,7 +933,7 @@ fn CollectionBuilder::collect_foreign_library(
       declaration.id,
       ForeignLibraryMemberDecl,
       source_member.name,
-      ModuleVisible,
+      semantic_visibility(source_member.visibility),
       source_member.offset,
     )
     match self.first_method_name(method_start, collected_method.name) {

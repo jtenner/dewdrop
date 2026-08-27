@@ -1875,6 +1875,7 @@ fn parse_write_foreign_library_member(
   writer : @cache_binary.Writer,
   value : ForeignLibraryMember,
 ) -> Unit {
+  parse_write_visibility(writer, value.visibility)
   writer.write_string(value.name)
   parse_write_offset(writer, value.name_offset)
   parse_write_fn_parameters(writer, value.parameters)
@@ -1891,6 +1892,7 @@ fn parse_read_foreign_library_member(
   depth : Int,
 ) -> ForeignLibraryMember {
   {
+    visibility: parse_read_visibility(reader, field + ".visibility"),
     name: reader.read_string(parse_event_maximum_text, field + ".name"),
     name_offset: parse_read_offset(reader, field + ".name_offset"),
     parameters: parse_read_fn_parameters(

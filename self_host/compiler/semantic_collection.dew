@@ -1196,7 +1196,7 @@ impl SelfHostCollectionBuilder {
         declaration.id,
         SelfHostCollectedMethodKind::ForeignLibraryMemberDecl,
         source_member.name,
-        SelfHostSemanticVisibility::ModuleVisible,
+        self_host_semantic_visibility(source_member.visibility),
         source_member.offset,
       )
       match self.first_method_name(

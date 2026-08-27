@@ -1,5 +1,10 @@
 # Facet host bindings — August 18, 2026
 
+> Superseded on August 27, 2026. Raw Facet imports now live in
+> `dew.std.facet.imports`; public operations use the grouped `core`, `fs`,
+> `process`, `clock`, `random`, `poll`, and `net` modules. The two adapters named
+> below were removed.
+
 ## Result
 
 Dewdrop now uses `facet` as the host provider and import-module name.

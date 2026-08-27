@@ -16,6 +16,7 @@ test "foreign types and linked namespaces parse" {
       assert_eq(value.logical_name, b"starshine")
       assert_eq(value.namespace_alias, "Starshine")
       assert_eq(value.members.length(), 1)
+      assert_eq(value.members[0].visibility, ModuleVisible)
       assert_eq(value.members[0].name, "module_new")
       assert_eq(value.members[0].export_name, b"module_new")
       assert_eq(value.members[0].parameters.length(), 0)
@@ -93,13 +94,22 @@ test "foreign trait implementations keep their old syntax" {
 }
 
 ///|
-test "linked namespace syntax rejects unsupported member forms" {
-  assert_true(
+test "linked namespace members can be public" {
+  match
     Parser::from_bytes(
       b"foreign impl \"x\" as X {\n  pub fn f() -> U32 = \"f\"\n}\n",
-    ).parse_declaration()
-    is Err(PublicForeignLibraryMemberNotAllowed(_)),
-  )
+    ).parse_declaration() {
+    Ok(ForeignLibrary(value)) => {
+      assert_eq(value.members.length(), 1)
+      assert_eq(value.members[0].visibility, Public)
+      assert_eq(value.members[0].name, "f")
+    }
+    _ => fail("expected public linked namespace member")
+  }
+}
+
+///|
+test "linked namespace syntax rejects unsupported member forms" {
   assert_true(
     Parser::from_bytes(
       b"foreign impl \"x\" as X {\n  fn f<a>() -> U32 = \"f\"\n}\n",

@@ -717,6 +717,31 @@ test "explicit import aliases select external calls" {
 
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
+test "public foreign library members are callable through import aliases" {
+  let program = collect_program_manifest(
+    1892UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.consumer", [
+        ManifestFile::new(
+          "consumer.dew", b"import app.imports as @raw\npub fn run() -> U32 {\n  @raw.answer()\n}\n",
+        ),
+      ]),
+      ManifestModule::new("app.imports", [
+        ManifestFile::new(
+          "imports.dew", b"foreign impl \"provider\" as Provider {\n  pub fn answer() -> U32 = \"answer\"\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_eq(analyzed.frozen.import_diagnostics.length(), 0)
+  assert_eq(analyzed.frozen.interfaces[1].callables_named("answer").length(), 1)
+  assert_eq(analyzed.modules[0].names.diagnostics.length(), 0)
+  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
+}
+
+///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
 test "default import aliases use the final module segment" {
   let program = collect_program_manifest(
     1895UL,

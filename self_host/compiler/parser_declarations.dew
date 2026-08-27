@@ -528,21 +528,29 @@ fn self_host_parse_foreign_library(
         } else {
         }
         let member_offset = self_host_parser_offset(parser)
-        if self_host_parser_consume_keyword(parser, SelfHostKeyword::Pub) {
-          self_host_parser_fail(
-            parser,
-            SelfHostParseError::PublicForeignLibraryMemberNotAllowed(
-              member_offset,
-            ),
-          )
-          break false
-        } else if !self_host_parser_expect_keyword(
+        let visibility = if self_host_parser_consume_keyword(
           parser,
-          SelfHostKeyword::Fn,
-          SelfHostDeclarationExpectation::ForeignLibraryMemberKeyword,
+          SelfHostKeyword::Pub,
         ) {
-          break false
+          if !self_host_parser_expect_keyword(
+            parser,
+            SelfHostKeyword::Fn,
+            SelfHostDeclarationExpectation::ForeignLibraryMemberKeyword,
+          ) {
+            break false
+          } else {
+          }
+          SelfHostDeclarationVisibility::Public
         } else {
+          if !self_host_parser_expect_keyword(
+            parser,
+            SelfHostKeyword::Fn,
+            SelfHostDeclarationExpectation::ForeignLibraryMemberKeyword,
+          ) {
+            break false
+          } else {
+          }
+          SelfHostDeclarationVisibility::ModuleVisible
         }
         let member_pair = match self_host_parser_identifier(
           parser,
@@ -628,6 +636,7 @@ fn self_host_parse_foreign_library(
         } else {
         }
         members.push(SelfHostForeignLibraryMember::{
+          visibility: visibility
           name: member_name
           name_offset: member_name_offset
           parameters: parameters

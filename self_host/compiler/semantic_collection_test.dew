@@ -279,11 +279,15 @@ test "semantic collection diagnoses duplicate owner names" {
 test "semantic collection records foreign declarations" {
   let collected = self_host_collect_bytes(
     13u64,
-    b"pub foreign type Handle\nforeign impl \"host\" as host {\n  fn read(value: I32) -> I32 = \"read\"\n}\n",
+    b"pub foreign type Handle\nforeign impl \"host\" as host {\n  pub fn read(value: I32) -> I32 = \"read\"\n}\n",
   )
   assert(collected.foreign_types.length() == 1u32, "foreign type")
   assert(collected.foreign_libraries.length() == 1u32, "foreign library")
   assert(collected.foreign_functions.length() == 1u32, "foreign function")
+  assert(
+    collected.methods[0u32].visibility is SelfHostSemanticVisibility::Public,
+    "public foreign function visibility",
+  )
   assert(collected.diagnostics.length() == 0u32, "foreign diagnostics")
 }
 

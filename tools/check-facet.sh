@@ -5,14 +5,20 @@ mkdir -p .tmp
 python3 tools/generate_facet_bindings.py --check
 python3 tools/generate_facet_adapter.py --check
 
-# Keep the provider-neutral filesystem and process adapters working.
-tools/dew build \
-  --link-wasm facet fixtures/facet/facet-adapter.wasm \
-  -o .tmp/facet-smoke.wasm \
-  fixtures/facet/facet-smoke.dew
-wasm-tools validate --features all .tmp/facet-smoke.wasm
+obsolete=(
+  std/fs/facet.dew
+  std/process/facet.dew
+  std/facet/fs/sync.dew
+  std/facet/net/dns.dew
+)
+for path in "${obsolete[@]}"; do
+  if [[ -e "$path" ]]; then
+    echo "obsolete Facet module remains: $path" >&2
+    exit 1
+  fi
+done
 
-# Reach every low-level namespace and retain every canonical Facet 0.1 import.
+# Reach every public Facet namespace and retain every canonical Facet 0.1 import.
 tools/dew build \
   --link-wasm facet fixtures/facet/facet-adapter.wasm \
   -o .tmp/facet-import-smoke.wasm \

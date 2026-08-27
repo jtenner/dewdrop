@@ -13,16 +13,12 @@ pub fn standard_source_paths() -> Array[String] {
     "std/math.dew", "std/io.dew", "std/testing.dew", "std/json.dew", "std/encode.dew",
     "std/decode.dew", "std/format.dew", "std/semver.dew", "std/package.dew", "std/package/artifact.dew",
     "std/bloom_filter.dew", "std/blake3.dew", "std/integrity/sha256.dew", "std/path.dew",
-    "std/fs.dew", "std/process.dew", "std/fs/wasi.dew", "std/fs/facet.dew", "std/process/wasi.dew",
-    "std/process/facet.dew", "std/text_runtime.dew", "std/string.dew", "std/string_fixed_array.dew",
-    "std/string_builder.dew", "std/bytes_builder.dew", "std/bytes.dew", "std/text.dew",
-    "std/encoding/utf8.dew", "std/wasm/wasi.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
-    "std/facet.dew", "std/facet/process.dew", "std/facet/clock.dew", "std/facet/random.dew",
-    "std/facet/fs/preopen.dew", "std/facet/fs/descriptor.dew", "std/facet/fs/read.dew",
-    "std/facet/fs/write.dew", "std/facet/fs/position.dew", "std/facet/fs/sync.dew",
-    "std/facet/fs/path.dew", "std/facet/fs/directory.dew", "std/facet/fs/link.dew",
-    "std/facet/net/socket.dew", "std/facet/net/datagram.dew", "std/facet/net/dns.dew",
-    "std/facet/poll.dew",
+    "std/fs.dew", "std/process.dew", "std/fs/wasi.dew", "std/process/wasi.dew", "std/text_runtime.dew",
+    "std/string.dew", "std/string_fixed_array.dew", "std/string_builder.dew", "std/bytes_builder.dew",
+    "std/bytes.dew", "std/text.dew", "std/encoding/utf8.dew", "std/wasm/wasi.dew",
+    "std/wasi.dew", "std/wasm/intrinsics.dew", "std/facet.dew", "std/facet/imports.dew",
+    "std/facet/core.dew", "std/facet/fs.dew", "std/facet/process.dew", "std/facet/clock.dew",
+    "std/facet/random.dew", "std/facet/poll.dew", "std/facet/net.dew",
   ]
   for
     name in [
@@ -89,9 +85,7 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/fs.dew" => Some(standard_fs_source())
     "std/process.dew" => Some(standard_process_source())
     "std/fs/wasi.dew" => Some(standard_fs_wasi_source())
-    "std/fs/facet.dew" => Some(standard_fs_facet_source())
     "std/process/wasi.dew" => Some(standard_process_wasi_source())
-    "std/process/facet.dew" => Some(standard_process_facet_source())
     "std/iter.dew" => Some(standard_iter_source())
     "std/text_runtime.dew" => Some(standard_text_sources()[0])
     "std/string.dew" => Some(standard_text_sources()[1])
@@ -105,22 +99,14 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/wasi.dew" => Some(standard_wasi_source())
     "std/wasm/intrinsics.dew" => Some(standard_wasm_intrinsics_source())
     "std/facet.dew" => Some(standard_facet_source())
+    "std/facet/imports.dew" => Some(standard_facet_imports_source())
+    "std/facet/core.dew" => Some(standard_facet_core_source())
+    "std/facet/fs.dew" => Some(standard_facet_fs_source())
     "std/facet/process.dew" => Some(standard_facet_process_source())
     "std/facet/clock.dew" => Some(standard_facet_clock_source())
     "std/facet/random.dew" => Some(standard_facet_random_source())
-    "std/facet/fs/preopen.dew" => Some(standard_facet_fs_preopen_source())
-    "std/facet/fs/descriptor.dew" => Some(standard_facet_fs_descriptor_source())
-    "std/facet/fs/read.dew" => Some(standard_facet_fs_read_source())
-    "std/facet/fs/write.dew" => Some(standard_facet_fs_write_source())
-    "std/facet/fs/position.dew" => Some(standard_facet_fs_position_source())
-    "std/facet/fs/sync.dew" => Some(standard_facet_fs_sync_source())
-    "std/facet/fs/path.dew" => Some(standard_facet_fs_path_source())
-    "std/facet/fs/directory.dew" => Some(standard_facet_fs_directory_source())
-    "std/facet/fs/link.dew" => Some(standard_facet_fs_link_source())
-    "std/facet/net/socket.dew" => Some(standard_facet_net_socket_source())
-    "std/facet/net/datagram.dew" => Some(standard_facet_net_datagram_source())
-    "std/facet/net/dns.dew" => Some(standard_facet_net_dns_source())
     "std/facet/poll.dew" => Some(standard_facet_poll_source())
+    "std/facet/net.dew" => Some(standard_facet_net_source())
     _ => {
       let lanes = standard_lane_sources()
       let names = [

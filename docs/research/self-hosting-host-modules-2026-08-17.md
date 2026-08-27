@@ -2,6 +2,11 @@
 
 Updated on August 18, 2026 for the Facet provider and current `facet-spec` ABI.
 
+> Facet namespace note, August 27, 2026: the provider-neutral Facet adapters
+> described below were removed. Raw imports now use `dew.std.facet.imports`,
+> with grouped public operations under `dew.std.facet.fs`,
+> `dew.std.facet.process`, and the other direct Facet child modules.
+
 ## Decision
 
 Do not add one broad `dew.std.host` module. Split pure contracts from host

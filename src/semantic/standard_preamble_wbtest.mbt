@@ -36,7 +36,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 99)
+  assert_eq(wildcard_paths.length(), 89)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -71,19 +71,20 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[45], "std/fs.dew")
   assert_eq(wildcard_paths[46], "std/process.dew")
   assert_eq(wildcard_paths[47], "std/fs/wasi.dew")
-  assert_eq(wildcard_paths[48], "std/fs/facet.dew")
-  assert_eq(wildcard_paths[49], "std/process/wasi.dew")
-  assert_eq(wildcard_paths[50], "std/process/facet.dew")
-  assert_eq(wildcard_paths[51], "std/facet.dew")
-  assert_eq(wildcard_paths[60], "std/facet/fs/sync.dew")
-  assert_eq(wildcard_paths[67], "std/facet/poll.dew")
-  assert_eq(wildcard_paths[68], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[70], "std/string_fixed_array.dew")
-  assert_eq(wildcard_paths[74], "std/text.dew")
-  assert_eq(wildcard_paths[75], "std/encoding/utf8.dew")
-  assert_eq(wildcard_paths[76], "std/wasm/wasi.dew")
-  assert_eq(wildcard_paths[78], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[98], "std/f64x2.dew")
+  assert_eq(wildcard_paths[48], "std/process/wasi.dew")
+  assert_eq(wildcard_paths[49], "std/facet.dew")
+  assert_eq(wildcard_paths[50], "std/facet/imports.dew")
+  assert_eq(wildcard_paths[51], "std/facet/core.dew")
+  assert_eq(wildcard_paths[52], "std/facet/fs.dew")
+  assert_eq(wildcard_paths[56], "std/facet/poll.dew")
+  assert_eq(wildcard_paths[57], "std/facet/net.dew")
+  assert_eq(wildcard_paths[58], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[60], "std/string_fixed_array.dew")
+  assert_eq(wildcard_paths[64], "std/text.dew")
+  assert_eq(wildcard_paths[65], "std/encoding/utf8.dew")
+  assert_eq(wildcard_paths[66], "std/wasm/wasi.dew")
+  assert_eq(wildcard_paths[68], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[88], "std/f64x2.dew")
 }
 
 ///|
@@ -232,36 +233,36 @@ test "standard import prepass selects SHA-256 dependencies" {
 
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "standard import prepass selects filesystem and process adapters" {
+test "standard import prepass selects filesystem and process WASI adapters" {
   let module_id = 1006UL
   assert_eq(
     selected_standard_modules([
       ProgramFile::new(
         make_program_file_id(module_id, 0),
-        b"open dew.std.fs.wasi\nopen dew.std.process.facet\npub fn run() -> Unit {\n}\n",
+        b"open dew.std.fs.wasi\nopen dew.std.process.wasi\npub fn run() -> Unit {\n}\n",
       ),
     ]),
     (
       15, false, false, false, false, false, false, true, true, true, false, false,
-      5193728, 0, 0,
+      3096576, 0, 0,
     ),
   )
 }
 
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "standard import prepass selects low-level Facet namespaces" {
+test "standard import prepass selects grouped Facet namespaces" {
   let module_id = 1008UL
   assert_eq(
     selected_standard_modules([
       ProgramFile::new(
         make_program_file_id(module_id, 0),
-        b"open dew.std.facet.fs.sync\nopen dew.std.facet.net.dns\npub fn run() -> Unit {\n}\n",
+        b"open dew.std.facet.fs\nopen dew.std.facet.net\npub fn run() -> Unit {\n}\n",
       ),
     ]),
     (
       0, false, false, false, false, false, false, true, true, false, false, false,
-      0, 33281, 0,
+      0, 267, 0,
     ),
   )
 }

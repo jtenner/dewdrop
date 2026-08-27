@@ -387,22 +387,13 @@ pub fn required_standard_library_source_paths(
   if (collection_mask & 524288) != 0 {
     required.push("std/fs/wasi.dew")
   }
-  if (collection_mask & 1048576) != 0 {
-    required.push("std/fs/facet.dew")
-  }
   if (collection_mask & 2097152) != 0 {
     required.push("std/process/wasi.dew")
   }
-  if (collection_mask & 4194304) != 0 {
-    required.push("std/process/facet.dew")
-  }
   let facet_paths = [
-    "std/facet.dew", "std/facet/process.dew", "std/facet/clock.dew", "std/facet/random.dew",
-    "std/facet/fs/preopen.dew", "std/facet/fs/descriptor.dew", "std/facet/fs/read.dew",
-    "std/facet/fs/write.dew", "std/facet/fs/position.dew", "std/facet/fs/sync.dew",
-    "std/facet/fs/path.dew", "std/facet/fs/directory.dew", "std/facet/fs/link.dew",
-    "std/facet/net/socket.dew", "std/facet/net/datagram.dew", "std/facet/net/dns.dew",
-    "std/facet/poll.dew",
+    "std/facet.dew", "std/facet/imports.dew", "std/facet/core.dew", "std/facet/fs.dew",
+    "std/facet/process.dew", "std/facet/clock.dew", "std/facet/random.dew", "std/facet/poll.dew",
+    "std/facet/net.dew",
   ]
   for index, path in facet_paths {
     if (facet_mask & (1 << index)) != 0 {
@@ -1000,20 +991,6 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 1048576) != 0 {
-    let module_id = standard_library_module_id(60)
-    let module_index = modules.length()
-    first_module["dew.std.fs.facet"] = module_index
-    module_paths.push("dew.std.fs.facet")
-    modules.push(
-      collect_program_files_with_frozen_standard_imports(
-        module_id,
-        standard_library_program_files(
-          module_id, "std/fs/facet.dew", standard_sources, false, false,
-        ),
-      ),
-    )
-  }
   if (selected_collection_mask & 2097152) != 0 {
     let module_id = standard_library_module_id(61)
     let module_index = modules.length()
@@ -1028,35 +1005,15 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  if (selected_collection_mask & 4194304) != 0 {
-    let module_id = standard_library_module_id(62)
-    let module_index = modules.length()
-    first_module["dew.std.process.facet"] = module_index
-    module_paths.push("dew.std.process.facet")
-    modules.push(
-      collect_program_files_with_frozen_standard_imports(
-        module_id,
-        standard_library_program_files(
-          module_id, "std/process/facet.dew", standard_sources, false, false,
-        ),
-      ),
-    )
-  }
   let facet_source_paths = [
-    "std/facet.dew", "std/facet/process.dew", "std/facet/clock.dew", "std/facet/random.dew",
-    "std/facet/fs/preopen.dew", "std/facet/fs/descriptor.dew", "std/facet/fs/read.dew",
-    "std/facet/fs/write.dew", "std/facet/fs/position.dew", "std/facet/fs/sync.dew",
-    "std/facet/fs/path.dew", "std/facet/fs/directory.dew", "std/facet/fs/link.dew",
-    "std/facet/net/socket.dew", "std/facet/net/datagram.dew", "std/facet/net/dns.dew",
-    "std/facet/poll.dew",
+    "std/facet.dew", "std/facet/imports.dew", "std/facet/core.dew", "std/facet/fs.dew",
+    "std/facet/process.dew", "std/facet/clock.dew", "std/facet/random.dew", "std/facet/poll.dew",
+    "std/facet/net.dew",
   ]
   let facet_module_paths = [
-    "dew.std.facet", "dew.std.facet.process", "dew.std.facet.clock", "dew.std.facet.random",
-    "dew.std.facet.fs.preopen", "dew.std.facet.fs.descriptor", "dew.std.facet.fs.read",
-    "dew.std.facet.fs.write", "dew.std.facet.fs.position", "dew.std.facet.fs.sync",
-    "dew.std.facet.fs.path", "dew.std.facet.fs.directory", "dew.std.facet.fs.link",
-    "dew.std.facet.net.socket", "dew.std.facet.net.datagram", "dew.std.facet.net.dns",
-    "dew.std.facet.poll",
+    "dew.std.facet", "dew.std.facet.imports", "dew.std.facet.core", "dew.std.facet.fs",
+    "dew.std.facet.process", "dew.std.facet.clock", "dew.std.facet.random", "dew.std.facet.poll",
+    "dew.std.facet.net",
   ]
   for index, source_path in facet_source_paths {
     if (selected_facet_mask & (1 << index)) != 0 {
