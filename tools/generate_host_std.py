@@ -13,6 +13,23 @@ SOURCES = [
     ("standard_fs_facet_source", ROOT / "std/fs/facet.dew"),
     ("standard_process_wasi_source", ROOT / "std/process/wasi.dew"),
     ("standard_process_facet_source", ROOT / "std/process/facet.dew"),
+    ("standard_facet_source", ROOT / "std/facet.dew"),
+    ("standard_facet_process_source", ROOT / "std/facet/process.dew"),
+    ("standard_facet_clock_source", ROOT / "std/facet/clock.dew"),
+    ("standard_facet_random_source", ROOT / "std/facet/random.dew"),
+    ("standard_facet_fs_preopen_source", ROOT / "std/facet/fs/preopen.dew"),
+    ("standard_facet_fs_descriptor_source", ROOT / "std/facet/fs/descriptor.dew"),
+    ("standard_facet_fs_read_source", ROOT / "std/facet/fs/read.dew"),
+    ("standard_facet_fs_write_source", ROOT / "std/facet/fs/write.dew"),
+    ("standard_facet_fs_position_source", ROOT / "std/facet/fs/position.dew"),
+    ("standard_facet_fs_sync_source", ROOT / "std/facet/fs/sync.dew"),
+    ("standard_facet_fs_path_source", ROOT / "std/facet/fs/path.dew"),
+    ("standard_facet_fs_directory_source", ROOT / "std/facet/fs/directory.dew"),
+    ("standard_facet_fs_link_source", ROOT / "std/facet/fs/link.dew"),
+    ("standard_facet_net_socket_source", ROOT / "std/facet/net/socket.dew"),
+    ("standard_facet_net_datagram_source", ROOT / "std/facet/net/datagram.dew"),
+    ("standard_facet_net_dns_source", ROOT / "std/facet/net/dns.dew"),
+    ("standard_facet_poll_source", ROOT / "std/facet/poll.dew"),
 ]
 TARGET = ROOT / "src/standard_sources/standard_host_sources.mbt"
 

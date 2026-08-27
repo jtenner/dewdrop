@@ -15,11 +15,11 @@ foreign impl "facet" as FacetProcessHost {
   fn i64_value(value: FacetProcessI64Result) -> U64 = "i64_result_value"
   fn i64_error(value: FacetProcessI64Result) -> U32 = "i64_result_error"
   fn args_count() -> FacetProcessI32Result = "args_count"
-  fn args_len(index: U32) -> FacetProcessI64Result = "args_len_i8"
-  fn args_read(index: U32, destination: FixedArray<U8>, capacity: U32) -> FacetProcessI64Result = "args_read_into_array_i8"
+  fn args_len(index: U32, wtf: U32) -> FacetProcessI64Result = "args_len_i8"
+  fn args_read(index: U32, wtf: U32, destination: FixedArray<U8>, offset: U32, capacity: U32) -> FacetProcessI64Result = "args_read_into_array_i8"
   fn env_count() -> FacetProcessI32Result = "env_count"
-  fn env_len(index: U32, field: U32) -> FacetProcessI64Result = "env_len_i8"
-  fn env_read(index: U32, field: U32, destination: FixedArray<U8>, capacity: U32) -> FacetProcessI64Result = "env_read_into_array_i8"
+  fn env_len(index: U32, field: U32, wtf: U32) -> FacetProcessI64Result = "env_len_i8"
+  fn env_read(index: U32, field: U32, wtf: U32, destination: FixedArray<U8>, offset: U32, capacity: U32) -> FacetProcessI64Result = "env_read_into_array_i8"
   fn stdio_stdout() -> FacetProcessI32Result = "stdio_stdout"
   fn stdio_stderr() -> FacetProcessI32Result = "stdio_stderr"
   fn fd_write(fd: U32, source: FixedArray<U8>, offset: U64, length: U64) -> FacetProcessI64Result = "fd_write_array_i8"
@@ -101,7 +101,7 @@ fn facet_argument(
   max_bytes: U32,
 ) -> Result<String, ProcessError> {
   let operation = ProcessOperation::Arguments
-  let length_result = FacetProcessHost.args_len(index)
+  let length_result = FacetProcessHost.args_len(index, 0u32)
   let length_error = FacetProcessHost.i64_error(length_result)
   if length_error != 0u32 {
     Result::Err(facet_process_backend_error(operation, length_error))
@@ -114,7 +114,7 @@ fn facet_argument(
     } else {
       let count = facet_process_u64_to_u32(length)
       let buffer = FixedArray::make(count, 0u8)
-      let read = FacetProcessHost.args_read(index, buffer, count)
+      let read = FacetProcessHost.args_read(index, 0u32, buffer, 0u32, count)
       let read_error = FacetProcessHost.i64_error(read)
       let written = FacetProcessHost.i64_value(read)
       if read_error != 0u32 {
@@ -134,7 +134,7 @@ fn facet_environment_field(
   max_bytes: U32,
 ) -> Result<String, ProcessError> {
   let operation = ProcessOperation::Environment
-  let length_result = FacetProcessHost.env_len(index, field)
+  let length_result = FacetProcessHost.env_len(index, field, 0u32)
   let length_error = FacetProcessHost.i64_error(length_result)
   if length_error != 0u32 {
     Result::Err(facet_process_backend_error(operation, length_error))
@@ -147,7 +147,7 @@ fn facet_environment_field(
     } else {
       let count = facet_process_u64_to_u32(length)
       let buffer = FixedArray::make(count, 0u8)
-      let read = FacetProcessHost.env_read(index, field, buffer, count)
+      let read = FacetProcessHost.env_read(index, field, 0u32, buffer, 0u32, count)
       let read_error = FacetProcessHost.i64_error(read)
       let written = FacetProcessHost.i64_value(read)
       if read_error != 0u32 {

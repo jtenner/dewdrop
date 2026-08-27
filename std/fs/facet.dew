@@ -18,16 +18,16 @@ foreign impl "facet" as FacetFsHost {
   fn stat_size(value: FacetStatResult) -> U64 = "stat_result_size"
   fn stat_error(value: FacetStatResult) -> U32 = "stat_result_error"
   fn handle_close(handle: U32) -> U32 = "handle_close"
-  fn fs_preopen_directory(index: U32) -> FacetI32Result = "fs_preopen_directory"
+  fn fs_preopen_get(index: U32) -> FacetI32Result = "fs_preopen_get"
   fn fd_stat(fd: U32) -> FacetStatResult = "fd_stat"
   fn fd_read(fd: U32, buffer: FixedArray<U8>, offset: U64, length: U64) -> FacetI64Result = "fd_read_array_i8"
   fn fd_write(fd: U32, buffer: FixedArray<U8>, offset: U64, length: U64) -> FacetI64Result = "fd_write_array_i8"
   fn fd_sync(fd: U32) -> U32 = "fd_sync"
-  fn path_open(directory: U32, path: FixedArray<U8>, length: U32, flags: U32, rights: U64) -> FacetI32Result = "path_open_array_i8"
-  fn path_stat(directory: U32, path: FixedArray<U8>, length: U32) -> FacetStatResult = "path_stat_array_i8"
-  fn path_create_directory(directory: U32, path: FixedArray<U8>, length: U32) -> U32 = "path_create_dir_array_i8"
-  fn path_remove(directory: U32, path: FixedArray<U8>, length: U32, flags: U32) -> U32 = "path_remove_array_i8"
-  fn path_rename(directory: U32, source: FixedArray<U8>, source_length: U32, destination: FixedArray<U8>, destination_length: U32) -> U32 = "path_rename_array_i8"
+  fn path_open(directory: U32, path: FixedArray<U8>, offset: U32, length: U32, wtf: U32, flags: U32, rights: U64) -> FacetI32Result = "path_open_array_i8"
+  fn path_stat(directory: U32, path: FixedArray<U8>, offset: U32, length: U32, wtf: U32, flags: U32) -> FacetStatResult = "path_stat_array_i8"
+  fn path_create_directory(directory: U32, path: FixedArray<U8>, offset: U32, length: U32, wtf: U32) -> U32 = "path_create_dir_array_i8"
+  fn path_remove(directory: U32, path: FixedArray<U8>, offset: U32, length: U32, wtf: U32, flags: U32) -> U32 = "path_remove_array_i8"
+  fn path_rename(source_directory: U32, source: FixedArray<U8>, source_offset: U32, source_length: U32, source_wtf: U32, destination_directory: U32, destination: FixedArray<U8>, destination_offset: U32, destination_length: U32, destination_wtf: U32, flags: U32) -> U32 = "path_rename_array_i8"
 }
 
 pub struct FacetFileSystem {
@@ -54,7 +54,7 @@ fn facet_root_error(code: U32) -> FsError {
 }
 
 pub fn facet_preopen_file_system(index: U32) -> Result<FacetFileSystem, FsError> {
-  let result = FacetFsHost.fs_preopen_directory(index)
+  let result = FacetFsHost.fs_preopen_get(index)
   let error = FacetFsHost.i32_error(result)
   if error == 0u32 {
     Result::Ok(facet_file_system(FacetFsHost.i32_value(result)))
@@ -151,7 +151,7 @@ fn facet_write_rights() -> U64 {
 impl FileSystem for FacetFileSystem {
   fn path_kind(self, path: RelativePath) -> Result<PathKind, FsError> {
     let buffer = facet_path_buffer(path)
-    let result = FacetFsHost.path_stat(self.root, buffer, buffer.length())
+    let result = FacetFsHost.path_stat(self.root, buffer, 0u32, buffer.length(), 0u32, 0u32)
     let error = FacetFsHost.stat_error(result)
     if error == 2u32 {
       Result::Ok(PathKind::Missing)
@@ -172,7 +172,9 @@ impl FileSystem for FacetFileSystem {
     let opened = FacetFsHost.path_open(
       self.root,
       path_buffer,
+      0u32,
       path_buffer.length(),
+      0u32,
       0u32,
       facet_read_rights(),
     )
@@ -224,7 +226,9 @@ impl FileSystem for FacetFileSystem {
     let opened = FacetFsHost.path_open(
       self.root,
       path_buffer,
+      0u32,
       path_buffer.length(),
+      0u32,
       5u32,
       facet_write_rights(),
     )
@@ -269,7 +273,7 @@ impl FileSystem for FacetFileSystem {
 
   fn create_directory(self, path: RelativePath) -> Result<Unit, FsError> {
     let buffer = facet_path_buffer(path)
-    let error = FacetFsHost.path_create_directory(self.root, buffer, buffer.length())
+    let error = FacetFsHost.path_create_directory(self.root, buffer, 0u32, buffer.length(), 0u32)
     if error == 0u32 || error == 9u32 {
       Result::Ok(facet_fs_unit())
     } else {
@@ -283,9 +287,15 @@ impl FileSystem for FacetFileSystem {
     let error = FacetFsHost.path_rename(
       self.root,
       source_buffer,
+      0u32,
       source_buffer.length(),
+      0u32,
+      self.root,
       destination_buffer,
+      0u32,
       destination_buffer.length(),
+      0u32,
+      1u32,
     )
     if error == 0u32 {
       Result::Ok(facet_fs_unit())
@@ -296,7 +306,7 @@ impl FileSystem for FacetFileSystem {
 
   fn remove_file(self, path: RelativePath) -> Result<Unit, FsError> {
     let buffer = facet_path_buffer(path)
-    let error = FacetFsHost.path_remove(self.root, buffer, buffer.length(), 1u32)
+    let error = FacetFsHost.path_remove(self.root, buffer, 0u32, buffer.length(), 0u32, 1u32)
     if error == 0u32 || error == 2u32 {
       Result::Ok(facet_fs_unit())
     } else {
@@ -306,7 +316,7 @@ impl FileSystem for FacetFileSystem {
 
   fn remove_directory(self, path: RelativePath) -> Result<Unit, FsError> {
     let buffer = facet_path_buffer(path)
-    let error = FacetFsHost.path_remove(self.root, buffer, buffer.length(), 2u32)
+    let error = FacetFsHost.path_remove(self.root, buffer, 0u32, buffer.length(), 0u32, 2u32)
     if error == 0u32 || error == 2u32 {
       Result::Ok(facet_fs_unit())
     } else {

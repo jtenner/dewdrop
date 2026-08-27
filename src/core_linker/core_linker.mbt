@@ -290,7 +290,7 @@ fn core_ref_defined_type(value : @lib.ValType) -> (Bool, Bool, Int)? {
 }
 
 ///|
-fn core_same_packed_array_type(
+fn core_same_non_nominal_array_type(
   dew_arena : CoreTypeArena,
   guest_arena : CoreTypeArena,
   dew : Int,
@@ -307,8 +307,17 @@ fn core_same_packed_array_type(
       dew_arena.subtypes[dew].get_comptype(),
       guest_arena.subtypes[guest].get_comptype(),
     ) {
-    (@lib.ArrayCompType(dew_field), @lib.ArrayCompType(guest_field)) =>
-      dew_field == guest_field && dew_field.get_storage_type().is_packed()
+    (@lib.ArrayCompType(dew_field), @lib.ArrayCompType(guest_field)) => {
+      if dew_field != guest_field {
+        false
+      } else {
+        match dew_field.get_storage_type() {
+          @lib.PackTypeStorageType(_) => true
+          @lib.ValTypeStorageType(type_) =>
+            core_ref_defined_type(type_) is None
+        }
+      }
+    }
     _ => false
   }
 }
@@ -345,7 +354,7 @@ fn core_bind_value_type(
       Some((guest_nullable, guest_exact, guest_concrete)),
     ) if dew_nullable == guest_nullable &&
       dew_exact == guest_exact &&
-      core_same_packed_array_type(
+      core_same_non_nominal_array_type(
         dew_arena, guest_arena, dew_concrete, guest_concrete,
       ) => {
       if concrete_guest_types[dew_concrete] >= 0 &&

@@ -36,7 +36,7 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let wildcard_paths = required_standard_library_source_paths(wildcard, false)
-  assert_eq(wildcard_paths.length(), 82)
+  assert_eq(wildcard_paths.length(), 99)
   assert_eq(wildcard_paths[14], "std/fixed_array.dew")
   assert_eq(wildcard_paths[15], "std/array.dew")
   assert_eq(wildcard_paths[16], "std/map.dew")
@@ -74,13 +74,16 @@ test "required on-disk standard paths are selective and deterministic" {
   assert_eq(wildcard_paths[48], "std/fs/facet.dew")
   assert_eq(wildcard_paths[49], "std/process/wasi.dew")
   assert_eq(wildcard_paths[50], "std/process/facet.dew")
-  assert_eq(wildcard_paths[51], "std/text_runtime.dew")
-  assert_eq(wildcard_paths[53], "std/string_fixed_array.dew")
-  assert_eq(wildcard_paths[57], "std/text.dew")
-  assert_eq(wildcard_paths[58], "std/encoding/utf8.dew")
-  assert_eq(wildcard_paths[59], "std/wasm/wasi.dew")
-  assert_eq(wildcard_paths[61], "std/wasm/intrinsics.dew")
-  assert_eq(wildcard_paths[81], "std/f64x2.dew")
+  assert_eq(wildcard_paths[51], "std/facet.dew")
+  assert_eq(wildcard_paths[60], "std/facet/fs/sync.dew")
+  assert_eq(wildcard_paths[67], "std/facet/poll.dew")
+  assert_eq(wildcard_paths[68], "std/text_runtime.dew")
+  assert_eq(wildcard_paths[70], "std/string_fixed_array.dew")
+  assert_eq(wildcard_paths[74], "std/text.dew")
+  assert_eq(wildcard_paths[75], "std/encoding/utf8.dew")
+  assert_eq(wildcard_paths[76], "std/wasm/wasi.dew")
+  assert_eq(wildcard_paths[78], "std/wasm/intrinsics.dew")
+  assert_eq(wildcard_paths[98], "std/f64x2.dew")
 }
 
 ///|
@@ -96,7 +99,7 @@ test "standard import prepass selects split module bits" {
     ]),
     (
       9, false, false, false, false, false, true, true, true, false, false, false,
-      0, 0,
+      0, 0, 0,
     ),
   )
 }
@@ -114,7 +117,7 @@ test "standard import prepass selects raw WebAssembly WASI" {
     ]),
     (
       0, false, false, false, false, false, false, false, false, false, false, false,
-      16384, 0,
+      16384, 0, 0,
     ),
   )
 }
@@ -132,7 +135,7 @@ test "standard import prepass selects scalar math dependencies" {
     ]),
     (
       0, false, false, true, false, false, false, false, false, false, false, false,
-      0, 0,
+      0, 0, 0,
     ),
   )
 }
@@ -150,7 +153,7 @@ test "standard import prepass selects portable IO dependencies" {
     ]),
     (
       12, false, false, false, true, false, false, true, true, false, false, false,
-      0, 0,
+      0, 0, 0,
     ),
   )
 }
@@ -168,7 +171,7 @@ test "standard import prepass selects testing dependencies" {
     ]),
     (
       0, false, false, false, false, true, false, false, false, false, false, false,
-      0, 0,
+      0, 0, 0,
     ),
   )
 }
@@ -186,7 +189,7 @@ test "standard import prepass selects Bloom filter" {
     ]),
     (
       0, false, false, false, false, false, false, false, false, false, false, false,
-      4096, 0,
+      4096, 0, 0,
     ),
   )
 }
@@ -204,7 +207,7 @@ test "standard import prepass selects BLAKE3 dependencies" {
     ]),
     (
       8, false, false, false, false, false, false, true, true, true, false, false,
-      8192, 0,
+      8192, 0, 0,
     ),
   )
 }
@@ -222,7 +225,7 @@ test "standard import prepass selects SHA-256 dependencies" {
     ]),
     (
       8, false, false, false, false, false, false, true, true, false, false, false,
-      32768, 0,
+      32768, 0, 0,
     ),
   )
 }
@@ -240,7 +243,25 @@ test "standard import prepass selects filesystem and process adapters" {
     ]),
     (
       15, false, false, false, false, false, false, true, true, true, false, false,
-      5193728, 0,
+      5193728, 0, 0,
+    ),
+  )
+}
+
+///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
+test "standard import prepass selects low-level Facet namespaces" {
+  let module_id = 1008UL
+  assert_eq(
+    selected_standard_modules([
+      ProgramFile::new(
+        make_program_file_id(module_id, 0),
+        b"open dew.std.facet.fs.sync\nopen dew.std.facet.net.dns\npub fn run() -> Unit {\n}\n",
+      ),
+    ]),
+    (
+      0, false, false, false, false, false, false, true, true, false, false, false,
+      0, 33281, 0,
     ),
   )
 }
@@ -258,7 +279,7 @@ test "standard import prepass selects JSON dependencies" {
     ]),
     (
       15, false, false, false, true, false, false, true, true, true, false, false,
-      6144, 2048,
+      6144, 0, 2048,
     ),
   )
 }
@@ -276,7 +297,7 @@ test "standard import prepass selects generic iterator dependencies" {
     ]),
     (
       0, false, false, false, false, false, false, false, false, false, false, false,
-      1024, 0,
+      1024, 0, 0,
     ),
   )
 }
@@ -294,7 +315,7 @@ test "standard import prepass selects text iteration dependencies" {
     ]),
     (
       17, false, false, false, false, false, false, true, true, false, false, false,
-      0, 0,
+      0, 0, 0,
     ),
   )
 }
@@ -312,7 +333,7 @@ test "standard import prepass selects UTF8 codec dependencies" {
     ]),
     (
       43, false, false, false, false, false, false, true, true, false, false, false,
-      0, 0,
+      0, 0, 0,
     ),
   )
 }
@@ -330,7 +351,7 @@ test "standard import prepass selects Show and builder dependency" {
     ]),
     (
       3, true, false, false, false, false, false, true, true, true, false, false,
-      0, 0,
+      0, 0, 0,
     ),
   )
 }
@@ -348,7 +369,7 @@ test "standard import prepass selects Disposable" {
     ]),
     (
       0, false, true, false, false, false, false, false, false, false, false, false,
-      0, 0,
+      0, 0, 0,
     ),
   )
 }
@@ -366,7 +387,7 @@ test "standard import prepass selects lane module bits" {
     ]),
     (
       0, false, false, false, false, false, false, false, false, false, false, false,
-      0, 524289,
+      0, 0, 524289,
     ),
   )
 }

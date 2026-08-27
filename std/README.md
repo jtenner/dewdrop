@@ -39,6 +39,13 @@ dew.std.fs.facet         Facet 0.1 filesystem adapter
 dew.std.process         provider-neutral process contract
 dew.std.process.wasi    WASI Preview 1 process adapter
 dew.std.process.facet    Facet 0.1 process adapter
+dew.std.facet            raw Facet core, handles, exit, and yield
+dew.std.facet.process    raw stdio, arguments, and environment
+dew.std.facet.clock      raw clocks and sleep
+dew.std.facet.random     raw scalar and buffer randomness
+dew.std.facet.fs.*       raw preopen, descriptor, I/O, sync, path, directory, and link APIs
+dew.std.facet.net.*      raw socket, datagram, and DNS APIs
+dew.std.facet.poll       raw readiness and timer polling
 dew.std.json            strict bounded JSON values, I/O facades, and serialization
 dew.std.encode          fallible receiver-based Bytes encoding evidence
 dew.std.decode          fallible Bytes decoding evidence
@@ -184,7 +191,7 @@ WASI marshalling uses the 65,520 data bytes remaining in one reusable 64 KiB lin
 
 `dew.std.testing` adds explicit-message Boolean, equality, ordering, Option-shape, and Result-shape assertions. It delegates failure to the ambient compiler-owned `assert`, so test-mode dynamic messages and production zero-I/O traps remain unchanged. Test discovery, `_test.dew`, `expect_trap`, filters, and metadata remain compiler/tooling features rather than library APIs.
 
-`dew.std.path` validates strict workspace-relative UTF-8 paths, rejects absolute paths, parent escapes, empty/dot segments, backslashes, NUL, and paths longer than 4,096 bytes. `dew.std.fs` defines explicit filesystem capabilities, typed errors, bounded reads, recursive directory creation, and atomic write composition. `dew.std.process` defines ordered arguments, missing-aware environment lookup, separate stdout/stderr, and explicit exit. WASI adapters use a bounded Memory32 scratch window. Facet adapters use the GC `array_i8` profile through the checked-in `fixtures/facet/facet-adapter.wasm` provider; link it with `--link-wasm facet fixtures/facet/facet-adapter.wasm`. Facet filesystem access starts with `facet_preopen_file_system(index)`. Facet argument and environment reads use strict UTF-8 length/copy imports.
+`dew.std.path` validates strict workspace-relative UTF-8 paths, rejects absolute paths, parent escapes, empty/dot segments, backslashes, NUL, and paths longer than 4,096 bytes. `dew.std.fs` defines explicit filesystem capabilities, typed errors, bounded reads, recursive directory creation, and atomic write composition. `dew.std.process` defines ordered arguments, missing-aware environment lookup, separate stdout/stderr, and explicit exit. WASI adapters use a bounded Memory32 scratch window. The higher-level Facet adapters use strict GC `array_i8` operations. The `dew.std.facet` namespace family exposes all 261 canonical Facet 0.1 imports, including Memory32, Memory64, numeric GC arrays, filesystems, links, networking, DNS, clocks, randomness, and polling. `dew.std.facet.fs.sync` contains `fd_sync` and `fd_datasync`. Link Facet programs with `--link-wasm facet fixtures/facet/facet-adapter.wasm`.
 
 `dew.std.io` is host-independent. `Reader.read(limit)` returns at most `limit` Bytes and uses an empty successful result for EOF; `Writer.write(value)` reports bounded progress. Exact reads, complete writes, bounded read-to-end, and bounded copy use typed `IoError` results. `BytesInput` and `BytesOutput` provide deterministic in-memory implementations. Importing the module does not import WASI or add linear memory; `dew.std.wasi` remains the GC-Bytes adapter and `dew.std.wasm.wasi` is the separate raw Preview 1 surface.
 
@@ -205,6 +212,7 @@ python3 tools/generate_wasi_std.py
 python3 tools/generate_wasm_intrinsics_std.py
 python3 tools/generate_bloom_filter_std.py
 python3 tools/generate_sha256_std.py
+python3 tools/generate_facet_bindings.py
 python3 tools/generate_host_std.py
 python3 tools/generate_facet_adapter.py
 python3 tools/generate_json_std.py

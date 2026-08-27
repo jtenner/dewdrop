@@ -76,6 +76,7 @@ fn selected_standard_modules(
   Bool,
   Int,
   Int,
+  Int,
 ) {
   let mut text_mask = 0
   let mut show = false
@@ -90,6 +91,7 @@ fn selected_standard_modules(
   let mut map = false
   let mut set = false
   let mut collection_mask = 0
+  let mut facet_mask = 0
   let mut lane_mask = 0
   for file in files {
     let events = file.events()
@@ -110,11 +112,54 @@ fn selected_standard_modules(
             map = true
             set = true
             collection_mask = 536854527
+            facet_mask = 131071
             show = true
             disposable = true
             math = true
             io = true
             testing = true
+          } else if import_.path.length() == 5 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
+            import_.path[2] == "facet" &&
+            import_.path[3] == "fs" {
+            match import_.path[4] {
+              "preopen" => facet_mask = facet_mask | 17
+              "descriptor" => facet_mask = facet_mask | 33
+              "read" => facet_mask = facet_mask | 65
+              "write" => facet_mask = facet_mask | 129
+              "position" => facet_mask = facet_mask | 257
+              "sync" => facet_mask = facet_mask | 513
+              "path" => facet_mask = facet_mask | 1025
+              "directory" => facet_mask = facet_mask | 2049
+              "link" => facet_mask = facet_mask | 4097
+              _ => ()
+            }
+            fixed_array = true
+          } else if import_.path.length() == 5 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
+            import_.path[2] == "facet" &&
+            import_.path[3] == "net" {
+            match import_.path[4] {
+              "socket" => facet_mask = facet_mask | 8193
+              "datagram" => facet_mask = facet_mask | 16385
+              "dns" => facet_mask = facet_mask | 32769
+              _ => ()
+            }
+            fixed_array = true
+          } else if import_.path.length() == 4 &&
+            import_.path[0] == "dew" &&
+            import_.path[1] == "std" &&
+            import_.path[2] == "facet" {
+            match import_.path[3] {
+              "process" => facet_mask = facet_mask | 3
+              "clock" => facet_mask = facet_mask | 5
+              "random" => facet_mask = facet_mask | 9
+              "poll" => facet_mask = facet_mask | 65537
+              _ => ()
+            }
+            fixed_array = true
           } else if import_.path.length() == 4 &&
             import_.path[0] == "dew" &&
             import_.path[1] == "std" &&
@@ -228,6 +273,10 @@ fn selected_standard_modules(
                 fixed_array = true
               }
               "wasi" => wasi = true
+              "facet" => {
+                facet_mask = facet_mask | 1
+                fixed_array = true
+              }
               "fixed_array" => fixed_array = true
               "array" => array = true
               "map" => map = true
@@ -344,7 +393,7 @@ fn selected_standard_modules(
   }
   (
     text_mask, show, disposable, math, io, testing, wasi, wasm_intrinsics, fixed_array,
-    array, map, set, collection_mask, lane_mask,
+    array, map, set, collection_mask, facet_mask, lane_mask,
   )
 }
 

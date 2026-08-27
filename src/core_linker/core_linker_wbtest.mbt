@@ -401,6 +401,108 @@ test "Core Wasm linker coalesces exact packed array types without an adapter" {
 }
 
 ///|
+fn core_link_test_i32_array_dew_module() -> @lib.Module {
+  let values = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::array(
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::var_(),
+        ),
+      ),
+    ),
+  )
+  let marker = @lib.RecType::new(
+    @lib.SubType::comp_type(@lib.CompType::struct_([])),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([core_link_test_ref(0)], [core_link_test_ref(1)]),
+    ),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([values, marker, signature]))
+  .with_import_sec(
+    @lib.ImportSec::new([
+      @lib.Import::new(
+        @lib.Name::from_string("link:facet"),
+        @lib.Name::from_string("consume_i32_array"),
+        @lib.ExternType::func(@lib.TypeIdx::new(2U)),
+      ),
+    ]),
+  )
+}
+
+///|
+fn core_link_test_i32_array_guest_module() -> @lib.Module {
+  let values = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::array(
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::var_(),
+        ),
+      ),
+    ),
+  )
+  let result = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::struct_([
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::const_(),
+        ),
+      ]),
+    ),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([core_link_test_ref(0)], [core_link_test_ref(1)]),
+    ),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([values, result, signature]))
+  .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(2U)]))
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("consume_i32_array"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+  .with_code_sec(
+    @lib.CodeSec::new([
+      @lib.Func::new(
+        @lib.Locals::empty(),
+        @lib.Expr::new([
+          @lib.Instruction::i32_const(@lib.I32::new(1)),
+          @lib.Instruction::struct_new(@lib.TypeIdx::new(1U)),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+test "Core Wasm linker coalesces exact non-packed numeric array types" {
+  let linked = link_core_wasm_gc_modules(
+    @binary.encode_module(core_link_test_i32_array_dew_module()).unwrap(),
+    [{
+      provider: "facet",
+      bytes: @binary.encode_module(core_link_test_i32_array_guest_module()).unwrap(),
+    }],
+    options={
+      keep_guest_exports: false,
+      validate_each_phase: true,
+      run_cleanup: false,
+      preserve_dew_memory_zero: true,
+    },
+  ).unwrap()
+  assert_eq(@validate.validate_module(@binary.decode_module(linked).unwrap()), Ok(()))
+}
+
+///|
 fn core_link_test_string_dew_module() -> @lib.Module {
   let marker = @lib.RecType::new(
     @lib.SubType::comp_type(@lib.CompType::struct_([])),

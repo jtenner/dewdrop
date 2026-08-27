@@ -58,9 +58,11 @@ linear-memory index.
 
 ## Facet source and adapter boundary
 
-The exact Facet import names and signatures come from `github:jtenner/facet-spec` at
-commit `c6014e7f086f3d3d7ff5e1e7d65a7e6f24e1dcab`. The Facet 0.1 draft uses
-ordinary imports from module `facet`, explicit memory indexes, and
+The original focused adapter names came from `github:jtenner/facet-spec` at
+commit `c6014e7f086f3d3d7ff5e1e7d65a7e6f24e1dcab`. The complete low-level
+namespace family now follows commit
+`c3d06ad1b3e7f8ad6b83ecb4e96e999c922b5140`. The Facet 0.1 draft uses ordinary
+imports from module `facet`, explicit memory indexes, and
 representation-specific function names.
 
 Dew uses Facet's GC `array_i8` profile. The checked-in

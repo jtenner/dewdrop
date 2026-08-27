@@ -30,6 +30,7 @@ python3 tools/generate_testing_std.py --check
 python3 tools/generate_bloom_filter_std.py --check
 python3 tools/generate_blake3_std.py --check
 python3 tools/generate_sha256_std.py --check
+python3 tools/generate_facet_bindings.py --check
 python3 tools/generate_host_std.py --check
 python3 tools/generate_package_std.py --check
 PYTHONPATH=tools python3 tools/test_starshine_ffi_consumer.py

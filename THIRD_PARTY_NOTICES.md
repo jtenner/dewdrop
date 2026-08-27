@@ -49,10 +49,16 @@ follow the specification from:
 https://github.com/jtenner/facet-spec
 ```
 
-The source was audited at commit:
+The complete import surface was audited at `facet-spec` commit:
 
 ```text
-c6014e7f086f3d3d7ff5e1e7d65a7e6f24e1dcab
+c3d06ad1b3e7f8ad6b83ecb4e96e999c922b5140
+```
+
+The matching `wago-facet` implementation was audited at commit:
+
+```text
+471eb2f3fe3c1dadad1fbb153f5c15b10ba71c4a
 ```
 
 MIT License

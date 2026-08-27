@@ -27,10 +27,12 @@ The bindings follow:
 https://github.com/jtenner/facet-spec
 ```
 
-Audited commit:
+The original focused adapters were audited at commit
+`c6014e7f086f3d3d7ff5e1e7d65a7e6f24e1dcab`. The complete 261-import binding
+surface was later audited at commit:
 
 ```text
-c6014e7f086f3d3d7ff5e1e7d65a7e6f24e1dcab
+c3d06ad1b3e7f8ad6b83ecb4e96e999c922b5140
 ```
 
 The Core Wasm import module is `facet`. The previous import-module namespace is
@@ -66,7 +68,7 @@ fixtures/facet/facet-adapter.wasm
 SHA-256:
 
 ```text
-6c94d783980b003c1330b7397f3321f5ade3e99ce81791522553a0f4a283058f
+6bdb891aa41ebe4c9d3b6e5220bcc2ab97c30fc7f017146bffb70ca208482ae0
 ```
 
 Reproduce and validate it with:

@@ -249,6 +249,7 @@ pub fn required_standard_library_source_paths(
     include_map,
     include_set,
     collection_mask,
+    facet_mask,
     lane_mask,
   ) = selected_standard_modules(files)
   if text_mask != 0 ||
@@ -264,6 +265,7 @@ pub fn required_standard_library_source_paths(
     include_map ||
     include_set ||
     collection_mask != 0 ||
+    facet_mask != 0 ||
     lane_mask != 0 {
     include_preamble = true
     include_option = true
@@ -394,6 +396,19 @@ pub fn required_standard_library_source_paths(
   if (collection_mask & 4194304) != 0 {
     required.push("std/process/facet.dew")
   }
+  let facet_paths = [
+    "std/facet.dew", "std/facet/process.dew", "std/facet/clock.dew", "std/facet/random.dew",
+    "std/facet/fs/preopen.dew", "std/facet/fs/descriptor.dew", "std/facet/fs/read.dew",
+    "std/facet/fs/write.dew", "std/facet/fs/position.dew", "std/facet/fs/sync.dew",
+    "std/facet/fs/path.dew", "std/facet/fs/directory.dew", "std/facet/fs/link.dew",
+    "std/facet/net/socket.dew", "std/facet/net/datagram.dew", "std/facet/net/dns.dew",
+    "std/facet/poll.dew",
+  ]
+  for index, path in facet_paths {
+    if (facet_mask & (1 << index)) != 0 {
+      required.push(path)
+    }
+  }
   if text_mask != 0 {
     required.push("std/text_runtime.dew")
     let text_files = [
@@ -423,7 +438,8 @@ pub fn required_standard_library_source_paths(
   if include_wasm_intrinsics ||
     include_fixed_array ||
     include_array ||
-    collection_mask != 0 {
+    collection_mask != 0 ||
+    facet_mask != 0 {
     required.push("std/wasm/intrinsics.dew")
   }
   for lane_index in 0..<20 {
@@ -515,6 +531,7 @@ pub fn collect_program_manifest_with_standard_sources(
   let mut selected_map = false
   let mut selected_set = false
   let mut selected_collection_mask = 0
+  let mut selected_facet_mask = 0
   let mut selected_lane_mask = 0
   for module_index, module_ in manifest.modules {
     if module_.path.length() == 0 {
@@ -561,6 +578,7 @@ pub fn collect_program_manifest_with_standard_sources(
       include_map,
       include_set,
       collection_mask,
+      facet_mask,
       lane_mask,
     ) = selected_standard_modules(files)
     selected_text_mask = selected_text_mask | text_mask
@@ -580,6 +598,7 @@ pub fn collect_program_manifest_with_standard_sources(
     selected_map = selected_map || include_map || include_array
     selected_set = selected_set || include_set
     selected_collection_mask = selected_collection_mask | collection_mask
+    selected_facet_mask = selected_facet_mask | facet_mask
     selected_lane_mask = selected_lane_mask | lane_mask
     modules.push(
       collect_program_files_with_frozen_standard_imports(
@@ -1022,6 +1041,38 @@ pub fn collect_program_manifest_with_standard_sources(
         ),
       ),
     )
+  }
+  let facet_source_paths = [
+    "std/facet.dew", "std/facet/process.dew", "std/facet/clock.dew", "std/facet/random.dew",
+    "std/facet/fs/preopen.dew", "std/facet/fs/descriptor.dew", "std/facet/fs/read.dew",
+    "std/facet/fs/write.dew", "std/facet/fs/position.dew", "std/facet/fs/sync.dew",
+    "std/facet/fs/path.dew", "std/facet/fs/directory.dew", "std/facet/fs/link.dew",
+    "std/facet/net/socket.dew", "std/facet/net/datagram.dew", "std/facet/net/dns.dew",
+    "std/facet/poll.dew",
+  ]
+  let facet_module_paths = [
+    "dew.std.facet", "dew.std.facet.process", "dew.std.facet.clock", "dew.std.facet.random",
+    "dew.std.facet.fs.preopen", "dew.std.facet.fs.descriptor", "dew.std.facet.fs.read",
+    "dew.std.facet.fs.write", "dew.std.facet.fs.position", "dew.std.facet.fs.sync",
+    "dew.std.facet.fs.path", "dew.std.facet.fs.directory", "dew.std.facet.fs.link",
+    "dew.std.facet.net.socket", "dew.std.facet.net.datagram", "dew.std.facet.net.dns",
+    "dew.std.facet.poll",
+  ]
+  for index, source_path in facet_source_paths {
+    if (selected_facet_mask & (1 << index)) != 0 {
+      let module_id = standard_library_module_id(70 + index)
+      let module_index = modules.length()
+      first_module[facet_module_paths[index]] = module_index
+      module_paths.push(facet_module_paths[index])
+      modules.push(
+        collect_program_files_with_frozen_standard_imports(
+          module_id,
+          standard_library_program_files(
+            module_id, source_path, standard_sources, false, false,
+          ),
+        ),
+      )
+    }
   }
   if (selected_collection_mask & 2048) != 0 {
     let module_id = standard_library_module_id(51)

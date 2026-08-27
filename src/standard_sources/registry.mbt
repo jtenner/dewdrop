@@ -17,6 +17,12 @@ pub fn standard_source_paths() -> Array[String] {
     "std/process/facet.dew", "std/text_runtime.dew", "std/string.dew", "std/string_fixed_array.dew",
     "std/string_builder.dew", "std/bytes_builder.dew", "std/bytes.dew", "std/text.dew",
     "std/encoding/utf8.dew", "std/wasm/wasi.dew", "std/wasi.dew", "std/wasm/intrinsics.dew",
+    "std/facet.dew", "std/facet/process.dew", "std/facet/clock.dew", "std/facet/random.dew",
+    "std/facet/fs/preopen.dew", "std/facet/fs/descriptor.dew", "std/facet/fs/read.dew",
+    "std/facet/fs/write.dew", "std/facet/fs/position.dew", "std/facet/fs/sync.dew",
+    "std/facet/fs/path.dew", "std/facet/fs/directory.dew", "std/facet/fs/link.dew",
+    "std/facet/net/socket.dew", "std/facet/net/datagram.dew", "std/facet/net/dns.dew",
+    "std/facet/poll.dew",
   ]
   for
     name in [
@@ -98,6 +104,23 @@ pub fn bootstrap_standard_source(path : String) -> Bytes? {
     "std/wasm/wasi.dew" => Some(standard_wasm_wasi_source())
     "std/wasi.dew" => Some(standard_wasi_source())
     "std/wasm/intrinsics.dew" => Some(standard_wasm_intrinsics_source())
+    "std/facet.dew" => Some(standard_facet_source())
+    "std/facet/process.dew" => Some(standard_facet_process_source())
+    "std/facet/clock.dew" => Some(standard_facet_clock_source())
+    "std/facet/random.dew" => Some(standard_facet_random_source())
+    "std/facet/fs/preopen.dew" => Some(standard_facet_fs_preopen_source())
+    "std/facet/fs/descriptor.dew" => Some(standard_facet_fs_descriptor_source())
+    "std/facet/fs/read.dew" => Some(standard_facet_fs_read_source())
+    "std/facet/fs/write.dew" => Some(standard_facet_fs_write_source())
+    "std/facet/fs/position.dew" => Some(standard_facet_fs_position_source())
+    "std/facet/fs/sync.dew" => Some(standard_facet_fs_sync_source())
+    "std/facet/fs/path.dew" => Some(standard_facet_fs_path_source())
+    "std/facet/fs/directory.dew" => Some(standard_facet_fs_directory_source())
+    "std/facet/fs/link.dew" => Some(standard_facet_fs_link_source())
+    "std/facet/net/socket.dew" => Some(standard_facet_net_socket_source())
+    "std/facet/net/datagram.dew" => Some(standard_facet_net_datagram_source())
+    "std/facet/net/dns.dew" => Some(standard_facet_net_dns_source())
+    "std/facet/poll.dew" => Some(standard_facet_poll_source())
     _ => {
       let lanes = standard_lane_sources()
       let names = [
