@@ -9,6 +9,18 @@ fn self_host_local_u32_at(values: Array<U32>, index: U32) -> U32 {
   array_get_unchecked(values, index)
 }
 
+fn self_host_local_empty_i32() -> Array<I32> {
+  let values = [0i32]
+  values.truncate(0u32)
+  values
+}
+
+fn self_host_local_empty_u32() -> Array<U32> {
+  let values = [0u32]
+  values.truncate(0u32)
+  values
+}
+
 fn self_host_body_u32_to_i32(value: U32) -> I32 {
   value.into()
 }
@@ -70,27 +82,27 @@ impl SelfHostLocalTypeSolver {
     SelfHostLocalTypeSolver::{
       resolved: resolved
       types: [SelfHostBodyTypeTerm::BodyErrorType]
-      type_arguments: []
-      variable_parents: []
-      variable_sizes: []
-      variable_bindings: []
-      variable_types: []
+      type_arguments: self_host_local_empty_i32()
+      variable_parents: self_host_local_empty_u32()
+      variable_sizes: self_host_local_empty_u32()
+      variable_bindings: self_host_local_empty_i32()
+      variable_types: self_host_local_empty_i32()
       diagnostics: []
       snapshots: []
-      undo_kinds: []
-      undo_indices: []
-      undo_values: []
-      unify_left: []
-      unify_right: []
-      occurs_stack: []
+      undo_kinds: self_host_local_empty_u32()
+      undo_indices: self_host_local_empty_u32()
+      undo_values: self_host_local_empty_i32()
+      unify_left: self_host_local_empty_i32()
+      unify_right: self_host_local_empty_i32()
+      occurs_stack: self_host_local_empty_i32()
       occurs_local_marks: [0u32]
       occurs_resolved_marks: []
       occurs_generation: 0u32
-      zonk_task_types: []
-      zonk_task_states: []
-      zonk_result_starts: []
-      zonk_results: []
-      zonk_scratch: []
+      zonk_task_types: self_host_local_empty_i32()
+      zonk_task_states: self_host_local_empty_u32()
+      zonk_result_starts: self_host_local_empty_u32()
+      zonk_results: self_host_local_empty_i32()
+      zonk_scratch: self_host_local_empty_i32()
       zonk_marks: [0u32]
       zonk_values: [0i32]
       zonk_generation: 0u32
@@ -821,14 +833,21 @@ impl SelfHostLocalTypeSolver {
     self.push_unification_pair(left, right)
     let _ = while self.unify_left.length() {
       length => if length > 0u32 {
-        let left_original = match self.unify_left.pop() {
-          Option::Some(value) => value
-          Option::None => self.error_type()
+        if self.unify_right.length() == 0u32 {
+          return false
         }
-        let right_original = match self.unify_right.pop() {
-          Option::Some(value) => value
-          Option::None => self.error_type()
-        }
+        let left_index = length - 1u32
+        let left_original = self_host_local_i32_at(
+          self.unify_left,
+          left_index,
+        )
+        self.unify_left.truncate(left_index)
+        let right_index = self.unify_right.length() - 1u32
+        let right_original = self_host_local_i32_at(
+          self.unify_right,
+          right_index,
+        )
+        self.unify_right.truncate(right_index)
         let left_type = self.representative_type(left_original)
         let right_type = self.representative_type(right_original)
         if left_type == right_type {
