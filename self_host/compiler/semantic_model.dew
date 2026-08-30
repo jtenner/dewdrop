@@ -334,6 +334,10 @@ impl SelfHostCollectedModule {
     self.declarations[index]
   }
 
+  fn method_at(self, index: U32) -> SelfHostCollectedMethod {
+    self.methods[index]
+  }
+
   fn generic_parameter_at(
     self,
     index: U32,

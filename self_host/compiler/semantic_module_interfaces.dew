@@ -611,20 +611,39 @@ fn self_host_frozen_callable_kind(
   }
 }
 
+fn self_host_frozen_declaration_location(
+  collected: SelfHostCollectedModule,
+  declaration: U64,
+) -> U32 {
+  if self_host_semantic_id_module(declaration) != collected.module_id {
+    return 4294967295u32
+  }
+  let local = self_host_semantic_id_local(declaration)
+  if local >= collected.declaration_locations.length() {
+    4294967295u32
+  } else {
+    collected.declaration_locations[local]
+  }
+}
+
 fn self_host_frozen_callable_name(
   collected: SelfHostCollectedModule,
   declaration: U64,
 ) -> String {
-  match collected.declaration_reference(declaration) {
-    Option::Some(reference) => match reference {
-      SelfHostCollectedDeclarationReference::TopLevel(value) => collected.name(
-        value.name,
-      )
-      SelfHostCollectedDeclarationReference::Method(value) => collected.name(
-        value.name,
-      )
+  let location = self_host_frozen_declaration_location(collected, declaration)
+  if location < 2147483648u32 {
+    if location < collected.declarations.length() {
+      collected.name(collected.declaration_at(location).name)
+    } else {
+      ""
     }
-    Option::None => ""
+  } else {
+    let method_index = location & 2147483647u32
+    if method_index < collected.methods.length() {
+      collected.name(collected.method_at(method_index).name)
+    } else {
+      ""
+    }
   }
 }
 
@@ -632,12 +651,20 @@ fn self_host_frozen_declaration_offset(
   collected: SelfHostCollectedModule,
   declaration: U64,
 ) -> U32 {
-  match collected.declaration_reference(declaration) {
-    Option::Some(reference) => match reference {
-      SelfHostCollectedDeclarationReference::TopLevel(value) => value.offset
-      SelfHostCollectedDeclarationReference::Method(value) => value.offset
+  let location = self_host_frozen_declaration_location(collected, declaration)
+  if location < 2147483648u32 {
+    if location < collected.declarations.length() {
+      collected.declaration_at(location).offset
+    } else {
+      0u32
     }
-    Option::None => 0u32
+  } else {
+    let method_index = location & 2147483647u32
+    if method_index < collected.methods.length() {
+      collected.method_at(method_index).offset
+    } else {
+      0u32
+    }
   }
 }
 
@@ -647,28 +674,42 @@ fn self_host_frozen_callable_exported(
   exported_declarations: Map<U64, Bool>,
   exported_implementations: Map<U64, Bool>,
 ) -> Bool {
-  if collected.declaration_is_test_only(declaration) {
-    false
+  if collected.declaration_is_test_only(declaration) ||
+    self_host_semantic_id_module(declaration) != collected.module_id {
+    return false
+  }
+  let local = self_host_semantic_id_local(declaration)
+  if local >= collected.declaration_locations.length() {
+    return false
+  }
+  let location = collected.declaration_locations[local]
+  if location < 2147483648u32 {
+    if location >= collected.declarations.length() {
+      false
+    } else {
+      let value = collected.declaration_at(location)
+      self_host_frozen_exported_declaration(
+        exported_declarations,
+        value.id,
+      )
+    }
   } else {
-    match collected.declaration_reference(declaration) {
-      Option::Some(reference) => match reference {
-        SelfHostCollectedDeclarationReference::TopLevel(value) => self_host_frozen_exported_declaration(
+    let method_index = location & 2147483647u32
+    if method_index >= collected.methods.length() {
+      false
+    } else {
+      let method = collected.method_at(method_index)
+      match method.kind {
+        SelfHostCollectedMethodKind::TraitMethodDecl => self_host_frozen_exported_declaration(
           exported_declarations,
-          value.id,
+          method.parent,
         )
-        SelfHostCollectedDeclarationReference::Method(method) => match method.kind {
-          SelfHostCollectedMethodKind::TraitMethodDecl => self_host_frozen_exported_declaration(
-            exported_declarations,
-            method.parent,
-          )
-          SelfHostCollectedMethodKind::ImplMethodDecl => self_host_frozen_exported_declaration(
-            exported_implementations,
-            method.parent,
-          )
-          SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => method.visibility is SelfHostSemanticVisibility::Public
-        }
+        SelfHostCollectedMethodKind::ImplMethodDecl => self_host_frozen_exported_declaration(
+          exported_implementations,
+          method.parent,
+        )
+        SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => method.visibility is SelfHostSemanticVisibility::Public
       }
-      Option::None => false
     }
   }
 }

@@ -60,10 +60,12 @@ impl SelfHostTypeResolver {
       self.dependency_scratch.clear()
       let _ = while self.visit_stack.length() {
         length => if length > 0u32 {
-          let type_ = match self.visit_stack.pop() {
-            Option::Some(value) => value
-            Option::None => self.interner.error_type
-          }
+          let type_index = length - 1u32
+          let type_ = self_host_type_resolution_u32_at(
+            self.visit_stack,
+            type_index,
+          )
+          self.visit_stack.truncate(type_index)
           if self.visit_marks[type_] != self.visit_generation {
             self.visit_marks[type_] = self.visit_generation
             match self.interner.types[type_] {
@@ -201,12 +203,18 @@ impl SelfHostTypeResolver {
 
   fn alias_offset(self, alias_index: U32) -> U32 {
     let declaration = self.collected.aliases[alias_index].declaration
-    match self.collected.declaration_reference(declaration) {
-      Option::Some(reference) => match reference {
-        SelfHostCollectedDeclarationReference::TopLevel(value) => value.offset
-        SelfHostCollectedDeclarationReference::Method(_) => 0u32
-      }
-      Option::None => 0u32
+    if self_host_semantic_id_module(declaration) != self.collected.module_id {
+      return 0u32
+    }
+    let local = self_host_semantic_id_local(declaration)
+    if local >= self.collected.declaration_locations.length() {
+      return 0u32
+    }
+    let location = self.collected.declaration_locations[local]
+    if location < self.collected.declarations.length() {
+      self.collected.declaration_at(location).offset
+    } else {
+      0u32
     }
   }
 
@@ -216,9 +224,9 @@ impl SelfHostTypeResolver {
       return
     }
     let visited = self_host_bool_slots(alias_count, false)
-    let work_nodes = []
-    let work_finish = []
-    let finish_order = []
+    let work_nodes = self_host_u32_slots(0u32, 0u32)
+    let work_finish = self_host_bool_slots(0u32, false)
+    let finish_order = self_host_u32_slots(0u32, 0u32)
     let mut start = 0u32
     let _ = while start {
       current_start => if current_start < alias_count {
@@ -227,14 +235,21 @@ impl SelfHostTypeResolver {
           work_finish.push(false)
           let _ = while work_nodes.length() {
             length => if length > 0u32 {
-              let item = match work_nodes.pop() {
-                Option::Some(value) => value
-                Option::None => 0u32
+              if work_finish.length() == 0u32 {
+                return
               }
-              let finishing = match work_finish.pop() {
-                Option::Some(value) => value
-                Option::None => false
-              }
+              let item_index = length - 1u32
+              let item = self_host_type_resolution_u32_at(
+                work_nodes,
+                item_index,
+              )
+              work_nodes.truncate(item_index)
+              let finish_index = work_finish.length() - 1u32
+              let finishing = self_host_type_resolution_bool_at(
+                work_finish,
+                finish_index,
+              )
+              work_finish.truncate(finish_index)
               if finishing {
                 finish_order.push(item)
               } else if !visited[item] {
@@ -276,7 +291,7 @@ impl SelfHostTypeResolver {
     }
 
     let assigned = self_host_bool_slots(alias_count, false)
-    let component = []
+    let component = self_host_u32_slots(0u32, 0u32)
     let mut order_index = finish_order.length()
     let _ = while order_index {
       remaining => if remaining > 0u32 {
@@ -289,10 +304,12 @@ impl SelfHostTypeResolver {
           assigned[component_start] = true
           let _ = while work_nodes.length() {
             length => if length > 0u32 {
-              let current = match work_nodes.pop() {
-                Option::Some(value) => value
-                Option::None => 0u32
-              }
+              let current_index = length - 1u32
+              let current = self_host_type_resolution_u32_at(
+                work_nodes,
+                current_index,
+              )
+              work_nodes.truncate(current_index)
               component.push(current)
               let mut candidate = 0u32
               let _ = while candidate {
@@ -317,14 +334,24 @@ impl SelfHostTypeResolver {
             self.sort_u32_values(component)
             let cycle_start = self.alias_cycle_declarations.length()
             let mut offset = 4294967295u32
-            for member in component {
-              self.alias_is_cyclic[member] = true
-              self.alias_cycle_declarations.push(
-                self.collected.aliases[member].declaration,
-              )
-              let member_offset = self.alias_offset(member)
-              if member_offset < offset {
-                offset = member_offset
+            let member_count = component.length()
+            let _ = while 0u32 {
+              member_index => if member_index < member_count {
+                let member = self_host_type_resolution_u32_at(
+                  component,
+                  member_index,
+                )
+                self.alias_is_cyclic[member] = true
+                self.alias_cycle_declarations.push(
+                  self.collected.aliases[member].declaration,
+                )
+                let member_offset = self.alias_offset(member)
+                if member_offset < offset {
+                  offset = member_offset
+                }
+                continue member_index + 1u32
+              } else {
+                break self_host_semantic_unit()
               }
             }
             let span = SelfHostHirSpan::{
@@ -992,18 +1019,28 @@ impl SelfHostTypeResolver {
     self.push_normalization_task(root, 0u32, 0u32)
     let _ = while self.normalization_types.length() {
       length => if length > 0u32 {
-        let current = match self.normalization_types.pop() {
-          Option::Some(value) => value
-          Option::None => self.interner.error_type
+        if self.normalization_states.length() == 0u32 ||
+          self.normalization_starts.length() == 0u32 {
+          return self.interner.error_type
         }
-        let state = match self.normalization_states.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
-        let result_start = match self.normalization_starts.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
+        let current_index = length - 1u32
+        let current = self_host_type_resolution_u32_at(
+          self.normalization_types,
+          current_index,
+        )
+        self.normalization_types.truncate(current_index)
+        let state_index = self.normalization_states.length() - 1u32
+        let state = self_host_type_resolution_u32_at(
+          self.normalization_states,
+          state_index,
+        )
+        self.normalization_states.truncate(state_index)
+        let start_index = self.normalization_starts.length() - 1u32
+        let result_start = self_host_type_resolution_u32_at(
+          self.normalization_starts,
+          start_index,
+        )
+        self.normalization_starts.truncate(start_index)
         if state == 0u32 {
           self.ensure_normalization_slots()
           if self.normalizations[current] != 4294967295u32 {

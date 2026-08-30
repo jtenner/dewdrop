@@ -3,6 +3,10 @@ open dew.std.map
 open dew.std.option
 open dew.std.string
 
+fn self_host_resolved_u32_at(values: Array<U32>, index: U32) -> U32 {
+  array_get_unchecked(values, index)
+}
+
 pub enum SelfHostPrimitiveType {
   UnitType
   BoolType
@@ -488,10 +492,17 @@ impl SelfHostResolvedTypeInterner {
 
   fn intern_product(self, fields: Array<U32>) -> U32 {
     let mut hash = 7u64
-    for field in fields {
-      hash = self_host_type_hash_mix(hash, self.hashes[field])
+    let field_count = fields.length()
+    let _ = while 0u32 {
+      field_index => if field_index < field_count {
+        let field = self_host_resolved_u32_at(fields, field_index)
+        hash = self_host_type_hash_mix(hash, self.hashes[field])
+        continue field_index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
-    hash = self_host_type_hash_mix(hash, u32_into_u64(fields.length()))
+    hash = self_host_type_hash_mix(hash, u32_into_u64(field_count))
     let mut candidate = match self.buckets.get(hash) {
       Option::Some(value) => value
       Option::None => 4294967295u32
@@ -507,8 +518,15 @@ impl SelfHostResolvedTypeInterner {
         continue self.next[current]
       } else {
         let start = self.arguments.length()
-        for field in fields {
-          self.arguments.push(field)
+        let _ = while 0u32 {
+          field_index => if field_index < field_count {
+            self.arguments.push(
+              self_host_resolved_u32_at(fields, field_index),
+            )
+            continue field_index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         break self.insert(
           SelfHostResolvedType::ProductType(SelfHostHirSpan::{
@@ -527,10 +545,20 @@ impl SelfHostResolvedTypeInterner {
     arguments: Array<U32>,
   ) -> U32 {
     let mut hash = self_host_type_hash_mix(8u64, self.hashes[base])
-    for argument in arguments {
-      hash = self_host_type_hash_mix(hash, self.hashes[argument])
+    let argument_count = arguments.length()
+    let _ = while 0u32 {
+      argument_index => if argument_index < argument_count {
+        let argument = self_host_resolved_u32_at(
+          arguments,
+          argument_index,
+        )
+        hash = self_host_type_hash_mix(hash, self.hashes[argument])
+        continue argument_index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
-    hash = self_host_type_hash_mix(hash, u32_into_u64(arguments.length()))
+    hash = self_host_type_hash_mix(hash, u32_into_u64(argument_count))
     let mut candidate = match self.buckets.get(hash) {
       Option::Some(value) => value
       Option::None => 4294967295u32
@@ -546,8 +574,15 @@ impl SelfHostResolvedTypeInterner {
         continue self.next[current]
       } else {
         let start = self.arguments.length()
-        for argument in arguments {
-          self.arguments.push(argument)
+        let _ = while 0u32 {
+          argument_index => if argument_index < argument_count {
+            self.arguments.push(
+              self_host_resolved_u32_at(arguments, argument_index),
+            )
+            continue argument_index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         break self.insert(
           SelfHostResolvedType::AppliedType(
@@ -569,10 +604,20 @@ impl SelfHostResolvedTypeInterner {
     result: U32,
   ) -> U32 {
     let mut hash = self_host_type_hash_mix(9u64, self.hashes[result])
-    for parameter in parameters {
-      hash = self_host_type_hash_mix(hash, self.hashes[parameter])
+    let parameter_count = parameters.length()
+    let _ = while 0u32 {
+      parameter_index => if parameter_index < parameter_count {
+        let parameter = self_host_resolved_u32_at(
+          parameters,
+          parameter_index,
+        )
+        hash = self_host_type_hash_mix(hash, self.hashes[parameter])
+        continue parameter_index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
-    hash = self_host_type_hash_mix(hash, u32_into_u64(parameters.length()))
+    hash = self_host_type_hash_mix(hash, u32_into_u64(parameter_count))
     let mut candidate = match self.buckets.get(hash) {
       Option::Some(value) => value
       Option::None => 4294967295u32
@@ -588,8 +633,15 @@ impl SelfHostResolvedTypeInterner {
         continue self.next[current]
       } else {
         let start = self.arguments.length()
-        for parameter in parameters {
-          self.arguments.push(parameter)
+        let _ = while 0u32 {
+          parameter_index => if parameter_index < parameter_count {
+            self.arguments.push(
+              self_host_resolved_u32_at(parameters, parameter_index),
+            )
+            continue parameter_index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         break self.insert(
           SelfHostResolvedType::FunctionType(
