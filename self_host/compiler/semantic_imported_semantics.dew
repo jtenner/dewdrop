@@ -3,6 +3,10 @@ open dew.std.map
 open dew.std.option
 open dew.std.string
 
+fn self_host_import_u32_at(values: Array<U32>, index: U32) -> U32 {
+  array_get_unchecked(values, index)
+}
+
 pub struct SelfHostResolvedImportedImplementation {
   declaration: U64
   generic_parameters: SelfHostHirSpan
@@ -217,7 +221,7 @@ fn self_host_empty_u64_span_map() -> Map<U64, SelfHostHirSpan> {
 }
 
 struct SelfHostInterfaceImportMemo {
-  mut values: Array<U32>
+  values: Array<U32>
 }
 
 impl SelfHostInterfaceImportMemo {
@@ -229,7 +233,14 @@ impl SelfHostInterfaceImportMemo {
 
   fn initialize(self, length: U32) -> Unit {
     if self.values.length() == 0u32 {
-      self.values = self_host_u32_slots(length, 4294967295u32)
+      while 0u32 {
+        index => if index < length {
+          self.values.push(4294967295u32)
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
     }
   }
 
@@ -387,6 +398,7 @@ impl SelfHostInterfaceTypeImporter {
   }
 
   fn intern_product(self, fields: Array<U32>) -> U32 {
+    let field_count = fields.length()
     let mut index = 0u32
     while index {
       current => if current < self.resolved.types.length() {
@@ -402,13 +414,20 @@ impl SelfHostInterfaceTypeImporter {
         continue current + 1u32
       } else {
         let start = self.resolved.type_arguments.length()
-        for field in fields {
-          self.resolved.type_arguments.push(field)
+        let _ = while 0u32 {
+          field_index => if field_index < field_count {
+            self.resolved.type_arguments.push(
+              self_host_import_u32_at(fields, field_index),
+            )
+            continue field_index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         self.resolved.types.push(
           SelfHostResolvedType::ProductType(SelfHostHirSpan::{
             start: start
-            length: fields.length()
+            length: field_count
           }),
         )
         break current
@@ -417,6 +436,7 @@ impl SelfHostInterfaceTypeImporter {
   }
 
   fn intern_applied(self, base: U32, arguments: Array<U32>) -> U32 {
+    let argument_count = arguments.length()
     let mut index = 0u32
     while index {
       current => if current < self.resolved.types.length() {
@@ -432,15 +452,22 @@ impl SelfHostInterfaceTypeImporter {
         continue current + 1u32
       } else {
         let start = self.resolved.type_arguments.length()
-        for argument in arguments {
-          self.resolved.type_arguments.push(argument)
+        let _ = while 0u32 {
+          argument_index => if argument_index < argument_count {
+            self.resolved.type_arguments.push(
+              self_host_import_u32_at(arguments, argument_index),
+            )
+            continue argument_index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         self.resolved.types.push(
           SelfHostResolvedType::AppliedType(
             base,
             SelfHostHirSpan::{
               start: start
-              length: arguments.length()
+              length: argument_count
             },
           ),
         )
@@ -454,6 +481,7 @@ impl SelfHostInterfaceTypeImporter {
     parameters: Array<U32>,
     result: U32,
   ) -> U32 {
+    let parameter_count = parameters.length()
     let mut index = 0u32
     while index {
       current => if current < self.resolved.types.length() {
@@ -469,14 +497,21 @@ impl SelfHostInterfaceTypeImporter {
         continue current + 1u32
       } else {
         let start = self.resolved.type_arguments.length()
-        for parameter in parameters {
-          self.resolved.type_arguments.push(parameter)
+        let _ = while 0u32 {
+          parameter_index => if parameter_index < parameter_count {
+            self.resolved.type_arguments.push(
+              self_host_import_u32_at(parameters, parameter_index),
+            )
+            continue parameter_index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         self.resolved.types.push(
           SelfHostResolvedType::FunctionType(
             SelfHostHirSpan::{
               start: start
-              length: parameters.length()
+              length: parameter_count
             },
             result,
           ),
@@ -518,22 +553,35 @@ impl SelfHostInterfaceTypeImporter {
     self.push_task(interface_index, root, 0u32, 0u32)
     let _ = while self.task_types.length() {
       length => if length > 0u32 {
-        let source_interface = match self.task_interfaces.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
+        if self.task_interfaces.length() == 0u32 ||
+          self.task_states.length() == 0u32 ||
+          self.task_result_starts.length() == 0u32 {
+          return self.resolved.error_type
         }
-        let source_type = match self.task_types.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
-        let state = match self.task_states.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
-        let result_start = match self.task_result_starts.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
+        let interface_task = self.task_interfaces.length() - 1u32
+        let source_interface = self_host_import_u32_at(
+          self.task_interfaces,
+          interface_task,
+        )
+        self.task_interfaces.truncate(interface_task)
+        let type_task = length - 1u32
+        let source_type = self_host_import_u32_at(
+          self.task_types,
+          type_task,
+        )
+        self.task_types.truncate(type_task)
+        let state_task = self.task_states.length() - 1u32
+        let state = self_host_import_u32_at(
+          self.task_states,
+          state_task,
+        )
+        self.task_states.truncate(state_task)
+        let start_task = self.task_result_starts.length() - 1u32
+        let result_start = self_host_import_u32_at(
+          self.task_result_starts,
+          start_task,
+        )
+        self.task_result_starts.truncate(start_task)
         let source = self.interfaces.at(source_interface)
         let memo = self.memos.at(source_interface)
         memo.initialize(source.resolved_type_count())

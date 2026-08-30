@@ -77,7 +77,7 @@ fn self_host_empty_alias_indices() -> Map<U64, U32> {
 }
 
 struct SelfHostImportedTypeMemo {
-  mut values: Array<U32>
+  values: Array<U32>
 }
 
 impl SelfHostImportedTypeMemo {
@@ -89,7 +89,14 @@ impl SelfHostImportedTypeMemo {
 
   fn initialize(self, length: U32) -> Unit {
     if self.values.length() == 0u32 {
-      self.values = self_host_u32_slots(length, 4294967295u32)
+      while 0u32 {
+        index => if index < length {
+          self.values.push(4294967295u32)
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
     }
   }
 
