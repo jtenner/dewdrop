@@ -195,6 +195,13 @@ struct SelfHostBodyNameTask {
   second: U32
 }
 
+fn self_host_body_name_task_at(
+  values: Array<SelfHostBodyNameTask>,
+  index: U32,
+) -> SelfHostBodyNameTask {
+  array_get_unchecked(values, index)
+}
+
 struct SelfHostBodyNameResolver {
   collected: SelfHostCollectedModule
   imports: Option<SelfHostModuleImportScope>
@@ -398,24 +405,37 @@ impl SelfHostBodyNameResolver {
   }
 
   fn exit_scope(self) -> Unit {
-    let start = match self.scope_markers.pop() {
-      Option::Some(value) => value
-      Option::None => {
-        self_host_body_name_fail()
-        4294967295u32
-      }
+    let marker_count = self.scope_markers.length()
+    if marker_count == 0u32 {
+      self_host_body_name_fail()
+      return
     }
+    let marker_index = marker_count - 1u32
+    let start = self_host_body_name_u32_at(
+      self.scope_markers,
+      marker_index,
+    )
+    self.scope_markers.truncate(marker_index)
     while self.scope_names.length() {
       length => if length > start {
-        let name = match self.scope_names.pop() {
-          Option::Some(value) => value
-          Option::None => 4294967295u32
+        if self.scope_locals.length() == 0u32 ||
+          self.scope_previous.length() == 0u32 {
+          self_host_body_name_fail()
+          return
         }
-        let _ = self.scope_locals.pop()
-        let previous = match self.scope_previous.pop() {
-          Option::Some(value) => value
-          Option::None => 4294967295u32
-        }
+        let name_index = length - 1u32
+        let name = self_host_body_name_u32_at(
+          self.scope_names,
+          name_index,
+        )
+        self.scope_names.truncate(name_index)
+        self.scope_locals.truncate(self.scope_locals.length() - 1u32)
+        let previous_index = self.scope_previous.length() - 1u32
+        let previous = self_host_body_name_u32_at(
+          self.scope_previous,
+          previous_index,
+        )
+        self.scope_previous.truncate(previous_index)
         self.current_locals.set(name, previous)
         continue self.scope_names.length()
       } else {
@@ -1371,6 +1391,10 @@ impl SelfHostBodyNameResolver {
     expression: U32,
     expectation: U32,
   ) -> Unit {
+    if expression == 4294967295u32 ||
+      expression >= self.collected.expressions.length() {
+      return
+    }
     match self.collected.expressions[expression] {
       SelfHostHirExpr::I8Expr(_, _) => {}
       SelfHostHirExpr::I16Expr(_, _) => {}
@@ -1850,14 +1874,9 @@ impl SelfHostBodyNameResolver {
     }
     while self.tasks.length() {
       length => if length > task_base {
-        let task = match self.tasks.pop() {
-          Option::Some(value) => value
-          Option::None => SelfHostBodyNameTask::{
-            kind: 4294967295u32
-            first: 4294967295u32
-            second: 4294967295u32
-          }
-        }
+        let task_index = length - 1u32
+        let task = self_host_body_name_task_at(self.tasks, task_index)
+        self.tasks.truncate(task_index)
         self.execute_task(task)
         continue self.tasks.length()
       } else {
@@ -1883,13 +1902,17 @@ impl SelfHostBodyNameResolver {
     } else if task.kind == self_host_name_task_enter_control {
       self.control_stack.push(task.first)
     } else if task.kind == self_host_name_task_exit_control {
-      let control = match self.control_stack.pop() {
-        Option::Some(value) => value
-        Option::None => {
-          self_host_body_name_fail()
-          4294967295u32
-        }
+      let control_count = self.control_stack.length()
+      if control_count == 0u32 {
+        self_host_body_name_fail()
+        return
       }
+      let control_index = control_count - 1u32
+      let control = self_host_body_name_u32_at(
+        self.control_stack,
+        control_index,
+      )
+      self.control_stack.truncate(control_index)
       if control != task.first {
         self_host_body_name_fail()
       }
@@ -1911,14 +1934,9 @@ impl SelfHostBodyNameResolver {
     }
     while self.tasks.length() {
       length => if length > 0u32 {
-        let task = match self.tasks.pop() {
-          Option::Some(value) => value
-          Option::None => SelfHostBodyNameTask::{
-            kind: 4294967295u32
-            first: 4294967295u32
-            second: 4294967295u32
-          }
-        }
+        let task_index = length - 1u32
+        let task = self_host_body_name_task_at(self.tasks, task_index)
+        self.tasks.truncate(task_index)
         self.execute_task(task)
         continue self.tasks.length()
       } else {
