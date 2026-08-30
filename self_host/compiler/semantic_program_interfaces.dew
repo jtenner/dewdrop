@@ -18,6 +18,10 @@ pub struct SelfHostProgramManifest {
   modules: Array<SelfHostManifestModule>
 }
 
+fn self_host_manifest_string_equal(left: String, right: String) -> Bool {
+  left.equals(right)
+}
+
 pub enum SelfHostManifestDiagnostic {
   EmptyModulePath(U32)
   DuplicateModulePath(String, U32, U32)
@@ -160,7 +164,10 @@ fn self_host_collect_program_manifest(
     let mut previous_module = 0u32
     let _ = while previous_module {
       previous => if previous < module_paths.length() {
-        if module_paths[previous] == module_.path {
+        if self_host_manifest_string_equal(
+          module_paths[previous],
+          module_.path,
+        ) {
           diagnostics.push(
             SelfHostManifestDiagnostic::DuplicateModulePath(
               module_.path,
@@ -192,7 +199,7 @@ fn self_host_collect_program_manifest(
         let _ = while previous_file {
           previous => if previous < current_file {
             let candidate = self_host_manifest_module_file(module_, previous)
-            if candidate.path == file.path {
+            if self_host_manifest_string_equal(candidate.path, file.path) {
               diagnostics.push(
                 SelfHostManifestDiagnostic::DuplicateFilePath(
                   file.path,
@@ -266,7 +273,10 @@ fn self_host_collect_missing_import_diagnostics(
               ),
             )
           }
-          } else if program.module_index(import_.path) is Option::None {
+          } else if self_host_module_path_index(
+            program.module_paths,
+            import_.path_segments,
+          ) >= program.module_paths.length() {
             diagnostics.push(
               SelfHostProgramImportDiagnostic::MissingImportedModule(
                 module_.module_id,
@@ -294,7 +304,7 @@ fn self_host_freeze_program_signature_interfaces(
 ) -> SelfHostFrozenSignatureProgram {
   let provisional = SelfHostFrozenInterfaceList::new()
   let mut module_index = 0u32
-  let _ = while module_index {
+  while module_index {
     current => if current < program.modules.length() {
       let collected = program.modules.at(current)
       let resolved = self_host_resolve_module_types(collected)
@@ -313,7 +323,7 @@ fn self_host_freeze_program_signature_interfaces(
   let scopes = SelfHostImportScopeList::new()
   let import_diagnostics = []
   module_index = 0u32
-  let _ = while module_index {
+  while module_index {
     current => if current < program.modules.length() {
       let collected = program.modules.at(current)
       let scope = self_host_build_module_import_scope(

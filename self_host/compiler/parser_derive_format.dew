@@ -110,8 +110,8 @@ fn self_host_derived_format_variant_pattern(
   )
   let names = []
   match variant {
-    SelfHostEnumVariant::UnitVariant(_, _) => (base, names)
-    SelfHostEnumVariant::TupleVariant(_, types, _) => {
+    SelfHostEnumVariant::UnitVariant(_, _, _) => (base, names)
+    SelfHostEnumVariant::TupleVariant(_, types, _, _) => {
       let patterns = []
       let mut index = 0u32
       for _ in types {
@@ -127,7 +127,7 @@ fn self_host_derived_format_variant_pattern(
       }
       (SelfHostPattern::TuplePattern(base, patterns, offset), names)
     }
-    SelfHostEnumVariant::StructVariant(_, fields, _) => {
+    SelfHostEnumVariant::StructVariant(_, fields, _, _) => {
       let patterns = []
       let mut index = 0u32
       for field in fields {
@@ -173,10 +173,10 @@ fn self_host_derived_debug_variant_body(
   let prefix = self_host_derived_variant_prefix(enum_name, variant)
   let expressions = []
   match variant {
-    SelfHostEnumVariant::UnitVariant(_, _) => expressions.push(
+    SelfHostEnumVariant::UnitVariant(_, _, _) => expressions.push(
       self_host_derived_debug_text(prefix, offset),
     )
-    SelfHostEnumVariant::TupleVariant(_, types, _) => {
+    SelfHostEnumVariant::TupleVariant(_, types, _, _) => {
       expressions.push(
         self_host_derived_debug_text(prefix.concat("("), offset),
       )
@@ -195,7 +195,7 @@ fn self_host_derived_debug_variant_body(
       }
       expressions.push(self_host_derived_debug_write(b")", offset))
     }
-    SelfHostEnumVariant::StructVariant(_, fields, _) => if fields.length() == 0u32 {
+    SelfHostEnumVariant::StructVariant(_, fields, _, _) => if fields.length() == 0u32 {
       expressions.push(
         self_host_derived_debug_text(prefix.concat(" {}"), offset),
       )
@@ -341,10 +341,10 @@ fn self_host_derived_show_variant_body(
   let prefix = self_host_derived_variant_prefix(enum_name, variant)
   let expressions = []
   match variant {
-    SelfHostEnumVariant::UnitVariant(_, _) => expressions.push(
+    SelfHostEnumVariant::UnitVariant(_, _, _) => expressions.push(
       self_host_derived_show_append_text(prefix, offset),
     )
-    SelfHostEnumVariant::TupleVariant(_, types, _) => {
+    SelfHostEnumVariant::TupleVariant(_, types, _, _) => {
       expressions.push(
         self_host_derived_show_append_text(prefix.concat("("), offset),
       )
@@ -365,7 +365,7 @@ fn self_host_derived_show_variant_body(
       }
       expressions.push(self_host_derived_show_append_text(")", offset))
     }
-    SelfHostEnumVariant::StructVariant(_, fields, _) => if fields.length() == 0u32 {
+    SelfHostEnumVariant::StructVariant(_, fields, _, _) => if fields.length() == 0u32 {
       expressions.push(
         self_host_derived_show_append_text(prefix.concat(" {}"), offset),
       )

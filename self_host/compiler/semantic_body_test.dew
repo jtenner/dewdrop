@@ -133,6 +133,38 @@ test "semantic function blocks lower contiguous let and return items" {
   }
 }
 
+test "semantic wildcard lets preserve initializer effects as expression items" {
+  let collected = self_host_collect_bytes(
+    2401u64,
+    b"fn run() -> Unit {\n  let _ = while 0u32 {\n    index if index < 1u32 => continue index + 1u32\n    _ => break ()\n  }\n}\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "wildcard let diagnostics")
+  let root = self_host_body_root_block(collected.bodies[0u32])
+  let items = collected.blocks[root].items
+  assert(items.length == 2u32, "wildcard let item count")
+  match collected.block_items[items.start] {
+    SelfHostHirBlockItem::ExpressionItem(expression, _) => match collected.expressions[
+      expression
+    ] {
+      SelfHostHirExpr::WhileExpr(_, _, _) => {}
+      _ => assert(false, "wildcard let initializer is not while")
+    }
+    _ => assert(false, "wildcard let created a local binding")
+  }
+  match collected.block_items[items.start + 1u32] {
+    SelfHostHirBlockItem::ExpressionItem(expression, _) => match collected.expressions[
+      expression
+    ] {
+      SelfHostHirExpr::BlockExpr(block) => assert(
+        collected.blocks[block].items.length == 0u32,
+        "wildcard let discard is not Unit",
+      )
+      _ => assert(false, "wildcard let discard is not Unit")
+    }
+    _ => assert(false, "wildcard let discard created a local binding")
+  }
+}
+
 test "semantic match and while expressions share pattern arm arenas" {
   let collected = self_host_collect_bytes(
     25u64,

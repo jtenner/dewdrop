@@ -3,8 +3,125 @@ open dew.std.map
 open dew.std.option
 open dew.std.string
 
+fn self_host_interface_string_equal_at(
+  left: String,
+  right: String,
+  index: U32,
+  length: U32,
+) -> Bool {
+  if index >= length {
+    true
+  } else if left.byte_at(index) != right.byte_at(index) {
+    false
+  } else {
+    self_host_interface_string_equal_at(
+      left,
+      right,
+      index + 1u32,
+      length,
+    )
+  }
+}
+
 fn self_host_interface_string_equal(left: String, right: String) -> Bool {
-  left == right
+  let length = left.byte_length()
+  length == right.byte_length() && self_host_interface_string_equal_at(
+    left,
+    right,
+    0u32,
+    length,
+  )
+}
+
+fn self_host_interface_string_at(
+  values: Array<String>,
+  index: U32,
+) -> String {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_module_path_segment_matches_at(
+  candidate: String,
+  segment: String,
+  candidate_index: U32,
+  segment_index: U32,
+) -> Bool {
+  if segment_index >= segment.byte_length() {
+    true
+  } else if candidate_index + segment_index >= candidate.byte_length() {
+    false
+  } else if candidate.byte_at(candidate_index + segment_index) !=
+    segment.byte_at(segment_index) {
+    false
+  } else {
+    self_host_module_path_segment_matches_at(
+      candidate,
+      segment,
+      candidate_index,
+      segment_index + 1u32,
+    )
+  }
+}
+
+fn self_host_module_path_matches_at(
+  candidate: String,
+  segments: Array<String>,
+  segment_index: U32,
+  candidate_index: U32,
+) -> Bool {
+  if segment_index >= segments.length() {
+    candidate_index == candidate.byte_length()
+  } else {
+    let segment = self_host_interface_string_at(segments, segment_index)
+    let content_index = if segment_index == 0u32 {
+      candidate_index
+    } else if candidate_index < candidate.byte_length() &&
+      candidate.byte_at(candidate_index) == 46u8 {
+      candidate_index + 1u32
+    } else {
+      return false
+    }
+    if !self_host_module_path_segment_matches_at(
+      candidate,
+      segment,
+      content_index,
+      0u32,
+    ) {
+      false
+    } else {
+      self_host_module_path_matches_at(
+        candidate,
+        segments,
+        segment_index + 1u32,
+        content_index + segment.byte_length(),
+      )
+    }
+  }
+}
+
+fn self_host_module_path_index(
+  module_paths: Array<String>,
+  segments: Array<String>,
+) -> U32 {
+  let mut found = 4294967295u32
+  let mut index = 0u32
+  while index {
+    current => if current < module_paths.length() {
+      if self_host_module_path_matches_at(
+        self_host_interface_string_at(module_paths, current),
+        segments,
+        0u32,
+        0u32,
+      ) {
+        found = current
+        break self_host_semantic_unit()
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  found
 }
 
 pub enum SelfHostFrozenInterfaceDeclarationKind {
@@ -597,6 +714,26 @@ fn self_host_freeze_module_signature_interface(
       }
     }
   }
+  for method in collected.methods {
+    if method.kind is SelfHostCollectedMethodKind::ForeignLibraryMemberDecl &&
+      method.visibility is SelfHostSemanticVisibility::Public &&
+      !collected.declaration_is_test_only(method.id) &&
+      !self_host_u32_equal(method.name, 4294967295u32) {
+      declarations.push(SelfHostFrozenInterfaceDeclaration::{
+        declaration: method.id
+        name: collected.name(method.name)
+        kind: SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration
+        source_kind: SelfHostCollectedDeclKind::FunctionDecl
+        generic_parameter_count: collected.generic_parameters_of(method.id).length
+        generic_parameters: collected.generic_parameters_of(method.id)
+        semantic_type: resolved.declaration_type(method.id)
+        location: SelfHostSourceLocation::{
+          file: collected.declaration_files[self_host_semantic_id_local(method.id)]
+          offset: method.offset
+        }
+      })
+    }
+  }
   let fields = []
   let mut field_index = 0u32
   for field in collected.fields {
@@ -1028,7 +1165,6 @@ impl SelfHostModuleImportScope {
 
 struct SelfHostImportScopeBuilder {
   module_id: U64
-  module_paths: Array<String>
   declarations: Array<SelfHostImportedDeclarationBinding>
   declaration_bindings: Map<U64, U32>
   imported_interfaces: Array<U32>
@@ -1050,7 +1186,6 @@ impl SelfHostImportScopeBuilder {
   ) -> SelfHostImportScopeBuilder {
     SelfHostImportScopeBuilder::{
       module_id: module_id
-      module_paths: module_paths
       declarations: []
       declaration_bindings: self_host_empty_u64_u32_map()
       imported_interfaces: []
@@ -1062,20 +1197,6 @@ impl SelfHostImportScopeBuilder {
       diagnostics: []
       imported: self_host_bool_slots(module_paths.length(), false)
       opened: self_host_bool_slots(module_paths.length(), false)
-    }
-  }
-
-  fn module_index(self, path: String) -> Option<U32> {
-    let mut index = 0u32
-    while index {
-      current => if current < self.module_paths.length() {
-        if self.module_paths[current] == path {
-          break Option::Some(current)
-        }
-        continue current + 1u32
-      } else {
-        break Option::None
-      }
     }
   }
 
@@ -1238,10 +1359,13 @@ impl SelfHostImportScopeBuilder {
     }
   }
 
-  fn finish(self) -> SelfHostModuleImportScope {
+  fn finish(
+    self,
+    module_paths: Array<String>,
+  ) -> SelfHostModuleImportScope {
     SelfHostModuleImportScope::{
       module_id: self.module_id
-      module_paths: self.module_paths
+      module_paths: module_paths
       declarations: self.declarations
       declaration_bindings: self.declaration_bindings
       imported_interfaces: self.imported_interfaces
@@ -1290,23 +1414,27 @@ fn self_host_build_module_import_scope(
         }
       }
     } else {
-      match builder.module_index(import_.path) {
-        Option::Some(dependency) => {
-          match import_.import_alias {
-            Option::Some(alias) => builder.add_alias(
-              alias,
-              dependency,
-              import_.file,
-              import_.import_alias_offset,
-            )
-            Option::None => {}
-          }
-          builder.import_interface(dependency, import_.open_)
+      let import_path = import_.path
+      let dependency = self_host_module_path_index(
+        module_paths,
+        import_.path_segments,
+      )
+      if dependency < module_paths.length() {
+        match import_.import_alias {
+          Option::Some(alias) => builder.add_alias(
+            alias,
+            dependency,
+            import_.file,
+            import_.import_alias_offset,
+          )
+          Option::None => {}
         }
-        Option::None => builder.diagnostics.push(
+        builder.import_interface(dependency, import_.open_)
+      } else {
+        builder.diagnostics.push(
           SelfHostImportScopeDiagnostic::UnavailableImportedInterface(
             collected.module_id,
-            import_.path,
+            import_path,
             import_.file,
             import_.offset,
           ),
@@ -1314,5 +1442,5 @@ fn self_host_build_module_import_scope(
       }
     }
   }
-  builder.finish()
+  builder.finish(module_paths)
 }

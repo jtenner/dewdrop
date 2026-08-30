@@ -301,10 +301,13 @@ impl SelfHostResolvedTypeInterner {
       primitive_types: []
       error_type: 0u32
     }
-    interner.error_type = interner.intern_simple(
+    let error_type = interner.intern_simple(
       SelfHostResolvedType::ErrorType,
       1u64,
     )
+    if !self_host_u32_equal(error_type, 0u32) {
+      unreachable()
+    }
     let primitives = [
       SelfHostPrimitiveType::UnitType,
       SelfHostPrimitiveType::BoolType,

@@ -197,6 +197,13 @@ fn core_link_provider_name(value : @lib.Name) -> String {
 }
 
 ///|
+fn core_import_matches_provider(value : @lib.Name, provider : String) -> Bool {
+  let text = core_name_text(value)
+  text == provider ||
+  (core_is_link_module(value) && core_link_provider_name(value) == provider)
+}
+
+///|
 fn core_type_index(value : @lib.TypeIdx) -> Int? {
   match value {
     @lib.TypeIdx(index) => Some(index.reinterpret_as_int())
@@ -265,8 +272,26 @@ fn core_function_comp_type(
 }
 
 ///|
+fn core_type_has_declared_subtype(arena : CoreTypeArena, index : Int) -> Bool {
+  for subtype in arena.subtypes {
+    match subtype {
+      @lib.SubType(_, supers, _, _) =>
+        for super_ in supers {
+          if core_type_index(super_) == Some(index) {
+            return true
+          }
+        }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
 fn core_empty_struct_marker(arena : CoreTypeArena, index : Int) -> Bool {
-  if index < 0 || index >= arena.subtypes.length() {
+  if index < 0 ||
+    index >= arena.subtypes.length() ||
+    core_type_has_declared_subtype(arena, index) {
     return false
   }
   match arena.subtypes[index].get_comptype() {
@@ -364,7 +389,8 @@ fn core_bind_value_type(
       concrete_guest_types[dew_concrete] = guest_concrete
       true
     }
-    _ => dew == guest
+    (None, None) => dew == guest
+    _ => false
   }
 }
 
@@ -389,6 +415,21 @@ fn core_is_moonbit_string_type(arena : CoreTypeArena, index : Int) -> Bool {
 }
 
 ///|
+priv struct CoreSignatureAdapterPlan {
+  string_parameters : Array[Int]
+  reference_adapter : Bool
+}
+
+///|
+fn core_reference_bridge_compatible(
+  dew : @lib.ValType,
+  guest : @lib.ValType,
+) -> Bool {
+  (core_is_nullable_eqref(dew) && core_ref_defined_type(guest) is Some(_)) ||
+  (core_ref_defined_type(dew) is Some(_) && core_is_nullable_eqref(guest))
+}
+
+///|
 fn core_bind_signature(
   provider : String,
   export_name : String,
@@ -398,7 +439,7 @@ fn core_bind_signature(
   guest_type : Int,
   marker_guest_types : Array[Int],
   concrete_guest_types : Array[Int],
-) -> Result[Array[Int], CoreWasmLinkError] {
+) -> Result[CoreSignatureAdapterPlan, CoreWasmLinkError] {
   let (dew_parameters, dew_results) = match
     core_function_comp_type(dew_arena, dew_type) {
     Some(value) => value
@@ -413,14 +454,14 @@ fn core_bind_signature(
     dew_results.length() != guest_results.length() {
     return Err(CoreWasmSignatureMismatch(provider, export_name))
   }
-  let parameter_adapters : Array[Int] = []
+  let string_parameters : Array[Int] = []
+  let mut reference_adapter = false
   for index in 0..<dew_parameters.length() {
     if core_is_nullable_eqref(dew_parameters[index]) {
       match core_ref_defined_type(guest_parameters[index]) {
-        Some((false, _, concrete)) if core_is_moonbit_string_type(
-            guest_arena, concrete,
-          ) => {
-          parameter_adapters.push(index)
+        Some((false, _, concrete)) if provider == "starshine" &&
+          core_is_moonbit_string_type(guest_arena, concrete) => {
+          string_parameters.push(index)
           continue
         }
         _ => ()
@@ -434,7 +475,13 @@ fn core_bind_signature(
         marker_guest_types,
         concrete_guest_types,
       ) {
-      return Err(CoreWasmSignatureMismatch(provider, export_name))
+      if core_reference_bridge_compatible(
+        dew_parameters[index], guest_parameters[index],
+      ) {
+        reference_adapter = true
+      } else {
+        return Err(CoreWasmSignatureMismatch(provider, export_name))
+      }
     }
   }
   for index in 0..<dew_results.length() {
@@ -446,10 +493,73 @@ fn core_bind_signature(
         marker_guest_types,
         concrete_guest_types,
       ) {
-      return Err(CoreWasmSignatureMismatch(provider, export_name))
+      if core_reference_bridge_compatible(
+        dew_results[index], guest_results[index],
+      ) {
+        if dew_results.length() != 1 {
+          return Err(
+            CoreWasmUnsupportedImport(
+              "reference result adapters currently require one result",
+            ),
+          )
+        }
+        reference_adapter = true
+      } else {
+        return Err(CoreWasmSignatureMismatch(provider, export_name))
+      }
     }
   }
-  Ok(parameter_adapters)
+  Ok({ string_parameters, reference_adapter })
+}
+
+///|
+fn core_append_reference_adapter_cast(
+  output : Array[@lib.Instruction],
+  map : CoreWasmIndexMap,
+  target : @lib.ValType,
+) -> Unit {
+  match core_remap_val_type(map, target) {
+    @lib.RefTypeValType(type_) =>
+      output.push(@lib.Instruction::ref_cast_type(type_))
+    _ => abort("reference adapter target is not a reference type")
+  }
+}
+
+///|
+fn core_reference_signature_adapter(
+  dew_parameters : Array[@lib.ValType],
+  dew_results : Array[@lib.ValType],
+  guest_parameters : Array[@lib.ValType],
+  guest_results : Array[@lib.ValType],
+  dew_map : CoreWasmIndexMap,
+  guest_map : CoreWasmIndexMap,
+  target_function : Int,
+) -> @lib.Func {
+  let body : Array[@lib.Instruction] = []
+  for index in 0..<dew_parameters.length() {
+    body.push(
+      @lib.Instruction::local_get(
+        @lib.LocalIdx::new(index.reinterpret_as_uint()),
+      ),
+    )
+    if core_is_nullable_eqref(dew_parameters[index]) &&
+      core_ref_defined_type(guest_parameters[index]) is Some(_) {
+      core_append_reference_adapter_cast(
+        body, guest_map, guest_parameters[index],
+      )
+    }
+  }
+  body.push(
+    @lib.Instruction::call(
+      @lib.FuncIdx::new(target_function.reinterpret_as_uint()),
+    ),
+  )
+  if dew_results.length() == 1 &&
+    core_ref_defined_type(dew_results[0]) is Some(_) &&
+    core_is_nullable_eqref(guest_results[0]) {
+    core_append_reference_adapter_cast(body, dew_map, dew_results[0])
+  }
+  @lib.Func::new(@lib.Locals::empty(), @lib.Expr::new(body))
 }
 
 ///|

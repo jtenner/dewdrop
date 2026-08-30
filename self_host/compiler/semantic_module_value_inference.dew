@@ -65,6 +65,7 @@ fn self_host_module_value_inputs_with_slots(
   local_types: Map<U64, I32>,
 ) -> SelfHostBasicImportedInputs {
   SelfHostBasicImportedInputs::{
+    scope: imported.scope
     callables: imported.callables
     generic_parameter_ids: imported.generic_parameter_ids
     parameter_types: imported.parameter_types
@@ -230,6 +231,7 @@ fn self_host_infer_module_values(
     resolved,
     names,
     SelfHostBasicImportedInputs::{
+      scope: Option::None
       callables: []
       generic_parameter_ids: []
       parameter_types: []
@@ -270,6 +272,7 @@ fn self_host_infer_module_values_with_imports(
     resolved,
     names,
     SelfHostBasicImportedInputs::{
+      scope: Option::None
       callables: callables
       generic_parameter_ids: generic_parameter_ids
       parameter_types: parameter_types

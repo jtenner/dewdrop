@@ -997,14 +997,20 @@ When behavior changes, update the relevant specification, roadmap, research note
 
 ```text
 src/tokenizer/       raw source cursor, WTF-8 decoding, and streaming lexer
-src/parser/          forward-only parser and syntax events
+src/parser/          forward-only parser, syntax events, and the parse-event artifact
 src/semantic/        collection, name resolution, inference, flow, layouts,
                      lowering, interface freezing, specialization, and linking
 src/standard_sources/ generated portable bootstrap source bytes and path registry
-src/standard_loader/ on-disk dew.std selection and the persistent interface cache
+src/standard_loader/ on-disk dew.std selection and the persistent parse-event,
+                     interface, body, planning, and program-output caches
+src/cache_binary/    aligned artifact-pack container, canonical binary codecs, and
+                     portable BLAKE3-256
+src/compile_request/ versioned binary host/compiler request codec
+src/core_linker/     deterministic Core Wasm static linker for --link-wasm providers
 src/backend/         deterministic Starshine/WasmGC planning and emission
 src/compiler_driver/ shared collect/analyze/lower/link/emit orchestration
 src/dew_cli/         compiler-facing command implementation
+src/dew_bootstrap/   build-cache, compiler-fingerprint, and CLI dispatch behind tools/dew
 std/                 Dew standard-library sources
 std/tests/           direct standard-library tests written in Dew
 tests/               snapshots, CLI fixtures, ABI consumers, and budgets

@@ -19,6 +19,10 @@ pub enum SelfHostMissingPatternCase {
   MissingVariantCase(U64)
 }
 
+fn self_host_flow_u64_at(values: Array<U64>, index: U32) -> U64 {
+  array_get_unchecked(values, index)
+}
+
 pub enum SelfHostBodyFlowDiagnostic {
   NonExhaustiveMatch(U32, SelfHostHirSpan, U32)
   NonExhaustiveFunctionalLoop(U32, SelfHostHirSpan, U32)
@@ -675,7 +679,7 @@ impl SelfHostBodyFlowAnalyzer {
               candidate => if candidate < enum_variants.length() {
                 if self.pattern_covers_variant(
                   info.pattern,
-                  enum_variants[candidate],
+                  self_host_flow_u64_at(enum_variants, candidate),
                 ) && !covered_variants[candidate] {
                   useful = true
                 }
@@ -712,7 +716,7 @@ impl SelfHostBodyFlowAnalyzer {
             candidate => if candidate < enum_variants.length() {
               if !covered_variants[candidate] && self.pattern_covers_variant(
                 info.pattern,
-                enum_variants[candidate],
+                self_host_flow_u64_at(enum_variants, candidate),
               ) {
                 covered_variants[candidate] = true
                 covered_variant_count = self_host_u32_add(
@@ -775,7 +779,7 @@ impl SelfHostBodyFlowAnalyzer {
               if !covered_variants[current] {
                 self.missing_cases.push(
                   SelfHostMissingPatternCase::MissingVariantCase(
-                    enum_variants[current],
+                    self_host_flow_u64_at(enum_variants, current),
                   ),
                 )
               }

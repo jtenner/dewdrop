@@ -2,18 +2,55 @@ open dew.std.array
 open dew.std.bytes
 open dew.std.fixed_array
 open dew.std.fs
-open dew.std.fs.wasi
 open dew.std.option
 open dew.std.path
 open dew.std.process
-open dew.std.process.wasi
 open dew.std.result
 open dew.std.string
+open dew.std.wasm.intrinsics
 
-fn self_host_error(process: WasiProcess, message: String) -> U32 {
+builtin self_host_main_string_concat(
+  left: String,
+  right: String,
+) -> String = "dew_string_concat"
+
+builtin self_host_main_string_as_bytes(
+  value: String,
+) -> Bytes = "dew_string_as_bytes"
+
+builtin self_host_main_string_equals(
+  left: String,
+  right: String,
+) -> Bool = "dew_string_equals"
+
+fn self_host_main_has_module_path(
+  paths: Array<String>,
+  expected: String,
+) -> Bool {
+  let mut index = 0u32
+  while index {
+    current => if current < paths.length() {
+      if self_host_main_string_equals(
+        array_get_unchecked(paths, current),
+        expected,
+      ) {
+        break true
+      }
+      continue current + 1u32
+    } else {
+      break false
+    }
+  }
+}
+
+fn self_host_error(process: FacetProcess, message: String) -> U32 {
+  let output = self_host_main_string_concat(
+    self_host_main_string_concat("self-host smoke: ", message),
+    "\n",
+  )
   let _written = process_write_stderr(
     process,
-    "self-host smoke: ".concat(message).concat("\n").as_bytes(),
+    self_host_main_string_as_bytes(output),
   )
   1u32
 }
@@ -25,23 +62,132 @@ fn self_host_compile_request_semantic_plan(
   if self_host_u32_greater(collected.diagnostics.length(), 0u32) {
     return Result::Err("compile request manifest is invalid")
   }
-  let frozen = self_host_freeze_program_signature_interfaces(collected)
-  if self_host_u32_greater(frozen.import_diagnostics.length(), 0u32) ||
-    self_host_u32_greater(frozen.path_diagnostics.length(), 0u32) {
-    return Result::Err("compile request imports are invalid")
+  if !self_host_main_has_module_path(
+    collected.module_paths,
+    "dew.std.preamble",
+  ) {
+    return Result::Err("compile request manifest path lookup failed")
   }
-  match collected.module_index(request.root_module) {
-    Option::None => Result::Err("compile request root module is missing")
-    Option::Some(_) => Result::Ok(
-      self_host_plan_program_wasmgc_link(
-        self_host_plan_program_wasmgc_fragments(
-          self_host_plan_program_specialization(
-            self_host_plan_program_lowering(frozen),
-            request.test_mode,
-          ),
+  match request.root_module_index() {
+    Option::Some(root_module_index) => {
+      let root_module = collected.modules.at(root_module_index)
+      if root_module.callable_count() == 0u32 {
+        if self_host_main_string_equals(
+          array_get_unchecked(collected.module_paths, root_module_index),
+          "self_host.compiler",
+        ) {
+          if root_module.file_count() == 0u32 {
+            return Result::Err("compile request collected compiler root has no files")
+          } else if root_module.first_source_byte_length() == 0u32 {
+            return Result::Err("compile request collected compiler root has empty source")
+          } else if root_module.diagnostic_count() > 0u32 {
+            match root_module.diagnostic_at(0u32) {
+              SelfHostCollectionDiagnostic::ParseDiagnostic(_, _, kind, offset, token_code, token_text) => {
+                if kind == 0u32 && offset == 0u32 {
+                  return Result::Err("compile request compiler root expected a declaration at source start")
+                } else if kind == 0u32 && token_code == 0u32 {
+                  return Result::Err("compile request compiler root rejected an fn declaration")
+                } else if kind == 0u32 && token_code == 2u32 {
+                  return Result::Err("compile request compiler root rejected a pub declaration")
+                } else if kind == 0u32 && token_code == 3u32 {
+                  return Result::Err("compile request compiler root rejected a builtin declaration")
+                } else if kind == 0u32 && token_code < 33u32 {
+                  return Result::Err("compile request compiler root rejected another keyword declaration")
+                } else if kind == 0u32 && token_code == 500u32 {
+                  return Result::Err("compile request compiler root tokenized fn as an identifier")
+                } else if kind == 0u32 && token_code == 502u32 {
+                  return Result::Err("compile request compiler root tokenized pub as an identifier")
+                } else if kind == 0u32 && token_code == 503u32 {
+                  return Result::Err("compile request compiler root tokenized builtin as an identifier")
+                } else if kind == 0u32 && token_code >= 500u32 && token_code < 533u32 {
+                  return Result::Err("compile request compiler root tokenized another keyword as an identifier")
+                } else if kind == 0u32 && token_code == 100u32 {
+                  return Result::Err(token_text)
+                } else if kind == 0u32 {
+                  return Result::Err("compile request compiler root expected a declaration after source start")
+                } else if kind == 1u32 {
+                  return Result::Err("compile request compiler root expected an expression")
+                } else if kind == 2u32 {
+                  return Result::Err("compile request compiler root expected a pattern")
+                } else if kind == 3u32 {
+                  return Result::Err("compile request compiler root has a lexical error")
+                } else if kind == 4u32 {
+                  return Result::Err("compile request compiler root has an import after a declaration")
+                }
+                return Result::Err("compile request compiler root has another parse error")
+              }
+              SelfHostCollectionDiagnostic::DuplicateName(_) =>
+                return Result::Err("compile request collected compiler root has a duplicate name")
+              SelfHostCollectionDiagnostic::DuplicateTestIdentity(_) =>
+                return Result::Err("compile request collected compiler root has a duplicate test")
+              SelfHostCollectionDiagnostic::InvalidExpectedTestTrap(_, _, _) =>
+                return Result::Err("compile request collected compiler root has an invalid test trap")
+            }
+            return Result::Err("compile request collected compiler root has diagnostics")
+          } else if root_module.declaration_count() == 0u32 {
+            return Result::Err("compile request collected compiler root has source but no declarations")
+          }
+          return Result::Err("compile request collected compiler root has declarations but no callables")
+        }
+        return Result::Err(
+          array_get_unchecked(collected.module_paths, root_module_index),
+        )
+      }
+    }
+    Option::None => return Result::Err("compile request root module is missing")
+  }
+  let frozen = self_host_freeze_program_signature_interfaces(collected)
+  if self_host_u32_greater(frozen.import_diagnostics.length(), 0u32) {
+    let diagnostic = frozen.import_diagnostics[0u32]
+    match diagnostic {
+      SelfHostImportScopeDiagnostic::UnavailableImportedInterface(_, path, _, _) =>
+        return Result::Err(path)
+      SelfHostImportScopeDiagnostic::DuplicateImportedAlias(_, name, _, _) =>
+        return Result::Err(name)
+      SelfHostImportScopeDiagnostic::AmbiguousImportedType(_, name, _, _) =>
+        return Result::Err(name)
+      SelfHostImportScopeDiagnostic::AmbiguousImportedTrait(_, name, _, _) =>
+        return Result::Err(name)
+      SelfHostImportScopeDiagnostic::AmbiguousImportedValue(_, name, _, _) =>
+        return Result::Err(name)
+    }
+    return Result::Err("compile request import scopes are invalid")
+  } else if self_host_u32_greater(frozen.path_diagnostics.length(), 0u32) {
+    match frozen.path_diagnostics[0u32] {
+      SelfHostProgramImportDiagnostic::MissingImportedModule(_, path, _, _) =>
+        return Result::Err(path)
+    }
+    return Result::Err("compile request import paths are invalid")
+  }
+  Result::Ok(
+    self_host_plan_program_wasmgc_link(
+      self_host_plan_program_wasmgc_fragments(
+        self_host_plan_program_specialization(
+          self_host_plan_program_lowering(frozen),
+          request.test_mode,
         ),
-        request.test_mode,
       ),
+      request.test_mode,
+    ),
+  )
+}
+
+fn self_host_fingerprint_matches_at(
+  expected: FixedArray<U8>,
+  actual: Bytes,
+  index: U32,
+  length: U32,
+) -> Bool {
+  if index >= length {
+    true
+  } else if wasm_array_get(expected, index) != actual.byte_at(index) {
+    false
+  } else {
+    self_host_fingerprint_matches_at(
+      expected,
+      actual,
+      index + 1u32,
+      length,
     )
   }
 }
@@ -50,26 +196,31 @@ fn self_host_fingerprint_matches(
   expected: FixedArray<U8>,
   actual: Bytes,
 ) -> Bool {
-  if actual.byte_length() != expected.length() {
-    false
-  } else {
-    while 0u32 {
-      index if index < expected.length() => {
-        if expected.get_unchecked(index) != actual.byte_at(index) {
-          break false
-        } else {
-          continue index + 1u32
-        }
-      }
-      _ => break true
-    }
-  }
+  let length = 32u32
+  actual.byte_length() == length && self_host_fingerprint_matches_at(
+    expected,
+    actual,
+    0u32,
+    length,
+  )
+}
+
+pub fn _start() -> Never {
+  facet_process().exit(main())
 }
 
 pub fn main() -> U32 {
-  let process = wasi_process()
-  match process_arguments(process, 8u32, 4096u32) {
-    Result::Err(_) => self_host_error(process, "cannot read process arguments")
+  let process = facet_process()
+  match process.arguments(8u32, 4096u32) {
+    Result::Err(error) => if self_host_u32_equal(error.code, 17u32) {
+      self_host_error(process, "cannot read process arguments: limit exceeded")
+    } else if self_host_u32_equal(error.code, 23u32) {
+      self_host_error(process, "cannot read process arguments: invalid UTF-8")
+    } else if self_host_u32_equal(error.code, 3u32) {
+      self_host_error(process, "cannot read process arguments: read mismatch")
+    } else {
+      self_host_error(process, "cannot read process arguments: backend error")
+    }
     Result::Ok(arguments) => {
       if arguments.length() != 2u32 {
         self_host_error(process, "usage: COMPILER REQUEST")
@@ -77,7 +228,7 @@ pub fn main() -> U32 {
         match relative_path(arguments.get_unchecked(1u32)) {
           Result::Err(_) => self_host_error(process, "request path is not relative")
           Result::Ok(request_path) => {
-            let filesystem = wasi_file_system(3u32)
+            let filesystem = facet_file_system(0u32)
             match fs_read_file(filesystem, request_path, 268435456u32) {
               Result::Err(_) => self_host_error(process, "cannot read compile request")
               Result::Ok(request_bytes) =>

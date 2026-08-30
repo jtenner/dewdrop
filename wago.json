@@ -1,0 +1,6 @@
+{
+  "$schema": "https://wago.sh/v1/schema.json",
+  "plugins": {
+    "github.com/jtenner/wago-facet": "0.1.0"
+  }
+}

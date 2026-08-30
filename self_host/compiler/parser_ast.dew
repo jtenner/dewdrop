@@ -245,6 +245,9 @@ pub struct SelfHostBuiltinDeclaration {
 pub struct SelfHostImportDeclaration {
   open_: Bool
   path: Array<String>
+  joined_path: String
+  default_alias: String
+  segment_count: U64
   wildcard: Bool
   import_alias: Option<String>
   import_alias_offset: U32
@@ -354,9 +357,9 @@ pub struct SelfHostStructDeclaration {
 }
 
 pub enum SelfHostEnumVariant {
-  UnitVariant(String, U32)
-  TupleVariant(String, Array<SelfHostTypeExpr>, U32)
-  StructVariant(String, Array<SelfHostStructField>, U32)
+  UnitVariant(String, U32, U32)
+  TupleVariant(String, Array<SelfHostTypeExpr>, U32, U32)
+  StructVariant(String, Array<SelfHostStructField>, U32, U32)
 }
 
 pub struct SelfHostEnumDeclaration {
@@ -522,6 +525,22 @@ impl SelfHostParseError {
   }
 }
 
+fn self_host_parse_error_kind(error: SelfHostParseError) -> U32 {
+  if error is SelfHostParseError::ExpectedDeclaration(_, _, _) {
+    0u32
+  } else if error is SelfHostParseError::ExpectedExpression(_, _) {
+    1u32
+  } else if error is SelfHostParseError::ExpectedPattern(_, _) {
+    2u32
+  } else if error is SelfHostParseError::Lexical(_, _) {
+    3u32
+  } else if error is SelfHostParseError::ImportAfterDeclaration(_) {
+    4u32
+  } else {
+    5u32
+  }
+}
+
 pub enum SelfHostDiagnosticSeverity {
   Error
   Warning
@@ -535,8 +554,8 @@ pub struct SelfHostParseDiagnostic {
 }
 
 pub enum SelfHostParseEvent {
-  Declaration(SelfHostDeclaration)
-  Diagnostic(SelfHostParseDiagnostic)
+  Declaration(SelfHostDeclaration, U32)
+  Diagnostic(SelfHostDiagnosticSeverity, SelfHostParseError, U32, U32, U32, String)
 }
 
 pub struct SelfHostParsedModule {

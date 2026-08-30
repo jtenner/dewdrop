@@ -265,6 +265,36 @@ fn self_host_lowering_function_value_type(
   }
 }
 
+fn self_host_lowering_unique_mutable_field(
+  collected: SelfHostCollectedModule,
+  name: U32,
+) -> Option<U64> {
+  let mut selected = 0u64
+  let mut found = false
+  let mut index = 0u32
+  while index {
+    current => if current < collected.fields.length() {
+      let field = collected.fields[current]
+      if self_host_u32_equal(field.name, name) && field.mutable_ {
+        match field.variant {
+          Option::None => if found {
+            break Option::None
+          } else {
+            selected = field.id
+            found = true
+          }
+          Option::Some(_) => {}
+        }
+      }
+      continue current + 1u32
+    } else if found {
+      break Option::Some(selected)
+    } else {
+      break Option::None
+    }
+  }
+}
+
 fn self_host_lowering_expression_kind(
   collected: SelfHostCollectedModule,
   names: SelfHostResolvedModuleNames,
@@ -344,23 +374,35 @@ fn self_host_lowering_expression_kind(
       _ => SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right)
     }
     SelfHostHirExpr::CallExpr(target, arguments, _) => match call_target {
-      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, type_arguments) => match self_host_lowering_builtin_name(
-        builtin_recipes,
-        declaration,
-      ) {
-        Option::Some(builtin_name) => SelfHostPlannedExpressionKind::PlannedBuiltinCall(
-          builtin_name,
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, type_arguments) => match selection {
+        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+          _,
+          _,
+          _,
+        ) => SelfHostPlannedExpressionKind::PlannedDirectCall(
           declaration,
           target,
           arguments,
           type_arguments,
         )
-        Option::None => SelfHostPlannedExpressionKind::PlannedDirectCall(
+        _ => match self_host_lowering_builtin_name(
+          builtin_recipes,
           declaration,
-          target,
-          arguments,
-          type_arguments,
-        )
+        ) {
+          Option::Some(builtin_name) => SelfHostPlannedExpressionKind::PlannedBuiltinCall(
+            builtin_name,
+            declaration,
+            target,
+            arguments,
+            type_arguments,
+          )
+          Option::None => SelfHostPlannedExpressionKind::PlannedDirectCall(
+            declaration,
+            target,
+            arguments,
+            type_arguments,
+          )
+        }
       }
       SelfHostBasicCallTarget::FunctionValueBasicCallTarget(_) => SelfHostPlannedExpressionKind::PlannedFunctionValueCall(
         target,
@@ -378,7 +420,21 @@ fn self_host_lowering_expression_kind(
       SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, mutable_) => SelfHostPlannedExpressionKind::PlannedFieldGet(field, base, mutable_)
       _ => SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name)
     }
-    SelfHostHirExpr::QualifiedExpr(_, _, _) => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    SelfHostHirExpr::QualifiedExpr(base, _, _) => match selection {
+      SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+        _,
+        _,
+        _,
+      ) => SelfHostPlannedExpressionKind::PlannedConstruct(
+        base,
+        SelfHostHirSpan::{
+          start: 0u32
+          length: 0u32
+        },
+        selection,
+      )
+      _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    }
     SelfHostHirExpr::ProductFieldExpr(base, index, count, _) => SelfHostPlannedExpressionKind::PlannedProductField(base, index, count)
     SelfHostHirExpr::IndexExpr(base, index, _) => SelfHostPlannedExpressionKind::PlannedIndexGet(base, index, call_target)
     SelfHostHirExpr::AssignmentExpr(target, value, _) => match collected.expressions[target] {
@@ -387,14 +443,21 @@ fn self_host_lowering_expression_kind(
         SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => SelfHostPlannedExpressionKind::PlannedCaptureSet(capture, value)
         _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
       }
-      SelfHostHirExpr::FieldExpr(base, _, _) => match inferred.expression_selections[
+      SelfHostHirExpr::FieldExpr(base, name, _) => match inferred.expression_selections[
         self_host_u32_add(
           job.expression_selections.start,
           target - source_expression_start,
         )
       ] {
         SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _) => SelfHostPlannedExpressionKind::PlannedFieldSet(field, base, value)
-        _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+        _ => match self_host_lowering_unique_mutable_field(collected, name) {
+          Option::Some(field) => SelfHostPlannedExpressionKind::PlannedFieldSet(
+            field,
+            base,
+            value,
+          )
+          Option::None => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+        }
       }
       _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
     }

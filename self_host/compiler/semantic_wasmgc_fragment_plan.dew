@@ -51,6 +51,7 @@ pub struct SelfHostPlannedWasmField {
   physical_index: U32
   storage: SelfHostPlannedWasmStorageType
   mutable_: Bool
+  exact_nominal: Bool
   offset: U32
 }
 
@@ -185,6 +186,80 @@ fn self_host_wasmgc_u32_slots(length: U32) -> Array<U32> {
   values
 }
 
+fn self_host_wasmgc_layout_at(
+  values: Array<SelfHostPlannedNominalLayout>,
+  index: U32,
+) -> SelfHostPlannedNominalLayout {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_wasmgc_payload_type_at(
+  values: Array<U32>,
+  index: U32,
+) -> U32 {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_wasmgc_payload_exact_nominal(
+  module_: SelfHostPlannedModuleLowering,
+  payload: SelfHostHirSpan,
+  payload_index: U32,
+) -> Bool {
+  let type_index = self_host_u32_add(payload.start, payload_index)
+  if type_index >= module_.type_layouts.payload_types.length() {
+    return false
+  }
+  let resolved_type = self_host_wasmgc_payload_type_at(
+    module_.type_layouts.payload_types,
+    type_index,
+  )
+  let runtime_base = match module_.resolved_types.type_at(resolved_type) {
+    SelfHostResolvedType::PrimitiveType(_) => true
+    SelfHostResolvedType::AppliedType(base, _) => match module_.resolved_types.type_at(
+      base,
+    ) {
+      SelfHostResolvedType::PrimitiveType(_) => true
+      _ => false
+    }
+    _ => false
+  }
+  if runtime_base {
+    return false
+  }
+  let nominal = self_host_linked_resolved_nominal_declaration(
+    module_,
+    resolved_type,
+  )
+  if self_host_u64_equal(nominal, 0u64) ||
+    !self_host_u64_equal(
+      self_host_semantic_id_module(nominal),
+      module_.module_id,
+    ) {
+    return false
+  }
+  let mut layout_index = 0u32
+  while layout_index {
+    current => if current < module_.type_layouts.layouts.length() {
+      let layout = self_host_wasmgc_layout_at(
+        module_.type_layouts.layouts,
+        current,
+      )
+      if self_host_u64_equal(layout.declaration, nominal) {
+        return match layout.kind {
+          SelfHostPlannedNominalLayoutKind::PlannedStructLayout(fields) =>
+            fields.length > 0u32
+          SelfHostPlannedNominalLayoutKind::PlannedEnumLayout(_) => true
+          SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout => false
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  false
+}
+
 fn self_host_wasmgc_plan_types(
   module_: SelfHostPlannedModuleLowering,
   physical_types: Array<SelfHostPlannedWasmPhysicalType>,
@@ -209,6 +284,7 @@ fn self_host_wasmgc_plan_types(
               physical_index: current
               storage: self_host_wasmgc_field_storage_type(module_, source)
               mutable_: source.mutable_
+              exact_nominal: false
               offset: source.offset
             })
             continue current + 1u32
@@ -273,6 +349,11 @@ fn self_host_wasmgc_plan_types(
                         payload_index,
                       )
                       mutable_: false
+                      exact_nominal: self_host_wasmgc_payload_exact_nominal(
+                        module_,
+                        payload,
+                        payload_index,
+                      )
                       offset: source.offset
                     })
                     continue payload_index + 1u32
@@ -294,6 +375,7 @@ fn self_host_wasmgc_plan_types(
                       physical_index: payload_index
                       storage: self_host_wasmgc_field_storage_type(module_, field)
                       mutable_: field.mutable_
+                      exact_nominal: false
                       offset: field.offset
                     })
                     continue payload_index + 1u32
@@ -480,6 +562,7 @@ fn self_host_wasmgc_plan_closures(
     physical_index: 0u32
     storage: SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage
     mutable_: false
+    exact_nominal: false
     offset: 0u32
   })
   physical_types.push(SelfHostPlannedWasmPhysicalType::{
@@ -504,6 +587,7 @@ fn self_host_wasmgc_plan_closures(
           physical_index: 0u32
           storage: self_host_wasmgc_storage_type(local.shape)
           mutable_: true
+          exact_nominal: false
           offset: local.offset
         })
         physical_types.push(SelfHostPlannedWasmPhysicalType::{
@@ -534,6 +618,7 @@ fn self_host_wasmgc_plan_closures(
         physical_index: 0u32
         storage: SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage
         mutable_: false
+        exact_nominal: false
         offset: 0u32
       })
       let mut capture = 0u32
@@ -551,6 +636,7 @@ fn self_host_wasmgc_plan_closures(
             physical_index: current_capture + 1u32
             storage: self_host_wasmgc_storage_type(source.shape)
             mutable_: false
+            exact_nominal: false
             offset: source.offset
           })
           continue current_capture + 1u32

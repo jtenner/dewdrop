@@ -52,6 +52,7 @@ try {
   const status = Number(instance.exports.main());
   process.exitCode = status;
 } catch (error) {
-  console.error(`dew WASI run failed: ${String(error)}`);
+  const detail = error instanceof Error && error.stack ? error.stack : String(error);
+  console.error(`dew WASI run failed: ${detail}`);
   process.exitCode = 1;
 }

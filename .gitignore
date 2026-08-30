@@ -18,3 +18,4 @@ tools/wago-string-bench/*.wasm
 tools/module-snapshots/wago-runner/wago-runner
 tools/wasi-parity/*.wasm
 tools/wasi-parity/generated_cases.dew
+.wago/

@@ -52,13 +52,13 @@ fn self_host_token_expression(token: SelfHostToken) -> Option<SelfHostExpr> {
       Option::Some(SelfHostExpr::StringExpr(value, token.offset))
     SelfHostTokenKind::BytesLiteral(value) =>
       Option::Some(SelfHostExpr::BytesExpr(value, token.offset))
-    SelfHostTokenKind::Identifier(name) =>
+    SelfHostTokenKind::Identifier(name, _) =>
       Option::Some(SelfHostExpr::NameExpr(name, token.offset))
-    SelfHostTokenKind::AtIdentifier(name) =>
+    SelfHostTokenKind::AtIdentifier(name, _, _) =>
       Option::Some(SelfHostExpr::ImportAliasExpr(name, token.offset))
-    SelfHostTokenKind::Keyword(SelfHostKeyword::True) =>
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 24u32 =>
       Option::Some(SelfHostExpr::BoolExpr(true, token.offset))
-    SelfHostTokenKind::Keyword(SelfHostKeyword::False) =>
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 25u32 =>
       Option::Some(SelfHostExpr::BoolExpr(false, token.offset))
     _ => Option::None
   }
@@ -86,15 +86,15 @@ fn self_host_parse_pattern_base(
     }
   }
   match token.kind {
-    SelfHostTokenKind::Identifier(name) => {
+    SelfHostTokenKind::Identifier(name, _) => {
       parser.index = parser.index + 1u32
       Option::Some(self_host_pattern_binding(name, token.offset))
     }
-    SelfHostTokenKind::AtIdentifier(name) => {
+    SelfHostTokenKind::AtIdentifier(name, _, _) => {
       parser.index = parser.index + 1u32
       Option::Some(SelfHostPattern::ImportAliasPattern(name, token.offset))
     }
-    SelfHostTokenKind::Symbol(SelfHostSymbol::Ellipsis) => {
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 28u32 => {
       parser.index = parser.index + 1u32
       if allow_rest {
         Option::Some(SelfHostPattern::RestPattern(token.offset))
@@ -106,7 +106,7 @@ fn self_host_parse_pattern_base(
         Option::None
       }
     }
-    SelfHostTokenKind::Symbol(SelfHostSymbol::Plus) => {
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 7u32 => {
       parser.index = parser.index + 1u32
       match self_host_parser_peek(parser) {
         Option::Some(value_token) => match self_host_token_expression(value_token) {
@@ -134,7 +134,7 @@ fn self_host_parse_pattern_base(
         }
       }
     }
-    SelfHostTokenKind::Symbol(SelfHostSymbol::Minus) => {
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 8u32 => {
       parser.index = parser.index + 1u32
       match self_host_parser_peek(parser) {
         Option::Some(value_token) => match self_host_token_expression(value_token) {
@@ -192,7 +192,7 @@ fn self_host_parse_tuple_pattern_arguments(
   let arguments = self_host_empty_patterns()
   let mut has_rest = false
   self_host_parser_skip_newlines(parser)
-  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+  if self_host_parser_consume_symbol(parser, 1u32) {
     self_host_parser_fail(
       parser,
       SelfHostParseError::EmptyTuplePattern(open_offset),
@@ -217,16 +217,16 @@ fn self_host_parse_tuple_pattern_arguments(
         }
         arguments.push(pattern)
         self_host_parser_skip_newlines(parser)
-        if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+        if self_host_parser_consume_symbol(parser, 1u32) {
           break Option::Some(arguments)
         } else if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::Comma,
+          25u32,
         ) {
           self_host_parser_skip_newlines(parser)
           if self_host_parser_consume_symbol(
             parser,
-            SelfHostSymbol::RightParen,
+            1u32,
           ) {
             break Option::Some(arguments)
           } else {
@@ -257,7 +257,7 @@ fn self_host_parse_struct_pattern(
 ) -> Option<SelfHostPattern> {
   let fields = self_host_empty_pattern_fields()
   let mut rest_offset = self_host_no_u32()
-  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+  if self_host_parser_consume_symbol(parser, 3u32) {
     return Option::Some(
       SelfHostPattern::StructPattern(
         target,
@@ -283,7 +283,7 @@ fn self_host_parse_struct_pattern(
   self_host_parser_skip_newlines(parser)
   let result = while 0u32 {
     _ => {
-      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+      if self_host_parser_consume_symbol(parser, 3u32) {
         break Option::Some(
           SelfHostPattern::StructPattern(
             target,
@@ -307,7 +307,7 @@ fn self_host_parse_struct_pattern(
           break Option::None
         }
       }
-      if token.kind is SelfHostTokenKind::Symbol(SelfHostSymbol::Ellipsis) {
+      if self_host_token_kind_is_symbol(token.kind, 28u32) {
         parser.index = parser.index + 1u32
         if rest_offset is Option::Some(_) {
           self_host_parser_fail(
@@ -336,7 +336,7 @@ fn self_host_parse_struct_pattern(
       let (name, field_offset) = pair
       let pattern = if self_host_parser_consume_symbol(
         parser,
-        SelfHostSymbol::Colon,
+        13u32,
       ) {
         match self_host_parse_pattern_context(parser, false, false) {
           Option::Some(value) => value
@@ -379,7 +379,7 @@ fn self_host_parse_pattern_context(
   let result = while 0u32 {
     _ => match self_host_parser_peek(parser) {
       Option::Some(token) => match token.kind {
-        SelfHostTokenKind::Symbol(SelfHostSymbol::Dot) => match pattern {
+        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 27u32 => match pattern {
           SelfHostPattern::ImportAliasPattern(_, _) => {
             parser.index = parser.index + 1u32
             self_host_parser_skip_newlines(parser)
@@ -388,7 +388,7 @@ fn self_host_parse_pattern_context(
               SelfHostDeclarationExpectation::BindingName,
             ) {
               Option::Some(pair) => {
-                let (property, _) = pair
+                let (property, _property_offset) = pair
                 pattern = SelfHostPattern::QualifiedPattern(
                   pattern,
                   property,
@@ -401,7 +401,7 @@ fn self_host_parse_pattern_context(
           }
           _ => break Option::Some(pattern)
         }
-        SelfHostTokenKind::Symbol(SelfHostSymbol::DoubleColon) => {
+        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 14u32 => {
           parser.index = parser.index + 1u32
           self_host_parser_skip_newlines(parser)
           match self_host_parser_identifier(
@@ -409,7 +409,7 @@ fn self_host_parse_pattern_context(
             SelfHostDeclarationExpectation::BindingName,
           ) {
             Option::Some(pair) => {
-              let (property, _) = pair
+              let (property, _property_offset) = pair
               pattern = SelfHostPattern::QualifiedPattern(
                 pattern,
                 property,
@@ -420,7 +420,7 @@ fn self_host_parse_pattern_context(
             Option::None => break Option::None
           }
         }
-        SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 0u32 => {
           parser.index = parser.index + 1u32
           match self_host_parse_tuple_pattern_arguments(parser, token.offset) {
             Option::Some(arguments) => {
@@ -434,9 +434,9 @@ fn self_host_parse_pattern_context(
             Option::None => break Option::None
           }
         }
-        SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace) if stop_left_brace =>
+        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 2u32 && stop_left_brace =>
           break Option::Some(pattern)
-        SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace) => {
+        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 2u32 => {
           parser.index = parser.index + 1u32
           match self_host_parse_struct_pattern(parser, pattern, token.offset) {
             Option::Some(value) => {

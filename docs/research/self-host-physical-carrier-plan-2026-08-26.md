@@ -31,6 +31,8 @@ At the failing instruction, call 1761 produces `i32` and `local.set 6` expects `
 
 The earlier branch record also identifies the i64-to-i32 `Some` payload class at physical function 1622 and offset `0x35d7f`. That number is historical only. The regression must use the selected `VariantId`, specialization, payload subtype, and physical payload field.
 
+The current primary bootstrap failure is physical function 1837, `SelfHostBodyNameMergeBuilder::resolve_and_merge_lambda`, at offset `0x4dcb8`. `pending_captures[current]` has logical type `SelfHostLambdaCapture`, but the old physical body path retained only `eqref`. The local `source` then lost its exact owner, and same-named fields from unrelated records were selected. The resulting `SelfHostLambdaCapture` constructor received `eqref` for its `name` field, which requires `i32`.
+
 ## Current pipeline
 
 The current native pipeline is:
@@ -158,6 +160,138 @@ Unqualified enum selection will use propagated expected types, scrutinee owners 
 
 A semantic style gate will report redundant qualified enum variants under `self_host/compiler/**/*.dew` with path, offset, owner, and variant.
 
-## Final results
+## Exact nominal provenance update
 
-Pending implementation and final gates.
+The canonical body plan now records `SelfHostPlannedPhysicalValueInfo` for expressions, parameters, user locals, pattern bindings, control-state values, control results, and scratches. The value record keeps the logical body type, broad Wasm carrier, exact nominal owner, and linked physical heap type as separate facts.
+
+Array and index planning recovers the specialized element owner from the indexed expression type and from the container type argument. Local initialization and `local.get` copy the complete value record. Pattern payload bindings and loop-carried values use the same record.
+
+Field plans now retain the receiver expression, receiver logical type, receiver nominal owner, receiver linked heap type, exact `FieldId`, exact linked owner type, physical field index, storage type, and result value record. Unresolved field syntax can only be completed by an exact receiver owner plus field name during physical planning. The old whole-program first-name fallback was removed. Starshine field emission consumes only the canonical selected field.
+
+Constructor emission now uses the canonical linked destination type when present and maps source fields to destination fields by exact `FieldId`. Name and ordinal fallback were removed. The pre-emission verifier checks each constructor argument carrier and nominal reference provenance against the exact destination field. It also rejects field receivers whose nominal owner or linked heap type does not match the selected physical field owner.
+
+The reduced runtime fixture is `tests/module-snapshots/collections/nominal-container-provenance-runtime.dew`. It covers `Array<I32>`, `Array<I64>`, `Array<String>`, `Array<Capture>`, `Option<Capture>`, `Result<Capture, OtherStruct>`, and `Map<I32, Capture>`. Three unrelated records reuse `name`, `source`, `mutable_`, and `offset` with different field orders and carriers.
+
+## Pre-emission carrier assertions
+
+The physical-body verifier now checks local initialization and assignment boundaries. A value cannot enter a materialized local when its planned carrier differs from the local carrier. `Never` and genuinely unresolved values remain exempt so the diagnostic does not hide the original unresolved source.
+
+This moves failures before Wasm instruction emission and reports the semantic module, declaration, body, specialization, expression, local ID, source offset, logical type, selected nominal owner, expected carrier, and actual carrier.
+
+The first assertion-enabled bootstrap stopped after compiler A executed, before compiler B validation, with three root mismatches:
+
+- `self_host_program_specialization_receiver_type_argument_shape`: local 4 expected `i32`, but a match result was planned as `eqref`;
+- `self_host_body_seed_expression`: local 8 expected `i64`, but the assigned declaration value was planned as `eqref`;
+- `self_host_linked_function_returns_array_element`: local 14 expected `i32`, but a match result was planned as `eqref`.
+
+These three mismatches are fixed. Local initialization and assignment now propagate an already-known local ABI carrier back into the source expression. Match planning propagates an externally required result carrier into each falling-through arm before arm values are merged. Exact call-result, field-storage, and constructor-field checks remain responsible for rejecting an incorrect external constraint.
+
+The Starshine emitter and physical-body verifier now check these high-traffic boundaries:
+
+- every allocated Wasm local must use the canonical local carrier;
+- local initialization and assignment must agree with the destination local;
+- exact physical variant payloads must agree with pattern-bound local carriers and nominal owners;
+- direct binding arms must agree with the match result carrier;
+- an index operation's selected runtime carrier must equal its canonical expression carrier;
+- normal call arguments must agree with physical parameter carriers;
+- a normal call's physical result ABI must equal the canonical expression carrier;
+- exact physical field storage must agree with the field expression carrier;
+- match-arm and match-result carriers must agree before branch instructions are emitted.
+
+Calls that the emitter intentionally replaces with a physical operation, such as `get_unchecked`, `indexed_get`, and `into`, are checked by their lowering-specific path instead of the normal-call ABI assertion.
+
+## Pattern and call propagation update
+
+The original `offset` failure is fixed. Pattern planning now:
+
+- prefers the tuple pattern's own selected constructor;
+- maps every tuple child by its physical field index;
+- propagates physical field carriers and reference owners recursively through nested variants;
+- treats the incoming physical payload as authoritative over broad pattern shapes;
+- uses exact generic `Some`, `Ok`, and `Err` payload information when available;
+- permits name/arity recovery only when the candidate physical variant is unique;
+- rejects ambiguous whole-program variant recovery instead of selecting the first candidate.
+
+Normal method calls now reuse the specialization-aware emitter call lookup when the body call map has no entry. Exact physical call parameters propagate into argument expressions and source locals. Exact call results propagate into result expressions and initialized locals. Array-push item carriers and direct binding results also propagate back into pattern locals.
+
+Canonical local and match-result carriers now take precedence over late emitter inference. This fixed the earlier bootstrap failures in physical functions 1510 and 1586, including scalar enum payloads and scalar array-push scratch values.
+
+## Current results
+
+Compiler A builds and validates. The physical-body verifier reports zero errors. Compiler A executes and produces compiler B.
+
+The `module_value_visible` failure in physical function 1809 is fixed. Loop-state planning now propagates the exact initial loop carrier back through `continue` values and pattern-bound locals. `Some` payload planning prefers exact binding-use evidence when it proves a reference, then the receiver's value shape, and does not let a broad call result silently replace a concrete loop carrier.
+
+The unresolved `Map<I64, V>::get` receiver defect in physical function 1812 is fixed. Field result type-argument provenance now recovers nominal payload owners through exact physical field layouts. Method lookup uses receiver identity and explicit arity before name-only fallback. The duplicate `intern_simple` method in imported semantics was renamed to `intern_imported_simple`, removing an ambiguous receiver/name pair.
+
+Further bootstrap fixes now cover:
+
+- exact Map pattern-local value carriers;
+- Map index writes lowered as Map writes instead of fixed-array writes;
+- direct, unresolved, and builtin Map get/contains/write scratch allocation;
+- array index lowering through physical array-module identity;
+- dead local initializers emitted as drops instead of invalid stores;
+- String literal match conditions lowered through `dew_string_equals`;
+- exact physical field storage for array-push items;
+- loop initial carriers and `continue` boundaries;
+- product-free field and pattern helper control flow where tuple carrier recovery was unnecessary.
+
+New pre-emission assertions cover normal call argument count and carriers, unresolved call arguments, escaped index lowering, literal match carriers, local allocation, Map payload/local boundaries, pattern payload extraction and stores, call results, index results, field storage, and constructor fields.
+
+The physical function 2467 control-result defect is fixed. Before an `if` is emitted, the emitter now computes exact live-branch carriers from canonical locals, blocks, index reads, constructors, constants, and physical call ABIs. If both branches are exact and disagree, emission stops with module, declaration, body, specialization, expression, branch expressions, selected carrier, and exact branch carriers. If both exact branches agree, that physical carrier controls the Wasm block result instead of stale scalar inference.
+
+The fix exposed two related specialization defects and corrected them:
+
+- generic array element shapes map through the physical fixed-array carrier, so `Generic` reference elements do not become unresolved;
+- fixed-array index use can propagate through local aliases, `if` results, and match arms, while Map key indexing remains a separate specialization path.
+
+Bare `Option::None` values in `self_host_linked_i32_main_expression` were also replaced with explicit scalar sentinels. This prevents `Option<U32>` and `Option<U64>` payload subtypes from sharing an unresolved generic carrier. Small helpers that returned `Result<Unit, String>` now return `Option<String>` where only success or an error message is needed; this prevents a unit payload from being assigned a reference field by unresolved Result specialization.
+
+The `wasm_ref_null` builtin now emits the actual Wasm `ref.null eq` instruction. It no longer falls through name-only lookup to the unrelated Starshine `Instruction::ref_null` export.
+
+Strict Starshine validation has been restored in `self_host_encode_linked_i32_module`; the temporary `&& false` bypass is gone.
+
+Current bootstrap result:
+
+- compiler A builds and validates;
+- compiler A executes and emits compiler B;
+- Starshine validates the emitted compiler B before encoding;
+- `wasm-tools validate --features all` validates compiler B;
+- the original Map receiver bug and the control-result carrier failure are no longer validation blockers.
+
+Compiler B execution now stops before its `main` function because the self-host output is still a Core Wasm consumer with dynamic `starshine` imports:
+
+```text
+dew WASI run failed: TypeError: WebAssembly.instantiate():
+Import #2 "starshine": module is not an object or function
+```
+
+This is now a provider-linking boundary, not a body-carrier or Wasm-validation failure. Compiler C and B/C byte identity still require the self-host request path to apply the Core Wasm provider linker, or an equivalent exact ABI-preserving link step, to compiler B before execution.
+
+Final checks for this pass:
+
+- `tools/test-native.sh`: pass, including 36 tokenizer, 284 parser, 350 semantic, 46 backend, 16 standard-loader, and 2 compiler-driver tests;
+- `collections/nominal-container-provenance-runtime`: pass under Node and Wago;
+- no temporary trace strings remain;
+- `git diff --check`: pass.
+
+## Provider link continuation
+
+The self-host output now uses `link:starshine` imports and exports `main` plus memory 0. The bootstrap script post-links compiler B and compiler C with the native Core Wasm linker before execution.
+
+The Core Wasm linker now:
+
+- inserts checked `eqref`-to-concrete-reference adapters instead of rejecting erased provider parameters;
+- does not treat an empty nominal base that has declared subtypes as a replaceable foreign marker;
+- does not compare unrelated cross-module defined references by raw local type index;
+- composes provider and Dew start functions, with provider initialization first;
+- uses the flattened type count when it appends the combined start signature;
+- runs cleanup after linking, which removes unused provider host imports.
+
+The full Starshine provider now links and validates. Compiler B is reduced from the full provider merge to about 1.1 MiB after cleanup. Compiler B exports `main` and `memory`, and `wasm-tools validate --features all` passes.
+
+The self-host emitter now emits the full WASI subset used by the included process and filesystem modules. Function indices keep separate logical and final emitted views, so the larger WASI import prefix does not corrupt canonical body-plan lookups.
+
+Imported calls through aliases, such as `@wasi.args_sizes_get`, now resolve through the exact imported module scope during basic inference. This prevents them from being misclassified as function-value calls with poison qualified roots.
+
+The remaining execution blocker is an unresolved type-qualified static call in `wasi_memory_string`, currently `BytesBuilder::with_capacity`. Compiler B validates and starts, but traps in that function before it can read the request path. The next fix is to port exact type-qualified imported method resolution from the native inferencer, rather than rely on emitter name recovery.

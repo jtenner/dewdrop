@@ -3,7 +3,7 @@ open dew.std.testing
 fn self_host_declaration_count(module_: SelfHostParsedModule) -> U32 {
   let mut count = 0u32
   for event in module_.events {
-    if event is SelfHostParseEvent::Declaration(_) {
+    if event is SelfHostParseEvent::Declaration(_, _) {
       count = count + 1u32
     } else {
     }
@@ -14,7 +14,7 @@ fn self_host_declaration_count(module_: SelfHostParsedModule) -> U32 {
 fn self_host_diagnostic_count(module_: SelfHostParsedModule) -> U32 {
   let mut count = 0u32
   for event in module_.events {
-    if event is SelfHostParseEvent::Diagnostic(_) {
+    if event is SelfHostParseEvent::Diagnostic(_, _, _, _, _, _) {
       count = count + 1u32
     } else {
     }

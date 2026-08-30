@@ -33,13 +33,14 @@ fn standard_module_name(path : String) -> String {
 fn bootstrap_module_required(name : String) -> Bool {
   match name {
     "dew.std.array" | "dew.std.blake3" | "dew.std.bytes" |
-    "dew.std.bytes_builder" | "dew.std.fixed_array" | "dew.std.fs" |
-    "dew.std.fs.wasi" | "dew.std.map" | "dew.std.math" |
-    "dew.std.option" | "dew.std.path" | "dew.std.preamble" |
-    "dew.std.process" | "dew.std.process.wasi" | "dew.std.result" |
-    "dew.std.string" | "dew.std.string_builder" |
+    "dew.std.bytes_builder" | "dew.std.facet" | "dew.std.facet.core" |
+    "dew.std.facet.fs" | "dew.std.facet.imports" |
+    "dew.std.facet.process" | "dew.std.fixed_array" | "dew.std.fs" |
+    "dew.std.map" | "dew.std.math" | "dew.std.option" |
+    "dew.std.path" | "dew.std.preamble" | "dew.std.process" |
+    "dew.std.result" | "dew.std.string" | "dew.std.string_builder" |
     "dew.std.testing" | "dew.std.text_runtime" |
-    "dew.std.wasm.intrinsics" | "dew.std.wasm.wasi" => true
+    "dew.std.wasm.intrinsics" => true
     _ => false
   }
 }

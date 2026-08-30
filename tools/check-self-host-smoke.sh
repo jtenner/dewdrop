@@ -65,6 +65,7 @@ semantic_sources=(
   self_host/compiler/semantic_program_specialization.dew
   self_host/compiler/semantic_wasmgc_fragment_plan.dew
   self_host/compiler/semantic_program_link_plan.dew
+  self_host/compiler/semantic_wasm_body_plan.dew
   self_host/compiler/semantic_body_flow.dew
 )
 

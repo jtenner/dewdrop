@@ -37,7 +37,7 @@ fn self_host_parse_function_parameters(
   let parameters = self_host_empty_function_parameters()
   let mut receiver = self_host_no_receiver()
   self_host_parser_skip_newlines(parser)
-  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+  if self_host_parser_consume_symbol(parser, 1u32) {
     return Option::Some((receiver, parameters))
   } else {
   }
@@ -62,7 +62,7 @@ fn self_host_parse_function_parameters(
         }
         let explicit_type = if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::Colon,
+          13u32,
         ) {
           self_host_parse_type(parser)
         } else {
@@ -79,7 +79,7 @@ fn self_host_parse_function_parameters(
       } else {
         if !self_host_parser_expect_symbol(
           parser,
-          SelfHostSymbol::Colon,
+          13u32,
           SelfHostDeclarationExpectation::Colon,
         ) {
           break Option::None
@@ -95,16 +95,16 @@ fn self_host_parse_function_parameters(
         }
       }
       self_host_parser_skip_newlines(parser)
-      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+      if self_host_parser_consume_symbol(parser, 1u32) {
         break Option::Some((receiver, parameters))
       } else if self_host_parser_consume_symbol(
         parser,
-        SelfHostSymbol::Comma,
+        25u32,
       ) {
         self_host_parser_skip_newlines(parser)
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::RightParen,
+          1u32,
         ) {
           break Option::Some((receiver, parameters))
         } else {
@@ -128,7 +128,7 @@ fn self_host_parse_lambda_expression(
 ) -> Option<SelfHostExpr> {
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftParen,
+    0u32,
     SelfHostDeclarationExpectation::LeftParen,
   ) {
     return Option::None
@@ -143,7 +143,7 @@ fn self_host_parse_lambda_expression(
   let (_, parameters) = parsed
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::Arrow,
+    31u32,
     SelfHostDeclarationExpectation::Arrow,
   ) {
     return Option::None
@@ -158,7 +158,7 @@ fn self_host_parse_lambda_expression(
   let body_offset = self_host_parser_offset(parser)
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftBrace,
+    2u32,
     SelfHostDeclarationExpectation::LeftBrace,
   ) {
     return Option::None
@@ -354,15 +354,15 @@ fn self_host_parse_product_binding_after_left(
     _ => {
       let field = match self_host_parser_peek(parser) {
         Option::Some(token) => match token.kind {
-          SelfHostTokenKind::Identifier("_") => {
+          SelfHostTokenKind::Identifier("_", _) => {
             parser.index = parser.index + 1u32
             SelfHostProductBinding::IgnoredProductBinding
           }
-          SelfHostTokenKind::Identifier(name) => {
+          SelfHostTokenKind::Identifier(name, _) => {
             parser.index = parser.index + 1u32
             SelfHostProductBinding::NamedProductBinding(name, token.offset)
           }
-          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 0u32 => {
             parser.index = parser.index + 1u32
             match self_host_parse_product_binding_after_left(
               parser,
@@ -393,7 +393,7 @@ fn self_host_parse_product_binding_after_left(
       }
       fields.push(field)
       self_host_parser_skip_newlines(parser)
-      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+      if self_host_parser_consume_symbol(parser, 1u32) {
         if fields.length() < 2u32 || fields.length() > 32u32 {
           self_host_parser_fail(
             parser,
@@ -413,12 +413,12 @@ fn self_host_parse_product_binding_after_left(
         }
       } else if self_host_parser_consume_symbol(
         parser,
-        SelfHostSymbol::Comma,
+        25u32,
       ) {
         self_host_parser_skip_newlines(parser)
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::RightParen,
+          1u32,
         ) {
           if fields.length() < 2u32 || fields.length() > 32u32 {
             self_host_parser_fail(
@@ -500,19 +500,19 @@ fn self_host_parse_block_let(
 ) -> Bool {
   let mutable_ = self_host_parser_consume_keyword(
     parser,
-    SelfHostKeyword::Mut,
+    13u32,
   )
   let binding = match self_host_parser_peek(parser) {
     Option::Some(token) => match token.kind {
-      SelfHostTokenKind::Identifier("_") => {
+      SelfHostTokenKind::Identifier("_", _) => {
         parser.index = parser.index + 1u32
         SelfHostProductBinding::IgnoredProductBinding
       }
-      SelfHostTokenKind::Identifier(name) => {
+      SelfHostTokenKind::Identifier(name, _) => {
         parser.index = parser.index + 1u32
         SelfHostProductBinding::NamedProductBinding(name, token.offset)
       }
-      SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+      SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 0u32 => {
         parser.index = parser.index + 1u32
         match self_host_parse_product_binding_after_left(parser, token.offset) {
           Option::Some(value) => value
@@ -539,7 +539,7 @@ fn self_host_parse_block_let(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::Equal,
+    15u32,
     SelfHostDeclarationExpectation::Equal,
   ) {
     return false
@@ -561,7 +561,15 @@ fn self_host_parse_block_let(
         let_offset,
       ),
     )
-    SelfHostProductBinding::IgnoredProductBinding => {}
+    SelfHostProductBinding::IgnoredProductBinding => {
+      items.push(SelfHostBlockItem::ExpressionItem(value, let_offset))
+      items.push(
+        SelfHostBlockItem::ExpressionItem(
+          SelfHostExpr::BlockExpr(self_host_empty_block(let_offset)),
+          let_offset,
+        ),
+      )
+    }
     SelfHostProductBinding::NestedProductBinding(_, offset) => {
       let hidden = self_host_product_name("$product_", let_offset)
       items.push(
@@ -591,7 +599,7 @@ fn self_host_parse_block_after_left(
 ) -> Option<SelfHostBlock> {
   let items = self_host_empty_block_items()
   let cleanups = self_host_empty_cleanups()
-  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+  if self_host_parser_consume_symbol(parser, 3u32) {
     return Option::Some(SelfHostBlock::{
       items: items
       offset: open_offset
@@ -613,7 +621,7 @@ fn self_host_parse_block_after_left(
   self_host_parser_skip_newlines(parser)
   let result = while 0u32 {
     _ => {
-      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+      if self_host_parser_consume_symbol(parser, 3u32) {
         break Option::Some(
           self_host_finalize_deferred_block(items, cleanups, open_offset),
         )
@@ -629,7 +637,7 @@ fn self_host_parse_block_after_left(
           break Option::None
         }
       }
-      if token.kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Using) {
+      if self_host_token_kind_is_keyword(token.kind, 12u32) {
         parser.index = parser.index + 1u32
         let pair = match self_host_parser_identifier(
           parser,
@@ -641,7 +649,7 @@ fn self_host_parse_block_after_left(
         let (name, name_offset) = pair
         if !self_host_parser_expect_symbol(
           parser,
-          SelfHostSymbol::Equal,
+          15u32,
           SelfHostDeclarationExpectation::Equal,
         ) {
           break Option::None
@@ -684,7 +692,7 @@ fn self_host_parse_block_after_left(
         )
         self_host_parser_skip_newlines(parser)
         continue 0u32
-      } else if token.kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Defer) {
+      } else if self_host_token_kind_is_keyword(token.kind, 21u32) {
         parser.index = parser.index + 1u32
         let value = match self_host_parse_expression_context(
           parser,
@@ -706,13 +714,17 @@ fn self_host_parse_block_after_left(
         )
         self_host_parser_skip_newlines(parser)
         continue 0u32
-      } else if token.kind is SelfHostTokenKind::Keyword(SelfHostKeyword::Let) {
+      } else if self_host_token_kind_is_keyword(token.kind, 11u32) {
         parser.index = parser.index + 1u32
         if !self_host_parse_block_let(parser, items, token.offset) {
           break Option::None
         } else {
         }
       } else {
+        let expression_starts_return = self_host_token_kind_is_keyword(
+          token.kind,
+          20u32,
+        )
         let expression = match self_host_parse_expression_context(
           parser,
           0u32,
@@ -721,7 +733,7 @@ fn self_host_parse_block_after_left(
           Option::Some(value) => value
           Option::None => break Option::None
         }
-        if self_host_parser_consume_symbol(parser, SelfHostSymbol::Equal) {
+        if self_host_parser_consume_symbol(parser, 15u32) {
           let equal_offset = token.offset
           let value = match self_host_parse_expression_context(
             parser,
@@ -765,7 +777,7 @@ fn self_host_parse_block_after_left(
               break Option::None
             }
           }
-        } else {
+        } else if expression_starts_return {
           match expression {
             SelfHostExpr::ReturnExpr(value, return_offset) =>
               self_host_append_return_expression(
@@ -778,6 +790,10 @@ fn self_host_parse_block_after_left(
               SelfHostBlockItem::ExpressionItem(expression, token.offset),
             )
           }
+        } else {
+          items.push(
+            SelfHostBlockItem::ExpressionItem(expression, token.offset),
+          )
         }
       }
       if !self_host_parser_finish_line(parser) {
@@ -802,7 +818,7 @@ fn self_host_parse_if_expression(
     }
   }
   let body_offset = self_host_parser_offset(parser)
-  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::LeftBrace) {
+  if !self_host_parser_consume_symbol(parser, 2u32) {
     self_host_parser_fail(
       parser,
       SelfHostParseError::ExpectedDelimiter(
@@ -822,15 +838,15 @@ fn self_host_parse_if_expression(
   }
   let alternative = if self_host_parser_consume_keyword(
     parser,
-    SelfHostKeyword::Else,
+    15u32,
   ) {
-    if self_host_parser_consume_keyword(parser, SelfHostKeyword::If) {
+    if self_host_parser_consume_keyword(parser, 14u32) {
       self_host_parse_if_expression(parser, self_host_parser_offset(parser))
     } else {
       let alternative_offset = self_host_parser_offset(parser)
       if !self_host_parser_consume_symbol(
         parser,
-        SelfHostSymbol::LeftBrace,
+        2u32,
       ) {
         self_host_parser_fail(
           parser,
@@ -933,7 +949,7 @@ fn self_host_parse_arm_pattern(
   }
   let alternatives = self_host_empty_patterns()
   let _ = while 0u32 {
-    _ => if self_host_parser_consume_symbol(parser, SelfHostSymbol::Comma) {
+    _ => if self_host_parser_consume_symbol(parser, 25u32) {
       self_host_parser_skip_newlines(parser)
       match self_host_parse_pattern_context(parser, false, false) {
         Option::Some(value) => {
@@ -981,7 +997,7 @@ fn self_host_parse_pattern_arms(
   self_host_parser_skip_newlines(parser)
   let result = while 0u32 {
     _ => {
-      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+      if self_host_parser_consume_symbol(parser, 3u32) {
         break Option::Some(arms)
       } else {
       }
@@ -991,7 +1007,7 @@ fn self_host_parse_pattern_arms(
       }
       let guard_condition = if self_host_parser_consume_keyword(
         parser,
-        SelfHostKeyword::If,
+        14u32,
       ) {
         self_host_parse_expression_context(parser, 0u32, false)
       } else {
@@ -1001,7 +1017,7 @@ fn self_host_parse_pattern_arms(
         break Option::None
       } else if !self_host_parser_consume_symbol(
         parser,
-        SelfHostSymbol::FatArrow,
+        17u32,
       ) {
         self_host_parser_fail(
           parser,
@@ -1018,7 +1034,7 @@ fn self_host_parse_pattern_arms(
       let body_offset = self_host_parser_offset(parser)
       let body = if self_host_parser_consume_symbol(
         parser,
-        SelfHostSymbol::LeftBrace,
+        2u32,
       ) {
         match self_host_parse_block_after_left(parser, body_offset) {
           Option::Some(value) => SelfHostExpr::BlockExpr(value)
@@ -1058,7 +1074,7 @@ fn self_host_parse_match_expression(
     }
   }
   let body_offset = self_host_parser_offset(parser)
-  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::LeftBrace) {
+  if !self_host_parser_consume_symbol(parser, 2u32) {
     self_host_parser_fail(
       parser,
       SelfHostParseError::ExpectedDelimiter(
@@ -1089,7 +1105,7 @@ fn self_host_parse_while_expression(
     }
   }
   let body_offset = self_host_parser_offset(parser)
-  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::LeftBrace) {
+  if !self_host_parser_consume_symbol(parser, 2u32) {
     self_host_parser_fail(
       parser,
       SelfHostParseError::ExpectedDelimiter(
@@ -1133,7 +1149,7 @@ fn self_host_parse_for_expression(
   }
   if !self_host_parser_expect_keyword(
     parser,
-    SelfHostKeyword::In,
+    27u32,
     SelfHostDeclarationExpectation::ForOrLeftBrace,
   ) {
     return Option::None
@@ -1146,7 +1162,7 @@ fn self_host_parse_for_expression(
     }
   }
   let body_offset = self_host_parser_offset(parser)
-  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::LeftBrace) {
+  if !self_host_parser_consume_symbol(parser, 2u32) {
     self_host_parser_fail(
       parser,
       SelfHostParseError::ExpectedDelimiter(

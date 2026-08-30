@@ -46,6 +46,8 @@ node --check tools/dew-abi.mjs
 node --check tools/dew-wasm-consumer.mjs
 node --check tools/wasm-metrics.mjs
 node --check tools/run-dew-wasi.mjs
+node --check tools/run-dew-facet.mjs
+python3 -m py_compile tools/export-wasm-memory.py
 moon test --target native src/dew_bootstrap
 python3 tools/cli-fixtures.py
 

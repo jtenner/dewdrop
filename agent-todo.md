@@ -1,10 +1,10 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 18, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
+> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 27, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
 
 ## P1 — self-hosting
 
-1. Port the parser, semantic analysis, optimization, backend, cache codecs, and compiler driver to Dew in dependency order. The source-Bytes tokenizer and the required product/array language support are complete.
+1. Port the parser, semantic analysis, optimization, backend, cache codecs, and compiler driver to Dew in dependency order. The source-Bytes tokenizer, full parser, semantic pipeline through specialization and fragment/link planning, the physical body-carrier plan, and linked Starshine emission are ported into the smoke compiler; compiler B remains in bootstrap validation with one known carrier class. Cache codecs and the compiler driver port remain.
 2. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
 
 Use [`docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md`](docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md) for the audited host, Wasm, collection, and port-surface gaps. Port-enabling options in that catalog remain decisions, not active backlog items, until explicitly selected.

@@ -68,6 +68,61 @@ test "lowering plans core expressions, blocks, and locals" {
   )
 }
 
+test "lowering plans qualified unit variants as constructors" {
+  let planned = self_host_lowering_test_plan(
+    b"enum State {\n  Ready\n}\nfn run() -> State {\n  State::Ready\n}\n",
+  )
+  let mut saw_unit_variant = false
+  for expression in planned.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedConstruct(
+        _,
+        fields,
+        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+          _,
+          _,
+          _,
+        ),
+      ) => if self_host_u32_equal(fields.length, 0u32) {
+        saw_unit_variant = true
+      }
+      _ => {}
+    }
+  }
+  assert(saw_unit_variant, "qualified unit variant constructor")
+}
+
+test "lowering keeps tuple variants ahead of colliding builtin ids" {
+  let planned = self_host_lowering_test_plan(
+    b"enum Value {\n  Item(I32)\n}\nfn run() -> Value {\n  Value::Item(1)\n}\n",
+  )
+  let mut saw_variant_call = false
+  for expression in planned.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => match expression.selection {
+        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+          _,
+          _,
+          _,
+        ) => {
+          saw_variant_call = true
+        }
+        _ => {}
+      }
+      SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, _, _) => match expression.selection {
+        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+          _,
+          _,
+          _,
+        ) => assert(false, "variant lowered as builtin")
+        _ => {}
+      }
+      _ => {}
+    }
+  }
+  assert(saw_variant_call, "tuple variant direct lowering")
+}
+
 test "lowering plans direct calls" {
   let planned = self_host_lowering_test_plan(
     b"fn add(value: I32) -> I32 {\n  value + 1\n}\nfn run() -> I32 {\n  add(1)\n}\n",
@@ -135,6 +190,38 @@ test "lowering plans local assignments" {
     }
   }
   assert(saw_set, "assignment")
+}
+
+test "lowering plans mutable field assignments" {
+  let planned = self_host_lowering_test_plan(
+    b"struct State {\n  mut value: U32\n}\nfn update(state: State) -> Unit {\n  state.value = 1u32\n}\n",
+  )
+  let mut saw_set = false
+  for expression in planned.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedFieldSet(_, _, _) => {
+        saw_set = true
+      }
+      _ => {}
+    }
+  }
+  assert(saw_set, "mutable field assignment")
+}
+
+test "lowering plans mutable receiver field assignments" {
+  let planned = self_host_lowering_test_plan(
+    b"struct State {\n  mut values: Array<U32>\n}\nimpl State {\n  fn reset(self) -> Unit {\n    self.values = []\n  }\n}\n",
+  )
+  let mut saw_set = false
+  for expression in planned.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedFieldSet(_, _, _) => {
+        saw_set = true
+      }
+      _ => {}
+    }
+  }
+  assert(saw_set, "mutable receiver field assignment")
 }
 
 test "lowering plans patterns and functional loops" {
@@ -243,6 +330,7 @@ fn self_host_lowering_imported_test_plan(
     collected,
     resolved,
     names,
+    imports.scope,
     imports.callables,
     imports.generic_parameter_ids,
     imports.parameter_types,
@@ -259,6 +347,7 @@ fn self_host_lowering_imported_test_plan(
     collected,
     resolved,
     names,
+    imports.scope,
     imports.callables,
     imports.generic_parameter_ids,
     imports.parameter_types,

@@ -229,6 +229,7 @@ test "body flow recognizes imported enum exhaustiveness" {
     collected,
     imports.resolved,
     names,
+    imports.scope,
     imports.callables,
     imports.generic_parameter_ids,
     imports.parameter_types,

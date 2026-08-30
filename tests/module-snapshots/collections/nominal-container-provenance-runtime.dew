@@ -1,0 +1,150 @@
+open dew.std.array
+open dew.std.map
+open dew.std.string
+open dew.std.wasi
+
+struct Capture {
+  id: U32
+  lambda: U32
+  name: U32
+  source: String
+  mutable_: Bool
+  offset: U32
+}
+
+struct OtherA {
+  name: String
+}
+
+struct OtherB {
+  source: U32
+  name: String
+}
+
+struct OtherC {
+  offset: String
+  mutable_: String
+}
+
+struct OtherStruct {
+  name: String
+  offset: String
+}
+
+fn copy_capture(values: Array<Capture>, index: U32) -> Capture {
+  let source = values[index]
+  Capture::{
+    id: source.id
+    lambda: source.lambda
+    name: source.name
+    source: source.source
+    mutable_: source.mutable_
+    offset: source.offset
+  }
+}
+
+fn option_capture(value: Option<Capture>) -> Capture {
+  match value {
+    Option::Some(source) => Capture::{
+      id: source.id
+      lambda: source.lambda
+      name: source.name
+      source: source.source
+      mutable_: source.mutable_
+      offset: source.offset
+    }
+    Option::None => unreachable()
+  }
+}
+
+fn ok_capture(value: Capture) -> Result<Capture, OtherStruct> {
+  Result::Ok(value)
+}
+
+fn result_capture(value: Result<Capture, OtherStruct>) -> Capture {
+  match value {
+    Result::Ok(source) => Capture::{
+      id: source.id
+      lambda: source.lambda
+      name: source.name
+      source: source.source
+      mutable_: source.mutable_
+      offset: source.offset
+    }
+    Result::Err(_) => unreachable()
+  }
+}
+
+fn map_capture(values: Map<I32, Capture>, key: I32) -> Capture {
+  let source = values[key]
+  Capture::{
+    id: source.id
+    lambda: source.lambda
+    name: source.name
+    source: source.source
+    mutable_: source.mutable_
+    offset: source.offset
+  }
+}
+
+fn string_equals(value: String, expected: String) -> Bool {
+  value.equals(expected)
+}
+
+fn check_capture(value: Capture) -> Unit {
+  assert(value.id == 1u32, "capture id")
+  assert(value.lambda == 2u32, "capture lambda")
+  assert(value.name == 3u32, "capture name")
+  assert(value.source.equals("capture-source"), "capture source")
+  assert(value.mutable_, "capture mutable")
+  assert(value.offset == 4u32, "capture offset")
+}
+
+pub fn main() -> Unit {
+  let i32_values = Array::make(1u32, 17)
+  let i32_value = i32_values[0u32]
+  assert(i32_value == 17, "array i32 provenance")
+
+  let i64_values = Array::make(1u32, 19i64)
+  let i64_value = i64_values[0u32]
+  assert(i64_value == 19i64, "array i64 provenance")
+
+  let string_values = Array::make(1u32, "text")
+  let string_value = string_values[0u32]
+  assert(string_equals(string_value, "text"), "array string provenance")
+
+  let capture = Capture::{
+    id: 1u32
+    lambda: 2u32
+    name: 3u32
+    source: "capture-source"
+    mutable_: true
+    offset: 4u32
+  }
+  let captures = Array::make(1u32, capture)
+  check_capture(copy_capture(captures, 0u32))
+  check_capture(option_capture(Option::Some(capture)))
+  check_capture(result_capture(ok_capture(capture)))
+
+  let capture_map = Map::singleton(7, capture)
+  check_capture(map_capture(capture_map, 7))
+
+  let other_a = OtherA::{
+    name: "other-a"
+  }
+  let other_b = OtherB::{
+    source: 99u32
+    name: "other-b"
+  }
+  let other_c = OtherC::{
+    offset: "other-c-offset"
+    mutable_: "other-c-mutable"
+  }
+  assert(string_equals(other_a.name, "other-a"), "other a")
+  assert(other_b.source == 99u32, "other b source")
+  assert(string_equals(other_b.name, "other-b"), "other b name")
+  assert(string_equals(other_c.offset, "other-c-offset"), "other c offset")
+  assert(string_equals(other_c.mutable_, "other-c-mutable"), "other c mutable")
+
+  wasi_fd_write(1u32, b"collections:nominal-container-provenance-runtime")
+}

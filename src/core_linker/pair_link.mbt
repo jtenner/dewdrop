@@ -158,7 +158,12 @@ fn core_pair_link(
     dew_counts.functions,
     -1,
   )
+  let dew_function_import_names : Array[String] = []
   let string_adapter_parameters_by_dew_import : Array[Array[Int]] = []
+  let reference_adapter_by_dew_import = Array::make(
+    dew_counts.functions,
+    false,
+  )
   for _ in 0..<dew_counts.functions {
     string_adapter_parameters_by_dew_import.push([])
   }
@@ -167,8 +172,8 @@ fn core_pair_link(
   for import_ in core_imports(dew) {
     match import_ {
       @lib.Import(module_name, export_name, @lib.FuncExternType(dew_signature)) => {
-        if core_is_link_module(module_name) &&
-          core_link_provider_name(module_name) == provider {
+        dew_function_import_names.push(core_name_text(export_name))
+        if core_import_matches_provider(module_name, provider) {
           found_link = true
           let guest_function = match
             core_exported_function(guest, export_name) {
@@ -204,8 +209,10 @@ fn core_pair_link(
               marker_guest_types,
               concrete_guest_types,
             ) {
-            Ok(parameters) =>
-              string_adapter_parameters_by_dew_import[dew_function_ordinal] = parameters
+            Ok(plan) => {
+              string_adapter_parameters_by_dew_import[dew_function_ordinal] = plan.string_parameters
+              reference_adapter_by_dew_import[dew_function_ordinal] = plan.reference_adapter
+            }
             Err(error) => return Err(error)
           }
           linked_guest_function_by_dew_import[dew_function_ordinal] = guest_function
@@ -289,8 +296,7 @@ fn core_pair_link(
       @lib.Import(module_name, _, type_) => {
         let linked = match type_ {
           @lib.FuncExternType(_) =>
-            core_is_link_module(module_name) &&
-            core_link_provider_name(module_name) == provider
+            core_import_matches_provider(module_name, provider)
           _ => false
         }
         if !linked {
@@ -411,23 +417,36 @@ fn core_pair_link(
     core_tags(guest).length(),
     imported_tag_count + core_tags(dew).length(),
   )
-  let string_adapter_imports : Array[Int] = []
+  let adapter_imports : Array[Int] = []
+  let adapter_kinds : Array[Int] = []
+  let mut has_string_adapters = false
   for index in 0..<linked_guest_function_by_dew_import.length() {
     let guest_function = linked_guest_function_by_dew_import[index]
     if guest_function >= 0 {
       if string_adapter_parameters_by_dew_import[index].length() > 0 {
-        if string_adapter_parameters_by_dew_import[index] != [0] {
+        if string_adapter_parameters_by_dew_import[index] != [0] ||
+          reference_adapter_by_dew_import[index] {
           return Err(
             CoreWasmUnsupportedImport(
-              "Dew String adapters currently require one leading String parameter",
+              "Dew String adapter import=" + dew_function_import_names[index] +
+                " index=\{index} string_parameters=\{string_adapter_parameters_by_dew_import[index]} reference_adapter=\{reference_adapter_by_dew_import[index]} requires one leading String parameter and no additional reference adapters",
             ),
           )
         }
         dew_function_indices[index] = imported_function_count +
           core_functions(dew).length() +
           core_functions(guest).length() +
-          string_adapter_imports.length()
-        string_adapter_imports.push(index)
+          adapter_imports.length()
+        adapter_imports.push(index)
+        adapter_kinds.push(1)
+        has_string_adapters = true
+      } else if reference_adapter_by_dew_import[index] {
+        dew_function_indices[index] = imported_function_count +
+          core_functions(dew).length() +
+          core_functions(guest).length() +
+          adapter_imports.length()
+        adapter_imports.push(index)
+        adapter_kinds.push(2)
       } else {
         dew_function_indices[index] = guest_function_indices[guest_function]
       }
@@ -450,7 +469,6 @@ fn core_pair_link(
       final_types.push(core_remap_rec_group(dew_map, group))
     }
   }
-  ignore(type_count)
   let final_imports = []
   for planned in planned_imports {
     let map = if planned.source == 0 { dew_map } else { guest_map }
@@ -472,7 +490,7 @@ fn core_pair_link(
   for type_ in core_function_types(guest) {
     function_types.push(core_remap_type_idx(guest_map, type_))
   }
-  for import_index in string_adapter_imports {
+  for import_index in adapter_imports {
     let signature = core_function_signature_type(dew, import_index).unwrap()
     function_types.push(
       core_remap_type_idx(
@@ -488,19 +506,24 @@ fn core_pair_link(
   for function_ in core_functions(guest) {
     functions.push(core_remap_func(guest_map, function_))
   }
-  if string_adapter_imports.length() > 0 {
-    let (dew_chunks, dew_text) = match core_find_dew_string_types(dew_arena) {
-      Some(value) => value
+  let string_types = if has_string_adapters {
+    match core_find_dew_string_types(dew_arena) {
+      Some(value) => Some(value)
       None =>
         return Err(
           CoreWasmUnsupportedImport("Dew String runtime types were not emitted"),
         )
     }
-    let scratch_memory = imported_memory_count +
-      core_memories(dew).length() +
-      core_memories(guest).length()
-    for import_index in string_adapter_imports {
-      let guest_function = linked_guest_function_by_dew_import[import_index]
+  } else {
+    None
+  }
+  let scratch_memory = imported_memory_count +
+    core_memories(dew).length() +
+    core_memories(guest).length()
+  for adapter_index, import_index in adapter_imports {
+    let guest_function = linked_guest_function_by_dew_import[import_index]
+    if adapter_kinds[adapter_index] == 1 {
+      let (dew_chunks, dew_text) = string_types.unwrap()
       let guest_signature = core_function_signature_type(guest, guest_function).unwrap()
       let (parameters, _) = core_function_comp_type(
         guest_arena, guest_signature,
@@ -521,6 +544,26 @@ fn core_pair_link(
           scratch_memory,
         ),
       )
+    } else {
+      let dew_signature = core_function_signature_type(dew, import_index).unwrap()
+      let guest_signature = core_function_signature_type(guest, guest_function).unwrap()
+      let (dew_parameters, dew_results) = core_function_comp_type(
+        dew_arena, dew_signature,
+      ).unwrap()
+      let (guest_parameters, guest_results) = core_function_comp_type(
+        guest_arena, guest_signature,
+      ).unwrap()
+      functions.push(
+        core_reference_signature_adapter(
+          dew_parameters,
+          dew_results,
+          guest_parameters,
+          guest_results,
+          dew_map,
+          guest_map,
+          guest_function_indices[guest_function],
+        ),
+      )
     }
   }
   let tables = []
@@ -537,7 +580,7 @@ fn core_pair_link(
   for memory in core_memories(guest) {
     memories.push(memory)
   }
-  if string_adapter_imports.length() > 0 {
+  if has_string_adapters {
     memories.push(@lib.MemType::new(@lib.Limits::i32(1U, Some(1U))))
   }
   let globals = []
@@ -583,8 +626,36 @@ fn core_pair_link(
     (None, Some(@lib.StartSec(index))) =>
       Some(@lib.StartSec::new(core_remap_func_idx(guest_map, index)))
     (None, None) => None
-    (Some(_), Some(_)) =>
-      return Err(CoreWasmUnsupportedImport("cannot merge two start functions"))
+    (Some(@lib.StartSec(dew_start)), Some(@lib.StartSec(guest_start))) => {
+      let combined_type = type_count
+      final_types.push(
+        @lib.RecType::new(
+          @lib.SubType::comp_type(@lib.CompType::func([], [])),
+        ),
+      )
+      function_types.push(
+        @lib.TypeIdx::new(combined_type.reinterpret_as_uint()),
+      )
+      let combined_function = imported_function_count + functions.length()
+      functions.push(
+        @lib.Func::new(
+          @lib.Locals::empty(),
+          @lib.Expr::new([
+            @lib.Instruction::call(
+              core_remap_func_idx(guest_map, guest_start),
+            ),
+            @lib.Instruction::call(
+              core_remap_func_idx(dew_map, dew_start),
+            ),
+          ]),
+        ),
+      )
+      Some(
+        @lib.StartSec::new(
+          @lib.FuncIdx::new(combined_function.reinterpret_as_uint()),
+        ),
+      )
+    }
   }
   let custom_secs = []
   for section in dew.custom_secs {

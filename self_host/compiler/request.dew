@@ -3,6 +3,11 @@ open dew.std.option
 open dew.std.result
 open dew.std.string
 
+builtin self_host_request_string_equals(
+  left: String,
+  right: String,
+) -> Bool = "dew_string_equals"
+
 fn self_host_unit() -> Unit {
 }
 
@@ -55,18 +60,25 @@ fn self_host_request_manifest_file(
 impl SelfHostCompileRequest {
   fn root_module_index(self) -> Option<U32> {
     let root = self.root_module
+    let mut found = 4294967295u32
     let mut module_index = 0u32
     let module_count = self_host_request_manifest_module_count(self.manifest)
     while module_index {
       current => if current < module_count {
         let module_ = self_host_request_manifest_module(self.manifest, current)
-        if module_.path == root {
-          break Option::Some(current)
+        if self_host_request_string_equals(module_.path, root) {
+          found = current
+          break self_host_unit()
         }
         continue current + 1u32
       } else {
-        break Option::None
+        break self_host_unit()
       }
+    }
+    if found < module_count {
+      Option::Some(found)
+    } else {
+      Option::None
     }
   }
 
@@ -77,7 +89,7 @@ impl SelfHostCompileRequest {
     let _ = while module_index {
       current => if current < module_count {
         let module_ = self_host_request_manifest_module(self.manifest, current)
-        if module_.path == root && self_host_u32_greater(
+        if self_host_request_string_equals(module_.path, root) && self_host_u32_greater(
           self_host_request_manifest_file_count(module_),
           0u32,
         ) {
@@ -323,9 +335,18 @@ pub fn decode_self_host_compile_request(
           test_mode: test_mode
           default_preamble: default_preamble
         }
-        match request.root_source() {
-          Option::Some(_) => Result::Ok(request)
-          Option::None => Result::Err("root module has no source file")
+        match request.root_module_index() {
+          Option::None => Result::Err("root module is missing from manifest")
+          Option::Some(module_index) => if self_host_u32_equal(
+            self_host_request_manifest_file_count(
+              self_host_request_manifest_module(request.manifest, module_index),
+            ),
+            0u32,
+          ) {
+            Result::Err("root module has no source file")
+          } else {
+            Result::Ok(request)
+          }
         }
       }
     }

@@ -3,7 +3,7 @@ fn self_host_linked_text_runtime_base(
 ) -> U32 {
   self_host_u32_add(
     self_host_u32_add(link.types.length(), link.functions.length()),
-    2u32,
+    16u32,
   )
 }
 
@@ -150,6 +150,46 @@ fn self_host_linked_append_option_runtime_subtype(
     )
     Option::None => {}
   }
+  let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+  StarshineFfi.ffi_ffi_bridge_type_indices_push(
+    supers,
+    StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(base)),
+  )
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_new(
+        1i32,
+        supers,
+        StarshineFfi.ffi_lib_CompType_struct_(fields),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+}
+
+fn self_host_linked_append_result_error_runtime_subtype(
+  rec_types: StarshineRef33,
+  base: U32,
+  value_type: StarshineRef0,
+) -> Unit {
+  let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(value_type),
+      StarshineFfi.ffi_lib_Mut_const_(),
+    ),
+  )
+  StarshineFfi.ffi_ffi_bridge_field_types_push(
+    fields,
+    StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(
+        StarshineFfi.ffi_lib_ValType_i32(),
+      ),
+      StarshineFfi.ffi_lib_Mut_const_(),
+    ),
+  )
   let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
   StarshineFfi.ffi_ffi_bridge_type_indices_push(
     supers,
@@ -382,35 +422,35 @@ fn self_host_linked_append_array_runtime_types(
     result_base,
     Option::Some(self_host_linked_eqref_value_type()),
   )
-  self_host_linked_append_option_runtime_subtype(
+  self_host_linked_append_result_error_runtime_subtype(
     rec_types,
     result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_i32()),
+    StarshineFfi.ffi_lib_ValType_i32(),
   )
-  self_host_linked_append_option_runtime_subtype(
+  self_host_linked_append_result_error_runtime_subtype(
     rec_types,
     result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_i64()),
+    StarshineFfi.ffi_lib_ValType_i64(),
   )
-  self_host_linked_append_option_runtime_subtype(
+  self_host_linked_append_result_error_runtime_subtype(
     rec_types,
     result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_f32()),
+    StarshineFfi.ffi_lib_ValType_f32(),
   )
-  self_host_linked_append_option_runtime_subtype(
+  self_host_linked_append_result_error_runtime_subtype(
     rec_types,
     result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_f64()),
+    StarshineFfi.ffi_lib_ValType_f64(),
   )
-  self_host_linked_append_option_runtime_subtype(
+  self_host_linked_append_result_error_runtime_subtype(
     rec_types,
     result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_v128()),
+    StarshineFfi.ffi_lib_ValType_v128(),
   )
-  self_host_linked_append_option_runtime_subtype(
+  self_host_linked_append_result_error_runtime_subtype(
     rec_types,
     result_base,
-    Option::Some(self_host_linked_eqref_value_type()),
+    self_host_linked_eqref_value_type(),
   )
   let mut pair = 0u32
   let _ = while pair {
@@ -575,7 +615,7 @@ fn self_host_linked_import_function_index(
 }
 
 fn self_host_linked_append_runtime_function_name(
-  builder: StarshineRef2472,
+  builder: StarshineRef2504,
   name: Bytes,
 ) -> Unit {
   let _ = while 0u32 {
@@ -725,6 +765,16 @@ fn self_host_linked_option_some_type_index(
   )
 }
 
+fn self_host_linked_emitted_i32_function_index(index: I32) -> I32 {
+  if index < 0i32 {
+    index
+  } else {
+    self_host_u32_to_i32(
+      self_host_linked_emitted_function_index(self_host_i32_to_u32(index)),
+    )
+  }
+}
+
 fn self_host_linked_append_runtime_function(
   link: SelfHostPlannedProgramWasmGCLink,
   functions: StarshineRef70,
@@ -734,12 +784,14 @@ fn self_host_linked_append_runtime_function(
 ) -> Bool {
   let builder = StarshineFfi.ffi_ffi_bridge_runtime_function_builder_new(
     self_host_u32_to_i32(self_host_linked_text_runtime_base(link)),
-    self_host_linked_runtime_function_index(
-      link,
-      b"dew_bytes_is_valid_utf8",
+    self_host_linked_emitted_i32_function_index(
+      self_host_linked_runtime_function_index(
+        link,
+        b"dew_bytes_is_valid_utf8",
+      ),
     ),
-    0i32,
-    1i32,
+    6i32,
+    7i32,
     carrier,
     second_carrier,
     self_host_linked_option_none_type_index(link),

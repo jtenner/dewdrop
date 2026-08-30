@@ -29,7 +29,7 @@ fn self_host_parse_optional_derives(
   let requests = self_host_empty_derives()
   match self_host_parser_peek(parser) {
     Option::Some(token) => match token.kind {
-      SelfHostTokenKind::Identifier("derive") => {
+      SelfHostTokenKind::Identifier("derive", _) => {
         parser.index = parser.index + 1u32
       }
       _ => {
@@ -42,7 +42,7 @@ fn self_host_parse_optional_derives(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftParen,
+    0u32,
     SelfHostDeclarationExpectation::LeftParen,
   ) {
     return Option::None
@@ -64,16 +64,16 @@ fn self_host_parse_optional_derives(
         offset: offset
       })
       self_host_parser_skip_newlines(parser)
-      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+      if self_host_parser_consume_symbol(parser, 1u32) {
         break Option::Some(requests)
       } else if self_host_parser_consume_symbol(
         parser,
-        SelfHostSymbol::Comma,
+        25u32,
       ) {
         self_host_parser_skip_newlines(parser)
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::RightParen,
+          1u32,
         ) {
           break Option::Some(requests)
         } else {
@@ -114,7 +114,7 @@ fn self_host_parse_function_after_keyword(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftParen,
+    0u32,
     SelfHostDeclarationExpectation::LeftParen,
   ) {
     return Option::None
@@ -132,7 +132,7 @@ fn self_host_parse_function_after_keyword(
   let (receiver, parameters) = parsed_parameters
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::Arrow,
+    31u32,
     SelfHostDeclarationExpectation::Arrow,
   ) {
     return Option::None
@@ -147,7 +147,7 @@ fn self_host_parse_function_after_keyword(
   let body_offset = self_host_parser_offset(parser)
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftBrace,
+    2u32,
     SelfHostDeclarationExpectation::LeftBrace,
   ) {
     return Option::None
@@ -205,7 +205,7 @@ fn self_host_parse_test_after_keyword(
   }
   let expected_trap = match self_host_parser_peek(parser) {
     Option::Some(token) => match token.kind {
-      SelfHostTokenKind::Identifier("expect_trap") => {
+      SelfHostTokenKind::Identifier("expect_trap", _) => {
         parser.index = parser.index + 1u32
         match self_host_parser_peek(parser) {
           Option::Some(value_token) => match value_token.kind {
@@ -237,7 +237,7 @@ fn self_host_parse_test_after_keyword(
   let body_offset = self_host_parser_offset(parser)
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftBrace,
+    2u32,
     SelfHostDeclarationExpectation::LeftBrace,
   ) {
     return Option::None
@@ -283,7 +283,7 @@ fn self_host_parse_impl_after_keyword(
   let mut trait_type = self_host_no_type()
   let target_type = if self_host_parser_consume_keyword(
     parser,
-    SelfHostKeyword::For,
+    7u32,
   ) {
     trait_type = Option::Some(first_type)
     match self_host_parse_type(parser) {
@@ -294,7 +294,7 @@ fn self_host_parse_impl_after_keyword(
     }
   } else if self_host_parser_at_symbol(
     parser,
-    SelfHostSymbol::LeftBrace,
+    2u32,
   ) {
     if foreign_ {
       self_host_parser_fail(
@@ -314,14 +314,14 @@ fn self_host_parse_impl_after_keyword(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftBrace,
+    2u32,
     SelfHostDeclarationExpectation::LeftBrace,
   ) {
     return Option::None
   } else {
   }
   let methods = self_host_empty_functions()
-  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+  if !self_host_parser_consume_symbol(parser, 3u32) {
     if !self_host_parser_expect_newline(
       parser,
       SelfHostDeclarationExpectation::FunctionBodyNewline,
@@ -334,7 +334,7 @@ fn self_host_parse_impl_after_keyword(
       _ => {
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::RightBrace,
+          3u32,
         ) {
           break true
         } else {
@@ -342,7 +342,7 @@ fn self_host_parse_impl_after_keyword(
         let method_offset = self_host_parser_offset(parser)
         if !self_host_parser_expect_keyword(
           parser,
-          SelfHostKeyword::Fn,
+          0u32,
           SelfHostDeclarationExpectation::ImplMemberKeyword,
         ) {
           break false
@@ -403,14 +403,14 @@ fn self_host_parse_struct_after_keyword(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftBrace,
+    2u32,
     SelfHostDeclarationExpectation::LeftBrace,
   ) {
     return Option::None
   } else {
   }
   let fields = self_host_empty_struct_fields()
-  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+  if !self_host_parser_consume_symbol(parser, 3u32) {
     if !self_host_parser_expect_newline(
       parser,
       SelfHostDeclarationExpectation::StructBodyNewline,
@@ -423,14 +423,14 @@ fn self_host_parse_struct_after_keyword(
       _ => {
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::RightBrace,
+          3u32,
         ) {
           break true
         } else {
         }
         let mutable_ = self_host_parser_consume_keyword(
           parser,
-          SelfHostKeyword::Mut,
+          13u32,
         )
         let field_pair = match self_host_parser_identifier(
           parser,
@@ -442,7 +442,7 @@ fn self_host_parse_struct_after_keyword(
         let (field_name, field_offset) = field_pair
         if !self_host_parser_expect_symbol(
           parser,
-          SelfHostSymbol::Colon,
+          13u32,
           SelfHostDeclarationExpectation::Colon,
         ) {
           break false
@@ -515,14 +515,14 @@ fn self_host_parse_enum_after_keyword(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftBrace,
+    2u32,
     SelfHostDeclarationExpectation::LeftBrace,
   ) {
     return Option::None
   } else {
   }
   let variants = self_host_empty_enum_variants()
-  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+  if !self_host_parser_consume_symbol(parser, 3u32) {
     if !self_host_parser_expect_newline(
       parser,
       SelfHostDeclarationExpectation::EnumBodyNewline,
@@ -535,7 +535,7 @@ fn self_host_parse_enum_after_keyword(
       _ => {
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::RightBrace,
+          3u32,
         ) {
           break true
         } else {
@@ -550,13 +550,13 @@ fn self_host_parse_enum_after_keyword(
         let (variant_name, variant_offset) = variant_pair
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::LeftParen,
+          0u32,
         ) {
           let types = self_host_empty_types()
           self_host_parser_skip_newlines(parser)
           if self_host_parser_consume_symbol(
             parser,
-            SelfHostSymbol::RightParen,
+            1u32,
           ) {
             self_host_parser_fail(
               parser,
@@ -572,17 +572,17 @@ fn self_host_parse_enum_after_keyword(
                 self_host_parser_skip_newlines(parser)
                 if self_host_parser_consume_symbol(
                   parser,
-                  SelfHostSymbol::RightParen,
+                  1u32,
                 ) {
                   break true
                 } else if self_host_parser_consume_symbol(
                   parser,
-                  SelfHostSymbol::Comma,
+                  25u32,
                 ) {
                   self_host_parser_skip_newlines(parser)
                   if self_host_parser_consume_symbol(
                     parser,
-                    SelfHostSymbol::RightParen,
+                    1u32,
                   ) {
                     break true
                   } else {
@@ -607,17 +607,18 @@ fn self_host_parse_enum_after_keyword(
                 variant_name,
                 types,
                 variant_offset,
+                1u32,
               ),
             )
           }
         } else if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::LeftBrace,
+          2u32,
         ) {
           let fields = self_host_empty_struct_fields()
           if !self_host_parser_consume_symbol(
             parser,
-            SelfHostSymbol::RightBrace,
+            3u32,
           ) {
             if !self_host_parser_expect_newline(
               parser,
@@ -631,7 +632,7 @@ fn self_host_parse_enum_after_keyword(
               _ => {
                 if self_host_parser_consume_symbol(
                   parser,
-                  SelfHostSymbol::RightBrace,
+                  3u32,
                 ) {
                   break true
                 } else {
@@ -646,7 +647,7 @@ fn self_host_parse_enum_after_keyword(
                 let (field_name, field_offset) = field_pair
                 if !self_host_parser_expect_symbol(
                   parser,
-                  SelfHostSymbol::Colon,
+                  13u32,
                   SelfHostDeclarationExpectation::Colon,
                 ) {
                   break false
@@ -680,6 +681,7 @@ fn self_host_parse_enum_after_keyword(
               variant_name,
               fields,
               variant_offset,
+              2u32,
             ),
           )
         } else if self_host_parser_consume_newline(parser) {
@@ -687,6 +689,7 @@ fn self_host_parse_enum_after_keyword(
             SelfHostEnumVariant::UnitVariant(
               variant_name,
               variant_offset,
+              0u32,
             ),
           )
           self_host_parser_skip_newlines(parser)
@@ -756,7 +759,7 @@ fn self_host_parse_type_alias_after_keyword(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::Equal,
+    15u32,
     SelfHostDeclarationExpectation::Equal,
   ) {
     return Option::None

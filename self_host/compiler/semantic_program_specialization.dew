@@ -1177,11 +1177,10 @@ fn self_host_program_specialization_scan_body(
                         candidate,
                       )
                       if bytes_to_string(callable.name) == unresolved_name {
-                        let candidate_shape = if unresolved_array_capacity {
+                        let mut candidate_shape = SelfHostPlannedValueShape::GenericPlannedValueShape
+                        if unresolved_array_capacity {
                           if self_host_u32_greater(caller_shapes.length, 0u32) {
-                            shapes[caller_shapes.start]
-                          } else {
-                            SelfHostPlannedValueShape::GenericPlannedValueShape
+                            candidate_shape = shapes[caller_shapes.start]
                           }
                         } else {
                           let argument_index = module_.expression_children[
@@ -1190,7 +1189,7 @@ fn self_host_program_specialization_scan_body(
                           let argument_expression = module_.expressions[
                             argument_index
                           ]
-                          self_host_program_specialization_argument_shape(
+                          candidate_shape = self_host_program_specialization_argument_shape(
                             module_,
                             caller,
                             caller_shapes,

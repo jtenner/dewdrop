@@ -52,9 +52,9 @@ pub fn parse_self_host_i32_source(source: Bytes) -> Result<I32, String> {
     Result::Err("smoke parser requires one complete main function")
   } else {
     match module_.events.get_unchecked(0u32) {
-      SelfHostParseEvent::Diagnostic(_) =>
+      SelfHostParseEvent::Diagnostic(_, _, _, _, _, _) =>
         Result::Err("smoke parser received a parser diagnostic")
-      SelfHostParseEvent::Declaration(declaration) => match declaration {
+      SelfHostParseEvent::Declaration(declaration, _) => match declaration {
         SelfHostDeclaration::Function(function) =>
           self_host_smoke_function_value(function)
         _ => Result::Err("smoke parser expected one function declaration")

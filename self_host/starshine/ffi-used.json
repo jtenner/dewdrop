@@ -39,6 +39,9 @@
     "Module::with_func_sec",
     "Module::with_code_sec",
     "ffi_bridge::validate_module",
+    "ffi_bridge::validation_error_byte_length",
+    "ffi_bridge::validation_error_byte_at",
+    "ffi_bridge::validation_error_function_index",
     "ffi_bridge::encode_module",
     "EncodedModule::is_ok",
     "EncodedModule::byte_length",
@@ -134,6 +137,7 @@
     "GlobalBuilder::push",
     "ffi_bridge::module_with_globals",
     "ffi_bridge::module_with_start_function",
+    "ffi_bridge::module_with_compiler_exports",
     "ffi_bridge::function_reference_builder_new",
     "FunctionReferenceBuilder::push",
     "ffi_bridge::module_with_declarative_functions",
@@ -378,6 +382,8 @@
     "Instruction::v128_andnot",
     "Instruction::v128_any_true",
     "Instruction::v128_bitselect",
-    "Instruction::v128_not"
+    "Instruction::v128_not",
+    "Instruction::array_new",
+    "Instruction::array_len"
   ]
 }

@@ -1,4 +1,36 @@
+open dew.std.array
 open dew.std.option
+
+fn self_host_program_bool_at(values: Array<Bool>, index: U32) -> Bool {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_program_u32_at(values: Array<U32>, index: U32) -> U32 {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_program_planned_module_at(
+  values: Array<SelfHostPlannedModuleLowering>,
+  index: U32,
+) -> SelfHostPlannedModuleLowering {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_program_u32_set(
+  values: Array<U32>,
+  index: U32,
+  value: U32,
+) -> Unit {
+  array_set_unchecked(values, index, value)
+}
+
+fn self_host_program_bool_set(
+  values: Array<Bool>,
+  index: U32,
+  value: Bool,
+) -> Unit {
+  array_set_unchecked(values, index, value)
+}
 
 pub struct SelfHostProgramLoweringIndex {
   module_ids: Array<U64>
@@ -127,21 +159,23 @@ fn self_host_program_module_reachable(
   let work = [root]
   let _ = while work.length() {
     length => if self_host_u32_greater(length, 0u32) {
-      let current = match work.pop() {
-        Option::Some(value) => value
-        Option::None => root
-      }
-      if current < seen.length() && !seen[current] {
+      let current = self_host_program_u32_at(work, length - 1u32)
+      work.truncate(length - 1u32)
+      if current < seen.length() && !self_host_program_bool_at(seen, current) {
         seen[current] = true
-        let span = dependencies[current]
+        let dependency_start = dependencies[current].start
+        let dependency_length = dependencies[current].length
         let mut dependency = 0u32
         let _ = while dependency {
-          offset => if offset < span.length {
-            let next = values[self_host_u32_add(span.start, offset)]
+          offset => if offset < dependency_length {
+            let next = self_host_program_u32_at(
+              values,
+              self_host_u32_add(dependency_start, offset),
+            )
             if self_host_u32_equal(next, target) {
               return true
             }
-            if next < seen.length() && !seen[next] {
+            if next < seen.length() && !self_host_program_bool_at(seen, next) {
               work.push(next)
             }
             continue offset + 1u32
@@ -180,13 +214,19 @@ fn self_host_plan_program_module_graph(
   let mut seed = 0u32
   let _ = while seed {
     current_seed => if current_seed < module_count {
-      if self_host_u32_equal(module_scc[current_seed], 4294967295u32) {
+      if self_host_u32_equal(
+        self_host_program_u32_at(module_scc, current_seed),
+        4294967295u32,
+      ) {
         let scc_index = provisional_sccs.length()
         let start = provisional_modules.length()
         let mut candidate = current_seed
         let _ = while candidate {
           current => if current < module_count {
-            if self_host_u32_equal(module_scc[current], 4294967295u32) &&
+            if self_host_u32_equal(
+              self_host_program_u32_at(module_scc, current),
+              4294967295u32,
+            ) &&
               self_host_program_module_reachable(
                 current_seed,
                 current,
@@ -198,7 +238,7 @@ fn self_host_plan_program_module_graph(
                 dependencies,
                 dependency_modules,
               ) {
-              module_scc[current] = scc_index
+              self_host_program_u32_set(module_scc, current, scc_index)
               provisional_modules.push(current)
             }
             continue current + 1u32
@@ -245,25 +285,32 @@ fn self_host_plan_program_module_graph(
       let mut candidate_scc = 0u32
       let _ = while candidate_scc {
         current_scc => if current_scc < provisional_sccs.length() {
-          if !emitted[current_scc] {
+          if !self_host_program_bool_at(emitted, current_scc) {
             let mut ready = true
-            let members = provisional_sccs[current_scc]
+            let member_start = provisional_sccs[current_scc].start
+            let member_length = provisional_sccs[current_scc].length
             let mut member = 0u32
             let _ = while member {
-              member_offset => if member_offset < members.length {
-                let module_ = provisional_modules[
-                  self_host_u32_add(members.start, member_offset)
-                ]
-                let deps = dependencies[module_]
+              member_offset => if member_offset < member_length {
+                let module_ = self_host_program_u32_at(
+                  provisional_modules,
+                  self_host_u32_add(member_start, member_offset),
+                )
+                let dependency_start = dependencies[module_].start
+                let dependency_length = dependencies[module_].length
                 let mut dependency = 0u32
                 let _ = while dependency {
-                  dependency_offset => if dependency_offset < deps.length {
-                    let dependency_module = dependency_modules[
-                      self_host_u32_add(deps.start, dependency_offset)
-                    ]
-                    let dependency_scc = module_scc[dependency_module]
+                  dependency_offset => if dependency_offset < dependency_length {
+                    let dependency_module = self_host_program_u32_at(
+                      dependency_modules,
+                      self_host_u32_add(dependency_start, dependency_offset),
+                    )
+                    let dependency_scc = self_host_program_u32_at(
+                      module_scc,
+                      dependency_module,
+                    )
                     if !self_host_u32_equal(dependency_scc, current_scc) &&
-                      !emitted[dependency_scc] {
+                      !self_host_program_bool_at(emitted, dependency_scc) {
                       ready = false
                     }
                     continue dependency_offset + 1u32
@@ -290,7 +337,7 @@ fn self_host_plan_program_module_graph(
         let mut fallback = 0u32
         let _ = while fallback {
           current => if current < emitted.length() {
-            if !emitted[current] {
+            if !self_host_program_bool_at(emitted, current) {
               selected = current
               break self_host_semantic_unit()
             }
@@ -300,18 +347,24 @@ fn self_host_plan_program_module_graph(
           }
         }
       }
-      emitted[selected] = true
+      self_host_program_bool_set(emitted, selected, true)
       let ordered_scc = sccs.length()
       let start = scc_modules.length()
-      let members = provisional_sccs[selected]
+      let member_start = provisional_sccs[selected].start
+      let member_length = provisional_sccs[selected].length
       let mut member = 0u32
       let _ = while member {
-        current => if current < members.length {
-          let module_ = provisional_modules[
-            self_host_u32_add(members.start, current)
-          ]
+        current => if current < member_length {
+          let module_ = self_host_program_u32_at(
+            provisional_modules,
+            self_host_u32_add(member_start, current),
+          )
           scc_modules.push(module_)
-          ordered_module_scc[module_] = ordered_scc
+          self_host_program_u32_set(
+            ordered_module_scc,
+            module_,
+            ordered_scc,
+          )
           continue current + 1u32
         } else {
           break self_host_semantic_unit()
@@ -344,6 +397,7 @@ fn self_host_infer_program_module_bodies(
     collected,
     imports.resolved,
     names,
+    imports.scope,
     imports.callables,
     imports.generic_parameter_ids,
     imports.parameter_types,
@@ -385,16 +439,8 @@ fn self_host_plan_program_lowering(
   frozen: SelfHostFrozenSignatureProgram,
 ) -> SelfHostPlannedProgramLowering {
   let graph = self_host_plan_program_module_graph(frozen)
-  let slots = []
-  let mut slot = 0u32
-  let _ = while slot {
-    current => if current < frozen.collected.modules.length() {
-      slots.push(Option::None)
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
+  let planned_indices = []
+  let planned_modules = []
   for scc in graph.sccs {
     let mut member = 0u32
     let _ = while member {
@@ -437,7 +483,8 @@ fn self_host_plan_program_lowering(
             imports.variants,
           ),
         )
-        slots[module_index] = Option::Some(planned)
+        planned_indices.push(module_index)
+        planned_modules.push(planned)
         continue current + 1u32
       } else {
         break self_host_semantic_unit()
@@ -446,13 +493,32 @@ fn self_host_plan_program_lowering(
   }
   let modules = []
   let module_ids = []
-  for value in slots {
-    match value {
-      Option::Some(module_) => {
-        module_ids.push(module_.module_id)
-        modules.push(module_)
+  let mut output_index = 0u32
+  while output_index {
+    current_output => if current_output < frozen.collected.modules.length() {
+      let mut planned_index = 0u32
+      while planned_index {
+        current_planned => if current_planned < planned_indices.length() {
+          if self_host_u32_equal(
+            self_host_program_u32_at(planned_indices, current_planned),
+            current_output,
+          ) {
+            let module_ = self_host_program_planned_module_at(
+              planned_modules,
+              current_planned,
+            )
+            module_ids.push(module_.module_id)
+            modules.push(module_)
+            break self_host_semantic_unit()
+          }
+          continue current_planned + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
       }
-      Option::None => {}
+      continue current_output + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   SelfHostPlannedProgramLowering::{

@@ -17,32 +17,32 @@ fn self_host_empty_parameters() -> Array<SelfHostFnParameter> {
 }
 
 fn self_host_binary_operator(
-  symbol: SelfHostSymbol,
+  symbol: U32,
 ) -> Option<SelfHostBinaryOperator> {
   match symbol {
-    SelfHostSymbol::LogicalOr =>
+    24u32 =>
       Option::Some(SelfHostBinaryOperator::LogicalOr)
-    SelfHostSymbol::LogicalAnd =>
+    23u32 =>
       Option::Some(SelfHostBinaryOperator::LogicalAnd)
-    SelfHostSymbol::Pipe => Option::Some(SelfHostBinaryOperator::BitOr)
-    SelfHostSymbol::Caret => Option::Some(SelfHostBinaryOperator::BitXor)
-    SelfHostSymbol::Ampersand => Option::Some(SelfHostBinaryOperator::BitAnd)
-    SelfHostSymbol::EqualEqual => Option::Some(SelfHostBinaryOperator::Equal)
-    SelfHostSymbol::BangEqual => Option::Some(SelfHostBinaryOperator::NotEqual)
-    SelfHostSymbol::Less => Option::Some(SelfHostBinaryOperator::Less)
-    SelfHostSymbol::LessEqual => Option::Some(SelfHostBinaryOperator::LessEqual)
-    SelfHostSymbol::Greater => Option::Some(SelfHostBinaryOperator::Greater)
-    SelfHostSymbol::GreaterEqual =>
+    34u32 => Option::Some(SelfHostBinaryOperator::BitOr)
+    6u32 => Option::Some(SelfHostBinaryOperator::BitXor)
+    33u32 => Option::Some(SelfHostBinaryOperator::BitAnd)
+    16u32 => Option::Some(SelfHostBinaryOperator::Equal)
+    18u32 => Option::Some(SelfHostBinaryOperator::NotEqual)
+    29u32 => Option::Some(SelfHostBinaryOperator::Less)
+    19u32 => Option::Some(SelfHostBinaryOperator::LessEqual)
+    30u32 => Option::Some(SelfHostBinaryOperator::Greater)
+    20u32 =>
       Option::Some(SelfHostBinaryOperator::GreaterEqual)
-    SelfHostSymbol::ShiftLeft => Option::Some(SelfHostBinaryOperator::ShiftLeft)
-    SelfHostSymbol::ShiftRight =>
+    21u32 => Option::Some(SelfHostBinaryOperator::ShiftLeft)
+    22u32 =>
       Option::Some(SelfHostBinaryOperator::ShiftRight)
-    SelfHostSymbol::Plus => Option::Some(SelfHostBinaryOperator::Add)
-    SelfHostSymbol::Minus => Option::Some(SelfHostBinaryOperator::Subtract)
-    SelfHostSymbol::Star => Option::Some(SelfHostBinaryOperator::Multiply)
-    SelfHostSymbol::Slash => Option::Some(SelfHostBinaryOperator::Divide)
-    SelfHostSymbol::Percent => Option::Some(SelfHostBinaryOperator::Remainder)
-    SelfHostSymbol::Exponent =>
+    7u32 => Option::Some(SelfHostBinaryOperator::Add)
+    8u32 => Option::Some(SelfHostBinaryOperator::Subtract)
+    9u32 => Option::Some(SelfHostBinaryOperator::Multiply)
+    10u32 => Option::Some(SelfHostBinaryOperator::Divide)
+    12u32 => Option::Some(SelfHostBinaryOperator::Remainder)
+    11u32 =>
       Option::Some(SelfHostBinaryOperator::Exponentiate)
     _ => Option::None
   }
@@ -108,13 +108,13 @@ fn self_host_expression_stops(
 ) -> Bool {
   match token.kind {
     SelfHostTokenKind::Newline => true
-    SelfHostTokenKind::Symbol(SelfHostSymbol::Comma) => true
-    SelfHostTokenKind::Symbol(SelfHostSymbol::RightParen) => true
-    SelfHostTokenKind::Symbol(SelfHostSymbol::RightBracket) => true
-    SelfHostTokenKind::Symbol(SelfHostSymbol::RightBrace) => true
-    SelfHostTokenKind::Symbol(SelfHostSymbol::FatArrow) => true
-    SelfHostTokenKind::Symbol(SelfHostSymbol::Equal) => true
-    SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace) => stop_left_brace
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 25u32 => true
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 1u32 => true
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 5u32 => true
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 3u32 => true
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 17u32 => true
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 15u32 => true
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 2u32 => stop_left_brace
     _ => false
   }
 }
@@ -125,7 +125,7 @@ fn self_host_parse_call_arguments(
 ) -> Option<Array<SelfHostExpr>> {
   let arguments = self_host_empty_expressions()
   self_host_parser_skip_newlines(parser)
-  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+  if self_host_parser_consume_symbol(parser, 1u32) {
     return Option::Some(arguments)
   } else {
   }
@@ -134,16 +134,16 @@ fn self_host_parse_call_arguments(
       Option::Some(argument) => {
         arguments.push(argument)
         self_host_parser_skip_newlines(parser)
-        if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+        if self_host_parser_consume_symbol(parser, 1u32) {
           break Option::Some(arguments)
         } else if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::Comma,
+          25u32,
         ) {
           self_host_parser_skip_newlines(parser)
           if self_host_parser_consume_symbol(
             parser,
-            SelfHostSymbol::RightParen,
+            1u32,
           ) {
             break Option::Some(arguments)
           } else {
@@ -173,7 +173,7 @@ fn self_host_parse_array_expression(
 ) -> Option<SelfHostExpr> {
   let values = self_host_empty_expressions()
   self_host_parser_skip_newlines(parser)
-  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBracket) {
+  if self_host_parser_consume_symbol(parser, 5u32) {
     return Option::Some(SelfHostExpr::ArrayExpr(values, open_offset))
   } else {
   }
@@ -184,17 +184,17 @@ fn self_host_parse_array_expression(
         self_host_parser_skip_newlines(parser)
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::RightBracket,
+          5u32,
         ) {
           break Option::Some(SelfHostExpr::ArrayExpr(values, open_offset))
         } else if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::Comma,
+          25u32,
         ) {
           self_host_parser_skip_newlines(parser)
           if self_host_parser_consume_symbol(
             parser,
-            SelfHostSymbol::RightBracket,
+            5u32,
           ) {
             break Option::Some(SelfHostExpr::ArrayExpr(values, open_offset))
           } else {
@@ -223,7 +223,7 @@ fn self_host_parse_group_expression(
   open_offset: U32,
 ) -> Option<SelfHostExpr> {
   self_host_parser_skip_newlines(parser)
-  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+  if self_host_parser_consume_symbol(parser, 1u32) {
     return Option::Some(SelfHostExpr::BlockExpr(SelfHostBlock::{
       items: self_host_empty_block_items()
       offset: open_offset
@@ -237,11 +237,11 @@ fn self_host_parse_group_expression(
     }
   }
   self_host_parser_skip_newlines(parser)
-  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+  if self_host_parser_consume_symbol(parser, 1u32) {
     return Option::Some(first)
   } else if !self_host_parser_consume_symbol(
     parser,
-    SelfHostSymbol::Comma,
+    25u32,
   ) {
     self_host_parser_fail(
       parser,
@@ -262,7 +262,7 @@ fn self_host_parse_group_expression(
       Option::Some(value) => {
         values.push(value)
         self_host_parser_skip_newlines(parser)
-        if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightParen) {
+        if self_host_parser_consume_symbol(parser, 1u32) {
           if values.length() < 2u32 || values.length() > 32u32 {
             self_host_parser_fail(
               parser,
@@ -279,12 +279,12 @@ fn self_host_parse_group_expression(
           }
         } else if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::Comma,
+          25u32,
         ) {
           self_host_parser_skip_newlines(parser)
           if self_host_parser_consume_symbol(
             parser,
-            SelfHostSymbol::RightParen,
+            1u32,
           ) {
             if values.length() < 2u32 || values.length() > 32u32 {
               self_host_parser_fail(
@@ -326,7 +326,7 @@ fn self_host_parse_object_fields(
   open_offset: U32,
 ) -> Option<Array<SelfHostObjectField>> {
   let fields = self_host_empty_object_fields()
-  if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+  if self_host_parser_consume_symbol(parser, 3u32) {
     return Option::Some(fields)
   } else {
   }
@@ -345,7 +345,7 @@ fn self_host_parse_object_fields(
   self_host_parser_skip_newlines(parser)
   let result = while 0u32 {
     _ => {
-      if self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+      if self_host_parser_consume_symbol(parser, 3u32) {
         break Option::Some(fields)
       } else {
       }
@@ -359,7 +359,7 @@ fn self_host_parse_object_fields(
       let (name, offset) = pair
       if !self_host_parser_expect_symbol(
         parser,
-        SelfHostSymbol::Colon,
+        13u32,
         SelfHostDeclarationExpectation::Colon,
       ) {
         break Option::None
@@ -398,7 +398,7 @@ fn self_host_parse_explicit_type_arguments(
           break Option::Some(arguments)
         } else if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::Comma,
+          25u32,
         ) {
           self_host_parser_skip_newlines(parser)
           if self_host_parser_consume_type_closer(parser) {
@@ -441,7 +441,7 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
       )
       Option::None
     }
-    SelfHostTokenKind::Symbol(SelfHostSymbol::Plus) => {
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 7u32 => {
       parser.index = parser.index + 1u32
       match self_host_parse_expression_context(parser, 14u32, true) {
         Option::Some(value) => Option::Some(
@@ -454,7 +454,7 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Symbol(SelfHostSymbol::Minus) => {
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 8u32 => {
       parser.index = parser.index + 1u32
       match self_host_parse_expression_context(parser, 14u32, true) {
         Option::Some(value) => Option::Some(
@@ -467,7 +467,7 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Symbol(SelfHostSymbol::Bang) => {
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 32u32 => {
       parser.index = parser.index + 1u32
       match self_host_parse_expression_context(parser, 14u32, true) {
         Option::Some(value) => Option::Some(
@@ -480,15 +480,15 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 0u32 => {
       parser.index = parser.index + 1u32
       self_host_parse_group_expression(parser, token.offset)
     }
-    SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBracket) => {
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 4u32 => {
       parser.index = parser.index + 1u32
       self_host_parse_array_expression(parser, token.offset)
     }
-    SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace) => {
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 2u32 => {
       parser.index = parser.index + 1u32
       match self_host_parse_object_fields(parser, token.offset) {
         Option::Some(fields) => Option::Some(
@@ -497,33 +497,33 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Fn) => {
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 0u32 => {
       parser.index = parser.index + 1u32
       self_host_parse_lambda_expression(parser, token.offset)
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::If) => {
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 14u32 => {
       parser.index = parser.index + 1u32
       self_host_parse_if_expression(parser, token.offset)
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Match) => {
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 16u32 => {
       parser.index = parser.index + 1u32
       self_host_parse_match_expression(parser, token.offset)
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::While) => {
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 18u32 => {
       parser.index = parser.index + 1u32
       self_host_parse_while_expression(parser, token.offset)
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::For) => {
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 7u32 => {
       parser.index = parser.index + 1u32
       self_host_parse_for_expression(parser, token.offset)
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Return) => {
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 20u32 => {
       parser.index = parser.index + 1u32
       let value = match self_host_parser_peek(parser) {
         Option::None => Option::Some(Option::None)
         Option::Some(next) => match next.kind {
           SelfHostTokenKind::Newline => Option::Some(Option::None)
-          SelfHostTokenKind::Symbol(SelfHostSymbol::RightBrace) => Option::Some(Option::None)
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 3u32 => Option::Some(Option::None)
           _ => match self_host_parse_expression_context(parser, 0u32, false) {
             Option::Some(expression) => Option::Some(Option::Some(expression))
             Option::None => Option::None
@@ -537,7 +537,7 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Break) => {
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 22u32 => {
       parser.index = parser.index + 1u32
       match self_host_parse_expression_context(parser, 0u32, false) {
         Option::Some(value) => Option::Some(
@@ -546,7 +546,7 @@ fn self_host_parse_primary(parser: SelfHostParser) -> Option<SelfHostExpr> {
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Continue) => {
+    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 23u32 => {
       parser.index = parser.index + 1u32
       match self_host_parse_expression_context(parser, 0u32, false) {
         Option::Some(value) => Option::Some(
@@ -590,7 +590,7 @@ fn self_host_parse_expression_context(
         break Option::Some(left)
       } else {
         match token.kind {
-          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 0u32 => {
             parser.index = parser.index + 1u32
             match self_host_parse_call_arguments(parser, token.offset) {
               Option::Some(arguments) => {
@@ -600,7 +600,7 @@ fn self_host_parse_expression_context(
               Option::None => break Option::None
             }
           }
-          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBracket) => {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 4u32 => {
             parser.index = parser.index + 1u32
             let index = match self_host_parse_expression_context(
               parser,
@@ -613,7 +613,7 @@ fn self_host_parse_expression_context(
             self_host_parser_skip_newlines(parser)
             if !self_host_parser_consume_symbol(
               parser,
-              SelfHostSymbol::RightBracket,
+              5u32,
             ) {
               self_host_parser_fail(
                 parser,
@@ -629,7 +629,7 @@ fn self_host_parse_expression_context(
             left = SelfHostExpr::IndexExpr(left, index, token.offset)
             continue 0u32
           }
-          SelfHostTokenKind::Symbol(SelfHostSymbol::Dot) => {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 27u32 => {
             parser.index = parser.index + 1u32
             self_host_parser_skip_newlines(parser)
             match self_host_parser_identifier(
@@ -637,7 +637,7 @@ fn self_host_parse_expression_context(
               SelfHostDeclarationExpectation::BindingName,
             ) {
               Option::Some(pair) => {
-                let (name, _) = pair
+                let (name, _name_offset) = pair
                 left = match left {
                   SelfHostExpr::ImportAliasExpr(_, _) =>
                     SelfHostExpr::QualifiedExpr(left, name, token.offset)
@@ -648,12 +648,12 @@ fn self_host_parse_expression_context(
               Option::None => break Option::None
             }
           }
-          SelfHostTokenKind::Symbol(SelfHostSymbol::DoubleColon) => {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 14u32 => {
             parser.index = parser.index + 1u32
             self_host_parser_skip_newlines(parser)
             if self_host_parser_consume_symbol(
               parser,
-              SelfHostSymbol::LeftBrace,
+              2u32,
             ) {
               match self_host_parse_object_fields(parser, token.offset) {
                 Option::Some(fields) => {
@@ -668,7 +668,7 @@ fn self_host_parse_expression_context(
               }
             } else if self_host_parser_consume_symbol(
               parser,
-              SelfHostSymbol::Less,
+              29u32,
             ) {
               let type_arguments = match self_host_parse_explicit_type_arguments(
                 parser,
@@ -680,7 +680,7 @@ fn self_host_parse_expression_context(
               let call_offset = self_host_parser_offset(parser)
               if !self_host_parser_consume_symbol(
                 parser,
-                SelfHostSymbol::LeftParen,
+                0u32,
               ) {
                 self_host_parser_fail(
                   parser,
@@ -711,7 +711,7 @@ fn self_host_parse_expression_context(
                 SelfHostDeclarationExpectation::BindingName,
               ) {
                 Option::Some(pair) => {
-                  let (name, _) = pair
+                  let (name, _name_offset) = pair
                   left = SelfHostExpr::QualifiedExpr(
                     left,
                     name,
@@ -723,7 +723,7 @@ fn self_host_parse_expression_context(
               }
             }
           }
-          SelfHostTokenKind::Keyword(SelfHostKeyword::Is) => {
+          SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 17u32 => {
             if 8u32 < minimum_precedence {
               break Option::Some(left)
             } else {
@@ -741,7 +741,7 @@ fn self_host_parse_expression_context(
               Option::None => break Option::None
             }
           }
-          SelfHostTokenKind::Symbol(symbol) => match self_host_binary_operator(
+          SelfHostTokenKind::Symbol(symbol, _) => match self_host_binary_operator(
             symbol,
           ) {
             Option::Some(operator) => {

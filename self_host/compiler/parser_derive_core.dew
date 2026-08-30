@@ -34,9 +34,9 @@ fn self_host_derived_enum_variant_name(
   variant: SelfHostEnumVariant,
 ) -> String {
   match variant {
-    SelfHostEnumVariant::UnitVariant(name, _) => name
-    SelfHostEnumVariant::TupleVariant(name, _, _) => name
-    SelfHostEnumVariant::StructVariant(name, _, _) => name
+    SelfHostEnumVariant::UnitVariant(name, _, _) => name
+    SelfHostEnumVariant::TupleVariant(name, _, _, _) => name
+    SelfHostEnumVariant::StructVariant(name, _, _, _) => name
   }
 }
 
@@ -108,8 +108,8 @@ fn self_host_derived_variant_pattern(
   )
   let names = []
   match variant {
-    SelfHostEnumVariant::UnitVariant(_, _) => (base, names)
-    SelfHostEnumVariant::TupleVariant(_, types, _) => {
+    SelfHostEnumVariant::UnitVariant(_, _, _) => (base, names)
+    SelfHostEnumVariant::TupleVariant(_, types, _, _) => {
       let patterns = []
       let mut index = 0u32
       for _ in types {
@@ -120,7 +120,7 @@ fn self_host_derived_variant_pattern(
       }
       (SelfHostPattern::TuplePattern(base, patterns, offset), names)
     }
-    SelfHostEnumVariant::StructVariant(_, fields, _) => {
+    SelfHostEnumVariant::StructVariant(_, fields, _, _) => {
       let patterns = []
       let mut index = 0u32
       for field in fields {
@@ -734,11 +734,11 @@ fn self_host_derived_enum_field_types(
   let types = []
   for variant in value.variants {
     match variant {
-      SelfHostEnumVariant::UnitVariant(_, _) => {}
-      SelfHostEnumVariant::TupleVariant(_, payload, _) => for type_ in payload {
+      SelfHostEnumVariant::UnitVariant(_, _, _) => {}
+      SelfHostEnumVariant::TupleVariant(_, payload, _, _) => for type_ in payload {
         types.push(type_)
       }
-      SelfHostEnumVariant::StructVariant(_, fields, _) => for field in fields {
+      SelfHostEnumVariant::StructVariant(_, fields, _, _) => for field in fields {
         types.push(field.type_)
       }
     }

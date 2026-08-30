@@ -6,6 +6,20 @@ fn self_host_u32_subtract(left: U32, right: U32) -> U32 {
   left - right
 }
 
+fn self_host_type_resolution_u32_at(
+  values: Array<U32>,
+  index: U32,
+) -> U32 {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_type_resolution_bool_at(
+  values: Array<Bool>,
+  index: U32,
+) -> Bool {
+  array_get_unchecked(values, index)
+}
+
 fn self_host_u32_slots(length: U32, value: U32) -> Array<U32> {
   let result = []
   let _ = while 0u32 {
@@ -399,22 +413,35 @@ impl SelfHostTypeResolver {
     self.push_import_task(interface_index, root, 0u32, 0u32)
     let _ = while self.import_task_types.length() {
       length => if length > 0u32 {
-        let source_interface = match self.import_task_interfaces.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
+        if self.import_task_interfaces.length() == 0u32 ||
+          self.import_task_states.length() == 0u32 ||
+          self.import_task_starts.length() == 0u32 {
+          return self.interner.error_type
         }
-        let source_type = match self.import_task_types.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
-        let state = match self.import_task_states.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
-        let result_start = match self.import_task_starts.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
+        let interface_task = self.import_task_interfaces.length() - 1u32
+        let source_interface = self_host_type_resolution_u32_at(
+          self.import_task_interfaces,
+          interface_task,
+        )
+        self.import_task_interfaces.truncate(interface_task)
+        let type_task = length - 1u32
+        let source_type = self_host_type_resolution_u32_at(
+          self.import_task_types,
+          type_task,
+        )
+        self.import_task_types.truncate(type_task)
+        let state_task = self.import_task_states.length() - 1u32
+        let state = self_host_type_resolution_u32_at(
+          self.import_task_states,
+          state_task,
+        )
+        self.import_task_states.truncate(state_task)
+        let start_task = self.import_task_starts.length() - 1u32
+        let result_start = self_host_type_resolution_u32_at(
+          self.import_task_starts,
+          start_task,
+        )
+        self.import_task_starts.truncate(start_task)
         let source = self_host_interface_resolved_types(
           scope.interfaces,
           source_interface,
@@ -424,7 +451,9 @@ impl SelfHostTypeResolver {
         let existing = source_memo.get(source_type)
         if state == 0u32 && existing != 4294967295u32 {
           self.import_results.push(existing)
-        } else if state == 0u32 {
+          continue self.import_task_types.length()
+        }
+        if state == 0u32 {
           match source.types[source_type] {
             SelfHostResolvedType::ErrorType => {
               source_memo.set(source_type, self.interner.error_type)
@@ -527,12 +556,17 @@ impl SelfHostTypeResolver {
               }
             }
           }
-        } else if state == 1u32 {
+          continue self.import_task_types.length()
+        }
+        if state == 1u32 {
           let base = self.import_results[result_start]
           self.import_scratch.clear()
-          let arguments = match source.types[source_type] {
-            SelfHostResolvedType::AppliedType(_, span) => span
-            _ => self_host_empty_hir_span(0u32)
+          let mut arguments = self_host_empty_hir_span(0u32)
+          match source.types[source_type] {
+            SelfHostResolvedType::AppliedType(_, span) => {
+              arguments = span
+            }
+            _ => {}
           }
           let mut index = 0u32
           let _ = while index {
@@ -549,10 +583,15 @@ impl SelfHostTypeResolver {
           source_memo.set(source_type, imported)
           self.import_results.truncate(result_start)
           self.import_results.push(imported)
-        } else if state == 2u32 {
-          let parameters = match source.types[source_type] {
-            SelfHostResolvedType::FunctionType(span, _) => span
-            _ => self_host_empty_hir_span(0u32)
+          continue self.import_task_types.length()
+        }
+        if state == 2u32 {
+          let mut parameters = self_host_empty_hir_span(0u32)
+          match source.types[source_type] {
+            SelfHostResolvedType::FunctionType(span, _) => {
+              parameters = span
+            }
+            _ => {}
           }
           self.import_scratch.clear()
           let mut index = 0u32
@@ -573,11 +612,15 @@ impl SelfHostTypeResolver {
           source_memo.set(source_type, imported)
           self.import_results.truncate(result_start)
           self.import_results.push(imported)
-        } else {
-          let fields = match source.types[source_type] {
-            SelfHostResolvedType::ProductType(span) => span
-            _ => self_host_empty_hir_span(0u32)
+          continue self.import_task_types.length()
+        }
+        let mut fields = self_host_empty_hir_span(0u32)
+        match source.types[source_type] {
+          SelfHostResolvedType::ProductType(span) => {
+            fields = span
           }
+          _ => {}
+        }
           self.import_scratch.clear()
           let mut index = 0u32
           let _ = while index {
@@ -592,9 +635,8 @@ impl SelfHostTypeResolver {
           }
           let imported = self.interner.intern_product(self.import_scratch)
           source_memo.set(source_type, imported)
-          self.import_results.truncate(result_start)
-          self.import_results.push(imported)
-        }
+        self.import_results.truncate(result_start)
+        self.import_results.push(imported)
         continue self.import_task_types.length()
       } else {
         break self_host_semantic_unit()
@@ -1053,22 +1095,35 @@ impl SelfHostTypeResolver {
     self.push_syntax_task(syntax, 0u32, expect_trait, false)
     let _ = while self.syntax_tasks.length() {
       length => if length > 0u32 {
-        let current = match self.syntax_tasks.pop() {
-          Option::Some(value) => value
-          Option::None => 4294967295u32
+        if self.state_tasks.length() == 0u32 ||
+          self.expectation_tasks.length() == 0u32 ||
+          self.constructor_tasks.length() == 0u32 {
+          return self.interner.error_type
         }
-        let state = match self.state_tasks.pop() {
-          Option::Some(value) => value
-          Option::None => 4294967295u32
-        }
-        let current_expectation = match self.expectation_tasks.pop() {
-          Option::Some(value) => value
-          Option::None => false
-        }
-        let constructor_position = match self.constructor_tasks.pop() {
-          Option::Some(value) => value
-          Option::None => false
-        }
+        let current_index = length - 1u32
+        let current = self_host_type_resolution_u32_at(
+          self.syntax_tasks,
+          current_index,
+        )
+        self.syntax_tasks.truncate(current_index)
+        let state_index = self.state_tasks.length() - 1u32
+        let state = self_host_type_resolution_u32_at(
+          self.state_tasks,
+          state_index,
+        )
+        self.state_tasks.truncate(state_index)
+        let expectation_index = self.expectation_tasks.length() - 1u32
+        let current_expectation = self_host_type_resolution_bool_at(
+          self.expectation_tasks,
+          expectation_index,
+        )
+        self.expectation_tasks.truncate(expectation_index)
+        let constructor_index = self.constructor_tasks.length() - 1u32
+        let constructor_position = self_host_type_resolution_bool_at(
+          self.constructor_tasks,
+          constructor_index,
+        )
+        self.constructor_tasks.truncate(constructor_index)
         match self.collected.type_syntax[current] {
           SelfHostHirTypeSyntax::NamedTypeSyntax(name, offset) => {
             self.syntax_types[current] = self.resolve_named_type(

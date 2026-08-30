@@ -1,0 +1,108 @@
+{
+  "formatVersion": 1,
+  "plugins": {
+    "github.com/jtenner/wago-facet": {
+      "direct": true,
+      "source": {
+        "module": "github.com/jtenner/wago-facet",
+        "version": "v0.1.0",
+        "checksum": "h1:MjD4xiQZit6v9VohEFrzJDXJjv6l+X9kYCao7hNDb9E="
+      },
+      "provider": {
+        "importPath": "github.com/jtenner/wago-facet/register"
+      },
+      "definitionDigest": "sha256:699910c429ed36fddcd3220a46b241c0a3590c40d68c3cde8221652d7525b80a",
+      "releaseFingerprint": "sha256:b1d7d4252b644a06250fb9bc4644c05cc4335606b4f0724d93dd27683ef34a77",
+      "dependencies": {},
+      "requestedAuthorities": [
+        {
+          "name": "host.arguments.read",
+          "mode": "required",
+          "reason": "expose the runtime-scoped guest argument vector through Facet",
+          "scope": {}
+        },
+        {
+          "name": "host.caller.identify",
+          "mode": "required",
+          "reason": "isolate opaque Facet resource handles by guest instance",
+          "scope": {}
+        },
+        {
+          "name": "host.import.define",
+          "mode": "required",
+          "reason": "define the Facet Core WebAssembly import module",
+          "scope": {
+            "modules": [
+              "facet"
+            ]
+          }
+        },
+        {
+          "name": "instance.close.observe",
+          "mode": "required",
+          "reason": "release Facet resources when their guest instance closes",
+          "scope": {}
+        },
+        {
+          "name": "instance.instantiate.intercept",
+          "mode": "required",
+          "reason": "validate exact structural Facet GC-reference signatures and caller-selected array result storage before instantiation",
+          "scope": {}
+        }
+      ],
+      "grants": [
+        {
+          "name": "host.arguments.read",
+          "scope": {}
+        },
+        {
+          "name": "host.caller.identify",
+          "scope": {}
+        },
+        {
+          "name": "host.import.define",
+          "scope": {
+            "modules": [
+              "facet"
+            ]
+          }
+        },
+        {
+          "name": "instance.close.observe",
+          "scope": {}
+        },
+        {
+          "name": "instance.instantiate.intercept",
+          "scope": {}
+        }
+      ],
+      "contracts": {
+        "provides": [],
+        "requires": []
+      },
+      "bindings": [],
+      "config": {
+        "stdin": "eof",
+        "stdout": "inherit",
+        "stderr": "inherit",
+        "preopens": [
+          {
+            "guest": "~",
+            "host": ".",
+            "rights": [
+              "read",
+              "write",
+              "stat",
+              "sync",
+              "path-open",
+              "path-create",
+              "path-remove",
+              "path-rename"
+            ]
+          }
+        ],
+        "maxHandles": 1024
+      }
+    }
+  }
+}

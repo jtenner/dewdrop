@@ -1,0 +1,707 @@
+import dew.std.facet.core as @facet_core
+import dew.std.facet.fs as @facet_fs
+import dew.std.facet.process as @facet_process
+open dew.std.array
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.fs
+open dew.std.path
+open dew.std.process
+open dew.std.string
+open dew.std.wasm.intrinsics
+
+builtin self_host_facet_bytes_builder_with_capacity(
+  capacity: U32,
+) -> BytesBuilder = "dew_bytes_builder_with_capacity"
+
+builtin self_host_facet_bytes_builder_append_byte(
+  builder: BytesBuilder,
+  byte: U8,
+) -> Unit = "dew_bytes_builder_append_byte"
+
+builtin self_host_facet_bytes_builder_finish(
+  builder: BytesBuilder,
+) -> Bytes = "dew_bytes_builder_finish"
+
+builtin self_host_facet_bytes_is_valid_utf8(
+  value: Bytes,
+) -> Bool = "dew_bytes_is_valid_utf8"
+
+builtin self_host_facet_bytes_to_string(
+  value: Bytes,
+) -> String = "dew_bytes_to_string"
+
+builtin self_host_facet_bytes_byte_length(
+  value: Bytes,
+) -> U32 = "dew_bytes_byte_length"
+
+builtin self_host_facet_bytes_byte_at(
+  value: Bytes,
+  index: U32,
+) -> U8 = "dew_bytes_byte_at"
+
+builtin self_host_facet_string_byte_length(
+  value: String,
+) -> U32 = "dew_string_byte_length"
+
+builtin self_host_facet_string_byte_at(
+  value: String,
+  index: U32,
+) -> U8 = "dew_string_byte_at"
+
+struct FacetProcess {
+}
+
+struct FacetFileSystem {
+  preopen: U32
+}
+
+fn facet_process() -> FacetProcess {
+  FacetProcess::{}
+}
+
+fn facet_file_system(preopen: U32) -> FacetFileSystem {
+  FacetFileSystem::{
+    preopen: preopen
+  }
+}
+
+fn facet_u32_to_u64(value: U32) -> U64 {
+  value.into()
+}
+
+fn facet_u64_to_u32(value: U64) -> U32 {
+  value.into()
+}
+
+fn facet_unit() -> Unit {
+}
+
+fn facet_copy_bytes(value: Bytes, start: U32, pointer: U32, length: U32) -> Unit {
+  while 0u32 {
+    index if index < length => {
+      wasm_u8_store(
+        pointer + index,
+        self_host_facet_bytes_byte_at(value, start + index),
+      )
+      continue index + 1u32
+    }
+    _ => break facet_unit()
+  }
+}
+
+fn facet_copy_path(path: RelativePath, pointer: U32) -> U32 {
+  let bytes = path.as_bytes()
+  let length = self_host_facet_bytes_byte_length(bytes)
+  facet_copy_bytes(bytes, 0u32, pointer, length)
+  length
+}
+
+fn facet_memory_bytes(pointer: U32, length: U32) -> Bytes {
+  let builder = self_host_facet_bytes_builder_with_capacity(length)
+  while 0u32 {
+    index if index < length => {
+      self_host_facet_bytes_builder_append_byte(
+        builder,
+        wasm_u8_load(pointer + index),
+      )
+      continue index + 1u32
+    }
+    _ => break self_host_facet_bytes_builder_finish(builder)
+  }
+}
+
+fn facet_memory_string(
+  pointer: U32,
+  length: U32,
+  operation: ProcessOperation,
+) -> Result<String, ProcessError> {
+  let bytes = facet_memory_bytes(pointer, length)
+  if self_host_facet_bytes_is_valid_utf8(bytes) {
+    Result::Ok(self_host_facet_bytes_to_string(bytes))
+  } else {
+    Result::Err(ProcessError::{
+      operation: operation
+      kind: ProcessErrorKind::InvalidUtf8
+      code: 23u32
+    })
+  }
+}
+
+fn facet_process_error(
+  operation: ProcessOperation,
+  kind: ProcessErrorKind,
+  code: U32,
+) -> ProcessError {
+  ProcessError::{
+    operation: operation
+    kind: kind
+    code: code
+  }
+}
+
+fn facet_process_backend_error(
+  operation: ProcessOperation,
+  code: U32,
+) -> ProcessError {
+  facet_process_error(operation, ProcessErrorKind::Backend, code)
+}
+
+fn facet_process_write(
+  descriptor: @facet_process.FacetLowLevelProcessI32Result,
+  operation: ProcessOperation,
+  value: Bytes,
+) -> Result<U32, ProcessError> {
+  if descriptor.error != 0u32 {
+    Result::Err(facet_process_backend_error(operation, descriptor.error))
+  } else {
+    let length = self_host_facet_bytes_byte_length(value)
+    while 0u32 {
+      total if total < length => {
+        let window = if length - total < 49152u32 {
+          length - total
+        } else {
+          49152u32
+        }
+        facet_copy_bytes(value, total, 16u32, window)
+        let write = @facet_fs.fd_write_mem32(
+          descriptor.value,
+          0u32,
+          16u32,
+          window,
+        )
+        if write.error != 0u32 {
+          break Result::Err(facet_process_backend_error(operation, write.error))
+        } else if write.value == 0u64 || write.value > facet_u32_to_u64(window) {
+          break Result::Err(facet_process_backend_error(operation, 3u32))
+        } else {
+          continue total + facet_u64_to_u32(write.value)
+        }
+      }
+      _ => break Result::Ok(length)
+    }
+  }
+}
+
+impl Process for FacetProcess {
+  fn arguments(self, max_count: U32, max_bytes: U32) -> Result<Array<String>, ProcessError> {
+    let count = @facet_process.args_count()
+    if count.error != 0u32 {
+      Result::Err(facet_process_backend_error(ProcessOperation::Arguments, count.error))
+    } else if count.value > max_count {
+      Result::Err(
+        facet_process_error(
+          ProcessOperation::Arguments,
+          ProcessErrorKind::LimitExceeded,
+          17u32,
+        ),
+      )
+    } else {
+      let output = Array::with_capacity(count.value)
+      let mut total = 0u32
+      while 0u32 {
+        index if index < count.value => {
+          let length_result = @facet_process.args_len_i8(index, 0u32)
+          if length_result.error != 0u32 {
+            break Result::Err(
+              facet_process_backend_error(
+                ProcessOperation::Arguments,
+                length_result.error,
+              ),
+            )
+          } else if length_result.value > facet_u32_to_u64(max_bytes - total) ||
+            length_result.value > 49152u64 {
+            break Result::Err(
+              facet_process_error(
+                ProcessOperation::Arguments,
+                ProcessErrorKind::LimitExceeded,
+                17u32,
+              ),
+            )
+          } else {
+            let length = facet_u64_to_u32(length_result.value)
+            let read = @facet_process.args_read_mem32_i8(
+              index,
+              0u32,
+              0u32,
+              16u32,
+              length,
+            )
+            if read.error != 0u32 || read.value != length_result.value {
+              break Result::Err(
+                facet_process_backend_error(
+                  ProcessOperation::Arguments,
+                  if read.error == 0u32 {
+                    3u32
+                  } else {
+                    read.error
+                  },
+                ),
+              )
+            } else {
+              match facet_memory_string(16u32, length, ProcessOperation::Arguments) {
+                Result::Err(error) => break Result::Err(error)
+                Result::Ok(value) => {
+                  total = total + length
+                  output.push(value)
+                  continue index + 1u32
+                }
+              }
+            }
+          }
+        }
+        _ => break Result::Ok(output)
+      }
+    }
+  }
+
+  fn environment(self, name: String, max_bytes: U32) -> Result<Option<String>, ProcessError> {
+    let count = @facet_process.env_count()
+    if count.error != 0u32 {
+      Result::Err(facet_process_backend_error(ProcessOperation::Environment, count.error))
+    } else {
+      while 0u32 {
+        index if index < count.value => {
+          let name_length = @facet_process.env_len_i8(index, 0u32, 0u32)
+          if name_length.error != 0u32 {
+            break Result::Err(
+              facet_process_backend_error(ProcessOperation::Environment, name_length.error),
+            )
+          } else if name_length.value > 49152u64 {
+            break Result::Err(
+              facet_process_error(
+                ProcessOperation::Environment,
+                ProcessErrorKind::LimitExceeded,
+                17u32,
+              ),
+            )
+          } else {
+            let candidate_length = facet_u64_to_u32(name_length.value)
+            let read_name = @facet_process.env_read_mem32_i8(
+              index,
+              0u32,
+              0u32,
+              0u32,
+              16u32,
+              candidate_length,
+            )
+            if read_name.error != 0u32 || read_name.value != name_length.value {
+              break Result::Err(
+                facet_process_backend_error(
+                  ProcessOperation::Environment,
+                  if read_name.error == 0u32 {
+                    3u32
+                  } else {
+                    read_name.error
+                  },
+                ),
+              )
+            }
+            let mut equal = candidate_length == self_host_facet_string_byte_length(name)
+            while 0u32 {
+              offset if equal && offset < candidate_length => {
+                equal = wasm_u8_load(16u32 + offset) == self_host_facet_string_byte_at(
+                  name,
+                  offset,
+                )
+                continue offset + 1u32
+              }
+              _ => break facet_unit()
+            }
+            if equal {
+              let value_length = @facet_process.env_len_i8(index, 1u32, 0u32)
+              if value_length.error != 0u32 {
+                break Result::Err(
+                  facet_process_backend_error(
+                    ProcessOperation::Environment,
+                    value_length.error,
+                  ),
+                )
+              } else if value_length.value > facet_u32_to_u64(max_bytes) ||
+                value_length.value > 49152u64 {
+                break Result::Err(
+                  facet_process_error(
+                    ProcessOperation::Environment,
+                    ProcessErrorKind::LimitExceeded,
+                    17u32,
+                  ),
+                )
+              } else {
+                let length = facet_u64_to_u32(value_length.value)
+                let read_value = @facet_process.env_read_mem32_i8(
+                  index,
+                  1u32,
+                  0u32,
+                  0u32,
+                  16u32,
+                  length,
+                )
+                if read_value.error != 0u32 || read_value.value != value_length.value {
+                  break Result::Err(
+                    facet_process_backend_error(
+                      ProcessOperation::Environment,
+                      if read_value.error == 0u32 {
+                        3u32
+                      } else {
+                        read_value.error
+                      },
+                    ),
+                  )
+                } else {
+                  match facet_memory_string(16u32, length, ProcessOperation::Environment) {
+                    Result::Err(error) => break Result::Err(error)
+                    Result::Ok(value) => break Result::Ok(Option::Some(value))
+                  }
+                }
+              }
+            } else {
+              continue index + 1u32
+            }
+          }
+        }
+        _ => break Result::Ok(Option::None)
+      }
+    }
+  }
+
+  fn write_stdout(self, value: Bytes) -> Result<U32, ProcessError> {
+    facet_process_write(
+      @facet_process.stdio_stdout(),
+      ProcessOperation::StandardOutput,
+      value,
+    )
+  }
+
+  fn write_stderr(self, value: Bytes) -> Result<U32, ProcessError> {
+    facet_process_write(
+      @facet_process.stdio_stderr(),
+      ProcessOperation::StandardError,
+      value,
+    )
+  }
+
+  fn exit(self, status: U32) -> Never {
+    @facet_process.proc_exit(status)
+    unreachable()
+  }
+}
+
+fn facet_fs_error_kind(code: U32) -> FsErrorKind {
+  match code {
+    1u32 => FsErrorKind::PermissionDenied
+    2u32 => FsErrorKind::NotFound
+    7u32 => FsErrorKind::PermissionDenied
+    9u32 => FsErrorKind::AlreadyExists
+    10u32 => FsErrorKind::NotDirectory
+    11u32 => FsErrorKind::IsDirectory
+    12u32 => FsErrorKind::InvalidPath
+    13u32 => FsErrorKind::FileTooLarge
+    14u32 => FsErrorKind::NoSpace
+    15u32 => FsErrorKind::ReadOnly
+    18u32 => FsErrorKind::NotEmpty
+    20u32 => FsErrorKind::InvalidPath
+    21u32 => FsErrorKind::Unsupported
+    22u32 => FsErrorKind::FileTooLarge
+    37u32 => FsErrorKind::PermissionDenied
+    _ => FsErrorKind::Backend
+  }
+}
+
+fn facet_fs_error(operation: FsOperation, path: RelativePath, code: U32) -> FsError {
+  FsError::{
+    operation: operation
+    path: path.to_string()
+    kind: facet_fs_error_kind(code)
+    code: code
+  }
+}
+
+fn facet_preopen(filesystem: FacetFileSystem) -> @facet_fs.FacetLowLevelFsI32Result {
+  @facet_fs.fs_preopen_get(filesystem.preopen)
+}
+
+fn facet_close(handle: U32) -> U32 {
+  @facet_core.handle_close(handle)
+}
+
+impl FileSystem for FacetFileSystem {
+  fn path_kind(self, path: RelativePath) -> Result<PathKind, FsError> {
+    let root = facet_preopen(self)
+    if root.error != 0u32 {
+      Result::Err(facet_fs_error(FsOperation::Stat, path, root.error))
+    } else {
+      let pointer = 128u32
+      let length = facet_copy_path(path, pointer)
+      let stat = @facet_fs.path_stat_mem32_i8(
+        root.value,
+        0u32,
+        pointer,
+        length,
+        0u32,
+        0u32,
+      )
+      if stat.error == 2u32 {
+        Result::Ok(PathKind::Missing)
+      } else if stat.error != 0u32 {
+        Result::Err(facet_fs_error(FsOperation::Stat, path, stat.error))
+      } else {
+        match stat.file_type {
+          1u32 => Result::Ok(PathKind::File)
+          2u32 => Result::Ok(PathKind::Directory)
+          3u32 => Result::Ok(PathKind::Symlink)
+          _ => Result::Ok(PathKind::Other)
+        }
+      }
+    }
+  }
+
+  fn read_file(self, path: RelativePath, max_bytes: U32) -> Result<Bytes, FsError> {
+    let root = facet_preopen(self)
+    if root.error != 0u32 {
+      Result::Err(facet_fs_error(FsOperation::Read, path, root.error))
+    } else {
+      let pointer = 128u32
+      let path_length = facet_copy_path(path, pointer)
+      let opened = @facet_fs.path_open_mem32_i8(
+        root.value,
+        0u32,
+        pointer,
+        path_length,
+        0u32,
+        0u32,
+        17u64,
+      )
+      if opened.error != 0u32 {
+        Result::Err(facet_fs_error(FsOperation::Read, path, opened.error))
+      } else {
+        let stat = @facet_fs.fd_stat(opened.value)
+        if stat.error != 0u32 {
+          let _closed = facet_close(opened.value)
+          Result::Err(facet_fs_error(FsOperation::Stat, path, stat.error))
+        } else if stat.size > facet_u32_to_u64(max_bytes) {
+          let _closed = facet_close(opened.value)
+          Result::Err(facet_fs_error(FsOperation::Read, path, 13u32))
+        } else {
+          let expected = facet_u64_to_u32(stat.size)
+          let builder = self_host_facet_bytes_builder_with_capacity(expected)
+          while 0u32 {
+            total if total < expected => {
+              let window = if expected - total < 49152u32 {
+                expected - total
+              } else {
+                49152u32
+              }
+              let read = @facet_fs.fd_read_mem32(
+                opened.value,
+                0u32,
+                16u32,
+                window,
+              )
+              if read.error != 0u32 {
+                let _closed = facet_close(opened.value)
+                break Result::Err(facet_fs_error(FsOperation::Read, path, read.error))
+              } else if read.value > facet_u32_to_u64(window) {
+                let _closed = facet_close(opened.value)
+                break Result::Err(facet_fs_error(FsOperation::Read, path, 3u32))
+              } else if read.value == 0u64 {
+                let _closed = facet_close(opened.value)
+                break Result::Ok(self_host_facet_bytes_builder_finish(builder))
+              } else {
+                let count = facet_u64_to_u32(read.value)
+                while 0u32 {
+                  index if index < count => {
+                    self_host_facet_bytes_builder_append_byte(
+                      builder,
+                      wasm_u8_load(16u32 + index),
+                    )
+                    continue index + 1u32
+                  }
+                  _ => break facet_unit()
+                }
+                continue total + count
+              }
+            }
+            _ => {
+              let close_error = facet_close(opened.value)
+              if close_error != 0u32 {
+                break Result::Err(facet_fs_error(FsOperation::Close, path, close_error))
+              } else {
+                break Result::Ok(self_host_facet_bytes_builder_finish(builder))
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  fn write_file(self, path: RelativePath, value: Bytes) -> Result<Unit, FsError> {
+    let root = facet_preopen(self)
+    if root.error != 0u32 {
+      Result::Err(facet_fs_error(FsOperation::Write, path, root.error))
+    } else {
+      let pointer = 128u32
+      let path_length = facet_copy_path(path, pointer)
+      let opened = @facet_fs.path_open_mem32_i8(
+        root.value,
+        0u32,
+        pointer,
+        path_length,
+        0u32,
+        5u32,
+        82u64,
+      )
+      if opened.error != 0u32 {
+        Result::Err(facet_fs_error(FsOperation::Write, path, opened.error))
+      } else {
+        let length = self_host_facet_bytes_byte_length(value)
+        while 0u32 {
+          total if total < length => {
+            let window = if length - total < 49152u32 {
+              length - total
+            } else {
+              49152u32
+            }
+            facet_copy_bytes(value, total, 16u32, window)
+            let written = @facet_fs.fd_write_mem32(
+              opened.value,
+              0u32,
+              16u32,
+              window,
+            )
+            if written.error != 0u32 {
+              let _closed = facet_close(opened.value)
+              break Result::Err(facet_fs_error(FsOperation::Write, path, written.error))
+            } else if written.value == 0u64 || written.value > facet_u32_to_u64(window) {
+              let _closed = facet_close(opened.value)
+              break Result::Err(facet_fs_error(FsOperation::Write, path, 3u32))
+            } else {
+              continue total + facet_u64_to_u32(written.value)
+            }
+          }
+          _ => {
+            let sync_error = @facet_fs.fd_sync(opened.value)
+            let close_error = facet_close(opened.value)
+            if sync_error != 0u32 {
+              break Result::Err(facet_fs_error(FsOperation::Sync, path, sync_error))
+            } else if close_error != 0u32 {
+              break Result::Err(facet_fs_error(FsOperation::Close, path, close_error))
+            } else {
+              break Result::Ok(facet_unit())
+            }
+          }
+        }
+      }
+    }
+  }
+
+  fn create_directory(self, path: RelativePath) -> Result<Unit, FsError> {
+    let root = facet_preopen(self)
+    if root.error != 0u32 {
+      Result::Err(facet_fs_error(FsOperation::CreateDirectory, path, root.error))
+    } else {
+      let pointer = 128u32
+      let length = facet_copy_path(path, pointer)
+      let error = @facet_fs.path_create_dir_mem32_i8(
+        root.value,
+        0u32,
+        pointer,
+        length,
+        0u32,
+      )
+      if error == 0u32 || error == 9u32 {
+        Result::Ok(facet_unit())
+      } else {
+        Result::Err(facet_fs_error(FsOperation::CreateDirectory, path, error))
+      }
+    }
+  }
+
+  fn rename(self, source: RelativePath, destination: RelativePath) -> Result<Unit, FsError> {
+    let root = facet_preopen(self)
+    if root.error != 0u32 {
+      Result::Err(facet_fs_error(FsOperation::Rename, source, root.error))
+    } else {
+      let source_pointer = 128u32
+      let source_length = facet_copy_path(source, source_pointer)
+      let destination_pointer = source_pointer + source_length
+      let destination_length = facet_copy_path(destination, destination_pointer)
+      let error = @facet_fs.path_rename_mem32_i8(
+        root.value,
+        0u32,
+        source_pointer,
+        source_length,
+        0u32,
+        root.value,
+        0u32,
+        destination_pointer,
+        destination_length,
+        0u32,
+        1u32,
+      )
+      if error == 0u32 {
+        Result::Ok(facet_unit())
+      } else {
+        Result::Err(facet_fs_error(FsOperation::Rename, source, error))
+      }
+    }
+  }
+
+  fn remove_file(self, path: RelativePath) -> Result<Unit, FsError> {
+    let root = facet_preopen(self)
+    if root.error != 0u32 {
+      Result::Err(facet_fs_error(FsOperation::RemoveFile, path, root.error))
+    } else {
+      let pointer = 128u32
+      let length = facet_copy_path(path, pointer)
+      let error = @facet_fs.path_remove_mem32_i8(
+        root.value,
+        0u32,
+        pointer,
+        length,
+        0u32,
+        1u32,
+      )
+      if error == 0u32 || error == 2u32 {
+        Result::Ok(facet_unit())
+      } else {
+        Result::Err(facet_fs_error(FsOperation::RemoveFile, path, error))
+      }
+    }
+  }
+
+  fn remove_directory(self, path: RelativePath) -> Result<Unit, FsError> {
+    let root = facet_preopen(self)
+    if root.error != 0u32 {
+      Result::Err(facet_fs_error(FsOperation::RemoveDirectory, path, root.error))
+    } else {
+      let pointer = 128u32
+      let length = facet_copy_path(path, pointer)
+      let error = @facet_fs.path_remove_mem32_i8(
+        root.value,
+        0u32,
+        pointer,
+        length,
+        0u32,
+        2u32,
+      )
+      if error == 0u32 || error == 2u32 {
+        Result::Ok(facet_unit())
+      } else {
+        Result::Err(facet_fs_error(FsOperation::RemoveDirectory, path, error))
+      }
+    }
+  }
+
+  fn atomic_write(
+    self,
+    temporary: RelativePath,
+    destination: RelativePath,
+    value: Bytes,
+  ) -> Result<Unit, FsError> {
+    match self.write_file(temporary, value) {
+      Result::Err(error) => Result::Err(error)
+      Result::Ok(_) => self.rename(temporary, destination)
+    }
+  }
+}

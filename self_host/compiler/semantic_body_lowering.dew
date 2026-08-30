@@ -9,7 +9,7 @@ impl SelfHostCollectionBuilder {
   fn emit_expression(self, value: SelfHostHirExpr) -> U32 {
     let id = self.expressions.length()
     self.expressions.push(value)
-    self.expression_files.push(self.current_file)
+    self.expression_files.push(self.state.current_file)
     self.explicit_call_type_argument_spans.push(
       self_host_empty_hir_span(self.explicit_call_type_arguments.length()),
     )
@@ -19,7 +19,7 @@ impl SelfHostCollectionBuilder {
   fn emit_pattern(self, value: SelfHostHirPattern) -> U32 {
     let id = self.patterns.length()
     self.patterns.push(value)
-    self.pattern_files.push(self.current_file)
+    self.pattern_files.push(self.state.current_file)
     id
   }
 
@@ -59,7 +59,7 @@ impl SelfHostCollectionBuilder {
           offset: field.offset
         },
       )
-      self.object_field_files.push(self.current_file)
+      self.object_field_files.push(self.state.current_file)
       field_index = field_index + 1u32
     }
     SelfHostHirSpan::{
@@ -85,7 +85,7 @@ impl SelfHostCollectionBuilder {
           offset: parameter.offset
         },
       )
-      self.lambda_parameter_files.push(self.current_file)
+      self.lambda_parameter_files.push(self.state.current_file)
     }
     self.pending_lambda_parameters.push(
       SelfHostHirSpan::{
@@ -95,10 +95,10 @@ impl SelfHostCollectionBuilder {
     )
     self.pending_lambda_return_types.push(self.lower_type(return_type))
     self.pending_lambda_bodies.push(body)
-    self.pending_lambda_files.push(self.current_file)
+    self.pending_lambda_files.push(self.state.current_file)
     self.pending_lambda_offsets.push(offset)
-    self.pending_lambda_parents.push(self.current_lambda)
-    self.pending_lambda_root_bodies.push(self.current_root_body)
+    self.pending_lambda_parents.push(self.state.current_lambda)
+    self.pending_lambda_root_bodies.push(self.state.current_root_body)
     id
   }
 
@@ -126,7 +126,7 @@ impl SelfHostCollectionBuilder {
         offset: offset
       },
     )
-    self.pattern_arm_files.push(self.current_file)
+    self.pattern_arm_files.push(self.state.current_file)
     let wildcard = self.emit_pattern(
       SelfHostHirPattern::WildcardPattern(offset),
     )
@@ -138,7 +138,7 @@ impl SelfHostCollectionBuilder {
         offset: offset
       },
     )
-    self.pattern_arm_files.push(self.current_file)
+    self.pattern_arm_files.push(self.state.current_file)
     let child_start = self.arm_children.length()
     self.arm_children.push(first_arm)
     self.arm_children.push(first_arm + 1u32)
@@ -437,7 +437,7 @@ impl SelfHostCollectionBuilder {
               offset: field.offset
             },
           )
-          self.pattern_field_files.push(self.current_file)
+          self.pattern_field_files.push(self.state.current_file)
           field_index = field_index + 1u32
         }
         let has_rest = rest is Option::Some(_)
@@ -503,7 +503,7 @@ impl SelfHostCollectionBuilder {
           offset: arm.offset
         },
       )
-      self.pattern_arm_files.push(self.current_file)
+      self.pattern_arm_files.push(self.state.current_file)
       lowered.push(id)
     }
     let start = self.arm_children.length()
@@ -522,14 +522,21 @@ impl SelfHostCollectionBuilder {
       match item {
         SelfHostBlockItem::LetItem(mutable_, name, name_offset, value, offset) => {
           let value_id = self.lower_expression(value)
-          let lowered = SelfHostHirBlockItem::LetItem(
-            mutable_,
-            self.intern(name),
-            name_offset,
-            value_id,
-            offset,
-          )
-          lowered_items.push(lowered)
+          if name == "_" {
+            lowered_items.push(
+              SelfHostHirBlockItem::ExpressionItem(value_id, offset),
+            )
+          } else {
+            lowered_items.push(
+              SelfHostHirBlockItem::LetItem(
+                mutable_,
+                self.intern(name),
+                name_offset,
+                value_id,
+                offset,
+              ),
+            )
+          }
         }
         SelfHostBlockItem::AssignmentItem(target, value, offset) => {
           let target_id = self.lower_expression(target)
@@ -582,7 +589,7 @@ impl SelfHostCollectionBuilder {
     let item_start = self.block_items.length()
     for item in lowered_items {
       self.block_items.push(item)
-      self.block_item_files.push(self.current_file)
+      self.block_item_files.push(self.state.current_file)
     }
     let id = self.blocks.length()
     self.blocks.push(
@@ -594,7 +601,7 @@ impl SelfHostCollectionBuilder {
         offset: source.offset
       },
     )
-    self.block_files.push(self.current_file)
+    self.block_files.push(self.state.current_file)
     id
   }
 
@@ -616,10 +623,10 @@ impl SelfHostCollectionBuilder {
     offset: U32,
   ) -> Unit {
     let body_index = self.bodies.length()
-    self.body_files.push(self.current_file)
+    self.body_files.push(self.state.current_file)
     self.bodies.push(
       SelfHostHirBody::{
-        id: self_host_make_semantic_id(self.module_id, body_index)
+        id: self_host_make_semantic_id(self.state.module_id, body_index)
         declaration: declaration
         kind: kind
         root: root
@@ -678,9 +685,9 @@ impl SelfHostCollectionBuilder {
     source: SelfHostExpr,
     offset: U32,
   ) -> Unit {
-    self.current_lambda = 4294967295u32
-    self.current_root_body = self_host_make_semantic_id(
-      self.module_id,
+    self.state.current_lambda = 4294967295u32
+    self.state.current_root_body = self_host_make_semantic_id(
+      self.state.module_id,
       self.bodies.length(),
     )
     let expression_start = self.expressions.length()
@@ -720,9 +727,9 @@ impl SelfHostCollectionBuilder {
     source: SelfHostBlock,
     offset: U32,
   ) -> Unit {
-    self.current_lambda = 4294967295u32
-    self.current_root_body = self_host_make_semantic_id(
-      self.module_id,
+    self.state.current_lambda = 4294967295u32
+    self.state.current_root_body = self_host_make_semantic_id(
+      self.state.module_id,
       self.bodies.length(),
     )
     let expression_start = self.expressions.length()
@@ -758,9 +765,9 @@ impl SelfHostCollectionBuilder {
   fn lower_pending_lambda_bodies(self) -> Unit {
     let _ = while self.lambdas.length() {
       index => if index < self.pending_lambda_bodies.length() {
-        self.current_file = self.pending_lambda_files[index]
-        self.current_lambda = index
-        self.current_root_body = self.pending_lambda_root_bodies[index]
+        self.state.current_file = self.pending_lambda_files[index]
+        self.state.current_lambda = index
+        self.state.current_root_body = self.pending_lambda_root_bodies[index]
         let expression_start = self.expressions.length()
         let expression_child_start = self.expression_children.length()
         let block_start = self.blocks.length()
@@ -831,6 +838,6 @@ impl SelfHostCollectionBuilder {
         break self_host_semantic_unit()
       }
     }
-    self.current_lambda = 4294967295u32
+    self.state.current_lambda = 4294967295u32
   }
 }

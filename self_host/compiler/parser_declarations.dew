@@ -2,6 +2,7 @@ open dew.std.array
 open dew.std.bytes
 open dew.std.option
 open dew.std.string
+open dew.std.string_builder
 
 fn self_host_empty_strings() -> Array<String> {
   Array::new()
@@ -25,16 +26,31 @@ fn self_host_parse_import_after_keyword(
   declaration_offset: U32,
 ) -> Option<SelfHostDeclaration> {
   let path = self_host_empty_strings()
+  let path_builder = StringBuilder::new()
+  let mut path_count = 0u32
+  let mut default_alias = ""
   let mut wildcard = false
   let path_ok = while 0u32 {
     _ => {
       match self_host_parser_peek(parser) {
         Option::Some(token) => match token.kind {
-          SelfHostTokenKind::Identifier(segment) => {
+          SelfHostTokenKind::Identifier(segment, _) => {
+            if path_count > 0u32 {
+              path_builder.append(".")
+            }
+            path_builder.append(segment)
+            default_alias = segment
+            path_count = path_count + 1u32
             path.push(segment)
             parser.index = parser.index + 1u32
           }
-          SelfHostTokenKind::Keyword(SelfHostKeyword::Package) => {
+          SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 32u32 => {
+            if path_count > 0u32 {
+              path_builder.append(".")
+            }
+            path_builder.append("package")
+            default_alias = "package"
+            path_count = path_count + 1u32
             path.push("package")
             parser.index = parser.index + 1u32
           }
@@ -54,8 +70,8 @@ fn self_host_parse_import_after_keyword(
           break false
         }
       }
-      if self_host_parser_consume_symbol(parser, SelfHostSymbol::Dot) {
-        if self_host_parser_consume_symbol(parser, SelfHostSymbol::Star) {
+      if self_host_parser_consume_symbol(parser, 27u32) {
+        if self_host_parser_consume_symbol(parser, 9u32) {
           wildcard = true
           break true
         } else {
@@ -72,7 +88,7 @@ fn self_host_parse_import_after_keyword(
   }
   let mut import_alias = self_host_no_string()
   let mut import_alias_offset = declaration_offset
-  if self_host_parser_consume_keyword(parser, SelfHostKeyword::As) {
+  if self_host_parser_consume_keyword(parser, 26u32) {
     if wildcard || open_ {
       self_host_parser_fail_expected(
         parser,
@@ -83,7 +99,7 @@ fn self_host_parse_import_after_keyword(
     }
     match self_host_parser_peek(parser) {
       Option::Some(token) => match token.kind {
-        SelfHostTokenKind::AtIdentifier(name) => {
+        SelfHostTokenKind::AtIdentifier(name, _, _) => {
           parser.index = parser.index + 1u32
           import_alias = Option::Some(name)
           import_alias_offset = token.offset
@@ -120,6 +136,9 @@ fn self_host_parse_import_after_keyword(
     SelfHostDeclaration::Import(SelfHostImportDeclaration::{
       open_: open_
       path: path
+      joined_path: path_builder.finish()
+      default_alias: default_alias
+      segment_count: u32_into_u64(path_count)
       wildcard: wildcard
       import_alias: import_alias
       import_alias_offset: import_alias_offset
@@ -163,7 +182,7 @@ fn self_host_parse_builtin_after_keyword(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftParen,
+    0u32,
     SelfHostDeclarationExpectation::LeftParen,
   ) {
     return Option::None
@@ -177,7 +196,7 @@ fn self_host_parse_builtin_after_keyword(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::Arrow,
+    31u32,
     SelfHostDeclarationExpectation::Arrow,
   ) {
     return Option::None
@@ -191,7 +210,7 @@ fn self_host_parse_builtin_after_keyword(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::Equal,
+    15u32,
     SelfHostDeclarationExpectation::Equal,
   ) {
     return Option::None
@@ -244,7 +263,7 @@ fn self_host_parse_let_after_keyword(
 ) -> Option<SelfHostDeclaration> {
   let mutable_ = self_host_parser_consume_keyword(
     parser,
-    SelfHostKeyword::Mut,
+    13u32,
   )
   let pair = match self_host_parser_identifier(
     parser,
@@ -258,7 +277,7 @@ fn self_host_parse_let_after_keyword(
   let (name, name_offset) = pair
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::Equal,
+    15u32,
     SelfHostDeclarationExpectation::Equal,
   ) {
     return Option::None
@@ -307,14 +326,14 @@ fn self_host_parse_trait_after_keyword(
   }
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftBrace,
+    2u32,
     SelfHostDeclarationExpectation::LeftBrace,
   ) {
     return Option::None
   } else {
   }
   let methods = self_host_empty_trait_methods()
-  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+  if !self_host_parser_consume_symbol(parser, 3u32) {
     if !self_host_parser_expect_newline(
       parser,
       SelfHostDeclarationExpectation::TraitBodyNewline,
@@ -327,7 +346,7 @@ fn self_host_parse_trait_after_keyword(
       _ => {
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::RightBrace,
+          3u32,
         ) {
           break true
         } else {
@@ -335,7 +354,7 @@ fn self_host_parse_trait_after_keyword(
         let method_offset = self_host_parser_offset(parser)
         if !self_host_parser_expect_keyword(
           parser,
-          SelfHostKeyword::Fn,
+          0u32,
           SelfHostDeclarationExpectation::TraitMethodKeyword,
         ) {
           break false
@@ -357,7 +376,7 @@ fn self_host_parse_trait_after_keyword(
         }
         if !self_host_parser_expect_symbol(
           parser,
-          SelfHostSymbol::LeftParen,
+          0u32,
           SelfHostDeclarationExpectation::LeftParen,
         ) {
           break false
@@ -373,7 +392,7 @@ fn self_host_parse_trait_after_keyword(
         let (receiver, parameters) = parsed_parameters
         if !self_host_parser_expect_symbol(
           parser,
-          SelfHostSymbol::Arrow,
+          31u32,
           SelfHostDeclarationExpectation::Arrow,
         ) {
           break false
@@ -484,7 +503,7 @@ fn self_host_parse_foreign_library(
   }
   if !self_host_parser_expect_keyword(
     parser,
-    SelfHostKeyword::As,
+    26u32,
     SelfHostDeclarationExpectation::ForeignLibraryAlias,
   ) {
     return Option::None
@@ -502,14 +521,14 @@ fn self_host_parse_foreign_library(
   let (namespace_alias, alias_offset) = alias_pair
   if !self_host_parser_expect_symbol(
     parser,
-    SelfHostSymbol::LeftBrace,
+    2u32,
     SelfHostDeclarationExpectation::LeftBrace,
   ) {
     return Option::None
   } else {
   }
   let members = self_host_empty_foreign_members()
-  if !self_host_parser_consume_symbol(parser, SelfHostSymbol::RightBrace) {
+  if !self_host_parser_consume_symbol(parser, 3u32) {
     if !self_host_parser_expect_newline(
       parser,
       SelfHostDeclarationExpectation::FunctionBodyNewline,
@@ -522,7 +541,7 @@ fn self_host_parse_foreign_library(
       _ => {
         if self_host_parser_consume_symbol(
           parser,
-          SelfHostSymbol::RightBrace,
+          3u32,
         ) {
           break true
         } else {
@@ -530,11 +549,11 @@ fn self_host_parse_foreign_library(
         let member_offset = self_host_parser_offset(parser)
         let visibility = if self_host_parser_consume_keyword(
           parser,
-          SelfHostKeyword::Pub,
+          2u32,
         ) {
           if !self_host_parser_expect_keyword(
             parser,
-            SelfHostKeyword::Fn,
+            0u32,
             SelfHostDeclarationExpectation::ForeignLibraryMemberKeyword,
           ) {
             break false
@@ -544,7 +563,7 @@ fn self_host_parse_foreign_library(
         } else {
           if !self_host_parser_expect_keyword(
             parser,
-            SelfHostKeyword::Fn,
+            0u32,
             SelfHostDeclarationExpectation::ForeignLibraryMemberKeyword,
           ) {
             break false
@@ -560,7 +579,7 @@ fn self_host_parse_foreign_library(
           Option::None => break false
         }
         let (member_name, member_name_offset) = member_pair
-        if self_host_parser_at_symbol(parser, SelfHostSymbol::Less) {
+        if self_host_parser_at_symbol(parser, 29u32) {
           self_host_parser_fail(
             parser,
             SelfHostParseError::GenericForeignLibraryMemberNotAllowed(
@@ -570,7 +589,7 @@ fn self_host_parse_foreign_library(
           break false
         } else if !self_host_parser_expect_symbol(
           parser,
-          SelfHostSymbol::LeftParen,
+          0u32,
           SelfHostDeclarationExpectation::LeftParen,
         ) {
           break false
@@ -582,7 +601,7 @@ fn self_host_parse_foreign_library(
         }
         if !self_host_parser_expect_symbol(
           parser,
-          SelfHostSymbol::Arrow,
+          31u32,
           SelfHostDeclarationExpectation::Arrow,
         ) {
           break false
@@ -592,7 +611,7 @@ fn self_host_parse_foreign_library(
           Option::Some(value) => value
           Option::None => break false
         }
-        if self_host_parser_at_symbol(parser, SelfHostSymbol::LeftBrace) {
+        if self_host_parser_at_symbol(parser, 2u32) {
           self_host_parser_fail(
             parser,
             SelfHostParseError::ForeignLibraryMemberBodyNotAllowed(
@@ -602,7 +621,7 @@ fn self_host_parse_foreign_library(
           break false
         } else if !self_host_parser_expect_symbol(
           parser,
-          SelfHostSymbol::Equal,
+          15u32,
           SelfHostDeclarationExpectation::Equal,
         ) {
           break false
@@ -680,8 +699,9 @@ fn self_host_parse_declaration(
   let mut visibility = SelfHostDeclarationVisibility::ModuleVisible
   let mut declaration_offset = self_host_parser_offset(parser)
   match self_host_parser_peek(parser) {
-    Option::Some(token) => match token.kind {
-      SelfHostTokenKind::Keyword(SelfHostKeyword::Open) => {
+    Option::Some(token) => match self_host_token_keyword_code(token.kind) {
+      29u32 => {
+        parser.last_declaration_kind = 0u32
         parser.index = parser.index + 1u32
         return self_host_parse_import_after_keyword(
           parser,
@@ -689,7 +709,8 @@ fn self_host_parse_declaration(
           token.offset,
         )
       }
-      SelfHostTokenKind::Keyword(SelfHostKeyword::Import) => {
+      30u32 => {
+        parser.last_declaration_kind = 0u32
         parser.index = parser.index + 1u32
         return self_host_parse_import_after_keyword(
           parser,
@@ -697,7 +718,7 @@ fn self_host_parse_declaration(
           token.offset,
         )
       }
-      SelfHostTokenKind::Keyword(SelfHostKeyword::Pub) => {
+      2u32 => {
         parser.index = parser.index + 1u32
         visibility = SelfHostDeclarationVisibility::Public
         declaration_offset = token.offset
@@ -722,8 +743,9 @@ fn self_host_parse_declaration(
       return Option::None
     }
   }
-  match token.kind {
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Builtin) => {
+  match self_host_token_keyword_code(token.kind) {
+    3u32 => {
+      parser.last_declaration_kind = 1u32
       parser.index = parser.index + 1u32
       self_host_parse_builtin_after_keyword(
         parser,
@@ -731,7 +753,8 @@ fn self_host_parse_declaration(
         declaration_offset,
       )
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Let) => {
+    11u32 => {
+      parser.last_declaration_kind = 2u32
       parser.index = parser.index + 1u32
       self_host_parse_let_after_keyword(
         parser,
@@ -739,7 +762,8 @@ fn self_host_parse_declaration(
         declaration_offset,
       )
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Trait) => {
+    6u32 => {
+      parser.last_declaration_kind = 3u32
       parser.index = parser.index + 1u32
       self_host_parse_trait_after_keyword(
         parser,
@@ -747,7 +771,8 @@ fn self_host_parse_declaration(
         declaration_offset,
       )
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Struct) => {
+    9u32 => {
+      parser.last_declaration_kind = 9u32
       parser.index = parser.index + 1u32
       match self_host_parse_struct_after_keyword(
         parser,
@@ -759,7 +784,8 @@ fn self_host_parse_declaration(
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Enum) => {
+    8u32 => {
+      parser.last_declaration_kind = 10u32
       parser.index = parser.index + 1u32
       match self_host_parse_enum_after_keyword(
         parser,
@@ -771,7 +797,8 @@ fn self_host_parse_declaration(
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Type) => {
+    10u32 => {
+      parser.last_declaration_kind = 11u32
       parser.index = parser.index + 1u32
       match self_host_parse_type_alias_after_keyword(
         parser,
@@ -783,7 +810,8 @@ fn self_host_parse_declaration(
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Fn) => {
+    0u32 => {
+      parser.last_declaration_kind = 4u32
       parser.index = parser.index + 1u32
       match self_host_parse_function_after_keyword(
         parser,
@@ -795,7 +823,8 @@ fn self_host_parse_declaration(
         Option::None => Option::None
       }
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Test) => {
+    1u32 => {
+      parser.last_declaration_kind = 5u32
       if visibility is SelfHostDeclarationVisibility::Public {
         self_host_parser_fail_expected(
           parser,
@@ -811,7 +840,8 @@ fn self_host_parse_declaration(
         }
       }
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Impl) => {
+    5u32 => {
+      parser.last_declaration_kind = 6u32
       if visibility is SelfHostDeclarationVisibility::Public {
         self_host_parser_fail(
           parser,
@@ -831,9 +861,10 @@ fn self_host_parse_declaration(
         }
       }
     }
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Foreign) => {
+    4u32 => {
       parser.index = parser.index + 1u32
-      if self_host_parser_consume_keyword(parser, SelfHostKeyword::Type) {
+      if self_host_parser_consume_keyword(parser, 10u32) {
+        parser.last_declaration_kind = 7u32
         self_host_parse_foreign_type(
           parser,
           visibility,
@@ -841,7 +872,7 @@ fn self_host_parse_declaration(
         )
       } else if self_host_parser_consume_keyword(
         parser,
-        SelfHostKeyword::Impl,
+        5u32,
       ) {
         match self_host_parser_peek(parser) {
           Option::Some(next) => match next.kind {
@@ -854,6 +885,7 @@ fn self_host_parse_declaration(
               )
               Option::None
             } else {
+              parser.last_declaration_kind = 8u32
               self_host_parse_foreign_library(parser, declaration_offset)
             }
             _ => if visibility is SelfHostDeclarationVisibility::Public {
@@ -865,6 +897,7 @@ fn self_host_parse_declaration(
               )
               Option::None
             } else {
+              parser.last_declaration_kind = 6u32
               match self_host_parse_impl_after_keyword(
                 parser,
                 true,
@@ -903,22 +936,12 @@ fn self_host_parse_declaration(
 }
 
 fn self_host_token_starts_declaration(token: SelfHostToken) -> Bool {
-  match token.kind {
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Pub) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Open) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Import) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Builtin) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Let) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Trait) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Struct) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Enum) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Type) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Fn) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Test) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Impl) => true
-    SelfHostTokenKind::Keyword(SelfHostKeyword::Foreign) => true
-    _ => false
-  }
+  let keyword = self_host_token_keyword_code(token.kind)
+  keyword == 2u32 || keyword == 29u32 || keyword == 30u32 ||
+    keyword == 3u32 || keyword == 11u32 || keyword == 6u32 ||
+    keyword == 9u32 || keyword == 8u32 || keyword == 10u32 ||
+    keyword == 0u32 || keyword == 1u32 || keyword == 5u32 ||
+    keyword == 4u32
 }
 
 fn self_host_parser_recover_declaration(parser: SelfHostParser) -> Unit {
@@ -929,24 +952,24 @@ fn self_host_parser_recover_declaration(parser: SelfHostParser) -> Unit {
     _ => match self_host_parser_take(parser) {
       Option::Some(token) => {
         match token.kind {
-          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBrace) => {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 2u32 => {
             braces = braces + 1u32
           }
-          SelfHostTokenKind::Symbol(SelfHostSymbol::RightBrace) => if braces > 0u32 {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 3u32 => if braces > 0u32 {
             braces = braces - 1u32
           } else {
           }
-          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftParen) => {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 0u32 => {
             parentheses = parentheses + 1u32
           }
-          SelfHostTokenKind::Symbol(SelfHostSymbol::RightParen) => if parentheses > 0u32 {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 1u32 => if parentheses > 0u32 {
             parentheses = parentheses - 1u32
           } else {
           }
-          SelfHostTokenKind::Symbol(SelfHostSymbol::LeftBracket) => {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 4u32 => {
             brackets = brackets + 1u32
           }
-          SelfHostTokenKind::Symbol(SelfHostSymbol::RightBracket) => if brackets > 0u32 {
+          SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 5u32 => if brackets > 0u32 {
             brackets = brackets - 1u32
           } else {
           }
@@ -999,27 +1022,35 @@ pub fn self_host_parse_module(source: Bytes) -> SelfHostParsedModule {
       }
       parser.diagnostic = Option::None
       match self_host_parse_declaration(parser) {
-        Option::Some(declaration) => match declaration {
-          SelfHostDeclaration::Import(import_) => if preamble_open {
-            events.push(
-              SelfHostParseEvent::Declaration(
-                SelfHostDeclaration::Import(import_),
-              ),
-            )
-          } else {
-            events.push(
-              SelfHostParseEvent::Diagnostic(SelfHostParseDiagnostic::{
-                severity: SelfHostDiagnosticSeverity::Error
-                error: SelfHostParseError::ImportAfterDeclaration(
+        Option::Some(declaration) => if parser.last_declaration_kind == 0u32 {
+          match declaration {
+            SelfHostDeclaration::Import(import_) => if preamble_open {
+              events.push(
+                SelfHostParseEvent::Declaration(
+                  SelfHostDeclaration::Import(import_),
+                  0u32,
+                ),
+              )
+            } else {
+              events.push(
+                SelfHostParseEvent::Diagnostic(
+                  SelfHostDiagnosticSeverity::Error,
+                  SelfHostParseError::ImportAfterDeclaration(import_.offset),
+                  4u32,
                   import_.offset,
-                )
-              }),
-            )
+                  4294967295u32,
+                  "",
+                ),
+              )
+            }
+            _ => {}
           }
-          _ => {
-            preamble_open = false
-            events.push(SelfHostParseEvent::Declaration(declaration))
-          }
+        } else {
+          preamble_open = false
+          events.push(SelfHostParseEvent::Declaration(
+            declaration,
+            parser.last_declaration_kind,
+          ))
         }
         Option::None => {
           let diagnostic = match parser.diagnostic {
@@ -1033,7 +1064,14 @@ pub fn self_host_parse_module(source: Bytes) -> SelfHostParsedModule {
               )
             }
           }
-          events.push(SelfHostParseEvent::Diagnostic(diagnostic))
+          events.push(SelfHostParseEvent::Diagnostic(
+            diagnostic.severity,
+            diagnostic.error,
+            self_host_parse_error_kind(diagnostic.error),
+            self_host_parser_offset(parser),
+            self_host_parser_token_code(parser),
+            self_host_parser_token_text(parser),
+          ))
           self_host_parser_recover_declaration(parser)
         }
       }

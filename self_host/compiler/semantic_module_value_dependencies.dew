@@ -1,6 +1,10 @@
 open dew.std.array
 open dew.std.option
 
+fn self_host_module_value_u32_at(values: Array<U32>, index: U32) -> U32 {
+  array_get_unchecked(values, index)
+}
+
 fn self_host_module_value_bool_slots(length: U32) -> Array<Bool> {
   let values = []
   let mut index = 0u32
@@ -343,13 +347,15 @@ fn self_host_find_module_value_sccs(
   let _ = while component {
     current_component => if current_component < raw_spans.length() {
       let scratch = []
-      let members = raw_spans[current_component]
+      let member_start = raw_spans[current_component].start
+      let member_length = raw_spans[current_component].length
       let mut member = 0u32
       let _ = while member {
-        current_member => if current_member < members.length {
-          let value = raw_members[
-            self_host_u32_add(members.start, current_member)
-          ]
+        current_member => if current_member < member_length {
+          let value = self_host_module_value_u32_at(
+            raw_members,
+            self_host_u32_add(member_start, current_member),
+          )
           let edges = dependencies[value]
           let mut edge = 0u32
           let _ = while edge {
@@ -426,14 +432,15 @@ fn self_host_find_module_value_sccs(
                 value: task.value
                 finish: true
               })
-              let edges = component_dependencies[task.value]
-              let mut edge = edges.length
+              let edge_start = component_dependencies[task.value].start
+              let mut edge = component_dependencies[task.value].length
               let _ = while edge {
                 current => if self_host_u32_greater(current, 0u32) {
                   let previous = current - 1u32
-                  let dependency = component_dependency_values[
-                    self_host_u32_add(edges.start, previous)
-                  ]
+                  let dependency = self_host_module_value_u32_at(
+                    component_dependency_values,
+                    self_host_u32_add(edge_start, previous),
+                  )
                   if !scheduled[dependency] {
                     tasks.push(SelfHostModuleValueDfsTask::{
                       value: dependency
@@ -460,14 +467,18 @@ fn self_host_find_module_value_sccs(
   let sccs = []
   let scc_declarations = []
   for ordered_component in schedule {
-    let raw = raw_spans[ordered_component]
+    let raw_start = raw_spans[ordered_component].start
+    let raw_length = raw_spans[ordered_component].length
     let scc_start = scc_declarations.length()
     let mut member = 0u32
     let _ = while member {
-      current => if current < raw.length {
+      current => if current < raw_length {
         scc_declarations.push(
           collected.lets[
-            raw_members[self_host_u32_add(raw.start, current)]
+            self_host_module_value_u32_at(
+              raw_members,
+              self_host_u32_add(raw_start, current),
+            )
           ].declaration,
         )
         continue current + 1u32

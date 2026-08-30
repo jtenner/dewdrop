@@ -56,6 +56,16 @@ import lower packages for manifest construction, source-diagnostic rendering,
 custom-section policy, and specialized output framing while those responsibilities
 are migrated or intentionally retained.
 
+`src/cache_binary` is a leaf package owning the aligned artifact-pack container,
+canonical binary codecs, and portable BLAKE3-256; `src/semantic`,
+`src/standard_loader`, and `src/compile_request` consume it. The diagram omits
+leaf executables and generators: `src/compile_request` owns the versioned binary
+host/compiler request codec, `src/core_linker` owns deterministic Core Wasm
+static linking, and `src/compiler_driver` consumes both. `src/dew_cli` and
+`src/dew_bootstrap` are executable packages above the driver: `src/dew_bootstrap`
+owns whole-build caching, compiler fingerprinting, and process dispatch behind
+`tools/dew`, while `src/dew_cli` implements the compiler-facing commands.
+
 Starshine is pinned as the `starshine-mb/` Git submodule and MoonBit workspace
 member. `src/backend` uses it to construct, validate, and encode WebAssembly.
 

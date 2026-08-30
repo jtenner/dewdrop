@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+root=$PWD
 mkdir -p .tmp
 python3 tools/generate_facet_bindings.py --check
 python3 tools/generate_facet_adapter.py --check
@@ -45,4 +46,19 @@ if grep -Eq 'link:facet|wpsi|fs_scratch|args_get|env_get|sysstr' .tmp/facet-impo
   echo "Facet smoke module retained a legacy import" >&2
   exit 1
 fi
-echo "Facet bindings passed with all 261 canonical imports"
+
+runner_work=$PWD/.tmp/facet-runner-smoke
+rm -rf "$runner_work"
+mkdir -p "$runner_work"
+wasm-tools parse tools/testdata/facet-runner-smoke.wat \
+  -o "$runner_work/compiler.wasm"
+printf 'request\n' > "$runner_work/request.bin"
+(
+  cd "$runner_work"
+  NODE_NO_WARNINGS=1 node "$root/tools/run-dew-facet.mjs" \
+    "$runner_work/compiler.wasm" "$runner_work/request.bin"
+)
+printf 'hello' > "$runner_work/expected.bin"
+cmp "$runner_work/expected.bin" "$runner_work/runner-output.bin"
+
+echo "Facet bindings and Node runner passed with all 261 canonical imports"

@@ -25,6 +25,7 @@ test "imported selection resolves non-generic calls" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -70,6 +71,65 @@ test "imported selection resolves non-generic calls" {
   }
 }
 
+test "qualified imported foreign calls stay direct" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @raw\npub fn run(value: I32) -> I64 {\n  @raw.read(value)\n}\n",
+    b"foreign impl \"facet\" as FacetImports {\n  pub fn read(value: I32) -> I64 = \"read\"\n}\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "foreign import diagnostics")
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
+  let inferred = self_host_infer_basic_module_bodies_with_imports(
+    collected,
+    imports.resolved,
+    names,
+    imports.scope,
+    imports.callables,
+    imports.generic_parameter_ids,
+    imports.parameter_types,
+    imports.parameter_receivers,
+    imports.implementations,
+    imports.fields,
+    imports.variants,
+    imports.variant_payload_types,
+    imports.type_declaration_types,
+    imports.type_generic_spans,
+    imports.module_value_types,
+  )
+  let hir_body = collected.bodies[0u32]
+  let body = match inferred.body(hir_body.id) {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "foreign imported body")
+      return
+    }
+  }
+  assert(body.diagnostic_count() == 0u32, "foreign imported call diagnostics")
+  let mut call = 4294967295u32
+  let end = self_host_u32_add(hir_body.expressions.start, hir_body.expressions.length)
+  let _ = while hir_body.expressions.start {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::CallExpr(_, _, _) => {
+          call = current
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  match body.call_target(hir_body, call) {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => assert(
+      arguments.length == 0u32,
+      "foreign imported type arguments",
+    )
+    _ => assert(false, "qualified foreign call must be direct")
+  }
+}
+
 test "imported selection resolves overloads" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\npub fn run(value: I32) -> I32 {\n  choose(value)\n}\n",
@@ -96,6 +156,7 @@ test "imported selection resolves overloads" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -177,6 +238,7 @@ test "imported selection resolves generic calls" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -260,6 +322,7 @@ test "imported selection resolves generic inherent methods" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -320,6 +383,7 @@ test "imported generic methods constrain ordinary arguments" {
     collected,
     imports.resolved,
     names,
+    imports.scope,
     imports.callables,
     imports.generic_parameter_ids,
     imports.parameter_types,
@@ -393,6 +457,7 @@ test "imported selection resolves generic tuple and unit variants" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -500,6 +565,7 @@ test "imported selection resolves tuple and unit variant patterns" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -571,6 +637,7 @@ test "imported selection resolves struct and struct-variant construction" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -664,6 +731,7 @@ test "imported selection resolves struct and struct-variant patterns" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -744,6 +812,7 @@ test "imported selection resolves generic fields" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -821,6 +890,7 @@ test "imported selection diagnoses non-generic call arity" {
     collected,
     resolved,
     names,
+    scope,
     callables,
     generic_parameter_ids,
     parameter_types,
@@ -884,6 +954,7 @@ test "module values use imported calls before function inference" {
     collected,
     imports.resolved,
     names,
+    imports.scope,
     imports.callables,
     imports.generic_parameter_ids,
     imports.parameter_types,

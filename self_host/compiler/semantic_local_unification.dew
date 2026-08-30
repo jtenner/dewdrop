@@ -1,6 +1,14 @@
 open dew.std.array
 open dew.std.option
 
+fn self_host_local_i32_at(values: Array<I32>, index: U32) -> I32 {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_local_u32_at(values: Array<U32>, index: U32) -> U32 {
+  array_get_unchecked(values, index)
+}
+
 fn self_host_body_u32_to_i32(value: U32) -> I32 {
   value.into()
 }
@@ -1158,18 +1166,28 @@ impl SelfHostLocalTypeSolver {
     self.push_zonk_task(root, 0u32, 0u32)
     let _ = while self.zonk_task_types.length() {
       length => if length > 0u32 {
-        let source = match self.zonk_task_types.pop() {
-          Option::Some(value) => value
-          Option::None => self.error_type()
+        if self.zonk_task_states.length() == 0u32 ||
+          self.zonk_result_starts.length() == 0u32 {
+          return self.error_type()
         }
-        let state = match self.zonk_task_states.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
-        let result_start = match self.zonk_result_starts.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
+        let source_index = length - 1u32
+        let source = self_host_local_i32_at(
+          self.zonk_task_types,
+          source_index,
+        )
+        self.zonk_task_types.truncate(source_index)
+        let state_index = self.zonk_task_states.length() - 1u32
+        let state = self_host_local_u32_at(
+          self.zonk_task_states,
+          state_index,
+        )
+        self.zonk_task_states.truncate(state_index)
+        let start_index = self.zonk_result_starts.length() - 1u32
+        let result_start = self_host_local_u32_at(
+          self.zonk_result_starts,
+          start_index,
+        )
+        self.zonk_result_starts.truncate(start_index)
         let current = self.representative_type(source)
         if state == 0u32 {
           if current < 0i32 {

@@ -832,3 +832,260 @@ test "Core Wasm linker reports missing providers" {
     _ => fail("expected missing-provider error")
   }
 }
+
+///|
+test "Core Wasm linker binds an exact direct import module provider" {
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([], [@lib.ValType::i64()]),
+    ),
+  )
+  let dew = @lib.Module::new()
+    .with_type_sec(@lib.TypeSec::new([signature]))
+    .with_import_sec(
+      @lib.ImportSec::new([
+        @lib.Import::new(
+          @lib.Name::from_string("__moonbit_time_unstable"),
+          @lib.Name::from_string("now"),
+          @lib.ExternType::func(@lib.TypeIdx::new(0U)),
+        ),
+      ]),
+    )
+    .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(0U)]))
+    .with_export_sec(
+      @lib.ExportSec::new([
+        @lib.Export::new(
+          @lib.Name::from_string("read_time"),
+          @lib.ExternIdx::func(@lib.FuncIdx::new(1U)),
+        ),
+      ]),
+    )
+    .with_code_sec(
+      @lib.CodeSec::new([
+        @lib.Func::new(
+          @lib.Locals::empty(),
+          @lib.Expr::new([@lib.Instruction::call(@lib.FuncIdx::new(0U))]),
+        ),
+      ]),
+    )
+  let provider = @lib.Module::new()
+    .with_type_sec(@lib.TypeSec::new([signature]))
+    .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(0U)]))
+    .with_export_sec(
+      @lib.ExportSec::new([
+        @lib.Export::new(
+          @lib.Name::from_string("now"),
+          @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+        ),
+      ]),
+    )
+    .with_code_sec(
+      @lib.CodeSec::new([
+        @lib.Func::new(
+          @lib.Locals::empty(),
+          @lib.Expr::new([@lib.Instruction::i64_const(0L)]),
+        ),
+      ]),
+    )
+  let linked = link_core_wasm_gc_modules(
+    @binary.encode_module(dew).unwrap(),
+    [{
+      provider: "__moonbit_time_unstable",
+      bytes: @binary.encode_module(provider).unwrap(),
+    }],
+    options={
+      keep_guest_exports: false,
+      validate_each_phase: true,
+      run_cleanup: false,
+      preserve_dew_memory_zero: true,
+    },
+  ).unwrap()
+  let module_ = @binary.decode_module(linked).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  assert_eq(core_imports(module_).length(), 0)
+}
+
+///|
+fn core_link_test_erased_reference_dew_module() -> @lib.Module {
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func(
+        [@lib.ValType::eqref_null()],
+        [@lib.ValType::eqref_null()],
+      ),
+    ),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([signature]))
+  .with_import_sec(
+    @lib.ImportSec::new([
+      @lib.Import::new(
+        @lib.Name::from_string("link:starshine"),
+        @lib.Name::from_string("identity"),
+        @lib.ExternType::func(@lib.TypeIdx::new(0U)),
+      ),
+    ]),
+  )
+  .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(0U)]))
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("call_identity"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(1U)),
+      ),
+    ]),
+  )
+  .with_code_sec(
+    @lib.CodeSec::new([
+      @lib.Func::new(
+        @lib.Locals::empty(),
+        @lib.Expr::new([
+          @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
+          @lib.Instruction::call(@lib.FuncIdx::new(0U)),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+fn core_link_test_concrete_reference_guest_module() -> @lib.Module {
+  let concrete = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::struct_([
+        @lib.FieldType::new(
+          @lib.StorageType::val_type(@lib.ValType::i32()),
+          @lib.Mut::const_(),
+        ),
+      ]),
+    ),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([core_link_test_ref(0)], [core_link_test_ref(0)]),
+    ),
+  )
+  @lib.Module::new()
+  .with_type_sec(@lib.TypeSec::new([concrete, signature]))
+  .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(1U)]))
+  .with_export_sec(
+    @lib.ExportSec::new([
+      @lib.Export::new(
+        @lib.Name::from_string("identity"),
+        @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+      ),
+    ]),
+  )
+  .with_code_sec(
+    @lib.CodeSec::new([
+      @lib.Func::new(
+        @lib.Locals::empty(),
+        @lib.Expr::new([
+          @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
+        ]),
+      ),
+    ]),
+  )
+}
+
+///|
+test "Core Wasm linker does not classify Facet i16 arrays as Strings" {
+  let dew = match core_link_test_erased_reference_dew_module().import_sec {
+    Some(@lib.ImportSec([@lib.Import(_, name, type_)])) => core_link_test_erased_reference_dew_module()
+      .with_import_sec(
+        @lib.ImportSec::new([
+          @lib.Import::new(@lib.Name::from_string("link:facet"), name, type_),
+        ]),
+      )
+    _ => fail("expected erased reference fixture import")
+  }
+  let array_i16 = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::array(
+        @lib.FieldType::new(
+          @lib.StorageType::pack_type(@lib.PackType::i16()),
+          @lib.Mut::var_(),
+        ),
+      ),
+    ),
+  )
+  let signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([core_link_test_ref(0)], [core_link_test_ref(0)]),
+    ),
+  )
+  let guest = @lib.Module::new()
+    .with_type_sec(@lib.TypeSec::new([array_i16, signature]))
+    .with_func_sec(@lib.FuncSec::new([@lib.TypeIdx::new(1U)]))
+    .with_export_sec(
+      @lib.ExportSec::new([
+        @lib.Export::new(
+          @lib.Name::from_string("identity"),
+          @lib.ExternIdx::func(@lib.FuncIdx::new(0U)),
+        ),
+      ]),
+    )
+    .with_code_sec(
+      @lib.CodeSec::new([
+        @lib.Func::new(
+          @lib.Locals::empty(),
+          @lib.Expr::new([
+            @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
+          ]),
+        ),
+      ]),
+    )
+  let linked = link_core_wasm_gc_modules(
+    @binary.encode_module(dew).unwrap(),
+    [{ provider: "facet", bytes: @binary.encode_module(guest).unwrap() }],
+    options={
+      keep_guest_exports: false,
+      validate_each_phase: true,
+      run_cleanup: false,
+      preserve_dew_memory_zero: true,
+    },
+  ).unwrap()
+  assert_eq(@validate.validate_module(@binary.decode_module(linked).unwrap()), Ok(()))
+}
+
+///|
+test "Core Wasm linker adapts erased eqref parameters to concrete provider references" {
+  let linked = link_core_wasm_gc_modules(
+    @binary.encode_module(core_link_test_erased_reference_dew_module()).unwrap(),
+    [{
+      provider: "starshine",
+      bytes: @binary.encode_module(
+        core_link_test_concrete_reference_guest_module(),
+      ).unwrap(),
+    }],
+    options={
+      keep_guest_exports: false,
+      validate_each_phase: true,
+      run_cleanup: false,
+      preserve_dew_memory_zero: true,
+    },
+  ).unwrap()
+  let module_ = @binary.decode_module(linked).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+  match module_.code_sec {
+    Some(@lib.CodeSec(functions)) => {
+      assert_eq(functions.length(), 3)
+      match functions[0] {
+        @lib.Func(_, @lib.Expr([
+          @lib.LocalGet(@lib.LocalIdx(0U)),
+          @lib.Call(@lib.FuncIdx(2U)),
+        ])) => ()
+        _ => fail("expected Dew call to use the reference adapter")
+      }
+      match functions[2] {
+        @lib.Func(_, @lib.Expr([
+          @lib.LocalGet(@lib.LocalIdx(0U)),
+          @lib.RefCast(_, _, _),
+          @lib.Call(@lib.FuncIdx(1U)),
+        ])) => ()
+        _ => fail("expected eqref-to-concrete cast adapter")
+      }
+    }
+    None => fail("expected linked functions")
+  }
+}

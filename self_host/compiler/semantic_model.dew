@@ -124,6 +124,7 @@ pub struct SelfHostCollectedTest {
 
 pub struct SelfHostCollectedImport {
   path: String
+  path_segments: Array<String>
   open_: Bool
   wildcard: Bool
   import_alias: Option<String>
@@ -211,7 +212,7 @@ pub struct SelfHostDuplicateTestIdentityDiagnostic {
 }
 
 pub enum SelfHostCollectionDiagnostic {
-  ParseDiagnostic(U64, SelfHostParseDiagnostic)
+  ParseDiagnostic(U64, SelfHostParseDiagnostic, U32, U32, U32, String)
   DuplicateName(SelfHostDuplicateNameDiagnostic)
   DuplicateTestIdentity(SelfHostDuplicateTestIdentityDiagnostic)
   InvalidExpectedTestTrap(U64, Bytes, U32)
@@ -301,6 +302,34 @@ pub struct SelfHostCollectedModule {
 }
 
 impl SelfHostCollectedModule {
+  fn callable_count(self) -> U32 {
+    self.callables.length()
+  }
+
+  fn declaration_count(self) -> U32 {
+    self.declarations.length()
+  }
+
+  fn file_count(self) -> U32 {
+    self.files.length()
+  }
+
+  fn first_source_byte_length(self) -> U32 {
+    if self.file_sources.length() == 0u32 {
+      0u32
+    } else {
+      array_get_unchecked(self.file_sources, 0u32).byte_length()
+    }
+  }
+
+  fn diagnostic_count(self) -> U32 {
+    self.diagnostics.length()
+  }
+
+  fn diagnostic_at(self, index: U32) -> SelfHostCollectionDiagnostic {
+    array_get_unchecked(self.diagnostics, index)
+  }
+
   fn declaration_at(self, index: U32) -> SelfHostCollectedDeclaration {
     self.declarations[index]
   }
@@ -373,17 +402,26 @@ impl SelfHostCollectedModule {
       } else {
         let location = self.declaration_locations[local]
         if location < 2147483648u32 {
-          Option::Some(
-            SelfHostCollectedDeclarationReference::TopLevel(
-              self.declarations[location],
-            ),
-          )
+          if location < self.declarations.length() {
+            Option::Some(
+              SelfHostCollectedDeclarationReference::TopLevel(
+                self.declarations[location],
+              ),
+            )
+          } else {
+            Option::None
+          }
         } else {
-          Option::Some(
-            SelfHostCollectedDeclarationReference::Method(
-              self.methods[location & 2147483647u32],
-            ),
-          )
+          let method = location & 2147483647u32
+          if method < self.methods.length() {
+            Option::Some(
+              SelfHostCollectedDeclarationReference::Method(
+                self.methods[method],
+              ),
+            )
+          } else {
+            Option::None
+          }
         }
       }
     }
