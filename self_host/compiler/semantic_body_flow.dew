@@ -174,14 +174,18 @@ fn self_host_flow_sequence(
 }
 
 fn self_host_flow_slots(length: U32) -> Array<SelfHostBodyFlowSummary> {
-  let values = []
-  let mut index = 0u32
-  let _ = while index {
-    current => if current < length {
-      values.push(self_host_flow_empty())
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
+  let values = [self_host_flow_empty()]
+  if length == 0u32 {
+    values.truncate(0u32)
+  } else {
+    let mut index = 1u32
+    let _ = while index {
+      current => if current < length {
+        values.push(self_host_flow_empty())
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
   }
   values
