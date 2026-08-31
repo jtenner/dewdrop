@@ -24,6 +24,7 @@ pub enum SelfHostPlannedWasmPhysicalTypeKind {
   PlannedWasmStructType(U64)
   PlannedWasmForeignMarkerType(U64)
   PlannedWasmEnumBaseType(U64)
+  PlannedWasmEnumMarkerType(U64, U64, U32, U32)
   PlannedWasmEnumSubtypeType(U64, U64, U32)
   PlannedWasmClosureType
   PlannedWasmCaptureCellType(U32)
@@ -323,6 +324,7 @@ fn self_host_wasmgc_plan_types(
           }
           offset: layout.offset
         })
+        let mut marker_super = type_index
         let mut variant = 0u32
         let _ = while variant {
           current => if current < variants.length {
@@ -385,6 +387,22 @@ fn self_host_wasmgc_plan_types(
                 }
               }
             }
+            let marker_index = physical_types.length()
+            physical_types.push(SelfHostPlannedWasmPhysicalType::{
+              kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(
+                layout.declaration,
+                source.variant,
+                source.tag,
+                marker_super,
+              )
+              type_index: marker_index
+              fields: SelfHostHirSpan::{
+                start: field_start
+                length: 0u32
+              }
+              offset: source.offset
+            })
+            marker_super = marker_index
             physical_types.push(SelfHostPlannedWasmPhysicalType::{
               kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
                 layout.declaration,

@@ -20768,6 +20768,20 @@ fn self_host_linked_physical_field_at(
   module_.fields[index]
 }
 
+fn self_host_linked_fragment_type_index(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_index: U32,
+  fragment_index: U32,
+) -> Option<U32> {
+  for linked_type in link.types {
+    if self_host_u32_equal(linked_type.module_index, module_index) &&
+      self_host_u32_equal(linked_type.fragment_index, fragment_index) {
+      return Option::Some(linked_type.type_index)
+    }
+  }
+  Option::None
+}
+
 fn self_host_linked_enum_base_type_index(
   link: SelfHostPlannedProgramWasmGCLink,
   declaration: U64,
@@ -20783,6 +20797,33 @@ fn self_host_linked_enum_base_type_index(
         candidate,
         declaration,
       ) {
+        return Option::Some(linked_type.type_index)
+      }
+      _ => {}
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_enum_marker_type_index(
+  link: SelfHostPlannedProgramWasmGCLink,
+  declaration: U64,
+  variant: U64,
+) -> Option<U32> {
+  for linked_type in link.types {
+    let module_ = link.fragments.modules[linked_type.module_index]
+    let physical = self_host_linked_physical_type_at(
+      module_,
+      linked_type.fragment_index,
+    )
+    match physical.kind {
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(
+        candidate_declaration,
+        candidate_variant,
+        _,
+        _,
+      ) => if self_host_u64_equal(candidate_declaration, declaration) &&
+        self_host_u64_equal(candidate_variant, variant) {
         return Option::Some(linked_type.type_index)
       }
       _ => {}
@@ -21091,11 +21132,42 @@ fn self_host_linked_append_physical_types(
           return Option::Some("linked lambda closure has no closure base type")
         }
       }
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(
+        _,
+        _,
+        _,
+        super_fragment,
+      ) => match self_host_linked_fragment_type_index(
+        link,
+        linked_type.module_index,
+        super_fragment,
+      ) {
+        Option::Some(super_type) => {
+          let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+          StarshineFfi.ffi_ffi_bridge_type_indices_push(
+            supers,
+            StarshineFfi.ffi_lib_TypeIdx_new(super_type.into()),
+          )
+          StarshineFfi.ffi_lib_SubType_new(
+            0i32,
+            supers,
+            component,
+            wasm_ref_null(),
+          )
+        }
+        Option::None => {
+          return Option::Some("linked enum marker has no super type")
+        }
+      }
       SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
         declaration,
+        variant,
         _,
-        _,
-      ) => match self_host_linked_enum_base_type_index(link, declaration) {
+      ) => match self_host_linked_enum_marker_type_index(
+        link,
+        declaration,
+        variant,
+      ) {
         Option::Some(base) => {
           let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
           StarshineFfi.ffi_ffi_bridge_type_indices_push(
@@ -21110,7 +21182,7 @@ fn self_host_linked_append_physical_types(
           )
         }
         Option::None => {
-          return Option::Some("linked enum subtype has no base type")
+          return Option::Some("linked enum subtype has no marker type")
         }
       }
       _ => StarshineFfi.ffi_lib_SubType_comp_type(

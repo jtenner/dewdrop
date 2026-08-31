@@ -79,7 +79,7 @@ test "WasmGC fragments plan nominal struct and enum families" {
     b"struct Point {\n  x: I32\n  y: I64\n}\nenum State {\n  Idle\n  Ready(I32)\n}\npub fn run() -> I32 {\n  1\n}\n",
   )
   let module_ = plan.modules[0u32]
-  assert(self_host_u32_equal(self_host_wasmgc_physical_type_count(module_), 4u32), "struct enum base and variants")
+  assert(self_host_u32_equal(self_host_wasmgc_physical_type_count(module_), 6u32), "struct enum base markers and variants")
   assert(self_host_u32_equal(self_host_wasmgc_field_count(module_), 3u32), "struct and variant fields")
   let struct_type = self_host_wasmgc_physical_type_at(module_, 0u32)
   match struct_type.kind {
@@ -91,7 +91,23 @@ test "WasmGC fragments plan nominal struct and enum families" {
     SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(_) => {}
     _ => assert(false, "enum base")
   }
-  let ready_type = self_host_wasmgc_physical_type_at(module_, 3u32)
+  let idle_marker = self_host_wasmgc_physical_type_at(module_, 2u32)
+  match idle_marker.kind {
+    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(_, _, tag, _) => assert(
+      self_host_u32_equal(tag, 0u32),
+      "idle marker tag",
+    )
+    _ => assert(false, "idle marker")
+  }
+  let ready_marker = self_host_wasmgc_physical_type_at(module_, 4u32)
+  match ready_marker.kind {
+    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(_, _, tag, super_) => {
+      assert(self_host_u32_equal(tag, 1u32), "ready marker tag")
+      assert(self_host_u32_equal(super_, 2u32), "ready marker super")
+    }
+    _ => assert(false, "ready marker")
+  }
+  let ready_type = self_host_wasmgc_physical_type_at(module_, 5u32)
   assert(self_host_u32_equal(ready_type.fields.length, 1u32), "tuple variant field span")
   match self_host_wasmgc_field_at(module_, ready_type.fields.start).role {
     SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(_, index) => assert(
@@ -207,7 +223,7 @@ test "WasmGC fragments retain exact nominal multi-field tuple payloads" {
     current => if current < self_host_wasmgc_physical_type_count(module_) {
       let type_ = self_host_wasmgc_physical_type_at(module_, current)
       match type_.kind {
-        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmVariantType(_, _) => if type_.fields.length == 2u32 {
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(_, _, _) => if type_.fields.length == 2u32 {
           let payload = self_host_wasmgc_field_at(module_, type_.fields.start)
           assert(payload.exact_nominal, "struct payload keeps exact nominal type")
           found = true
