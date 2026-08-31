@@ -23,6 +23,14 @@ fn self_host_flow_u64_at(values: Array<U64>, index: U32) -> U64 {
   array_get_unchecked(values, index)
 }
 
+fn self_host_flow_i32_at(values: Array<I32>, index: U32) -> I32 {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_flow_u32_at(values: Array<U32>, index: U32) -> U32 {
+  array_get_unchecked(values, index)
+}
+
 pub enum SelfHostBodyFlowDiagnostic {
   NonExhaustiveMatch(U32, SelfHostHirSpan, U32)
   NonExhaustiveFunctionalLoop(U32, SelfHostHirSpan, U32)
@@ -382,10 +390,8 @@ impl SelfHostBodyFlowAnalyzer {
     let tasks = [self.inferred.expression_types[expression - self.body.expressions.start]]
     while tasks.length() {
       length => if self_host_u32_greater(length, 0u32) {
-        let type_ = match tasks.pop() {
-          Option::Some(value) => value
-          Option::None => 0i32
-        }
+        let type_ = self_host_flow_i32_at(tasks, length - 1u32)
+        tasks.truncate(length - 1u32)
         match self.inferred.type_term(type_) {
           SelfHostBodyTypeTerm::BodyAppliedType(base, _) => tasks.push(base)
           SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => {
@@ -436,10 +442,8 @@ impl SelfHostBodyFlowAnalyzer {
     let tasks = [pattern]
     while tasks.length() {
       length => if self_host_u32_greater(length, 0u32) {
-        let current = match tasks.pop() {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
+        let current = self_host_flow_u32_at(tasks, length - 1u32)
+        tasks.truncate(length - 1u32)
         match self.collected.patterns[current] {
           SelfHostHirPattern::WildcardPattern(_) => {
             return true
@@ -528,10 +532,8 @@ impl SelfHostBodyFlowAnalyzer {
     let tasks = [pattern]
     while tasks.length() {
       length => if self_host_u32_greater(length, 0u32) {
-        let current = match tasks.pop() {
-          Option::Some(item) => item
-          Option::None => 0u32
-        }
+        let current = self_host_flow_u32_at(tasks, length - 1u32)
+        tasks.truncate(length - 1u32)
         match self.collected.patterns[current] {
           SelfHostHirPattern::LiteralPattern(expression, _) => match self.collected.expressions[
             expression
@@ -594,10 +596,8 @@ impl SelfHostBodyFlowAnalyzer {
     let tasks = [pattern]
     while tasks.length() {
       length => if self_host_u32_greater(length, 0u32) {
-        let current = match tasks.pop() {
-          Option::Some(item) => item
-          Option::None => 0u32
-        }
+        let current = self_host_flow_u32_at(tasks, length - 1u32)
+        tasks.truncate(length - 1u32)
         match self.collected.patterns[current] {
           SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
             tasks.push(first)

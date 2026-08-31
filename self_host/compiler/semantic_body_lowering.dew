@@ -2,7 +2,85 @@ open dew.std.array
 open dew.std.option
 
 fn self_host_empty_semantic_ids() -> Array<U32> {
-  []
+  let values = [0u32]
+  values.truncate(0u32)
+  values
+}
+
+fn self_host_body_lowering_u32_at(
+  values: Array<U32>,
+  index: U32,
+) -> U32 {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_lowering_pattern_arm_at(
+  values: Array<SelfHostPatternArm>,
+  index: U32,
+) -> SelfHostPatternArm {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_lowering_expression_at(
+  values: Array<SelfHostExpr>,
+  index: U32,
+) -> SelfHostExpr {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_lowering_object_field_at(
+  values: Array<SelfHostObjectField>,
+  index: U32,
+) -> SelfHostObjectField {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_lowering_parameter_at(
+  values: Array<SelfHostFnParameter>,
+  index: U32,
+) -> SelfHostFnParameter {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_lowering_type_at(
+  values: Array<SelfHostTypeExpr>,
+  index: U32,
+) -> SelfHostTypeExpr {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_lowering_pattern_at(
+  values: Array<SelfHostPattern>,
+  index: U32,
+) -> SelfHostPattern {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_lowering_pattern_field_at(
+  values: Array<SelfHostPatternField>,
+  index: U32,
+) -> SelfHostPatternField {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_lowering_block_item_at(
+  values: Array<SelfHostBlockItem>,
+  index: U32,
+) -> SelfHostBlockItem {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_lowering_hir_block_item_at(
+  values: Array<SelfHostHirBlockItem>,
+  index: U32,
+) -> SelfHostHirBlockItem {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_empty_lowered_block_items() -> Array<SelfHostHirBlockItem> {
+  let values = [SelfHostHirBlockItem::ExpressionItem(0u32, 0u32)]
+  values.truncate(0u32)
+  values
 }
 
 impl SelfHostCollectionBuilder {
@@ -28,12 +106,30 @@ impl SelfHostCollectionBuilder {
     values: Array<SelfHostExpr>,
   ) -> SelfHostHirSpan {
     let lowered = self_host_empty_semantic_ids()
-    for value in values {
-      lowered.push(self.lower_expression(value))
+    let mut value_index = 0u32
+    let _ = while value_index {
+      current => if current < values.length() {
+        lowered.push(
+          self.lower_expression(
+            self_host_body_lowering_expression_at(values, current),
+          ),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let start = self.expression_children.length()
-    for value in lowered {
-      self.expression_children.push(value)
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < lowered.length() {
+        self.expression_children.push(
+          self_host_body_lowering_u32_at(lowered, current),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     SelfHostHirSpan::{
       start: start
@@ -46,21 +142,33 @@ impl SelfHostCollectionBuilder {
     fields: Array<SelfHostObjectField>,
   ) -> SelfHostHirSpan {
     let lowered = self_host_empty_semantic_ids()
-    for field in fields {
-      lowered.push(self.lower_expression(field.value))
+    let mut field_index = 0u32
+    let _ = while field_index {
+      current => if current < fields.length() {
+        let field = self_host_body_lowering_object_field_at(fields, current)
+        lowered.push(self.lower_expression(field.value))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let start = self.object_fields.length()
-    let mut field_index = 0u32
-    for field in fields {
-      self.object_fields.push(
-        SelfHostHirObjectField::{
-          name: self.intern(field.name)
-          value: lowered[field_index]
-          offset: field.offset
-        },
-      )
-      self.object_field_files.push(self.state.current_file)
-      field_index = field_index + 1u32
+    field_index = 0u32
+    let _ = while field_index {
+      current => if current < fields.length() {
+        let field = self_host_body_lowering_object_field_at(fields, current)
+        self.object_fields.push(
+          SelfHostHirObjectField::{
+            name: self.intern(field.name)
+            value: self_host_body_lowering_u32_at(lowered, current)
+            offset: field.offset
+          },
+        )
+        self.object_field_files.push(self.state.current_file)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     SelfHostHirSpan::{
       start: start
@@ -77,15 +185,25 @@ impl SelfHostCollectionBuilder {
   ) -> U32 {
     let id = self.pending_lambda_bodies.length()
     let parameter_start = self.lambda_parameters.length()
-    for parameter in parameters {
-      self.lambda_parameters.push(
-        SelfHostHirLambdaParameter::{
-          name: self.intern(parameter.name)
-          type_: self.lower_type(parameter.type_)
-          offset: parameter.offset
-        },
-      )
-      self.lambda_parameter_files.push(self.state.current_file)
+    let mut parameter_index = 0u32
+    let _ = while parameter_index {
+      current => if current < parameters.length() {
+        let parameter = self_host_body_lowering_parameter_at(
+          parameters,
+          current,
+        )
+        self.lambda_parameters.push(
+          SelfHostHirLambdaParameter::{
+            name: self.intern(parameter.name)
+            type_: self.lower_type(parameter.type_)
+            offset: parameter.offset
+          },
+        )
+        self.lambda_parameter_files.push(self.state.current_file)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     self.pending_lambda_parameters.push(
       SelfHostHirSpan::{
@@ -328,8 +446,18 @@ impl SelfHostCollectionBuilder {
           SelfHostHirExpr::CallExpr(target_id, arguments, offset),
         )
         let type_start = self.explicit_call_type_arguments.length()
-        for type_ in type_arguments {
-          self.explicit_call_type_arguments.push(self.lower_type(type_))
+        let mut type_index = 0u32
+        let _ = while type_index {
+          current => if current < type_arguments.length() {
+            self.explicit_call_type_arguments.push(
+              self.lower_type(
+                self_host_body_lowering_type_at(type_arguments, current),
+              ),
+            )
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         self.explicit_call_type_argument_spans[expression] = SelfHostHirSpan::{
           start: type_start
@@ -403,12 +531,30 @@ impl SelfHostCollectionBuilder {
       SelfHostPattern::TuplePattern(base, arguments, offset) => {
         let base_id = self.lower_pattern(base)
         let lowered = self_host_empty_semantic_ids()
-        for argument in arguments {
-          lowered.push(self.lower_pattern(argument))
+        let mut argument_index = 0u32
+        let _ = while argument_index {
+          current => if current < arguments.length() {
+            lowered.push(
+              self.lower_pattern(
+                self_host_body_lowering_pattern_at(arguments, current),
+              ),
+            )
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         let start = self.pattern_children.length()
-        for argument in lowered {
-          self.pattern_children.push(argument)
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < lowered.length() {
+            self.pattern_children.push(
+              self_host_body_lowering_u32_at(lowered, current),
+            )
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         self.emit_pattern(
           SelfHostHirPattern::TuplePattern(
@@ -424,21 +570,39 @@ impl SelfHostCollectionBuilder {
       SelfHostPattern::StructPattern(base, fields, rest, offset) => {
         let base_id = self.lower_pattern(base)
         let lowered = self_host_empty_semantic_ids()
-        for field in fields {
-          lowered.push(self.lower_pattern(field.pattern))
+        let mut field_index = 0u32
+        let _ = while field_index {
+          current => if current < fields.length() {
+            let field = self_host_body_lowering_pattern_field_at(
+              fields,
+              current,
+            )
+            lowered.push(self.lower_pattern(field.pattern))
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         let start = self.pattern_fields.length()
-        let mut field_index = 0u32
-        for field in fields {
-          self.pattern_fields.push(
-            SelfHostHirPatternField::{
-              name: self.intern(field.name)
-              pattern: lowered[field_index]
-              offset: field.offset
-            },
-          )
-          self.pattern_field_files.push(self.state.current_file)
-          field_index = field_index + 1u32
+        field_index = 0u32
+        let _ = while field_index {
+          current => if current < fields.length() {
+            let field = self_host_body_lowering_pattern_field_at(
+              fields,
+              current,
+            )
+            self.pattern_fields.push(
+              SelfHostHirPatternField::{
+                name: self.intern(field.name)
+                pattern: self_host_body_lowering_u32_at(lowered, current)
+                offset: field.offset
+              },
+            )
+            self.pattern_field_files.push(self.state.current_file)
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         let has_rest = rest is Option::Some(_)
         let rest_offset = match rest {
@@ -461,12 +625,30 @@ impl SelfHostCollectionBuilder {
       SelfHostPattern::AlternativePattern(first, remaining, offset) => {
         let first_id = self.lower_pattern(first)
         let lowered = self_host_empty_semantic_ids()
-        for pattern in remaining {
-          lowered.push(self.lower_pattern(pattern))
+        let mut pattern_index = 0u32
+        let _ = while pattern_index {
+          current => if current < remaining.length() {
+            lowered.push(
+              self.lower_pattern(
+                self_host_body_lowering_pattern_at(remaining, current),
+              ),
+            )
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         let start = self.pattern_children.length()
-        for pattern in lowered {
-          self.pattern_children.push(pattern)
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < lowered.length() {
+            self.pattern_children.push(
+              self_host_body_lowering_u32_at(lowered, current),
+            )
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
         self.emit_pattern(
           SelfHostHirPattern::AlternativePattern(
@@ -487,28 +669,43 @@ impl SelfHostCollectionBuilder {
     arms: Array<SelfHostPatternArm>,
   ) -> SelfHostHirSpan {
     let lowered = self_host_empty_semantic_ids()
-    for arm in arms {
-      let pattern = self.lower_pattern(arm.pattern)
-      let guard = match arm.guard_condition {
-        Option::Some(value) => self.lower_expression(value)
-        Option::None => 4294967295u32
+    let mut arm_index = 0u32
+    let _ = while arm_index {
+      current => if current < arms.length() {
+        let arm = self_host_body_lowering_pattern_arm_at(arms, current)
+        let pattern = self.lower_pattern(arm.pattern)
+        let guard = match arm.guard_condition {
+          Option::Some(value) => self.lower_expression(value)
+          Option::None => 4294967295u32
+        }
+        let body = self.lower_expression(arm.body)
+        let id = self.pattern_arms.length()
+        self.pattern_arms.push(
+          SelfHostHirPatternArm::{
+            pattern: pattern
+            guard_condition: guard
+            body: body
+            offset: arm.offset
+          },
+        )
+        self.pattern_arm_files.push(self.state.current_file)
+        lowered.push(id)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      let body = self.lower_expression(arm.body)
-      let id = self.pattern_arms.length()
-      self.pattern_arms.push(
-        SelfHostHirPatternArm::{
-          pattern: pattern
-          guard_condition: guard
-          body: body
-          offset: arm.offset
-        },
-      )
-      self.pattern_arm_files.push(self.state.current_file)
-      lowered.push(id)
     }
     let start = self.arm_children.length()
-    for arm in lowered {
-      self.arm_children.push(arm)
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < lowered.length() {
+        self.arm_children.push(
+          self_host_body_lowering_u32_at(lowered, current),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     SelfHostHirSpan::{
       start: start
@@ -517,9 +714,12 @@ impl SelfHostCollectionBuilder {
   }
 
   fn lower_block(self, source: SelfHostBlock) -> U32 {
-    let lowered_items = []
-    for item in source.items {
-      match item {
+    let lowered_items = self_host_empty_lowered_block_items()
+    let mut source_item_index = 0u32
+    let _ = while source_item_index {
+      current => if current < source.items.length() {
+        let item = self_host_body_lowering_block_item_at(source.items, current)
+        match item {
         SelfHostBlockItem::LetItem(mutable_, name, name_offset, value, offset) => {
           let value_id = self.lower_expression(value)
           if name == "_" {
@@ -584,12 +784,24 @@ impl SelfHostCollectionBuilder {
             SelfHostHirBlockItem::ExpressionItem(expression, offset),
           )
         }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
     let item_start = self.block_items.length()
-    for item in lowered_items {
-      self.block_items.push(item)
-      self.block_item_files.push(self.state.current_file)
+    let mut item_index = 0u32
+    let _ = while item_index {
+      current => if current < lowered_items.length() {
+        self.block_items.push(
+          self_host_body_lowering_hir_block_item_at(lowered_items, current),
+        )
+        self.block_item_files.push(self.state.current_file)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let id = self.blocks.length()
     self.blocks.push(

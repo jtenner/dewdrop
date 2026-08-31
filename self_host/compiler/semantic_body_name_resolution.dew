@@ -7,6 +7,10 @@ fn self_host_body_name_u32_at(values: Array<U32>, index: U32) -> U32 {
   array_get_unchecked(values, index)
 }
 
+fn self_host_body_name_bool_at(values: Array<Bool>, index: U32) -> Bool {
+  array_get_unchecked(values, index)
+}
+
 fn self_host_body_name_fail() -> Unit {
   let empty = self_host_u32_slots(0u32, 0u32)
   let _ = empty[0u32]
@@ -979,14 +983,20 @@ impl SelfHostBodyNameResolver {
     self.pattern_contexts.push(true)
     while self.pattern_stack.length() {
       length => if length > 0u32 {
-        let pattern = match self.pattern_stack.pop() {
-          Option::Some(value) => value
-          Option::None => 4294967295u32
+        if self.pattern_contexts.length() != length {
+          self_host_body_name_fail()
+          break self_host_semantic_unit()
         }
-        let binding_context = match self.pattern_contexts.pop() {
-          Option::Some(value) => value
-          Option::None => false
-        }
+        let pattern = self_host_body_name_u32_at(
+          self.pattern_stack,
+          length - 1u32,
+        )
+        let binding_context = self_host_body_name_bool_at(
+          self.pattern_contexts,
+          length - 1u32,
+        )
+        self.pattern_stack.truncate(length - 1u32)
+        self.pattern_contexts.truncate(length - 1u32)
         match self.collected.patterns[pattern] {
           SelfHostHirPattern::WildcardPattern(_) => {}
           SelfHostHirPattern::RestPattern(_) => {}

@@ -222,8 +222,14 @@ impl SelfHostLocalTypeSolver {
 
   fn product_type(self, fields: Array<I32>) -> I32 {
     let start = self.type_arguments.length()
-    for field in fields {
-      self.type_arguments.push(field)
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < fields.length() {
+        self.type_arguments.push(self_host_local_i32_at(fields, current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     self.push_type_term(
       SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
@@ -235,8 +241,14 @@ impl SelfHostLocalTypeSolver {
 
   fn applied_type(self, base: I32, arguments: Array<I32>) -> I32 {
     let start = self.type_arguments.length()
-    for argument in arguments {
-      self.type_arguments.push(argument)
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < arguments.length() {
+        self.type_arguments.push(self_host_local_i32_at(arguments, current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     self.push_type_term(
       SelfHostBodyTypeTerm::BodyAppliedType(
@@ -251,8 +263,14 @@ impl SelfHostLocalTypeSolver {
 
   fn function_type(self, parameters: Array<I32>, result: I32) -> I32 {
     let start = self.type_arguments.length()
-    for parameter in parameters {
-      self.type_arguments.push(parameter)
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < parameters.length() {
+        self.type_arguments.push(self_host_local_i32_at(parameters, current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     self.push_type_term(
       SelfHostBodyTypeTerm::BodyFunctionType(
@@ -400,10 +418,11 @@ impl SelfHostLocalTypeSolver {
     self.occurs_stack.push(type_)
     let _ = while self.occurs_stack.length() {
       length => if length > 0u32 {
-        let popped = match self.occurs_stack.pop() {
-          Option::Some(value) => value
-          Option::None => self.error_type()
-        }
+        let popped = self_host_local_i32_at(
+          self.occurs_stack,
+          length - 1u32,
+        )
+        self.occurs_stack.truncate(length - 1u32)
         let current = self.representative_type(popped)
         if current < -1i32 {
           let resolved_id = self.decoded_resolved_type(current)
@@ -522,7 +541,10 @@ impl SelfHostLocalTypeSolver {
       remaining => if remaining > 0u32 {
         let next = remaining - 1u32
         output.push(
-          self.type_arguments[self_host_u32_add(span.start, next)],
+          self_host_local_i32_at(
+            self.type_arguments,
+            self_host_u32_add(span.start, next),
+          ),
         )
         continue next
       } else {
@@ -1440,10 +1462,11 @@ impl SelfHostLocalTypeSolver {
     self.occurs_stack.push(representative)
     let _ = while self.occurs_stack.length() {
       length => if length > 0u32 {
-        let popped = match self.occurs_stack.pop() {
-          Option::Some(value) => value
-          Option::None => self.error_type()
-        }
+        let popped = self_host_local_i32_at(
+          self.occurs_stack,
+          length - 1u32,
+        )
+        self.occurs_stack.truncate(length - 1u32)
         let current = self.representative_type(popped)
         if current < -1i32 {
           let resolved_id = self.decoded_resolved_type(current)

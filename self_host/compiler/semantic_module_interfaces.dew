@@ -40,6 +40,13 @@ fn self_host_interface_string_at(
   array_get_unchecked(values, index)
 }
 
+fn self_host_module_interface_u32_at(
+  values: Array<U32>,
+  index: U32,
+) -> U32 {
+  array_get_unchecked(values, index)
+}
+
 fn self_host_module_path_segment_matches_at(
   candidate: String,
   segment: String,
@@ -492,10 +499,8 @@ fn self_host_frozen_impl_type_visible(
   let mut visible = true
   let _ = while work.length() {
     length => if length > 0u32 {
-      let current = match work.pop() {
-        Option::Some(value) => value
-        Option::None => resolved.error_type
-      }
+      let current = self_host_module_interface_u32_at(work, length - 1u32)
+      work.truncate(length - 1u32)
       match resolved.types[current] {
         SelfHostResolvedType::ErrorType => {
           visible = false
