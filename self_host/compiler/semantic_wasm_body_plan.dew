@@ -2923,6 +2923,74 @@ fn self_host_body_force_call_arguments(
   changed
 }
 
+fn self_host_body_empty_physical_values(
+) -> Array<SelfHostPlannedPhysicalValueInfo> {
+  let values = [SelfHostPlannedPhysicalValueInfo::{
+    logical_type: -1i32
+    carrier: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    nominal_owner: 0u64
+    physical_heap_type: 4294967295u32
+  }]
+  values.truncate(0u32)
+  values
+}
+
+fn self_host_body_physical_expression_at(
+  values: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  index: U32,
+) -> SelfHostPlannedPhysicalExpressionCarrier {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_empty_physical_expressions(
+) -> Array<SelfHostPlannedPhysicalExpressionCarrier> {
+  let values = [SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: 0u32
+    value: SelfHostPlannedPhysicalValueInfo::{
+      logical_type: -1i32
+      carrier: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+      nominal_owner: 0u64
+      physical_heap_type: 4294967295u32
+    }
+    carrier: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    receiver_expression: 4294967295u32
+    receiver_logical_type: -1i32
+    receiver_nominal_owner: 0u64
+    receiver_physical_heap_type: 4294967295u32
+    selected_field: 0u64
+    selected_type_index: 4294967295u32
+    selected_field_index: 4294967295u32
+    selected_storage: Option::None
+    call_function_index: 4294967295u32
+  }]
+  values.truncate(0u32)
+  values
+}
+
+fn self_host_body_empty_carriers() -> Array<SelfHostWasmBodyCarrier> {
+  let values = [SelfHostWasmBodyCarrier::UnresolvedBodyCarrier]
+  values.truncate(0u32)
+  values
+}
+
+fn self_host_body_empty_scratches(
+) -> Array<SelfHostPlannedPhysicalScratchCarrier> {
+  let values = [SelfHostPlannedPhysicalScratchCarrier::{
+    expression: 0u32
+    ordinal: 0u32
+    value: SelfHostPlannedPhysicalValueInfo::{
+      logical_type: -1i32
+      carrier: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+      nominal_owner: 0u64
+      physical_heap_type: 4294967295u32
+    }
+    carrier: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    context: ""
+  }]
+  values.truncate(0u32)
+  values
+}
+
 fn self_host_plan_one_physical_body(
   link: SelfHostPlannedProgramWasmGCLink,
   indexes: SelfHostPhysicalBodyIndexes,
@@ -2941,7 +3009,7 @@ fn self_host_plan_one_physical_body(
     fragment_module,
     linked_function.fragment_index,
   )
-  let expressions = []
+  let expressions = self_host_body_empty_physical_expressions()
   let mut expression = body.expressions.start
   let expression_end = self_host_u32_add(body.expressions.start, body.expressions.length)
   let _ = while expression {
@@ -2961,8 +3029,8 @@ fn self_host_plan_one_physical_body(
       break self_host_semantic_unit()
     }
   }
-  let local_values = []
-  let locals = []
+  let local_values = self_host_body_empty_physical_values()
+  let locals = self_host_body_empty_carriers()
   let mut parameter_index = if lambda == 4294967295u32 {
     0u32
   } else {
@@ -3071,18 +3139,25 @@ fn self_host_plan_one_physical_body(
       break self_host_semantic_unit()
     }
   }
-  let control_state_values = []
-  let control_states = []
-  let control_result_values = []
-  let control_results = []
+  let control_state_values = self_host_body_empty_physical_values()
+  let control_states = self_host_body_empty_carriers()
+  let control_result_values = self_host_body_empty_physical_values()
+  let control_results = self_host_body_empty_carriers()
   let mut maximum_control = 0u32
-  for planned in expressions {
-    match module_.expressions[planned.expression].kind {
-      SelfHostPlannedExpressionKind::PlannedWhileExpression(control, _, _) => if control != 4294967295u32 &&
-        control >= maximum_control {
-        maximum_control = self_host_u32_add(control, 1u32)
+  let mut control_plan_index = 0u32
+  while control_plan_index {
+    current => if current < expressions.length() {
+      let planned = self_host_body_physical_expression_at(expressions, current)
+      match module_.expressions[planned.expression].kind {
+        SelfHostPlannedExpressionKind::PlannedWhileExpression(control, _, _) => if control != 4294967295u32 &&
+          control >= maximum_control {
+          maximum_control = self_host_u32_add(control, 1u32)
+        }
+        _ => {}
       }
-      _ => {}
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   let mut control = 0u32
@@ -4113,29 +4188,39 @@ fn self_host_plan_one_physical_body(
       break self_host_semantic_unit()
     }
   }
-  for expression_plan in expressions {
-    match module_.expressions[expression_plan.expression].kind {
-      SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _) => {
-        let _ = self_host_body_plan_resolve_field(
-          link,
-          indexes,
-          module_,
-          body,
-          expressions,
-          expression_plan.expression,
-        )
+  let mut field_plan_index = 0u32
+  while field_plan_index {
+    current => if current < expressions.length() {
+      let expression_plan = self_host_body_physical_expression_at(
+        expressions,
+        current,
+      )
+      match module_.expressions[expression_plan.expression].kind {
+        SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _) => {
+          let _ = self_host_body_plan_resolve_field(
+            link,
+            indexes,
+            module_,
+            body,
+            expressions,
+            expression_plan.expression,
+          )
+        }
+        SelfHostPlannedExpressionKind::PlannedUnresolvedField(_, _) => {
+          let _ = self_host_body_plan_resolve_field(
+            link,
+            indexes,
+            module_,
+            body,
+            expressions,
+            expression_plan.expression,
+          )
+        }
+        _ => {}
       }
-      SelfHostPlannedExpressionKind::PlannedUnresolvedField(_, _) => {
-        let _ = self_host_body_plan_resolve_field(
-          link,
-          indexes,
-          module_,
-          body,
-          expressions,
-          expression_plan.expression,
-        )
-      }
-      _ => {}
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   let mut final_local_offset = 0u32
@@ -4179,106 +4264,161 @@ fn self_host_plan_one_physical_body(
       break self_host_semantic_unit()
     }
   }
-  for expression_plan in expressions {
-    match module_.expressions[expression_plan.expression].kind {
-      SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => {
-        let _ = self_host_body_force_call_result(
-          link,
-          module_,
-          body,
-          expression_plan.expression,
-          expression_plan.call_function_index,
-          expressions,
-          local_values,
-          locals,
-        )
-      }
-      SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => {
-        let _ = self_host_body_force_call_result(
-          link,
-          module_,
-          body,
-          expression_plan.expression,
-          expression_plan.call_function_index,
-          expressions,
-          local_values,
-          locals,
-        )
-      }
-      _ => {}
-    }
-  }
-  for expression_plan in expressions {
-    let planned_expression = module_.expressions[expression_plan.expression]
-    match planned_expression.kind {
-      SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => if self_host_u32_greater(
-        arguments.length,
-        0u32,
-      ) {
-        let declaration = match planned_expression.call_target {
-          SelfHostBasicCallTarget::SelectedBasicCallTarget(value, _) => value
-          _ => self_host_body_function_declaration(
+  let mut call_plan_index = 0u32
+  while call_plan_index {
+    current => if current < expressions.length() {
+      let expression_plan = self_host_body_physical_expression_at(
+        expressions,
+        current,
+      )
+      match module_.expressions[expression_plan.expression].kind {
+        SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => {
+          let _ = self_host_body_force_call_result(
             link,
+            module_,
+            body,
+            expression_plan.expression,
             expression_plan.call_function_index,
+            expressions,
+            local_values,
+            locals,
           )
         }
-        if !self_host_u64_equal(declaration, 0u64) {
-          let child_index = self_host_u32_add(
-            arguments.start,
-            arguments.length - 1u32,
+        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => {
+          let _ = self_host_body_force_call_result(
+            link,
+            module_,
+            body,
+            expression_plan.expression,
+            expression_plan.call_function_index,
+            expressions,
+            local_values,
+            locals,
           )
-          if child_index < module_.expression_children.length() {
-            let argument_expression = module_.expression_children[child_index]
-            if argument_expression >= body.expressions.start &&
-              argument_expression < expression_end {
-              let argument_carrier = expressions[
-                self_host_body_expression_slot(body, argument_expression)
-              ].carrier
-              self_host_body_plan_set_call_function(
-                body,
-                expressions,
-                expression_plan.expression,
-                self_host_body_unique_function_for_last_parameter_carrier(
-                  link,
-                  declaration,
-                  argument_carrier,
-                ),
-              )
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut argument_plan_index = 0u32
+  while argument_plan_index {
+    current => if current < expressions.length() {
+      let expression_plan = self_host_body_physical_expression_at(
+        expressions,
+        current,
+      )
+      let planned_expression = module_.expressions[expression_plan.expression]
+      match planned_expression.kind {
+        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => if self_host_u32_greater(
+          arguments.length,
+          0u32,
+        ) {
+          let declaration = match planned_expression.call_target {
+            SelfHostBasicCallTarget::SelectedBasicCallTarget(value, _) => value
+            _ => self_host_body_function_declaration(
+              link,
+              expression_plan.call_function_index,
+            )
+          }
+          if !self_host_u64_equal(declaration, 0u64) {
+            let child_index = self_host_u32_add(
+              arguments.start,
+              arguments.length - 1u32,
+            )
+            if child_index < module_.expression_children.length() {
+              let argument_expression = module_.expression_children[child_index]
+              if argument_expression >= body.expressions.start &&
+                argument_expression < expression_end {
+                let argument_carrier = expressions[
+                  self_host_body_expression_slot(body, argument_expression)
+                ].carrier
+                self_host_body_plan_set_call_function(
+                  body,
+                  expressions,
+                  expression_plan.expression,
+                  self_host_body_unique_function_for_last_parameter_carrier(
+                    link,
+                    declaration,
+                    argument_carrier,
+                  ),
+                )
+              }
             }
           }
         }
+        _ => {}
       }
-      _ => {}
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
-  for expression_plan in expressions {
-    match module_.expressions[expression_plan.expression].kind {
-      SelfHostPlannedExpressionKind::PlannedContinueExpression(
-        loop_control,
-        value,
-      ) => if loop_control < control_state_values.length() &&
-        value >= body.expressions.start && value < expression_end {
-        let boundary_value = match self_host_body_loop_initial_value(
-          module_,
-          body,
-          expressions,
+  let mut transfer_plan_index = 0u32
+  while transfer_plan_index {
+    current => if current < expressions.length() {
+      let expression_plan = self_host_body_physical_expression_at(
+        expressions,
+        current,
+      )
+      match module_.expressions[expression_plan.expression].kind {
+        SelfHostPlannedExpressionKind::PlannedContinueExpression(
           loop_control,
-        ) {
-          Option::Some(initial_value) => if !(
-            initial_value.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+          value,
+        ) => if loop_control < control_state_values.length() &&
+          value >= body.expressions.start && value < expression_end {
+          let boundary_value = match self_host_body_loop_initial_value(
+            module_,
+            body,
+            expressions,
+            loop_control,
           ) {
-            initial_value
-          } else {
-            control_state_values[loop_control]
+            Option::Some(initial_value) => if !(
+              initial_value.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+            ) {
+              initial_value
+            } else {
+              control_state_values[loop_control]
+            }
+            Option::None => control_state_values[loop_control]
           }
-          Option::None => control_state_values[loop_control]
+          if !(boundary_value.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+            let _ = self_host_body_plan_force_expression_value(
+              body,
+              expressions,
+              value,
+              boundary_value,
+            )
+            match self_host_body_wrapped_local_get(module_, value) {
+              Option::Some(local_id) => {
+                let slot = self_host_body_local_slot(module_, body, local_id)
+                if slot < local_values.length() && slot < locals.length() {
+                  let _ = self_host_body_plan_force_local_value(
+                    local_values,
+                    locals,
+                    slot,
+                    boundary_value,
+                  )
+                }
+              }
+              Option::None => {}
+            }
+          }
         }
-        if !(boundary_value.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+        SelfHostPlannedExpressionKind::PlannedBreakExpression(
+          loop_control,
+          value,
+        ) => if loop_control < control_result_values.length() &&
+          value >= body.expressions.start && value < expression_end && !(
+            control_result_values[loop_control].carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+          ) {
           let _ = self_host_body_plan_force_expression_value(
             body,
             expressions,
             value,
-            boundary_value,
+            control_result_values[loop_control],
           )
           match self_host_body_wrapped_local_get(module_, value) {
             Option::Some(local_id) => {
@@ -4288,99 +4428,84 @@ fn self_host_plan_one_physical_body(
                   local_values,
                   locals,
                   slot,
-                  boundary_value,
+                  control_result_values[loop_control],
                 )
               }
             }
             Option::None => {}
           }
         }
+        _ => {}
       }
-      SelfHostPlannedExpressionKind::PlannedBreakExpression(
-        loop_control,
-        value,
-      ) => if loop_control < control_result_values.length() &&
-        value >= body.expressions.start && value < expression_end && !(
-          control_result_values[loop_control].carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-        ) {
-        let _ = self_host_body_plan_force_expression_value(
-          body,
-          expressions,
-          value,
-          control_result_values[loop_control],
-        )
-        match self_host_body_wrapped_local_get(module_, value) {
-          Option::Some(local_id) => {
-            let slot = self_host_body_local_slot(module_, body, local_id)
-            if slot < local_values.length() && slot < locals.length() {
-              let _ = self_host_body_plan_force_local_value(
-                local_values,
-                locals,
-                slot,
-                control_result_values[loop_control],
-              )
-            }
-          }
-          Option::None => {}
-        }
-      }
-      _ => {}
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
-  let scratches = []
-  for expression_plan in expressions {
-    match module_.expressions[expression_plan.expression].kind {
-      SelfHostPlannedExpressionKind::PlannedMatchExpression(subject, _) => {
-        let value = if subject >= body.expressions.start && subject < expression_end {
-          expressions[self_host_body_expression_slot(body, subject)].value
-        } else {
-          self_host_body_physical_value(
-            indexes,
-            -1i32,
-            SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
-            0u64,
+  let scratches = self_host_body_empty_scratches()
+  let mut scratch_plan_index = 0u32
+  while scratch_plan_index {
+    current => if current < expressions.length() {
+      let expression_plan = self_host_body_physical_expression_at(
+        expressions,
+        current,
+      )
+      match module_.expressions[expression_plan.expression].kind {
+        SelfHostPlannedExpressionKind::PlannedMatchExpression(subject, _) => {
+          let value = if subject >= body.expressions.start && subject < expression_end {
+            expressions[self_host_body_expression_slot(body, subject)].value
+          } else {
+            self_host_body_physical_value(
+              indexes,
+              -1i32,
+              SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+              0u64,
+            )
+          }
+          self_host_body_add_scratch(
+            scratches,
+            expression_plan.expression,
+            value,
+            "match subject",
           )
         }
-        self_host_body_add_scratch(
+        SelfHostPlannedExpressionKind::PlannedWhileExpression(loop_control, _, _) => if loop_control < control_states.length() {
+          self_host_body_add_scratch(
+            scratches,
+            expression_plan.expression,
+            control_state_values[loop_control],
+            "loop state",
+          )
+        }
+        SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) => self_host_body_add_scratch(
           scratches,
           expression_plan.expression,
-          value,
-          "match subject",
+          self_host_body_value_with_carrier(
+            expression_plan.value,
+            SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+          ),
+          "function value",
         )
-      }
-      SelfHostPlannedExpressionKind::PlannedWhileExpression(loop_control, _, _) => if loop_control < control_states.length() {
-        self_host_body_add_scratch(
+        SelfHostPlannedExpressionKind::PlannedProductField(_, _, _) => self_host_body_add_scratch(
           scratches,
           expression_plan.expression,
-          control_state_values[loop_control],
-          "loop state",
+          expression_plan.value,
+          "product projection",
         )
+        SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => self_host_body_add_scratch(
+          scratches,
+          expression_plan.expression,
+          self_host_body_value_with_carrier(
+            expression_plan.value,
+            SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+          ),
+          "array literal",
+        )
+        _ => {}
       }
-      SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) => self_host_body_add_scratch(
-        scratches,
-        expression_plan.expression,
-        self_host_body_value_with_carrier(
-          expression_plan.value,
-          SelfHostWasmBodyCarrier::EqRefBodyCarrier,
-        ),
-        "function value",
-      )
-      SelfHostPlannedExpressionKind::PlannedProductField(_, _, _) => self_host_body_add_scratch(
-        scratches,
-        expression_plan.expression,
-        expression_plan.value,
-        "product projection",
-      )
-      SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => self_host_body_add_scratch(
-        scratches,
-        expression_plan.expression,
-        self_host_body_value_with_carrier(
-          expression_plan.value,
-          SelfHostWasmBodyCarrier::EqRefBodyCarrier,
-        ),
-        "array literal",
-      )
-      _ => {}
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   let result_carrier = physical_result_carrier
