@@ -195,3 +195,29 @@ test "WasmGC fragments plan mutable local capture cells" {
   }
   assert(saw_cell, "mutable capture cell")
 }
+
+test "WasmGC fragments retain exact nominal multi-field tuple payloads" {
+  let plan = self_host_wasmgc_test_plan(
+    b"struct Span {\n  start: U32\n  length: U32\n}\nenum Expr {\n  Product(Span, U32)\n}\npub fn run() -> U32 {\n  match Expr::Product(Span::{ start: 1u32, length: 2u32 }, 3u32) {\n    Expr::Product(span, _) => span.length\n  }\n}\n",
+  )
+  let module_ = plan.modules[0u32]
+  let mut physical = 0u32
+  let mut found = false
+  let _ = while physical {
+    current => if current < self_host_wasmgc_physical_type_count(module_) {
+      let type_ = self_host_wasmgc_physical_type_at(module_, current)
+      match type_.kind {
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmVariantType(_, _) => if type_.fields.length == 2u32 {
+          let payload = self_host_wasmgc_field_at(module_, type_.fields.start)
+          assert(payload.exact_nominal, "struct payload keeps exact nominal type")
+          found = true
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(found, "multi-field tuple variant")
+}

@@ -916,7 +916,12 @@ fn self_host_linked_nominal_field_type_index(
     name.equals(b"FixedArray") || name.equals(b"Map") {
     return Option::None
   }
-  let _allow_struct = allow_struct
+  if allow_struct {
+    match self_host_linked_struct_type_index(link, declaration) {
+      Option::Some(type_index) => return Option::Some(type_index)
+      Option::None => {}
+    }
+  }
   match self_host_linked_enum_base_type_index(link, declaration) {
     Option::Some(type_index) => return Option::Some(type_index)
     Option::None => {}
