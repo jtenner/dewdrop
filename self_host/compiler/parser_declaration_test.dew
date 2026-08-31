@@ -28,9 +28,9 @@ test "self-host parser parses declaration families" {
   assert(self_host_declaration_count(module_) == 13u32, "wrong declaration count")
 }
 
-test "self-host parser derives declaration kinds from variants" {
+test "self-host parser derives declaration kinds from tokens" {
   let module_ = self_host_parse_module(
-    b"struct Item {}\nfn run() -> I32 {\n  0\n}\n",
+    b"struct Item {}\nenum Choice {\n  None\n}\nfn run() -> I32 {\n  0\n}\n",
   )
   assert(self_host_diagnostic_count(module_) == 0u32, "kind diagnostics")
   match module_.events.get_unchecked(0u32) {
@@ -41,6 +41,13 @@ test "self-host parser derives declaration kinds from variants" {
     _ => assert(false, "struct declaration")
   }
   match module_.events.get_unchecked(1u32) {
+    SelfHostParseEvent::Declaration(SelfHostDeclaration::Enum(_), kind) => assert(
+      kind == 10u32,
+      "enum kind",
+    )
+    _ => assert(false, "enum declaration")
+  }
+  match module_.events.get_unchecked(2u32) {
     SelfHostParseEvent::Declaration(SelfHostDeclaration::Function(_), kind) => assert(
       kind == 4u32,
       "function kind",

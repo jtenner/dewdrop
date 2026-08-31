@@ -1009,22 +1009,72 @@ fn self_host_parser_recover_declaration(parser: SelfHostParser) -> Unit {
   }
 }
 
-fn self_host_parsed_declaration_kind(
-  declaration: SelfHostDeclaration,
+fn self_host_declaration_keyword_at(
+  parser: SelfHostParser,
+  index: U32,
 ) -> U32 {
-  match declaration {
-    SelfHostDeclaration::Import(_) => 0u32
-    SelfHostDeclaration::Builtin(_) => 1u32
-    SelfHostDeclaration::Let(_) => 2u32
-    SelfHostDeclaration::Trait(_) => 3u32
-    SelfHostDeclaration::Function(_) => 4u32
-    SelfHostDeclaration::Test(_) => 5u32
-    SelfHostDeclaration::Impl(_) => 6u32
-    SelfHostDeclaration::ForeignType(_) => 7u32
-    SelfHostDeclaration::ForeignLibrary(_) => 8u32
-    SelfHostDeclaration::Struct(_) => 9u32
-    SelfHostDeclaration::Enum(_) => 10u32
-    SelfHostDeclaration::TypeAlias(_) => 11u32
+  if index < parser.tokens.length() {
+    self_host_token_keyword_code(parser.tokens.get_unchecked(index).kind)
+  } else {
+    4294967295u32
+  }
+}
+
+fn self_host_declaration_string_at(
+  parser: SelfHostParser,
+  index: U32,
+) -> Bool {
+  if index < parser.tokens.length() {
+    parser.tokens.get_unchecked(index).kind is SelfHostTokenKind::StringLiteral(_)
+  } else {
+    false
+  }
+}
+
+fn self_host_next_declaration_kind(parser: SelfHostParser) -> U32 {
+  let mut keyword_index = parser.index
+  if self_host_declaration_keyword_at(parser, keyword_index) == 2u32 {
+    keyword_index = keyword_index + 1u32
+  } else {
+  }
+  let keyword = self_host_declaration_keyword_at(parser, keyword_index)
+  if keyword == 29u32 || keyword == 30u32 {
+    0u32
+  } else if keyword == 3u32 {
+    1u32
+  } else if keyword == 11u32 {
+    2u32
+  } else if keyword == 6u32 {
+    3u32
+  } else if keyword == 0u32 {
+    4u32
+  } else if keyword == 1u32 {
+    5u32
+  } else if keyword == 5u32 {
+    6u32
+  } else if keyword == 9u32 {
+    9u32
+  } else if keyword == 8u32 {
+    10u32
+  } else if keyword == 10u32 {
+    11u32
+  } else if keyword == 4u32 {
+    let foreign_kind = self_host_declaration_keyword_at(
+      parser,
+      keyword_index + 1u32,
+    )
+    if foreign_kind == 10u32 {
+      7u32
+    } else if foreign_kind == 5u32 && self_host_declaration_string_at(
+      parser,
+      keyword_index + 2u32,
+    ) {
+      8u32
+    } else {
+      6u32
+    }
+  } else {
+    4294967295u32
   }
 }
 
@@ -1040,9 +1090,9 @@ pub fn self_host_parse_module(source: Bytes) -> SelfHostParsedModule {
       } else {
       }
       parser.diagnostic = Option::None
+      let declaration_kind = self_host_next_declaration_kind(parser)
       match self_host_parse_declaration(parser) {
         Option::Some(declaration) => {
-          let declaration_kind = self_host_parsed_declaration_kind(declaration)
           if declaration_kind == 0u32 {
             match declaration {
               SelfHostDeclaration::Import(import_) => if preamble_open {

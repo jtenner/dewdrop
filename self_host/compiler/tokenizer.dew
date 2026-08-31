@@ -354,6 +354,104 @@ fn self_host_keyword(value: String) -> U32 {
   }
 }
 
+fn self_host_source_keyword_matches(
+  source: Bytes,
+  start: U32,
+  end: U32,
+  expected: Bytes,
+) -> Bool {
+  if end - start != expected.byte_length() {
+    return false
+  }
+  let mut index = 0u32
+  while index {
+    current => if current < expected.byte_length() {
+      if source.byte_at(start + current) != expected.byte_at(current) {
+        break false
+      }
+      continue current + 1u32
+    } else {
+      break true
+    }
+  }
+}
+
+fn self_host_source_keyword(
+  source: Bytes,
+  start: U32,
+  end: U32,
+) -> U32 {
+  if self_host_source_keyword_matches(source, start, end, b"fn") {
+    0u32
+  } else if self_host_source_keyword_matches(source, start, end, b"test") {
+    1u32
+  } else if self_host_source_keyword_matches(source, start, end, b"pub") {
+    2u32
+  } else if self_host_source_keyword_matches(source, start, end, b"builtin") {
+    3u32
+  } else if self_host_source_keyword_matches(source, start, end, b"foreign") {
+    4u32
+  } else if self_host_source_keyword_matches(source, start, end, b"impl") {
+    5u32
+  } else if self_host_source_keyword_matches(source, start, end, b"trait") {
+    6u32
+  } else if self_host_source_keyword_matches(source, start, end, b"for") {
+    7u32
+  } else if self_host_source_keyword_matches(source, start, end, b"enum") {
+    8u32
+  } else if self_host_source_keyword_matches(source, start, end, b"struct") {
+    9u32
+  } else if self_host_source_keyword_matches(source, start, end, b"type") {
+    10u32
+  } else if self_host_source_keyword_matches(source, start, end, b"let") {
+    11u32
+  } else if self_host_source_keyword_matches(source, start, end, b"using") {
+    12u32
+  } else if self_host_source_keyword_matches(source, start, end, b"mut") {
+    13u32
+  } else if self_host_source_keyword_matches(source, start, end, b"if") {
+    14u32
+  } else if self_host_source_keyword_matches(source, start, end, b"else") {
+    15u32
+  } else if self_host_source_keyword_matches(source, start, end, b"match") {
+    16u32
+  } else if self_host_source_keyword_matches(source, start, end, b"is") {
+    17u32
+  } else if self_host_source_keyword_matches(source, start, end, b"while") {
+    18u32
+  } else if self_host_source_keyword_matches(source, start, end, b"loop") {
+    19u32
+  } else if self_host_source_keyword_matches(source, start, end, b"return") {
+    20u32
+  } else if self_host_source_keyword_matches(source, start, end, b"defer") {
+    21u32
+  } else if self_host_source_keyword_matches(source, start, end, b"break") {
+    22u32
+  } else if self_host_source_keyword_matches(source, start, end, b"continue") {
+    23u32
+  } else if self_host_source_keyword_matches(source, start, end, b"true") {
+    24u32
+  } else if self_host_source_keyword_matches(source, start, end, b"false") {
+    25u32
+  } else if self_host_source_keyword_matches(source, start, end, b"as") {
+    26u32
+  } else if self_host_source_keyword_matches(source, start, end, b"in") {
+    27u32
+  } else if self_host_source_keyword_matches(source, start, end, b"where") {
+    28u32
+  } else if self_host_source_keyword_matches(source, start, end, b"open") {
+    29u32
+  } else if self_host_source_keyword_matches(source, start, end, b"import") {
+    30u32
+  } else if self_host_source_keyword_matches(source, start, end, b"export") {
+    31u32
+  } else if self_host_source_keyword_matches(source, start, end, b"package") {
+    32u32
+  } else {
+    4294967295u32
+  }
+}
+
 fn self_host_tokenizer_string(value: Bytes) -> String {
   let builder = StringBuilder::new()
   let mut index = 0u32
@@ -1569,7 +1667,11 @@ tokenizer.position = tokenizer.position + 1u32
         }
       } else if self_host_identifier_start(source, index) {
         let name = self_host_scan_identifier(tokenizer)
-        let keyword = self_host_keyword(name)
+        let keyword = self_host_source_keyword(
+          source,
+          index,
+          tokenizer.position,
+        )
         if keyword < 33u32 {
           self_host_tokenizer_emit(
             tokenizer,
