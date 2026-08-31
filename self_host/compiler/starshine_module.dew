@@ -3080,7 +3080,7 @@ fn self_host_linked_i32_main_expression(
   let mut found_body = false
   let functions = module_.functions.callables
   for callable in functions {
-    if self_host_bytes_equal(callable.name, b"main") {
+    if callable.is_main {
       match callable.kind {
         SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => {
           selected_body = body
@@ -31024,7 +31024,11 @@ fn build_self_host_linked_i32_module(
       let root_module_lowering = link.fragments.specialization.lowering.modules[
         root.module_index
       ]
-      if root.body_index >= self_host_linked_body_count(root_module_lowering) {
+      let root_body_count = self_host_linked_body_count(root_module_lowering)
+      if self_host_u32_equal(root_body_count, 0u32) || self_host_u32_greater(
+        root.body_index,
+        root_body_count - 1u32,
+      ) {
         return Result::Err("linked root body is outside its arena")
       }
       let root_body = self_host_linked_body_at(

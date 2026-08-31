@@ -177,6 +177,23 @@ fn self_host_bytes_empty(value: Bytes) -> Bool {
   value.byte_length() == 0u32
 }
 
+fn self_host_source_name_is_main(
+  source: Bytes,
+  offset: U32,
+) -> Bool {
+  if offset + 4u32 > source.byte_length() {
+    false
+  } else if source.byte_at(offset) != 109u8 ||
+    source.byte_at(offset + 1u32) != 97u8 ||
+    source.byte_at(offset + 2u32) != 105u8 ||
+    source.byte_at(offset + 3u32) != 110u8 {
+    false
+  } else {
+    offset + 4u32 == source.byte_length() ||
+      !self_host_identifier_continue(source, offset + 4u32)
+  }
+}
+
 struct SelfHostCollectionBuilderState {
   module_id: U64
   mut current_file: U64
@@ -1050,6 +1067,7 @@ impl SelfHostCollectionBuilder {
       SelfHostCollectedCallable::{
         declaration: declaration.id
         return_type: self.lower_type(value.return_type)
+        is_main: false
       },
     )
     self.builtins.push(
@@ -1139,12 +1157,17 @@ impl SelfHostCollectionBuilder {
         SelfHostCollectedCallable::{
           declaration: method.id
           return_type: self.lower_type(source_method.return_type)
+          is_main: false
         },
       )
     }
   }
 
-  fn collect_function(self, value: SelfHostFunctionDeclaration) -> Unit {
+  fn collect_function(
+    self,
+    value: SelfHostFunctionDeclaration,
+    source: Bytes,
+  ) -> Unit {
     let declaration = self.add_declaration(
       SelfHostCollectedDeclKind::FunctionDecl,
       Option::Some(value.name),
@@ -1163,6 +1186,7 @@ impl SelfHostCollectionBuilder {
       SelfHostCollectedCallable::{
         declaration: declaration.id
         return_type: self.lower_type(value.return_type)
+        is_main: self_host_source_name_is_main(source, value.name_offset)
       },
     )
     self.lower_block_body(
@@ -1224,6 +1248,7 @@ impl SelfHostCollectionBuilder {
       SelfHostCollectedCallable::{
         declaration: declaration.id
         return_type: self.lower_type(value.return_type)
+        is_main: false
       },
     )
     self.tests.push(
@@ -1336,6 +1361,7 @@ impl SelfHostCollectionBuilder {
         SelfHostCollectedCallable::{
           declaration: method.id
           return_type: self.lower_type(source_member.return_type)
+          is_main: false
         },
       )
       if self_host_bytes_empty(source_member.export_name) {
@@ -1425,6 +1451,7 @@ impl SelfHostCollectionBuilder {
       let callable = SelfHostCollectedCallable::{
         declaration: method.id
         return_type: return_type
+        is_main: false
       }
       self.callables.push(callable)
       self.lower_block_body(
@@ -1720,6 +1747,7 @@ impl SelfHostCollectionBuilder {
     self,
     declaration: SelfHostDeclaration,
     kind: U32,
+    source: Bytes,
   ) -> Unit {
     if kind == 0u32 {
       match declaration {
@@ -1743,7 +1771,7 @@ impl SelfHostCollectionBuilder {
       }
     } else if kind == 4u32 {
       match declaration {
-        SelfHostDeclaration::Function(value) => self.collect_function(value)
+        SelfHostDeclaration::Function(value) => self.collect_function(value, source)
         _ => {}
       }
     } else if kind == 5u32 {
@@ -1802,6 +1830,7 @@ impl SelfHostCollectionBuilder {
         SelfHostParseEvent::Declaration(declaration, kind) => self.collect_declaration(
           declaration,
           kind,
+          file.source,
         )
         SelfHostParseEvent::Diagnostic(severity, error, kind, offset, token_code, token_text) => self.state.diagnostics.push(
           SelfHostCollectionDiagnostic::ParseDiagnostic(

@@ -25,6 +25,7 @@ pub struct SelfHostPlannedCallable {
   name: Bytes
   visibility: SelfHostSemanticVisibility
   compiler_owned: Bool
+  is_main: Bool
   is_test: Bool
   is_test_entry: Bool
   test_name: Bytes
@@ -252,6 +253,7 @@ fn self_host_push_planned_callable(
     SelfHostPlannedValueShape::ErrorPlannedValueShape
   }
   let compiler_owned = self_host_semantic_id_module(declaration) >= 4294901760u64
+  let is_main = collected.callables[callable_index].is_main
   let is_test_entry = self_host_function_plan_is_test_entry(collected, declaration)
   let planned_visibility = if compiler_owned {
     SelfHostSemanticVisibility::ModuleVisible
@@ -264,6 +266,7 @@ fn self_host_push_planned_callable(
     name: name.as_bytes()
     visibility: planned_visibility
     compiler_owned: compiler_owned
+    is_main: is_main
     is_test: collected.declaration_is_test_only(declaration) || is_test_entry
     is_test_entry: is_test_entry
     test_name: self_host_function_plan_test_name(collected, declaration)

@@ -22,6 +22,22 @@ test "function plans retain callable ABI shapes" {
   assert(functions.callables[1u32].result_shape is SelfHostPlannedValueShape::I64PlannedValueShape, "I64 result")
 }
 
+test "function plans preserve source-derived main identity" {
+  let collected = self_host_collect_bytes(
+    1007u64,
+    b"fn helper() -> I32 {\n  1\n}\npub fn main() -> U32 {\n  0u32\n}\nfn mainly() -> I32 {\n  2\n}\n",
+  )
+  assert(collected.callables.length() == 3u32, "three functions")
+  assert(!collected.callables[0u32].is_main, "helper is not main")
+  assert(collected.callables[1u32].is_main, "main identity")
+  assert(!collected.callables[2u32].is_main, "mainly is not main")
+  let resolved = self_host_resolve_module_types(collected)
+  let functions = self_host_plan_module_functions(collected, resolved)
+  assert(!functions.callables[0u32].is_main, "planned helper")
+  assert(functions.callables[1u32].is_main, "planned main")
+  assert(!functions.callables[2u32].is_main, "planned mainly")
+}
+
 test "function plans substitute impl Self shapes" {
   let collected = self_host_collect_bytes(
     1004u64,

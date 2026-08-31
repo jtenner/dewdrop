@@ -112,6 +112,7 @@ pub struct SelfHostCollectedParameter {
 pub struct SelfHostCollectedCallable {
   declaration: U64
   return_type: U32
+  is_main: Bool
 }
 
 pub struct SelfHostCollectedTest {
