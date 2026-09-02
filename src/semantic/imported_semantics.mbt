@@ -190,7 +190,7 @@ pub fn ResolvedModuleImports::generic_parameters_of(
       return imported.generic_parameters
     }
   }
-  { start: 0, length: 0 }
+  { start: 0, length: 0, }
 }
 
 ///|
@@ -308,7 +308,7 @@ fn InterfaceTypeImporter::intern_applied(
   }
   let index = self.resolved.types.length()
   self.resolved.types.push(
-    AppliedType(base, { start, length: arguments.length() }),
+    AppliedType(base, { start, length: arguments.length(), }),
   )
   index
 }
@@ -344,7 +344,7 @@ fn InterfaceTypeImporter::intern_function(
   }
   let index = self.resolved.types.length()
   self.resolved.types.push(
-    FunctionType({ start, length: parameters.length() }, result),
+    FunctionType({ start, length: parameters.length(), }, result),
   )
   index
 }
@@ -799,7 +799,7 @@ pub fn make_analyzed_program_module(
   names : ResolvedModuleNames,
   inferred : InferredModuleBodies,
 ) -> AnalyzedProgramModule {
-  { module_id, imports, names, inferred }
+  { module_id, imports, names, inferred, }
 }
 
 ///|
@@ -807,7 +807,7 @@ pub fn make_analyzed_program_semantics(
   frozen : FrozenProgramInterfaces,
   modules : Array[AnalyzedProgramModule],
 ) -> AnalyzedProgramSemantics {
-  { frozen, modules }
+  { frozen, modules, }
 }
 
 ///|
@@ -848,7 +848,7 @@ pub fn analyze_program_semantics_with_frozen(
   for slot in slots {
     modules.push(slot.unwrap())
   }
-  { frozen, modules }
+  { frozen, modules, }
 }
 
 ///|

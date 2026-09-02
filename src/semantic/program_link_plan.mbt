@@ -248,7 +248,7 @@ fn program_specialized_call_key(
   specialization_abi_key : String,
   expression : ExprId,
 ) -> ProgramSpecializedCallKey {
-  { body, specialization_abi_key, expression }
+  { body, specialization_abi_key, expression, }
 }
 
 ///|

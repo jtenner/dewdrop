@@ -260,7 +260,7 @@ test "interface bundle cache key includes dependency provenance" {
     dependency_fingerprint: "",
     cacheable: true,
   }
-  let dependency = { ..base, dependency_fingerprint: "dependency" }
+  let dependency = { ..base, dependency_fingerprint: "dependency", }
   assert_eq(interface_bundle_cache_key(base).fingerprint, "standard")
   assert_true(interface_bundle_cache_key(dependency).fingerprint != "standard")
 }

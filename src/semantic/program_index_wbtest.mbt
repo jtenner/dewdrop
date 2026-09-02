@@ -27,7 +27,7 @@ test "physical linker receives a validated compact specialization plan" {
   ])
   let plan = plan_program_wasmgc_fragments(stages.analyzed, stages.lowering)
   assert_eq(validate_program_specialization_plan(plan, stages.lowering), Ok(()))
-  let invalid = { ..plan, modules: [] }
+  let invalid = { ..plan, modules: [], }
   match validate_program_specialization_plan(invalid, stages.lowering) {
     Err(error) =>
       assert_eq(

@@ -60,6 +60,55 @@ test "basic body inference resolves literals parameters lets and returns" {
   )
 }
 
+test "loop item fields keep their exact declaration identity" {
+  let (collected, resolved, names, inferred) = self_host_basic_infer_source(
+    811u64,
+    b"struct Recipe {\n  declaration: U64\n  builtin_name: Bytes\n}\nfn find(recipes: Array<Recipe>, declaration: U64) -> Option<Bytes> {\n  for recipe in recipes {\n    if recipe.declaration == declaration {\n      return Option::Some(recipe.builtin_name)\n    }\n  }\n  Option::None\n}\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "collection diagnostics")
+  assert(resolved.diagnostics.length() == 0u32, "type diagnostics")
+  assert(names.diagnostics.length() == 0u32, "name diagnostics")
+  let body = inferred.bodies[0u32]
+  assert(body.diagnostics.length() == 0u32, "inference diagnostics")
+  let mut declaration_field = 0u64
+  let mut builtin_name_field = 0u64
+  for field in collected.fields {
+    let name = collected.name(field.name)
+    if name == "declaration" {
+      declaration_field = field.id
+    } else if name == "builtin_name" {
+      builtin_name_field = field.id
+    }
+  }
+  let mut found_declaration = false
+  let mut found_builtin_name = false
+  for selection in body.expression_selections {
+    match selection {
+      SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(
+        field,
+        _,
+        owner,
+      ) => {
+        if self_host_u64_equal(field, declaration_field) {
+          found_declaration = self_host_u64_equal(
+            owner,
+            collected.fields[0u32].declaration,
+          )
+        }
+        if self_host_u64_equal(field, builtin_name_field) {
+          found_builtin_name = self_host_u64_equal(
+            owner,
+            collected.fields[0u32].declaration,
+          )
+        }
+      }
+      _ => {}
+    }
+  }
+  assert(found_declaration, "declaration field identity")
+  assert(found_builtin_name, "builtin name field identity")
+}
+
 test "basic body inference handles products destructuring and branches" {
   let (collected, resolved, names, inferred) = self_host_basic_infer_source(
     82u64,
@@ -106,11 +155,13 @@ test "basic body inference selects non-generic direct calls" {
   let body = inferred.bodies[1u32]
   assert(body.diagnostics.length() == 0u32, "direct call diagnostics")
   let call = match hir_body.root {
-    SelfHostHirBodyRoot::BlockBodyRoot(block) => match collected.block_items[
-      collected.blocks[block].items.start
-    ] {
-      SelfHostHirBlockItem::ExpressionItem(expression, _) => expression
-      _ => 4294967295u32
+    SelfHostHirBodyRoot::BlockBodyRoot(block) => {
+      let item = collected.block_items[collected.blocks[block].items.start]
+      if self_host_hir_block_item_is_let(item) {
+        4294967295u32
+      } else {
+        item.value
+      }
     }
     SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => expression
   }

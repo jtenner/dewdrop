@@ -323,8 +323,8 @@ fn CallInferenceScratch::new() -> CallInferenceScratch {
     instantiation_marks: [],
     instantiation_values: [],
     instantiation_generation: 0,
-    instantiation_generics: { start: 0, length: 0 },
-    instantiation_method_generics: { start: 0, length: 0 },
+    instantiation_generics: { start: 0, length: 0, },
+    instantiation_method_generics: { start: 0, length: 0, },
     instantiation_self_owner: 0UL,
     instantiation_self_type: -1,
     trial_viable_count: 0,
@@ -1404,7 +1404,7 @@ fn BasicBodyInferencer::commit_function_reference(
   self.ensure_member_storage()
   self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
     declaration,
-    { start, length: self.call_scratch.candidate_type_arguments.length() },
+    { start, length: self.call_scratch.candidate_type_arguments.length(), },
   )
   let obligation_start = self.call_type_arguments.length()
   for type_ in self.call_scratch.candidate_type_arguments {
@@ -1737,7 +1737,7 @@ fn BasicBodyInferencer::initialize_expression_types(
                     self.ensure_member_storage()
                     self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
                       declaration,
-                      { start: 0, length: 0 },
+                      { start: 0, length: 0, },
                     )
                     self.solver.resolved_type(type_)
                   }
@@ -1750,7 +1750,7 @@ fn BasicBodyInferencer::initialize_expression_types(
                 self.ensure_member_storage()
                 self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
                   declaration,
-                  { start: 0, length: 0 },
+                  { start: 0, length: 0, },
                 )
                 self.solver.resolved_type(type_)
               }
@@ -1798,9 +1798,8 @@ fn BasicBodyInferencer::initialize_expression_types(
           self.solver.error_type()
         }
       }
-      HirReturnExpr(_, _)
-      | HirBreakExpr(_, _)
-      | HirContinueExpr(_, _) => self.primitive(NeverType)
+      HirReturnExpr(_, _) | HirBreakExpr(_, _) | HirContinueExpr(_, _) =>
+        self.primitive(NeverType)
       HirCallExpr(_, _, _) => {
         self.call_expressions.push(expression)
         self.call_targets.push(NoInferredCallTarget)
@@ -1845,8 +1844,8 @@ fn BasicBodyInferencer::body_signature_type(
   if implementation_index < 0 {
     return self.solver.resolved_type(root)
   }
-  self.call_scratch.instantiation_generics = { start: 0, length: 0 }
-  self.call_scratch.instantiation_method_generics = { start: 0, length: 0 }
+  self.call_scratch.instantiation_generics = { start: 0, length: 0, }
+  self.call_scratch.instantiation_method_generics = { start: 0, length: 0, }
   self.call_scratch.candidate_type_arguments.clear()
   self.call_scratch.instantiation_self_owner = parent
   self.call_scratch.instantiation_self_type = self.solver.resolved_type(
@@ -2005,12 +2004,12 @@ fn BasicBodyInferencer::begin_call_candidate(
       Some(imports) =>
         match imports.callable(declaration) {
           Some(callable) => callable.generic_parameters
-          None => { start: 0, length: 0 }
+          None => { start: 0, length: 0, }
         }
-      None => { start: 0, length: 0 }
+      None => { start: 0, length: 0, }
     }
   }
-  self.call_scratch.instantiation_method_generics = { start: 0, length: 0 }
+  self.call_scratch.instantiation_method_generics = { start: 0, length: 0, }
   self.call_scratch.candidate_type_arguments.clear()
   for _ in 0..<self.call_scratch.instantiation_generics.length {
     self.call_scratch.candidate_type_arguments.push(
@@ -2744,7 +2743,7 @@ fn BasicBodyInferencer::constrain_expressions(
         }
       }
       HirLambdaExpr(_, _) => ()
-      HirReturnExpr(value, offset) => {
+      HirReturnExpr(value, offset) =>
         if self.lambda < 0 && self.callable_index < 0 {
           self.diagnose(ReturnOutsideCallable(offset))
         } else if value >= 0 {
@@ -2760,7 +2759,6 @@ fn BasicBodyInferencer::constrain_expressions(
             return_type_origin(-1, offset),
           )
         }
-      }
       HirBreakExpr(value, offset) =>
         self.constrain_transfer_expression(expression, value, true, offset)
       HirContinueExpr(value, offset) =>
@@ -3119,7 +3117,7 @@ fn field_spans_by_declaration(collected : CollectedModule) -> Array[HirSpan] {
   for index, field in collected.fields {
     let declaration_index = semantic_id_local(field.declaration)
     if spans[declaration_index].length == 0 {
-      spans[declaration_index] = { start: index, length: 1 }
+      spans[declaration_index] = { start: index, length: 1, }
     } else {
       spans[declaration_index] = {
         start: spans[declaration_index].start,
@@ -3142,7 +3140,7 @@ fn variant_spans_by_declaration(collected : CollectedModule) -> Array[HirSpan] {
   for index, variant in collected.variants {
     let local_index = semantic_id_local(variant.declaration)
     if spans[local_index].length == 0 {
-      spans[local_index] = { start: index, length: 1 }
+      spans[local_index] = { start: index, length: 1, }
     } else {
       spans[local_index] = {
         start: spans[local_index].start,
@@ -3289,7 +3287,7 @@ fn append_module_value_job(
             remap_job_type(job.type_arguments[fields.start + index], type_start),
           )
         }
-        values.types.push(BodyProductType({ start, length: fields.length }))
+        values.types.push(BodyProductType({ start, length: fields.length, }))
       }
       BodyAppliedType(base, arguments) => {
         let start = values.type_arguments.length()
@@ -3320,7 +3318,7 @@ fn append_module_value_job(
         }
         values.types.push(
           BodyFunctionType(
-            { start, length: parameters.length },
+            { start, length: parameters.length, },
             remap_job_type(result, type_start),
           ),
         )
@@ -3375,7 +3373,7 @@ fn infer_module_values_internal(
     None,
   )
   if collected.lets.length() == 0 {
-    return { values, jobs }
+    return { values, jobs, }
   }
   let let_indices = module_let_indices_by_declaration(collected)
   let solver = LocalTypeSolver::new(resolved)
@@ -3492,7 +3490,7 @@ fn infer_module_values_internal(
       left.rank() - right.rank()
     }
   })
-  { values, jobs }
+  { values, jobs, }
 }
 
 ///|
@@ -3629,7 +3627,7 @@ fn merge_body_inference_jobs(
               ),
             )
           }
-          types.push(BodyProductType({ start, length: fields.length }))
+          types.push(BodyProductType({ start, length: fields.length, }))
         }
         BodyAppliedType(base, arguments) => {
           let start = type_arguments.length()
@@ -3660,7 +3658,7 @@ fn merge_body_inference_jobs(
           }
           types.push(
             BodyFunctionType(
-              { start, length: parameters.length },
+              { start, length: parameters.length, },
               remap_job_type(result, type_start),
             ),
           )
@@ -3829,7 +3827,7 @@ fn merge_body_inference_jobs(
     bodies.push({
       body: body.id,
       root_type: remap_job_type(job.result_type, type_start),
-      types: { start: type_start, length: job.types.length() - 1 },
+      types: { start: type_start, length: job.types.length() - 1, },
       type_arguments: {
         start: argument_start,
         length: type_arguments.length() - argument_start,
@@ -3857,7 +3855,7 @@ fn merge_body_inference_jobs(
               ),
             )
           }
-          types.push(BodyProductType({ start, length: fields.length }))
+          types.push(BodyProductType({ start, length: fields.length, }))
         }
         BodyAppliedType(base, arguments) => {
           let start = type_arguments.length()
@@ -3888,7 +3886,7 @@ fn merge_body_inference_jobs(
           }
           types.push(
             BodyFunctionType(
-              { start, length: parameters.length },
+              { start, length: parameters.length, },
               remap_job_type(result, type_start),
             ),
           )
@@ -4063,7 +4061,7 @@ fn merge_body_inference_jobs(
     lambdas.push({
       lambda: lambda.id,
       root_type: remap_job_type(job.result_type, type_start),
-      types: { start: type_start, length: job.types.length() - 1 },
+      types: { start: type_start, length: job.types.length() - 1, },
       type_arguments: {
         start: argument_start,
         length: type_arguments.length() - argument_start,

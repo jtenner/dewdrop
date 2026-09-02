@@ -140,7 +140,7 @@ fn pb_read_layout_kind(
     2 => PlannedForeignTypeLayout
     _ => {
       reader.fail(field, "unknown nominal-layout discriminant")
-      PlannedStructLayout({ start: 0, length: 0 })
+      PlannedStructLayout({ start: 0, length: 0, })
     }
   }
 }
@@ -749,7 +749,7 @@ fn pb_read_import_identity(
       HostWasmImport
     }
   }
-  { module_name, field: import_field, kind }
+  { module_name, field: import_field, kind, }
 }
 
 ///|
@@ -858,7 +858,7 @@ fn pb_read_specialization_evidence(
       PlannedRuntimeTraitEvidence(0UL, -1)
     }
   }
-  { kind, prerequisites: ib_read_span(reader, field) }
+  { kind, prerequisites: ib_read_span(reader, field), }
 }
 
 ///|

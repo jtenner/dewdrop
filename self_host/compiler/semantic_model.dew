@@ -4,6 +4,11 @@ open dew.std.map
 open dew.std.option
 open dew.std.string
 
+builtin self_host_semantic_string_equals(
+  left: String,
+  right: String,
+) -> Bool = "dew_string_equals"
+
 pub enum SelfHostCollectedDeclKind {
   BuiltinDecl
   LetDecl
@@ -218,6 +223,7 @@ pub enum SelfHostCollectionDiagnostic {
   DuplicateTestIdentity(SelfHostDuplicateTestIdentityDiagnostic)
   InvalidExpectedTestTrap(U64, Bytes, U32)
   TestDeclarationOutsideTestFile(U64, U32)
+  ValueBindingArenaMismatch(U32, U32, U32)
   UnknownDerivedTrait(String, U64, U32)
   DuplicateDerivedTrait(String, U64, U32, U32)
   EmptyForeignLogicalName(U64, U32)
@@ -297,7 +303,7 @@ pub struct SelfHostCollectedModule {
   name_lookup: Map<String, U32>
   type_bindings: Map<U32, U64>
   trait_bindings: Map<U32, U64>
-  value_bindings: Map<U32, SelfHostValueBinding>
+  value_bindings: Array<Option<SelfHostValueBinding>>
   value_binding_candidates: Array<SelfHostValueBindingCandidate>
   foreign_library_by_alias: Map<U32, U64>
 }
@@ -347,7 +353,17 @@ impl SelfHostCollectedModule {
   }
 
   fn find_name(self, name: String) -> Option<U32> {
-    self.name_lookup.get(name)
+    let mut index = 0u32
+    while index {
+      current => if current < self.names.length() {
+        if self_host_semantic_string_equals(self.names[current], name) {
+          break Option::Some(current)
+        }
+        continue current + 1u32
+      } else {
+        break Option::None
+      }
+    }
   }
 
   fn name(self, id: U32) -> String {
@@ -368,9 +384,17 @@ impl SelfHostCollectedModule {
     }
   }
 
+  fn value_binding(self, name: U32) -> Option<SelfHostValueBinding> {
+    if name < self.value_bindings.length() {
+      self.value_bindings[name]
+    } else {
+      Option::None
+    }
+  }
+
   fn lookup_value(self, name: String) -> Option<U64> {
     match self.find_name(name) {
-      Option::Some(id) => match self.value_bindings.get(id) {
+      Option::Some(id) => match self.value_binding(id) {
         Option::Some(binding) => Option::Some(
           self.value_binding_candidates[binding.head].declaration,
         )

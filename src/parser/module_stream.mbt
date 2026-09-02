@@ -199,7 +199,7 @@ fn ModuleEventParser::next_parse_event(self : ModuleEventParser) -> ParseEvent? 
     Err(failure) => {
       let error = failure.declaration_error()
       self.parser.recover_to_declaration_boundary(failure)
-      Some(Diagnostic({ severity: Error, error }))
+      Some(Diagnostic({ severity: Error, error, }))
     }
   }
 }
@@ -207,7 +207,7 @@ fn ModuleEventParser::next_parse_event(self : ModuleEventParser) -> ParseEvent? 
 ///|
 /// Starts a lazy, interleaved stream of declarations and diagnostics.
 pub fn Parser::parse_events(self : Parser) -> Iter[ParseEvent] {
-  let module_parser = { parser: self, preamble_open: true }
+  let module_parser = { parser: self, preamble_open: true, }
   Iter::new(fn() { module_parser.next_parse_event() })
 }
 

@@ -20,7 +20,7 @@ test "public generic enums preserve unit and tuple variants" {
         visibility: Public,
         name: "Option",
         name_offset: 9UL,
-        type_parameters: [{ name: "t", bounds: [], offset: 16UL }],
+        type_parameters: [{ name: "t", bounds: [], offset: 16UL, }],
         variants: [
           UnitVariant("None", 23UL),
           TupleVariant("Some", [NamedType("t", 35UL)], 30UL),
@@ -40,8 +40,8 @@ test "enum declarations retain postfix derive requests" {
     ).parse_declaration() {
     Ok(Enum(declaration)) =>
       assert_eq(declaration.derives, [
-        { name: "Eq", offset: 39UL },
-        { name: "Debug", offset: 43UL },
+        { name: "Eq", offset: 39UL, },
+        { name: "Debug", offset: 43UL, },
       ])
     _ => fail("expected derived enum declaration")
   }

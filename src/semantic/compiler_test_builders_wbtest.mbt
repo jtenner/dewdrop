@@ -7,7 +7,7 @@ struct CompilerTestSource {
 
 ///|
 fn CompilerTestSource::new(path : String, bytes : Bytes) -> CompilerTestSource {
-  { path, bytes }
+  { path, bytes, }
 }
 
 ///|
@@ -22,7 +22,7 @@ fn CompilerTestModule::new(
   name : String,
   sources : Array[CompilerTestSource],
 ) -> CompilerTestModule {
-  { name, sources }
+  { name, sources, }
 }
 
 ///|
@@ -116,7 +116,7 @@ fn compiler_test_stages(
     root_module_index~,
     emit_tests~,
   )
-  { program, analyzed, lowering, link }
+  { program, analyzed, lowering, link, }
 }
 
 ///|

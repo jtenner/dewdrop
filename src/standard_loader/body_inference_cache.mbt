@@ -510,7 +510,9 @@ fn lookup_body_inference_cache(
       }
       let bytes = @fs.read_file_to_bytes(path) catch {
         error =>
-          return Err("cannot read body-inference cache \{path}: \{error}")
+          return Err(
+            "cannot read body-inference cache \{path}: \{standard_loader_fs_error_message(error)}",
+          )
       }
       match
         unwrap_body_inference_cache_payload(
@@ -644,7 +646,10 @@ fn lookup_body_inference_family_cache(
         return Ok(None)
       }
       let bytes = @fs.read_file_to_bytes(path) catch {
-        error => return Err("cannot read body-family cache \{path}: \{error}")
+        error =>
+          return Err(
+            "cannot read body-family cache \{path}: \{standard_loader_fs_error_message(error)}",
+          )
       }
       match
         unwrap_body_inference_family_cache_payload(

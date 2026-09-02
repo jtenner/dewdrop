@@ -94,7 +94,7 @@ test "bench Core Wasm-GC static link module_new" (it : @bench.T) {
   let dew = @binary.encode_module(core_link_bench_dew(false)).unwrap()
   let guest = @binary.encode_module(core_link_bench_guest(false)).unwrap()
   let libraries : Array[CoreWasmLibrary] = [
-    { provider: "starshine", bytes: guest },
+    { provider: "starshine", bytes: guest, },
   ]
   it.bench(fn() {
     let linked = link_core_wasm_gc_modules(dew, libraries, options={

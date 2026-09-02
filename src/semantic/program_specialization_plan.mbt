@@ -479,7 +479,7 @@ priv struct ProgramTraitEvidenceRequest {
 
 ///|
 fn empty_program_trait_evidence_request() -> ProgramTraitEvidenceRequest {
-  { roots: [], evidence: [], children: [], arguments: [] }
+  { roots: [], evidence: [], children: [], arguments: [], }
 }
 
 ///|
@@ -1007,8 +1007,8 @@ fn resolve_program_lowering_evidence_node(
       resolve_program_lowering_evidence_node_with_specialization(
         lowering,
         fragments,
-        { start: 0, length: 0 },
-        { start: 0, length: 0 },
+        { start: 0, length: 0, },
+        { start: 0, length: 0, },
         false,
         source_node,
         request,
@@ -1228,7 +1228,7 @@ fn materialize_program_generic_specialization(
       function_.specialization_shapes.length > 0 &&
       function_.specialization_abi_key == specialization_abi_key {
       if erased_fallback && function_.visibility != Public {
-        module_.functions[function_index] = { ..function_, visibility: Public }
+        module_.functions[function_index] = { ..function_, visibility: Public, }
         modules[owner_index] = module_
       }
       return Some(specialization_abi_key)
@@ -1261,7 +1261,7 @@ fn materialize_program_generic_specialization(
       ),
     )
   }
-  let specialization_shapes = { start: shape_start, length: request.length }
+  let specialization_shapes = { start: shape_start, length: request.length, }
   let evidence_argument_start = module_.specialization_evidence_arguments.length()
   for argument in evidence.arguments {
     module_.specialization_evidence_arguments.push(
@@ -1447,7 +1447,7 @@ fn materialize_program_generic_specialization(
           }
       }
   }
-  module_.functions[base_index] = { ..base, elided: true }
+  module_.functions[base_index] = { ..base, elided: true, }
   module_.functions.push({
     ..base,
     visibility: if erased_fallback {
@@ -1687,7 +1687,7 @@ fn materialize_program_expression_call(
           module_lookup,
           target,
           request_shapes,
-          { start: 0, length: request_shapes.length() },
+          { start: 0, length: request_shapes.length(), },
           request_evidence,
           false,
         ) {
@@ -1768,7 +1768,7 @@ fn materialize_program_expression_call(
           module_lookup,
           target,
           request_shapes,
-          { start: 0, length: request_shapes.length() },
+          { start: 0, length: request_shapes.length(), },
           request_evidence,
           false,
         ) {
@@ -1871,7 +1871,7 @@ fn materialize_program_expression_call(
                 module_lookup,
                 target,
                 request_shapes,
-                { start: 0, length: request_shapes.length() },
+                { start: 0, length: request_shapes.length(), },
                 request_evidence,
                 false,
               ) {
@@ -1980,7 +1980,7 @@ fn materialize_program_trait_dictionary_methods(
             module_lookup,
             method_info.implementation_method,
             shapes,
-            { start: 0, length: shapes.length() },
+            { start: 0, length: shapes.length(), },
             evidence,
             false,
           ) {
@@ -2200,7 +2200,7 @@ fn materialize_program_specialization_trait_dictionaries(
             module_lookup,
             implementation_method,
             request_shapes,
-            { start: 0, length: request_shapes.length() },
+            { start: 0, length: request_shapes.length(), },
             method_evidence,
             false,
           ) {
@@ -2249,8 +2249,8 @@ fn materialize_program_specialization_trait_dictionaries(
         function_index: -1,
         parameters: requirement_fragment.parameters,
         results: requirement_fragment.results,
-        specialization_shapes: { start: 0, length: 0 },
-        specialization_evidence: { start: 0, length: 0 },
+        specialization_shapes: { start: 0, length: 0, },
+        specialization_evidence: { start: 0, length: 0, },
         specialization_abi_key: "",
         offset: owner.expressions[expression].offset,
       })
@@ -2904,7 +2904,7 @@ fn program_runtime_trait_fallback_evidence(
       let node = request.evidence.length()
       request.evidence.push({
         kind: PlannedRuntimeTraitEvidence(trait_, slot),
-        prerequisites: { start: 0, length: 0 },
+        prerequisites: { start: 0, length: 0, },
       })
       request.roots.push(node)
       slot += 1
@@ -3181,7 +3181,7 @@ fn plan_program_wasmgc_fragments_for_root(
           specialization_module_lookup,
           callable.declaration,
           erased_shapes,
-          { start: 0, length: erased_shapes.length() },
+          { start: 0, length: erased_shapes.length(), },
           evidence,
           true,
         ),
@@ -3232,7 +3232,7 @@ fn plan_program_wasmgc_fragments_for_root(
             expression_index < module_.expression_evidence.length() {
             module_.expression_evidence[expression_index]
           } else {
-            { start: 0, length: 0 }
+            { start: 0, length: 0, }
           }
           if roots.length == 0 {
             ignore(
@@ -3328,7 +3328,7 @@ fn plan_program_wasmgc_fragments_for_root(
         ) {
         Some(callable) if program_callable_generic_parameters(callable).length >
           0 =>
-          fragments_.functions[function_index] = { ..function_, elided: true }
+          fragments_.functions[function_index] = { ..function_, elided: true, }
         _ => ()
       }
     }
@@ -3338,7 +3338,7 @@ fn plan_program_wasmgc_fragments_for_root(
     for field in module_.fields {
       match field.storage {
         WasmExternalNominalRefStorage(declaration) =>
-          external_type_references.push({ module_index, declaration })
+          external_type_references.push({ module_index, declaration, })
         _ => ()
       }
     }
@@ -3349,14 +3349,14 @@ fn plan_program_wasmgc_fragments_for_root(
       for index in 0..<function_.parameters.length {
         match module_.function_value_types[function_.parameters.start + index] {
           WasmExternalNominalRefValue(declaration) =>
-            external_type_references.push({ module_index, declaration })
+            external_type_references.push({ module_index, declaration, })
           _ => ()
         }
       }
       for index in 0..<function_.results.length {
         match module_.function_value_types[function_.results.start + index] {
           WasmExternalNominalRefValue(declaration) =>
-            external_type_references.push({ module_index, declaration })
+            external_type_references.push({ module_index, declaration, })
           _ => ()
         }
       }

@@ -1233,23 +1233,17 @@ fn starshine_finish_program_call(
     for parameter_index, fragment in fragments {
       append_starshine_instructions(output, fragment)
       let needs_cast = starshine_program_argument_needs_nominal_cast(
-        lowering,
-        expression,
-        parameter_index,
-      ) ||
-      (
-        !cross_module_or_specialized &&
-        starshine_program_parameter_is_external_nominal(
-          planned,
-          function_,
-          parameter_index,
-        ) &&
-        starshine_program_local_external_argument_needs_nominal_cast(
-          lowering,
-          expression,
-          parameter_index,
+          lowering, expression, parameter_index,
+        ) ||
+        (
+          !cross_module_or_specialized &&
+          starshine_program_parameter_is_external_nominal(
+            planned, function_, parameter_index,
+          ) &&
+          starshine_program_local_external_argument_needs_nominal_cast(
+            lowering, expression, parameter_index,
+          )
         )
-      )
       if needs_cast {
         starshine_append_program_argument_cast(
           planned, function_, parameter_index, output,
@@ -3242,11 +3236,11 @@ fn starshine_body_local_live_ranges(
       @semantic.BodyLocalCapture(owner, local_id) if owner == body.body &&
         local_id >= 0 &&
         local_id < ranges.length() =>
-        ranges[local_id] = { ..ranges[local_id], captured: true }
+        ranges[local_id] = { ..ranges[local_id], captured: true, }
       @semantic.LambdaLocalCapture(owner, local_id) if local_id >= 0 &&
         local_id < ranges.length() &&
         lowering.locals[body.locals.start + local_id].lambda == owner =>
-        ranges[local_id] = { ..ranges[local_id], captured: true }
+        ranges[local_id] = { ..ranges[local_id], captured: true, }
       _ => ()
     }
   }
@@ -8175,14 +8169,13 @@ fn starshine_emit_body_instructions(
             }
             tasks.push(EmitStarshineExpression(initial))
           }
-          @semantic.PlannedReturnExpression(value) => {
+          @semantic.PlannedReturnExpression(value) =>
             if value < 0 {
               results.push([@lib.Instruction::return_()])
             } else {
               tasks.push(FinishStarshineReturn)
               tasks.push(EmitStarshineExpression(value))
             }
-          }
           @semantic.PlannedBreakExpression(control, value) => {
             let value_source = lowering.expressions[value]
             tasks.push(
@@ -11644,7 +11637,7 @@ fn emit_starshine_lambda_body(
     starshine_emit_body_instructions(
       lowering,
       planned,
-      { program, module_index: program_module_index, helper_plan: None },
+      { program, module_index: program_module_index, helper_plan: None, },
       body,
       lambda,
       local_indices,
@@ -11734,7 +11727,7 @@ fn emit_starshine_function_body(
     starshine_emit_body_instructions(
       lowering,
       planned,
-      { program: None, module_index: -1, helper_plan: None },
+      { program: None, module_index: -1, helper_plan: None, },
       body,
       -1,
       local_indices,

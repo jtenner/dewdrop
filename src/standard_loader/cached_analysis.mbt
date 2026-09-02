@@ -175,7 +175,7 @@ pub fn analyze_program_with_interface_bundle_cache(
   }
   Ok({
     analyzed,
-    status: { enabled: policy.enabled && key.fingerprint != "", hits, misses },
+    status: { enabled: policy.enabled && key.fingerprint != "", hits, misses, },
     body_cache_status: body_cached.status,
   })
 }

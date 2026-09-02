@@ -129,7 +129,9 @@ fn bootstrap_store_package_artifact(
     bootstrap_artifact_write_string(body, logical)
     let bytes = @fs.read_file_to_bytes(file) catch {
       error => {
-        bootstrap_fail("cannot read package source \{file}: \{error}")
+        bootstrap_fail(
+          "cannot read package source \{file}: \{bootstrap_fs_error_message(error)}",
+        )
         b""
       }
     }
@@ -165,7 +167,9 @@ fn bootstrap_restore_package_artifact(
   }
   let encoded = @fs.read_file_to_bytes(path) catch {
     error => {
-      bootstrap_fail("cannot read installed package artifact \{path}: \{error}")
+      bootstrap_fail(
+        "cannot read installed package artifact \{path}: \{bootstrap_fs_error_message(error)}",
+      )
       b""
     }
   }
@@ -250,13 +254,19 @@ fn bootstrap_restore_package_artifact(
     bootstrap_join(staging, "dew.json"),
     Json::object(manifest_fields).stringify() + "\n",
   ) catch {
-    error => bootstrap_fail("cannot restore package manifest: \{error}")
+    error =>
+      bootstrap_fail(
+        "cannot restore package manifest: \{bootstrap_fs_error_message(error)}",
+      )
   }
   for file in files {
     let destination = bootstrap_join(staging, file.0)
     bootstrap_ensure_directory(bootstrap_dirname(destination))
     @fs.write_bytes_to_file(destination, file.1) catch {
-      error => bootstrap_fail("cannot restore package source: \{error}")
+      error =>
+        bootstrap_fail(
+          "cannot restore package source: \{bootstrap_fs_error_message(error)}",
+        )
     }
   }
   match bootstrap_rename(staging, package_root) {

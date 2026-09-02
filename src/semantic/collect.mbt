@@ -294,7 +294,7 @@ fn CollectionBuilder::bind_value_name(
       if kind == BuiltinDecl && binding.kind == BuiltinDecl {
         let candidate_index = self.value_binding_candidates.length()
         self.value_binding_candidates[binding.tail].next = candidate_index
-        self.value_binding_candidates.push({ declaration, next: -1 })
+        self.value_binding_candidates.push({ declaration, next: -1, })
         binding.tail = candidate_index
       } else {
         self.record_duplicate(
@@ -313,7 +313,7 @@ fn CollectionBuilder::bind_value_name(
       }
     None => {
       let candidate_index = self.value_binding_candidates.length()
-      self.value_binding_candidates.push({ declaration, next: -1 })
+      self.value_binding_candidates.push({ declaration, next: -1, })
       self.value_bindings[name] = {
         head: candidate_index,
         tail: candidate_index,
@@ -337,7 +337,7 @@ fn CollectionBuilder::add_declaration(
     Some(value) => self.intern(value)
     None => -1
   }
-  let declaration = { id, kind, name, visibility, offset }
+  let declaration = { id, kind, name, visibility, offset, }
   let location = self.declarations.length()
   self.declarations.push(declaration)
   self.declaration_locations.push(location)
@@ -669,7 +669,7 @@ fn CollectionBuilder::collect_let(
     declaration.id,
     value.name_offset,
   )
-  self.lets.push({ declaration: declaration.id, mutable_: value.mutable_ })
+  self.lets.push({ declaration: declaration.id, mutable_: value.mutable_, })
   self.lower_expression_body(
     declaration.id,
     ModuleLetBody,
@@ -870,7 +870,7 @@ fn CollectionBuilder::collect_foreign_type(
       )
     None => ()
   }
-  self.foreign_types.push({ declaration: declaration.id })
+  self.foreign_types.push({ declaration: declaration.id, })
 }
 
 ///|
@@ -1081,7 +1081,7 @@ fn CollectionBuilder::collect_derive_requests(
   requests : Array[@parser.DeriveRequest],
 ) -> CollectedDeriveOffsets {
   if requests.length() == 0 {
-    return { eq: None, debug: None, hash: None, show: None }
+    return { eq: None, debug: None, hash: None, show: None, }
   }
   let seen : Map[String, UInt64]? = if requests.length() > 8 {
     Some(Map::default())
@@ -1138,7 +1138,7 @@ fn CollectionBuilder::collect_derive_requests(
       )
     }
   }
-  { eq: eq_offset, debug: debug_offset, hash: hash_offset, show: show_offset }
+  { eq: eq_offset, debug: debug_offset, hash: hash_offset, show: show_offset, }
 }
 
 ///|

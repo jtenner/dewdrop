@@ -202,7 +202,7 @@ pub fn LocalTypeSolver::product_type(
   for field in fields {
     self.type_arguments.push(field)
   }
-  self.push_type_term(BodyProductType({ start, length: fields.length() }))
+  self.push_type_term(BodyProductType({ start, length: fields.length(), }))
 }
 
 ///|
@@ -216,7 +216,7 @@ pub fn LocalTypeSolver::applied_type(
     self.type_arguments.push(argument)
   }
   self.push_type_term(
-    BodyAppliedType(base, { start, length: arguments.length() }),
+    BodyAppliedType(base, { start, length: arguments.length(), }),
   )
 }
 
@@ -231,7 +231,7 @@ pub fn LocalTypeSolver::function_type(
     self.type_arguments.push(parameter)
   }
   self.push_type_term(
-    BodyFunctionType({ start, length: parameters.length() }, result),
+    BodyFunctionType({ start, length: parameters.length(), }, result),
   )
 }
 

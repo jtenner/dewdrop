@@ -202,7 +202,7 @@ fn Parser::parse_match_body(
       Ok(_) => ()
       Err(error) => return Err(error)
     }
-    arms.push({ pattern, guard_condition, body, offset: arm_offset })
+    arms.push({ pattern, guard_condition, body, offset: arm_offset, })
     self.skip_newlines()
   } nobreak {
     abort("unreachable match body parser termination")

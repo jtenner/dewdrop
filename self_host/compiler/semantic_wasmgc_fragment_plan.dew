@@ -125,13 +125,15 @@ fn self_host_wasmgc_field_storage_type(
   module_: SelfHostPlannedModuleLowering,
   field: SelfHostPlannedFieldLayout,
 ) -> SelfHostPlannedWasmStorageType {
-  let shape = if field.shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-    self_host_planned_resolved_value_shape(
-      module_.resolved_types,
-      field.type_,
-    )
-  } else {
+  // The declared type is the field carrier proof. Inference must not override it.
+  let declared_shape = self_host_planned_resolved_value_shape(
+    module_.resolved_types,
+    field.type_,
+  )
+  let shape = if declared_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
     field.shape
+  } else {
+    declared_shape
   }
   self_host_wasmgc_storage_type(shape)
 }
@@ -144,17 +146,16 @@ fn self_host_wasmgc_payload_storage_type(
   let shape = module_.type_layouts.payload_shapes[
     self_host_u32_add(payload.start, index)
   ]
-  if shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-    self_host_wasmgc_storage_type(
-      self_host_planned_resolved_value_shape(
-        module_.resolved_types,
-        module_.type_layouts.payload_types[
-          self_host_u32_add(payload.start, index)
-        ],
-      ),
-    )
-  } else {
+  let declared_shape = self_host_planned_resolved_value_shape(
+    module_.resolved_types,
+    module_.type_layouts.payload_types[
+      self_host_u32_add(payload.start, index)
+    ],
+  )
+  if declared_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
     self_host_wasmgc_storage_type(shape)
+  } else {
+    self_host_wasmgc_storage_type(declared_shape)
   }
 }
 
@@ -283,7 +284,19 @@ fn self_host_wasmgc_plan_types(
               role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
               declaration: source.field
               physical_index: current
-              storage: self_host_wasmgc_field_storage_type(module_, source)
+              storage: match self_host_specialization_canonical_scalar(
+                self_host_planned_resolved_value_shape(
+                  module_.resolved_types,
+                  source.type_,
+                ),
+              ) {
+                SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI32Storage
+                SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI64Storage
+                SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF32Storage
+                SelfHostPlannedValueShape::F64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF64Storage
+                SelfHostPlannedValueShape::V128PlannedValueShape => SelfHostPlannedWasmStorageType::WasmV128Storage
+                _ => SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+              }
               mutable_: source.mutable_
               exact_nominal: false
               offset: source.offset

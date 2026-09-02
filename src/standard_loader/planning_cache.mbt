@@ -273,7 +273,10 @@ fn lookup_type_layout_cache(
         return Ok(None)
       }
       let bytes = @fs.read_file_to_bytes(path) catch {
-        error => return Err("cannot read type-layout cache \{path}: \{error}")
+        error =>
+          return Err(
+            "cannot read type-layout cache \{path}: \{standard_loader_fs_error_message(error)}",
+          )
       }
       match unwrap_type_layout_cache_payload(bytes, key, source, interface_) {
         Ok(value) => value
@@ -440,7 +443,9 @@ fn lookup_wasmgc_fragment_cache(
       }
       let bytes = @fs.read_file_to_bytes(path) catch {
         error =>
-          return Err("cannot read WasmGC fragment cache \{path}: \{error}")
+          return Err(
+            "cannot read WasmGC fragment cache \{path}: \{standard_loader_fs_error_message(error)}",
+          )
       }
       match
         unwrap_wasmgc_fragment_cache_payload(

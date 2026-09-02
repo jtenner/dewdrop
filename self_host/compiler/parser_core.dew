@@ -463,7 +463,7 @@ fn self_host_parse_type(parser: SelfHostParser) -> Option<SelfHostTypeExpr> {
         continue 0u32
       } else {
       }
-      match frames.pop() {
+      match self_host_array_pop(frames) {
         Option::None => break Option::Some(value)
         Option::Some(frame) => match frame {
           SelfHostTypeParseFrame::AppliedFrame(base, arguments, offset) => {

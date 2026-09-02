@@ -1,14 +1,7 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "jtenner/dewdrop/starshine_guest"
 
-import {
-  "jtenner/starshine/lib",
-}
-
 // Values
-pub fn module_new() -> @lib.Module
-
-pub fn module_new_named(String) -> @lib.Module
 
 // Errors
 
@@ -17,4 +10,3 @@ pub fn module_new_named(String) -> @lib.Module
 // Type aliases
 
 // Traits
-

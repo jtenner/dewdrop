@@ -461,7 +461,7 @@ fn planned_error_expression() -> PlannedExpression {
     type_: 0,
     shape: ErrorPlannedValueShape,
     nominal: 0UL,
-    flow: { outcomes: 0 },
+    flow: { outcomes: 0, },
     trait_object_coercion: NoInferredTraitObjectCoercion,
     kind: PlannedPoisonExpression,
     offset: 0UL,
@@ -470,7 +470,7 @@ fn planned_error_expression() -> PlannedExpression {
 
 ///|
 fn planned_error_block_item() -> PlannedBlockItem {
-  { kind: PlannedExpressionItem(-1), offset: 0UL }
+  { kind: PlannedExpressionItem(-1), offset: 0UL, }
 }
 
 ///|
@@ -1879,7 +1879,7 @@ fn plan_body_lowering_job(
       blocks: body.blocks,
       patterns: body.patterns,
       pattern_arms: body.pattern_arms,
-      diagnostics: { start: 0, length: diagnostics.length() },
+      diagnostics: { start: 0, length: diagnostics.length(), },
     },
     expressions,
     blocks,
@@ -1959,7 +1959,10 @@ fn copy_body_lowering_job(
       blocks: job.body.blocks,
       patterns: job.body.patterns,
       pattern_arms: job.body.pattern_arms,
-      diagnostics: { start: diagnostic_start, length: job.diagnostics.length() },
+      diagnostics: {
+        start: diagnostic_start,
+        length: job.diagnostics.length(),
+      },
     }
   } else {
     target.bodies[semantic_id_local(body.id)] = {
@@ -1976,7 +1979,10 @@ fn copy_body_lowering_job(
       blocks: job.body.blocks,
       patterns: job.body.patterns,
       pattern_arms: job.body.pattern_arms,
-      diagnostics: { start: diagnostic_start, length: job.diagnostics.length() },
+      diagnostics: {
+        start: diagnostic_start,
+        length: job.diagnostics.length(),
+      },
     }
   }
   for diagnostic in job.diagnostics {
@@ -2049,7 +2055,7 @@ fn directize_body_function_values(
               kind: PlannedConsumedExpression,
             }
             let lambda_source = target.lambdas[lambda]
-            target.lambdas[lambda] = { ..lambda_source, directized: true }
+            target.lambdas[lambda] = { ..lambda_source, directized: true, }
           }
           _ => ()
         }
@@ -2083,7 +2089,7 @@ fn directize_body_function_values(
       match initializer_kind {
         PlannedLambdaClosure(lambda, _) => {
           let lambda_source = target.lambdas[lambda]
-          target.lambdas[lambda] = { ..lambda_source, elided: true }
+          target.lambdas[lambda] = { ..lambda_source, elided: true, }
         }
         PlannedFunctionReference(_, _) => ()
         _ => continue
@@ -2131,7 +2137,7 @@ fn directize_body_function_values(
           }
         }
         let lambda_source = target.lambdas[lambda]
-        target.lambdas[lambda] = { ..lambda_source, directized: true }
+        target.lambdas[lambda] = { ..lambda_source, directized: true, }
       }
       PlannedFunctionReference(declaration, type_arguments) =>
         for
@@ -2334,13 +2340,13 @@ fn plan_module_lowering_in_order(
       root_type: 0,
       root_shape: ErrorPlannedValueShape,
       result_shape: ErrorPlannedValueShape,
-      flow: { outcomes: 0 },
-      locals: { start: 0, length: 0 },
-      expressions: { start: 0, length: 0 },
-      blocks: { start: 0, length: 0 },
-      patterns: { start: 0, length: 0 },
-      pattern_arms: { start: 0, length: 0 },
-      diagnostics: { start: 0, length: 0 },
+      flow: { outcomes: 0, },
+      locals: { start: 0, length: 0, },
+      expressions: { start: 0, length: 0, },
+      blocks: { start: 0, length: 0, },
+      patterns: { start: 0, length: 0, },
+      pattern_arms: { start: 0, length: 0, },
+      diagnostics: { start: 0, length: 0, },
     }),
     lambdas: names.lambdas.map(fn(info) {
       {
@@ -2352,14 +2358,14 @@ fn plan_module_lowering_in_order(
         root_type: 0,
         root_shape: ErrorPlannedValueShape,
         result_shape: ErrorPlannedValueShape,
-        flow: { outcomes: 0 },
+        flow: { outcomes: 0, },
         locals: info.locals,
         captures: info.captures,
         expressions: collected.lambdas[info.lambda].body.expressions,
         blocks: collected.lambdas[info.lambda].body.blocks,
         patterns: collected.lambdas[info.lambda].body.patterns,
         pattern_arms: collected.lambdas[info.lambda].body.pattern_arms,
-        diagnostics: { start: 0, length: 0 },
+        diagnostics: { start: 0, length: 0, },
       }
     }),
     locals: planned_locals,
@@ -2369,8 +2375,8 @@ fn plan_module_lowering_in_order(
       planned_error_expression(),
     ),
     blocks: Array::make(collected.blocks.length(), {
-      items: { start: 0, length: 0 },
-      flow: { outcomes: 0 },
+      items: { start: 0, length: 0, },
+      flow: { outcomes: 0, },
       offset: 0UL,
     }),
     block_items: Array::make(
@@ -2401,7 +2407,7 @@ fn plan_module_lowering_in_order(
       pattern: -1,
       guard_condition: -1,
       body: -1,
-      flow: { outcomes: 0 },
+      flow: { outcomes: 0, },
       offset: 0UL,
     }),
     expression_children: collected.expression_children,

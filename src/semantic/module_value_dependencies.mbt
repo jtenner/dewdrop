@@ -76,7 +76,7 @@ fn collect_module_let_dependencies(
     for dependency in scratch {
       declarations.push(collected.lets[dependency].declaration)
     }
-    spans.push({ start, length: declarations.length() - start })
+    spans.push({ start, length: declarations.length() - start, })
   }
   (spans, declarations)
 }
@@ -276,7 +276,7 @@ fn find_module_value_sccs(
         collected.lets[raw_members[raw.start + index]].declaration,
       )
     }
-    sccs.push({ start, length: scc_declarations.length() - start })
+    sccs.push({ start, length: scc_declarations.length() - start, })
   }
   (sccs, scc_declarations)
 }

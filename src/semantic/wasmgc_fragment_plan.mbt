@@ -163,12 +163,12 @@ pub struct WasmImportIdentity {
 
 ///|
 pub fn WasmImportIdentity::host(field : Bytes) -> WasmImportIdentity {
-  { module_name: b"dew", field, kind: HostWasmImport }
+  { module_name: b"dew", field, kind: HostWasmImport, }
 }
 
 ///|
 pub fn WasmImportIdentity::wasi(field : Bytes) -> WasmImportIdentity {
-  { module_name: b"wasi_snapshot_preview1", field, kind: WasiWasmImport }
+  { module_name: b"wasi_snapshot_preview1", field, kind: WasiWasmImport, }
 }
 
 ///|
@@ -179,7 +179,7 @@ pub fn WasmImportIdentity::static_link(
   let module_name = Buffer(size_hint=5 + logical_name.length())
   module_name.write_bytes(b"link:")
   module_name.write_bytes(logical_name)
-  { module_name: module_name.to_bytes(), field, kind: StaticLinkWasmImport }
+  { module_name: module_name.to_bytes(), field, kind: StaticLinkWasmImport, }
 }
 
 ///|
@@ -1539,7 +1539,7 @@ fn wasmgc_type_sccs(
     for entity in component {
       raw_members.push(entity)
     }
-    raw_spans.push({ start, length: raw_members.length() - start })
+    raw_spans.push({ start, length: raw_members.length() - start, })
     raw_ranks.push(rank)
   }
   let order : Array[Int] = []
@@ -1562,7 +1562,7 @@ fn wasmgc_type_sccs(
     for index in 0..<source.length {
       members.push(raw_members[source.start + index])
     }
-    spans.push({ start, length: members.length() - start })
+    spans.push({ start, length: members.length() - start, })
   }
   (spans, members)
 }
@@ -1922,9 +1922,9 @@ fn wasmgc_append_physical_type_fields(
   let length = target.length() - start
   for index in 0..<length {
     let field = target[start + index]
-    target[start + index] = { ..field, physical_index: index }
+    target[start + index] = { ..field, physical_index: index, }
   }
-  { start, length }
+  { start, length, }
 }
 
 ///|
@@ -2586,7 +2586,7 @@ fn wasmgc_plan_function_job(
     PlannedImplMethodCallable(_, Some(body)) => PlannedWasmDefinedFunction(body)
     PlannedImplMethodCallable(_, None) => PlannedWasmSignatureOnlyFunction
   }
-  { kind, parameters, results }
+  { kind, parameters, results, }
 }
 
 ///|
@@ -3237,7 +3237,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       })
     }
     type_groups.push({
-      types: { start, length: physical_types.length() - start },
+      types: { start, length: physical_types.length() - start, },
       first_type_index,
     })
   }
@@ -3273,11 +3273,11 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       kind: PlannedWasmCaptureCellType(slot),
       type_index,
       group_index: type_groups.length(),
-      fields: { start: field_start, length: 1 },
+      fields: { start: field_start, length: 1, },
       offset: capture_cell_offsets[slot],
     })
     type_groups.push({
-      types: { start: physical_start, length: 1 },
+      types: { start: physical_start, length: 1, },
       first_type_index: type_index,
     })
   }
@@ -3300,11 +3300,11 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       kind: PlannedWasmClosureType,
       type_index: closure_type_index,
       group_index: type_groups.length(),
-      fields: { start: closure_field_start, length: 1 },
+      fields: { start: closure_field_start, length: 1, },
       offset: 0UL,
     })
     type_groups.push({
-      types: { start: closure_physical_start, length: 1 },
+      types: { start: closure_physical_start, length: 1, },
       first_type_index: closure_type_index,
     })
     for lambda_index, lambda in lowering.lambdas {
@@ -3346,7 +3346,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         kind: PlannedWasmLambdaClosureType(lambda_index),
         type_index,
         group_index: type_groups.length(),
-        fields: { start: field_start, length: fields.length() - field_start },
+        fields: { start: field_start, length: fields.length() - field_start, },
         offset: match lowering.lambdas[lambda_index].root {
           BlockBodyRoot(block) => lowering.blocks[block].offset
           ExpressionBodyRoot(expression) =>
@@ -3354,7 +3354,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         },
       })
       type_groups.push({
-        types: { start: physical_start, length: 1 },
+        types: { start: physical_start, length: 1, },
         first_type_index: type_index,
       })
     }
@@ -3379,11 +3379,11 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         kind: PlannedWasmTraitMethodSignatureType(requirement),
         type_index: signature_type_index,
         group_index: type_groups.length(),
-        fields: { start: 0, length: 0 },
+        fields: { start: 0, length: 0, },
         offset: wasmgc_trait_requirement_offset(functions, imports, requirement),
       })
       type_groups.push({
-        types: { start: signature_physical, length: 1 },
+        types: { start: signature_physical, length: 1, },
         first_type_index: signature_type_index,
       })
     }
@@ -3396,11 +3396,11 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       kind: PlannedWasmTraitVTableType(trait_declaration),
       type_index: vtable_type_index,
       group_index: type_groups.length(),
-      fields: { start: 0, length: 0 },
+      fields: { start: 0, length: 0, },
       offset: 0UL,
     })
     type_groups.push({
-      types: { start: vtable_physical, length: 1 },
+      types: { start: vtable_physical, length: 1, },
       first_type_index: vtable_type_index,
     })
     let object_physical = physical_types.length()
@@ -3408,11 +3408,11 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       kind: PlannedWasmTraitObjectType(trait_declaration),
       type_index: object_type_index,
       group_index: type_groups.length(),
-      fields: { start: 0, length: 0 },
+      fields: { start: 0, length: 0, },
       offset: 0UL,
     })
     type_groups.push({
-      types: { start: object_physical, length: 1 },
+      types: { start: object_physical, length: 1, },
       first_type_index: object_type_index,
     })
     trait_layouts.push({
@@ -3792,8 +3792,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       function_index,
       parameters,
       results,
-      specialization_shapes: { start: 0, length: 0 },
-      specialization_evidence: { start: 0, length: 0 },
+      specialization_shapes: { start: 0, length: 0, },
+      specialization_evidence: { start: 0, length: 0, },
       specialization_abi_key: "",
       offset: callable.offset,
     })
@@ -3833,8 +3833,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       function_index,
       parameters: function_type.parameters,
       results: function_type.results,
-      specialization_shapes: { start: 0, length: 0 },
-      specialization_evidence: { start: 0, length: 0 },
+      specialization_shapes: { start: 0, length: 0, },
+      specialization_evidence: { start: 0, length: 0, },
       specialization_abi_key: "",
       offset: match lambda.root {
         BlockBodyRoot(block) => lowering.blocks[block].offset
@@ -3910,8 +3910,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
               start: result_start,
               length: function_value_types.length() - result_start,
             },
-            specialization_shapes: { start: 0, length: 0 },
-            specialization_evidence: { start: 0, length: 0 },
+            specialization_shapes: { start: 0, length: 0, },
+            specialization_evidence: { start: 0, length: 0, },
             specialization_abi_key: "",
             offset: interface_callable.location.offset,
           })
@@ -3965,7 +3965,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       if physical_types[index].type_index == layout.object_type_index {
         physical_types[index] = {
           ..physical_types[index],
-          fields: { start: object_field_start, length: 2 },
+          fields: { start: object_field_start, length: 2, },
         }
       }
     }
@@ -4062,8 +4062,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           function_index: defined_index,
           parameters: requirement_fragment.parameters,
           results: requirement_fragment.results,
-          specialization_shapes: { start: 0, length: 0 },
-          specialization_evidence: { start: 0, length: 0 },
+          specialization_shapes: { start: 0, length: 0, },
+          specialization_evidence: { start: 0, length: 0, },
           specialization_abi_key: "",
           offset: expression.offset,
         })
@@ -4097,7 +4097,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           start: method_start,
           length: trait_methods.length() - method_start,
         },
-        runtime_evidence_parameters: { start: 0, length: 0 },
+        runtime_evidence_parameters: { start: 0, length: 0, },
         runtime_materialized,
       })
     } else {

@@ -20,7 +20,7 @@ test "public generic structs preserve ordered fields" {
         visibility: Public,
         name: "Point",
         name_offset: 11UL,
-        type_parameters: [{ name: "t", bounds: [], offset: 17UL }],
+        type_parameters: [{ name: "t", bounds: [], offset: 17UL, }],
         fields: [
           {
             mutable_: false,
@@ -66,8 +66,8 @@ test "struct declarations retain postfix derive requests" {
     ).parse_declaration() {
     Ok(Struct(declaration)) =>
       assert_eq(declaration.derives, [
-        { name: "Eq", offset: 48UL },
-        { name: "Debug", offset: 52UL },
+        { name: "Eq", offset: 48UL, },
+        { name: "Debug", offset: 52UL, },
       ])
     _ => fail("expected derived struct declaration")
   }

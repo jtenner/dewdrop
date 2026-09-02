@@ -151,7 +151,7 @@ fn program_effect_summary_expression_is_discardable(
     }
     PlannedDirectCall(target, receiver, arguments, _) => {
       match summaries.get(target) {
-        Some({ discardable: true }) => ()
+        Some({ discardable: true, }) => ()
         _ => return false
       }
       (
@@ -215,7 +215,7 @@ fn program_callable_effect_summaries(
             )
         }
         if discardable {
-          summaries[callable.declaration] = { discardable: true }
+          summaries[callable.declaration] = { discardable: true, }
           changed = true
         }
       }
@@ -755,7 +755,7 @@ fn directize_transparent_callback_calls(
       let replacement = match module_.expressions[callback_expression].kind {
         PlannedLambdaClosure(lambda, captures) => {
           let lambda_source = module_.lambdas[lambda]
-          module_.lambdas[lambda] = { ..lambda_source, directized: true }
+          module_.lambdas[lambda] = { ..lambda_source, directized: true, }
           PlannedDirectLambdaCall(lambda, captures, forwarded)
         }
         PlannedFunctionReference(target, type_arguments) =>
@@ -768,7 +768,7 @@ fn directize_transparent_callback_calls(
         kind: PlannedConsumedExpression,
       }
       let call_source = module_.expressions[expression]
-      module_.expressions[expression] = { ..call_source, kind: replacement }
+      module_.expressions[expression] = { ..call_source, kind: replacement, }
     }
   }
 }
@@ -1447,7 +1447,7 @@ fn runtime_trait_direct_call_candidate(
       (
         summary.requirement,
         module_.expression_children[arguments.start],
-        { start: arguments.start + 1, length: arguments.length - 1 },
+        { start: arguments.start + 1, length: arguments.length - 1, },
       )
     }
     _ => return None
@@ -1730,7 +1730,7 @@ fn runtime_trait_directize_candidate(
     }
   }
   while module_.expression_evidence.length() < module_.expressions.length() {
-    module_.expression_evidence.push({ start: 0, length: 0 })
+    module_.expression_evidence.push({ start: 0, length: 0, })
   }
   let evidence_start = module_.trait_evidence_roots.length()
   let prerequisites = module_.trait_evidence[candidate.evidence].prerequisites
@@ -1750,7 +1750,7 @@ fn runtime_trait_directize_candidate(
       candidate.implementation_method,
       candidate.receiver,
       candidate.method_arguments,
-      { start: type_argument_start, length: owner_arguments.length },
+      { start: type_argument_start, length: owner_arguments.length, },
     ),
   }
 }
@@ -1825,7 +1825,7 @@ fn directize_exact_runtime_trait_body(
       ExactRuntimeTraitFlow(_, _, _, type_, shape, nominal) => {
         let index = body.locals.start + local_id
         let source = module_.locals[index]
-        module_.locals[index] = { ..source, type_, shape, nominal }
+        module_.locals[index] = { ..source, type_, shape, nominal, }
       }
       _ => ()
     }
@@ -2060,7 +2060,7 @@ fn runtime_trait_elidable_wrappers(
       continue
     }
     let source = module_.expressions[root]
-    module_.expressions[root] = { ..source, kind: PlannedConsumedExpression }
+    module_.expressions[root] = { ..source, kind: PlannedConsumedExpression, }
     elided.push(declaration)
   }
   elided
@@ -2726,7 +2726,7 @@ fn scalarize_program_private_unit_enum_local_matches(
 ) -> Unit {
   let local_index = body.locals.start + local_id
   let local_info = module_.locals[local_index]
-  module_.locals[local_index] = { ..local_info, shape: I32PlannedValueShape }
+  module_.locals[local_index] = { ..local_info, shape: I32PlannedValueShape, }
   for
     expression in body.expressions.start..<(body.expressions.start +
     body.expressions.length) {
@@ -4038,7 +4038,7 @@ fn program_local_live_range(
       _ => ()
     }
   }
-  { first_read, last_read, reads, writes }
+  { first_read, last_read, reads, writes, }
 }
 
 ///|
@@ -4323,7 +4323,7 @@ fn scalar_replace_program_struct_field_read(
   }
   module_.expressions[expression] = {
     ..source,
-    kind: PlannedParameterSelect({ start, length: fields.length }, selected),
+    kind: PlannedParameterSelect({ start, length: fields.length, }, selected),
   }
   let struct_source = module_.expressions[struct_expression]
   module_.expressions[struct_expression] = {
@@ -4500,7 +4500,10 @@ fn scalarize_joined_struct_field(
         type_,
         shape,
         trait_object_coercion: NoInferredTraitObjectCoercion,
-        kind: PlannedParameterSelect({ start, length: fields.length }, selected),
+        kind: PlannedParameterSelect(
+          { start, length: fields.length, },
+          selected,
+        ),
       }
       true
     }
@@ -4787,7 +4790,7 @@ fn scalar_replace_struct_component_aliases(
         kind: PlannedLetItem(component_locals[field_index], false, object_value),
       }
     } else {
-      { ..target_source, kind: PlannedExpressionItem(object_value) }
+      { ..target_source, kind: PlannedExpressionItem(object_value), }
     }
     if field_gets[field_index] >= 0 {
       let field_get = field_gets[field_index]
@@ -4926,7 +4929,7 @@ fn scalar_replace_repeated_same_struct_field_local(
     type_: field_source.type_,
     shape: field_source.shape,
     trait_object_coercion: NoInferredTraitObjectCoercion,
-    kind: PlannedParameterSelect({ start, length: fields.length }, selected),
+    kind: PlannedParameterSelect({ start, length: fields.length, }, selected),
   }
   let local_index = body.locals.start + local_id
   let local_source = module_.locals[local_index]
@@ -5239,7 +5242,7 @@ fn scalar_replace_synthesized_struct_components(
               ),
             }
           } else {
-            { ..aggregate_item, kind: PlannedExpressionItem(object_value) }
+            { ..aggregate_item, kind: PlannedExpressionItem(object_value), }
           },
         )
       }
@@ -5422,8 +5425,7 @@ fn scalar_replace_program_struct_field_reads(
               PlannedLetItem(_, _, value) | PlannedExpressionItem(value) =>
                 (
                   value,
-                  module_.expressions[value].kind
-                  is PlannedReturnExpression(_),
+                  module_.expressions[value].kind is PlannedReturnExpression(_),
                 )
               PlannedElidedLetItem(_) => continue
             }
@@ -5808,7 +5810,7 @@ fn scalarize_nested_pattern_binding(
   let mut selected = -1
   let mut selected_pattern = -1
   let mut selected_value = -1
-  let mut selector = { start: -1, length: 0 }
+  let mut selector = { start: -1, length: 0, }
   match (module_.patterns[pattern].source, module_.expressions[value].kind) {
     (
       HirStructPattern(_, pattern_fields, _, _, _),
@@ -5846,7 +5848,7 @@ fn scalarize_nested_pattern_binding(
           _ => ()
         }
       }
-      selector = { start, length: object_fields.length }
+      selector = { start, length: object_fields.length, }
     }
     (HirTuplePattern(_, children, _), PlannedStructNew(_, _, fields)) => {
       let start = module_.expression_children.length()
@@ -5860,7 +5862,7 @@ fn scalarize_nested_pattern_binding(
           selected_value = candidate
         }
       }
-      selector = { start, length: fields.length }
+      selector = { start, length: fields.length, }
     }
     _ => return false
   }
@@ -5933,7 +5935,7 @@ fn scalar_replace_known_variant_catchall(
       module_.expression_children.push(variant_expression)
       module_.expressions[expression] = {
         ..source,
-        kind: PlannedParameterSelect({ start: selector_start, length: 1 }, 0),
+        kind: PlannedParameterSelect({ start: selector_start, length: 1, }, 0),
       }
       return true
     }
@@ -5954,7 +5956,7 @@ fn scalar_replace_known_variant_catchall(
         return false
       }
       let rewritten_body = module_.expressions[arm.body]
-      module_.expressions[expression] = { ..source, kind: rewritten_body.kind }
+      module_.expressions[expression] = { ..source, kind: rewritten_body.kind, }
       module_.expressions[arm.body] = {
         ..rewritten_body,
         kind: PlannedConsumedExpression,
@@ -6714,7 +6716,7 @@ fn scalar_replace_program_guarded_variant_match(
     })
     let then_block = module_.blocks.length()
     module_.blocks.push({
-      items: { start: then_item, length: 1 },
+      items: { start: then_item, length: 1, },
       flow: arm.flow,
       offset: arm.offset,
     })
@@ -6745,7 +6747,7 @@ fn scalar_replace_program_guarded_variant_match(
   })
   let result_block = module_.blocks.length()
   module_.blocks.push({
-    items: { start: items_start, length: values.length() + 1 },
+    items: { start: items_start, length: values.length() + 1, },
     flow: module_.expressions[expression].flow,
     offset: module_.expressions[expression].offset,
   })
@@ -6882,7 +6884,7 @@ fn scalar_replace_program_variant_payload_match(
   let mut payload = -1
   let mut payload_pattern = -1
   let mut payload_count = 0
-  let mut selector = { start: -1, length: 0 }
+  let mut selector = { start: -1, length: 0, }
   let mut appended_selector = false
   match (module_.expressions[variant_expression].kind, root.source) {
     (
@@ -6979,7 +6981,7 @@ fn scalar_replace_program_variant_payload_match(
           module_.object_fields[fields.start + index].value,
         )
       }
-      selector = { start, length: fields.length }
+      selector = { start, length: fields.length, }
       appended_selector = true
     }
     _ => return false
@@ -7542,7 +7544,7 @@ fn factor_program_variant_payload_extractions(
           })
           let then_block = module_.blocks.length()
           module_.blocks.push({
-            items: { start: then_item, length: 1 },
+            items: { start: then_item, length: 1, },
             flow: arm.flow,
             offset: arm.offset,
           })

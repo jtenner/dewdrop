@@ -3,6 +3,20 @@ open dew.std.bytes
 open dew.std.option
 open dew.std.string
 
+// This helper keeps the Array element type visible at each pop call.
+// The backend uses the type argument as compile-time carrier proof.
+fn self_host_array_pop<t>(values: Array<t>) -> Option<t> {
+  let length = values.length()
+  if length == 0u32 {
+    Option::None
+  } else {
+    let index = length - 1u32
+    let value = values.get_unchecked(index)
+    values.truncate(index)
+    Option::Some(value)
+  }
+}
+
 pub enum SelfHostDeclarationVisibility {
   ModuleVisible
   Public
@@ -219,11 +233,95 @@ impl SelfHostExpr {
   }
 }
 
-pub enum SelfHostBlockItem {
-  LetItem(Bool, String, U32, SelfHostExpr, U32)
-  AssignmentItem(SelfHostExpr, SelfHostExpr, U32)
-  IndexSetItem(SelfHostExpr, SelfHostExpr, U32)
-  ExpressionItem(SelfHostExpr, U32)
+pub struct SelfHostBlockItem {
+  kind: U32
+  mutable_: Bool
+  name: String
+  name_offset: U32
+  target: SelfHostExpr
+  value: SelfHostExpr
+  offset: U32
+}
+
+fn self_host_let_block_item(
+  mutable_: Bool,
+  name: String,
+  name_offset: U32,
+  value: SelfHostExpr,
+  offset: U32,
+) -> SelfHostBlockItem {
+  SelfHostBlockItem::{
+    kind: 0u32
+    mutable_: mutable_
+    name: name
+    name_offset: name_offset
+    target: value
+    value: value
+    offset: offset
+  }
+}
+
+fn self_host_assignment_block_item(
+  target: SelfHostExpr,
+  value: SelfHostExpr,
+  offset: U32,
+) -> SelfHostBlockItem {
+  SelfHostBlockItem::{
+    kind: 1u32
+    mutable_: false
+    name: ""
+    name_offset: offset
+    target: target
+    value: value
+    offset: offset
+  }
+}
+
+fn self_host_index_set_block_item(
+  target: SelfHostExpr,
+  value: SelfHostExpr,
+  offset: U32,
+) -> SelfHostBlockItem {
+  SelfHostBlockItem::{
+    kind: 2u32
+    mutable_: false
+    name: ""
+    name_offset: offset
+    target: target
+    value: value
+    offset: offset
+  }
+}
+
+fn self_host_expression_block_item(
+  value: SelfHostExpr,
+  offset: U32,
+) -> SelfHostBlockItem {
+  SelfHostBlockItem::{
+    kind: 3u32
+    mutable_: false
+    name: ""
+    name_offset: offset
+    target: value
+    value: value
+    offset: offset
+  }
+}
+
+fn self_host_block_item_is_let(item: SelfHostBlockItem) -> Bool {
+  self_host_u32_equal(item.kind, 0u32)
+}
+
+fn self_host_block_item_is_assignment(item: SelfHostBlockItem) -> Bool {
+  self_host_u32_equal(item.kind, 1u32)
+}
+
+fn self_host_block_item_is_index_set(item: SelfHostBlockItem) -> Bool {
+  self_host_u32_equal(item.kind, 2u32)
+}
+
+fn self_host_block_item_is_expression(item: SelfHostBlockItem) -> Bool {
+  self_host_u32_equal(item.kind, 3u32)
 }
 
 pub struct SelfHostBlock {

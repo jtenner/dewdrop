@@ -312,7 +312,7 @@ fn Parser::parse_optional_derive_requests(
       Ok(value) => value
       Err(error) => return Err(error.inside_parenthesis())
     }
-    requests.push({ name, offset })
+    requests.push({ name, offset, })
     self.skip_newlines()
     if self.consume_right_paren_for_declaration() {
       return Ok(requests)
@@ -416,7 +416,7 @@ fn Parser::parse_explicit_type_arguments_after_less(
   self : Parser,
 ) -> Result[Array[TypeExpr], RecoveryFailure] {
   let arguments : Array[TypeExpr] = []
-  let state : TypeCloserState = { pending: 0, offset: 0UL }
+  let state : TypeCloserState = { pending: 0, offset: 0UL, }
   self.skip_newlines()
   while true {
     let argument = match self.parse_type_inner(state) {
@@ -610,7 +610,7 @@ fn Parser::parse_type_inner(
 
 ///|
 fn Parser::parse_type(self : Parser) -> Result[TypeExpr, RecoveryFailure] {
-  let state : TypeCloserState = { pending: 0, offset: 0UL }
+  let state : TypeCloserState = { pending: 0, offset: 0UL, }
   let type_ = match self.parse_type_inner(state) {
     Ok(value) => value
     Err(error) => return Err(error)
@@ -717,7 +717,7 @@ fn Parser::parse_type_parameters(
   self : Parser,
 ) -> Result[Array[TypeParameter], RecoveryFailure] {
   let parameters : Array[TypeParameter] = []
-  let closer_state : TypeCloserState = { pending: 0, offset: 0UL }
+  let closer_state : TypeCloserState = { pending: 0, offset: 0UL, }
   self.skip_newlines()
   while true {
     let (name, offset) = match self.parse_identifier(TypeParameter) {
@@ -745,7 +745,7 @@ fn Parser::parse_type_parameters(
         }
       None => ()
     }
-    parameters.push({ name, bounds, offset })
+    parameters.push({ name, bounds, offset, })
     if self.consume_type_greater(closer_state) {
       return Ok(parameters)
     }
@@ -801,7 +801,7 @@ fn Parser::parse_parameter(
     Ok(value) => value
     Err(error) => return Err(error)
   }
-  Ok({ name, type_, offset })
+  Ok({ name, type_, offset, })
 }
 
 ///|
@@ -929,7 +929,7 @@ fn Parser::parse_trait_method_parameters(
   let mut receiver : ReceiverParameter? = None
   self.skip_newlines()
   if self.consume_right_paren_for_declaration() {
-    return Ok({ receiver, parameters })
+    return Ok({ receiver, parameters, })
   }
   while true {
     let (name, offset) = match self.parse_identifier(ParameterName) {
@@ -963,7 +963,7 @@ fn Parser::parse_trait_method_parameters(
           }
         None => ()
       }
-      receiver = Some({ explicit_type: None, offset })
+      receiver = Some({ explicit_type: None, offset, })
     } else {
       match self.peek_token() {
         Some(token) =>
@@ -977,17 +977,17 @@ fn Parser::parse_trait_method_parameters(
         Ok(value) => value
         Err(error) => return Err(error)
       }
-      parameters.push({ name, type_, offset })
+      parameters.push({ name, type_, offset, })
     }
     if self.consume_right_paren_for_declaration() {
-      return Ok({ receiver, parameters })
+      return Ok({ receiver, parameters, })
     }
     guard self.consume_comma() else {
       return Err(self.declaration_error(ParameterSeparatorOrClose))
     }
     self.skip_newlines()
     if self.consume_right_paren_for_declaration() {
-      return Ok({ receiver, parameters })
+      return Ok({ receiver, parameters, })
     }
   } nobreak {
     abort("unreachable trait method parameter parser termination")

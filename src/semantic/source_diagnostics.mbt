@@ -111,7 +111,7 @@ pub fn ProgramFile::line_column(
   if line_end > line_start && self.source[line_end - 1] == b'\r' {
     line_end -= 1
   }
-  { line, column: target - line_start + 1, line_start, line_end }
+  { line, column: target - line_start + 1, line_start, line_end, }
 }
 
 ///|
@@ -141,7 +141,7 @@ fn compiler_diagnostic(
       {
         severity,
         message,
-        primary: { file: 0UL, offset: 0UL },
+        primary: { file: 0UL, offset: 0UL, },
         has_primary: false,
         secondary,
         module_order: -1,
@@ -154,7 +154,7 @@ fn compiler_diagnostic(
 ///|
 fn location_at(base : SourceLocation?, offset : UInt64) -> SourceLocation? {
   match base {
-    Some(location) => Some({ file: location.file, offset })
+    Some(location) => Some({ file: location.file, offset, })
     None => None
   }
 }
@@ -167,7 +167,7 @@ fn CollectedModule::default_location(
   if self.files.length() == 0 {
     None
   } else {
-    Some({ file: self.files[0], offset })
+    Some({ file: self.files[0], offset, })
   }
 }
 
@@ -178,12 +178,12 @@ fn CollectedModule::module_offset_location(
 ) -> SourceLocation? {
   for index, expression in self.expressions {
     if expression.offset() == offset {
-      return Some({ file: self.expression_files[index], offset })
+      return Some({ file: self.expression_files[index], offset, })
     }
   }
   for index, pattern in self.patterns {
     if pattern.offset() == offset {
-      return Some({ file: self.pattern_files[index], offset })
+      return Some({ file: self.pattern_files[index], offset, })
     }
   }
   self.default_location(offset)
@@ -204,36 +204,36 @@ fn CollectionDiagnostic::source_parts(
         @parser.Error => CompilerError
         @parser.Warning | @parser.Info | @parser.Hint => CompilerWarning
       }
-      (severity, Some({ file, offset: diagnostic.error.offset() }), secondary)
+      (severity, Some({ file, offset: diagnostic.error.offset(), }), secondary)
     }
     DuplicateName(value) => {
       secondary.push({
-        location: { file: value.first_file, offset: value.first_offset },
+        location: { file: value.first_file, offset: value.first_offset, },
         message: "first declaration is here",
       })
       (
         CompilerError,
-        Some({ file: value.duplicate_file, offset: value.duplicate_offset }),
+        Some({ file: value.duplicate_file, offset: value.duplicate_offset, }),
         secondary,
       )
     }
     DuplicateTestIdentity(value) => {
       secondary.push({
-        location: { file: value.file, offset: value.first_offset },
+        location: { file: value.file, offset: value.first_offset, },
         message: "first test with this identity is here",
       })
       (
         CompilerError,
-        Some({ file: value.file, offset: value.duplicate_offset }),
+        Some({ file: value.file, offset: value.duplicate_offset, }),
         secondary,
       )
     }
     DuplicateDerivedTrait(_, file, first_offset, duplicate_offset) => {
       secondary.push({
-        location: { file, offset: first_offset },
+        location: { file, offset: first_offset, },
         message: "first derive request is here",
       })
-      (CompilerError, Some({ file, offset: duplicate_offset }), secondary)
+      (CompilerError, Some({ file, offset: duplicate_offset, }), secondary)
     }
     InvalidExpectedTestTrap(file, _, offset)
     | InvalidUtf8StringLiteral(file, offset)
@@ -243,7 +243,7 @@ fn CollectionDiagnostic::source_parts(
     | InvalidUtf8ForeignLogicalName(file, offset)
     | EmptyForeignExportName(file, offset)
     | InvalidUtf8ForeignExportName(file, offset) =>
-      (CompilerError, Some({ file, offset }), secondary)
+      (CompilerError, Some({ file, offset, }), secondary)
   }
 }
 
@@ -298,7 +298,7 @@ fn BodyResolutionDiagnostic::primary_location(
     | AlternativeExtraBinding(_, pattern, offset) =>
       location_at(module_.pattern_location(pattern), offset)
     DuplicatePatternBinding(_, _, offset) =>
-      Some({ file: fallback_file, offset })
+      Some({ file: fallback_file, offset, })
   }
 }
 
@@ -311,7 +311,7 @@ fn BodyResolutionDiagnostic::secondary_labels(
   match self {
     DuplicatePatternBinding(_, first, _) =>
       labels.push({
-        location: { file, offset: first },
+        location: { file, offset: first, },
         message: "first binding is here",
       })
     _ => ()
@@ -330,7 +330,7 @@ fn constraint_origin_location(
       location_at(module_.expression_location(origin.source), origin.offset)
     PatternTypeConstraint =>
       location_at(module_.pattern_location(origin.source), origin.offset)
-    _ => Some({ file: fallback_file, offset: origin.offset })
+    _ => Some({ file: fallback_file, offset: origin.offset, })
   }
 }
 
@@ -392,7 +392,7 @@ fn BodyInferenceDiagnostic::primary_location(
     | ReturnOutsideCallable(offset)
     | UnresolvedLocalType(_, _, offset)
     | UnresolvedLambdaLocalType(_, _, offset) =>
-      Some({ file: fallback_file, offset })
+      Some({ file: fallback_file, offset, })
   }
 }
 
@@ -405,7 +405,7 @@ fn BodyInferenceDiagnostic::secondary_labels(
   match self {
     DuplicateConstructionField(_, first, _) =>
       labels.push({
-        location: { file, offset: first },
+        location: { file, offset: first, },
         message: "first field is here",
       })
     _ => ()
@@ -428,7 +428,10 @@ fn add_return_type_secondary_label(
   if return_mismatch {
     match location {
       Some(value) =>
-        labels.push({ location: value, message: "declared return type is here" })
+        labels.push({
+          location: value,
+          message: "declared return type is here",
+        })
       None => ()
     }
   }
@@ -498,7 +501,7 @@ fn compiler_label_for_declaration(
   match program.module_for_id(semantic_id_module(declaration)) {
     Some(module_) =>
       match module_.declaration_location(declaration) {
-        Some(location) => Some({ location, message })
+        Some(location) => Some({ location, message, })
         None => None
       }
     None => None
@@ -625,7 +628,7 @@ pub fn collect_compiler_source_diagnostics(
   for diagnostic in analyzed.frozen.graph.diagnostics {
     let primary = match diagnostic {
       MissingImportedModule(_, _, file, offset)
-      | DuplicateImportedModule(_, _, file, offset) => Some({ file, offset })
+      | DuplicateImportedModule(_, _, file, offset) => Some({ file, offset, })
     }
     push_source_diagnostic(
       diagnostics,
@@ -642,7 +645,7 @@ pub fn collect_compiler_source_diagnostics(
     let (module_id, primary, secondary) = match diagnostic {
       UnavailableImportedInterface(module_id, _, file, offset)
       | DuplicateImportedAlias(module_id, _, file, offset) =>
-        (module_id, Some({ file, offset }), [])
+        (module_id, Some({ file, offset, }), [])
       AmbiguousImportedType(module_id, _, first, second)
       | AmbiguousImportedTrait(module_id, _, first, second)
       | AmbiguousImportedValue(module_id, _, first, second) => {

@@ -11,7 +11,7 @@ fn BasicBodyInferencer::begin_pattern_instantiation(
   self.call_scratch.instantiation_generics = self.declaration_generic_parameters(
     declaration,
   )
-  self.call_scratch.instantiation_method_generics = { start: 0, length: 0 }
+  self.call_scratch.instantiation_method_generics = { start: 0, length: 0, }
   let has_expected = self.inspect_nominal_type(expected) &&
     self.call_scratch.nominal_declaration == declaration &&
     self.call_scratch.nominal_arguments.length() ==
@@ -90,7 +90,7 @@ fn BasicBodyInferencer::declaration_generic_parameters(
   } else {
     match self.imports {
       Some(imports) => imports.generic_parameters_of(declaration)
-      None => { start: 0, length: 0 }
+      None => { start: 0, length: 0, }
     }
   }
 }
@@ -108,7 +108,7 @@ fn BasicBodyInferencer::begin_expression_instantiation(
   self.call_scratch.instantiation_generics = self.declaration_generic_parameters(
     declaration,
   )
-  self.call_scratch.instantiation_method_generics = { start: 0, length: 0 }
+  self.call_scratch.instantiation_method_generics = { start: 0, length: 0, }
   let has_expected = self.inspect_nominal_type(expected) &&
     self.call_scratch.nominal_declaration == declaration &&
     self.call_scratch.nominal_arguments.length() ==
@@ -216,7 +216,7 @@ fn BasicBodyInferencer::collect_owned_fields(
   let declaration_index = semantic_id_local(declaration)
   let span = if declaration_index < 0 ||
     declaration_index >= self.field_spans.length() {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     self.field_spans[declaration_index]
   }

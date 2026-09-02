@@ -9,7 +9,7 @@ pub struct ProgramFile {
 
 ///|
 pub fn ProgramFile::new(id : FileId, source : Bytes) -> ProgramFile {
-  { id, path: "", source, test_only: false, parse_events: None }
+  { id, path: "", source, test_only: false, parse_events: None, }
 }
 
 ///|

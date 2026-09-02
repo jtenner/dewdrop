@@ -5,6 +5,13 @@ fn bootstrap_fail(message : String) -> Unit {
 }
 
 ///|
+fn bootstrap_fs_error_message(error : @fs.IOError) -> String {
+  match error {
+    @fs.IOError(message) => message
+  }
+}
+
+///|
 fn bootstrap_join(left : String, right : String) -> String {
   if left.has_suffix("/") {
     left + right
@@ -126,7 +133,9 @@ fn bootstrap_compiler_fingerprint(repository : String) -> String {
     bootstrap_write_hash_string(hash, path)
     let bytes = @fs.read_file_to_bytes(path) catch {
       error => {
-        bootstrap_fail("cannot fingerprint compiler input \{path}: \{error}")
+        bootstrap_fail(
+          "cannot fingerprint compiler input \{path}: \{bootstrap_fs_error_message(error)}",
+        )
         b""
       }
     }
@@ -323,9 +332,7 @@ fn bootstrap_compile(
     if bootstrap_build_cache_restore(plan) {
       return 0
     }
-    let result = bootstrap_run_process(
-      [host, command, ..plan.arguments],
-    )
+    let result = bootstrap_run_process([host, command, ..plan.arguments])
     if result == 0 {
       bootstrap_build_cache_publish(plan)
     }
@@ -585,8 +592,8 @@ fn bootstrap_test_command(
     ".tmp/dew-test-\{bootstrap_process_id()}.wasm",
   )
   let compile : Array[String] = [
-    "moon", "run", "--target", "native", "--release", "-j", "8", "src/dew_test_gen", "--", wasm,
-    root,
+    "moon", "run", "--target", "native", "--release", "-j", "8", "src/dew_test_gen",
+    "--", wasm, root,
   ]
   for module_ in modules {
     for file in module_.1 {

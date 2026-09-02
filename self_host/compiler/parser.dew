@@ -10,16 +10,18 @@ fn self_host_smoke_body_value(body: SelfHostBlock) -> Result<I32, String> {
   if body.items.length() != 1u32 {
     Result::Err("smoke parser expected one positive I32 literal body")
   } else {
-    match body.items.get_unchecked(0u32) {
-      SelfHostBlockItem::ExpressionItem(
-        SelfHostExpr::I32Expr(value, _),
-        _,
-      ) => if value <= 2147483647u64 {
-        Result::Ok(self_host_parser_u64_to_i32(value))
-      } else {
-        Result::Err("smoke parser positive I32 literal is out of range")
+    let item = body.items.get_unchecked(0u32)
+    if !self_host_u32_equal(item.kind, 3u32) {
+      Result::Err("smoke parser expected one positive I32 literal body")
+    } else {
+      match item.value {
+        SelfHostExpr::I32Expr(value, _) => if value <= 2147483647u64 {
+          Result::Ok(self_host_parser_u64_to_i32(value))
+        } else {
+          Result::Err("smoke parser positive I32 literal is out of range")
+        }
+        _ => Result::Err("smoke parser expected one positive I32 literal body")
       }
-      _ => Result::Err("smoke parser expected one positive I32 literal body")
     }
   }
 }

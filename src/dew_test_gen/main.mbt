@@ -5,6 +5,13 @@ fn dew_test_fail(message : String) -> Unit {
 }
 
 ///|
+fn dew_test_io_error_message(error : @fs.IOError) -> String {
+  match error {
+    @fs.IOError(message) => message
+  }
+}
+
+///|
 fn dew_test_runtime_source() -> Bytes {
   b"open dew.std.string\nopen dew.std.wasi\nbuiltin dew_test_assert_runtime(condition: Bool, message: String) -> Unit = \"dew_test_assert\"\n"
 }
@@ -139,7 +146,9 @@ fn main {
     }
     let source = @fs.read_file_to_bytes(path) catch {
       error => {
-        dew_test_fail("cannot read \{path}: \{error}")
+        dew_test_fail(
+          "cannot read \{path}: \{dew_test_io_error_message(error)}",
+        )
         b""
       }
     }
@@ -203,7 +212,10 @@ fn main {
     binary, "dew.tests", metadata,
   )
   @fs.write_bytes_to_file(output_path, self_describing_binary) catch {
-    error => dew_test_fail("cannot write Dew test module: \{error}")
+    error =>
+      dew_test_fail(
+        "cannot write Dew test module: \{dew_test_io_error_message(error)}",
+      )
   }
   println("wrote self-describing Dew test module")
 }

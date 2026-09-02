@@ -78,7 +78,7 @@ fn self_host_body_lowering_hir_block_item_at(
 }
 
 fn self_host_empty_lowered_block_items() -> Array<SelfHostHirBlockItem> {
-  let values = [SelfHostHirBlockItem::ExpressionItem(0u32, 0u32)]
+  let values = [self_host_hir_expression_item(0u32, 0u32)]
   values.truncate(0u32)
   values
 }
@@ -719,71 +719,80 @@ impl SelfHostCollectionBuilder {
     let _ = while source_item_index {
       current => if current < source.items.length() {
         let item = self_host_body_lowering_block_item_at(source.items, current)
-        match item {
-        SelfHostBlockItem::LetItem(mutable_, name, name_offset, value, offset) => {
-          let value_id = self.lower_expression(value)
-          if name == "_" {
+        if self_host_block_item_is_let(item) {
+          let value_id = self.lower_expression(item.value)
+          if item.name == "_" {
             lowered_items.push(
-              SelfHostHirBlockItem::ExpressionItem(value_id, offset),
+              self_host_hir_discarded_let_item(
+                self.intern(item.name),
+                value_id,
+                item.offset,
+              ),
             )
           } else {
             lowered_items.push(
-              SelfHostHirBlockItem::LetItem(
-                mutable_,
-                self.intern(name),
-                name_offset,
+              self_host_hir_let_item(
+                item.mutable_,
+                self.intern(item.name),
+                item.name_offset,
                 value_id,
-                offset,
+                item.offset,
               ),
             )
           }
-        }
-        SelfHostBlockItem::AssignmentItem(target, value, offset) => {
-          let target_id = self.lower_expression(target)
-          let value_id = self.lower_expression(value)
+        } else if self_host_block_item_is_assignment(item) {
+          let target_id = self.lower_expression(item.target)
+          let value_id = self.lower_expression(item.value)
           let expression = self.emit_expression(
-            SelfHostHirExpr::AssignmentExpr(target_id, value_id, offset),
+            SelfHostHirExpr::AssignmentExpr(
+              target_id,
+              value_id,
+              item.offset,
+            ),
           )
           lowered_items.push(
-            SelfHostHirBlockItem::ExpressionItem(expression, offset),
+            self_host_hir_expression_item(expression, item.offset),
           )
-        }
-        SelfHostBlockItem::IndexSetItem(target, value, offset) => {
-          match target {
+        } else if self_host_block_item_is_index_set(item) {
+          match item.target {
             SelfHostExpr::IndexExpr(base, index, _) => {
               let base_id = self.lower_expression(base)
               let index_id = self.lower_expression(index)
-              let value_id = self.lower_expression(value)
+              let value_id = self.lower_expression(item.value)
               let expression = self.emit_expression(
                 SelfHostHirExpr::IndexSetExpr(
                   base_id,
                   index_id,
                   value_id,
-                  offset,
+                  item.offset,
                 ),
               )
               lowered_items.push(
-                SelfHostHirBlockItem::ExpressionItem(expression, offset),
+                self_host_hir_expression_item(expression, item.offset),
               )
             }
             _ => {
-              let target_id = self.lower_expression(target)
-              let value_id = self.lower_expression(value)
+              let target_id = self.lower_expression(item.target)
+              let value_id = self.lower_expression(item.value)
               let expression = self.emit_expression(
-                SelfHostHirExpr::AssignmentExpr(target_id, value_id, offset),
+                SelfHostHirExpr::AssignmentExpr(
+                  target_id,
+                  value_id,
+                  item.offset,
+                ),
               )
               lowered_items.push(
-                SelfHostHirBlockItem::ExpressionItem(expression, offset),
+                self_host_hir_expression_item(expression, item.offset),
               )
             }
           }
-        }
-        SelfHostBlockItem::ExpressionItem(value, offset) => {
-          let expression = self.lower_expression(value)
+        } else if self_host_block_item_is_expression(item) {
+          let expression = self.lower_expression(item.value)
           lowered_items.push(
-            SelfHostHirBlockItem::ExpressionItem(expression, offset),
+            self_host_hir_expression_item(expression, item.offset),
           )
-        }
+        } else {
+          self_host_body_name_fail()
         }
         continue current + 1u32
       } else {

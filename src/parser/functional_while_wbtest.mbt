@@ -38,7 +38,7 @@ test "functional while retains initial state guarded arms and transfers" {
         BlockExpr(
           {
             items: [ExpressionItem(ContinueExpr(NameExpr("next", _), _), _)],
-            ..,
+            ..
           }
         ) => ()
         _ => fail("expected block continue transfer")
@@ -112,7 +112,7 @@ test "functional transfers compose inside nested if blocks" {
               ExpressionItem(IfExpr(_, then_block, None, _), _),
               ExpressionItem(BreakExpr(_, _), _),
             ],
-            ..,
+            ..
           }
         ) =>
           match then_block.items {

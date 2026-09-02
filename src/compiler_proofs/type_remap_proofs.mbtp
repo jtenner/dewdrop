@@ -1,0 +1,63 @@
+///|
+/// A dense type remap removes only earlier type slots.
+predicate valid_dense_type_remap(
+  old_index : Int,
+  removed_before : Int,
+  new_index : Int,
+) {
+  0 <= removed_before &&
+  removed_before <= old_index &&
+  new_index == old_index - removed_before
+}
+
+///|
+/// Prove that a retained type index stays inside the compacted type arena.
+lemma dense_type_remap_stays_in_range(
+  old_type_count : Int,
+  removed_type_count : Int,
+  old_index : Int,
+  removed_before : Int,
+  new_index : Int,
+) where {
+  proof_require: 0 <= removed_type_count,
+  proof_require: removed_type_count <= old_type_count,
+  proof_require: 0 <= old_index,
+  proof_require: old_index < old_type_count,
+  proof_require: valid_dense_type_remap(
+    old_index,
+    removed_before,
+    new_index,
+  ),
+  proof_require: 0 <= removed_type_count - removed_before,
+  proof_require: removed_type_count - removed_before <= old_type_count - old_index - 1,
+  proof_ensure: 0 <= new_index,
+  proof_ensure: new_index < old_type_count - removed_type_count,
+} {
+}
+
+///|
+/// Prove that dense compaction keeps a supertype before its retained subtype.
+lemma dense_type_remap_preserves_supertype_order(
+  old_super_index : Int,
+  old_subtype_index : Int,
+  removed_before_super : Int,
+  removed_before_subtype : Int,
+  new_super_index : Int,
+  new_subtype_index : Int,
+) where {
+  proof_require: valid_dense_type_remap(
+    old_super_index,
+    removed_before_super,
+    new_super_index,
+  ),
+  proof_require: valid_dense_type_remap(
+    old_subtype_index,
+    removed_before_subtype,
+    new_subtype_index,
+  ),
+  proof_require: old_super_index < old_subtype_index,
+  proof_require: removed_before_super <= removed_before_subtype,
+  proof_require: removed_before_subtype - removed_before_super < old_subtype_index - old_super_index,
+  proof_ensure: new_super_index < new_subtype_index,
+} {
+}

@@ -420,7 +420,7 @@ fn BasicBodyInferencer::build_compact_types(self : BasicBodyInferencer) -> Unit 
           )
         }
         self.compact_types.push(
-          BodyProductType({ start, length: fields.length }),
+          BodyProductType({ start, length: fields.length, }),
         )
       }
       BodyAppliedType(base, arguments) => {
@@ -450,7 +450,7 @@ fn BasicBodyInferencer::build_compact_types(self : BasicBodyInferencer) -> Unit 
         }
         self.compact_types.push(
           BodyFunctionType(
-            { start, length: parameters.length },
+            { start, length: parameters.length, },
             self.compact_type_id(result),
           ),
         )

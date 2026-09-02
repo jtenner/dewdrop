@@ -254,7 +254,7 @@ test "body-family artifacts include nested lambdas and reject incompatible owner
   )
   let owner = cold.families[0].unwrap()
   let invalid_types = owner.root.types.copy()
-  invalid_types.push(BodyAppliedType(-2, { start: 999, length: 1 }))
+  invalid_types.push(BodyAppliedType(-2, { start: 999, length: 1, }))
   let invalid_owner = {
     ..owner,
     root: {

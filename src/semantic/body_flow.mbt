@@ -637,7 +637,7 @@ fn BodyFlowAnalyzer::variant_span(
 ) -> HirSpan {
   let index = semantic_id_local(declaration)
   if index < 0 || index >= self.variant_spans.length() {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     self.variant_spans[index]
   }
@@ -1118,7 +1118,7 @@ fn flow_variant_spans(collected : CollectedModule) -> Array[HirSpan] {
   for index, variant in collected.variants {
     let declaration_slot = semantic_id_local(variant.declaration)
     if spans[declaration_slot].length == 0 {
-      spans[declaration_slot] = { start: index, length: 1 }
+      spans[declaration_slot] = { start: index, length: 1, }
     } else {
       spans[declaration_slot] = {
         start: spans[declaration_slot].start,
@@ -1226,13 +1226,13 @@ fn analyze_module_flows_internal(
           NonExhaustiveMatch(expression, missing, offset) =>
             NonExhaustiveMatch(
               expression,
-              { start: missing_start + missing.start, length: missing.length },
+              { start: missing_start + missing.start, length: missing.length, },
               offset,
             )
           NonExhaustiveFunctionalLoop(expression, missing, offset) =>
             NonExhaustiveFunctionalLoop(
               expression,
-              { start: missing_start + missing.start, length: missing.length },
+              { start: missing_start + missing.start, length: missing.length, },
               offset,
             )
           RedundantPatternArm(arm, offset) => RedundantPatternArm(arm, offset)
@@ -1274,13 +1274,13 @@ fn analyze_module_flows_internal(
           NonExhaustiveMatch(expression, missing, offset) =>
             NonExhaustiveMatch(
               expression,
-              { start: missing_start + missing.start, length: missing.length },
+              { start: missing_start + missing.start, length: missing.length, },
               offset,
             )
           NonExhaustiveFunctionalLoop(expression, missing, offset) =>
             NonExhaustiveFunctionalLoop(
               expression,
-              { start: missing_start + missing.start, length: missing.length },
+              { start: missing_start + missing.start, length: missing.length, },
               offset,
             )
           RedundantPatternArm(arm, offset) => RedundantPatternArm(arm, offset)

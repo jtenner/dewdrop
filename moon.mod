@@ -4,7 +4,7 @@ version = "0.1.0"
 
 import {
   "jtenner/starshine@0.1.1",
-  "moonbitlang/x@0.4.40",
+  "moonbitlang/x@0.5.1",
 }
 
 source = "src"

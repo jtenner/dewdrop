@@ -44,7 +44,7 @@ fn Parser::parse_function_parameters(
   let mut receiver : ReceiverParameter? = None
   self.skip_newlines()
   if self.consume_right_paren_for_declaration() {
-    return Ok({ receiver, parameters })
+    return Ok({ receiver, parameters, })
   }
   while true {
     let (name, offset) = match self.parse_identifier(ParameterName) {
@@ -69,7 +69,7 @@ fn Parser::parse_function_parameters(
           }
         None => None
       }
-      receiver = Some({ explicit_type, offset })
+      receiver = Some({ explicit_type, offset, })
     } else {
       match self.peek_token() {
         Some(token) =>
@@ -83,17 +83,17 @@ fn Parser::parse_function_parameters(
         Ok(value) => value
         Err(error) => return Err(error)
       }
-      parameters.push({ name, type_, offset })
+      parameters.push({ name, type_, offset, })
     }
     if self.consume_right_paren_for_declaration() {
-      return Ok({ receiver, parameters })
+      return Ok({ receiver, parameters, })
     }
     guard self.consume_comma() else {
       return Err(self.declaration_error(ParameterSeparatorOrClose))
     }
     self.skip_newlines()
     if self.consume_right_paren_for_declaration() {
-      return Ok({ receiver, parameters })
+      return Ok({ receiver, parameters, })
     }
   } nobreak {
     abort("unreachable function parameter parser termination")

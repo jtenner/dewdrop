@@ -3,6 +3,8 @@ import {
   "moonbitlang/core/bench",
   "moonbitlang/core/encoding/utf8",
   "jtenner/starshine/lib",
+  "jtenner/starshine/representation",
+  "jtenner/starshine/passes",
   "jtenner/starshine/validate",
   "jtenner/starshine/binary",
   "moonbitlang/x/fs",

@@ -59,7 +59,7 @@ pub fn make_body_inference_family_bundle(
     if artifacts[index].module_id != module_id {
       return Err("body-family bundle artifact ownership mismatch")
     }
-    entries.push({ fingerprint, artifact: artifacts[index] })
+    entries.push({ fingerprint, artifact: artifacts[index], })
   }
   entries.sort_by(fn(left, right) {
     left.fingerprint.compare(right.fingerprint)
@@ -69,7 +69,7 @@ pub fn make_body_inference_family_bundle(
       return Err("body-family bundle contains duplicate fingerprints")
     }
   }
-  let bundle = { module_id, entries }
+  let bundle = { module_id, entries, }
   match validate_body_inference_family_bundle(bundle) {
     Ok(_) => Ok(bundle)
     Err(error) => Err(error)

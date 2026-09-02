@@ -157,12 +157,11 @@ test "match arms accept return expressions" {
     b"match value {\n  Ok(item) => return None\n  Err(_) => ()\n}",
   )
   match parsed {
-    Ok(MatchExpr(_, arms, _)) => {
+    Ok(MatchExpr(_, arms, _)) =>
       match arms[0].body {
         ReturnExpr(Some(NameExpr("None", _)), _) => ()
         _ => fail("expected return expression")
       }
-    }
     _ => fail("expected match return expression")
   }
 }

@@ -45,7 +45,7 @@ fn ib_write_span(writer : @cache_binary.Writer, value : HirSpan) -> Unit {
 
 ///|
 fn ib_read_span(reader : @cache_binary.Reader, field : String) -> HirSpan {
-  { start: ib_read_int(reader, field), length: ib_read_int(reader, field) }
+  { start: ib_read_int(reader, field), length: ib_read_int(reader, field), }
 }
 
 ///|
@@ -1891,7 +1891,7 @@ fn ib_read_evidence(
       BoundInferredTraitEvidence(0)
     }
   }
-  { kind, prerequisites: ib_read_span(reader, field) }
+  { kind, prerequisites: ib_read_span(reader, field), }
 }
 
 ///|
@@ -2430,7 +2430,7 @@ fn ib_read_family(
       job: ib_read_job(reader, item + ".job"),
     })
   }
-  { module_id, body, declaration, root, lambdas }
+  { module_id, body, declaration, root, lambdas, }
 }
 
 ///|
@@ -2677,7 +2677,7 @@ pub fn open_body_inference_family_bundle(
   if expected_offset != data_length.to_uint64() {
     return Err("body_family_bundle: trailing or unindexed section bytes")
   }
-  Ok({ module_id, fingerprints, offsets, lengths, payload, data_start })
+  Ok({ module_id, fingerprints, offsets, lengths, payload, data_start, })
 }
 
 ///|
@@ -2699,7 +2699,7 @@ pub fn deserialize_body_inference_family_bundle(
       Ok(None) => return Err("body-family bundle index lookup failed")
       Err(error) => return Err(error)
     }
-    entries.push({ fingerprint: @crypto.bytes_to_hex_string(digest), artifact })
+    entries.push({ fingerprint: @crypto.bytes_to_hex_string(digest), artifact, })
   }
-  Ok({ module_id: index.module_id, entries })
+  Ok({ module_id: index.module_id, entries, })
 }

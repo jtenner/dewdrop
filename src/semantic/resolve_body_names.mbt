@@ -173,7 +173,7 @@ fn BodyNameResolver::new(
     body,
     -1,
     collected.parameters_of(body.declaration),
-    { bindings: [] },
+    { bindings: [], },
     variant_names,
   )
 }
@@ -328,7 +328,7 @@ fn BodyNameResolver::allocate_local(
   offset : UInt64,
 ) -> LocalId {
   let id = self.locals.length()
-  self.locals.push({ id, name, kind, mutable_, source, offset })
+  self.locals.push({ id, name, kind, mutable_, source, offset, })
   id
 }
 
@@ -1564,9 +1564,12 @@ fn merge_body_name_jobs(
     }
     bodies.push({
       body: body.id,
-      locals: { start: local_start, length: job.locals.length() },
-      controls: { start: control_start, length: job.controls.length() },
-      diagnostics: { start: diagnostic_start, length: job.diagnostics.length() },
+      locals: { start: local_start, length: job.locals.length(), },
+      controls: { start: control_start, length: job.controls.length(), },
+      diagnostics: {
+        start: diagnostic_start,
+        length: job.diagnostics.length(),
+      },
     })
   }
   for lambda_index, lambda in collected.lambdas {
@@ -1604,10 +1607,13 @@ fn merge_body_name_jobs(
     }
     lambdas.push({
       lambda: lambda.id,
-      locals: { start: local_start, length: job.locals.length() },
-      controls: { start: control_start, length: job.controls.length() },
-      captures: { start: capture_start, length: job.captures.length() },
-      diagnostics: { start: diagnostic_start, length: job.diagnostics.length() },
+      locals: { start: local_start, length: job.locals.length(), },
+      controls: { start: control_start, length: job.controls.length(), },
+      captures: { start: capture_start, length: job.captures.length(), },
+      diagnostics: {
+        start: diagnostic_start,
+        length: job.diagnostics.length(),
+      },
     })
   }
   {

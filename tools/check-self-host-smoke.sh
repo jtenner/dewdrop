@@ -136,6 +136,7 @@ sources=(
   "${parser_sources[@]}"
   "${semantic_sources[@]}"
   self_host/compiler/request.dew
+  self_host/compiler/facet_runtime.dew
   self_host/compiler/starshine_builtin_emit.dew
   self_host/compiler/starshine_runtime_emit.dew
   self_host/compiler/starshine_module.dew
@@ -146,6 +147,7 @@ build_compiler() {
   local stage=$1
   self_host_measure "smoke compiler $stage build" tools/dew build \
     --link-wasm starshine starshine-mb/dist/ffi/starshine-ffi.wasm \
+    --link-wasm facet fixtures/facet/facet-adapter.wasm \
     "${build_cache_args[@]}" \
     -o "$work/$stage/compiler.wasm" \
     "${sources[@]}"
@@ -160,12 +162,12 @@ write_request() {
       "$work/$stage/request.bin" \
       starshine-mb/dist/ffi/starshine-ffi.wasm \
       self_host/starshine/fingerprint-prefix.bin \
-      output.wasm
+      ".tmp/self-host-smoke/$stage/output.wasm"
 }
 
 run_compiler() {
   local stage=$1
-  self_host_measure "smoke compiler $stage execution" self_host_run_wasi \
+  self_host_measure "smoke compiler $stage execution" self_host_run_node_facet \
     "$work/$stage/compiler.wasm" \
     "$work/$stage/request.bin"
   self_host_measure "smoke output $stage validation" \
@@ -174,8 +176,7 @@ run_compiler() {
   wasm-tools print "$work/$stage/output.wasm" > "$wat"
   grep -Fq 'local.get 0' "$wat"
   grep -Fq 'local.get 1' "$wat"
-  grep -Fq 'call 3' "$wat"
-  grep -Fq 'call 4' "$wat"
+  test "$(grep -Ec 'call [0-9]+' "$wat")" -ge 2
   grep -Fq 'i32.const 35' "$wat"
   grep -Fq 'local.set 0' "$wat"
   grep -Fq 'i32.const 70' "$wat"
@@ -183,10 +184,10 @@ run_compiler() {
   grep -Fq 'i32.gt_u' "$wat"
   grep -Fq '(struct (field i32) (field i64))' "$wat"
   grep -Fq '(sub (struct))' "$wat"
-  grep -Fq '(sub final 1 (struct (field i32)))' "$wat"
-  grep -Fq '(sub final 1 (struct (field i32) (field i64)))' "$wat"
-  grep -Fq 'struct.new 0' "$wat"
-  grep -Fq 'struct.get 0 0' "$wat"
+  grep -Eq '\(sub final [0-9]+ \(struct \(field i32\)\)\)' "$wat"
+  grep -Eq '\(sub final [0-9]+ \(struct \(field i32\) \(field i64\)\)\)' "$wat"
+  grep -Eq 'struct.new [0-9]+' "$wat"
+  grep -Eq 'struct.get [0-9]+ 0' "$wat"
   grep -Fq 'i64.add' "$wat"
   grep -Fq 'i64.sub' "$wat"
   grep -Fq 'i64.gt_u' "$wat"
@@ -239,13 +240,14 @@ data = bytearray(path.read_bytes())
 data[-1] ^= 1
 path.write_bytes(data)
 PY
-if NODE_NO_WARNINGS=1 node tools/run-dew-wasi.mjs \
+accepted_output_sha=$(sha256sum "$work/a/output.wasm" | cut -d' ' -f1)
+if self_host_run_node_facet \
   "$work/reject-fingerprint/compiler.wasm" \
   "$work/reject-fingerprint/request.bin"; then
   echo "self-host smoke accepted a mismatched compiler fingerprint" >&2
   exit 1
 fi
-test ! -e "$work/reject-fingerprint/output.wasm"
+test "$(sha256sum "$work/a/output.wasm" | cut -d' ' -f1)" = "$accepted_output_sha"
 
 cp "$work/a/compiler.wasm" "$work/reject-count/compiler.wasm"
 cp "$work/a/request.bin" "$work/reject-count/request.bin"
@@ -263,13 +265,13 @@ offset += 4 + root_length
 struct.pack_into("<I", data, offset, 0xFFFFFFFF)
 path.write_bytes(data)
 PY
-if NODE_NO_WARNINGS=1 node tools/run-dew-wasi.mjs \
+if self_host_run_node_facet \
   "$work/reject-count/compiler.wasm" \
   "$work/reject-count/request.bin"; then
   echo "self-host smoke accepted an unbounded module count" >&2
   exit 1
 fi
-test ! -e "$work/reject-count/output.wasm"
+test "$(sha256sum "$work/a/output.wasm" | cut -d' ' -f1)" = "$accepted_output_sha"
 
 compiler_sha=$(sha256sum "$work/a/compiler.wasm" | cut -d' ' -f1)
 output_sha=$(sha256sum "$work/a/output.wasm" | cut -d' ' -f1)

@@ -8,7 +8,7 @@ fn self_host_derived_expression_list_block(
 ) -> SelfHostBlock {
   let items = []
   for expression in expressions {
-    items.push(SelfHostBlockItem::ExpressionItem(expression, offset))
+    items.push(self_host_expression_block_item(expression, offset))
   }
   SelfHostBlock::{
     items: items

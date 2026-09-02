@@ -117,8 +117,9 @@ test "member selection resolves local fields" {
     "field type",
   )
   match body.expression_selection(hir_body, field) {
-    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(declaration, mutable_) => {
+    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(declaration, mutable_, owner) => {
       assert(declaration == collected.fields[0u32].id, "selected x field")
+      assert(owner == collected.fields[0u32].declaration, "selected x owner")
       assert(!mutable_, "x immutable")
     }
     _ => assert(false, "field selection")

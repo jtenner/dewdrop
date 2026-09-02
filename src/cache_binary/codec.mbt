@@ -18,7 +18,7 @@ pub struct Writer {
 
 ///|
 pub fn Writer::new(size_hint? : Int = 0) -> Writer {
-  { output: Buffer(size_hint=if size_hint < 0 { 0 } else { size_hint }) }
+  { output: Buffer(size_hint=if size_hint < 0 { 0 } else { size_hint }), }
 }
 
 ///|
@@ -123,7 +123,7 @@ pub struct Reader {
 
 ///|
 pub fn Reader::new(bytes : Bytes, context? : String = "artifact") -> Reader {
-  { bytes, start: 0, end: bytes.length(), offset: 0, context, error: None }
+  { bytes, start: 0, end: bytes.length(), offset: 0, context, error: None, }
 }
 
 ///|
@@ -133,7 +133,7 @@ fn Reader::bounded(
   end : Int,
   context : String,
 ) -> Reader {
-  { bytes, start, end, offset: start, context, error: None }
+  { bytes, start, end, offset: start, context, error: None, }
 }
 
 ///|

@@ -14,7 +14,7 @@ pub struct InterfaceBundleCacheStatus {
 
 ///|
 pub fn InterfaceBundleCacheStatus::disabled() -> InterfaceBundleCacheStatus {
-  { enabled: false, hits: 0, misses: 0 }
+  { enabled: false, hits: 0, misses: 0, }
 }
 
 ///|
@@ -55,7 +55,7 @@ pub fn InterfaceBundlePolicy::for_compilation(
 ) -> InterfaceBundlePolicy {
   {
     enabled: cache_platform_supported() &&
-      @sys.get_env_var("DEW_INTERFACE_CACHE").unwrap_or("1") != "0",
+    @sys.get_env_var("DEW_INTERFACE_CACHE").unwrap_or("1") != "0",
     store_on_miss: loaded.cacheable,
     root_module_index,
     include_dependencies: loaded.dependency_fingerprint != "",
@@ -67,7 +67,7 @@ fn interface_bundle_cache_key(
   loaded : StandardLibraryLoad,
 ) -> InterfaceBundleCacheKey {
   if loaded.dependency_fingerprint == "" {
-    return { fingerprint: loaded.fingerprint }
+    return { fingerprint: loaded.fingerprint, }
   }
   let output = Buffer()
   output.write_bytes(b"DEW_INTERFACE_BUNDLE_KEY_V1_MUTABLE_FIELDS\x00")
@@ -116,7 +116,9 @@ fn ensure_cache_directory(path : String) -> Result[Unit, String] {
   if @fs.path_exists(path) {
     let directory = @fs.is_dir(path) catch {
       error =>
-        return Err("cannot inspect interface cache directory \{path}: \{error}")
+        return Err(
+          "cannot inspect interface cache directory \{path}: \{standard_loader_fs_error_message(error)}",
+        )
     }
     if !directory {
       return Err("interface cache path is not a directory: \{path}")
@@ -125,7 +127,9 @@ fn ensure_cache_directory(path : String) -> Result[Unit, String] {
   }
   @fs.create_dir(path) catch {
     error =>
-      return Err("cannot create interface cache directory \{path}: \{error}")
+      return Err(
+        "cannot create interface cache directory \{path}: \{standard_loader_fs_error_message(error)}",
+      )
   }
   Ok(())
 }
@@ -308,7 +312,7 @@ fn lookup_workspace_interface(
       let bytes = @fs.read_file_to_bytes(path) catch {
         error =>
           return Err(
-            "cannot read workspace frozen-interface cache \{path}: \{error}",
+            "cannot read workspace frozen-interface cache \{path}: \{standard_loader_fs_error_message(error)}",
           )
       }
       match unwrap_workspace_interface_cache_payload(bytes, key) {
@@ -556,7 +560,7 @@ fn lookup_workspace_interface_scc(
       let bytes = @fs.read_file_to_bytes(path) catch {
         error =>
           return Err(
-            "cannot read workspace frozen-interface SCC cache \{path}: \{error}",
+            "cannot read workspace frozen-interface SCC cache \{path}: \{standard_loader_fs_error_message(error)}",
           )
       }
       match unwrap_workspace_interface_cache_payload(bytes, key) {
@@ -748,7 +752,9 @@ pub fn lookup_interface_bundle(
       }
       let bytes = @fs.read_file_to_bytes(path) catch {
         error =>
-          return Err("cannot read frozen-interface cache \{path}: \{error}")
+          return Err(
+            "cannot read frozen-interface cache \{path}: \{standard_loader_fs_error_message(error)}",
+          )
       }
       match unwrap_standard_interface_cache_payload(bytes, key.fingerprint) {
         Ok(value) => value

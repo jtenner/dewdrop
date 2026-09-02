@@ -736,7 +736,7 @@ pub fn decode(bytes : Bytes) -> Result[CompilerRequest, String] {
   if bytes.length() > max_request_bytes() {
     return Err("compile request exceeds total request byte bound")
   }
-  let reader : CompilerRequestReader = { bytes, offset: 0, error: None }
+  let reader : CompilerRequestReader = { bytes, offset: 0, error: None, }
   if reader.read_u32() != COMPILER_REQUEST_MAGIC {
     return Err("invalid compile request magic")
   }
@@ -775,7 +775,7 @@ pub fn decode(bytes : Bytes) -> Result[CompilerRequest, String] {
         source: reader.read_bytes("source", max_source_bytes()),
       })
     }
-    modules.push({ name, files })
+    modules.push({ name, files, })
   }
   let dependency_interfaces : Array[CompilerRequestDependencyInterface] = []
   let dependency_count = reader.read_count(

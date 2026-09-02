@@ -1,4 +1,11 @@
 ///|
+fn self_host_link_io_error_message(error : @fs.IOError) -> String {
+  match error {
+    @fs.IOError(message) => message
+  }
+}
+
+///|
 fn main {
   let args = @sys.get_cli_args()
   if args.length() != 6 {
@@ -7,28 +14,36 @@ fn main {
   }
   let core = @fs.read_file_to_bytes(args[1]) catch {
     error => {
-      println("cannot read Core Wasm module: \{error}")
+      println(
+        "cannot read Core Wasm module: \{self_host_link_io_error_message(error)}",
+      )
       @sys.exit(2)
       b""
     }
   }
   let starshine = @fs.read_file_to_bytes(args[2]) catch {
     error => {
-      println("cannot read Starshine provider: \{error}")
+      println(
+        "cannot read Starshine provider: \{self_host_link_io_error_message(error)}",
+      )
       @sys.exit(2)
       b""
     }
   }
   let facet = @fs.read_file_to_bytes(args[3]) catch {
     error => {
-      println("cannot read Facet provider: \{error}")
+      println(
+        "cannot read Facet provider: \{self_host_link_io_error_message(error)}",
+      )
       @sys.exit(2)
       b""
     }
   }
   let time = @fs.read_file_to_bytes(args[4]) catch {
     error => {
-      println("cannot read MoonBit time provider: \{error}")
+      println(
+        "cannot read MoonBit time provider: \{self_host_link_io_error_message(error)}",
+      )
       @sys.exit(2)
       b""
     }
@@ -37,9 +52,9 @@ fn main {
     @core_linker.link_core_wasm_gc_modules(
       core,
       [
-        { provider: "starshine", bytes: starshine },
-        { provider: "facet", bytes: facet },
-        { provider: "__moonbit_time_unstable", bytes: time },
+        { provider: "starshine", bytes: starshine, },
+        { provider: "facet", bytes: facet, },
+        { provider: "__moonbit_time_unstable", bytes: time, },
       ],
       options={
         keep_guest_exports: false,
@@ -51,7 +66,9 @@ fn main {
     Ok(linked) =>
       @fs.write_bytes_to_file(args[5], linked) catch {
         error => {
-          println("cannot write linked Wasm module: \{error}")
+          println(
+            "cannot write linked Wasm module: \{self_host_link_io_error_message(error)}",
+          )
           @sys.exit(2)
         }
       }

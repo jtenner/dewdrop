@@ -36,8 +36,8 @@ fn compile_request_test_request() -> CompilerRequest {
       },
     ],
     static_providers: [
-      { name: "starshine", wasm: b"\x00asm\xff\x00provider" },
-      { name: "facet", wasm: b"\x00asm\x01\x00\x00\x00" },
+      { name: "starshine", wasm: b"\x00asm\xff\x00provider", },
+      { name: "facet", wasm: b"\x00asm\x01\x00\x00\x00", },
     ],
     standard_library: CompilerBootstrapStandard(
       bootstrap_standard_library_identity(),
@@ -122,7 +122,7 @@ test "compiler request rejects invalid UTF-8 and oversized counts before allocat
       {
         name: "app.main",
         files: [
-          { logical_path: "main.dew", source: b"pub fn main() -> I32 { 0 }\n" },
+          { logical_path: "main.dew", source: b"pub fn main() -> I32 { 0 }\n", },
         ],
       },
     ],
@@ -155,8 +155,8 @@ test "compiler request validation rejects duplicates unsafe paths and malformed 
       {
         name: "app.main",
         files: [
-          { logical_path: "main.dew", source: b"a" },
-          { logical_path: "main.dew", source: b"b" },
+          { logical_path: "main.dew", source: b"a", },
+          { logical_path: "main.dew", source: b"b", },
         ],
       },
     ],
@@ -168,7 +168,7 @@ test "compiler request validation rejects duplicates unsafe paths and malformed 
     modules: [
       {
         name: "app.main",
-        files: [{ logical_path: "../main.dew", source: b"a" }],
+        files: [{ logical_path: "../main.dew", source: b"a", }],
       },
     ],
     root_module: "app.main",
@@ -176,7 +176,9 @@ test "compiler request validation rejects duplicates unsafe paths and malformed 
   assert_true(unsafe_path.encode() is Err(_))
   let malformed : CompilerRequest = {
     ..compile_request_test_request(),
-    dependency_interfaces: [{ module_name: "dep.value", fingerprint: "ABC123" }],
+    dependency_interfaces: [
+      { module_name: "dep.value", fingerprint: "ABC123", },
+    ],
   }
   assert_true(malformed.encode() is Err(_))
 }

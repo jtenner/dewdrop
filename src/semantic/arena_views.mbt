@@ -79,7 +79,7 @@ pub fn ResolvedModuleTypes::type_view(
     }
     _ => self.type_arguments[0:0]
   }
-  Some({ type_: value, arguments })
+  Some({ type_: value, arguments, })
 }
 
 ///|

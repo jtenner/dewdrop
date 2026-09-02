@@ -10,7 +10,7 @@ pub struct HirSpan {
 
 ///|
 fn empty_hir_span(at : Int) -> HirSpan {
-  { start: at, length: 0 }
+  { start: at, length: 0, }
 }
 
 ///|
@@ -129,7 +129,7 @@ fn CollectionBuilder::lower_type(
           let id = self.type_syntax.length()
           self.type_syntax.push(
             ProductTypeSyntax(
-              { start: field_start, length: fields.length() },
+              { start: field_start, length: fields.length(), },
               offset,
             ),
           )
@@ -147,7 +147,7 @@ fn CollectionBuilder::lower_type(
           self.type_syntax.push(
             AppliedTypeSyntax(
               base,
-              { start: argument_start, length: arguments.length() },
+              { start: argument_start, length: arguments.length(), },
               offset,
             ),
           )
@@ -164,7 +164,7 @@ fn CollectionBuilder::lower_type(
           let id = self.type_syntax.length()
           self.type_syntax.push(
             FunctionTypeSyntax(
-              { start: parameter_start, length: parameters.length() },
+              { start: parameter_start, length: parameters.length(), },
               result,
               offset,
             ),
@@ -196,5 +196,5 @@ fn CollectionBuilder::lower_type_list(
   for type_ in lowered {
     self.type_arguments.push(type_)
   }
-  { start, length: lowered.length() }
+  { start, length: lowered.length(), }
 }

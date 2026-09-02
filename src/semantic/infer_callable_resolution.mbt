@@ -248,7 +248,7 @@ fn BasicBodyInferencer::explicit_call_type_arguments(
 ) -> HirSpan {
   if expression < 0 ||
     expression >= self.collected.explicit_call_type_argument_spans.length() {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     self.collected.explicit_call_type_argument_spans[expression]
   }
@@ -417,7 +417,7 @@ fn BasicBodyInferencer::select_debug_dispatch(
       expression,
       receiver,
       name,
-      { start: 0, length: 0 },
+      { start: 0, length: 0, },
       offset,
     ) {
     return
@@ -427,7 +427,7 @@ fn BasicBodyInferencer::select_debug_dispatch(
     self.diagnose(NoMatchingMethod(name, expression, offset))
     return
   }
-  let arguments = { start: 0, length: 0 }
+  let arguments = { start: 0, length: 0, }
   let mut viable_count = 0
   let mut selected_declaration = 0UL
   let mut selected_impl = -1
@@ -581,7 +581,10 @@ fn BasicBodyInferencer::resolved_function_signature(
               ),
             )
           }
-          Some({ parameters: values, result: self.solver.resolved_type(result) })
+          Some({
+            parameters: values,
+            result: self.solver.resolved_type(result),
+          })
         }
         _ => None
       }
@@ -590,7 +593,7 @@ fn BasicBodyInferencer::resolved_function_signature(
       for index in 0..<parameters.length {
         values.push(self.solver.type_arguments[parameters.start + index])
       }
-      Some({ parameters: values, result })
+      Some({ parameters: values, result, })
     }
     _ => None
   }
@@ -768,12 +771,13 @@ fn BasicBodyInferencer::prepare_call(
           }
         VariantNameReference(_) => {
           self.consume_member_root(target)
-          match self.select_value_variant(
-            name,
-            self.expression_type(expression),
-            expression,
-            offset,
-          ) {
+          match
+            self.select_value_variant(
+              name,
+              self.expression_type(expression),
+              expression,
+              offset,
+            ) {
             SelectedLocalValueVariant(variant_index) =>
               self.infer_tuple_variant_call(
                 call_slot, expression, arguments, variant_index, offset,

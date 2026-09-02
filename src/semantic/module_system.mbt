@@ -7,7 +7,7 @@ pub struct ManifestFile {
 
 ///|
 pub fn ManifestFile::new(path : String, source : Bytes) -> ManifestFile {
-  { path, source, parse_events: None }
+  { path, source, parse_events: None, }
 }
 
 ///|
@@ -15,7 +15,7 @@ pub fn ManifestFile::with_parse_events(
   self : ManifestFile,
   parse_events : Array[@parser.ParseEvent],
 ) -> ManifestFile {
-  { ..self, parse_events: Some(parse_events) }
+  { ..self, parse_events: Some(parse_events), }
 }
 
 ///|
@@ -37,7 +37,7 @@ pub fn ManifestModule::new(
   path : String,
   files : Array[ManifestFile],
 ) -> ManifestModule {
-  { path, files }
+  { path, files, }
 }
 
 ///|
@@ -77,7 +77,7 @@ pub fn StandardLibrarySources::new(
     sources.push(file.source)
     parse_events.push(file.parse_events)
   }
-  { paths, sources, parse_events, lookup }
+  { paths, sources, parse_events, lookup, }
 }
 
 ///|
@@ -1450,7 +1450,7 @@ fn module_dependency_sccs(
     for index in 0..<raw.length {
       ordered_members.push(raw_members[raw.start + index])
     }
-    spans.push({ start, length: ordered_members.length() - start })
+    spans.push({ start, length: ordered_members.length() - start, })
   }
   (spans, ordered_members)
 }
@@ -1576,7 +1576,7 @@ pub fn build_module_dependency_graph(
     for dependency in local_dependencies {
       dependency_modules.push(dependency)
     }
-    dependencies.push({ start, length: dependency_modules.length() - start })
+    dependencies.push({ start, length: dependency_modules.length() - start, })
   }
   let (sccs, scc_modules) = module_dependency_sccs(
     dependencies, dependency_modules,
@@ -2437,7 +2437,7 @@ fn frozen_body_type_to_resolved(
       }
       let result = resolved.types.length()
       resolved.types.push(
-        ProductType({ start, length: resolved_fields.length() }),
+        ProductType({ start, length: resolved_fields.length(), }),
       )
       result
     }
@@ -2529,7 +2529,7 @@ fn frozen_body_type_to_resolved(
       let result = resolved.types.length()
       resolved.types.push(
         FunctionType(
-          { start, length: resolved_parameters.length() },
+          { start, length: resolved_parameters.length(), },
           resolved_result,
         ),
       )
@@ -3377,7 +3377,7 @@ fn expose_imported_module_value_binding(
   match scope.value_bindings.get(name) {
     Some(callables) if !callables.ambiguous => {
       callables.ambiguous = true
-      let opened : ImportedModuleValueBinding = { ..binding, ambiguous: true }
+      let opened : ImportedModuleValueBinding = { ..binding, ambiguous: true, }
       scope.let_bindings[name] = opened
       scope.diagnostics.push(
         AmbiguousImportedValue(
@@ -3392,7 +3392,7 @@ fn expose_imported_module_value_binding(
     _ => ()
   }
   match scope.let_bindings.get(name) {
-    None => scope.let_bindings[name] = { ..binding, ambiguous: false }
+    None => scope.let_bindings[name] = { ..binding, ambiguous: false, }
     Some(opened) => {
       if opened.ambiguous || opened.interface_index == binding.interface_index {
         return
@@ -3437,7 +3437,7 @@ fn expose_imported_value_binding(
 ) -> Unit {
   match scope.let_bindings.get(name) {
     Some(value) if !value.ambiguous => {
-      let opened : ImportedValueBinding = { ..binding, ambiguous: true }
+      let opened : ImportedValueBinding = { ..binding, ambiguous: true, }
       scope.value_bindings[name] = opened
       value.ambiguous = true
       scope.diagnostics.push(
@@ -3987,7 +3987,7 @@ fn freeze_program_interfaces_with_cached_hook(
   let interfaces = frozen_program_interfaces_with_fingerprints(
     graph, interfaces,
   )
-  { graph, interfaces, import_scopes, import_diagnostics }
+  { graph, interfaces, import_scopes, import_diagnostics, }
 }
 
 ///|

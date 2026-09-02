@@ -52,6 +52,119 @@ class ExportBinding:
     unsupported_reason: str | None
 
 
+@dataclass(frozen=True)
+class CarrierProbe:
+    export_name: str
+    location: str
+    index: int
+
+
+@dataclass(frozen=True)
+class CarrierAssertion:
+    alias: str
+    probes: tuple[CarrierProbe, ...]
+
+
+# These checks give stable Dew names to provider types that can move when
+# Starshine adds a new internal type. Each list also proves that all listed
+# exports use one physical carrier. Generation stops before Dew compilation if
+# the provider breaks one of these relations.
+CARRIER_ASSERTIONS = (
+    CarrierAssertion(
+        "StarshineValue",
+        (
+            CarrierProbe("ValType::i32", "result", 0),
+            CarrierProbe("Instruction::i32_const", "result", 0),
+            CarrierProbe("ffi_bridge::instructions_push", "parameter", 1),
+        ),
+    ),
+    CarrierAssertion(
+        "StarshineRecTypes",
+        (
+            CarrierProbe("ffi_bridge::rec_types_new", "result", 0),
+            CarrierProbe("ffi_bridge::rec_types_push", "parameter", 0),
+            CarrierProbe("TypeSec::new", "parameter", 0),
+            CarrierProbe("TypeSec::new", "result", 0),
+        ),
+    ),
+    CarrierAssertion(
+        "StarshineInstructions",
+        (
+            CarrierProbe("ffi_bridge::instructions_new", "result", 0),
+            CarrierProbe("ffi_bridge::instructions_push", "parameter", 0),
+            CarrierProbe("Expr::new", "parameter", 0),
+            CarrierProbe("Expr::new", "result", 0),
+        ),
+    ),
+    CarrierAssertion(
+        "StarshineFunctions",
+        (
+            CarrierProbe("ffi_bridge::funcs_new", "result", 0),
+            CarrierProbe("ffi_bridge::funcs_push", "parameter", 0),
+            CarrierProbe("CodeSec::new", "parameter", 0),
+            CarrierProbe("CodeSec::new", "result", 0),
+        ),
+    ),
+    CarrierAssertion(
+        "StarshineImports",
+        (
+            CarrierProbe("ffi_bridge::imports_new", "result", 0),
+            CarrierProbe("ffi_bridge::imports_push_builder", "parameter", 0),
+            CarrierProbe("ImportSec::new", "parameter", 0),
+            CarrierProbe("ImportSec::new", "result", 0),
+        ),
+    ),
+    CarrierAssertion(
+        "StarshineModule",
+        (
+            CarrierProbe("ffi_bridge::module_new", "result", 0),
+            CarrierProbe(
+                "ffi_bridge::module_with_dewdrop_compiler_facts", "parameter", 0
+            ),
+            CarrierProbe(
+                "ffi_bridge::module_with_dewdrop_compiler_facts", "result", 0
+            ),
+            CarrierProbe("ffi_bridge::validate_module", "parameter", 0),
+            CarrierProbe("ffi_bridge::encode_module", "parameter", 0),
+        ),
+    ),
+    CarrierAssertion(
+        "StarshineValueTypes",
+        (
+            CarrierProbe("ffi_bridge::val_types_new", "result", 0),
+            CarrierProbe("ffi_bridge::val_types_push", "parameter", 0),
+            CarrierProbe("CompType::func", "parameter", 0),
+            CarrierProbe("CompType::func", "parameter", 1),
+        ),
+    ),
+    CarrierAssertion(
+        "StarshineLocals",
+        (
+            CarrierProbe("Locals::empty", "result", 0),
+            CarrierProbe("Locals::push", "parameter", 0),
+            CarrierProbe("Func::new", "parameter", 0),
+        ),
+    ),
+    CarrierAssertion(
+        "StarshineImportBuilder",
+        (
+            CarrierProbe("ffi_bridge::import_builder_new", "result", 0),
+            CarrierProbe("ImportBuilder::push_module_byte", "parameter", 0),
+            CarrierProbe("ImportBuilder::push_field_byte", "parameter", 0),
+            CarrierProbe("ffi_bridge::imports_push_builder", "parameter", 1),
+        ),
+    ),
+    CarrierAssertion(
+        "StarshineRuntimeFunctionBuilder",
+        (
+            CarrierProbe("ffi_bridge::runtime_function_builder_new", "result", 0),
+            CarrierProbe("RuntimeFunctionBuilder::push_name_byte", "parameter", 0),
+            CarrierProbe("ffi_bridge::funcs_push_runtime", "parameter", 1),
+        ),
+    ),
+)
+
+
 def parse_sexpr(text: str) -> SExpr:
     tokens = re.findall(r"\(|\)|[^\s()]+", text)
     index = 0
@@ -162,6 +275,63 @@ def function_signature(line: str) -> tuple[tuple[SExpr, ...], tuple[SExpr, ...]]
     for group in result_groups:
         results.extend(group_value_types(group, "result"))
     return tuple(parameters), tuple(results)
+
+
+def reference_index(value: SExpr) -> int:
+    if (
+        isinstance(value, list)
+        and len(value) == 2
+        and value[0] == "ref"
+        and isinstance(value[1], str)
+    ):
+        try:
+            return int(value[1])
+        except ValueError as error:
+            raise ValueError(
+                f"compile-time carrier assertion found a non-numeric reference: "
+                f"{render_wat_type(value)}"
+            ) from error
+    raise ValueError(
+        "compile-time carrier assertion requires one non-null typed reference, got "
+        + render_wat_type(value)
+    )
+
+
+def validate_carrier_assertions(
+    bindings: list[ExportBinding],
+    assertions: tuple[CarrierAssertion, ...] = CARRIER_ASSERTIONS,
+) -> dict[str, int]:
+    by_name = {binding.export_name: binding for binding in bindings}
+    aliases: dict[str, int] = {}
+    for assertion in assertions:
+        observed: list[tuple[CarrierProbe, int]] = []
+        for probe in assertion.probes:
+            binding = by_name.get(probe.export_name)
+            if binding is None:
+                raise ValueError(
+                    "compile-time carrier assertion is missing export "
+                    f"{probe.export_name} for {assertion.alias}"
+                )
+            values = (
+                binding.parameters if probe.location == "parameter" else binding.results
+            )
+            if probe.location not in ("parameter", "result") or probe.index >= len(values):
+                raise ValueError(
+                    "compile-time carrier assertion has no "
+                    f"{probe.location} {probe.index} on {probe.export_name}"
+                )
+            observed.append((probe, reference_index(values[probe.index])))
+        expected = observed[0][1]
+        mismatch = next((item for item in observed if item[1] != expected), None)
+        if mismatch is not None:
+            probe, actual = mismatch
+            raise ValueError(
+                "compile-time carrier assertion failed for "
+                f"{assertion.alias}: expected ref {expected}, but "
+                f"{probe.export_name} {probe.location} {probe.index} uses ref {actual}"
+            )
+        aliases[assertion.alias] = expected
+    return aliases
 
 
 def inspect_exports(wasm: Path) -> tuple[list[ExportBinding], str]:
@@ -313,7 +483,9 @@ def render_fingerprint_dew(prefix: bytes) -> str:
     )
 
 
-def render_dew(bindings: list[ExportBinding], digest: str) -> str:
+def render_dew(
+    bindings: list[ExportBinding], digest: str, carrier_aliases: dict[str, int]
+) -> str:
     supported = [binding for binding in bindings if binding.unsupported_reason is None]
     reference_indices: set[int] = set()
     for binding in supported:
@@ -335,6 +507,16 @@ def render_dew(bindings: list[ExportBinding], digest: str) -> str:
     ]
     for index in sorted(reference_indices):
         lines.append(f"pub foreign type StarshineRef{index}")
+    lines.extend(
+        [
+            "",
+            "// These aliases name compiler-visible ABI carriers.",
+            "// The generator proves each alias from all related FFI signatures.",
+            "// Generation stops before compilation if one relation changes.",
+        ]
+    )
+    for alias, index in carrier_aliases.items():
+        lines.append(f"pub type {alias} = StarshineRef{index}")
     lines.extend(["", 'foreign impl "starshine" as StarshineFfi {'])
     for binding in supported:
         parameters = []
@@ -458,7 +640,11 @@ def main() -> None:
         for path in INTERFACE_PATHS
     ]
     prefix = fingerprint_prefix(submodule_revision, interfaces, selected)
-    write_or_check(TARGET, render_dew(selected, digest), args.check)
+    try:
+        carrier_aliases = validate_carrier_assertions(selected)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    write_or_check(TARGET, render_dew(selected, digest, carrier_aliases), args.check)
     write_or_check(FINGERPRINT_TARGET, render_fingerprint_dew(prefix), args.check)
     write_or_check(FINGERPRINT_PREFIX_TARGET, prefix, args.check)
     write_or_check(

@@ -457,7 +457,7 @@ pub fn CollectedModule::block_location(
   if block < 0 || block >= self.blocks.length() {
     return None
   }
-  Some({ file: self.block_files[block], offset: self.blocks[block].offset })
+  Some({ file: self.block_files[block], offset: self.blocks[block].offset, })
 }
 
 ///|

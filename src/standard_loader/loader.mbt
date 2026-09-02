@@ -1,4 +1,11 @@
 ///|
+fn standard_loader_fs_error_message(error : @fs.IOError) -> String {
+  match error {
+    @fs.IOError(message) => message
+  }
+}
+
+///|
 fn join_standard_path(root : String, logical : String) -> String {
   if root == "" || root == "." {
     logical
@@ -74,7 +81,10 @@ fn load_paths_with_fingerprint(
   for logical in paths {
     let physical = join_standard_path(root, logical)
     let source = @fs.read_file_to_bytes(physical) catch {
-      error => return Err("cannot read standard source \{physical}: \{error}")
+      error =>
+        return Err(
+          "cannot read standard source \{physical}: \{standard_loader_fs_error_message(error)}",
+        )
     }
     files.push(@semantic.ManifestFile::new(logical, source))
     fingerprint_write_string(fingerprint, logical)

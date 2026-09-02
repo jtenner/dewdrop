@@ -156,7 +156,7 @@ fn planned_callable_metadata(
           (
             PlannedBuiltinCallable(planned_builtin_name(collected, declaration)),
             declaration,
-            { start: 0, length: 0 },
+            { start: 0, length: 0, },
             -1,
             value.offset,
           )
@@ -164,7 +164,7 @@ fn planned_callable_metadata(
           (
             PlannedFunctionCallable(collected.body_of(declaration).unwrap().id),
             declaration,
-            { start: 0, length: 0 },
+            { start: 0, length: 0, },
             -1,
             value.offset,
           )
@@ -179,7 +179,7 @@ fn planned_callable_metadata(
           (
             PlannedForeignCallable(identity.0, identity.1),
             value.parent,
-            { start: 0, length: 0 },
+            { start: 0, length: 0, },
             -1,
             value.offset,
           )

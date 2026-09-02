@@ -13,6 +13,36 @@ struct SelfHostSpecializationShapePair {
   right: SelfHostPlannedValueShape
 }
 
+// These helpers keep specialization work arrays on exact source types.
+// The backend uses these types as compile-time proof for Array pop carriers.
+fn self_host_specialization_tasks(
+  root: SelfHostPlannedValueShape,
+) -> Array<SelfHostSpecializationShapeTask> {
+  [SelfHostSpecializationShapeTask::{
+    shape: root
+    finish: false
+    start: 0u32
+  }]
+}
+
+fn self_host_specialization_results() -> Array<SelfHostPlannedValueShape> {
+  []
+}
+
+fn self_host_specialization_fields() -> Array<SelfHostPlannedValueShape> {
+  []
+}
+
+fn self_host_specialization_pairs(
+  left: SelfHostPlannedValueShape,
+  right: SelfHostPlannedValueShape,
+) -> Array<SelfHostSpecializationShapePair> {
+  [SelfHostSpecializationShapePair::{
+    left: left
+    right: right
+  }]
+}
+
 pub struct SelfHostProgramSpecializationRequest {
   declaration: U64
   shapes: SelfHostHirSpan
@@ -62,15 +92,11 @@ fn self_host_specialization_canonical_scalar(
 fn self_host_specialization_canonical_shape(
   root: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedValueShape {
-  let tasks = [SelfHostSpecializationShapeTask::{
-    shape: root
-    finish: false
-    start: 0u32
-  }]
-  let results = []
+  let tasks = self_host_specialization_tasks(root)
+  let results = self_host_specialization_results()
   let _ = while tasks.length() {
     length => if self_host_u32_greater(length, 0u32) {
-      let task = match tasks.pop() {
+      let task = match self_host_array_pop(tasks) {
         Option::Some(value) => value
         Option::None => SelfHostSpecializationShapeTask::{
           shape: SelfHostPlannedValueShape::ErrorPlannedValueShape
@@ -79,7 +105,7 @@ fn self_host_specialization_canonical_shape(
         }
       }
       if task.finish {
-        let fields = []
+        let fields = self_host_specialization_fields()
         let end = results.length()
         let mut index = task.start
         let _ = while index {
@@ -124,7 +150,7 @@ fn self_host_specialization_canonical_shape(
       break self_host_semantic_unit()
     }
   }
-  match results.pop() {
+  match self_host_array_pop(results) {
     Option::Some(value) => value
     Option::None => SelfHostPlannedValueShape::RefPlannedValueShape
   }
@@ -134,13 +160,10 @@ fn self_host_specialization_shapes_equal(
   left: SelfHostPlannedValueShape,
   right: SelfHostPlannedValueShape,
 ) -> Bool {
-  let work = [SelfHostSpecializationShapePair::{
-    left: left
-    right: right
-  }]
+  let work = self_host_specialization_pairs(left, right)
   let _ = while work.length() {
     length => if self_host_u32_greater(length, 0u32) {
-      let pair = match work.pop() {
+      let pair = match self_host_array_pop(work) {
         Option::Some(value) => value
         Option::None => SelfHostSpecializationShapePair::{
           left: SelfHostPlannedValueShape::ErrorPlannedValueShape
@@ -282,6 +305,15 @@ fn self_host_program_specialization_add_reachable(
 fn self_host_program_specialization_call_recipe(
   expression: SelfHostPlannedExpression,
 ) -> Option<SelfHostProgramCallRecipe> {
+  // A variant constructor has a physical type, not a physical function.
+  match expression.selection {
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      _,
+      _,
+      _,
+    ) => return Option::None
+    _ => {}
+  }
   match expression.call_target {
     SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
       return Option::Some(SelfHostProgramCallRecipe::{
@@ -897,6 +929,67 @@ fn self_host_program_specialization_argument_nominal(
   0u64
 }
 
+fn self_host_program_specialization_program_callable(
+  lowering: SelfHostPlannedProgramLowering,
+  declaration: U64,
+) -> Option<SelfHostPlannedCallable> {
+  match lowering.index.declaration_owner(declaration) {
+    Option::Some(module_index) => if module_index < lowering.modules.length() {
+      self_host_program_specialization_callable(
+        lowering.modules[module_index],
+        declaration,
+      )
+    } else {
+      Option::None
+    }
+    Option::None => Option::None
+  }
+}
+
+fn self_host_program_specialization_type_argument_shape(
+  module_: SelfHostPlannedModuleLowering,
+  type_: I32,
+  argument: U32,
+) -> Option<SelfHostPlannedValueShape> {
+  match self_host_program_specialization_resolved_type(module_, type_) {
+    Option::Some(resolved_type) => if resolved_type < module_.resolved_types.types.length() {
+      match module_.resolved_types.types[resolved_type] {
+        SelfHostResolvedType::AppliedType(_, arguments) => if argument < arguments.length {
+          let index = self_host_u32_add(arguments.start, argument)
+          if index < module_.resolved_types.type_arguments.length() {
+            Option::Some(
+              self_host_planned_resolved_value_shape(
+                module_.resolved_types,
+                module_.resolved_types.type_arguments[index],
+              ),
+            )
+          } else {
+            Option::None
+          }
+        } else {
+          Option::None
+        }
+        _ => Option::None
+      }
+    } else {
+      Option::None
+    }
+    Option::None => Option::None
+  }
+}
+
+fn self_host_program_specialization_result_type_argument_shape(
+  module_: SelfHostPlannedModuleLowering,
+  expression: SelfHostPlannedExpression,
+  argument: U32,
+) -> Option<SelfHostPlannedValueShape> {
+  self_host_program_specialization_type_argument_shape(
+    module_,
+    expression.type_,
+    argument,
+  )
+}
+
 fn self_host_program_specialization_receiver_type_argument_shape(
   module_: SelfHostPlannedModuleLowering,
   expression: SelfHostPlannedExpression,
@@ -928,34 +1021,11 @@ fn self_host_program_specialization_receiver_type_argument_shape(
   if base >= module_.expressions.length() {
     return Option::None
   }
-  match self_host_program_specialization_resolved_type(
+  self_host_program_specialization_type_argument_shape(
     module_,
     module_.expressions[base].type_,
-  ) {
-    Option::Some(resolved_type) => if resolved_type < module_.resolved_types.types.length() {
-      match module_.resolved_types.types[resolved_type] {
-        SelfHostResolvedType::AppliedType(_, arguments) => if argument < arguments.length {
-          let index = self_host_u32_add(arguments.start, argument)
-          if index < module_.resolved_types.type_arguments.length() {
-            Option::Some(
-              self_host_planned_resolved_value_shape(
-                module_.resolved_types,
-                module_.resolved_types.type_arguments[index],
-              ),
-            )
-          } else {
-            Option::None
-          }
-        } else {
-          Option::None
-        }
-        _ => Option::None
-      }
-    } else {
-      Option::None
-    }
-    Option::None => Option::None
-  }
+    argument,
+  )
 }
 
 fn self_host_program_specialization_scan_body(
@@ -1044,6 +1114,78 @@ fn self_host_program_specialization_scan_body(
                 target,
                 request,
               )
+            } else {
+              match self_host_program_specialization_program_callable(
+                lowering,
+                target,
+              ) {
+                Option::Some(callable) => {
+                  let generic_parameters = self_host_program_specialization_callable_generics(
+                    callable,
+                  )
+                  if self_host_u32_greater(generic_parameters.length, 0u32) {
+                    let candidate_shapes = []
+                    let mut complete = true
+                    let mut argument = 0u32
+                    let _ = while argument {
+                      argument_offset => if argument_offset < generic_parameters.length {
+                        let candidate_shape = match self_host_program_specialization_receiver_type_argument_shape(
+                          module_,
+                          expression,
+                          argument_offset,
+                        ) {
+                          Option::Some(shape) => Option::Some(shape)
+                          Option::None => match self_host_program_specialization_result_type_argument_shape(
+                            module_,
+                            expression,
+                            argument_offset,
+                          ) {
+                            Option::Some(shape) => Option::Some(shape)
+                            Option::None => if self_host_bytes_equal(
+                              callable.name,
+                              b"with_capacity",
+                            ) && callable.result_shape is SelfHostPlannedValueShape::RefPlannedValueShape {
+                              // Capacity does not store an element. The Array wrapper has one reference carrier.
+                              Option::Some(SelfHostPlannedValueShape::RefPlannedValueShape)
+                            } else {
+                              Option::None
+                            }
+                          }
+                        }
+                        match candidate_shape {
+                          Option::Some(shape) => candidate_shapes.push(shape)
+                          Option::None => {
+                            complete = false
+                          }
+                        }
+                        continue argument_offset + 1u32
+                      } else {
+                        break self_host_semantic_unit()
+                      }
+                    }
+                    if complete && self_host_u32_equal(
+                      candidate_shapes.length(),
+                      generic_parameters.length,
+                    ) {
+                      let request = self_host_program_specialization_add_request(
+                        requests,
+                        shapes,
+                        target,
+                        candidate_shapes,
+                      )
+                      self_host_program_specialization_record_call(
+                        calls,
+                        body.body,
+                        caller_specialization,
+                        expression_index,
+                        target,
+                        request,
+                      )
+                    }
+                  }
+                }
+                Option::None => {}
+              }
             }
           }
         }
@@ -1068,6 +1210,7 @@ fn self_host_program_specialization_scan_body(
             } else {
               ""
             }
+            let unresolved_method_call = target.kind is SelfHostPlannedExpressionKind::PlannedUnresolvedField(_, _)
             let unresolved_nominal = match target.kind {
               SelfHostPlannedExpressionKind::PlannedPoisonExpression => {
                 let base_nominal = if self_host_u32_greater(
@@ -1107,6 +1250,19 @@ fn self_host_program_specialization_scan_body(
                   }
                 }
               }
+              SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => if base < module_.expressions.length() {
+                let receiver = module_.expressions[base]
+                if !self_host_u64_equal(receiver.nominal, 0u64) {
+                  receiver.nominal
+                } else {
+                  self_host_linked_type_nominal_declaration(
+                    module_,
+                    receiver.type_,
+                  )
+                }
+              } else {
+                0u64
+              }
               _ => 0u64
             }
             let mut resolved_nominal_call = false
@@ -1122,14 +1278,62 @@ fn self_host_program_specialization_scan_body(
                       candidate_module,
                       candidate,
                     )
+                    let candidate_nominal = self_host_linked_resolved_nominal_declaration(
+                      candidate_module,
+                      if unresolved_method_call {
+                        callable.self_type
+                      } else {
+                        callable.result_type
+                      },
+                    )
                     if bytes_to_string(callable.name) == unresolved_name &&
-                      self_host_u64_equal(
-                        self_host_linked_resolved_nominal_declaration(
-                          candidate_module,
-                          callable.result_type,
-                        ),
+                      (!unresolved_method_call || callable.has_receiver) &&
+                      self_host_u32_equal(
+                        callable.parameters.length,
+                        arguments.length,
+                      ) && self_host_u64_equal(
+                        candidate_nominal,
                         unresolved_nominal,
                       ) {
+                      let generic_parameters = self_host_program_specialization_callable_generics(
+                        callable,
+                      )
+                      let candidate_shapes = []
+                      let mut generic = 0u32
+                      let _ = while generic {
+                        current_generic => if current_generic < generic_parameters.length {
+                          match self_host_program_specialization_receiver_type_argument_shape(
+                            module_,
+                            expression,
+                            current_generic,
+                          ) {
+                            Option::Some(shape) => candidate_shapes.push(shape)
+                            Option::None => if current_generic < caller_shapes.length {
+                              candidate_shapes.push(shapes[
+                                self_host_u32_add(caller_shapes.start, current_generic)
+                              ])
+                            } else {
+                              candidate_shapes.push(SelfHostPlannedValueShape::GenericPlannedValueShape)
+                            }
+                          }
+                          continue current_generic + 1u32
+                        } else {
+                          break self_host_semantic_unit()
+                        }
+                      }
+                      let request = if self_host_u32_greater(
+                        generic_parameters.length,
+                        0u32,
+                      ) {
+                        self_host_program_specialization_add_request(
+                          requests,
+                          shapes,
+                          callable.declaration,
+                          candidate_shapes,
+                        )
+                      } else {
+                        4294967295u32
+                      }
                       self_host_program_specialization_add_reachable(
                         reachable,
                         reachable_seen,
@@ -1141,7 +1345,7 @@ fn self_host_program_specialization_scan_body(
                         caller_specialization,
                         expression_index,
                         callable.declaration,
-                        4294967295u32,
+                        request,
                       )
                       resolved_nominal_call = true
                       break self_host_semantic_unit()
@@ -1164,9 +1368,26 @@ fn self_host_program_specialization_scan_body(
                 arguments.length,
                 0u32,
               )
-            if unresolved_array_call || unresolved_array_capacity {
+            let unresolved_array_iter = !resolved_nominal_call &&
+              unresolved_name == "iter" && self_host_u32_equal(
+                arguments.length,
+                0u32,
+              )
+            if unresolved_array_call || unresolved_array_capacity ||
+              unresolved_array_iter {
               for candidate_module in lowering.modules {
-                if self_host_u64_equal(candidate_module.module_id, 7204u64) {
+                let mut array_module = false
+                for candidate_callable in candidate_module.functions.callables {
+                  match candidate_callable.kind {
+                    SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if name.equals(
+                      b"dew_array_iter",
+                    ) {
+                      array_module = true
+                    }
+                    _ => {}
+                  }
+                }
+                if array_module {
                   let mut callable_index = 0u32
                   let _ = while callable_index {
                     candidate => if candidate < self_host_program_specialization_callable_count(
@@ -1176,11 +1397,30 @@ fn self_host_program_specialization_scan_body(
                         candidate_module,
                         candidate,
                       )
-                      if bytes_to_string(callable.name) == unresolved_name {
+                      let candidate_name = if unresolved_array_capacity {
+                        "array_with_capacity"
+                      } else {
+                        unresolved_name
+                      }
+                      if bytes_to_string(callable.name) == candidate_name {
                         let mut candidate_shape = SelfHostPlannedValueShape::GenericPlannedValueShape
-                        if unresolved_array_capacity {
-                          if self_host_u32_greater(caller_shapes.length, 0u32) {
-                            candidate_shape = shapes[caller_shapes.start]
+                        if unresolved_array_capacity || unresolved_array_iter {
+                          match self_host_program_specialization_receiver_type_argument_shape(
+                            module_,
+                            expression,
+                            0u32,
+                          ) {
+                            Option::Some(shape) => {
+                              candidate_shape = shape
+                            }
+                            Option::None => {
+                              if self_host_u32_greater(
+                                caller_shapes.length,
+                                0u32,
+                              ) {
+                                candidate_shape = shapes[caller_shapes.start]
+                              }
+                            }
                           }
                         } else {
                           let argument_index = module_.expression_children[

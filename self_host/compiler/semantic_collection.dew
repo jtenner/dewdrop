@@ -116,10 +116,6 @@ fn self_host_empty_id_lookup() -> Map<U32, U64> {
   Map::empty()
 }
 
-fn self_host_empty_value_bindings() -> Map<U32, SelfHostValueBinding> {
-  Map::empty()
-}
-
 fn self_host_empty_derive_seen() -> Map<String, U32> {
   Map::empty()
 }
@@ -204,7 +200,7 @@ struct SelfHostCollectionBuilderState {
   name_lookup: Map<String, U32>
   type_bindings: Map<U32, U64>
   trait_bindings: Map<U32, U64>
-  value_bindings: Map<U32, SelfHostValueBinding>
+  value_bindings: Array<Option<SelfHostValueBinding>>
   value_binding_candidates: Array<SelfHostValueBindingCandidate>
   foreign_library_by_alias: Map<U32, U64>
   mut next_declaration_local: U32
@@ -294,7 +290,7 @@ impl SelfHostCollectionBuilder {
         name_lookup: self_host_empty_name_lookup()
         type_bindings: self_host_empty_id_lookup()
         trait_bindings: self_host_empty_id_lookup()
-        value_bindings: self_host_empty_value_bindings()
+        value_bindings: []
         value_binding_candidates: []
         foreign_library_by_alias: self_host_empty_id_lookup()
         next_declaration_local: 0u32
@@ -370,14 +366,38 @@ impl SelfHostCollectionBuilder {
   }
 
   fn intern(self, name: String) -> U32 {
-    match self.state.name_lookup.get(name) {
-      Option::Some(id) => id
-      Option::None => {
-        let id = self.names.length()
-        self.names.push(name)
-        self.state.name_lookup.set(name, id)
-        id
+    // Name identity must use String content. The current Wasm Map runtime uses
+    // reference identity for reference keys, so it cannot certify this table.
+    let mut index = 0u32
+    let found = while index {
+      current => if current < self.names.length() {
+        if self_host_semantic_string_equals(self.names[current], name) {
+          break current
+        }
+        continue current + 1u32
+      } else {
+        break 4294967295u32
       }
+    }
+    if !self_host_u32_equal(found, 4294967295u32) {
+      found
+    } else {
+      let id = self.names.length()
+      if !self_host_u32_equal(id, self.state.value_bindings.length()) {
+        // Every interned name must have one value-binding slot.
+        self.state.diagnostics.push(
+          SelfHostCollectionDiagnostic::ValueBindingArenaMismatch(
+            id,
+            self.names.length(),
+            self.state.value_bindings.length(),
+          ),
+        )
+        return 4294967295u32
+      }
+      self.names.push(name)
+      self.state.value_bindings.push(Option::None)
+      self.state.name_lookup.set(name, id)
+      id
     }
   }
 
@@ -511,7 +531,18 @@ impl SelfHostCollectionBuilder {
     declaration: U64,
     offset: U32,
   ) -> Unit {
-    match self.state.value_bindings.get(name) {
+    if name >= self.state.value_bindings.length() {
+      // A value binding must use an interned name slot.
+      self.state.diagnostics.push(
+        SelfHostCollectionDiagnostic::ValueBindingArenaMismatch(
+          name,
+          self.names.length(),
+          self.state.value_bindings.length(),
+        ),
+      )
+      return
+    }
+    match self.state.value_bindings[name] {
       Option::Some(binding) => {
         if kind is SelfHostCollectedDeclKind::BuiltinDecl &&
           binding.kind is SelfHostCollectedDeclKind::BuiltinDecl {
@@ -545,8 +576,7 @@ impl SelfHostCollectionBuilder {
             next: Option::None
           },
         )
-        self.state.value_bindings.set(
-          name,
+        self.state.value_bindings[name] = Option::Some(
           SelfHostValueBinding::{
             head: candidate
             tail: candidate

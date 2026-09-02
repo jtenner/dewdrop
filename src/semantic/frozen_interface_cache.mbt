@@ -450,29 +450,29 @@ pub fn frozen_interface_body_evidence_fingerprint(
 ) -> Result[String, String] {
   let declarations : Array[FrozenInterfaceDeclaration] = []
   for declaration in interface_.declarations {
-    declarations.push({ ..declaration, location: { file: 0UL, offset: 0UL } })
+    declarations.push({ ..declaration, location: { file: 0UL, offset: 0UL, }, })
   }
   let fields : Array[FrozenInterfaceField] = []
   for field in interface_.fields {
-    fields.push({ ..field, location: { file: 0UL, offset: 0UL } })
+    fields.push({ ..field, location: { file: 0UL, offset: 0UL, }, })
   }
   let variants : Array[FrozenInterfaceVariant] = []
   for variant in interface_.variants {
-    variants.push({ ..variant, location: { file: 0UL, offset: 0UL } })
+    variants.push({ ..variant, location: { file: 0UL, offset: 0UL, }, })
   }
   let callables : Array[FrozenInterfaceCallable] = []
   for callable in interface_.callables {
-    callables.push({ ..callable, location: { file: 0UL, offset: 0UL } })
+    callables.push({ ..callable, location: { file: 0UL, offset: 0UL, }, })
   }
   let parameters : Array[FrozenInterfaceParameter] = []
   for parameter in interface_.parameters {
-    parameters.push({ ..parameter, location: { file: 0UL, offset: 0UL } })
+    parameters.push({ ..parameter, location: { file: 0UL, offset: 0UL, }, })
   }
   let implementations : Array[FrozenInterfaceImplementation] = []
   for implementation in interface_.implementations {
     implementations.push({
       ..implementation,
-      location: { file: 0UL, offset: 0UL },
+      location: { file: 0UL, offset: 0UL, },
     })
   }
   let normalized : FrozenModuleInterface = {
@@ -563,14 +563,14 @@ fn FrozenInterfaceCacheReader::read_string(
 fn FrozenInterfaceCacheReader::read_span(
   self : FrozenInterfaceCacheReader,
 ) -> HirSpan {
-  { start: self.read_int(), length: self.read_int() }
+  { start: self.read_int(), length: self.read_int(), }
 }
 
 ///|
 fn FrozenInterfaceCacheReader::read_location(
   self : FrozenInterfaceCacheReader,
 ) -> SourceLocation {
-  { file: self.read_u64(), offset: self.read_u64() }
+  { file: self.read_u64(), offset: self.read_u64(), }
 }
 
 ///|
@@ -972,7 +972,7 @@ pub fn deserialize_frozen_interfaces(
   if magic != frozen_interface_cache_magic {
     return Err("unsupported frozen-interface cache version")
   }
-  let reader : FrozenInterfaceCacheReader = { reader: binary }
+  let reader : FrozenInterfaceCacheReader = { reader: binary, }
   let count = reader.read_count(1, "interface")
   let interfaces : Array[FrozenModuleInterface] = []
   for _ in 0..<count {

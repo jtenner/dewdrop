@@ -665,12 +665,12 @@ fn starshine_program_adapter_helper_plan(
   }
   for index in 0..<helpers.length() {
     let helper = helpers[index]
-    helpers[index] = { ..helper, function_index: next_function_index }
+    helpers[index] = { ..helper, function_index: next_function_index, }
     next_function_index += 1
   }
   for index in 0..<wrappers.length() {
     let wrapper = wrappers[index]
-    wrappers[index] = { ..wrapper, function_index: next_function_index }
+    wrappers[index] = { ..wrapper, function_index: next_function_index, }
     next_function_index += 1
   }
   for module_index, module_ in planned.modules {

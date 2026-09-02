@@ -149,7 +149,7 @@ test "semantic collection keeps builtin overloads in source order" {
     Option::Some(value) => value
     Option::None => 4294967295u32
   }
-  let binding = match collected.value_bindings.get(name) {
+  let binding = match collected.value_binding(name) {
     Option::Some(value) => value
     Option::None => SelfHostValueBinding::{
       head: 0u32

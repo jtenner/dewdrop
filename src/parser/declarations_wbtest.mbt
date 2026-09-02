@@ -18,8 +18,8 @@ test "public builtin declaration preserves complete signature" {
         name_offset: 12UL,
         type_parameters: [],
         parameters: [
-          { name: "a", type_: NamedType("I32", 23UL), offset: 20UL },
-          { name: "b", type_: NamedType("I32", 31UL), offset: 28UL },
+          { name: "a", type_: NamedType("I32", 23UL), offset: 20UL, },
+          { name: "b", type_: NamedType("I32", 31UL), offset: 28UL, },
         ],
         return_type: NamedType("I32", 39UL),
         builtin_name: b"i32_add",

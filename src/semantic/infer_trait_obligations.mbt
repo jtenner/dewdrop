@@ -19,7 +19,7 @@ fn BasicBodyInferencer::body_generic_parameter_spans(
     _ =>
       (
         self.collected.generic_parameters_of(self.body.declaration),
-        { start: 0, length: 0 },
+        { start: 0, length: 0, },
       )
   }
 }
@@ -174,7 +174,7 @@ fn BasicBodyInferencer::begin_declared_body_trait_evidence(
   } else {
     match self.imports {
       Some(imports) => imports.generic_parameters_of(evidence.trait_declaration)
-      None => { start: 0, length: 0 }
+      None => { start: 0, length: 0, }
     }
   }
   self.call_scratch.instantiation_method_generics = if semantic_id_module(
@@ -183,7 +183,7 @@ fn BasicBodyInferencer::begin_declared_body_trait_evidence(
     self.collected.module_id {
     self.collected.generic_parameters_of(evidence.requirement)
   } else {
-    { start: 0, length: self.call_generic_count(evidence.requirement) }
+    { start: 0, length: self.call_generic_count(evidence.requirement), }
   }
   self.call_scratch.candidate_type_arguments.clear()
   match self.resolved.types[evidence.bound_type] {
@@ -303,7 +303,7 @@ fn BasicBodyInferencer::begin_obligation_impl_candidate(
   self.call_scratch.instantiation_generics = self.implementation_generic_parameters(
     implementation.declaration,
   )
-  self.call_scratch.instantiation_method_generics = { start: 0, length: 0 }
+  self.call_scratch.instantiation_method_generics = { start: 0, length: 0, }
   self.call_scratch.candidate_type_arguments.clear()
   for _ in 0..<self.call_scratch.instantiation_generics.length {
     self.call_scratch.candidate_type_arguments.push(
@@ -715,7 +715,7 @@ fn BasicBodyInferencer::select_trait_obligation_evidence_at_depth(
       let node = self.trait_evidence.length()
       self.trait_evidence.push({
         kind: BoundInferredTraitEvidence(slot),
-        prerequisites: { start: 0, length: 0 },
+        prerequisites: { start: 0, length: 0, },
       })
       return Some(node)
     }

@@ -22,7 +22,10 @@ fn bootstrap_ensure_directory(path : String) -> Unit {
   }
   bootstrap_ensure_directory(bootstrap_dirname(path))
   @fs.create_dir(path) catch {
-    error => bootstrap_fail("cannot create directory \{path}: \{error}")
+    error =>
+      bootstrap_fail(
+        "cannot create directory \{path}: \{bootstrap_fs_error_message(error)}",
+      )
   }
 }
 
@@ -120,7 +123,9 @@ fn bootstrap_build_cache_plan(
   for source in sources {
     let bytes = @fs.read_file_to_bytes(source) catch {
       error => {
-        bootstrap_fail("cannot read build-cache source \{source}: \{error}")
+        bootstrap_fail(
+          "cannot read build-cache source \{source}: \{bootstrap_fs_error_message(error)}",
+        )
         b""
       }
     }
@@ -180,7 +185,7 @@ fn bootstrap_build_cache_decode(plan : BootstrapBuildCachePlan) -> Bytes? {
   let encoded = @fs.read_file_to_bytes(plan.artifact) catch {
     error => {
       bootstrap_fail(
-        "cannot read build cache artifact \{plan.artifact}: \{error}",
+        "cannot read build cache artifact \{plan.artifact}: \{bootstrap_fs_error_message(error)}",
       )
       b""
     }
@@ -242,7 +247,7 @@ fn bootstrap_build_cache_publish(plan : BootstrapBuildCachePlan) -> Unit {
   let payload = @fs.read_file_to_bytes(plan.output) catch {
     error => {
       bootstrap_fail(
-        "compiler did not write build output \{plan.output}: \{error}",
+        "compiler did not write build output \{plan.output}: \{bootstrap_fs_error_message(error)}",
       )
       b""
     }

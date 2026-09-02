@@ -275,7 +275,7 @@ fn Parser::parse_struct_pattern(
       Ok(_) => ()
       Err(error) => return Err(error)
     }
-    fields.push({ name, pattern, offset: field_offset })
+    fields.push({ name, pattern, offset: field_offset, })
     self.skip_newlines()
   } nobreak {
     abort("unreachable struct pattern parser termination")

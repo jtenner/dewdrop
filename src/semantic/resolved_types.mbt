@@ -476,7 +476,7 @@ fn ResolvedTypeInterner::intern_product(
   for field in fields {
     self.arguments.push(field)
   }
-  self.insert(ProductType({ start, length: fields.length() }), hash)
+  self.insert(ProductType({ start, length: fields.length(), }), hash)
 }
 
 ///|
@@ -548,7 +548,7 @@ fn ResolvedTypeInterner::intern_function(
     self.arguments.push(parameter)
   }
   self.insert(
-    FunctionType({ start, length: parameters.length() }, result),
+    FunctionType({ start, length: parameters.length(), }, result),
     hash,
   )
 }
@@ -575,5 +575,5 @@ fn ResolvedTypeInterner::intern_applied(
   for argument in arguments {
     self.arguments.push(argument)
   }
-  self.insert(AppliedType(base, { start, length: arguments.length() }), hash)
+  self.insert(AppliedType(base, { start, length: arguments.length(), }), hash)
 }

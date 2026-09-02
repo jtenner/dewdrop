@@ -1086,15 +1086,15 @@ impl SelfHostLocalTypeSolver {
   fn restore_undo(self, start: U32) -> Unit {
     let _ = while self.undo_kinds.length() {
       length => if length > start {
-        let kind = match self.undo_kinds.pop() {
+        let kind = match self_host_array_pop(self.undo_kinds) {
           Option::Some(value) => value
           Option::None => 0u32
         }
-        let index = match self.undo_indices.pop() {
+        let index = match self_host_array_pop(self.undo_indices) {
           Option::Some(value) => value
           Option::None => 0u32
         }
-        let old_value = match self.undo_values.pop() {
+        let old_value = match self_host_array_pop(self.undo_values) {
           Option::Some(value) => value
           Option::None => 0i32
         }
@@ -1131,7 +1131,7 @@ impl SelfHostLocalTypeSolver {
     self.zonk_marks.truncate(snapshot.type_count)
     self.zonk_values.truncate(snapshot.type_count)
     self.diagnostics.truncate(snapshot.diagnostic_count)
-    let _ = self.snapshots.pop()
+    let _ = self_host_array_pop(self.snapshots)
     if self.snapshots.length() == 0u32 {
       self.undo_kinds.clear()
       self.undo_indices.clear()
@@ -1147,7 +1147,7 @@ impl SelfHostLocalTypeSolver {
     if !self_host_inference_snapshot_equal(top, snapshot) {
       return
     }
-    let _ = self.snapshots.pop()
+    let _ = self_host_array_pop(self.snapshots)
     if self.snapshots.length() == 0u32 {
       self.undo_kinds.clear()
       self.undo_indices.clear()

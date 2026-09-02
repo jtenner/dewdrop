@@ -79,7 +79,7 @@ fn self_host_module_value_declaration(
   collected: SelfHostCollectedModule,
   name: U32,
 ) -> Option<U64> {
-  match collected.value_bindings.get(name) {
+  match collected.value_binding(name) {
     Option::Some(binding) => Option::Some(
       collected.value_binding_candidates[binding.head].declaration,
     )

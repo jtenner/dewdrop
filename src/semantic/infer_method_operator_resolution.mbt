@@ -44,9 +44,9 @@ fn BasicBodyInferencer::implementation_generic_parameters(
     Some(imports) =>
       match imports.implementation(declaration) {
         Some(implementation) => implementation.generic_parameters
-        None => { start: 0, length: 0 }
+        None => { start: 0, length: 0, }
       }
-    None => { start: 0, length: 0 }
+    None => { start: 0, length: 0, }
   }
 }
 
@@ -68,7 +68,7 @@ fn BasicBodyInferencer::begin_method_candidate(
   } else {
     match self.imported_callable_of(declaration) {
       Some(callable) => callable.generic_parameters
-      None => { start: 0, length: 0 }
+      None => { start: 0, length: 0, }
     }
   }
   self.call_scratch.candidate_type_arguments.clear()
@@ -361,7 +361,7 @@ fn BasicBodyInferencer::select_operator_candidate(
   }
   self.operator_targets[self.expression_index(expression)] = SelectedInferredCallTarget(
     declaration,
-    { start, length: self.call_scratch.candidate_type_arguments.length() },
+    { start, length: self.call_scratch.candidate_type_arguments.length(), },
   )
   self.record_selected_impl_prerequisite_evidence(
     expression, implementation_index, origin,
@@ -472,7 +472,7 @@ fn BasicBodyInferencer::select_index_candidate(
   }
   self.operator_targets[self.expression_index(expression)] = SelectedInferredCallTarget(
     declaration,
-    { start, length: self.call_scratch.candidate_type_arguments.length() },
+    { start, length: self.call_scratch.candidate_type_arguments.length(), },
   )
   self.record_selected_impl_prerequisite_evidence(
     expression, implementation_index, origin,
@@ -783,7 +783,7 @@ fn BasicBodyInferencer::select_fixed_array_index(
   self.call_type_arguments.push(element)
   self.operator_targets[self.expression_index(expression)] = SelectedInferredCallTarget(
     declaration,
-    { start, length: 1 },
+    { start, length: 1, },
   )
 }
 
@@ -817,7 +817,7 @@ fn BasicBodyInferencer::select_map_index(
   self.call_type_arguments.push(value_type)
   self.operator_targets[self.expression_index(expression)] = SelectedInferredCallTarget(
     declaration,
-    { start, length: 2 },
+    { start, length: 2, },
   )
 }
 
@@ -899,7 +899,7 @@ fn BasicBodyInferencer::select_declared_bound_operator(
   self.operator_targets[self.expression_index(expression)] = SelectedBoundInferredCallTarget(
     declaration,
     selected.evidence_index,
-    { start, length: self.call_scratch.candidate_type_arguments.length() },
+    { start, length: self.call_scratch.candidate_type_arguments.length(), },
   )
   true
 }
@@ -965,7 +965,7 @@ fn BasicBodyInferencer::begin_trait_object_requirement(
   } else {
     match self.imports {
       Some(imports) => imports.generic_parameters_of(trait_declaration)
-      None => { start: 0, length: 0 }
+      None => { start: 0, length: 0, }
     }
   }
   self.call_scratch.instantiation_method_generics = if semantic_id_module(
@@ -974,7 +974,7 @@ fn BasicBodyInferencer::begin_trait_object_requirement(
     self.collected.module_id {
     self.collected.generic_parameters_of(requirement)
   } else {
-    { start: 0, length: self.call_generic_count(requirement) }
+    { start: 0, length: self.call_generic_count(requirement), }
   }
   self.call_scratch.candidate_type_arguments.clear()
   for
@@ -1127,7 +1127,7 @@ fn BasicBodyInferencer::select_trait_object_method(
     trait_declaration,
     requirement,
     slot,
-    { start, length: self.call_type_arguments.length() - start },
+    { start, length: self.call_type_arguments.length() - start, },
   )
   true
 }
@@ -1218,7 +1218,7 @@ fn BasicBodyInferencer::select_declared_bound_method(
   self.call_targets[call_slot] = SelectedBoundInferredCallTarget(
     declaration,
     selected.evidence_index,
-    { start, length: self.call_scratch.candidate_type_arguments.length() },
+    { start, length: self.call_scratch.candidate_type_arguments.length(), },
   )
   true
 }
@@ -1636,7 +1636,7 @@ fn BasicBodyInferencer::resolve_type_qualified_method_call(
         self.call_type_arguments.push(element)
         self.call_targets[call_slot] = SelectedInferredCallTarget(
           standard_fixed_array_method_declaration("make"),
-          { start, length: 1 },
+          { start, length: 1, },
         )
         return true
       } else if declaration == standard_map_type_declaration() &&
@@ -1662,7 +1662,7 @@ fn BasicBodyInferencer::resolve_type_qualified_method_call(
         self.call_type_arguments.push(value_type)
         self.call_targets[call_slot] = SelectedInferredCallTarget(
           standard_map_method_declaration("singleton"),
-          { start, length: 2 },
+          { start, length: 2, },
         )
         return true
       } else if declaration == standard_map_type_declaration() &&
@@ -1679,7 +1679,7 @@ fn BasicBodyInferencer::resolve_type_qualified_method_call(
         self.call_type_arguments.push(value_type)
         self.call_targets[call_slot] = SelectedInferredCallTarget(
           standard_map_method_declaration("empty"),
-          { start, length: 2 },
+          { start, length: 2, },
         )
         return true
       } else if declaration == standard_set_type_declaration() &&
@@ -1702,7 +1702,7 @@ fn BasicBodyInferencer::resolve_type_qualified_method_call(
         self.call_type_arguments.push(key_type)
         self.call_targets[call_slot] = SelectedInferredCallTarget(
           standard_set_method_declaration("singleton"),
-          { start, length: 1 },
+          { start, length: 1, },
         )
         return true
       } else if declaration == standard_set_type_declaration() &&
@@ -1723,7 +1723,7 @@ fn BasicBodyInferencer::resolve_type_qualified_method_call(
         self.call_type_arguments.push(key_type)
         self.call_targets[call_slot] = SelectedInferredCallTarget(
           standard_set_method_declaration("empty"),
-          { start, length: 1 },
+          { start, length: 1, },
         )
         return true
       }

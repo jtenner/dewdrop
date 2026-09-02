@@ -523,8 +523,8 @@ test "named and qualified values accept double-colon construction bodies" {
       ConstructExpr(
         NameExpr("Point", 0UL),
         [
-          { name: "x", value: I32Expr(10UL, 14UL), offset: 11UL },
-          { name: "y", value: I32Expr(20UL, 22UL), offset: 19UL },
+          { name: "x", value: I32Expr(10UL, 14UL), offset: 11UL, },
+          { name: "y", value: I32Expr(20UL, 22UL), offset: 19UL, },
         ],
         7UL,
       ),
@@ -549,7 +549,7 @@ test "construction permits a soft newline after double colon" {
     Ok(
       ConstructExpr(
         NameExpr("Point", 0UL),
-        [{ name: "x", value: I32Expr(10UL, 15UL), offset: 12UL }],
+        [{ name: "x", value: I32Expr(10UL, 15UL), offset: 12UL, }],
         8UL,
       ),
     ),
@@ -565,7 +565,7 @@ test "construction remains in binary-seeking mode" {
         FieldExpr(
           ConstructExpr(
             QualifiedExpr(NameExpr("Message", 0UL), "Data", 7UL),
-            [{ name: "value", value: NameExpr("item", 26UL), offset: 19UL }],
+            [{ name: "value", value: NameExpr("item", 26UL), offset: 19UL, }],
             15UL,
           ),
           "value",

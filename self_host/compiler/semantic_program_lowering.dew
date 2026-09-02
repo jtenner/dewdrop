@@ -1,5 +1,13 @@
 open dew.std.array
 open dew.std.option
+open dew.std.string_builder
+
+fn self_host_program_collected_module_at(
+  collected: SelfHostCollectedProgram,
+  index: U32,
+) -> SelfHostCollectedModule {
+  collected.modules.at(index)
+}
 
 fn self_host_program_bool_at(values: Array<Bool>, index: U32) -> Bool {
   array_get_unchecked(values, index)
@@ -433,6 +441,582 @@ fn self_host_infer_program_module_values(
     imports.type_generic_spans,
     imports.module_value_types,
   )
+}
+
+fn self_host_program_lowering_reference_name(
+  reference: SelfHostBodyNameReference,
+) -> String {
+  match reference {
+    SelfHostBodyNameReference::NoNameReference => "none"
+    SelfHostBodyNameReference::ErrorNameReference => "error"
+    SelfHostBodyNameReference::LocalNameReference(_) => "local"
+    SelfHostBodyNameReference::LambdaCaptureNameReference(_) => "capture"
+    SelfHostBodyNameReference::ModuleValueNameReference(_) => "module-value"
+    SelfHostBodyNameReference::ImportedModuleValueNameReference(_) => "imported-value"
+    SelfHostBodyNameReference::ImportedModuleNameReference(_) => "imported-module"
+    SelfHostBodyNameReference::ForeignLibraryNameReference(_) => "foreign-library"
+    SelfHostBodyNameReference::PrimitiveTypeNameReference(_) => "primitive-type"
+    SelfHostBodyNameReference::ModuleTypeNameReference(_) => "module-type"
+    SelfHostBodyNameReference::ModuleTraitNameReference(_) => "module-trait"
+    SelfHostBodyNameReference::VariantNameReference(_) => "variant"
+  }
+}
+
+fn self_host_program_lowering_name_at(
+  module_: SelfHostPlannedModuleLowering,
+  name: U32,
+) -> String {
+  if name < module_.names.length() {
+    module_.names[name]
+  } else {
+    ""
+  }
+}
+
+fn self_host_program_lowering_expression_error(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expression: U32,
+  context: String,
+) -> String {
+  let planned = module_.expressions[expression]
+  let message = StringBuilder::new()
+  message.append("program lowering ")
+  message.append(context)
+  message.append(" module=")
+  message.append_u64(module_.module_id)
+  message.append(" declaration=")
+  message.append_u64(body.declaration)
+  message.append(" body=")
+  message.append_u64(body.body)
+  message.append(" expression=")
+  message.append_u32(expression)
+  message.append(" type=")
+  message.append_i32(planned.type_)
+  message.append(" nominal=")
+  message.append_u64(planned.nominal)
+  message.append(" reference=")
+  message.append(self_host_program_lowering_reference_name(planned.reference))
+  message.append(" source_name=")
+  message.append(self_host_program_lowering_name_at(module_, planned.source_name))
+  message.append(" offset=")
+  message.append_u32(planned.offset)
+  message.append(" locals=")
+  let mut local_offset = 0u32
+  let _ = while local_offset {
+    current => if current < body.locals.length && current < 8u32 {
+      let index = self_host_u32_add(body.locals.start, current)
+      if index < module_.locals.length() {
+        let local = module_.locals[index]
+        if self_host_u32_greater(current, 0u32) {
+          message.append(",")
+        }
+        message.append_u32(local.local_id)
+        message.append(":")
+        message.append_u32(local.offset)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  message.append(" items=")
+  match body.root {
+    SelfHostHirBodyRoot::BlockBodyRoot(block) => if block < module_.blocks.length() {
+      let items = module_.blocks[block].items
+      let mut item_offset = 0u32
+      let _ = while item_offset {
+        current => if current < items.length && current < 12u32 {
+          let item_index = self_host_u32_add(items.start, current)
+          if item_index < module_.block_items.length() {
+            if self_host_u32_greater(current, 0u32) {
+              message.append(",")
+            }
+            match module_.block_items[item_index].kind {
+              SelfHostPlannedBlockItemKind::PlannedLetItem(local, _, value) => {
+                message.append("let:")
+                message.append_u32(local)
+                message.append(":")
+                message.append_u32(value)
+              }
+              SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => {
+                message.append("expression:")
+                message.append_u32(value)
+              }
+            }
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    _ => {}
+  }
+  message.finish()
+}
+
+// This gate stops invalid body lowering before specialization can recover or hide it.
+fn self_host_validate_program_lowering(
+  lowering: SelfHostPlannedProgramLowering,
+) -> Option<String> {
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current_module => if current_module < lowering.modules.length() {
+      let module_ = lowering.modules[current_module]
+      let mut body_index = 0u32
+      let _ = while body_index {
+        current_body => if current_body < module_.bodies.length() {
+          let body = module_.bodies[current_body]
+          let mut block_offset = 0u32
+          let _ = while block_offset {
+            current_block => if current_block < body.blocks.length {
+              let block_index = self_host_u32_add(
+                body.blocks.start,
+                current_block,
+              )
+              if block_index >= module_.blocks.length() {
+                return Option::Some("program lowering body block is outside its arena")
+              }
+              let items = module_.blocks[block_index].items
+              let mut item_offset = 0u32
+              let _ = while item_offset {
+                current_item => if current_item < items.length {
+                  let item_index = self_host_u32_add(items.start, current_item)
+                  if item_index >= module_.block_items.length() {
+                    return Option::Some("program lowering block item is outside its arena")
+                  }
+                  match module_.block_items[item_index].kind {
+                    SelfHostPlannedBlockItemKind::PlannedLetItem(
+                      local,
+                      _,
+                      _,
+                    ) => if self_host_u32_equal(local, 4294967295u32) ||
+                      local >= body.locals.length {
+                      // Every let item must have one local before lowering starts.
+                      let message = StringBuilder::new()
+                      message.append("program lowering let item has no resolved local module=")
+                      message.append_u64(module_.module_id)
+                      message.append(" declaration=")
+                      message.append_u64(body.declaration)
+                      message.append(" body=")
+                      message.append_u64(body.body)
+                      message.append(" block=")
+                      message.append_u32(block_index)
+                      message.append(" item=")
+                      message.append_u32(item_index)
+                      message.append(" local=")
+                      message.append_u32(local)
+                      message.append(" local_count=")
+                      message.append_u32(body.locals.length)
+                      message.append(" offset=")
+                      message.append_u32(module_.block_items[item_index].offset)
+                      return Option::Some(message.finish())
+                    }
+                    _ => {}
+                  }
+                  continue current_item + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              continue current_block + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          let expression_end = self_host_u32_add(
+            body.expressions.start,
+            body.expressions.length,
+          )
+          if body.expressions.start > module_.expressions.length() ||
+            expression_end > module_.expressions.length() ||
+            expression_end < body.expressions.start {
+            let message = StringBuilder::new()
+            message.append("program lowering body expression span is outside its arena module=")
+            message.append_u64(module_.module_id)
+            message.append(" declaration=")
+            message.append_u64(body.declaration)
+            message.append(" body=")
+            message.append_u64(body.body)
+            message.append(" start=")
+            message.append_u32(body.expressions.start)
+            message.append(" length=")
+            message.append_u32(body.expressions.length)
+            message.append(" arena=")
+            message.append_u32(module_.expressions.length())
+            return Option::Some(message.finish())
+          }
+          let mut expression = body.expressions.start
+          let _ = while expression {
+            current_expression => if current_expression < expression_end {
+              let planned = module_.expressions[current_expression]
+              match planned.kind {
+                SelfHostPlannedExpressionKind::PlannedPoisonExpression => match planned.reference {
+                  SelfHostBodyNameReference::LocalNameReference(_) => return Option::Some(
+                    self_host_program_lowering_expression_error(
+                      module_,
+                      body,
+                      current_expression,
+                      "lost a local value",
+                    ),
+                  )
+                  SelfHostBodyNameReference::LambdaCaptureNameReference(_) => return Option::Some(
+                    self_host_program_lowering_expression_error(
+                      module_,
+                      body,
+                      current_expression,
+                      "lost a captured value",
+                    ),
+                  )
+                  _ => if !self_host_u64_equal(planned.nominal, 0u64) {
+                    return Option::Some(
+                      self_host_program_lowering_expression_error(
+                        module_,
+                        body,
+                        current_expression,
+                        "has a typed poison value",
+                      ),
+                    )
+                  }
+                }
+                SelfHostPlannedExpressionKind::PlannedUnresolvedField(
+                  receiver,
+                  _,
+                ) => if receiver >= module_.expressions.length() {
+                  return Option::Some(
+                    self_host_program_lowering_expression_error(
+                      module_,
+                      body,
+                      current_expression,
+                      "has a field receiver outside its arena",
+                    ),
+                  )
+                } else if module_.expressions[receiver].kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression {
+                  let namespace_receiver = match module_.expressions[
+                    receiver
+                  ].reference {
+                    SelfHostBodyNameReference::ForeignLibraryNameReference(_) => true
+                    SelfHostBodyNameReference::ImportedModuleNameReference(_) => true
+                    SelfHostBodyNameReference::ModuleTypeNameReference(_) => true
+                    SelfHostBodyNameReference::PrimitiveTypeNameReference(_) => true
+                    _ => false
+                  }
+                  if !namespace_receiver {
+                    return Option::Some(
+                      self_host_program_lowering_expression_error(
+                        module_,
+                        body,
+                        receiver,
+                        "has a poison runtime method receiver",
+                      ),
+                    )
+                  }
+                }
+                _ => {}
+              }
+              continue current_expression + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          continue current_body + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}
+
+// This gate checks collected body arenas before name resolution consumes them.
+fn self_host_validate_collected_program_bodies(
+  frozen: SelfHostFrozenSignatureProgram,
+) -> Option<String> {
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current_module => if current_module < frozen.collected.modules.length() {
+      let collected = self_host_program_collected_module_at(
+        frozen.collected,
+        current_module,
+      )
+      let declaration_count = self_host_u32_add(
+        collected.declarations.length(),
+        collected.methods.length(),
+      )
+      if !self_host_u32_equal(
+        collected.declaration_locations.length(),
+        declaration_count,
+      ) {
+        let message = StringBuilder::new()
+        message.append("collected declaration location arena length mismatch module=")
+        message.append_u64(collected.module_id)
+        message.append(" locations=")
+        message.append_u32(collected.declaration_locations.length())
+        message.append(" declarations=")
+        message.append_u32(collected.declarations.length())
+        message.append(" methods=")
+        message.append_u32(collected.methods.length())
+        return Option::Some(message.finish())
+      }
+      let mut declaration_index = 0u32
+      let _ = while declaration_index {
+        current => if current < collected.declarations.length() {
+          let declaration = collected.declarations[current]
+          let local = self_host_semantic_id_local(declaration.id)
+          if !self_host_u32_greater(
+            collected.declaration_locations.length(),
+            local,
+          ) || !self_host_u32_equal(
+            collected.declaration_locations[local],
+            current,
+          ) {
+            let message = StringBuilder::new()
+            message.append("collected declaration location does not map to its owner module=")
+            message.append_u64(collected.module_id)
+            message.append(" index=")
+            message.append_u32(current)
+            message.append(" local=")
+            message.append_u32(local)
+            message.append(" declaration=")
+            message.append_u64(declaration.id)
+            return Option::Some(message.finish())
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let mut method_index = 0u32
+      let _ = while method_index {
+        current => if current < collected.methods.length() {
+          let method = collected.methods[current]
+          let local = self_host_semantic_id_local(method.id)
+          let expected = 2147483648u32 | current
+          if !self_host_u32_greater(
+            collected.declaration_locations.length(),
+            local,
+          ) || !self_host_u32_equal(
+            collected.declaration_locations[local],
+            expected,
+          ) {
+            let message = StringBuilder::new()
+            message.append("collected method location does not map to its owner module=")
+            message.append_u64(collected.module_id)
+            message.append(" index=")
+            message.append_u32(current)
+            message.append(" local=")
+            message.append_u32(local)
+            message.append(" expected=")
+            message.append_u32(expected)
+            message.append(" method=")
+            message.append_u64(method.id)
+            return Option::Some(message.finish())
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let mut body_index = 0u32
+      let _ = while body_index {
+        current_body => if current_body < collected.bodies.length() {
+          let body = collected.bodies[current_body]
+          let expression_end = self_host_u32_add(
+            body.expressions.start,
+            body.expressions.length,
+          )
+          let block_end = self_host_u32_add(body.blocks.start, body.blocks.length)
+          let item_end = self_host_u32_add(
+            body.block_items.start,
+            body.block_items.length,
+          )
+          if self_host_u32_greater(
+            body.blocks.start,
+            collected.blocks.length(),
+          ) || self_host_u32_greater(
+            block_end,
+            collected.blocks.length(),
+          ) || self_host_u32_greater(body.blocks.start, block_end) ||
+            self_host_u32_greater(
+              body.block_items.start,
+              collected.block_items.length(),
+            ) || self_host_u32_greater(
+              item_end,
+              collected.block_items.length(),
+            ) || self_host_u32_greater(body.block_items.start, item_end) {
+            let message = StringBuilder::new()
+            message.append("collected body arena span is invalid module=")
+            message.append_u64(collected.module_id)
+            message.append(" declaration=")
+            message.append_u64(body.declaration)
+            message.append(" body=")
+            message.append_u64(body.id)
+            message.append(" block_start=")
+            message.append_u32(body.blocks.start)
+            message.append(" block_length=")
+            message.append_u32(body.blocks.length)
+            message.append(" block_arena=")
+            message.append_u32(collected.blocks.length())
+            message.append(" item_start=")
+            message.append_u32(body.block_items.start)
+            message.append(" item_length=")
+            message.append_u32(body.block_items.length)
+            message.append(" item_arena=")
+            message.append_u32(collected.block_items.length())
+            return Option::Some(message.finish())
+          }
+          match body.root {
+            SelfHostHirBodyRoot::BlockBodyRoot(root) => {
+              if self_host_u32_greater(body.blocks.start, root) ||
+                !self_host_u32_greater(block_end, root) {
+                let message = StringBuilder::new()
+                message.append("collected block body root is outside its body span module=")
+                message.append_u64(collected.module_id)
+                message.append(" declaration=")
+                message.append_u64(body.declaration)
+                message.append(" body=")
+                message.append_u64(body.id)
+                message.append(" root=")
+                message.append_u32(root)
+                message.append(" block_start=")
+                message.append_u32(body.blocks.start)
+                message.append(" block_length=")
+                message.append_u32(body.blocks.length)
+                return Option::Some(message.finish())
+              }
+              let mut block = body.blocks.start
+              let _ = while block {
+                current_block => if current_block < block_end {
+                  let items = collected.blocks[current_block].items
+                  let block_item_end = self_host_u32_add(
+                    items.start,
+                    items.length,
+                  )
+                  if self_host_u32_greater(
+                    body.block_items.start,
+                    items.start,
+                  ) || self_host_u32_greater(block_item_end, item_end) ||
+                    self_host_u32_greater(items.start, block_item_end) {
+                    let message = StringBuilder::new()
+                    message.append("collected block items are outside their body span module=")
+                    message.append_u64(collected.module_id)
+                    message.append(" declaration=")
+                    message.append_u64(body.declaration)
+                    message.append(" body=")
+                    message.append_u64(body.id)
+                    message.append(" block=")
+                    message.append_u32(current_block)
+                    message.append(" item_start=")
+                    message.append_u32(items.start)
+                    message.append(" item_length=")
+                    message.append_u32(items.length)
+                    message.append(" body_item_start=")
+                    message.append_u32(body.block_items.start)
+                    message.append(" body_item_length=")
+                    message.append_u32(body.block_items.length)
+                    return Option::Some(message.finish())
+                  }
+                  let mut item = items.start
+                  let _ = while item {
+                    current_item => if current_item < block_item_end {
+                      let source = collected.block_items[current_item]
+                      if self_host_u32_greater(source.kind, 1u32) ||
+                        self_host_u32_greater(
+                          body.expressions.start,
+                          source.value,
+                        ) || !self_host_u32_greater(
+                          expression_end,
+                          source.value,
+                        ) || self_host_hir_block_item_is_let(source) && (
+                          self_host_u32_equal(source.name, 4294967295u32) ||
+                          !self_host_u32_greater(
+                            collected.names.length(),
+                            source.name,
+                          )
+                        ) || !self_host_hir_block_item_is_let(source) &&
+                        !self_host_u32_equal(
+                          source.source_name,
+                          4294967295u32,
+                        ) && (
+                          !self_host_u32_greater(
+                            collected.names.length(),
+                            source.source_name,
+                          ) || !self_host_semantic_string_equals(
+                            collected.name(source.source_name),
+                            "_",
+                          )
+                        ) {
+                        // Each item must keep one explicit kind and source value.
+                        let message = StringBuilder::new()
+                        message.append("collected block item contract failed module=")
+                        message.append_u64(collected.module_id)
+                        message.append(" declaration=")
+                        message.append_u64(body.declaration)
+                        message.append(" body=")
+                        message.append_u64(body.id)
+                        message.append(" block=")
+                        message.append_u32(current_block)
+                        message.append(" item=")
+                        message.append_u32(current_item)
+                        message.append(" kind=")
+                        message.append_u32(source.kind)
+                        message.append(" name=")
+                        message.append_u32(source.name)
+                        message.append(" source_name=")
+                        message.append_u32(source.source_name)
+                        message.append(" value=")
+                        message.append_u32(source.value)
+                        message.append(" offset=")
+                        message.append_u32(source.offset)
+                        return Option::Some(message.finish())
+                      }
+                      continue current_item + 1u32
+                    } else {
+                      break self_host_semantic_unit()
+                    }
+                  }
+                  continue current_block + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => {
+              if self_host_u32_greater(body.expressions.start, expression) ||
+                !self_host_u32_greater(expression_end, expression) {
+                let message = StringBuilder::new()
+                message.append("collected expression body root is outside its body span module=")
+                message.append_u64(collected.module_id)
+                message.append(" declaration=")
+                message.append_u64(body.declaration)
+                message.append(" body=")
+                message.append_u64(body.id)
+                message.append(" root=")
+                message.append_u32(expression)
+                message.append(" expression_start=")
+                message.append_u32(body.expressions.start)
+                message.append(" expression_length=")
+                message.append_u32(body.expressions.length)
+                return Option::Some(message.finish())
+              }
+            }
+          }
+          continue current_body + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
 }
 
 fn self_host_plan_program_lowering(

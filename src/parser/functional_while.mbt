@@ -198,7 +198,7 @@ fn Parser::parse_while_body(
       Ok(_) => ()
       Err(error) => return Err(error)
     }
-    arms.push({ pattern, guard_condition, body, offset: arm_offset })
+    arms.push({ pattern, guard_condition, body, offset: arm_offset, })
     self.skip_newlines()
   } nobreak {
     abort("unreachable functional while body parser termination")

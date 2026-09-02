@@ -212,14 +212,22 @@ fn self_host_derived_enum_eq_expression(
   )
 }
 
+// This helper keeps the derive traversal stack on its exact AST type.
+// The backend uses this type as compile-time proof for Array pop carriers.
+fn self_host_derived_type_stack(
+  root: SelfHostTypeExpr,
+) -> Array<SelfHostTypeExpr> {
+  [root]
+}
+
 fn self_host_derived_type_mentions_parameter(
   root: SelfHostTypeExpr,
   parameter: String,
 ) -> Bool {
-  let stack = [root]
+  let stack = self_host_derived_type_stack(root)
   while stack.length() {
     length => if length > 0u32 {
-      let type_ = match stack.pop() {
+      let type_ = match self_host_array_pop(stack) {
         Option::Some(value) => value
         Option::None => root
       }
@@ -329,7 +337,7 @@ fn self_host_derived_expression_block(
   offset: U32,
 ) -> SelfHostBlock {
   SelfHostBlock::{
-    items: [SelfHostBlockItem::ExpressionItem(expression, offset)]
+    items: [self_host_expression_block_item(expression, offset)]
     offset: offset
   }
 }

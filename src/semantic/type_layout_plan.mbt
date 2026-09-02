@@ -78,14 +78,14 @@ pub fn PlannedModuleTypeLayouts::layout_of(
 
 ///|
 fn layout_variant_field_spans(collected : CollectedModule) -> Array[HirSpan] {
-  let spans = Array::make(collected.variants.length(), { start: 0, length: 0 })
+  let spans = Array::make(collected.variants.length(), { start: 0, length: 0, })
   for index, field in collected.fields {
     match field.variant {
       Some(variant) => {
         let variant_index = semantic_id_local(variant)
         let current = spans[variant_index]
         if current.length == 0 {
-          spans[variant_index] = { start: index, length: 1 }
+          spans[variant_index] = { start: index, length: 1, }
         } else {
           if current.start + current.length != index {
             abort("variant fields are not contiguous")
@@ -188,7 +188,7 @@ pub fn plan_module_type_layouts(
     let span = if declaration_index < declaration_variant_spans.length() {
       declaration_variant_spans[declaration_index]
     } else {
-      { start: 0, length: 0 }
+      { start: 0, length: 0, }
     }
     for tag in 0..<span.length {
       let variant_index = span.start + tag
@@ -232,7 +232,7 @@ pub fn plan_module_type_layouts(
         let fields = if declaration_index < declaration_field_spans.length() {
           declaration_field_spans[declaration_index]
         } else {
-          { start: 0, length: 0 }
+          { start: 0, length: 0, }
         }
         Some(PlannedStructLayout(fields))
       }
@@ -241,7 +241,7 @@ pub fn plan_module_type_layouts(
         let variants = if declaration_index < declaration_variant_spans.length() {
           declaration_variant_spans[declaration_index]
         } else {
-          { start: 0, length: 0 }
+          { start: 0, length: 0, }
         }
         Some(PlannedEnumLayout(variants))
       }

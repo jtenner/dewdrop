@@ -38,7 +38,7 @@ pub struct Parser {
 
 ///|
 pub fn Parser::new(tokens : Iter[@tokenizer.Token]) -> Parser {
-  { tokens, lookahead_loaded: false, lookahead: None }
+  { tokens, lookahead_loaded: false, lookahead: None, }
 }
 
 ///|
@@ -660,7 +660,7 @@ fn Parser::parse_object_fields(
       Ok(expression) => expression
       Err(error) => return Err(error)
     }
-    fields.push({ name, value, offset: field_offset })
+    fields.push({ name, value, offset: field_offset, })
     match self.peek_token() {
       None => return Err(expression_failure(UnclosedObject(open_offset)))
       Some(token) =>
@@ -918,13 +918,15 @@ fn Parser::parse_expression_context(
               }
               @tokenizer.Symbol(@tokenizer.RightParen) if nested_groups > 0 &&
                 group_element_counts[group_element_counts.length() - 1] == 0 &&
-                values.length() == group_value_starts[group_value_starts.length() - 1] => {
+                values.length() ==
+                group_value_starts[group_value_starts.length() - 1] => {
                 let start = group_value_starts.pop().unwrap()
                 ignore(group_element_counts.pop())
                 let open_offset = group_offsets.pop().unwrap()
                 if values.length() != start ||
                   operator_codes.length() == 0 ||
-                  operator_codes[operator_codes.length() - 1] != pending_group_code {
+                  operator_codes[operator_codes.length() - 1] !=
+                  pending_group_code {
                   return Err(
                     expression_failure(InvalidOperatorState(offset)).inside_parentheses_count(
                       nested_groups,
@@ -933,7 +935,7 @@ fn Parser::parse_expression_context(
                 }
                 ignore(operator_codes.pop())
                 ignore(operator_offsets.pop())
-                values.push(BlockExpr({ items: [], offset: open_offset }))
+                values.push(BlockExpr({ items: [], offset: open_offset, }))
                 self.consume_lookahead()
                 nested_groups -= 1
                 mode = SeekingBinaryOperator

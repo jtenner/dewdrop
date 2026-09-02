@@ -1280,13 +1280,16 @@ pub fn emit_starshine_program_module(
           break
         }
       }
-      Ok(
-        if uses_linear_memory {
-          module_.with_mem_sec(starshine_default_memory_section())
-        } else {
-          module_
-        },
-      )
+      let complete = if uses_linear_memory {
+        module_.with_mem_sec(starshine_default_memory_section())
+      } else {
+        module_
+      }
+      match
+        attach_starshine_program_compiler_facts(complete, lowering, planned) {
+        Ok((fact_module, _)) => Ok(fact_module)
+        Err(error) => abort("Dewdrop compiler-fact generation failed: \{error}")
+      }
     }
     Err(error) => Err(error)
   }
@@ -1320,9 +1323,7 @@ pub fn emit_starshine_program_binary(
       )
       match @validate.validation_error_func_idx(error) {
         Some(@lib.FuncIdx(index)) => {
-          println(
-            module_.pretty_print_func(@lib.FuncIdx::new(index)),
-          )
+          println(module_.pretty_print_func(@lib.FuncIdx::new(index)))
           let physical = index.reinterpret_as_int()
           for function_ in planned.functions {
             if function_.function_index == physical {
@@ -1348,7 +1349,23 @@ pub fn emit_starshine_program_binary(
     }
   }
   match @binary.encode_module(module_) {
-    Ok(bytes) => Ok(bytes)
+    Ok(bytes) => {
+      let decoded = match @binary.decode_module(bytes) {
+        Ok(value) => value
+        Err(error) =>
+          abort("Dewdrop compiler-fact round-trip decode failed: \{error}")
+      }
+      match @validate.validate_module(decoded) {
+        Ok(_) => ()
+        Err(error) =>
+          abort("Dewdrop compiler-fact round-trip validation failed: \{error}")
+      }
+      if decoded.compiler_fact_custom_section !=
+        module_.compiler_fact_custom_section {
+        abort("Dewdrop compiler-fact round-trip changed the typed fact section")
+      }
+      Ok(bytes)
+    }
     Err(error) => Err(StarshineProgramEncodingError(error))
   }
 }

@@ -370,7 +370,10 @@ test "linked module exports only public functions from the root module" {
     .with_code_sec(
       emit_starshine_program_code_section(lowering, link, helper_plan).unwrap(),
     )
-  assert_eq(module_, expected_module)
+  let expected_with_facts = attach_starshine_program_compiler_facts(
+      expected_module, lowering, link,
+    ).unwrap().0
+  assert_eq(module_, expected_with_facts)
 }
 
 ///|

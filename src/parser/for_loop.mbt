@@ -47,14 +47,14 @@ fn desugar_for_expression(
       for_offset,
     ),
   )
-  let unit = BlockExpr({ items: [], offset: for_offset })
+  let unit = BlockExpr({ items: [], offset: for_offset, })
   let loop_expression = WhileExpr(
     for_next_call(iterator_name, for_offset),
     [
       {
         pattern: for_option_pattern("Some", Some(pattern), for_offset),
         guard_condition: None,
-        body: BlockExpr({ items: some_items, offset: body.offset }),
+        body: BlockExpr({ items: some_items, offset: body.offset, }),
         offset: pattern.offset(),
       },
       {

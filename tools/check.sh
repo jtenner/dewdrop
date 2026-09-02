@@ -15,6 +15,7 @@ fi
 echo "== formatting =="
 moon fmt --check
 
+tools/test-proofs.sh
 tools/check-generated.sh
 tools/check-moon-targets.sh "$mode"
 tools/check-compile-request.sh

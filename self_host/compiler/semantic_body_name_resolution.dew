@@ -225,11 +225,9 @@ struct SelfHostBodyNameResolver {
   transfer_targets: Array<U32>
   expression_controls: Array<U32>
   diagnostics: Array<SelfHostBodyResolutionDiagnostic>
-  current_locals: Map<U32, U32>
   scope_markers: Array<U32>
   scope_names: Array<U32>
   scope_locals: Array<U32>
-  scope_previous: Array<U32>
   control_stack: Array<U32>
   tasks: Array<SelfHostBodyNameTask>
   pattern_stack: Array<U32>
@@ -291,11 +289,9 @@ impl SelfHostBodyNameResolver {
         4294967295u32,
       )
       diagnostics: []
-      current_locals: self_host_empty_u32_u32_map()
       scope_markers: []
       scope_names: []
       scope_locals: []
-      scope_previous: []
       control_stack: []
       tasks: []
       pattern_stack: []
@@ -398,14 +394,27 @@ impl SelfHostBodyNameResolver {
   }
 
   fn bind_existing_local(self, name: U32, local: U32) -> Unit {
-    let previous = match self.current_locals.get(name) {
-      Option::Some(value) => value
-      Option::None => 4294967295u32
-    }
     self.scope_names.push(name)
     self.scope_locals.push(local)
-    self.scope_previous.push(previous)
-    self.current_locals.set(name, local)
+    // The lexical name and local stacks must stay parallel.
+    if !self_host_u32_equal(
+      self.scope_names.length(),
+      self.scope_locals.length(),
+    ) || !self_host_u32_equal(
+      self_host_body_name_u32_at(
+        self.scope_names,
+        self.scope_names.length() - 1u32,
+      ),
+      name,
+    ) || !self_host_u32_equal(
+      self_host_body_name_u32_at(
+        self.scope_locals,
+        self.scope_locals.length() - 1u32,
+      ),
+      local,
+    ) {
+      self_host_body_name_fail()
+    }
   }
 
   fn exit_scope(self) -> Unit {
@@ -420,32 +429,15 @@ impl SelfHostBodyNameResolver {
       marker_index,
     )
     self.scope_markers.truncate(marker_index)
-    while self.scope_names.length() {
-      length => if length > start {
-        if self.scope_locals.length() == 0u32 ||
-          self.scope_previous.length() == 0u32 {
-          self_host_body_name_fail()
-          return
-        }
-        let name_index = length - 1u32
-        let name = self_host_body_name_u32_at(
-          self.scope_names,
-          name_index,
-        )
-        self.scope_names.truncate(name_index)
-        self.scope_locals.truncate(self.scope_locals.length() - 1u32)
-        let previous_index = self.scope_previous.length() - 1u32
-        let previous = self_host_body_name_u32_at(
-          self.scope_previous,
-          previous_index,
-        )
-        self.scope_previous.truncate(previous_index)
-        self.current_locals.set(name, previous)
-        continue self.scope_names.length()
-      } else {
-        break self_host_semantic_unit()
-      }
+    if !self_host_u32_equal(
+      self.scope_names.length(),
+      self.scope_locals.length(),
+    ) || start > self.scope_names.length() {
+      self_host_body_name_fail()
+      return
     }
+    self.scope_names.truncate(start)
+    self.scope_locals.truncate(start)
   }
 
   fn allocate_local(
@@ -522,7 +514,7 @@ impl SelfHostBodyNameResolver {
   }
 
   fn module_value_visible(self, name: U32) -> Bool {
-    match self.collected.value_bindings.get(name) {
+    match self.collected.value_binding(name) {
       Option::Some(binding) => {
         let mut candidate = binding.head
         while candidate {
@@ -630,20 +622,45 @@ impl SelfHostBodyNameResolver {
     offset: U32,
     expectation: U32,
   ) -> Unit {
-    match self.current_locals.get(name) {
-      Option::Some(local) => if local != 4294967295u32 {
-        self.set_expression_reference(
-          expression,
-          SelfHostBodyNameReference::LocalNameReference(local),
+    if !self_host_u32_equal(
+      self.scope_names.length(),
+      self.scope_locals.length(),
+    ) {
+      self_host_body_name_fail()
+      return
+    }
+    let spelling = self.collected.name(name)
+    let mut binding = self.scope_names.length()
+    let found_local = while binding {
+      current => if current > 0u32 {
+        let previous = current - 1u32
+        let bound_name = self_host_body_name_u32_at(
+          self.scope_names,
+          previous,
         )
-        return
+        if self_host_semantic_string_equals(
+          self.collected.name(bound_name),
+          spelling,
+        ) {
+          self.set_expression_reference(
+            expression,
+            SelfHostBodyNameReference::LocalNameReference(
+              self_host_body_name_u32_at(self.scope_locals, previous),
+            ),
+          )
+          break true
+        }
+        continue previous
+      } else {
+        break false
       }
-      Option::None => {}
+    }
+    if found_local {
+      return
     }
     if self.capture_outer_name(expression, name, offset) {
       return
     }
-    let spelling = self.collected.name(name)
     if expectation == self_host_name_expect_qualified_root {
       match self.collected.type_bindings.get(name) {
         Option::Some(declaration) => if self.declaration_visible(declaration) {
@@ -1509,16 +1526,7 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_qualified_root,
         )
       }
-      SelfHostHirExpr::BlockExpr(block, _) => {
-        let items = self.collected.blocks[block].items
-        self.enter_scope()
-        self.push_task(self_host_name_task_exit_scope, 0u32, 0u32)
-        self.push_task(
-          self_host_name_task_visit_block_items,
-          items.start,
-          items.length,
-        )
-      }
+      SelfHostHirExpr::BlockExpr(block, _) => self.schedule_block(block)
       SelfHostHirExpr::IfExpr(condition, block, alternative, _) => {
         if alternative != 4294967295u32 {
           self.push_task(
@@ -1781,55 +1789,60 @@ impl SelfHostBodyNameResolver {
   fn schedule_block(self, block: U32) -> Unit {
     let items = self.collected.blocks[block].items
     self.enter_scope()
-    self.push_task(self_host_name_task_exit_scope, 0u32, 0u32)
-    self.push_task(
-      self_host_name_task_visit_block_items,
-      items.start,
-      items.length,
-    )
+    self.visit_block_items(items.start, items.length)
+    self.exit_scope()
   }
 
-  fn visit_block_items(self, item: U32, remaining: U32) -> Unit {
-    if remaining == 0u32 {
-      return
-    }
-    self.push_task(
-      self_host_name_task_visit_block_items,
-      item + 1u32,
-      remaining - 1u32,
-    )
-    match self.collected.block_items[item] {
-      SelfHostHirBlockItem::LetItem(_, _, _, value, _) => {
-        self.push_task(self_host_name_task_bind_let, item, 0u32)
-        self.push_task(
-          self_host_name_task_visit_expression,
-          value,
+  fn visit_block_items(self, start: U32, count: U32) -> Unit {
+    let end = self_host_u32_add(start, count)
+    let mut item = start
+    let _ = while item {
+      current => if current < end {
+        let source = self.collected.block_items[current]
+        // Resolve this item before the next item enters the work stack.
+        // A block must keep its lexical scope active for the complete item.
+        let task_base = self.tasks.length()
+        self.schedule_expression_children(
+          source.value,
           self_host_name_expect_value,
         )
+        let _ = while self.tasks.length() {
+          length => if length > task_base {
+            let task_index = length - 1u32
+            let task = self_host_body_name_task_at(self.tasks, task_index)
+            self.tasks.truncate(task_index)
+            self.execute_task(task)
+            continue self.tasks.length()
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        if self_host_hir_block_item_is_let(source) {
+          // The initializer must resolve before the new local enters scope.
+          self.bind_let(current)
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      SelfHostHirBlockItem::ExpressionItem(value, _) => self.push_task(
-        self_host_name_task_visit_expression,
-        value,
-        self_host_name_expect_value,
-      )
     }
   }
 
   fn bind_let(self, item: U32) -> Unit {
-    match self.collected.block_items[item] {
-      SelfHostHirBlockItem::LetItem(mutable_, name, name_offset, _, _) => {
-        let local = self.allocate_local(
-          name,
-          SelfHostBodyLocalKind::LetLocal,
-          mutable_,
-          item,
-          name_offset,
-        )
-        self.block_item_locals[self.block_item_index(item)] = local
-        self.bind_existing_local(name, local)
-      }
-      _ => self_host_body_name_fail()
+    let source = self.collected.block_items[item]
+    if !self_host_hir_block_item_is_let(source) {
+      self_host_body_name_fail()
+      return
     }
+    let local = self.allocate_local(
+      source.name,
+      SelfHostBodyLocalKind::LetLocal,
+      source.mutable_,
+      item,
+      source.name_offset,
+    )
+    self.block_item_locals[self.block_item_index(item)] = local
+    self.bind_existing_local(source.name, local)
   }
 
   fn visit_arm_list(self, start: U32, remaining: U32) -> Unit {

@@ -5,16 +5,30 @@ enum SelfHostBodyShapeTask {
   FinishBodyProductShape(U32)
 }
 
+// These helpers keep each work array on its exact source type.
+// The backend uses these types as compile-time proof for Array pop carriers.
+fn self_host_body_shape_tasks(root: I32) -> Array<SelfHostBodyShapeTask> {
+  [SelfHostBodyShapeTask::VisitBodyShapeType(root)]
+}
+
+fn self_host_body_shape_results() -> Array<SelfHostPlannedValueShape> {
+  []
+}
+
+fn self_host_body_shape_fields() -> Array<SelfHostPlannedValueShape> {
+  []
+}
+
 fn self_host_planned_merged_body_value_shape(
   resolved: SelfHostResolvedModuleTypes,
   inferred: SelfHostMergedModuleInference,
   root: I32,
 ) -> SelfHostPlannedValueShape {
-  let tasks = [SelfHostBodyShapeTask::VisitBodyShapeType(root)]
-  let results = []
+  let tasks = self_host_body_shape_tasks(root)
+  let results = self_host_body_shape_results()
   let _ = while tasks.length() {
     length => if self_host_u32_greater(length, 0u32) {
-      let task = match tasks.pop() {
+      let task = match self_host_array_pop(tasks) {
         Option::Some(value) => value
         Option::None => SelfHostBodyShapeTask::VisitBodyShapeType(-1i32)
       }
@@ -71,7 +85,7 @@ fn self_host_planned_merged_body_value_shape(
           }
         }
         SelfHostBodyShapeTask::FinishBodyProductShape(start) => {
-          let fields = []
+          let fields = self_host_body_shape_fields()
           let end = results.length()
           let mut index = start
           let _ = while index {
@@ -91,7 +105,7 @@ fn self_host_planned_merged_body_value_shape(
       break self_host_semantic_unit()
     }
   }
-  match results.pop() {
+  match self_host_array_pop(results) {
     Option::Some(shape) => shape
     Option::None => SelfHostPlannedValueShape::ErrorPlannedValueShape
   }

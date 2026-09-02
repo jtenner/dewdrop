@@ -10,7 +10,7 @@ extern "js" fn cache_platform_atomic_write(
   content : Bytes,
 ) -> Int =
   #| function(path, pathLength, content) {
-  #|   const fs = require('fs');
+  #|   const fs = process.getBuiltinModule('fs');
   #|   const destination = Buffer.from(path)
   #|     .subarray(0, pathLength)
   #|     .toString('utf8');

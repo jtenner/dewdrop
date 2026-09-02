@@ -112,24 +112,20 @@ test "semantic function blocks lower contiguous let and return items" {
   let root = self_host_body_root_block(collected.bodies[0u32])
   let items = collected.blocks[root].items
   assert(self_host_u32_equal(items.length, 2u32), "block item count")
-  match collected.block_items[items.start] {
-    SelfHostHirBlockItem::LetItem(false, name, _, _, _) => assert(
-      collected.name(name) == "next",
-      "let name",
+  let let_item = collected.block_items[items.start]
+  assert(self_host_hir_block_item_is_let(let_item), "missing let item")
+  assert(!let_item.mutable_, "let item is mutable")
+  assert(collected.name(let_item.name) == "next", "let name")
+  let return_item = collected.block_items[
+    self_host_u32_add(items.start, 1u32)
+  ]
+  assert(!self_host_hir_block_item_is_let(return_item), "missing return expression item")
+  match collected.expressions[return_item.value] {
+    SelfHostHirExpr::ReturnExpr(value, _) => assert(
+      value < 4294967295u32,
+      "return value",
     )
-    _ => assert(false, "missing let item")
-  }
-  match collected.block_items[self_host_u32_add(items.start, 1u32)] {
-    SelfHostHirBlockItem::ExpressionItem(expression, _) => match collected.expressions[
-      expression
-    ] {
-      SelfHostHirExpr::ReturnExpr(value, _) => assert(
-        value < 4294967295u32,
-        "return value",
-      )
-      _ => assert(false, "missing return expression")
-    }
-    _ => assert(false, "missing return expression item")
+    _ => assert(false, "missing return expression")
   }
 }
 
@@ -142,26 +138,20 @@ test "semantic wildcard lets preserve initializer effects as expression items" {
   let root = self_host_body_root_block(collected.bodies[0u32])
   let items = collected.blocks[root].items
   assert(items.length == 2u32, "wildcard let item count")
-  match collected.block_items[items.start] {
-    SelfHostHirBlockItem::ExpressionItem(expression, _) => match collected.expressions[
-      expression
-    ] {
-      SelfHostHirExpr::WhileExpr(_, _, _) => {}
-      _ => assert(false, "wildcard let initializer is not while")
-    }
-    _ => assert(false, "wildcard let created a local binding")
+  let while_item = collected.block_items[items.start]
+  assert(!self_host_hir_block_item_is_let(while_item), "wildcard let created a local binding")
+  match collected.expressions[while_item.value] {
+    SelfHostHirExpr::WhileExpr(_, _, _) => {}
+    _ => assert(false, "wildcard let initializer is not while")
   }
-  match collected.block_items[items.start + 1u32] {
-    SelfHostHirBlockItem::ExpressionItem(expression, _) => match collected.expressions[
-      expression
-    ] {
-      SelfHostHirExpr::BlockExpr(block) => assert(
-        collected.blocks[block].items.length == 0u32,
-        "wildcard let discard is not Unit",
-      )
-      _ => assert(false, "wildcard let discard is not Unit")
-    }
-    _ => assert(false, "wildcard let discard created a local binding")
+  let discard_item = collected.block_items[items.start + 1u32]
+  assert(!self_host_hir_block_item_is_let(discard_item), "wildcard let discard created a local binding")
+  match collected.expressions[discard_item.value] {
+    SelfHostHirExpr::BlockExpr(block) => assert(
+      collected.blocks[block].items.length == 0u32,
+      "wildcard let discard is not Unit",
+    )
+    _ => assert(false, "wildcard let discard is not Unit")
   }
 }
 

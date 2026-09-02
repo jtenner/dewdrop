@@ -99,9 +99,67 @@ pub struct SelfHostHirObjectField {
   offset: U32
 }
 
-pub enum SelfHostHirBlockItem {
-  LetItem(Bool, U32, U32, U32, U32)
-  ExpressionItem(U32, U32)
+pub struct SelfHostHirBlockItem {
+  kind: U32
+  mutable_: Bool
+  source_name: U32
+  name: U32
+  name_offset: U32
+  value: U32
+  offset: U32
+}
+
+fn self_host_hir_let_item(
+  mutable_: Bool,
+  name: U32,
+  name_offset: U32,
+  value: U32,
+  offset: U32,
+) -> SelfHostHirBlockItem {
+  SelfHostHirBlockItem::{
+    kind: 0u32
+    mutable_: mutable_
+    source_name: name
+    name: name
+    name_offset: name_offset
+    value: value
+    offset: offset
+  }
+}
+
+fn self_host_hir_expression_item(
+  value: U32,
+  offset: U32,
+) -> SelfHostHirBlockItem {
+  SelfHostHirBlockItem::{
+    kind: 1u32
+    mutable_: false
+    source_name: 4294967295u32
+    name: 4294967295u32
+    name_offset: offset
+    value: value
+    offset: offset
+  }
+}
+
+fn self_host_hir_discarded_let_item(
+  name: U32,
+  value: U32,
+  offset: U32,
+) -> SelfHostHirBlockItem {
+  SelfHostHirBlockItem::{
+    kind: 1u32
+    mutable_: false
+    source_name: name
+    name: 4294967295u32
+    name_offset: offset
+    value: value
+    offset: offset
+  }
+}
+
+fn self_host_hir_block_item_is_let(item: SelfHostHirBlockItem) -> Bool {
+  self_host_u32_equal(item.kind, 0u32)
 }
 
 pub struct SelfHostHirBlock {

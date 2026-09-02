@@ -164,7 +164,7 @@ test "module recovery preserves nested pattern delimiters" {
         error: DeclarationExpressionError(
           MatchPatternError(ExpectedPatternDelimiter(_, _))
         ),
-        ..,
+        ..
       }
     ) => ()
     _ => fail("expected nested pattern delimiter diagnostic")

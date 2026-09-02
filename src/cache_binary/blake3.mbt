@@ -120,7 +120,7 @@ fn Blake3Output::chaining_value(self : Blake3Output) -> FixedArray[UInt] {
 
 ///|
 fn Blake3Output::root_digest(self : Blake3Output) -> FixedArray[Byte] {
-  let rooted = { ..self, flags: self.flags | blake3_root }
+  let rooted = { ..self, flags: self.flags | blake3_root, }
   let words = blake3_compress(rooted, root_counter=0UL)
   let digest = FixedArray::make(32, (0 : Byte))
   for index in 0..<8 {

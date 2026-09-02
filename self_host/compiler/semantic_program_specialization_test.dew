@@ -106,6 +106,24 @@ test "program specialization materializes concrete generic call shapes" {
   assert(plan.calls.length() == 1u32, "one specialized call")
 }
 
+test "program specialization derives a static method carrier from its result" {
+  let plan = self_host_specialization_test_plan(
+    b"struct Box<t> {}\nimpl<t> Box<t> {\n  fn empty() -> Box<t> {\n    Box::{\n    }\n  }\n}\npub fn run() -> Box<I32> {\n  Box::empty()\n}\n",
+  )
+  let request = match self_host_specialization_request_named(plan, b"empty") {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "static method request")
+      0u32
+    }
+  }
+  match self_host_specialization_request_shape(plan, request, 0u32) {
+    SelfHostPlannedValueShape::I32PlannedValueShape => {}
+    _ => assert(false, "static method i32 carrier")
+  }
+  assert(plan.calls.length() == 1u32, "static method call edge")
+}
+
 test "program specialization canonicalizes and deduplicates scalar carriers" {
   let plan = self_host_specialization_test_plan(
     b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn first() -> I8 {\n  identity(1i8)\n}\npub fn second() -> U32 {\n  identity(2u32)\n}\n",

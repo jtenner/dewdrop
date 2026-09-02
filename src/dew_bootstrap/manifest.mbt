@@ -70,7 +70,9 @@ fn bootstrap_json_object(value : Json, context : String) -> Map[String, Json] {
 fn bootstrap_read_json(path : String, context : String) -> Map[String, Json] {
   let text = @fs.read_file_to_string(path) catch {
     error => {
-      bootstrap_fail("cannot read \{context} \{path}: \{error}")
+      bootstrap_fail(
+        "cannot read \{context} \{path}: \{bootstrap_fs_error_message(error)}",
+      )
       ""
     }
   }
@@ -152,7 +154,7 @@ fn bootstrap_load_package(path : String) -> BootstrapPackage {
     }
     _ => bootstrap_fail("package dependencies must be an object")
   }
-  { manifest, name, version, dependencies }
+  { manifest, name, version, dependencies, }
 }
 
 ///|
@@ -235,7 +237,9 @@ fn bootstrap_package_integrity(package_ : BootstrapPackage) -> String {
     }
     let bytes = @fs.read_file_to_bytes(file) catch {
       error => {
-        bootstrap_fail("cannot read package source \{file}: \{error}")
+        bootstrap_fail(
+          "cannot read package source \{file}: \{bootstrap_fs_error_message(error)}",
+        )
         b""
       }
     }
@@ -347,7 +351,7 @@ fn bootstrap_load_legacy_manifest(path : String) -> BootstrapManifest {
       }
     _ => bootstrap_fail("module manifest modules must be an array")
   }
-  { root, modules, dependency_key: "", expectations: [] }
+  { root, modules, dependency_key: "", expectations: [], }
 }
 
 ///|

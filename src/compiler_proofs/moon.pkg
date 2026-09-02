@@ -1,0 +1,5 @@
+options(
+  "is-main": false,
+  "enable-value-tracing": false,
+  "proof-enabled": true,
+)

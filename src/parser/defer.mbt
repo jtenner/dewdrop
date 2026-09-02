@@ -46,7 +46,7 @@ fn deferred_wrap_value(
   let items : Array[BlockItem] = [LetItem(false, name, offset, value, offset)]
   append_deferred_cleanups(items, cleanups)
   items.push(ExpressionItem(NameExpr(name, offset), offset))
-  BlockExpr({ items, offset })
+  BlockExpr({ items, offset, })
 }
 
 ///|
@@ -62,7 +62,7 @@ fn defer_transform_block_exits(
   for item in block.items {
     defer_transform_block_item(items, item, cleanups, loop_depth)
   }
-  { items, offset: block.offset }
+  { items, offset: block.offset, }
 }
 
 ///|
@@ -215,7 +215,7 @@ fn defer_transform_expression(
           items.push(ExpressionItem(ReturnExpr(None, offset), offset))
         }
       }
-      BlockExpr({ items, offset })
+      BlockExpr({ items, offset, })
     }
     BreakExpr(value, offset) => {
       let transformed = defer_transform_expression(value, cleanups, loop_depth)
@@ -379,25 +379,25 @@ fn finalize_deferred_block(
   offset : UInt64,
 ) -> Block {
   if cleanups.length() == 0 || items.length() == 0 {
-    return { items, offset }
+    return { items, offset, }
   }
   match items[items.length() - 1] {
-    ExpressionItem(ReturnExpr(_, _), _) => { items, offset }
+    ExpressionItem(ReturnExpr(_, _), _) => { items, offset, }
     ExpressionItem(CallExpr(NameExpr("unreachable", _), [], _), _) =>
-      { items, offset }
+      { items, offset, }
     ExpressionItem(BreakExpr(_, _), _)
-    | ExpressionItem(ContinueExpr(_, _), _) => { items, offset }
+    | ExpressionItem(ContinueExpr(_, _), _) => { items, offset, }
     ExpressionItem(value, item_offset) => {
       ignore(items.pop())
       let name = deferred_result_name(item_offset)
       items.push(LetItem(false, name, item_offset, value, item_offset))
       append_deferred_cleanups(items, cleanups)
       items.push(ExpressionItem(NameExpr(name, item_offset), item_offset))
-      { items, offset }
+      { items, offset, }
     }
     _ => {
       append_deferred_cleanups(items, cleanups)
-      { items, offset }
+      { items, offset, }
     }
   }
 }
@@ -599,9 +599,8 @@ fn deferred_expression_dispose_offset(
     | QualifiedExpr(scrutinee, _, _)
     | ProductFieldExpr(scrutinee, _, _, _) =>
       deferred_expression_dispose_offset(scrutinee, name)
-    ReturnExpr(Some(value), _)
-    | BreakExpr(value, _)
-    | ContinueExpr(value, _) => deferred_expression_dispose_offset(value, name)
+    ReturnExpr(Some(value), _) | BreakExpr(value, _) | ContinueExpr(value, _) =>
+      deferred_expression_dispose_offset(value, name)
     ReturnExpr(None, _) => None
     BinaryExpr(_, left, right, _) | IndexExpr(left, right, _) =>
       match deferred_expression_dispose_offset(left, name) {
@@ -684,7 +683,8 @@ fn deferred_expression_escape_offset(
 ) -> UInt64? {
   match expression {
     LambdaExpr(_, _, _, _) => None
-    ReturnExpr(Some(NameExpr(value, offset)), _) if value == name => Some(offset)
+    ReturnExpr(Some(NameExpr(value, offset)), _) if value == name =>
+      Some(offset)
     ReturnExpr(Some(value), _) => deferred_expression_escape_offset(value, name)
     ReturnExpr(None, _) => None
     BlockExpr(block) => deferred_block_escape_offset(block, name)
@@ -778,9 +778,9 @@ fn deferred_cleanup_registration(
   using_name : String?,
 ) -> (BlockItem, DeferredCleanup) {
   let name = deferred_cleanup_name(offset)
-  let body = { items: [ExpressionItem(value, offset)], offset }
+  let body = { items: [ExpressionItem(value, offset)], offset, }
   let lambda = LambdaExpr([], NamedType("Unit", offset), body, offset)
-  (LetItem(false, name, offset, lambda, offset), { name, offset, using_name })
+  (LetItem(false, name, offset, lambda, offset), { name, offset, using_name, })
 }
 
 ///|

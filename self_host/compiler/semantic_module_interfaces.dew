@@ -490,88 +490,120 @@ fn self_host_frozen_trait_impl_is_owned(
   }
 }
 
+// This recursive check keeps each type index on its U32 source carrier.
+// The depth limit rejects malformed recursive interface evidence at compile time.
+fn self_host_frozen_impl_type_visible_at(
+  resolved: SelfHostResolvedModuleTypes,
+  root: U32,
+  exported: Map<U64, Bool>,
+  depth: U32,
+) -> Bool {
+  if depth >= 1024u32 || root >= resolved.types.length() {
+    return false
+  }
+  match resolved.types[root] {
+    SelfHostResolvedType::ErrorType => false
+    SelfHostResolvedType::NominalType(declaration) => self_host_semantic_id_module(
+      declaration,
+    ) != resolved.module_id || self_host_frozen_exported_declaration(
+      exported,
+      declaration,
+    )
+    SelfHostResolvedType::TraitType(declaration) => self_host_semantic_id_module(
+      declaration,
+    ) != resolved.module_id || self_host_frozen_exported_declaration(
+      exported,
+      declaration,
+    )
+    SelfHostResolvedType::ProductType(fields) => {
+      let mut index = 0u32
+      let _ = while index {
+        current => if current < fields.length {
+          let child = self_host_u32_add(fields.start, current)
+          if child >= resolved.type_arguments.length() ||
+            !self_host_frozen_impl_type_visible_at(
+              resolved,
+              resolved.type_arguments[child],
+              exported,
+              depth + 1u32,
+            ) {
+            return false
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      true
+    }
+    SelfHostResolvedType::AppliedType(base, arguments) => {
+      if !self_host_frozen_impl_type_visible_at(
+        resolved,
+        base,
+        exported,
+        depth + 1u32,
+      ) {
+        return false
+      }
+      let mut index = 0u32
+      let _ = while index {
+        current => if current < arguments.length {
+          let child = self_host_u32_add(arguments.start, current)
+          if child >= resolved.type_arguments.length() ||
+            !self_host_frozen_impl_type_visible_at(
+              resolved,
+              resolved.type_arguments[child],
+              exported,
+              depth + 1u32,
+            ) {
+            return false
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      true
+    }
+    SelfHostResolvedType::FunctionType(parameters, result) => {
+      if !self_host_frozen_impl_type_visible_at(
+        resolved,
+        result,
+        exported,
+        depth + 1u32,
+      ) {
+        return false
+      }
+      let mut index = 0u32
+      let _ = while index {
+        current => if current < parameters.length {
+          let child = self_host_u32_add(parameters.start, current)
+          if child >= resolved.type_arguments.length() ||
+            !self_host_frozen_impl_type_visible_at(
+              resolved,
+              resolved.type_arguments[child],
+              exported,
+              depth + 1u32,
+            ) {
+            return false
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      true
+    }
+    _ => true
+  }
+}
+
 fn self_host_frozen_impl_type_visible(
   resolved: SelfHostResolvedModuleTypes,
   root: U32,
   exported: Map<U64, Bool>,
 ) -> Bool {
-  let work = [root]
-  let mut visible = true
-  let _ = while work.length() {
-    length => if length > 0u32 {
-      let current = self_host_module_interface_u32_at(work, length - 1u32)
-      work.truncate(length - 1u32)
-      match resolved.types[current] {
-        SelfHostResolvedType::ErrorType => {
-          visible = false
-        }
-        SelfHostResolvedType::NominalType(declaration) => if self_host_semantic_id_module(
-          declaration,
-        ) == resolved.module_id && !self_host_frozen_exported_declaration(
-          exported,
-          declaration,
-        ) {
-          visible = false
-        }
-        SelfHostResolvedType::TraitType(declaration) => if self_host_semantic_id_module(
-          declaration,
-        ) == resolved.module_id && !self_host_frozen_exported_declaration(
-          exported,
-          declaration,
-        ) {
-          visible = false
-        }
-        SelfHostResolvedType::ProductType(fields) => {
-          let mut index = 0u32
-          let _ = while index {
-            current_field => if current_field < fields.length {
-              work.push(resolved.type_arguments[fields.start + current_field])
-              continue current_field + 1u32
-            } else {
-              break self_host_semantic_unit()
-            }
-          }
-        }
-        SelfHostResolvedType::AppliedType(base, arguments) => {
-          work.push(base)
-          let mut index = 0u32
-          let _ = while index {
-            current_argument => if current_argument < arguments.length {
-              work.push(
-                resolved.type_arguments[arguments.start + current_argument],
-              )
-              continue current_argument + 1u32
-            } else {
-              break self_host_semantic_unit()
-            }
-          }
-        }
-        SelfHostResolvedType::FunctionType(parameters, result) => {
-          work.push(result)
-          let mut index = 0u32
-          let _ = while index {
-            current_parameter => if current_parameter < parameters.length {
-              work.push(
-                resolved.type_arguments[parameters.start + current_parameter],
-              )
-              continue current_parameter + 1u32
-            } else {
-              break self_host_semantic_unit()
-            }
-          }
-        }
-        _ => {}
-      }
-      if visible {
-        continue work.length()
-      } else {
-        break self_host_semantic_unit()
-      }
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  visible
+  self_host_frozen_impl_type_visible_at(resolved, root, exported, 0u32)
 }
 
 fn self_host_frozen_callable_kind(

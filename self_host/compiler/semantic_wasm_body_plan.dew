@@ -806,6 +806,96 @@ fn self_host_body_unique_function_for_last_parameter_carrier(
   selected
 }
 
+fn self_host_body_function_for_physical_receiver_method(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  target: U32,
+  explicit_argument_count: U32,
+) -> U32 {
+  if target >= module_.expressions.length() {
+    return 4294967295u32
+  }
+  let (receiver, name_index) = match module_.expressions[target].kind {
+    SelfHostPlannedExpressionKind::PlannedUnresolvedField(value, name) => (value, name)
+    _ => return 4294967295u32
+  }
+  if receiver < body.expressions.start || receiver >= self_host_u32_add(
+    body.expressions.start,
+    body.expressions.length,
+  ) || name_index >= self_host_linked_module_name_count(module_) {
+    return 4294967295u32
+  }
+  let receiver_value = expressions[
+    self_host_body_expression_slot(body, receiver)
+  ].value
+  let receiver_owner = if !self_host_u64_equal(
+    receiver_value.nominal_owner,
+    0u64,
+  ) {
+    receiver_value.nominal_owner
+  } else if !self_host_u32_equal(
+    receiver_value.physical_heap_type,
+    4294967295u32,
+  ) {
+    self_host_body_physical_owner(link, receiver_value.physical_heap_type)
+  } else {
+    0u64
+  }
+  let receiver_is_array = self_host_u32_equal(
+    receiver_value.physical_heap_type,
+    self_host_linked_array_wrapper_type(link),
+  )
+  if self_host_u64_equal(receiver_owner, 0u64) && !receiver_is_array {
+    return 4294967295u32
+  }
+  let name = self_host_linked_module_name_at(module_, name_index)
+  let mut declaration = 0u64
+  for candidate_module in link.fragments.specialization.lowering.modules {
+    for callable in candidate_module.functions.callables {
+      let candidate_owner = self_host_linked_resolved_nominal_declaration(
+        candidate_module,
+        callable.self_type,
+      )
+      let owner_matches = self_host_u64_equal(candidate_owner, receiver_owner) ||
+        (receiver_is_array && self_host_u64_equal(
+          self_host_semantic_id_module(candidate_owner),
+          link.array_module_id,
+        ))
+      if callable.has_receiver && bytes_to_string(callable.name) == name &&
+        self_host_u32_equal(
+          callable.parameters.length,
+          explicit_argument_count,
+        ) && owner_matches {
+        if !self_host_u64_equal(declaration, 0u64) && !self_host_u64_equal(
+          declaration,
+          callable.declaration,
+        ) {
+          return 4294967295u32
+        }
+        declaration = callable.declaration
+      }
+    }
+  }
+  if self_host_u64_equal(declaration, 0u64) {
+    return 4294967295u32
+  }
+  let mut selected = 4294967295u32
+  for function_ in link.functions {
+    if self_host_u64_equal(function_.declaration, declaration) {
+      if !self_host_u32_equal(selected, 4294967295u32) && !self_host_u32_equal(
+        selected,
+        function_.function_index,
+      ) {
+        return 4294967295u32
+      }
+      selected = function_.function_index
+    }
+  }
+  selected
+}
+
 fn self_host_body_plan_set_call_function(
   body: SelfHostPlannedBodyLowering,
   expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
@@ -1104,15 +1194,28 @@ fn self_host_body_seed_expression(
     ) => {
       constructor_selection = true
       carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
-      match indexes.type_by_variant.get(variant) {
-        Option::Some(value) => {
-          selected_type_index = value
-          physical_heap_type = value
+      let variant_name = if self_host_u32_greater(
+        self_host_linked_module_name_count(module_),
+        planned.source_name,
+      ) {
+        self_host_linked_module_name_at(module_, planned.source_name)
+      } else {
+        ""
+      }
+      if variant_name == "None" {
+        selected_type_index = self_host_linked_array_runtime_base(link) + 10u32
+        physical_heap_type = selected_type_index
+      } else {
+        match indexes.type_by_variant.get(variant) {
+          Option::Some(value) => {
+            selected_type_index = value
+            physical_heap_type = value
+          }
+          Option::None => {}
         }
-        Option::None => {}
       }
     }
-    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _) => match indexes.field_by_declaration.get(
+    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _, _) => match indexes.field_by_declaration.get(
       field,
     ) {
       Option::Some(value) => {
@@ -1185,7 +1288,7 @@ fn self_host_body_seed_expression(
     }
     SelfHostPlannedExpressionKind::PlannedConstruct(target, _, _) => {
       carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
-      if target < module_.expressions.length() {
+      if !constructor_selection && target < module_.expressions.length() {
         match module_.expressions[target].reference {
           SelfHostBodyNameReference::ModuleTypeNameReference(declaration) => {
             nominal_owner = declaration
@@ -1960,11 +2063,11 @@ fn self_host_body_force_pattern_carriers(
   let mut changed = false
   let _ = while patterns.length() {
     length => if self_host_u32_greater(length, 0u32) {
-      let pattern = match patterns.pop() {
+      let pattern = match self_host_array_pop(patterns) {
         Option::Some(value) => value
         Option::None => 4294967295u32
       }
-      let value_carrier = match carriers.pop() {
+      let value_carrier = match self_host_array_pop(carriers) {
         Option::Some(value) => value
         Option::None => SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
       }
@@ -2265,11 +2368,11 @@ fn self_host_body_force_pattern_values(
   let mut changed = false
   let _ = while patterns.length() {
     length => if self_host_u32_greater(length, 0u32) {
-      let pattern = match patterns.pop() {
+      let pattern = match self_host_array_pop(patterns) {
         Option::Some(value) => value
         Option::None => 4294967295u32
       }
-      let incoming_value = match values.pop() {
+      let incoming_value = match self_host_array_pop(values) {
         Option::Some(value) => value
         Option::None => incoming
       }
@@ -2389,11 +2492,11 @@ fn self_host_body_force_physical_pattern_payloads(
   let mut changed = false
   let _ = while patterns.length() {
     length => if self_host_u32_greater(length, 0u32) {
-      let pattern_index = match patterns.pop() {
+      let pattern_index = match self_host_array_pop(patterns) {
         Option::Some(value) => value
         Option::None => 4294967295u32
       }
-      let type_index = match physical_types.pop() {
+      let type_index = match self_host_array_pop(physical_types) {
         Option::Some(value) => value
         Option::None => 4294967295u32
       }
@@ -3223,7 +3326,9 @@ fn self_host_plan_one_physical_body(
   )
   match body.root {
     SelfHostHirBodyRoot::ExpressionBodyRoot(root) => {
-      let _ = self_host_body_plan_set_expression_value(
+      // The physical function signature is exact proof for its root value.
+      // A logical fallback must not replace this carrier.
+      let _ = self_host_body_plan_force_expression_value(
         body,
         expressions,
         root,
@@ -3233,7 +3338,8 @@ fn self_host_plan_one_physical_body(
     SelfHostHirBodyRoot::BlockBodyRoot(block) => {
       let tail = self_host_body_block_tail_expression(module_, block)
       if tail != 4294967295u32 {
-        let _ = self_host_body_plan_set_expression_value(
+        // The block tail must produce the exact physical function result.
+        let _ = self_host_body_plan_force_expression_value(
           body,
           expressions,
           tail,
@@ -3533,13 +3639,34 @@ fn self_host_plan_one_physical_body(
                 changed = true
               }
             }
-            SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => {
+            SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments) => {
+              let mut call_function_index = expressions[slot].call_function_index
+              if call_function_index == 4294967295u32 {
+                let recovered = self_host_body_function_for_physical_receiver_method(
+                  link,
+                  module_,
+                  body,
+                  expressions,
+                  target,
+                  arguments.length,
+                )
+                if recovered != 4294967295u32 {
+                  self_host_body_plan_set_call_function(
+                    body,
+                    expressions,
+                    current,
+                    recovered,
+                  )
+                  call_function_index = recovered
+                  changed = true
+                }
+              }
               if self_host_body_force_call_result(
                 link,
                 module_,
                 body,
                 current,
-                expressions[slot].call_function_index,
+                call_function_index,
                 expressions,
                 local_values,
                 locals,
@@ -3552,7 +3679,7 @@ fn self_host_plan_one_physical_body(
                 body,
                 current,
                 arguments,
-                expressions[slot].call_function_index,
+                call_function_index,
                 expressions,
                 local_values,
                 locals,
@@ -3688,6 +3815,31 @@ fn self_host_plan_one_physical_body(
               then_block,
               else_expression,
             ) => {
+              let expected_carrier = expressions[slot].carrier
+              if !(expected_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+                let then_tail = self_host_body_block_tail_expression(
+                  module_,
+                  then_block,
+                )
+                if then_tail != 4294967295u32 && then_tail >= body.expressions.start &&
+                  then_tail < expression_end && self_host_body_plan_force_expression_carrier(
+                  body,
+                  expressions,
+                  then_tail,
+                  expected_carrier,
+                ) {
+                  changed = true
+                }
+                if else_expression >= body.expressions.start && else_expression < expression_end &&
+                  self_host_body_plan_force_expression_carrier(
+                    body,
+                    expressions,
+                    else_expression,
+                    expected_carrier,
+                  ) {
+                  changed = true
+                }
+              }
               let then_carrier = self_host_body_block_carrier(
                 module_,
                 body,
@@ -4264,6 +4416,46 @@ fn self_host_plan_one_physical_body(
       break self_host_semantic_unit()
     }
   }
+  let mut loop_local_offset = 0u32
+  let _ = while loop_local_offset {
+    current => if current < body.locals.length {
+      let local_index = self_host_u32_add(body.locals.start, current)
+      if local_index < module_.locals.length() && current < local_values.length() &&
+        current < locals.length() {
+        let local = module_.locals[local_index]
+        let nominal = self_host_linked_loop_binding_nominal_declaration(
+          link,
+          module_,
+          body,
+          local.local_id,
+        )
+        if !self_host_u64_equal(nominal, 0u64) && self_host_u64_equal(
+          local_values[current].nominal_owner,
+          0u64,
+        ) {
+          // Loop planning must keep the exact nominal element type before emission.
+          let carrier = if local_values[current].carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
+            SelfHostWasmBodyCarrier::EqRefBodyCarrier
+          } else {
+            local_values[current].carrier
+          }
+          local_values[current] = SelfHostPlannedPhysicalValueInfo::{
+            logical_type: local_values[current].logical_type
+            carrier: carrier
+            nominal_owner: nominal
+            physical_heap_type: self_host_body_physical_heap_type(
+              indexes,
+              nominal,
+            )
+          }
+          locals[current] = carrier
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
   let mut call_plan_index = 0u32
   while call_plan_index {
     current => if current < expressions.length() {
@@ -4781,6 +4973,7 @@ fn self_host_verify_body_field_owner(
   link: SelfHostPlannedProgramWasmGCLink,
   plan: SelfHostPlannedPhysicalBodyCarrierPlan,
   module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
   expression_plan: SelfHostPlannedPhysicalExpressionCarrier,
   diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
 ) -> Unit {
@@ -4805,6 +4998,89 @@ fn self_host_verify_body_field_owner(
     link,
     expression_plan.selected_type_index,
   )
+  let inferred_field = if expression_plan.expression < module_.expressions.length() {
+    match module_.expressions[expression_plan.expression].selection {
+      SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(
+        field,
+        _,
+        _,
+      ) => field
+      _ => 0u64
+    }
+  } else {
+    0u64
+  }
+  let inferred_field_owner = if expression_plan.expression < module_.expressions.length() {
+    match module_.expressions[expression_plan.expression].selection {
+      SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(
+        _,
+        _,
+        owner,
+      ) => owner
+      _ => 0u64
+    }
+  } else {
+    0u64
+  }
+  if !self_host_u64_equal(inferred_field, 0u64) && !self_host_u64_equal(
+    inferred_field,
+    expression_plan.selected_field,
+  ) {
+    // Physical field planning must keep the exact inference field identity.
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      expression_plan.expression,
+      expression_plan.selected_field,
+      "field physical identity differs from inference selection",
+      SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+      expression_plan.value.carrier,
+    )
+    return
+  }
+  if !self_host_u64_equal(inferred_field_owner, 0u64) && !self_host_u64_equal(
+    inferred_field_owner,
+    expected_owner,
+  ) {
+    // A physical field type must belong to the inference field declaration.
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      expression_plan.expression,
+      expression_plan.selected_field,
+      "field physical owner differs from declared field owner",
+      SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+      expression_plan.value.carrier,
+    )
+    return
+  }
+  let declared_receiver_owner = if expression_plan.receiver_expression < module_.expressions.length() {
+    self_host_linked_expression_nominal_declaration(
+      link,
+      module_,
+      body,
+      expression_plan.receiver_expression,
+    )
+  } else {
+    0u64
+  }
+  if !self_host_u64_equal(declared_receiver_owner, 0u64) &&
+    !self_host_u64_equal(declared_receiver_owner, expected_owner) {
+    // Field selection must not replace the receiver's declared nominal owner.
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      expression_plan.expression,
+      expression_plan.selected_field,
+      "field target owner does not match receiver type",
+      SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+      expression_plan.value.carrier,
+    )
+    return
+  }
   if !self_host_u64_equal(expression_plan.receiver_nominal_owner, 0u64) && (
     !self_host_u64_equal(
       expression_plan.receiver_nominal_owner,
@@ -4831,6 +5107,7 @@ fn self_host_verify_body_constructor(
   link: SelfHostPlannedProgramWasmGCLink,
   plan: SelfHostPlannedPhysicalBodyCarrierPlan,
   module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
   expression_plan: SelfHostPlannedPhysicalExpressionCarrier,
   fields: SelfHostHirSpan,
   diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
@@ -4860,6 +5137,41 @@ fn self_host_verify_body_constructor(
       _ => {}
     }
     return
+  }
+  match module_.expressions[expression_plan.expression].selection {
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      variant,
+      _,
+      _,
+    ) => match self_host_linked_expression_variant_type(
+      link,
+      module_,
+      body,
+      plan.specialization,
+      module_.expressions[expression_plan.expression],
+      variant,
+      fields,
+    ) {
+      Option::Some(expected_type) => if !self_host_u32_equal(
+        expected_type,
+        expression_plan.selected_type_index,
+      ) {
+        // A variant constructor must use the exact selected variant type.
+        self_host_body_add_diagnostic(
+          diagnostics,
+          plan,
+          module_,
+          expression_plan.expression,
+          u32_into_u64(expected_type),
+          "constructor selected physical type mismatch",
+          SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+          expression_plan.value.carrier,
+        )
+        return
+      }
+      Option::None => {}
+    }
+    _ => {}
   }
   for linked_type in link.types {
     if self_host_u32_equal(
@@ -5151,6 +5463,41 @@ fn self_host_verify_one_physical_body(
     body,
     diagnostics,
   )
+  let mut local_offset = 0u32
+  let _ = while local_offset {
+    current => if current < body.locals.length {
+      let local_index = self_host_u32_add(body.locals.start, current)
+      if local_index < module_.locals.length() && current < plan.local_values.length() {
+        let local = module_.locals[local_index]
+        let expected_nominal = self_host_linked_loop_binding_nominal_declaration(
+          link,
+          module_,
+          body,
+          local.local_id,
+        )
+        let actual_nominal = plan.local_values[current].nominal_owner
+        if !self_host_u64_equal(expected_nominal, 0u64) && !self_host_u64_equal(
+          expected_nominal,
+          actual_nominal,
+        ) {
+          // A loop binding must keep the nominal type of its container element.
+          self_host_body_add_diagnostic(
+            diagnostics,
+            plan,
+            module_,
+            body.expressions.start,
+            expected_nominal,
+            "loop binding nominal provenance mismatch",
+            SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+            plan.local_values[current].carrier,
+          )
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
   for expression_plan in plan.expressions {
     let expression = expression_plan.expression
     let source = module_.expressions[expression]
@@ -5211,6 +5558,7 @@ fn self_host_verify_one_physical_body(
           link,
           plan,
           module_,
+          body,
           expression_plan,
           diagnostics,
         )
@@ -5250,6 +5598,7 @@ fn self_host_verify_one_physical_body(
           link,
           plan,
           module_,
+          body,
           expression_plan,
           diagnostics,
         )
@@ -5258,6 +5607,7 @@ fn self_host_verify_one_physical_body(
         link,
         plan,
         module_,
+        body,
         expression_plan,
         fields,
         diagnostics,

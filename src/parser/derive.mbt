@@ -215,10 +215,10 @@ fn derived_comparison_impl(
         name: method_name,
         name_offset: offset,
         type_parameters: [],
-        receiver: Some({ explicit_type: None, offset }),
-        parameters: [{ name: "right", type_: target, offset }],
+        receiver: Some({ explicit_type: None, offset, }),
+        parameters: [{ name: "right", type_: target, offset, }],
         return_type: NamedType("Bool", offset),
-        body: { items: [ExpressionItem(expression, offset)], offset },
+        body: { items: [ExpressionItem(expression, offset)], offset, },
         offset,
       },
     ],
@@ -363,7 +363,7 @@ fn derived_enum_hash_expression(
         offset,
       )
     }
-    arms.push({ pattern, guard_condition: None, body: result, offset })
+    arms.push({ pattern, guard_condition: None, body: result, offset, })
   }
   MatchExpr(NameExpr("self", offset), arms, offset)
 }
@@ -435,10 +435,10 @@ fn derived_hash_impl(
         name: "hash",
         name_offset: offset,
         type_parameters: [],
-        receiver: Some({ explicit_type: None, offset }),
+        receiver: Some({ explicit_type: None, offset, }),
         parameters: [],
         return_type: NamedType("U64", offset),
-        body: { items: [ExpressionItem(hash_expression, offset)], offset },
+        body: { items: [ExpressionItem(hash_expression, offset)], offset, },
         offset,
       },
       {
@@ -446,10 +446,10 @@ fn derived_hash_impl(
         name: "hash_eq",
         name_offset: offset,
         type_parameters: [],
-        receiver: Some({ explicit_type: None, offset }),
-        parameters: [{ name: "right", type_: target, offset }],
+        receiver: Some({ explicit_type: None, offset, }),
+        parameters: [{ name: "right", type_: target, offset, }],
         return_type: NamedType("Bool", offset),
-        body: { items: [ExpressionItem(hash_eq_expression, offset)], offset },
+        body: { items: [ExpressionItem(hash_eq_expression, offset)], offset, },
         offset,
       },
     ],
@@ -509,7 +509,7 @@ fn derived_debug_impl(
         name: "debug",
         name_offset: offset,
         type_parameters: [],
-        receiver: Some({ explicit_type: None, offset }),
+        receiver: Some({ explicit_type: None, offset, }),
         parameters: [],
         return_type: NamedType("Unit", offset),
         body: unit_body,
@@ -547,7 +547,7 @@ fn derived_debug_block(expressions : Array[Expr], offset : UInt64) -> Block {
   for expression in expressions {
     items.push(ExpressionItem(expression, offset))
   }
-  { items, offset }
+  { items, offset, }
 }
 
 ///|
@@ -708,7 +708,7 @@ fn derived_show_block(expressions : Array[Expr], offset : UInt64) -> Block {
   for expression in expressions {
     items.push(ExpressionItem(expression, offset))
   }
-  { items, offset }
+  { items, offset, }
 }
 
 ///|
@@ -811,7 +811,7 @@ fn derived_show_impl(
         name: "append_show",
         name_offset: offset,
         type_parameters: [],
-        receiver: Some({ explicit_type: None, offset }),
+        receiver: Some({ explicit_type: None, offset, }),
         parameters: [
           {
             name: "formatter",
@@ -886,7 +886,7 @@ pub fn derived_enum_debug_impl(
     let body = BlockExpr(
       derived_debug_variant_body(value.name, variant, names, offset),
     )
-    arms.push({ pattern, guard_condition: None, body, offset })
+    arms.push({ pattern, guard_condition: None, body, offset, })
   }
   derived_debug_impl(
     value.name,

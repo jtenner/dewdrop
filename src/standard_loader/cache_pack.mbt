@@ -158,13 +158,16 @@ pub fn open_compilation_cache_pack(
     })
   }
   let bytes = @fs.read_file_to_bytes(path) catch {
-    error => return Err("cannot read compilation cache pack \{path}: \{error}")
+    error =>
+      return Err(
+        "cannot read compilation cache pack \{path}: \{standard_loader_fs_error_message(error)}",
+      )
   }
   let pack = match @cache_binary.open_artifact_pack(bytes) {
     Ok(value) => value
     Err(error) => return Err("corrupt compilation cache pack \{path}: \{error}")
   }
-  Ok({ enabled: true, path, pack, dirty: false, hits: 0, misses: 0, reads: 1 })
+  Ok({ enabled: true, path, pack, dirty: false, hits: 0, misses: 0, reads: 1, })
 }
 
 ///|

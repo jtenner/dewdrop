@@ -59,7 +59,7 @@ fn core_type_arena(module_ : @lib.Module) -> CoreTypeArena {
       group_by_type.push(group_index)
     }
   }
-  { groups, subtypes, group_by_type }
+  { groups, subtypes, group_by_type, }
 }
 
 ///|
@@ -170,7 +170,7 @@ fn core_import_counts(module_ : @lib.Module) -> CoreImportCounts {
         }
     }
   }
-  { functions, tables, memories, globals, tags }
+  { functions, tables, memories, globals, tags, }
 }
 
 ///|
@@ -332,17 +332,15 @@ fn core_same_non_nominal_array_type(
       dew_arena.subtypes[dew].get_comptype(),
       guest_arena.subtypes[guest].get_comptype(),
     ) {
-    (@lib.ArrayCompType(dew_field), @lib.ArrayCompType(guest_field)) => {
+    (@lib.ArrayCompType(dew_field), @lib.ArrayCompType(guest_field)) =>
       if dew_field != guest_field {
         false
       } else {
         match dew_field.get_storage_type() {
           @lib.PackTypeStorageType(_) => true
-          @lib.ValTypeStorageType(type_) =>
-            core_ref_defined_type(type_) is None
+          @lib.ValTypeStorageType(type_) => core_ref_defined_type(type_) is None
         }
       }
-    }
     _ => false
   }
 }
@@ -476,8 +474,9 @@ fn core_bind_signature(
         concrete_guest_types,
       ) {
       if core_reference_bridge_compatible(
-        dew_parameters[index], guest_parameters[index],
-      ) {
+          dew_parameters[index],
+          guest_parameters[index],
+        ) {
         reference_adapter = true
       } else {
         return Err(CoreWasmSignatureMismatch(provider, export_name))
@@ -494,8 +493,9 @@ fn core_bind_signature(
         concrete_guest_types,
       ) {
       if core_reference_bridge_compatible(
-        dew_results[index], guest_results[index],
-      ) {
+          dew_results[index],
+          guest_results[index],
+        ) {
         if dew_results.length() != 1 {
           return Err(
             CoreWasmUnsupportedImport(
@@ -509,7 +509,7 @@ fn core_bind_signature(
       }
     }
   }
-  Ok({ string_parameters, reference_adapter })
+  Ok({ string_parameters, reference_adapter, })
 }
 
 ///|
@@ -545,7 +545,9 @@ fn core_reference_signature_adapter(
     if core_is_nullable_eqref(dew_parameters[index]) &&
       core_ref_defined_type(guest_parameters[index]) is Some(_) {
       core_append_reference_adapter_cast(
-        body, guest_map, guest_parameters[index],
+        body,
+        guest_map,
+        guest_parameters[index],
       )
     }
   }

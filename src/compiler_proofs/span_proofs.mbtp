@@ -1,0 +1,114 @@
+///|
+/// A valid physical carrier uses one supported Wasm value class.
+predicate valid_physical_carrier(carrier : Int) {
+  0 <= carrier && carrier <= 5
+}
+
+///|
+/// A certified value uses one carrier in each compiler phase.
+predicate certified_carrier_path(
+  source : Int,
+  planned : Int,
+  emitted : Int,
+) {
+  valid_physical_carrier(source) &&
+  source == planned &&
+  planned == emitted
+}
+
+///|
+/// Prove that a certified carrier path cannot change during emission.
+lemma certified_carrier_path_is_exact(
+  source : Int,
+  planned : Int,
+  emitted : Int,
+) where {
+  proof_require: certified_carrier_path(source, planned, emitted),
+  proof_ensure: valid_physical_carrier(emitted),
+  proof_ensure: source == emitted,
+} {
+}
+
+///|
+/// A valid span stays inside one arena.
+predicate valid_arena_span(
+  arena_length : Int,
+  start : Int,
+  length : Int,
+) {
+  0 <= arena_length &&
+  0 <= start &&
+  0 <= length &&
+  start + length <= arena_length
+}
+
+///|
+/// A valid local index stays inside one span.
+predicate valid_span_index(
+  start : Int,
+  length : Int,
+  index : Int,
+) {
+  start <= index && index < start + length
+}
+
+///|
+/// Prove that each local span index is also a valid arena index.
+lemma valid_span_index_is_valid_arena_index(
+  arena_length : Int,
+  start : Int,
+  length : Int,
+  index : Int,
+) where {
+  proof_require: valid_arena_span(arena_length, start, length),
+  proof_require: valid_span_index(start, length, index),
+  proof_ensure: 0 <= index,
+  proof_ensure: index < arena_length,
+} {
+}
+
+///|
+/// Prove that a valid span has enough arena items.
+lemma valid_span_has_required_items(
+  arena_length : Int,
+  start : Int,
+  length : Int,
+) where {
+  proof_require: valid_arena_span(arena_length, start, length),
+  proof_ensure: length <= arena_length - start,
+} {
+}
+
+///|
+/// Prove that two adjacent valid spans do not share an index.
+lemma adjacent_valid_spans_do_not_overlap(
+  arena_length : Int,
+  first_start : Int,
+  first_length : Int,
+  second_length : Int,
+  first_index : Int,
+  second_index : Int,
+) where {
+  proof_require: valid_arena_span(
+    arena_length,
+    first_start,
+    first_length,
+  ),
+  proof_require: valid_arena_span(
+    arena_length,
+    first_start + first_length,
+    second_length,
+  ),
+  proof_require: valid_span_index(
+    first_start,
+    first_length,
+    first_index,
+  ),
+  proof_require: valid_span_index(
+    first_start + first_length,
+    second_length,
+    second_index,
+  ),
+  proof_ensure: first_index < second_index,
+} {
+}

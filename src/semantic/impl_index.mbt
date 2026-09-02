@@ -288,7 +288,7 @@ pub fn ModuleImplIndex::method_dispatch_span(
       upper = middle
     }
   }
-  { start, length: lower - start }
+  { start, length: lower - start, }
 }
 
 ///|
@@ -350,7 +350,7 @@ pub fn ModuleImplIndex::trait_method_dispatch_span(
       upper = middle
     }
   }
-  { start, length: lower - start }
+  { start, length: lower - start, }
 }
 
 ///|
@@ -411,7 +411,7 @@ fn impl_method_spans(collected : CollectedModule) -> Array[HirSpan] {
   for index, method_info in collected.methods {
     let owner = semantic_id_local(method_info.parent)
     if spans[owner].length == 0 {
-      spans[owner] = { start: index, length: 1 }
+      spans[owner] = { start: index, length: 1, }
     } else {
       spans[owner] = {
         start: spans[owner].start,
@@ -426,7 +426,7 @@ fn impl_method_spans(collected : CollectedModule) -> Array[HirSpan] {
 fn method_span_of(spans : Array[HirSpan], declaration : DeclId) -> HirSpan {
   let index = semantic_id_local(declaration)
   if index < 0 || index >= spans.length() {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     spans[index]
   }
@@ -647,13 +647,13 @@ fn impl_trait_context(
 ) -> ImplTypeContext {
   let arguments = match resolved.types[trait_type] {
     AppliedType(_, arguments) => arguments
-    _ => { start: 0, length: 0 }
+    _ => { start: 0, length: 0, }
   }
   {
     generic_parameters: collected.generic_parameters_of(trait_declaration),
     generic_arguments: arguments,
-    method_parameters: { start: 0, length: 0 },
-    method_arguments: { start: 0, length: 0 },
+    method_parameters: { start: 0, length: 0, },
+    method_arguments: { start: 0, length: 0, },
     self_owner: trait_declaration,
     self_type: target_type,
   }
@@ -677,10 +677,10 @@ fn validate_trait_impl_methods(
     collected, resolved, trait_declaration, trait_type, target_type,
   )
   let implementation_context : ImplTypeContext = {
-    generic_parameters: { start: 0, length: 0 },
-    generic_arguments: { start: 0, length: 0 },
-    method_parameters: { start: 0, length: 0 },
-    method_arguments: { start: 0, length: 0 },
+    generic_parameters: { start: 0, length: 0, },
+    generic_arguments: { start: 0, length: 0, },
+    method_parameters: { start: 0, length: 0, },
+    method_arguments: { start: 0, length: 0, },
     self_owner: implementation.declaration,
     self_type: target_type,
   }
@@ -845,7 +845,7 @@ fn validate_trait_impl_methods(
       )
     }
   }
-  { start, length: methods.length() - start }
+  { start, length: methods.length() - start, }
 }
 
 ///|
@@ -865,7 +865,7 @@ fn collect_inherent_methods(
       instance: method_has_receiver(collected, method_info.id),
     })
   }
-  { start, length: methods.length() - start }
+  { start, length: methods.length() - start, }
 }
 
 ///|
@@ -905,7 +905,7 @@ fn collect_imported_trait_methods(
       instance: method_has_receiver(collected, method_info.id),
     })
   }
-  { start, length: methods.length() - start }
+  { start, length: methods.length() - start, }
 }
 
 ///|
@@ -937,7 +937,7 @@ fn ImplPatternScratch::new(
     marks: Array::make(resolved.types.length(), 0),
     values: Array::make(resolved.types.length(), 0),
     generation: 0,
-    generic_parameters: { start: 0, length: 0 },
+    generic_parameters: { start: 0, length: 0, },
     any_generic_parameter: false,
   }
 }
@@ -1158,12 +1158,12 @@ fn impl_target_patterns_overlap(
   let right_external = semantic_id_module(right.declaration) !=
     collected.module_id
   let left_generics = if left_external {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     collected.generic_parameters_of(left.declaration)
   }
   let right_generics = if right_external {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     collected.generic_parameters_of(right.declaration)
   }
@@ -1202,12 +1202,12 @@ fn impl_patterns_overlap(
   let right_external = semantic_id_module(right.declaration) !=
     collected.module_id
   let left_generics = if left_external {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     collected.generic_parameters_of(left.declaration)
   }
   let right_generics = if right_external {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     collected.generic_parameters_of(right.declaration)
   }
@@ -1259,7 +1259,7 @@ fn impl_pattern_matches(
   let general_external = semantic_id_module(general.declaration) !=
     collected.module_id
   let general_generics = if general_external {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     collected.generic_parameters_of(general.declaration)
   }
@@ -1463,7 +1463,7 @@ fn build_module_impl_index_internal(
     buckets.push({
       kind: bucket_kinds[bucket],
       target_head: bucket_heads[bucket],
-      implementations: { start, length: bucket_counts[bucket] },
+      implementations: { start, length: bucket_counts[bucket], },
     })
     cursors.push(start)
     start += bucket_counts[bucket]
@@ -1757,7 +1757,7 @@ fn rebuild_impl_buckets(index : ModuleImplIndex) -> Unit {
     index.buckets.push({
       kind: bucket_kinds[bucket],
       target_head: bucket_heads[bucket],
-      implementations: { start, length: bucket_counts[bucket] },
+      implementations: { start, length: bucket_counts[bucket], },
     })
     cursors.push(start)
     for _ in 0..<bucket_counts[bucket] {

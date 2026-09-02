@@ -131,9 +131,11 @@ fn self_host_first_body_expression(
 ) -> U32 {
   let block = self_host_body_root_block_id(body)
   let item = collected.blocks[block].items.start
-  match collected.block_items[item] {
-    SelfHostHirBlockItem::ExpressionItem(expression, _) => expression
-    _ => 4294967295u32
+  let source = collected.block_items[item]
+  if self_host_hir_block_item_is_let(source) {
+    4294967295u32
+  } else {
+    source.value
   }
 }
 
@@ -153,9 +155,11 @@ test "body names resolve parameters sequential lets shadowing and module values"
   assert(names.parameter_locals[0u32] == 0u32, "parameter local")
   let block = self_host_body_root_block_id(body)
   let items = collected.blocks[block].items
-  let first_initializer = match collected.block_items[items.start] {
-    SelfHostHirBlockItem::LetItem(_, _, _, value, _) => value
-    _ => 4294967295u32
+  let first_item = collected.block_items[items.start]
+  let first_initializer = if self_host_hir_block_item_is_let(first_item) {
+    first_item.value
+  } else {
+    4294967295u32
   }
   match collected.expressions[first_initializer] {
     SelfHostHirExpr::NameExpr(name, _) => assert(
@@ -168,9 +172,10 @@ test "body names resolve parameters sequential lets shadowing and module values"
     SelfHostHirExpr::NameExpr(name, _) => name
     _ => 4294967295u32
   }
-  let first_name = match collected.block_items[items.start] {
-    SelfHostHirBlockItem::LetItem(_, name, _, _, _) => name
-    _ => 4294967295u32
+  let first_name = if self_host_hir_block_item_is_let(first_item) {
+    first_item.name
+  } else {
+    4294967295u32
   }
   assert(value_name != first_name, "distinct value and first names")
   let parameter_code = self_host_name_ref_code(
@@ -180,9 +185,13 @@ test "body names resolve parameters sequential lets shadowing and module values"
     parameter_code == 10u32,
     self_host_u32_message("parameter reference code ", parameter_code),
   )
-  let shadow_initializer = match collected.block_items[self_host_u32_add(items.start, 1u32)] {
-    SelfHostHirBlockItem::LetItem(_, _, _, value, _) => value
-    _ => 4294967295u32
+  let shadow_item = collected.block_items[
+    self_host_u32_add(items.start, 1u32)
+  ]
+  let shadow_initializer = if self_host_hir_block_item_is_let(shadow_item) {
+    shadow_item.value
+  } else {
+    4294967295u32
   }
   assert(first_initializer != shadow_initializer, "distinct initializers")
   assert(
@@ -192,9 +201,13 @@ test "body names resolve parameters sequential lets shadowing and module values"
     ),
     "sequential let reference",
   )
-  let final_expression = match collected.block_items[self_host_u32_add(items.start, 2u32)] {
-    SelfHostHirBlockItem::ExpressionItem(value, _) => value
-    _ => 4294967295u32
+  let final_item = collected.block_items[
+    self_host_u32_add(items.start, 2u32)
+  ]
+  let final_expression = if self_host_hir_block_item_is_let(final_item) {
+    4294967295u32
+  } else {
+    final_item.value
   }
   match collected.expressions[final_expression] {
     SelfHostHirExpr::BinaryExpr(_, local, module_value, _) => {
@@ -216,6 +229,40 @@ test "body names resolve parameters sequential lets shadowing and module values"
     }
     _ => assert(false, "final binary expression")
   }
+}
+
+test "for iterable retains its parameter binding" {
+  let collected = self_host_collect_bytes(
+    3031u64,
+    b"fn visit(values: Array<I32>) -> Unit {\n  for value in values {\n  }\n}\n",
+  )
+  let names = self_host_resolve_module_names(collected)
+  assert(names.diagnostics.length() == 0u32, "for iterable diagnostics")
+  let body = collected.bodies[0u32]
+  let mut found = false
+  let mut expression = body.expressions.start
+  let end = body.expressions.start + body.expressions.length
+  let _ = while expression {
+    current => if current < end {
+      match collected.expressions[current] {
+        SelfHostHirExpr::NameExpr(name, _) => if collected.name(name) == "values" {
+          found = true
+          assert(
+            self_host_name_ref_is_local(
+              names.expression_references[current],
+              0u32,
+            ),
+            "for iterable parameter reference",
+          )
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(found, "for iterable parameter expression")
 }
 
 test "body names diagnose unknown values and preserve known names" {

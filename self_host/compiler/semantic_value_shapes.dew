@@ -27,6 +27,20 @@ enum SelfHostShapeTask {
   FinishProductShape(U32)
 }
 
+// These helpers keep value-shape work arrays on exact source types.
+// The backend uses these types as compile-time proof for Array pop carriers.
+fn self_host_shape_tasks(root: U32) -> Array<SelfHostShapeTask> {
+  [SelfHostShapeTask::VisitShapeType(root)]
+}
+
+fn self_host_shape_results() -> Array<SelfHostPlannedValueShape> {
+  []
+}
+
+fn self_host_shape_fields() -> Array<SelfHostPlannedValueShape> {
+  []
+}
+
 fn self_host_primitive_value_shape(
   primitive: SelfHostPrimitiveType,
 ) -> SelfHostPlannedValueShape {
@@ -79,11 +93,11 @@ fn self_host_planned_resolved_value_shape(
   resolved: SelfHostResolvedModuleTypes,
   root: U32,
 ) -> SelfHostPlannedValueShape {
-  let tasks = [SelfHostShapeTask::VisitShapeType(root)]
-  let results = []
+  let tasks = self_host_shape_tasks(root)
+  let results = self_host_shape_results()
   let _ = while tasks.length() {
     length => if self_host_u32_greater(length, 0u32) {
-      let task = match tasks.pop() {
+      let task = match self_host_array_pop(tasks) {
         Option::Some(value) => value
         Option::None => SelfHostShapeTask::VisitShapeType(resolved.error_type)
       }
@@ -115,7 +129,7 @@ fn self_host_planned_resolved_value_shape(
           }
         }
         SelfHostShapeTask::FinishProductShape(start) => {
-          let fields = []
+          let fields = self_host_shape_fields()
           let mut index = start
           let end = results.length()
           let _ = while index {
@@ -135,7 +149,7 @@ fn self_host_planned_resolved_value_shape(
       break self_host_semantic_unit()
     }
   }
-  match results.pop() {
+  match self_host_array_pop(results) {
     Option::Some(shape) => shape
     Option::None => SelfHostPlannedValueShape::ErrorPlannedValueShape
   }

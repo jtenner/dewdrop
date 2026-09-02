@@ -362,7 +362,7 @@ impl SelfHostImplPatternImporter {
     self.tasks.push(SelfHostImplPatternTask::VisitImplPatternType(root))
     let _ = while self.tasks.length() {
       length => if self_host_u32_greater(length, 0u32) {
-        let task = match self.tasks.pop() {
+        let task = match self_host_array_pop(self.tasks) {
           Option::Some(value) => value
           Option::None => {
             return self.solver.error_type()
@@ -891,6 +891,146 @@ fn self_host_impl_substitute_type(
   }
 }
 
+// This recursive check keeps each type pair on its declared U32 carrier.
+// The depth limit is a compile-time guard against malformed recursive evidence.
+fn self_host_impl_signature_types_equal_at(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  left_root: U32,
+  left_context: SelfHostImplTypeContext,
+  right_root: U32,
+  right_context: SelfHostImplTypeContext,
+  depth: U32,
+) -> Bool {
+  if depth >= 1024u32 {
+    return false
+  }
+  let left = self_host_impl_substitute_type(
+    collected,
+    resolved,
+    left_root,
+    left_context,
+  )
+  let right = self_host_impl_substitute_type(
+    collected,
+    resolved,
+    right_root,
+    right_context,
+  )
+  if self_host_u32_equal(left, right) {
+    return true
+  }
+  match resolved.types[left] {
+    SelfHostResolvedType::ErrorType => true
+    SelfHostResolvedType::AppliedType(left_base, left_arguments) => match resolved.types[right] {
+      SelfHostResolvedType::AppliedType(right_base, right_arguments) => {
+        if !self_host_u32_equal(left_arguments.length, right_arguments.length) ||
+          !self_host_impl_signature_types_equal_at(
+            collected,
+            resolved,
+            left_base,
+            left_context,
+            right_base,
+            right_context,
+            depth + 1u32,
+          ) {
+          return false
+        }
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < left_arguments.length {
+            if !self_host_impl_signature_types_equal_at(
+              collected,
+              resolved,
+              resolved.type_arguments[self_host_u32_add(left_arguments.start, current)],
+              left_context,
+              resolved.type_arguments[self_host_u32_add(right_arguments.start, current)],
+              right_context,
+              depth + 1u32,
+            ) {
+              return false
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        true
+      }
+      SelfHostResolvedType::ErrorType => true
+      _ => false
+    }
+    SelfHostResolvedType::ProductType(left_fields) => match resolved.types[right] {
+      SelfHostResolvedType::ProductType(right_fields) => {
+        if !self_host_u32_equal(left_fields.length, right_fields.length) {
+          return false
+        }
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < left_fields.length {
+            if !self_host_impl_signature_types_equal_at(
+              collected,
+              resolved,
+              resolved.type_arguments[self_host_u32_add(left_fields.start, current)],
+              left_context,
+              resolved.type_arguments[self_host_u32_add(right_fields.start, current)],
+              right_context,
+              depth + 1u32,
+            ) {
+              return false
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        true
+      }
+      SelfHostResolvedType::ErrorType => true
+      _ => false
+    }
+    SelfHostResolvedType::FunctionType(left_parameters, left_result) => match resolved.types[right] {
+      SelfHostResolvedType::FunctionType(right_parameters, right_result) => {
+        if !self_host_u32_equal(left_parameters.length, right_parameters.length) ||
+          !self_host_impl_signature_types_equal_at(
+            collected,
+            resolved,
+            left_result,
+            left_context,
+            right_result,
+            right_context,
+            depth + 1u32,
+          ) {
+          return false
+        }
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < left_parameters.length {
+            if !self_host_impl_signature_types_equal_at(
+              collected,
+              resolved,
+              resolved.type_arguments[self_host_u32_add(left_parameters.start, current)],
+              left_context,
+              resolved.type_arguments[self_host_u32_add(right_parameters.start, current)],
+              right_context,
+              depth + 1u32,
+            ) {
+              return false
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        true
+      }
+      SelfHostResolvedType::ErrorType => true
+      _ => false
+    }
+    _ => resolved.types[right] is SelfHostResolvedType::ErrorType
+  }
+}
+
 fn self_host_impl_signature_types_equal(
   collected: SelfHostCollectedModule,
   resolved: SelfHostResolvedModuleTypes,
@@ -899,151 +1039,15 @@ fn self_host_impl_signature_types_equal(
   right_root: U32,
   right_context: SelfHostImplTypeContext,
 ) -> Bool {
-  let left_stack = [left_root]
-  let right_stack = [right_root]
-  while left_stack.length() {
-    length => if self_host_u32_greater(length, 0u32) {
-      let left_source = match left_stack.pop() {
-        Option::Some(value) => value
-        Option::None => {
-          return false
-        }
-      }
-      let right_source = match right_stack.pop() {
-        Option::Some(value) => value
-        Option::None => {
-          return false
-        }
-      }
-      let left = self_host_impl_substitute_type(
-        collected,
-        resolved,
-        left_source,
-        left_context,
-      )
-      let right = self_host_impl_substitute_type(
-        collected,
-        resolved,
-        right_source,
-        right_context,
-      )
-      if !self_host_u32_equal(left, right) {
-        match resolved.types[left] {
-          SelfHostResolvedType::ErrorType => {}
-          SelfHostResolvedType::AppliedType(left_base, left_arguments) => match resolved.types[right] {
-            SelfHostResolvedType::AppliedType(right_base, right_arguments) => {
-              if !self_host_u32_equal(
-                left_arguments.length,
-                right_arguments.length,
-              ) {
-                return false
-              }
-              left_stack.push(left_base)
-              right_stack.push(right_base)
-              let mut index = left_arguments.length
-              let _ = while index {
-                current => if self_host_u32_greater(current, 0u32) {
-                  let previous = current - 1u32
-                  left_stack.push(
-                    resolved.type_arguments[
-                      self_host_u32_add(left_arguments.start, previous)
-                    ],
-                  )
-                  right_stack.push(
-                    resolved.type_arguments[
-                      self_host_u32_add(right_arguments.start, previous)
-                    ],
-                  )
-                  continue previous
-                } else {
-                  break self_host_semantic_unit()
-                }
-              }
-            }
-            SelfHostResolvedType::ErrorType => {}
-            _ => {
-              return false
-            }
-          }
-          SelfHostResolvedType::ProductType(left_fields) => match resolved.types[right] {
-            SelfHostResolvedType::ProductType(right_fields) => {
-              if !self_host_u32_equal(left_fields.length, right_fields.length) {
-                return false
-              }
-              let mut index = left_fields.length
-              let _ = while index {
-                current => if self_host_u32_greater(current, 0u32) {
-                  let previous = current - 1u32
-                  left_stack.push(
-                    resolved.type_arguments[
-                      self_host_u32_add(left_fields.start, previous)
-                    ],
-                  )
-                  right_stack.push(
-                    resolved.type_arguments[
-                      self_host_u32_add(right_fields.start, previous)
-                    ],
-                  )
-                  continue previous
-                } else {
-                  break self_host_semantic_unit()
-                }
-              }
-            }
-            SelfHostResolvedType::ErrorType => {}
-            _ => {
-              return false
-            }
-          }
-          SelfHostResolvedType::FunctionType(left_parameters, left_result) => match resolved.types[right] {
-            SelfHostResolvedType::FunctionType(right_parameters, right_result) => {
-              if !self_host_u32_equal(
-                left_parameters.length,
-                right_parameters.length,
-              ) {
-                return false
-              }
-              left_stack.push(left_result)
-              right_stack.push(right_result)
-              let mut index = left_parameters.length
-              let _ = while index {
-                current => if self_host_u32_greater(current, 0u32) {
-                  let previous = current - 1u32
-                  left_stack.push(
-                    resolved.type_arguments[
-                      self_host_u32_add(left_parameters.start, previous)
-                    ],
-                  )
-                  right_stack.push(
-                    resolved.type_arguments[
-                      self_host_u32_add(right_parameters.start, previous)
-                    ],
-                  )
-                  continue previous
-                } else {
-                  break self_host_semantic_unit()
-                }
-              }
-            }
-            SelfHostResolvedType::ErrorType => {}
-            _ => {
-              return false
-            }
-          }
-          _ => match resolved.types[right] {
-            SelfHostResolvedType::ErrorType => {}
-            _ => {
-              return false
-            }
-          }
-        }
-      }
-      continue left_stack.length()
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  self_host_u32_equal(right_stack.length(), 0u32)
+  self_host_impl_signature_types_equal_at(
+    collected,
+    resolved,
+    left_root,
+    left_context,
+    right_root,
+    right_context,
+    0u32,
+  )
 }
 
 fn self_host_impl_callable_index(

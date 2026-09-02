@@ -160,10 +160,7 @@ fn core_pair_link(
   )
   let dew_function_import_names : Array[String] = []
   let string_adapter_parameters_by_dew_import : Array[Array[Int]] = []
-  let reference_adapter_by_dew_import = Array::make(
-    dew_counts.functions,
-    false,
-  )
+  let reference_adapter_by_dew_import = Array::make(dew_counts.functions, false)
   for _ in 0..<dew_counts.functions {
     string_adapter_parameters_by_dew_import.push([])
   }
@@ -314,7 +311,7 @@ fn core_pair_link(
             dew_tag_indices,
             next,
           )
-          planned_imports.push({ source: 0, value: import_ })
+          planned_imports.push({ source: 0, value: import_, })
         }
         core_advance_import_ordinals(type_, dew_ordinals)
       }
@@ -339,7 +336,7 @@ fn core_pair_link(
           next,
         )
         core_advance_import_ordinals(type_, guest_ordinals)
-        planned_imports.push({ source: 1, value: import_ })
+        planned_imports.push({ source: 1, value: import_, })
       }
     }
   }
@@ -428,8 +425,9 @@ fn core_pair_link(
           reference_adapter_by_dew_import[index] {
           return Err(
             CoreWasmUnsupportedImport(
-              "Dew String adapter import=" + dew_function_import_names[index] +
-                " index=\{index} string_parameters=\{string_adapter_parameters_by_dew_import[index]} reference_adapter=\{reference_adapter_by_dew_import[index]} requires one leading String parameter and no additional reference adapters",
+              "Dew String adapter import=" +
+              dew_function_import_names[index] +
+              " index=\{index} string_parameters=\{string_adapter_parameters_by_dew_import[index]} reference_adapter=\{reference_adapter_by_dew_import[index]} requires one leading String parameter and no additional reference adapters",
             ),
           )
         }
@@ -629,9 +627,7 @@ fn core_pair_link(
     (Some(@lib.StartSec(dew_start)), Some(@lib.StartSec(guest_start))) => {
       let combined_type = type_count
       final_types.push(
-        @lib.RecType::new(
-          @lib.SubType::comp_type(@lib.CompType::func([], [])),
-        ),
+        @lib.RecType::new(@lib.SubType::comp_type(@lib.CompType::func([], []))),
       )
       function_types.push(
         @lib.TypeIdx::new(combined_type.reinterpret_as_uint()),
@@ -641,12 +637,8 @@ fn core_pair_link(
         @lib.Func::new(
           @lib.Locals::empty(),
           @lib.Expr::new([
-            @lib.Instruction::call(
-              core_remap_func_idx(guest_map, guest_start),
-            ),
-            @lib.Instruction::call(
-              core_remap_func_idx(dew_map, dew_start),
-            ),
+            @lib.Instruction::call(core_remap_func_idx(guest_map, guest_start)),
+            @lib.Instruction::call(core_remap_func_idx(dew_map, dew_start)),
           ]),
         ),
       )

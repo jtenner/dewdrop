@@ -264,7 +264,7 @@ fn Parser::parse_block_after_left_brace(
   let items : Array[BlockItem] = []
   let cleanups : Array[DeferredCleanup] = []
   if self.consume_right_brace() {
-    return Ok({ items, offset: open_offset })
+    return Ok({ items, offset: open_offset, })
   }
   guard self.consume_newline_token() else {
     return Err(
@@ -420,7 +420,7 @@ priv struct IsConditionParts {
 fn split_is_condition(condition : Expr) -> IsConditionParts? {
   match condition {
     IsExpr(scrutinee, pattern, offset) =>
-      Some({ scrutinee, pattern, guard_condition: None, offset })
+      Some({ scrutinee, pattern, guard_condition: None, offset, })
     BinaryExpr(LogicalAnd, left, right, operator_offset) =>
       match split_is_condition(left) {
         Some(parts) => {
@@ -453,7 +453,7 @@ fn make_if_expression(
     Some(parts) => {
       let fallback = match alternative {
         Some(value) => value
-        None => BlockExpr({ items: [], offset: if_offset })
+        None => BlockExpr({ items: [], offset: if_offset, })
       }
       MatchExpr(
         parts.scrutinee,

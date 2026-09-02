@@ -393,7 +393,7 @@ fn program_physical_type_sccs(
     for entity in component {
       raw_members.push(entity)
     }
-    raw_spans.push({ start, length: raw_members.length() - start })
+    raw_spans.push({ start, length: raw_members.length() - start, })
     raw_ranks.push(rank)
   }
   let order : Array[Int] = []
@@ -416,7 +416,7 @@ fn program_physical_type_sccs(
     for index in 0..<source.length {
       members.push(raw_members[source.start + index])
     }
-    spans.push({ start, length: members.length() - start })
+    spans.push({ start, length: members.length() - start, })
   }
   (spans, members)
 }
@@ -452,7 +452,7 @@ fn program_cross_module_type_groups(
           PlannedWasmClosureType => {
             canonical_closure_node = nodes.length()
             node_by_module_type[module_index][fragment_index] = canonical_closure_node
-            nodes.push({ module_index, fragment_index })
+            nodes.push({ module_index, fragment_index, })
           }
           PlannedWasmTraitMethodSignatureType(requirement) =>
             match trait_method_nodes.get(requirement) {
@@ -462,7 +462,7 @@ fn program_cross_module_type_groups(
                 let node = nodes.length()
                 trait_method_nodes[requirement] = node
                 node_by_module_type[module_index][fragment_index] = node
-                nodes.push({ module_index, fragment_index })
+                nodes.push({ module_index, fragment_index, })
               }
             }
           PlannedWasmTraitVTableType(trait_) =>
@@ -473,7 +473,7 @@ fn program_cross_module_type_groups(
                 let node = nodes.length()
                 trait_vtable_nodes[trait_] = node
                 node_by_module_type[module_index][fragment_index] = node
-                nodes.push({ module_index, fragment_index })
+                nodes.push({ module_index, fragment_index, })
               }
             }
           PlannedWasmTraitObjectType(trait_) =>
@@ -484,12 +484,12 @@ fn program_cross_module_type_groups(
                 let node = nodes.length()
                 trait_object_nodes[trait_] = node
                 node_by_module_type[module_index][fragment_index] = node
-                nodes.push({ module_index, fragment_index })
+                nodes.push({ module_index, fragment_index, })
               }
             }
           _ => {
             node_by_module_type[module_index][fragment_index] = nodes.length()
-            nodes.push({ module_index, fragment_index })
+            nodes.push({ module_index, fragment_index, })
           }
         }
       }
@@ -597,7 +597,7 @@ fn program_cross_module_type_groups(
       physical_types.push(node)
     }
     groups.push({
-      types: { start, length: physical_types.length() - start },
+      types: { start, length: physical_types.length() - start, },
       first_type_index,
     })
   }
@@ -1576,8 +1576,8 @@ pub fn link_program_wasmgc_fragments(
                         defined_function_count,
                         parameters: source.parameters,
                         results: source.results,
-                        specialization_shapes: { start: 0, length: 0 },
-                        specialization_evidence: { start: 0, length: 0 },
+                        specialization_shapes: { start: 0, length: 0, },
+                        specialization_evidence: { start: 0, length: 0, },
                         specialization_abi_key: "",
                         erased_adapter_target: function_.function_index,
                         offset: expression.offset,

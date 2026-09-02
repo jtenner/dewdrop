@@ -34,6 +34,10 @@ python3 tools/generate_facet_bindings.py --check
 python3 tools/generate_host_std.py --check
 python3 tools/generate_package_std.py --check
 PYTHONPATH=tools python3 tools/test_starshine_ffi_consumer.py
+(
+  cd starshine-mb
+  bun test scripts/lib/wasm-export-renaming.test.ts
+)
 tools/check-facet.sh
 python3 tools/generate_json_std.py --check
 python3 tools/generate_text_iteration_std.py --check

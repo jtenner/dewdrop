@@ -86,6 +86,14 @@ test "WasmGC fragments plan nominal struct and enum families" {
     SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(_) => {}
     _ => assert(false, "struct type")
   }
+  match self_host_wasmgc_field_at(module_, 0u32).storage {
+    SelfHostPlannedWasmStorageType::WasmI32Storage => {}
+    _ => assert(false, "Point.x i32 storage")
+  }
+  match self_host_wasmgc_field_at(module_, 1u32).storage {
+    SelfHostPlannedWasmStorageType::WasmI64Storage => {}
+    _ => assert(false, "Point.y i64 storage")
+  }
   let enum_type = self_host_wasmgc_physical_type_at(module_, 1u32)
   match enum_type.kind {
     SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(_) => {}

@@ -33,7 +33,7 @@ fn backend_test_single_module_stages(
   } else {
     @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
   }
-  { program, analyzed, lowering, link }
+  { program, analyzed, lowering, link, }
 }
 
 ///|

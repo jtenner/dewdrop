@@ -1,4 +1,11 @@
 ///|
+fn bootstrap_io_error_message(error : @fs.IOError) -> String {
+  match error {
+    @fs.IOError(message) => message
+  }
+}
+
+///|
 fn bootstrap_fingerprint(prefix : Bytes, provider : Bytes) -> Bytes {
   let input = Buffer(size_hint=prefix.length() + provider.length())
   input.write_bytes(prefix)
@@ -32,15 +39,29 @@ fn standard_module_name(path : String) -> String {
 ///|
 fn bootstrap_module_required(name : String) -> Bool {
   match name {
-    "dew.std.array" | "dew.std.blake3" | "dew.std.bytes" |
-    "dew.std.bytes_builder" | "dew.std.facet" | "dew.std.facet.core" |
-    "dew.std.facet.fs" | "dew.std.facet.imports" |
-    "dew.std.facet.process" | "dew.std.fixed_array" | "dew.std.fs" |
-    "dew.std.map" | "dew.std.math" | "dew.std.option" |
-    "dew.std.path" | "dew.std.preamble" | "dew.std.process" |
-    "dew.std.result" | "dew.std.string" | "dew.std.string_builder" |
-    "dew.std.testing" | "dew.std.text_runtime" |
-    "dew.std.wasm.intrinsics" => true
+    "dew.std.array"
+    | "dew.std.blake3"
+    | "dew.std.bytes"
+    | "dew.std.bytes_builder"
+    | "dew.std.facet"
+    | "dew.std.facet.core"
+    | "dew.std.facet.fs"
+    | "dew.std.facet.imports"
+    | "dew.std.facet.process"
+    | "dew.std.fixed_array"
+    | "dew.std.fs"
+    | "dew.std.map"
+    | "dew.std.math"
+    | "dew.std.option"
+    | "dew.std.path"
+    | "dew.std.preamble"
+    | "dew.std.process"
+    | "dew.std.result"
+    | "dew.std.string"
+    | "dew.std.string_builder"
+    | "dew.std.testing"
+    | "dew.std.text_runtime"
+    | "dew.std.wasm.intrinsics" => true
     _ => false
   }
 }
@@ -54,7 +75,7 @@ fn append_standard_module(
 ) -> Unit {
   for index, module_ in modules {
     if module_.name == name {
-      module_.files.push({ logical_path: path, source })
+      module_.files.push({ logical_path: path, source, })
       modules[index] = module_
       return
     }
@@ -67,15 +88,16 @@ fn append_standard_module(
       b"open dew.std.preamble\nopen dew.std.option\n"
     } else if name == "dew.std.string" ||
       name == "dew.std.string_builder" ||
-      name == "dew.std.bytes_builder" || name == "dew.std.bytes" {
+      name == "dew.std.bytes_builder" ||
+      name == "dew.std.bytes" {
       b"open dew.std.preamble\nopen dew.std.text_runtime\nopen dew.std.option\n"
     } else {
       b"open dew.std.preamble\nopen dew.std.option\n"
     }
-    files.push({ logical_path: "__dew_std_imports.dew", source: imports })
+    files.push({ logical_path: "__dew_std_imports.dew", source: imports, })
   }
-  files.push({ logical_path: path, source })
-  modules.push({ name, files })
+  files.push({ logical_path: path, source, })
+  modules.push({ name, files, })
 }
 
 ///|
@@ -89,14 +111,18 @@ fn main {
   }
   let provider = @fs.read_file_to_bytes(args[2]) catch {
     error => {
-      println("cannot read Starshine provider: \{error}")
+      println(
+        "cannot read Starshine provider: \{bootstrap_io_error_message(error)}",
+      )
       @sys.exit(2)
       b""
     }
   }
   let fingerprint_prefix = @fs.read_file_to_bytes(args[3]) catch {
     error => {
-      println("cannot read fingerprint prefix: \{error}")
+      println(
+        "cannot read fingerprint prefix: \{bootstrap_io_error_message(error)}",
+      )
       @sys.exit(2)
       b""
     }
@@ -117,14 +143,16 @@ fn main {
     let path = args[index]
     let source = @fs.read_file_to_bytes(path) catch {
       error => {
-        println("cannot read compiler source \{path}: \{error}")
+        println(
+          "cannot read compiler source \{path}: \{bootstrap_io_error_message(error)}",
+        )
         @sys.exit(2)
         b""
       }
     }
-    root_files.push({ logical_path: path, source })
+    root_files.push({ logical_path: path, source, })
   }
-  modules.push({ name: args[5], files: root_files })
+  modules.push({ name: args[5], files: root_files, })
   let request : @compile_request.CompilerRequest = {
     command: @compile_request.CompilerBuild,
     output_kind: @compile_request.CompilerWasmOutput,
@@ -132,7 +160,7 @@ fn main {
     root_module: args[5],
     modules,
     dependency_interfaces: [],
-    static_providers: [{ name: "starshine", wasm: provider }],
+    static_providers: [{ name: "starshine", wasm: provider, }],
     standard_library: @compile_request.CompilerBootstrapStandard(
       @compile_request.bootstrap_standard_library_identity(),
     ),
@@ -156,7 +184,9 @@ fn main {
   }
   @fs.write_bytes_to_file(args[1], encoded) catch {
     error => {
-      println("cannot write self-host bootstrap request: \{error}")
+      println(
+        "cannot write self-host bootstrap request: \{bootstrap_io_error_message(error)}",
+      )
       @sys.exit(2)
     }
   }

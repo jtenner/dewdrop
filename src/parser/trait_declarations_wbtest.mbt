@@ -20,7 +20,7 @@ test "generic trait declarations preserve method signatures" {
         visibility: ModuleVisible,
         name: "Add",
         name_offset: 6UL,
-        type_parameters: [{ name: "t", bounds: [], offset: 10UL }],
+        type_parameters: [{ name: "t", bounds: [], offset: 10UL, }],
         methods: [
           {
             name: "add",
@@ -28,8 +28,8 @@ test "generic trait declarations preserve method signatures" {
             type_parameters: [],
             receiver: None,
             parameters: [
-              { name: "left", type_: NamedType("t", 30UL), offset: 24UL },
-              { name: "right", type_: NamedType("t", 40UL), offset: 33UL },
+              { name: "left", type_: NamedType("t", 30UL), offset: 24UL, },
+              { name: "right", type_: NamedType("t", 40UL), offset: 33UL, },
             ],
             return_type: NamedType("t", 46UL),
             offset: 17UL,
@@ -54,7 +54,7 @@ test "public traits retain receiver and static methods" {
       assert_true(declaration.methods[0].has_receiver())
       assert_eq(
         declaration.methods[0].receiver,
-        Some({ explicit_type: None, offset: 36UL }),
+        Some({ explicit_type: None, offset: 36UL, }),
       )
       assert_eq(declaration.methods[0].parameters.length(), 0)
       assert_false(declaration.methods[1].has_receiver())
@@ -75,7 +75,7 @@ test "explicit self Self receiver syntax is accepted" {
       let parsed_method = declaration.methods[0]
       assert_eq(
         parsed_method.receiver,
-        Some({ explicit_type: None, offset: 26UL }),
+        Some({ explicit_type: None, offset: 26UL, }),
       )
       assert_eq(parsed_method.parameters.length(), 1)
       assert_eq(parsed_method.parameters[0], {

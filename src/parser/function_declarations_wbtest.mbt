@@ -79,10 +79,9 @@ test "return without a value is represented explicitly" {
   match
     Parser::from_bytes(b"fn stop() -> Unit {\n  return\n}\n").parse_declaration() {
     Ok(Function(declaration)) =>
-      assert_eq(
-        declaration.body.items,
-        [ExpressionItem(ReturnExpr(None, 22UL), 22UL)],
-      )
+      assert_eq(declaration.body.items, [
+        ExpressionItem(ReturnExpr(None, 22UL), 22UL),
+      ])
     _ => fail("expected empty return")
   }
 }
@@ -98,7 +97,7 @@ test "regular functions become methods when self is first" {
         Some(
           {
             explicit_type: Some(AppliedType(NamedType("List", _), arguments, _)),
-            ..,
+            ..
           }
         ) => {
           assert_eq(arguments.length(), 1)
@@ -115,7 +114,7 @@ test "regular functions become methods when self is first" {
       assert_true(declaration.has_receiver())
       assert_eq(
         declaration.receiver,
-        Some({ explicit_type: None, offset: 9UL }),
+        Some({ explicit_type: None, offset: 9UL, }),
       )
     }
     _ => fail("expected shorthand receiver function")

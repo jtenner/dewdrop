@@ -452,15 +452,15 @@ impl SelfHostTypeResolver {
     self.push_substitution_task(self.alias_target_types[alias_index], 0u32, 0u32)
     let _ = while self.substitution_types.length() {
       length => if length > 0u32 {
-        let current = match self.substitution_types.pop() {
+        let current = match self_host_array_pop(self.substitution_types) {
           Option::Some(value) => value
           Option::None => self.interner.error_type
         }
-        let state = match self.substitution_states.pop() {
+        let state = match self_host_array_pop(self.substitution_states) {
           Option::Some(value) => value
           Option::None => 0u32
         }
-        let result_start = match self.substitution_starts.pop() {
+        let result_start = match self_host_array_pop(self.substitution_starts) {
           Option::Some(value) => value
           Option::None => 0u32
         }
@@ -661,15 +661,15 @@ impl SelfHostTypeResolver {
     self.push_substitution_task(target, 0u32, 0u32)
     let _ = while self.substitution_types.length() {
       length => if length > 0u32 {
-        let current = match self.substitution_types.pop() {
+        let current = match self_host_array_pop(self.substitution_types) {
           Option::Some(value) => value
           Option::None => self.interner.error_type
         }
-        let state = match self.substitution_states.pop() {
+        let state = match self_host_array_pop(self.substitution_states) {
           Option::Some(value) => value
           Option::None => 0u32
         }
-        let result_start = match self.substitution_starts.pop() {
+        let result_start = match self_host_array_pop(self.substitution_starts) {
           Option::Some(value) => value
           Option::None => 0u32
         }

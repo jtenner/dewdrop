@@ -27,7 +27,7 @@ impl SelfHostBasicCompaction {
     self.stack.push(root)
     let _ = while self.stack.length() {
       length => if self_host_u32_greater(length, 0u32) {
-        let type_ = match self.stack.pop() {
+        let type_ = match self_host_array_pop(self.stack) {
           Option::Some(value) => value
           Option::None => 0i32
         }

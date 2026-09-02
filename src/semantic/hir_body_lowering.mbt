@@ -84,7 +84,7 @@ fn CollectionBuilder::emit_expr(
   let id = self.expressions.length()
   self.expressions.push(expression)
   self.expression_files.push(self.current_file)
-  self.explicit_call_type_argument_spans.push({ start: 0, length: 0 })
+  self.explicit_call_type_argument_spans.push({ start: 0, length: 0, })
   self.body_expr_results.push(id)
   id
 }
@@ -297,7 +297,7 @@ fn CollectionBuilder::append_object_fields(
     })
     self.object_field_files.push(self.current_file)
   }
-  { start, length: source.length() }
+  { start, length: source.length(), }
 }
 
 ///|
@@ -317,7 +317,7 @@ fn CollectionBuilder::finish_expr_source(
           self.body_expr_results[first_start + index],
         )
       }
-      let span = { start, length: elements.length() }
+      let span = { start, length: elements.length(), }
       match source {
         @parser.ProductExpr(_, _) => HirProductExpr(span, offset)
         @parser.ArrayExpr(_, _) => HirArrayExpr(span, offset)
@@ -355,7 +355,7 @@ fn CollectionBuilder::finish_expr_source(
       self.body_arm_results.truncate(second_start)
       HirMatchExpr(
         self.body_expr_results[first_start],
-        { start: arm_start, length: arms.length() },
+        { start: arm_start, length: arms.length(), },
         offset,
       )
     }
@@ -367,13 +367,17 @@ fn CollectionBuilder::finish_expr_source(
       self.body_arm_results.truncate(second_start)
       HirWhileExpr(
         self.body_expr_results[first_start],
-        { start: arm_start, length: arms.length() },
+        { start: arm_start, length: arms.length(), },
         offset,
       )
     }
     @parser.ReturnExpr(value, offset) =>
       HirReturnExpr(
-        if value is Some(_) { self.body_expr_results[first_start] } else { -1 },
+        if value is Some(_) {
+          self.body_expr_results[first_start]
+        } else {
+          -1
+        },
         offset,
       )
     @parser.BreakExpr(_, offset) =>
@@ -404,7 +408,7 @@ fn CollectionBuilder::finish_expr_source(
       }
       HirCallExpr(
         target,
-        { start: argument_start, length: arguments.length() },
+        { start: argument_start, length: arguments.length(), },
         offset,
       )
     }
@@ -545,7 +549,7 @@ fn CollectionBuilder::finish_block_source(
   self.body_expr_results.truncate(expr_start)
   let id = self.blocks.length()
   self.blocks.push({
-    items: { start: item_start, length: source.items.length() },
+    items: { start: item_start, length: source.items.length(), },
     offset: source.offset,
   })
   self.block_files.push(self.current_file)
@@ -637,7 +641,7 @@ fn CollectionBuilder::finish_pattern_source(
       }
       HirTuplePattern(
         self.body_pattern_results[first_start],
-        { start: argument_start, length: arguments.length() },
+        { start: argument_start, length: arguments.length(), },
         offset,
       )
     }
@@ -657,7 +661,7 @@ fn CollectionBuilder::finish_pattern_source(
       }
       HirStructPattern(
         self.body_pattern_results[first_start],
-        { start: field_start, length: fields.length() },
+        { start: field_start, length: fields.length(), },
         has_rest,
         rest_offset,
         offset,
@@ -672,7 +676,7 @@ fn CollectionBuilder::finish_pattern_source(
       }
       HirAlternativePattern(
         self.body_pattern_results[first_start],
-        { start: alternative_start, length: remaining.length() },
+        { start: alternative_start, length: remaining.length(), },
         offset,
       )
     }
@@ -803,7 +807,7 @@ fn CollectionBuilder::append_body(
       start: expression_child_start,
       length: self.expression_children.length() - expression_child_start,
     },
-    blocks: { start: block_start, length: self.blocks.length() - block_start },
+    blocks: { start: block_start, length: self.blocks.length() - block_start, },
     block_items: {
       start: block_item_start,
       length: self.block_items.length() - block_item_start,

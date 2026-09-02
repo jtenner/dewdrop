@@ -31,6 +31,12 @@ fn self_host_flow_u32_at(values: Array<U32>, index: U32) -> U32 {
   array_get_unchecked(values, index)
 }
 
+// This helper keeps flow work stacks on the U32 carrier.
+// The backend uses this type as compile-time proof for Array operations.
+fn self_host_flow_u32_stack(value: U32) -> Array<U32> {
+  [value]
+}
+
 pub enum SelfHostBodyFlowDiagnostic {
   NonExhaustiveMatch(U32, SelfHostHirSpan, U32)
   NonExhaustiveFunctionalLoop(U32, SelfHostHirSpan, U32)
@@ -310,10 +316,7 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn block_item_offset(self, item: SelfHostHirBlockItem) -> U32 {
-    match item {
-      SelfHostHirBlockItem::LetItem(_, _, _, _, offset) => offset
-      SelfHostHirBlockItem::ExpressionItem(_, offset) => offset
-    }
+    item.offset
   }
 
   fn block_flow(self, block: U32) -> SelfHostBodyFlowSummary {
@@ -336,14 +339,7 @@ impl SelfHostBodyFlowAnalyzer {
             self.block_item_offset(item),
           ))
         } else {
-          let item_flow = match item {
-            SelfHostHirBlockItem::LetItem(_, _, _, value, _) => {
-              self.expression_flow(value)
-            }
-            SelfHostHirBlockItem::ExpressionItem(value, _) => {
-              self.expression_flow(value)
-            }
-          }
+          let item_flow = self.expression_flow(item.value)
           result = self_host_flow_sequence(result, item_flow)
         }
         continue current + 1u32
@@ -439,41 +435,32 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn pattern_catches_all(self, pattern: U32) -> Bool {
-    let tasks = [pattern]
-    while tasks.length() {
-      length => if self_host_u32_greater(length, 0u32) {
-        let current = self_host_flow_u32_at(tasks, length - 1u32)
-        tasks.truncate(length - 1u32)
-        match self.collected.patterns[current] {
-          SelfHostHirPattern::WildcardPattern(_) => {
-            return true
-          }
-          SelfHostHirPattern::BindingPattern(_, _) => {
-            return true
-          }
-          SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
-            let mut index = alternatives.length
-            let _ = while index {
-              alternative => if self_host_u32_greater(alternative, 0u32) {
-                let previous = alternative - 1u32
-                tasks.push(
-                  self.collected.pattern_children[
-                    self_host_u32_add(alternatives.start, previous)
-                  ],
-                )
-                continue previous
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-            tasks.push(first)
-          }
-          _ => {}
+    if pattern >= self.collected.patterns.length() {
+      return false
+    }
+    match self.collected.patterns[pattern] {
+      SelfHostHirPattern::WildcardPattern(_) => true
+      SelfHostHirPattern::BindingPattern(_, _) => true
+      SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
+        if self.pattern_catches_all(first) {
+          return true
         }
-        continue tasks.length()
-      } else {
-        break false
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < alternatives.length {
+            let child = self_host_u32_add(alternatives.start, current)
+            if child < self.collected.pattern_children.length() &&
+              self.pattern_catches_all(self.collected.pattern_children[child]) {
+              return true
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        false
       }
+      _ => false
     }
   }
 
@@ -529,40 +516,41 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn pattern_covers_bool(self, pattern: U32, value: Bool) -> Bool {
-    let tasks = [pattern]
-    while tasks.length() {
-      length => if self_host_u32_greater(length, 0u32) {
-        let current = self_host_flow_u32_at(tasks, length - 1u32)
-        tasks.truncate(length - 1u32)
-        match self.collected.patterns[current] {
-          SelfHostHirPattern::LiteralPattern(expression, _) => match self.collected.expressions[
-            expression
-          ] {
-            SelfHostHirExpr::BoolExpr(candidate, _) => if candidate == value {
+    if pattern >= self.collected.patterns.length() {
+      return false
+    }
+    match self.collected.patterns[pattern] {
+      SelfHostHirPattern::LiteralPattern(expression, _) => if expression < self.collected.expressions.length() {
+        match self.collected.expressions[expression] {
+          SelfHostHirExpr::BoolExpr(candidate, _) => candidate == value
+          _ => false
+        }
+      } else {
+        false
+      }
+      SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
+        if self.pattern_covers_bool(first, value) {
+          return true
+        }
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < alternatives.length {
+            let child = self_host_u32_add(alternatives.start, current)
+            if child < self.collected.pattern_children.length() &&
+              self.pattern_covers_bool(
+                self.collected.pattern_children[child],
+                value,
+              ) {
               return true
             }
-            _ => {}
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
           }
-          SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
-            tasks.push(first)
-            let mut index = 0u32
-            let _ = while index {
-              candidate => if candidate < alternatives.length {
-                tasks.push(self.collected.pattern_children[
-                  self_host_u32_add(alternatives.start, candidate)
-                ])
-                continue candidate + 1u32
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-          }
-          _ => {}
         }
-        continue tasks.length()
-      } else {
-        break false
+        false
       }
+      _ => false
     }
   }
 
@@ -593,41 +581,35 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn pattern_covers_variant(self, pattern: U32, variant: U64) -> Bool {
-    let tasks = [pattern]
-    while tasks.length() {
-      length => if self_host_u32_greater(length, 0u32) {
-        let current = self_host_flow_u32_at(tasks, length - 1u32)
-        tasks.truncate(length - 1u32)
-        match self.collected.patterns[current] {
-          SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
-            tasks.push(first)
-            let mut index = 0u32
-            let _ = while index {
-              candidate => if candidate < alternatives.length {
-                tasks.push(self.collected.pattern_children[
-                  self_host_u32_add(alternatives.start, candidate)
-                ])
-                continue candidate + 1u32
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-          }
-          _ => match self.pattern_variant(current) {
-            Option::Some(candidate) => if self_host_u64_equal(candidate, variant) {
+    if pattern >= self.collected.patterns.length() {
+      return false
+    }
+    match self.collected.patterns[pattern] {
+      SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
+        if self.pattern_covers_variant(first, variant) {
+          return true
+        }
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < alternatives.length {
+            let child = self_host_u32_add(alternatives.start, current)
+            if child < self.collected.pattern_children.length() &&
+              self.pattern_covers_variant(
+                self.collected.pattern_children[child],
+                variant,
+              ) {
               return true
             }
-            Option::None => if self.qualified_pattern_matches_variant(
-              current,
-              variant,
-            ) {
-              return true
-            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
           }
         }
-        continue tasks.length()
-      } else {
-        break false
+        false
+      }
+      _ => match self.pattern_variant(pattern) {
+        Option::Some(candidate) => self_host_u64_equal(candidate, variant)
+        Option::None => self.qualified_pattern_matches_variant(pattern, variant)
       }
     }
   }

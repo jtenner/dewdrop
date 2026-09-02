@@ -473,8 +473,13 @@ sections without rerunning compiler work.
 
 - `tools/check.sh --quick` is the focused formatting/generated/native loop.
 - `tools/check.sh` is the deterministic top-level scheduler for the full profile.
-  It delegates generated checks, per-target MoonBit tests, CLI/cache/ABI checks,
-  and parity/snapshot suites to directly executable `tools/check-*.sh` runners.
+  It delegates formal proofs, generated checks, per-target MoonBit tests,
+  CLI/cache/ABI checks, and parity/snapshot suites to directly executable tool
+  runners.
+- `tools/test-proofs.sh` runs the proof-enabled `src/compiler_proofs` package.
+  These proofs define the first arena-span, physical-carrier, and dense
+  type-remap obligations for the certified self-host lowering plan and the
+  post-link type compactor.
 - `tests/architecture-cases.json` declaratively records provider artifacts,
   performance budgets, optional consumers/invocations, expected values, and
   required/forbidden WAT properties; `tools/check-architecture-cases.py` runs

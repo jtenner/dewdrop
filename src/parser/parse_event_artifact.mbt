@@ -626,7 +626,7 @@ fn parse_read_type_parameter(
   for index in 0..<count {
     bounds.push(parse_read_type(reader, field + ".bound[\{index}]", depth + 1))
   }
-  { name, bounds, offset: parse_read_offset(reader, field + ".offset") }
+  { name, bounds, offset: parse_read_offset(reader, field + ".offset"), }
 }
 
 ///|
@@ -737,7 +737,7 @@ fn parse_read_receiver(
   } else {
     None
   }
-  Some({ explicit_type, offset: parse_read_offset(reader, field + ".offset") })
+  Some({ explicit_type, offset: parse_read_offset(reader, field + ".offset"), })
 }
 
 ///|
@@ -914,7 +914,7 @@ fn parse_read_block(
       parse_read_block_item(reader, field + ".item[\{index}]", depth + 1),
     )
   }
-  { items, offset: parse_read_offset(reader, field + ".offset") }
+  { items, offset: parse_read_offset(reader, field + ".offset"), }
 }
 
 ///|
@@ -3174,7 +3174,7 @@ fn parse_read_event(
     }
     _ => {
       reader.fail(field, "unknown parse-event discriminant")
-      Diagnostic({ severity: Error, error: ImportAfterDeclaration(0UL) })
+      Diagnostic({ severity: Error, error: ImportAfterDeclaration(0UL), })
     }
   }
 }

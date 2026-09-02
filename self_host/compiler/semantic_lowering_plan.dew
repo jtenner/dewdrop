@@ -222,7 +222,7 @@ fn self_host_lowering_module_value_declaration(
   collected: SelfHostCollectedModule,
   name: U32,
 ) -> U64 {
-  match collected.value_bindings.get(name) {
+  match collected.value_binding(name) {
     Option::Some(binding) => if binding.kind is SelfHostCollectedDeclKind::LetDecl {
       collected.value_binding_candidates[binding.head].declaration
     } else {
@@ -236,12 +236,18 @@ fn self_host_lowering_builtin_name(
   recipes: Array<SelfHostLoweringBuiltinRecipe>,
   declaration: U64,
 ) -> Option<Bytes> {
-  for recipe in recipes {
-    if self_host_u64_equal(recipe.declaration, declaration) {
-      return Option::Some(recipe.builtin_name)
+  let mut index = 0u32
+  while index {
+    current => if current < recipes.length() {
+      let recipe = recipes[current]
+      if self_host_u64_equal(recipe.declaration, declaration) {
+        break Option::Some(recipe.builtin_name)
+      }
+      continue current + 1u32
+    } else {
+      break Option::None
     }
   }
-  Option::None
 }
 
 fn self_host_lowering_function_value_type(
@@ -417,7 +423,7 @@ fn self_host_lowering_expression_kind(
       _ => SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments)
     }
     SelfHostHirExpr::FieldExpr(base, name, _) => match selection {
-      SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, mutable_) => SelfHostPlannedExpressionKind::PlannedFieldGet(field, base, mutable_)
+      SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, mutable_, _) => SelfHostPlannedExpressionKind::PlannedFieldGet(field, base, mutable_)
       _ => SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name)
     }
     SelfHostHirExpr::QualifiedExpr(base, _, _) => match selection {
@@ -449,7 +455,7 @@ fn self_host_lowering_expression_kind(
           target - source_expression_start,
         )
       ] {
-        SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _) => SelfHostPlannedExpressionKind::PlannedFieldSet(field, base, value)
+        SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _, _) => SelfHostPlannedExpressionKind::PlannedFieldSet(field, base, value)
         _ => match self_host_lowering_unique_mutable_field(collected, name) {
           Option::Some(field) => SelfHostPlannedExpressionKind::PlannedFieldSet(
             field,
@@ -591,20 +597,19 @@ fn self_host_lowering_plan_block_item(
   source: SelfHostHirBlockItem,
   local: U32,
 ) -> SelfHostPlannedBlockItem {
-  match source {
-    SelfHostHirBlockItem::LetItem(mutable_, _, _, value, offset) => {
-      SelfHostPlannedBlockItem::{
-        kind: SelfHostPlannedBlockItemKind::PlannedLetItem(
-          local,
-          mutable_,
-          value,
-        )
-        offset: offset
-      }
+  if self_host_hir_block_item_is_let(source) {
+    SelfHostPlannedBlockItem::{
+      kind: SelfHostPlannedBlockItemKind::PlannedLetItem(
+        local,
+        source.mutable_,
+        source.value,
+      )
+      offset: source.offset
     }
-    SelfHostHirBlockItem::ExpressionItem(value, offset) => SelfHostPlannedBlockItem::{
-      kind: SelfHostPlannedBlockItemKind::PlannedExpressionItem(value)
-      offset: offset
+  } else {
+    SelfHostPlannedBlockItem::{
+      kind: SelfHostPlannedBlockItemKind::PlannedExpressionItem(source.value)
+      offset: source.offset
     }
   }
 }

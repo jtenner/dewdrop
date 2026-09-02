@@ -14,7 +14,7 @@ test "for desugars to one iterator binding and an Option while" {
             ),
             ExpressionItem(WhileExpr(initial, arms, _), _),
           ],
-          ..,
+          ..
         }
       )
     ) => {
@@ -43,7 +43,7 @@ test "for desugars to one iterator binding and an Option while" {
               ),
               ExpressionItem(ContinueExpr(next, _), _),
             ],
-            ..,
+            ..
           }
         ) =>
           match next {

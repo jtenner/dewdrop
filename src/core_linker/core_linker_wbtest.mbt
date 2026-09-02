@@ -91,16 +91,19 @@ test "Core Wasm linker replaces a nominal marker with the guest concrete type" {
   let dew = @binary.encode_module(core_link_test_dew_module()).unwrap()
   let guest = @binary.encode_module(core_link_test_guest_module()).unwrap()
   let linked = link_core_wasm_gc_modules(dew, [
-    { provider: "starshine", bytes: guest },
+    { provider: "starshine", bytes: guest, },
   ]).unwrap()
   let module_ = @binary.decode_module(linked).unwrap()
-  @validate.validate_module(module_) |> ignore
+  // This check proves that cleanup keeps all retained type indices valid.
+  assert_eq(@validate.validate_module(module_), Ok(()))
   match module_.import_sec {
     Some(@lib.ImportSec(imports)) => assert_eq(imports.length(), 0)
     None => ()
   }
   match module_.type_sec {
-    Some(@lib.TypeSec(groups)) => assert_eq(groups.length(), 3)
+    Some(@lib.TypeSec(groups)) =>
+      // Cleanup removes the marker and the unused linked import signature.
+      assert_eq(groups.length(), 2)
     None => fail("expected linked types")
   }
   match module_.export_sec {
@@ -279,7 +282,7 @@ test "Core Wasm linker binds nullable markers and remaps ref.null" {
   let guest = @binary.encode_module(core_link_test_nullable_guest_module()).unwrap()
   let linked = link_core_wasm_gc_modules(
     dew,
-    [{ provider: "starshine", bytes: guest }],
+    [{ provider: "starshine", bytes: guest, }],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -310,7 +313,7 @@ test "Core Wasm linker rejects nullable Dew and non-null guest mismatch" {
     core_link_test_non_nullable_maybe_guest_module(),
   ).unwrap()
   match
-    link_core_wasm_gc_modules(dew, [{ provider: "starshine", bytes: guest }]) {
+    link_core_wasm_gc_modules(dew, [{ provider: "starshine", bytes: guest, }]) {
     Err(CoreWasmSignatureMismatch("starshine", "maybe")) => ()
     _ => fail("expected nullable-to-non-null signature mismatch")
   }
@@ -323,7 +326,7 @@ test "Core Wasm linker rejects non-null Dew and nullable guest mismatch" {
   ).unwrap()
   let guest = @binary.encode_module(core_link_test_nullable_guest_module()).unwrap()
   match
-    link_core_wasm_gc_modules(dew, [{ provider: "starshine", bytes: guest }]) {
+    link_core_wasm_gc_modules(dew, [{ provider: "starshine", bytes: guest, }]) {
     Err(CoreWasmSignatureMismatch("starshine", "maybe")) => ()
     _ => fail("expected non-null-to-nullable signature mismatch")
   }
@@ -376,7 +379,7 @@ test "Core Wasm linker coalesces exact packed array types without an adapter" {
   let guest = @binary.encode_module(core_link_test_string_guest_module()).unwrap()
   let linked = link_core_wasm_gc_modules(
     dew,
-    [{ provider: "starshine", bytes: guest }],
+    [{ provider: "starshine", bytes: guest, }],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -488,10 +491,12 @@ fn core_link_test_i32_array_guest_module() -> @lib.Module {
 test "Core Wasm linker coalesces exact non-packed numeric array types" {
   let linked = link_core_wasm_gc_modules(
     @binary.encode_module(core_link_test_i32_array_dew_module()).unwrap(),
-    [{
-      provider: "facet",
-      bytes: @binary.encode_module(core_link_test_i32_array_guest_module()).unwrap(),
-    }],
+    [
+      {
+        provider: "facet",
+        bytes: @binary.encode_module(core_link_test_i32_array_guest_module()).unwrap(),
+      },
+    ],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -499,7 +504,10 @@ test "Core Wasm linker coalesces exact non-packed numeric array types" {
       preserve_dew_memory_zero: true,
     },
   ).unwrap()
-  assert_eq(@validate.validate_module(@binary.decode_module(linked).unwrap()), Ok(()))
+  assert_eq(
+    @validate.validate_module(@binary.decode_module(linked).unwrap()),
+    Ok(()),
+  )
 }
 
 ///|
@@ -618,7 +626,7 @@ test "Core Wasm linker adds the Dew String to MoonBit String adapter" {
   let guest = @binary.encode_module(core_link_test_string_guest_module()).unwrap()
   let linked = link_core_wasm_gc_modules(
     dew,
-    [{ provider: "starshine", bytes: guest }],
+    [{ provider: "starshine", bytes: guest, }],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -721,7 +729,7 @@ test "Core Wasm linker keeps Dew and guest memories separate" {
     )
   let linked = link_core_wasm_gc_modules(
     @binary.encode_module(dew).unwrap(),
-    [{ provider: "starshine", bytes: @binary.encode_module(guest).unwrap() }],
+    [{ provider: "starshine", bytes: @binary.encode_module(guest).unwrap(), }],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -796,7 +804,7 @@ test "Core Wasm linker keeps Dew memory zero for Facet providers" {
     )
   let linked = link_core_wasm_gc_modules(
     @binary.encode_module(dew).unwrap(),
-    [{ provider: "facet", bytes: @binary.encode_module(guest).unwrap() }],
+    [{ provider: "facet", bytes: @binary.encode_module(guest).unwrap(), }],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -836,9 +844,7 @@ test "Core Wasm linker reports missing providers" {
 ///|
 test "Core Wasm linker binds an exact direct import module provider" {
   let signature = @lib.RecType::new(
-    @lib.SubType::comp_type(
-      @lib.CompType::func([], [@lib.ValType::i64()]),
-    ),
+    @lib.SubType::comp_type(@lib.CompType::func([], [@lib.ValType::i64()])),
   )
   let dew = @lib.Module::new()
     .with_type_sec(@lib.TypeSec::new([signature]))
@@ -889,10 +895,12 @@ test "Core Wasm linker binds an exact direct import module provider" {
     )
   let linked = link_core_wasm_gc_modules(
     @binary.encode_module(dew).unwrap(),
-    [{
-      provider: "__moonbit_time_unstable",
-      bytes: @binary.encode_module(provider).unwrap(),
-    }],
+    [
+      {
+        provider: "__moonbit_time_unstable",
+        bytes: @binary.encode_module(provider).unwrap(),
+      },
+    ],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -909,10 +917,9 @@ test "Core Wasm linker binds an exact direct import module provider" {
 fn core_link_test_erased_reference_dew_module() -> @lib.Module {
   let signature = @lib.RecType::new(
     @lib.SubType::comp_type(
-      @lib.CompType::func(
-        [@lib.ValType::eqref_null()],
-        [@lib.ValType::eqref_null()],
-      ),
+      @lib.CompType::func([@lib.ValType::eqref_null()], [
+        @lib.ValType::eqref_null(),
+      ]),
     ),
   )
   @lib.Module::new()
@@ -980,9 +987,7 @@ fn core_link_test_concrete_reference_guest_module() -> @lib.Module {
     @lib.CodeSec::new([
       @lib.Func::new(
         @lib.Locals::empty(),
-        @lib.Expr::new([
-          @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
-        ]),
+        @lib.Expr::new([@lib.Instruction::local_get(@lib.LocalIdx::new(0U))]),
       ),
     ]),
   )
@@ -991,8 +996,8 @@ fn core_link_test_concrete_reference_guest_module() -> @lib.Module {
 ///|
 test "Core Wasm linker does not classify Facet i16 arrays as Strings" {
   let dew = match core_link_test_erased_reference_dew_module().import_sec {
-    Some(@lib.ImportSec([@lib.Import(_, name, type_)])) => core_link_test_erased_reference_dew_module()
-      .with_import_sec(
+    Some(@lib.ImportSec([@lib.Import(_, name, type_)])) =>
+      core_link_test_erased_reference_dew_module().with_import_sec(
         @lib.ImportSec::new([
           @lib.Import::new(@lib.Name::from_string("link:facet"), name, type_),
         ]),
@@ -1029,15 +1034,13 @@ test "Core Wasm linker does not classify Facet i16 arrays as Strings" {
       @lib.CodeSec::new([
         @lib.Func::new(
           @lib.Locals::empty(),
-          @lib.Expr::new([
-            @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
-          ]),
+          @lib.Expr::new([@lib.Instruction::local_get(@lib.LocalIdx::new(0U))]),
         ),
       ]),
     )
   let linked = link_core_wasm_gc_modules(
     @binary.encode_module(dew).unwrap(),
-    [{ provider: "facet", bytes: @binary.encode_module(guest).unwrap() }],
+    [{ provider: "facet", bytes: @binary.encode_module(guest).unwrap(), }],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -1045,19 +1048,24 @@ test "Core Wasm linker does not classify Facet i16 arrays as Strings" {
       preserve_dew_memory_zero: true,
     },
   ).unwrap()
-  assert_eq(@validate.validate_module(@binary.decode_module(linked).unwrap()), Ok(()))
+  assert_eq(
+    @validate.validate_module(@binary.decode_module(linked).unwrap()),
+    Ok(()),
+  )
 }
 
 ///|
 test "Core Wasm linker adapts erased eqref parameters to concrete provider references" {
   let linked = link_core_wasm_gc_modules(
     @binary.encode_module(core_link_test_erased_reference_dew_module()).unwrap(),
-    [{
-      provider: "starshine",
-      bytes: @binary.encode_module(
-        core_link_test_concrete_reference_guest_module(),
-      ).unwrap(),
-    }],
+    [
+      {
+        provider: "starshine",
+        bytes: @binary.encode_module(
+          core_link_test_concrete_reference_guest_module(),
+        ).unwrap(),
+      },
+    ],
     options={
       keep_guest_exports: false,
       validate_each_phase: true,
@@ -1071,18 +1079,25 @@ test "Core Wasm linker adapts erased eqref parameters to concrete provider refer
     Some(@lib.CodeSec(functions)) => {
       assert_eq(functions.length(), 3)
       match functions[0] {
-        @lib.Func(_, @lib.Expr([
-          @lib.LocalGet(@lib.LocalIdx(0U)),
-          @lib.Call(@lib.FuncIdx(2U)),
-        ])) => ()
+        @lib.Func(
+          _,
+          @lib.Expr(
+            [@lib.LocalGet(@lib.LocalIdx(0U)), @lib.Call(@lib.FuncIdx(2U))]
+          )
+        ) => ()
         _ => fail("expected Dew call to use the reference adapter")
       }
       match functions[2] {
-        @lib.Func(_, @lib.Expr([
-          @lib.LocalGet(@lib.LocalIdx(0U)),
-          @lib.RefCast(_, _, _),
-          @lib.Call(@lib.FuncIdx(1U)),
-        ])) => ()
+        @lib.Func(
+          _,
+          @lib.Expr(
+            [
+              @lib.LocalGet(@lib.LocalIdx(0U)),
+              @lib.RefCast(_, _, _),
+              @lib.Call(@lib.FuncIdx(1U)),
+            ]
+          )
+        ) => ()
         _ => fail("expected eqref-to-concrete cast adapter")
       }
     }

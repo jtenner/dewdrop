@@ -1,5 +1,6 @@
 open dew.std.bytes
 open dew.std.option
+open dew.std.string
 
 pub struct SelfHostPlannedProgramWasmType {
   module_index: U32
@@ -34,8 +35,8 @@ pub struct SelfHostPlannedProgramSpecializedCallLink {
 }
 
 pub enum SelfHostProgramWasmGCLinkDiagnostic {
-  MissingLinkedSpecialization(U64, U32)
-  MissingLinkedCallTarget(U64, U32)
+  MissingLinkedSpecialization(U64, U32, U64, U32, U32)
+  MissingLinkedCallTarget(U64, U32, U64, U32, U32)
 }
 
 pub struct SelfHostPlannedProgramWasmGCLink {
@@ -48,6 +49,8 @@ pub struct SelfHostPlannedProgramWasmGCLink {
   imported_function_count: U32
   defined_function_count: U32
   global_count: U32
+  array_module_id: U64
+  map_module_id: U64
   diagnostics: Array<SelfHostProgramWasmGCLinkDiagnostic>
 }
 
@@ -85,17 +88,62 @@ fn self_host_program_link_is_runtime_builtin(name: Bytes) -> Bool {
   name.starts_with(b"dew_bench_wasi_")
 }
 
+fn self_host_program_link_runtime_builtin_module_id(
+  fragments: SelfHostPlannedProgramWasmGCFragments,
+  name: Bytes,
+) -> U64 {
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current_module => if current_module < fragments.modules.length() {
+      let module_ = fragments.modules[current_module]
+      let mut function_index = 0u32
+      let _ = while function_index {
+        current_function => if current_function < self_host_program_link_fragment_function_count(
+          module_,
+        ) {
+          let function_ = self_host_program_link_fragment_function(
+            module_,
+            current_function,
+          )
+          match function_.kind {
+            SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(
+              builtin_name,
+            ) => if builtin_name.equals(name) {
+              return module_.module_id
+            }
+            _ => {}
+          }
+          continue current_function + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  0u64
+}
+
+fn self_host_program_link_is_carrier_independent_runtime_builtin(
+  name: Bytes,
+) -> Bool {
+  // Array capacity changes allocation policy. It does not read or store an element carrier.
+  name.equals(b"dew_array_with_capacity")
+}
+
 fn self_host_program_link_is_emitted(
   function_: SelfHostPlannedWasmFunctionFragment,
 ) -> Bool {
-  if function_.elided {
-    false
-  } else {
-    match function_.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => self_host_program_link_is_runtime_builtin(name)
-      SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction => false
-      _ => true
+  match function_.kind {
+    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if function_.elided {
+      self_host_program_link_is_carrier_independent_runtime_builtin(name)
+    } else {
+      self_host_program_link_is_runtime_builtin(name)
     }
+    SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction => false
+    _ => !function_.elided
   }
 }
 
@@ -113,10 +161,129 @@ fn self_host_program_link_function(
   Option::None
 }
 
+fn self_host_program_link_call_requires_function(
+  fragments: SelfHostPlannedProgramWasmGCFragments,
+  declaration: U64,
+  specialization: U32,
+) -> Bool {
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current_module => if current_module < fragments.modules.length() {
+      let module_ = fragments.modules[current_module]
+      let mut fragment_index = 0u32
+      let _ = while fragment_index {
+        current_fragment => if current_fragment < self_host_program_link_fragment_function_count(
+          module_,
+        ) {
+          let function_ = self_host_program_link_fragment_function(
+            module_,
+            current_fragment,
+          )
+          if self_host_u64_equal(function_.declaration, declaration) &&
+            self_host_u32_equal(function_.specialization, specialization) {
+            match function_.kind {
+              SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => return self_host_program_link_is_runtime_builtin(name)
+              _ => return true
+            }
+          }
+          continue current_fragment + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  true
+}
+
+fn self_host_program_link_fragment_exists(
+  fragments: SelfHostPlannedProgramWasmGCFragments,
+  declaration: U64,
+  specialization: U32,
+) -> Bool {
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current_module => if current_module < fragments.modules.length() {
+      let module_ = fragments.modules[current_module]
+      let mut fragment_index = 0u32
+      let _ = while fragment_index {
+        current_fragment => if current_fragment < self_host_program_link_fragment_function_count(
+          module_,
+        ) {
+          let function_ = self_host_program_link_fragment_function(
+            module_,
+            current_fragment,
+          )
+          if self_host_u64_equal(function_.declaration, declaration) &&
+            self_host_u32_equal(function_.specialization, specialization) {
+            return true
+          }
+          continue current_fragment + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  false
+}
+
 fn self_host_program_link_fragment_function_count(
   module_: SelfHostPlannedModuleWasmGCFragments,
 ) -> U32 {
   module_.functions.length()
+}
+
+fn self_host_program_link_fragment_field_count(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+) -> U32 {
+  module_.fields.length()
+}
+
+fn self_host_program_link_fragment_field(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  index: U32,
+) -> SelfHostPlannedWasmField {
+  module_.fields[index]
+}
+
+fn self_host_program_link_layout_field_count(
+  module_: SelfHostPlannedModuleLowering,
+) -> U32 {
+  module_.type_layouts.fields.length()
+}
+
+fn self_host_program_link_layout_field(
+  module_: SelfHostPlannedModuleLowering,
+  index: U32,
+) -> SelfHostPlannedFieldLayout {
+  module_.type_layouts.fields[index]
+}
+
+fn self_host_program_link_layout_variant_count(
+  module_: SelfHostPlannedModuleLowering,
+) -> U32 {
+  module_.type_layouts.variants.length()
+}
+
+fn self_host_program_link_layout_variant(
+  module_: SelfHostPlannedModuleLowering,
+  index: U32,
+) -> SelfHostPlannedVariantLayout {
+  module_.type_layouts.variants[index]
+}
+
+fn self_host_program_link_payload_type(
+  module_: SelfHostPlannedModuleLowering,
+  index: U32,
+) -> U32 {
+  module_.type_layouts.payload_types[index]
 }
 
 fn self_host_program_link_fragment_function(
@@ -283,6 +450,522 @@ fn self_host_program_link_initializers(
   initializers
 }
 
+fn self_host_program_link_append_declaration_identity(
+  message: StringBuilder,
+  declaration: U64,
+) -> Unit {
+  message.append(" module=")
+  message.append_u64(self_host_semantic_id_module(declaration))
+  message.append(" local=")
+  message.append_u32(self_host_semantic_id_local(declaration))
+}
+
+fn self_host_program_link_append_fragment_detail(
+  message: StringBuilder,
+  fragments: SelfHostPlannedProgramWasmGCFragments,
+  declaration: U64,
+  specialization: U32,
+) -> Unit {
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current_module => if current_module < fragments.modules.length() {
+      let module_ = fragments.modules[current_module]
+      let mut fragment_index = 0u32
+      let _ = while fragment_index {
+        current_fragment => if current_fragment < self_host_program_link_fragment_function_count(
+          module_,
+        ) {
+          let function_ = self_host_program_link_fragment_function(
+            module_,
+            current_fragment,
+          )
+          if self_host_u64_equal(function_.declaration, declaration) &&
+            self_host_u32_equal(function_.specialization, specialization) {
+            message.append(" fragment_elided=")
+            if function_.elided {
+              message.append("true")
+            } else {
+              message.append("false")
+            }
+            message.append(" fragment_kind=")
+            match function_.kind {
+              SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => {
+                message.append("builtin:")
+                message.append(bytes_to_string(name))
+              }
+              SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _) => message.append("import")
+              SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(_) => message.append("defined")
+              SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction => message.append("signature")
+            }
+            return self_host_semantic_unit()
+          }
+          continue current_fragment + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_program_link_append_caller_detail(
+  message: StringBuilder,
+  link: SelfHostPlannedProgramWasmGCLink,
+  caller_body: U64,
+  expression: U32,
+) -> Unit {
+  let caller_module = self_host_semantic_id_module(caller_body)
+  let lowering = link.fragments.specialization.lowering
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < lowering.modules.length() {
+      let module_ = lowering.modules[current]
+      if self_host_u64_equal(module_.module_id, caller_module) {
+        match self_host_program_specialization_body(module_, caller_body) {
+          Option::Some(body) => {
+            message.append(" caller_declaration=")
+            message.append_u64(body.declaration)
+            match self_host_program_specialization_callable(
+              module_,
+              body.declaration,
+            ) {
+              Option::Some(callable) => {
+                message.append(" caller_name=")
+                message.append(bytes_to_string(callable.name))
+              }
+              Option::None => message.append(" caller_callable=missing")
+            }
+          }
+          Option::None => message.append(" caller_body=missing")
+        }
+        if expression < module_.expressions.length() {
+          let source_name = module_.expressions[expression].source_name
+          if source_name < self_host_program_specialization_module_name_count(
+            module_,
+          ) {
+            message.append(" source_name=")
+            message.append(self_host_program_specialization_module_name_at(
+              module_,
+              source_name,
+            ))
+          }
+        }
+        break self_host_semantic_unit()
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_program_representation_storage_code(
+  storage: SelfHostPlannedWasmStorageType,
+) -> I32 {
+  match storage {
+    SelfHostPlannedWasmStorageType::WasmI32Storage => 0i32
+    SelfHostPlannedWasmStorageType::WasmI64Storage => 1i32
+    SelfHostPlannedWasmStorageType::WasmF32Storage => 2i32
+    SelfHostPlannedWasmStorageType::WasmF64Storage => 3i32
+    SelfHostPlannedWasmStorageType::WasmV128Storage => 4i32
+    SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage => 5i32
+    SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage => 6i32
+  }
+}
+
+fn self_host_program_representation_storage_shape(
+  storage: SelfHostPlannedWasmStorageType,
+) -> SelfHostPlannedValueShape {
+  match storage {
+    SelfHostPlannedWasmStorageType::WasmI32Storage => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmI64Storage => SelfHostPlannedValueShape::I64PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmF32Storage => SelfHostPlannedValueShape::F32PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmF64Storage => SelfHostPlannedValueShape::F64PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmV128Storage => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage => SelfHostPlannedValueShape::RefPlannedValueShape
+  }
+}
+
+fn self_host_program_representation_storage_matches_shape(
+  storage: SelfHostPlannedWasmStorageType,
+  shape: SelfHostPlannedValueShape,
+) -> Bool {
+  match self_host_specialization_canonical_scalar(shape) {
+    SelfHostPlannedValueShape::I32PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI32Storage
+    SelfHostPlannedValueShape::I64PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI64Storage
+    SelfHostPlannedValueShape::F32PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmF32Storage
+    SelfHostPlannedValueShape::F64PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmF64Storage
+    SelfHostPlannedValueShape::V128PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmV128Storage
+    SelfHostPlannedValueShape::RefPlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage ||
+      storage is SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage
+    SelfHostPlannedValueShape::ProductPlannedValueShape(_) => storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+    _ => false
+  }
+}
+
+fn self_host_program_representation_shape_name(
+  shape: SelfHostPlannedValueShape,
+) -> String {
+  match self_host_specialization_canonical_scalar(shape) {
+    SelfHostPlannedValueShape::ErrorPlannedValueShape => "error"
+    SelfHostPlannedValueShape::UnitPlannedValueShape => "unit"
+    SelfHostPlannedValueShape::NeverPlannedValueShape => "never"
+    SelfHostPlannedValueShape::I32PlannedValueShape => "i32"
+    SelfHostPlannedValueShape::I64PlannedValueShape => "i64"
+    SelfHostPlannedValueShape::F32PlannedValueShape => "f32"
+    SelfHostPlannedValueShape::F64PlannedValueShape => "f64"
+    SelfHostPlannedValueShape::V128PlannedValueShape => "v128"
+    SelfHostPlannedValueShape::RefPlannedValueShape => "ref"
+    SelfHostPlannedValueShape::ProductPlannedValueShape(_) => "product"
+    _ => "scalar"
+  }
+}
+
+fn self_host_program_representation_shape_carrier_code(
+  shape: SelfHostPlannedValueShape,
+) -> I32 {
+  match self_host_specialization_canonical_scalar(shape) {
+    SelfHostPlannedValueShape::UnitPlannedValueShape => -1i32
+    SelfHostPlannedValueShape::NeverPlannedValueShape => -1i32
+    SelfHostPlannedValueShape::I32PlannedValueShape => 0i32
+    SelfHostPlannedValueShape::I64PlannedValueShape => 1i32
+    SelfHostPlannedValueShape::F32PlannedValueShape => 2i32
+    SelfHostPlannedValueShape::F64PlannedValueShape => 3i32
+    SelfHostPlannedValueShape::V128PlannedValueShape => 4i32
+    SelfHostPlannedValueShape::RefPlannedValueShape => 5i32
+    SelfHostPlannedValueShape::ProductPlannedValueShape(_) => 5i32
+    _ => -2i32
+  }
+}
+
+fn self_host_program_representation_value_type_shape(
+  value: SelfHostPlannedWasmValueType,
+) -> SelfHostPlannedValueShape {
+  match value {
+    SelfHostPlannedWasmValueType::WasmI32Value => SelfHostPlannedValueShape::I32PlannedValueShape
+    SelfHostPlannedWasmValueType::WasmI64Value => SelfHostPlannedValueShape::I64PlannedValueShape
+    SelfHostPlannedWasmValueType::WasmF32Value => SelfHostPlannedValueShape::F32PlannedValueShape
+    SelfHostPlannedWasmValueType::WasmF64Value => SelfHostPlannedValueShape::F64PlannedValueShape
+    SelfHostPlannedWasmValueType::WasmV128Value => SelfHostPlannedValueShape::V128PlannedValueShape
+    SelfHostPlannedWasmValueType::WasmNullableEqRefValue => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPlannedWasmValueType::WasmNullableFuncRefValue => SelfHostPlannedValueShape::RefPlannedValueShape
+  }
+}
+
+fn self_host_program_representation_fragment_result_shape(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  function_: SelfHostPlannedWasmFunctionFragment,
+) -> SelfHostPlannedValueShape {
+  if self_host_u32_equal(function_.results.length, 0u32) {
+    SelfHostPlannedValueShape::UnitPlannedValueShape
+  } else if self_host_u32_equal(function_.results.length, 1u32) &&
+    function_.results.start < module_.function_value_types.length() {
+    self_host_program_representation_value_type_shape(
+      module_.function_value_types[function_.results.start],
+    )
+  } else {
+    SelfHostPlannedValueShape::ErrorPlannedValueShape
+  }
+}
+
+fn self_host_validate_program_representation(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> Option<String> {
+  let lowering = link.fragments.specialization.lowering
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current_module => if current_module < link.fragments.modules.length() &&
+      current_module < lowering.modules.length() {
+      let fragment_module = link.fragments.modules[current_module]
+      let lowering_module = lowering.modules[current_module]
+      let mut function_index = 0u32
+      let _ = while function_index {
+        current_function => if current_function < self_host_program_link_fragment_function_count(
+          fragment_module,
+        ) {
+          let function_ = self_host_program_link_fragment_function(
+            fragment_module,
+            current_function,
+          )
+          match self_host_program_specialization_callable(
+            lowering_module,
+            function_.declaration,
+          ) {
+            Option::Some(callable) => if self_host_u32_equal(
+              self_host_program_specialization_callable_generics(callable).length,
+              0u32,
+            ) && self_host_u32_equal(
+              callable.owner_generic_parameters.length,
+              0u32,
+            ) && !callable.has_receiver {
+              let expected = self_host_planned_resolved_value_shape(
+                lowering_module.resolved_types,
+                callable.result_type,
+              )
+              let actual = self_host_program_representation_fragment_result_shape(
+                fragment_module,
+                function_,
+              )
+              let expected_carrier = self_host_program_representation_shape_carrier_code(
+                expected,
+              )
+              let actual_carrier = self_host_program_representation_shape_carrier_code(
+                actual,
+              )
+              if expected_carrier >= -1i32 && expected_carrier != actual_carrier {
+                // A retained non-generic function must use its declared result carrier.
+                let message = StringBuilder::new()
+                message.append("program representation function result carrier mismatch module=")
+                message.append_u64(lowering_module.module_id)
+                message.append(" declaration=")
+                message.append_u64(function_.declaration)
+                message.append(" name=")
+                message.append(bytes_to_string(callable.name))
+                message.append(" specialization=")
+                message.append_u32(function_.specialization)
+                message.append(" expected=")
+                message.append(self_host_program_representation_shape_name(expected))
+                message.append(" actual=")
+                message.append(self_host_program_representation_shape_name(actual))
+                message.append(" planned=")
+                message.append(self_host_program_representation_shape_name(
+                  callable.result_shape,
+                ))
+                message.append(" logical_type=")
+                message.append_u32(callable.result_type)
+                message.append(" fragment_slot=")
+                message.append_u32(current_function)
+                return Option::Some(message.finish())
+              }
+            }
+            Option::None => {}
+          }
+          continue current_function + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let mut physical_field_index = 0u32
+      let _ = while physical_field_index {
+        current_field => if current_field < self_host_program_link_fragment_field_count(
+          fragment_module,
+        ) {
+          let physical_field = self_host_program_link_fragment_field(
+            fragment_module,
+            current_field,
+          )
+          match physical_field.role {
+            SelfHostPlannedWasmFieldRole::WasmStructField(field_declaration) => {
+              let mut layout_field_index = 0u32
+              let _ = while layout_field_index {
+                current_layout => if current_layout < self_host_program_link_layout_field_count(
+                  lowering_module,
+                ) {
+                  let layout_field = self_host_program_link_layout_field(
+                    lowering_module,
+                    current_layout,
+                  )
+                  if self_host_u64_equal(
+                    layout_field.field,
+                    field_declaration,
+                  ) {
+                    let expected = self_host_planned_resolved_value_shape(
+                      lowering_module.resolved_types,
+                      layout_field.type_,
+                    )
+                    let actual = self_host_program_representation_storage_shape(
+                      physical_field.storage,
+                    )
+                    if !self_host_program_representation_storage_matches_shape(
+                      physical_field.storage,
+                      expected,
+                    ) {
+                      // A physical field must use the carrier of its declared source type.
+                      let message = StringBuilder::new()
+                      message.append("program representation field carrier mismatch module=")
+                      message.append_u64(lowering_module.module_id)
+                      message.append(" field=")
+                      message.append_u64(layout_field.field)
+                      message.append(" name=")
+                      message.append(layout_field.name)
+                      message.append(" expected=")
+                      message.append(self_host_program_representation_shape_name(expected))
+                      message.append(" actual=")
+                      message.append(self_host_program_representation_shape_name(actual))
+                      message.append(" physical_slot=")
+                      message.append_u32(current_field)
+                      message.append(" physical_index=")
+                      message.append_u32(physical_field.physical_index)
+                      message.append(" layout_slot=")
+                      message.append_u32(current_layout)
+                      message.append(" logical_type=")
+                      message.append_u32(layout_field.type_)
+                      return Option::Some(message.finish())
+                    }
+                    break self_host_semantic_unit()
+                  }
+                  continue current_layout + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(
+              variant_declaration,
+              payload_index,
+            ) => {
+              let mut variant_index = 0u32
+              let _ = while variant_index {
+                current_variant => if current_variant < self_host_program_link_layout_variant_count(
+                  lowering_module,
+                ) {
+                  let variant = self_host_program_link_layout_variant(
+                    lowering_module,
+                    current_variant,
+                  )
+                  if self_host_u64_equal(
+                    variant.variant,
+                    variant_declaration,
+                  ) {
+                    match variant.payload {
+                      SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(
+                        payload,
+                      ) => if payload_index < payload.length {
+                        let logical_type = self_host_program_link_payload_type(
+                          lowering_module,
+                          self_host_u32_add(payload.start, payload_index),
+                        )
+                        let expected = self_host_planned_resolved_value_shape(
+                          lowering_module.resolved_types,
+                          logical_type,
+                        )
+                        if !self_host_program_representation_storage_matches_shape(
+                          physical_field.storage,
+                          expected,
+                        ) {
+                          let message = StringBuilder::new()
+                          message.append("program representation variant carrier mismatch module=")
+                          message.append_u64(lowering_module.module_id)
+                          message.append(" variant=")
+                          message.append_u64(variant_declaration)
+                          message.append(" payload=")
+                          message.append_u32(payload_index)
+                          message.append(" expected=")
+                          message.append(self_host_program_representation_shape_name(expected))
+                          message.append(" actual=")
+                          message.append(self_host_program_representation_shape_name(
+                            self_host_program_representation_storage_shape(
+                              physical_field.storage,
+                            ),
+                          ))
+                          return Option::Some(message.finish())
+                        }
+                      }
+                      _ => {}
+                    }
+                    break self_host_semantic_unit()
+                  }
+                  continue current_variant + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            _ => {}
+          }
+          continue current_field + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}
+
+fn self_host_validate_program_wasmgc_link(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> Option<String> {
+  if self_host_u32_equal(link.diagnostics.length(), 0u32) {
+    Option::None
+  } else {
+    // Body emission must not repair a missing physical call target.
+    let message = StringBuilder::new()
+    match link.diagnostics[0u32] {
+      SelfHostProgramWasmGCLinkDiagnostic::MissingLinkedSpecialization(
+        declaration,
+        specialization,
+        caller_body,
+        caller_specialization,
+        expression,
+      ) => {
+        message.append("program link has no specialization declaration=")
+        message.append_u64(declaration)
+        message.append(" specialization=")
+        message.append_u32(specialization)
+        self_host_program_link_append_declaration_identity(message, declaration)
+        self_host_program_link_append_fragment_detail(
+          message,
+          link.fragments,
+          declaration,
+          specialization,
+        )
+        message.append(" caller_body=")
+        message.append_u64(caller_body)
+        message.append(" caller_specialization=")
+        message.append_u32(caller_specialization)
+        message.append(" expression=")
+        message.append_u32(expression)
+        self_host_program_link_append_caller_detail(
+          message,
+          link,
+          caller_body,
+          expression,
+        )
+      }
+      SelfHostProgramWasmGCLinkDiagnostic::MissingLinkedCallTarget(
+        declaration,
+        specialization,
+        caller_body,
+        caller_specialization,
+        expression,
+      ) => {
+        message.append("program link has no physical call target declaration=")
+        message.append_u64(declaration)
+        message.append(" specialization=")
+        message.append_u32(specialization)
+        self_host_program_link_append_declaration_identity(message, declaration)
+        self_host_program_link_append_fragment_detail(
+          message,
+          link.fragments,
+          declaration,
+          specialization,
+        )
+        message.append(" caller_body=")
+        message.append_u64(caller_body)
+        message.append(" caller_specialization=")
+        message.append_u32(caller_specialization)
+        message.append(" expression=")
+        message.append_u32(expression)
+        self_host_program_link_append_caller_detail(
+          message,
+          link,
+          caller_body,
+          expression,
+        )
+      }
+    }
+    Option::Some(message.finish())
+  }
+}
+
 fn self_host_plan_program_wasmgc_link(
   fragments: SelfHostPlannedProgramWasmGCFragments,
   emit_tests: Bool,
@@ -305,6 +988,14 @@ fn self_host_plan_program_wasmgc_link(
   )
   let diagnostics = []
   let specialized_calls = []
+  let array_module_id = self_host_program_link_runtime_builtin_module_id(
+    fragments,
+    b"dew_array_new",
+  )
+  let map_module_id = self_host_program_link_runtime_builtin_module_id(
+    fragments,
+    b"dew_map_empty",
+  )
   for call in fragments.specialization.calls {
     match self_host_program_link_function(
       functions,
@@ -319,12 +1010,37 @@ fn self_host_plan_program_wasmgc_link(
           function_index: function_index
         },
       )
-      Option::None => diagnostics.push(
-        SelfHostProgramWasmGCLinkDiagnostic::MissingLinkedCallTarget(
-          call.target,
-          call.target_specialization,
-        ),
-      )
+      Option::None => if !self_host_program_link_call_requires_function(
+        fragments,
+        call.target,
+        call.target_specialization,
+      ) {
+        // The body emitter handles an inline builtin without a physical function.
+      } else if self_host_program_link_fragment_exists(
+        fragments,
+        call.target,
+        call.target_specialization,
+      ) {
+        diagnostics.push(
+          SelfHostProgramWasmGCLinkDiagnostic::MissingLinkedCallTarget(
+            call.target,
+            call.target_specialization,
+            call.caller_body,
+            call.caller_specialization,
+            call.expression,
+          ),
+        )
+      } else {
+        diagnostics.push(
+          SelfHostProgramWasmGCLinkDiagnostic::MissingLinkedSpecialization(
+            call.target,
+            call.target_specialization,
+            call.caller_body,
+            call.caller_specialization,
+            call.expression,
+          ),
+        )
+      }
     }
   }
   let initializers = self_host_program_link_initializers(fragments, emit_tests)
@@ -338,6 +1054,8 @@ fn self_host_plan_program_wasmgc_link(
     imported_function_count: imported_count
     defined_function_count: defined_count
     global_count: initializers.length()
+    array_module_id: array_module_id
+    map_module_id: map_module_id
     diagnostics: diagnostics
   }
 }

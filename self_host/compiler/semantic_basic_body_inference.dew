@@ -93,7 +93,7 @@ enum SelfHostModuleValueImportTask {
 pub enum SelfHostBasicExpressionSelection {
   NoBasicExpressionSelection
   ErrorBasicExpressionSelection
-  FieldBasicExpressionSelection(U64, Bool)
+  FieldBasicExpressionSelection(U64, Bool, U64)
   StructConstructionBasicExpressionSelection(U64, SelfHostHirSpan)
   VariantConstructionBasicExpressionSelection(U64, U32, SelfHostHirSpan)
 }
@@ -390,10 +390,6 @@ fn self_host_basic_empty_local_module_value_map() -> Map<U64, I32> {
   Map::empty()
 }
 
-fn self_host_basic_empty_module_value_import_cache() -> Map<U32, I32> {
-  Map::empty()
-}
-
 struct SelfHostBasicImportedInputs {
   scope: Option<SelfHostModuleImportScope>
   callables: Array<SelfHostResolvedImportedCallable>
@@ -453,7 +449,8 @@ struct SelfHostBasicBodyInferencer {
   pending_fields: Array<U32>
   module_value_import_tasks: Array<SelfHostModuleValueImportTask>
   module_value_import_results: Array<I32>
-  module_value_import_cache: Map<U32, I32>
+  module_value_import_cache: Array<I32>
+  module_value_import_cache_present: Array<Bool>
   mut capture_span: SelfHostHirSpan
   mut instantiation_generics: SelfHostHirSpan
   mut instantiation_method_generics: SelfHostHirSpan
@@ -550,7 +547,8 @@ impl SelfHostBasicBodyInferencer {
       pending_fields: []
       module_value_import_tasks: []
       module_value_import_results: []
-      module_value_import_cache: self_host_basic_empty_module_value_import_cache()
+      module_value_import_cache: []
+      module_value_import_cache_present: []
       capture_span: SelfHostHirSpan::{
         start: 0u32
         length: 0u32
@@ -1097,7 +1095,7 @@ impl SelfHostBasicBodyInferencer {
   fn collapse_instantiation_results(self, start: U32, result: I32) -> Unit {
     let _ = while self.instantiation_results.length() {
       length => if self_host_u32_greater(length, start) {
-        let _ = self.instantiation_results.pop()
+        let _ = self_host_array_pop(self.instantiation_results)
         continue self.instantiation_results.length()
       } else {
         break self_host_semantic_unit()
@@ -1196,7 +1194,7 @@ impl SelfHostBasicBodyInferencer {
     )
     let _ = while self.instantiation_tasks.length() {
       length => if self_host_u32_greater(length, 0u32) {
-        let task = match self.instantiation_tasks.pop() {
+        let task = match self_host_array_pop(self.instantiation_tasks) {
           Option::Some(value) => value
           Option::None => {
             return self.solver.error_type()
@@ -1365,7 +1363,7 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn unique_local_callable_index(self, name: U32) -> Option<U32> {
-    let binding = match self.collected.value_bindings.get(name) {
+    let binding = match self.collected.value_binding(name) {
       Option::Some(value) => value
       Option::None => {
         return Option::None
@@ -1687,6 +1685,17 @@ impl SelfHostBasicBodyInferencer {
       return source
     }
     self.module_value_import_cache.clear()
+    self.module_value_import_cache_present.clear()
+    let mut cache_slot = 0u32
+    let _ = while cache_slot {
+      current => if current < source_terms.length() {
+        self.module_value_import_cache.push(0i32)
+        self.module_value_import_cache_present.push(false)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
     self.module_value_import_tasks.clear()
     self.module_value_import_results.clear()
     self.module_value_import_tasks.push(
@@ -1694,7 +1703,7 @@ impl SelfHostBasicBodyInferencer {
     )
     let _ = while self.module_value_import_tasks.length() {
       length => if self_host_u32_greater(length, 0u32) {
-        let task = match self.module_value_import_tasks.pop() {
+        let task = match self_host_array_pop(self.module_value_import_tasks) {
           Option::Some(value) => value
           Option::None => SelfHostModuleValueImportTask::VisitModuleValueType(0i32)
         }
@@ -1703,9 +1712,14 @@ impl SelfHostBasicBodyInferencer {
             self.module_value_import_results.push(type_)
           } else {
             let local = self_host_body_i32_to_u32(type_)
-            match self.module_value_import_cache.get(local) {
-              Option::Some(imported) => self.module_value_import_results.push(imported)
-              Option::None => match source_terms[local] {
+            if local < self.module_value_import_cache.length() &&
+              local < self.module_value_import_cache_present.length() &&
+              self.module_value_import_cache_present[local] {
+              self.module_value_import_results.push(
+                self.module_value_import_cache[local],
+              )
+            } else {
+              match source_terms[local] {
                 SelfHostBodyTypeTerm::BodyErrorType => {
                   self.module_value_import_results.push(self.solver.error_type())
                 }
@@ -1817,6 +1831,7 @@ impl SelfHostBasicBodyInferencer {
             self.module_value_import_results.truncate(start)
             self.module_value_import_results.push(imported)
             self.module_value_import_cache[local] = imported
+            self.module_value_import_cache_present[local] = true
           }
           SelfHostModuleValueImportTask::FinishModuleValueApplication(local, start) => {
             let base = self.module_value_import_results[start]
@@ -1835,6 +1850,7 @@ impl SelfHostBasicBodyInferencer {
             self.module_value_import_results.truncate(start)
             self.module_value_import_results.push(imported)
             self.module_value_import_cache[local] = imported
+            self.module_value_import_cache_present[local] = true
           }
           SelfHostModuleValueImportTask::FinishModuleValueFunction(local, start) => {
             let end = self.module_value_import_results.length()
@@ -1854,6 +1870,7 @@ impl SelfHostBasicBodyInferencer {
             self.module_value_import_results.truncate(start)
             self.module_value_import_results.push(imported)
             self.module_value_import_cache[local] = imported
+            self.module_value_import_cache_present[local] = true
           }
         }
         continue self.module_value_import_tasks.length()
@@ -1861,7 +1878,7 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
-    match self.module_value_import_results.pop() {
+    match self_host_array_pop(self.module_value_import_results) {
       Option::Some(result) => result
       Option::None => self.solver.error_type()
     }
@@ -2053,9 +2070,11 @@ impl SelfHostBasicBodyInferencer {
             self_host_u32_add(data.items.start, data.items.length),
             1u32,
           )
-          match self.collected.block_items[last_item] {
-            SelfHostHirBlockItem::LetItem(_, _, _, _, _) => unit
-            SelfHostHirBlockItem::ExpressionItem(expression, _) => self.expression_type(expression)
+          let item = self.collected.block_items[last_item]
+          if self_host_hir_block_item_is_let(item) {
+            unit
+          } else {
+            self.expression_type(item.value)
           }
         }
         self.block_types[self.block_index(current)] = type_
@@ -3019,24 +3038,29 @@ impl SelfHostBasicBodyInferencer {
     let end = self.body.block_items.start + self.body.block_items.length
     let _ = while item {
       current => if current < end {
-        match self.collected.block_items[current] {
-          SelfHostHirBlockItem::LetItem(_, _, name_offset, value, _) => {
-            let local = self.names.block_item_locals[current]
-            if local != 4294967295u32 && local < self.local_types.length() {
-              self.constrain(
-                self.local_types[local],
-                self.expression_type(value),
-                self_host_local_type_origin(local, name_offset),
-              )
-            }
+        let source = self.collected.block_items[current]
+        if self_host_hir_block_item_is_let(source) {
+          let local = self.names.block_item_locals[current]
+          if local != 4294967295u32 && local < self.local_types.length() {
+            self.constrain(
+              self.local_types[local],
+              self.expression_type(source.value),
+              self_host_local_type_origin(local, source.name_offset),
+            )
           }
-          SelfHostHirBlockItem::ExpressionItem(_, _) => {}
         }
         continue current + 1u32
       } else {
         break self_host_semantic_unit()
       }
     }
+  }
+
+  // This helper keeps the resolved-type stack element type explicit.
+  // The backend uses this type as compile-time proof for Array pop carriers.
+  fn resolved_type_stack(self, value: U32) -> Array<U32> {
+    let _ = self.collected.module_id
+    [value]
   }
 
   fn constrain_resolved_signature_evidence(
@@ -3052,17 +3076,17 @@ impl SelfHostBasicBodyInferencer {
         return
       }
     }
-    let actual_types = [actual_root]
-    let signature_types = [signature]
+    let actual_types = self.resolved_type_stack(actual_root)
+    let signature_types = self.resolved_type_stack(signature)
     let _ = while actual_types.length() {
       length => if self_host_u32_greater(length, 0u32) {
-        let actual_type = match actual_types.pop() {
+        let actual_type = match self_host_array_pop(actual_types) {
           Option::Some(value) => value
           Option::None => {
             return
           }
         }
-        let signature_type = match signature_types.pop() {
+        let signature_type = match self_host_array_pop(signature_types) {
           Option::Some(value) => value
           Option::None => {
             return
@@ -3328,7 +3352,7 @@ impl SelfHostBasicBodyInferencer {
     arguments: SelfHostHirSpan,
     offset: U32,
   ) -> Unit {
-    let binding = match self.collected.value_bindings.get(name) {
+    let binding = match self.collected.value_binding(name) {
       Option::Some(value) => value
       Option::None => {
         self.mark_unsupported(expression)
@@ -3709,7 +3733,7 @@ impl SelfHostBasicBodyInferencer {
         return
       }
     }
-    let binding = match self.collected.value_bindings.get(name) {
+    let binding = match self.collected.value_binding(name) {
       Option::Some(value) => value
       Option::None => {
         self.mark_unsupported(expression)
@@ -5323,6 +5347,7 @@ impl SelfHostBasicBodyInferencer {
       SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(
         field.field,
         field.mutable_,
+        declaration,
       ),
     )
     true
@@ -5436,6 +5461,7 @@ impl SelfHostBasicBodyInferencer {
       SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(
         field.id,
         field.mutable_,
+        declaration,
       ),
     )
     true
@@ -6628,11 +6654,9 @@ impl SelfHostBasicBodyInferencer {
               self_host_u32_add(items.start, items.length),
               1u32,
             )
-            match self.collected.block_items[last_item] {
-              SelfHostHirBlockItem::ExpressionItem(expression, _) => {
-                root_expression = expression
-              }
-              _ => {}
+            let item = self.collected.block_items[last_item]
+            if !self_host_hir_block_item_is_let(item) {
+              root_expression = item.value
             }
           }
         }

@@ -156,7 +156,7 @@ test "variant selection resolves tuple and unit constructors" {
     }
     SelfHostBasicExpressionSelection::NoBasicExpressionSelection => assert(false, "tuple variant no selection")
     SelfHostBasicExpressionSelection::ErrorBasicExpressionSelection => assert(false, "tuple variant error selection")
-    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(_, _) => assert(false, "tuple variant field selection")
+    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(_, _, _) => assert(false, "tuple variant field selection")
     SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(_, _) => assert(false, "tuple variant struct selection")
   }
   match none_body.expression_selection(none_hir, qualified) {

@@ -68,7 +68,7 @@ fn Parser::parse_struct_field(
     Err(error) => return Err(error)
   }
   match self.finish_struct_field_line(struct_offset) {
-    Ok(_) => Ok({ mutable_, name, type_, offset })
+    Ok(_) => Ok({ mutable_, name, type_, offset, })
     Err(error) => Err(error)
   }
 }

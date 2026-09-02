@@ -5,6 +5,13 @@ fn cli_fail(message : String) -> Unit {
 }
 
 ///|
+fn cli_fs_error_message(error : @fs.IOError) -> String {
+  match error {
+    @fs.IOError(message) => message
+  }
+}
+
+///|
 fn cli_error(message : String) -> Unit {
   println(message)
 }
@@ -18,7 +25,7 @@ fn cli_warning(message : String) -> Unit {
 fn cli_read_file(path : String) -> Bytes {
   @fs.read_file_to_bytes(path) catch {
     error => {
-      cli_fail("cannot read \{path}: \{error}")
+      cli_fail("cannot read \{path}: \{cli_fs_error_message(error)}")
       b""
     }
   }
@@ -106,7 +113,7 @@ fn render_program_lowering(
 ///|
 fn write_cli_output(path : String, bytes : Bytes) -> Unit {
   @fs.write_bytes_to_file(path, bytes) catch {
-    error => cli_fail("cannot write \{path}: \{error}")
+    error => cli_fail("cannot write \{path}: \{cli_fs_error_message(error)}")
   }
   println("wrote \{path} (\{bytes.length()} bytes)")
 }
@@ -236,7 +243,7 @@ fn run_source_compile_request(
         @compile_request.CompilerWasmOutput => {
           let libraries : Array[@core_linker.CoreWasmLibrary] = []
           for provider in request.static_providers {
-            libraries.push({ provider: provider.name, bytes: provider.wasm })
+            libraries.push({ provider: provider.name, bytes: provider.wasm, })
           }
           let encoded = match compiled.emit_linked_binary(libraries) {
             Ok(binary) => binary
@@ -615,7 +622,7 @@ fn main {
   } else {
     let libraries : Array[@core_linker.CoreWasmLibrary] = []
     for index, provider in static_link_providers {
-      libraries.push({ provider, bytes: static_link_modules[index] })
+      libraries.push({ provider, bytes: static_link_modules[index], })
     }
     let encoded = match compiled.emit_linked_binary(libraries) {
       Ok(binary) => binary

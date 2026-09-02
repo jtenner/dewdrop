@@ -26,21 +26,21 @@ test "manifest ordered files share one module namespace" {
   assert_eq(semantic_id_local(run), collected.preamble_declaration_count + 1)
   assert_eq(
     collected.declaration_location(double),
-    Some({ file: first_file, offset: 0UL }),
+    Some({ file: first_file, offset: 0UL, }),
   )
   assert_eq(
     collected.declaration_location(run),
-    Some({ file: second_file, offset: 0UL }),
+    Some({ file: second_file, offset: 0UL, }),
   )
   let double_body = collected.body_of(double).unwrap()
   let run_body = collected.body_of(run).unwrap()
   assert_eq(
     collected.body_location(double_body.id),
-    Some({ file: first_file, offset: 0UL }),
+    Some({ file: first_file, offset: 0UL, }),
   )
   assert_eq(
     collected.body_location(run_body.id),
-    Some({ file: second_file, offset: 0UL }),
+    Some({ file: second_file, offset: 0UL, }),
   )
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)

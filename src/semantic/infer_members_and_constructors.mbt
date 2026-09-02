@@ -411,7 +411,7 @@ fn BasicBodyInferencer::infer_qualified_value(
                 )
                 self.expression_selections[self.expression_index(expression)] = FunctionReferenceSelection(
                   declaration,
-                  { start: 0, length: 0 },
+                  { start: 0, length: 0, },
                 )
               } else {
                 self.mark_unsupported(expression)
@@ -553,7 +553,7 @@ fn BasicBodyInferencer::try_infer_field_expression(
   let declaration_index = semantic_id_local(declaration)
   let span = if declaration_index < 0 ||
     declaration_index >= self.field_spans.length() {
-    { start: 0, length: 0 }
+    { start: 0, length: 0, }
   } else {
     self.field_spans[declaration_index]
   }
@@ -617,13 +617,14 @@ fn BasicBodyInferencer::constrain_members(
           NoExpressionSelection &&
           !self.consumed_member_roots[self.expression_index(expression)] {
           match self.names.expression_references[expression] {
-            VariantNameReference(_) => {
-              match self.select_value_variant(
-                name,
-                self.expression_type(expression),
-                expression,
-                offset,
-              ) {
+            VariantNameReference(_) =>
+              match
+                self.select_value_variant(
+                  name,
+                  self.expression_type(expression),
+                  expression,
+                  offset,
+                ) {
                 SelectedLocalValueVariant(variant_index) =>
                   self.infer_unit_variant_value(
                     expression, variant_index, offset,
@@ -635,7 +636,6 @@ fn BasicBodyInferencer::constrain_members(
                 NoSelectedValueVariant =>
                   self.fail_expression_selection(expression)
               }
-            }
             _ => ()
           }
         }

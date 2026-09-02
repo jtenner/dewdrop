@@ -112,8 +112,17 @@ pub enum SelfHostTokenKind {
 
 pub struct SelfHostToken {
   kind: SelfHostTokenKind
+  keyword_code: U32
+  symbol_code: U32
   offset: U32
   index: U32
+}
+
+fn self_host_token_is_keyword(
+  token: SelfHostToken,
+  expected: U32,
+) -> Bool {
+  self_host_u32_equal(token.keyword_code, expected)
 }
 
 fn self_host_tokenizer_unit() -> Unit {
@@ -149,8 +158,18 @@ fn self_host_tokenizer_emit(
   kind: SelfHostTokenKind,
   offset: U32,
 ) -> Unit {
+  let keyword_code = match kind {
+    SelfHostTokenKind::Keyword(_, spelling) => self_host_keyword(spelling)
+    _ => 4294967295u32
+  }
+  let symbol_code = match kind {
+    SelfHostTokenKind::Symbol(code, _) => code
+    _ => 4294967295u32
+  }
   output.push(SelfHostToken::{
     kind: kind
+    keyword_code: keyword_code
+    symbol_code: symbol_code
     offset: offset
     index: tokenizer.next_index
   })
@@ -381,7 +400,10 @@ fn self_host_source_keyword(
   start: U32,
   end: U32,
 ) -> U32 {
-  if self_host_source_keyword_matches(source, start, end, b"fn") {
+  // Block-local binding syntax must not depend on a long keyword chain.
+  if self_host_source_keyword_matches(source, start, end, b"let") {
+    11u32
+  } else if self_host_source_keyword_matches(source, start, end, b"fn") {
     0u32
   } else if self_host_source_keyword_matches(source, start, end, b"test") {
     1u32

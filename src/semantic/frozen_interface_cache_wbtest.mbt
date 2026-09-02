@@ -130,7 +130,7 @@ test "frozen interface decoder rejects invalid implementation type IDs" {
   let invalid_type = frozen.interfaces[0].resolved_types.types.length()
   frozen.interfaces[0].implementations.push({
     declaration: declaration.declaration,
-    generic_parameters: { start: 0, length: 0 },
+    generic_parameters: { start: 0, length: 0, },
     trait_type: invalid_type,
     target_type: invalid_type,
     location: declaration.location,
@@ -157,11 +157,11 @@ test "frozen interface decoder rejects cyclic implementation heads" {
   let declaration = frozen.interfaces[0].declarations[0]
   let cyclic_type = frozen.interfaces[0].resolved_types.types.length()
   frozen.interfaces[0].resolved_types.types.push(
-    AppliedType(cyclic_type, { start: 0, length: 0 }),
+    AppliedType(cyclic_type, { start: 0, length: 0, }),
   )
   frozen.interfaces[0].implementations.push({
     declaration: declaration.declaration,
-    generic_parameters: { start: 0, length: 0 },
+    generic_parameters: { start: 0, length: 0, },
     trait_type: cyclic_type,
     target_type: cyclic_type,
     location: declaration.location,

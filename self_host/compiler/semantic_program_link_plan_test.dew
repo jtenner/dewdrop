@@ -1,3 +1,4 @@
+open dew.std.option
 open dew.std.testing
 
 fn self_host_link_test_plan(
@@ -33,6 +34,146 @@ test "program link resolves specialized call targets" {
   let function_ = link.functions[call.function_index]
   assert(self_host_u32_equal(function_.specialization, 0u32), "specialized target")
   assert(!function_.imported, "specialized definition")
+}
+
+test "program representation rejects a field carrier mismatch" {
+  let link = self_host_link_test_plan(
+    b"struct Box {\n  value: String\n}\npub fn run() -> Box {\n  Box::{\n    value: \"ok\"\n  }\n}\n",
+  )
+  match self_host_validate_program_representation(link) {
+    Option::Some(_) => assert(false, "valid field carrier")
+    Option::None => {}
+  }
+  let module_ = link.fragments.modules[0u32]
+  let field = module_.fields[0u32]
+  module_.fields[0u32] = SelfHostPlannedWasmField::{
+    role: field.role
+    declaration: field.declaration
+    physical_index: field.physical_index
+    storage: SelfHostPlannedWasmStorageType::WasmI32Storage
+    mutable_: field.mutable_
+    exact_nominal: field.exact_nominal
+    offset: field.offset
+  }
+  match self_host_validate_program_representation(link) {
+    Option::Some(_) => {}
+    Option::None => assert(false, "bad field carrier was accepted")
+  }
+}
+
+test "program representation rejects a function result carrier mismatch" {
+  let link = self_host_link_test_plan(
+    b"pub fn run() -> I64 {\n  42i64\n}\n",
+  )
+  match self_host_validate_program_representation(link) {
+    Option::Some(_) => assert(false, "valid function result carrier")
+    Option::None => {}
+  }
+  let module_ = link.fragments.modules[0u32]
+  let function_ = module_.functions[0u32]
+  assert(function_.results.length == 1u32, "one function result")
+  module_.function_value_types[function_.results.start] = SelfHostPlannedWasmValueType::WasmNullableEqRefValue
+  match self_host_validate_program_representation(link) {
+    Option::Some(error) => assert(
+      error.starts_with("program representation function result carrier mismatch"),
+      "function result diagnostic",
+    )
+    Option::None => assert(false, "bad function result carrier was accepted")
+  }
+}
+
+test "emitted local validation rejects a field carrier change" {
+  let link = self_host_link_test_plan(
+    b"struct Box {\n  value: I64\n}\npub fn run(box: Box) -> I64 {\n  let value = box.value\n  value\n}\n",
+  )
+  let body_plan = self_host_plan_program_wasm_bodies(link)
+  match self_host_validate_emitted_local_carriers(link, body_plan) {
+    Option::Some(_) => assert(false, "valid emitted local carrier")
+    Option::None => {}
+  }
+  let module_ = link.fragments.modules[0u32]
+  let field = module_.fields[0u32]
+  module_.fields[0u32] = SelfHostPlannedWasmField::{
+    role: field.role
+    declaration: field.declaration
+    physical_index: field.physical_index
+    storage: SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+    mutable_: field.mutable_
+    exact_nominal: field.exact_nominal
+    offset: field.offset
+  }
+  match self_host_validate_emitted_local_carriers(link, body_plan) {
+    Option::Some(error) => assert(
+      error.starts_with("emitted local carrier mismatch"),
+      "emitted local diagnostic",
+    )
+    Option::None => assert(false, "bad emitted local carrier was accepted")
+  }
+}
+
+test "program link emits carrier-independent Array capacity runtime" {
+  let link = self_host_link_test_plan(
+    b"struct Array<t> {}\nbuiltin array_with_capacity<t>(capacity: U32) -> Array<t> = \"dew_array_with_capacity\"\npub fn run() -> U32 {\n  0u32\n}\n",
+  )
+  let mut found = false
+  for function_ in link.functions {
+    let fragment_module = link.fragments.modules[function_.module_index]
+    let fragment = self_host_program_link_fragment_function(
+      fragment_module,
+      function_.fragment_index,
+    )
+    match fragment.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if name.equals(
+        b"dew_array_with_capacity",
+      ) {
+        found = true
+        assert(
+          function_.specialization == 4294967295u32,
+          "canonical capacity specialization",
+        )
+      }
+      _ => {}
+    }
+  }
+  assert(found, "capacity runtime function")
+}
+
+test "program link does not treat a variant constructor as a call" {
+  let link = self_host_link_test_plan(
+    b"enum Maybe<t> {\n  Empty\n  Value(t)\n}\npub fn run() -> Maybe<I32> {\n  Maybe::Value(42)\n}\n",
+  )
+  assert(link.diagnostics.length() == 0u32, "variant link diagnostics")
+  assert(link.specialized_calls.length() == 0u32, "variant physical call")
+}
+
+test "program link does not require a physical inline builtin" {
+  let link = self_host_link_test_plan(
+    b"builtin debug<t>(value: t) -> Unit = \"dew_debug_dispatch\"\npub fn run() -> Unit {\n  debug(42)\n}\n",
+  )
+  assert(link.diagnostics.length() == 0u32, "inline builtin diagnostics")
+  assert(link.specialized_calls.length() == 0u32, "inline builtin physical call")
+}
+
+test "program link rejects a missing physical call target" {
+  let link = self_host_link_test_plan(
+    b"pub fn run() -> I32 {\n  42\n}\n",
+  )
+  link.diagnostics.push(
+    SelfHostProgramWasmGCLinkDiagnostic::MissingLinkedCallTarget(
+      77u64,
+      3u32,
+      88u64,
+      4u32,
+      9u32,
+    ),
+  )
+  match self_host_validate_program_wasmgc_link(link) {
+    Option::Some(error) => assert(
+      error == "program link has no physical call target declaration=77 specialization=3 module=0 local=77 caller_body=88 caller_specialization=4 expression=9",
+      "missing target diagnostic",
+    )
+    Option::None => assert(false, "missing target was accepted")
+  }
 }
 
 test "program link assigns dependency-first types and module globals" {

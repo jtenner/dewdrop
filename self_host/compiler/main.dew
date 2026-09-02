@@ -159,17 +159,28 @@ fn self_host_compile_request_semantic_plan(
     }
     return Result::Err("compile request import paths are invalid")
   }
-  Result::Ok(
-    self_host_plan_program_wasmgc_link(
-      self_host_plan_program_wasmgc_fragments(
-        self_host_plan_program_specialization(
-          self_host_plan_program_lowering(frozen),
-          request.test_mode,
-        ),
-      ),
-      request.test_mode,
+  match self_host_validate_collected_program_bodies(frozen) {
+    Option::Some(error) => return Result::Err(error)
+    Option::None => {}
+  }
+  let lowering = self_host_plan_program_lowering(frozen)
+  match self_host_validate_program_lowering(lowering) {
+    Option::Some(error) => return Result::Err(error)
+    Option::None => {}
+  }
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_plan_program_wasmgc_fragments(
+      self_host_plan_program_specialization(lowering, request.test_mode),
     ),
+    request.test_mode,
   )
+  match self_host_validate_program_representation(link) {
+    Option::Some(error) => Result::Err(error)
+    Option::None => match self_host_validate_program_wasmgc_link(link) {
+      Option::Some(error) => Result::Err(error)
+      Option::None => Result::Ok(link)
+    }
+  }
 }
 
 fn self_host_fingerprint_matches_at(

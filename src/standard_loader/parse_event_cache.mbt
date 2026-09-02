@@ -85,7 +85,7 @@ fn ensure_parse_event_cache_directory(path : String) -> Result[Unit, String] {
     let directory = @fs.is_dir(path) catch {
       error =>
         return Err(
-          "cannot inspect parse-event cache directory \{path}: \{error}",
+          "cannot inspect parse-event cache directory \{path}: \{standard_loader_fs_error_message(error)}",
         )
     }
     if !directory {
@@ -95,7 +95,9 @@ fn ensure_parse_event_cache_directory(path : String) -> Result[Unit, String] {
   }
   @fs.create_dir(path) catch {
     error =>
-      return Err("cannot create parse-event cache directory \{path}: \{error}")
+      return Err(
+        "cannot create parse-event cache directory \{path}: \{standard_loader_fs_error_message(error)}",
+      )
   }
   Ok(())
 }
@@ -171,7 +173,10 @@ fn lookup_parse_event_cache(
     return Ok(None)
   }
   let bytes = @fs.read_file_to_bytes(path) catch {
-    error => return Err("cannot read parse-event cache \{path}: \{error}")
+    error =>
+      return Err(
+        "cannot read parse-event cache \{path}: \{standard_loader_fs_error_message(error)}",
+      )
   }
   let payload = match
     unwrap_parse_event_cache_payload(bytes, key_digest, source_digest) {
