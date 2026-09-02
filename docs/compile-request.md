@@ -138,10 +138,6 @@ Ambient cache environment variables are ignored. `tools/check-compile-request.sh
 runs the same request in two physical directories, validates both Wasm outputs,
 checks byte identity, and verifies that no cache directory was created.
 
-The first Dew consumer is under `self_host/compiler/`. It decodes the same version
-1 framing, requires a build request with a Starshine provider, verifies the
-pinned BLAKE3 compiler fingerprint, parses the bounded `pub fn main() -> I32`
-smoke source, and emits one module through the linked Starshine object model.
-`tools/check-self-host-smoke.sh` builds that compiler twice, runs it in two
-physical directories, checks compiler and output byte identity, validates both
-outputs, and rejects a modified fingerprint.
+The first Dew consumer is under `self_host/compiler/`. It decodes the same version 1 framing, requires a build request with a Starshine provider, verifies the pinned BLAKE3 compiler fingerprint, and runs the ported collection, interface freezing, lowering, specialization, fragment planning, and link planning pipeline over the supplied manifest with compile-time storage and representation gates. Its root emission is still the bounded `pub fn main() -> I32` smoke module emitted through the linked Starshine object model. It reads process arguments and files through the capability-based Facet host instead of WASI.
+
+Two scripts exercise it. `tools/check-self-host-smoke.sh` builds that compiler twice, runs it in two physical directories, checks compiler and output byte identity, validates both outputs, and rejects a modified fingerprint or an unbounded module count. `tools/check-self-host-bootstrap.sh` runs the full fixed-point harness: compiler A builds and validates, builds compiler B, and compiler B builds compiler C; both outputs are post-linked with the pinned providers, validated, and compared for byte identity.

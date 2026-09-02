@@ -65,6 +65,10 @@ static linking, and `src/compiler_driver` consumes both. `src/dew_cli` and
 `src/dew_bootstrap` are executable packages above the driver: `src/dew_bootstrap`
 owns whole-build caching, compiler fingerprinting, and process dispatch behind
 `tools/dew`, while `src/dew_cli` implements the compiler-facing commands.
+`src/compiler_proofs` is the proof-enabled leaf package: it separates executable
+code in `.mbt` from logical predicates and lemmas in `.mbtp` and proves the
+arena-span, physical-carrier, and dense type-remap obligations behind
+`tools/test-proofs.sh`.
 
 Starshine is pinned as the `starshine-mb/` Git submodule and MoonBit workspace
 member. `src/backend` uses it to construct, validate, and encode WebAssembly.
