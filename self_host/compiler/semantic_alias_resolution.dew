@@ -6,6 +6,12 @@ fn self_host_empty_span_array() -> Array<SelfHostHirSpan> {
 }
 
 impl SelfHostTypeResolver {
+  fn alias_declaration(self, alias_index: U32) -> U64 {
+    self_host_collected_alias_identity(
+      self.collected.aliases[alias_index],
+    ).declaration
+  }
+
   fn ensure_normalization_slots(self) -> Unit {
     let _ = while self.normalizations.length() {
       length => if length < self.interner.types.length() {
@@ -31,9 +37,21 @@ impl SelfHostTypeResolver {
 
   fn collect_alias_dependencies(self) -> Unit {
     self.visit_marks = self_host_u32_slots(self.interner.types.length(), 0u32)
+    // Each alias must have one resolved target and one dependency slot.
+    if self.alias_target_types.length() != self.collected.aliases.length() {
+      unreachable()
+    }
+    if self.alias_dependencies.length() != self.alias_target_types.length() {
+      unreachable()
+    }
     let mut alias_index = 0u32
-    for target in self.alias_target_types {
-      self.visit_generation = self.visit_generation + 1u32
+    let _ = while alias_index {
+      current_alias => if current_alias < self.alias_target_types.length() {
+        let target = self_host_type_resolution_u32_at(
+          self.alias_target_types,
+          current_alias,
+        )
+        self.visit_generation = self.visit_generation + 1u32
       if self.visit_generation == 0u32 {
         let mut index = 0u32
         let _ = while index {
@@ -127,18 +145,31 @@ impl SelfHostTypeResolver {
           break self_host_semantic_unit()
         }
       }
-      self.sort_u32_values(self.dependency_scratch)
-      let start = self.alias_dependency_declarations.length()
-      for dependency in self.dependency_scratch {
-        self.alias_dependency_declarations.push(
-          self.collected.aliases[dependency].declaration,
-        )
+        self.sort_u32_values(self.dependency_scratch)
+        let start = self.alias_dependency_declarations.length()
+        let mut dependency_index = 0u32
+        let _ = while dependency_index {
+          current_dependency => if current_dependency < self.dependency_scratch.length() {
+            let dependency = self_host_type_resolution_u32_at(
+              self.dependency_scratch,
+              current_dependency,
+            )
+            self.alias_dependency_declarations.push(
+              self.alias_declaration(dependency),
+            )
+            continue current_dependency + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        self.alias_dependencies[current_alias] = SelfHostHirSpan::{
+          start: start
+          length: self.alias_dependency_declarations.length() - start
+        }
+        continue current_alias + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      self.alias_dependencies[alias_index] = SelfHostHirSpan::{
-        start: start
-        length: self.alias_dependency_declarations.length() - start
-      }
-      alias_index = alias_index + 1u32
     }
   }
 
@@ -168,7 +199,7 @@ impl SelfHostTypeResolver {
     source: U32,
     target: U32,
   ) -> Bool {
-    let declaration = self.collected.aliases[target].declaration
+    let declaration = self.alias_declaration(target)
     let dependencies = self.alias_dependencies[source]
     let mut index = dependencies.start
     let end = self_host_u32_add(dependencies.start, dependencies.length)
@@ -185,7 +216,7 @@ impl SelfHostTypeResolver {
   }
 
   fn alias_has_self_edge(self, alias_index: U32) -> Bool {
-    let declaration = self.collected.aliases[alias_index].declaration
+    let declaration = self.alias_declaration(alias_index)
     let dependencies = self.alias_dependencies[alias_index]
     let mut index = dependencies.start
     let end = self_host_u32_add(dependencies.start, dependencies.length)
@@ -202,7 +233,7 @@ impl SelfHostTypeResolver {
   }
 
   fn alias_offset(self, alias_index: U32) -> U32 {
-    let declaration = self.collected.aliases[alias_index].declaration
+    let declaration = self.alias_declaration(alias_index)
     if self_host_semantic_id_module(declaration) != self.collected.module_id {
       return 0u32
     }
@@ -343,7 +374,7 @@ impl SelfHostTypeResolver {
                 )
                 self.alias_is_cyclic[member] = true
                 self.alias_cycle_declarations.push(
-                  self.collected.aliases[member].declaration,
+                  self.alias_declaration(member),
                 )
                 let member_offset = self.alias_offset(member)
                 if member_offset < offset {
@@ -375,10 +406,24 @@ impl SelfHostTypeResolver {
     let mut alias_index = 0u32
     let _ = while alias_index {
       current_alias => if current_alias < self.collected.aliases.length() {
-        let declaration = self.collected.aliases[current_alias].declaration
-        for cycle in self.alias_cycles {
-          if self.alias_cycle_declarations[cycle.start] == declaration {
-            sorted.push(cycle)
+        let declaration = self.alias_declaration(current_alias)
+        let mut cycle_index = 0u32
+        let _ = while cycle_index {
+          current_cycle => if current_cycle < self.alias_cycles.length() {
+            let cycle = self.alias_cycles[current_cycle]
+            // Stop before an invalid cycle declaration access.
+            if !self_host_u32_greater(
+              self.alias_cycle_declarations.length(),
+              cycle.start,
+            ) {
+              unreachable()
+            }
+            if self.alias_cycle_declarations[cycle.start] == declaration {
+              sorted.push(cycle)
+            }
+            continue current_cycle + 1u32
+          } else {
+            break self_host_semantic_unit()
           }
         }
         continue current_alias + 1u32
@@ -387,8 +432,14 @@ impl SelfHostTypeResolver {
       }
     }
     self.alias_cycles.clear()
-    for cycle in sorted {
-      self.alias_cycles.push(cycle)
+    let mut sorted_index = 0u32
+    let _ = while sorted_index {
+      current => if current < sorted.length() {
+        self.alias_cycles.push(sorted[current])
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
   }
 
@@ -398,7 +449,7 @@ impl SelfHostTypeResolver {
     parameter: U64,
     arguments: Array<U32>,
   ) -> Option<U32> {
-    let declaration = self.collected.aliases[alias_index].declaration
+    let declaration = self.alias_declaration(alias_index)
     if self_host_semantic_id_module(parameter) != self.collected.module_id {
       Option::None
     } else {
@@ -836,7 +887,7 @@ impl SelfHostTypeResolver {
         self.alias_expansion_limited[alias_index] = true
         self.diagnose(
           SelfHostTypeDiagnostic::AliasExpansionLimit(
-            self.collected.aliases[alias_index].declaration,
+            self.alias_declaration(alias_index),
             self.alias_expansion_limit,
             self.alias_offset(alias_index),
           ),

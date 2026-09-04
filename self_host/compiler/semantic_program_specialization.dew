@@ -1,6 +1,7 @@
 open dew.std.bytes
 open dew.std.map
 open dew.std.option
+open dew.std.string
 
 struct SelfHostSpecializationShapeTask {
   shape: SelfHostPlannedValueShape
@@ -54,6 +55,18 @@ pub struct SelfHostProgramSpecializedCall {
   expression: U32
   target: U64
   target_specialization: U32
+}
+
+fn self_host_program_specialized_call_identity(
+  call: SelfHostProgramSpecializedCall,
+) -> SelfHostProgramSpecializedCall {
+  SelfHostProgramSpecializedCall::{
+    caller_body: call.caller_body
+    caller_specialization: call.caller_specialization
+    expression: call.expression
+    target: call.target
+    target_specialization: call.target_specialization
+  }
 }
 
 pub struct SelfHostProgramSpecializationPlan {
@@ -241,13 +254,17 @@ fn self_host_program_specialization_callable(
   ) {
     return Option::None
   }
+  let functions = self_host_planned_module_functions_identity(module_.functions)
   let local = self_host_semantic_id_local(declaration)
-  if local >= module_.functions.callable_by_declaration.length() {
+  if local >= functions.callable_by_declaration.length() {
     return Option::None
   }
-  let index = module_.functions.callable_by_declaration[local]
-  if index < module_.functions.callables.length() {
-    Option::Some(module_.functions.callables[index])
+  let index = functions.callable_by_declaration[local]
+  if self_host_u32_equal(index, 4294967295u32) {
+    return Option::None
+  }
+  if self_host_u32_greater(functions.callables.length(), index) {
+    Option::Some(self_host_planned_callable_identity(functions.callables[index]))
   } else {
     Option::None
   }
@@ -260,6 +277,28 @@ fn self_host_program_specialization_callable_generics(
     callable.owner_generic_parameters
   } else {
     callable.generic_parameters
+  }
+}
+
+fn self_host_program_specialization_call_arity_matches(
+  callable: SelfHostPlannedCallable,
+  argument_count: U32,
+  method_call: Bool,
+) -> Bool {
+  if method_call {
+    if !callable.has_receiver {
+      return false
+    }
+    self_host_assert_compiler_invariant(
+      !self_host_u32_equal(argument_count, 4294967295u32),
+      "compiler method-call argument count cannot include the receiver",
+    )
+    self_host_u32_equal(
+      callable.parameters.length,
+      self_host_u32_add(argument_count, 1u32),
+    )
+  } else {
+    self_host_u32_equal(callable.parameters.length, argument_count)
   }
 }
 
@@ -277,9 +316,16 @@ fn self_host_program_specialization_body(
   module_: SelfHostPlannedModuleLowering,
   body: U64,
 ) -> Option<SelfHostPlannedBodyLowering> {
-  for candidate in module_.bodies {
+  let mut body_index = 0u32
+  let _ = while body_index {
+    current => if current < module_.bodies.length() {
+      let candidate = module_.bodies[current]
     if self_host_u64_equal(candidate.body, body) {
       return Option::Some(candidate)
+    }
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   Option::None
@@ -429,68 +475,6 @@ fn self_host_program_specialization_argument_shape(
   }
 }
 
-fn self_host_program_specialization_request_matches(
-  request: SelfHostProgramSpecializationRequest,
-  requests_shapes: Array<SelfHostPlannedValueShape>,
-  declaration: U64,
-  candidates: Array<SelfHostPlannedValueShape>,
-) -> Bool {
-  if !self_host_u64_equal(request.declaration, declaration) ||
-    !self_host_u32_equal(request.shapes.length, candidates.length()) {
-    return false
-  }
-  let mut index = 0u32
-  let _ = while index {
-    current => if current < request.shapes.length {
-      if !self_host_specialization_shapes_equal(
-        requests_shapes[self_host_u32_add(request.shapes.start, current)],
-        candidates[current],
-      ) {
-        return false
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  true
-}
-
-fn self_host_program_specialization_add_request(
-  requests: Array<SelfHostProgramSpecializationRequest>,
-  shapes: Array<SelfHostPlannedValueShape>,
-  declaration: U64,
-  candidates: Array<SelfHostPlannedValueShape>,
-) -> U32 {
-  let mut request_index = 0u32
-  while request_index {
-    current => if current < requests.length() {
-      if self_host_program_specialization_request_matches(
-        requests[current],
-        shapes,
-        declaration,
-        candidates,
-      ) {
-        break current
-      }
-      continue current + 1u32
-    } else {
-      let start = shapes.length()
-      for candidate in candidates {
-        shapes.push(self_host_specialization_canonical_shape(candidate))
-      }
-      requests.push(SelfHostProgramSpecializationRequest::{
-        declaration: declaration
-        shapes: SelfHostHirSpan::{
-          start: start
-          length: candidates.length()
-        }
-      })
-      break requests.length() - 1u32
-    }
-  }
-}
-
 fn self_host_program_specialization_record_call(
   calls: Array<SelfHostProgramSpecializedCall>,
   caller_body: U64,
@@ -576,14 +560,17 @@ fn self_host_program_specialization_module_name_at(
 fn self_host_program_specialization_callable_count(
   module_: SelfHostPlannedModuleLowering,
 ) -> U32 {
-  module_.functions.callables.length()
+  self_host_planned_module_functions_identity(
+    module_.functions,
+  ).callables.length()
 }
 
 fn self_host_program_specialization_callable_at(
   module_: SelfHostPlannedModuleLowering,
   index: U32,
 ) -> SelfHostPlannedCallable {
-  module_.functions.callables[index]
+  let functions = self_host_planned_module_functions_identity(module_.functions)
+  self_host_planned_callable_identity(functions.callables[index])
 }
 
 fn self_host_program_specialization_evidence_target(
@@ -625,7 +612,10 @@ fn self_host_program_specialization_evidence_target(
       return target
     }
   }
-  for candidate_module in lowering.modules {
+  let mut scan_module_index = 0u32
+  let _ = while scan_module_index {
+    current => if current < lowering.modules.length() {
+      let candidate_module = lowering.modules[current]
     let _ = while 0u32 {
       index => if index < self_host_program_specialization_callable_count(
         candidate_module,
@@ -651,6 +641,10 @@ fn self_host_program_specialization_evidence_target(
         break self_host_semantic_unit()
       }
     }
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   target
 }
@@ -660,7 +654,10 @@ fn self_host_program_specialization_receiver_nominal_by_name(
   name: String,
 ) -> U64 {
   let mut selected = 0u64
-  for candidate_module in lowering.modules {
+  let mut builtin_module_index = 0u32
+  let _ = while builtin_module_index {
+    current => if current < lowering.modules.length() {
+      let candidate_module = lowering.modules[current]
     let mut callable_index = 0u32
     let _ = while callable_index {
       current => if current < self_host_program_specialization_callable_count(
@@ -670,7 +667,7 @@ fn self_host_program_specialization_receiver_nominal_by_name(
           candidate_module,
           current,
         )
-        if callable.has_receiver && bytes_to_string(callable.name) == name {
+        if callable.has_receiver && callable.name.equals(name.as_bytes()) {
           let nominal = self_host_linked_resolved_nominal_declaration(
             candidate_module,
             callable.self_type,
@@ -687,6 +684,10 @@ fn self_host_program_specialization_receiver_nominal_by_name(
       } else {
         break self_host_semantic_unit()
       }
+    }
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   selected
@@ -882,7 +883,10 @@ fn self_host_program_specialization_argument_nominal(
                 module_,
                 source_name,
               )
-              for candidate_module in lowering.modules {
+              let mut name_module_index = 0u32
+              let _ = while name_module_index {
+                current => if current < lowering.modules.length() {
+                  let candidate_module = lowering.modules[current]
                 let mut callable_index = 0u32
                 let _ = while callable_index {
                   current_callable => if current_callable < self_host_program_specialization_callable_count(
@@ -892,7 +896,7 @@ fn self_host_program_specialization_argument_nominal(
                       candidate_module,
                       current_callable,
                     )
-                    if bytes_to_string(callable.name) == name &&
+                    if callable.name.equals(name.as_bytes()) &&
                       found < callable.parameters.length {
                       let parameter_index = self_host_u32_add(
                         callable.parameters.start,
@@ -914,6 +918,10 @@ fn self_host_program_specialization_argument_nominal(
                   } else {
                     break self_host_semantic_unit()
                   }
+                }
+                                continue current + 1u32
+                } else {
+                  break self_host_semantic_unit()
                 }
               }
             }
@@ -952,29 +960,158 @@ fn self_host_program_specialization_type_argument_shape(
   argument: U32,
 ) -> Option<SelfHostPlannedValueShape> {
   match self_host_program_specialization_resolved_type(module_, type_) {
-    Option::Some(resolved_type) => if resolved_type < module_.resolved_types.types.length() {
-      match module_.resolved_types.types[resolved_type] {
-        SelfHostResolvedType::AppliedType(_, arguments) => if argument < arguments.length {
-          let index = self_host_u32_add(arguments.start, argument)
-          if index < module_.resolved_types.type_arguments.length() {
-            Option::Some(
-              self_host_planned_resolved_value_shape(
-                module_.resolved_types,
-                module_.resolved_types.type_arguments[index],
-              ),
-            )
-          } else {
-            Option::None
-          }
-        } else {
-          Option::None
-        }
-        _ => Option::None
+    Option::Some(resolved_type) => self_host_program_specialization_resolved_type_argument_shape(
+      module_,
+      resolved_type,
+      argument,
+    )
+    Option::None => Option::None
+  }
+}
+
+fn self_host_program_specialization_resolved_type_argument_shape(
+  module_: SelfHostPlannedModuleLowering,
+  resolved_type: U32,
+  argument: U32,
+) -> Option<SelfHostPlannedValueShape> {
+  if resolved_type >= module_.resolved_types.types.length() {
+    return Option::None
+  }
+  match module_.resolved_types.types[resolved_type] {
+    SelfHostResolvedType::AppliedType(_, arguments) => if argument < arguments.length {
+      let index = self_host_u32_add(arguments.start, argument)
+      if index < module_.resolved_types.type_arguments.length() {
+        Option::Some(
+          self_host_planned_resolved_value_shape(
+            module_.resolved_types,
+            module_.resolved_types.type_arguments[index],
+          ),
+        )
+      } else {
+        Option::None
       }
     } else {
       Option::None
     }
+    _ => Option::None
+  }
+}
+
+fn self_host_program_specialization_receiver_field_resolved_type(
+  module_: SelfHostPlannedModuleLowering,
+  caller: Option<SelfHostPlannedCallable>,
+  receiver: U32,
+) -> Option<U32> {
+  if receiver >= module_.expressions.length() {
+    return Option::None
+  }
+  let name = match module_.expressions[receiver].kind {
+    SelfHostPlannedExpressionKind::PlannedUnresolvedField(_, value) => value
+    SelfHostPlannedExpressionKind::PlannedFieldGet(field, _, _) => {
+      for layout in module_.type_layouts.fields {
+        if self_host_u64_equal(layout.field, field) {
+          self_host_assert_array_index(
+            layout.type_,
+            module_.resolved_types.types.length(),
+            "compiler specialization field type is outside the resolved-type arena",
+          )
+          return Option::Some(layout.type_)
+        }
+      }
+      return Option::None
+    }
+    _ => return Option::None
+  }
+  if name >= module_.names.length() {
+    return Option::None
+  }
+  let owner = match caller {
+    Option::Some(value) => self_host_linked_resolved_nominal_declaration(
+      module_,
+      value.self_type,
+    )
+    Option::None => return Option::None
+  }
+  let field_name = module_.names[name]
+  if !self_host_u64_equal(owner, 0u64) {
+    for layout in module_.type_layouts.fields {
+      if self_host_u64_equal(layout.declaration, owner) && self_host_tokenizer_string_equals(
+        layout.name,
+        field_name,
+      ) {
+        self_host_assert_array_index(
+          layout.type_,
+          module_.resolved_types.types.length(),
+          "compiler specialization field type is outside the resolved-type arena",
+        )
+        return Option::Some(layout.type_)
+      }
+    }
+  }
+  let mut selected = 4294967295u32
+  let mut field_index = 0u32
+  let _ = while field_index {
+    current => if current < module_.type_layouts.fields.length() {
+      let layout = module_.type_layouts.fields[current]
+      if self_host_tokenizer_string_equals(layout.name, field_name) {
+        if !self_host_u32_equal(selected, 4294967295u32) {
+          return Option::None
+        }
+        selected = current
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  if self_host_u32_equal(selected, 4294967295u32) {
+    Option::None
+  } else {
+    let type_ = module_.type_layouts.fields[selected].type_
+    self_host_assert_array_index(
+      type_,
+      module_.resolved_types.types.length(),
+      "compiler specialization field type is outside the resolved-type arena",
+    )
+    Option::Some(type_)
+  }
+}
+
+fn self_host_program_specialization_receiver_field_argument_shape(
+  module_: SelfHostPlannedModuleLowering,
+  caller: Option<SelfHostPlannedCallable>,
+  receiver: U32,
+  argument: U32,
+) -> Option<SelfHostPlannedValueShape> {
+  match self_host_program_specialization_receiver_field_resolved_type(
+    module_,
+    caller,
+    receiver,
+  ) {
+    Option::Some(type_) => self_host_program_specialization_resolved_type_argument_shape(
+      module_,
+      type_,
+      argument,
+    )
     Option::None => Option::None
+  }
+}
+
+fn self_host_program_specialization_receiver_field_nominal(
+  module_: SelfHostPlannedModuleLowering,
+  caller: Option<SelfHostPlannedCallable>,
+  receiver: U32,
+) -> U64 {
+  match self_host_program_specialization_receiver_field_resolved_type(
+    module_,
+    caller,
+    receiver,
+  ) {
+    Option::Some(type_) => self_host_linked_resolved_nominal_declaration(
+      module_,
+      type_,
+    )
+    Option::None => 0u64
   }
 }
 
@@ -992,6 +1129,7 @@ fn self_host_program_specialization_result_type_argument_shape(
 
 fn self_host_program_specialization_receiver_type_argument_shape(
   module_: SelfHostPlannedModuleLowering,
+  caller: Option<SelfHostPlannedCallable>,
   expression: SelfHostPlannedExpression,
   argument: U32,
 ) -> Option<SelfHostPlannedValueShape> {
@@ -1004,28 +1142,44 @@ fn self_host_program_specialization_receiver_type_argument_shape(
   if target >= module_.expressions.length() {
     return Option::None
   }
-  let base = match module_.expressions[target].kind {
+  let field_target = if module_.expressions[target].kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression && self_host_u32_greater(
+    target,
+    0u32,
+  ) {
+    target - 1u32
+  } else {
+    target
+  }
+  let raw_base = match module_.expressions[field_target].kind {
     SelfHostPlannedExpressionKind::PlannedUnresolvedField(value, _) => value
-    SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
-      target,
-      0u32,
-    ) {
-      target - 1u32
-    } else {
-      return Option::None
-    }
     _ => {
       return Option::None
     }
   }
+  let base = if raw_base < module_.expressions.length() && module_.expressions[raw_base].kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression && self_host_u32_greater(
+    raw_base,
+    0u32,
+  ) {
+    raw_base - 1u32
+  } else {
+    raw_base
+  }
   if base >= module_.expressions.length() {
     return Option::None
   }
-  self_host_program_specialization_type_argument_shape(
+  match self_host_program_specialization_receiver_field_argument_shape(
     module_,
-    module_.expressions[base].type_,
+    caller,
+    base,
     argument,
-  )
+  ) {
+    Option::Some(shape) => Option::Some(shape)
+    Option::None => self_host_program_specialization_type_argument_shape(
+      module_,
+      module_.expressions[base].type_,
+      argument,
+    )
+  }
 }
 
 fn self_host_program_specialization_scan_body(
@@ -1039,6 +1193,8 @@ fn self_host_program_specialization_scan_body(
   reachable_seen: Map<U64, Bool>,
   requests: Array<SelfHostProgramSpecializationRequest>,
   shapes: Array<SelfHostPlannedValueShape>,
+  request_head_by_declaration: Map<U64, U32>,
+  request_next: Array<U32>,
   calls: Array<SelfHostProgramSpecializedCall>,
 ) -> Unit {
   let module_ = lowering.modules[module_index]
@@ -1082,6 +1238,7 @@ fn self_host_program_specialization_scan_body(
                   )
                   let candidate_shape = match self_host_program_specialization_receiver_type_argument_shape(
                     module_,
+                    caller,
                     expression,
                     argument_offset,
                   ) {
@@ -1103,6 +1260,8 @@ fn self_host_program_specialization_scan_body(
               let request = self_host_program_specialization_add_request(
                 requests,
                 shapes,
+                request_head_by_declaration,
+                request_next,
                 target,
                 candidate_shapes,
               )
@@ -1131,6 +1290,7 @@ fn self_host_program_specialization_scan_body(
                       argument_offset => if argument_offset < generic_parameters.length {
                         let candidate_shape = match self_host_program_specialization_receiver_type_argument_shape(
                           module_,
+                          caller,
                           expression,
                           argument_offset,
                         ) {
@@ -1170,6 +1330,8 @@ fn self_host_program_specialization_scan_body(
                       let request = self_host_program_specialization_add_request(
                         requests,
                         shapes,
+                        request_head_by_declaration,
+                        request_next,
                         target,
                         candidate_shapes,
                       )
@@ -1252,7 +1414,14 @@ fn self_host_program_specialization_scan_body(
               }
               SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => if base < module_.expressions.length() {
                 let receiver = module_.expressions[base]
-                if !self_host_u64_equal(receiver.nominal, 0u64) {
+                let declared_field_nominal = self_host_program_specialization_receiver_field_nominal(
+                  module_,
+                  caller,
+                  base,
+                )
+                if !self_host_u64_equal(declared_field_nominal, 0u64) {
+                  declared_field_nominal
+                } else if !self_host_u64_equal(receiver.nominal, 0u64) {
                   receiver.nominal
                 } else {
                   self_host_linked_type_nominal_declaration(
@@ -1268,7 +1437,10 @@ fn self_host_program_specialization_scan_body(
             let mut resolved_nominal_call = false
             if !self_host_u64_equal(unresolved_nominal, 0u64) &&
               unresolved_name.byte_length() > 0u32 {
-              for candidate_module in lowering.modules {
+              let mut array_module_index = 0u32
+              let _ = while array_module_index {
+                current => if current < lowering.modules.length() {
+                  let candidate_module = lowering.modules[current]
                 let mut callable_index = 0u32
                 let _ = while callable_index {
                   candidate => if candidate < self_host_program_specialization_callable_count(
@@ -1286,11 +1458,11 @@ fn self_host_program_specialization_scan_body(
                         callable.result_type
                       },
                     )
-                    if bytes_to_string(callable.name) == unresolved_name &&
-                      (!unresolved_method_call || callable.has_receiver) &&
-                      self_host_u32_equal(
-                        callable.parameters.length,
+                    if callable.name.equals(unresolved_name.as_bytes()) &&
+                      self_host_program_specialization_call_arity_matches(
+                        callable,
                         arguments.length,
+                        unresolved_method_call,
                       ) && self_host_u64_equal(
                         candidate_nominal,
                         unresolved_nominal,
@@ -1304,6 +1476,7 @@ fn self_host_program_specialization_scan_body(
                         current_generic => if current_generic < generic_parameters.length {
                           match self_host_program_specialization_receiver_type_argument_shape(
                             module_,
+                            caller,
                             expression,
                             current_generic,
                           ) {
@@ -1328,6 +1501,8 @@ fn self_host_program_specialization_scan_body(
                         self_host_program_specialization_add_request(
                           requests,
                           shapes,
+                          request_head_by_declaration,
+                          request_next,
                           callable.declaration,
                           candidate_shapes,
                         )
@@ -1358,36 +1533,73 @@ fn self_host_program_specialization_scan_body(
                 if resolved_nominal_call {
                   break self_host_semantic_unit()
                 }
+                                continue current + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
               }
             }
-            let unresolved_array_call = !resolved_nominal_call && (
-              unresolved_name == "make" || unresolved_name == "set_unchecked"
-            ) && self_host_u32_greater(arguments.length, 1u32)
-            let unresolved_array_capacity = !resolved_nominal_call &&
-              unresolved_name == "with_capacity" && self_host_u32_greater(
-                arguments.length,
-                0u32,
-              )
-            let unresolved_array_iter = !resolved_nominal_call &&
-              unresolved_name == "iter" && self_host_u32_equal(
-                arguments.length,
-                0u32,
-              )
-            if unresolved_array_call || unresolved_array_capacity ||
-              unresolved_array_iter {
-              for candidate_module in lowering.modules {
-                let mut array_module = false
-                for candidate_callable in candidate_module.functions.callables {
-                  match candidate_callable.kind {
-                    SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if name.equals(
-                      b"dew_array_iter",
-                    ) {
-                      array_module = true
+            let unresolved_array_call = if resolved_nominal_call {
+              false
+            } else if unresolved_name == "make" {
+              self_host_u32_greater(arguments.length, 1u32)
+            } else if unresolved_name == "set_unchecked" {
+              self_host_u32_greater(arguments.length, 1u32)
+            } else {
+              false
+            }
+            let unresolved_array_capacity = if resolved_nominal_call {
+              false
+            } else if unresolved_name == "with_capacity" {
+              self_host_u32_greater(arguments.length, 0u32)
+            } else {
+              false
+            }
+            let unresolved_array_iter = if resolved_nominal_call {
+              false
+            } else if unresolved_name == "iter" {
+              self_host_u32_equal(arguments.length, 0u32)
+            } else {
+              false
+            }
+            let unresolved_array_operation = if unresolved_array_call {
+              true
+            } else if unresolved_array_capacity {
+              true
+            } else {
+              unresolved_array_iter
+            }
+            if unresolved_array_operation {
+              let mut array_search_module_index = 0u32
+              let _ = while array_search_module_index {
+                current_module => if current_module < lowering.modules.length() {
+                  let candidate_module = self_host_planned_module_lowering_identity(
+                    lowering.modules[current_module],
+                  )
+                  let functions = self_host_planned_module_functions_identity(
+                    candidate_module.functions,
+                  )
+                  let mut array_module = false
+                  let mut array_callable_index = 0u32
+                  let _ = while array_callable_index {
+                    current => if current < functions.callables.length() {
+                      let candidate_callable = self_host_planned_callable_identity(
+                        functions.callables[current],
+                      )
+                      match candidate_callable.kind {
+                        SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if name.equals(
+                          b"dew_array_iter",
+                        ) {
+                          array_module = true
+                        }
+                        _ => {}
+                      }
+                      continue current + 1u32
+                    } else {
+                      break self_host_semantic_unit()
                     }
-                    _ => {}
                   }
-                }
-                if array_module {
+                  if array_module {
                   let mut callable_index = 0u32
                   let _ = while callable_index {
                     candidate => if candidate < self_host_program_specialization_callable_count(
@@ -1402,11 +1614,12 @@ fn self_host_program_specialization_scan_body(
                       } else {
                         unresolved_name
                       }
-                      if bytes_to_string(callable.name) == candidate_name {
+                      if callable.name.equals(candidate_name.as_bytes()) {
                         let mut candidate_shape = SelfHostPlannedValueShape::GenericPlannedValueShape
                         if unresolved_array_capacity || unresolved_array_iter {
                           match self_host_program_specialization_receiver_type_argument_shape(
                             module_,
+                            caller,
                             expression,
                             0u32,
                           ) {
@@ -1440,6 +1653,8 @@ fn self_host_program_specialization_scan_body(
                         let request = self_host_program_specialization_add_request(
                           requests,
                           shapes,
+                          request_head_by_declaration,
+                          request_next,
                           callable.declaration,
                           [candidate_shape],
                         )
@@ -1464,6 +1679,10 @@ fn self_host_program_specialization_scan_body(
                     }
                   }
                 }
+                                continue current_module + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
               }
             }
           }
@@ -1477,6 +1696,236 @@ fn self_host_program_specialization_scan_body(
   }
 }
 
+fn self_host_program_specialization_normalize_receiver_calls(
+  lowering: SelfHostPlannedProgramLowering,
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  request_head_by_declaration: Map<U64, U32>,
+  request_next: Array<U32>,
+  calls: Array<SelfHostProgramSpecializedCall>,
+  start: U32,
+) -> U32 {
+  self_host_assert_compiler_invariant(
+    !self_host_u32_greater(start, calls.length()),
+    "compiler specialization call normalization cursor is outside the arena",
+  )
+  let mut call_index = start
+  let _ = while call_index {
+    current => if current < calls.length() {
+      let call = self_host_program_specialized_call_identity(calls[current])
+      match self_host_program_specialization_program_callable(
+        lowering,
+        call.target,
+      ) {
+        Option::Some(target_callable) => {
+          let generics = self_host_program_specialization_callable_generics(
+            target_callable,
+          )
+          if self_host_u32_greater(generics.length, 0u32) {
+            let mut module_index = 0u32
+            let mut normalized = false
+            let _ = while module_index {
+              candidate_module => if candidate_module < lowering.modules.length() {
+                let module_ = lowering.modules[candidate_module]
+                match self_host_program_specialization_body(
+                  module_,
+                  call.caller_body,
+                ) {
+                  Option::Some(body) => if call.expression < module_.expressions.length() {
+                    let expression = module_.expressions[call.expression]
+                    let caller = self_host_program_specialization_callable(
+                      module_,
+                      body.declaration,
+                    )
+                    let candidates = []
+                    let mut complete = true
+                    let mut argument = 0u32
+                    let _ = while argument {
+                      position => if position < generics.length {
+                        match self_host_program_specialization_receiver_type_argument_shape(
+                          module_,
+                          caller,
+                          expression,
+                          position,
+                        ) {
+                          Option::Some(shape) => candidates.push(shape)
+                          Option::None => {
+                            complete = false
+                          }
+                        }
+                        continue position + 1u32
+                      } else {
+                        break self_host_semantic_unit()
+                      }
+                    }
+                    if complete && self_host_u32_equal(
+                      candidates.length(),
+                      generics.length,
+                    ) {
+                      let request = self_host_program_specialization_add_request(
+                        requests,
+                        shapes,
+                        request_head_by_declaration,
+                        request_next,
+                        call.target,
+                        candidates,
+                      )
+                      calls[current] = SelfHostProgramSpecializedCall::{
+                        caller_body: call.caller_body
+                        caller_specialization: call.caller_specialization
+                        expression: call.expression
+                        target: call.target
+                        target_specialization: request
+                      }
+                    }
+                    normalized = true
+                  }
+                  Option::None => {}
+                }
+                if normalized {
+                  break self_host_semantic_unit()
+                }
+                continue candidate_module + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+        }
+        Option::None => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  calls.length()
+}
+
+fn self_host_program_specialization_scan_reachable_declaration(
+  lowering: SelfHostPlannedProgramLowering,
+  declaration: U64,
+  reachable: Array<U64>,
+  reachable_seen: Map<U64, Bool>,
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  request_head_by_declaration: Map<U64, U32>,
+  request_next: Array<U32>,
+  calls: Array<SelfHostProgramSpecializedCall>,
+  scanned_bodies: Map<U64, Bool>,
+) -> Unit {
+  match lowering.index.declaration_owner(declaration) {
+    Option::Some(owner) => {
+      self_host_assert_array_index(
+        owner,
+        lowering.modules.length(),
+        "compiler specialization declaration owner is outside the module arena",
+      )
+      let module_ = lowering.modules[owner]
+      match self_host_program_specialization_callable(module_, declaration) {
+        Option::Some(callable) => if self_host_u32_equal(
+          self_host_program_specialization_callable_generics(callable).length,
+          0u32,
+        ) {
+          match self_host_program_specialization_callable_body(callable) {
+            Option::Some(body_id) => if !scanned_bodies.contains_key(body_id) {
+              match self_host_program_specialization_body(module_, body_id) {
+                Option::Some(body) => {
+                  self_host_program_specialization_scan_body(
+                    lowering,
+                    owner,
+                    body,
+                    Option::Some(callable),
+                    4294967295u32,
+                    SelfHostHirSpan::{
+                      start: 0u32
+                      length: 0u32
+                    },
+                    reachable,
+                    reachable_seen,
+                    requests,
+                    shapes,
+                    request_head_by_declaration,
+                    request_next,
+                    calls,
+                  )
+                  scanned_bodies.set(body_id, true)
+                }
+                Option::None => {}
+              }
+            }
+            Option::None => {}
+          }
+        }
+        Option::None => {}
+      }
+    }
+    Option::None => {}
+  }
+}
+
+fn self_host_program_specialization_scan_request(
+  lowering: SelfHostPlannedProgramLowering,
+  request_index: U32,
+  reachable: Array<U64>,
+  reachable_seen: Map<U64, Bool>,
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  request_head_by_declaration: Map<U64, U32>,
+  request_next: Array<U32>,
+  calls: Array<SelfHostProgramSpecializedCall>,
+) -> Unit {
+  self_host_assert_array_index(
+    request_index,
+    requests.length(),
+    "compiler specialization request is outside the request arena",
+  )
+  let request = requests[request_index]
+  match lowering.index.declaration_owner(request.declaration) {
+    Option::Some(owner) => {
+      self_host_assert_array_index(
+        owner,
+        lowering.modules.length(),
+        "compiler specialization request owner is outside the module arena",
+      )
+      let module_ = lowering.modules[owner]
+      match self_host_program_specialization_callable(
+        module_,
+        request.declaration,
+      ) {
+        Option::Some(callable) => match self_host_program_specialization_callable_body(
+          callable,
+        ) {
+          Option::Some(body_id) => match self_host_program_specialization_body(
+            module_,
+            body_id,
+          ) {
+            Option::Some(body) => self_host_program_specialization_scan_body(
+              lowering,
+              owner,
+              body,
+              Option::Some(callable),
+              request_index,
+              request.shapes,
+              reachable,
+              reachable_seen,
+              requests,
+              shapes,
+              request_head_by_declaration,
+              request_next,
+              calls,
+            )
+            Option::None => {}
+          }
+          Option::None => {}
+        }
+        Option::None => {}
+      }
+    }
+    Option::None => {}
+  }
+}
+
 fn self_host_plan_program_specialization(
   lowering: SelfHostPlannedProgramLowering,
   emit_tests: Bool,
@@ -1487,25 +1936,59 @@ fn self_host_plan_program_specialization(
   let declaration_queued = self_host_program_specialization_seen()
   let requests = []
   let shapes = []
+  let request_head_by_declaration = self_host_empty_u64_u32_map()
+  let request_next = []
   let calls = []
   let scanned_bodies = self_host_program_specialization_seen()
   let mut module_index = 0u32
   let _ = while module_index {
     current_module => if current_module < lowering.modules.length() {
-      let module_ = lowering.modules[current_module]
-      for callable in module_.functions.callables {
-        let implementation_method = callable.kind is SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, _)
-        let root = ((callable.visibility is SelfHostSemanticVisibility::Public || !callable.compiler_owned) ||
-          implementation_method) && (!callable.is_test || emit_tests)
-        if root {
-          let _ = self_host_program_specialization_add_reachable(
-            reachable,
-            reachable_seen,
-            callable.declaration,
+      let module_ = self_host_planned_module_lowering_identity(
+        lowering.modules[current_module],
+      )
+      let functions = self_host_planned_module_functions_identity(
+        module_.functions,
+      )
+      let mut root_callable_index = 0u32
+      let _ = while root_callable_index {
+        current => if current < functions.callables.length() {
+          let callable = self_host_planned_callable_identity(
+            functions.callables[current],
           )
+          let implementation_method = callable.kind is SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, _)
+          let visible_root = if callable.visibility is SelfHostSemanticVisibility::Public {
+            true
+          } else {
+            !callable.compiler_owned
+          }
+          let callable_root = if visible_root {
+            true
+          } else {
+            implementation_method
+          }
+          let enabled = if callable.is_test {
+            emit_tests
+          } else {
+            true
+          }
+          if callable_root {
+            if enabled {
+              let _ = self_host_program_specialization_add_reachable(
+                reachable,
+                reachable_seen,
+                callable.declaration,
+              )
+            }
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
         }
       }
-      for step in module_.initialization.steps {
+      let mut initializer_step_index = 0u32
+      let _ = while initializer_step_index {
+        current => if current < module_.initialization.steps.length() {
+          let step = module_.initialization.steps[current]
         if !step.test_only || emit_tests {
           match step.kind {
             SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(_, body_id, _) => match self_host_program_specialization_body(
@@ -1527,6 +2010,8 @@ fn self_host_plan_program_specialization(
                   reachable_seen,
                   requests,
                   shapes,
+                  request_head_by_declaration,
+                  request_next,
                   calls,
                 )
                 scanned_bodies.set(body.body, true)
@@ -1536,6 +2021,10 @@ fn self_host_plan_program_specialization(
             _ => {}
           }
         }
+                continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
       }
       continue current_module + 1u32
     } else {
@@ -1543,120 +2032,77 @@ fn self_host_plan_program_specialization(
     }
   }
   let mut reachable_queue_index = 0u32
-  let _ = while reachable_queue_index {
-    current => if current < reachable.length() {
-      let declaration = reachable[current]
-      if !declaration_queued.contains_key(declaration) {
-        declaration_queued.set(declaration, true)
-        declaration_work.push(declaration)
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
+  reachable_queue_index = self_host_program_specialization_queue_reachable(
+    reachable,
+    declaration_work,
+    declaration_queued,
+    reachable_queue_index,
+  )
   let mut work_index = 0u32
-  let _ = while work_index {
-    current => if current < declaration_work.length() {
-      let declaration = declaration_work[current]
-      match lowering.index.declaration_owner(declaration) {
-        Option::Some(owner) => {
-          let module_ = lowering.modules[owner]
-          match self_host_program_specialization_callable(module_, declaration) {
-            Option::Some(callable) => if self_host_u32_equal(
-              self_host_program_specialization_callable_generics(callable).length,
-              0u32,
-            ) {
-              match self_host_program_specialization_callable_body(callable) {
-                Option::Some(body_id) => {
-                  if !scanned_bodies.contains_key(body_id) {
-                    match self_host_program_specialization_body(module_, body_id) {
-                      Option::Some(body) => {
-                        self_host_program_specialization_scan_body(
-                          lowering,
-                          owner,
-                          body,
-                          Option::Some(callable),
-                          4294967295u32,
-                          SelfHostHirSpan::{
-                            start: 0u32
-                            length: 0u32
-                          },
-                          reachable,
-                          reachable_seen,
-                          requests,
-                          shapes,
-                          calls,
-                        )
-                        scanned_bodies.set(body_id, true)
-                      }
-                      Option::None => {}
-                    }
-                  }
-                }
-                Option::None => {}
-              }
-            }
-            Option::None => {}
-          }
-        }
-        Option::None => {}
-      }
-      let _ = while reachable_queue_index {
-        next => if next < reachable.length() {
-          let value = reachable[next]
-          if !declaration_queued.contains_key(value) {
-            declaration_queued.set(value, true)
-            declaration_work.push(value)
-          }
-          continue next + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
+  let mut normalized_call_count = self_host_program_specialization_normalize_receiver_calls(
+    lowering,
+    requests,
+    shapes,
+    request_head_by_declaration,
+    request_next,
+    calls,
+    0u32,
+  )
   let mut request_index = 0u32
-  let _ = while request_index {
-    current => if current < requests.length() {
-      let request = requests[current]
-      match lowering.index.declaration_owner(request.declaration) {
-        Option::Some(owner) => {
-          let module_ = lowering.modules[owner]
-          match self_host_program_specialization_callable(
-            module_,
-            request.declaration,
-          ) {
-            Option::Some(callable) => match self_host_program_specialization_callable_body(callable) {
-              Option::Some(body_id) => match self_host_program_specialization_body(module_, body_id) {
-                Option::Some(body) => self_host_program_specialization_scan_body(
-                  lowering,
-                  owner,
-                  body,
-                  Option::Some(callable),
-                  current,
-                  request.shapes,
-                  reachable,
-                  reachable_seen,
-                  requests,
-                  shapes,
-                  calls,
-                )
-                Option::None => {}
-              }
-              Option::None => {}
-            }
-            Option::None => {}
-          }
-        }
-        Option::None => {}
+  let _ = while 0u32 {
+    step => {
+      if self_host_array_index_is_valid(
+        work_index,
+        declaration_work.length(),
+      ) {
+        self_host_program_specialization_scan_reachable_declaration(
+          lowering,
+          declaration_work[work_index],
+          reachable,
+          reachable_seen,
+          requests,
+          shapes,
+          request_head_by_declaration,
+          request_next,
+          calls,
+          scanned_bodies,
+        )
+        work_index = self_host_u32_add(work_index, 1u32)
+      } else if self_host_array_index_is_valid(
+        request_index,
+        requests.length(),
+      ) {
+        self_host_program_specialization_scan_request(
+          lowering,
+          request_index,
+          reachable,
+          reachable_seen,
+          requests,
+          shapes,
+          request_head_by_declaration,
+          request_next,
+          calls,
+        )
+        request_index = self_host_u32_add(request_index, 1u32)
+      } else {
+        break self_host_semantic_unit()
       }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
+      reachable_queue_index = self_host_program_specialization_queue_reachable(
+        reachable,
+        declaration_work,
+        declaration_queued,
+        reachable_queue_index,
+      )
+      normalized_call_count = self_host_program_specialization_normalize_receiver_calls(
+        lowering,
+        requests,
+        shapes,
+        request_head_by_declaration,
+        request_next,
+        calls,
+        normalized_call_count,
+      )
+      continue step + 1u32
     }
   }
   SelfHostProgramSpecializationPlan::{

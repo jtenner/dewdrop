@@ -1,141 +1,183 @@
 (module
-  (type (;0;) (struct (field i32)))
-  (type (;1;) (sub (struct (field funcref))))
-  (type (;2;) (sub final 1 (struct (field funcref) (field i32))))
-  (type (;3;) (sub final 1 (struct (field funcref) (field i32) (field i32))))
-  (type (;4;) (sub final 1 (struct (field funcref))))
-  (type (;5;) (func (param i32) (result i32)))
-  (type (;6;) (func (param i32) (result eqref)))
-  (type (;7;) (func (result i32)))
-  (type (;8;) (func (param eqref i32) (result i32)))
-  (type (;9;) (func (param eqref i32) (result eqref)))
-  (type (;10;) (func (param eqref) (result i32)))
-  (type (;11;) (func (param i32 i32) (result eqref)))
-  (type (;12;) (func (param eqref i32) (result i32)))
-  (type (;13;) (func))
-  (type (;14;) (func))
-  (type (;15;) (array (mut v128)))
-  (type (;16;) (struct (field (ref 15)) (field i32) (field i32)))
-  (type (;17;) (struct (field (ref 15)) (field i32) (field i32)))
-  (type (;18;) (struct (field (ref 15)) (field i32) (field i32)))
-  (type (;19;) (struct (field (mut (ref 15))) (field (mut i32)) (field (mut i32))))
-  (type (;20;) (struct (field (mut (ref 15))) (field (mut i32)) (field (mut i32))))
+  (@custom "compiler.facts" (before first) "\01\00\01\07dewdrop\050.1.0\00\01\01\01\00\12\00\01\81\800\00\00\00\00\00\00\00\00\01\00\02\00\00\01\7f\01\ff\01\01\00\01\7f\00\00\01\01\00\00\00\00\01\01\81\810\00\00\00\00\00\00\00\00\01\01\00\01\00\00\01\7f\01\ff\01\00\01\01\00\00\00\00\02\01\81\800\00\00\00\00\00\00\00\00\01\01\00\01\00\00\01\7f\01\ff\01\00\01\01\00\00\00\00\03\01\00\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\00\01\00\00\00\04\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\00\02\00\00\01\7f\01\ff\01\01\00\01\7f\00\00\01\01\00\00\00\00\05\01\80\01\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\01\00\00\00\00\06\01\80\01\00\00\00\00\00\00\00\00\01\01\0a\01\00\00\01\7f\00\00\01\01\00\00\00\00\07\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\09\01\02\04\05\06\0d\0e\0f\10\00\00\01\00\00\01\00\00\08\01\00\00\00\00\00\00\00\00\00\01\00\01\00\00\01\00\00\00\01\00\01\00\00\00\09\01\81\80\10\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\00\01\00\00\00\0a\01\80\01\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\01\00\00\00\00\0b\01\81\80\10\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\00\01\00\00\00\0c\01\00\00\00\00\00\00\00\00\00\01\00\01\00\00\01\00\00\00\01\00\01\00\00\00\0d\01\00\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\01\00\00\00\00\0e\01\81\80\10\00\00\00\00\00\00\00\00\01\00\00\00\01\01\00\00\00\00\0f\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\01\00\00\00\00\10\01\00\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\01\00\00\00\00\11\01\80\11\00\00\00\00\00\00\00\00\01\00\00\00\01\00\00\01\00\00\00\00\01\00\01\01\01\04\02\00\00\00\01\01\00\00\00\01\00\00\00\00\01\01\01\01\00\00\09\00\01\01\00\00\05\01\02\01\09\00\01\01\05\08\00\00\00\01\01\01\01\00\06\01\01\08\01\01\b8\17\01\82\80\80\80\80\f7\02\01\81\80\80\80\80\f7\02\00\01\a6\01\00\01\0b\00\00\00\00\00\01\01\01\01\00\00\0a\00\01\01\b8\17\01\82\80\80\80\80\f7\02\01\81\80\80\80\80\f7\02\00\01\a6\01\00\00\00\00\00\01\01\0b\00\04\0a\00\00\00\00\00\01\01\b8\17\01\82\80\80\80\80\f7\02\01\81\80\80\80\80\f7\02\00\01\a6\01\00\00\00\05\02\05\00\00\01\01\05\09\00\00\00\01\01\01\01\00\06\01\01\09\01\01\b8\17\01\86\80\80\80\80\f7\02\01\85\80\80\80\80\f7\02\00\01\8c\04\00\05\04\00\00\00\00\00\01\01\01\01\00\00\0b\00\01\01\b8\17\01\86\80\80\80\80\f7\02\01\85\80\80\80\80\f7\02\00\01\8c\04\00\00\00\00\00\01\05\04\00\04\0b\00\00\00\00\00\01\01\b8\17\01\86\80\80\80\80\f7\02\01\85\80\80\80\80\f7\02\00\01\8c\04\00\00\00\07\1b\07\00\00\01\01\05\0c\00\00\00\01\01\01\01\00\06\01\01\0c\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\02\00\00\00\00\00\01\01\01\01\00\00\0d\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\077\00\01\01\05\0c\00\00\00\01\01\01\01\00\06\01\01\0c\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07d\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07l\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\c6\01\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\ce\01\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\84\02\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\8c\02\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\c2\02\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\ca\02\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\fe\02\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\86\03\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\e0\03\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\e8\03\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\f3\03\00\00\00\00\00\01\01\01\01\00\00\08\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\a3\04\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\ab\04\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\d3\04\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\db\04\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\8f\05\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\97\05\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\ac\05\00\00\00\00\00\01\01\01\01\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\9d\06\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\a5\06\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\f1\06\00\00\00\00\00\01\01\01\01\00\00\1b\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\f9\06\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\00\01\07:\01\0c\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\00\00\19\07\02\00\04\0d\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07d\00\01\1b\00\00\00\01\02\01\02\02\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07l\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\c6\01\00\01\1b\00\00\00\01\02\01\01\01\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\ce\01\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\84\02\00\01\1b\00\00\00\01\02\01\02\02\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\8c\02\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\c2\02\00\01\1b\00\00\00\01\02\01\02\02\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\ca\02\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\fe\02\00\01\1b\00\00\00\01\02\01\02\02\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\86\03\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\e0\03\00\01\1b\00\00\00\01\02\01\01\01\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\e8\03\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\f3\03\00\04\08\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\a3\04\00\01\1b\00\00\00\01\02\01\02\02\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\ab\04\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\d3\04\00\01\1b\00\00\00\01\02\01\01\01\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\db\04\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\8f\05\00\01\1b\00\00\00\01\02\01\02\02\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\97\05\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\ac\05\00\01\00\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\9d\06\00\01\1b\00\00\00\01\02\01\02\02\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\a5\06\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\f1\06\00\01\1b\00\00\00\01\02\01\03\03\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\07\f9\06\00\04\1c\00\00\00\00\00\01\01\b8\17\01\88\80\80\80\80\f7\02\01\87\80\80\80\80\f7\02\00\01\9f\06\00\00\00\0a\02\0a\00\00\01\01\05\0b\00\00\00\01\01\01\01\00\06\01\01\0b\01\01\b8\17\01\82\80\80\80\87\f7\02\01\86\80\80\80\80\f7\02\00\01\cd\05\00\0a\06\00\00\00\00\00\01\01\01\01\00\00\0c\00\01\01\b8\17\01\82\80\80\80\87\f7\02\01\86\80\80\80\80\f7\02\00\01\cd\05\00\00\00\00\00\01\0a\06\00\04\0c\00\00\00\00\00\01\01\b8\17\01\82\80\80\80\87\f7\02\01\86\80\80\80\80\f7\02\00\01\cd\05\00\00\00\11\02\11\00\00\01\01\05\03\00\00\00\01\01\01\01\00\06\01\01\03\00\11\02\00\00\00\00\00\01\01\01\01\00\00\09\00\00\00\00\00\00\01\11\02\00\04\09\00\00\00\00\00\00\00\00\00")
+  (type (;0;) (array (mut i32)))
+  (type (;1;) (array (mut i64)))
+  (type (;2;) (array (mut f32)))
+  (type (;3;) (array (mut f64)))
+  (type (;4;) (array (mut v128)))
+  (type (;5;) (array (mut eqref)))
+  (type (;6;) (array (mut i8)))
+  (type (;7;) (array (mut i16)))
+  (type (;8;) (struct (field i32)))
+  (type (;9;) (sub (struct (field funcref))))
+  (type (;10;) (sub final 9 (struct (field funcref))))
+  (type (;11;) (sub final 9 (struct (field funcref) (field i32))))
+  (type (;12;) (sub final 9 (struct (field funcref) (field i32) (field i32))))
+  (type (;13;) (sub final 9 (struct (field funcref))))
+  (type (;14;) (func (param i32) (result i32)))
+  (type (;15;) (func (param i32) (result eqref)))
+  (type (;16;) (func (result i32)))
+  (type (;17;) (func (param eqref i32) (result i32)))
+  (type (;18;) (func (param eqref i32) (result eqref)))
+  (type (;19;) (func (param eqref) (result i32)))
+  (type (;20;) (func (param i32 i32) (result eqref)))
+  (type (;21;) (func (param (ref 0) i32)))
+  (type (;22;) (func (param (ref 0)) (result eqref)))
+  (type (;23;) (func (param (ref 0)) (result i32)))
+  (type (;24;) (func (param eqref i32) (result i32)))
+  (type (;25;) (func))
+  (type (;26;) (func))
+  (type (;27;) (array (mut v128)))
+  (type (;28;) (struct (field (ref 27)) (field i32) (field i32)))
+  (type (;29;) (struct (field (ref 27)) (field i32) (field i32)))
+  (type (;30;) (struct (field (ref 27)) (field i32) (field i32)))
+  (type (;31;) (struct (field (mut (ref 27))) (field (mut i32)) (field (mut i32))))
+  (type (;32;) (struct (field (mut (ref 27))) (field (mut i32)) (field (mut i32))))
   (global (;0;) (mut eqref) ref.null eq)
-  (export "main" (func 4))
-  (export "__dew_init" (func 13))
-  (elem (;0;) declare func 0 5 7 8)
-  (func (;0;) (type 5) (param i32) (result i32)
+  (export "main" (func 7))
+  (export "__dew_init" (func 17))
+  (elem (;0;) declare func 3 8 9 11 12)
+  (func (;0;) (type 21) (param (ref 0) i32)
+    local.get 0
+    ref.cast (ref 0)
+    i32.const 0
+    local.get 0
+    ref.cast (ref 0)
+    i32.const 0
+    array.get 0
+    i32.const 10
+    i32.mul
+    local.get 1
+    i32.add
+    array.set 0
+  )
+  (func (;1;) (type 22) (param (ref 0)) (result eqref)
+    local.get 0
+    ref.cast (ref 0)
+    i32.const 1
+    call 0
+    ref.func 8
+    struct.new 10
+  )
+  (func (;2;) (type 23) (param (ref 0)) (result i32)
+    local.get 0
+    ref.cast (ref 0)
+    i32.const 2
+    call 0
+    i32.const 41
+  )
+  (func (;3;) (type 14) (param i32) (result i32)
     local.get 0
     i32.const 1
     i32.add
   )
-  (func (;1;) (type 12) (param eqref i32) (result i32)
+  (func (;4;) (type 24) (param eqref i32) (result i32)
     (local eqref)
     local.get 0
     local.set 2
     local.get 2
-    ref.cast (ref 1)
-    struct.get 1 0
-    ref.test (ref 5)
+    ref.cast (ref 9)
+    struct.get 9 0
+    ref.test (ref 14)
     if (result i32) ;; label = @1
       local.get 1
       local.get 2
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 5)
-      call_ref 5
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 14)
+      call_ref 14
     else
       local.get 2
       local.get 1
       local.get 2
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 8)
-      call_ref 8
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 17)
+      call_ref 17
     end
   )
-  (func (;2;) (type 6) (param i32) (result eqref)
-    ref.func 5
+  (func (;5;) (type 15) (param i32) (result eqref)
+    ref.func 9
     local.get 0
-    struct.new 2
+    struct.new 11
   )
-  (func (;3;) (type 6) (param i32) (result eqref)
+  (func (;6;) (type 15) (param i32) (result eqref)
     local.get 0
     i32.const 2
-    call 6
+    call 10
   )
-  (func (;4;) (type 13)
-    (local eqref eqref (ref 0) eqref eqref eqref eqref)
-    ref.func 8
-    struct.new 4
+  (func (;7;) (type 25)
+    (local eqref eqref (ref 8) eqref eqref eqref eqref i32 i32 eqref)
+    ref.func 12
+    struct.new 13
     local.set 0
     local.get 0
     local.set 4
     local.get 4
-    ref.cast (ref 1)
-    struct.get 1 0
-    ref.test (ref 5)
+    ref.cast (ref 9)
+    struct.get 9 0
+    ref.test (ref 14)
     if (result i32) ;; label = @1
       i32.const 42
       local.get 4
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 5)
-      call_ref 5
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 14)
+      call_ref 14
     else
       local.get 4
       i32.const 42
       local.get 4
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 8)
-      call_ref 8
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 17)
+      call_ref 17
     end
     i32.const 42
     i32.eq
     v128.const i32x4 0x2d6e6f6e 0x74706163 0x6e697275 0x616c2067
     v128.const i32x4 0x6164626d 0x00000000 0x00000000 0x00000000
-    array.new_fixed 15 2
+    array.new_fixed 27 2
     i32.const 0
     i32.const 20
-    struct.new 16
+    struct.new 28
     drop
     i32.eqz
     if ;; label = @1
       unreachable
     end
     i32.const 1
-    call 2
+    call 5
     local.set 1
     local.get 1
     local.set 5
     local.get 5
-    ref.cast (ref 1)
-    struct.get 1 0
-    ref.test (ref 5)
+    ref.cast (ref 9)
+    struct.get 9 0
+    ref.test (ref 14)
     if (result i32) ;; label = @1
       i32.const 41
       local.get 5
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 5)
-      call_ref 5
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 14)
+      call_ref 14
     else
       local.get 5
       i32.const 41
       local.get 5
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 8)
-      call_ref 8
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 17)
+      call_ref 17
     end
     i32.const 42
     i32.eq
     v128.const i32x4 0x75746572 0x64656e72 0x6f6c6320 0x65727573
-    array.new_fixed 15 1
+    array.new_fixed 27 1
     i32.const 0
     i32.const 16
-    struct.new 16
+    struct.new 28
     drop
     i32.eqz
     if ;; label = @1
@@ -143,15 +185,15 @@
     end
     local.get 1
     i32.const 41
-    call 1
+    call 4
     i32.const 42
     i32.eq
     v128.const i32x4 0x736f6c63 0x20657275 0x61726170 0x6574656d
     v128.const i32x4 0x00000072 0x00000000 0x00000000 0x00000000
-    array.new_fixed 15 2
+    array.new_fixed 27 2
     i32.const 0
     i32.const 17
-    struct.new 16
+    struct.new 28
     drop
     i32.eqz
     if ;; label = @1
@@ -159,85 +201,85 @@
     end
     local.get 0
     i32.const 42
-    call 1
+    call 4
     i32.const 42
     i32.eq
     v128.const i32x4 0x6e617274 0x72617073 0x20746e65 0x656d616e
     v128.const i32x4 0x61632064 0x61626c6c 0x00006b63 0x00000000
-    array.new_fixed 15 2
+    array.new_fixed 27 2
     i32.const 0
     i32.const 26
-    struct.new 16
+    struct.new 28
     drop
     i32.eqz
     if ;; label = @1
       unreachable
     end
     i32.const 41
-    call 9
+    call 13
     i32.const 42
     i32.eq
     v128.const i32x4 0x6e617274 0x72617073 0x20746e65 0x626d616c
     v128.const i32x4 0x63206164 0x626c6c61 0x006b6361 0x00000000
-    array.new_fixed 15 2
+    array.new_fixed 27 2
     i32.const 0
     i32.const 27
-    struct.new 16
+    struct.new 28
     drop
     i32.eqz
     if ;; label = @1
       unreachable
     end
     i32.const 39
-    call 3
+    call 6
     local.set 0
     local.get 0
     local.set 6
     local.get 6
-    ref.cast (ref 1)
-    struct.get 1 0
-    ref.test (ref 5)
+    ref.cast (ref 9)
+    struct.get 9 0
+    ref.test (ref 14)
     if (result i32) ;; label = @1
       i32.const 1
       local.get 6
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 5)
-      call_ref 5
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 14)
+      call_ref 14
     else
       local.get 6
       i32.const 1
       local.get 6
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 8)
-      call_ref 8
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 17)
+      call_ref 17
     end
     i32.const 42
     i32.eq
     v128.const i32x4 0x7473656e 0x63206465 0x75736f6c 0x00006572
-    array.new_fixed 15 1
+    array.new_fixed 27 1
     i32.const 0
     i32.const 14
-    struct.new 16
+    struct.new 28
     drop
     i32.eqz
     if ;; label = @1
       unreachable
     end
     i32.const 41
-    struct.new 0
+    struct.new 8
     local.set 2
     local.get 2
-    call 10
+    call 14
     i32.const 42
     i32.eq
     v128.const i32x4 0x65666572 0x636e6572 0x61632065 0x72757470
     v128.const i32x4 0x00000065 0x00000000 0x00000000 0x00000000
-    array.new_fixed 15 2
+    array.new_fixed 27 2
     i32.const 0
     i32.const 17
-    struct.new 16
+    struct.new 28
     drop
     i32.eqz
     if ;; label = @1
@@ -247,149 +289,221 @@
     local.set 3
     local.get 3
     i32.const 40
-    call 11
+    call 15
     i32.const 42
     i32.eq
     v128.const i32x4 0x636e7566 0x6e6f6974 0x70616320 0x65727574
-    array.new_fixed 15 1
+    array.new_fixed 27 1
     i32.const 0
     i32.const 16
-    struct.new 16
+    struct.new 28
     drop
     i32.eqz
     if ;; label = @1
       unreachable
     end
     i32.const 41
-    call 12
+    call 16
     i32.const 42
     i32.eq
     v128.const i32x4 0x656d6d69 0x74616964 0x616c2065 0x6164626d
     v128.const i32x4 0x6c616320 0x0000006c 0x00000000 0x00000000
-    array.new_fixed 15 2
+    array.new_fixed 27 2
     i32.const 0
     i32.const 21
-    struct.new 16
+    struct.new 28
+    drop
+    i32.eqz
+    if ;; label = @1
+      unreachable
+    end
+    i32.const 1
+    i32.const 0
+    local.set 7
+    local.set 8
+    local.get 7
+    local.get 8
+    array.new 0
+    local.set 0
+    local.get 0
+    ref.cast (ref 0)
+    call 1
+    local.set 9
+    local.get 9
+    ref.cast (ref 9)
+    struct.get 9 0
+    ref.test (ref 14)
+    if (result i32) ;; label = @1
+      local.get 0
+      ref.cast (ref 0)
+      call 2
+      local.get 9
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 14)
+      call_ref 14
+    else
+      local.get 9
+      local.get 0
+      ref.cast (ref 0)
+      call 2
+      local.get 9
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 17)
+      call_ref 17
+    end
+    i32.const 42
+    i32.eq
+    v128.const i32x4 0x616e7964 0x2063696d 0x6c6c6163 0x73657220
+    v128.const i32x4 0x00746c75 0x00000000 0x00000000 0x00000000
+    array.new_fixed 27 2
+    i32.const 0
+    i32.const 19
+    struct.new 28
+    drop
+    i32.eqz
+    if ;; label = @1
+      unreachable
+    end
+    local.get 0
+    ref.cast (ref 0)
+    i32.const 0
+    array.get 0
+    i32.const 12
+    i32.eq
+    v128.const i32x4 0x616e7964 0x2063696d 0x6c6c6163 0x61766520
+    v128.const i32x4 0x7461756c 0x74207365 0x65677261 0x69662074
+    v128.const i32x4 0x00747372 0x00000000 0x00000000 0x00000000
+    array.new_fixed 27 3
+    i32.const 0
+    i32.const 35
+    struct.new 28
     drop
     i32.eqz
     if ;; label = @1
       unreachable
     end
   )
-  (func (;5;) (type 8) (param eqref i32) (result i32)
+  (func (;8;) (type 17) (param eqref i32) (result i32)
     local.get 1
-    local.get 0
-    ref.cast (ref 2)
-    struct.get 2 1
+    i32.const 1
     i32.add
   )
-  (func (;6;) (type 11) (param i32 i32) (result eqref)
-    ref.func 7
+  (func (;9;) (type 17) (param eqref i32) (result i32)
+    local.get 1
+    local.get 0
+    ref.cast (ref 11)
+    struct.get 11 1
+    i32.add
+  )
+  (func (;10;) (type 20) (param i32 i32) (result eqref)
+    ref.func 11
     local.get 0
     local.get 1
-    struct.new 3
+    struct.new 12
   )
-  (func (;7;) (type 8) (param eqref i32) (result i32)
+  (func (;11;) (type 17) (param eqref i32) (result i32)
     local.get 0
-    ref.cast (ref 3)
-    struct.get 3 1
+    ref.cast (ref 12)
+    struct.get 12 1
     local.get 0
-    ref.cast (ref 3)
-    struct.get 3 2
+    ref.cast (ref 12)
+    struct.get 12 2
     i32.add
     local.get 1
     i32.add
   )
-  (func (;8;) (type 8) (param eqref i32) (result i32)
+  (func (;12;) (type 17) (param eqref i32) (result i32)
     local.get 1
   )
-  (func (;9;) (type 5) (param i32) (result i32)
+  (func (;13;) (type 14) (param i32) (result i32)
     local.get 0
     i32.const 1
     i32.add
   )
-  (func (;10;) (type 10) (param eqref) (result i32)
+  (func (;14;) (type 19) (param eqref) (result i32)
     local.get 0
-    ref.cast (ref 0)
-    struct.get 0 0
+    ref.cast (ref 8)
+    struct.get 8 0
     i32.const 1
     i32.add
   )
-  (func (;11;) (type 8) (param eqref i32) (result i32)
+  (func (;15;) (type 17) (param eqref i32) (result i32)
     (local eqref eqref)
     local.get 0
     local.set 3
     local.get 3
-    ref.cast (ref 1)
-    struct.get 1 0
-    ref.test (ref 5)
+    ref.cast (ref 9)
+    struct.get 9 0
+    ref.test (ref 14)
     if (result i32) ;; label = @1
       local.get 0
       local.set 2
       local.get 2
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.test (ref 5)
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.test (ref 14)
       if (result i32) ;; label = @2
         local.get 1
         local.get 2
-        ref.cast (ref 1)
-        struct.get 1 0
-        ref.cast (ref 5)
-        call_ref 5
+        ref.cast (ref 9)
+        struct.get 9 0
+        ref.cast (ref 14)
+        call_ref 14
       else
         local.get 2
         local.get 1
         local.get 2
-        ref.cast (ref 1)
-        struct.get 1 0
-        ref.cast (ref 8)
-        call_ref 8
+        ref.cast (ref 9)
+        struct.get 9 0
+        ref.cast (ref 17)
+        call_ref 17
       end
       local.get 3
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 5)
-      call_ref 5
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 14)
+      call_ref 14
     else
       local.get 3
       local.get 0
       local.set 2
       local.get 2
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.test (ref 5)
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.test (ref 14)
       if (result i32) ;; label = @2
         local.get 1
         local.get 2
-        ref.cast (ref 1)
-        struct.get 1 0
-        ref.cast (ref 5)
-        call_ref 5
+        ref.cast (ref 9)
+        struct.get 9 0
+        ref.cast (ref 14)
+        call_ref 14
       else
         local.get 2
         local.get 1
         local.get 2
-        ref.cast (ref 1)
-        struct.get 1 0
-        ref.cast (ref 8)
-        call_ref 8
+        ref.cast (ref 9)
+        struct.get 9 0
+        ref.cast (ref 17)
+        call_ref 17
       end
       local.get 3
-      ref.cast (ref 1)
-      struct.get 1 0
-      ref.cast (ref 8)
-      call_ref 8
+      ref.cast (ref 9)
+      struct.get 9 0
+      ref.cast (ref 17)
+      call_ref 17
     end
   )
-  (func (;12;) (type 5) (param i32) (result i32)
+  (func (;16;) (type 14) (param i32) (result i32)
     local.get 0
     i32.const 1
     i32.add
   )
-  (func (;13;) (type 14)
-    ref.func 0
-    struct.new 1
+  (func (;17;) (type 26)
+    ref.func 3
+    struct.new 9
     global.set 0
   )
 )

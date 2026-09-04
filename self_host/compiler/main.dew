@@ -7,6 +7,7 @@ open dew.std.path
 open dew.std.process
 open dew.std.result
 open dew.std.string
+open dew.std.string_builder
 open dew.std.wasm.intrinsics
 
 builtin self_host_main_string_concat(
@@ -55,9 +56,177 @@ fn self_host_error(process: FacetProcess, message: String) -> U32 {
   1u32
 }
 
+fn self_host_compile_request_root_diagnostic(
+  diagnostic: SelfHostCollectionDiagnostic,
+) -> String {
+  let message = StringBuilder::new()
+  message.append("compile request root parse diagnostic")
+  match diagnostic {
+    SelfHostCollectionDiagnostic::ParseDiagnostic(
+      file_id,
+      parse_diagnostic,
+      kind,
+      offset,
+      token_code,
+      token_text,
+    ) => {
+      message.append(" file=")
+      message.append_u64(file_id)
+      message.append(" kind=")
+      message.append_u32(kind)
+      message.append(" offset=")
+      message.append_u32(offset)
+      message.append(" token_code=")
+      message.append_u32(token_code)
+      message.append(" token=")
+      message.append(token_text)
+      match parse_diagnostic.error {
+        SelfHostParseError::Lexical(error, error_offset) => {
+          message.append(" error_offset=")
+          message.append_u32(error_offset)
+          match error {
+            SelfHostLexError::UnexpectedUnit(unit) => {
+              message.append(" lexical=unexpected_unit unit=")
+              message.append_u32(unit)
+            }
+            SelfHostLexError::InvalidAtIdentifier =>
+              message.append(" lexical=invalid_at_identifier")
+            SelfHostLexError::InvalidInteger(text) => {
+              message.append(" lexical=invalid_integer text=")
+              message.append(text)
+            }
+            SelfHostLexError::InvalidFloat(text) => {
+              message.append(" lexical=invalid_float text=")
+              message.append(text)
+            }
+            SelfHostLexError::InvalidEscape(unit) => {
+              message.append(" lexical=invalid_escape unit=")
+              message.append_u32(unit)
+            }
+            SelfHostLexError::UnterminatedString =>
+              message.append(" lexical=unterminated_string")
+          }
+        }
+        SelfHostParseError::ExpectedDeclaration(expectation, _, error_offset) => {
+          message.append(" error_offset=")
+          message.append_u32(error_offset)
+          match expectation {
+            SelfHostDeclarationExpectation::TypeArgumentSeparatorOrClose =>
+              message.append(" expectation=type_argument_separator_or_close")
+            SelfHostDeclarationExpectation::LeftBrace =>
+              message.append(" expectation=left_brace")
+            SelfHostDeclarationExpectation::Type =>
+              message.append(" expectation=type")
+            SelfHostDeclarationExpectation::Arrow =>
+              message.append(" expectation=arrow")
+            SelfHostDeclarationExpectation::LineEnd =>
+              message.append(" expectation=line_end")
+            SelfHostDeclarationExpectation::DeclarationKeyword =>
+              message.append(" expectation=declaration_keyword")
+            _ => message.append(" expectation=other_declaration")
+          }
+        }
+        _ => message.append(" error=non_declaration")
+      }
+    }
+    SelfHostCollectionDiagnostic::DuplicateName(diagnostic) => {
+      message.append(" kind=duplicate_name name=")
+      message.append_u32(diagnostic.name)
+      message.append(" first=")
+      message.append_u64(diagnostic.first)
+      message.append(" duplicate=")
+      message.append_u64(diagnostic.duplicate)
+      message.append(" first_file=")
+      message.append_u64(diagnostic.first_file)
+      message.append(" duplicate_file=")
+      message.append_u64(diagnostic.duplicate_file)
+      message.append(" first_offset=")
+      message.append_u32(diagnostic.first_offset)
+      message.append(" duplicate_offset=")
+      message.append_u32(diagnostic.duplicate_offset)
+    }
+    SelfHostCollectionDiagnostic::DuplicateTestIdentity(diagnostic) => {
+      message.append(" kind=duplicate_test file=")
+      message.append_u64(diagnostic.file)
+      message.append(" name=")
+      message.append(bytes_to_string(diagnostic.display_name))
+    }
+    SelfHostCollectionDiagnostic::InvalidExpectedTestTrap(file, trap, offset) => {
+      message.append(" kind=invalid_test_trap file=")
+      message.append_u64(file)
+      message.append(" trap=")
+      message.append(bytes_to_string(trap))
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostCollectionDiagnostic::TestDeclarationOutsideTestFile(file, offset) => {
+      message.append(" kind=test_outside_test_file file=")
+      message.append_u64(file)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostCollectionDiagnostic::ValueBindingArenaMismatch(
+      names,
+      bindings,
+      candidates,
+    ) => {
+      message.append(" kind=value_binding_arena_mismatch names=")
+      message.append_u32(names)
+      message.append(" bindings=")
+      message.append_u32(bindings)
+      message.append(" candidates=")
+      message.append_u32(candidates)
+    }
+    SelfHostCollectionDiagnostic::UnknownDerivedTrait(name, file, offset) => {
+      message.append(" kind=unknown_derived_trait name=")
+      message.append(name)
+      message.append(" file=")
+      message.append_u64(file)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostCollectionDiagnostic::DuplicateDerivedTrait(name, file, first, duplicate) => {
+      message.append(" kind=duplicate_derived_trait name=")
+      message.append(name)
+      message.append(" file=")
+      message.append_u64(file)
+      message.append(" first=")
+      message.append_u32(first)
+      message.append(" duplicate=")
+      message.append_u32(duplicate)
+    }
+    SelfHostCollectionDiagnostic::EmptyForeignLogicalName(file, offset) => {
+      message.append(" kind=empty_foreign_logical_name file=")
+      message.append_u64(file)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostCollectionDiagnostic::EmptyForeignExportName(file, offset) => {
+      message.append(" kind=empty_foreign_export_name file=")
+      message.append_u64(file)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+  }
+  message.finish()
+}
+
 fn self_host_compile_request_semantic_plan(
   request: SelfHostCompileRequest,
 ) -> Result<SelfHostPlannedProgramWasmGCLink, String> {
+  // This canary protects nominal identity comparisons before body planning.
+  if !self_host_u64_equal(31022548779538u64, 31022548779538u64) {
+    return Result::Err("compile request U64 helper equality contract failed")
+  }
+  if self_host_u64_equal(31022548779538u64, 31022548779539u64) {
+    return Result::Err("compile request U64 helper inequality contract failed")
+  }
+  if 31022548779538u64 != 31022548779538u64 {
+    return Result::Err("compile request U64 direct equality contract failed")
+  }
+  if 31022548779538u64 == 31022548779539u64 {
+    return Result::Err("compile request U64 direct inequality contract failed")
+  }
   let collected = self_host_collect_program_manifest(7200u64, request.manifest)
   if self_host_u32_greater(collected.diagnostics.length(), 0u32) {
     return Result::Err("compile request manifest is invalid")
@@ -71,6 +240,13 @@ fn self_host_compile_request_semantic_plan(
   match request.root_module_index() {
     Option::Some(root_module_index) => {
       let root_module = collected.modules.at(root_module_index)
+      if root_module.diagnostic_count() > 0u32 {
+        return Result::Err(
+          self_host_compile_request_root_diagnostic(
+            root_module.diagnostic_at(0u32),
+          ),
+        )
+      }
       if root_module.callable_count() == 0u32 {
         if self_host_main_string_equals(
           array_get_unchecked(collected.module_paths, root_module_index),
@@ -122,6 +298,8 @@ fn self_host_compile_request_semantic_plan(
                 return Result::Err("compile request collected compiler root has a duplicate test")
               SelfHostCollectionDiagnostic::InvalidExpectedTestTrap(_, _, _) =>
                 return Result::Err("compile request collected compiler root has an invalid test trap")
+              _ =>
+                return Result::Err("compile request collected compiler root has diagnostics")
             }
             return Result::Err("compile request collected compiler root has diagnostics")
           } else if root_module.declaration_count() == 0u32 {
@@ -135,6 +313,10 @@ fn self_host_compile_request_semantic_plan(
       }
     }
     Option::None => return Result::Err("compile request root module is missing")
+  }
+  match self_host_validate_collected_program_storage(collected) {
+    Option::Some(error) => return Result::Err(error)
+    Option::None => {}
   }
   let frozen = self_host_freeze_program_signature_interfaces(collected)
   if self_host_u32_greater(frozen.import_diagnostics.length(), 0u32) {

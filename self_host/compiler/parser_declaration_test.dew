@@ -28,6 +28,14 @@ test "self-host parser parses declaration families" {
   assert(self_host_declaration_count(module_) == 13u32, "wrong declaration count")
 }
 
+test "self-host parser keeps a line after nested applied type closers" {
+  let module_ = self_host_parse_module(
+    b"struct State {\n  values: Array<Option<I32>>\n  next: U32\n}\n",
+  )
+  assert(self_host_diagnostic_count(module_) == 0u32, "nested closer diagnostics")
+  assert(self_host_declaration_count(module_) == 1u32, "nested closer declaration")
+}
+
 test "self-host parser derives declaration kinds from tokens" {
   let module_ = self_host_parse_module(
     b"struct Item {}\nenum Choice {\n  None\n}\nfn run() -> I32 {\n  0\n}\n",

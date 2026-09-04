@@ -76,8 +76,29 @@ impl SelfHostImportScopeList {
     self.values.push(scope)
   }
 
+  fn set(self, index: U32, scope: SelfHostModuleImportScope) -> Unit {
+    self.values[index] = scope
+  }
+
+  fn length(self) -> U32 {
+    self.values.length()
+  }
+
   fn at(self, index: U32) -> SelfHostModuleImportScope {
-    self.values[index]
+    let value = self.values[index]
+    SelfHostModuleImportScope::{
+      module_id: value.module_id
+      module_paths: value.module_paths
+      declarations: value.declarations
+      declaration_bindings: value.declaration_bindings
+      imported_interfaces: value.imported_interfaces
+      type_bindings: value.type_bindings
+      trait_bindings: value.trait_bindings
+      value_bindings: value.value_bindings
+      alias_bindings: value.alias_bindings
+      interfaces: value.interfaces
+      diagnostics: value.diagnostics
+    }
   }
 }
 
@@ -156,76 +177,84 @@ fn self_host_collect_program_manifest(
   let module_paths = []
   let modules = SelfHostCollectedModuleList::new()
   let diagnostics = []
+  let module_count = array_length(manifest.modules)
   let mut module_index = 0u32
-  for module_ in manifest.modules {
-    if module_.path.byte_length() == 0u32 {
-      diagnostics.push(SelfHostManifestDiagnostic::EmptyModulePath(module_index))
-    }
-    let mut previous_module = 0u32
-    let _ = while previous_module {
-      previous => if previous < module_paths.length() {
-        if self_host_manifest_string_equal(
-          module_paths[previous],
-          module_.path,
-        ) {
-          diagnostics.push(
-            SelfHostManifestDiagnostic::DuplicateModulePath(
-              module_.path,
-              previous,
-              module_index,
-            ),
-          )
-          break self_host_semantic_unit()
-        }
-        continue previous + 1u32
-      } else {
-        break self_host_semantic_unit()
+  let _ = while module_index {
+    current_module => if current_module < module_count {
+      let module_ = array_get_unchecked(manifest.modules, current_module)
+      if module_.path.byte_length() == 0u32 {
+        diagnostics.push(SelfHostManifestDiagnostic::EmptyModulePath(
+          current_module,
+        ))
       }
-    }
-    let mut file_index = 0u32
-    let file_count = self_host_manifest_module_file_count(module_)
-    let _ = while file_index {
-      current_file => if current_file < file_count {
-        let file = self_host_manifest_module_file(module_, current_file)
-        if file.path.byte_length() == 0u32 {
-          diagnostics.push(
-            SelfHostManifestDiagnostic::EmptyFilePath(
-              module_index,
-              current_file,
-            ),
-          )
-        }
-        let mut previous_file = 0u32
-        let _ = while previous_file {
-          previous => if previous < current_file {
-            let candidate = self_host_manifest_module_file(module_, previous)
-            if self_host_manifest_string_equal(candidate.path, file.path) {
-              diagnostics.push(
-                SelfHostManifestDiagnostic::DuplicateFilePath(
-                  file.path,
-                  module_index,
-                  previous,
-                  current_file,
-                ),
-              )
-              break self_host_semantic_unit()
-            }
-            continue previous + 1u32
-          } else {
+      let mut previous_module = 0u32
+      let _ = while previous_module {
+        previous => if previous < module_paths.length() {
+          if self_host_manifest_string_equal(
+            module_paths[previous],
+            module_.path,
+          ) {
+            diagnostics.push(
+              SelfHostManifestDiagnostic::DuplicateModulePath(
+                module_.path,
+                previous,
+                current_module,
+              ),
+            )
             break self_host_semantic_unit()
           }
+          continue previous + 1u32
+        } else {
+          break self_host_semantic_unit()
         }
-        continue current_file + 1u32
-      } else {
-        break self_host_semantic_unit()
       }
+      let mut file_index = 0u32
+      let file_count = self_host_manifest_module_file_count(module_)
+      let _ = while file_index {
+        current_file => if current_file < file_count {
+          let file = self_host_manifest_module_file(module_, current_file)
+          if file.path.byte_length() == 0u32 {
+            diagnostics.push(
+              SelfHostManifestDiagnostic::EmptyFilePath(
+                current_module,
+                current_file,
+              ),
+            )
+          }
+          let mut previous_file = 0u32
+          let _ = while previous_file {
+            previous => if previous < current_file {
+              let candidate = self_host_manifest_module_file(module_, previous)
+              if self_host_manifest_string_equal(candidate.path, file.path) {
+                diagnostics.push(
+                  SelfHostManifestDiagnostic::DuplicateFilePath(
+                    file.path,
+                    current_module,
+                    previous,
+                    current_file,
+                  ),
+                )
+                break self_host_semantic_unit()
+              }
+              continue previous + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          continue current_file + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let module_id = module_id_base + u32_into_u64(current_module)
+      let files = self_host_program_files_for_manifest_module(module_id, module_)
+      let collected = self_host_collect_files(module_id, files)
+      module_paths.push(module_.path)
+      modules.push(collected)
+      continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
-    let module_id = module_id_base + u32_into_u64(module_index)
-    let files = self_host_program_files_for_manifest_module(module_id, module_)
-    let collected = self_host_collect_files(module_id, files)
-    module_paths.push(module_.path)
-    modules.push(collected)
-    module_index = module_index + 1u32
   }
   SelfHostCollectedProgram::{
     module_id_base: module_id_base
@@ -275,7 +304,7 @@ fn self_host_collect_missing_import_diagnostics(
           }
           } else if self_host_module_path_index(
             program.module_paths,
-            import_.path_segments,
+            import_.path,
           ) >= program.module_paths.length() {
             diagnostics.push(
               SelfHostProgramImportDiagnostic::MissingImportedModule(
@@ -319,9 +348,7 @@ fn self_host_freeze_program_signature_interfaces(
       break self_host_semantic_unit()
     }
   }
-  let interfaces = SelfHostFrozenInterfaceList::new()
-  let scopes = SelfHostImportScopeList::new()
-  let import_diagnostics = []
+  let provisional_scopes = SelfHostImportScopeList::new()
   module_index = 0u32
   while module_index {
     current => if current < program.modules.length() {
@@ -332,20 +359,102 @@ fn self_host_freeze_program_signature_interfaces(
         program.module_paths,
         provisional,
       )
-      for diagnostic in scope.diagnostics {
-        import_diagnostics.push(diagnostic)
+      provisional_scopes.push(scope)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let provisional_frozen = SelfHostFrozenSignatureProgram::{
+    collected: program
+    interfaces: provisional
+    import_scopes: provisional_scopes
+    import_diagnostics: []
+    path_diagnostics: []
+  }
+  let graph = self_host_plan_program_module_graph(provisional_frozen)
+  let interfaces = SelfHostFrozenInterfaceList::new()
+  let scopes = SelfHostImportScopeList::new()
+  module_index = 0u32
+  let _ = while module_index {
+    current => if current < program.modules.length() {
+      interfaces.push(provisional.at(current))
+      scopes.push(provisional_scopes.at(current))
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut scc_index = 0u32
+  let _ = while scc_index {
+    current_scc => if current_scc < graph.sccs.length() {
+      let scc = self_host_hir_span_identity(graph.sccs[current_scc])
+      let mut pass = 0u32
+      let pass_count = if self_host_u32_greater(scc.length, 1u32) {
+        2u32
+      } else {
+        1u32
       }
-      let resolved = self_host_resolve_module_types_with_imports(
-        collected,
-        scope,
-      )
-      let interface_ = self_host_freeze_module_signature_interface(
-        program.module_paths[current],
-        collected,
-        resolved,
-      )
-      scopes.push(scope)
-      interfaces.push(interface_)
+      let _ = while pass {
+        current_pass => if current_pass < pass_count {
+          let mut member = 0u32
+          let _ = while member {
+            current_member => if current_member < scc.length {
+              let member_index = self_host_u32_add(
+                scc.start,
+                current_member,
+              )
+              let current_module = graph.scc_modules[member_index]
+              let collected = program.modules.at(current_module)
+              let scope = self_host_build_module_import_scope(
+                collected,
+                current_module,
+                program.module_paths,
+                interfaces,
+              )
+              let resolved = self_host_resolve_module_types_with_imports(
+                collected,
+                scope,
+              )
+              let interface_ = self_host_freeze_module_signature_interface(
+                program.module_paths[current_module],
+                collected,
+                resolved,
+              )
+              scopes.set(current_module, scope)
+              interfaces.set(current_module, interface_)
+              continue current_member + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          continue current_pass + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_scc + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let import_diagnostics = []
+  module_index = 0u32
+  let _ = while module_index {
+    current => if current < scopes.length() {
+      let scope = scopes.at(current)
+      let diagnostic_count = array_length(scope.diagnostics)
+      let mut diagnostic_index = 0u32
+      let _ = while diagnostic_index {
+        current_diagnostic => if current_diagnostic < diagnostic_count {
+          import_diagnostics.push(
+            array_get_unchecked(scope.diagnostics, current_diagnostic),
+          )
+          continue current_diagnostic + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
       continue current + 1u32
     } else {
       break self_host_semantic_unit()

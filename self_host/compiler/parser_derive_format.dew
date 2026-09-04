@@ -2,13 +2,38 @@ open dew.std.array
 open dew.std.option
 open dew.std.string
 
+fn self_host_derived_block_items() -> Array<SelfHostBlockItem> {
+  []
+}
+
+fn self_host_derived_block_items_push(
+  items: Array<SelfHostBlockItem>,
+  item: SelfHostBlockItem,
+) -> Unit {
+  array_push(items, item)
+}
+
 fn self_host_derived_expression_list_block(
   expressions: Array<SelfHostExpr>,
   offset: U32,
 ) -> SelfHostBlock {
-  let items = []
-  for expression in expressions {
-    items.push(self_host_expression_block_item(expression, offset))
+  // Indexed traversal keeps the source Array carrier explicit.
+  let items = self_host_derived_block_items()
+  let limit = array_length(expressions)
+  let mut index = 0u32
+  while index {
+    current => if current < limit {
+      self_host_derived_block_items_push(
+        items,
+        self_host_expression_block_item(
+          array_get_unchecked(expressions, current),
+          offset,
+        ),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   SelfHostBlock::{
     items: items
@@ -72,25 +97,31 @@ fn self_host_derived_struct_debug_body(
     expressions.push(
       self_host_derived_debug_text(value.name.concat(" { "), offset),
     )
+    let limit = array_length(value.fields)
     let mut index = 0u32
-    for field in value.fields {
-      expressions.push(
-        self_host_derived_debug_text(
-          self_host_derived_field_label(field.name, index == 0u32),
-          offset,
-        ),
-      )
-      expressions.push(
-        self_host_derived_debug_value(
-          SelfHostExpr::FieldExpr(
-            SelfHostExpr::NameExpr("self", offset),
-            field.name,
+    while index {
+      current => if current < limit {
+        let field = array_get_unchecked(value.fields, current)
+        expressions.push(
+          self_host_derived_debug_text(
+            self_host_derived_field_label(field.name, current == 0u32),
             offset,
           ),
-          offset,
-        ),
-      )
-      index = index + 1u32
+        )
+        expressions.push(
+          self_host_derived_debug_value(
+            SelfHostExpr::FieldExpr(
+              SelfHostExpr::NameExpr("self", offset),
+              field.name,
+              offset,
+            ),
+            offset,
+          ),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     expressions.push(self_host_derived_debug_write(b" }", offset))
   }
@@ -113,39 +144,50 @@ fn self_host_derived_format_variant_pattern(
     SelfHostEnumVariant::UnitVariant(_, _, _) => (base, names)
     SelfHostEnumVariant::TupleVariant(_, types, _, _) => {
       let patterns = []
+      let limit = array_length(types)
       let mut index = 0u32
-      for _ in types {
-        let name = self_host_derived_indexed_name(
-          "derive_debug_",
-          variant_index,
-          "_",
-          index,
-        )
-        names.push(name)
-        patterns.push(SelfHostPattern::BindingPattern(name, offset))
-        index = index + 1u32
+      while index {
+        current => if current < limit {
+          let name = self_host_derived_indexed_name(
+            "derive_debug_",
+            variant_index,
+            "_",
+            current,
+          )
+          names.push(name)
+          patterns.push(SelfHostPattern::BindingPattern(name, offset))
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
       }
       (SelfHostPattern::TuplePattern(base, patterns, offset), names)
     }
     SelfHostEnumVariant::StructVariant(_, fields, _, _) => {
       let patterns = []
+      let limit = array_length(fields)
       let mut index = 0u32
-      for field in fields {
-        let name = self_host_derived_indexed_name(
-          "derive_debug_",
-          variant_index,
-          "_",
-          index,
-        )
-        names.push(name)
-        patterns.push(
-          SelfHostPatternField::{
-            name: field.name
-            pattern: SelfHostPattern::BindingPattern(name, offset)
-            offset: offset
-          },
-        )
-        index = index + 1u32
+      while index {
+        current => if current < limit {
+          let field = array_get_unchecked(fields, current)
+          let name = self_host_derived_indexed_name(
+            "derive_debug_",
+            variant_index,
+            "_",
+            current,
+          )
+          names.push(name)
+          patterns.push(
+            SelfHostPatternField::{
+              name: field.name
+              pattern: SelfHostPattern::BindingPattern(name, offset)
+              offset: offset
+            },
+          )
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
       }
       (
         SelfHostPattern::StructPattern(base, patterns, Option::None, offset),
@@ -180,18 +222,23 @@ fn self_host_derived_debug_variant_body(
       expressions.push(
         self_host_derived_debug_text(prefix.concat("("), offset),
       )
+      let limit = array_length(types)
       let mut index = 0u32
-      for _ in types {
-        if index > 0u32 {
-          expressions.push(self_host_derived_debug_write(b", ", offset))
+      while index {
+        current => if current < limit {
+          if current > 0u32 {
+            expressions.push(self_host_derived_debug_write(b", ", offset))
+          }
+          expressions.push(
+            self_host_derived_debug_value(
+              SelfHostExpr::NameExpr(names[current], offset),
+              offset,
+            ),
+          )
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
         }
-        expressions.push(
-          self_host_derived_debug_value(
-            SelfHostExpr::NameExpr(names[index], offset),
-            offset,
-          ),
-        )
-        index = index + 1u32
       }
       expressions.push(self_host_derived_debug_write(b")", offset))
     }
@@ -203,21 +250,27 @@ fn self_host_derived_debug_variant_body(
       expressions.push(
         self_host_derived_debug_text(prefix.concat(" { "), offset),
       )
+      let limit = array_length(fields)
       let mut index = 0u32
-      for field in fields {
-        expressions.push(
-          self_host_derived_debug_text(
-            self_host_derived_field_label(field.name, index == 0u32),
-            offset,
-          ),
-        )
-        expressions.push(
-          self_host_derived_debug_value(
-            SelfHostExpr::NameExpr(names[index], offset),
-            offset,
-          ),
-        )
-        index = index + 1u32
+      while index {
+        current => if current < limit {
+          let field = array_get_unchecked(fields, current)
+          expressions.push(
+            self_host_derived_debug_text(
+              self_host_derived_field_label(field.name, current == 0u32),
+              offset,
+            ),
+          )
+          expressions.push(
+            self_host_derived_debug_value(
+              SelfHostExpr::NameExpr(names[current], offset),
+              offset,
+            ),
+          )
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
       }
       expressions.push(self_host_derived_debug_write(b" }", offset))
     }
@@ -242,6 +295,7 @@ fn self_host_derived_debug_impl(
     visibility: SelfHostDeclarationVisibility::ModuleVisible
     name: "debug"
     name_offset: offset
+    is_main: false
     type_parameters: []
     receiver: Option::Some(
       SelfHostReceiverParameter::{
@@ -307,25 +361,31 @@ fn self_host_derived_struct_show_body(
     expressions.push(
       self_host_derived_show_append_text(value.name.concat(" { "), offset),
     )
+    let limit = array_length(value.fields)
     let mut index = 0u32
-    for field in value.fields {
-      expressions.push(
-        self_host_derived_show_append_text(
-          self_host_derived_field_label(field.name, index == 0u32),
-          offset,
-        ),
-      )
-      expressions.push(
-        self_host_derived_show_append_value(
-          SelfHostExpr::FieldExpr(
-            SelfHostExpr::NameExpr("self", offset),
-            field.name,
+    while index {
+      current => if current < limit {
+        let field = array_get_unchecked(value.fields, current)
+        expressions.push(
+          self_host_derived_show_append_text(
+            self_host_derived_field_label(field.name, current == 0u32),
             offset,
           ),
-          offset,
-        ),
-      )
-      index = index + 1u32
+        )
+        expressions.push(
+          self_host_derived_show_append_value(
+            SelfHostExpr::FieldExpr(
+              SelfHostExpr::NameExpr("self", offset),
+              field.name,
+              offset,
+            ),
+            offset,
+          ),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     expressions.push(self_host_derived_show_append_text(" }", offset))
   }
@@ -348,20 +408,25 @@ fn self_host_derived_show_variant_body(
       expressions.push(
         self_host_derived_show_append_text(prefix.concat("("), offset),
       )
+      let limit = array_length(types)
       let mut index = 0u32
-      for _ in types {
-        if index > 0u32 {
+      while index {
+        current => if current < limit {
+          if current > 0u32 {
+            expressions.push(
+              self_host_derived_show_append_text(", ", offset),
+            )
+          }
           expressions.push(
-            self_host_derived_show_append_text(", ", offset),
+            self_host_derived_show_append_value(
+              SelfHostExpr::NameExpr(names[current], offset),
+              offset,
+            ),
           )
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
         }
-        expressions.push(
-          self_host_derived_show_append_value(
-            SelfHostExpr::NameExpr(names[index], offset),
-            offset,
-          ),
-        )
-        index = index + 1u32
       }
       expressions.push(self_host_derived_show_append_text(")", offset))
     }
@@ -373,21 +438,27 @@ fn self_host_derived_show_variant_body(
       expressions.push(
         self_host_derived_show_append_text(prefix.concat(" { "), offset),
       )
+      let limit = array_length(fields)
       let mut index = 0u32
-      for field in fields {
-        expressions.push(
-          self_host_derived_show_append_text(
-            self_host_derived_field_label(field.name, index == 0u32),
-            offset,
-          ),
-        )
-        expressions.push(
-          self_host_derived_show_append_value(
-            SelfHostExpr::NameExpr(names[index], offset),
-            offset,
-          ),
-        )
-        index = index + 1u32
+      while index {
+        current => if current < limit {
+          let field = array_get_unchecked(fields, current)
+          expressions.push(
+            self_host_derived_show_append_text(
+              self_host_derived_field_label(field.name, current == 0u32),
+              offset,
+            ),
+          )
+          expressions.push(
+            self_host_derived_show_append_value(
+              SelfHostExpr::NameExpr(names[current], offset),
+              offset,
+            ),
+          )
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
       }
       expressions.push(self_host_derived_show_append_text(" }", offset))
     }
@@ -407,6 +478,7 @@ fn self_host_derived_show_impl(
     visibility: SelfHostDeclarationVisibility::ModuleVisible
     name: "append_show"
     name_offset: offset
+    is_main: false
     type_parameters: []
     receiver: Option::Some(
       SelfHostReceiverParameter::{
@@ -458,30 +530,36 @@ fn self_host_derived_enum_debug_impl(
   offset: U32,
 ) -> SelfHostImplDeclaration {
   let arms = []
+  let limit = array_length(value.variants)
   let mut index = 0u32
-  for variant in value.variants {
-    let (pattern, names) = self_host_derived_format_variant_pattern(
-      value.name,
-      variant,
-      index,
-      offset,
-    )
-    arms.push(
-      SelfHostPatternArm::{
-        pattern: pattern
-        guard_condition: Option::None
-        body: SelfHostExpr::BlockExpr(
-          self_host_derived_debug_variant_body(
-            value.name,
-            variant,
-            names,
-            offset,
-          ),
-        )
-        offset: offset
-      },
-    )
-    index = index + 1u32
+  while index {
+    current => if current < limit {
+      let variant = array_get_unchecked(value.variants, current)
+      let (pattern, names) = self_host_derived_format_variant_pattern(
+        value.name,
+        variant,
+        current,
+        offset,
+      )
+      arms.push(
+        SelfHostPatternArm::{
+          pattern: pattern
+          guard_condition: Option::None
+          body: SelfHostExpr::BlockExpr(
+            self_host_derived_debug_variant_body(
+              value.name,
+              variant,
+              names,
+              offset,
+            ),
+          )
+          offset: offset
+        },
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let body = self_host_derived_expression_list_block(
     [
@@ -520,30 +598,36 @@ fn self_host_derived_enum_show_impl(
   offset: U32,
 ) -> SelfHostImplDeclaration {
   let arms = []
+  let limit = array_length(value.variants)
   let mut index = 0u32
-  for variant in value.variants {
-    let (pattern, names) = self_host_derived_format_variant_pattern(
-      value.name,
-      variant,
-      index,
-      offset,
-    )
-    arms.push(
-      SelfHostPatternArm::{
-        pattern: pattern
-        guard_condition: Option::None
-        body: SelfHostExpr::BlockExpr(
-          self_host_derived_show_variant_body(
-            value.name,
-            variant,
-            names,
-            offset,
-          ),
-        )
-        offset: offset
-      },
-    )
-    index = index + 1u32
+  while index {
+    current => if current < limit {
+      let variant = array_get_unchecked(value.variants, current)
+      let (pattern, names) = self_host_derived_format_variant_pattern(
+        value.name,
+        variant,
+        current,
+        offset,
+      )
+      arms.push(
+        SelfHostPatternArm::{
+          pattern: pattern
+          guard_condition: Option::None
+          body: SelfHostExpr::BlockExpr(
+            self_host_derived_show_variant_body(
+              value.name,
+              variant,
+              names,
+              offset,
+            ),
+          )
+          offset: offset
+        },
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let body = self_host_derived_expression_list_block(
     [

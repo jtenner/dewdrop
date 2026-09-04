@@ -378,30 +378,36 @@ fn self_host_parse_pattern_context(
   }
   let result = while 0u32 {
     _ => match self_host_parser_peek(parser) {
-      Option::Some(token) => match token.kind {
-        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 27u32 => match pattern {
-          SelfHostPattern::ImportAliasPattern(_, _) => {
-            parser.index = parser.index + 1u32
-            self_host_parser_skip_newlines(parser)
-            match self_host_parser_identifier(
-              parser,
-              SelfHostDeclarationExpectation::BindingName,
-            ) {
-              Option::Some(pair) => {
-                let (property, _property_offset) = pair
-                pattern = SelfHostPattern::QualifiedPattern(
-                  pattern,
-                  property,
-                  token.offset,
-                )
-                continue 0u32
+      Option::Some(token) => {
+        let exact_token = self_host_token_identity(token)
+        let symbol_code = self_host_source_symbol_code(
+          parser.source,
+          exact_token.offset,
+        )
+        if symbol_code == 27u32 {
+          match pattern {
+            SelfHostPattern::ImportAliasPattern(_, _) => {
+              parser.index = parser.index + 1u32
+              self_host_parser_skip_newlines(parser)
+              match self_host_parser_identifier(
+                parser,
+                SelfHostDeclarationExpectation::BindingName,
+              ) {
+                Option::Some(pair) => {
+                  let (property, _property_offset) = pair
+                  pattern = SelfHostPattern::QualifiedPattern(
+                    pattern,
+                    property,
+                    exact_token.offset,
+                  )
+                  continue 0u32
+                }
+                Option::None => break Option::None
               }
-              Option::None => break Option::None
             }
+            _ => break Option::Some(pattern)
           }
-          _ => break Option::Some(pattern)
-        }
-        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 14u32 => {
+        } else if symbol_code == 14u32 {
           parser.index = parser.index + 1u32
           self_host_parser_skip_newlines(parser)
           match self_host_parser_identifier(
@@ -413,40 +419,46 @@ fn self_host_parse_pattern_context(
               pattern = SelfHostPattern::QualifiedPattern(
                 pattern,
                 property,
-                token.offset,
+                exact_token.offset,
               )
               continue 0u32
             }
             Option::None => break Option::None
           }
-        }
-        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 0u32 => {
+        } else if symbol_code == 0u32 {
           parser.index = parser.index + 1u32
-          match self_host_parse_tuple_pattern_arguments(parser, token.offset) {
+          match self_host_parse_tuple_pattern_arguments(
+            parser,
+            exact_token.offset,
+          ) {
             Option::Some(arguments) => {
               pattern = SelfHostPattern::TuplePattern(
                 pattern,
                 arguments,
-                token.offset,
+                exact_token.offset,
               )
               continue 0u32
             }
             Option::None => break Option::None
           }
-        }
-        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 2u32 && stop_left_brace =>
+        } else if symbol_code == 2u32 && stop_left_brace {
           break Option::Some(pattern)
-        SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 2u32 => {
+        } else if symbol_code == 2u32 {
           parser.index = parser.index + 1u32
-          match self_host_parse_struct_pattern(parser, pattern, token.offset) {
+          match self_host_parse_struct_pattern(
+            parser,
+            pattern,
+            exact_token.offset,
+          ) {
             Option::Some(value) => {
               pattern = value
               continue 0u32
             }
             Option::None => break Option::None
           }
+        } else {
+          break Option::Some(pattern)
         }
-        _ => break Option::Some(pattern)
       }
       Option::None => break Option::Some(pattern)
     }

@@ -1,0 +1,75 @@
+open dew.std.map
+open dew.std.option
+
+// A flat typed chain avoids storing Map values inside another generic Map.
+// Each body owns one chain head. Parallel arrays retain exact scalar carriers.
+fn self_host_body_specialized_call_index_append(
+  head_by_body: Map<U64, U32>,
+  keys: Array<U64>,
+  functions: Array<U32>,
+  next: Array<U32>,
+  body: U64,
+  key: U64,
+  function_index: U32,
+) -> Unit {
+  self_host_assert_parallel_array_lengths(
+    keys.length(),
+    functions.length(),
+    "compiler specialized-call keys and functions must have equal lengths",
+  )
+  self_host_assert_parallel_array_lengths(
+    keys.length(),
+    next.length(),
+    "compiler specialized-call keys and chain links must have equal lengths",
+  )
+  let missing = 4294967295u32
+  let index = keys.length()
+  let previous = match head_by_body.get(body) {
+    Option::Some(value) => value
+    Option::None => missing
+  }
+  keys.push(key)
+  functions.push(function_index)
+  next.push(previous)
+  head_by_body.set(body, index)
+}
+
+fn self_host_body_specialized_call_index_get(
+  head_by_body: Map<U64, U32>,
+  keys: Array<U64>,
+  functions: Array<U32>,
+  next: Array<U32>,
+  body: U64,
+  key: U64,
+) -> Option<U32> {
+  let missing = 4294967295u32
+  let mut current = match head_by_body.get(body) {
+    Option::Some(value) => value
+    Option::None => missing
+  }
+  while current {
+    index => if !self_host_u32_equal(index, missing) {
+      self_host_assert_array_index(
+        index,
+        keys.length(),
+        "compiler specialized-call key index is outside its arena",
+      )
+      self_host_assert_array_index(
+        index,
+        functions.length(),
+        "compiler specialized-call function index is outside its arena",
+      )
+      self_host_assert_array_index(
+        index,
+        next.length(),
+        "compiler specialized-call chain index is outside its arena",
+      )
+      if self_host_u64_equal(keys[index], key) {
+        break Option::Some(functions[index])
+      }
+      continue next[index]
+    } else {
+      break Option::None
+    }
+  }
+}

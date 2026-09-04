@@ -9,6 +9,10 @@ builtin self_host_semantic_string_equals(
   right: String,
 ) -> Bool = "dew_string_equals"
 
+fn self_host_semantic_u64_at(values: Array<U64>, index: U32) -> U64 {
+  array_get_unchecked(values, index)
+}
+
 pub enum SelfHostCollectedDeclKind {
   BuiltinDecl
   LetDecl
@@ -62,6 +66,18 @@ pub struct SelfHostCollectedDeclaration {
   offset: U32
 }
 
+fn self_host_collected_declaration_identity(
+  declaration: SelfHostCollectedDeclaration,
+) -> SelfHostCollectedDeclaration {
+  SelfHostCollectedDeclaration::{
+    id: declaration.id
+    kind: declaration.kind
+    name: declaration.name
+    visibility: declaration.visibility
+    offset: declaration.offset
+  }
+}
+
 pub struct SelfHostCollectedMethod {
   id: U64
   parent: U64
@@ -69,6 +85,19 @@ pub struct SelfHostCollectedMethod {
   name: U32
   visibility: SelfHostSemanticVisibility
   offset: U32
+}
+
+fn self_host_collected_method_identity(
+  method: SelfHostCollectedMethod,
+) -> SelfHostCollectedMethod {
+  SelfHostCollectedMethod::{
+    id: method.id
+    parent: method.parent
+    kind: method.kind
+    name: method.name
+    visibility: method.visibility
+    offset: method.offset
+  }
 }
 
 pub enum SelfHostCollectedDeclarationReference {
@@ -86,6 +115,20 @@ pub struct SelfHostCollectedField {
   offset: U32
 }
 
+fn self_host_collected_field_identity(
+  field: SelfHostCollectedField,
+) -> SelfHostCollectedField {
+  SelfHostCollectedField::{
+    id: field.id
+    declaration: field.declaration
+    variant: field.variant
+    mutable_: field.mutable_
+    name: field.name
+    type_: field.type_
+    offset: field.offset
+  }
+}
+
 pub struct SelfHostCollectedVariant {
   id: U64
   declaration: U64
@@ -95,6 +138,19 @@ pub struct SelfHostCollectedVariant {
   offset: U32
 }
 
+fn self_host_collected_variant_identity(
+  variant: SelfHostCollectedVariant,
+) -> SelfHostCollectedVariant {
+  SelfHostCollectedVariant::{
+    id: variant.id
+    declaration: variant.declaration
+    kind: variant.kind
+    name: variant.name
+    payload_types: variant.payload_types
+    offset: variant.offset
+  }
+}
+
 pub struct SelfHostCollectedGenericParameter {
   id: U64
   declaration: U64
@@ -102,6 +158,19 @@ pub struct SelfHostCollectedGenericParameter {
   name: U32
   bounds: SelfHostHirSpan
   offset: U32
+}
+
+fn self_host_collected_generic_parameter_identity(
+  parameter: SelfHostCollectedGenericParameter,
+) -> SelfHostCollectedGenericParameter {
+  SelfHostCollectedGenericParameter::{
+    id: parameter.id
+    declaration: parameter.declaration
+    index: parameter.index
+    name: parameter.name
+    bounds: parameter.bounds
+    offset: parameter.offset
+  }
 }
 
 pub struct SelfHostCollectedParameter {
@@ -114,10 +183,26 @@ pub struct SelfHostCollectedParameter {
   offset: U32
 }
 
+fn self_host_collected_parameter_identity(
+  value: SelfHostCollectedParameter,
+) -> SelfHostCollectedParameter {
+  value
+}
+
 pub struct SelfHostCollectedCallable {
   declaration: U64
   return_type: U32
   is_main: Bool
+}
+
+fn self_host_collected_callable_identity(
+  value: SelfHostCollectedCallable,
+) -> SelfHostCollectedCallable {
+  SelfHostCollectedCallable::{
+    declaration: value.declaration
+    return_type: value.return_type
+    is_main: value.is_main
+  }
 }
 
 pub struct SelfHostCollectedTest {
@@ -139,9 +224,33 @@ pub struct SelfHostCollectedImport {
   offset: U32
 }
 
+fn self_host_collected_import_identity(
+  import_: SelfHostCollectedImport,
+) -> SelfHostCollectedImport {
+  SelfHostCollectedImport::{
+    path: import_.path
+    path_segments: import_.path_segments
+    open_: import_.open_
+    wildcard: import_.wildcard
+    import_alias: import_.import_alias
+    import_alias_offset: import_.import_alias_offset
+    file: import_.file
+    offset: import_.offset
+  }
+}
+
 pub struct SelfHostCollectedBuiltin {
   declaration: U64
   builtin_name: Bytes
+}
+
+fn self_host_collected_builtin_identity(
+  value: SelfHostCollectedBuiltin,
+) -> SelfHostCollectedBuiltin {
+  SelfHostCollectedBuiltin::{
+    declaration: value.declaration
+    builtin_name: value.builtin_name
+  }
 }
 
 pub struct SelfHostCollectedLet {
@@ -149,9 +258,27 @@ pub struct SelfHostCollectedLet {
   mutable_: Bool
 }
 
+fn self_host_collected_let_identity(
+  value: SelfHostCollectedLet,
+) -> SelfHostCollectedLet {
+  SelfHostCollectedLet::{
+    declaration: value.declaration
+    mutable_: value.mutable_
+  }
+}
+
 pub struct SelfHostCollectedAlias {
   declaration: U64
   target: U32
+}
+
+fn self_host_collected_alias_identity(
+  alias: SelfHostCollectedAlias,
+) -> SelfHostCollectedAlias {
+  SelfHostCollectedAlias::{
+    declaration: alias.declaration
+    target: alias.target
+  }
 }
 
 pub struct SelfHostCollectedDeriveRequest {
@@ -165,6 +292,17 @@ pub struct SelfHostCollectedImpl {
   foreign_: Bool
   trait_type: Option<U32>
   target_type: U32
+}
+
+fn self_host_collected_impl_identity(
+  implementation: SelfHostCollectedImpl,
+) -> SelfHostCollectedImpl {
+  SelfHostCollectedImpl::{
+    declaration: implementation.declaration
+    foreign_: implementation.foreign_
+    trait_type: implementation.trait_type
+    target_type: implementation.target_type
+  }
 }
 
 pub struct SelfHostCollectedForeignType {
@@ -235,11 +373,31 @@ pub struct SelfHostValueBindingCandidate {
   mut next: Option<U32>
 }
 
+fn self_host_value_binding_candidate_identity(
+  value: SelfHostValueBindingCandidate,
+) -> SelfHostValueBindingCandidate {
+  SelfHostValueBindingCandidate::{
+    declaration: value.declaration
+    next: value.next
+  }
+}
+
 pub struct SelfHostValueBinding {
   head: U32
   mut tail: U32
   kind: SelfHostCollectedDeclKind
   offset: U32
+}
+
+fn self_host_value_binding_identity(
+  value: SelfHostValueBinding,
+) -> SelfHostValueBinding {
+  SelfHostValueBinding::{
+    head: value.head
+    tail: value.tail
+    kind: value.kind
+    offset: value.offset
+  }
 }
 
 pub struct SelfHostCollectedModule {
@@ -306,6 +464,12 @@ pub struct SelfHostCollectedModule {
   value_bindings: Array<Option<SelfHostValueBinding>>
   value_binding_candidates: Array<SelfHostValueBindingCandidate>
   foreign_library_by_alias: Map<U32, U64>
+}
+
+fn self_host_collected_module_identity(
+  value: SelfHostCollectedModule,
+) -> SelfHostCollectedModule {
+  value
 }
 
 impl SelfHostCollectedModule {
@@ -386,7 +550,10 @@ impl SelfHostCollectedModule {
 
   fn value_binding(self, name: U32) -> Option<SelfHostValueBinding> {
     if name < self.value_bindings.length() {
-      self.value_bindings[name]
+      match self.value_bindings[name] {
+        Option::Some(value) => Option::Some(self_host_value_binding_identity(value))
+        Option::None => Option::None
+      }
     } else {
       Option::None
     }
@@ -472,10 +639,19 @@ impl SelfHostCollectedModule {
     if self_host_semantic_id_module(declaration) != self.module_id {
       false
     } else {
-      let file = self.declaration_files[self_host_semantic_id_local(declaration)]
-      for test_file in self.test_files {
-        if test_file == file {
-          return true
+      let file = self_host_semantic_u64_at(
+        self.declaration_files,
+        self_host_semantic_id_local(declaration),
+      )
+      let mut test_file_index = 0u32
+      let _ = while test_file_index {
+        current => if current < self.test_files.length() {
+          if self_host_semantic_u64_at(self.test_files, current) == file {
+            return true
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
         }
       }
       false

@@ -15,6 +15,24 @@ pub struct SelfHostResolvedImportedImplementation {
   target_type: U32
 }
 
+fn self_host_resolved_imported_implementation_at(
+  implementations: Array<SelfHostResolvedImportedImplementation>,
+  index: U32,
+) -> SelfHostResolvedImportedImplementation {
+  // Stop before an invalid physical Array access.
+  if index >= implementations.length() {
+    unreachable()
+  }
+  let implementation = implementations[index]
+  SelfHostResolvedImportedImplementation::{
+    declaration: implementation.declaration
+    generic_parameters: implementation.generic_parameters
+    generic_bounds: implementation.generic_bounds
+    trait_type: implementation.trait_type
+    target_type: implementation.target_type
+  }
+}
+
 pub struct SelfHostResolvedImportedField {
   field: U64
   declaration: U64
@@ -32,6 +50,23 @@ pub struct SelfHostResolvedImportedVariant {
   payload_types: SelfHostHirSpan
 }
 
+fn self_host_resolved_imported_variant_at(
+  variants: Array<SelfHostResolvedImportedVariant>,
+  index: U32,
+) -> SelfHostResolvedImportedVariant {
+  if index >= variants.length() {
+    unreachable()
+  }
+  let variant = variants[index]
+  SelfHostResolvedImportedVariant::{
+    variant: variant.variant
+    declaration: variant.declaration
+    kind: variant.kind
+    name: variant.name
+    payload_types: variant.payload_types
+  }
+}
+
 pub struct SelfHostResolvedImportedCallable {
   declaration: U64
   name: String
@@ -41,6 +76,27 @@ pub struct SelfHostResolvedImportedCallable {
   parameters: SelfHostHirSpan
   result_type: U32
   function_type: U32
+}
+
+fn self_host_resolved_imported_callable_at(
+  callables: Array<SelfHostResolvedImportedCallable>,
+  index: U32,
+) -> SelfHostResolvedImportedCallable {
+  // Stop before an invalid physical Array access.
+  if index >= callables.length() {
+    unreachable()
+  }
+  let callable = callables[index]
+  SelfHostResolvedImportedCallable::{
+    declaration: callable.declaration
+    name: callable.name
+    kind: callable.kind
+    generic_parameters: callable.generic_parameters
+    generic_bounds: callable.generic_bounds
+    parameters: callable.parameters
+    result_type: callable.result_type
+    function_type: callable.function_type
+  }
 }
 
 pub struct SelfHostResolvedModuleImports {
@@ -1154,8 +1210,16 @@ fn self_host_resolve_module_imports(
   scope: SelfHostModuleImportScope,
 ) -> SelfHostResolvedModuleImports {
   let builder = SelfHostImportedRecipeBuilder::new(resolved, scope)
-  for interface_index in scope.imported_interfaces {
-    builder.import_interface(interface_index)
+  let mut imported_index = 0u32
+  let _ = while imported_index {
+    current => if current < scope.imported_interfaces.length() {
+      builder.import_interface(
+        self_host_import_u32_at(scope.imported_interfaces, current),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   builder.finish()
 }

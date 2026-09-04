@@ -654,6 +654,7 @@ fn self_host_linked_array_carrier_from_value_type(
     SelfHostPlannedWasmValueType::WasmF64Value => 3i32
     SelfHostPlannedWasmValueType::WasmV128Value => 4i32
     SelfHostPlannedWasmValueType::WasmNullableEqRefValue => 5i32
+    SelfHostPlannedWasmValueType::WasmNullableFuncRefValue => 5i32
   }
 }
 
@@ -801,9 +802,52 @@ fn self_host_linked_append_runtime_function(
   StarshineFfi.ffi_ffi_bridge_funcs_push_runtime(functions, builder) != 0i32
 }
 
+fn self_host_emit_linked_map_key_equality(
+  carrier: I32,
+  equality_function: I32,
+  destination: StarshineInstructions,
+) -> Bool {
+  if equality_function == -2i32 {
+    return false
+  }
+  if equality_function >= 0i32 {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_call(
+        StarshineFfi.ffi_lib_FuncIdx_new(
+          self_host_u32_to_i32(
+            self_host_linked_emitted_function_index(
+              self_host_i32_to_u32(equality_function),
+            ),
+          ),
+        ),
+      ),
+    )
+    return true
+  }
+  let comparison = match carrier {
+    0 => StarshineFfi.ffi_lib_Instruction_i32_eq()
+    1 => StarshineFfi.ffi_lib_Instruction_i64_eq()
+    2 => StarshineFfi.ffi_lib_Instruction_f32_eq()
+    3 => StarshineFfi.ffi_lib_Instruction_f64_eq()
+    4 => StarshineFfi.ffi_lib_Instruction_i8x16_eq()
+    5 => StarshineFfi.ffi_lib_Instruction_ref_eq()
+    _ => return false
+  }
+  StarshineFfi.ffi_ffi_bridge_instructions_push(destination, comparison)
+  if carrier == 4i32 {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_i16x8_all_true(),
+    )
+  }
+  true
+}
+
 fn self_host_emit_linked_map_contains_key(
   base: U32,
   carrier: I32,
+  equality_function: I32,
   scratch: U32,
   destination: StarshineInstructions,
 ) -> Bool {
@@ -973,20 +1017,12 @@ fn self_host_emit_linked_map_contains_key(
       StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(key_local)),
     ),
   )
-  let comparison = match carrier {
-    0 => StarshineFfi.ffi_lib_Instruction_i32_eq()
-    1 => StarshineFfi.ffi_lib_Instruction_i64_eq()
-    2 => StarshineFfi.ffi_lib_Instruction_f32_eq()
-    3 => StarshineFfi.ffi_lib_Instruction_f64_eq()
-    4 => StarshineFfi.ffi_lib_Instruction_i8x16_eq()
-    _ => StarshineFfi.ffi_lib_Instruction_ref_eq()
-  }
-  StarshineFfi.ffi_ffi_bridge_instructions_push(loop_body, comparison)
-  if carrier == 4i32 {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      loop_body,
-      StarshineFfi.ffi_lib_Instruction_i16x8_all_true(),
-    )
+  if !self_host_emit_linked_map_key_equality(
+    carrier,
+    equality_function,
+    loop_body,
+  ) {
+    return false
   }
   let found = StarshineFfi.ffi_ffi_bridge_instructions_new()
   StarshineFfi.ffi_ffi_bridge_instructions_push(
@@ -1043,6 +1079,7 @@ fn self_host_emit_linked_map_get(
   base: U32,
   key_carrier: I32,
   value_carrier: I32,
+  equality_function: I32,
   scratch: U32,
   destination: StarshineInstructions,
 ) -> Bool {
@@ -1250,20 +1287,12 @@ fn self_host_emit_linked_map_get(
       StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(key_local)),
     ),
   )
-  let comparison = match key_carrier {
-    0 => StarshineFfi.ffi_lib_Instruction_i32_eq()
-    1 => StarshineFfi.ffi_lib_Instruction_i64_eq()
-    2 => StarshineFfi.ffi_lib_Instruction_f32_eq()
-    3 => StarshineFfi.ffi_lib_Instruction_f64_eq()
-    4 => StarshineFfi.ffi_lib_Instruction_i8x16_eq()
-    _ => StarshineFfi.ffi_lib_Instruction_ref_eq()
-  }
-  StarshineFfi.ffi_ffi_bridge_instructions_push(loop_body, comparison)
-  if key_carrier == 4i32 {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      loop_body,
-      StarshineFfi.ffi_lib_Instruction_i16x8_all_true(),
-    )
+  if !self_host_emit_linked_map_key_equality(
+    key_carrier,
+    equality_function,
+    loop_body,
+  ) {
+    return false
   }
   let found = StarshineFfi.ffi_ffi_bridge_instructions_new()
   StarshineFfi.ffi_ffi_bridge_instructions_push(
@@ -1405,6 +1434,7 @@ fn self_host_emit_linked_map_empty(
 fn self_host_emit_linked_array_builtin(
   name: Bytes,
   wrapper_type: U32,
+  array_type: U32,
   destination: StarshineInstructions,
 ) -> Bool {
   if name.equals(b"dew_array_length") {
@@ -1434,6 +1464,31 @@ fn self_host_emit_linked_array_builtin(
         StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
         2i32,
       ),
+    )
+  } else if name.equals(b"dew_array_backing_length_i32") ||
+    name.equals(b"dew_array_backing_length_ref") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+        self_host_u32_to_i32(wrapper_type),
+      ),
+    )
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_struct_get(
+        StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type)),
+        0i32,
+      ),
+    )
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
+        self_host_u32_to_i32(array_type),
+      ),
+    )
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_array_len(),
     )
   } else if name.equals(b"dew_array_clear") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(

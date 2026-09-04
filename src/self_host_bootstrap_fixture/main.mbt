@@ -84,6 +84,8 @@ fn append_standard_module(
   if name != "dew.std.preamble" {
     let imports = if name == "dew.std.option" {
       b"open dew.std.preamble\n"
+    } else if name == "dew.std.result" {
+      b"open dew.std.preamble\nopen dew.std.option\n"
     } else if name == "dew.std.text_runtime" {
       b"open dew.std.preamble\nopen dew.std.option\n"
     } else if name == "dew.std.string" ||
@@ -92,7 +94,7 @@ fn append_standard_module(
       name == "dew.std.bytes" {
       b"open dew.std.preamble\nopen dew.std.text_runtime\nopen dew.std.option\n"
     } else {
-      b"open dew.std.preamble\nopen dew.std.option\n"
+      b"open dew.std.preamble\nopen dew.std.option\nopen dew.std.result\n"
     }
     files.push({ logical_path: "__dew_std_imports.dew", source: imports, })
   }

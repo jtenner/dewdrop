@@ -35,6 +35,31 @@ pub struct SelfHostIndexedTraitMethodDispatch {
   method_index: U32
 }
 
+fn self_host_indexed_method_dispatch_identity(
+  dispatch: SelfHostIndexedMethodDispatch,
+) -> SelfHostIndexedMethodDispatch {
+  SelfHostIndexedMethodDispatch::{
+    target_head: dispatch.target_head
+    name: dispatch.name
+    inherent: dispatch.inherent
+    instance: dispatch.instance
+    implementation: dispatch.implementation
+    method_index: dispatch.method_index
+  }
+}
+
+fn self_host_indexed_trait_method_dispatch_identity(
+  dispatch: SelfHostIndexedTraitMethodDispatch,
+) -> SelfHostIndexedTraitMethodDispatch {
+  SelfHostIndexedTraitMethodDispatch::{
+    trait_declaration: dispatch.trait_declaration
+    name: dispatch.name
+    instance: dispatch.instance
+    implementation: dispatch.implementation
+    method_index: dispatch.method_index
+  }
+}
+
 pub struct SelfHostIndexedImpl {
   declaration: U64
   kind: SelfHostIndexedImplKind
@@ -45,6 +70,22 @@ pub struct SelfHostIndexedImpl {
   valid: Bool
   coherent: Bool
   specificity: U32
+}
+
+fn self_host_indexed_impl_identity(
+  implementation: SelfHostIndexedImpl,
+) -> SelfHostIndexedImpl {
+  SelfHostIndexedImpl::{
+    declaration: implementation.declaration
+    kind: implementation.kind
+    target_head: implementation.target_head
+    trait_type: implementation.trait_type
+    target_type: implementation.target_type
+    methods: implementation.methods
+    valid: implementation.valid
+    coherent: implementation.coherent
+    specificity: implementation.specificity
+  }
 }
 
 pub enum SelfHostImplIndexDiagnostic {
@@ -102,9 +143,18 @@ impl SelfHostModuleImplIndex {
   }
 
   fn implementation(self, declaration: U64) -> Option<SelfHostIndexedImpl> {
-    for implementation in self.implementations {
-      if self_host_u64_equal(implementation.declaration, declaration) {
-        return Option::Some(implementation)
+    let mut implementation_index = 0u32
+    let _ = while implementation_index {
+      current => if current < self.implementations.length() {
+        let implementation = self_host_indexed_impl_identity(
+          self.implementations[current],
+        )
+        if self_host_u64_equal(implementation.declaration, declaration) {
+          return Option::Some(implementation)
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
     Option::None
@@ -726,16 +776,33 @@ fn self_host_impl_method_duplicate(
   left: U64,
   right: U64,
 ) -> Option<U32> {
-  for left_method in collected.methods {
-    if self_host_u64_equal(left_method.parent, left) {
-      for right_method in collected.methods {
-        if self_host_u64_equal(right_method.parent, right) && self_host_u32_equal(
-          left_method.name,
-          right_method.name,
-        ) {
-          return Option::Some(left_method.name)
+  let mut left_index = 0u32
+  let _ = while left_index {
+    current_left => if current_left < collected.methods.length() {
+      let left_method = self_host_collected_method_identity(
+        collected.methods[current_left],
+      )
+      if self_host_u64_equal(left_method.parent, left) {
+        let mut right_index = 0u32
+        let _ = while right_index {
+          current_right => if current_right < collected.methods.length() {
+            let right_method = self_host_collected_method_identity(
+              collected.methods[current_right],
+            )
+            if self_host_u64_equal(right_method.parent, right) {
+              if self_host_u32_equal(left_method.name, right_method.name) {
+                return Option::Some(left_method.name)
+              }
+            }
+            continue current_right + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
       }
+      continue current_left + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   Option::None
@@ -819,9 +886,11 @@ fn self_host_impl_generic_relative(
   let mut index = 0u32
   while index {
     current => if current < span.length {
-      let candidate = collected.generic_parameters[
-        self_host_u32_add(span.start, current)
-      ].id
+      let candidate = self_host_collected_generic_parameter_identity(
+        collected.generic_parameters[
+          self_host_u32_add(span.start, current)
+        ],
+      ).id
       if self_host_u64_equal(candidate, parameter) {
         break Option::Some(current)
       }
@@ -1303,12 +1372,20 @@ fn self_host_check_trait_impl_methods(
       let trait_method = collected.methods[current]
       if self_host_u64_equal(trait_method.parent, trait_declaration) {
         let mut found = false
-        for method in collected.methods {
-          if self_host_u64_equal(method.parent, implementation.declaration) && self_host_u32_equal(
-            method.name,
-            trait_method.name,
-          ) {
-            found = true
+        let mut method_index = 0u32
+        let _ = while method_index {
+          current_method => if current_method < collected.methods.length() {
+            let method = self_host_collected_method_identity(
+              collected.methods[current_method],
+            )
+            if self_host_u64_equal(method.parent, implementation.declaration) {
+              if self_host_u32_equal(method.name, trait_method.name) {
+                found = true
+              }
+            }
+            continue current_method + 1u32
+          } else {
+            break self_host_semantic_unit()
           }
         }
         if !found {
@@ -1534,12 +1611,20 @@ fn self_host_index_module_implementations(
             let requirement = match implementation.kind {
               SelfHostIndexedImplKind::TraitIndexedImpl(trait_declaration) => {
                 let mut found = Option::None
-                for candidate in collected.methods {
-                  if self_host_u64_equal(candidate.parent, trait_declaration) && self_host_u32_equal(
-                    candidate.name,
-                    method.name,
-                  ) {
-                    found = Option::Some(candidate.id)
+                let mut candidate_index = 0u32
+                let _ = while candidate_index {
+                  current_candidate => if current_candidate < collected.methods.length() {
+                    let candidate = self_host_collected_method_identity(
+                      collected.methods[current_candidate],
+                    )
+                    if self_host_u64_equal(candidate.parent, trait_declaration) {
+                      if self_host_u32_equal(candidate.name, method.name) {
+                        found = Option::Some(candidate.id)
+                      }
+                    }
+                    continue current_candidate + 1u32
+                  } else {
+                    break self_host_semantic_unit()
                   }
                 }
                 found
@@ -1827,24 +1912,64 @@ fn self_host_index_module_implementations_with_imports(
     }
   }
   let retained_methods = []
-  for dispatch in index.method_dispatch {
-    if index.implementations[dispatch.implementation].coherent {
-      retained_methods.push(dispatch)
+  let mut dispatch_index = 0u32
+  let _ = while dispatch_index {
+    current => if current < index.method_dispatch.length() {
+      let dispatch = self_host_indexed_method_dispatch_identity(
+        index.method_dispatch[current],
+      )
+      if self_host_indexed_impl_identity(
+        index.implementations[dispatch.implementation],
+      ).coherent {
+        retained_methods.push(dispatch)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   index.method_dispatch.clear()
-  for dispatch in retained_methods {
-    index.method_dispatch.push(dispatch)
+  dispatch_index = 0u32
+  let _ = while dispatch_index {
+    current => if current < retained_methods.length() {
+      index.method_dispatch.push(
+        self_host_indexed_method_dispatch_identity(retained_methods[current]),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let retained_trait_methods = []
-  for dispatch in index.trait_method_dispatch {
-    if index.implementations[dispatch.implementation].coherent {
-      retained_trait_methods.push(dispatch)
+  let mut trait_dispatch_index = 0u32
+  let _ = while trait_dispatch_index {
+    current => if current < index.trait_method_dispatch.length() {
+      let dispatch = self_host_indexed_trait_method_dispatch_identity(
+        index.trait_method_dispatch[current],
+      )
+      if self_host_indexed_impl_identity(
+        index.implementations[dispatch.implementation],
+      ).coherent {
+        retained_trait_methods.push(dispatch)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   index.trait_method_dispatch.clear()
-  for dispatch in retained_trait_methods {
-    index.trait_method_dispatch.push(dispatch)
+  trait_dispatch_index = 0u32
+  let _ = while trait_dispatch_index {
+    current => if current < retained_trait_methods.length() {
+      index.trait_method_dispatch.push(
+        self_host_indexed_trait_method_dispatch_identity(
+          retained_trait_methods[current],
+        ),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   index
 }

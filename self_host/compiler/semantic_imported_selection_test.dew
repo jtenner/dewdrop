@@ -1,5 +1,22 @@
 open dew.std.testing
 
+test "imported implementation accessor preserves physical fields" {
+  let implementations = [SelfHostResolvedImportedImplementation::{
+    declaration: 77u64
+    generic_parameters: SelfHostHirSpan::{ start: 1u32 length: 2u32 }
+    generic_bounds: SelfHostHirSpan::{ start: 3u32 length: 4u32 }
+    trait_type: Option::Some(5u32)
+    target_type: 6u32
+  }]
+  let implementation = self_host_resolved_imported_implementation_at(
+    implementations,
+    0u32,
+  )
+  assert(implementation.declaration == 77u64, "implementation declaration")
+  assert(implementation.generic_parameters.length == 2u32, "implementation generics")
+  assert(implementation.target_type == 6u32, "implementation target")
+}
+
 test "imported selection resolves non-generic calls" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\npub fn run(value: I32) -> I64 {\n  widen(value)\n}\n",
@@ -10,6 +27,16 @@ test "imported selection resolves non-generic calls" {
   let scope = imports.scope
   let resolved = imports.resolved
   let callables = imports.callables
+  assert(callables.length() == 1u32, "imported callable count")
+  let imported_callable = self_host_resolved_imported_callable_at(
+    callables,
+    0u32,
+  )
+  assert(
+    self_host_semantic_id_module(imported_callable.declaration) == 2601u64,
+    "imported callable identity",
+  )
+  assert(imported_callable.parameters.length == 1u32, "imported parameter span")
   let generic_parameter_ids = imports.generic_parameter_ids
   let parameter_types = imports.parameter_types
   let parameter_receivers = imports.parameter_receivers

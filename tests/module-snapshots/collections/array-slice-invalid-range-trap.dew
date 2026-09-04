@@ -1,5 +1,8 @@
 open dew.std.array
 
 pub fn main() -> Unit {
-  Array::make(3u32, 7).slice(2u32, 1u32)
+  let values = Array::with_capacity(8u32)
+  values.push(1)
+  values.push(2)
+  values.slice(0u32, 4u32)
 }

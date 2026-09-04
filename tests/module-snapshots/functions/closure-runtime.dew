@@ -1,5 +1,23 @@
+open dew.std.fixed_array
+
 struct Box {
   value: I32
+}
+
+fn record_call_order(state: FixedArray<I32>, digit: I32) -> Unit {
+  state[0u32] = state[0u32] * 10 + digit
+}
+
+fn ordered_callback(state: FixedArray<I32>) -> fn(I32) -> I32 {
+  record_call_order(state, 1)
+  fn(value: I32) -> I32 {
+    value + 1
+  }
+}
+
+fn ordered_argument(state: FixedArray<I32>) -> I32 {
+  record_call_order(state, 2)
+  41
 }
 
 fn increment(value: I32) -> I32 {
@@ -62,4 +80,11 @@ pub fn main() -> Unit {
   assert(fn(value: I32) -> I32 {
     value + 1
   }(41) == 42, "immediate lambda call")
+
+  let order = FixedArray::make(1u32, 0)
+  assert(
+    ordered_callback(order)(ordered_argument(order)) == 42,
+    "dynamic call result",
+  )
+  assert(order[0u32] == 12, "dynamic call evaluates target first")
 }

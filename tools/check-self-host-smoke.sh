@@ -21,6 +21,8 @@ esac
 source tools/self-host-common.sh
 self_host_ensure_starshine_ffi
 parser_sources=(
+  self_host/compiler/compiler_value_primitives.dew
+  self_host/compiler/compiler_runtime_assertions.dew
   self_host/compiler/tokenizer.dew
   self_host/compiler/parser_ast.dew
   self_host/compiler/parser_derive_core.dew
@@ -63,7 +65,9 @@ semantic_sources=(
   self_host/compiler/semantic_lowering_plan.dew
   self_host/compiler/semantic_program_lowering.dew
   self_host/compiler/semantic_program_specialization.dew
+  self_host/compiler/semantic_program_specialization_index.dew
   self_host/compiler/semantic_wasmgc_fragment_plan.dew
+  self_host/compiler/semantic_wasm_body_link_index.dew
   self_host/compiler/semantic_program_link_plan.dew
   self_host/compiler/semantic_wasm_body_plan.dew
   self_host/compiler/semantic_body_flow.dew

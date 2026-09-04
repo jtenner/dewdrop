@@ -49,4 +49,20 @@ pub fn main() -> Unit {
   strings[0u32]
   strings[1u32]
   values[0u32] = 11
+
+  let nested_make = FixedArray::make(
+    3u32,
+    FixedArray::make(2u32, 23).get_unchecked(0u32),
+  )
+  assert(nested_make.length() == 3u32, "nested make keeps outer length")
+  assert(nested_make[2u32] == 23, "nested make keeps outer value")
+
+  let other = FixedArray::make(1u32, 99)
+  match values.get(match other.get(0u32) {
+    Option::Some(_) => 0u32
+    Option::None => 0u32
+  }) {
+    Option::Some(value) => assert(value == 11, "nested index keeps outer base")
+    Option::None => assert(false, "nested index unexpectedly empty")
+  }
 }

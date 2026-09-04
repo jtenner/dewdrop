@@ -1,0 +1,20 @@
+open dew.std.array
+
+struct Box {
+  values: Array<U64>
+}
+
+impl Box {
+  fn read(self, index: U32) -> U64 {
+    self.values[index]
+  }
+}
+
+pub fn main() -> U64 {
+  let box_ = Box::{
+    values: [9u64]
+  }
+  let output = [0u64]
+  output.push(box_.read(0u32))
+  output[1u32]
+}

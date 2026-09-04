@@ -1032,8 +1032,18 @@ fn BodyFlowAnalyzer::analyze_expressions(self : BodyFlowAnalyzer) -> Unit {
           }
         }
       HirCallExpr(target, arguments, _) => {
+        let target_flow = match self.inferred.call_targets[expression] {
+          SelectedInferredCallTarget(_, _)
+          | SelectedBoundInferredCallTarget(_, _, _)
+          | SelectedDynamicTraitCallTarget(_, _, _, _) =>
+            // A selected static target is compile-time proof, not a value.
+            flow(flow_falls_through)
+          SelectedFunctionValueCallTarget(_)
+          | NoInferredCallTarget
+          | ErrorInferredCallTarget => self.expression_flow(target)
+        }
         let prefix = flow_sequence(
-          self.expression_flow(target),
+          target_flow,
           self.sequence_expression_children(arguments),
         )
         flow_sequence(prefix, self.terminal_flow(expression))

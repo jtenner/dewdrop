@@ -202,29 +202,52 @@ impl SelfHostTypeResolver {
   ) -> SelfHostTypeResolver {
     let interner = SelfHostResolvedTypeInterner::new()
     let generic_parameter_types = []
-    for parameter in collected.generic_parameters {
-      generic_parameter_types.push(interner.intern_generic(parameter.id))
+    let mut generic_parameter_index = 0u32
+    let _ = while generic_parameter_index {
+      current => if current < collected.generic_parameters.length() {
+        let parameter = self_host_collected_generic_parameter_identity(
+          collected.generic_parameters[current],
+        )
+        generic_parameter_types.push(interner.intern_generic(parameter.id))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let alias_indices = self_host_empty_alias_indices()
     let mut alias_index = 0u32
-    for alias in collected.aliases {
-      alias_indices.set(alias.declaration, alias_index)
-      alias_index = alias_index + 1u32
+    let _ = while alias_index {
+      current => if current < collected.aliases.length() {
+        let alias = self_host_collected_alias_identity(collected.aliases[current])
+        alias_indices.set(alias.declaration, current)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let declaration_types = self_host_u32_slots(
       collected.declaration_locations.length(),
       interner.error_type,
     )
-    for declaration in collected.declarations {
-      let resolved = match declaration.kind {
-        SelfHostCollectedDeclKind::StructDecl => interner.intern_nominal(declaration.id)
-        SelfHostCollectedDeclKind::EnumDecl => interner.intern_nominal(declaration.id)
-        SelfHostCollectedDeclKind::TypeAliasDecl => interner.intern_nominal(declaration.id)
-        SelfHostCollectedDeclKind::ForeignTypeDecl => interner.intern_nominal(declaration.id)
-        SelfHostCollectedDeclKind::TraitDecl => interner.intern_trait(declaration.id)
-        _ => interner.error_type
+    let mut declaration_index = 0u32
+    let _ = while declaration_index {
+      current => if current < collected.declarations.length() {
+        let declaration = self_host_collected_declaration_identity(
+          collected.declarations[current],
+        )
+        let resolved = match declaration.kind {
+          SelfHostCollectedDeclKind::StructDecl => interner.intern_nominal(declaration.id)
+          SelfHostCollectedDeclKind::EnumDecl => interner.intern_nominal(declaration.id)
+          SelfHostCollectedDeclKind::TypeAliasDecl => interner.intern_nominal(declaration.id)
+          SelfHostCollectedDeclKind::ForeignTypeDecl => interner.intern_nominal(declaration.id)
+          SelfHostCollectedDeclKind::TraitDecl => interner.intern_trait(declaration.id)
+          _ => interner.error_type
+        }
+        declaration_types[self_host_semantic_id_local(declaration.id)] = resolved
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      declaration_types[self_host_semantic_id_local(declaration.id)] = resolved
     }
     let import_memos = SelfHostImportedTypeMemoList::new()
     match imports {
@@ -1283,13 +1306,22 @@ impl SelfHostTypeResolver {
   }
 
   fn resolve_reserved_names(self) -> Unit {
-    for declaration in self.collected.declarations {
-      match declaration.kind {
-        SelfHostCollectedDeclKind::StructDecl => self.check_reserved_name(declaration)
-        SelfHostCollectedDeclKind::EnumDecl => self.check_reserved_name(declaration)
-        SelfHostCollectedDeclKind::TypeAliasDecl => self.check_reserved_name(declaration)
-        SelfHostCollectedDeclKind::ForeignTypeDecl => self.check_reserved_name(declaration)
-        _ => {}
+    let mut declaration_index = 0u32
+    let _ = while declaration_index {
+      current => if current < self.collected.declarations.length() {
+        let declaration = self_host_collected_declaration_identity(
+          self.collected.declarations[current],
+        )
+        match declaration.kind {
+          SelfHostCollectedDeclKind::StructDecl => self.check_reserved_name(declaration)
+          SelfHostCollectedDeclKind::EnumDecl => self.check_reserved_name(declaration)
+          SelfHostCollectedDeclKind::TypeAliasDecl => self.check_reserved_name(declaration)
+          SelfHostCollectedDeclKind::ForeignTypeDecl => self.check_reserved_name(declaration)
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
   }
@@ -1313,206 +1345,264 @@ impl SelfHostTypeResolver {
 
   fn resolve_parameters(self) -> Unit {
     let mut index = 0u32
-    for parameter in self.collected.parameters {
-      if !self_host_u32_equal(parameter.type_, 4294967295u32) {
-        let resolved = self.resolve_syntax(
-          parameter.declaration,
-          parameter.type_,
-          false,
+    let _ = while index {
+      current => if current < self.collected.parameters.length() {
+        let parameter = self_host_collected_parameter_identity(
+          self.collected.parameters[current],
         )
-        self.parameter_types[index] = resolved
-      } else {
-        match parameter.kind {
-          SelfHostCollectedParameterKind::ReceiverParameterDecl => match self.self_context(
+        if !self_host_u32_equal(parameter.type_, 4294967295u32) {
+          let resolved = self.resolve_syntax(
             parameter.declaration,
-          ) {
-            Option::Some(declaration) => {
-              self.parameter_types[index] = self.interner.intern_self(
-                declaration,
-              )
+            parameter.type_,
+            false,
+          )
+          self.parameter_types[current] = resolved
+        } else {
+          match parameter.kind {
+            SelfHostCollectedParameterKind::ReceiverParameterDecl => match self.self_context(
+              parameter.declaration,
+            ) {
+              Option::Some(declaration) => {
+                self.parameter_types[current] = self.interner.intern_self(
+                  declaration,
+                )
+              }
+              Option::None => {
+                self.diagnose(
+                  SelfHostTypeDiagnostic::SelfOutsideContext(
+                    parameter.declaration,
+                    parameter.offset,
+                  ),
+                )
+                self.parameter_types[current] = self.interner.error_type
+              }
             }
-            Option::None => {
+            SelfHostCollectedParameterKind::ValueParameterDecl => {
               self.diagnose(
-                SelfHostTypeDiagnostic::SelfOutsideContext(
+                SelfHostTypeDiagnostic::UnknownType(
+                  parameter.name,
                   parameter.declaration,
                   parameter.offset,
                 ),
               )
-              self.parameter_types[index] = self.interner.error_type
+              self.parameter_types[current] = self.interner.error_type
             }
           }
-          SelfHostCollectedParameterKind::ValueParameterDecl => {
-            self.diagnose(
-              SelfHostTypeDiagnostic::UnknownType(
-                parameter.name,
-                parameter.declaration,
-                parameter.offset,
-              ),
-            )
-            self.parameter_types[index] = self.interner.error_type
-          }
         }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      index = index + 1u32
     }
   }
 
   fn resolve_signatures(self) -> Unit {
     self.resolve_reserved_names()
-    for parameter in self.collected.generic_parameters {
-      let mut index = parameter.bounds.start
-      let _ = while index {
-        current => if current < self_host_u32_add(
-          parameter.bounds.start,
-          parameter.bounds.length,
-        ) {
-          let resolved = self.resolve_syntax(
-            parameter.declaration,
-            self.collected.generic_bounds[current],
-            true,
-          )
-          self.generic_bound_types[current] = resolved
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
+    let mut generic_parameter_index = 0u32
+    let _ = while generic_parameter_index {
+      current_parameter => if current_parameter < self.collected.generic_parameters.length() {
+        let parameter = self_host_collected_generic_parameter_identity(
+          self.collected.generic_parameters[current_parameter],
+        )
+        let mut index = parameter.bounds.start
+        let _ = while index {
+          current => if current < self_host_u32_add(
+            parameter.bounds.start,
+            parameter.bounds.length,
+          ) {
+            let resolved = self.resolve_syntax(
+              parameter.declaration,
+              self.collected.generic_bounds[current],
+              true,
+            )
+            self.generic_bound_types[current] = resolved
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
+        continue current_parameter + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
     self.resolve_parameters()
     let mut callable_index = 0u32
-    for callable in self.collected.callables {
-      let resolved = self.resolve_syntax(
-        callable.declaration,
-        callable.return_type,
-        false,
-      )
-      self.callable_return_types[callable_index] = resolved
-      callable_index = callable_index + 1u32
+    let _ = while callable_index {
+      current => if current < self.collected.callables.length() {
+        let callable = self_host_collected_callable_identity(
+          self.collected.callables[current],
+        )
+        let resolved = self.resolve_syntax(
+          callable.declaration,
+          callable.return_type,
+          false,
+        )
+        self.callable_return_types[current] = resolved
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let mut lambda_index = 0u32
-    for lambda in self.collected.lambdas {
-      let body = self.collected.bodies[self_host_semantic_id_local(lambda.root_body)]
-      let mut parameter_index = lambda.parameters.start
-      let _ = while parameter_index {
-        current => if current < self_host_u32_add(
-          lambda.parameters.start,
-          lambda.parameters.length,
-        ) {
-          let resolved = self.resolve_syntax(
-            body.declaration,
-            self.collected.lambda_parameters[current].type_,
-            false,
-          )
-          self.lambda_parameter_types[current] = resolved
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
+    let _ = while lambda_index {
+      current_lambda => if current_lambda < self.collected.lambdas.length() {
+        let lambda = self.collected.lambdas[current_lambda]
+        let body = self.collected.bodies[self_host_semantic_id_local(lambda.root_body)]
+        let mut parameter_index = lambda.parameters.start
+        let _ = while parameter_index {
+          current => if current < self_host_u32_add(
+            lambda.parameters.start,
+            lambda.parameters.length,
+          ) {
+            let resolved = self.resolve_syntax(
+              body.declaration,
+              self.collected.lambda_parameters[current].type_,
+              false,
+            )
+            self.lambda_parameter_types[current] = resolved
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
+        let resolved_return = self.resolve_syntax(
+          body.declaration,
+          lambda.return_type,
+          false,
+        )
+        self.lambda_return_types[current_lambda] = resolved_return
+        continue current_lambda + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      let resolved_return = self.resolve_syntax(
-        body.declaration,
-        lambda.return_type,
-        false,
-      )
-      self.lambda_return_types[lambda_index] = resolved_return
-      lambda_index = lambda_index + 1u32
     }
-    for body in self.collected.bodies {
-      let mut expression = body.expressions.start
-      let _ = while expression {
-        current => if current < self_host_u32_add(
-          body.expressions.start,
-          body.expressions.length,
-        ) {
-          if current < self.collected.explicit_call_type_argument_spans.length() {
-            let span = self.collected.explicit_call_type_argument_spans[current]
-            let mut argument = span.start
-            let _ = while argument {
-              argument_index => if argument_index < self_host_u32_add(
-                span.start,
-                span.length,
-              ) {
-                let resolved = self.resolve_syntax(
-                  body.declaration,
-                  self.collected.explicit_call_type_arguments[argument_index],
-                  false,
-                )
-                self.explicit_call_type_arguments[argument_index] = resolved
-                continue argument_index + 1u32
-              } else {
-                break self_host_semantic_unit()
+    let mut body_index = 0u32
+    let _ = while body_index {
+      current_body => if current_body < self.collected.bodies.length() {
+        let body = self.collected.bodies[current_body]
+        let mut expression = body.expressions.start
+        let _ = while expression {
+          current => if current < self_host_u32_add(
+            body.expressions.start,
+            body.expressions.length,
+          ) {
+            if current < self.collected.explicit_call_type_argument_spans.length() {
+              let span = self.collected.explicit_call_type_argument_spans[current]
+              let mut argument = span.start
+              let _ = while argument {
+                argument_index => if argument_index < self_host_u32_add(
+                  span.start,
+                  span.length,
+                ) {
+                  let resolved = self.resolve_syntax(
+                    body.declaration,
+                    self.collected.explicit_call_type_arguments[argument_index],
+                    false,
+                  )
+                  self.explicit_call_type_arguments[argument_index] = resolved
+                  continue argument_index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
               }
             }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
           }
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
         }
+        continue current_body + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
     let mut field_index = 0u32
-    for field in self.collected.fields {
-      let resolved = self.resolve_syntax(
-        field.declaration,
-        field.type_,
-        false,
-      )
-      self.field_types[field_index] = resolved
-      field_index = field_index + 1u32
+    let _ = while field_index {
+      current => if current < self.collected.fields.length() {
+        let field = self_host_collected_field_identity(self.collected.fields[current])
+        let resolved = self.resolve_syntax(
+          field.declaration,
+          field.type_,
+          false,
+        )
+        self.field_types[current] = resolved
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let mut variant_index = 0u32
-    for variant in self.collected.variants {
-      let start = self.signature_type_lists.length()
-      let mut payload = variant.payload_types.start
-      let _ = while payload {
-        current => if current < self_host_u32_add(
-          variant.payload_types.start,
-          variant.payload_types.length,
-        ) {
-          let resolved = self.resolve_syntax(
-            variant.declaration,
-            self.collected.type_arguments[current],
-            false,
-          )
-          self.signature_type_lists.push(resolved)
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
+    let _ = while variant_index {
+      current_variant => if current_variant < self.collected.variants.length() {
+        let variant = self_host_collected_variant_identity(
+          self.collected.variants[current_variant],
+        )
+        let start = self.signature_type_lists.length()
+        let mut payload = variant.payload_types.start
+        let _ = while payload {
+          current => if current < self_host_u32_add(
+            variant.payload_types.start,
+            variant.payload_types.length,
+          ) {
+            let resolved = self.resolve_syntax(
+              variant.declaration,
+              self.collected.type_arguments[current],
+              false,
+            )
+            self.signature_type_lists.push(resolved)
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
+        self.variant_payloads[current_variant] = SelfHostHirSpan::{
+          start: start
+          length: self.signature_type_lists.length() - start
+        }
+        continue current_variant + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      let payload_span = SelfHostHirSpan::{
-        start: start
-        length: self.signature_type_lists.length() - start
-      }
-      self.variant_payloads[variant_index] = payload_span
-      variant_index = variant_index + 1u32
     }
     let mut alias_index = 0u32
-    for alias in self.collected.aliases {
-      let resolved = self.resolve_syntax(
-        alias.declaration,
-        alias.target,
-        false,
-      )
-      self.alias_target_types[alias_index] = resolved
-      alias_index = alias_index + 1u32
+    let _ = while alias_index {
+      current => if current < self.collected.aliases.length() {
+        let alias = self_host_collected_alias_identity(self.collected.aliases[current])
+        let resolved = self.resolve_syntax(
+          alias.declaration,
+          alias.target,
+          false,
+        )
+        self.alias_target_types[current] = resolved
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let mut impl_index = 0u32
-    for implementation in self.collected.impls {
-      let resolved_trait = match implementation.trait_type {
-        Option::Some(type_) => Option::Some(
-          self.resolve_syntax(implementation.declaration, type_, true),
+    let _ = while impl_index {
+      current => if current < self.collected.impls.length() {
+        let implementation = self_host_collected_impl_identity(
+          self.collected.impls[current],
         )
-        Option::None => Option::None
+        let resolved_trait = match implementation.trait_type {
+          Option::Some(type_) => Option::Some(
+            self.resolve_syntax(implementation.declaration, type_, true),
+          )
+          Option::None => Option::None
+        }
+        self.impl_trait_types[current] = resolved_trait
+        let resolved_target = self.resolve_syntax(
+          implementation.declaration,
+          implementation.target_type,
+          false,
+        )
+        self.impl_target_types[current] = resolved_target
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      self.impl_trait_types[impl_index] = resolved_trait
-      let resolved_target = self.resolve_syntax(
-        implementation.declaration,
-        implementation.target_type,
-        false,
-      )
-      self.impl_target_types[impl_index] = resolved_target
-      impl_index = impl_index + 1u32
     }
   }
 }

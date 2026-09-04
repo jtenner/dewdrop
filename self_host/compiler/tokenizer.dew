@@ -118,6 +118,16 @@ pub struct SelfHostToken {
   index: U32
 }
 
+fn self_host_token_identity(token: SelfHostToken) -> SelfHostToken {
+  SelfHostToken::{
+    kind: token.kind
+    keyword_code: token.keyword_code
+    symbol_code: token.symbol_code
+    offset: token.offset
+    index: token.index
+  }
+}
+
 fn self_host_token_is_keyword(
   token: SelfHostToken,
   expected: U32,
@@ -152,6 +162,24 @@ struct SelfHostTokenizer {
   mut next_index: U32
 }
 
+fn self_host_tokenizer_emit_with_codes(
+  tokenizer: SelfHostTokenizer,
+  output: Array<SelfHostToken>,
+  kind: SelfHostTokenKind,
+  keyword_code: U32,
+  symbol_code: U32,
+  offset: U32,
+) -> Unit {
+  output.push(SelfHostToken::{
+    kind: kind
+    keyword_code: keyword_code
+    symbol_code: symbol_code
+    offset: offset
+    index: tokenizer.next_index
+  })
+  tokenizer.next_index = tokenizer.next_index + 1u32
+}
+
 fn self_host_tokenizer_emit(
   tokenizer: SelfHostTokenizer,
   output: Array<SelfHostToken>,
@@ -166,14 +194,14 @@ fn self_host_tokenizer_emit(
     SelfHostTokenKind::Symbol(code, _) => code
     _ => 4294967295u32
   }
-  output.push(SelfHostToken::{
-    kind: kind
-    keyword_code: keyword_code
-    symbol_code: symbol_code
-    offset: offset
-    index: tokenizer.next_index
-  })
-  tokenizer.next_index = tokenizer.next_index + 1u32
+  self_host_tokenizer_emit_with_codes(
+    tokenizer,
+    output,
+    kind,
+    keyword_code,
+    symbol_code,
+    offset,
+  )
 }
 
 fn self_host_ascii_letter(value: U8) -> Bool {
@@ -1361,10 +1389,39 @@ fn self_host_scan_number(
     if valid && suffix_valid && self_host_integer_in_range(magnitude, width, unsigned) {
       self_host_tokenizer_emit(tokenizer, output, self_host_integer_kind(magnitude, width, unsigned), offset)
     } else {
-      let text = self_host_tokenizer_string(
+      let text = StringBuilder::new()
+      text.append(self_host_tokenizer_string(
         tokenizer.source.slice(start, tokenizer.position),
-      )
-      self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidInteger(text)), offset)
+      ))
+      text.append(" digits=")
+      text.append(if valid {
+        "true"
+      } else {
+        "false"
+      })
+      text.append(" suffix=")
+      text.append(if suffix_valid {
+        "true"
+      } else {
+        "false"
+      })
+      text.append(" range=")
+      text.append(if self_host_integer_in_range(magnitude, width, unsigned) {
+        "true"
+      } else {
+        "false"
+      })
+      text.append(" magnitude=")
+      text.append_u64(magnitude)
+      text.append(" width=")
+      text.append_u32(width)
+      text.append(" unsigned=")
+      text.append(if unsigned {
+        "true"
+      } else {
+        "false"
+      })
+      self_host_tokenizer_emit(tokenizer, output, SelfHostTokenKind::Error(SelfHostLexError::InvalidInteger(text.finish())), offset)
     }
   }
 }
@@ -1534,6 +1591,95 @@ fn self_host_scan_multiline_string(
   }
 }
 
+fn self_host_source_symbol_code(source: Bytes, offset: U32) -> U32 {
+  if offset >= source.byte_length() {
+    return 4294967295u32
+  } else {
+  }
+  let value = source.byte_at(offset)
+  let next = if offset + 1u32 < source.byte_length() {
+    source.byte_at(offset + 1u32)
+  } else {
+    0u8
+  }
+  let third = if offset + 2u32 < source.byte_length() {
+    source.byte_at(offset + 2u32)
+  } else {
+    0u8
+  }
+  match value {
+    40u8 => 0u32
+    41u8 => 1u32
+    123u8 => 2u32
+    125u8 => 3u32
+    91u8 => 4u32
+    93u8 => 5u32
+    94u8 => 6u32
+    43u8 => 7u32
+    45u8 => if next == 62u8 {
+      31u32
+    } else {
+      8u32
+    }
+    42u8 => if next == 42u8 {
+      11u32
+    } else {
+      9u32
+    }
+    47u8 => 10u32
+    37u8 => 12u32
+    58u8 => if next == 58u8 {
+      14u32
+    } else {
+      13u32
+    }
+    61u8 => if next == 61u8 {
+      16u32
+    } else if next == 62u8 {
+      17u32
+    } else {
+      15u32
+    }
+    33u8 => if next == 61u8 {
+      18u32
+    } else {
+      32u32
+    }
+    60u8 => if next == 61u8 {
+      19u32
+    } else if next == 60u8 {
+      21u32
+    } else {
+      29u32
+    }
+    62u8 => if next == 61u8 {
+      20u32
+    } else if next == 62u8 {
+      22u32
+    } else {
+      30u32
+    }
+    38u8 => if next == 38u8 {
+      23u32
+    } else {
+      33u32
+    }
+    124u8 => if next == 124u8 {
+      24u32
+    } else {
+      34u32
+    }
+    46u8 => if next == 46u8 && third == 46u8 {
+      28u32
+    } else {
+      27u32
+    }
+    44u8 => 25u32
+    59u8 => 26u32
+    _ => 4294967295u32
+  }
+}
+
 fn self_host_scan_symbol(
   tokenizer: SelfHostTokenizer,
   output: Array<SelfHostToken>,
@@ -1638,8 +1784,86 @@ fn self_host_scan_symbol(
       SelfHostLexError::UnexpectedUnit(self_host_u8_to_u32(value)),
     )
   }
+  let symbol_code = match value {
+    40u8 => 0u32
+    41u8 => 1u32
+    123u8 => 2u32
+    125u8 => 3u32
+    91u8 => 4u32
+    93u8 => 5u32
+    94u8 => 6u32
+    43u8 => 7u32
+    45u8 => if next == 62u8 {
+      31u32
+    } else {
+      8u32
+    }
+    42u8 => if next == 42u8 {
+      11u32
+    } else {
+      9u32
+    }
+    47u8 => 10u32
+    37u8 => 12u32
+    58u8 => if next == 58u8 {
+      14u32
+    } else {
+      13u32
+    }
+    61u8 => if next == 61u8 {
+      16u32
+    } else if next == 62u8 {
+      17u32
+    } else {
+      15u32
+    }
+    33u8 => if next == 61u8 {
+      18u32
+    } else {
+      32u32
+    }
+    60u8 => if next == 61u8 {
+      19u32
+    } else if next == 60u8 {
+      21u32
+    } else {
+      29u32
+    }
+    62u8 => if next == 61u8 {
+      20u32
+    } else if next == 62u8 {
+      22u32
+    } else {
+      30u32
+    }
+    38u8 => if next == 38u8 {
+      23u32
+    } else {
+      33u32
+    }
+    124u8 => if next == 124u8 {
+      24u32
+    } else {
+      34u32
+    }
+    46u8 => if next == 46u8 && third == 46u8 {
+      28u32
+    } else {
+      27u32
+    }
+    44u8 => 25u32
+    59u8 => 26u32
+    _ => 4294967295u32
+  }
   tokenizer.position = tokenizer.position + width
-  self_host_tokenizer_emit(tokenizer, output, kind, offset)
+  self_host_tokenizer_emit_with_codes(
+    tokenizer,
+    output,
+    kind,
+    4294967295u32,
+    symbol_code,
+    offset,
+  )
 }
 
 pub fn self_host_tokenize(source: Bytes) -> Array<SelfHostToken> {

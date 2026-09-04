@@ -185,6 +185,28 @@ test "generic aliases substitute nested applications" {
   }
 }
 
+test "alias dependency collection keeps exact indexed targets" {
+  let collected = self_host_collect_bytes(
+    47u64,
+    b"type First = Second\ntype Second = I32\nfn read(value: First) -> I32 {\n  value\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostics.length() == 0u32, "alias diagnostics")
+  assert(resolved.alias_dependencies.length() == 2u32, "dependency spans")
+  assert(resolved.alias_dependencies[0u32].length == 1u32, "first dependency")
+  assert(resolved.alias_dependencies[1u32].length == 0u32, "second dependency")
+  let dependency = resolved.alias_dependency_declarations[
+    resolved.alias_dependencies[0u32].start
+  ]
+  assert(
+    self_host_u64_equal(
+      dependency,
+      self_host_collected_alias_identity(collected.aliases[1u32]).declaration,
+    ),
+    "indexed alias dependency",
+  )
+}
+
 test "alias cycles are deterministic and poison transitive users" {
   let collected = self_host_collect_bytes(
     45u64,
@@ -199,6 +221,14 @@ test "alias cycles are deterministic and poison transitive users" {
   assert(
     self_host_u32_equal(resolved.alias_cycles[1u32].length, 1u32),
     "self cycle",
+  )
+  assert(
+    resolved.alias_cycles[0u32].start < resolved.alias_cycle_declarations.length(),
+    "first cycle start",
+  )
+  assert(
+    resolved.alias_cycles[1u32].start < resolved.alias_cycle_declarations.length(),
+    "self cycle start",
   )
   assert(resolved.alias_is_cyclic[0u32], "A cyclic")
   assert(!resolved.alias_is_cyclic[3u32], "Stable acyclic")

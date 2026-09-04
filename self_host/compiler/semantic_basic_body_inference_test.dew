@@ -17,6 +17,15 @@ fn self_host_basic_infer_source(
   (collected, resolved, names, inferred)
 }
 
+test "basic inference copies exact scalar carriers by index" {
+  assert(self_host_basic_u32_at([7u32], 0u32) == 7u32, "indexed U32")
+  let destination = []
+  self_host_basic_copy_i32_values([-7i32, 11i32], destination)
+  assert(destination.length() == 2u32, "copied I32 count")
+  assert(destination[0u32] == -7i32, "copied first I32")
+  assert(destination[1u32] == 11i32, "copied second I32")
+}
+
 fn self_host_assert_basic_primitive(
   body: SelfHostBasicInferredBody,
   resolved: SelfHostResolvedModuleTypes,

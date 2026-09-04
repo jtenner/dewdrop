@@ -96,11 +96,22 @@ fn self_host_infer_module_values_with_inputs(
   let slots = self_host_module_value_type_slots()
   let solver = SelfHostLocalTypeSolver::new(resolved)
   let diagnostics = []
-  for value in collected.lets {
-    declarations.push(value.declaration)
+  let mut declaration_index = 0u32
+  let _ = while declaration_index {
+    current => if current < collected.lets.length() {
+      declarations.push(
+        self_host_collected_let_identity(collected.lets[current]).declaration,
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
-  for scc in dependencies.sccs {
-    let mut member = 0u32
+  let mut scc_index = 0u32
+  let _ = while scc_index {
+    current_scc => if current_scc < dependencies.sccs.length() {
+      let scc = self_host_hir_span_identity(dependencies.sccs[current_scc])
+      let mut member = 0u32
     let _ = while member {
       current => if current < scc.length {
         let declaration = dependencies.scc_declaration(
@@ -197,7 +208,11 @@ fn self_host_infer_module_values_with_inputs(
         break self_host_semantic_unit()
       }
     }
-    inferencers.clear()
+      inferencers.clear()
+      continue current_scc + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let mut solver_diagnostic = 0u32
   let _ = while solver_diagnostic {

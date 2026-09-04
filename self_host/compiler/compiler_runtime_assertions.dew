@@ -1,0 +1,69 @@
+// Shared runtime checks for compiler arena and parallel-array contracts.
+// Keep these checks at typed API boundaries so invalid compiler state traps
+// before an unchecked Wasm array access loses the source-level invariant.
+fn self_host_assert_compiler_invariant(
+  condition: Bool,
+  message: String,
+) -> Bool {
+  if condition {
+    true
+  } else {
+    // The message stays on the typed compiler API. The Wasm trap keeps the
+    // failing helper name in the runtime stack until diagnostic I/O is valid.
+    let _message = message
+    unreachable()
+  }
+}
+
+fn self_host_assert_array_index(
+  index: U32,
+  length: U32,
+  message: String,
+) -> Bool {
+  self_host_assert_compiler_invariant(
+    self_host_array_index_is_valid(index, length),
+    message,
+  )
+}
+
+fn self_host_array_index_is_valid(index: U32, length: U32) -> Bool {
+  // Keep this comparison behind a typed boundary. A raw U32 comparison can
+  // otherwise lose its unsigned proof while the self-host compiler recovers
+  // an expression shape from a shared i32 Wasm carrier.
+  self_host_u32_greater(length, index)
+}
+
+fn self_host_array_span_is_valid(
+  start: U32,
+  count: U32,
+  length: U32,
+) -> Bool {
+  if self_host_u32_greater(start, length) {
+    false
+  } else {
+    !self_host_u32_greater(count, length - start)
+  }
+}
+
+fn self_host_assert_array_span(
+  start: U32,
+  count: U32,
+  length: U32,
+  message: String,
+) -> Bool {
+  self_host_assert_compiler_invariant(
+    self_host_array_span_is_valid(start, count, length),
+    message,
+  )
+}
+
+fn self_host_assert_parallel_array_lengths(
+  left: U32,
+  right: U32,
+  message: String,
+) -> Bool {
+  self_host_assert_compiler_invariant(
+    self_host_u32_equal(left, right),
+    message,
+  )
+}

@@ -74,6 +74,20 @@ pub struct SelfHostPlannedWasmFunctionFragment {
   offset: U32
 }
 
+fn self_host_planned_wasm_function_fragment_identity(
+  fragment: SelfHostPlannedWasmFunctionFragment,
+) -> SelfHostPlannedWasmFunctionFragment {
+  SelfHostPlannedWasmFunctionFragment::{
+    declaration: fragment.declaration
+    kind: fragment.kind
+    parameters: fragment.parameters
+    results: fragment.results
+    specialization: fragment.specialization
+    elided: fragment.elided
+    offset: fragment.offset
+  }
+}
+
 pub struct SelfHostPlannedModuleWasmGCFragments {
   module_id: U64
   physical_types: Array<SelfHostPlannedWasmPhysicalType>
@@ -277,9 +291,10 @@ fn self_host_wasmgc_plan_types(
         let mut field = 0u32
         let _ = while field {
           current => if current < field_span.length {
-            let source = module_.type_layouts.fields[
-              self_host_u32_add(field_span.start, current)
-            ]
+            let source = self_host_planned_field_layout_at(
+              module_.type_layouts.fields,
+              self_host_u32_add(field_span.start, current),
+            )
             fields.push(SelfHostPlannedWasmField::{
               role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
               declaration: source.field
@@ -381,9 +396,10 @@ fn self_host_wasmgc_plan_types(
                 let mut item = 0u32
                 let _ = while item {
                   payload_index => if payload_index < payload.length {
-                    let field = module_.type_layouts.fields[
-                      self_host_u32_add(payload.start, payload_index)
-                    ]
+                    let field = self_host_planned_field_layout_at(
+                      module_.type_layouts.fields,
+                      self_host_u32_add(payload.start, payload_index),
+                    )
                     fields.push(SelfHostPlannedWasmField::{
                       role: SelfHostPlannedWasmFieldRole::WasmStructField(field.field)
                       declaration: field.field

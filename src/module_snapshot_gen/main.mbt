@@ -19,10 +19,19 @@ fn snapshot_warning(message : String) -> Unit {
 }
 
 ///|
+fn snapshot_io_error_message(error : @fs.IOError) -> String {
+  match error {
+    @fs.IOError(message) => message
+  }
+}
+
+///|
 fn snapshot_read_file(path : String) -> Bytes {
   @fs.read_file_to_bytes(path) catch {
     error => {
-      println("DEW_INTERNAL cannot read \{path}: \{error}")
+      println(
+        "DEW_INTERNAL cannot read \{path}: \{snapshot_io_error_message(error)}",
+      )
       @sys.exit(1)
       b""
     }
@@ -121,6 +130,9 @@ fn main {
     }
   }
   @fs.write_bytes_to_file(output, binary) catch {
-    error => snapshot_fail("cannot write \{output}: \{error}")
+    error =>
+      snapshot_fail(
+        "cannot write \{output}: \{snapshot_io_error_message(error)}",
+      )
   }
 }

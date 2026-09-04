@@ -1,3 +1,7 @@
+fn self_host_merge_i32_at(values: Array<I32>, index: U32) -> I32 {
+  array_get_unchecked(values, index)
+}
+
 pub enum SelfHostMergedInferenceJobKind {
   MergedBodyInferenceJob(U64)
   MergedLambdaInferenceJob(U32)
@@ -48,6 +52,12 @@ pub struct SelfHostMergedModuleInference {
   pattern_type_arguments: Array<I32>
   unsupported_expressions: Array<Bool>
   diagnostics: Array<SelfHostBodyInferenceDiagnostic>
+}
+
+fn self_host_merged_module_inference_identity(
+  value: SelfHostMergedModuleInference,
+) -> SelfHostMergedModuleInference {
+  value
 }
 
 fn self_host_merge_span(start: U32, length: U32) -> SelfHostHirSpan {
@@ -112,28 +122,33 @@ fn self_host_merge_call_target(
   }
 }
 
-fn self_host_merge_expression_selection(
+fn self_host_merge_append_expression_selection(
+  target: Array<SelfHostBasicExpressionSelection>,
   selection: SelfHostBasicExpressionSelection,
   argument_base: U32,
-) -> SelfHostBasicExpressionSelection {
+) -> Unit {
   match selection {
     SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
       declaration,
       arguments,
-    ) => SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
-      declaration,
-      self_host_merge_type_span(arguments, argument_base),
+    ) => target.push(
+      SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+        declaration,
+        self_host_merge_type_span(arguments, argument_base),
+      ),
     )
     SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
       variant,
       tag,
       arguments,
-    ) => SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
-      variant,
-      tag,
-      self_host_merge_type_span(arguments, argument_base),
+    ) => target.push(
+      SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+        variant,
+        tag,
+        self_host_merge_type_span(arguments, argument_base),
+      ),
     )
-    _ => selection
+    _ => target.push(selection)
   }
 }
 
@@ -216,13 +231,27 @@ fn self_host_merge_inference_job(
 ) -> Unit {
   let type_base = target.types.length()
   let type_argument_base = target.type_arguments.length()
-  for type_ in source.type_arguments {
+  let mut type_argument_index = 0u32
+  let _ = while type_argument_index {
+    current => if current < source.type_arguments.length() {
+      let type_ = self_host_merge_i32_at(source.type_arguments, current)
     target.type_arguments.push(self_host_merge_type(type_, type_base))
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
-  for term in source.types {
+  let mut type_term_index = 0u32
+  let _ = while type_term_index {
+    current => if current < source.types.length() {
+      let term = source.types[current]
     target.types.push(
       self_host_merge_type_term(term, type_base, type_argument_base),
     )
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let expression_types = self_host_merge_type_array(
     target.expression_types, source.expression_types, type_base,
@@ -258,40 +287,91 @@ fn self_host_merge_inference_job(
     target.pattern_type_arguments, source.pattern_type_arguments, type_base,
   )
   let call_start = target.call_targets.length()
-  for value in source.call_targets {
+  let mut call_target_index = 0u32
+  let _ = while call_target_index {
+    current => if current < source.call_targets.length() {
+      let value = source.call_targets[current]
     target.call_targets.push(
       self_host_merge_call_target(value, call_argument_base),
     )
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let operator_start = target.operator_targets.length()
-  for value in source.operator_targets {
+  let mut operator_target_index = 0u32
+  let _ = while operator_target_index {
+    current => if current < source.operator_targets.length() {
+      let value = source.operator_targets[current]
     target.operator_targets.push(
       self_host_merge_call_target(value, call_argument_base),
     )
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let selection_start = target.expression_selections.length()
-  for value in source.expression_selections {
-    target.expression_selections.push(
-      self_host_merge_expression_selection(value, expression_argument_base),
+  let mut selection_index = 0u32
+  let _ = while selection_index {
+    current => if current < source.expression_selections.length() {
+      let value = source.expression_selections[current]
+    self_host_merge_append_expression_selection(
+      target.expression_selections,
+      value,
+      expression_argument_base,
     )
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let field_start = target.object_field_targets.length()
-  for value in source.object_field_targets {
+  let mut field_target_index = 0u32
+  let _ = while field_target_index {
+    current => if current < source.object_field_targets.length() {
+      let value = source.object_field_targets[current]
     target.object_field_targets.push(value)
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let constructor_start = target.pattern_constructors.length()
-  for value in source.pattern_constructors {
+  let mut constructor_index = 0u32
+  let _ = while constructor_index {
+    current => if current < source.pattern_constructors.length() {
+      let value = source.pattern_constructors[current]
     target.pattern_constructors.push(
       self_host_merge_pattern_constructor(value, pattern_argument_base),
     )
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let unsupported_start = target.unsupported_expressions.length()
-  for value in source.unsupported_expressions {
+  let mut unsupported_index = 0u32
+  let _ = while unsupported_index {
+    current => if current < source.unsupported_expressions.length() {
+      let value = source.unsupported_expressions[current]
     target.unsupported_expressions.push(value)
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let diagnostic_start = target.diagnostics.length()
-  for value in source.diagnostics {
+  let mut diagnostic_index = 0u32
+  let _ = while diagnostic_index {
+    current => if current < source.diagnostics.length() {
+      let value = source.diagnostics[current]
     target.diagnostics.push(self_host_merge_diagnostic(value, type_base))
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   target.jobs.push(SelfHostMergedInferenceJob::{
     kind: kind
@@ -344,19 +424,33 @@ fn self_host_merge_module_inference(
     unsupported_expressions: []
     diagnostics: []
   }
-  for body in inferred.bodies {
+  let mut body_index = 0u32
+  let _ = while body_index {
+    current => if current < inferred.bodies.length() {
+      let body = inferred.bodies[current]
     self_host_merge_inference_job(
       target,
       SelfHostMergedInferenceJobKind::MergedBodyInferenceJob(body.body),
       body,
     )
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
-  for lambda in inferred.lambdas {
+  let mut lambda_index = 0u32
+  let _ = while lambda_index {
+    current => if current < inferred.lambdas.length() {
+      let lambda = inferred.lambdas[current]
     self_host_merge_inference_job(
       target,
       SelfHostMergedInferenceJobKind::MergedLambdaInferenceJob(lambda.lambda),
       lambda.body,
     )
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   target
 }

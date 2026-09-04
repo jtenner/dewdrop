@@ -1,4 +1,15 @@
 open dew.std.map
+open dew.std.fixed_array
+
+fn record_map_order(state: FixedArray<I32>, digit: I32) -> I32 {
+  state[0u32] = state[0u32] * 10 + digit
+  digit
+}
+
+fn ordered_map(state: FixedArray<I32>) -> Map<I32, I32> {
+  record_map_order(state, 1)
+  Map::empty()
+}
 
 fn empty_i32_map() -> Map<I32, I32> {
   Map::empty()
@@ -61,4 +72,14 @@ pub fn main() -> Unit {
   let singles = Map::singleton(1u8, 1.5f32)
   singles[2u8] = 2.5f32
   assert(singles[2u8] == 2.5f32, "u8 key and f32 value carriers")
+
+  let order = FixedArray::make(1u32, 0)
+  ordered_map(order).insert(
+    record_map_order(order, 2),
+    record_map_order(order, 3),
+  )
+  assert(order[0u32] == 123, "map insert evaluates receiver first")
+  order[0u32] = 0
+  ordered_map(order).contains_key(record_map_order(order, 2))
+  assert(order[0u32] == 12, "map lookup evaluates receiver first")
 }

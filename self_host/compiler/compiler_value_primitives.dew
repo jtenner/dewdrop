@@ -1,0 +1,27 @@
+// Small typed compiler operations shared by the parser, semantic passes, and
+// Wasm emitter. Keep these operations outside a compiler phase so lower phases
+// do not depend on higher semantic modules.
+fn self_host_semantic_unit() -> Unit {
+}
+
+// These typed boundaries keep source integer meaning when the physical Wasm
+// carrier is shared by signed and unsigned values.
+fn self_host_u32_equal(left: U32, right: U32) -> Bool {
+  left == right
+}
+
+fn self_host_u32_greater(left: U32, right: U32) -> Bool {
+  left > right
+}
+
+fn self_host_u32_add(left: U32, right: U32) -> U32 {
+  left + right
+}
+
+fn self_host_u64_equal(left: U64, right: U64) -> Bool {
+  left == right
+}
+
+fn self_host_u64_not_equal(left: U64, right: U64) -> Bool {
+  left != right
+}

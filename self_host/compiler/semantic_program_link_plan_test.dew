@@ -12,6 +12,31 @@ fn self_host_link_test_plan(
   )
 }
 
+test "program function lookup keeps one record owner across loop fields" {
+  let functions = [
+    SelfHostPlannedProgramWasmFunction::{
+      module_index: 0u32
+      fragment_index: 0u32
+      declaration: 11u64
+      specialization: 1u32
+      function_index: 4u32
+      imported: false
+    },
+    SelfHostPlannedProgramWasmFunction::{
+      module_index: 0u32
+      fragment_index: 1u32
+      declaration: 22u64
+      specialization: 3u32
+      function_index: 8u32
+      imported: false
+    },
+  ]
+  match self_host_program_link_function(functions, 22u64, 3u32) {
+    Option::Some(index) => assert(self_host_u32_equal(index, 8u32), "function index")
+    Option::None => assert(false, "function lookup")
+  }
+}
+
 test "program link assigns imports before defined functions" {
   let link = self_host_link_test_plan(
     b"foreign impl \"host\" as host {\n  fn read(value: I32) -> I32 = \"read\"\n}\npub fn run() -> I32 {\n  read(1)\n}\n",
@@ -34,6 +59,151 @@ test "program link resolves specialized call targets" {
   let function_ = link.functions[call.function_index]
   assert(self_host_u32_equal(function_.specialization, 0u32), "specialized target")
   assert(!function_.imported, "specialized definition")
+}
+
+test "physical body plan preserves exact generic call targets" {
+  let link = self_host_link_test_plan(
+    b"fn fixed<a, b>(left: a, right: b) -> I64 {\n  7i64\n}\npub fn run() -> I64 {\n  let first = fixed(1, 2)\n  fixed(3i64, 4) + first\n}\n",
+  )
+  assert(self_host_u32_equal(link.diagnostics.length(), 0u32), "link diagnostics")
+  let body_plan = self_host_plan_program_wasm_bodies(link)
+  assert(
+    self_host_u32_equal(body_plan.diagnostics.length(), 0u32),
+    "physical carrier diagnostics",
+  )
+  let mut first_call = 4294967295u32
+  let mut second_call = 4294967295u32
+  for body in body_plan.bodies {
+    for expression in body.expressions {
+      if !self_host_u32_equal(expression.call_function_index, 4294967295u32) {
+        if self_host_u32_equal(first_call, 4294967295u32) {
+          first_call = expression.call_function_index
+        } else if !self_host_u32_equal(first_call, expression.call_function_index) {
+          second_call = expression.call_function_index
+        }
+      }
+    }
+  }
+  assert(!self_host_u32_equal(first_call, 4294967295u32), "first generic target")
+  assert(!self_host_u32_equal(second_call, 4294967295u32), "second generic target")
+}
+
+test "physical body call index uses a flat typed chain" {
+  let heads = self_host_body_empty_u64_u32_map()
+  let keys = []
+  let functions = []
+  let next = []
+  self_host_body_specialized_call_index_append(
+    heads,
+    keys,
+    functions,
+    next,
+    11u64,
+    21u64,
+    31u32,
+  )
+  self_host_body_specialized_call_index_append(
+    heads,
+    keys,
+    functions,
+    next,
+    11u64,
+    22u64,
+    32u32,
+  )
+  self_host_body_specialized_call_index_append(
+    heads,
+    keys,
+    functions,
+    next,
+    12u64,
+    21u64,
+    33u32,
+  )
+  match self_host_body_specialized_call_index_get(
+    heads,
+    keys,
+    functions,
+    next,
+    11u64,
+    21u64,
+  ) {
+    Option::Some(value) => assert(value == 31u32, "first body call")
+    Option::None => assert(false, "first body call index")
+  }
+  match self_host_body_specialized_call_index_get(
+    heads,
+    keys,
+    functions,
+    next,
+    12u64,
+    21u64,
+  ) {
+    Option::Some(value) => assert(value == 33u32, "second body call")
+    Option::None => assert(false, "second body call index")
+  }
+}
+
+test "physical body plan takes mutable local carriers from assignments" {
+  let link = self_host_link_test_plan(
+    b"enum Value {\n  Item(U64)\n}\npub fn run(value: Value) -> U64 {\n  let mut owner = 18446744073709551615u64\n  match value {\n    Value::Item(declaration) => {\n      owner = declaration\n    }\n  }\n  owner\n}\n",
+  )
+  assert(self_host_u32_equal(link.diagnostics.length(), 0u32), "link diagnostics")
+  let body_plan = self_host_plan_program_wasm_bodies(link)
+  assert(
+    self_host_u32_equal(body_plan.diagnostics.length(), 0u32),
+    "mutable U64 local carrier",
+  )
+}
+
+test "arithmetic carrier uses a concrete result over broad operands" {
+  let carrier = self_host_body_binary_operand_carrier(
+    SelfHostHirBinaryOperator::Add,
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+    SelfHostWasmBodyCarrier::I32BodyCarrier,
+  )
+  assert(
+    carrier is SelfHostWasmBodyCarrier::I32BodyCarrier,
+    "arithmetic result carrier",
+  )
+}
+
+test "reference equality does not use its boolean result as an operand" {
+  let carrier = self_host_body_binary_operand_carrier(
+    SelfHostHirBinaryOperator::Equal,
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+    SelfHostWasmBodyCarrier::I32BodyCarrier,
+  )
+  assert(
+    carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+    "reference equality carrier",
+  )
+}
+
+test "physical body plan keeps a concrete String call result" {
+  let link = self_host_link_test_plan(
+    b"fn name() -> String {\n  \"value\"\n}\npub fn run() -> String {\n  let value = name()\n  value\n}\n",
+  )
+  assert(self_host_u32_equal(link.diagnostics.length(), 0u32), "link diagnostics")
+  let body_plan = self_host_plan_program_wasm_bodies(link)
+  assert(
+    self_host_u32_equal(body_plan.diagnostics.length(), 0u32),
+    "String call local carrier",
+  )
+}
+
+test "physical body plan keeps a String result from a checked record array accessor" {
+  let link = self_host_link_test_plan(
+    b"struct Item {\n  name: String\n  offset: U32\n}\nfn name_at(values: Array<Item>, index: U32) -> String {\n  assert(index < values.length(), \"item index\")\n  values[index].name\n}\npub fn run(values: Array<Item>) -> String {\n  let name = name_at(values, 0u32)\n  name\n}\n",
+  )
+  assert(self_host_u32_equal(link.diagnostics.length(), 0u32), "link diagnostics")
+  let body_plan = self_host_plan_program_wasm_bodies(link)
+  assert(
+    self_host_u32_equal(body_plan.diagnostics.length(), 0u32),
+    "checked String accessor local carrier",
+  )
 }
 
 test "program representation rejects a field carrier mismatch" {
@@ -131,6 +301,21 @@ test "program link emits carrier-independent Array capacity runtime" {
           function_.specialization == 4294967295u32,
           "canonical capacity specialization",
         )
+        let indexes = self_host_build_physical_body_indexes(link)
+        let physical_function = self_host_linked_physical_function_index(
+          function_.function_index,
+        )
+        assert(
+          physical_function < indexes.call_site_result_by_function.length(),
+          "inline builtin policy index",
+        )
+        assert(
+          self_host_body_bool_at(
+            indexes.call_site_result_by_function,
+            physical_function,
+          ),
+          "inline builtin call-site result policy",
+        )
       }
       _ => {}
     }
@@ -152,6 +337,39 @@ test "program link does not require a physical inline builtin" {
   )
   assert(link.diagnostics.length() == 0u32, "inline builtin diagnostics")
   assert(link.specialized_calls.length() == 0u32, "inline builtin physical call")
+}
+
+test "builtin lookup rejects the missing fragment sentinel" {
+  let link = self_host_link_test_plan(
+    b"builtin keep(value: U32) -> U32 = \"dew_debug_ignore\"\npub fn run() -> U32 {\n  keep(1u32)\n}\n",
+  )
+  let module_ = link.fragments.modules[0u32]
+  let mut declaration = 0u64
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < module_.functions.length() {
+      let fragment = self_host_program_link_fragment_function(module_, current)
+      match fragment.kind {
+        SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if name.equals(
+          b"dew_debug_ignore",
+        ) {
+          declaration = fragment.declaration
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(!self_host_u64_equal(declaration, 0u64), "builtin declaration")
+  module_.function_by_declaration[
+    self_host_semantic_id_local(declaration)
+  ] = 4294967295u32
+  match self_host_linked_builtin_name(link, declaration) {
+    Option::Some(name) => assert(name.equals(b"dew_debug_ignore"), "fallback builtin")
+    Option::None => assert(false, "fallback builtin lookup")
+  }
 }
 
 test "program link rejects a missing physical call target" {

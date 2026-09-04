@@ -46,6 +46,21 @@ pub struct SelfHostProgramLoweringIndex {
 
 impl SelfHostProgramLoweringIndex {
   fn module_index(self, module_id: U64) -> Option<U32> {
+    if self_host_u32_greater(self.module_ids.length(), 0u32) {
+      let base = self.module_ids[0u32]
+      if module_id >= base {
+        let relative = module_id - base
+        if relative <= 4294967295u64 {
+          let direct = u64_into_u32(relative)
+          if direct < self.module_ids.length() && self_host_u64_equal(
+            self.module_ids[direct],
+            module_id,
+          ) {
+            return Option::Some(direct)
+          }
+        }
+      }
+    }
     let mut index = 0u32
     while index {
       current => if current < self.module_ids.length() {
@@ -77,6 +92,7 @@ pub struct SelfHostProgramModuleGraph {
 }
 
 pub struct SelfHostPlannedProgramLowering {
+  collected: SelfHostCollectedProgram
   modules: Array<SelfHostPlannedModuleLowering>
   index: SelfHostProgramLoweringIndex
   graph: SelfHostProgramModuleGraph
@@ -145,59 +161,283 @@ fn self_host_program_module_dependencies(
   (spans, values)
 }
 
-fn self_host_program_module_reachable(
-  root: U32,
-  target: U32,
+fn self_host_program_module_sccs(
   dependencies: Array<SelfHostHirSpan>,
-  values: Array<U32>,
-) -> Bool {
-  if self_host_u32_equal(root, target) {
-    return true
+  dependency_modules: Array<U32>,
+) -> (Array<SelfHostHirSpan>, Array<U32>, Array<U32>) {
+  let module_count = dependencies.length()
+  if self_host_u32_equal(module_count, 0u32) {
+    return ([], [], [])
   }
-  let seen = []
-  let mut index = 0u32
-  let _ = while index {
-    current => if current < dependencies.length() {
-      seen.push(false)
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let work = [root]
-  let _ = while work.length() {
-    length => if self_host_u32_greater(length, 0u32) {
-      let current = self_host_program_u32_at(work, length - 1u32)
-      work.truncate(length - 1u32)
-      if current < seen.length() && !self_host_program_bool_at(seen, current) {
-        seen[current] = true
-        let dependency_start = dependencies[current].start
-        let dependency_length = dependencies[current].length
-        let mut dependency = 0u32
-        let _ = while dependency {
-          offset => if offset < dependency_length {
-            let next = self_host_program_u32_at(
-              values,
-              self_host_u32_add(dependency_start, offset),
+  let visited = self_host_bool_slots(module_count, false)
+  let work_nodes = self_host_u32_slots(0u32, 0u32)
+  let work_finish = self_host_bool_slots(0u32, false)
+  let finish_order = self_host_u32_slots(0u32, 0u32)
+  let mut start = 0u32
+  let _ = while start {
+    current_start => if current_start < module_count {
+      if !self_host_program_bool_at(visited, current_start) {
+        work_nodes.push(current_start)
+        work_finish.push(false)
+        let _ = while work_nodes.length() {
+          length => if self_host_u32_greater(length, 0u32) {
+            let item_index = length - 1u32
+            let item = self_host_program_u32_at(work_nodes, item_index)
+            work_nodes.truncate(item_index)
+            let finish_index = work_finish.length() - 1u32
+            let finishing = self_host_program_bool_at(
+              work_finish,
+              finish_index,
             )
-            if self_host_u32_equal(next, target) {
-              return true
+            work_finish.truncate(finish_index)
+            if finishing {
+              finish_order.push(item)
+            } else if !self_host_program_bool_at(visited, item) {
+              self_host_program_bool_set(visited, item, true)
+              work_nodes.push(item)
+              work_finish.push(true)
+              let edges = dependencies[item]
+              let mut edge = edges.length
+              let _ = while edge {
+                remaining => if self_host_u32_greater(remaining, 0u32) {
+                  let next = remaining - 1u32
+                  let dependency = self_host_program_u32_at(
+                    dependency_modules,
+                    self_host_u32_add(edges.start, next),
+                  )
+                  if !self_host_program_bool_at(visited, dependency) {
+                    work_nodes.push(dependency)
+                    work_finish.push(false)
+                  }
+                  continue next
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
             }
-            if next < seen.length() && !self_host_program_bool_at(seen, next) {
-              work.push(next)
-            }
-            continue offset + 1u32
+            continue work_nodes.length()
           } else {
             break self_host_semantic_unit()
           }
         }
       }
-      continue work.length()
+      continue current_start + 1u32
     } else {
       break self_host_semantic_unit()
     }
   }
-  false
+
+  let reverse_counts = self_host_u32_slots(module_count, 0u32)
+  let mut source = 0u32
+  let _ = while source {
+    current_source => if current_source < module_count {
+      let edges = dependencies[current_source]
+      let mut edge = 0u32
+      let _ = while edge {
+        current_edge => if current_edge < edges.length {
+          let dependency = self_host_program_u32_at(
+            dependency_modules,
+            self_host_u32_add(edges.start, current_edge),
+          )
+          self_host_program_u32_set(
+            reverse_counts,
+            dependency,
+            self_host_program_u32_at(reverse_counts, dependency) + 1u32,
+          )
+          continue current_edge + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_source + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let reverse_offsets = self_host_u32_slots(module_count + 1u32, 0u32)
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < module_count {
+      self_host_program_u32_set(
+        reverse_offsets,
+        current + 1u32,
+        self_host_program_u32_at(reverse_offsets, current) +
+          self_host_program_u32_at(reverse_counts, current),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let reverse_cursor = self_host_u32_slots(module_count, 0u32)
+  module_index = 0u32
+  let _ = while module_index {
+    current => if current < module_count {
+      self_host_program_u32_set(
+        reverse_cursor,
+        current,
+        self_host_program_u32_at(reverse_offsets, current),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let reverse_edges = self_host_u32_slots(
+    self_host_program_u32_at(reverse_offsets, module_count),
+    0u32,
+  )
+  source = 0u32
+  let _ = while source {
+    current_source => if current_source < module_count {
+      let edges = dependencies[current_source]
+      let mut edge = 0u32
+      let _ = while edge {
+        current_edge => if current_edge < edges.length {
+          let dependency = self_host_program_u32_at(
+            dependency_modules,
+            self_host_u32_add(edges.start, current_edge),
+          )
+          let destination = self_host_program_u32_at(
+            reverse_cursor,
+            dependency,
+          )
+          self_host_program_u32_set(
+            reverse_edges,
+            destination,
+            current_source,
+          )
+          self_host_program_u32_set(
+            reverse_cursor,
+            dependency,
+            destination + 1u32,
+          )
+          continue current_edge + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current_source + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+
+  let assigned = self_host_bool_slots(module_count, false)
+  let raw_component_of = self_host_u32_slots(
+    module_count,
+    4294967295u32,
+  )
+  let raw_sizes = self_host_u32_slots(0u32, 0u32)
+  let mut order_index = finish_order.length()
+  let _ = while order_index {
+    remaining => if self_host_u32_greater(remaining, 0u32) {
+      let next = remaining - 1u32
+      let component_start = self_host_program_u32_at(finish_order, next)
+      if !self_host_program_bool_at(assigned, component_start) {
+        let raw_component = raw_sizes.length()
+        let mut component_size = 0u32
+        work_nodes.clear()
+        work_nodes.push(component_start)
+        self_host_program_bool_set(assigned, component_start, true)
+        let _ = while work_nodes.length() {
+          length => if self_host_u32_greater(length, 0u32) {
+            let item_index = length - 1u32
+            let module_ = self_host_program_u32_at(work_nodes, item_index)
+            work_nodes.truncate(item_index)
+            self_host_program_u32_set(
+              raw_component_of,
+              module_,
+              raw_component,
+            )
+            component_size = component_size + 1u32
+            let edge_start = self_host_program_u32_at(
+              reverse_offsets,
+              module_,
+            )
+            let edge_end = self_host_program_u32_at(
+              reverse_offsets,
+              module_ + 1u32,
+            )
+            let mut edge = edge_start
+            let _ = while edge {
+              current_edge => if current_edge < edge_end {
+                let dependent = self_host_program_u32_at(
+                  reverse_edges,
+                  current_edge,
+                )
+                if !self_host_program_bool_at(assigned, dependent) {
+                  self_host_program_bool_set(assigned, dependent, true)
+                  work_nodes.push(dependent)
+                }
+                continue current_edge + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            continue work_nodes.length()
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        raw_sizes.push(component_size)
+      }
+      continue next
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+
+  let sccs = []
+  let component_cursor = self_host_u32_slots(raw_sizes.length(), 0u32)
+  let mut component = 0u32
+  let mut member_start = 0u32
+  let _ = while component {
+    ordered_component => if ordered_component < raw_sizes.length() {
+      let raw_component = raw_sizes.length() - ordered_component - 1u32
+      let component_size = self_host_program_u32_at(
+        raw_sizes,
+        raw_component,
+      )
+      sccs.push(SelfHostHirSpan::{
+        start: member_start
+        length: component_size
+      })
+      self_host_program_u32_set(
+        component_cursor,
+        ordered_component,
+        member_start,
+      )
+      member_start = member_start + component_size
+      continue ordered_component + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let scc_modules = self_host_u32_slots(module_count, 0u32)
+  let module_scc = self_host_u32_slots(module_count, 0u32)
+  module_index = 0u32
+  let _ = while module_index {
+    current => if current < module_count {
+      let raw_component = self_host_program_u32_at(raw_component_of, current)
+      let ordered_component = raw_sizes.length() - raw_component - 1u32
+      let destination = self_host_program_u32_at(
+        component_cursor,
+        ordered_component,
+      )
+      self_host_program_u32_set(scc_modules, destination, current)
+      self_host_program_u32_set(module_scc, current, ordered_component)
+      self_host_program_u32_set(
+        component_cursor,
+        ordered_component,
+        destination + 1u32,
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  (sccs, scc_modules, module_scc)
 }
 
 fn self_host_plan_program_module_graph(
@@ -206,193 +446,16 @@ fn self_host_plan_program_module_graph(
   let (dependencies, dependency_modules) = self_host_program_module_dependencies(
     frozen,
   )
-  let module_count = dependencies.length()
-  let provisional_sccs = []
-  let provisional_modules = []
-  let module_scc = []
-  let mut module_index = 0u32
-  let _ = while module_index {
-    current => if current < module_count {
-      module_scc.push(4294967295u32)
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let mut seed = 0u32
-  let _ = while seed {
-    current_seed => if current_seed < module_count {
-      if self_host_u32_equal(
-        self_host_program_u32_at(module_scc, current_seed),
-        4294967295u32,
-      ) {
-        let scc_index = provisional_sccs.length()
-        let start = provisional_modules.length()
-        let mut candidate = current_seed
-        let _ = while candidate {
-          current => if current < module_count {
-            if self_host_u32_equal(
-              self_host_program_u32_at(module_scc, current),
-              4294967295u32,
-            ) &&
-              self_host_program_module_reachable(
-                current_seed,
-                current,
-                dependencies,
-                dependency_modules,
-              ) && self_host_program_module_reachable(
-                current,
-                current_seed,
-                dependencies,
-                dependency_modules,
-              ) {
-              self_host_program_u32_set(module_scc, current, scc_index)
-              provisional_modules.push(current)
-            }
-            continue current + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-        provisional_sccs.push(SelfHostHirSpan::{
-          start: start
-          length: provisional_modules.length() - start
-        })
-      }
-      continue current_seed + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let emitted = []
-  let mut scc_index = 0u32
-  let _ = while scc_index {
-    current => if current < provisional_sccs.length() {
-      emitted.push(false)
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let sccs = []
-  let scc_modules = []
-  let ordered_module_scc = []
-  let mut module_slot = 0u32
-  let _ = while module_slot {
-    current => if current < module_count {
-      ordered_module_scc.push(4294967295u32)
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let mut emitted_count = 0u32
-  let _ = while emitted_count {
-    count => if count < provisional_sccs.length() {
-      let mut selected = 4294967295u32
-      let mut candidate_scc = 0u32
-      let _ = while candidate_scc {
-        current_scc => if current_scc < provisional_sccs.length() {
-          if !self_host_program_bool_at(emitted, current_scc) {
-            let mut ready = true
-            let member_start = provisional_sccs[current_scc].start
-            let member_length = provisional_sccs[current_scc].length
-            let mut member = 0u32
-            let _ = while member {
-              member_offset => if member_offset < member_length {
-                let module_ = self_host_program_u32_at(
-                  provisional_modules,
-                  self_host_u32_add(member_start, member_offset),
-                )
-                let dependency_start = dependencies[module_].start
-                let dependency_length = dependencies[module_].length
-                let mut dependency = 0u32
-                let _ = while dependency {
-                  dependency_offset => if dependency_offset < dependency_length {
-                    let dependency_module = self_host_program_u32_at(
-                      dependency_modules,
-                      self_host_u32_add(dependency_start, dependency_offset),
-                    )
-                    let dependency_scc = self_host_program_u32_at(
-                      module_scc,
-                      dependency_module,
-                    )
-                    if !self_host_u32_equal(dependency_scc, current_scc) &&
-                      !self_host_program_bool_at(emitted, dependency_scc) {
-                      ready = false
-                    }
-                    continue dependency_offset + 1u32
-                  } else {
-                    break self_host_semantic_unit()
-                  }
-                }
-                continue member_offset + 1u32
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-            if ready {
-              selected = current_scc
-              break self_host_semantic_unit()
-            }
-          }
-          continue current_scc + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      if self_host_u32_equal(selected, 4294967295u32) {
-        let mut fallback = 0u32
-        let _ = while fallback {
-          current => if current < emitted.length() {
-            if !self_host_program_bool_at(emitted, current) {
-              selected = current
-              break self_host_semantic_unit()
-            }
-            continue current + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-      }
-      self_host_program_bool_set(emitted, selected, true)
-      let ordered_scc = sccs.length()
-      let start = scc_modules.length()
-      let member_start = provisional_sccs[selected].start
-      let member_length = provisional_sccs[selected].length
-      let mut member = 0u32
-      let _ = while member {
-        current => if current < member_length {
-          let module_ = self_host_program_u32_at(
-            provisional_modules,
-            self_host_u32_add(member_start, current),
-          )
-          scc_modules.push(module_)
-          self_host_program_u32_set(
-            ordered_module_scc,
-            module_,
-            ordered_scc,
-          )
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      sccs.push(SelfHostHirSpan::{
-        start: start
-        length: scc_modules.length() - start
-      })
-      continue count + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
+  let (sccs, scc_modules, module_scc) = self_host_program_module_sccs(
+    dependencies,
+    dependency_modules,
+  )
   SelfHostProgramModuleGraph::{
     dependencies: dependencies
     dependency_modules: dependency_modules
     sccs: sccs
     scc_modules: scc_modules
-    module_scc: ordered_module_scc
+    module_scc: module_scc
   }
 }
 
@@ -460,6 +523,94 @@ fn self_host_program_lowering_reference_name(
     SelfHostBodyNameReference::ModuleTraitNameReference(_) => "module-trait"
     SelfHostBodyNameReference::VariantNameReference(_) => "variant"
   }
+}
+
+fn self_host_program_type_diagnostic_text(
+  collected: SelfHostCollectedModule,
+  diagnostic: SelfHostTypeDiagnostic,
+) -> String {
+  let message = StringBuilder::new()
+  match diagnostic {
+    SelfHostTypeDiagnostic::ReservedTypeName(_, name, offset) => {
+      message.append("reserved-type name=")
+      message.append(collected.name(name))
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::UnknownType(name, owner, offset) => {
+      message.append("unknown-type name=")
+      message.append(collected.name(name))
+      message.append(" owner=")
+      message.append_u64(owner)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::UnknownTrait(name, owner, offset) => {
+      message.append("unknown-trait name=")
+      message.append(collected.name(name))
+      message.append(" owner=")
+      message.append_u64(owner)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::AmbiguousImportedType(name, owner, offset) => {
+      message.append("ambiguous-imported-type name=")
+      message.append(collected.name(name))
+      message.append(" owner=")
+      message.append_u64(owner)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::AmbiguousImportedTrait(name, owner, offset) => {
+      message.append("ambiguous-imported-trait name=")
+      message.append(collected.name(name))
+      message.append(" owner=")
+      message.append_u64(owner)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::ExpectedTraitType(_, owner, offset) => {
+      message.append("expected-trait owner=")
+      message.append_u64(owner)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::TypeArityMismatch(_, expected, actual, owner, offset) => {
+      message.append("type-arity expected=")
+      message.append_u32(expected)
+      message.append(" actual=")
+      message.append_u32(actual)
+      message.append(" owner=")
+      message.append_u64(owner)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::TypeNotApplicable(_, owner, offset) => {
+      message.append("type-not-applicable owner=")
+      message.append_u64(owner)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::SelfOutsideContext(owner, offset) => {
+      message.append("self-outside-context owner=")
+      message.append_u64(owner)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::AliasCycle(_, offset) => {
+      message.append("alias-cycle offset=")
+      message.append_u32(offset)
+    }
+    SelfHostTypeDiagnostic::AliasExpansionLimit(owner, work, offset) => {
+      message.append("alias-expansion-limit owner=")
+      message.append_u64(owner)
+      message.append(" work=")
+      message.append_u32(work)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
+  }
+  message.finish()
 }
 
 fn self_host_program_lowering_name_at(
@@ -560,10 +711,417 @@ fn self_host_program_lowering_expression_error(
 fn self_host_validate_program_lowering(
   lowering: SelfHostPlannedProgramLowering,
 ) -> Option<String> {
+  match self_host_validate_collected_program_storage(lowering.collected) {
+    Option::Some(error) => {
+      let message = StringBuilder::new()
+      message.append("program lowering changed collected storage: ")
+      message.append(error)
+      return Option::Some(message.finish())
+    }
+    Option::None => {}
+  }
   let mut module_index = 0u32
   let _ = while module_index {
     current_module => if current_module < lowering.modules.length() {
       let module_ = lowering.modules[current_module]
+      let callable_lookup_length = module_.functions.callable_by_declaration.length()
+      let callable_lookup_backing = self_host_u32_array_backing_length(
+        module_.functions.callable_by_declaration,
+      )
+      if self_host_u32_greater(
+        callable_lookup_length,
+        callable_lookup_backing,
+      ) {
+        let message = StringBuilder::new()
+        message.append("program lowering callable lookup backing is shorter than its logical length module=")
+        message.append_u64(module_.module_id)
+        message.append(" length=")
+        message.append_u32(callable_lookup_length)
+        message.append(" backing=")
+        message.append_u32(callable_lookup_backing)
+        return Option::Some(message.finish())
+      }
+      let callable_length = module_.functions.callables.length()
+      let callable_backing = self_host_callable_array_backing_length(
+        module_.functions.callables,
+      )
+      if self_host_u32_greater(callable_length, callable_backing) {
+        let message = StringBuilder::new()
+        message.append("program lowering callable backing is shorter than its logical length module=")
+        message.append_u64(module_.module_id)
+        message.append(" length=")
+        message.append_u32(callable_length)
+        message.append(" backing=")
+        message.append_u32(callable_backing)
+        return Option::Some(message.finish())
+      }
+      let exact_resolved = self_host_resolved_module_types_identity(
+        module_.resolved_types,
+      )
+      let mut callable_index = 0u32
+      let _ = while callable_index {
+        current_callable => if current_callable < callable_length {
+          let callable = self_host_planned_callable_identity(
+            module_.functions.callables[current_callable],
+          )
+          let mut parameter_offset = 0u32
+          let _ = while parameter_offset {
+            current_parameter => if current_parameter < callable.parameters.length {
+              let parameter_index = self_host_u32_add(
+                callable.parameters.start,
+                current_parameter,
+              )
+              if parameter_index >= module_.functions.parameters.length() {
+                let message = StringBuilder::new()
+                message.append("program lowering callable parameter is outside its arena module=")
+                message.append_u64(module_.module_id)
+                message.append(" declaration=")
+                message.append_u64(callable.declaration)
+                message.append(" parameter=")
+                message.append_u32(current_parameter)
+                message.append(" index=")
+                message.append_u32(parameter_index)
+                message.append(" arena=")
+                message.append_u32(module_.functions.parameters.length())
+                return Option::Some(message.finish())
+              }
+              let parameter = self_host_planned_parameter_identity(
+                module_.functions.parameters[parameter_index],
+              )
+              if !self_host_u64_equal(
+                parameter.declaration,
+                callable.declaration,
+              ) {
+                let message = StringBuilder::new()
+                message.append("program lowering callable parameter has the wrong owner module=")
+                message.append_u64(module_.module_id)
+                message.append(" declaration=")
+                message.append_u64(callable.declaration)
+                message.append(" parameter=")
+                message.append_u32(current_parameter)
+                message.append(" index=")
+                message.append_u32(parameter_index)
+                message.append(" owner=")
+                message.append_u64(parameter.declaration)
+                message.append(" type=")
+                message.append_u32(parameter.type_)
+                return Option::Some(message.finish())
+              }
+              if !self_host_u32_greater(
+                exact_resolved.types.length(),
+                parameter.type_,
+              ) {
+                let message = StringBuilder::new()
+                message.append("program lowering callable parameter type is outside its arena module=")
+                message.append_u64(module_.module_id)
+                message.append(" declaration=")
+                message.append_u64(callable.declaration)
+                message.append(" name=")
+                message.append(bytes_to_string(callable.name))
+                message.append(" parameter=")
+                message.append_u32(current_parameter)
+                message.append(" index=")
+                message.append_u32(parameter_index)
+                message.append(" source_parameter=")
+                message.append_u64(parameter.parameter)
+                message.append(" type=")
+                message.append_u32(parameter.type_)
+                message.append(" error_type=")
+                message.append_u32(exact_resolved.error_type)
+                message.append(" type_count=")
+                message.append_u32(exact_resolved.types.length())
+                return Option::Some(message.finish())
+              }
+              if exact_resolved.types[parameter.type_] is SelfHostResolvedType::ErrorType {
+                let message = StringBuilder::new()
+                message.append("program lowering callable parameter resolved to error module=")
+                message.append_u64(module_.module_id)
+                message.append(" declaration=")
+                message.append_u64(callable.declaration)
+                message.append(" name=")
+                message.append(bytes_to_string(callable.name))
+                message.append(" parameter=")
+                message.append_u32(current_parameter)
+                message.append(" source_parameter=")
+                message.append_u64(parameter.parameter)
+                message.append(" planned_type=")
+                message.append_u32(parameter.type_)
+                let collected_module = self_host_program_collected_module_at(
+                  lowering.collected,
+                  current_module,
+                )
+                let mut source_index = 0u32
+                let _ = while source_index {
+                  source => if source < collected_module.parameters.length() {
+                    let source_parameter = self_host_collected_parameter_identity(
+                      collected_module.parameters[source],
+                    )
+                    if self_host_u64_equal(source_parameter.id, parameter.parameter) {
+                      message.append(" source_type_syntax=")
+                      message.append_u32(source_parameter.type_)
+                      if source_parameter.type_ < collected_module.type_syntax.length() {
+                        match collected_module.type_syntax[source_parameter.type_] {
+                          SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => {
+                            message.append(":named:")
+                            message.append(collected_module.name(name))
+                          }
+                          SelfHostHirTypeSyntax::QualifiedTypeSyntax(_, name, _, _) => {
+                            message.append(":qualified:")
+                            message.append(collected_module.name(name))
+                          }
+                          SelfHostHirTypeSyntax::AppliedTypeSyntax(_, arguments, _) => {
+                            message.append(":applied:")
+                            message.append_u32(arguments.length)
+                          }
+                          SelfHostHirTypeSyntax::ProductTypeSyntax(fields, _) => {
+                            message.append(":product:")
+                            message.append_u32(fields.length)
+                          }
+                          SelfHostHirTypeSyntax::FunctionTypeSyntax(parameters, _, _) => {
+                            message.append(":function:")
+                            message.append_u32(parameters.length)
+                          }
+                        }
+                      }
+                      break self_host_semantic_unit()
+                    }
+                    continue source + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+                message.append(" type_diagnostics=")
+                message.append_u32(exact_resolved.diagnostics.length())
+                if self_host_u32_greater(exact_resolved.diagnostics.length(), 0u32) {
+                  message.append(" first_diagnostic=")
+                  message.append(self_host_program_type_diagnostic_text(
+                    collected_module,
+                    exact_resolved.diagnostics[0u32],
+                  ))
+                  match exact_resolved.diagnostics[0u32] {
+                    SelfHostTypeDiagnostic::UnknownType(name, _, _) => {
+                      let spelling = collected_module.name(name)
+                      let debug_frozen = self_host_freeze_program_signature_interfaces(
+                        lowering.collected,
+                      )
+                      let scope = debug_frozen.import_scopes.at(current_module)
+                      message.append(" scope_lookup=")
+                      match scope.lookup_type(spelling) {
+                        Option::Some(_) => message.append("found")
+                        Option::None => message.append("missing")
+                      }
+                      message.append(" scope_ambiguous=")
+                      if scope.type_is_ambiguous(spelling) {
+                        message.append("true")
+                      } else {
+                        message.append("false")
+                      }
+                      let imported_count = self_host_program_imported_interface_count(scope)
+                      message.append(" imported_interfaces=")
+                      message.append_u32(imported_count)
+                      let mut imported = 0u32
+                      let _ = while imported {
+                        current_import => if current_import < imported_count {
+                          let interface_index = self_host_program_imported_interface(
+                            scope,
+                            current_import,
+                          )
+                          message.append(";")
+                          message.append_u32(interface_index)
+                          message.append(":")
+                          if interface_index < debug_frozen.collected.module_paths.length() {
+                            message.append(debug_frozen.collected.module_paths[interface_index])
+                          } else {
+                            message.append("invalid")
+                          }
+                          message.append(":declarations=")
+                          if interface_index < debug_frozen.interfaces.length() {
+                            message.append_u32(
+                              self_host_interface_slot_declaration_count(
+                                debug_frozen.interfaces,
+                                interface_index,
+                              ),
+                            )
+                            message.append(":declares_type=")
+                            match scope.lookup_module_type(interface_index, spelling) {
+                              Option::Some(_) => message.append("bound")
+                              Option::None => match debug_frozen.interfaces.at(
+                                interface_index,
+                              ).declaration_named(
+                                spelling,
+                                SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+                              ) {
+                                Option::Some(_) => message.append("unbound")
+                                Option::None => message.append("missing")
+                              }
+                            }
+                          } else {
+                            message.append("invalid")
+                          }
+                          continue current_import + 1u32
+                        } else {
+                          break self_host_semantic_unit()
+                          }
+                      }
+                      message.append(" source_imports=")
+                      message.append_u32(collected_module.import_count())
+                      let mut source_import = 0u32
+                      let _ = while source_import {
+                        current_import => if current_import < collected_module.import_count() {
+                          let import_ = self_host_collected_import_identity(
+                            collected_module.import_at(current_import),
+                          )
+                          message.append(";")
+                          message.append(import_.path)
+                          message.append(":open=")
+                          if import_.open_ {
+                            message.append("true")
+                          } else {
+                            message.append("false")
+                          }
+                          continue current_import + 1u32
+                        } else {
+                          break self_host_semantic_unit()
+                        }
+                      }
+                    }
+                    _ => {}
+                  }
+                }
+                return Option::Some(message.finish())
+              }
+              continue current_parameter + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          continue current_callable + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let mut callable_local = 0u32
+      let _ = while callable_local {
+        current_local => if current_local < callable_lookup_length {
+          let callable_index = module_.functions.callable_by_declaration[
+            current_local
+          ]
+          if !self_host_u32_equal(callable_index, 4294967295u32) &&
+            !self_host_u32_greater(callable_length, callable_index) {
+            let message = StringBuilder::new()
+            message.append("program lowering callable lookup reaches outside logical callable storage module=")
+            message.append_u64(module_.module_id)
+            message.append(" local=")
+            message.append_u32(current_local)
+            message.append(" index=")
+            message.append_u32(callable_index)
+            message.append(" length=")
+            message.append_u32(callable_length)
+            return Option::Some(message.finish())
+          }
+          if !self_host_u32_equal(callable_index, 4294967295u32) &&
+            !self_host_u32_greater(callable_backing, callable_index) {
+            let message = StringBuilder::new()
+            message.append("program lowering callable lookup reaches outside physical callable storage module=")
+            message.append_u64(module_.module_id)
+            message.append(" local=")
+            message.append_u32(current_local)
+            message.append(" index=")
+            message.append_u32(callable_index)
+            message.append(" length=")
+            message.append_u32(callable_length)
+            message.append(" backing=")
+            message.append_u32(callable_backing)
+            return Option::Some(message.finish())
+          }
+          continue current_local + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let mut object_field_index = 0u32
+      let _ = while object_field_index {
+        current_field => if current_field < module_.object_fields.length() {
+          let field = self_host_planned_object_field_at(
+            module_.object_fields,
+            current_field,
+          )
+          if field.value >= module_.expressions.length() {
+            let message = StringBuilder::new()
+            message.append("program lowering object field value is outside its expression arena module=")
+            message.append_u64(module_.module_id)
+            message.append(" field_index=")
+            message.append_u32(current_field)
+            message.append(" field=")
+            message.append_u64(field.field)
+            message.append(" value=")
+            message.append_u32(field.value)
+            message.append(" expression_count=")
+            message.append_u32(module_.expressions.length())
+            message.append(" offset=")
+            message.append_u32(field.offset)
+            return Option::Some(message.finish())
+          }
+          continue current_field + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let mut arm_index = 0u32
+      let _ = while arm_index {
+        current_arm => if current_arm < module_.pattern_arms.length() {
+          let arm = self_host_planned_pattern_arm_at(
+            module_.pattern_arms,
+            current_arm,
+          )
+          if arm.pattern >= module_.patterns.length() {
+            let message = StringBuilder::new()
+            message.append("program lowering pattern arm root is outside its pattern arena module=")
+            message.append_u64(module_.module_id)
+            message.append(" arm=")
+            message.append_u32(current_arm)
+            message.append(" pattern=")
+            message.append_u32(arm.pattern)
+            message.append(" pattern_count=")
+            message.append_u32(module_.patterns.length())
+            message.append(" offset=")
+            message.append_u32(arm.offset)
+            return Option::Some(message.finish())
+          }
+          if arm.body >= module_.expressions.length() {
+            let message = StringBuilder::new()
+            message.append("program lowering pattern arm body is outside its expression arena module=")
+            message.append_u64(module_.module_id)
+            message.append(" arm=")
+            message.append_u32(current_arm)
+            message.append(" body=")
+            message.append_u32(arm.body)
+            message.append(" expression_count=")
+            message.append_u32(module_.expressions.length())
+            message.append(" offset=")
+            message.append_u32(arm.offset)
+            return Option::Some(message.finish())
+          }
+          if !self_host_u32_equal(arm.guard_condition, 4294967295u32) &&
+            arm.guard_condition >= module_.expressions.length() {
+            let message = StringBuilder::new()
+            message.append("program lowering pattern arm guard is outside its expression arena module=")
+            message.append_u64(module_.module_id)
+            message.append(" arm=")
+            message.append_u32(current_arm)
+            message.append(" guard=")
+            message.append_u32(arm.guard_condition)
+            message.append(" expression_count=")
+            message.append_u32(module_.expressions.length())
+            message.append(" offset=")
+            message.append_u32(arm.offset)
+            return Option::Some(message.finish())
+          }
+          continue current_arm + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
       let mut body_index = 0u32
       let _ = while body_index {
         current_body => if current_body < module_.bodies.length() {
@@ -650,7 +1208,10 @@ fn self_host_validate_program_lowering(
           let mut expression = body.expressions.start
           let _ = while expression {
             current_expression => if current_expression < expression_end {
-              let planned = module_.expressions[current_expression]
+              let planned = self_host_planned_expression_at(
+                module_.expressions,
+                current_expression,
+              )
               match planned.kind {
                 SelfHostPlannedExpressionKind::PlannedPoisonExpression => match planned.reference {
                   SelfHostBodyNameReference::LocalNameReference(_) => return Option::Some(
@@ -692,16 +1253,16 @@ fn self_host_validate_program_lowering(
                       "has a field receiver outside its arena",
                     ),
                   )
-                } else if module_.expressions[receiver].kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression {
-                  let namespace_receiver = match module_.expressions[
-                    receiver
-                  ].reference {
-                    SelfHostBodyNameReference::ForeignLibraryNameReference(_) => true
-                    SelfHostBodyNameReference::ImportedModuleNameReference(_) => true
-                    SelfHostBodyNameReference::ModuleTypeNameReference(_) => true
-                    SelfHostBodyNameReference::PrimitiveTypeNameReference(_) => true
-                    _ => false
-                  }
+                } else if self_host_planned_expression_at(
+                  module_.expressions,
+                  receiver,
+                ).kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression {
+                  let namespace_receiver = self_host_body_name_reference_is_namespace(
+                    self_host_planned_expression_at(
+                      module_.expressions,
+                      receiver,
+                    ).reference,
+                  )
                   if !namespace_receiver {
                     return Option::Some(
                       self_host_program_lowering_expression_error(
@@ -726,6 +1287,89 @@ fn self_host_validate_program_lowering(
         }
       }
       continue current_module + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}
+
+// This gate checks physical collection storage before interface freezing reads it.
+fn self_host_validate_collected_program_storage(
+  collected_program: SelfHostCollectedProgram,
+) -> Option<String> {
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < collected_program.modules.length() {
+      let collected = self_host_program_collected_module_at(
+        collected_program,
+        current,
+      )
+      let location_length = collected.declaration_locations.length()
+      let location_capacity = collected.declaration_locations.capacity()
+      let location_backing = if self_host_u32_equal(location_length, 0u32) {
+        0u32
+      } else {
+        self_host_u32_array_backing_length(collected.declaration_locations)
+      }
+      if self_host_u32_greater(location_length, location_backing) {
+        let message = StringBuilder::new()
+        message.append("collected declaration location backing is shorter than its logical length module=")
+        message.append_u64(collected.module_id)
+        message.append(" length=")
+        message.append_u32(location_length)
+        message.append(" capacity=")
+        message.append_u32(location_capacity)
+        message.append(" backing=")
+        message.append_u32(location_backing)
+        message.append(" declarations=")
+        message.append_u32(collected.declarations.length())
+        message.append(" methods=")
+        message.append_u32(collected.methods.length())
+        return Option::Some(message.finish())
+      }
+      let declaration_length = collected.declarations.length()
+      let declaration_capacity = collected.declarations.capacity()
+      let declaration_backing = if self_host_u32_equal(
+        declaration_length,
+        0u32,
+      ) {
+        0u32
+      } else {
+        self_host_declaration_array_backing_length(collected.declarations)
+      }
+      if self_host_u32_greater(declaration_length, declaration_backing) {
+        let message = StringBuilder::new()
+        message.append("collected declaration backing is shorter than its logical length module=")
+        message.append_u64(collected.module_id)
+        message.append(" length=")
+        message.append_u32(declaration_length)
+        message.append(" capacity=")
+        message.append_u32(declaration_capacity)
+        message.append(" backing=")
+        message.append_u32(declaration_backing)
+        return Option::Some(message.finish())
+      }
+      let method_length = collected.methods.length()
+      let method_capacity = collected.methods.capacity()
+      let method_backing = if self_host_u32_equal(method_length, 0u32) {
+        0u32
+      } else {
+        self_host_method_array_backing_length(collected.methods)
+      }
+      if self_host_u32_greater(method_length, method_backing) {
+        let message = StringBuilder::new()
+        message.append("collected method backing is shorter than its logical length module=")
+        message.append_u64(collected.module_id)
+        message.append(" length=")
+        message.append_u32(method_length)
+        message.append(" capacity=")
+        message.append_u32(method_capacity)
+        message.append(" backing=")
+        message.append_u32(method_backing)
+        return Option::Some(message.finish())
+      }
+      continue current + 1u32
     } else {
       break self_host_semantic_unit()
     }
@@ -1025,8 +1669,11 @@ fn self_host_plan_program_lowering(
   let graph = self_host_plan_program_module_graph(frozen)
   let planned_indices = []
   let planned_modules = []
-  for scc in graph.sccs {
-    let mut member = 0u32
+  let mut scc_index = 0u32
+  let _ = while scc_index {
+    current_scc => if current_scc < graph.sccs.length() {
+      let scc = self_host_hir_span_identity(graph.sccs[current_scc])
+      let mut member = 0u32
     let _ = while member {
       current => if current < scc.length {
         let module_index = graph.scc_modules[
@@ -1074,6 +1721,10 @@ fn self_host_plan_program_lowering(
         break self_host_semantic_unit()
       }
     }
+      continue current_scc + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let modules = []
   let module_ids = []
@@ -1106,6 +1757,7 @@ fn self_host_plan_program_lowering(
     }
   }
   SelfHostPlannedProgramLowering::{
+    collected: frozen.collected
     modules: modules
     index: SelfHostProgramLoweringIndex::{
       module_ids: module_ids
@@ -1114,3 +1766,20 @@ fn self_host_plan_program_lowering(
     elided_trait_wrappers: []
   }
 }
+
+// These compiler-only intrinsics read the physical Wasm Array length.
+builtin self_host_u32_array_backing_length(
+  value: Array<U32>,
+) -> U32 = "dew_array_backing_length_i32"
+
+builtin self_host_declaration_array_backing_length(
+  value: Array<SelfHostCollectedDeclaration>,
+) -> U32 = "dew_array_backing_length_ref"
+
+builtin self_host_method_array_backing_length(
+  value: Array<SelfHostCollectedMethod>,
+) -> U32 = "dew_array_backing_length_ref"
+
+builtin self_host_callable_array_backing_length(
+  value: Array<SelfHostPlannedCallable>,
+) -> U32 = "dew_array_backing_length_ref"

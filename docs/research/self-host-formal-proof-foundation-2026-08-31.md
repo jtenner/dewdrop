@@ -85,6 +85,11 @@ tools/test-proofs.sh
 
 The main `tools/check.sh` lane also runs this proof command.
 
+Small failure-driven compiler proofs now live in `docs/proofs/`. The proof map
+in `docs/proofs/README.md` states which rules are proved, checked at run time,
+tested, or still open. These notes cover namespace calls, branch expected
+types, constructor recovery, and unsigned arena checks.
+
 ## Trust boundary
 
 MoonBit formal verification is experimental. Its default integer model uses mathematical integers. It does not prove machine-integer overflow safety.

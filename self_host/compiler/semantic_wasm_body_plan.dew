@@ -1,5 +1,6 @@
 open dew.std.map
 open dew.std.option
+open dew.std.string
 open dew.std.string_builder
 
 pub enum SelfHostWasmBodyCarrier {
@@ -63,6 +64,8 @@ pub struct SelfHostPhysicalCarrierDiagnostic {
   logical_type: I32
   logical_shape: SelfHostPlannedValueShape
   selected_owner: U64
+  expected_owner: U64
+  actual_owner: U64
   expected: SelfHostWasmBodyCarrier
   actual: SelfHostWasmBodyCarrier
 }
@@ -94,11 +97,23 @@ pub struct SelfHostPlannedProgramWasmBodyPlan {
 }
 
 struct SelfHostPhysicalFieldCarrier {
-  field: U64
-  type_index: U32
-  field_index: U32
+  field_declaration: U64
+  physical_type_index: U32
+  physical_field_index: U32
   storage: SelfHostPlannedWasmStorageType
   owner: U64
+}
+
+fn self_host_body_physical_field_carrier_identity(
+  value: SelfHostPhysicalFieldCarrier,
+) -> SelfHostPhysicalFieldCarrier {
+  SelfHostPhysicalFieldCarrier::{
+    field_declaration: value.field_declaration
+    physical_type_index: value.physical_type_index
+    physical_field_index: value.physical_field_index
+    storage: value.storage
+    owner: value.owner
+  }
 }
 
 struct SelfHostPhysicalBodyIndexes {
@@ -106,7 +121,23 @@ struct SelfHostPhysicalBodyIndexes {
   type_by_variant: Map<U64, U32>
   field_by_declaration: Map<U64, SelfHostPhysicalFieldCarrier>
   function_by_declaration: Map<U64, U32>
-  specialized_calls_by_body: Map<U64, Map<U64, U32>>
+  call_site_result_by_function: Array<Bool>
+  specialized_call_head_by_body: Map<U64, U32>
+  specialized_call_keys: Array<U64>
+  specialized_call_functions: Array<U32>
+  specialized_call_next: Array<U32>
+}
+
+fn self_host_body_indexed_field(
+  indexes: SelfHostPhysicalBodyIndexes,
+  declaration: U64,
+) -> Option<SelfHostPhysicalFieldCarrier> {
+  match indexes.field_by_declaration.get(declaration) {
+    Option::Some(value) => Option::Some(
+      self_host_body_physical_field_carrier_identity(value),
+    )
+    Option::None => Option::None
+  }
 }
 
 fn self_host_body_carrier_equal(
@@ -133,6 +164,71 @@ fn self_host_body_carrier_is_value(
   !(carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
     !(carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) &&
     !(carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier)
+}
+
+fn self_host_body_carrier_is_numeric(
+  carrier: SelfHostWasmBodyCarrier,
+) -> Bool {
+  carrier is SelfHostWasmBodyCarrier::I32BodyCarrier ||
+    carrier is SelfHostWasmBodyCarrier::I64BodyCarrier ||
+    carrier is SelfHostWasmBodyCarrier::F32BodyCarrier ||
+    carrier is SelfHostWasmBodyCarrier::F64BodyCarrier ||
+    carrier is SelfHostWasmBodyCarrier::V128BodyCarrier
+}
+
+fn self_host_body_binary_is_comparison(
+  operator: SelfHostHirBinaryOperator,
+) -> Bool {
+  operator is SelfHostHirBinaryOperator::Equal ||
+    operator is SelfHostHirBinaryOperator::NotEqual ||
+    operator is SelfHostHirBinaryOperator::Less ||
+    operator is SelfHostHirBinaryOperator::LessEqual ||
+    operator is SelfHostHirBinaryOperator::Greater ||
+    operator is SelfHostHirBinaryOperator::GreaterEqual
+}
+
+fn self_host_body_binary_operand_carrier(
+  operator: SelfHostHirBinaryOperator,
+  left: SelfHostWasmBodyCarrier,
+  right: SelfHostWasmBodyCarrier,
+  result: SelfHostWasmBodyCarrier,
+) -> SelfHostWasmBodyCarrier {
+  if operator is SelfHostHirBinaryOperator::LogicalOr ||
+    operator is SelfHostHirBinaryOperator::LogicalAnd {
+    return SelfHostWasmBodyCarrier::I32BodyCarrier
+  }
+  if self_host_body_binary_is_comparison(operator) {
+    // A comparison result is always i32, so it is not evidence about the
+    // operands. Prefer a concrete scalar before a broad reference carrier.
+    if self_host_body_carrier_is_numeric(right) {
+      return right
+    }
+    if self_host_body_carrier_is_numeric(left) {
+      return left
+    }
+    if self_host_body_carrier_is_value(right) {
+      return right
+    }
+    return left
+  }
+  // Arithmetic operands and their result have one physical carrier. A parent
+  // result constraint is stronger than an unresolved or broad-ref operand.
+  if self_host_body_carrier_is_numeric(result) {
+    return result
+  }
+  if self_host_body_carrier_is_numeric(right) {
+    return right
+  }
+  if self_host_body_carrier_is_numeric(left) {
+    return left
+  }
+  if self_host_body_carrier_is_value(right) {
+    return right
+  }
+  if self_host_body_carrier_is_value(left) {
+    return left
+  }
+  result
 }
 
 fn self_host_body_carrier_from_shape(
@@ -258,16 +354,36 @@ fn self_host_body_call_key(specialization: U32, expression: U32) -> U64 {
   (u32_into_u64(specialization) << 32u64) | u32_into_u64(expression)
 }
 
+fn self_host_body_u32_at(values: Array<U32>, index: U32) -> U32 {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_u32_set(
+  values: Array<U32>,
+  index: U32,
+  value: U32,
+) -> Unit {
+  array_set_unchecked(values, index, value)
+}
+
+fn self_host_body_bool_at(values: Array<Bool>, index: U32) -> Bool {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_body_bool_set(
+  values: Array<Bool>,
+  index: U32,
+  value: Bool,
+) -> Unit {
+  array_set_unchecked(values, index, value)
+}
+
 fn self_host_body_empty_u64_u32_map() -> Map<U64, U32> {
   Map::empty()
 }
 
 fn self_host_body_empty_u64_field_map(
 ) -> Map<U64, SelfHostPhysicalFieldCarrier> {
-  Map::empty()
-}
-
-fn self_host_body_empty_u64_call_map() -> Map<U64, Map<U64, U32>> {
   Map::empty()
 }
 
@@ -306,6 +422,51 @@ fn self_host_body_function_value_type(
   module_.function_value_types[index]
 }
 
+fn self_host_body_function_uses_call_site_result(
+  link: SelfHostPlannedProgramWasmGCLink,
+  function_: SelfHostPlannedProgramWasmFunction,
+) -> Bool {
+  let lowering_module = link.fragments.specialization.lowering.modules[
+    function_.module_index
+  ]
+  if self_host_u64_equal(
+    self_host_semantic_id_module(function_.declaration),
+    lowering_module.module_id,
+  ) {
+    let functions = self_host_planned_module_functions_identity(
+      lowering_module.functions,
+    )
+    let local = self_host_semantic_id_local(function_.declaration)
+    if local < functions.callable_by_declaration.length() {
+      let callable_index = functions.callable_by_declaration[local]
+      if callable_index < functions.callables.length() {
+        let callable = self_host_planned_callable_identity(
+          functions.callables[callable_index],
+        )
+        match callable.kind {
+          SelfHostPlannedCallableKind::PlannedBuiltinCallable(_) => return true
+          SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, body) => {
+            if body is Option::None {
+              return true
+            }
+            if callable.name.ends_with(b"into") {
+              return true
+            }
+            if callable.name.ends_with(b"get_unchecked") {
+              return true
+            }
+            if callable.name.ends_with(b"indexed_get") {
+              return true
+            }
+          }
+          _ => {}
+        }
+      }
+    }
+  }
+  false
+}
+
 fn self_host_build_physical_body_indexes(
   link: SelfHostPlannedProgramWasmGCLink,
 ) -> SelfHostPhysicalBodyIndexes {
@@ -313,7 +474,21 @@ fn self_host_build_physical_body_indexes(
   let type_by_variant = self_host_body_empty_u64_u32_map()
   let field_by_declaration = self_host_body_empty_u64_field_map()
   let function_by_declaration = self_host_body_empty_u64_u32_map()
-  let specialized_calls_by_body = self_host_body_empty_u64_call_map()
+  let call_site_result_by_function = []
+  let mut function_policy_index = 0u32
+  let function_policy_length = self_host_u32_add(link.functions.length(), 2u32)
+  let _ = while function_policy_index {
+    current => if current < function_policy_length {
+      call_site_result_by_function.push(false)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let specialized_call_head_by_body = self_host_body_empty_u64_u32_map()
+  let specialized_call_keys = []
+  let specialized_call_functions = []
+  let specialized_call_next = []
   for linked_type in link.types {
     let module_ = self_host_body_fragment_module(
       link,
@@ -358,9 +533,9 @@ fn self_host_build_physical_body_indexes(
               Option::Some(_) => {}
               Option::None => {
                 field_by_declaration[field] = SelfHostPhysicalFieldCarrier::{
-                  field: field
-                  type_index: linked_type.type_index
-                  field_index: source.physical_index
+                  field_declaration: field
+                  physical_type_index: linked_type.type_index
+                  physical_field_index: source.physical_index
                   storage: source.storage
                   owner: owner
                 }
@@ -379,24 +554,41 @@ fn self_host_build_physical_body_indexes(
     if self_host_u32_equal(function_.specialization, 4294967295u32) {
       function_by_declaration[function_.declaration] = function_.function_index
     }
+    if self_host_body_function_uses_call_site_result(link, function_) {
+      let physical_function = self_host_linked_physical_function_index(
+        function_.function_index,
+      )
+      if physical_function >= call_site_result_by_function.length() {
+        unreachable()
+      }
+      self_host_body_bool_set(
+        call_site_result_by_function,
+        physical_function,
+        true,
+      )
+    }
   }
   for call in link.specialized_calls {
-    let calls = match specialized_calls_by_body.get(call.caller_body) {
-      Option::Some(value) => value
-      Option::None => {
-        let value = self_host_body_empty_u64_u32_map()
-        specialized_calls_by_body[call.caller_body] = value
-        value
-      }
-    }
-    calls[self_host_body_call_key(call.caller_specialization, call.expression)] = call.function_index
+    self_host_body_specialized_call_index_append(
+      specialized_call_head_by_body,
+      specialized_call_keys,
+      specialized_call_functions,
+      specialized_call_next,
+      call.caller_body,
+      self_host_body_call_key(call.caller_specialization, call.expression),
+      call.function_index,
+    )
   }
   SelfHostPhysicalBodyIndexes::{
     type_by_declaration: type_by_declaration
     type_by_variant: type_by_variant
     field_by_declaration: field_by_declaration
     function_by_declaration: function_by_declaration
-    specialized_calls_by_body: specialized_calls_by_body
+    call_site_result_by_function: call_site_result_by_function
+    specialized_call_head_by_body: specialized_call_head_by_body
+    specialized_call_keys: specialized_call_keys
+    specialized_call_functions: specialized_call_functions
+    specialized_call_next: specialized_call_next
   }
 }
 
@@ -450,11 +642,10 @@ fn self_host_body_merge_value_provenance(
   source: SelfHostPlannedPhysicalValueInfo,
 ) -> SelfHostPlannedPhysicalValueInfo {
   SelfHostPlannedPhysicalValueInfo::{
-    logical_type: if preferred.logical_type != -1i32 {
-      preferred.logical_type
-    } else {
-      source.logical_type
-    }
+    logical_type: self_host_body_preferred_logical_type(
+      preferred.logical_type,
+      source.logical_type,
+    )
     carrier: self_host_body_merge_carrier(preferred.carrier, source.carrier)
     nominal_owner: if !self_host_u64_equal(preferred.nominal_owner, 0u64) {
       preferred.nominal_owner
@@ -475,43 +666,8 @@ fn self_host_body_exact_field_by_owner_name(
   name: String,
 ) -> Option<SelfHostPhysicalFieldCarrier> {
   if self_host_u64_equal(owner, 0u64) {
-    for linked_type in link.types {
-      let module_ = self_host_body_fragment_module(link, linked_type.module_index)
-      let physical = self_host_body_physical_type(
-        module_,
-        linked_type.fragment_index,
-      )
-      let mut field_offset = 0u32
-      let _ = while field_offset {
-        current => if current < physical.fields.length {
-          let field = self_host_body_physical_field(
-            module_,
-            self_host_u32_add(physical.fields.start, current),
-          )
-          match field.role {
-            SelfHostPlannedWasmFieldRole::WasmStructField(field_id) => match self_host_linked_field_name(
-              link,
-              field_id,
-            ) {
-              Option::Some(candidate) => if candidate == name {
-                return Option::Some(SelfHostPhysicalFieldCarrier::{
-                  field: field_id
-                  type_index: linked_type.type_index
-                  field_index: field.physical_index
-                  storage: field.storage
-                  owner: 0u64
-                })
-              }
-              Option::None => {}
-            }
-            _ => {}
-          }
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-    }
+    // A field name is not proof of its owner. Many compiler records use names
+    // such as `value` and `type_` with different physical carriers.
     return Option::None
   }
   for linked_type in link.types {
@@ -550,9 +706,9 @@ fn self_host_body_exact_field_by_owner_name(
             ) {
               Option::Some(candidate) => if candidate == name {
                 return Option::Some(SelfHostPhysicalFieldCarrier::{
-                  field: field_id
-                  type_index: linked_type.type_index
-                  field_index: field.physical_index
+                  field_declaration: field_id
+                  physical_type_index: linked_type.type_index
+                  physical_field_index: field.physical_index
                   storage: field.storage
                   owner: owner
                 })
@@ -638,6 +794,77 @@ fn self_host_body_type_argument_nominal_owner(
   }
 }
 
+fn self_host_body_field_value_nominal_from_initializers(
+  link: SelfHostPlannedProgramWasmGCLink,
+  field: U64,
+) -> U64 {
+  match link.fragments.specialization.lowering.index.declaration_owner(field) {
+    Option::Some(owner) => if owner < link.fragments.specialization.lowering.modules.length() {
+      return self_host_body_field_value_nominal_from_module_initializers(
+        link,
+        link.fragments.specialization.lowering.modules[owner],
+        field,
+      )
+    }
+    Option::None => {}
+  }
+  let mut selected = 0u64
+  for module_ in link.fragments.specialization.lowering.modules {
+    let nominal = self_host_body_field_value_nominal_from_module_initializers(
+      link,
+      module_,
+      field,
+    )
+    if !self_host_u64_equal(nominal, 0u64) {
+      if self_host_u64_equal(selected, 0u64) {
+        selected = nominal
+      } else if !self_host_u64_equal(selected, nominal) {
+        return 0u64
+      }
+    }
+  }
+  selected
+}
+
+fn self_host_body_field_value_nominal_from_module_initializers(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  field: U64,
+) -> U64 {
+  let mut selected = 0u64
+    for source_object_field in module_.object_fields {
+      let object_field = self_host_planned_object_field_identity(
+        source_object_field,
+      )
+      if self_host_u64_equal(object_field.field, field) {
+        for source_body in module_.bodies {
+          let body = self_host_planned_body_lowering_identity(source_body)
+          if !(object_field.value < body.expressions.start) &&
+            object_field.value < self_host_u32_add(
+              body.expressions.start,
+              body.expressions.length,
+            ) {
+            let nominal = self_host_linked_expression_nominal_declaration(
+              link,
+              module_,
+              body,
+              object_field.value,
+            )
+            if !self_host_u64_equal(nominal, 0u64) {
+              if self_host_u64_equal(selected, 0u64) {
+                selected = nominal
+              } else if !self_host_u64_equal(selected, nominal) {
+                return 0u64
+              }
+            }
+            break self_host_semantic_unit()
+          }
+        }
+      }
+    }
+  selected
+}
+
 fn self_host_body_field_value_nominal_owner(
   link: SelfHostPlannedProgramWasmGCLink,
   field: U64,
@@ -645,17 +872,42 @@ fn self_host_body_field_value_nominal_owner(
   if self_host_u64_equal(field, 0u64) {
     return 0u64
   }
-  for module_ in link.fragments.specialization.lowering.modules {
+  match link.fragments.specialization.lowering.index.declaration_owner(field) {
+    Option::Some(owner) => if owner < link.fragments.specialization.lowering.modules.length() {
+      let module_ = link.fragments.specialization.lowering.modules[owner]
     for layout_field in module_.type_layouts.fields {
       if self_host_u64_equal(layout_field.field, field) {
-        return self_host_linked_resolved_nominal_declaration(
+        let declared = self_host_linked_resolved_nominal_declaration(
           module_,
           layout_field.type_,
         )
+        if !self_host_u64_equal(declared, 0u64) {
+          return declared
+        }
+      }
+    }
+      return self_host_body_field_value_nominal_from_module_initializers(
+        link,
+        module_,
+        field,
+      )
+    }
+    Option::None => {}
+  }
+  for module_ in link.fragments.specialization.lowering.modules {
+    for layout_field in module_.type_layouts.fields {
+      if self_host_u64_equal(layout_field.field, field) {
+        let declared = self_host_linked_resolved_nominal_declaration(
+          module_,
+          layout_field.type_,
+        )
+        if !self_host_u64_equal(declared, 0u64) {
+          return declared
+        }
       }
     }
   }
-  0u64
+  self_host_body_field_value_nominal_from_initializers(link, field)
 }
 
 fn self_host_body_function_result_carrier(
@@ -688,6 +940,60 @@ fn self_host_body_function_result_carrier(
     }
   }
   SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+}
+
+fn self_host_body_declaration_result_nominal_owner(
+  link: SelfHostPlannedProgramWasmGCLink,
+  declaration: U64,
+) -> U64 {
+  let module_id = self_host_semantic_id_module(declaration)
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < link.fragments.specialization.lowering.modules.length() {
+      let module_ = link.fragments.specialization.lowering.modules[current]
+      if self_host_u64_equal(module_.module_id, module_id) {
+        match self_host_program_specialization_callable(module_, declaration) {
+          Option::Some(callable) => return self_host_linked_resolved_nominal_declaration(
+            module_,
+            callable.result_type,
+          )
+          Option::None => return 0u64
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  0u64
+}
+
+fn self_host_body_function_result_nominal_owner(
+  link: SelfHostPlannedProgramWasmGCLink,
+  logical_function_index: U32,
+) -> U64 {
+  for function_ in link.functions {
+    if self_host_u32_equal(function_.function_index, logical_function_index) &&
+      self_host_u32_greater(
+        link.fragments.specialization.lowering.modules.length(),
+        function_.module_index,
+      ) {
+      let module_ = link.fragments.specialization.lowering.modules[
+        function_.module_index
+      ]
+      match self_host_program_specialization_callable(
+        module_,
+        function_.declaration,
+      ) {
+        Option::Some(callable) => return self_host_linked_resolved_nominal_declaration(
+          module_,
+          callable.result_type,
+        )
+        Option::None => return 0u64
+      }
+    }
+  }
+  0u64
 }
 
 fn self_host_body_function_parameter_carrier(
@@ -724,6 +1030,21 @@ fn self_host_body_call_function(
   expression: U32,
   declaration: U64,
 ) -> U32 {
+  match self_host_body_specialized_call_index_get(
+    indexes.specialized_call_head_by_body,
+    indexes.specialized_call_keys,
+    indexes.specialized_call_functions,
+    indexes.specialized_call_next,
+    body,
+    self_host_body_call_key(specialization, expression),
+  ) {
+    Option::Some(value) => return value
+    Option::None => {}
+  }
+  match indexes.function_by_declaration.get(declaration) {
+    Option::Some(value) => return value
+    Option::None => {}
+  }
   match self_host_linked_i32_call_index(
     link,
     body,
@@ -733,15 +1054,6 @@ fn self_host_body_call_function(
   ) {
     Option::Some(physical) => if self_host_u32_greater(physical, 1u32) {
       return self_host_u32_subtract(physical, 2u32)
-    }
-    Option::None => {}
-  }
-  match indexes.specialized_calls_by_body.get(body) {
-    Option::Some(calls) => match calls.get(
-      self_host_body_call_key(specialization, expression),
-    ) {
-      Option::Some(value) => return value
-      Option::None => {}
     }
     Option::None => {}
   }
@@ -771,6 +1083,107 @@ fn self_host_body_function_declaration(
   0u64
 }
 
+fn self_host_body_function_matches_receiver_shapes(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  receiver: U32,
+  function_index: U32,
+) -> Bool {
+  for function_ in link.functions {
+    if self_host_u32_equal(function_.function_index, function_index) && !(
+      self_host_u32_equal(function_.specialization, 4294967295u32)
+    ) && self_host_array_index_is_valid(
+      function_.specialization,
+      link.fragments.specialization.requests.length(),
+    ) {
+      let request = link.fragments.specialization.requests[function_.specialization]
+      let mut known = 0u32
+      let mut argument = 0u32
+      let _ = while argument {
+        current => if current < request.shapes.length {
+          match self_host_linked_expression_container_argument_shape(
+            link,
+            module_,
+            body,
+            receiver,
+            current,
+          ) {
+            Option::Some(receiver_shape) => {
+              let receiver_carrier = self_host_body_carrier_from_shape(
+                receiver_shape,
+              )
+              if !(receiver_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+                let shape_index = self_host_u32_add(request.shapes.start, current)
+                if shape_index >= link.fragments.specialization.shapes.length() || !self_host_body_carrier_equal(
+                  receiver_carrier,
+                  self_host_body_carrier_from_shape(
+                    link.fragments.specialization.shapes[shape_index],
+                  ),
+                ) {
+                  return false
+                }
+                known = self_host_u32_add(known, 1u32)
+              }
+            }
+            Option::None => {}
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      return self_host_u32_greater(known, 0u32)
+    }
+  }
+  false
+}
+
+fn self_host_body_refine_receiver_specialization(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  receiver: U32,
+  selected: U32,
+) -> U32 {
+  if self_host_u32_equal(selected, 4294967295u32) || self_host_body_function_matches_receiver_shapes(
+    link,
+    module_,
+    body,
+    receiver,
+    selected,
+  ) {
+    return selected
+  }
+  let declaration = self_host_body_function_declaration(link, selected)
+  if self_host_u64_equal(declaration, 0u64) {
+    return selected
+  }
+  let mut refined = 4294967295u32
+  for function_ in link.functions {
+    if self_host_u64_equal(function_.declaration, declaration) && self_host_body_function_matches_receiver_shapes(
+      link,
+      module_,
+      body,
+      receiver,
+      function_.function_index,
+    ) {
+      if !self_host_u32_equal(refined, 4294967295u32) && !self_host_u32_equal(
+        refined,
+        function_.function_index,
+      ) {
+        return selected
+      }
+      refined = function_.function_index
+    }
+  }
+  if self_host_u32_equal(refined, 4294967295u32) {
+    selected
+  } else {
+    refined
+  }
+}
+
 fn self_host_body_unique_function_for_last_parameter_carrier(
   link: SelfHostPlannedProgramWasmGCLink,
   declaration: U64,
@@ -798,12 +1211,98 @@ fn self_host_body_unique_function_for_last_parameter_carrier(
         ) is carrier {
           if self_host_u32_equal(selected, 4294967295u32) {
             selected = function_.function_index
+          } else if !self_host_u32_equal(selected, function_.function_index) {
+            return 4294967295u32
           }
         }
       }
     }
   }
   selected
+}
+
+fn self_host_body_local_initializer(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  local_id: U32,
+) -> U32 {
+  let mut block_offset = 0u32
+  let _ = while block_offset {
+    current_block => if current_block < body.blocks.length {
+      let block_index = self_host_u32_add(body.blocks.start, current_block)
+      if block_index < module_.blocks.length() {
+        let items = module_.blocks[block_index].items
+        let mut item_offset = 0u32
+        let _ = while item_offset {
+          current_item => if current_item < items.length {
+            let item_index = self_host_u32_add(items.start, current_item)
+            if item_index < module_.block_items.length() {
+              match module_.block_items[item_index].kind {
+                SelfHostPlannedBlockItemKind::PlannedLetItem(
+                  candidate,
+                  _,
+                  value,
+                ) => if self_host_u32_equal(candidate, local_id) {
+                  return value
+                }
+                _ => {}
+              }
+            }
+            continue current_item + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      continue current_block + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  4294967295u32
+}
+
+fn self_host_body_local_parameter_nominal_owner(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  local_id: U32,
+) -> U64 {
+  let exact_module = self_host_planned_module_lowering_identity(module_)
+  let exact_body = self_host_planned_body_lowering_identity(body)
+  match self_host_linked_local_parameter_position(
+    exact_module,
+    exact_body,
+    local_id,
+  ) {
+    Option::Some(pair) => {
+      let (position, count) = pair
+      match self_host_program_specialization_callable(
+        exact_module,
+        exact_body.declaration,
+      ) {
+        Option::Some(callable) => {
+          let nominal = self_host_linked_callable_parameter_nominal_from_callable(
+            exact_module,
+            callable,
+            position,
+            count,
+          )
+          if !self_host_u64_equal(nominal, 0u64) {
+            return nominal
+          }
+        }
+        Option::None => {}
+      }
+    }
+    Option::None => {}
+  }
+  self_host_linked_local_parameter_nominal_declaration(
+    link,
+    exact_module,
+    exact_body,
+    local_id,
+  )
 }
 
 fn self_host_body_function_for_physical_receiver_method(
@@ -830,7 +1329,7 @@ fn self_host_body_function_for_physical_receiver_method(
   let receiver_value = expressions[
     self_host_body_expression_slot(body, receiver)
   ].value
-  let receiver_owner = if !self_host_u64_equal(
+  let mut receiver_owner = if !self_host_u64_equal(
     receiver_value.nominal_owner,
     0u64,
   ) {
@@ -843,9 +1342,65 @@ fn self_host_body_function_for_physical_receiver_method(
   } else {
     0u64
   }
+  if self_host_u64_equal(receiver_owner, 0u64) {
+    match module_.expressions[receiver].kind {
+      SelfHostPlannedExpressionKind::PlannedLocalGet(local_id) => {
+        receiver_owner = self_host_body_local_parameter_nominal_owner(
+          link,
+          module_,
+          body,
+          local_id,
+        )
+        if self_host_u64_equal(receiver_owner, 0u64) && local_id < body.locals.length {
+          let local_index = self_host_u32_add(body.locals.start, local_id)
+          if local_index < module_.locals.length() {
+            let planned_local = self_host_body_planned_local_identity(
+              module_.locals[local_index],
+            )
+            receiver_owner = if !self_host_u64_equal(
+              planned_local.nominal,
+              0u64,
+            ) {
+              planned_local.nominal
+            } else {
+              self_host_linked_type_nominal_declaration(
+                module_,
+                planned_local.type_,
+              )
+            }
+          }
+        }
+        let initializer = self_host_body_local_initializer(
+          module_,
+          body,
+          local_id,
+        )
+        if initializer < module_.expressions.length() {
+          match module_.expressions[initializer].kind {
+            SelfHostPlannedExpressionKind::PlannedDirectCall(
+              declaration,
+              _,
+              _,
+              _,
+            ) => {
+              receiver_owner = self_host_body_declaration_result_nominal_owner(
+                link,
+                declaration,
+              )
+            }
+            _ => {}
+          }
+        }
+      }
+      _ => {}
+    }
+  }
   let receiver_is_array = self_host_u32_equal(
     receiver_value.physical_heap_type,
     self_host_linked_array_wrapper_type(link),
+  ) || self_host_u64_equal(
+    self_host_semantic_id_module(receiver_owner),
+    link.array_module_id,
   )
   if self_host_u64_equal(receiver_owner, 0u64) && !receiver_is_array {
     return 4294967295u32
@@ -863,7 +1418,7 @@ fn self_host_body_function_for_physical_receiver_method(
           self_host_semantic_id_module(candidate_owner),
           link.array_module_id,
         ))
-      if callable.has_receiver && bytes_to_string(callable.name) == name &&
+      if callable.has_receiver && self_host_bytes_equal_string(callable.name, name) &&
         self_host_u32_equal(
           callable.parameters.length,
           explicit_argument_count,
@@ -931,9 +1486,19 @@ fn self_host_body_lookup(
   module_: SelfHostPlannedModuleLowering,
   body_id: U64,
 ) -> Option<SelfHostPlannedBodyLowering> {
-  for body in module_.bodies {
-    if self_host_u64_equal(body.body, body_id) {
-      return Option::Some(body)
+  let limit = array_length(module_.bodies)
+  let mut index = 0u32
+  while index {
+    current => if current < limit {
+      let body = self_host_planned_body_lowering_identity(
+        array_get_unchecked(module_.bodies, current),
+      )
+      if self_host_u64_equal(body.body, body_id) {
+        return Option::Some(body)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   Option::None
@@ -955,6 +1520,8 @@ fn self_host_body_lambda_lookup(
         result_shape: lambda.result_shape
         flow: lambda.flow
         locals: lambda.locals
+        local_initializers: lambda.local_initializers
+        local_assignments: lambda.local_assignments
         expressions: lambda.expressions
         blocks: lambda.blocks
         patterns: lambda.patterns
@@ -1121,7 +1688,7 @@ fn self_host_body_qualified_call_declaration(
   let mut selected = 0u64
   for candidate_module in link.fragments.specialization.lowering.modules {
     for callable in candidate_module.functions.callables {
-      if !callable.has_receiver && bytes_to_string(callable.name) == spelling &&
+      if !callable.has_receiver && self_host_bytes_equal_string(callable.name, spelling) &&
         self_host_u64_equal(
           self_host_linked_resolved_nominal_declaration(
             candidate_module,
@@ -1148,7 +1715,9 @@ fn self_host_body_seed_expression(
   specialization: U32,
   expression: U32,
 ) -> SelfHostPlannedPhysicalExpressionCarrier {
-  let planned = module_.expressions[expression]
+  let planned = self_host_planned_expression_identity(
+    module_.expressions[expression],
+  )
   let mut carrier = self_host_body_carrier_from_shape(
     self_host_body_specialization_shape(link, specialization, planned.shape),
   )
@@ -1156,6 +1725,18 @@ fn self_host_body_seed_expression(
     planned.nominal
   } else {
     self_host_linked_type_nominal_declaration(module_, planned.type_)
+  }
+  let call_result_is_adapted = self_host_linked_expression_is_fixed_array_constructor(
+    module_,
+    expression,
+  )
+  if call_result_is_adapted && self_host_u64_equal(
+    self_host_semantic_id_module(nominal_owner),
+    link.array_module_id,
+  ) {
+    // FixedArray constructors call Array::make and then remove its wrapper.
+    // The helper's Array owner is not the owner of the emitted backing array.
+    nominal_owner = 0u64
   }
   let mut physical_heap_type = self_host_body_physical_heap_type(
     indexes,
@@ -1215,16 +1796,20 @@ fn self_host_body_seed_expression(
         }
       }
     }
-    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _, _) => match indexes.field_by_declaration.get(
+    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _, _) => match self_host_body_indexed_field(
+      indexes,
       field,
     ) {
       Option::Some(value) => {
-        selected_field = value.field
-        selected_type_index = value.type_index
-        selected_field_index = value.field_index
+        selected_field = value.field_declaration
+        selected_type_index = value.physical_type_index
+        selected_field_index = value.physical_field_index
         selected_storage = Option::Some(value.storage)
         carrier = self_host_body_carrier_from_storage(value.storage)
-        nominal_owner = self_host_body_field_value_nominal_owner(link, value.field)
+        nominal_owner = self_host_body_field_value_nominal_owner(
+          link,
+          value.field_declaration,
+        )
         physical_heap_type = self_host_body_physical_heap_type(
           indexes,
           nominal_owner,
@@ -1327,6 +1912,40 @@ fn self_host_body_seed_expression(
           link,
           call_function_index,
         )
+        let result_owner = self_host_body_function_result_nominal_owner(
+          link,
+          call_function_index,
+        )
+        if !call_result_is_adapted && self_host_u64_equal(
+          nominal_owner,
+          0u64,
+        ) && !self_host_u64_equal(
+          result_owner,
+          0u64,
+        ) {
+          nominal_owner = result_owner
+          physical_heap_type = self_host_body_physical_heap_type(
+            indexes,
+            result_owner,
+          )
+        }
+      }
+      let declared_result_owner = self_host_body_declaration_result_nominal_owner(
+        link,
+        declaration,
+      )
+      if !call_result_is_adapted && self_host_u64_equal(
+        nominal_owner,
+        0u64,
+      ) && !self_host_u64_equal(
+        declared_result_owner,
+        0u64,
+      ) {
+        nominal_owner = declared_result_owner
+        physical_heap_type = self_host_body_physical_heap_type(
+          indexes,
+          declared_result_owner,
+        )
       }
       let physical_call_index = if call_function_index == 4294967295u32 {
         4294967295u32
@@ -1384,6 +2003,20 @@ fn self_host_body_seed_expression(
           link,
           call_function_index,
         )
+        let result_owner = self_host_body_function_result_nominal_owner(
+          link,
+          call_function_index,
+        )
+        if self_host_u64_equal(nominal_owner, 0u64) && !self_host_u64_equal(
+          result_owner,
+          0u64,
+        ) {
+          nominal_owner = result_owner
+          physical_heap_type = self_host_body_physical_heap_type(
+            indexes,
+            result_owner,
+          )
+        }
       }
     }
     SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, _, _, _, _) => {
@@ -1400,6 +2033,20 @@ fn self_host_body_seed_expression(
           link,
           call_function_index,
         )
+        let result_owner = self_host_body_function_result_nominal_owner(
+          link,
+          call_function_index,
+        )
+        if self_host_u64_equal(nominal_owner, 0u64) && !self_host_u64_equal(
+          result_owner,
+          0u64,
+        ) {
+          nominal_owner = result_owner
+          physical_heap_type = self_host_body_physical_heap_type(
+            indexes,
+            result_owner,
+          )
+        }
       }
     }
     SelfHostPlannedExpressionKind::PlannedLocalSet(_, _) => {
@@ -1428,6 +2075,20 @@ fn self_host_body_seed_expression(
         expression,
         qualified_declaration,
       )
+      if call_function_index != 4294967295u32 && target < module_.expressions.length() {
+        match module_.expressions[target].kind {
+          SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => {
+            call_function_index = self_host_body_refine_receiver_specialization(
+              link,
+              module_,
+              body,
+              base,
+              call_function_index,
+            )
+          }
+          _ => {}
+        }
+      }
       if call_function_index == 4294967295u32 && target < module_.expressions.length() {
         match module_.expressions[target].kind {
           SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name) => if name < self_host_linked_module_name_count(
@@ -1454,6 +2115,23 @@ fn self_host_body_seed_expression(
           link,
           call_function_index,
         )
+        let result_owner = self_host_body_function_result_nominal_owner(
+          link,
+          call_function_index,
+        )
+        if !call_result_is_adapted && self_host_u64_equal(
+          nominal_owner,
+          0u64,
+        ) && !self_host_u64_equal(
+          result_owner,
+          0u64,
+        ) {
+          nominal_owner = result_owner
+          physical_heap_type = self_host_body_physical_heap_type(
+            indexes,
+            result_owner,
+          )
+        }
       }
       match self_host_linked_unresolved_get_result_shape(
         link,
@@ -1504,7 +2182,9 @@ fn self_host_body_seed_expression(
       ) {
         inferred_element_owner
       } else if base < module_.expressions.length() {
-        let container_type = module_.expressions[base].type_
+        let container_type = self_host_planned_expression_identity(
+          module_.expressions[base],
+        ).type_
         let container_owner = self_host_linked_type_nominal_declaration(
           module_,
           container_type,
@@ -1545,20 +2225,26 @@ fn self_host_body_seed_expression(
       }
       Option::None => {}
     }
-    SelfHostPlannedExpressionKind::PlannedFieldGet(field, base, _) => match indexes.field_by_declaration.get(
+    SelfHostPlannedExpressionKind::PlannedFieldGet(field, base, _) => match self_host_body_indexed_field(
+      indexes,
       field,
     ) {
       Option::Some(value) => {
         receiver_expression = base
-        receiver_logical_type = module_.expressions[base].type_
+        receiver_logical_type = self_host_planned_expression_identity(
+          module_.expressions[base],
+        ).type_
         receiver_nominal_owner = value.owner
-        receiver_physical_heap_type = value.type_index
-        selected_field = value.field
-        selected_type_index = value.type_index
-        selected_field_index = value.field_index
+        receiver_physical_heap_type = value.physical_type_index
+        selected_field = value.field_declaration
+        selected_type_index = value.physical_type_index
+        selected_field_index = value.physical_field_index
         selected_storage = Option::Some(value.storage)
         carrier = self_host_body_carrier_from_storage(value.storage)
-        nominal_owner = self_host_body_field_value_nominal_owner(link, value.field)
+        nominal_owner = self_host_body_field_value_nominal_owner(
+          link,
+          value.field_declaration,
+        )
         physical_heap_type = self_host_body_physical_heap_type(
           indexes,
           nominal_owner,
@@ -1568,7 +2254,9 @@ fn self_host_body_seed_expression(
     }
     SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => {
       receiver_expression = base
-      receiver_logical_type = module_.expressions[base].type_
+      receiver_logical_type = self_host_planned_expression_identity(
+        module_.expressions[base],
+      ).type_
     }
     _ => {}
   }
@@ -1691,6 +2379,14 @@ fn self_host_body_value_info_equal(
     self_host_u32_equal(left.physical_heap_type, right.physical_heap_type)
 }
 
+fn self_host_body_preferred_logical_type(
+  preferred: I32,
+  fallback: I32,
+) -> I32 {
+  let fallback_mask = preferred >> 31i32
+  (preferred & (fallback_mask ^ -1i32)) | (fallback & fallback_mask)
+}
+
 fn self_host_body_plan_set_local_value(
   values: Array<SelfHostPlannedPhysicalValueInfo>,
   carriers: Array<SelfHostWasmBodyCarrier>,
@@ -1726,11 +2422,10 @@ fn self_host_body_plan_force_local_value(
     return false
   }
   let forced = SelfHostPlannedPhysicalValueInfo::{
-    logical_type: if current.logical_type != -1i32 {
-      current.logical_type
-    } else {
-      source.logical_type
-    }
+    logical_type: self_host_body_preferred_logical_type(
+      current.logical_type,
+      source.logical_type,
+    )
     carrier: source.carrier
     nominal_owner: if !self_host_u64_equal(source.nominal_owner, 0u64) {
       source.nominal_owner
@@ -1826,6 +2521,7 @@ fn self_host_body_plan_resolve_field(
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
   expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  embedded_targets: Array<Bool>,
   expression: U32,
 ) -> Bool {
   if expression < body.expressions.start || expression >= self_host_u32_add(
@@ -1837,21 +2533,27 @@ fn self_host_body_plan_resolve_field(
   let slot = self_host_body_expression_slot(body, expression)
   let source = expressions[slot]
   let mut base = 4294967295u32
-  let mut selected = indexes.field_by_declaration.get(0u64)
+  let mut selected = self_host_body_indexed_field(indexes, 0u64)
   let mut exact_receiver_owner = false
   match module_.expressions[expression].kind {
     SelfHostPlannedExpressionKind::PlannedFieldGet(field, value, _) => {
       base = value
-      selected = indexes.field_by_declaration.get(field)
+      selected = self_host_body_indexed_field(indexes, field)
       exact_receiver_owner = true
     }
     SelfHostPlannedExpressionKind::PlannedUnresolvedField(value, name) => {
       base = value
-      if !self_host_body_expression_is_embedded_target(
-        module_,
-        body,
-        expression,
-      ) && base >= body.expressions.start &&
+      let embedded_target = if expression >= body.expressions.start {
+        let relative = expression - body.expressions.start
+        if relative < embedded_targets.length() {
+          embedded_targets[relative]
+        } else {
+          false
+        }
+      } else {
+        false
+      }
+      if !embedded_target && base >= body.expressions.start &&
         base < self_host_u32_add(body.expressions.start, body.expressions.length) &&
         name < self_host_linked_module_name_count(module_) {
         let base_value = expressions[self_host_body_expression_slot(body, base)].value
@@ -1896,7 +2598,7 @@ fn self_host_body_plan_resolve_field(
           physical_heap_type: if self_host_u64_equal(field.owner, 0u64) {
             4294967295u32
           } else {
-            field.type_index
+            field.physical_type_index
           }
         }
       } else {
@@ -1910,7 +2612,7 @@ fn self_host_body_plan_resolve_field(
       )
       let physical_result_owner = self_host_body_field_value_nominal_owner(
         link,
-        field.field,
+        field.field_declaration,
       )
       let result_owner = if !self_host_u64_equal(
         physical_result_owner,
@@ -1918,10 +2620,15 @@ fn self_host_body_plan_resolve_field(
       ) {
         physical_result_owner
       } else {
-        module_.expressions[expression].nominal
+        self_host_planned_expression_identity(
+          module_.expressions[expression],
+        ).nominal
       }
+      let exact_expression = self_host_planned_expression_identity(
+        module_.expressions[expression],
+      )
       let result = SelfHostPlannedPhysicalValueInfo::{
-        logical_type: module_.expressions[expression].type_
+        logical_type: exact_expression.type_
         carrier: self_host_body_carrier_from_storage(field.storage)
         nominal_owner: result_owner
         physical_heap_type: self_host_body_physical_heap_type(
@@ -1929,9 +2636,17 @@ fn self_host_body_plan_resolve_field(
           result_owner,
         )
       }
-      let changed = !self_host_u64_equal(source.selected_field, field.field) ||
-        !self_host_u32_equal(source.selected_type_index, field.type_index) ||
-        !self_host_u32_equal(source.selected_field_index, field.field_index) ||
+      let changed = !self_host_u64_equal(
+        source.selected_field,
+        field.field_declaration,
+      ) ||
+        !self_host_u32_equal(
+          source.selected_type_index,
+          field.physical_type_index,
+        ) || !self_host_u32_equal(
+          source.selected_field_index,
+          field.physical_field_index,
+        ) ||
         !self_host_u64_equal(source.receiver_nominal_owner, receiver.nominal_owner) ||
         !self_host_u32_equal(
           source.receiver_physical_heap_type,
@@ -1946,9 +2661,9 @@ fn self_host_body_plan_resolve_field(
           receiver_logical_type: receiver.logical_type
           receiver_nominal_owner: receiver.nominal_owner
           receiver_physical_heap_type: receiver.physical_heap_type
-          selected_field: field.field
-          selected_type_index: field.type_index
-          selected_field_index: field.field_index
+          selected_field: field.field_declaration
+          selected_type_index: field.physical_type_index
+          selected_field_index: field.physical_field_index
           selected_storage: Option::Some(field.storage)
           call_function_index: source.call_function_index
         }
@@ -2047,122 +2762,6 @@ fn self_host_body_physical_field_carrier(
     }
   }
   SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-}
-
-fn self_host_body_force_pattern_carriers(
-  link: SelfHostPlannedProgramWasmGCLink,
-  indexes: SelfHostPhysicalBodyIndexes,
-  module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
-  root: U32,
-  carrier: SelfHostWasmBodyCarrier,
-  locals: Array<SelfHostWasmBodyCarrier>,
-) -> Bool {
-  let patterns = [root]
-  let carriers = [carrier]
-  let mut changed = false
-  let _ = while patterns.length() {
-    length => if self_host_u32_greater(length, 0u32) {
-      let pattern = match self_host_array_pop(patterns) {
-        Option::Some(value) => value
-        Option::None => 4294967295u32
-      }
-      let value_carrier = match self_host_array_pop(carriers) {
-        Option::Some(value) => value
-        Option::None => SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-      }
-      if pattern < module_.patterns.length() {
-        let source = module_.patterns[pattern]
-        match source.reference {
-          SelfHostBodyPatternReference::PatternBindingReference(local_id) => {
-            let local = self_host_body_local_slot(module_, body, local_id)
-            let planned_carrier = self_host_body_carrier_from_shape(source.shape)
-            let binding_carrier = if !(planned_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
-              planned_carrier
-            } else if local != 4294967295u32 &&
-              !(locals[local] is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
-              locals[local]
-            } else {
-              value_carrier
-            }
-            if local != 4294967295u32 &&
-              !(binding_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
-              !self_host_body_carrier_equal(locals[local], binding_carrier) {
-              locals[local] = binding_carrier
-              changed = true
-            }
-          }
-          _ => {}
-        }
-        match source.source {
-          SelfHostHirPattern::TuplePattern(_, children, _) => {
-            let mut selected_type = 4294967295u32
-            match source.selected_constructor {
-              SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
-                constructor,
-                variant,
-                _,
-              ) => if variant {
-                match indexes.type_by_variant.get(constructor) {
-                  Option::Some(value) => {
-                    selected_type = value
-                  }
-                  Option::None => {}
-                }
-              }
-              _ => {}
-            }
-            let mut child = children.length
-            let _ = while child {
-              current => if self_host_u32_greater(current, 0u32) {
-                let previous = self_host_u32_subtract(current, 1u32)
-                let child_index = self_host_u32_add(children.start, previous)
-                if child_index < module_.pattern_children.length() {
-                  patterns.push(module_.pattern_children[child_index])
-                  carriers.push(
-                    if selected_type != 4294967295u32 {
-                      self_host_body_physical_field_carrier(
-                        link,
-                        selected_type,
-                        previous,
-                      )
-                    } else {
-                      value_carrier
-                    },
-                  )
-                }
-                continue previous
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-          }
-          SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
-            patterns.push(first)
-            carriers.push(value_carrier)
-            let mut alternative = 0u32
-            let _ = while alternative {
-              current => if current < alternatives.length {
-                let index = self_host_u32_add(alternatives.start, current)
-                if index < module_.pattern_children.length() {
-                  patterns.push(module_.pattern_children[index])
-                  carriers.push(value_carrier)
-                }
-                continue current + 1u32
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-          }
-          _ => {}
-        }
-      }
-      continue patterns.length()
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  changed
 }
 
 fn self_host_body_pattern_payload_value(
@@ -2353,6 +2952,169 @@ fn self_host_body_pattern_payload_value(
   fallback
 }
 
+fn self_host_body_force_return_carriers(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  result_carrier: SelfHostWasmBodyCarrier,
+) -> Unit {
+  let expression_end = self_host_u32_add(
+    body.expressions.start,
+    body.expressions.length,
+  )
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < body.expressions.length {
+      let expression = self_host_u32_add(body.expressions.start, current)
+      match module_.expressions[expression].kind {
+        SelfHostPlannedExpressionKind::PlannedReturnExpression(value) => if value != 4294967295u32 &&
+          value >= body.expressions.start && value < expression_end {
+          let _ = self_host_body_plan_force_expression_carrier(
+            body,
+            expressions,
+            value,
+            result_carrier,
+          )
+        }
+        _ => {}
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_body_force_pattern_value_at(
+  link: SelfHostPlannedProgramWasmGCLink,
+  indexes: SelfHostPhysicalBodyIndexes,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  pattern_index: U32,
+  incoming: SelfHostPlannedPhysicalValueInfo,
+  local_values: Array<SelfHostPlannedPhysicalValueInfo>,
+  locals: Array<SelfHostWasmBodyCarrier>,
+  depth: U32,
+) -> Bool {
+  if depth >= 64u32 || pattern_index >= module_.patterns.length() {
+    return false
+  }
+  let source = self_host_planned_pattern_identity(
+    module_.patterns[pattern_index],
+  )
+  let nominal_owner = self_host_linked_type_nominal_declaration(
+    module_,
+    source.type_,
+  )
+  let pattern_carrier = self_host_body_carrier_from_shape(source.shape)
+  let pattern_value = self_host_body_physical_value(
+    indexes,
+    source.type_,
+    if !(incoming.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+      incoming.carrier
+    } else {
+      pattern_carrier
+    },
+    if !self_host_u64_equal(incoming.nominal_owner, 0u64) {
+      incoming.nominal_owner
+    } else {
+      nominal_owner
+    },
+  )
+  let mut changed = false
+  match source.reference {
+    SelfHostBodyPatternReference::PatternBindingReference(local_id) => {
+      let local = self_host_body_local_slot(module_, body, local_id)
+      if local != 4294967295u32 && self_host_body_plan_force_local_value(
+        local_values,
+        locals,
+        local,
+        pattern_value,
+      ) {
+        changed = true
+      }
+    }
+    _ => {}
+  }
+  match source.source {
+    SelfHostHirPattern::TuplePattern(_, children, _) => {
+      let mut child_offset = 0u32
+      let _ = while child_offset {
+        current => if current < children.length {
+          let child_slot = self_host_u32_add(children.start, current)
+          if child_slot < module_.pattern_children.length() {
+            let child_pattern = module_.pattern_children[child_slot]
+            let child_value = self_host_body_pattern_payload_value(
+              link,
+              indexes,
+              module_,
+              source,
+              current,
+              pattern_value,
+            )
+            if self_host_body_force_pattern_value_at(
+              link,
+              indexes,
+              module_,
+              body,
+              child_pattern,
+              child_value,
+              local_values,
+              locals,
+              depth + 1u32,
+            ) {
+              changed = true
+            }
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
+      if self_host_body_force_pattern_value_at(
+        link,
+        indexes,
+        module_,
+        body,
+        first,
+        pattern_value,
+        local_values,
+        locals,
+        depth + 1u32,
+      ) {
+        changed = true
+      }
+      let mut alternative_offset = 0u32
+      let _ = while alternative_offset {
+        current => if current < alternatives.length {
+          let child_slot = self_host_u32_add(alternatives.start, current)
+          if child_slot < module_.pattern_children.length() &&
+            self_host_body_force_pattern_value_at(
+              link,
+              indexes,
+              module_,
+              body,
+              module_.pattern_children[child_slot],
+              pattern_value,
+              local_values,
+              locals,
+              depth + 1u32,
+            ) {
+            changed = true
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    _ => {}
+  }
+  changed
+}
+
 fn self_host_body_force_pattern_values(
   link: SelfHostPlannedProgramWasmGCLink,
   indexes: SelfHostPhysicalBodyIndexes,
@@ -2363,104 +3125,54 @@ fn self_host_body_force_pattern_values(
   local_values: Array<SelfHostPlannedPhysicalValueInfo>,
   locals: Array<SelfHostWasmBodyCarrier>,
 ) -> Bool {
-  let patterns = [root]
-  let values = [incoming]
-  let mut changed = false
-  let _ = while patterns.length() {
-    length => if self_host_u32_greater(length, 0u32) {
-      let pattern = match self_host_array_pop(patterns) {
-        Option::Some(value) => value
-        Option::None => 4294967295u32
-      }
-      let incoming_value = match self_host_array_pop(values) {
-        Option::Some(value) => value
-        Option::None => incoming
-      }
+  self_host_body_force_pattern_value_at(
+    link,
+    indexes,
+    module_,
+    body,
+    root,
+    incoming,
+    local_values,
+    locals,
+    0u32,
+  )
+}
+
+fn self_host_body_force_declared_pattern_payloads(
+  link: SelfHostPlannedProgramWasmGCLink,
+  indexes: SelfHostPhysicalBodyIndexes,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  local_values: Array<SelfHostPlannedPhysicalValueInfo>,
+  locals: Array<SelfHostWasmBodyCarrier>,
+) -> Unit {
+  let unknown = self_host_body_physical_value(
+    indexes,
+    -1i32,
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+    0u64,
+  )
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < body.patterns.length {
+      let pattern = self_host_u32_add(body.patterns.start, current)
       if pattern < module_.patterns.length() {
-        let source = module_.patterns[pattern]
-        let nominal_owner = self_host_linked_type_nominal_declaration(
-          module_,
-          source.type_,
-        )
-        let pattern_carrier = self_host_body_carrier_from_shape(source.shape)
-        let pattern_value = self_host_body_physical_value(
+        let _ = self_host_body_force_pattern_values(
+          link,
           indexes,
-          source.type_,
-          if !(incoming_value.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
-            incoming_value.carrier
-          } else {
-            pattern_carrier
-          },
-          if !self_host_u64_equal(incoming_value.nominal_owner, 0u64) {
-            incoming_value.nominal_owner
-          } else {
-            nominal_owner
-          },
+          module_,
+          body,
+          pattern,
+          unknown,
+          local_values,
+          locals,
         )
-        match source.reference {
-          SelfHostBodyPatternReference::PatternBindingReference(local_id) => {
-            let local = self_host_body_local_slot(module_, body, local_id)
-            if local != 4294967295u32 && self_host_body_plan_force_local_value(
-              local_values,
-              locals,
-              local,
-              pattern_value,
-            ) {
-              changed = true
-            }
-          }
-          _ => {}
-        }
-        match source.source {
-          SelfHostHirPattern::TuplePattern(_, children, _) => {
-            let mut child = children.length
-            let _ = while child {
-              current => if self_host_u32_greater(current, 0u32) {
-                let previous = self_host_u32_subtract(current, 1u32)
-                let child_index = self_host_u32_add(children.start, previous)
-                if child_index < module_.pattern_children.length() {
-                  patterns.push(module_.pattern_children[child_index])
-                  values.push(self_host_body_pattern_payload_value(
-                    link,
-                    indexes,
-                    module_,
-                    source,
-                    previous,
-                    pattern_value,
-                  ))
-                }
-                continue previous
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-          }
-          SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
-            patterns.push(first)
-            values.push(pattern_value)
-            let mut alternative = 0u32
-            let _ = while alternative {
-              current => if current < alternatives.length {
-                let index = self_host_u32_add(alternatives.start, current)
-                if index < module_.pattern_children.length() {
-                  patterns.push(module_.pattern_children[index])
-                  values.push(pattern_value)
-                }
-                continue current + 1u32
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-          }
-          _ => {}
-        }
       }
-      continue patterns.length()
+      continue current + 1u32
     } else {
       break self_host_semantic_unit()
     }
   }
-  changed
 }
 
 fn self_host_body_force_physical_pattern_payloads(
@@ -2501,7 +3213,9 @@ fn self_host_body_force_physical_pattern_payloads(
         Option::None => 4294967295u32
       }
       if pattern_index < module_.patterns.length() && type_index != 4294967295u32 {
-        let pattern = module_.patterns[pattern_index]
+        let pattern = self_host_planned_pattern_identity(
+          module_.patterns[pattern_index],
+        )
         match pattern.source {
           SelfHostHirPattern::TuplePattern(_, children, _) => {
             let mut field_index = 0u32
@@ -2511,7 +3225,9 @@ fn self_host_body_force_physical_pattern_payloads(
                 if child_offset < module_.pattern_children.length() {
                   let child_index = module_.pattern_children[child_offset]
                   if child_index < module_.patterns.length() {
-                    let child = module_.patterns[child_index]
+                    let child = self_host_planned_pattern_identity(
+                      module_.patterns[child_index],
+                    )
                     let carrier = self_host_body_physical_field_carrier(
                       link,
                       type_index,
@@ -2595,7 +3311,9 @@ fn self_host_body_seed_match_payload_binding(
   if pattern_index >= module_.patterns.length() {
     return false
   }
-  let pattern = module_.patterns[pattern_index]
+  let pattern = self_host_planned_pattern_identity(
+    module_.patterns[pattern_index],
+  )
   let mut target = 0u32
   let mut children = SelfHostHirSpan::{
     start: 0u32
@@ -2867,13 +3585,164 @@ fn self_host_body_add_scratch(
   })
 }
 
+fn self_host_body_local_by_initializer(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+) -> Array<U32> {
+  let result = []
+  let mut expression_offset = 0u32
+  let _ = while expression_offset {
+    current => if current < body.expressions.length {
+      result.push(4294967295u32)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut local_offset = 0u32
+  let _ = while local_offset {
+    current => if current < body.locals.length {
+      let source = self_host_u32_add(body.locals.start, current)
+      if source < module_.locals.length() {
+        let local = self_host_body_planned_local_identity(module_.locals[source])
+        match self_host_linked_local_initializer_expression(
+          module_,
+          body,
+          local.local_id,
+        ) {
+          Option::Some(initializer) => if initializer >= body.expressions.start {
+            let relative = initializer - body.expressions.start
+            if relative < result.length() {
+              self_host_body_u32_set(result, relative, current)
+            }
+          }
+          Option::None => {}
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  result
+}
+
+fn self_host_body_force_constructor_field_carriers(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  specialization: U32,
+  expression_plan: SelfHostPlannedPhysicalExpressionCarrier,
+  fields: SelfHostHirSpan,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+) -> Bool {
+  let type_index = if self_host_u32_equal(
+    expression_plan.selected_type_index,
+    4294967295u32,
+  ) {
+    match self_host_linked_infer_constructor_type_index(
+      link,
+      module_,
+      body,
+      specialization,
+      module_.expressions[expression_plan.expression].nominal,
+      fields,
+    ) {
+      Option::Some(value) => value
+      Option::None => return false
+    }
+  } else {
+    expression_plan.selected_type_index
+  }
+  let mut changed = false
+  for linked_type in link.types {
+    if self_host_u32_equal(
+      linked_type.type_index,
+      type_index,
+    ) {
+      let physical_module = self_host_body_fragment_module(
+        link,
+        linked_type.module_index,
+      )
+      let physical = self_host_body_physical_type(
+        physical_module,
+        linked_type.fragment_index,
+      )
+      let mut physical_offset = 0u32
+      let _ = while physical_offset {
+        current => if current < physical.fields.length {
+          let destination = self_host_body_physical_field(
+            physical_module,
+            self_host_u32_add(physical.fields.start, current),
+          )
+          let mut argument = 4294967295u32
+          let mut source_offset = 0u32
+          let _ = while source_offset {
+            source => if source < fields.length {
+              let object_index = self_host_u32_add(fields.start, source)
+              if object_index < module_.object_fields.length() {
+                let object_field = self_host_planned_object_field_identity(
+                  module_.object_fields[object_index],
+                )
+                let exact_field = self_host_u64_equal(
+                  object_field.field,
+                  destination.declaration,
+                )
+                let named_field = self_host_u32_greater(
+                  self_host_linked_module_name_count(module_),
+                  object_field.name,
+                ) && match self_host_linked_field_name(
+                  link,
+                  destination.declaration,
+                ) {
+                  Option::Some(destination_name) => self_host_linked_module_name_at(
+                    module_,
+                    object_field.name,
+                  ) == destination_name
+                  Option::None => false
+                }
+                if exact_field {
+                  argument = object_field.value
+                  break self_host_semantic_unit()
+                }
+                if named_field && self_host_u32_equal(argument, 4294967295u32) {
+                  argument = object_field.value
+                }
+              }
+              continue source + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          if !self_host_u32_equal(argument, 4294967295u32) &&
+            self_host_body_plan_force_expression_carrier(
+              body,
+              expressions,
+              argument,
+              self_host_body_carrier_from_storage(destination.storage),
+            ) {
+            changed = true
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      return changed
+    }
+  }
+  changed
+}
+
 fn self_host_body_force_call_result(
   link: SelfHostPlannedProgramWasmGCLink,
+  indexes: SelfHostPhysicalBodyIndexes,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
   expression: U32,
   call_function_index: U32,
   expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  local_by_initializer: Array<U32>,
   local_values: Array<SelfHostPlannedPhysicalValueInfo>,
   locals: Array<SelfHostWasmBodyCarrier>,
 ) -> Bool {
@@ -2883,13 +3752,13 @@ fn self_host_body_force_call_result(
   let physical_function = self_host_linked_physical_function_index(
     call_function_index,
   )
-  let function_name = self_host_linked_physical_function_name(
-    link,
-    physical_function,
-  )
-  if function_name.ends_with(b"get_unchecked") ||
-    function_name.ends_with(b"indexed_get") || function_name.ends_with(b"into") {
-    return false
+  if physical_function < indexes.call_site_result_by_function.length() {
+    if self_host_body_bool_at(
+      indexes.call_site_result_by_function,
+      physical_function,
+    ) {
+      return false
+    }
   }
   let result_shape = self_host_linked_physical_function_result_shape(
     link,
@@ -2905,37 +3774,23 @@ fn self_host_body_force_call_result(
     expression,
     result_carrier,
   )
-  let mut local_offset = 0u32
-  let _ = while local_offset {
-    current => if current < body.locals.length {
-      let source = self_host_u32_add(body.locals.start, current)
-      if source < module_.locals.length() {
-        let local = module_.locals[source]
-        match self_host_linked_local_initializer_expression(
-          module_,
-          body,
-          local.local_id,
+  if expression >= body.expressions.start {
+    let relative = expression - body.expressions.start
+    if relative < local_by_initializer.length() {
+      let local_offset = self_host_body_u32_at(local_by_initializer, relative)
+      if local_offset < local_values.length() {
+        if self_host_body_plan_force_local_value(
+          local_values,
+          locals,
+          local_offset,
+          self_host_body_value_with_carrier(
+            local_values[local_offset],
+            result_carrier,
+          ),
         ) {
-          Option::Some(initializer) => if self_host_u32_equal(
-            initializer,
-            expression,
-          ) && current < local_values.length() && self_host_body_plan_force_local_value(
-            local_values,
-            locals,
-            current,
-            self_host_body_value_with_carrier(
-              local_values[current],
-              result_carrier,
-            ),
-          ) {
-            changed = true
-          }
-          Option::None => {}
+          changed = true
         }
       }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
     }
   }
   changed
@@ -3070,6 +3925,12 @@ fn self_host_body_empty_physical_expressions(
   values
 }
 
+fn self_host_body_planned_local_identity(
+  value: SelfHostPlannedLocal,
+) -> SelfHostPlannedLocal {
+  value
+}
+
 fn self_host_body_empty_carriers() -> Array<SelfHostWasmBodyCarrier> {
   let values = [SelfHostWasmBodyCarrier::UnresolvedBodyCarrier]
   values.truncate(0u32)
@@ -3104,6 +3965,8 @@ fn self_host_plan_one_physical_body(
   let module_ = link.fragments.specialization.lowering.modules[
     linked_function.module_index
   ]
+  let embedded_targets = self_host_body_embedded_targets(module_, body)
+  let local_by_initializer = self_host_body_local_by_initializer(module_, body)
   let fragment_module = self_host_body_fragment_module(
     link,
     linked_function.module_index,
@@ -3142,7 +4005,9 @@ fn self_host_plan_one_physical_body(
   let mut local = 0u32
   let _ = while local {
     current => if current < body.locals.length {
-      let source = module_.locals[self_host_u32_add(body.locals.start, current)]
+      let source = self_host_body_planned_local_identity(
+        module_.locals[self_host_u32_add(body.locals.start, current)],
+      )
       let local_carrier = if source.kind is SelfHostBodyLocalKind::ParameterLocal &&
         parameter_index < fragment.parameters.length {
         let value_index = self_host_u32_add(fragment.parameters.start, parameter_index)
@@ -3162,18 +4027,25 @@ fn self_host_plan_one_physical_body(
         parameter_index = self_host_u32_add(parameter_index, 1u32)
         parameter_carrier
       } else {
-        self_host_body_carrier_from_shape(
-          self_host_body_specialization_shape(
-            link,
-            linked_function.specialization,
-            source.shape,
-          ),
-        )
+        // Initializers, assignments, and pattern payloads are physical proof.
+        // A stale inferred local shape must not rewrite those expressions.
+        SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
       }
-      let local_owner = if !self_host_u64_equal(source.nominal, 0u64) {
+      let inferred_local_owner = if !self_host_u64_equal(source.nominal, 0u64) {
         source.nominal
       } else {
         self_host_linked_type_nominal_declaration(module_, source.type_)
+      }
+      let local_owner = if source.kind is SelfHostBodyLocalKind::ParameterLocal &&
+        self_host_u64_equal(inferred_local_owner, 0u64) {
+        self_host_body_local_parameter_nominal_owner(
+          link,
+          module_,
+          body,
+          source.local_id,
+        )
+      } else {
+        inferred_local_owner
       }
       local_values.push(
         self_host_body_physical_value(
@@ -3194,7 +4066,9 @@ fn self_host_plan_one_physical_body(
     current => if current < body.patterns.length {
       let pattern_index = self_host_u32_add(body.patterns.start, current)
       if pattern_index < module_.patterns.length() {
-        let pattern = module_.patterns[pattern_index]
+        let pattern = self_host_planned_pattern_identity(
+          module_.patterns[pattern_index],
+        )
         match pattern.source {
           SelfHostHirPattern::TuplePattern(_, children, _) => {
             let mut child_offset = 0u32
@@ -3204,7 +4078,9 @@ fn self_host_plan_one_physical_body(
                 if child_index < module_.pattern_children.length() {
                   let child = module_.pattern_children[child_index]
                   if child < module_.patterns.length() {
-                    match module_.patterns[child].reference {
+                    match self_host_planned_pattern_identity(
+                      module_.patterns[child],
+                    ).reference {
                       SelfHostBodyPatternReference::PatternBindingReference(local_id) => {
                         let slot = self_host_body_local_slot(module_, body, local_id)
                         if slot < local_values.length() {
@@ -3216,7 +4092,7 @@ fn self_host_plan_one_physical_body(
                             field_index,
                             local_values[slot],
                           )
-                          let _ = self_host_body_plan_set_local_value(
+                          let _ = self_host_body_plan_force_local_value(
                             local_values,
                             locals,
                             slot,
@@ -3422,9 +4298,13 @@ fn self_host_plan_one_physical_body(
           break self_host_semantic_unit()
         }
       }
-      expression = body.expressions.start
+      // Parents have larger expression ids than their children. Walk backward
+      // so an expected carrier reaches a branch tail, local, and initializer
+      // in one pass instead of one graph edge per pass.
+      expression = expression_end
       let _ = while expression {
-        current => if current < expression_end {
+        remaining => if remaining > body.expressions.start {
+          let current = self_host_u32_subtract(remaining, 1u32)
           let slot = self_host_body_expression_slot(body, current)
           if self_host_body_plan_resolve_field(
             link,
@@ -3432,6 +4312,7 @@ fn self_host_plan_one_physical_body(
             module_,
             body,
             expressions,
+            embedded_targets,
             current,
           ) {
             changed = true
@@ -3444,8 +4325,17 @@ fn self_host_plan_one_physical_body(
               let operand_carrier = expressions[
                 self_host_body_expression_slot(body, operand)
               ].carrier
+              let semantic_carrier = self_host_body_carrier_from_shape(
+                self_host_planned_merged_body_value_shape(
+                  module_.resolved_types,
+                  module_.inferred,
+                  module_.expressions[current].type_,
+                ),
+              )
               let result_carrier = if operator is SelfHostHirPrefixOperator::LogicalNot {
                 SelfHostWasmBodyCarrier::I32BodyCarrier
+              } else if !(semantic_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+                semantic_carrier
               } else {
                 operand_carrier
               }
@@ -3457,33 +4347,21 @@ fn self_host_plan_one_physical_body(
               ) {
                 changed = true
               }
+              if !(operator is SelfHostHirPrefixOperator::LogicalNot) &&
+                self_host_body_plan_force_expression_carrier(
+                  body,
+                  expressions,
+                  operand,
+                  result_carrier,
+                ) {
+                changed = true
+              }
             }
             SelfHostPlannedExpressionKind::PlannedBinaryExpression(
               operator,
               left,
               right,
             ) => if left >= body.expressions.start && left < expression_end {
-              let result_carrier = match operator {
-                SelfHostHirBinaryOperator::LogicalOr => SelfHostWasmBodyCarrier::I32BodyCarrier
-                SelfHostHirBinaryOperator::LogicalAnd => SelfHostWasmBodyCarrier::I32BodyCarrier
-                SelfHostHirBinaryOperator::Equal => SelfHostWasmBodyCarrier::I32BodyCarrier
-                SelfHostHirBinaryOperator::NotEqual => SelfHostWasmBodyCarrier::I32BodyCarrier
-                SelfHostHirBinaryOperator::Less => SelfHostWasmBodyCarrier::I32BodyCarrier
-                SelfHostHirBinaryOperator::LessEqual => SelfHostWasmBodyCarrier::I32BodyCarrier
-                SelfHostHirBinaryOperator::Greater => SelfHostWasmBodyCarrier::I32BodyCarrier
-                SelfHostHirBinaryOperator::GreaterEqual => SelfHostWasmBodyCarrier::I32BodyCarrier
-                _ => expressions[
-                  self_host_body_expression_slot(body, left)
-                ].carrier
-              }
-              if self_host_body_plan_set_expression_carrier(
-                body,
-                expressions,
-                current,
-                result_carrier,
-              ) {
-                changed = true
-              }
               if right >= body.expressions.start && right < expression_end {
                 let left_carrier = expressions[
                   self_host_body_expression_slot(body, left)
@@ -3491,16 +4369,27 @@ fn self_host_plan_one_physical_body(
                 let right_carrier = expressions[
                   self_host_body_expression_slot(body, right)
                 ].carrier
-                let operand_carrier = if !(
-                  right_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-                ) {
-                  right_carrier
-                } else if !(
-                  left_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-                ) {
-                  left_carrier
+                let prior_result_carrier = expressions[slot].carrier
+                let operand_carrier = self_host_body_binary_operand_carrier(
+                  operator,
+                  left_carrier,
+                  right_carrier,
+                  prior_result_carrier,
+                )
+                let result_carrier = if self_host_body_binary_is_comparison(operator) ||
+                  operator is SelfHostHirBinaryOperator::LogicalOr ||
+                  operator is SelfHostHirBinaryOperator::LogicalAnd {
+                  SelfHostWasmBodyCarrier::I32BodyCarrier
                 } else {
-                  expressions[slot].carrier
+                  operand_carrier
+                }
+                if self_host_body_plan_force_expression_carrier(
+                  body,
+                  expressions,
+                  current,
+                  result_carrier,
+                ) {
+                  changed = true
                 }
                 if self_host_body_plan_force_expression_carrier(
                   body,
@@ -3615,11 +4504,13 @@ fn self_host_plan_one_physical_body(
             SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, arguments, _) => {
               if self_host_body_force_call_result(
                 link,
+                indexes,
                 module_,
                 body,
                 current,
                 expressions[slot].call_function_index,
                 expressions,
+                local_by_initializer,
                 local_values,
                 locals,
               ) {
@@ -3638,6 +4529,17 @@ fn self_host_plan_one_physical_body(
               ) {
                 changed = true
               }
+            }
+            SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => if self_host_body_force_constructor_field_carriers(
+              link,
+              module_,
+              body,
+              linked_function.specialization,
+              expressions[slot],
+              fields,
+              expressions,
+            ) {
+              changed = true
             }
             SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments) => {
               let mut call_function_index = expressions[slot].call_function_index
@@ -3663,11 +4565,13 @@ fn self_host_plan_one_physical_body(
               }
               if self_host_body_force_call_result(
                 link,
+                indexes,
                 module_,
                 body,
                 current,
                 call_function_index,
                 expressions,
+                local_by_initializer,
                 local_values,
                 locals,
               ) {
@@ -3967,18 +4871,9 @@ fn self_host_plan_one_physical_body(
                   if child < module_.arm_children.length() {
                     let arm_index = module_.arm_children[child]
                     if arm_index < module_.pattern_arms.length() {
-                      let source_arm = module_.pattern_arms[arm_index]
-                      if self_host_body_force_pattern_carriers(
-                        link,
-                        indexes,
-                        module_,
-                        body,
-                        source_arm.pattern,
-                        subject_carrier,
-                        locals,
-                      ) {
-                        changed = true
-                      }
+                      let source_arm = self_host_planned_pattern_arm_identity(
+                        module_.pattern_arms[arm_index],
+                      )
                       if self_host_body_force_pattern_values(
                         link,
                         indexes,
@@ -4231,23 +5126,14 @@ fn self_host_plan_one_physical_body(
                   if child < module_.arm_children.length() {
                     let arm_index = module_.arm_children[child]
                     if arm_index < module_.pattern_arms.length() {
-                      if self_host_body_force_pattern_carriers(
-                        link,
-                        indexes,
-                        module_,
-                        body,
-                        module_.pattern_arms[arm_index].pattern,
-                        control_states[loop_control],
-                        locals,
-                      ) {
-                        changed = true
-                      }
                       if self_host_body_force_pattern_values(
                         link,
                         indexes,
                         module_,
                         body,
-                        module_.pattern_arms[arm_index].pattern,
+                        self_host_planned_pattern_arm_identity(
+                          module_.pattern_arms[arm_index],
+                        ).pattern,
                         control_state_values[loop_control],
                         local_values,
                         locals,
@@ -4330,7 +5216,7 @@ fn self_host_plan_one_physical_body(
               let _ = slot
             }
           }
-          continue current + 1u32
+          continue current
         } else {
           break self_host_semantic_unit()
         }
@@ -4340,6 +5226,22 @@ fn self_host_plan_one_physical_body(
       break self_host_semantic_unit()
     }
   }
+  // A return boundary is exact proof from the physical function signature.
+  // Reapply it after the fixed point so broad local propagation cannot erase it.
+  self_host_body_force_declared_pattern_payloads(
+    link,
+    indexes,
+    module_,
+    body,
+    local_values,
+    locals,
+  )
+  self_host_body_force_return_carriers(
+    module_,
+    body,
+    expressions,
+    physical_result_carrier,
+  )
   let mut field_plan_index = 0u32
   while field_plan_index {
     current => if current < expressions.length() {
@@ -4355,6 +5257,7 @@ fn self_host_plan_one_physical_body(
             module_,
             body,
             expressions,
+            embedded_targets,
             expression_plan.expression,
           )
         }
@@ -4365,6 +5268,7 @@ fn self_host_plan_one_physical_body(
             module_,
             body,
             expressions,
+            embedded_targets,
             expression_plan.expression,
           )
         }
@@ -4429,9 +5333,9 @@ fn self_host_plan_one_physical_body(
           body,
           local.local_id,
         )
-        if !self_host_u64_equal(nominal, 0u64) && self_host_u64_equal(
+        if !self_host_u64_equal(nominal, 0u64) && !self_host_u64_equal(
           local_values[current].nominal_owner,
-          0u64,
+          nominal,
         ) {
           // Loop planning must keep the exact nominal element type before emission.
           let carrier = if local_values[current].carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
@@ -4467,11 +5371,13 @@ fn self_host_plan_one_physical_body(
         SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => {
           let _ = self_host_body_force_call_result(
             link,
+            indexes,
             module_,
             body,
             expression_plan.expression,
             expression_plan.call_function_index,
             expressions,
+            local_by_initializer,
             local_values,
             locals,
           )
@@ -4479,11 +5385,13 @@ fn self_host_plan_one_physical_body(
         SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => {
           let _ = self_host_body_force_call_result(
             link,
+            indexes,
             module_,
             body,
             expression_plan.expression,
             expression_plan.call_function_index,
             expressions,
+            local_by_initializer,
             local_values,
             locals,
           )
@@ -4504,7 +5412,10 @@ fn self_host_plan_one_physical_body(
       )
       let planned_expression = module_.expressions[expression_plan.expression]
       match planned_expression.kind {
-        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => if self_host_u32_greater(
+        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => if self_host_u32_equal(
+          expression_plan.call_function_index,
+          4294967295u32,
+        ) && self_host_u32_greater(
           arguments.length,
           0u32,
         ) {
@@ -4734,12 +5645,23 @@ fn self_host_body_plan_expression(
   plan: SelfHostPlannedPhysicalBodyCarrierPlan,
   expression: U32,
 ) -> Option<SelfHostPlannedPhysicalExpressionCarrier> {
-  for source in plan.expressions {
-    if self_host_u32_equal(source.expression, expression) {
-      return Option::Some(source)
-    }
+  if self_host_u32_equal(plan.expressions.length(), 0u32) {
+    return Option::None
   }
-  Option::None
+  let first = self_host_body_physical_expression_at(plan.expressions, 0u32)
+  if expression < first.expression {
+    return Option::None
+  }
+  let slot = expression - first.expression
+  if slot >= plan.expressions.length() {
+    return Option::None
+  }
+  let source = self_host_body_physical_expression_at(plan.expressions, slot)
+  if self_host_u32_equal(source.expression, expression) {
+    Option::Some(source)
+  } else {
+    Option::None
+  }
 }
 
 fn self_host_body_expression_kind_name(
@@ -4794,6 +5716,57 @@ fn self_host_body_expression_kind_name(
   }
 }
 
+fn self_host_body_add_known_expression_diagnostic(
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  source: SelfHostPlannedExpression,
+  expression: U32,
+  entity: U64,
+  selected_owner: U64,
+  context: String,
+  expected: SelfHostWasmBodyCarrier,
+  actual: SelfHostWasmBodyCarrier,
+) -> Unit {
+  let declaration_name = match self_host_program_specialization_callable(
+    module_,
+    plan.declaration,
+  ) {
+    Option::Some(callable) => callable.name
+    Option::None => b""
+  }
+  diagnostics.push(SelfHostPhysicalCarrierDiagnostic::{
+    module_id: plan.module_id
+    declaration: plan.declaration
+    declaration_name: declaration_name
+    body: plan.body
+    lambda: plan.lambda
+    physical_function_index: plan.physical_function_index
+    specialization: plan.specialization
+    specialization_key: plan.specialization_key
+    expression: expression
+    entity: entity
+    source_offset: source.offset
+    expression_kind: self_host_body_expression_kind_name(source.kind)
+    source_name: if self_host_u32_greater(
+      module_.names.length(),
+      source.source_name,
+    ) {
+      module_.names[source.source_name]
+    } else {
+      ""
+    }
+    context: context
+    logical_type: source.type_
+    logical_shape: source.shape
+    selected_owner: selected_owner
+    expected_owner: 0u64
+    actual_owner: 0u64
+    expected: expected
+    actual: actual
+  })
+}
+
 fn self_host_body_add_diagnostic(
   diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
   plan: SelfHostPlannedPhysicalBodyCarrierPlan,
@@ -4829,7 +5802,10 @@ fn self_host_body_add_diagnostic(
     entity: entity
     source_offset: source.offset
     expression_kind: self_host_body_expression_kind_name(source.kind)
-    source_name: if source.source_name < module_.names.length() {
+    source_name: if self_host_u32_greater(
+      module_.names.length(),
+      source.source_name,
+    ) {
       module_.names[source.source_name]
     } else {
       ""
@@ -4841,6 +5817,66 @@ fn self_host_body_add_diagnostic(
       Option::Some(value) => value.value.nominal_owner
       Option::None => source.nominal
     }
+    expected_owner: 0u64
+    actual_owner: 0u64
+    expected: expected
+    actual: actual
+  })
+}
+
+fn self_host_body_add_nominal_diagnostic(
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  expression: U32,
+  expected_owner: U64,
+  actual_owner: U64,
+  context: String,
+  expected: SelfHostWasmBodyCarrier,
+  actual: SelfHostWasmBodyCarrier,
+) -> Unit {
+  let source = if expression < module_.expressions.length() {
+    self_host_planned_expression_identity(module_.expressions[expression])
+  } else {
+    self_host_lowering_error_expression()
+  }
+  let declaration_name = match self_host_program_specialization_callable(
+    module_,
+    plan.declaration,
+  ) {
+    Option::Some(callable) => callable.name
+    Option::None => b""
+  }
+  diagnostics.push(SelfHostPhysicalCarrierDiagnostic::{
+    module_id: plan.module_id
+    declaration: plan.declaration
+    declaration_name: declaration_name
+    body: plan.body
+    lambda: plan.lambda
+    physical_function_index: plan.physical_function_index
+    specialization: plan.specialization
+    specialization_key: plan.specialization_key
+    expression: expression
+    entity: expected_owner
+    source_offset: source.offset
+    expression_kind: self_host_body_expression_kind_name(source.kind)
+    source_name: if self_host_u32_greater(
+      module_.names.length(),
+      source.source_name,
+    ) {
+      module_.names[source.source_name]
+    } else {
+      ""
+    }
+    context: context
+    logical_type: source.type_
+    logical_shape: source.shape
+    selected_owner: match self_host_body_plan_expression(plan, expression) {
+      Option::Some(value) => value.value.nominal_owner
+      Option::None => source.nominal
+    }
+    expected_owner: expected_owner
+    actual_owner: actual_owner
     expected: expected
     actual: actual
   })
@@ -4894,49 +5930,39 @@ fn self_host_verify_body_call_result(
   }
 }
 
-fn self_host_body_expression_is_embedded_target(
+fn self_host_body_embedded_targets(
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
-  expression: U32,
-) -> Bool {
-  let mut relative = 0u32
+) -> Array<Bool> {
+  let targets = []
+  let mut slot = 0u32
+  let _ = while slot {
+    current => if current < body.expressions.length {
+      targets.push(false)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
   let end = self_host_u32_add(body.expressions.start, body.expressions.length)
+  let mut relative = 0u32
   let _ = while relative {
     current => if current < body.expressions.length {
       let parent = self_host_u32_add(body.expressions.start, current)
-      if parent < end {
-        match module_.expressions[parent].kind {
-          SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => if self_host_u32_equal(
-            target,
-            expression,
-          ) {
-            return true
-          }
-          SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, target, _, _) => if self_host_u32_equal(
-            target,
-            expression,
-          ) {
-            return true
-          }
-          SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, _, _) => if self_host_u32_equal(
-            target,
-            expression,
-          ) {
-            return true
-          }
-          SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => if self_host_u32_equal(
-            target,
-            expression,
-          ) {
-            return true
-          }
-          SelfHostPlannedExpressionKind::PlannedConstruct(target, _, _) => if self_host_u32_equal(
-            target,
-            expression,
-          ) {
-            return true
-          }
-          _ => {}
+      let target = match self_host_planned_expression_at(
+        module_.expressions,
+        parent,
+      ).kind {
+        SelfHostPlannedExpressionKind::PlannedDirectCall(_, value, _, _) => value
+        SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, value, _, _) => value
+        SelfHostPlannedExpressionKind::PlannedFunctionValueCall(value, _, _) => value
+        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(value, _) => value
+        SelfHostPlannedExpressionKind::PlannedConstruct(value, _, _) => value
+        _ => 4294967295u32
+      }
+      if target >= body.expressions.start {
+        if target < end {
+          targets[target - body.expressions.start] = true
         }
       }
       continue current + 1u32
@@ -4944,7 +5970,7 @@ fn self_host_body_expression_is_embedded_target(
       break self_host_semantic_unit()
     }
   }
-  false
+  targets
 }
 
 fn self_host_body_physical_owner(
@@ -5145,6 +6171,7 @@ fn self_host_verify_body_constructor(
       _,
     ) => match self_host_linked_expression_variant_type(
       link,
+      Option::Some(plan),
       module_,
       body,
       plan.specialization,
@@ -5200,7 +6227,9 @@ fn self_host_verify_body_constructor(
             source => if source < fields.length {
               let object_index = self_host_u32_add(fields.start, source)
               if object_index < module_.object_fields.length() {
-                let object_field = module_.object_fields[object_index]
+                let object_field = self_host_planned_object_field_identity(
+                  module_.object_fields[object_index],
+                )
                 let exact_field = self_host_u64_equal(
                   object_field.field,
                   destination.declaration,
@@ -5272,12 +6301,13 @@ fn self_host_verify_body_constructor(
                     expected_owner,
                     actual.value.nominal_owner,
                   ) {
-                  self_host_body_add_diagnostic(
+                  self_host_body_add_nominal_diagnostic(
                     diagnostics,
                     plan,
                     module_,
                     argument,
-                    destination.declaration,
+                    expected_owner,
+                    actual.value.nominal_owner,
                     "constructor argument nominal provenance mismatch",
                     expected_carrier,
                     actual.value.carrier,
@@ -5313,8 +6343,15 @@ fn self_host_verify_body_pattern_payloads(
   body: SelfHostPlannedBodyLowering,
   diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
 ) -> Unit {
-  for expression_plan in plan.expressions {
-    match module_.expressions[expression_plan.expression].kind {
+  let expression_plan_count = array_length(plan.expressions)
+  let mut expression_plan_index = 0u32
+  let _ = while expression_plan_index {
+    current_expression_plan => if current_expression_plan < expression_plan_count {
+      let expression_plan = array_get_unchecked(
+        plan.expressions,
+        current_expression_plan,
+      )
+      match module_.expressions[expression_plan.expression].kind {
       SelfHostPlannedExpressionKind::PlannedMatchExpression(subject, arms) => match self_host_body_plan_expression(
         plan,
         subject,
@@ -5327,9 +6364,13 @@ fn self_host_verify_body_pattern_payloads(
               if child < module_.arm_children.length() {
                 let arm_index = module_.arm_children[child]
                 if arm_index < module_.pattern_arms.length() {
-                  let root_index = module_.pattern_arms[arm_index].pattern
+                  let root_index = self_host_planned_pattern_arm_identity(
+                    module_.pattern_arms[arm_index],
+                  ).pattern
                   if root_index < module_.patterns.length() {
-                    let root = module_.patterns[root_index]
+                    let root = self_host_planned_pattern_identity(
+                      module_.patterns[root_index],
+                    )
                     if root.selected_constructor is SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
                       _,
                       _,
@@ -5370,8 +6411,14 @@ fn self_host_verify_body_pattern_payloads(
                                           current_field,
                                         )
                                         let actual = plan.local_values[slot]
+                                        let actual_carrier = if slot < plan.locals.length() {
+                                          plan.locals[slot]
+                                        } else {
+                                          actual.carrier
+                                        }
                                         if !(expected_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
-                                          !self_host_body_carrier_equal(expected_carrier, actual.carrier) {
+                                          !(actual_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
+                                          !self_host_body_carrier_equal(expected_carrier, actual_carrier) {
                                           self_host_body_add_diagnostic(
                                             diagnostics,
                                             plan,
@@ -5380,7 +6427,7 @@ fn self_host_verify_body_pattern_payloads(
                                             u32_into_u64(local_id),
                                             "pattern payload carrier mismatch",
                                             expected_carrier,
-                                            actual.carrier,
+                                            actual_carrier,
                                           )
                                         }
                                         let expected_owner = self_host_linked_field_value_nominal_declaration(
@@ -5390,23 +6437,23 @@ fn self_host_verify_body_pattern_payloads(
                                             field_index: current_field
                                           },
                                         )
-                                        if expected_carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier && !self_host_u64_equal(
-                                          expected_owner,
-                                          0u64,
-                                        ) && !self_host_u64_equal(
-                                          expected_owner,
-                                          actual.nominal_owner,
-                                        ) {
-                                          self_host_body_add_diagnostic(
-                                            diagnostics,
-                                            plan,
-                                            module_,
-                                            subject,
-                                            expected_owner,
-                                            "pattern payload nominal provenance mismatch",
-                                            expected_carrier,
-                                            actual.carrier,
-                                          )
+                                        let actual_owner = actual.nominal_owner
+                                        if expected_carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier {
+                                          if expected_owner != 0u64 && actual_owner != 0u64 {
+                                            if expected_owner != actual_owner {
+                                              self_host_body_add_nominal_diagnostic(
+                                                diagnostics,
+                                                plan,
+                                                module_,
+                                                subject,
+                                                expected_owner,
+                                                actual_owner,
+                                                "pattern payload nominal provenance mismatch",
+                                                expected_carrier,
+                                                actual_carrier,
+                                              )
+                                            }
+                                          }
                                         }
                                       }
                                     }
@@ -5436,7 +6483,11 @@ fn self_host_verify_body_pattern_payloads(
         }
         Option::None => {}
       }
-      _ => {}
+        _ => {}
+      }
+      continue current_expression_plan + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
 }
@@ -5476,17 +6527,17 @@ fn self_host_verify_one_physical_body(
           local.local_id,
         )
         let actual_nominal = plan.local_values[current].nominal_owner
-        if !self_host_u64_equal(expected_nominal, 0u64) && !self_host_u64_equal(
-          expected_nominal,
-          actual_nominal,
-        ) {
+        if !self_host_u64_equal(expected_nominal, 0u64) &&
+          !self_host_u64_equal(actual_nominal, 0u64) &&
+          !self_host_u64_equal(expected_nominal, actual_nominal) {
           // A loop binding must keep the nominal type of its container element.
-          self_host_body_add_diagnostic(
+          self_host_body_add_nominal_diagnostic(
             diagnostics,
             plan,
             module_,
             body.expressions.start,
             expected_nominal,
+            actual_nominal,
             "loop binding nominal provenance mismatch",
             SelfHostWasmBodyCarrier::EqRefBodyCarrier,
             plan.local_values[current].carrier,
@@ -5498,14 +6549,40 @@ fn self_host_verify_one_physical_body(
       break self_host_semantic_unit()
     }
   }
+  let embedded_targets = self_host_body_embedded_targets(module_, body)
   for expression_plan in plan.expressions {
     let expression = expression_plan.expression
-    let source = module_.expressions[expression]
-    let embedded_target = self_host_body_expression_is_embedded_target(
-      module_,
-      body,
-      expression,
-    )
+    let source = self_host_planned_expression_at(module_.expressions, expression)
+    let embedded_target = if expression >= body.expressions.start {
+      let relative = expression - body.expressions.start
+      if relative < embedded_targets.length() {
+        embedded_targets[relative]
+      } else {
+        false
+      }
+    } else {
+      false
+    }
+    if !source.flow.falls_through {
+      match source.kind {
+        SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => if !(expression_plan.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) {
+          // A direct call with a physical result must not poison later flow.
+          self_host_body_add_known_expression_diagnostic(
+            diagnostics,
+            plan,
+            module_,
+            source,
+            expression,
+            u32_into_u64(expression_plan.call_function_index),
+            expression_plan.value.nominal_owner,
+            "direct call result is incorrectly marked as diverging",
+            expression_plan.carrier,
+            SelfHostWasmBodyCarrier::NeverBodyCarrier,
+          )
+        }
+        _ => {}
+      }
+    }
     match source.kind {
       SelfHostPlannedExpressionKind::PlannedLocalGet(_) => {}
       SelfHostPlannedExpressionKind::PlannedLocalSet(local_id, value) => {
@@ -5904,6 +6981,10 @@ pub fn self_host_program_wasm_body_plan_error_report(
     output.append_i32(diagnostic.logical_type)
     output.append(" selected_owner=")
     output.append_u64(diagnostic.selected_owner)
+    output.append(" expected_owner=")
+    output.append_u64(diagnostic.expected_owner)
+    output.append(" actual_owner=")
+    output.append_u64(diagnostic.actual_owner)
     output.append(" expected=")
     output.append(self_host_body_carrier_name(diagnostic.expected))
     output.append(" actual=")

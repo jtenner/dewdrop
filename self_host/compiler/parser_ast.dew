@@ -91,6 +91,30 @@ pub struct SelfHostDeriveRequest {
   offset: U32
 }
 
+fn self_host_derive_request_name_at(
+  values: Array<SelfHostDeriveRequest>,
+  index: U32,
+) -> String {
+  self_host_assert_array_index(
+    index,
+    values.length(),
+    "compiler derive-request index is outside the parser arena",
+  )
+  values[index].name
+}
+
+fn self_host_derive_request_offset_at(
+  values: Array<SelfHostDeriveRequest>,
+  index: U32,
+) -> U32 {
+  self_host_assert_array_index(
+    index,
+    values.length(),
+    "compiler derive-request index is outside the parser arena",
+  )
+  values[index].offset
+}
+
 pub struct SelfHostFnParameter {
   name: String
   type_: SelfHostTypeExpr
@@ -384,12 +408,19 @@ pub struct SelfHostFunctionDeclaration {
   visibility: SelfHostDeclarationVisibility
   name: String
   name_offset: U32
+  is_main: Bool
   type_parameters: Array<SelfHostTypeParameter>
   receiver: Option<SelfHostReceiverParameter>
   parameters: Array<SelfHostFnParameter>
   return_type: SelfHostTypeExpr
   body: SelfHostBlock
   offset: U32
+}
+
+fn self_host_function_declaration_identity(
+  value: SelfHostFunctionDeclaration,
+) -> SelfHostFunctionDeclaration {
+  value
 }
 
 pub struct SelfHostTestDeclaration {

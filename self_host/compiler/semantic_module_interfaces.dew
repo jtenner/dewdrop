@@ -47,78 +47,17 @@ fn self_host_module_interface_u32_at(
   array_get_unchecked(values, index)
 }
 
-fn self_host_module_path_segment_matches_at(
-  candidate: String,
-  segment: String,
-  candidate_index: U32,
-  segment_index: U32,
-) -> Bool {
-  if segment_index >= segment.byte_length() {
-    true
-  } else if candidate_index + segment_index >= candidate.byte_length() {
-    false
-  } else if candidate.byte_at(candidate_index + segment_index) !=
-    segment.byte_at(segment_index) {
-    false
-  } else {
-    self_host_module_path_segment_matches_at(
-      candidate,
-      segment,
-      candidate_index,
-      segment_index + 1u32,
-    )
-  }
-}
-
-fn self_host_module_path_matches_at(
-  candidate: String,
-  segments: Array<String>,
-  segment_index: U32,
-  candidate_index: U32,
-) -> Bool {
-  if segment_index >= segments.length() {
-    candidate_index == candidate.byte_length()
-  } else {
-    let segment = self_host_interface_string_at(segments, segment_index)
-    let content_index = if segment_index == 0u32 {
-      candidate_index
-    } else if candidate_index < candidate.byte_length() &&
-      candidate.byte_at(candidate_index) == 46u8 {
-      candidate_index + 1u32
-    } else {
-      return false
-    }
-    if !self_host_module_path_segment_matches_at(
-      candidate,
-      segment,
-      content_index,
-      0u32,
-    ) {
-      false
-    } else {
-      self_host_module_path_matches_at(
-        candidate,
-        segments,
-        segment_index + 1u32,
-        content_index + segment.byte_length(),
-      )
-    }
-  }
-}
-
 fn self_host_module_path_index(
   module_paths: Array<String>,
-  segments: Array<String>,
+  path: String,
 ) -> U32 {
   let mut found = 4294967295u32
   let mut index = 0u32
   while index {
     current => if current < module_paths.length() {
-      if self_host_module_path_matches_at(
+      if self_host_interface_string_equal(
         self_host_interface_string_at(module_paths, current),
-        segments,
-        0u32,
-        0u32,
+        path,
       ) {
         found = current
         break self_host_semantic_unit()
@@ -215,6 +154,24 @@ pub struct SelfHostFrozenModuleInterface {
   implementations: Array<SelfHostFrozenInterfaceImplementation>
 }
 
+fn self_host_frozen_module_interface_identity(
+  value: SelfHostFrozenModuleInterface,
+) -> SelfHostFrozenModuleInterface {
+  SelfHostFrozenModuleInterface::{
+    module_id: value.module_id
+    path: value.path
+    resolved_types: value.resolved_types
+    generic_parameter_bounds: value.generic_parameter_bounds
+    declarations: value.declarations
+    fields: value.fields
+    variants: value.variants
+    variant_payload_types: value.variant_payload_types
+    callables: value.callables
+    parameters: value.parameters
+    implementations: value.implementations
+  }
+}
+
 pub struct SelfHostFrozenInterfaceList {
   values: Array<SelfHostFrozenModuleInterface>
 }
@@ -230,12 +187,20 @@ impl SelfHostFrozenInterfaceList {
     self.values.push(interface_)
   }
 
+  fn set(
+    self,
+    index: U32,
+    interface_: SelfHostFrozenModuleInterface,
+  ) -> Unit {
+    self.values[index] = interface_
+  }
+
   fn length(self) -> U32 {
     self.values.length()
   }
 
   fn at(self, index: U32) -> SelfHostFrozenModuleInterface {
-    self.values[index]
+    self_host_frozen_module_interface_identity(self.values[index])
   }
 }
 
@@ -758,7 +723,12 @@ fn self_host_freeze_module_signature_interface(
 ) -> SelfHostFrozenModuleInterface {
   let declarations = []
   let exported_declarations = self_host_empty_u64_bool_map()
-  for declaration in collected.declarations {
+  let mut declaration_index = 0u32
+  let _ = while declaration_index {
+    current => if current < collected.declarations.length() {
+      let declaration = self_host_collected_declaration_identity(
+        collected.declarations[current],
+      )
     if declaration.visibility is SelfHostSemanticVisibility::Public &&
       !collected.declaration_is_test_only(declaration.id) &&
       !self_host_u32_equal(declaration.name, 4294967295u32) {
@@ -791,8 +761,15 @@ fn self_host_freeze_module_signature_interface(
         Option::None => {}
       }
     }
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
-  for method in collected.methods {
+  let mut method_index = 0u32
+  let _ = while method_index {
+    current => if current < collected.methods.length() {
+      let method = self_host_collected_method_identity(collected.methods[current])
     if method.kind is SelfHostCollectedMethodKind::ForeignLibraryMemberDecl &&
       method.visibility is SelfHostSemanticVisibility::Public &&
       !collected.declaration_is_test_only(method.id) &&
@@ -811,41 +788,54 @@ fn self_host_freeze_module_signature_interface(
         }
       })
     }
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let fields = []
   let mut field_index = 0u32
-  for field in collected.fields {
-    if self_host_frozen_exported_declaration(
-      exported_declarations,
-      field.declaration,
-    ) {
-      fields.push(SelfHostFrozenInterfaceField::{
-        field: field.id
-        declaration: field.declaration
-        variant: field.variant
-        mutable_: field.mutable_
-        name: collected.name(field.name)
-        type_: resolved.field_types[field_index]
-        location: SelfHostSourceLocation::{
-          file: collected.declaration_files[
-            self_host_semantic_id_local(field.declaration)
-          ]
-          offset: field.offset
-        }
-      })
+  let _ = while field_index {
+    current => if current < collected.fields.length() {
+      let field = self_host_collected_field_identity(collected.fields[current])
+      if self_host_frozen_exported_declaration(
+        exported_declarations,
+        field.declaration,
+      ) {
+        fields.push(SelfHostFrozenInterfaceField::{
+          field: field.id
+          declaration: field.declaration
+          variant: field.variant
+          mutable_: field.mutable_
+          name: collected.name(field.name)
+          type_: resolved.field_types[current]
+          location: SelfHostSourceLocation::{
+            file: collected.declaration_files[
+              self_host_semantic_id_local(field.declaration)
+            ]
+            offset: field.offset
+          }
+        })
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
-    field_index = field_index + 1u32
   }
   let variants = []
   let variant_payload_types = []
   let mut variant_index = 0u32
-  for variant in collected.variants {
-    if self_host_frozen_exported_declaration(
-      exported_declarations,
-      variant.declaration,
-    ) {
-      let payload_start = variant_payload_types.length()
-      let source_payload = resolved.variant_payloads[variant_index]
+  let _ = while variant_index {
+    current_variant => if current_variant < collected.variants.length() {
+      let variant = self_host_collected_variant_identity(
+        collected.variants[current_variant],
+      )
+      if self_host_frozen_exported_declaration(
+        exported_declarations,
+        variant.declaration,
+      ) {
+        let payload_start = variant_payload_types.length()
+        let source_payload = resolved.variant_payloads[current_variant]
       let mut payload_index = 0u32
       let _ = while payload_index {
         current => if current < source_payload.length {
@@ -859,28 +849,36 @@ fn self_host_freeze_module_signature_interface(
           break self_host_semantic_unit()
         }
       }
-      variants.push(SelfHostFrozenInterfaceVariant::{
-        variant: variant.id
-        declaration: variant.declaration
-        kind: variant.kind
-        name: collected.name(variant.name)
-        payload_types: SelfHostHirSpan::{
-          start: payload_start
-          length: variant_payload_types.length() - payload_start
-        }
-        location: SelfHostSourceLocation::{
-          file: collected.declaration_files[
-            self_host_semantic_id_local(variant.declaration)
-          ]
-          offset: variant.offset
-        }
-      })
+        variants.push(SelfHostFrozenInterfaceVariant::{
+          variant: variant.id
+          declaration: variant.declaration
+          kind: variant.kind
+          name: collected.name(variant.name)
+          payload_types: SelfHostHirSpan::{
+            start: payload_start
+            length: variant_payload_types.length() - payload_start
+          }
+          location: SelfHostSourceLocation::{
+            file: collected.declaration_files[
+              self_host_semantic_id_local(variant.declaration)
+            ]
+            offset: variant.offset
+          }
+        })
+      }
+      continue current_variant + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
-    variant_index = variant_index + 1u32
   }
   let exported_implementations = self_host_empty_u64_bool_map()
   let mut implementation_index = 0u32
-  for implementation in collected.impls {
+  let mut implementation_export_index = 0u32
+  let _ = while implementation_export_index {
+    current => if current < collected.impls.length() {
+      let implementation = self_host_collected_impl_identity(
+        collected.impls[current],
+      )
     if !implementation.foreign_ &&
       !collected.declaration_is_test_only(implementation.declaration) &&
       self_host_frozen_impl_type_visible(
@@ -910,15 +908,32 @@ fn self_host_freeze_module_signature_interface(
       }
     }
     implementation_index = implementation_index + 1u32
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let generic_parameter_bounds = []
-  for parameter in collected.generic_parameters {
+  let mut generic_parameter_index = 0u32
+  let _ = while generic_parameter_index {
+    current => if current < collected.generic_parameters.length() {
+      let parameter = self_host_collected_generic_parameter_identity(
+        collected.generic_parameters[current],
+      )
     generic_parameter_bounds.push(parameter.bounds)
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let parameters = []
   let callables = []
   let mut callable_index = 0u32
-  for callable in collected.callables {
+  let _ = while callable_index {
+    current => if current < collected.callables.length() {
+      let callable = self_host_collected_callable_identity(
+        collected.callables[current],
+      )
     if self_host_frozen_callable_exported(
       collected,
       callable.declaration,
@@ -934,7 +949,9 @@ fn self_host_freeze_module_signature_interface(
             source_parameters.start,
             current,
           )
-          let parameter = collected.parameters[parameter_index]
+          let parameter = self_host_collected_parameter_identity(
+            collected.parameters[parameter_index],
+          )
           parameters.push(SelfHostFrozenInterfaceParameter::{
             parameter: parameter.id
             name: collected.name(parameter.name)
@@ -980,10 +997,19 @@ fn self_host_freeze_module_signature_interface(
       })
     }
     callable_index = callable_index + 1u32
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let implementations = []
   implementation_index = 0u32
-  for implementation in collected.impls {
+  let mut implementation_freeze_index = 0u32
+  let _ = while implementation_freeze_index {
+    current => if current < collected.impls.length() {
+      let implementation = self_host_collected_impl_identity(
+        collected.impls[current],
+      )
     if self_host_frozen_exported_declaration(
       exported_implementations,
       implementation.declaration,
@@ -1008,6 +1034,10 @@ fn self_host_freeze_module_signature_interface(
       })
     }
     implementation_index = implementation_index + 1u32
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   SelfHostFrozenModuleInterface::{
     module_id: collected.module_id
@@ -1307,16 +1337,22 @@ impl SelfHostImportScopeBuilder {
     interface_index: U32,
     declaration: SelfHostFrozenInterfaceDeclaration,
   ) -> Unit {
-    let table = if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
-      self.trait_bindings
+    let previous_binding = if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+      self.trait_bindings.get(declaration.name)
     } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
-      self.type_bindings
+      self.type_bindings.get(declaration.name)
     } else {
-      self.value_bindings
+      self.value_bindings.get(declaration.name)
     }
     let index = self.register_declaration(interface_index, declaration)
-    match table.get(declaration.name) {
-      Option::None => table.set(declaration.name, index)
+    match previous_binding {
+      Option::None => if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+        self.trait_bindings.set(declaration.name, index)
+      } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
+        self.type_bindings.set(declaration.name, index)
+      } else {
+        self.value_bindings.set(declaration.name, index)
+      }
       Option::Some(previous_index) => if previous_index < 4294967294u32 {
         let previous = self.declarations[previous_index]
         if !self_host_u64_equal(
@@ -1330,7 +1366,13 @@ impl SelfHostImportScopeBuilder {
           if same_interface_overload {
             return
           }
-          table.set(declaration.name, 4294967294u32)
+          if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+            self.trait_bindings.set(declaration.name, 4294967294u32)
+          } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
+            self.type_bindings.set(declaration.name, 4294967294u32)
+          } else {
+            self.value_bindings.set(declaration.name, 4294967294u32)
+          }
           if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
             self.diagnostics.push(
               SelfHostImportScopeDiagnostic::AmbiguousImportedTrait(
@@ -1475,49 +1517,58 @@ fn self_host_build_module_import_scope(
     module_paths,
     interfaces,
   )
-  for import_ in collected.imports {
-    if import_.wildcard {
-      let mut dependency = 0u32
-      let _ = while dependency {
-        current => if current < module_paths.length() {
-          if current != module_index && self_host_wildcard_import_matches(
-            import_.path,
-            module_paths[current],
-          ) {
-            builder.import_interface(current, true)
-          }
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-    } else {
-      let import_path = import_.path
-      let dependency = self_host_module_path_index(
-        module_paths,
-        import_.path_segments,
+  let mut import_index = 0u32
+  let _ = while import_index {
+    current_import => if current_import < collected.imports.length() {
+      let import_ = self_host_collected_import_identity(
+        collected.imports[current_import],
       )
-      if dependency < module_paths.length() {
-        match import_.import_alias {
-          Option::Some(alias) => builder.add_alias(
-            alias,
-            dependency,
-            import_.file,
-            import_.import_alias_offset,
-          )
-          Option::None => {}
+      if import_.wildcard {
+        let mut dependency = 0u32
+        let _ = while dependency {
+          current => if current < module_paths.length() {
+            if current != module_index && self_host_wildcard_import_matches(
+              import_.path,
+              module_paths[current],
+            ) {
+              builder.import_interface(current, true)
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
-        builder.import_interface(dependency, import_.open_)
       } else {
-        builder.diagnostics.push(
-          SelfHostImportScopeDiagnostic::UnavailableImportedInterface(
-            collected.module_id,
-            import_path,
-            import_.file,
-            import_.offset,
-          ),
+        let import_path = import_.path
+        let dependency = self_host_module_path_index(
+          module_paths,
+          import_.path,
         )
+        if dependency < module_paths.length() {
+          match import_.import_alias {
+            Option::Some(alias) => builder.add_alias(
+              alias,
+              dependency,
+              import_.file,
+              import_.import_alias_offset,
+            )
+            Option::None => {}
+          }
+          builder.import_interface(dependency, import_.open_)
+        } else {
+          builder.diagnostics.push(
+            SelfHostImportScopeDiagnostic::UnavailableImportedInterface(
+              collected.module_id,
+              import_path,
+              import_.file,
+              import_.offset,
+            ),
+          )
+        }
       }
+      continue current_import + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   builder.finish(module_paths)

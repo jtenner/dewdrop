@@ -1,5 +1,17 @@
 open dew.std.option
 
+fn self_host_lowering_u32_at(values: Array<U32>, index: U32) -> U32 {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_lowering_u32_set(
+  values: Array<U32>,
+  index: U32,
+  value: U32,
+) -> Unit {
+  array_set_unchecked(values, index, value)
+}
+
 pub enum SelfHostPlannedExpressionKind {
   PlannedPoisonExpression
   PlannedConsumedExpression
@@ -67,6 +79,36 @@ pub struct SelfHostPlannedExpression {
   offset: U32
 }
 
+fn self_host_planned_expression_identity(
+  expression: SelfHostPlannedExpression,
+) -> SelfHostPlannedExpression {
+  SelfHostPlannedExpression::{
+    type_: expression.type_
+    shape: expression.shape
+    nominal: expression.nominal
+    flow: self_host_body_flow_summary_identity(expression.flow)
+    kind: expression.kind
+    selection: expression.selection
+    reference: expression.reference
+    call_target: expression.call_target
+    call_type_arguments: expression.call_type_arguments
+    source_name: expression.source_name
+    offset: expression.offset
+  }
+}
+
+fn self_host_planned_expression_at(
+  expressions: Array<SelfHostPlannedExpression>,
+  index: U32,
+) -> SelfHostPlannedExpression {
+  self_host_assert_array_index(
+    index,
+    expressions.length(),
+    "compiler planned-expression index is outside the expression arena",
+  )
+  self_host_planned_expression_identity(expressions[index])
+}
+
 pub enum SelfHostPlannedBlockItemKind {
   PlannedLetItem(U32, Bool, U32)
   PlannedExpressionItem(U32)
@@ -109,6 +151,30 @@ pub struct SelfHostPlannedPattern {
   offset: U32
 }
 
+fn self_host_planned_pattern_identity(
+  pattern: SelfHostPlannedPattern,
+) -> SelfHostPlannedPattern {
+  SelfHostPlannedPattern::{
+    type_: pattern.type_
+    shape: pattern.shape
+    source: pattern.source
+    reference: pattern.reference
+    selected_constructor: pattern.selected_constructor
+    offset: pattern.offset
+  }
+}
+
+fn self_host_planned_pattern_at(
+  patterns: Array<SelfHostPlannedPattern>,
+  index: U32,
+) -> SelfHostPlannedPattern {
+  // Stop before an invalid physical Array access.
+  if index >= patterns.length() {
+    unreachable()
+  }
+  self_host_planned_pattern_identity(patterns[index])
+}
+
 pub struct SelfHostPlannedPatternField {
   name: String
   pattern: U32
@@ -121,6 +187,29 @@ pub struct SelfHostPlannedPatternArm {
   body: U32
   flow: SelfHostBodyFlowSummary
   offset: U32
+}
+
+fn self_host_planned_pattern_arm_identity(
+  arm: SelfHostPlannedPatternArm,
+) -> SelfHostPlannedPatternArm {
+  SelfHostPlannedPatternArm::{
+    pattern: arm.pattern
+    guard_condition: arm.guard_condition
+    body: arm.body
+    flow: arm.flow
+    offset: arm.offset
+  }
+}
+
+fn self_host_planned_pattern_arm_at(
+  arms: Array<SelfHostPlannedPatternArm>,
+  index: U32,
+) -> SelfHostPlannedPatternArm {
+  // Stop before an invalid physical Array access.
+  if index >= arms.length() {
+    unreachable()
+  }
+  self_host_planned_pattern_arm_identity(arms[index])
 }
 
 pub struct SelfHostPlannedLocal {
@@ -156,6 +245,8 @@ pub struct SelfHostPlannedBodyLowering {
   result_shape: SelfHostPlannedValueShape
   flow: SelfHostBodyFlowSummary
   locals: SelfHostHirSpan
+  local_initializers: Array<U32>
+  local_assignments: Array<U32>
   expressions: SelfHostHirSpan
   blocks: SelfHostHirSpan
   patterns: SelfHostHirSpan
@@ -172,6 +263,8 @@ pub struct SelfHostPlannedLambdaLowering {
   result_shape: SelfHostPlannedValueShape
   flow: SelfHostBodyFlowSummary
   locals: SelfHostHirSpan
+  local_initializers: Array<U32>
+  local_assignments: Array<U32>
   captures: SelfHostHirSpan
   expressions: SelfHostHirSpan
   blocks: SelfHostHirSpan
@@ -207,12 +300,46 @@ pub struct SelfHostPlannedModuleLowering {
   flow_diagnostics: Array<SelfHostBodyFlowDiagnostic>
 }
 
+fn self_host_planned_object_field_identity(
+  field: SelfHostPlannedObjectField,
+) -> SelfHostPlannedObjectField {
+  SelfHostPlannedObjectField::{
+    field: field.field
+    name: field.name
+    value: field.value
+    offset: field.offset
+  }
+}
+
+fn self_host_planned_object_field_at(
+  fields: Array<SelfHostPlannedObjectField>,
+  index: U32,
+) -> SelfHostPlannedObjectField {
+  // Stop before an invalid physical Array access.
+  if index >= fields.length() {
+    unreachable()
+  }
+  self_host_planned_object_field_identity(fields[index])
+}
+
+fn self_host_planned_body_lowering_identity(
+  value: SelfHostPlannedBodyLowering,
+) -> SelfHostPlannedBodyLowering {
+  value
+}
+
+fn self_host_planned_module_lowering_identity(
+  value: SelfHostPlannedModuleLowering,
+) -> SelfHostPlannedModuleLowering {
+  value
+}
+
 fn self_host_lowering_flow_at(
-  flows: Array<SelfHostBodyFlowSummary>,
+  flows: Array<U32>,
   index: U32,
 ) -> SelfHostBodyFlowSummary {
   if index < flows.length() {
-    flows[index]
+    self_host_flow_decode(flows[index])
   } else {
     self_host_flow_empty()
   }
@@ -280,7 +407,9 @@ fn self_host_lowering_unique_mutable_field(
   let mut index = 0u32
   while index {
     current => if current < collected.fields.length() {
-      let field = collected.fields[current]
+      let field = self_host_collected_field_identity(
+        collected.fields[current],
+      )
       if self_host_u32_equal(field.name, name) && field.mutable_ {
         match field.variant {
           Option::None => if found {
@@ -524,7 +653,7 @@ fn self_host_lowering_plan_expressions(
   inferred: SelfHostMergedModuleInference,
   job: SelfHostMergedInferenceJob,
   source: SelfHostHirSpan,
-  flows: Array<SelfHostBodyFlowSummary>,
+  flows: Array<U32>,
   output: Array<SelfHostPlannedExpression>,
 ) -> Unit {
   let mut relative = 0u32
@@ -624,8 +753,8 @@ fn self_host_lowering_plan_job_structures(
   source_block_items: SelfHostHirSpan,
   source_patterns: SelfHostHirSpan,
   source_pattern_arms: SelfHostHirSpan,
-  block_flows: Array<SelfHostBodyFlowSummary>,
-  arm_flows: Array<SelfHostBodyFlowSummary>,
+  block_flows: Array<U32>,
+  arm_flows: Array<U32>,
   blocks: Array<SelfHostPlannedBlock>,
   block_items: Array<SelfHostPlannedBlockItem>,
   patterns: Array<SelfHostPlannedPattern>,
@@ -838,8 +967,14 @@ fn self_host_lowering_append_flow_diagnostics(
   output: Array<SelfHostBodyFlowDiagnostic>,
   source: Array<SelfHostBodyFlowDiagnostic>,
 ) -> Unit {
-  for diagnostic in source {
-    output.push(diagnostic)
+  let mut diagnostic_index = 0u32
+  let _ = while diagnostic_index {
+    current => if current < source.length() {
+      output.push(source[current])
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
 }
 
@@ -969,6 +1104,13 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
         4294967295u32,
         locals,
       )
+      let (local_initializers, local_assignments) = self_host_lowering_local_sources(
+        planned_locals.length,
+        source.block_items,
+        source.expressions,
+        block_items,
+        expressions,
+      )
       let root_shape = self_host_planned_merged_body_value_shape(
         resolved,
         inferred,
@@ -984,6 +1126,8 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
         result_shape: root_shape
         flow: flow.flow
         locals: planned_locals
+        local_initializers: local_initializers
+        local_assignments: local_assignments
         expressions: source.expressions
         blocks: source.blocks
         patterns: source.patterns
@@ -1050,6 +1194,13 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
         source.id,
         locals,
       )
+      let (local_initializers, local_assignments) = self_host_lowering_local_sources(
+        planned_locals.length,
+        source.body.block_items,
+        source.body.expressions,
+        block_items,
+        expressions,
+      )
       let planned_captures = self_host_lowering_plan_captures(
         resolved,
         inferred,
@@ -1074,6 +1225,8 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
         result_shape: root_shape
         flow: flow.flow
         locals: planned_locals
+        local_initializers: local_initializers
+        local_assignments: local_assignments
         captures: planned_captures
         expressions: source.body.expressions
         blocks: source.body.blocks
@@ -1090,26 +1243,49 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
     }
   }
   let named_fields = []
-  for field in collected.fields {
-    named_fields.push(SelfHostPlannedNamedField::{
-      declaration: field.id
-      name: collected.name(field.name)
-    })
+  let mut named_field_index = 0u32
+  let _ = while named_field_index {
+    current => if current < collected.fields.length() {
+      let field = self_host_collected_field_identity(collected.fields[current])
+      named_fields.push(SelfHostPlannedNamedField::{
+        declaration: field.id
+        name: collected.name(field.name)
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let named_variants = []
-  for variant in collected.variants {
-    named_variants.push(SelfHostPlannedNamedVariant::{
-      declaration: variant.id
-      name: collected.name(variant.name)
-    })
+  let mut named_variant_index = 0u32
+  let _ = while named_variant_index {
+    current => if current < collected.variants.length() {
+      let variant = self_host_collected_variant_identity(collected.variants[current])
+      named_variants.push(SelfHostPlannedNamedVariant::{
+        declaration: variant.id
+        name: collected.name(variant.name)
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let pattern_fields = []
-  for field in collected.pattern_fields {
-    pattern_fields.push(SelfHostPlannedPatternField::{
-      name: collected.name(field.name)
-      pattern: field.pattern
-      offset: field.offset
-    })
+  let mut pattern_field_index = 0u32
+  let _ = while pattern_field_index {
+    current => if current < collected.pattern_fields.length() {
+      let field = self_host_hir_pattern_field_identity(
+        collected.pattern_fields[current],
+      )
+      pattern_fields.push(SelfHostPlannedPatternField::{
+        name: collected.name(field.name)
+        pattern: field.pattern
+        offset: field.offset
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   self_host_lowering_directize_targets(expressions)
   SelfHostPlannedModuleLowering::{
@@ -1141,6 +1317,74 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
   }
 }
 
+fn self_host_lowering_local_sources(
+  local_count: U32,
+  block_item_span: SelfHostHirSpan,
+  expression_span: SelfHostHirSpan,
+  block_items: Array<SelfHostPlannedBlockItem>,
+  expressions: Array<SelfHostPlannedExpression>,
+) -> (Array<U32>, Array<U32>) {
+  let initializers = []
+  let assignments = []
+  let mut local = 0u32
+  let _ = while local {
+    current => if current < local_count {
+      initializers.push(4294967295u32)
+      assignments.push(4294967295u32)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut item_offset = 0u32
+  let _ = while item_offset {
+    current => if current < block_item_span.length {
+      let item_index = self_host_u32_add(block_item_span.start, current)
+      if item_index < block_items.length() {
+        match block_items[item_index].kind {
+          SelfHostPlannedBlockItemKind::PlannedLetItem(
+            local_id,
+            _,
+            initializer,
+          ) => if local_id < local_count {
+            self_host_lowering_u32_set(initializers, local_id, initializer)
+          }
+          _ => {}
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let expression_end = self_host_u32_add(
+    expression_span.start,
+    expression_span.length,
+  )
+  let mut expression = expression_span.start
+  let _ = while expression {
+    current => if current < expression_end {
+      if current < expressions.length() {
+        match self_host_planned_expression_at(expressions, current).kind {
+          SelfHostPlannedExpressionKind::PlannedLocalSet(local_id, value) => if local_id < local_count {
+            if self_host_u32_equal(
+              self_host_lowering_u32_at(assignments, local_id),
+              4294967295u32,
+            ) {
+              self_host_lowering_u32_set(assignments, local_id, value)
+            }
+          }
+          _ => {}
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  (initializers, assignments)
+}
+
 fn self_host_lowering_plan_locals(
   resolved: SelfHostResolvedModuleTypes,
   inferred: SelfHostMergedModuleInference,
@@ -1151,12 +1395,15 @@ fn self_host_lowering_plan_locals(
   lambda: U32,
   output: Array<SelfHostPlannedLocal>,
 ) -> SelfHostHirSpan {
+  let exact_inferred = self_host_merged_module_inference_identity(inferred)
   let start = output.length()
   let mut relative = 0u32
   let _ = while relative {
     current => if current < source.length {
-      let source_local = names.locals[self_host_u32_add(source.start, current)]
-      let type_ = inferred.local_types[
+      let source_local = self_host_body_local_identity(
+        names.locals[self_host_u32_add(source.start, current)],
+      )
+      let type_ = exact_inferred.local_types[
         self_host_u32_add(job.local_types.start, current)
       ]
       output.push(SelfHostPlannedLocal::{
@@ -1256,6 +1503,7 @@ fn self_host_lowering_body_nominal(
   inferred: SelfHostMergedModuleInference,
   root: I32,
 ) -> U64 {
+  let exact_inferred = self_host_merged_module_inference_identity(inferred)
   let mut current = root
   while current {
     type_ => if type_ < -1i32 {
@@ -1267,10 +1515,10 @@ fn self_host_lowering_body_nominal(
       break 0u64
     } else {
       let index = self_host_body_i32_to_u32(type_)
-      if index >= inferred.types.length() {
+      if index >= exact_inferred.types.length() {
         break 0u64
       }
-      match inferred.types[index] {
+      match exact_inferred.types[index] {
         SelfHostBodyTypeTerm::BodyAppliedType(base, _) => continue base
         SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => break self_host_lowering_resolved_nominal(
           resolved,
@@ -1286,11 +1534,18 @@ fn self_host_lowering_local_builtin_recipes(
   collected: SelfHostCollectedModule,
 ) -> Array<SelfHostLoweringBuiltinRecipe> {
   let recipes = []
-  for value in collected.builtins {
-    recipes.push(SelfHostLoweringBuiltinRecipe::{
-      declaration: value.declaration
-      builtin_name: value.builtin_name
-    })
+  let mut builtin_index = 0u32
+  let _ = while builtin_index {
+    current => if current < collected.builtins.length() {
+      let value = self_host_collected_builtin_identity(collected.builtins[current])
+      recipes.push(SelfHostLoweringBuiltinRecipe::{
+        declaration: value.declaration
+        builtin_name: value.builtin_name
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   recipes
 }
@@ -1300,15 +1555,25 @@ fn self_host_lowering_imported_builtin_recipes(
   imports: SelfHostResolvedModuleImports,
 ) -> Array<SelfHostLoweringBuiltinRecipe> {
   let recipes = self_host_lowering_local_builtin_recipes(collected)
-  for callable in imports.callables {
-    match callable.kind {
-      SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(name) => {
-        recipes.push(SelfHostLoweringBuiltinRecipe::{
-          declaration: callable.declaration
-          builtin_name: name
-        })
+  let mut callable_index = 0u32
+  let _ = while callable_index {
+    current => if current < imports.callables.length() {
+      let callable = self_host_resolved_imported_callable_at(
+        imports.callables,
+        current,
+      )
+      match callable.kind {
+        SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(name) => {
+          recipes.push(SelfHostLoweringBuiltinRecipe::{
+            declaration: callable.declaration
+            builtin_name: name
+          })
+        }
+        _ => {}
       }
-      _ => {}
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   recipes

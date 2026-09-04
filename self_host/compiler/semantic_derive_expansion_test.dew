@@ -111,6 +111,72 @@ test "existing generic bounds are retained without duplicates" {
   }
 }
 
+test "derive accessors preserve exact AST record and variant fields" {
+  let fields = [SelfHostStructField::{
+    mutable_: true
+    name: "value"
+    type_: SelfHostTypeExpr::NamedType("U64", 19u32)
+    offset: 23u32
+  }]
+  let field = self_host_derived_struct_field_at(fields, 0u32)
+  assert(field.mutable_, "derived field mutability")
+  assert(
+    self_host_tokenizer_string_equals(field.name, "value"),
+    "derived field name",
+  )
+  assert(field.offset == 23u32, "derived field offset")
+  let variants = [SelfHostEnumVariant::StructVariant(
+    "Item",
+    fields,
+    29u32,
+    31u32,
+  )]
+  match self_host_derived_enum_variant_at(variants, 0u32) {
+    SelfHostEnumVariant::StructVariant(name, exact_fields, 29u32, 31u32) => {
+      assert(
+        self_host_tokenizer_string_equals(name, "Item"),
+        "derived variant name",
+      )
+      assert(exact_fields.length() == 1u32, "derived variant fields")
+    }
+    _ => assert(false, "derived variant identity")
+  }
+}
+
+test "derived equality pairs names by exact array index" {
+  let expression = self_host_derived_eq_expression(
+    ["left0", "left1"],
+    ["right0", "right1"],
+    17u32,
+  )
+  match expression {
+    SelfHostExpr::BinaryExpr(
+      SelfHostBinaryOperator::LogicalAnd,
+      _,
+      equal,
+      17u32,
+    ) => match equal {
+      SelfHostExpr::BinaryExpr(
+        SelfHostBinaryOperator::Equal,
+        SelfHostExpr::NameExpr(left, 17u32),
+        SelfHostExpr::NameExpr(right, 17u32),
+        17u32,
+      ) => {
+        assert(
+          self_host_tokenizer_string_equals(left, "left1"),
+          "left indexed name",
+        )
+        assert(
+          self_host_tokenizer_string_equals(right, "right1"),
+          "right indexed name",
+        )
+      }
+      _ => assert(false, "generated final equality")
+    }
+    _ => assert(false, "generated equality chain")
+  }
+}
+
 test "derived enum equality resolves generated patterns and locals" {
   let collected = self_host_collect_bytes(
     3103u64,

@@ -31,6 +31,18 @@ pub enum SelfHostBodyNameReference {
   VariantNameReference(U32)
 }
 
+fn self_host_body_name_reference_is_namespace(
+  reference: SelfHostBodyNameReference,
+) -> Bool {
+  match reference {
+    SelfHostBodyNameReference::ForeignLibraryNameReference(_) => true
+    SelfHostBodyNameReference::ImportedModuleNameReference(_) => true
+    SelfHostBodyNameReference::ModuleTypeNameReference(_) => true
+    SelfHostBodyNameReference::PrimitiveTypeNameReference(_) => true
+    _ => false
+  }
+}
+
 pub enum SelfHostBodyPatternReference {
   NoPatternReference
   ErrorPatternReference
@@ -118,6 +130,12 @@ fn self_host_body_diagnostic_rank(
 
 fn self_host_hir_pattern_offset(pattern: SelfHostHirPattern) -> U32 {
   pattern.offset()
+}
+
+fn self_host_body_local_identity(
+  value: SelfHostBodyLocal,
+) -> SelfHostBodyLocal {
+  value
 }
 
 pub struct SelfHostResolvedBodyNames {

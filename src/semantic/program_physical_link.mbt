@@ -1117,6 +1117,17 @@ pub fn link_program_wasmgc_fragments(
         }
       }
     }
+    for function_ in module_.functions {
+      for index in 0..<function_.specialization_shapes.length {
+        let shape = module_.specialization_shapes[function_.specialization_shapes.start +
+          index]
+        match shape {
+          ProductPlannedValueShape(_) | GenericPlannedValueShape =>
+            program_mark_product_erased_boxes(shape, erased_box_used)
+          _ => ()
+        }
+      }
+    }
     for expression in module_lowering.expressions {
       match expression.kind {
         PlannedArrayLiteral(_, _, shape) =>

@@ -87,6 +87,13 @@ fn core_link_test_guest_module() -> @lib.Module {
 }
 
 ///|
+test "Core Wasm linker indexes provider function exports once" {
+  let functions = core_exported_function_index(core_link_test_guest_module())
+  assert_eq(functions.get("module_new"), Some(0))
+  assert_eq(functions.get("missing"), None)
+}
+
+///|
 test "Core Wasm linker replaces a nominal marker with the guest concrete type" {
   let dew = @binary.encode_module(core_link_test_dew_module()).unwrap()
   let guest = @binary.encode_module(core_link_test_guest_module()).unwrap()

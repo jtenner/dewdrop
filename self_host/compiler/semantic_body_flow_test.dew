@@ -94,6 +94,24 @@ fn self_host_assert_one_missing_variant(
   }
 }
 
+test "body flow bit flags preserve every exit kind" {
+  let source = SelfHostBodyFlowSummary::{
+    falls_through: true
+    returns: true
+    breaks: true
+    continues: true
+    diverges: true
+  }
+  let encoded = self_host_flow_encode(source)
+  assert(encoded == 31u32, "all flow flags encoded")
+  let decoded = self_host_flow_decode(encoded)
+  assert(decoded.falls_through, "fallthrough flag")
+  assert(decoded.returns, "return flag")
+  assert(decoded.breaks, "break flag")
+  assert(decoded.continues, "continue flag")
+  assert(decoded.diverges, "diverge flag")
+}
+
 test "body flow diagnoses unreachable block items" {
   let (_, flows) = self_host_flow_source(
     970u64,
@@ -103,6 +121,37 @@ test "body flow diagnoses unreachable block items" {
   assert(flow.flow.returns, "body returns")
   assert(!flow.flow.falls_through, "body does not fall through")
   assert(self_host_flow_has_unreachable(flow), "unreachable item")
+}
+
+test "body flow keeps selected direct calls reachable" {
+  let (_, flows) = self_host_flow_source(
+    982u64,
+    b"fn helper() -> I32 {\n  1\n}\nfn run() -> I32 {\n  let value = helper()\n  value\n}\n",
+  )
+  let flow = flows.bodies[1u32]
+  assert(flow.flow.falls_through, "direct call falls through")
+  assert(!self_host_flow_has_unreachable(flow), "direct call continuation")
+}
+
+test "body flow keeps named function values reachable" {
+  let (_, flows) = self_host_flow_source(
+    983u64,
+    b"fn apply(callback: fn(I32) -> I32) -> I32 {\n  let value = callback(1)\n  value\n}\n",
+  )
+  let flow = flows.bodies[0u32]
+  assert(flow.flow.falls_through, "function value call falls through")
+  assert(!self_host_flow_has_unreachable(flow), "function value continuation")
+}
+
+test "body flow stops after Never-returning calls" {
+  let (_, flows) = self_host_flow_source(
+    984u64,
+    b"fn stop() -> Never {\n  stop()\n}\nfn run() -> I32 {\n  stop()\n  1\n}\n",
+  )
+  let flow = flows.bodies[1u32]
+  assert(!flow.flow.falls_through, "Never call does not fall through")
+  assert(flow.flow.diverges, "Never call diverges")
+  assert(self_host_flow_has_unreachable(flow), "Never call stops block")
 }
 
 test "body flow handles a return without a value" {

@@ -276,6 +276,12 @@ impl SelfHostResolvedModuleTypes {
   }
 }
 
+fn self_host_resolved_module_types_identity(
+  value: SelfHostResolvedModuleTypes,
+) -> SelfHostResolvedModuleTypes {
+  value
+}
+
 fn self_host_empty_type_buckets() -> Map<U64, U32> {
   Map::empty()
 }

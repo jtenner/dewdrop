@@ -1,4 +1,15 @@
 open dew.std.set
+open dew.std.fixed_array
+
+fn record_set_order(state: FixedArray<I32>, digit: I32) -> I32 {
+  state[0u32] = state[0u32] * 10 + digit
+  digit
+}
+
+fn ordered_set(state: FixedArray<I32>) -> Set<I32> {
+  record_set_order(state, 1)
+  Set::empty()
+}
 
 fn empty_values() -> Set<I32> {
   Set::empty()
@@ -45,4 +56,11 @@ pub fn main() -> Unit {
 
   let unsigned = Set::singleton(18446744073709551615u64)
   assert(unsigned.contains(18446744073709551615u64), "u64 maximum key")
+
+  let order = FixedArray::make(1u32, 0)
+  ordered_set(order).insert(record_set_order(order, 2))
+  assert(order[0u32] == 12, "set insert evaluates receiver first")
+  order[0u32] = 0
+  ordered_set(order).contains(record_set_order(order, 2))
+  assert(order[0u32] == 12, "set lookup evaluates receiver first")
 }

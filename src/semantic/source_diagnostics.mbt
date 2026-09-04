@@ -888,21 +888,39 @@ pub fn collect_compiler_source_diagnostics(
   for module_index, planned in lowering.modules {
     let collected = program.modules[module_index]
     for diagnostic in planned.flow_diagnostics {
-      match diagnostic {
-        UnreachableBlockItem(block, _, offset) => {
-          push_source_diagnostic(
-            diagnostics,
-            program,
-            CompilerWarning,
-            @debug.to_string(diagnostic),
-            location_at(collected.block_location(block), offset),
-            [],
-            rank,
+      let (severity, primary) = match diagnostic {
+        NonExhaustiveMatch(expression, _, offset)
+        | NonExhaustiveFunctionalLoop(expression, _, offset) =>
+          (
+            CompilerError,
+            location_at(collected.expression_location(expression), offset),
           )
-          rank += 1
-        }
-        _ => ()
+        RedundantPatternArm(arm, offset) =>
+          (
+            CompilerWarning,
+            location_at(collected.pattern_arm_location(arm), offset),
+          )
+        FunctionalLoopArmFallsThrough(arm, offset) =>
+          (
+            CompilerError,
+            location_at(collected.pattern_arm_location(arm), offset),
+          )
+        UnreachableBlockItem(block, _, offset) =>
+          (
+            CompilerWarning,
+            location_at(collected.block_location(block), offset),
+          )
       }
+      push_source_diagnostic(
+        diagnostics,
+        program,
+        severity,
+        @debug.to_string(diagnostic),
+        primary,
+        [],
+        rank,
+      )
+      rank += 1
     }
     for diagnostic in planned.initialization.diagnostics {
       let primary = match diagnostic {

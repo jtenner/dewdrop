@@ -92,11 +92,11 @@ impl RelativePath {
       Result::Err(error) => Result::Err(error)
       Result::Ok(valid_child) => {
         let builder = StringBuilder::with_capacity(
-          self.value.byte_length() + 1u32 + valid_child.value.byte_length(),
+          self.value.byte_length() + 1u32 + valid_child.byte_length(),
         )
         builder.append(self.value)
         builder.append_ascii(47u8)
-        builder.append(valid_child.value)
+        builder.append(valid_child.to_string())
         Result::Ok(RelativePath::{
           value: builder.finish()
         })

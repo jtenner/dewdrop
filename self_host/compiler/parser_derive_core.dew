@@ -6,6 +6,57 @@ open dew.std.string_builder
 fn self_host_derive_unit() -> Unit {
 }
 
+fn self_host_derived_struct_field_at(
+  fields: Array<SelfHostStructField>,
+  index: U32,
+) -> SelfHostStructField {
+  // Stop before an invalid physical Array access.
+  if index >= fields.length() {
+    unreachable()
+  }
+  let field = fields[index]
+  SelfHostStructField::{
+    mutable_: field.mutable_
+    name: field.name
+    type_: field.type_
+    offset: field.offset
+  }
+}
+
+fn self_host_derived_type_parameter_at(
+  parameters: Array<SelfHostTypeParameter>,
+  index: U32,
+) -> SelfHostTypeParameter {
+  // Stop before an invalid physical Array access.
+  if index >= parameters.length() {
+    unreachable()
+  }
+  let parameter = parameters[index]
+  SelfHostTypeParameter::{
+    name: parameter.name
+    bounds: parameter.bounds
+    offset: parameter.offset
+  }
+}
+
+fn self_host_derived_enum_variant_at(
+  variants: Array<SelfHostEnumVariant>,
+  index: U32,
+) -> SelfHostEnumVariant {
+  // Stop before an invalid physical Array access.
+  if index >= variants.length() {
+    unreachable()
+  }
+  match variants[index] {
+    SelfHostEnumVariant::UnitVariant(name, name_offset, offset) =>
+      SelfHostEnumVariant::UnitVariant(name, name_offset, offset)
+    SelfHostEnumVariant::TupleVariant(name, types, name_offset, offset) =>
+      SelfHostEnumVariant::TupleVariant(name, types, name_offset, offset)
+    SelfHostEnumVariant::StructVariant(name, fields, name_offset, offset) =>
+      SelfHostEnumVariant::StructVariant(name, fields, name_offset, offset)
+  }
+}
+
 fn self_host_derived_indexed_name(
   prefix: String,
   first: U32,
@@ -45,22 +96,30 @@ fn self_host_derived_eq_expression(
   right_names: Array<String>,
   offset: U32,
 ) -> SelfHostExpr {
+  // Both generated pattern sides must have one name at each position.
+  if left_names.length() != right_names.length() {
+    unreachable()
+  }
   let mut result = SelfHostExpr::BoolExpr(true, offset)
   let mut index = 0u32
-  for left in left_names {
-    let equal = SelfHostExpr::BinaryExpr(
-      SelfHostBinaryOperator::Equal,
-      SelfHostExpr::NameExpr(left, offset),
-      SelfHostExpr::NameExpr(right_names[index], offset),
-      offset,
-    )
-    result = SelfHostExpr::BinaryExpr(
-      SelfHostBinaryOperator::LogicalAnd,
-      result,
-      equal,
-      offset,
-    )
-    index = index + 1u32
+  let _ = while index {
+    current => if current < left_names.length() {
+      let equal = SelfHostExpr::BinaryExpr(
+        SelfHostBinaryOperator::Equal,
+        SelfHostExpr::NameExpr(left_names[current], offset),
+        SelfHostExpr::NameExpr(right_names[current], offset),
+        offset,
+      )
+      result = SelfHostExpr::BinaryExpr(
+        SelfHostBinaryOperator::LogicalAnd,
+        result,
+        equal,
+        offset,
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
+    }
   }
   result
 }
@@ -70,27 +129,34 @@ fn self_host_derived_struct_eq_expression(
   offset: U32,
 ) -> SelfHostExpr {
   let mut result = SelfHostExpr::BoolExpr(true, offset)
-  for field in fields {
-    let equal = SelfHostExpr::BinaryExpr(
-      SelfHostBinaryOperator::Equal,
-      SelfHostExpr::FieldExpr(
-        SelfHostExpr::NameExpr("self", offset),
-        field.name,
+  let mut field_index = 0u32
+  let _ = while field_index {
+    current => if current < fields.length() {
+      let field = self_host_derived_struct_field_at(fields, current)
+      let equal = SelfHostExpr::BinaryExpr(
+        SelfHostBinaryOperator::Equal,
+        SelfHostExpr::FieldExpr(
+          SelfHostExpr::NameExpr("self", offset),
+          field.name,
+          offset,
+        ),
+        SelfHostExpr::FieldExpr(
+          SelfHostExpr::NameExpr("right", offset),
+          field.name,
+          offset,
+        ),
         offset,
-      ),
-      SelfHostExpr::FieldExpr(
-        SelfHostExpr::NameExpr("right", offset),
-        field.name,
+      )
+      result = SelfHostExpr::BinaryExpr(
+        SelfHostBinaryOperator::LogicalAnd,
+        result,
+        equal,
         offset,
-      ),
-      offset,
-    )
-    result = SelfHostExpr::BinaryExpr(
-      SelfHostBinaryOperator::LogicalAnd,
-      result,
-      equal,
-      offset,
-    )
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
+    }
   }
   result
 }
@@ -112,27 +178,36 @@ fn self_host_derived_variant_pattern(
     SelfHostEnumVariant::TupleVariant(_, types, _, _) => {
       let patterns = []
       let mut index = 0u32
-      for _ in types {
-        let name = self_host_derived_single_index_name(prefix, index)
-        names.push(name)
-        patterns.push(SelfHostPattern::BindingPattern(name, offset))
-        index = index + 1u32
+      let _ = while index {
+        current => if current < types.length() {
+          let name = self_host_derived_single_index_name(prefix, current)
+          names.push(name)
+          patterns.push(SelfHostPattern::BindingPattern(name, offset))
+          continue current + 1u32
+        } else {
+          break self_host_derive_unit()
+        }
       }
       (SelfHostPattern::TuplePattern(base, patterns, offset), names)
     }
     SelfHostEnumVariant::StructVariant(_, fields, _, _) => {
       let patterns = []
       let mut index = 0u32
-      for field in fields {
-        let name = self_host_derived_single_index_name(prefix, index)
-        names.push(name)
-        let pattern = SelfHostPatternField::{
-          name: field.name
-          pattern: SelfHostPattern::BindingPattern(name, offset)
-          offset: offset
+      let _ = while index {
+        current => if current < fields.length() {
+          let field = self_host_derived_struct_field_at(fields, current)
+          let name = self_host_derived_single_index_name(prefix, current)
+          names.push(name)
+          let pattern = SelfHostPatternField::{
+            name: field.name
+            pattern: SelfHostPattern::BindingPattern(name, offset)
+            offset: offset
+          }
+          patterns.push(pattern)
+          continue current + 1u32
+        } else {
+          break self_host_derive_unit()
         }
-        patterns.push(pattern)
-        index = index + 1u32
       }
       (
         SelfHostPattern::StructPattern(base, patterns, Option::None, offset),
@@ -149,61 +224,66 @@ fn self_host_derived_enum_eq_expression(
 ) -> SelfHostExpr {
   let outer_arms = []
   let mut index = 0u32
-  for variant in variants {
-    let left_prefix = self_host_derived_single_index_name(
-      "derive_left_",
-      index,
-    ).concat("_")
-    let right_prefix = self_host_derived_single_index_name(
-      "derive_right_",
-      index,
-    ).concat("_")
-    let (left_pattern, left_names) = self_host_derived_variant_pattern(
-      enum_name,
-      variant,
-      left_prefix,
-      offset,
-    )
-    let (right_pattern, right_names) = self_host_derived_variant_pattern(
-      enum_name,
-      variant,
-      right_prefix,
-      offset,
-    )
-    let inner_arms = []
-    inner_arms.push(
-      SelfHostPatternArm::{
-        pattern: right_pattern
-        guard_condition: Option::None
-        body: self_host_derived_eq_expression(
-          left_names,
-          right_names,
-          offset,
-        )
-        offset: offset
-      },
-    )
-    inner_arms.push(
-      SelfHostPatternArm::{
-        pattern: SelfHostPattern::WildcardPattern(offset)
-        guard_condition: Option::None
-        body: SelfHostExpr::BoolExpr(false, offset)
-        offset: offset
-      },
-    )
-    outer_arms.push(
-      SelfHostPatternArm::{
-        pattern: left_pattern
-        guard_condition: Option::None
-        body: SelfHostExpr::MatchExpr(
-          SelfHostExpr::NameExpr("right", offset),
-          inner_arms,
-          offset,
-        )
-        offset: offset
-      },
-    )
-    index = index + 1u32
+  let _ = while index {
+    current => if current < variants.length() {
+      let variant = self_host_derived_enum_variant_at(variants, current)
+      let left_prefix = self_host_derived_single_index_name(
+        "derive_left_",
+        current,
+      ).concat("_")
+      let right_prefix = self_host_derived_single_index_name(
+        "derive_right_",
+        current,
+      ).concat("_")
+      let (left_pattern, left_names) = self_host_derived_variant_pattern(
+        enum_name,
+        variant,
+        left_prefix,
+        offset,
+      )
+      let (right_pattern, right_names) = self_host_derived_variant_pattern(
+        enum_name,
+        variant,
+        right_prefix,
+        offset,
+      )
+      let inner_arms = []
+      inner_arms.push(
+        SelfHostPatternArm::{
+          pattern: right_pattern
+          guard_condition: Option::None
+          body: self_host_derived_eq_expression(
+            left_names,
+            right_names,
+            offset,
+          )
+          offset: offset
+        },
+      )
+      inner_arms.push(
+        SelfHostPatternArm::{
+          pattern: SelfHostPattern::WildcardPattern(offset)
+          guard_condition: Option::None
+          body: SelfHostExpr::BoolExpr(false, offset)
+          offset: offset
+        },
+      )
+      outer_arms.push(
+        SelfHostPatternArm::{
+          pattern: left_pattern
+          guard_condition: Option::None
+          body: SelfHostExpr::MatchExpr(
+            SelfHostExpr::NameExpr("right", offset),
+            inner_arms,
+            offset,
+          )
+          offset: offset
+        },
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
+    }
   }
   SelfHostExpr::MatchExpr(
     SelfHostExpr::NameExpr("self", offset),
@@ -236,19 +316,39 @@ fn self_host_derived_type_mentions_parameter(
           break true
         }
         SelfHostTypeExpr::QualifiedType(_, _, _, _) => {}
-        SelfHostTypeExpr::ProductType(fields, _) => for field in fields {
-          stack.push(field)
+        SelfHostTypeExpr::ProductType(fields, _) => {
+          let mut field_index = 0u32
+          let _ = while field_index {
+            current => if current < fields.length() {
+              stack.push(fields[current])
+              continue current + 1u32
+            } else {
+              break self_host_derive_unit()
+            }
+          }
         }
         SelfHostTypeExpr::AppliedType(base, arguments, _) => {
           stack.push(base)
-          for argument in arguments {
-            stack.push(argument)
+          let mut argument_index = 0u32
+          let _ = while argument_index {
+            current => if current < arguments.length() {
+              stack.push(arguments[current])
+              continue current + 1u32
+            } else {
+              break self_host_derive_unit()
+            }
           }
         }
         SelfHostTypeExpr::FunctionType(parameters, result, _) => {
           stack.push(result)
-          for parameter_type in parameters {
-            stack.push(parameter_type)
+          let mut parameter_index = 0u32
+          let _ = while parameter_index {
+            current => if current < parameters.length() {
+              stack.push(parameters[current])
+              continue current + 1u32
+            } else {
+              break self_host_derive_unit()
+            }
           }
         }
       }
@@ -263,12 +363,18 @@ fn self_host_derived_parameter_has_bound(
   bounds: Array<SelfHostTypeExpr>,
   trait_name: String,
 ) -> Bool {
-  for bound in bounds {
-    match bound {
-      SelfHostTypeExpr::NamedType(name, _) => if name == trait_name {
-        return true
+  let mut bound_index = 0u32
+  let _ = while bound_index {
+    current => if current < bounds.length() {
+      match bounds[current] {
+        SelfHostTypeExpr::NamedType(name, _) => if name == trait_name {
+          return true
+        }
+        _ => {}
       }
-      _ => {}
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
     }
   }
   false
@@ -281,35 +387,54 @@ fn self_host_derived_trait_type_parameters(
   offset: U32,
 ) -> Array<SelfHostTypeParameter> {
   let result = []
-  for parameter in parameters {
-    let mut required = false
-    for type_ in field_types {
-      if self_host_derived_type_mentions_parameter(type_, parameter.name) {
-        required = true
+  let mut parameter_index = 0u32
+  let _ = while parameter_index {
+    current_parameter => if current_parameter < parameters.length() {
+      let parameter = self_host_derived_type_parameter_at(
+        parameters,
+        current_parameter,
+      )
+      let mut required = false
+      let mut type_index = 0u32
+      let _ = while type_index {
+        current_type => if current_type < field_types.length() {
+          if self_host_derived_type_mentions_parameter(
+            field_types[current_type],
+            parameter.name,
+          ) {
+            required = true
+          }
+          continue current_type + 1u32
+        } else {
+          break self_host_derive_unit()
+        }
       }
-    }
-    let bounds = []
-    let mut bound_index = 0u32
-    while bound_index {
-      current => if current < parameter.bound_count() {
-        bounds.push(parameter.bound_at(current))
-        continue current + 1u32
-      } else {
-        break self_host_derive_unit()
+      let bounds = []
+      let mut bound_index = 0u32
+      let _ = while bound_index {
+        current => if current < parameter.bound_count() {
+          bounds.push(parameter.bound_at(current))
+          continue current + 1u32
+        } else {
+          break self_host_derive_unit()
+        }
       }
+      if required && !self_host_derived_parameter_has_bound(
+        bounds,
+        trait_name,
+      ) {
+        bounds.push(SelfHostTypeExpr::NamedType(trait_name, offset))
+      }
+      let derived = SelfHostTypeParameter::{
+        name: parameter.name
+        bounds: bounds
+        offset: parameter.offset
+      }
+      result.push(derived)
+      continue current_parameter + 1u32
+    } else {
+      break self_host_derive_unit()
     }
-    if required && !self_host_derived_parameter_has_bound(
-      bounds,
-      trait_name,
-    ) {
-      bounds.push(SelfHostTypeExpr::NamedType(trait_name, offset))
-    }
-    let derived = SelfHostTypeParameter::{
-      name: parameter.name
-      bounds: bounds
-      offset: parameter.offset
-    }
-    result.push(derived)
   }
   result
 }
@@ -324,10 +449,17 @@ fn self_host_derived_nominal_type(
     return base
   }
   let arguments = []
-  for parameter in parameters {
-    arguments.push(
-      SelfHostTypeExpr::NamedType(parameter.name, parameter.offset),
-    )
+  let mut parameter_index = 0u32
+  let _ = while parameter_index {
+    current => if current < parameters.length() {
+      let parameter = self_host_derived_type_parameter_at(parameters, current)
+      arguments.push(
+        SelfHostTypeExpr::NamedType(parameter.name, parameter.offset),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
+    }
   }
   SelfHostTypeExpr::AppliedType(base, arguments, offset)
 }
@@ -356,6 +488,7 @@ fn self_host_derived_comparison_impl(
     visibility: SelfHostDeclarationVisibility::ModuleVisible
     name: method_name
     name_offset: offset
+    is_main: false
     type_parameters: []
     receiver: Option::Some(
       SelfHostReceiverParameter::{
@@ -475,19 +608,26 @@ fn self_host_derived_struct_hash_expression(
   offset: U32,
 ) -> SelfHostExpr {
   let mut result = SelfHostExpr::U64Expr(14695981039346656037u64, offset)
-  for field in fields {
-    result = self_host_derived_hash_mix(
-      result,
-      self_host_derived_hash_call(
-        SelfHostExpr::FieldExpr(
-          SelfHostExpr::NameExpr("self", offset),
-          field.name,
+  let mut field_index = 0u32
+  let _ = while field_index {
+    current => if current < fields.length() {
+      let field = self_host_derived_struct_field_at(fields, current)
+      result = self_host_derived_hash_mix(
+        result,
+        self_host_derived_hash_call(
+          SelfHostExpr::FieldExpr(
+            SelfHostExpr::NameExpr("self", offset),
+            field.name,
+            offset,
+          ),
           offset,
         ),
         offset,
-      ),
-      offset,
-    )
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
+    }
   }
   result
 }
@@ -497,26 +637,33 @@ fn self_host_derived_struct_hash_eq_expression(
   offset: U32,
 ) -> SelfHostExpr {
   let mut result = SelfHostExpr::BoolExpr(true, offset)
-  for field in fields {
-    let equal = self_host_derived_hash_eq_call(
-      SelfHostExpr::FieldExpr(
-        SelfHostExpr::NameExpr("self", offset),
-        field.name,
+  let mut field_index = 0u32
+  let _ = while field_index {
+    current => if current < fields.length() {
+      let field = self_host_derived_struct_field_at(fields, current)
+      let equal = self_host_derived_hash_eq_call(
+        SelfHostExpr::FieldExpr(
+          SelfHostExpr::NameExpr("self", offset),
+          field.name,
+          offset,
+        ),
+        SelfHostExpr::FieldExpr(
+          SelfHostExpr::NameExpr("right", offset),
+          field.name,
+          offset,
+        ),
         offset,
-      ),
-      SelfHostExpr::FieldExpr(
-        SelfHostExpr::NameExpr("right", offset),
-        field.name,
+      )
+      result = SelfHostExpr::BinaryExpr(
+        SelfHostBinaryOperator::LogicalAnd,
+        result,
+        equal,
         offset,
-      ),
-      offset,
-    )
-    result = SelfHostExpr::BinaryExpr(
-      SelfHostBinaryOperator::LogicalAnd,
-      result,
-      equal,
-      offset,
-    )
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
+    }
   }
   result
 }
@@ -526,20 +673,28 @@ fn self_host_derived_hash_eq_expression(
   right_names: Array<String>,
   offset: U32,
 ) -> SelfHostExpr {
+  // Both generated pattern sides must have one name at each position.
+  if left_names.length() != right_names.length() {
+    unreachable()
+  }
   let mut result = SelfHostExpr::BoolExpr(true, offset)
   let mut index = 0u32
-  for left in left_names {
-    result = SelfHostExpr::BinaryExpr(
-      SelfHostBinaryOperator::LogicalAnd,
-      result,
-      self_host_derived_hash_eq_call(
-        SelfHostExpr::NameExpr(left, offset),
-        SelfHostExpr::NameExpr(right_names[index], offset),
+  let _ = while index {
+    current => if current < left_names.length() {
+      result = SelfHostExpr::BinaryExpr(
+        SelfHostBinaryOperator::LogicalAnd,
+        result,
+        self_host_derived_hash_eq_call(
+          SelfHostExpr::NameExpr(left_names[current], offset),
+          SelfHostExpr::NameExpr(right_names[current], offset),
+          offset,
+        ),
         offset,
-      ),
-      offset,
-    )
-    index = index + 1u32
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
+    }
   }
   result
 }
@@ -551,41 +706,52 @@ fn self_host_derived_enum_hash_expression(
 ) -> SelfHostExpr {
   let arms = []
   let mut index = 0u32
-  for variant in variants {
-    let prefix = self_host_derived_single_index_name(
-      "derive_hash_",
-      index,
-    ).concat("_")
-    let (pattern, names) = self_host_derived_variant_pattern(
-      enum_name,
-      variant,
-      prefix,
-      offset,
-    )
-    let mut result = self_host_derived_hash_mix(
-      SelfHostExpr::U64Expr(14695981039346656037u64, offset),
-      SelfHostExpr::U64Expr(u32_into_u64(index), offset),
-      offset,
-    )
-    for name in names {
-      result = self_host_derived_hash_mix(
-        result,
-        self_host_derived_hash_call(
-          SelfHostExpr::NameExpr(name, offset),
-          offset,
-        ),
+  let _ = while index {
+    current => if current < variants.length() {
+      let variant = self_host_derived_enum_variant_at(variants, current)
+      let prefix = self_host_derived_single_index_name(
+        "derive_hash_",
+        current,
+      ).concat("_")
+      let (pattern, names) = self_host_derived_variant_pattern(
+        enum_name,
+        variant,
+        prefix,
         offset,
       )
+      let mut result = self_host_derived_hash_mix(
+        SelfHostExpr::U64Expr(14695981039346656037u64, offset),
+        SelfHostExpr::U64Expr(u32_into_u64(current), offset),
+        offset,
+      )
+      let mut name_index = 0u32
+      let _ = while name_index {
+        current_name => if current_name < names.length() {
+          result = self_host_derived_hash_mix(
+            result,
+            self_host_derived_hash_call(
+              SelfHostExpr::NameExpr(names[current_name], offset),
+              offset,
+            ),
+            offset,
+          )
+          continue current_name + 1u32
+        } else {
+          break self_host_derive_unit()
+        }
+      }
+      arms.push(
+        SelfHostPatternArm::{
+          pattern: pattern
+          guard_condition: Option::None
+          body: result
+          offset: offset
+        },
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
     }
-    arms.push(
-      SelfHostPatternArm::{
-        pattern: pattern
-        guard_condition: Option::None
-        body: result
-        offset: offset
-      },
-    )
-    index = index + 1u32
   }
   SelfHostExpr::MatchExpr(
     SelfHostExpr::NameExpr("self", offset),
@@ -601,61 +767,66 @@ fn self_host_derived_enum_hash_eq_expression(
 ) -> SelfHostExpr {
   let outer_arms = []
   let mut index = 0u32
-  for variant in variants {
-    let left_prefix = self_host_derived_single_index_name(
-      "derive_hash_eq_left_",
-      index,
-    ).concat("_")
-    let right_prefix = self_host_derived_single_index_name(
-      "derive_hash_eq_right_",
-      index,
-    ).concat("_")
-    let (left_pattern, left_names) = self_host_derived_variant_pattern(
-      enum_name,
-      variant,
-      left_prefix,
-      offset,
-    )
-    let (right_pattern, right_names) = self_host_derived_variant_pattern(
-      enum_name,
-      variant,
-      right_prefix,
-      offset,
-    )
-    let inner_arms = []
-    inner_arms.push(
-      SelfHostPatternArm::{
-        pattern: right_pattern
-        guard_condition: Option::None
-        body: self_host_derived_hash_eq_expression(
-          left_names,
-          right_names,
-          offset,
-        )
-        offset: offset
-      },
-    )
-    inner_arms.push(
-      SelfHostPatternArm::{
-        pattern: SelfHostPattern::WildcardPattern(offset)
-        guard_condition: Option::None
-        body: SelfHostExpr::BoolExpr(false, offset)
-        offset: offset
-      },
-    )
-    outer_arms.push(
-      SelfHostPatternArm::{
-        pattern: left_pattern
-        guard_condition: Option::None
-        body: SelfHostExpr::MatchExpr(
-          SelfHostExpr::NameExpr("right", offset),
-          inner_arms,
-          offset,
-        )
-        offset: offset
-      },
-    )
-    index = index + 1u32
+  let _ = while index {
+    current => if current < variants.length() {
+      let variant = self_host_derived_enum_variant_at(variants, current)
+      let left_prefix = self_host_derived_single_index_name(
+        "derive_hash_eq_left_",
+        current,
+      ).concat("_")
+      let right_prefix = self_host_derived_single_index_name(
+        "derive_hash_eq_right_",
+        current,
+      ).concat("_")
+      let (left_pattern, left_names) = self_host_derived_variant_pattern(
+        enum_name,
+        variant,
+        left_prefix,
+        offset,
+      )
+      let (right_pattern, right_names) = self_host_derived_variant_pattern(
+        enum_name,
+        variant,
+        right_prefix,
+        offset,
+      )
+      let inner_arms = []
+      inner_arms.push(
+        SelfHostPatternArm::{
+          pattern: right_pattern
+          guard_condition: Option::None
+          body: self_host_derived_hash_eq_expression(
+            left_names,
+            right_names,
+            offset,
+          )
+          offset: offset
+        },
+      )
+      inner_arms.push(
+        SelfHostPatternArm::{
+          pattern: SelfHostPattern::WildcardPattern(offset)
+          guard_condition: Option::None
+          body: SelfHostExpr::BoolExpr(false, offset)
+          offset: offset
+        },
+      )
+      outer_arms.push(
+        SelfHostPatternArm::{
+          pattern: left_pattern
+          guard_condition: Option::None
+          body: SelfHostExpr::MatchExpr(
+            SelfHostExpr::NameExpr("right", offset),
+            inner_arms,
+            offset,
+          )
+          offset: offset
+        },
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
+    }
   }
   SelfHostExpr::MatchExpr(
     SelfHostExpr::NameExpr("self", offset),
@@ -677,6 +848,7 @@ fn self_host_derived_hash_impl(
     visibility: SelfHostDeclarationVisibility::ModuleVisible
     name: "hash"
     name_offset: offset
+    is_main: false
     type_parameters: []
     receiver: Option::Some(
       SelfHostReceiverParameter::{
@@ -693,6 +865,7 @@ fn self_host_derived_hash_impl(
     visibility: SelfHostDeclarationVisibility::ModuleVisible
     name: "hash_eq"
     name_offset: offset
+    is_main: false
     type_parameters: []
     receiver: Option::Some(
       SelfHostReceiverParameter::{
@@ -730,8 +903,16 @@ fn self_host_derived_struct_field_types(
   value: SelfHostStructDeclaration,
 ) -> Array<SelfHostTypeExpr> {
   let types = []
-  for field in value.fields {
-    types.push(field.type_)
+  let mut field_index = 0u32
+  let _ = while field_index {
+    current => if current < value.fields.length() {
+      types.push(
+        self_host_derived_struct_field_at(value.fields, current).type_,
+      )
+      continue current + 1u32
+    } else {
+      break self_host_derive_unit()
+    }
   }
   types
 }
@@ -740,15 +921,39 @@ fn self_host_derived_enum_field_types(
   value: SelfHostEnumDeclaration,
 ) -> Array<SelfHostTypeExpr> {
   let types = []
-  for variant in value.variants {
-    match variant {
-      SelfHostEnumVariant::UnitVariant(_, _, _) => {}
-      SelfHostEnumVariant::TupleVariant(_, payload, _, _) => for type_ in payload {
-        types.push(type_)
+  let mut variant_index = 0u32
+  let _ = while variant_index {
+    current_variant => if current_variant < value.variants.length() {
+      match self_host_derived_enum_variant_at(value.variants, current_variant) {
+        SelfHostEnumVariant::UnitVariant(_, _, _) => {}
+        SelfHostEnumVariant::TupleVariant(_, payload, _, _) => {
+          let mut payload_index = 0u32
+          let _ = while payload_index {
+            current_payload => if current_payload < payload.length() {
+              types.push(payload[current_payload])
+              continue current_payload + 1u32
+            } else {
+              break self_host_derive_unit()
+            }
+          }
+        }
+        SelfHostEnumVariant::StructVariant(_, fields, _, _) => {
+          let mut field_index = 0u32
+          let _ = while field_index {
+            current_field => if current_field < fields.length() {
+              types.push(
+                self_host_derived_struct_field_at(fields, current_field).type_,
+              )
+              continue current_field + 1u32
+            } else {
+              break self_host_derive_unit()
+            }
+          }
+        }
       }
-      SelfHostEnumVariant::StructVariant(_, fields, _, _) => for field in fields {
-        types.push(field.type_)
-      }
+      continue current_variant + 1u32
+    } else {
+      break self_host_derive_unit()
     }
   }
   types

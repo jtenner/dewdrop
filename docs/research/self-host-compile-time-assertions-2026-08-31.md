@@ -236,3 +236,67 @@ Latest logs:
 - `.tmp/runtime-first-content-wildcard-binding.log`
 - `.tmp/runtime-first-content-product-wildcard.log`
 - `.tmp/runtime-first-declaration-arena-gate.log`
+
+## Callable lookup sentinel comparison
+
+The later Array trap was not a collected declaration read. It was the specialization callable lookup:
+
+```text
+module_.functions.callables[index]
+```
+
+The lookup stores `4294967295u32` for a missing callable. Compiler B emitted the logical check with signed `i32.lt_s`. The sentinel became `-1`, passed the check, and reached `array.get`.
+
+The lowering gate now checks the logical and physical backing lengths for both `callable_by_declaration` and `callables`. It also requires each lookup value to be either the exact sentinel or a valid logical and physical index.
+
+The specialization producer now tests the sentinel first. It then uses the certified unsigned helper with the operands reversed:
+
+```text
+self_host_u32_greater(callables.length(), index)
+```
+
+This prevents signed recovery from authorizing a sentinel as an Array index.
+
+## Loop record owner mismatch
+
+After the sentinel fix, compiler B advanced to an illegal cast in `self_host_program_link_function`. One synthetic `for` binding was used for three fields of `SelfHostPlannedProgramWasmFunction`. The generated first field read used a different struct owner from the next two field reads.
+
+The lookup now uses indexed Array access. The local receives one exact `SelfHostPlannedProgramWasmFunction` nominal before any field is read. A regression test checks declaration, specialization, and function-index reads from the same record.
+
+Compiler B then advanced to the body planner's physical-field lookup. A `Map` value of type `SelfHostPhysicalFieldCarrier` used the generic field name `field`. One read selected a different struct owner while later reads kept the correct owner.
+
+The physical-field record now retains the declaration as `field_declaration`. Its physical type and field indices also use unique member names. All reads keep declaration, type index, field index, storage, and owner on one nominal record.
+
+The physical body carrier verifier then caught six collection projection helpers before emission. Their declared results were `String` or `SelfHostTypeExpr`, but compiler B reduced the return expression to the struct parameter's `i32` carrier. The helpers now pass each projected field through an exact typed identity boundary. This makes the call argument and function result certify the same reference carrier.
+
+The next assertion found an unproved Array receiver in `self_host_derived_expression_list_block`. Its empty `items` literal had no exact element nominal before the first `push`. A typed `Array<SelfHostBlockItem>` factory creates the work list.
+
+The typed factory exposed the broader producer: physical body planning kept a call's result carrier but dropped its nominal result owner and heap type. Body planning now derives the exact result nominal from the linked callable result type for direct, builtin, operator, and unresolved calls.
+
+The next diagnostics showed that imported parameter and field types can keep the module-local error type even when their linked physical carrier is valid. For example, `Array<SelfHostExpr>` became `eqref` with no module-local Array nominal. The method gate now reports the local kind, local type term, callable parameter position, callable parameter span, resolved type, selected field, and physical heap.
+
+Call-site and object-initializer scans can provide nominal proof only when every retained source agrees. They do not guess from a method name. Generated derive helpers and bounded lookup helpers now use indexed Array traversal instead of synthetic `iter` calls when the imported outer nominal is not retained.
+
+This work also found a direct `Map::contains_key` scratch-local bug. The emitted U64 key was stored in an `eqref` scratch local. Scratch planning now compares the exact emitted key carrier with the declared Map key carrier before it allocates the local. It allocates the certified carrier only.
+
+The indexed traversal changes advanced compiler B through:
+
+- `self_host_derived_expression_list_block`;
+- all Debug and Show derive field and variant loops;
+- `SelfHostBasicModuleEvidence::evidence_body`;
+- function body, builtin, test, and foreign-library lookups;
+- program manifest collection.
+
+The imported Array field boundary in `self_host_freeze_program_signature_interfaces` is now clear. The `scope.diagnostics` copy uses indexed access.
+
+Compiler B then reached root entry selection and reported 674 callables but no callable with `is_main = true`. The diagnostic now prints the root module, callable count, matching entry names, declarations, and physical main flags. It found the parsed entry callable at index 405 with the flag cleared.
+
+`SelfHostFunctionDeclaration` now stores a physical `is_main` flag at parse time. Function planning also stores a physical main code. The missing root entry was not the first producer. An unconditional root collection gate found that compiler B stopped parsing `facet_runtime.dew` at `Result<String, ProcessError>` and therefore never reached `_start` or `main`.
+
+The parser now keeps the source bytes, derives symbol codes from exact source bytes, and uses those codes for symbol consumption and type closers. Pattern qualification also uses exact source symbol codes. The iterative type-frame stack was replaced by bounded recursive type parsing, and applied type arguments use bounded recursion. A regression checks that `Array<Option<I32>>` does not consume the following field line. Derive-name validation now uses String content equality, which cleared a later false `UnknownDerivedTrait("Eq")` diagnostic.
+
+Compiler B now parses and collects the full root module. The physical body carrier verifier first reported 303 errors. A nested Boolean condition in the nominal canary was miscompiled as one combined condition. Replacing it with nested gates removed all false pattern-payload nominal errors. The runtime gate now checks helper and direct U64 equality before collection. Nominal diagnostics also retain expected and actual owners.
+
+Typed identities for planned expressions, patterns, pattern arms, object fields, collected aliases, collected methods, and collected generic parameters reduced the remaining carrier errors from 38 to 28. Checked planned-arena accessors and lowering-boundary validation then cleared all 28 errors. The new canaries stop before invalid expression, pattern, pattern-arm, object-field, and alias-cycle Array accesses and report detailed lowering arena context.
+
+The next physical method certification failures came from synthetic Array iteration in derive expansion, alias dependency collection, alias cycle sorting, imported callable lookup, pending call queues, and imported implementation lookup. These producers now use indexed traversal with exact I32 or U32 carrier accessors. Regression tests cover planned arena corruption, derive AST identities, indexed generated equality names, alias dependency order, cycle span bounds, imported callable and implementation identities, and exact I32/U32 copy carriers. The current boundary is `constrain_pending_variant_calls`, whose synthetic pending-variant Array iteration still has no certified receiver type. The verifier remains enabled.

@@ -60,6 +60,67 @@ test "program lowering schedules dependency SCCs before consumers" {
   }
 }
 
+test "program lowering index uses contiguous ids and keeps sparse fallback" {
+  let contiguous = SelfHostProgramLoweringIndex::{
+    module_ids: [5100u64, 5101u64, 5102u64]
+  }
+  assert(contiguous.module_index(5102u64) == Option::Some(2u32), "direct index")
+  assert(contiguous.module_index(5099u64) == Option::None, "below range")
+  let sparse = SelfHostProgramLoweringIndex::{
+    module_ids: [6100u64, 6102u64]
+  }
+  assert(sparse.module_index(6102u64) == Option::Some(1u32), "sparse fallback")
+}
+
+test "program SCC ordering matches the host graph planner" {
+  let (sccs, modules, module_scc) = self_host_program_module_sccs(
+    [
+      SelfHostHirSpan::{ start: 0u32 length: 1u32 },
+      SelfHostHirSpan::{ start: 1u32 length: 0u32 },
+      SelfHostHirSpan::{ start: 1u32 length: 0u32 },
+    ],
+    [2u32],
+  )
+  assert(sccs.length() == 3u32, "three singleton SCCs")
+  assert(modules[0u32] == 2u32, "dependency first")
+  assert(modules[1u32] == 0u32, "consumer second")
+  assert(modules[2u32] == 1u32, "independent module last")
+  assert(module_scc[0u32] == 1u32, "consumer SCC index")
+  assert(module_scc[1u32] == 2u32, "independent SCC index")
+  assert(module_scc[2u32] == 0u32, "dependency SCC index")
+}
+
+test "program SCC planning handles a long chain iteratively" {
+  let count = 4096u32
+  let dependencies = []
+  let dependency_modules = []
+  let mut module_ = 0u32
+  let _ = while module_ {
+    current => if current < count {
+      let start = dependency_modules.length()
+      if current + 1u32 < count {
+        dependency_modules.push(current + 1u32)
+      }
+      dependencies.push(SelfHostHirSpan::{
+        start: start
+        length: dependency_modules.length() - start
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let (sccs, modules, module_scc) = self_host_program_module_sccs(
+    dependencies,
+    dependency_modules,
+  )
+  assert(sccs.length() == count, "one SCC per chain module")
+  assert(modules[0u32] == count - 1u32, "chain leaf first")
+  assert(modules[count - 1u32] == 0u32, "chain root last")
+  assert(module_scc[0u32] == count - 1u32, "root SCC index")
+  assert(module_scc[count - 1u32] == 0u32, "leaf SCC index")
+}
+
 test "program lowering groups cyclic module dependencies" {
   let planned = self_host_program_lowering_test_manifest([
     SelfHostManifestModule::{
@@ -106,6 +167,62 @@ fn self_host_program_lowering_has_imported_call(
     }
   }
   false
+}
+
+fn self_host_program_lowering_single_test_module(
+  source: Bytes,
+) -> SelfHostPlannedProgramLowering {
+  self_host_program_lowering_test_manifest([
+    SelfHostManifestModule::{
+      path: "app.main"
+      files: [
+        SelfHostManifestFile::{
+          path: "main.dew"
+          source: source
+          test_only: false
+        },
+      ]
+    },
+  ])
+}
+
+test "program lowering rejects pattern arm arena corruption" {
+  let planned = self_host_program_lowering_single_test_module(
+    b"enum Maybe {\n  None\n  Some(I32)\n}\npub fn read(value: Maybe) -> I32 {\n  match value {\n    Maybe::None => 0\n    Maybe::Some(item) => item\n  }\n}\n",
+  )
+  let module_ = planned.modules[0u32]
+  assert(module_.pattern_arms.length() == 2u32, "pattern arm count")
+  let source = self_host_planned_pattern_arm_at(module_.pattern_arms, 0u32)
+  module_.pattern_arms[0u32] = SelfHostPlannedPatternArm::{
+    pattern: source.pattern
+    guard_condition: source.guard_condition
+    body: module_.expressions.length()
+    flow: source.flow
+    offset: source.offset
+  }
+  assert(
+    self_host_validate_program_lowering(planned) is Option::Some(_),
+    "pattern arm body canary",
+  )
+}
+
+test "program lowering rejects object field arena corruption" {
+  let planned = self_host_program_lowering_single_test_module(
+    b"struct Box {\n  value: I32\n}\npub fn make() -> Box {\n  Box::{\n    value: 1\n  }\n}\n",
+  )
+  let module_ = planned.modules[0u32]
+  assert(module_.object_fields.length() == 1u32, "object field count")
+  let source = self_host_planned_object_field_at(module_.object_fields, 0u32)
+  module_.object_fields[0u32] = SelfHostPlannedObjectField::{
+    field: source.field
+    name: source.name
+    value: module_.expressions.length()
+    offset: source.offset
+  }
+  assert(
+    self_host_validate_program_lowering(planned) is Option::Some(_),
+    "object field value canary",
+  )
 }
 
 test "program lowering preserves imported direct call identity" {

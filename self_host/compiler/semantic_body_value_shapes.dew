@@ -24,6 +24,7 @@ fn self_host_planned_merged_body_value_shape(
   inferred: SelfHostMergedModuleInference,
   root: I32,
 ) -> SelfHostPlannedValueShape {
+  let exact_inferred = self_host_merged_module_inference_identity(inferred)
   let tasks = self_host_body_shape_tasks(root)
   let results = self_host_body_shape_results()
   let _ = while tasks.length() {
@@ -44,10 +45,10 @@ fn self_host_planned_merged_body_value_shape(
           results.push(SelfHostPlannedValueShape::ErrorPlannedValueShape)
         } else {
           let index = self_host_body_i32_to_u32(type_)
-          if index >= inferred.types.length() {
+          if index >= exact_inferred.types.length() {
             results.push(SelfHostPlannedValueShape::ErrorPlannedValueShape)
           } else {
-            match inferred.types[index] {
+            match exact_inferred.types[index] {
               SelfHostBodyTypeTerm::BodyErrorType => results.push(
                 SelfHostPlannedValueShape::ErrorPlannedValueShape,
               )
@@ -71,7 +72,7 @@ fn self_host_planned_merged_body_value_shape(
                   current => if self_host_u32_greater(current, 0u32) {
                     let previous = current - 1u32
                     tasks.push(SelfHostBodyShapeTask::VisitBodyShapeType(
-                      inferred.type_arguments[
+                      exact_inferred.type_arguments[
                         self_host_u32_add(fields.start, previous)
                       ],
                     ))

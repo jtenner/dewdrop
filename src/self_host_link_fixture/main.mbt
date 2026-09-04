@@ -8,10 +8,13 @@ fn self_host_link_io_error_message(error : @fs.IOError) -> String {
 ///|
 fn main {
   let args = @sys.get_cli_args()
-  if args.length() != 6 {
-    println("usage: self_host_link_fixture CORE STARSHINE FACET TIME OUTPUT")
+  if args.length() != 6 && args.length() != 7 {
+    println(
+      "usage: self_host_link_fixture CORE STARSHINE FACET TIME OUTPUT [--single-validation]",
+    )
     @sys.exit(2)
   }
+  let validate_each_phase = args.length() == 6 || args[6] != "--single-validation"
   let core = @fs.read_file_to_bytes(args[1]) catch {
     error => {
       println(
@@ -58,7 +61,7 @@ fn main {
       ],
       options={
         keep_guest_exports: false,
-        validate_each_phase: true,
+        validate_each_phase,
         run_cleanup: true,
         preserve_dew_memory_zero: true,
       },

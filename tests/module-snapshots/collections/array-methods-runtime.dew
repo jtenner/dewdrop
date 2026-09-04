@@ -229,6 +229,13 @@ fn array_case_3() -> Unit {
   assert(values[0u32] == 8, "full fill first")
   assert(values[2u32] == 8, "full fill middle")
   assert(values[4u32] == 8, "full fill last")
+
+  let nested_end = array_pair(4, 0)
+  let nested = array_values()
+  nested.fill(6, 1u32, i32_into_u32(nested_end[0u32]))
+  assert(nested[0u32] == 1, "nested fill prefix")
+  assert(nested[3u32] == 6, "nested fill end")
+  assert(nested[4u32] == 5, "nested fill suffix")
 }
 
 
@@ -254,6 +261,13 @@ fn array_case_4() -> Unit {
   assert(same.equals(array_values()), "same range copy")
   same.copy_within(5u32, 5u32, 5u32)
   assert(same.equals(array_values()), "empty end copy")
+
+  let nested_end = array_pair(4, 0)
+  let nested = array_values()
+  nested.copy_within(0u32, 2u32, i32_into_u32(nested_end[0u32]))
+  assert(nested[0u32] == 3, "nested copy first")
+  assert(nested[1u32] == 4, "nested copy second")
+  assert(nested[2u32] == 3, "nested copy suffix")
 }
 
 
@@ -284,6 +298,13 @@ fn array_case_5() -> Unit {
   assert(values[6u32] == 7, "extend final added")
   values.push_all(empty_i32_array())
   assert(values.length() == 7u32, "extend empty")
+
+  let reserved = Array::with_capacity(16u32)
+  reserved.push(1)
+  reserved.extend(array_pair(2, 3))
+  assert(reserved.length() == 3u32, "reserved extend length")
+  assert(reserved.capacity() == 16u32, "extend keeps reserved capacity")
+  assert(reserved[2u32] == 3, "reserved extend value")
 
   let self = array_pair(8, 9)
   self.extend(self)

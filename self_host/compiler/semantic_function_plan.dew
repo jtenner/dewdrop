@@ -26,6 +26,7 @@ pub struct SelfHostPlannedCallable {
   visibility: SelfHostSemanticVisibility
   compiler_owned: Bool
   is_main: Bool
+  main_code: U32
   is_test: Bool
   is_test_entry: Bool
   test_name: Bytes
@@ -41,11 +42,34 @@ pub struct SelfHostPlannedCallable {
   offset: U32
 }
 
+fn self_host_planned_parameter_identity(
+  value: SelfHostPlannedParameter,
+) -> SelfHostPlannedParameter {
+  value
+}
+
+fn self_host_planned_callable_identity(
+  value: SelfHostPlannedCallable,
+) -> SelfHostPlannedCallable {
+  value
+}
+
 pub struct SelfHostPlannedModuleFunctions {
   module_id: U64
   callables: Array<SelfHostPlannedCallable>
   callable_by_declaration: Array<U32>
   parameters: Array<SelfHostPlannedParameter>
+}
+
+fn self_host_planned_module_functions_identity(
+  value: SelfHostPlannedModuleFunctions,
+) -> SelfHostPlannedModuleFunctions {
+  SelfHostPlannedModuleFunctions::{
+    module_id: value.module_id
+    callables: value.callables
+    callable_by_declaration: value.callable_by_declaration
+    parameters: value.parameters
+  }
 }
 
 fn self_host_function_plan_slots(length: U32) -> Array<U32> {
@@ -66,9 +90,17 @@ fn self_host_function_plan_body(
   collected: SelfHostCollectedModule,
   declaration: U64,
 ) -> Option<U64> {
-  for body in collected.bodies {
-    if self_host_u64_equal(body.declaration, declaration) {
-      return Option::Some(body.id)
+  let limit = array_length(collected.bodies)
+  let mut index = 0u32
+  while index {
+    current => if current < limit {
+      let body = array_get_unchecked(collected.bodies, current)
+      if self_host_u64_equal(body.declaration, declaration) {
+        return Option::Some(body.id)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   Option::None
@@ -78,9 +110,17 @@ fn self_host_function_plan_builtin(
   collected: SelfHostCollectedModule,
   declaration: U64,
 ) -> Bytes {
-  for value in collected.builtins {
-    if self_host_u64_equal(value.declaration, declaration) {
-      return value.builtin_name
+  let limit = array_length(collected.builtins)
+  let mut index = 0u32
+  while index {
+    current => if current < limit {
+      let value = array_get_unchecked(collected.builtins, current)
+      if self_host_u64_equal(value.declaration, declaration) {
+        return value.builtin_name
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   b""
@@ -90,9 +130,17 @@ fn self_host_function_plan_test_name(
   collected: SelfHostCollectedModule,
   declaration: U64,
 ) -> Bytes {
-  for value in collected.tests {
-    if self_host_u64_equal(value.declaration, declaration) {
-      return value.display_name
+  let limit = array_length(collected.tests)
+  let mut index = 0u32
+  while index {
+    current => if current < limit {
+      let value = array_get_unchecked(collected.tests, current)
+      if self_host_u64_equal(value.declaration, declaration) {
+        return value.display_name
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   b""
@@ -102,9 +150,17 @@ fn self_host_function_plan_is_test_entry(
   collected: SelfHostCollectedModule,
   declaration: U64,
 ) -> Bool {
-  for value in collected.tests {
-    if self_host_u64_equal(value.declaration, declaration) {
-      return true
+  let limit = array_length(collected.tests)
+  let mut index = 0u32
+  while index {
+    current => if current < limit {
+      let value = array_get_unchecked(collected.tests, current)
+      if self_host_u64_equal(value.declaration, declaration) {
+        return true
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   false
@@ -132,13 +188,35 @@ fn self_host_function_plan_foreign_identity(
   collected: SelfHostCollectedModule,
   declaration: U64,
 ) -> (Bytes, Bytes) {
-  for function_ in collected.foreign_functions {
-    if self_host_u64_equal(function_.declaration, declaration) {
-      for library in collected.foreign_libraries {
-        if self_host_u64_equal(library.declaration, function_.library) {
-          return (library.logical_name, function_.export_name)
+  let function_limit = array_length(collected.foreign_functions)
+  let mut function_index = 0u32
+  while function_index {
+    current_function => if current_function < function_limit {
+      let function_ = array_get_unchecked(
+        collected.foreign_functions,
+        current_function,
+      )
+      if self_host_u64_equal(function_.declaration, declaration) {
+        let library_limit = array_length(collected.foreign_libraries)
+        let mut library_index = 0u32
+        while library_index {
+          current_library => if current_library < library_limit {
+            let library = array_get_unchecked(
+              collected.foreign_libraries,
+              current_library,
+            )
+            if self_host_u64_equal(library.declaration, function_.library) {
+              return (library.logical_name, function_.export_name)
+            }
+            continue current_library + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
         }
       }
+      continue current_function + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   (b"", b"")
@@ -181,23 +259,30 @@ fn self_host_plan_callable_parameters(
   owner: U64,
   self_type: U32,
 ) -> SelfHostPlannedParameterSummary {
-  let source_parameters = collected.parameters_of(declaration)
+  let exact_collected = self_host_collected_module_identity(collected)
+  let exact_resolved = self_host_resolved_module_types_identity(resolved)
+  let source_parameters = exact_collected.parameters_of(declaration)
   let parameter_start = parameters.length()
   let mut has_receiver = false
-  let mut receiver_type = resolved.error_type
+  let mut receiver_type = exact_resolved.error_type
   let mut parameter = 0u32
   let _ = while parameter {
     index => if index < source_parameters.length {
       let source_index = self_host_u32_add(source_parameters.start, index)
-      let source = collected.parameters[source_index]
-      let type_ = resolved.parameter_types[source_index]
+      let source = self_host_collected_parameter_identity(
+        exact_collected.parameters[source_index],
+      )
+      let type_ = exact_resolved.parameter_types[source_index]
       let representation = self_host_function_plan_representation_type(
-        resolved,
+        exact_resolved,
         type_,
         owner,
         self_type,
       )
-      let shape = self_host_planned_resolved_value_shape(resolved, representation)
+      let shape = self_host_planned_resolved_value_shape(
+        exact_resolved,
+        representation,
+      )
       let receiver = source.kind is SelfHostCollectedParameterKind::ReceiverParameterDecl
       if receiver {
         has_receiver = true
@@ -244,6 +329,10 @@ fn self_host_push_planned_callable(
   result_shape: SelfHostPlannedValueShape,
   offset: U32,
 ) -> Unit {
+  let exact_collected = self_host_collected_module_identity(collected)
+  let source_callable = self_host_collected_callable_identity(
+    exact_collected.callables[callable_index],
+  )
   let self_shape = if parameter_summary.has_receiver {
     self_host_planned_resolved_value_shape(
       resolved,
@@ -253,8 +342,12 @@ fn self_host_push_planned_callable(
     SelfHostPlannedValueShape::ErrorPlannedValueShape
   }
   let compiler_owned = self_host_semantic_id_module(declaration) >= 4294901760u64
-  let is_main = collected.callables[callable_index].is_main
-  let is_test_entry = self_host_function_plan_is_test_entry(collected, declaration)
+  let main_code = self_host_name_main_code(name)
+  let is_main = source_callable.is_main || main_code == 1296124238u32
+  let is_test_entry = self_host_function_plan_is_test_entry(
+    exact_collected,
+    declaration,
+  )
   let planned_visibility = if compiler_owned {
     SelfHostSemanticVisibility::ModuleVisible
   } else {
@@ -267,12 +360,13 @@ fn self_host_push_planned_callable(
     visibility: planned_visibility
     compiler_owned: compiler_owned
     is_main: is_main
-    is_test: collected.declaration_is_test_only(declaration) || is_test_entry
+    main_code: main_code
+    is_test: exact_collected.declaration_is_test_only(declaration) || is_test_entry
     is_test_entry: is_test_entry
-    test_name: self_host_function_plan_test_name(collected, declaration)
+    test_name: self_host_function_plan_test_name(exact_collected, declaration)
     kind: kind
     owner_generic_parameters: owner_generics
-    generic_parameters: collected.generic_parameters_of(declaration)
+    generic_parameters: exact_collected.generic_parameters_of(declaration)
     parameters: parameter_summary.span
     has_receiver: parameter_summary.has_receiver
     self_type: self_type
@@ -346,8 +440,13 @@ fn self_host_plan_top_level_callable(
   callable_index: U32,
   declaration: U64,
 ) -> Bool {
-  for value in collected.declarations {
-    if self_host_u64_equal(value.id, declaration) {
+  let mut declaration_index = 0u32
+  let _ = while declaration_index {
+    current => if current < collected.declarations.length() {
+      let value = self_host_collected_declaration_identity(
+        collected.declarations[current],
+      )
+      if self_host_u64_equal(value.id, declaration) {
       let kind = if value.kind is SelfHostCollectedDeclKind::BuiltinDecl {
         SelfHostPlannedCallableKind::PlannedBuiltinCallable(
           self_host_function_plan_builtin(collected, declaration),
@@ -369,7 +468,11 @@ fn self_host_plan_top_level_callable(
         declaration, collected.name(value.name), value.visibility, kind,
         declaration, owner_generics, resolved.error_type, value.offset,
       )
-      return true
+        return true
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   false
@@ -384,8 +487,11 @@ fn self_host_plan_method_callable(
   callable_index: U32,
   declaration: U64,
 ) -> Bool {
-  for value in collected.methods {
-    if self_host_u64_equal(value.id, declaration) {
+  let mut method_index = 0u32
+  let _ = while method_index {
+    current => if current < collected.methods.length() {
+      let value = self_host_collected_method_identity(collected.methods[current])
+      if self_host_u64_equal(value.id, declaration) {
       let owner_generics = collected.generic_parameters_of(value.parent)
       match value.kind {
         SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => {
@@ -428,7 +534,11 @@ fn self_host_plan_method_callable(
           )
         }
       }
-      return true
+        return true
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   false

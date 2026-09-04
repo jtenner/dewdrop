@@ -13,6 +13,15 @@ enum Outer {
   }
 }
 
+enum Toggle {
+  Off
+  On
+}
+
+enum WrappedToggle {
+  Toggle(Toggle)
+}
+
 struct Box {
   inner: Inner
 }
@@ -33,6 +42,7 @@ fn read_outer(value: Outer) -> I32 {
       inner: Inner::B(item)
       ...
     } => item + 300
+    _ => -1000
   }
 }
 
@@ -44,6 +54,15 @@ fn read_box(value: Box) -> I32 {
     Box {
       inner: Inner::B(item)
     } => item + 10
+    _ => -1000
+  }
+}
+
+fn read_toggle(value: WrappedToggle) -> I32 {
+  match value {
+    WrappedToggle::Toggle(Toggle::Off) => 7
+    WrappedToggle::Toggle(Toggle::On) => 11
+    _ => -1000
   }
 }
 
@@ -56,8 +75,9 @@ pub fn main() -> U32 {
     }) +
     read_box(Box::{
       inner: Inner::B(4)
-    })
-  if result == 192 {
+    }) +
+    read_toggle(WrappedToggle::Toggle(Toggle::On))
+  if result == 203 {
     wasi_fd_write(1u32, b"control:nested-patterns")
   } else {
     wasi_fd_write(1u32, b"FAIL")

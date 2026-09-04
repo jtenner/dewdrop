@@ -1,5 +1,9 @@
 open dew.std.array
 
+fn self_host_compaction_i32_at(values: Array<I32>, index: U32) -> I32 {
+  array_get_unchecked(values, index)
+}
+
 struct SelfHostBasicCompaction {
   source_types: Array<SelfHostBodyTypeTerm>
   source_arguments: Array<I32>
@@ -106,8 +110,14 @@ impl SelfHostBasicCompaction {
   }
 
   fn mark_array(self, values: Array<I32>) -> Unit {
-    for value in values {
-      self.mark(value)
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < values.length() {
+        self.mark(self_host_compaction_i32_at(values, current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
   }
 
@@ -122,6 +132,12 @@ impl SelfHostBasicCompaction {
           let new_id = self_host_body_u32_to_i32(self.types.length())
           self.mapping[current] = new_id
           match self.source_types[current] {
+            SelfHostBodyTypeTerm::BodyErrorType => {
+              self.mapping[current] = 0i32
+            }
+            SelfHostBodyTypeTerm::BodyResolvedType(resolved) => self.types.push(
+              SelfHostBodyTypeTerm::BodyResolvedType(resolved),
+            )
             SelfHostBodyTypeTerm::BodyVariableType(variable) => self.types.push(
               SelfHostBodyTypeTerm::BodyVariableType(variable),
             )
@@ -199,7 +215,6 @@ impl SelfHostBasicCompaction {
                 self.remap(result),
               ))
             }
-            _ => {}
           }
         }
         continue current + 1u32
@@ -211,8 +226,14 @@ impl SelfHostBasicCompaction {
 
   fn remap_array(self, source: Array<I32>) -> Array<I32> {
     let result = []
-    for type_ in source {
-      result.push(self.remap(type_))
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < source.length() {
+        result.push(self.remap(self_host_compaction_i32_at(source, current)))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     result
   }
@@ -234,12 +255,18 @@ fn self_host_compact_basic_type_count(
 fn self_host_basic_has_type_diagnostic(
   body: SelfHostBasicInferredBody,
 ) -> Bool {
-  for diagnostic in body.diagnostics {
-    match diagnostic {
-      SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => {
-        return true
+  let mut diagnostic_index = 0u32
+  let _ = while diagnostic_index {
+    current => if current < body.diagnostics.length() {
+      match body.diagnostics[current] {
+        SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => {
+          return true
+        }
+        _ => {}
       }
-      _ => {}
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   false
@@ -292,15 +319,30 @@ fn self_host_compact_basic_module_bodies(
   inferred: SelfHostBasicInferredModuleBodies,
 ) -> SelfHostBasicInferredModuleBodies {
   let bodies = []
-  for body in inferred.bodies {
-    bodies.push(self_host_compact_basic_inferred_body(body))
+  let mut body_index = 0u32
+  let _ = while body_index {
+    current => if current < inferred.bodies.length() {
+      bodies.push(
+        self_host_compact_basic_inferred_body(inferred.bodies[current]),
+      )
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   let lambdas = []
-  for lambda in inferred.lambdas {
-    lambdas.push(SelfHostBasicInferredLambda::{
-      lambda: lambda.lambda
-      body: self_host_compact_basic_inferred_body(lambda.body)
-    })
+  let mut lambda_index = 0u32
+  let _ = while lambda_index {
+    current => if current < inferred.lambdas.length() {
+      let lambda = inferred.lambdas[current]
+      lambdas.push(SelfHostBasicInferredLambda::{
+        lambda: lambda.lambda
+        body: self_host_compact_basic_inferred_body(lambda.body)
+      })
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   SelfHostBasicInferredModuleBodies::{
     module_id: inferred.module_id

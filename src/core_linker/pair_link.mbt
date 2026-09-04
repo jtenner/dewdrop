@@ -164,6 +164,7 @@ fn core_pair_link(
   for _ in 0..<dew_counts.functions {
     string_adapter_parameters_by_dew_import.push([])
   }
+  let guest_exported_functions = core_exported_function_index(guest)
   let mut dew_function_ordinal = 0
   let mut found_link = false
   for import_ in core_imports(dew) {
@@ -173,7 +174,7 @@ fn core_pair_link(
         if core_import_matches_provider(module_name, provider) {
           found_link = true
           let guest_function = match
-            core_exported_function(guest, export_name) {
+            guest_exported_functions.get(core_name_text(export_name)) {
             Some(value) => value
             None =>
               return Err(

@@ -6,6 +6,25 @@ pub struct SelfHostHirSpan {
   length: U32
 }
 
+fn self_host_hir_span_identity(span: SelfHostHirSpan) -> SelfHostHirSpan {
+  SelfHostHirSpan::{
+    start: span.start
+    length: span.length
+  }
+}
+
+fn self_host_hir_span_at(
+  spans: Array<SelfHostHirSpan>,
+  index: U32,
+) -> SelfHostHirSpan {
+  self_host_assert_array_index(
+    index,
+    spans.length(),
+    "compiler HIR span index is outside the span arena",
+  )
+  self_host_hir_span_identity(spans[index])
+}
+
 fn self_host_empty_hir_span(at: U32) -> SelfHostHirSpan {
   SelfHostHirSpan::{
     start: at
@@ -99,6 +118,28 @@ pub struct SelfHostHirObjectField {
   offset: U32
 }
 
+fn self_host_hir_object_field_identity(
+  field: SelfHostHirObjectField,
+) -> SelfHostHirObjectField {
+  SelfHostHirObjectField::{
+    name: field.name
+    value: field.value
+    offset: field.offset
+  }
+}
+
+fn self_host_hir_object_field_at(
+  fields: Array<SelfHostHirObjectField>,
+  index: U32,
+) -> SelfHostHirObjectField {
+  self_host_assert_array_index(
+    index,
+    fields.length(),
+    "compiler HIR object-field index is outside the field arena",
+  )
+  self_host_hir_object_field_identity(fields[index])
+}
+
 pub struct SelfHostHirBlockItem {
   kind: U32
   mutable_: Bool
@@ -107,6 +148,20 @@ pub struct SelfHostHirBlockItem {
   name_offset: U32
   value: U32
   offset: U32
+}
+
+fn self_host_hir_block_item_identity(
+  item: SelfHostHirBlockItem,
+) -> SelfHostHirBlockItem {
+  SelfHostHirBlockItem::{
+    kind: item.kind
+    mutable_: item.mutable_
+    source_name: item.source_name
+    name: item.name
+    name_offset: item.name_offset
+    value: item.value
+    offset: item.offset
+  }
 }
 
 fn self_host_hir_let_item(
@@ -171,6 +226,16 @@ pub struct SelfHostHirPatternField {
   name: U32
   pattern: U32
   offset: U32
+}
+
+fn self_host_hir_pattern_field_identity(
+  field: SelfHostHirPatternField,
+) -> SelfHostHirPatternField {
+  SelfHostHirPatternField::{
+    name: field.name
+    pattern: field.pattern
+    offset: field.offset
+  }
 }
 
 pub struct SelfHostHirPatternArm {

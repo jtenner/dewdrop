@@ -42,7 +42,7 @@ fn self_host_smoke_function_value(
   } else {
   }
   match function.return_type {
-    SelfHostTypeExpr::NamedType("I32", _) =>
+    SelfHostTypeExpr::NamedType(name, _) if name.equals("I32") =>
       self_host_smoke_body_value(function.body)
     _ => Result::Err("smoke parser expected I32 return type")
   }

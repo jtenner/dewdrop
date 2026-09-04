@@ -12,9 +12,6 @@ pub struct SelfHostProgramFile {
   test_only: Bool
 }
 
-fn self_host_semantic_unit() -> Unit {
-}
-
 fn self_host_collection_type_expr_at(
   values: Array<SelfHostTypeExpr>,
   index: U32,
@@ -22,10 +19,54 @@ fn self_host_collection_type_expr_at(
   array_get_unchecked(values, index)
 }
 
+fn self_host_collection_u32_at(values: Array<U32>, index: U32) -> U32 {
+  array_get_unchecked(values, index)
+}
+
+fn self_host_collection_string_value(value: String) -> String {
+  value
+}
+
+fn self_host_collection_type_expr_value(
+  value: SelfHostTypeExpr,
+) -> SelfHostTypeExpr {
+  value
+}
+
+fn self_host_collection_type_parameter_at(
+  parameters: Array<SelfHostTypeParameter>,
+  index: U32,
+) -> SelfHostTypeParameter {
+  if index >= parameters.length() {
+    unreachable()
+  }
+  let parameter = parameters[index]
+  SelfHostTypeParameter::{
+    name: parameter.name
+    bounds: parameter.bounds
+    offset: parameter.offset
+  }
+}
+
+fn self_host_collection_parameter_at(
+  parameters: Array<SelfHostFnParameter>,
+  index: U32,
+) -> SelfHostFnParameter {
+  if index >= parameters.length() {
+    unreachable()
+  }
+  let parameter = parameters[index]
+  SelfHostFnParameter::{
+    name: parameter.name
+    type_: parameter.type_
+    offset: parameter.offset
+  }
+}
+
 fn self_host_collection_type_parameter_name(
   parameter: SelfHostTypeParameter,
 ) -> String {
-  parameter.name
+  self_host_collection_string_value(parameter.name)
 }
 
 fn self_host_collection_type_parameter_offset(
@@ -50,13 +91,13 @@ fn self_host_collection_type_parameter_bound_at(
 fn self_host_collection_struct_field_name(
   field: SelfHostStructField,
 ) -> String {
-  field.name
+  self_host_collection_string_value(field.name)
 }
 
 fn self_host_collection_struct_field_type(
   field: SelfHostStructField,
 ) -> SelfHostTypeExpr {
-  field.type_
+  self_host_collection_type_expr_value(field.type_)
 }
 
 fn self_host_collection_struct_field_mutable(
@@ -71,28 +112,16 @@ fn self_host_collection_struct_field_offset(
   field.offset
 }
 
-fn self_host_collection_derive_name(
-  derive: SelfHostDeriveRequest,
-) -> String {
-  derive.name
-}
-
-fn self_host_collection_derive_offset(
-  derive: SelfHostDeriveRequest,
-) -> U32 {
-  derive.offset
-}
-
 fn self_host_collection_parameter_name(
   parameter: SelfHostFnParameter,
 ) -> String {
-  parameter.name
+  self_host_collection_string_value(parameter.name)
 }
 
 fn self_host_collection_parameter_type(
   parameter: SelfHostFnParameter,
 ) -> SelfHostTypeExpr {
-  parameter.type_
+  self_host_collection_type_expr_value(parameter.type_)
 }
 
 fn self_host_collection_parameter_offset(
@@ -116,8 +145,47 @@ fn self_host_empty_id_lookup() -> Map<U32, U64> {
   Map::empty()
 }
 
-fn self_host_empty_derive_seen() -> Map<String, U32> {
-  Map::empty()
+struct SelfHostCollectedDeriveSeen {
+  names: Array<String>
+  offsets: Array<U32>
+}
+
+fn self_host_empty_derive_seen() -> SelfHostCollectedDeriveSeen {
+  SelfHostCollectedDeriveSeen::{
+    names: []
+    offsets: []
+  }
+}
+
+impl SelfHostCollectedDeriveSeen {
+  fn get(self, name: String) -> Option<U32> {
+    self_host_assert_parallel_array_lengths(
+      self.names.length(),
+      self.offsets.length(),
+      "compiler derive names and offsets must have equal lengths",
+    )
+    let mut index = 0u32
+    while index {
+      current => if current < self.names.length() {
+        if self.names[current] == name {
+          break Option::Some(self.offsets[current])
+        }
+        continue current + 1u32
+      } else {
+        break Option::None
+      }
+    }
+  }
+
+  fn set(self, name: String, offset: U32) -> Unit {
+    self_host_assert_parallel_array_lengths(
+      self.names.length(),
+      self.offsets.length(),
+      "compiler derive names and offsets must have equal lengths",
+    )
+    self.names.push(name)
+    self.offsets.push(offset)
+  }
 }
 
 struct SelfHostCollectedDeriveOffsets {
@@ -134,31 +202,8 @@ fn self_host_test_declaration_name(index: U32) -> String {
   builder.finish()
 }
 
-// These typed boundaries work around incomplete expected-type propagation for
-// fields read from arena structs. Equality itself still uses the language
-// operators and the standard Eq/Ne implementations.
-fn self_host_u32_equal(left: U32, right: U32) -> Bool {
-  left == right
-}
-
-fn self_host_u32_greater(left: U32, right: U32) -> Bool {
-  left > right
-}
-
-fn self_host_u32_add(left: U32, right: U32) -> U32 {
-  left + right
-}
-
-fn self_host_u64_equal(left: U64, right: U64) -> Bool {
-  left == right
-}
-
-fn self_host_u64_not_equal(left: U64, right: U64) -> Bool {
-  left != right
-}
-
 fn self_host_string_not_equal(left: String, right: String) -> Bool {
-  left != right
+  !self_host_tokenizer_string_equals(left, right)
 }
 
 fn self_host_bytes_equal(left: Bytes, right: Bytes) -> Bool {
@@ -169,25 +214,41 @@ fn self_host_bytes_not_equal(left: Bytes, right: Bytes) -> Bool {
   left != right
 }
 
+fn self_host_bytes_equal_string(left: Bytes, right: String) -> Bool {
+  if left.byte_length() != right.byte_length() {
+    return false
+  }
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < left.byte_length() {
+      if left.byte_at(current) != right.byte_at(current) {
+        return false
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  true
+}
+
 fn self_host_bytes_empty(value: Bytes) -> Bool {
   value.byte_length() == 0u32
 }
 
-fn self_host_source_name_is_main(
-  source: Bytes,
-  offset: U32,
-) -> Bool {
-  if offset + 4u32 > source.byte_length() {
-    false
-  } else if source.byte_at(offset) != 109u8 ||
-    source.byte_at(offset + 1u32) != 97u8 ||
-    source.byte_at(offset + 2u32) != 105u8 ||
-    source.byte_at(offset + 3u32) != 110u8 {
-    false
+fn self_host_name_main_code(name: String) -> U32 {
+  let bytes = name.as_bytes()
+  if name.byte_length() == 4u32 && bytes.byte_at(0u32) == 109u8 &&
+    bytes.byte_at(1u32) == 97u8 && bytes.byte_at(2u32) == 105u8 &&
+    bytes.byte_at(3u32) == 110u8 {
+    1296124238u32
   } else {
-    offset + 4u32 == source.byte_length() ||
-      !self_host_identifier_continue(source, offset + 4u32)
+    0u32
   }
+}
+
+fn self_host_name_is_main(name: String) -> Bool {
+  self_host_name_main_code(name) == 1296124238u32
 }
 
 struct SelfHostCollectionBuilderState {
@@ -544,6 +605,7 @@ impl SelfHostCollectionBuilder {
     }
     match self.state.value_bindings[name] {
       Option::Some(binding) => {
+        let binding = self_host_value_binding_identity(binding)
         if kind is SelfHostCollectedDeclKind::BuiltinDecl &&
           binding.kind is SelfHostCollectedDeclKind::BuiltinDecl {
           let candidate = self.state.value_binding_candidates.length()
@@ -784,12 +846,26 @@ impl SelfHostCollectionBuilder {
   fn lower_type_list(self, source: Array<SelfHostTypeExpr>) -> SelfHostHirSpan {
     let lowered = self.state.type_list_scratch
     lowered.clear()
-    for type_ in source {
-      lowered.push(self.lower_type(type_))
+    let mut source_index = 0u32
+    let _ = while source_index {
+      current => if current < source.length() {
+        lowered.push(
+          self.lower_type(self_host_collection_type_expr_at(source, current)),
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let start = self.type_arguments.length()
-    for type_ in lowered {
-      self.type_arguments.push(type_)
+    let mut lowered_index = 0u32
+    let _ = while lowered_index {
+      current => if current < lowered.length() {
+        self.type_arguments.push(self_host_collection_u32_at(lowered, current))
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     SelfHostHirSpan::{
       start: start
@@ -804,8 +880,13 @@ impl SelfHostCollectionBuilder {
   ) -> Unit {
     let start = self.generic_parameters.length()
     let mut index = 0u32
-    for parameter in parameters {
-      let name = self.intern(
+    let _ = while index {
+      current => if current < parameters.length() {
+        let parameter = self_host_collection_type_parameter_at(
+          parameters,
+          current,
+        )
+        let name = self.intern(
         self_host_collection_type_parameter_name(parameter),
       )
       let id = self_host_make_semantic_id(
@@ -848,7 +929,7 @@ impl SelfHostCollectionBuilder {
       let collected_parameter = SelfHostCollectedGenericParameter::{
         id: id
         declaration: declaration
-        index: index
+        index: current
         name: name
         bounds: SelfHostHirSpan::{
           start: bound_start
@@ -856,8 +937,11 @@ impl SelfHostCollectionBuilder {
         }
         offset: self_host_collection_type_parameter_offset(parameter)
       }
-      self.generic_parameters.push(collected_parameter)
-      index = index + 1u32
+        self.generic_parameters.push(collected_parameter)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     self.generic_parameter_spans[
       self_host_semantic_id_local(declaration)
@@ -897,10 +981,13 @@ impl SelfHostCollectionBuilder {
       }
       Option::None => {}
     }
-    for parameter in parameters {
-      let name = self.intern(
-        self_host_collection_parameter_name(parameter),
-      )
+    let mut source_parameter_index = 0u32
+    let _ = while source_parameter_index {
+      current => if current < parameters.length() {
+        let parameter = self_host_collection_parameter_at(parameters, current)
+        let name = self.intern(
+          self_host_collection_parameter_name(parameter),
+        )
       let id = self_host_make_semantic_id(
         self.state.module_id,
         self.parameters.length(),
@@ -931,8 +1018,12 @@ impl SelfHostCollectionBuilder {
         )
         offset: self_host_collection_parameter_offset(parameter)
       }
-      self.parameters.push(collected_parameter)
-      parameter_index = parameter_index + 1u32
+        self.parameters.push(collected_parameter)
+        parameter_index = parameter_index + 1u32
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     self.parameter_spans[
       self_host_semantic_id_local(declaration)
@@ -950,10 +1041,13 @@ impl SelfHostCollectionBuilder {
     space: SelfHostBindingSpace,
   ) -> Unit {
     let start = self.fields.length()
-    for field in fields {
-      let name = self.intern(
-        self_host_collection_struct_field_name(field),
-      )
+    let mut field_index = 0u32
+    let _ = while field_index {
+      current => if current < fields.length() {
+        let field = self_host_derived_struct_field_at(fields, current)
+        let name = self.intern(
+          self_host_collection_struct_field_name(field),
+        )
       let id = self_host_make_semantic_id(self.state.module_id, self.fields.length())
       match self.first_field_index(start, name) {
         Option::Some(previous) => {
@@ -970,19 +1064,23 @@ impl SelfHostCollectionBuilder {
         }
         Option::None => {}
       }
-      self.fields.push(
-        SelfHostCollectedField::{
-          id: id
-          declaration: declaration
-          variant: variant
-          mutable_: self_host_collection_struct_field_mutable(field)
-          name: name
-          type_: self.lower_type(
-            self_host_collection_struct_field_type(field),
-          )
-          offset: self_host_collection_struct_field_offset(field)
-        },
-      )
+        self.fields.push(
+          SelfHostCollectedField::{
+            id: id
+            declaration: declaration
+            variant: variant
+            mutable_: self_host_collection_struct_field_mutable(field)
+            name: name
+            type_: self.lower_type(
+              self_host_collection_struct_field_type(field),
+            )
+            offset: self_host_collection_struct_field_offset(field)
+          },
+        )
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
   }
 
@@ -992,15 +1090,20 @@ impl SelfHostCollectionBuilder {
     name: U32,
   ) -> Option<U32> {
     let mut index = 0u32
-    for candidate in self.generic_parameters {
-      match self_host_u64_equal(candidate.declaration, declaration) &&
-        self_host_u32_equal(candidate.name, name) {
-        true => {
-          return Option::Some(index)
+    let _ = while index {
+      current => if current < self.generic_parameters.length() {
+        let candidate = self_host_collected_generic_parameter_identity(
+          self.generic_parameters[current],
+        )
+        if self_host_u64_equal(candidate.declaration, declaration) {
+          if self_host_u32_equal(candidate.name, name) {
+            return Option::Some(current)
+          }
         }
-        false => {}
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      index = index + 1u32
     }
     Option::None
   }
@@ -1011,29 +1114,36 @@ impl SelfHostCollectionBuilder {
     name: U32,
   ) -> Option<U32> {
     let mut index = 0u32
-    for candidate in self.parameters {
-      match self_host_u64_equal(candidate.declaration, declaration) &&
-        self_host_u32_equal(candidate.name, name) {
-        true => {
-          return Option::Some(index)
+    let _ = while index {
+      current => if current < self.parameters.length() {
+        let candidate = self_host_collected_parameter_identity(
+          self.parameters[current],
+        )
+        if self_host_u64_equal(candidate.declaration, declaration) {
+          if self_host_u32_equal(candidate.name, name) {
+            return Option::Some(current)
+          }
         }
-        false => {}
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      index = index + 1u32
     }
     Option::None
   }
 
   fn first_field_index(self, start: U32, name: U32) -> Option<U32> {
-    let mut index = 0u32
-    for candidate in self.fields {
-      match index >= start && self_host_u32_equal(candidate.name, name) {
-        true => {
-          return Option::Some(index)
+    let mut index = start
+    let _ = while index {
+      current => if current < self.fields.length() {
+        let candidate = self_host_collected_field_identity(self.fields[current])
+        if self_host_u32_equal(candidate.name, name) {
+          return Option::Some(current)
         }
-        false => {}
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      index = index + 1u32
     }
     Option::None
   }
@@ -1044,15 +1154,18 @@ impl SelfHostCollectionBuilder {
     name: U32,
   ) -> Option<U32> {
     let mut index = 0u32
-    for candidate in self.variants {
-      match self_host_u64_equal(candidate.declaration, declaration) &&
-        self_host_u32_equal(candidate.name, name) {
-        true => {
-          return Option::Some(index)
+    let _ = while index {
+      current => if current < self.variants.length() {
+        let candidate = self_host_collected_variant_identity(self.variants[current])
+        if self_host_u64_equal(candidate.declaration, declaration) {
+          if self_host_u32_equal(candidate.name, name) {
+            return Option::Some(current)
+          }
         }
-        false => {}
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      index = index + 1u32
     }
     Option::None
   }
@@ -1064,16 +1177,20 @@ impl SelfHostCollectionBuilder {
     exclude: U64,
   ) -> Option<U32> {
     let mut index = 0u32
-    for candidate in self.methods {
-      match self_host_u64_equal(candidate.parent, parent) &&
-        self_host_u32_equal(candidate.name, name) &&
-        self_host_u64_not_equal(candidate.id, exclude) {
-        true => {
-          return Option::Some(index)
+    let _ = while index {
+      current => if current < self.methods.length() {
+        let candidate = self_host_collected_method_identity(self.methods[current])
+        if self_host_u64_equal(candidate.parent, parent) {
+          if self_host_u32_equal(candidate.name, name) {
+            if self_host_u64_not_equal(candidate.id, exclude) {
+              return Option::Some(current)
+            }
+          }
         }
-        false => {}
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      index = index + 1u32
     }
     Option::None
   }
@@ -1150,7 +1267,10 @@ impl SelfHostCollectionBuilder {
       value.name_offset,
     )
     self.collect_generic_parameters(declaration.id, value.type_parameters)
-    for source_method in value.methods {
+    let mut trait_method_index = 0u32
+    let _ = while trait_method_index {
+      current => if current < value.methods.length() {
+        let source_method = value.methods[current]
       let method = self.add_method(
         declaration.id,
         SelfHostCollectedMethodKind::TraitMethodDecl,
@@ -1190,6 +1310,10 @@ impl SelfHostCollectionBuilder {
           is_main: false
         },
       )
+            continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
   }
 
@@ -1198,32 +1322,37 @@ impl SelfHostCollectionBuilder {
     value: SelfHostFunctionDeclaration,
     source: Bytes,
   ) -> Unit {
+    let exact_value = self_host_function_declaration_identity(value)
     let declaration = self.add_declaration(
       SelfHostCollectedDeclKind::FunctionDecl,
-      Option::Some(value.name),
-      self_host_semantic_visibility(value.visibility),
-      value.offset,
+      Option::Some(exact_value.name),
+      self_host_semantic_visibility(exact_value.visibility),
+      exact_value.offset,
     )
     self.bind_value_name(
       SelfHostCollectedDeclKind::FunctionDecl,
       declaration.name,
       declaration.id,
-      value.name_offset,
+      exact_value.name_offset,
     )
-    self.collect_generic_parameters(declaration.id, value.type_parameters)
-    self.collect_parameters(declaration.id, value.receiver, value.parameters)
+    self.collect_generic_parameters(declaration.id, exact_value.type_parameters)
+    self.collect_parameters(
+      declaration.id,
+      exact_value.receiver,
+      exact_value.parameters,
+    )
     self.callables.push(
       SelfHostCollectedCallable::{
         declaration: declaration.id
-        return_type: self.lower_type(value.return_type)
-        is_main: self_host_source_name_is_main(source, value.name_offset)
+        return_type: self.lower_type(exact_value.return_type)
+        is_main: exact_value.is_main
       },
     )
     self.lower_block_body(
       declaration.id,
       SelfHostHirBodyKind::FunctionBody,
-      value.body,
-      value.offset,
+      exact_value.body,
+      exact_value.offset,
     )
   }
 
@@ -1253,7 +1382,10 @@ impl SelfHostCollectionBuilder {
       }
       Option::None => {}
     }
-    for test_ in self.tests {
+    let mut test_index = 0u32
+    let _ = while test_index {
+      current => if current < self.tests.length() {
+        let test_ = self.tests[current]
       if self_host_u64_equal(test_.file, self.state.current_file) &&
         self_host_bytes_equal(test_.display_name, value.name) {
         self.state.diagnostics.push(
@@ -1266,6 +1398,10 @@ impl SelfHostCollectionBuilder {
             },
           ),
         )
+      }
+            continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
     let declaration = self.add_declaration(
@@ -1359,7 +1495,10 @@ impl SelfHostCollectionBuilder {
       )
     }
     let member_start = self.foreign_functions.length()
-    for source_member in value.members {
+    let mut member_index = 0u32
+    let _ = while member_index {
+      current => if current < value.members.length() {
+        let source_member = value.members[current]
       let method = self.add_method(
         declaration.id,
         SelfHostCollectedMethodKind::ForeignLibraryMemberDecl,
@@ -1410,6 +1549,10 @@ impl SelfHostCollectionBuilder {
           export_name_offset: source_member.export_name_offset
         },
       )
+            continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     self.foreign_libraries.push(
       SelfHostCollectedForeignLibrary::{
@@ -1444,7 +1587,10 @@ impl SelfHostCollectionBuilder {
       target_type: target_type
     }
     self.impls.push(collected_impl)
-    for source_method in value.methods {
+    let mut impl_method_index = 0u32
+    let _ = while impl_method_index {
+      current => if current < value.methods.length() {
+        let source_method = value.methods[current]
       let method = self.add_method(
         declaration.id,
         SelfHostCollectedMethodKind::ImplMethodDecl,
@@ -1490,6 +1636,10 @@ impl SelfHostCollectionBuilder {
         source_method.body,
         source_method.offset,
       )
+            continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
   }
 
@@ -1503,9 +1653,11 @@ impl SelfHostCollectionBuilder {
     let mut debug = Option::None
     let mut hash = Option::None
     let mut show = Option::None
-    for derive in derives {
-      let derive_name = self_host_collection_derive_name(derive)
-      let derive_offset = self_host_collection_derive_offset(derive)
+    let mut derive_index = 0u32
+    let _ = while derive_index {
+      current => if current < derives.length() {
+      let derive_offset = self_host_derive_request_offset_at(derives, current)
+      let derive_name = self_host_derive_request_name_at(derives, current)
       match seen.get(derive_name) {
         Option::Some(first) => self.state.diagnostics.push(
           SelfHostCollectionDiagnostic::DuplicateDerivedTrait(
@@ -1548,6 +1700,10 @@ impl SelfHostCollectionBuilder {
           }
         }
       }
+            continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     SelfHostCollectedDeriveOffsets::{
       eq: eq
@@ -1580,11 +1736,17 @@ impl SelfHostCollectionBuilder {
     )
     let derives = self.collect_derives(declaration.id, value.derives)
     match derives.eq {
-      Option::Some(offset) => for implementation in self_host_derived_struct_eq_impls(
-        value,
-        offset,
-      ) {
-        self.collect_impl(implementation)
+      Option::Some(offset) => {
+        let implementations = self_host_derived_struct_eq_impls(value, offset)
+        let mut implementation_index = 0u32
+        let _ = while implementation_index {
+          current => if current < implementations.length() {
+            self.collect_impl(implementations[current])
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
       }
       Option::None => {}
     }
@@ -1624,7 +1786,10 @@ impl SelfHostCollectionBuilder {
     )
     self.collect_generic_parameters(declaration.id, value.type_parameters)
     let variant_start = self.variants.length()
-    for source_variant in value.variants {
+    let mut source_variant_index = 0u32
+    let _ = while source_variant_index {
+      current => if current < value.variants.length() {
+        let source_variant = value.variants[current]
       let name = match source_variant {
         SelfHostEnumVariant::UnitVariant(name, _, _) => name
         SelfHostEnumVariant::TupleVariant(name, _, _, _) => name
@@ -1696,14 +1861,24 @@ impl SelfHostCollectionBuilder {
           _ => {}
         }
       }
+            continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
     }
     let derives = self.collect_derives(declaration.id, value.derives)
     match derives.eq {
-      Option::Some(offset) => for implementation in self_host_derived_enum_eq_impls(
-        value,
-        offset,
-      ) {
-        self.collect_impl(implementation)
+      Option::Some(offset) => {
+        let implementations = self_host_derived_enum_eq_impls(value, offset)
+        let mut implementation_index = 0u32
+        let _ = while implementation_index {
+          current => if current < implementations.length() {
+            self.collect_impl(implementations[current])
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
       }
       Option::None => {}
     }
@@ -1855,7 +2030,10 @@ impl SelfHostCollectionBuilder {
       self.test_files.push(file.id)
     }
     let parsed = self_host_parse_module(file.source)
-    for event in parsed.events {
+    let mut event_index = 0u32
+    let _ = while event_index {
+      current => if current < parsed.events.length() {
+        let event = parsed.events[current]
       match event {
         SelfHostParseEvent::Declaration(declaration, kind) => self.collect_declaration(
           declaration,
@@ -1875,6 +2053,10 @@ impl SelfHostCollectionBuilder {
             token_text,
           ),
         )
+      }
+            continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
   }
@@ -1953,8 +2135,15 @@ fn self_host_collect_files(
   files: Array<SelfHostProgramFile>,
 ) -> SelfHostCollectedModule {
   let builder = SelfHostCollectionBuilder::new(module_id)
-  for file in files {
+  let mut file_index = 0u32
+  let _ = while file_index {
+    current => if current < files.length() {
+      let file = files[current]
     builder.collect_file(file)
+        continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
   }
   builder.finish()
 }

@@ -123,6 +123,89 @@ test "lowering keeps tuple variants ahead of colliding builtin ids" {
   assert(saw_variant_call, "tuple variant direct lowering")
 }
 
+test "lowering keeps a struct payload inside a result variant" {
+  let planned = self_host_lowering_test_plan(
+    b"enum Outcome<t, e> {\n  Ok(t)\n  Err(e)\n}\nstruct ProcessError {\n  operation: U32\n  kind: U32\n  code: U32\n}\nfn run(ready: Bool) -> Outcome<String, ProcessError> {\n  if ready {\n    Outcome::Ok(\"ok\")\n  } else {\n    Outcome::Err(ProcessError::{\n      operation: 1u32\n      kind: 2u32\n      code: 3u32\n    })\n  }\n}\n",
+  )
+  let body = self_host_planned_body_lowering_identity(planned.bodies[0u32])
+  let end = self_host_u32_add(body.expressions.start, body.expressions.length)
+  let mut saw_process_error = false
+  let mut saw_err_call = false
+  let mut expression = body.expressions.start
+  let _ = while expression {
+    current => if current < end {
+      let source = self_host_planned_expression_at(planned.expressions, current)
+      match source.kind {
+        SelfHostPlannedExpressionKind::PlannedConstruct(
+          _,
+          fields,
+          SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+            _,
+            _,
+          ),
+        ) => if self_host_u32_equal(fields.length, 3u32) {
+          saw_process_error = true
+        }
+        SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, arguments, _) => match source.selection {
+          SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+            _,
+            _,
+            _,
+          ) => if self_host_u32_equal(arguments.length, 1u32) {
+            let child_index = arguments.start
+            if self_host_array_index_is_valid(
+              child_index,
+              planned.expression_children.length(),
+            ) {
+              let child = planned.expression_children[child_index]
+              if child < current {
+                saw_err_call = true
+              }
+            }
+          }
+          _ => {}
+        }
+        _ => {}
+      }
+      continue self_host_u32_add(current, 1u32)
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(saw_process_error, "struct payload selection")
+  assert(saw_err_call, "result variant keeps payload call")
+}
+
+test "body verifier indexes embedded call targets once" {
+  let planned = self_host_lowering_test_plan(
+    b"fn answer() -> I32 {\n  42\n}\nfn run() -> I32 {\n  answer()\n}\n",
+  )
+  let mut saw_target = false
+  for body_source in planned.bodies {
+    let body = self_host_planned_body_lowering_identity(body_source)
+    let targets = self_host_body_embedded_targets(planned, body)
+    let end = self_host_u32_add(body.expressions.start, body.expressions.length)
+    let mut expression = body.expressions.start
+    let _ = while expression {
+      current => if current < end {
+        match self_host_planned_expression_at(planned.expressions, current).kind {
+          SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => {
+            assert(target >= body.expressions.start, "target body start")
+            assert(target < end, "target body end")
+            assert(targets[target - body.expressions.start], "indexed embedded target")
+            saw_target = true
+          }
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+  assert(saw_target, "direct call target")
+}
+
 test "lowering plans direct calls" {
   let planned = self_host_lowering_test_plan(
     b"fn add(value: I32) -> I32 {\n  value + 1\n}\nfn run() -> I32 {\n  add(1)\n}\n",
@@ -192,6 +275,25 @@ test "lowering plans local assignments" {
   assert(saw_set, "assignment")
 }
 
+test "planned expression identity preserves physical fields" {
+  let planned = self_host_lowering_test_plan(
+    b"struct State {\n  value: U32\n}\nfn read(state: State) -> U32 {\n  state.value\n}\n",
+  )
+  let mut checked = 0u32
+  for expression in planned.expressions {
+    let exact = self_host_planned_expression_identity(expression)
+    assert(exact.type_ == expression.type_, "expression type identity")
+    assert(
+      self_host_u64_equal(exact.nominal, expression.nominal),
+      "expression nominal identity",
+    )
+    assert(exact.source_name == expression.source_name, "expression name identity")
+    assert(exact.offset == expression.offset, "expression offset identity")
+    checked = checked + 1u32
+  }
+  assert(checked > 0u32, "planned expression identity coverage")
+}
+
 test "lowering plans mutable field assignments" {
   let planned = self_host_lowering_test_plan(
     b"struct State {\n  mut value: U32\n}\nfn update(state: State) -> Unit {\n  state.value = 1u32\n}\n",
@@ -230,6 +332,12 @@ test "lowering plans patterns and functional loops" {
   )
   assert(planned.patterns.length() == 2u32, "patterns")
   assert(planned.pattern_arms.length() == 2u32, "arms")
+  let arm = self_host_planned_pattern_arm_at(planned.pattern_arms, 0u32)
+  assert(arm.pattern < planned.patterns.length(), "arm pattern identity")
+  assert(arm.body < planned.expressions.length(), "arm body identity")
+  let pattern = self_host_planned_pattern_at(planned.patterns, arm.pattern)
+  assert(pattern.type_ >= 0i32, "pattern type identity")
+  assert(pattern.offset == planned.patterns[arm.pattern].offset, "pattern offset identity")
   let mut saw_match = false
   for expression in planned.expressions {
     match expression.kind {
@@ -301,6 +409,13 @@ test "lowering retains nominal identities" {
     b"struct Box {\n  value: I32\n}\nfn make() -> Box {\n  Box::{\n    value: 1\n  }\n}\n",
   )
   let declaration = planned.type_layouts.layouts[0u32].declaration
+  assert(planned.object_fields.length() == 1u32, "object field count")
+  let object_field = self_host_planned_object_field_at(planned.object_fields, 0u32)
+  assert(object_field.value < planned.expressions.length(), "object field value identity")
+  assert(
+    self_host_u64_equal(object_field.field, planned.object_fields[0u32].field),
+    "object field id identity",
+  )
   assert(
     planned.bodies[0u32].root_shape is SelfHostPlannedValueShape::RefPlannedValueShape,
     "nominal result shape",

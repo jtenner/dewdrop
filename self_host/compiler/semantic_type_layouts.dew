@@ -27,6 +27,34 @@ pub struct SelfHostPlannedFieldLayout {
   offset: U32
 }
 
+fn self_host_planned_field_layout_identity(
+  field: SelfHostPlannedFieldLayout,
+) -> SelfHostPlannedFieldLayout {
+  SelfHostPlannedFieldLayout::{
+    field: field.field
+    declaration: field.declaration
+    variant: field.variant
+    mutable_: field.mutable_
+    name: field.name
+    index: field.index
+    type_: field.type_
+    shape: field.shape
+    offset: field.offset
+  }
+}
+
+fn self_host_planned_field_layout_at(
+  fields: Array<SelfHostPlannedFieldLayout>,
+  index: U32,
+) -> SelfHostPlannedFieldLayout {
+  self_host_assert_array_index(
+    index,
+    fields.length(),
+    "compiler planned-field index is outside the field arena",
+  )
+  self_host_planned_field_layout_identity(fields[index])
+}
+
 pub enum SelfHostPlannedVariantPayloadLayout {
   PlannedUnitVariantLayout
   PlannedTupleVariantLayout(SelfHostHirSpan)

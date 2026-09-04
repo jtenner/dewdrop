@@ -1,0 +1,130 @@
+open dew.std.map
+open dew.std.option
+
+// This module owns specialization worklist cursors and request indexes.
+// The planner supplies arenas. These APIs keep all parallel-array checks in
+// one place and prevent callers from restarting a completed queue scan.
+fn self_host_program_specialization_queue_reachable(
+  reachable: Array<U64>,
+  declaration_work: Array<U64>,
+  declaration_queued: Map<U64, Bool>,
+  start: U32,
+) -> U32 {
+  self_host_assert_compiler_invariant(
+    !self_host_u32_greater(start, reachable.length()),
+    "compiler specialization reachable cursor is outside the arena",
+  )
+  let _ = while start {
+    current => if current < reachable.length() {
+      let declaration = reachable[current]
+      if !declaration_queued.contains_key(declaration) {
+        declaration_queued.set(declaration, true)
+        declaration_work.push(declaration)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  reachable.length()
+}
+
+fn self_host_program_specialization_request_matches(
+  request: SelfHostProgramSpecializationRequest,
+  requests_shapes: Array<SelfHostPlannedValueShape>,
+  declaration: U64,
+  candidates: Array<SelfHostPlannedValueShape>,
+) -> Bool {
+  if !self_host_u64_equal(request.declaration, declaration) ||
+    !self_host_u32_equal(request.shapes.length, candidates.length()) {
+    return false
+  }
+  self_host_assert_array_span(
+    request.shapes.start,
+    request.shapes.length,
+    requests_shapes.length(),
+    "compiler specialization shape span is outside the shape arena",
+  )
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < request.shapes.length {
+      if !self_host_specialization_shapes_equal(
+        requests_shapes[self_host_u32_add(request.shapes.start, current)],
+        candidates[current],
+      ) {
+        return false
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  true
+}
+
+fn self_host_program_specialization_add_request(
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  request_head_by_declaration: Map<U64, U32>,
+  request_next: Array<U32>,
+  declaration: U64,
+  candidates: Array<SelfHostPlannedValueShape>,
+) -> U32 {
+  let missing = 4294967295u32
+  let previous_head = match request_head_by_declaration.get(declaration) {
+    Option::Some(index) => index
+    Option::None => missing
+  }
+  let mut request_index = previous_head
+  while request_index {
+    current => if !self_host_u32_equal(current, missing) {
+      self_host_assert_array_index(
+        current,
+        requests.length(),
+        "compiler specialization request index is outside the request arena",
+      )
+      self_host_assert_array_index(
+        current,
+        request_next.length(),
+        "compiler specialization request chain is shorter than the request arena",
+      )
+      if self_host_program_specialization_request_matches(
+        requests[current],
+        shapes,
+        declaration,
+        candidates,
+      ) {
+        break current
+      }
+      continue request_next[current]
+    } else {
+      let start = shapes.length()
+      let mut shape_index = 0u32
+      let _ = while shape_index {
+        current => if current < candidates.length() {
+          let candidate = candidates[current]
+          shapes.push(self_host_specialization_canonical_shape(candidate))
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let new_index = requests.length()
+      requests.push(SelfHostProgramSpecializationRequest::{
+        declaration: declaration
+        shapes: SelfHostHirSpan::{
+          start: start
+          length: candidates.length()
+        }
+      })
+      request_next.push(previous_head)
+      request_head_by_declaration.set(declaration, new_index)
+      self_host_assert_parallel_array_lengths(
+        request_next.length(),
+        requests.length(),
+        "compiler specialization request indexes must match the request arena",
+      )
+      break new_index
+    }
+  }
+}

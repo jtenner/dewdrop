@@ -13,6 +13,18 @@ pub struct SelfHostBodyFlowSummary {
   diverges: Bool
 }
 
+fn self_host_body_flow_summary_identity(
+  flow: SelfHostBodyFlowSummary,
+) -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: flow.falls_through
+    returns: flow.returns
+    breaks: flow.breaks
+    continues: flow.continues
+    diverges: flow.diverges
+  }
+}
+
 pub enum SelfHostMissingPatternCase {
   MissingCatchAllCase
   MissingBoolCase(Bool)
@@ -24,10 +36,6 @@ fn self_host_flow_u64_at(values: Array<U64>, index: U32) -> U64 {
 }
 
 fn self_host_flow_i32_at(values: Array<I32>, index: U32) -> I32 {
-  array_get_unchecked(values, index)
-}
-
-fn self_host_flow_u32_at(values: Array<U32>, index: U32) -> U32 {
   array_get_unchecked(values, index)
 }
 
@@ -72,9 +80,9 @@ fn self_host_body_flow_diagnostic_rank(
 pub struct SelfHostAnalyzedBodyFlow {
   body: U64
   flow: SelfHostBodyFlowSummary
-  expression_flows: Array<SelfHostBodyFlowSummary>
-  block_flows: Array<SelfHostBodyFlowSummary>
-  arm_flows: Array<SelfHostBodyFlowSummary>
+  expression_flows: Array<U32>
+  block_flows: Array<U32>
+  arm_flows: Array<U32>
   missing_cases: Array<SelfHostMissingPatternCase>
   diagnostics: Array<SelfHostBodyFlowDiagnostic>
 }
@@ -82,9 +90,9 @@ pub struct SelfHostAnalyzedBodyFlow {
 pub struct SelfHostAnalyzedLambdaFlow {
   lambda: U32
   flow: SelfHostBodyFlowSummary
-  expression_flows: Array<SelfHostBodyFlowSummary>
-  block_flows: Array<SelfHostBodyFlowSummary>
-  arm_flows: Array<SelfHostBodyFlowSummary>
+  expression_flows: Array<U32>
+  block_flows: Array<U32>
+  arm_flows: Array<U32>
   missing_cases: Array<SelfHostMissingPatternCase>
   diagnostics: Array<SelfHostBodyFlowDiagnostic>
 }
@@ -187,15 +195,45 @@ fn self_host_flow_sequence(
   }
 }
 
-fn self_host_flow_slots(length: U32) -> Array<SelfHostBodyFlowSummary> {
-  let values = [self_host_flow_empty()]
+fn self_host_flow_encode(flow: SelfHostBodyFlowSummary) -> U32 {
+  let mut encoded = 0u32
+  if flow.falls_through {
+    encoded = encoded | 1u32
+  }
+  if flow.returns {
+    encoded = encoded | 2u32
+  }
+  if flow.breaks {
+    encoded = encoded | 4u32
+  }
+  if flow.continues {
+    encoded = encoded | 8u32
+  }
+  if flow.diverges {
+    encoded = encoded | 16u32
+  }
+  encoded
+}
+
+fn self_host_flow_decode(flow: U32) -> SelfHostBodyFlowSummary {
+  SelfHostBodyFlowSummary::{
+    falls_through: (flow & 1u32) != 0u32
+    returns: (flow & 2u32) != 0u32
+    breaks: (flow & 4u32) != 0u32
+    continues: (flow & 8u32) != 0u32
+    diverges: (flow & 16u32) != 0u32
+  }
+}
+
+fn self_host_flow_slots(length: U32) -> Array<U32> {
+  let values = [0u32]
   if length == 0u32 {
     values.truncate(0u32)
   } else {
     let mut index = 1u32
     let _ = while index {
       current => if current < length {
-        values.push(self_host_flow_empty())
+        values.push(0u32)
         continue current + 1u32
       } else {
         break self_host_semantic_unit()
@@ -212,7 +250,9 @@ fn self_host_flow_resolved_type_is_never(
   let mut current = type_
   while current {
     candidate => match resolved.types[candidate] {
-      SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::NeverType) => break true
+      SelfHostResolvedType::PrimitiveType(primitive) => {
+        break primitive is SelfHostPrimitiveType::NeverType
+      }
       SelfHostResolvedType::AppliedType(base, _) => continue base
       _ => break false
     }
@@ -255,10 +295,10 @@ struct SelfHostBodyFlowAnalyzer {
   body: SelfHostHirBody
   inferred: SelfHostBasicInferredBody
   imported_variants: Array<SelfHostResolvedImportedVariant>
-  expression_flows: Array<SelfHostBodyFlowSummary>
-  block_flows: Array<SelfHostBodyFlowSummary>
+  expression_flows: Array<U32>
+  block_flows: Array<U32>
   block_done: Array<Bool>
-  arm_flows: Array<SelfHostBodyFlowSummary>
+  arm_flows: Array<U32>
   missing_cases: Array<SelfHostMissingPatternCase>
   diagnostics: Array<SelfHostBodyFlowDiagnostic>
 }
@@ -290,7 +330,9 @@ impl SelfHostBodyFlowAnalyzer {
     if self_host_u32_equal(expression, 4294967295u32) {
       self_host_flow_falls_through()
     } else {
-      self.expression_flows[expression - self.body.expressions.start]
+      self_host_flow_decode(
+        self.expression_flows[expression - self.body.expressions.start],
+      )
     }
   }
 
@@ -322,7 +364,7 @@ impl SelfHostBodyFlowAnalyzer {
   fn block_flow(self, block: U32) -> SelfHostBodyFlowSummary {
     let slot = block - self.body.blocks.start
     if self.block_done[slot] {
-      return self.block_flows[slot]
+      return self_host_flow_decode(self.block_flows[slot])
     }
     let info = self.collected.blocks[block]
     let mut result = self_host_flow_falls_through()
@@ -347,7 +389,7 @@ impl SelfHostBodyFlowAnalyzer {
         break self_host_semantic_unit()
       }
     }
-    self.block_flows[slot] = result
+    self.block_flows[slot] = self_host_flow_encode(result)
     self.block_done[slot] = true
     result
   }
@@ -362,7 +404,9 @@ impl SelfHostBodyFlowAnalyzer {
         self.expression_flow(info.body),
       )
     }
-    self.arm_flows[arm - self.body.pattern_arms.start] = result
+    self.arm_flows[arm - self.body.pattern_arms.start] = self_host_flow_encode(
+      result,
+    )
     result
   }
 
@@ -370,8 +414,12 @@ impl SelfHostBodyFlowAnalyzer {
     let mut current = type_
     while current {
       candidate => match self.resolved.types[candidate] {
-        SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::BoolType) => {
-          break SelfHostFlowCoverageDomain::BoolFlowCoverageDomain
+        SelfHostResolvedType::PrimitiveType(primitive) => {
+          if primitive is SelfHostPrimitiveType::BoolType {
+            break SelfHostFlowCoverageDomain::BoolFlowCoverageDomain
+          } else {
+            break SelfHostFlowCoverageDomain::OpenFlowCoverageDomain
+          }
         }
         SelfHostResolvedType::NominalType(declaration) => {
           break SelfHostFlowCoverageDomain::EnumFlowCoverageDomain(declaration)
@@ -404,14 +452,33 @@ impl SelfHostBodyFlowAnalyzer {
 
   fn enum_variants(self, declaration: U64) -> Array<U64> {
     let variants = []
-    for variant in self.collected.variants {
-      if self_host_u64_equal(variant.declaration, declaration) {
-        variants.push(variant.id)
+    let mut local_index = 0u32
+    let _ = while local_index {
+      current => if current < self.collected.variants.length() {
+        let variant = self_host_collected_variant_identity(
+          self.collected.variants[current],
+        )
+        if self_host_u64_equal(variant.declaration, declaration) {
+          variants.push(variant.id)
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
-    for variant in self.imported_variants {
-      if self_host_u64_equal(variant.declaration, declaration) {
-        variants.push(variant.variant)
+    let mut imported_index = 0u32
+    let _ = while imported_index {
+      current => if current < self.imported_variants.length() {
+        let variant = self_host_resolved_imported_variant_at(
+          self.imported_variants,
+          current,
+        )
+        if self_host_u64_equal(variant.declaration, declaration) {
+          variants.push(variant.variant)
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
     variants
@@ -465,8 +532,11 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn pattern_has_error(self, pattern: U32) -> Bool {
-    for diagnostic in self.inferred.diagnostics {
-      match diagnostic {
+    let mut diagnostic_index = 0u32
+    let _ = while diagnostic_index {
+      current => if current < self.inferred.diagnostics.length() {
+        let diagnostic = self.inferred.diagnostics[current]
+        match diagnostic {
         SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(
           candidate,
           _,
@@ -509,7 +579,11 @@ impl SelfHostBodyFlowAnalyzer {
         ) => if self_host_u32_equal(candidate, pattern) {
           return true
         }
-        _ => {}
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
     false
@@ -565,16 +639,35 @@ impl SelfHostBodyFlowAnalyzer {
         return false
       }
     }
-    for candidate in self.collected.variants {
-      if self_host_u64_equal(candidate.id, variant) {
-        return self_host_u32_equal(candidate.name, pattern_name)
+    let mut local_index = 0u32
+    let _ = while local_index {
+      current => if current < self.collected.variants.length() {
+        let candidate = self_host_collected_variant_identity(
+          self.collected.variants[current],
+        )
+        if self_host_u64_equal(candidate.id, variant) {
+          return self_host_u32_equal(candidate.name, pattern_name)
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
     let name = self.collected.name(pattern_name)
-    for candidate in self.imported_variants {
-      if self_host_u64_equal(candidate.variant, variant) {
-        let candidate_name = candidate.name
-        return self_host_flow_string_equal(candidate_name, name)
+    let mut imported_index = 0u32
+    let _ = while imported_index {
+      current => if current < self.imported_variants.length() {
+        let candidate = self_host_resolved_imported_variant_at(
+          self.imported_variants,
+          current,
+        )
+        if self_host_u64_equal(candidate.variant, variant) {
+          let candidate_name = candidate.name
+          return self_host_flow_string_equal(candidate_name, name)
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
     }
     false
@@ -854,9 +947,11 @@ impl SelfHostBodyFlowAnalyzer {
             let mut field = 0u32
             let _ = while field {
               field_index => if field_index < fields.length {
-                let value = self.collected.object_fields[
-                  self_host_u32_add(fields.start, field_index)
-                ].value
+                let object_field = self_host_hir_object_field_at(
+                  self.collected.object_fields,
+                  self_host_u32_add(fields.start, field_index),
+                )
+                let value = object_field.value
                 prefix = self_host_flow_sequence(
                   prefix,
                   self.expression_flow(value),
@@ -873,9 +968,11 @@ impl SelfHostBodyFlowAnalyzer {
             let mut field = 0u32
             let _ = while field {
               field_index => if field_index < fields.length {
-                let value = self.collected.object_fields[
-                  self_host_u32_add(fields.start, field_index)
-                ].value
+                let object_field = self_host_hir_object_field_at(
+                  self.collected.object_fields,
+                  self_host_u32_add(fields.start, field_index),
+                )
+                let value = object_field.value
                 prefix = self_host_flow_sequence(
                   prefix,
                   self.expression_flow(value),
@@ -959,13 +1056,24 @@ impl SelfHostBodyFlowAnalyzer {
               terminal,
             )
           }
-          SelfHostHirExpr::CallExpr(target, arguments, _) => self_host_flow_sequence(
+          SelfHostHirExpr::CallExpr(target, arguments, _) => {
+            let target_flow = match self.inferred.call_targets[
+              current - self.body.expressions.start
+            ] {
+              // A selected direct target is compile-time proof, not a value.
+              SelfHostBasicCallTarget::SelectedBasicCallTarget(_, _) => {
+                self_host_flow_falls_through()
+              }
+              _ => self.expression_flow(target)
+            }
             self_host_flow_sequence(
-              self.expression_flow(target),
-              self.sequence_children(arguments),
-            ),
-            terminal,
-          )
+              self_host_flow_sequence(
+                target_flow,
+                self.sequence_children(arguments),
+              ),
+              terminal,
+            )
+          }
           SelfHostHirExpr::FieldExpr(base, _, _) => {
             self_host_flow_sequence(self.expression_flow(base), terminal)
           }
@@ -999,7 +1107,9 @@ impl SelfHostBodyFlowAnalyzer {
             )
           }
         }
-        self.expression_flows[current - self.body.expressions.start] = flow
+        self.expression_flows[
+          current - self.body.expressions.start
+        ] = self_host_flow_encode(flow)
         continue current + 1u32
       } else {
         break self_host_semantic_unit()

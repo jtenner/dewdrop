@@ -241,20 +241,17 @@ fn core_function_signature_type(
 }
 
 ///|
-fn core_exported_function(module_ : @lib.Module, name : @lib.Name) -> Int? {
-  for export_ in core_exports(module_) {
+fn core_exported_function_index(module_ : @lib.Module) -> Map[String, Int] {
+  let exports = core_exports(module_)
+  let result : Map[String, Int] = Map([], capacity=exports.length() * 2 + 1)
+  for export_ in exports {
     match export_ {
-      @lib.Export(candidate, item) =>
-        if candidate == name {
-          match item {
-            @lib.FuncExternIdx(@lib.FuncIdx(index)) =>
-              return Some(index.reinterpret_as_int())
-            _ => return None
-          }
-        }
+      @lib.Export(name, @lib.FuncExternIdx(@lib.FuncIdx(index))) =>
+        result.set(core_name_text(name), index.reinterpret_as_int())
+      _ => ()
     }
   }
-  None
+  result
 }
 
 ///|

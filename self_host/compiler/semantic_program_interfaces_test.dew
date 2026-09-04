@@ -108,6 +108,61 @@ test "program signature freezing resolves imported nominal signatures" {
   }
 }
 
+test "program signature freezing resolves transitive imported aliases" {
+  let program = self_host_collect_program_manifest(
+    215u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "chain.consumer"
+          files: [
+            SelfHostManifestFile::{
+              path: "consumer.dew"
+              source: b"open chain.alias\npub fn keep(value: Alias<U32>) -> Alias<U32> {\n  value\n}\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "chain.alias"
+          files: [
+            SelfHostManifestFile::{
+              path: "alias.dew"
+              source: b"open chain.storage\npub type Alias<t> = Cell<t>\n"
+              test_only: false
+            },
+          ]
+        },
+        SelfHostManifestModule::{
+          path: "chain.storage"
+          files: [
+            SelfHostManifestFile::{
+              path: "storage.dew"
+              source: b"pub struct Cell<t> {}\n"
+              test_only: false
+            },
+          ]
+        },
+      ]
+    },
+  )
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  let consumer = frozen.interfaces.at(0u32)
+  assert(consumer.resolved_diagnostic_count() == 0u32, "type diagnostics")
+  match consumer.resolved_type_at(consumer.resolved_parameter_type(0u32)) {
+    SelfHostResolvedType::AppliedType(base, _) => match consumer.resolved_type_at(
+      base,
+    ) {
+      SelfHostResolvedType::NominalType(declaration) => assert(
+        self_host_semantic_id_module(declaration) == 217u64,
+        "transitive alias target",
+      )
+      _ => assert(false, "expected imported Cell")
+    }
+    _ => assert(false, "expected applied Cell")
+  }
+}
+
 test "two-stage signature freezing resolves cyclic module types" {
   let program = self_host_collect_program_manifest(
     220u64,

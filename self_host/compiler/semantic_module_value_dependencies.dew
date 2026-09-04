@@ -67,9 +67,17 @@ fn self_host_module_value_body(
   collected: SelfHostCollectedModule,
   declaration: U64,
 ) -> Option<SelfHostHirBody> {
-  for body in collected.bodies {
-    if self_host_u64_equal(body.declaration, declaration) {
-      return Option::Some(body)
+  let limit = array_length(collected.bodies)
+  let mut index = 0u32
+  while index {
+    current => if current < limit {
+      let body = array_get_unchecked(collected.bodies, current)
+      if self_host_u64_equal(body.declaration, declaration) {
+        return Option::Some(body)
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
   Option::None
@@ -145,8 +153,13 @@ fn self_host_collect_module_value_dependencies(
   let spans = []
   let declarations = []
   let scratch = []
-  for value in collected.lets {
-    scratch.clear()
+  let mut value_index = 0u32
+  let _ = while value_index {
+    current_value => if current_value < collected.lets.length() {
+      let value = self_host_collected_let_identity(
+        collected.lets[current_value],
+      )
+      scratch.clear()
     match self_host_module_value_body(collected, value.declaration) {
       Option::Some(body) => {
         let mut expression = body.expressions.start
@@ -183,14 +196,32 @@ fn self_host_collect_module_value_dependencies(
       }
       Option::None => {}
     }
-    let start = declarations.length()
-    for dependency in scratch {
-      declarations.push(collected.lets[dependency].declaration)
+      let start = declarations.length()
+      let mut dependency_index = 0u32
+      let _ = while dependency_index {
+        current_dependency => if current_dependency < scratch.length() {
+          let dependency = self_host_module_value_u32_at(
+            scratch,
+            current_dependency,
+          )
+          declarations.push(
+            self_host_collected_let_identity(
+              collected.lets[dependency],
+            ).declaration,
+          )
+          continue current_dependency + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      spans.push(SelfHostHirSpan::{
+        start: start
+        length: declarations.length() - start
+      })
+      continue current_value + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
-    spans.push(SelfHostHirSpan::{
-      start: start
-      length: declarations.length() - start
-    })
   }
   (spans, declarations)
 }
@@ -359,8 +390,9 @@ fn self_host_find_module_value_sccs(
   let _ = while component {
     current_component => if current_component < raw_spans.length() {
       let scratch = []
-      let member_start = raw_spans[current_component].start
-      let member_length = raw_spans[current_component].length
+      let component_span = self_host_hir_span_at(raw_spans, current_component)
+      let member_start = component_span.start
+      let member_length = component_span.length
       let mut member = 0u32
       let _ = while member {
         current_member => if current_member < member_length {
@@ -447,8 +479,12 @@ fn self_host_find_module_value_sccs(
                 value: task.value
                 finish: true
               })
-              let edge_start = component_dependencies[task.value].start
-              let mut edge = component_dependencies[task.value].length
+              let dependency_span = self_host_hir_span_at(
+                component_dependencies,
+                task.value,
+              )
+              let edge_start = dependency_span.start
+              let mut edge = dependency_span.length
               let _ = while edge {
                 current => if self_host_u32_greater(current, 0u32) {
                   let previous = current - 1u32
@@ -488,8 +524,9 @@ fn self_host_find_module_value_sccs(
         schedule,
         current_component,
       )
-      let raw_start = raw_spans[ordered_component].start
-      let raw_length = raw_spans[ordered_component].length
+      let ordered_span = self_host_hir_span_at(raw_spans, ordered_component)
+      let raw_start = ordered_span.start
+      let raw_length = ordered_span.length
       let scc_start = scc_declarations.length()
       let mut member = 0u32
       let _ = while member {

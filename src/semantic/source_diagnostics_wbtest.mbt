@@ -122,3 +122,39 @@ test "source diagnostics render line columns excerpts and secondary labels" {
     content="second.dew:1:4: error: DuplicateName(\n  {\n    space: ModuleValue,\n    name: 0,\n    first: 11166914969600,\n    duplicate: 11166914969601,\n    first_file: 11166914969856,\n    duplicate_file: 11166914969857,\n    first_offset: 3,\n    duplicate_offset: 3,\n  },\n)\n  |\n1 | fn same() -> I32 {\n  |    ^\n  = first.dew:1:4: first declaration is here",
   )
 }
+
+///|
+test "source diagnostics keep every body flow diagnostic" {
+  let (program, analyzed, lowering, link) = source_diagnostic_program([
+    ManifestFile::new(
+      "main.dew",
+      b"enum Flag {\n  On\n  Off\n}\nfn read(value: Flag) -> I32 {\n  match value {\n    On => 1\n    On => 2\n  }\n}\nfn run(state: Flag) -> I32 {\n  while state {\n    On => 1\n  }\n}\n",
+    ),
+  ])
+  let diagnostics = collect_compiler_source_diagnostics(
+    program, analyzed, lowering, link,
+  )
+  let mut non_exhaustive_match = false
+  let mut redundant_arm = false
+  let mut non_exhaustive_loop = false
+  let mut loop_fallthrough = false
+  for diagnostic in diagnostics {
+    if diagnostic.message.has_prefix("NonExhaustiveMatch") {
+      assert_eq(diagnostic.severity, CompilerError)
+      non_exhaustive_match = true
+    } else if diagnostic.message.has_prefix("RedundantPatternArm") {
+      assert_eq(diagnostic.severity, CompilerWarning)
+      redundant_arm = true
+    } else if diagnostic.message.has_prefix("NonExhaustiveFunctionalLoop") {
+      assert_eq(diagnostic.severity, CompilerError)
+      non_exhaustive_loop = true
+    } else if diagnostic.message.has_prefix("FunctionalLoopArmFallsThrough") {
+      assert_eq(diagnostic.severity, CompilerError)
+      loop_fallthrough = true
+    }
+  }
+  assert_true(non_exhaustive_match)
+  assert_true(redundant_arm)
+  assert_true(non_exhaustive_loop)
+  assert_true(loop_fallthrough)
+}
