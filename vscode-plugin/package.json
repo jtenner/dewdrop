@@ -1,0 +1,69 @@
+{
+  "name": "dewdrop",
+  "displayName": "Dewdrop Language",
+  "description": "Dew syntax highlighting, snippets, and local name completion.",
+  "version": "1.0.0",
+  "publisher": "dewdrop",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "main": "./src/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "dew",
+        "aliases": [
+          "Dew",
+          "Dewdrop",
+          "dew"
+        ],
+        "extensions": [
+          ".dew"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dew",
+        "scopeName": "source.dew",
+        "path": "./syntaxes/dew.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "dew",
+        "path": "./snippets/dew.json"
+      }
+    ],
+    "configurationDefaults": {
+      "[dew]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.wordBasedSuggestions": "off"
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "package": "vsce package --no-dependencies --allow-missing-repository",
+    "test:host": "node test/run-host.js"
+  },
+  "devDependencies": {
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "3.9.2",
+    "vscode-oniguruma": "2.0.1",
+    "vscode-textmate": "9.3.2"
+  }
+}

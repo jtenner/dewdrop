@@ -1,0 +1,150 @@
+{
+  "Function": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:name}(${2}) -> ${3:Unit} {",
+      "  $0",
+      "}"
+    ],
+    "description": "Function (Dew)"
+  },
+  "Public function": {
+    "prefix": "pubfn",
+    "body": [
+      "pub fn ${1:name}(${2}) -> ${3:Unit} {",
+      "  $0",
+      "}"
+    ],
+    "description": "Public function (Dew)"
+  },
+  "Test": {
+    "prefix": "test",
+    "body": [
+      "test \"${1:behavior}\" {",
+      "  $0",
+      "}"
+    ],
+    "description": "Test (Dew)"
+  },
+  "Struct": {
+    "prefix": "struct",
+    "body": [
+      "struct ${1:Name} {",
+      "  ${2:field}: ${3:I32}",
+      "}$0"
+    ],
+    "description": "Struct (Dew)"
+  },
+  "Enum": {
+    "prefix": "enum",
+    "body": [
+      "enum ${1:Name} {",
+      "  ${2:Variant}",
+      "}$0"
+    ],
+    "description": "Enum (Dew)"
+  },
+  "Trait": {
+    "prefix": "trait",
+    "body": [
+      "trait ${1:Name} {",
+      "  fn ${2:method}(self) -> ${3:Unit}",
+      "}$0"
+    ],
+    "description": "Trait (Dew)"
+  },
+  "Implementation": {
+    "prefix": "impl",
+    "body": [
+      "impl ${1:Type} {",
+      "  fn ${2:method}(self) -> ${3:Unit} {",
+      "    $0",
+      "  }",
+      "}"
+    ],
+    "description": "Implementation (Dew)"
+  },
+  "Trait implementation": {
+    "prefix": "implfor",
+    "body": [
+      "impl ${1:Trait} for ${2:Type} {",
+      "  $0",
+      "}"
+    ],
+    "description": "Trait implementation (Dew)"
+  },
+  "Match": {
+    "prefix": "match",
+    "body": [
+      "match ${1:value} {",
+      "  ${2:pattern} => ${3:result}",
+      "  _ => ${0:fallback}",
+      "}"
+    ],
+    "description": "Match (Dew)"
+  },
+  "If": {
+    "prefix": "if",
+    "body": [
+      "if ${1:condition} {",
+      "  $0",
+      "}"
+    ],
+    "description": "If (Dew)"
+  },
+  "If else": {
+    "prefix": "ifelse",
+    "body": [
+      "if ${1:condition} {",
+      "  ${2}",
+      "} else {",
+      "  $0",
+      "}"
+    ],
+    "description": "If else (Dew)"
+  },
+  "Open module": {
+    "prefix": "open",
+    "body": [
+      "open ${1:dew.std.array}$0"
+    ],
+    "description": "Open module (Dew)"
+  },
+  "Import module": {
+    "prefix": "import",
+    "body": [
+      "import ${1:app.module} as @${2:module}$0"
+    ],
+    "description": "Import module (Dew)"
+  },
+  "Let": {
+    "prefix": "let",
+    "body": [
+      "let ${1:name} = $0"
+    ],
+    "description": "Let (Dew)"
+  },
+  "Mutable let": {
+    "prefix": "letmut",
+    "body": [
+      "let mut ${1:name} = $0"
+    ],
+    "description": "Mutable let (Dew)"
+  },
+  "Using": {
+    "prefix": "using",
+    "body": [
+      "using ${1:resource} = $0"
+    ],
+    "description": "Using (Dew)"
+  },
+  "Defer": {
+    "prefix": "defer",
+    "body": [
+      "defer {",
+      "  $0",
+      "}"
+    ],
+    "description": "Defer (Dew)"
+  }
+}

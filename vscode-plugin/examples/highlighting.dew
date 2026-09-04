@@ -1,0 +1,35 @@
+// Use this file to check colors and completion in VS Code.
+open dew.std.array
+import app.util as @util
+
+pub struct Greeting {
+  message: String
+} derive(Eq, Debug)
+
+enum Choice {
+  None
+  Some(I32)
+}
+
+pub fn greet(name: String) -> String {
+  let bytes = b"hello\x20"
+  let count = 12_345u64
+  let ratio = .5f32
+  let text = "hello\n"
+  let lines =
+    #| Text has no code colors: fn let true
+    #| This line is part of the text.
+  if true {
+    name
+  } else {
+    text
+  }
+}
+
+test "match syntax" {
+  let value = Choice::Some(1)
+  match value {
+    Choice::Some(n) => n
+    Choice::None => 0
+  }
+}

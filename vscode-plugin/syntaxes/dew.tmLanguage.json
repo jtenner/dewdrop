@@ -1,0 +1,115 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Dew",
+  "scopeName": "source.dew",
+  "patterns": [
+    {
+      "name": "comment.line.double-slash.dew",
+      "begin": "//",
+      "end": "$"
+    },
+    {
+      "name": "string.unquoted.multiline.dew",
+      "begin": "#\\|",
+      "end": "$"
+    },
+    {
+      "name": "string.quoted.double.dew",
+      "begin": "\\b(b)(\")|(\")",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.type.bytes.dew"
+        }
+      },
+      "end": "\"|$",
+      "patterns": [
+        {
+          "name": "constant.character.escape.dew",
+          "match": "\\\\(?:[\\\\\"nrt0bf]|x[0-9A-Fa-f]{2})"
+        },
+        {
+          "name": "invalid.illegal.escape.dew",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "variable.other.namespace.dew",
+      "match": "@[A-Za-z_\\x{80}-\\x{10FFFF}][A-Za-z_0-9\\x{80}-\\x{10FFFF}]*(?:\\.[A-Za-z_\\x{80}-\\x{10FFFF}][A-Za-z_0-9\\x{80}-\\x{10FFFF}]*)*"
+    },
+    {
+      "match": "\\b(fn|builtin)\\s+([A-Za-z_\\x{80}-\\x{10FFFF}][A-Za-z_0-9\\x{80}-\\x{10FFFF}]*)",
+      "captures": {
+        "1": {
+          "name": "storage.type.function.dew"
+        },
+        "2": {
+          "name": "entity.name.function.dew"
+        }
+      }
+    },
+    {
+      "match": "\\b(struct|enum|trait|type)\\s+([A-Za-z_\\x{80}-\\x{10FFFF}][A-Za-z_0-9\\x{80}-\\x{10FFFF}]*)",
+      "captures": {
+        "1": {
+          "name": "storage.type.dew"
+        },
+        "2": {
+          "name": "entity.name.type.dew"
+        }
+      }
+    },
+    {
+      "name": "constant.language.boolean.dew",
+      "match": "\\b(true|false)\\b"
+    },
+    {
+      "name": "keyword.control.dew",
+      "match": "\\b(if|else|match|is|while|loop|for|in|return|defer|break|continue)\\b"
+    },
+    {
+      "name": "keyword.other.dew",
+      "match": "\\b(fn|test|pub|builtin|foreign|impl|trait|enum|struct|type|let|using|mut|as|where|open|import|export|package)\\b"
+    },
+    {
+      "name": "keyword.other.derive.dew",
+      "match": "\\bderive\\b(?=\\s*\\()"
+    },
+    {
+      "name": "variable.language.dew",
+      "match": "\\bself\\b"
+    },
+    {
+      "name": "support.type.dew",
+      "match": "\\b(?:Unit|Bool|[IU](?:8|16|32|64)(?:x(?:2|4|8|16))?|F(?:32|64)(?:x[24])?|String(?:View|Builder)?|Bytes(?:Builder)?|V128|Swar(?:32|64)|Self)\\b"
+    },
+    {
+      "name": "constant.numeric.float.dew",
+      "match": "(?<![\\w.])(?:[0-9](?:_?[0-9])*)?\\.[0-9](?:_?[0-9])*(?:[eE][+-]?[0-9](?:_?[0-9])*)?(?:f32|f64|F)?\\b"
+    },
+    {
+      "name": "constant.numeric.integer.dew",
+      "match": "\\b[0-9](?:_?[0-9])*(?:[iu](?:8|16|32|64)|UL|U|L)?\\b"
+    },
+    {
+      "name": "entity.name.type.dew",
+      "match": "\\b[A-Z][A-Za-z_0-9]*\\b"
+    },
+    {
+      "name": "entity.name.function.dew",
+      "match": "[A-Za-z_\\x{80}-\\x{10FFFF}][A-Za-z_0-9\\x{80}-\\x{10FFFF}]*(?=\\s*(?:\\(|::<))"
+    },
+    {
+      "name": "keyword.operator.dew",
+      "match": "\\*\\*|=>|->|==|!=|<=|>=|<<|>>|&&|\\|\\||[+*/%=!<>^&|\\-]"
+    },
+    {
+      "name": "punctuation.separator.dew",
+      "match": "::|\\.\\.\\.|[.,:;]"
+    },
+    {
+      "name": "punctuation.section.brackets.dew",
+      "match": "[(){}\\[\\]]"
+    }
+  ]
+}
