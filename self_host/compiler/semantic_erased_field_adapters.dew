@@ -23,6 +23,21 @@ fn self_host_empty_erased_field_index() -> Map<U64, Bool> {
   Map::empty()
 }
 
+// A reference field needs an explicit boxing contract. Generic shape evidence
+// alone cannot certify a reference in a signature or specialization request.
+fn self_host_linked_field_storage_matches_shape(
+  link: SelfHostPlannedProgramWasmGCLink,
+  field: U64,
+  storage: SelfHostPlannedWasmStorageType,
+  shape: SelfHostPlannedValueShape,
+) -> Bool {
+  if shape is SelfHostPlannedValueShape::GenericPlannedValueShape {
+    return link.erased_fields.get(field) is Option::Some(true) &&
+      storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+  }
+  self_host_program_representation_storage_matches_shape(storage, shape)
+}
+
 fn self_host_linked_erased_field_box_type(link: SelfHostPlannedProgramWasmGCLink, field: U64, carrier: SelfHostWasmBodyCarrier) -> Option<U32> {
   if !(link.erased_fields.get(field) is Option::Some(true)) {
     return Option::None

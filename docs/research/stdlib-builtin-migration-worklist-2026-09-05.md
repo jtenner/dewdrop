@@ -46,6 +46,10 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   cast inventory across every source module and generator.
 - [ ] Finish physical-boundary checks for missing/error specialization evidence;
   neither state may become a valid reference certificate.
+  Self-host request insertion now rejects both states, including nested products,
+  with exact SPC-301 records; normalization preserves the distinction. See
+  `specialization-shape-evidence-2026-09-05.md`. Native requests and broader
+  fragment boundaries remain open.
 
 ## Exit checks
 

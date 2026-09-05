@@ -97,8 +97,8 @@ fn self_host_specialization_canonical_scalar(
     SelfHostPlannedValueShape::U64PlannedValueShape => SelfHostPlannedValueShape::I64PlannedValueShape
     SelfHostPlannedValueShape::Swar64PlannedValueShape => SelfHostPlannedValueShape::I64PlannedValueShape
     SelfHostPlannedValueShape::RefPlannedValueShape => SelfHostPlannedValueShape::RefPlannedValueShape
-    SelfHostPlannedValueShape::GenericPlannedValueShape => SelfHostPlannedValueShape::RefPlannedValueShape
-    SelfHostPlannedValueShape::ErrorPlannedValueShape => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPlannedValueShape::GenericPlannedValueShape => SelfHostPlannedValueShape::GenericPlannedValueShape
+    SelfHostPlannedValueShape::ErrorPlannedValueShape => SelfHostPlannedValueShape::ErrorPlannedValueShape
     _ => shape
   }
 }
@@ -112,15 +112,23 @@ fn self_host_specialization_canonical_shape(
     length => if self_host_u32_greater(length, 0u32) {
       let task = match self_host_array_pop(tasks) {
         Option::Some(value) => value
-        Option::None => SelfHostSpecializationShapeTask::{
-          shape: SelfHostPlannedValueShape::ErrorPlannedValueShape
-          finish: false
-          start: 0u32
+        Option::None => {
+          self_host_assert_compiler_invariant(false, "specialization normalization lost a work item")
+          unreachable()
         }
       }
       if task.finish {
         let fields = self_host_specialization_fields()
         let end = results.length()
+        let expected = match task.shape {
+          SelfHostPlannedValueShape::ProductPlannedValueShape(source_fields) => source_fields.length()
+          _ => {
+            self_host_assert_compiler_invariant(false, "specialization finish task must describe a product")
+            unreachable()
+          }
+        }
+        self_host_assert_array_span(task.start, expected, end, "specialization product result span is invalid")
+        self_host_assert_compiler_invariant(end - task.start == expected, "specialization product result count is invalid")
         let mut index = task.start
         let _ = while index {
           current => if current < end {
@@ -164,9 +172,13 @@ fn self_host_specialization_canonical_shape(
       break self_host_semantic_unit()
     }
   }
+  self_host_assert_compiler_invariant(results.length() == 1u32, "specialization normalization must produce one result")
   match self_host_array_pop(results) {
     Option::Some(value) => value
-    Option::None => SelfHostPlannedValueShape::RefPlannedValueShape
+    Option::None => {
+      self_host_assert_compiler_invariant(false, "specialization normalization lost its result")
+      unreachable()
+    }
   }
 }
 
@@ -179,9 +191,9 @@ fn self_host_specialization_shapes_equal(
     length => if self_host_u32_greater(length, 0u32) {
       let pair = match self_host_array_pop(work) {
         Option::Some(value) => value
-        Option::None => SelfHostSpecializationShapePair::{
-          left: SelfHostPlannedValueShape::ErrorPlannedValueShape
-          right: SelfHostPlannedValueShape::UnitPlannedValueShape
+        Option::None => {
+          self_host_assert_compiler_invariant(false, "specialization equality lost a work item")
+          unreachable()
         }
       }
       let canonical_left = self_host_specialization_canonical_scalar(pair.left)
@@ -231,6 +243,12 @@ fn self_host_specialization_shapes_equal(
           return false
         }
         SelfHostPlannedValueShape::RefPlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::RefPlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::GenericPlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::GenericPlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::ErrorPlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
           return false
         }
         _ => {
@@ -493,17 +511,6 @@ fn self_host_program_specialization_argument_shape(
           }
         }
         Option::None => {}
-      }
-      if self_host_u32_equal(caller_shapes.length, 1u32) {
-        match fallback {
-          SelfHostPlannedValueShape::GenericPlannedValueShape => {
-            return shapes[caller_shapes.start]
-          }
-          SelfHostPlannedValueShape::ErrorPlannedValueShape => {
-            return shapes[caller_shapes.start]
-          }
-          _ => {}
-        }
       }
       fallback
     }
@@ -1295,7 +1302,7 @@ fn self_host_program_specialization_scan_body(
                 }
               }
               let evidence_types = self_host_program_specialization_call_evidence_types(lowering, module_, caller, caller_specialization, requests, target, type_arguments)
-              let request = self_host_program_specialization_add_request_with_evidence(
+              let request = self_host_program_specialization_add_request_at_call(
                 requests,
                 shapes,
                 request_head_by_declaration,
@@ -1303,6 +1310,8 @@ fn self_host_program_specialization_scan_body(
                 target,
                 candidate_shapes,
                 evidence_types,
+                body.body,
+                expression_index,
               )
               self_host_program_specialization_record_call(
                 calls,
@@ -1369,13 +1378,14 @@ fn self_host_program_specialization_scan_body(
                       candidate_shapes.length(),
                       generic_parameters.length,
                     ) {
-                      let request = self_host_program_specialization_add_request(
+                      let request = self_host_program_specialization_add_request_at_call(
                         requests,
                         shapes,
                         request_head_by_declaration,
                         request_next,
                         target,
                         candidate_shapes,
+                        [], body.body, expression_index,
                       )
                       self_host_program_specialization_record_call(
                         calls,
@@ -1540,13 +1550,14 @@ fn self_host_program_specialization_scan_body(
                         generic_parameters.length,
                         0u32,
                       ) {
-                        self_host_program_specialization_add_request(
+                        self_host_program_specialization_add_request_at_call(
                           requests,
                           shapes,
                           request_head_by_declaration,
                           request_next,
                           callable.declaration,
                           candidate_shapes,
+                          [], body.body, expression_index,
                         )
                       } else {
                         4294967295u32
@@ -1692,13 +1703,14 @@ fn self_host_program_specialization_scan_body(
                             argument_expression.type_,
                           )
                         }
-                        let request = self_host_program_specialization_add_request(
+                        let request = self_host_program_specialization_add_request_at_call(
                           requests,
                           shapes,
                           request_head_by_declaration,
                           request_next,
                           callable.declaration,
                           [candidate_shape],
+                          [], body.body, expression_index,
                         )
                         self_host_program_specialization_add_reachable(
                           reachable,
@@ -1804,13 +1816,14 @@ fn self_host_program_specialization_normalize_receiver_calls(
                       candidates.length(),
                       generics.length,
                     ) {
-                      let request = self_host_program_specialization_add_request(
+                      let request = self_host_program_specialization_add_request_at_call(
                         requests,
                         shapes,
                         request_head_by_declaration,
                         request_next,
                         call.target,
                         candidates,
+                        [], call.caller_body, call.expression,
                       )
                       calls[current] = SelfHostProgramSpecializedCall::{
                         caller_body: call.caller_body

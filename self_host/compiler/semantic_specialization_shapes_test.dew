@@ -1,0 +1,91 @@
+test "specialization normalization retains missing and erroneous evidence" {
+  let generic = SelfHostPlannedValueShape::GenericPlannedValueShape
+  let error = SelfHostPlannedValueShape::ErrorPlannedValueShape
+  let reference = SelfHostPlannedValueShape::RefPlannedValueShape
+  assert(self_host_specialization_canonical_scalar(generic) is SelfHostPlannedValueShape::GenericPlannedValueShape, "generic evidence was erased")
+  assert(self_host_specialization_canonical_scalar(error) is SelfHostPlannedValueShape::ErrorPlannedValueShape, "error evidence was erased")
+  assert(!self_host_specialization_shapes_equal(generic, reference), "generic is not a reference certificate")
+  assert(!self_host_specialization_shapes_equal(error, reference), "error is not a reference certificate")
+  let product = self_host_specialization_canonical_shape(SelfHostPlannedValueShape::ProductPlannedValueShape([
+    SelfHostPlannedValueShape::U8PlannedValueShape,
+    generic,
+    error,
+  ]))
+  match product {
+    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+      assert(fields[0u32] is SelfHostPlannedValueShape::I32PlannedValueShape, "concrete carrier normalization")
+      assert(fields[1u32] is SelfHostPlannedValueShape::GenericPlannedValueShape, "nested generic evidence")
+      assert(fields[2u32] is SelfHostPlannedValueShape::ErrorPlannedValueShape, "nested error evidence")
+    }
+    _ => assert(false, "product was lost")
+  }
+}
+
+fn self_host_invalid_specialization_request(shape: SelfHostPlannedValueShape) -> Unit {
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let _ = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, 377957122059u64,
+    [SelfHostPlannedValueShape::I32PlannedValueShape, SelfHostPlannedValueShape::RefPlannedValueShape],
+    [], 330712481809u64, 18u32,
+  )
+  let _ = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, 377957122059u64,
+    [SelfHostPlannedValueShape::I32PlannedValueShape, shape],
+    [], 330712481809u64, 19u32,
+  )
+}
+
+test "concrete specialization normalization is idempotent and structural" {
+  let product = SelfHostPlannedValueShape::ProductPlannedValueShape([
+    SelfHostPlannedValueShape::U8PlannedValueShape,
+    SelfHostPlannedValueShape::ProductPlannedValueShape([
+      SelfHostPlannedValueShape::U64PlannedValueShape,
+      SelfHostPlannedValueShape::RefPlannedValueShape,
+    ]),
+    SelfHostPlannedValueShape::ProductPlannedValueShape([]),
+  ])
+  let normalized = self_host_specialization_canonical_shape(product)
+  assert(self_host_specialization_shapes_equal(normalized, self_host_specialization_canonical_shape(normalized)), "normalization is idempotent")
+  assert(self_host_specialization_shape_error(normalized) == 0u32, "concrete product is valid")
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let first = self_host_program_specialization_add_request(requests, shapes, heads, next, 11u64, [product])
+  let repeated = self_host_program_specialization_add_request(requests, shapes, heads, next, 11u64, [normalized])
+  assert(first == repeated && requests.length() == 1u32, "structurally equal requests deduplicate")
+  assert(self_host_specialization_shapes_equal(shapes[0u32], normalized), "stored shapes are canonical")
+}
+
+test "missing shape evidence cannot certify physical field storage" {
+  let reference = SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+  assert(!self_host_program_representation_storage_matches_shape(reference, SelfHostPlannedValueShape::GenericPlannedValueShape), "generic needs an explicit adapter")
+  assert(!self_host_program_representation_storage_matches_shape(reference, SelfHostPlannedValueShape::ErrorPlannedValueShape), "error never grants an adapter")
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(b"pub fn run() -> I32 {\n  42\n}\n"), false)
+  assert(!self_host_linked_field_storage_matches_shape(link, 11u64, reference, SelfHostPlannedValueShape::GenericPlannedValueShape), "missing field metadata cannot permit boxing")
+}
+
+test "SPC-301 generic request shape is rejected" expect_trap "unreachable" {
+  self_host_invalid_specialization_request(SelfHostPlannedValueShape::GenericPlannedValueShape)
+}
+
+test "SPC-301 erroneous request shape is rejected" expect_trap "unreachable" {
+  self_host_invalid_specialization_request(SelfHostPlannedValueShape::ErrorPlannedValueShape)
+}
+
+test "SPC-301 nested generic request shape is rejected" expect_trap "unreachable" {
+  self_host_invalid_specialization_request(SelfHostPlannedValueShape::ProductPlannedValueShape([
+    SelfHostPlannedValueShape::I64PlannedValueShape,
+    SelfHostPlannedValueShape::GenericPlannedValueShape,
+  ]))
+}
+
+test "SPC-301 nested erroneous request shape is rejected" expect_trap "unreachable" {
+  self_host_invalid_specialization_request(SelfHostPlannedValueShape::ProductPlannedValueShape([
+    SelfHostPlannedValueShape::I64PlannedValueShape,
+    SelfHostPlannedValueShape::ErrorPlannedValueShape,
+  ]))
+}

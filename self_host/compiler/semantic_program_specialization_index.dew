@@ -82,6 +82,81 @@ fn self_host_program_specialization_add_request_with_evidence(
   candidates: Array<SelfHostPlannedValueShape>,
   evidence_types: Array<SelfHostSpecializationEvidenceType>,
 ) -> U32 {
+  self_host_program_specialization_add_request_at_call(
+    requests, shapes, request_head_by_declaration, request_next,
+    declaration, candidates, evidence_types, 0u64, 4294967295u32,
+  )
+}
+
+// Unknown and poison are logical evidence, never physical ABI certificates.
+// Walk product fields too; checking only the outer shape would admit poison.
+fn self_host_specialization_shape_error(root: SelfHostPlannedValueShape) -> U32 {
+  let work = [root]
+  while work.length() {
+    length if length > 0u32 => {
+      let shape = match work.pop() {
+        Option::Some(value) => value
+        Option::None => {
+          self_host_assert_compiler_invariant(false, "specialization shape work stack lost an entry")
+          unreachable()
+        }
+      }
+      match shape {
+        SelfHostPlannedValueShape::GenericPlannedValueShape => return 1u32
+        SelfHostPlannedValueShape::ErrorPlannedValueShape => return 2u32
+        SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+          for field in fields {
+            work.push(field)
+          }
+        }
+        _ => {}
+      }
+      continue work.length()
+    }
+    _ => break 0u32
+  }
+}
+
+fn self_host_program_specialization_add_request_at_call(
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  request_head_by_declaration: Map<U64, U32>,
+  request_next: Array<U32>,
+  declaration: U64,
+  candidates: Array<SelfHostPlannedValueShape>,
+  evidence_types: Array<SelfHostSpecializationEvidenceType>,
+  caller_body: U64,
+  expression: U32,
+) -> U32 {
+  // Validate before lookup or mutation: an invalid shape must not deduplicate
+  // against an earlier reference-shaped request.
+  let context_id = if caller_body == 0u64 {
+    declaration
+  } else {
+    caller_body
+  }
+  let _ = while 0u32 {
+    index if index < candidates.length() => {
+      let error = self_host_specialization_shape_error(candidates[index])
+      self_host_assert_compiler_invariant_with_failure(
+        error == 0u32,
+        SelfHostInvariantFailure::{
+          code: 301u32
+          phase: 5u32
+          module_id: self_host_semantic_id_module(context_id)
+          declaration: declaration
+          body: caller_body
+          expression: expression
+          expected: 0u64
+          actual: u32_into_u64(error)
+          detail: u32_into_u64(index)
+        },
+        "physical specialization requires concrete shapes (1=generic, 2=error)",
+      )
+      continue index + 1u32
+    }
+    _ => break ()
+  }
   let missing = 4294967295u32
   let previous_head = match request_head_by_declaration.get(declaration) {
     Option::Some(index) => index

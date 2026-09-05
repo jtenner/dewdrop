@@ -121,9 +121,9 @@ fn self_host_physical_test_assert_clean_inference(
   }
 }
 
-fn self_host_physical_test_fragments(
+fn self_host_physical_test_lowering(
   source: Bytes,
-) -> SelfHostPlannedProgramWasmGCFragments {
+) -> SelfHostPlannedProgramLowering {
   let collected = self_host_collect_program_manifest(
     5100u64,
     SelfHostProgramManifest::{
@@ -140,9 +140,15 @@ fn self_host_physical_test_fragments(
   assert(collected.diagnostics.length() == 0u32, "single-module fixture manifest must parse")
   let source_module = collected.modules.at(0u32)
   assert(source_module.diagnostic_count() == 0u32, "single-module fixture source must parse and collect")
-  let lowering = self_host_plan_program_lowering(
+  self_host_plan_program_lowering(
     self_host_freeze_program_signature_interfaces(collected),
   )
+}
+
+fn self_host_physical_test_fragments(
+  source: Bytes,
+) -> SelfHostPlannedProgramWasmGCFragments {
+  let lowering = self_host_physical_test_lowering(source)
   self_host_plan_program_wasmgc_fragments(
     self_host_plan_program_specialization(lowering, false),
   )
@@ -1090,10 +1096,10 @@ test "explicit call type count mismatches remain diagnostics" {
 }
 
 test "explicit call types cannot contradict argument types" {
-  let fragments = self_host_physical_test_fragments(
+  let lowering = self_host_physical_test_lowering(
     b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn main() -> I32 {\n  identity::<I64>(42)\n}\n",
   )
-  let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
+  let module_ = self_host_planned_module_lowering_identity(lowering.modules[0u32])
   let mut found = false
   for diagnostic in module_.inferred.diagnostics {
     if diagnostic is SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) {

@@ -10,6 +10,13 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["generic", 1n], ["erroneous", 2n],
+    ["nested generic", 1n], ["nested erroneous", 2n],
+  ].map(([kind, error]) => ({
+    name: `SPC-301 ${kind} request shape is rejected`,
+    expected: [301, 5, 77n, (88n << 32n) + 11n, (77n << 32n) + 17n, 19, 0n, error, 1n],
+  })),
   {
     name: "SPC-303 one call key cannot select two targets",
     expected: [303, 5, 0n, 0n, 17n, 19, 23n, 29n, 3n],

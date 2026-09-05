@@ -28049,7 +28049,9 @@ fn self_host_linked_append_physical_types(
             link,
             field_declaration,
           ) {
-            Option::Some(expected) => if !self_host_program_representation_storage_matches_shape(
+            Option::Some(expected) => if !self_host_linked_field_storage_matches_shape(
+              link,
+              field_declaration,
               source.storage,
               expected,
             ) {
