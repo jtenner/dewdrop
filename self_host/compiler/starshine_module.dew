@@ -7791,6 +7791,9 @@ fn self_host_linked_i32_scratch_count(
     current => if current < body.expressions.length {
       let expression = self_host_u32_add(body.expressions.start, current)
       match module_.expressions[expression].kind {
+        SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, _, _, _, _) => if name.equals(b"array_new") {
+          count = self_host_u32_add(count, 1u32)
+        }
         SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) => {
           count = self_host_u32_add(count, 1u32)
         }
@@ -10784,6 +10787,8 @@ fn self_host_linked_i32_scratch_slot(
           b"dew_map_get",
         ) {
           count = self_host_u32_add(count, 5u32)
+        } else if name.equals(b"array_new") {
+          count = self_host_u32_add(count, 1u32)
         } else if name.equals(b"dew_map_contains_key") {
           count = self_host_u32_add(count, 4u32)
         } else if name.equals(b"dew_map_set") || name.equals(b"dew_map_insert") {
@@ -20899,19 +20904,7 @@ fn self_host_emit_linked_i32_expression(
                 }
                 continue tasks.length()
               }
-              let builtin_target_name = if target < module_.expressions.length() &&
-                self_host_u32_greater(
-                  self_host_linked_module_name_count(module_),
-                  module_.expressions[target].source_name,
-                ) {
-                self_host_linked_module_name_at(
-                  module_,
-                  module_.expressions[target].source_name,
-                )
-              } else {
-                ""
-              }
-              if name.equals(b"array_new") || builtin_target_name == "wasm_array_new" {
+              if name.equals(b"array_new") {
                 if !self_host_u32_equal(arguments.length, 2u32) ||
                   self_host_u32_add(arguments.start, 1u32) >= module_.expression_children.length() {
                   return Option::Some("linked raw array new needs length and value")
@@ -20936,13 +20929,11 @@ fn self_host_emit_linked_i32_expression(
                   array_type,
                   destination,
                 ))
-                self_host_linked_i32_schedule_expression(
-                  tasks,
-                  expression_depths,
-                  length_expression,
-                  destination,
-                  depth,
-                )
+                // Dew evaluates length before value; array.new consumes value
+                // before length. A call-local slot keeps both orders exact,
+                // including nested constructors and side-effecting arguments.
+                let length_local = self_host_linked_i32_scratch_slot(link, module_, body, expression)
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedLocalGet(length_local, destination))
                 self_host_linked_i32_schedule_expression(
                   tasks,
                   expression_depths,
@@ -20950,9 +20941,17 @@ fn self_host_emit_linked_i32_expression(
                   destination,
                   depth,
                 )
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(length_local, destination))
+                self_host_linked_i32_schedule_expression(
+                  tasks,
+                  expression_depths,
+                  length_expression,
+                  destination,
+                  depth,
+                )
                 continue tasks.length()
               }
-              if name.equals(b"array_len") || builtin_target_name == "wasm_array_len" {
+              if name.equals(b"array_len") {
                 if !self_host_u32_equal(arguments.length, 1u32) ||
                   arguments.start >= module_.expression_children.length() {
                   return Option::Some("linked raw array length needs one array")
@@ -20992,7 +20991,7 @@ fn self_host_emit_linked_i32_expression(
                 )
                 continue tasks.length()
               }
-              if name.equals(b"array_set") || builtin_target_name == "wasm_array_set" {
+              if name.equals(b"array_set") {
                 if !self_host_u32_equal(arguments.length, 3u32) ||
                   self_host_u32_add(arguments.start, 2u32) >= module_.expression_children.length() {
                   return Option::Some("linked raw array set needs array index and value")
@@ -21132,7 +21131,7 @@ fn self_host_emit_linked_i32_expression(
                 }
                 continue tasks.length()
               }
-              if name.equals(b"array_get") || builtin_target_name == "wasm_array_get" {
+              if name.equals(b"array_get") {
                 if !self_host_u32_equal(arguments.length, 2u32) {
                   return Option::Some("linked fixed-array get needs two arguments")
                 }
@@ -38468,6 +38467,10 @@ fn self_host_linked_scalar_locals(
             SelfHostPlannedValueShape::I32PlannedValueShape,
           ) {
             return Result::Err("linked builtin map get scratch type is unsupported")
+          }
+        } else if name.equals(b"array_new") {
+          if !self_host_linked_scalar_append_local_type(locals, SelfHostPlannedValueShape::I32PlannedValueShape) {
+            return Result::Err("linked raw array length scratch type is unsupported")
           }
         } else if name.equals(b"dew_map_contains_key") {
           let key_shape = if self_host_u32_greater(arguments.length, 1u32) &&

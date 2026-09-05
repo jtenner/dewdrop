@@ -997,6 +997,21 @@ pub fn self_host_emit_packed_into_probe() -> Bytes {
   }
 }
 
+pub fn self_host_emit_raw_array_order_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Raw<t> {}\nbuiltin make<t>(length: U32, value: t) -> Raw<t> = \"array_new\"\nbuiltin store(address: U32, value: U32) -> Unit = \"i32.store\"\nbuiltin load(address: U32) -> U32 = \"i32.load\"\nfn first() -> U32 {\n  store(0u32, 1u32)\n  1u32\n}\nfn second() -> I32 {\n  store(0u32, load(0u32) + 10u32)\n  7i32\n}\npub fn main() -> U32 {\n  let _ = make(first(), second())\n  load(0u32)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
 test "explicit call types constrain local and imported generic functions" {
   let link = self_host_physical_test_named_import_link(
     "app.explicit",
@@ -1006,6 +1021,36 @@ test "explicit call types constrain local and imported generic functions" {
   self_host_physical_test_assert_clean_inference(link)
   let plan = self_host_plan_program_wasm_bodies(link)
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+pub fn self_host_emit_nested_raw_array_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Raw<t> {}\nbuiltin make<t>(length: U32, value: t) -> Raw<t> = \"array_new\"\nbuiltin count<t>(value: Raw<t>) -> U32 = \"array_len\"\nbuiltin get<t>(value: Raw<t>, index: U32) -> t = \"array_get\"\npub fn main() -> U32 {\n  let value = make(3u32, get(make(1u32, 7u32), 0u32))\n  count(value) * 100u32 + get(value, 2u32)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_raw_array_name_collision_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin wasm_array_new(a: I32, b: I32) -> I32 = \"i32_add\"\nbuiltin wasm_array_len(a: I32, b: I32) -> I32 = \"i32_add\"\nbuiltin wasm_array_get(a: I32, b: I32) -> I32 = \"i32_add\"\nbuiltin wasm_array_set(a: I32, b: I32) -> I32 = \"i32_add\"\npub fn main() -> I32 {\n  wasm_array_set(wasm_array_get(wasm_array_len(wasm_array_new(1, 2), 3), 4), 5)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
 }
 
 test "explicit call type count mismatches remain diagnostics" {
