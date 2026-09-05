@@ -45,3 +45,14 @@ test "SIMD float conversion saturates and maps NaN to zero" {
   let zero = i32x4_trunc_sat_f32x4_s(f32x4_splat(nan))
   assert(zero.extract_0() == 0i32, "float vector NaN conversion")
 }
+
+test "SIMD reverse and concat retain all source lanes" {
+  let left = i8x16_splat(3i8).replace_0(-9i8).replace_15(7i8)
+  let reversed = left.reverse()
+  assert(reversed.extract_0() == 7i8, "reverse first lane")
+  assert(reversed.extract_15() == -9i8, "reverse final lane")
+  let shifted = left.concat_shift_15(i8x16_splat(42i8))
+  assert(shifted.extract_0() == 7i8, "concat last left lane")
+  assert(shifted.extract_1() == 42i8, "concat first right lane")
+  assert(shifted.extract_15() == 42i8, "concat final right lane")
+}

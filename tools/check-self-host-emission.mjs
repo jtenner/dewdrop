@@ -345,8 +345,23 @@ builtin all(value: V128) -> I32 = "i8x16.all_true"
       const main = await compileSource(declarations + `pub fn main() -> I32 {\n  all(${expression})\n}\n`);
       assert.equal(main(), 1, label);
     }
+    const customShuffle = await compileSource(declarations + `
+builtin shuffle(left: V128, right: V128) -> V128 = "i8x16.shuffle 31 31 0 30 1 29 2 28 3 27 4 26 5 25 6 24"
+builtin first(value: V128) -> I32 = "i8x16.extract_lane_s 0"
+builtin third(value: V128) -> I32 = "i8x16.extract_lane_s 2"
+builtin last(value: V128) -> I32 = "i8x16.extract_lane_s 15"
+pub fn main() -> I32 {
+  let value = shuffle(splat8(42i32), splat8(-7i32))
+  if first(value) == -7i32 && third(value) == 42i32 && last(value) == -7i32 {
+    1i32
+  } else {
+    0i32
+  }
+}
+`);
+    assert.equal(customShuffle(), 1, "custom shuffle indices and signed extraction");
     const elapsed = (performance.now() - start) / 1000;
-    console.log(`self-host SIMD opcode validation passed: ${cases.length}, cross-lane execution checks: 6 (${elapsed.toFixed(3)} seconds)`);
+    console.log(`self-host SIMD opcode validation passed: ${cases.length}, cross-lane execution checks: 6, custom shuffle checks: 1 (${elapsed.toFixed(3)} seconds)`);
     assert.ok(elapsed <= 30, "SIMD opcode compiler performance exceeds 30 seconds");
   } catch (error) {
     failures++;
@@ -385,6 +400,7 @@ builtin all(value: V128) -> I32 = "i8x16.all_true"
       ["discarded match effects", "", "let mut count = 0i32\n  let bump = fn() -> I32 {\n    count = count + 1i32\n    count\n  }\n  match value {\n    0i64 => bump()\n    _ => bump()\n  }\n  if count == 1i32 {\n    value\n  } else {\n    value + 1i64\n  }"],
       ["unused match binding", "", "let unused = match value {\n    0i64 => 1i32\n    _ => 2i32\n  }\n  value"],
       ["discarded conditional", "", "if value == 0i64 {\n    1i32\n  } else {\n    2i32\n  }\n  value"],
+      ["I64 SIMD lane replacement", "builtin splat(value: I64) -> V128 = \"i64x2.splat\"\nbuiltin replace(value: V128, lane: I64) -> V128 = \"i64x2.replace_lane 1\"\nbuiltin extract(value: V128) -> I64 = \"i64x2.extract_lane 1\"\n", "extract(replace(splat(0i64), value))"],
     ]) {
       const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
       let main;

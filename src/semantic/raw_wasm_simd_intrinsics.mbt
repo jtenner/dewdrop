@@ -187,7 +187,59 @@ fn raw_wasm_simd_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
     | b"i32x4.all_true"
     | b"i32x4.bitmask"
     | b"i64x2.all_true"
-    | b"i64x2.bitmask" =>
+    | b"i64x2.bitmask"
+    | b"i8x16.extract_lane_s 0"
+    | b"i8x16.extract_lane_u 0"
+    | b"i8x16.extract_lane_s 1"
+    | b"i8x16.extract_lane_u 1"
+    | b"i8x16.extract_lane_s 2"
+    | b"i8x16.extract_lane_u 2"
+    | b"i8x16.extract_lane_s 3"
+    | b"i8x16.extract_lane_u 3"
+    | b"i8x16.extract_lane_s 4"
+    | b"i8x16.extract_lane_u 4"
+    | b"i8x16.extract_lane_s 5"
+    | b"i8x16.extract_lane_u 5"
+    | b"i8x16.extract_lane_s 6"
+    | b"i8x16.extract_lane_u 6"
+    | b"i8x16.extract_lane_s 7"
+    | b"i8x16.extract_lane_u 7"
+    | b"i8x16.extract_lane_s 8"
+    | b"i8x16.extract_lane_u 8"
+    | b"i8x16.extract_lane_s 9"
+    | b"i8x16.extract_lane_u 9"
+    | b"i8x16.extract_lane_s 10"
+    | b"i8x16.extract_lane_u 10"
+    | b"i8x16.extract_lane_s 11"
+    | b"i8x16.extract_lane_u 11"
+    | b"i8x16.extract_lane_s 12"
+    | b"i8x16.extract_lane_u 12"
+    | b"i8x16.extract_lane_s 13"
+    | b"i8x16.extract_lane_u 13"
+    | b"i8x16.extract_lane_s 14"
+    | b"i8x16.extract_lane_u 14"
+    | b"i8x16.extract_lane_s 15"
+    | b"i8x16.extract_lane_u 15"
+    | b"i16x8.extract_lane_s 0"
+    | b"i16x8.extract_lane_u 0"
+    | b"i16x8.extract_lane_s 1"
+    | b"i16x8.extract_lane_u 1"
+    | b"i16x8.extract_lane_s 2"
+    | b"i16x8.extract_lane_u 2"
+    | b"i16x8.extract_lane_s 3"
+    | b"i16x8.extract_lane_u 3"
+    | b"i16x8.extract_lane_s 4"
+    | b"i16x8.extract_lane_u 4"
+    | b"i16x8.extract_lane_s 5"
+    | b"i16x8.extract_lane_u 5"
+    | b"i16x8.extract_lane_s 6"
+    | b"i16x8.extract_lane_u 6"
+    | b"i16x8.extract_lane_s 7"
+    | b"i16x8.extract_lane_u 7"
+    | b"i32x4.extract_lane 0"
+    | b"i32x4.extract_lane 1"
+    | b"i32x4.extract_lane 2"
+    | b"i32x4.extract_lane 3" =>
       Some({ inputs: [WasmV128Value], result: Some(WasmI32Value), })
     b"i8x16.splat" | b"i16x8.splat" | b"i32x4.splat" =>
       Some({ inputs: [WasmI32Value], result: Some(WasmV128Value), })
@@ -208,11 +260,66 @@ fn raw_wasm_simd_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
     | b"i32x4.shr_u"
     | b"i64x2.shl"
     | b"i64x2.shr_s"
-    | b"i64x2.shr_u" =>
+    | b"i64x2.shr_u"
+    | b"i8x16.replace_lane 0"
+    | b"i8x16.replace_lane 1"
+    | b"i8x16.replace_lane 2"
+    | b"i8x16.replace_lane 3"
+    | b"i8x16.replace_lane 4"
+    | b"i8x16.replace_lane 5"
+    | b"i8x16.replace_lane 6"
+    | b"i8x16.replace_lane 7"
+    | b"i8x16.replace_lane 8"
+    | b"i8x16.replace_lane 9"
+    | b"i8x16.replace_lane 10"
+    | b"i8x16.replace_lane 11"
+    | b"i8x16.replace_lane 12"
+    | b"i8x16.replace_lane 13"
+    | b"i8x16.replace_lane 14"
+    | b"i8x16.replace_lane 15"
+    | b"i16x8.replace_lane 0"
+    | b"i16x8.replace_lane 1"
+    | b"i16x8.replace_lane 2"
+    | b"i16x8.replace_lane 3"
+    | b"i16x8.replace_lane 4"
+    | b"i16x8.replace_lane 5"
+    | b"i16x8.replace_lane 6"
+    | b"i16x8.replace_lane 7"
+    | b"i32x4.replace_lane 0"
+    | b"i32x4.replace_lane 1"
+    | b"i32x4.replace_lane 2"
+    | b"i32x4.replace_lane 3" =>
       Some({
         inputs: [WasmV128Value, WasmI32Value],
         result: Some(WasmV128Value),
       })
-    _ => None
+    b"i64x2.extract_lane 0" | b"i64x2.extract_lane 1" =>
+      Some({ inputs: [WasmV128Value], result: Some(WasmI64Value), })
+    b"i64x2.replace_lane 0" | b"i64x2.replace_lane 1" =>
+      Some({
+        inputs: [WasmV128Value, WasmI64Value],
+        result: Some(WasmV128Value),
+      })
+    b"f32x4.extract_lane 0"
+    | b"f32x4.extract_lane 1"
+    | b"f32x4.extract_lane 2"
+    | b"f32x4.extract_lane 3" =>
+      Some({ inputs: [WasmV128Value], result: Some(WasmF32Value), })
+    b"f32x4.replace_lane 0"
+    | b"f32x4.replace_lane 1"
+    | b"f32x4.replace_lane 2"
+    | b"f32x4.replace_lane 3" =>
+      Some({
+        inputs: [WasmV128Value, WasmF32Value],
+        result: Some(WasmV128Value),
+      })
+    b"f64x2.extract_lane 0" | b"f64x2.extract_lane 1" =>
+      Some({ inputs: [WasmV128Value], result: Some(WasmF64Value), })
+    b"f64x2.replace_lane 0" | b"f64x2.replace_lane 1" =>
+      Some({
+        inputs: [WasmV128Value, WasmF64Value],
+        result: Some(WasmV128Value),
+      })
+    _ => raw_wasm_shuffle_signature(name)
   }
 }

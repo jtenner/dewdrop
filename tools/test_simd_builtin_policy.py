@@ -4,7 +4,7 @@ import re
 import unittest
 from pathlib import Path
 
-from wasm_simd_intrinsics import SIMD_INSTRUCTIONS, SIMD_CROSS_OPERATIONS
+from wasm_simd_intrinsics import SIMD_INSTRUCTIONS, SIMD_CROSS_OPERATIONS, SIMD_LANE_INSTRUCTIONS, simd_shuffle_immediates
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -39,6 +39,27 @@ class SimdBuiltinPolicyTests(unittest.TestCase):
         for opcode, (inputs, result) in contracts.items():
             if opcode.endswith((".shl", ".shr_s", ".shr_u")):
                 self.assertEqual((inputs, result), (("V128", "I32"), "V128"))
+
+    def test_lane_immediates_cover_complete_valid_ranges(self):
+        self.assertEqual(len(SIMD_LANE_INSTRUCTIONS), 96)
+        source = (ROOT / "src/backend/starshine_v128_builtins.mbt").read_text()
+        for descriptor, _, _, _, indices in SIMD_LANE_INSTRUCTIONS:
+            with self.subTest(descriptor=descriptor):
+                self.assertIn(f'name == b"{descriptor}"', source)
+                family = descriptor.split(".")[0]
+                self.assertEqual(len(indices), 1)
+                self.assertLess(indices[0], int(family.split("x")[1]))
+
+    def test_generic_shuffle_accepts_custom_recipe_and_rejects_mutations(self):
+        descriptor = "i8x16.shuffle 31 31 0 30 1 29 2 28 3 27 4 26 5 25 6 24"
+        indices = simd_shuffle_immediates(descriptor)
+        self.assertEqual(indices, (31, 31, 0, 30, 1, 29, 2, 28, 3, 27, 4, 26, 5, 25, 6, 24))
+        for position in range(16):
+            bad = list(map(str, indices))
+            bad[position] = "32"
+            self.assertIsNone(simd_shuffle_immediates("i8x16.shuffle " + " ".join(bad)))
+        for bad in (descriptor + " 0", descriptor[:-3], descriptor.replace(" 0 ", " 00 ")):
+            self.assertIsNone(simd_shuffle_immediates(bad))
 
 
 if __name__ == "__main__":

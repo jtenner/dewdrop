@@ -5,7 +5,7 @@
   "wasm_path": "starshine-mb/dist/ffi/starshine-ffi.wasm",
   "wasm_sha256": "fca7ab4f7db569732f60ff25213e45c5ec7c158b0098b2169e662ff2f95d81d9",
   "available_export_count": 4190,
-  "binding_count": 430,
+  "binding_count": 446,
   "interfaces": [
     {
       "path": "src/lib/pkg.generated.mbti",
@@ -27,7 +27,7 @@
   "fingerprint": {
     "algorithm": "blake3-256",
     "domain": "DEW_SELF_HOST_COMPILER_FINGERPRINT_V1",
-    "prefix_sha256": "3aab5403ee6f6c9e64a0d3bef13ab7ec9dc0340d7ce86eed6c2591753b0ee237",
+    "prefix_sha256": "da9d545f55aed0bc7ed979df2b73e67c3b088c5d083b8fc8ba9b3472553e1b26",
     "provider_input": "exact wasm bytes appended after the prefix"
   },
   "exports": [
@@ -3469,6 +3469,134 @@
       "internal_name": "ffi_lib_Instruction_i32x4_trunc_sat_f64x2u_zero",
       "export_name": "Instruction::i32x4_trunc_sat_f64x2u_zero",
       "signature": "() -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2752,
+      "function_index": 3086,
+      "internal_name": "ffi_lib_Instruction_i8x16_extract_lane_s",
+      "export_name": "Instruction::i8x16_extract_lane_s",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2751,
+      "function_index": 3085,
+      "internal_name": "ffi_lib_Instruction_i8x16_extract_lane_u",
+      "export_name": "Instruction::i8x16_extract_lane_u",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2731,
+      "function_index": 3065,
+      "internal_name": "ffi_lib_Instruction_i8x16_replace_lane",
+      "export_name": "Instruction::i8x16_replace_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2988,
+      "function_index": 3322,
+      "internal_name": "ffi_lib_Instruction_i16x8_extract_lane_s",
+      "export_name": "Instruction::i16x8_extract_lane_s",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2987,
+      "function_index": 3321,
+      "internal_name": "ffi_lib_Instruction_i16x8_extract_lane_u",
+      "export_name": "Instruction::i16x8_extract_lane_u",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2966,
+      "function_index": 3300,
+      "internal_name": "ffi_lib_Instruction_i16x8_replace_lane",
+      "export_name": "Instruction::i16x8_replace_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2883,
+      "function_index": 3217,
+      "internal_name": "ffi_lib_Instruction_i32x4_extract_lane",
+      "export_name": "Instruction::i32x4_extract_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2861,
+      "function_index": 3195,
+      "internal_name": "ffi_lib_Instruction_i32x4_replace_lane",
+      "export_name": "Instruction::i32x4_replace_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2775,
+      "function_index": 3109,
+      "internal_name": "ffi_lib_Instruction_i64x2_extract_lane",
+      "export_name": "Instruction::i64x2_extract_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2766,
+      "function_index": 3100,
+      "internal_name": "ffi_lib_Instruction_i64x2_replace_lane",
+      "export_name": "Instruction::i64x2_replace_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3091,
+      "function_index": 3425,
+      "internal_name": "ffi_lib_Instruction_f32x4_extract_lane",
+      "export_name": "Instruction::f32x4_extract_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3073,
+      "function_index": 3407,
+      "internal_name": "ffi_lib_Instruction_f32x4_replace_lane",
+      "export_name": "Instruction::f32x4_replace_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3032,
+      "function_index": 3366,
+      "internal_name": "ffi_lib_Instruction_f64x2_extract_lane",
+      "export_name": "Instruction::f64x2_extract_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 3013,
+      "function_index": 3347,
+      "internal_name": "ffi_lib_Instruction_f64x2_replace_lane",
+      "export_name": "Instruction::f64x2_replace_lane",
+      "signature": "(i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2727,
+      "function_index": 3061,
+      "internal_name": "ffi_lib_Instruction_i8x16_shuffle",
+      "export_name": "Instruction::i8x16_shuffle",
+      "signature": "(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (ref 0)",
+      "status": "bound"
+    },
+    {
+      "ordinal": 2608,
+      "function_index": 2942,
+      "internal_name": "ffi_lib_LaneIdx_new",
+      "export_name": "LaneIdx::new",
+      "signature": "(i32) -> i32",
       "status": "bound"
     }
   ]

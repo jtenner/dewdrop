@@ -13,9 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "std"
 EMBEDDED = ROOT / "src" / "standard_sources" / "standard_lane_sources.mbt"
 TYPED_PARITY = ROOT / "tools" / "swar-parity" / "typed_lane_parity.dew"
-V128_LANE_BACKEND = ROOT / "src" / "backend" / "starshine_v128_lane_builtins.mbt"
 V128_MEMORY_BACKEND = ROOT / "src" / "backend" / "starshine_v128_memory_builtins.mbt"
-V128_SHUFFLE_BACKEND = ROOT / "src" / "backend" / "starshine_v128_shuffle_builtins.mbt"
 
 V128_TYPES = [
     ("I8x16", "I8", "i8", "signed"),
@@ -140,17 +138,20 @@ def v128_source(type_name: str, scalar: str, lane: str, kind: str) -> str:
         if result == type_name:
             out.append(builtin(f"{p}_{suffix}", "address: U32", type_name, f"dew_{p}_{suffix}"))
     for index in range(lane_count):
-        out.append(builtin(f"{p}_extract_{index}", f"value: {type_name}", scalar, f"dew_{p}_extract_{index}"))
-        out.append(builtin(f"{p}_replace_{index}", f"value: {type_name}, lane: {scalar}", type_name, f"dew_{p}_replace_{index}"))
+        signedness = ("_s" if kind == "signed" else "_u") if lane in ("i8", "i16") else ""
+        out.append(builtin(f"{p}_extract_{index}", f"value: {type_name}", scalar, f"{wasm_lane}.extract_lane{signedness} {index}"))
+        out.append(builtin(f"{p}_replace_{index}", f"value: {type_name}, lane: {scalar}", type_name, f"{wasm_lane}.replace_lane {index}"))
         out.append(builtin(f"{p}_load_lane_{index}", f"address: U32, value: {type_name}", type_name, f"dew_{p}_load_lane_{index}"))
         out.append(builtin(f"{p}_store_lane_{index}", f"address: U32, value: {type_name}", "Unit", f"dew_{p}_store_lane_{index}"))
     if lane == "i8":
-        for shuffle in V128_BYTE_SHUFFLES:
+        for shuffle, indices in V128_BYTE_SHUFFLES.items():
+            assert len(indices) == 16 and all(0 <= index < 32 for index in indices)
+            opcode = "i8x16.shuffle " + " ".join(map(str, indices))
             if shuffle == "reverse":
-                out.append(builtin(f"{p}_reverse_raw", f"left: {type_name}, right: {type_name}", type_name, f"dew_{p}_reverse"))
+                out.append(builtin(f"{p}_reverse_raw", f"left: {type_name}, right: {type_name}", type_name, opcode))
                 out.append(f"fn {p}_reverse(value: {type_name}) -> {type_name} {{\n  {p}_reverse_raw(value, value)\n}}\n")
             else:
-                out.append(builtin(f"{p}_{shuffle}", f"left: {type_name}, right: {type_name}", type_name, f"dew_{p}_{shuffle}"))
+                out.append(builtin(f"{p}_{shuffle}", f"left: {type_name}, right: {type_name}", type_name, opcode))
     for result, suffix, params, _ in V128_CROSS_OPS:
         if result == type_name:
             out.append(builtin(f"{p}_{suffix}", params, type_name, simd_cross_opcode(type_name, suffix)))
@@ -677,75 +678,6 @@ def v128_memory_backend_source() -> str:
     )
 
 
-def v128_shuffle_backend_source() -> str:
-    branches: list[str] = []
-    first = True
-    for type_name in ("I8x16", "U8x16"):
-        prefix = type_name.lower()
-        for name, indices in V128_BYTE_SHUFFLES.items():
-            keyword = "  if" if first else "else if"
-            first = False
-            args = ", ".join(lane_index(index) for index in indices)
-            branches.append(
-                f"{keyword} name == b\"dew_{prefix}_{name}\" {{\n"
-                f"    Some([@lib.Instruction::i8x16_shuffle({args})])\n"
-                f"  }} "
-            )
-    return (
-        "///|\nfn starshine_v128_shuffle_builtin_instructions(name : Bytes) -> Array[@lib.Instruction]? {\n"
-        + "".join(branches)
-        + "else {\n    None\n  }\n}\n"
-    )
-
-
-def v128_lane_backend_source() -> str:
-    branches: list[str] = []
-    instruction = {
-        "I8x16": "i8x16_extract_lane_s",
-        "U8x16": "i8x16_extract_lane_u",
-        "I16x8": "i16x8_extract_lane_s",
-        "U16x8": "i16x8_extract_lane_u",
-        "I32x4": "i32x4_extract_lane",
-        "U32x4": "i32x4_extract_lane",
-        "I64x2": "i64x2_extract_lane",
-        "U64x2": "i64x2_extract_lane",
-        "F32x4": "f32x4_extract_lane",
-        "F64x2": "f64x2_extract_lane",
-    }
-    replace = {
-        "i8": "i8x16_replace_lane",
-        "i16": "i16x8_replace_lane",
-        "i32": "i32x4_replace_lane",
-        "i64": "i64x2_replace_lane",
-        "f32": "f32x4_replace_lane",
-        "f64": "f64x2_replace_lane",
-    }
-    first = True
-    for type_name, _, lane, _ in V128_TYPES:
-        prefix = type_name.lower()
-        lane_count = int(type_name.split("x", 1)[1])
-        for index in range(lane_count):
-            keyword = "  if" if first else "else if"
-            first = False
-            index_value = lane_index(index)
-            branches.append(
-                f"{keyword} name == b\"dew_{prefix}_extract_{index}\" {{\n"
-                f"    Some([@lib.Instruction::{instruction[type_name]}({index_value})])\n"
-                f"  }} "
-            )
-            branches.append(
-                f"else if name == b\"dew_{prefix}_replace_{index}\" {{\n"
-                f"    Some([@lib.Instruction::{replace[lane]}({index_value})])\n"
-                f"  }} "
-            )
-    return (
-        "///|\n"
-        "fn starshine_v128_lane_builtin_instructions(\n"
-        "  name : Bytes,\n"
-        ") -> Array[@lib.Instruction]? {\n"
-        + "".join(branches)
-        + "else {\n    None\n  }\n}\n"
-    )
 
 
 def typed_parity_source() -> str:
@@ -824,9 +756,7 @@ def main() -> None:
         [
             (EMBEDDED, embedded),
             (TYPED_PARITY, typed_parity_source()),
-            (V128_LANE_BACKEND, v128_lane_backend_source()),
             (V128_MEMORY_BACKEND, v128_memory_backend_source()),
-            (V128_SHUFFLE_BACKEND, v128_shuffle_backend_source()),
         ]
     )
     if check:

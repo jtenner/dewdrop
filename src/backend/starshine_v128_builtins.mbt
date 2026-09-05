@@ -4,15 +4,11 @@
 fn starshine_v128_builtin_instructions(
   name : Bytes,
 ) -> Array[@lib.Instruction]? {
-  match starshine_v128_lane_builtin_instructions(name) {
-    Some(instructions) => return Some(instructions)
+  match starshine_simd_shuffle_instruction(name) {
+    Some(instruction) => return Some([instruction])
     None => ()
   }
   match starshine_v128_memory_builtin_instructions(name) {
-    Some(instructions) => return Some(instructions)
-    None => ()
-  }
-  match starshine_v128_shuffle_builtin_instructions(name) {
     Some(instructions) => return Some(instructions)
     None => ()
   }
@@ -404,6 +400,198 @@ fn starshine_v128_builtin_instructions(
     Some([@lib.Instruction::i32x4_trunc_sat_f64x2s_zero()])
   } else if name == b"i32x4.trunc_sat_f64x2_u_zero" {
     Some([@lib.Instruction::i32x4_trunc_sat_f64x2u_zero()])
+  } else if name == b"i8x16.extract_lane_s 0" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i8x16.extract_lane_u 0" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i8x16.replace_lane 0" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i8x16.extract_lane_s 1" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"i8x16.extract_lane_u 1" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"i8x16.replace_lane 1" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"i8x16.extract_lane_s 2" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"i8x16.extract_lane_u 2" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"i8x16.replace_lane 2" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"i8x16.extract_lane_s 3" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"i8x16.extract_lane_u 3" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"i8x16.replace_lane 3" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"i8x16.extract_lane_s 4" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x04'))])
+  } else if name == b"i8x16.extract_lane_u 4" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x04'))])
+  } else if name == b"i8x16.replace_lane 4" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x04'))])
+  } else if name == b"i8x16.extract_lane_s 5" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x05'))])
+  } else if name == b"i8x16.extract_lane_u 5" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x05'))])
+  } else if name == b"i8x16.replace_lane 5" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x05'))])
+  } else if name == b"i8x16.extract_lane_s 6" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x06'))])
+  } else if name == b"i8x16.extract_lane_u 6" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x06'))])
+  } else if name == b"i8x16.replace_lane 6" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x06'))])
+  } else if name == b"i8x16.extract_lane_s 7" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x07'))])
+  } else if name == b"i8x16.extract_lane_u 7" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x07'))])
+  } else if name == b"i8x16.replace_lane 7" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x07'))])
+  } else if name == b"i8x16.extract_lane_s 8" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x08'))])
+  } else if name == b"i8x16.extract_lane_u 8" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x08'))])
+  } else if name == b"i8x16.replace_lane 8" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x08'))])
+  } else if name == b"i8x16.extract_lane_s 9" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x09'))])
+  } else if name == b"i8x16.extract_lane_u 9" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x09'))])
+  } else if name == b"i8x16.replace_lane 9" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x09'))])
+  } else if name == b"i8x16.extract_lane_s 10" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x0A'))])
+  } else if name == b"i8x16.extract_lane_u 10" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x0A'))])
+  } else if name == b"i8x16.replace_lane 10" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x0A'))])
+  } else if name == b"i8x16.extract_lane_s 11" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x0B'))])
+  } else if name == b"i8x16.extract_lane_u 11" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x0B'))])
+  } else if name == b"i8x16.replace_lane 11" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x0B'))])
+  } else if name == b"i8x16.extract_lane_s 12" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x0C'))])
+  } else if name == b"i8x16.extract_lane_u 12" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x0C'))])
+  } else if name == b"i8x16.replace_lane 12" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x0C'))])
+  } else if name == b"i8x16.extract_lane_s 13" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x0D'))])
+  } else if name == b"i8x16.extract_lane_u 13" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x0D'))])
+  } else if name == b"i8x16.replace_lane 13" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x0D'))])
+  } else if name == b"i8x16.extract_lane_s 14" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x0E'))])
+  } else if name == b"i8x16.extract_lane_u 14" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x0E'))])
+  } else if name == b"i8x16.replace_lane 14" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x0E'))])
+  } else if name == b"i8x16.extract_lane_s 15" {
+    Some([@lib.Instruction::i8x16_extract_lane_s(@lib.LaneIdx::new(b'\x0F'))])
+  } else if name == b"i8x16.extract_lane_u 15" {
+    Some([@lib.Instruction::i8x16_extract_lane_u(@lib.LaneIdx::new(b'\x0F'))])
+  } else if name == b"i8x16.replace_lane 15" {
+    Some([@lib.Instruction::i8x16_replace_lane(@lib.LaneIdx::new(b'\x0F'))])
+  } else if name == b"i16x8.extract_lane_s 0" {
+    Some([@lib.Instruction::i16x8_extract_lane_s(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i16x8.extract_lane_u 0" {
+    Some([@lib.Instruction::i16x8_extract_lane_u(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i16x8.replace_lane 0" {
+    Some([@lib.Instruction::i16x8_replace_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i16x8.extract_lane_s 1" {
+    Some([@lib.Instruction::i16x8_extract_lane_s(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"i16x8.extract_lane_u 1" {
+    Some([@lib.Instruction::i16x8_extract_lane_u(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"i16x8.replace_lane 1" {
+    Some([@lib.Instruction::i16x8_replace_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"i16x8.extract_lane_s 2" {
+    Some([@lib.Instruction::i16x8_extract_lane_s(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"i16x8.extract_lane_u 2" {
+    Some([@lib.Instruction::i16x8_extract_lane_u(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"i16x8.replace_lane 2" {
+    Some([@lib.Instruction::i16x8_replace_lane(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"i16x8.extract_lane_s 3" {
+    Some([@lib.Instruction::i16x8_extract_lane_s(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"i16x8.extract_lane_u 3" {
+    Some([@lib.Instruction::i16x8_extract_lane_u(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"i16x8.replace_lane 3" {
+    Some([@lib.Instruction::i16x8_replace_lane(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"i16x8.extract_lane_s 4" {
+    Some([@lib.Instruction::i16x8_extract_lane_s(@lib.LaneIdx::new(b'\x04'))])
+  } else if name == b"i16x8.extract_lane_u 4" {
+    Some([@lib.Instruction::i16x8_extract_lane_u(@lib.LaneIdx::new(b'\x04'))])
+  } else if name == b"i16x8.replace_lane 4" {
+    Some([@lib.Instruction::i16x8_replace_lane(@lib.LaneIdx::new(b'\x04'))])
+  } else if name == b"i16x8.extract_lane_s 5" {
+    Some([@lib.Instruction::i16x8_extract_lane_s(@lib.LaneIdx::new(b'\x05'))])
+  } else if name == b"i16x8.extract_lane_u 5" {
+    Some([@lib.Instruction::i16x8_extract_lane_u(@lib.LaneIdx::new(b'\x05'))])
+  } else if name == b"i16x8.replace_lane 5" {
+    Some([@lib.Instruction::i16x8_replace_lane(@lib.LaneIdx::new(b'\x05'))])
+  } else if name == b"i16x8.extract_lane_s 6" {
+    Some([@lib.Instruction::i16x8_extract_lane_s(@lib.LaneIdx::new(b'\x06'))])
+  } else if name == b"i16x8.extract_lane_u 6" {
+    Some([@lib.Instruction::i16x8_extract_lane_u(@lib.LaneIdx::new(b'\x06'))])
+  } else if name == b"i16x8.replace_lane 6" {
+    Some([@lib.Instruction::i16x8_replace_lane(@lib.LaneIdx::new(b'\x06'))])
+  } else if name == b"i16x8.extract_lane_s 7" {
+    Some([@lib.Instruction::i16x8_extract_lane_s(@lib.LaneIdx::new(b'\x07'))])
+  } else if name == b"i16x8.extract_lane_u 7" {
+    Some([@lib.Instruction::i16x8_extract_lane_u(@lib.LaneIdx::new(b'\x07'))])
+  } else if name == b"i16x8.replace_lane 7" {
+    Some([@lib.Instruction::i16x8_replace_lane(@lib.LaneIdx::new(b'\x07'))])
+  } else if name == b"i32x4.extract_lane 0" {
+    Some([@lib.Instruction::i32x4_extract_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i32x4.replace_lane 0" {
+    Some([@lib.Instruction::i32x4_replace_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i32x4.extract_lane 1" {
+    Some([@lib.Instruction::i32x4_extract_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"i32x4.replace_lane 1" {
+    Some([@lib.Instruction::i32x4_replace_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"i32x4.extract_lane 2" {
+    Some([@lib.Instruction::i32x4_extract_lane(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"i32x4.replace_lane 2" {
+    Some([@lib.Instruction::i32x4_replace_lane(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"i32x4.extract_lane 3" {
+    Some([@lib.Instruction::i32x4_extract_lane(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"i32x4.replace_lane 3" {
+    Some([@lib.Instruction::i32x4_replace_lane(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"i64x2.extract_lane 0" {
+    Some([@lib.Instruction::i64x2_extract_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i64x2.replace_lane 0" {
+    Some([@lib.Instruction::i64x2_replace_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"i64x2.extract_lane 1" {
+    Some([@lib.Instruction::i64x2_extract_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"i64x2.replace_lane 1" {
+    Some([@lib.Instruction::i64x2_replace_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"f32x4.extract_lane 0" {
+    Some([@lib.Instruction::f32x4_extract_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"f32x4.replace_lane 0" {
+    Some([@lib.Instruction::f32x4_replace_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"f32x4.extract_lane 1" {
+    Some([@lib.Instruction::f32x4_extract_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"f32x4.replace_lane 1" {
+    Some([@lib.Instruction::f32x4_replace_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"f32x4.extract_lane 2" {
+    Some([@lib.Instruction::f32x4_extract_lane(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"f32x4.replace_lane 2" {
+    Some([@lib.Instruction::f32x4_replace_lane(@lib.LaneIdx::new(b'\x02'))])
+  } else if name == b"f32x4.extract_lane 3" {
+    Some([@lib.Instruction::f32x4_extract_lane(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"f32x4.replace_lane 3" {
+    Some([@lib.Instruction::f32x4_replace_lane(@lib.LaneIdx::new(b'\x03'))])
+  } else if name == b"f64x2.extract_lane 0" {
+    Some([@lib.Instruction::f64x2_extract_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"f64x2.replace_lane 0" {
+    Some([@lib.Instruction::f64x2_replace_lane(@lib.LaneIdx::new(b'\x00'))])
+  } else if name == b"f64x2.extract_lane 1" {
+    Some([@lib.Instruction::f64x2_extract_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"f64x2.replace_lane 1" {
+    Some([@lib.Instruction::f64x2_replace_lane(@lib.LaneIdx::new(b'\x01'))])
   } else {
     None
   }

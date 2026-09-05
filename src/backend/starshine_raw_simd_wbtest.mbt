@@ -1,6 +1,13 @@
 ///|
 test "raw SIMD instructions validate every operand and result" {
   let cases = raw_simd_test_cases()
+  for
+    opcode in [
+      "i8x16.shuffle 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15", "i8x16.shuffle 31 31 0 30 1 29 2 28 3 27 4 26 5 25 6 24",
+      "i8x16.shuffle 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31",
+    ] {
+    cases.push((opcode, ["V128", "V128"], "V128"))
+  }
   let source = Buffer(size_hint=32768)
   for index, case_ in cases {
     let (opcode, inputs, output) = case_
@@ -54,5 +61,33 @@ test "raw SIMD instructions validate every operand and result" {
       }
     }
   }
-  assert_eq(checked, 194)
+  assert_eq(checked, 293)
+}
+
+///|
+test "invalid SIMD immediates fail before Wasm emission" {
+  for
+    opcode in [
+      "i8x16.extract_lane_s 16", "i16x8.replace_lane 8", "i8x16.shuffle 32 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15",
+      "i8x16.shuffle 00 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15", "i8x16.shuffle 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14",
+      "i8x16.shuffle 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16",
+    ] {
+    let name = @utf8.encode(opcode)
+    assert_eq(@semantic.raw_wasm_builtin_signature(name), None)
+    let stages = backend_test_single_module_stages(
+      28215UL,
+      @utf8.encode(
+        "builtin operation(value: V128) -> V128 = \"\{opcode}\"\npub fn main(value: V128) -> V128 {\n  operation(value)\n}\n",
+      ),
+    )
+    assert_eq(stages.diagnostic_count(), 0)
+    match emit_starshine_program_module(stages.lowering, stages.link) {
+      Err(UnsupportedBuiltin(actual)) => assert_eq(actual, name)
+      Err(error) => {
+        debug_inspect(error)
+        fail("invalid SIMD immediate did not report UnsupportedBuiltin")
+      }
+      Ok(_) => fail("invalid SIMD immediate was accepted")
+    }
+  }
 }

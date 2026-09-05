@@ -8,6 +8,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from wasm_simd_intrinsics import simd_shuffle_immediates
+
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "std/wasm/intrinsics.dew"
 TARGET = ROOT / "src/standard_sources/standard_wasm_intrinsics_sources.mbt"
@@ -192,6 +194,7 @@ def intrinsic_declarations() -> tuple[list[IntrinsicDeclaration], set[str]]:
         declaration
         for declaration in standard_builtin_declarations()
         if declaration.body is not None or declaration.target in backend_names
+        or simd_shuffle_immediates(declaration.target) is not None
     )
     aliases: set[str] = set()
     duplicate_aliases: list[str] = []

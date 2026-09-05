@@ -221,3 +221,44 @@ def _cross_instructions():
 
 
 SIMD_INSTRUCTIONS += _cross_instructions()
+
+
+def _lane_instructions():
+    instructions = []
+    for family, scalar, count, suffixes in (
+        ("i8x16", "I32", 16, ("_s", "_u")),
+        ("i16x8", "I32", 8, ("_s", "_u")),
+        ("i32x4", "I32", 4, ("",)),
+        ("i64x2", "I64", 2, ("",)),
+        ("f32x4", "F32", 4, ("",)),
+        ("f64x2", "F64", 2, ("",)),
+    ):
+        for index in range(count):
+            for suffix in suffixes:
+                instructions.append((
+                    f"{family}.extract_lane{suffix} {index}",
+                    f"{family}_extract_lane{suffix}", ("V128",), scalar, (index,),
+                ))
+            instructions.append((
+                f"{family}.replace_lane {index}",
+                f"{family}_replace_lane", ("V128", scalar), "V128", (index,),
+            ))
+    return tuple(instructions)
+
+
+SIMD_LANE_INSTRUCTIONS = _lane_instructions()
+SIMD_SIGNATURES = SIMD_INSTRUCTIONS + tuple(row[:4] for row in SIMD_LANE_INSTRUCTIONS)
+
+
+def simd_shuffle_immediates(descriptor):
+    prefix = "i8x16.shuffle "
+    if not descriptor.startswith(prefix):
+        return None
+    tokens = descriptor[len(prefix):].split(" ")
+    if len(tokens) != 16 or any(
+        not token.isascii() or not token.isdecimal() or len(token) > 2
+        or (len(token) > 1 and token[0] == "0") or int(token) > 31
+        for token in tokens
+    ):
+        return None
+    return tuple(map(int, tokens))

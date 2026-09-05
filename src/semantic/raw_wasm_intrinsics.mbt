@@ -165,5 +165,31 @@ pub fn raw_wasm_builtin_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
 
 ///|
 fn raw_wasm_builtin_is_inline(name : Bytes) -> Bool {
-  raw_wasm_builtin_signature(name) is Some(_)
+  if raw_wasm_builtin_signature(name) is Some(_) {
+    return true
+  }
+  // A malformed Wasm opcode is not a host import. Keep it on the intrinsic
+  // path so emission reports UnsupportedBuiltin before producing a module.
+  if name.length() < 4 || (name[0] != b'i' && name[0] != b'f' && name[0] != b'v') {
+    return false
+  }
+  for
+    prefix in [
+      b"i32.", b"i64.", b"f32.", b"f64.", b"v128.", b"i8x16.", b"i16x8.", b"i32x4.",
+      b"i64x2.", b"f32x4.", b"f64x2.",
+    ] {
+    if name.length() >= prefix.length() {
+      let mut matches = true
+      for index in 0..<prefix.length() {
+        if name[index] != prefix[index] {
+          matches = false
+          break
+        }
+      }
+      if matches {
+        return true
+      }
+    }
+  }
+  false
 }

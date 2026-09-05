@@ -7,12 +7,11 @@ import re
 import argparse
 from pathlib import Path
 
-from wasm_simd_intrinsics import SIMD_INSTRUCTIONS
+from wasm_simd_intrinsics import SIMD_INSTRUCTIONS, SIMD_LANE_INSTRUCTIONS
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src/backend/starshine_numeric_builtins.mbt"
 CONVERSION_SOURCE = ROOT / "src/backend/starshine_conversion_builtins.mbt"
-V128_SOURCE = ROOT / "src/backend/starshine_v128_builtins.mbt"
 OUTPUT = ROOT / "self_host/compiler/starshine_builtin_emit.dew"
 
 BRANCH = re.compile(
@@ -83,9 +82,6 @@ def main() -> None:
         raise SystemExit(
             f"expected 23 conversion instruction branches, found {len(conversion_branches)}"
         )
-    v128_branches = BRANCH.findall(V128_SOURCE.read_text())
-    if len(v128_branches) != len(SIMD_INSTRUCTIONS):
-        raise SystemExit(f"expected {len(SIMD_INSTRUCTIONS)} SIMD opcode branches, found {len(v128_branches)}")
 
     aliases: list[tuple[str, list[str]]] = [
         ("dew_debug_ignore", ["StarshineFfi.ffi_lib_Instruction_drop()"]),
@@ -123,6 +119,9 @@ def main() -> None:
         "  name: Bytes,",
         "  destination: StarshineInstructions,",
         ") -> Bool {",
+        "  if self_host_emit_simd_shuffle(name, destination) {",
+        "    return true",
+        "  }",
     ]
 
     lines.extend(
@@ -169,10 +168,13 @@ def main() -> None:
         instructions = split_instructions(body)
         for instruction in instructions:
             lines.extend(emit_push(translate_instruction(instruction)))
-    for name, body in v128_branches:
+    for name, instruction, _, _ in SIMD_INSTRUCTIONS:
         lines.append(f"  }} else if name.equals(b\"{name}\") {{")
-        for instruction in split_instructions(body):
-            lines.extend(emit_push(translate_instruction(instruction)))
+        lines.extend(emit_push(f"StarshineFfi.ffi_lib_Instruction_{instruction}()"))
+    for name, instruction, _, _, indices in SIMD_LANE_INSTRUCTIONS:
+        lines.append(f"  }} else if name.equals(b\"{name}\") {{")
+        arguments = ", ".join(f"StarshineFfi.ffi_lib_LaneIdx_new({index}i32)" for index in indices)
+        lines.extend(emit_push(f"StarshineFfi.ffi_lib_Instruction_{instruction}({arguments})"))
     lines.extend(
         [
             "  } else {",

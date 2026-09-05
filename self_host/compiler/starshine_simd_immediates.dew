@@ -1,0 +1,28 @@
+fn self_host_emit_simd_shuffle(name: Bytes, destination: StarshineInstructions) -> Bool {
+  let lanes = match self_host_raw_shuffle_immediates(name) {
+    Option::Some(values) => values
+    Option::None => return false
+  }
+  StarshineFfi.ffi_ffi_bridge_instructions_push(
+    destination,
+    StarshineFfi.ffi_lib_Instruction_i8x16_shuffle(
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[0u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[1u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[2u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[3u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[4u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[5u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[6u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[7u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[8u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[9u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[10u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[11u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[12u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[13u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[14u32]),
+      StarshineFfi.ffi_lib_LaneIdx_new(lanes[15u32]),
+    ),
+  )
+  true
+}

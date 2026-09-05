@@ -1486,5 +1486,713 @@
       "V128"
     ],
     "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 0",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 0",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 0",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 1",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 1",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 1",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 2",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 2",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 2",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 3",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 3",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 3",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 4",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 4",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 4",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 5",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 5",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 5",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 6",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 6",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 6",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 7",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 7",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 7",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 8",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 8",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 8",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 9",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 9",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 9",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 10",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 10",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 10",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 11",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 11",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 11",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 12",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 12",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 12",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 13",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 13",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 13",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 14",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 14",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 14",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i8x16.extract_lane_s 15",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.extract_lane_u 15",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i8x16.replace_lane 15",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i16x8.extract_lane_s 0",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.extract_lane_u 0",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.replace_lane 0",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i16x8.extract_lane_s 1",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.extract_lane_u 1",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.replace_lane 1",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i16x8.extract_lane_s 2",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.extract_lane_u 2",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.replace_lane 2",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i16x8.extract_lane_s 3",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.extract_lane_u 3",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.replace_lane 3",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i16x8.extract_lane_s 4",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.extract_lane_u 4",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.replace_lane 4",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i16x8.extract_lane_s 5",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.extract_lane_u 5",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.replace_lane 5",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i16x8.extract_lane_s 6",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.extract_lane_u 6",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.replace_lane 6",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i16x8.extract_lane_s 7",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.extract_lane_u 7",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i16x8.replace_lane 7",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i32x4.extract_lane 0",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i32x4.replace_lane 0",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i32x4.extract_lane 1",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i32x4.replace_lane 1",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i32x4.extract_lane 2",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i32x4.replace_lane 2",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i32x4.extract_lane 3",
+    [
+      "V128"
+    ],
+    "I32"
+  ],
+  [
+    "i32x4.replace_lane 3",
+    [
+      "V128",
+      "I32"
+    ],
+    "V128"
+  ],
+  [
+    "i64x2.extract_lane 0",
+    [
+      "V128"
+    ],
+    "I64"
+  ],
+  [
+    "i64x2.replace_lane 0",
+    [
+      "V128",
+      "I64"
+    ],
+    "V128"
+  ],
+  [
+    "i64x2.extract_lane 1",
+    [
+      "V128"
+    ],
+    "I64"
+  ],
+  [
+    "i64x2.replace_lane 1",
+    [
+      "V128",
+      "I64"
+    ],
+    "V128"
+  ],
+  [
+    "f32x4.extract_lane 0",
+    [
+      "V128"
+    ],
+    "F32"
+  ],
+  [
+    "f32x4.replace_lane 0",
+    [
+      "V128",
+      "F32"
+    ],
+    "V128"
+  ],
+  [
+    "f32x4.extract_lane 1",
+    [
+      "V128"
+    ],
+    "F32"
+  ],
+  [
+    "f32x4.replace_lane 1",
+    [
+      "V128",
+      "F32"
+    ],
+    "V128"
+  ],
+  [
+    "f32x4.extract_lane 2",
+    [
+      "V128"
+    ],
+    "F32"
+  ],
+  [
+    "f32x4.replace_lane 2",
+    [
+      "V128",
+      "F32"
+    ],
+    "V128"
+  ],
+  [
+    "f32x4.extract_lane 3",
+    [
+      "V128"
+    ],
+    "F32"
+  ],
+  [
+    "f32x4.replace_lane 3",
+    [
+      "V128",
+      "F32"
+    ],
+    "V128"
+  ],
+  [
+    "f64x2.extract_lane 0",
+    [
+      "V128"
+    ],
+    "F64"
+  ],
+  [
+    "f64x2.replace_lane 0",
+    [
+      "V128",
+      "F64"
+    ],
+    "V128"
+  ],
+  [
+    "f64x2.extract_lane 1",
+    [
+      "V128"
+    ],
+    "F64"
+  ],
+  [
+    "f64x2.replace_lane 1",
+    [
+      "V128",
+      "F64"
+    ],
+    "V128"
   ]
 ]

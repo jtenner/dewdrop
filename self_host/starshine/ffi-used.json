@@ -430,6 +430,22 @@
     "Instruction::i32x4_trunc_sat_f32x4s",
     "Instruction::i32x4_trunc_sat_f32x4u",
     "Instruction::i32x4_trunc_sat_f64x2s_zero",
-    "Instruction::i32x4_trunc_sat_f64x2u_zero"
+    "Instruction::i32x4_trunc_sat_f64x2u_zero",
+    "Instruction::i8x16_extract_lane_s",
+    "Instruction::i8x16_extract_lane_u",
+    "Instruction::i8x16_replace_lane",
+    "Instruction::i16x8_extract_lane_s",
+    "Instruction::i16x8_extract_lane_u",
+    "Instruction::i16x8_replace_lane",
+    "Instruction::i32x4_extract_lane",
+    "Instruction::i32x4_replace_lane",
+    "Instruction::i64x2_extract_lane",
+    "Instruction::i64x2_replace_lane",
+    "Instruction::f32x4_extract_lane",
+    "Instruction::f32x4_replace_lane",
+    "Instruction::f64x2_extract_lane",
+    "Instruction::f64x2_replace_lane",
+    "Instruction::i8x16_shuffle",
+    "LaneIdx::new"
   ]
 }
