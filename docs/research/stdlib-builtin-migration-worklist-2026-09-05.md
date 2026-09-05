@@ -49,6 +49,10 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   native/self-host execution corpus. See `array-bulk-library-2026-09-05.md`.
   Unit index reads/writes and non-returning indices now use explicit call
   evaluation recipes. See `index-call-evaluation-recipes-2026-09-05.md`.
+  Safe reads, safe writes, and Option-returning iterator next now run in Dew.
+  Seventeen shared array checks pass in both compilers; see
+  `array-checked-library-2026-09-05.md`. Constructor effects/source order and
+  explicit Unit storage are fixed; see `constructor-evaluation-order-2026-09-05.md`.
   Basic storage/growth and remaining legacy dispatch are still open.
 - [ ] Map and Set: move hashing, buckets, growth, lookup, and iteration into Dew.
 - [ ] Queue, circular buffer, and deque: move storage algorithms into Dew.

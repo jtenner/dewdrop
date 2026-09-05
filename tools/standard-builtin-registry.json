@@ -46,9 +46,7 @@
         "ArrayWithCapacity": [3, 18],
         "ArrayLength": [4, 19],
         "ArrayCapacity": [5, 20],
-        "ArrayGet": [6, 24],
         "ArrayGetUnchecked": [7, 25, 31],
-        "ArraySet": [8, 26],
         "ArraySetUnchecked": [9, 27, 33],
         "ArrayPush": [10, 22],
         "ArrayPop": [11, 23],
@@ -56,7 +54,6 @@
         "ArrayIter": [13, 29],
         "ArrayIterHasNext": [14],
         "ArrayIterNext": [15],
-        "ArrayIterNextOption": [35, 168],
         "ArrayReserve": [37],
         "ArrayShrinkToFit": [38],
         "ArrayTruncate": [39]

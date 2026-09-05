@@ -11,5 +11,9 @@ export function checkArrayOperations(main) {
   for (const test of [10, 11]) {
     assert.throws(() => main(test), WebAssembly.RuntimeError, `non-returning index ${test}`);
   }
-  return 12;
+  for (const test of [12, 13, 14, 15]) {
+    assert.equal(main(test), 1, `checked array operation ${test}`);
+  }
+  assert.throws(() => main(4294967295), WebAssembly.RuntimeError, "unknown array case is not a passing case");
+  return 17;
 }

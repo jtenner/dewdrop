@@ -5,9 +5,22 @@ pub builtin array_new<t>() -> Array<t> = "dew_array_new"
 pub builtin array_with_capacity<t>(capacity: U32) -> Array<t> = "dew_array_with_capacity"
 pub builtin array_length<t>(value: Array<t>) -> U32 = "dew_array_length"
 pub builtin array_capacity<t>(value: Array<t>) -> U32 = "dew_array_capacity"
-pub builtin array_get<t>(value: Array<t>, index: U32) -> Option<t> = "dew_array_get"
+pub fn array_get<t>(value: Array<t>, index: U32) -> Option<t> {
+  if index < array_length(value) {
+    Option::Some(array_get_unchecked(value, index))
+  } else {
+    Option::None
+  }
+}
 pub builtin array_get_unchecked<t>(value: Array<t>, index: U32) -> t = "dew_array_get_unchecked"
-pub builtin array_set<t>(value: Array<t>, index: U32, item: t) -> Bool = "dew_array_set"
+pub fn array_set<t>(value: Array<t>, index: U32, item: t) -> Bool {
+  if index < array_length(value) {
+    array_set_unchecked(value, index, item)
+    true
+  } else {
+    false
+  }
+}
 pub builtin array_set_unchecked<t>(value: Array<t>, index: U32, item: t) -> Unit = "dew_array_set_unchecked"
 pub builtin array_push<t>(value: Array<t>, item: t) -> Unit = "dew_array_push"
 pub builtin array_pop<t>(value: Array<t>) -> Option<t> = "dew_array_pop"
@@ -1303,4 +1316,10 @@ impl<t> Arena<t> {
   }
 }
 
-builtin array_iter_next_option<t>(value: ArrayIter<t>) -> Option<t> = "dew_array_iter_next_option"
+fn array_iter_next_option<t>(value: ArrayIter<t>) -> Option<t> {
+  if array_iter_has_next(value) {
+    Option::Some(array_iter_next(value))
+  } else {
+    Option::None
+  }
+}

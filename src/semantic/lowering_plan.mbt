@@ -1280,8 +1280,6 @@ fn plan_expression_kind(
                       )
                     ArrayLength => PlannedArrayLength(base)
                     ArrayCapacity => PlannedArrayCapacity(base)
-                    ArrayGet =>
-                      PlannedArrayGet(base, key, element_type, element_shape)
                     ArrayGetUnchecked =>
                       PlannedArrayGetUnchecked(
                         base,
@@ -1290,17 +1288,6 @@ fn plan_expression_kind(
                           resolved,
                           inferred,
                           inferred.expression_types[expression],
-                        ),
-                      )
-                    ArraySet =>
-                      PlannedArraySet(
-                        base,
-                        key,
-                        value,
-                        planned_value_shape(
-                          resolved,
-                          inferred,
-                          inferred.expression_types[value],
                         ),
                       )
                     ArraySetUnchecked =>
@@ -1341,10 +1328,6 @@ fn plan_expression_kind(
                           inferred,
                           inferred.expression_types[expression],
                         ),
-                      )
-                    ArrayIterNextOption =>
-                      PlannedArrayIterNextOption(
-                        base, element_type, element_shape,
                       )
                     ArrayReserve =>
                       PlannedArrayReserve(

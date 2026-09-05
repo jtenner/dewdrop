@@ -58,8 +58,21 @@ test "debug emission preserves Option traffic in for loops" {
   let after = emitted.pretty_print_func(
     @lib.FuncIdx::new(function_index.reinterpret_as_uint()),
   )
-  assert_true(before.contains(some_allocation), msg=before)
-  assert_true(before.contains(none_allocation), msg=before)
-  assert_true(after.contains(some_allocation), msg=after)
-  assert_true(after.contains(none_allocation), msg=after)
+  // Iter::next is now an ordinary Dew call. Its Option allocations belong
+  // to the callee, not an opaque inline loop expansion.
+  assert_true(before.contains("call (Func "), msg=before)
+  assert_true(after.contains("call (Func "), msg=after)
+  for module_ in [unoptimized, emitted] {
+    let mut some_found = false
+    let mut none_found = false
+    for function_ in link.functions {
+      let printed = module_.pretty_print_func(
+        @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+      )
+      some_found = some_found || printed.contains(some_allocation)
+      none_found = none_found || printed.contains(none_allocation)
+    }
+    assert_true(some_found, msg="Iter::next must construct Some")
+    assert_true(none_found, msg="Iter::next must construct None")
+  }
 }

@@ -19,9 +19,7 @@ enum StandardBuiltinOperation {
   ArrayWithCapacity
   ArrayLength
   ArrayCapacity
-  ArrayGet
   ArrayGetUnchecked
-  ArraySet
   ArraySetUnchecked
   ArrayPush
   ArrayPop
@@ -29,7 +27,6 @@ enum StandardBuiltinOperation {
   ArrayIter
   ArrayIterHasNext
   ArrayIterNext
-  ArrayIterNextOption
   ArrayReserve
   ArrayShrinkToFit
   ArrayTruncate
@@ -241,9 +238,7 @@ fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
     3 | 18 => ArrayWithCapacity
     4 | 19 => ArrayLength
     5 | 20 => ArrayCapacity
-    6 | 24 => ArrayGet
     7 | 25 | 31 => ArrayGetUnchecked
-    8 | 26 => ArraySet
     9 | 27 | 33 => ArraySetUnchecked
     10 | 22 => ArrayPush
     11 | 23 => ArrayPop
@@ -251,7 +246,6 @@ fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
     13 | 29 => ArrayIter
     14 => ArrayIterHasNext
     15 => ArrayIterNext
-    35 | 168 => ArrayIterNextOption
     37 => ArrayReserve
     38 => ArrayShrinkToFit
     39 => ArrayTruncate

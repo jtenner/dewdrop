@@ -105,7 +105,61 @@ pub fn main(case: U32) -> I32 {
     }
     value[unreachable()]
     0i32
-  } else {
+  } else if case == 12u32 {
+    let cell = BulkCell::{
+      value: 0i32
+    }
+    let values = Array::make(1u32, ())
+    let rejected = values.set(1u32, bulk_effect(cell))
+    let accepted = values.set(0u32, bulk_effect(cell))
+    if !rejected && accepted && cell.value == 2i32 && values.length() == 1u32 && values.get(0u32) is Option::Some(_) && values.get(1u32) is Option::None {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 13u32 {
+    let values = Array::make(1u32, ())
+    let iterator = values.iter()
+    let first = iterator.next() is Option::Some(_)
+    let second = iterator.next() is Option::None
+    if first && second {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 15u32 {
+    let values = [(2i32, 3i64)]
+    let iterator = values.iter()
+    let first = match values.get(0u32) {
+      Option::Some(value) => {
+        let (left, right) = value
+        left == 2i32 && right == 3i64
+      }
+      Option::None => false
+    }
+    let second = match iterator.next() {
+      Option::Some(value) => {
+        let (left, right) = value
+        left == 2i32 && right == 3i64
+      }
+      Option::None => false
+    }
+    if first && second && iterator.next() is Option::None {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 14u32 {
+    let values = bulk_values()
+    match values.get(0u32) {
+      Option::Some(value) => if value == 10i64 && values.get(4u32) is Option::None {
+        1i32
+      } else {
+        0i32
+      }
+      Option::None => 0i32
+    }
+  } else if case == 9u32 {
     let cell = BulkCell::{
       value: 0i32
     }
@@ -123,5 +177,7 @@ pub fn main(case: U32) -> I32 {
     } else {
       0i32
     }
+  } else {
+    unreachable()
   }
 }
