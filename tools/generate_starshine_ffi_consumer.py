@@ -470,6 +470,18 @@ def select_bindings(
     return selected
 
 
+def validate_source_bindings(selected: list[ExportBinding], sources: list[tuple[str, str]]) -> None:
+    """Catch a missing compiler FFI declaration before the native compiler build."""
+    declared = {binding.internal_name for binding in selected}
+    for path, source in sources:
+        for match in re.finditer(r"\bStarshineFfi\.(ffi_[A-Za-z0-9_]+)\b", source):
+            if match[1] not in declared:
+                line = source.count("\n", 0, match.start()) + 1
+                raise ValueError(
+                    f"{path}:{line}: compiler FFI reference {match[1]} is not selected in ffi-used.json"
+                )
+
+
 def encode_fingerprint_field(value: bytes) -> bytes:
     return len(value).to_bytes(4, "little") + value
 
@@ -673,6 +685,10 @@ def main() -> None:
         raise SystemExit("invalid self_host/starshine/ffi-used.json")
     try:
         selected = select_bindings(available, used_data["exports"])
+        validate_source_bindings(selected, [
+            (path.relative_to(ROOT).as_posix(), path.read_text())
+            for path in sorted((ROOT / "self_host/compiler").glob("*.dew"))
+        ])
     except ValueError as error:
         raise SystemExit(str(error)) from error
     submodule_revision = subprocess.run(

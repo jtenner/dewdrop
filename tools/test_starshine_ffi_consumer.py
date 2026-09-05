@@ -64,6 +64,12 @@ class StarshineFfiConsumerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing"):
             generator.select_bindings([self.binding("present", "() -> Unit")], ["missing"])
 
+    def test_source_binding_check_reports_exact_missing_reference(self) -> None:
+        selected = [self.binding("present", "() -> Unit")]
+        generator.validate_source_bindings(selected, [("probe.dew", "StarshineFfi.ffi_present()")])
+        with self.assertRaisesRegex(ValueError, r"probe.dew:2:.*ffi_missing.*ffi-used.json"):
+            generator.validate_source_bindings(selected, [("probe.dew", "\nStarshineFfi.ffi_missing()")])
+
     def test_fingerprint_prefix_changes_with_signature(self) -> None:
         first = generator.fingerprint_prefix(
             "abc123",

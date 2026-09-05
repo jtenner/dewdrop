@@ -320,8 +320,33 @@ for (const [name, expected] of [
         throw new Error(`SIMD opcode ${opcode} failed self-host compilation or Wasm validation`, { cause: error });
       }
     }
+    const declarations = `
+builtin splat8(value: I32) -> V128 = "i8x16.splat"
+builtin splat16(value: I32) -> V128 = "i16x8.splat"
+builtin splat32(value: I32) -> V128 = "i32x4.splat"
+builtin splatf32(value: F32) -> V128 = "f32x4.splat"
+builtin narrow_s(left: V128, right: V128) -> V128 = "i8x16.narrow_i16x8_s"
+builtin narrow_u(left: V128, right: V128) -> V128 = "i8x16.narrow_i16x8_u"
+builtin multiply(left: V128, right: V128) -> V128 = "i32x4.extmul_high_i16x8_s"
+builtin swizzle(value: V128, indices: V128) -> V128 = "i8x16.swizzle"
+builtin convert(value: V128) -> V128 = "i32x4.trunc_sat_f32x4_s"
+builtin equal8(left: V128, right: V128) -> V128 = "i8x16.eq"
+builtin equal32(left: V128, right: V128) -> V128 = "i32x4.eq"
+builtin all(value: V128) -> I32 = "i8x16.all_true"
+`;
+    for (const [label, expression] of [
+      ["signed narrow bound", "equal8(narrow_s(splat16(-200i32), splat16(-200i32)), splat8(-128i32))"],
+      ["unsigned narrow negative bits", "equal8(narrow_u(splat16(65535i32), splat16(65535i32)), splat8(0i32))"],
+      ["wide signed multiply", "equal32(multiply(splat16(-32768i32), splat16(-1i32)), splat32(32768i32))"],
+      ["swizzle out of range", "equal8(swizzle(splat8(42i32), splat8(16i32)), splat8(0i32))"],
+      ["float conversion upper bound", "equal32(convert(splatf32(2147483648.0f32)), splat32(2147483647i32))"],
+      ["float conversion NaN", "equal32(convert(splatf32(0.0f32 / 0.0f32)), splat32(0i32))"],
+    ]) {
+      const main = await compileSource(declarations + `pub fn main() -> I32 {\n  all(${expression})\n}\n`);
+      assert.equal(main(), 1, label);
+    }
     const elapsed = (performance.now() - start) / 1000;
-    console.log(`self-host SIMD opcode validation passed: ${cases.length} (${elapsed.toFixed(3)} seconds)`);
+    console.log(`self-host SIMD opcode validation passed: ${cases.length}, cross-lane execution checks: 6 (${elapsed.toFixed(3)} seconds)`);
     assert.ok(elapsed <= 30, "SIMD opcode compiler performance exceeds 30 seconds");
   } catch (error) {
     failures++;

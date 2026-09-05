@@ -7,6 +7,8 @@ import re
 import argparse
 from pathlib import Path
 
+from wasm_simd_intrinsics import SIMD_INSTRUCTIONS
+
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src/backend/starshine_numeric_builtins.mbt"
 CONVERSION_SOURCE = ROOT / "src/backend/starshine_conversion_builtins.mbt"
@@ -82,8 +84,8 @@ def main() -> None:
             f"expected 23 conversion instruction branches, found {len(conversion_branches)}"
         )
     v128_branches = BRANCH.findall(V128_SOURCE.read_text())
-    if len(v128_branches) != 150:
-        raise SystemExit(f"expected 150 V128 builtin branches, found {len(v128_branches)}")
+    if len(v128_branches) != len(SIMD_INSTRUCTIONS):
+        raise SystemExit(f"expected {len(SIMD_INSTRUCTIONS)} SIMD opcode branches, found {len(v128_branches)}")
 
     aliases: list[tuple[str, list[str]]] = [
         ("dew_debug_ignore", ["StarshineFfi.ffi_lib_Instruction_drop()"]),

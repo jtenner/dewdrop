@@ -7,12 +7,13 @@ import json
 import sys
 from pathlib import Path
 
+from wasm_simd_intrinsics import SIMD_CROSS_OPERATIONS as V128_CROSS_OPS, simd_cross_opcode
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "std"
 EMBEDDED = ROOT / "src" / "standard_sources" / "standard_lane_sources.mbt"
 TYPED_PARITY = ROOT / "tools" / "swar-parity" / "typed_lane_parity.dew"
 V128_LANE_BACKEND = ROOT / "src" / "backend" / "starshine_v128_lane_builtins.mbt"
-V128_CROSS_BACKEND = ROOT / "src" / "backend" / "starshine_v128_cross_builtins.mbt"
 V128_MEMORY_BACKEND = ROOT / "src" / "backend" / "starshine_v128_memory_builtins.mbt"
 V128_SHUFFLE_BACKEND = ROOT / "src" / "backend" / "starshine_v128_shuffle_builtins.mbt"
 
@@ -70,54 +71,6 @@ V128_SPECIAL_MEMORY = [
     ("F64x2", "load_zero", "v128_load64_zero", 3),
 ]
 
-# (result type, Dew function suffix, parameters, Starshine instruction)
-V128_CROSS_OPS = [
-    ("I8x16", "narrow_i16x8_s", "low: I16x8, high: I16x8", "i8x16_narrow_i16x8s"),
-    ("U8x16", "narrow_i16x8_u", "low: U16x8, high: U16x8", "i8x16_narrow_i16x8u"),
-    ("I8x16", "swizzle", "value: I8x16, indices: U8x16", "i8x16_swizzle"),
-    ("U8x16", "swizzle", "value: U8x16, indices: U8x16", "i8x16_swizzle"),
-    ("I16x8", "narrow_i32x4_s", "low: I32x4, high: I32x4", "i16x8_narrow_i32x4s"),
-    ("U16x8", "narrow_i32x4_u", "low: U32x4, high: U32x4", "i16x8_narrow_i32x4u"),
-    ("I16x8", "extend_low_i8x16_s", "value: I8x16", "i16x8_extend_low_i8x16s"),
-    ("I16x8", "extend_high_i8x16_s", "value: I8x16", "i16x8_extend_high_i8x16s"),
-    ("U16x8", "extend_low_i8x16_u", "value: U8x16", "i16x8_extend_low_i8x16u"),
-    ("U16x8", "extend_high_i8x16_u", "value: U8x16", "i16x8_extend_high_i8x16u"),
-    ("I16x8", "extadd_pairwise_i8x16_s", "value: I8x16", "i16x8_extadd_pairwise_i8x16s"),
-    ("U16x8", "extadd_pairwise_i8x16_u", "value: U8x16", "i16x8_extadd_pairwise_i8x16u"),
-    ("I16x8", "extmul_low_i8x16_s", "left: I8x16, right: I8x16", "i16x8_extmul_low_i8x16s"),
-    ("I16x8", "extmul_high_i8x16_s", "left: I8x16, right: I8x16", "i16x8_extmul_high_i8x16s"),
-    ("U16x8", "extmul_low_i8x16_u", "left: U8x16, right: U8x16", "i16x8_extmul_low_i8x16u"),
-    ("U16x8", "extmul_high_i8x16_u", "left: U8x16, right: U8x16", "i16x8_extmul_high_i8x16u"),
-    ("I32x4", "extend_low_i16x8_s", "value: I16x8", "i32x4_extend_low_i16x8s"),
-    ("I32x4", "extend_high_i16x8_s", "value: I16x8", "i32x4_extend_high_i16x8s"),
-    ("U32x4", "extend_low_i16x8_u", "value: U16x8", "i32x4_extend_low_i16x8u"),
-    ("U32x4", "extend_high_i16x8_u", "value: U16x8", "i32x4_extend_high_i16x8u"),
-    ("I32x4", "extadd_pairwise_i16x8_s", "value: I16x8", "i32x4_extadd_pairwise_i16x8s"),
-    ("U32x4", "extadd_pairwise_i16x8_u", "value: U16x8", "i32x4_extadd_pairwise_i16x8u"),
-    ("I32x4", "extmul_low_i16x8_s", "left: I16x8, right: I16x8", "i32x4_extmul_low_i16x8s"),
-    ("I32x4", "extmul_high_i16x8_s", "left: I16x8, right: I16x8", "i32x4_extmul_high_i16x8s"),
-    ("U32x4", "extmul_low_i16x8_u", "left: U16x8, right: U16x8", "i32x4_extmul_low_i16x8u"),
-    ("U32x4", "extmul_high_i16x8_u", "left: U16x8, right: U16x8", "i32x4_extmul_high_i16x8u"),
-    ("I32x4", "dot_i16x8_s", "left: I16x8, right: I16x8", "i32x4_dot_i16x8s"),
-    ("I64x2", "extend_low_i32x4_s", "value: I32x4", "i64x2_extend_low_i32x4s"),
-    ("I64x2", "extend_high_i32x4_s", "value: I32x4", "i64x2_extend_high_i32x4s"),
-    ("U64x2", "extend_low_i32x4_u", "value: U32x4", "i64x2_extend_low_i32x4u"),
-    ("U64x2", "extend_high_i32x4_u", "value: U32x4", "i64x2_extend_high_i32x4u"),
-    ("I64x2", "extmul_low_i32x4_s", "left: I32x4, right: I32x4", "i64x2_extmul_low_i32x4s"),
-    ("I64x2", "extmul_high_i32x4_s", "left: I32x4, right: I32x4", "i64x2_extmul_high_i32x4s"),
-    ("U64x2", "extmul_low_i32x4_u", "left: U32x4, right: U32x4", "i64x2_extmul_low_i32x4u"),
-    ("U64x2", "extmul_high_i32x4_u", "left: U32x4, right: U32x4", "i64x2_extmul_high_i32x4u"),
-    ("F32x4", "convert_i32x4_s", "value: I32x4", "f32x4_convert_i32x4s"),
-    ("F32x4", "convert_i32x4_u", "value: U32x4", "f32x4_convert_i32x4u"),
-    ("F32x4", "demote_f64x2_zero", "value: F64x2", "f32x4_demote_f64x2_zero"),
-    ("F64x2", "convert_low_i32x4_s", "value: I32x4", "f64x2_convert_low_i32x4s"),
-    ("F64x2", "convert_low_i32x4_u", "value: U32x4", "f64x2_convert_low_i32x4u"),
-    ("F64x2", "promote_low_f32x4", "value: F32x4", "f64x2_promote_low_f32x4"),
-    ("I32x4", "trunc_sat_f32x4_s", "value: F32x4", "i32x4_trunc_sat_f32x4s"),
-    ("U32x4", "trunc_sat_f32x4_u", "value: F32x4", "i32x4_trunc_sat_f32x4u"),
-    ("I32x4", "trunc_sat_f64x2_s_zero", "value: F64x2", "i32x4_trunc_sat_f64x2s_zero"),
-    ("U32x4", "trunc_sat_f64x2_u_zero", "value: F64x2", "i32x4_trunc_sat_f64x2u_zero"),
-]
 
 
 def builtin(name: str, params: str, result: str, target: str) -> str:
@@ -200,7 +153,7 @@ def v128_source(type_name: str, scalar: str, lane: str, kind: str) -> str:
                 out.append(builtin(f"{p}_{shuffle}", f"left: {type_name}, right: {type_name}", type_name, f"dew_{p}_{shuffle}"))
     for result, suffix, params, _ in V128_CROSS_OPS:
         if result == type_name:
-            out.append(builtin(f"{p}_{suffix}", params, type_name, f"dew_{p}_{suffix}"))
+            out.append(builtin(f"{p}_{suffix}", params, type_name, simd_cross_opcode(type_name, suffix)))
 
     binary = []
     unary = []
@@ -745,26 +698,6 @@ def v128_shuffle_backend_source() -> str:
     )
 
 
-def v128_cross_backend_source() -> str:
-    branches: list[str] = []
-    for index, (result, suffix, _, instruction) in enumerate(V128_CROSS_OPS):
-        prefix = result.lower()
-        keyword = "  if" if index == 0 else "else if"
-        branches.append(
-            f"{keyword} name == b\"dew_{prefix}_{suffix}\" {{\n"
-            f"    Some([@lib.Instruction::{instruction}()])\n"
-            f"  }} "
-        )
-    return (
-        "///|\n"
-        "fn starshine_v128_cross_builtin_instructions(\n"
-        "  name : Bytes,\n"
-        ") -> Array[@lib.Instruction]? {\n"
-        + "".join(branches)
-        + "else {\n    None\n  }\n}\n"
-    )
-
-
 def v128_lane_backend_source() -> str:
     branches: list[str] = []
     instruction = {
@@ -892,7 +825,6 @@ def main() -> None:
             (EMBEDDED, embedded),
             (TYPED_PARITY, typed_parity_source()),
             (V128_LANE_BACKEND, v128_lane_backend_source()),
-            (V128_CROSS_BACKEND, v128_cross_backend_source()),
             (V128_MEMORY_BACKEND, v128_memory_backend_source()),
             (V128_SHUFFLE_BACKEND, v128_shuffle_backend_source()),
         ]

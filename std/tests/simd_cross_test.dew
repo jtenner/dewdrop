@@ -1,0 +1,47 @@
+open dew.std.i8x16
+open dew.std.u8x16
+open dew.std.i16x8
+open dew.std.u16x8
+open dew.std.i32x4
+open dew.std.f32x4
+
+test "SIMD narrowing saturates signed lanes" {
+  let value = i8x16_narrow_i16x8_s(i16x8_splat(-200i16), i16x8_splat(300i16))
+  assert(value.extract_0() == -128i8, "signed narrow low lane")
+  assert(value.extract_8() == 127i8, "signed narrow high lane")
+}
+
+test "SIMD unsigned narrowing clamps signed input bits" {
+  let value = u8x16_narrow_i16x8_u(u16x8_splat(256u16), u16x8_splat(65535u16))
+  assert(value.extract_0() == 255u8, "unsigned narrow upper bound")
+  assert(value.extract_8() == 0u8, "unsigned narrow negative input bits")
+}
+
+test "SIMD widening multiply keeps signed high lanes" {
+  let value = i32x4_extmul_high_i16x8_s(i16x8_splat(-32768i16), i16x8_splat(-1i16))
+  assert(value.extract_0() == 32768i32, "signed widening product first lane")
+  assert(value.extract_3() == 32768i32, "signed widening product last lane")
+}
+
+test "SIMD pairwise add widens before addition" {
+  let value = i16x8_extadd_pairwise_i8x16_s(i8x16_splat(127i8).replace_0(-128i8))
+  assert(value.extract_0() == -1i16, "pairwise signed sum")
+  assert(value.extract_7() == 254i16, "pairwise widened sum")
+}
+
+test "SIMD swizzle zeros out of range indices" {
+  let indices = u8x16_splat(16u8).replace_0(15u8).replace_1(0u8).replace_2(255u8)
+  let value = i8x16_swizzle(i8x16_splat(42i8).replace_15(-7i8), indices)
+  assert(value.extract_0() == -7i8, "swizzle final source lane")
+  assert(value.extract_1() == 42i8, "swizzle first source lane")
+  assert(value.extract_2() == 0i8, "swizzle high index")
+  assert(value.extract_3() == 0i8, "swizzle index equal to lane count")
+}
+
+test "SIMD float conversion saturates and maps NaN to zero" {
+  let saturated = i32x4_trunc_sat_f32x4_s(f32x4_splat(2147483648.0f32))
+  assert(saturated.extract_0() == 2147483647i32, "float vector upper bound")
+  let nan = 0.0f32 / 0.0f32
+  let zero = i32x4_trunc_sat_f32x4_s(f32x4_splat(nan))
+  assert(zero.extract_0() == 0i32, "float vector NaN conversion")
+}

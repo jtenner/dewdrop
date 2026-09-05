@@ -23,7 +23,33 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     name.equals(b"f64x2.ceil") ||
     name.equals(b"f64x2.floor") ||
     name.equals(b"f64x2.trunc") ||
-    name.equals(b"f64x2.nearest") {
+    name.equals(b"f64x2.nearest") ||
+    name.equals(b"i16x8.extend_low_i8x16_s") ||
+    name.equals(b"i16x8.extend_high_i8x16_s") ||
+    name.equals(b"i16x8.extend_low_i8x16_u") ||
+    name.equals(b"i16x8.extend_high_i8x16_u") ||
+    name.equals(b"i16x8.extadd_pairwise_i8x16_s") ||
+    name.equals(b"i16x8.extadd_pairwise_i8x16_u") ||
+    name.equals(b"i32x4.extend_low_i16x8_s") ||
+    name.equals(b"i32x4.extend_high_i16x8_s") ||
+    name.equals(b"i32x4.extend_low_i16x8_u") ||
+    name.equals(b"i32x4.extend_high_i16x8_u") ||
+    name.equals(b"i32x4.extadd_pairwise_i16x8_s") ||
+    name.equals(b"i32x4.extadd_pairwise_i16x8_u") ||
+    name.equals(b"i64x2.extend_low_i32x4_s") ||
+    name.equals(b"i64x2.extend_high_i32x4_s") ||
+    name.equals(b"i64x2.extend_low_i32x4_u") ||
+    name.equals(b"i64x2.extend_high_i32x4_u") ||
+    name.equals(b"f32x4.convert_i32x4_s") ||
+    name.equals(b"f32x4.convert_i32x4_u") ||
+    name.equals(b"f32x4.demote_f64x2_zero") ||
+    name.equals(b"f64x2.convert_low_i32x4_s") ||
+    name.equals(b"f64x2.convert_low_i32x4_u") ||
+    name.equals(b"f64x2.promote_low_f32x4") ||
+    name.equals(b"i32x4.trunc_sat_f32x4_s") ||
+    name.equals(b"i32x4.trunc_sat_f32x4_u") ||
+    name.equals(b"i32x4.trunc_sat_f64x2_s_zero") ||
+    name.equals(b"i32x4.trunc_sat_f64x2_u_zero") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
       inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier]
       result: SelfHostWasmBodyCarrier::V128BodyCarrier
@@ -126,7 +152,25 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     name.equals(b"f64x2.lt") ||
     name.equals(b"f64x2.le") ||
     name.equals(b"f64x2.gt") ||
-    name.equals(b"f64x2.ge") {
+    name.equals(b"f64x2.ge") ||
+    name.equals(b"i8x16.narrow_i16x8_s") ||
+    name.equals(b"i8x16.narrow_i16x8_u") ||
+    name.equals(b"i8x16.swizzle") ||
+    name.equals(b"i16x8.narrow_i32x4_s") ||
+    name.equals(b"i16x8.narrow_i32x4_u") ||
+    name.equals(b"i16x8.extmul_low_i8x16_s") ||
+    name.equals(b"i16x8.extmul_high_i8x16_s") ||
+    name.equals(b"i16x8.extmul_low_i8x16_u") ||
+    name.equals(b"i16x8.extmul_high_i8x16_u") ||
+    name.equals(b"i32x4.extmul_low_i16x8_s") ||
+    name.equals(b"i32x4.extmul_high_i16x8_s") ||
+    name.equals(b"i32x4.extmul_low_i16x8_u") ||
+    name.equals(b"i32x4.extmul_high_i16x8_u") ||
+    name.equals(b"i32x4.dot_i16x8_s") ||
+    name.equals(b"i64x2.extmul_low_i32x4_s") ||
+    name.equals(b"i64x2.extmul_high_i32x4_s") ||
+    name.equals(b"i64x2.extmul_low_i32x4_u") ||
+    name.equals(b"i64x2.extmul_high_i32x4_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
       inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::V128BodyCarrier]
       result: SelfHostWasmBodyCarrier::V128BodyCarrier

@@ -54,5 +54,5 @@ test "raw SIMD instructions validate every operand and result" {
       }
     }
   }
-  assert_eq(checked, 150)
+  assert_eq(checked, 194)
 }
