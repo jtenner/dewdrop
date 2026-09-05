@@ -10748,7 +10748,7 @@ fn self_host_linked_i32_scratch_slot(
       if self_host_u32_equal(candidate, expression) {
         return self_host_u32_add(
           self_host_linked_body_parameter_offset(module_, body),
-          self_host_u32_add(body.locals.length, count),
+          self_host_u32_add(self_host_linked_physical_local_count(module_, body), count),
         )
       }
       match module_.expressions[candidate].kind {
@@ -10852,7 +10852,7 @@ fn self_host_linked_i32_scratch_slot(
   }
   self_host_u32_add(
     self_host_linked_body_parameter_offset(module_, body),
-    self_host_u32_add(body.locals.length, count),
+    self_host_u32_add(self_host_linked_physical_local_count(module_, body), count),
   )
 }
 
@@ -10862,16 +10862,19 @@ fn self_host_linked_i32_local_slot(
   local_id: U32,
 ) -> Option<U32> {
   let mut offset = 0u32
+  let mut physical = self_host_linked_body_parameter_offset(module_, body)
   let _ = while offset {
     current => if current < body.locals.length {
       let local = module_.locals[self_host_u32_add(body.locals.start, current)]
       if self_host_u32_equal(local.local_id, local_id) {
-        return Option::Some(
-          self_host_u32_add(
-            self_host_linked_body_parameter_offset(module_, body),
-            current,
-          ),
-        )
+        return if self_host_capture_has_value(local.shape) {
+          Option::Some(physical)
+        } else {
+          Option::None
+        }
+      }
+      if self_host_capture_has_value(local.shape) {
+        physical = physical + 1u32
       }
       continue current + 1u32
     } else {
@@ -16136,7 +16139,9 @@ fn self_host_emit_linked_i32_expression(
                 }
               }
               Option::None => {
-                return Option::Some("linked I32 local read has no physical slot")
+                if !self_host_linked_local_is_erased(module_, body, local) {
+                  return Option::Some("linked local read has no physical slot")
+                }
               }
             }
             SelfHostPlannedExpressionKind::PlannedLocalSet(local, value) => match self_host_linked_i32_local_slot(
@@ -16164,7 +16169,10 @@ fn self_host_emit_linked_i32_expression(
                 )
               }
               Option::None => {
-                return Option::Some("linked I32 local write has no physical slot")
+                if !self_host_linked_local_is_erased(module_, body, local) {
+                  return Option::Some("linked local write has no physical slot")
+                }
+                self_host_linked_i32_schedule_expression(tasks, expression_depths, value, destination, depth)
               }
             }
             SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => {
@@ -27616,7 +27624,7 @@ fn self_host_emit_linked_i32_expression(
                 return Option::Some("linked I32 block item is outside its arena")
               }
               match module_.block_items[item_index].kind {
-                SelfHostPlannedBlockItemKind::PlannedLetItem(local, _, value) => if !self_host_linked_local_is_read(
+                SelfHostPlannedBlockItemKind::PlannedLetItem(local, _, value) => if self_host_linked_local_is_erased(module_, body, local) || !self_host_linked_local_is_read(
                   module_,
                   body,
                   local,
@@ -37142,6 +37150,9 @@ fn self_host_linked_scalar_locals(
       let source = self_host_u32_add(body.locals.start, current)
       if source < module_.locals.length() {
         let planned_local = self_host_body_planned_local_identity(module_.locals[source])
+        if !self_host_capture_has_value(planned_local.shape) {
+          continue current + 1u32
+        }
         if !(planned_local.kind is SelfHostBodyLocalKind::ParameterLocal) {
           let product_field_shape = match self_host_linked_local_initializer_expression(
             module_,

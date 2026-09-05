@@ -320,6 +320,9 @@ for (const [name, expected] of [
       ["captured local", "", "let held = value\n  let callback = fn() -> I64 {\n    held\n  }\n  callback()"],
       ["shared capture", "", "let mut held = 0i64\n  let write = fn(next: I64) -> Unit {\n    held = next\n  }\n  let read = fn() -> I64 {\n    held\n  }\n  write(value)\n  read()"],
       ["forwarded capture", "fn maker(held: I64) -> fn() -> fn() -> I64 {\n  fn() -> fn() -> I64 {\n    fn() -> I64 {\n      held\n    }\n  }\n}\n", "let first = maker(value)\n  let second = first()\n  second()"],
+      ["Unit parameters", "fn select(left: Unit, value: I64, right: Unit) -> I64 {\n  value\n}\n", "let callback = select\n  callback((), value, ())"],
+      ["Unit lambda parameter", "", "let callback = fn(left: I32, effect: Unit, right: I64) -> I64 {\n    if left == 7i32 {\n      right\n    } else {\n      0i64\n    }\n  }\n  callback(7i32, (), value)"],
+      ["Unit local and capture", "", "let effect = ()\n  let callback = fn() -> I64 {\n    effect\n    value\n  }\n  callback()"],
     ]) {
       const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
       const main = await compileSource(source);

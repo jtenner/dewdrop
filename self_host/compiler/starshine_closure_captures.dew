@@ -101,7 +101,7 @@ fn self_host_linked_capture_cell_type(link: SelfHostPlannedProgramWasmGCLink, mo
 // Hidden cell locals follow the normal locals and all expression scratch slots.
 // The scalar local's logical carrier remains unchanged in the frozen body plan.
 fn self_host_linked_capture_cell_slot(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local_id: U32) -> Option<U32> {
-  let base = self_host_linked_body_parameter_offset(module_, body) + body.locals.length + self_host_linked_i32_scratch_count(module_, body)
+  let base = self_host_linked_body_parameter_offset(module_, body) + self_host_linked_physical_local_count(module_, body) + self_host_linked_i32_scratch_count(module_, body)
   let mut offset = 0u32
   let mut index = 0u32
   while index {

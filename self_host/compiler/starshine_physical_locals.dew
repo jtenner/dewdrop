@@ -1,0 +1,23 @@
+// Logical Unit/Never locals have no Wasm slot. All local and scratch offsets use
+// this same projection; a logical arena position is never a physical local ID.
+fn self_host_linked_local_is_erased(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local_id: U32) -> Bool {
+  let relative = self_host_body_local_slot(module_, body, local_id)
+  relative < body.locals.length && !self_host_capture_has_value(module_.locals[body.locals.start + relative].shape)
+}
+
+fn self_host_linked_physical_local_count(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> U32 {
+  let mut count = 0u32
+  let mut index = 0u32
+  while index {
+    _ => if index < body.locals.length {
+      if self_host_capture_has_value(module_.locals[body.locals.start + index].shape) {
+        count = count + 1u32
+      }
+      index = index + 1u32
+      continue index
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  count
+}
