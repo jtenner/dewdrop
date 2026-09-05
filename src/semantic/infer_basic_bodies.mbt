@@ -2553,7 +2553,8 @@ fn BasicBodyInferencer::constrain_match_expression(
   while true {
     match self.collected.expressions[subject] {
       HirFieldExpr(base, _, _) => {
-        if self.expression_selections[self.expression_index(subject)] != NoExpressionSelection {
+        if self.expression_selections[self.expression_index(subject)] !=
+          NoExpressionSelection {
           break
         }
         fields.push(subject)
@@ -3031,10 +3032,31 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   self.constrain_root()
   self.constrain_calls()
   self.constrain_members(false)
-  self.constrain_pending_function_calls(false)
-  self.constrain_method_calls()
+  // A member can depend on indexing, while a method/operator can depend on
+  // that member. Finish the shared constraint queue before reporting missing
+  // calls. Each successful round removes at least one pending call.
+  while true {
+    let before = self.call_scratch.pending_methods.length() +
+      self.call_scratch.pending_operators.length() +
+      self.call_scratch.pending_function_calls.length()
+    self.constrain_pending_function_calls(false)
+    self.constrain_method_calls(false)
+    self.constrain_members(false)
+    self.constrain_operator_calls(false)
+    self.constrain_members(false)
+    let after = self.call_scratch.pending_methods.length() +
+      self.call_scratch.pending_operators.length() +
+      self.call_scratch.pending_function_calls.length()
+    guard after <= before else {
+      abort("body inference constraint queue grew during resolution")
+    }
+    if after == before {
+      break
+    }
+  }
+  self.constrain_method_calls(true)
   self.constrain_debug_dispatches()
-  self.constrain_operator_calls()
+  self.constrain_operator_calls(true)
   self.constrain_members(true)
   self.validate_field_assignments()
   self.constrain_function_references()

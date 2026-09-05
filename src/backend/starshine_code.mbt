@@ -340,13 +340,13 @@ priv enum StarshineEmitTask {
   )
   FinishStarshinePackedEnumPayload(Int)
   FinishStarshineNominalResult(@semantic.DeclId)
-  FinishStarshineFieldGet(Int, Int, @semantic.PlannedWasmStorageType, Bool)
+  FinishStarshineFieldGet(Int, Int, @semantic.PlannedWasmStorageType)
   FinishStarshinePolymorphicFieldGet(
     Array[StarshineFieldLocation],
     Int,
     @semantic.PlannedValueShape
   )
-  FinishStarshineFieldSet(Int, Int, Bool)
+  FinishStarshineFieldSet(Int, Int)
   FinishStarshineUnitFieldSet
   FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
   FinishStarshineWhile(
@@ -8479,17 +8479,6 @@ fn starshine_emit_body_instructions(
               return Err(UnsupportedExpression(body.body, expression))
             }
             let first_location = locations[0]
-            let needs_cast = match lowering.expressions[base].kind {
-              @semantic.PlannedDirectCall(_, _, _, arguments)
-              | @semantic.PlannedTailCall(_, _, _, arguments) if arguments.length >
-                0 => true
-              @semantic.PlannedFunctionValueCall(_, _, _) => true
-              @semantic.PlannedLocalGet(_) => true
-              @semantic.PlannedBlockExpression(_)
-              | @semantic.PlannedIfExpression(_, _, _)
-              | @semantic.PlannedMatchExpression(_, _) => true
-              _ => false
-            }
             if field_shape is @semantic.ProductPlannedValueShape(_) {
               tasks.push(
                 FinishStarshineProductUnbox(
@@ -8509,7 +8498,6 @@ fn starshine_emit_body_instructions(
                   first_location.type_index,
                   first_location.field_index,
                   first_location.storage,
-                  needs_cast,
                 ),
               )
             }
@@ -8549,26 +8537,7 @@ fn starshine_emit_body_instructions(
                   link.physical_type_index(owner_module, local_type_index)
                 None => local_type_index
               }
-              let needs_cast = match lowering.expressions[base].kind {
-                @semantic.PlannedDirectCall(_, _, _, arguments)
-                | @semantic.PlannedTailCall(_, _, _, arguments) if arguments.length >
-                  0 => true
-                @semantic.PlannedFunctionValueCall(_, _, _) => true
-                @semantic.PlannedLocalGet(local_id) => {
-                  let local_info = lowering.locals[body.locals.start + local_id]
-                  match local_info.kind {
-                    @semantic.ParameterLocal => false
-                    _ => true
-                  }
-                }
-                @semantic.PlannedBlockExpression(_)
-                | @semantic.PlannedIfExpression(_, _, _)
-                | @semantic.PlannedMatchExpression(_, _) => true
-                _ => false
-              }
-              tasks.push(
-                FinishStarshineFieldSet(type_index, physical_index, needs_cast),
-              )
+              tasks.push(FinishStarshineFieldSet(type_index, physical_index))
               if field_shape is @semantic.ProductPlannedValueShape(_) {
                 tasks.push(
                   FinishStarshineProductBox(
@@ -10757,11 +10726,12 @@ fn starshine_emit_body_instructions(
         }
         results.push(output)
       }
-      FinishStarshineFieldGet(type_index, field_index, storage, needs_cast) => {
+      FinishStarshineFieldGet(type_index, field_index, storage) => {
         let output = results.pop().unwrap()
-        if needs_cast {
-          output.push(starshine_match_cast(type_index))
-        }
+        // Generic calls and stored fields may return an erased reference.
+        // The selected field owner, not the source expression kind, determines
+        // the exact heap type required by struct.get.
+        output.push(starshine_match_cast(type_index))
         output.push(
           starshine_struct_get_instruction(type_index, field_index, storage),
         )
@@ -10813,12 +10783,10 @@ fn starshine_emit_body_instructions(
         append_starshine_instructions(output, fallback)
         results.push(output)
       }
-      FinishStarshineFieldSet(type_index, field_index, needs_cast) => {
+      FinishStarshineFieldSet(type_index, field_index) => {
         let value = results.pop().unwrap()
         let output = results.pop().unwrap()
-        if needs_cast {
-          output.push(starshine_match_cast(type_index))
-        }
+        output.push(starshine_match_cast(type_index))
         append_starshine_instructions(output, value)
         output.push(
           @lib.Instruction::struct_set(

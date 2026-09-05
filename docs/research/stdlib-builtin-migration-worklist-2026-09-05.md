@@ -42,6 +42,9 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   higher-level algorithms remain Dew. See `raw-math-instructions-2026-09-05.md`.
 - [ ] Array: move mutable length/capacity, growth, mutation, iteration, and bulk
   operations out of compiler runtime builders.
+  Bulk-operation tests exposed indexed member/call ordering and exact field
+  receiver bugs, now fixed in both compilers. See
+  `member-index-fixed-point-2026-09-05.md`. Unit array storage remains open.
 - [ ] Map and Set: move hashing, buckets, growth, lookup, and iteration into Dew.
 - [ ] Queue, circular buffer, and deque: move storage algorithms into Dew.
 - [ ] Text, Bytes, views, and builders: remove compiler-owned representation and

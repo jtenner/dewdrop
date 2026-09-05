@@ -8,6 +8,7 @@ import { checkSimdMemoryOperations } from "./simd-memory-operation-cases.mjs";
 import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
 import { checkMathOperations } from "./math-operation-cases.mjs";
 import { checkSpecializationCallbacks } from "./specialization-callback-cases.mjs";
+import { checkMemberCalls } from "./member-call-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
@@ -377,6 +378,8 @@ pub fn main() -> I32 {
 {
   const start = performance.now();
   try {
+    const memberSource = await readFile(new URL("./dew-test/member_calls.dew", import.meta.url), "utf8");
+    console.log(`self-host member/index checks passed: ${checkMemberCalls(await compileSource(memberSource))}`);
     let checks = 0;
     for (const [name, declarations, body] of [
       ["scalar", "", "let callback = reader::<I64>()\n  callback(value)"],

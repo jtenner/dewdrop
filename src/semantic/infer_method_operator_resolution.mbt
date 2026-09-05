@@ -1383,6 +1383,7 @@ fn BasicBodyInferencer::try_resolve_operator(
 ///|
 fn BasicBodyInferencer::constrain_operator_calls(
   self : BasicBodyInferencer,
+  final_ : Bool,
 ) -> Unit {
   while self.call_scratch.pending_operators.length() > 0 {
     self.call_scratch.deferred_operators.clear()
@@ -1402,6 +1403,9 @@ fn BasicBodyInferencer::constrain_operator_calls(
       break
     }
   }
+  if !final_ {
+    return
+  }
   for expression in self.call_scratch.pending_operators {
     let method_name_string = match self.collected.expressions[expression] {
       HirBinaryExpr(operator, _, _, _) =>
@@ -1419,6 +1423,7 @@ fn BasicBodyInferencer::constrain_operator_calls(
       ),
     )
   }
+  self.call_scratch.pending_operators.clear()
 }
 
 ///|
@@ -2160,6 +2165,7 @@ fn BasicBodyInferencer::try_resolve_method_call(
 ///|
 fn BasicBodyInferencer::constrain_method_calls(
   self : BasicBodyInferencer,
+  final_ : Bool,
 ) -> Unit {
   while self.call_scratch.pending_methods.length() > 0 {
     self.call_scratch.deferred_methods.clear()
@@ -2178,6 +2184,9 @@ fn BasicBodyInferencer::constrain_method_calls(
     if !progress {
       break
     }
+  }
+  if !final_ {
+    return
   }
   for call_slot in self.call_scratch.pending_methods {
     let expression = self.call_expressions[call_slot]

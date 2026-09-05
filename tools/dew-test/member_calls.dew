@@ -1,0 +1,63 @@
+// This fixture also runs without the native compiler's implicit preamble.
+trait IndexedGet<index, value> {
+  fn indexed_get(self, index: index) -> value
+}
+
+trait IndexedSet<index, value> {
+  fn indexed_set(self, index: index, value: value) -> Unit
+}
+
+struct MemberSlot<t> {
+  mut item: t
+}
+
+impl<t> IndexedGet<U32, t> for MemberSlot<t> {
+  fn indexed_get(self, index: U32) -> t {
+    self.item
+  }
+}
+
+impl<t> IndexedSet<U32, t> for MemberSlot<t> {
+  fn indexed_set(self, index: U32, value: t) -> Unit {
+    self.item = value
+  }
+}
+
+struct MemberCell {
+  mut value: I32
+}
+
+impl MemberCell {
+  fn read(self) -> I32 {
+    self.value
+  }
+}
+
+struct MemberWrapper {
+  inner: MemberCell
+}
+
+pub fn main(value: I32, expected: I32) -> I32 {
+  let cell = MemberCell::{
+    value: 0i32
+  }
+  let wrapper = MemberWrapper::{
+    inner: cell
+  }
+  let old = MemberCell::{
+    value: 17i32
+  }
+  let previous = MemberWrapper::{
+    inner: old
+  }
+  let slot = MemberSlot::{
+    item: previous
+  }
+  slot[0u32] = wrapper
+  slot[0u32].inner.value = value
+  if slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
+    slot[0u32].inner.read()
+  } else {
+    -1i32
+  }
+}

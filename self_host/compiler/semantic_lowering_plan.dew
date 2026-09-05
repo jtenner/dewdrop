@@ -584,7 +584,7 @@ fn self_host_lowering_expression_kind(
       _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
     }
     SelfHostHirExpr::ProductFieldExpr(base, index, count, _) => SelfHostPlannedExpressionKind::PlannedProductField(base, index, count)
-    SelfHostHirExpr::IndexExpr(base, index, _) => SelfHostPlannedExpressionKind::PlannedIndexGet(base, index, call_target)
+    SelfHostHirExpr::IndexExpr(base, index, _) => SelfHostPlannedExpressionKind::PlannedIndexGet(base, index, operator_target)
     SelfHostHirExpr::AssignmentExpr(target, value, _) => match collected.expressions[target] {
       SelfHostHirExpr::NameExpr(_, _) => match names.expression_references[target] {
         SelfHostBodyNameReference::LocalNameReference(local) => SelfHostPlannedExpressionKind::PlannedLocalSet(local, value)
@@ -609,7 +609,7 @@ fn self_host_lowering_expression_kind(
       }
       _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
     }
-    SelfHostHirExpr::IndexSetExpr(base, index, value, _) => SelfHostPlannedExpressionKind::PlannedIndexSet(base, index, value, call_target)
+    SelfHostHirExpr::IndexSetExpr(base, index, value, _) => SelfHostPlannedExpressionKind::PlannedIndexSet(base, index, value, operator_target)
   }
 }
 
