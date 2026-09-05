@@ -19,6 +19,7 @@ test "program function lookup keeps one record owner across loop fields" {
       fragment_index: 0u32
       declaration: 11u64
       specialization: 1u32
+      lambda: 4294967295u32
       function_index: 4u32
       imported: false
     },
@@ -27,6 +28,7 @@ test "program function lookup keeps one record owner across loop fields" {
       fragment_index: 1u32
       declaration: 22u64
       specialization: 3u32
+      lambda: 4294967295u32
       function_index: 8u32
       imported: false
     },

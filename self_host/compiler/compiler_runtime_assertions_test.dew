@@ -91,3 +91,34 @@ test "SPC-303 one call key cannot select two targets" expect_trap "unreachable" 
     },
   ])
 }
+
+fn self_host_call_index_test_function(index: U32, lambda: U32) -> SelfHostPlannedProgramWasmFunction {
+  SelfHostPlannedProgramWasmFunction::{
+    module_index: 0u32
+    fragment_index: index
+    declaration: self_host_make_semantic_id(77u64, 11u32)
+    specialization: 4294967295u32
+    lambda: lambda
+    function_index: index
+    imported: false
+  }
+}
+
+test "linked lambdas do not enter the named function index" {
+  let functions = [
+    self_host_call_index_test_function(3u32, 0u32),
+    self_host_call_index_test_function(4u32, 4294967295u32),
+    self_host_call_index_test_function(5u32, 1u32),
+  ]
+  let index = self_host_build_linked_call_index(functions, [])
+  let declaration = self_host_make_semantic_id(77u64, 11u32)
+  assert(index.plain_functions.get(declaration) is Option::Some(4u32), "only the named callable owns the declaration key")
+  assert(self_host_program_link_function(functions, declaration, 4294967295u32) is Option::Some(4u32), "linear lookup also excludes lambda bodies")
+}
+
+test "LNK-504 two named physical functions cannot own one declaration" expect_trap "unreachable" {
+  let _ = self_host_build_linked_call_index([
+    self_host_call_index_test_function(4u32, 4294967295u32),
+    self_host_call_index_test_function(5u32, 4294967295u32),
+  ], [])
+}

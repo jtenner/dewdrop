@@ -11200,7 +11200,7 @@ fn self_host_linked_expression_emits_value(
   match planned.kind {
     SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => {
       for function_ in link.functions {
-        if self_host_u64_equal(function_.declaration, declaration) {
+        if self_host_linked_named_function_matches(function_, declaration) {
           return self_host_linked_function_has_result(
             link,
             function_.function_index,
@@ -11713,7 +11713,7 @@ fn self_host_linked_function_declaration_module_matches(
       ) && self_host_u32_equal(
         function_.module_index,
         owner,
-      ) && self_host_u64_equal(function_.declaration, declaration)
+      ) && self_host_linked_named_function_matches(function_, declaration)
     }
     Option::None => {
       return false
@@ -11910,7 +11910,7 @@ fn self_host_linked_callable_function_index(
     return Option::None
   }
   for function_ in link.functions {
-    if self_host_u64_equal(function_.declaration, declaration) &&
+    if self_host_linked_named_function_matches(function_, declaration) &&
       self_host_linked_function_declaration_module_matches(
         link,
         function_.function_index,
@@ -12012,7 +12012,7 @@ fn self_host_linked_specialized_function_index_for_carriers(
   let second_carrier = self_host_linked_array_carrier_from_shape(second)
   let mut selected = -1i32
   for function_ in link.functions {
-    if self_host_u64_equal(function_.declaration, declaration) {
+    if self_host_linked_named_function_matches(function_, declaration) {
       let physical = self_host_linked_physical_function_index(
         function_.function_index,
       )
@@ -39347,7 +39347,7 @@ fn self_host_linked_certified_array_method_function(
   let _ = while function_index {
     current => if current < link.functions.length() {
       let function_ = link.functions[current]
-      if self_host_u64_equal(function_.declaration, declaration) {
+      if self_host_linked_named_function_matches(function_, declaration) {
       let physical = self_host_linked_physical_function_index(
         function_.function_index,
       )

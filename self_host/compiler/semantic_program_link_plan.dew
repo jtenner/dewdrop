@@ -13,6 +13,7 @@ pub struct SelfHostPlannedProgramWasmFunction {
   fragment_index: U32
   declaration: U64
   specialization: U32
+  lambda: U32
   function_index: U32
   imported: Bool
 }
@@ -25,9 +26,18 @@ fn self_host_planned_program_wasm_function_identity(
     fragment_index: function_.fragment_index
     declaration: function_.declaration
     specialization: function_.specialization
+    lambda: function_.lambda
     function_index: function_.function_index
     imported: function_.imported
   }
+}
+
+fn self_host_linked_named_function_matches(
+  function_: SelfHostPlannedProgramWasmFunction,
+  declaration: U64,
+) -> Bool {
+  self_host_u32_equal(function_.lambda, 4294967295u32) &&
+    self_host_u64_equal(function_.declaration, declaration)
 }
 
 pub struct SelfHostPlannedProgramInitializer {
@@ -208,7 +218,8 @@ fn self_host_program_link_function(
     current => if current < functions.length() {
       let function_ = functions[current]
       if self_host_u64_equal(function_.declaration, declaration) &&
-        self_host_u32_equal(function_.specialization, specialization) {
+        self_host_u32_equal(function_.specialization, specialization) &&
+        self_host_u32_equal(function_.lambda, 4294967295u32) {
         return Option::Some(function_.function_index)
       }
       continue current + 1u32
@@ -238,7 +249,8 @@ fn self_host_program_link_call_requires_function(
             current_fragment,
           )
           if self_host_u64_equal(function_.declaration, declaration) &&
-            self_host_u32_equal(function_.specialization, specialization) {
+            self_host_u32_equal(function_.specialization, specialization) &&
+            !(function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_)) {
             match function_.kind {
               SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => return self_host_program_link_is_runtime_builtin(name)
               _ => return true
@@ -276,7 +288,8 @@ fn self_host_program_link_fragment_exists(
             current_fragment,
           )
           if self_host_u64_equal(function_.declaration, declaration) &&
-            self_host_u32_equal(function_.specialization, specialization) {
+            self_host_u32_equal(function_.specialization, specialization) &&
+            !(function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_)) {
             return true
           }
           continue current_fragment + 1u32
@@ -404,6 +417,10 @@ fn self_host_program_link_append_function_class(
               fragment_index: current
               declaration: function_.declaration
               specialization: function_.specialization
+              lambda: match function_.kind {
+                SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(lambda) => lambda
+                _ => 4294967295u32
+              }
               function_index: functions.length()
               imported: imported
             })

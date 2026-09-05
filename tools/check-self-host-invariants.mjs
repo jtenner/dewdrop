@@ -10,6 +10,10 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "LNK-504 two named physical functions cannot own one declaration",
+    expected: [504, 5, 77n, (77n << 32n) + 11n, 0n, 4294967295, 4n, 5n, 5n],
+  },
   ...[
     ["generic", 1n], ["erroneous", 2n],
     ["nested generic", 1n], ["nested erroneous", 2n],

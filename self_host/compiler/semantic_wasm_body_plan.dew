@@ -581,7 +581,7 @@ fn self_host_build_physical_body_indexes(
   let type_by_declaration = self_host_body_empty_u64_u32_map()
   let type_by_variant = self_host_body_empty_u64_u32_map()
   let field_by_declaration = self_host_body_empty_u64_field_map()
-  let function_by_declaration = self_host_body_empty_u64_u32_map()
+  let function_by_declaration = link.call_index.plain_functions
   let call_site_result_by_function = []
   let mut function_policy_index = 0u32
   let function_policy_length = self_host_u32_add(link.functions.length(), 2u32)
@@ -659,11 +659,6 @@ fn self_host_build_physical_body_indexes(
     }
   }
   for function_ in link.functions {
-    if self_host_u32_equal(function_.specialization, 4294967295u32) && !(
-      self_host_u64_equal(function_.declaration, 0u64)
-    ) {
-      function_by_declaration[function_.declaration] = function_.function_index
-    }
     if self_host_body_function_uses_call_site_result(link, function_) {
       let physical_function = self_host_linked_physical_function_index(
         function_.function_index,
@@ -1190,7 +1185,7 @@ fn self_host_body_call_function(
     Option::None => {}
   }
   for function_ in link.functions {
-    if self_host_u64_equal(function_.declaration, declaration) {
+    if self_host_linked_named_function_matches(function_, declaration) {
       if self_host_u32_equal(function_.specialization, 4294967295u32) {
         return function_.function_index
       }
@@ -1291,7 +1286,7 @@ fn self_host_body_refine_receiver_specialization(
   }
   let mut refined = 4294967295u32
   for function_ in link.functions {
-    if self_host_u64_equal(function_.declaration, declaration) && self_host_body_function_matches_receiver_shapes(
+    if self_host_linked_named_function_matches(function_, declaration) && self_host_body_function_matches_receiver_shapes(
       link,
       module_,
       body,
@@ -1326,7 +1321,7 @@ fn self_host_body_unique_function_for_last_parameter_carrier(
   }
   let mut selected = 4294967295u32
   for function_ in link.functions {
-    if self_host_u64_equal(function_.declaration, declaration) {
+    if self_host_linked_named_function_matches(function_, declaration) {
       let module_ = self_host_body_fragment_module(link, function_.module_index)
       let fragment = self_host_body_function_fragment(
         module_,
@@ -1568,7 +1563,7 @@ fn self_host_body_function_for_physical_receiver_method(
   }
   let mut selected = 4294967295u32
   for function_ in link.functions {
-    if self_host_u64_equal(function_.declaration, declaration) {
+    if self_host_linked_named_function_matches(function_, declaration) {
       if !self_host_u32_equal(selected, 4294967295u32) && !self_host_u32_equal(
         selected,
         function_.function_index,

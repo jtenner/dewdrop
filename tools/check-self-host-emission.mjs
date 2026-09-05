@@ -6,6 +6,8 @@ import { checkScalarConversions } from "./scalar-conversion-cases.mjs";
 import { checkMemoryOperations } from "./memory-operation-cases.mjs";
 import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
 import { checkMathOperations } from "./math-operation-cases.mjs";
+import { checkSpecializationCallbacks } from "./specialization-callback-cases.mjs";
+import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
 function unusedImports(module) {
@@ -102,7 +104,14 @@ async function compileSourceExports(fixture) {
   for (const byte of new TextEncoder().encode(fixture)) {
     compiler.exports.self_host_emission_probe_source_append(builder, byte);
   }
-  const output = compiler.exports.self_host_emission_probe_compile_source(builder);
+  let output;
+  try {
+    output = compiler.exports.self_host_emission_probe_compile_source(builder);
+  } catch (error) {
+    const failure = readSelfHostInvariantFailure(compiler.exports.memory);
+    if (failure) throw new Error(formatSelfHostInvariantFailure(failure), { cause: error });
+    throw error;
+  }
   const bytes = new Uint8Array(compiler.exports.self_host_emission_probe_bytes_length(output));
   for (let index = 0; index < bytes.length; index++) {
     bytes[index] = compiler.exports.self_host_emission_probe_byte_at(output, index);
@@ -294,6 +303,21 @@ for (const [name, expected] of [
   } catch (error) {
     failures++;
     console.error("self-host math operation probe failed");
+    console.error(error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const source = await readFile(new URL("./dew-test/specialization_callbacks.dew", import.meta.url), "utf8");
+    const exports = await compileSourceExports(source + "\npub fn main() -> I32 {\n  0i32\n}\n");
+    const checks = checkSpecializationCallbacks(exports);
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`self-host specialization callback checks passed: ${checks} (${elapsed.toFixed(3)} seconds)`);
+    assert.ok(elapsed <= 30, "callback compiler performance exceeds 30 seconds");
+  } catch (error) {
+    failures++;
+    console.error("self-host specialization callback probe failed");
     console.error(error);
   }
 }

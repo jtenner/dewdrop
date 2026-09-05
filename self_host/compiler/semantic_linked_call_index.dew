@@ -28,10 +28,26 @@ fn self_host_build_linked_call_index(
     next: []
   }
   for function_ in functions {
-    if self_host_u32_equal(function_.specialization, 4294967295u32) && !self_host_u64_equal(function_.declaration, 0u64) {
+    if self_host_u32_equal(function_.specialization, 4294967295u32) &&
+      self_host_u32_equal(function_.lambda, 4294967295u32) &&
+      !self_host_u64_equal(function_.declaration, 0u64) {
       match index.plain_functions.get(function_.declaration) {
         Option::Some(previous) => {
-          let _ = self_host_assert_compiler_invariant(self_host_u32_equal(previous, function_.function_index), "one declaration has two plain linked functions")
+          let _ = self_host_assert_compiler_invariant_with_failure(
+            self_host_u32_equal(previous, function_.function_index),
+            SelfHostInvariantFailure::{
+              code: 504u32
+              phase: 5u32
+              module_id: self_host_semantic_id_module(function_.declaration)
+              declaration: function_.declaration
+              body: 0u64
+              expression: 4294967295u32
+              expected: u32_into_u64(previous)
+              actual: u32_into_u64(function_.function_index)
+              detail: u32_into_u64(function_.fragment_index)
+            },
+            "one declaration has two plain linked functions",
+          )
         }
         Option::None => index.plain_functions.set(function_.declaration, function_.function_index)
       }
