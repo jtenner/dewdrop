@@ -141,18 +141,13 @@ fn self_host_program_specialization_bound_target(lowering: SelfHostPlannedProgra
     _ => return target
   }
   let mut receiver = SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType
-  for job in module_.inferred.jobs {
-    match job.kind {
-      SelfHostMergedInferenceJobKind::MergedBodyInferenceJob(id) => if self_host_u64_equal(id, body.body) && offset < job.call_targets.length {
-        match module_.inferred.call_targets[self_host_u32_add(job.call_targets.start, offset)] {
-          SelfHostBasicCallTarget::BoundTraitBasicCallTarget(method, parameter, bound, _) => if self_host_u64_equal(method, target) && module_.resolved_types.types[bound] is SelfHostResolvedType::TraitType(_) {
-            receiver = self_host_specialization_parameter_evidence_type(caller, specialization, requests, parameter)
-          }
-          _ => {}
-        }
-      }
-      _ => {}
+  // The lowered expression already owns its exact inference target. Re-reading
+  // the parent body's job at a lambda-relative offset selects unrelated data.
+  match expression.call_target {
+    SelfHostBasicCallTarget::BoundTraitBasicCallTarget(method, parameter, bound, _) => if self_host_u64_equal(method, target) && module_.resolved_types.types[bound] is SelfHostResolvedType::TraitType(_) {
+      receiver = self_host_specialization_parameter_evidence_type(caller, specialization, requests, parameter)
     }
+    _ => {}
   }
   if receiver is SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType {
     return target

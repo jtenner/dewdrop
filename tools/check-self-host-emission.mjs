@@ -331,6 +331,9 @@ for (const [name, expected] of [
       ["generic mutable capture", "fn maker<t>(seed: t) -> fn(t) -> t {\n  let mut held = seed\n  fn(next: t) -> t {\n    let previous = held\n    held = next\n    previous\n  }\n}\n", "let callback = maker::<I64>(value)\n  callback(0i64)"],
       ["generic Unit capture", "fn maker<t>(held: t) -> fn() -> t {\n  fn() -> t {\n    held\n  }\n}\n", "let callback = maker::<Unit>(())\n  callback()\n  value"],
       ["generic mutable Unit capture", "fn maker<t>(seed: t) -> fn(t) -> t {\n  let mut held = seed\n  fn(next: t) -> t {\n    held = next\n    held\n  }\n}\n", "let callback = maker::<Unit>(())\n  callback(())\n  value"],
+      ["call inside generic lambda", "fn maker<t>() -> fn(t) -> t {\n  fn(value: t) -> t {\n    identity(value)\n  }\n}\n", "let callback = maker::<I64>()\n  callback(value)"],
+      ["reference inside generic lambda", "fn maker<t>() -> fn() -> fn(t) -> t {\n  fn() -> fn(t) -> t {\n    identity\n  }\n}\n", "let outer = maker::<I64>()\n  let callback = outer()\n  callback(value)"],
+      ["trait call inside generic lambda", "trait Read {\n  fn read(self) -> I64\n}\nstruct Item {\n  value: I64\n}\nimpl Read for Item {\n  fn read(self) -> I64 {\n    self.value\n  }\n}\nfn maker<t: Read>() -> fn(t) -> I64 {\n  fn(value: t) -> I64 {\n    value.read()\n  }\n}\n", "let callback = maker::<Item>()\n  callback(Item::{\n    value: value\n  })"],
     ]) {
       const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
       let main;

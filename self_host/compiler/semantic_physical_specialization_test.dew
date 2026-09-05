@@ -879,6 +879,7 @@ pub fn self_host_emission_probe_source_append(source: BytesBuilder, value: U8) -
 }
 
 pub fn self_host_emission_probe_compile_source(source: BytesBuilder) -> Bytes {
+  self_host_clear_invariant_failure()
   let fragments = self_host_physical_test_fragments(source.finish())
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)

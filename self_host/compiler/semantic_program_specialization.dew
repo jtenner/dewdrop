@@ -1244,6 +1244,47 @@ fn self_host_program_specialization_scan_body(
   request_next: Array<U32>,
   calls: Array<SelfHostProgramSpecializedCall>,
 ) -> Unit {
+  self_host_program_specialization_scan_one_body(lowering, module_index, body, caller, caller_specialization, caller_shapes, reachable, reachable_seen, requests, shapes, request_head_by_declaration, request_next, calls)
+  let module_ = self_host_planned_module_lowering_identity(lowering.modules[module_index])
+  // Lambda expression spans are separate from the root function's span. Scan
+  // each nested body once in the same owning specialization context.
+  for lambda in module_.lambdas {
+    if self_host_u64_equal(lambda.root_body, body.body) {
+      match self_host_body_lambda_lookup(module_, lambda.lambda) {
+        Option::Some(lambda_body) => self_host_program_specialization_scan_one_body(lowering, module_index, lambda_body, caller, caller_specialization, caller_shapes, reachable, reachable_seen, requests, shapes, request_head_by_declaration, request_next, calls)
+        Option::None => {
+          let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+            code: 610u32
+            phase: 5u32
+            module_id: module_.module_id
+            declaration: body.declaration
+            body: body.body
+            expression: lambda.expressions.start
+            expected: 1u64
+            actual: 0u64
+            detail: u32_into_u64(lambda.lambda)
+          }, "specialization lost a source lambda body")
+        }
+      }
+    }
+  }
+}
+
+fn self_host_program_specialization_scan_one_body(
+  lowering: SelfHostPlannedProgramLowering,
+  module_index: U32,
+  body: SelfHostPlannedBodyLowering,
+  caller: Option<SelfHostPlannedCallable>,
+  caller_specialization: U32,
+  caller_shapes: SelfHostHirSpan,
+  reachable: Array<U64>,
+  reachable_seen: Map<U64, Bool>,
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  request_head_by_declaration: Map<U64, U32>,
+  request_next: Array<U32>,
+  calls: Array<SelfHostProgramSpecializedCall>,
+) -> Unit {
   let module_ = lowering.modules[module_index]
   let mut expression_offset = 0u32
   let _ = while expression_offset {
