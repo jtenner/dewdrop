@@ -1,0 +1,301 @@
+// Execute all scalar Into implementations with host-supplied boundary values.
+pub fn probe_i8_into_i8(value: I8) -> I8 {
+  value.into()
+}
+pub fn probe_i8_into_i16(value: I8) -> I16 {
+  value.into()
+}
+pub fn probe_i8_into_i32(value: I8) -> I32 {
+  value.into()
+}
+pub fn probe_i8_into_i64(value: I8) -> I64 {
+  value.into()
+}
+pub fn probe_i8_into_u8(value: I8) -> U8 {
+  value.into()
+}
+pub fn probe_i8_into_u16(value: I8) -> U16 {
+  value.into()
+}
+pub fn probe_i8_into_u32(value: I8) -> U32 {
+  value.into()
+}
+pub fn probe_i8_into_u64(value: I8) -> U64 {
+  value.into()
+}
+pub fn probe_i8_into_f32(value: I8) -> F32 {
+  value.into()
+}
+pub fn probe_i8_into_f64(value: I8) -> F64 {
+  value.into()
+}
+pub fn probe_i16_into_i8(value: I16) -> I8 {
+  value.into()
+}
+pub fn probe_i16_into_i16(value: I16) -> I16 {
+  value.into()
+}
+pub fn probe_i16_into_i32(value: I16) -> I32 {
+  value.into()
+}
+pub fn probe_i16_into_i64(value: I16) -> I64 {
+  value.into()
+}
+pub fn probe_i16_into_u8(value: I16) -> U8 {
+  value.into()
+}
+pub fn probe_i16_into_u16(value: I16) -> U16 {
+  value.into()
+}
+pub fn probe_i16_into_u32(value: I16) -> U32 {
+  value.into()
+}
+pub fn probe_i16_into_u64(value: I16) -> U64 {
+  value.into()
+}
+pub fn probe_i16_into_f32(value: I16) -> F32 {
+  value.into()
+}
+pub fn probe_i16_into_f64(value: I16) -> F64 {
+  value.into()
+}
+pub fn probe_i32_into_i8(value: I32) -> I8 {
+  value.into()
+}
+pub fn probe_i32_into_i16(value: I32) -> I16 {
+  value.into()
+}
+pub fn probe_i32_into_i32(value: I32) -> I32 {
+  value.into()
+}
+pub fn probe_i32_into_i64(value: I32) -> I64 {
+  value.into()
+}
+pub fn probe_i32_into_u8(value: I32) -> U8 {
+  value.into()
+}
+pub fn probe_i32_into_u16(value: I32) -> U16 {
+  value.into()
+}
+pub fn probe_i32_into_u32(value: I32) -> U32 {
+  value.into()
+}
+pub fn probe_i32_into_u64(value: I32) -> U64 {
+  value.into()
+}
+pub fn probe_i32_into_f32(value: I32) -> F32 {
+  value.into()
+}
+pub fn probe_i32_into_f64(value: I32) -> F64 {
+  value.into()
+}
+pub fn probe_i64_into_i8(value: I64) -> I8 {
+  value.into()
+}
+pub fn probe_i64_into_i16(value: I64) -> I16 {
+  value.into()
+}
+pub fn probe_i64_into_i32(value: I64) -> I32 {
+  value.into()
+}
+pub fn probe_i64_into_i64(value: I64) -> I64 {
+  value.into()
+}
+pub fn probe_i64_into_u8(value: I64) -> U8 {
+  value.into()
+}
+pub fn probe_i64_into_u16(value: I64) -> U16 {
+  value.into()
+}
+pub fn probe_i64_into_u32(value: I64) -> U32 {
+  value.into()
+}
+pub fn probe_i64_into_u64(value: I64) -> U64 {
+  value.into()
+}
+pub fn probe_i64_into_f32(value: I64) -> F32 {
+  value.into()
+}
+pub fn probe_i64_into_f64(value: I64) -> F64 {
+  value.into()
+}
+pub fn probe_u8_into_i8(value: U8) -> I8 {
+  value.into()
+}
+pub fn probe_u8_into_i16(value: U8) -> I16 {
+  value.into()
+}
+pub fn probe_u8_into_i32(value: U8) -> I32 {
+  value.into()
+}
+pub fn probe_u8_into_i64(value: U8) -> I64 {
+  value.into()
+}
+pub fn probe_u8_into_u8(value: U8) -> U8 {
+  value.into()
+}
+pub fn probe_u8_into_u16(value: U8) -> U16 {
+  value.into()
+}
+pub fn probe_u8_into_u32(value: U8) -> U32 {
+  value.into()
+}
+pub fn probe_u8_into_u64(value: U8) -> U64 {
+  value.into()
+}
+pub fn probe_u8_into_f32(value: U8) -> F32 {
+  value.into()
+}
+pub fn probe_u8_into_f64(value: U8) -> F64 {
+  value.into()
+}
+pub fn probe_u16_into_i8(value: U16) -> I8 {
+  value.into()
+}
+pub fn probe_u16_into_i16(value: U16) -> I16 {
+  value.into()
+}
+pub fn probe_u16_into_i32(value: U16) -> I32 {
+  value.into()
+}
+pub fn probe_u16_into_i64(value: U16) -> I64 {
+  value.into()
+}
+pub fn probe_u16_into_u8(value: U16) -> U8 {
+  value.into()
+}
+pub fn probe_u16_into_u16(value: U16) -> U16 {
+  value.into()
+}
+pub fn probe_u16_into_u32(value: U16) -> U32 {
+  value.into()
+}
+pub fn probe_u16_into_u64(value: U16) -> U64 {
+  value.into()
+}
+pub fn probe_u16_into_f32(value: U16) -> F32 {
+  value.into()
+}
+pub fn probe_u16_into_f64(value: U16) -> F64 {
+  value.into()
+}
+pub fn probe_u32_into_i8(value: U32) -> I8 {
+  value.into()
+}
+pub fn probe_u32_into_i16(value: U32) -> I16 {
+  value.into()
+}
+pub fn probe_u32_into_i32(value: U32) -> I32 {
+  value.into()
+}
+pub fn probe_u32_into_i64(value: U32) -> I64 {
+  value.into()
+}
+pub fn probe_u32_into_u8(value: U32) -> U8 {
+  value.into()
+}
+pub fn probe_u32_into_u16(value: U32) -> U16 {
+  value.into()
+}
+pub fn probe_u32_into_u32(value: U32) -> U32 {
+  value.into()
+}
+pub fn probe_u32_into_u64(value: U32) -> U64 {
+  value.into()
+}
+pub fn probe_u32_into_f32(value: U32) -> F32 {
+  value.into()
+}
+pub fn probe_u32_into_f64(value: U32) -> F64 {
+  value.into()
+}
+pub fn probe_u64_into_i8(value: U64) -> I8 {
+  value.into()
+}
+pub fn probe_u64_into_i16(value: U64) -> I16 {
+  value.into()
+}
+pub fn probe_u64_into_i32(value: U64) -> I32 {
+  value.into()
+}
+pub fn probe_u64_into_i64(value: U64) -> I64 {
+  value.into()
+}
+pub fn probe_u64_into_u8(value: U64) -> U8 {
+  value.into()
+}
+pub fn probe_u64_into_u16(value: U64) -> U16 {
+  value.into()
+}
+pub fn probe_u64_into_u32(value: U64) -> U32 {
+  value.into()
+}
+pub fn probe_u64_into_u64(value: U64) -> U64 {
+  value.into()
+}
+pub fn probe_u64_into_f32(value: U64) -> F32 {
+  value.into()
+}
+pub fn probe_u64_into_f64(value: U64) -> F64 {
+  value.into()
+}
+pub fn probe_f32_into_i8(value: F32) -> I8 {
+  value.into()
+}
+pub fn probe_f32_into_i16(value: F32) -> I16 {
+  value.into()
+}
+pub fn probe_f32_into_i32(value: F32) -> I32 {
+  value.into()
+}
+pub fn probe_f32_into_i64(value: F32) -> I64 {
+  value.into()
+}
+pub fn probe_f32_into_u8(value: F32) -> U8 {
+  value.into()
+}
+pub fn probe_f32_into_u16(value: F32) -> U16 {
+  value.into()
+}
+pub fn probe_f32_into_u32(value: F32) -> U32 {
+  value.into()
+}
+pub fn probe_f32_into_u64(value: F32) -> U64 {
+  value.into()
+}
+pub fn probe_f32_into_f32(value: F32) -> F32 {
+  value.into()
+}
+pub fn probe_f32_into_f64(value: F32) -> F64 {
+  value.into()
+}
+pub fn probe_f64_into_i8(value: F64) -> I8 {
+  value.into()
+}
+pub fn probe_f64_into_i16(value: F64) -> I16 {
+  value.into()
+}
+pub fn probe_f64_into_i32(value: F64) -> I32 {
+  value.into()
+}
+pub fn probe_f64_into_i64(value: F64) -> I64 {
+  value.into()
+}
+pub fn probe_f64_into_u8(value: F64) -> U8 {
+  value.into()
+}
+pub fn probe_f64_into_u16(value: F64) -> U16 {
+  value.into()
+}
+pub fn probe_f64_into_u32(value: F64) -> U32 {
+  value.into()
+}
+pub fn probe_f64_into_u64(value: F64) -> U64 {
+  value.into()
+}
+pub fn probe_f64_into_f32(value: F64) -> F32 {
+  value.into()
+}
+pub fn probe_f64_into_f64(value: F64) -> F64 {
+  value.into()
+}

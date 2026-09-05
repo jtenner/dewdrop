@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { execFileSync } from "node:child_process";
+import { checkScalarConversions } from "./scalar-conversion-cases.mjs";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
 function unusedImports(module) {
@@ -93,6 +94,23 @@ if (compilerImports.wasi_snapshot_preview1?.fd_write) {
 }
 compiler = await WebAssembly.instantiate(module, compilerImports);
 compiler.exports.__dew_init?.();
+async function compileSource(fixture) {
+  const builder = compiler.exports.self_host_emission_probe_source_new();
+  for (const byte of new TextEncoder().encode(fixture)) {
+    compiler.exports.self_host_emission_probe_source_append(builder, byte);
+  }
+  const output = compiler.exports.self_host_emission_probe_compile_source(builder);
+  const bytes = new Uint8Array(compiler.exports.self_host_emission_probe_bytes_length(output));
+  for (let index = 0; index < bytes.length; index++) {
+    bytes[index] = compiler.exports.self_host_emission_probe_byte_at(output, index);
+  }
+  const module = await WebAssembly.compile(bytes);
+  const instance = await WebAssembly.instantiate(module, unusedImports(module));
+  instance.exports.__dew_init?.();
+  assert.equal(typeof instance.exports.main, "function", "source probe main export is missing");
+  return instance.exports.main;
+}
+
 let failures = 0;
 for (const [name, expected] of [
   ["self_host_emit_raw_bitcast_probe", -1],
@@ -159,20 +177,7 @@ for (const [name, expected] of [
         const name = `f${width}_into_${target}`;
         const type = target.toUpperCase();
         const fixture = source + `\npub fn main(value: F${width}) -> I32 {\n  unsafe_bitcast::<${type}, I32>(${name}(value))\n}\n`;
-        const builder = compiler.exports.self_host_emission_probe_source_new();
-        for (const byte of new TextEncoder().encode(fixture)) {
-          compiler.exports.self_host_emission_probe_source_append(builder, byte);
-        }
-        const output = compiler.exports.self_host_emission_probe_compile_source(builder);
-        const bytes = new Uint8Array(compiler.exports.self_host_emission_probe_bytes_length(output));
-        for (let index = 0; index < bytes.length; index++) {
-          bytes[index] = compiler.exports.self_host_emission_probe_byte_at(output, index);
-        }
-        const module = await WebAssembly.compile(bytes);
-        const instance = await WebAssembly.instantiate(module, unusedImports(module));
-        instance.exports.__dew_init?.();
-        const convert = instance.exports.main;
-        assert.equal(typeof convert, "function", `${name}: export is missing`);
+        const convert = await compileSource(fixture);
         for (const [input, expected] of [[min, min], [max, max], [42.75, 42], [-0.75, 0]]) {
           assert.equal(convert(input), expected, `${name}(${input})`);
           checks++;
@@ -189,6 +194,25 @@ for (const [name, expected] of [
   } catch (error) {
     failures++;
     console.error("self-host narrow float conversion probe failed");
+    console.error(error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const source = "builtin unsafe_bitcast<a, b>(value: a) -> b = \"unsafe.bitcast\"\n" +
+      "builtin unreachable() -> Never = \"dew_unreachable\"\npub trait Into<t> {\n  fn into(self) -> t\n}\n" +
+      await readFile(new URL("../std/preamble/70-into-builtins.dew", import.meta.url), "utf8") +
+      await readFile(new URL("../std/preamble/80-into-impls.dew", import.meta.url), "utf8");
+    const checks = await checkScalarConversions(async (origin, target) => {
+      return compileSource(source + `\npub fn main(value: ${origin}) -> ${target} {\n  value.into()\n}\n`);
+    });
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`self-host scalar Into conversion checks passed: ${checks} (${elapsed.toFixed(3)} seconds)`);
+    if (elapsed > 30) throw new Error("scalar conversion compiler performance exceeds 30 seconds");
+  } catch (error) {
+    failures++;
+    console.error("self-host scalar Into conversion probe failed");
     console.error(error);
   }
 }

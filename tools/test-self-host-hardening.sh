@@ -14,6 +14,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/compiler_runtime_assertions_test.dew \
   self_host/compiler/semantic_wasm_body_plan_test.dew \
   self_host/compiler/semantic_physical_specialization_test.dew \
+  self_host/compiler/semantic_raw_conversions_test.dew \
   self_host/compiler/semantic_local_unification_test.dew \
   self_host/compiler/semantic_solver_invariants_test.dew
 do

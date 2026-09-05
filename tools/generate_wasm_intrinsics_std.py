@@ -172,7 +172,7 @@ def standard_builtin_declarations() -> list[IntrinsicDeclaration]:
             # Keep existing packed API spellings as Dew code, never turn them
             # back into compiler-owned aliases. These bodies use only preamble
             # carrier operations, so there is no hidden module dependency.
-            if "unsafe_bitcast" in match.group("body"):
+            if "unsafe_bitcast" in match.group("body") and path.parent.name != "preamble":
                 declarations.append(IntrinsicDeclaration(
                     source=relative,
                     name=match.group("name"),
@@ -226,7 +226,7 @@ def rendered_intrinsics() -> tuple[str, int, int]:
         "pub struct NullableRef<t> {}",
         "",
         '// Compatibility spelling for the first published intrinsic.',
-        'pub builtin i64_trunc_i32(value: I64) -> I32 = "dew_i64_into_i32"',
+        'pub builtin i64_trunc_i32(value: I64) -> I32 = "i32.wrap_i64"',
         "",
     ]
     previous_source = ""

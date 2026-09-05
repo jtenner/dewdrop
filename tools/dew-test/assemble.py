@@ -57,6 +57,16 @@ def main() -> None:
     print(
         f"compiled {len(paths)} manifest-ordered Dew test files deterministically and builtin traps"
     )
+    subprocess.run(
+        [
+            "moon", "run", "--target", "native", "src/dew_test_gen", "--",
+            "tools/dew-test/scalar_conversions.wasm", "dew.std.conversions",
+            "dew.std.conversions", "tools/dew-test/scalar_conversions_test.dew",
+            str(ROOT / "tools/dew-test/scalar_conversions.dew"),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
 
 
 if __name__ == "__main__":

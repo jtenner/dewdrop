@@ -77,9 +77,9 @@ def main() -> None:
     if len(branches) != 156:
         raise SystemExit(f"expected 156 numeric builtin branches, found {len(branches)}")
     conversion_branches = BRANCH.findall(CONVERSION_SOURCE.read_text())
-    if len(conversion_branches) != 92:
+    if len(conversion_branches) != 23:
         raise SystemExit(
-            f"expected 92 conversion builtin branches, found {len(conversion_branches)}"
+            f"expected 23 conversion instruction branches, found {len(conversion_branches)}"
         )
     v128_branches = BRANCH.findall(V128_SOURCE.read_text())
     if len(v128_branches) != 150:

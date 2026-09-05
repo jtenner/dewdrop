@@ -6,7 +6,7 @@ pub struct WasmArray<t> {}
 pub struct NullableRef<t> {}
 
 // Compatibility spelling for the first published intrinsic.
-pub builtin i64_trunc_i32(value: I64) -> I32 = "dew_i64_into_i32"
+pub builtin i64_trunc_i32(value: I64) -> I32 = "i32.wrap_i64"
 
 // WasmGC array operations
 pub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = "array_new"
@@ -652,36 +652,6 @@ pub builtin wasm_i32_lte(left: I32, right: I32) -> Bool = "i32_lte"
 pub builtin wasm_v128_and(left: V128, right: V128) -> V128 = "v128.and"
 pub builtin wasm_v128_or(left: V128, right: V128) -> V128 = "v128.or"
 pub builtin wasm_v128_xor(left: V128, right: V128) -> V128 = "v128.xor"
-pub fn wasm_swar32_from_bits(value: U32) -> Swar32 {
-  unsafe_bitcast(value)
-}
-pub fn wasm_swar32_to_bits(value: Swar32) -> U32 {
-  unsafe_bitcast(value)
-}
-pub fn wasm_swar32_and(left: Swar32, right: Swar32) -> Swar32 {
-  unsafe_bitcast(u32_and(unsafe_bitcast(left), unsafe_bitcast(right)))
-}
-pub fn wasm_swar32_or(left: Swar32, right: Swar32) -> Swar32 {
-  unsafe_bitcast(u32_or(unsafe_bitcast(left), unsafe_bitcast(right)))
-}
-pub fn wasm_swar32_xor(left: Swar32, right: Swar32) -> Swar32 {
-  unsafe_bitcast(u32_xor(unsafe_bitcast(left), unsafe_bitcast(right)))
-}
-pub fn wasm_swar64_from_bits(value: U64) -> Swar64 {
-  unsafe_bitcast(value)
-}
-pub fn wasm_swar64_to_bits(value: Swar64) -> U64 {
-  unsafe_bitcast(value)
-}
-pub fn wasm_swar64_and(left: Swar64, right: Swar64) -> Swar64 {
-  unsafe_bitcast(u64_and(unsafe_bitcast(left), unsafe_bitcast(right)))
-}
-pub fn wasm_swar64_or(left: Swar64, right: Swar64) -> Swar64 {
-  unsafe_bitcast(u64_or(unsafe_bitcast(left), unsafe_bitcast(right)))
-}
-pub fn wasm_swar64_xor(left: Swar64, right: Swar64) -> Swar64 {
-  unsafe_bitcast(u64_xor(unsafe_bitcast(left), unsafe_bitcast(right)))
-}
 
 // std/preamble/100-v128.dew
 pub builtin wasm_v128_not(value: V128) -> V128 = "dew_v128_not"
@@ -1001,112 +971,31 @@ pub builtin wasm_f64_load(address: U32) -> F64 = "dew_f64_load"
 pub builtin wasm_f64_store(address: U32, value: F64) -> Unit = "dew_f64_store"
 pub builtin wasm_v128_load(address: U32) -> V128 = "v128.load"
 pub builtin wasm_v128_store(address: U32, value: V128) -> Unit = "v128.store"
-pub fn wasm_swar32_load(address: U32) -> Swar32 {
-  unsafe_bitcast(u32_load(address))
-}
-pub fn wasm_swar32_store(address: U32, value: Swar32) -> Unit {
-  u32_store(address, unsafe_bitcast(value))
-}
-pub fn wasm_swar64_load(address: U32) -> Swar64 {
-  unsafe_bitcast(u64_load(address))
-}
-pub fn wasm_swar64_store(address: U32, value: Swar64) -> Unit {
-  u64_store(address, unsafe_bitcast(value))
-}
 
 // std/preamble/70-into-builtins.dew
-pub builtin wasm_i8_into_i8(value: I8) -> I8 = "dew_i8_into_i8"
-pub builtin wasm_i8_into_i16(value: I8) -> I16 = "dew_i8_into_i16"
-pub builtin wasm_i8_into_i32(value: I8) -> I32 = "dew_i8_into_i32"
-pub builtin wasm_i8_into_i64(value: I8) -> I64 = "dew_i8_into_i64"
-pub builtin wasm_i8_into_u8(value: I8) -> U8 = "dew_i8_into_u8"
-pub builtin wasm_i8_into_u16(value: I8) -> U16 = "dew_i8_into_u16"
-pub builtin wasm_i8_into_u32(value: I8) -> U32 = "dew_i8_into_u32"
-pub builtin wasm_i8_into_u64(value: I8) -> U64 = "dew_i8_into_u64"
-pub builtin wasm_i8_into_f32(value: I8) -> F32 = "dew_i8_into_f32"
-pub builtin wasm_i8_into_f64(value: I8) -> F64 = "dew_i8_into_f64"
-pub builtin wasm_i16_into_i8(value: I16) -> I8 = "dew_i16_into_i8"
-pub builtin wasm_i16_into_i16(value: I16) -> I16 = "dew_i16_into_i16"
-pub builtin wasm_i16_into_i32(value: I16) -> I32 = "dew_i16_into_i32"
-pub builtin wasm_i16_into_i64(value: I16) -> I64 = "dew_i16_into_i64"
-pub builtin wasm_i16_into_u8(value: I16) -> U8 = "dew_i16_into_u8"
-pub builtin wasm_i16_into_u16(value: I16) -> U16 = "dew_i16_into_u16"
-pub builtin wasm_i16_into_u32(value: I16) -> U32 = "dew_i16_into_u32"
-pub builtin wasm_i16_into_u64(value: I16) -> U64 = "dew_i16_into_u64"
-pub builtin wasm_i16_into_f32(value: I16) -> F32 = "dew_i16_into_f32"
-pub builtin wasm_i16_into_f64(value: I16) -> F64 = "dew_i16_into_f64"
-pub builtin wasm_i32_into_i8(value: I32) -> I8 = "dew_i32_into_i8"
-pub builtin wasm_i32_into_i16(value: I32) -> I16 = "dew_i32_into_i16"
-pub builtin wasm_i32_into_i32(value: I32) -> I32 = "dew_i32_into_i32"
-pub builtin wasm_i32_into_i64(value: I32) -> I64 = "dew_i32_into_i64"
-pub builtin wasm_i32_into_u8(value: I32) -> U8 = "dew_i32_into_u8"
-pub builtin wasm_i32_into_u16(value: I32) -> U16 = "dew_i32_into_u16"
-pub builtin wasm_i32_into_u32(value: I32) -> U32 = "dew_i32_into_u32"
-pub builtin wasm_i32_into_u64(value: I32) -> U64 = "dew_i32_into_u64"
-pub builtin wasm_i32_into_f32(value: I32) -> F32 = "dew_i32_into_f32"
-pub builtin wasm_i32_into_f64(value: I32) -> F64 = "dew_i32_into_f64"
-pub builtin wasm_i64_into_i8(value: I64) -> I8 = "dew_i64_into_i8"
-pub builtin wasm_i64_into_i16(value: I64) -> I16 = "dew_i64_into_i16"
-pub builtin wasm_i64_into_i32(value: I64) -> I32 = "dew_i64_into_i32"
-pub builtin wasm_i64_into_i64(value: I64) -> I64 = "dew_i64_into_i64"
-pub builtin wasm_i64_into_u8(value: I64) -> U8 = "dew_i64_into_u8"
-pub builtin wasm_i64_into_u16(value: I64) -> U16 = "dew_i64_into_u16"
-pub builtin wasm_i64_into_u32(value: I64) -> U32 = "dew_i64_into_u32"
-pub builtin wasm_i64_into_u64(value: I64) -> U64 = "dew_i64_into_u64"
-pub builtin wasm_i64_into_f32(value: I64) -> F32 = "dew_i64_into_f32"
-pub builtin wasm_i64_into_f64(value: I64) -> F64 = "dew_i64_into_f64"
-pub builtin wasm_u8_into_i8(value: U8) -> I8 = "dew_u8_into_i8"
-pub builtin wasm_u8_into_i16(value: U8) -> I16 = "dew_u8_into_i16"
-pub builtin wasm_u8_into_i32(value: U8) -> I32 = "dew_u8_into_i32"
-pub builtin wasm_u8_into_i64(value: U8) -> I64 = "dew_u8_into_i64"
-pub builtin wasm_u8_into_u8(value: U8) -> U8 = "dew_u8_into_u8"
-pub builtin wasm_u8_into_u16(value: U8) -> U16 = "dew_u8_into_u16"
-pub builtin wasm_u8_into_u32(value: U8) -> U32 = "dew_u8_into_u32"
-pub builtin wasm_u8_into_u64(value: U8) -> U64 = "dew_u8_into_u64"
-pub builtin wasm_u8_into_f32(value: U8) -> F32 = "dew_u8_into_f32"
-pub builtin wasm_u8_into_f64(value: U8) -> F64 = "dew_u8_into_f64"
-pub builtin wasm_u16_into_i8(value: U16) -> I8 = "dew_u16_into_i8"
-pub builtin wasm_u16_into_i16(value: U16) -> I16 = "dew_u16_into_i16"
-pub builtin wasm_u16_into_i32(value: U16) -> I32 = "dew_u16_into_i32"
-pub builtin wasm_u16_into_i64(value: U16) -> I64 = "dew_u16_into_i64"
-pub builtin wasm_u16_into_u8(value: U16) -> U8 = "dew_u16_into_u8"
-pub builtin wasm_u16_into_u16(value: U16) -> U16 = "dew_u16_into_u16"
-pub builtin wasm_u16_into_u32(value: U16) -> U32 = "dew_u16_into_u32"
-pub builtin wasm_u16_into_u64(value: U16) -> U64 = "dew_u16_into_u64"
-pub builtin wasm_u16_into_f32(value: U16) -> F32 = "dew_u16_into_f32"
-pub builtin wasm_u16_into_f64(value: U16) -> F64 = "dew_u16_into_f64"
-pub builtin wasm_u32_into_i8(value: U32) -> I8 = "dew_u32_into_i8"
-pub builtin wasm_u32_into_i16(value: U32) -> I16 = "dew_u32_into_i16"
-pub builtin wasm_u32_into_i32(value: U32) -> I32 = "dew_u32_into_i32"
-pub builtin wasm_u32_into_i64(value: U32) -> I64 = "dew_u32_into_i64"
-pub builtin wasm_u32_into_u8(value: U32) -> U8 = "dew_u32_into_u8"
-pub builtin wasm_u32_into_u16(value: U32) -> U16 = "dew_u32_into_u16"
-pub builtin wasm_u32_into_u32(value: U32) -> U32 = "dew_u32_into_u32"
-pub builtin wasm_u32_into_u64(value: U32) -> U64 = "dew_u32_into_u64"
-pub builtin wasm_u32_into_f32(value: U32) -> F32 = "dew_u32_into_f32"
-pub builtin wasm_u32_into_f64(value: U32) -> F64 = "dew_u32_into_f64"
-pub builtin wasm_u64_into_i8(value: U64) -> I8 = "dew_u64_into_i8"
-pub builtin wasm_u64_into_i16(value: U64) -> I16 = "dew_u64_into_i16"
-pub builtin wasm_u64_into_i32(value: U64) -> I32 = "dew_u64_into_i32"
-pub builtin wasm_u64_into_i64(value: U64) -> I64 = "dew_u64_into_i64"
-pub builtin wasm_u64_into_u8(value: U64) -> U8 = "dew_u64_into_u8"
-pub builtin wasm_u64_into_u16(value: U64) -> U16 = "dew_u64_into_u16"
-pub builtin wasm_u64_into_u32(value: U64) -> U32 = "dew_u64_into_u32"
-pub builtin wasm_u64_into_u64(value: U64) -> U64 = "dew_u64_into_u64"
-pub builtin wasm_u64_into_f32(value: U64) -> F32 = "dew_u64_into_f32"
-pub builtin wasm_u64_into_f64(value: U64) -> F64 = "dew_u64_into_f64"
-pub builtin wasm_f32_into_i32(value: F32) -> I32 = "dew_f32_into_i32"
-pub builtin wasm_f32_into_i64(value: F32) -> I64 = "dew_f32_into_i64"
-pub builtin wasm_f32_into_u32(value: F32) -> U32 = "dew_f32_into_u32"
-pub builtin wasm_f32_into_u64(value: F32) -> U64 = "dew_f32_into_u64"
-pub builtin wasm_f32_into_f32(value: F32) -> F32 = "dew_f32_into_f32"
-pub builtin wasm_f32_into_f64(value: F32) -> F64 = "dew_f32_into_f64"
-pub builtin wasm_f64_into_i32(value: F64) -> I32 = "dew_f64_into_i32"
-pub builtin wasm_f64_into_i64(value: F64) -> I64 = "dew_f64_into_i64"
-pub builtin wasm_f64_into_u32(value: F64) -> U32 = "dew_f64_into_u32"
-pub builtin wasm_f64_into_u64(value: F64) -> U64 = "dew_f64_into_u64"
-pub builtin wasm_f64_into_f32(value: F64) -> F32 = "dew_f64_into_f32"
-pub builtin wasm_f64_into_f64(value: F64) -> F64 = "dew_f64_into_f64"
+pub builtin wasm_raw_i32_extend8_s(value: I32) -> I32 = "i32.extend8_s"
+pub builtin wasm_raw_i32_extend16_s(value: I32) -> I32 = "i32.extend16_s"
+pub builtin wasm_raw_i32_wrap_i64(value: I64) -> I32 = "i32.wrap_i64"
+pub builtin wasm_raw_i64_extend_i32_s(value: I32) -> I64 = "i64.extend_i32_s"
+pub builtin wasm_raw_i64_extend_i32_u(value: I32) -> I64 = "i64.extend_i32_u"
+pub builtin wasm_raw_f32_convert_i32_s(value: I32) -> F32 = "f32.convert_i32_s"
+pub builtin wasm_raw_i32_trunc_f32_s(value: F32) -> I32 = "i32.trunc_f32_s"
+pub builtin wasm_raw_f32_convert_i32_u(value: I32) -> F32 = "f32.convert_i32_u"
+pub builtin wasm_raw_i32_trunc_f32_u(value: F32) -> I32 = "i32.trunc_f32_u"
+pub builtin wasm_raw_f32_convert_i64_s(value: I64) -> F32 = "f32.convert_i64_s"
+pub builtin wasm_raw_i64_trunc_f32_s(value: F32) -> I64 = "i64.trunc_f32_s"
+pub builtin wasm_raw_f32_convert_i64_u(value: I64) -> F32 = "f32.convert_i64_u"
+pub builtin wasm_raw_i64_trunc_f32_u(value: F32) -> I64 = "i64.trunc_f32_u"
+pub builtin wasm_raw_f64_convert_i32_s(value: I32) -> F64 = "f64.convert_i32_s"
+pub builtin wasm_raw_i32_trunc_f64_s(value: F64) -> I32 = "i32.trunc_f64_s"
+pub builtin wasm_raw_f64_convert_i32_u(value: I32) -> F64 = "f64.convert_i32_u"
+pub builtin wasm_raw_i32_trunc_f64_u(value: F64) -> I32 = "i32.trunc_f64_u"
+pub builtin wasm_raw_f64_convert_i64_s(value: I64) -> F64 = "f64.convert_i64_s"
+pub builtin wasm_raw_i64_trunc_f64_s(value: F64) -> I64 = "i64.trunc_f64_s"
+pub builtin wasm_raw_f64_convert_i64_u(value: I64) -> F64 = "f64.convert_i64_u"
+pub builtin wasm_raw_i64_trunc_f64_u(value: F64) -> I64 = "i64.trunc_f64_u"
+pub builtin wasm_raw_f32_demote_f64(value: F64) -> F32 = "f32.demote_f64"
+pub builtin wasm_raw_f64_promote_f32(value: F32) -> F64 = "f64.promote_f32"
 
 // std/u16x2.dew
 pub fn wasm_u16x2_from_swar32(value: Swar32) -> U16x2 {

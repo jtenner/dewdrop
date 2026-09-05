@@ -30,6 +30,32 @@ fn raw_wasm_nonreference_carrier(
 // Opcode identity, not a Dew declaration name or a standard-module ordinal.
 pub fn raw_wasm_builtin_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
   match name {
+    b"i32.extend8_s" | b"i32.extend16_s" =>
+      Some({ first: WasmI32Value, second: None, result: Some(WasmI32Value), })
+    b"i32.wrap_i64" =>
+      Some({ first: WasmI64Value, second: None, result: Some(WasmI32Value), })
+    b"i64.extend_i32_s" | b"i64.extend_i32_u" =>
+      Some({ first: WasmI32Value, second: None, result: Some(WasmI64Value), })
+    b"f32.convert_i32_s" | b"f32.convert_i32_u" =>
+      Some({ first: WasmI32Value, second: None, result: Some(WasmF32Value), })
+    b"i32.trunc_f32_s" | b"i32.trunc_f32_u" =>
+      Some({ first: WasmF32Value, second: None, result: Some(WasmI32Value), })
+    b"f32.convert_i64_s" | b"f32.convert_i64_u" =>
+      Some({ first: WasmI64Value, second: None, result: Some(WasmF32Value), })
+    b"i64.trunc_f32_s" | b"i64.trunc_f32_u" =>
+      Some({ first: WasmF32Value, second: None, result: Some(WasmI64Value), })
+    b"f64.convert_i32_s" | b"f64.convert_i32_u" =>
+      Some({ first: WasmI32Value, second: None, result: Some(WasmF64Value), })
+    b"i32.trunc_f64_s" | b"i32.trunc_f64_u" =>
+      Some({ first: WasmF64Value, second: None, result: Some(WasmI32Value), })
+    b"f64.convert_i64_s" | b"f64.convert_i64_u" =>
+      Some({ first: WasmI64Value, second: None, result: Some(WasmF64Value), })
+    b"i64.trunc_f64_s" | b"i64.trunc_f64_u" =>
+      Some({ first: WasmF64Value, second: None, result: Some(WasmI64Value), })
+    b"f32.demote_f64" =>
+      Some({ first: WasmF64Value, second: None, result: Some(WasmF32Value), })
+    b"f64.promote_f32" =>
+      Some({ first: WasmF32Value, second: None, result: Some(WasmF64Value), })
     b"i32.and" | b"i32.or" | b"i32.xor" =>
       Some({
         first: WasmI32Value,
@@ -66,22 +92,5 @@ pub fn raw_wasm_builtin_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
 
 ///|
 fn raw_wasm_builtin_is_inline(name : Bytes) -> Bool {
-  match name {
-    b"i32.and"
-    | b"i32.or"
-    | b"i32.xor"
-    | b"i64.and"
-    | b"i64.or"
-    | b"i64.xor"
-    | b"v128.and"
-    | b"v128.or"
-    | b"v128.xor"
-    | b"i32.load"
-    | b"i64.load"
-    | b"v128.load"
-    | b"i32.store"
-    | b"i64.store"
-    | b"v128.store" => true
-    _ => false
-  }
+  raw_wasm_builtin_signature(name) is Some(_)
 }

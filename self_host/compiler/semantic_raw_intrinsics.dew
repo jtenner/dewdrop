@@ -50,6 +50,97 @@ pub struct SelfHostRawIntrinsicSignature {
 }
 
 fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSignature> {
+  if name.equals(b"i32.extend8_s") || name.equals(b"i32.extend16_s") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I32BodyCarrier
+    })
+  }
+  if name.equals(b"i32.wrap_i64") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I64BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I32BodyCarrier
+    })
+  }
+  if name.equals(b"i64.extend_i32_s") || name.equals(b"i64.extend_i32_u") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I64BodyCarrier
+    })
+  }
+  if name.equals(b"f32.convert_i32_s") || name.equals(b"f32.convert_i32_u") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F32BodyCarrier
+    })
+  }
+  if name.equals(b"i32.trunc_f32_s") || name.equals(b"i32.trunc_f32_u") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I32BodyCarrier
+    })
+  }
+  if name.equals(b"f32.convert_i64_s") || name.equals(b"f32.convert_i64_u") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I64BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F32BodyCarrier
+    })
+  }
+  if name.equals(b"i64.trunc_f32_s") || name.equals(b"i64.trunc_f32_u") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I64BodyCarrier
+    })
+  }
+  if name.equals(b"f64.convert_i32_s") || name.equals(b"f64.convert_i32_u") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F64BodyCarrier
+    })
+  }
+  if name.equals(b"i32.trunc_f64_s") || name.equals(b"i32.trunc_f64_u") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F64BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I32BodyCarrier
+    })
+  }
+  if name.equals(b"f64.convert_i64_s") || name.equals(b"f64.convert_i64_u") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I64BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F64BodyCarrier
+    })
+  }
+  if name.equals(b"i64.trunc_f64_s") || name.equals(b"i64.trunc_f64_u") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F64BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I64BodyCarrier
+    })
+  }
+  if name.equals(b"f32.demote_f64") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F64BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F32BodyCarrier
+    })
+  }
+  if name.equals(b"f64.promote_f32") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F64BodyCarrier
+    })
+  }
   let mut carrier = SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
   let mut load = false
   let mut store = false
