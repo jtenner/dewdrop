@@ -2937,9 +2937,15 @@ fn program_generic_enum_instantiations(
     }
   }
   let output : Map[DeclId, Array[Array[Int]]] = Map::default()
-  for interface_ in analyzed.frozen.interfaces {
+  for module_index, interface_ in analyzed.frozen.interfaces {
     wasmgc_collect_generic_enum_instantiations_into(
       interface_.resolved_types,
+      counts,
+      output,
+    )
+    wasmgc_collect_inferred_enum_instantiations(
+      interface_.resolved_types,
+      analyzed.modules[module_index].inferred,
       counts,
       output,
     )

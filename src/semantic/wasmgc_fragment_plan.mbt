@@ -925,6 +925,70 @@ fn wasmgc_nominal_declaration(
 }
 
 ///|
+fn wasmgc_record_generic_enum_instantiation(
+  output : Map[DeclId, Array[Array[Int]]],
+  declaration : DeclId,
+  carriers : Array[Int],
+) -> Unit {
+  let demands = match output.get(declaration) {
+    Some(values) => values
+    None => {
+      let values : Array[Array[Int]] = []
+      output[declaration] = values
+      values
+    }
+  }
+  for demand in demands {
+    if wasmgc_variant_uses_same_generic_carriers(demand, carriers) {
+      return
+    }
+  }
+  demands.push(carriers)
+}
+
+///|
+fn wasmgc_collect_inferred_enum_instantiations(
+  resolved : ResolvedModuleTypes,
+  inferred : InferredModuleBodies,
+  generic_parameter_counts : Map[DeclId, Int],
+  output : Map[DeclId, Array[Array[Int]]],
+) -> Unit {
+  for type_ in inferred.types {
+    let (base, arguments) = match type_ {
+      BodyAppliedType(base, arguments) => (base, arguments)
+      _ => continue
+    }
+    let declaration = planned_nominal_declaration(resolved, inferred, base)
+    let expected = match generic_parameter_counts.get(declaration) {
+      Some(value) => value
+      None => continue
+    }
+    guard arguments.start >= 0 &&
+      arguments.length == expected &&
+      arguments.start <= inferred.type_arguments.length() &&
+      arguments.length <= inferred.type_arguments.length() - arguments.start else {
+      abort("generic enum inference argument span is invalid")
+    }
+    let carriers : Array[Int] = []
+    for index in 0..<arguments.length {
+      let shape = planned_value_shape(
+        resolved,
+        inferred,
+        inferred.type_arguments[arguments.start + index],
+      )
+      if program_specialization_shape_error(shape) is Some(_) {
+        // Unspecialized templates are not concrete layout demands.
+        break
+      }
+      carriers.push(wasmgc_fixed_array_carrier(shape))
+    }
+    if carriers.length() == expected {
+      wasmgc_record_generic_enum_instantiation(output, declaration, carriers)
+    }
+  }
+}
+
+///|
 pub fn wasmgc_collect_generic_enum_instantiations_into(
   resolved : ResolvedModuleTypes,
   generic_parameter_counts : Map[DeclId, Int],
@@ -955,34 +1019,7 @@ pub fn wasmgc_collect_generic_enum_instantiations_into(
         ),
       )
     }
-    let demands = match output.get(declaration) {
-      Some(values) => values
-      None => {
-        let values : Array[Array[Int]] = []
-        output[declaration] = values
-        values
-      }
-    }
-    let mut duplicate = false
-    for demand in demands {
-      if demand.length() != carriers.length() {
-        continue
-      }
-      let mut same = true
-      for index in 0..<demand.length() {
-        if demand[index] != carriers[index] {
-          same = false
-          break
-        }
-      }
-      if same {
-        duplicate = true
-        break
-      }
-    }
-    if !duplicate {
-      demands.push(carriers)
-    }
+    wasmgc_record_generic_enum_instantiation(output, declaration, carriers)
   }
 }
 
