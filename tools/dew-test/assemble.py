@@ -62,6 +62,7 @@ def main() -> None:
         ("memory_operations", "dew.std.memory"),
         ("arithmetic_operations", "dew.std.arithmetic"),
         ("math_operations", "dew.std.math_probes"),
+        ("specialization_products", "app.specialization_probes"),
     ]:
         subprocess.run(
             [

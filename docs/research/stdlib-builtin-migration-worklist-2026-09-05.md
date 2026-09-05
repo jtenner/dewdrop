@@ -48,8 +48,13 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   neither state may become a valid reference certificate.
   Self-host request insertion now rejects both states, including nested products,
   with exact SPC-301 records; normalization preserves the distinction. See
-  `specialization-shape-evidence-2026-09-05.md`. Native requests and broader
-  fragment boundaries remain open.
+  `specialization-shape-evidence-2026-09-05.md`. Native requests now reject both
+  states too, and tuple keys are structural; see
+  `native-specialization-shape-evidence-2026-09-05.md`. Broader fragment
+  boundaries and inferred callback signature materialization remain open.
+- [ ] Require valid collected source in compiler integration fixtures. A callback
+  fixture used an invalid local type annotation but checked only inference
+  diagnostics. Its valid-source replacement must exercise the actual call.
 
 ## Exit checks
 

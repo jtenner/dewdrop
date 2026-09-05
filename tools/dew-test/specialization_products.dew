@@ -1,0 +1,33 @@
+// Recursion keeps the specialization boundary out of identity-call inlining.
+fn identity<t>(value: t, depth: U32) -> t {
+  if depth == 0u32 {
+    value
+  } else {
+    identity(value, depth - 1u32)
+  }
+}
+
+pub fn pair_i32_i64(left: I32, right: I64) -> I64 {
+  let (_, selected) = identity((left, right), 1u32)
+  selected
+}
+
+pub fn pair_i64_i32(left: I64, right: I32) -> I64 {
+  let (selected, _) = identity((left, right), 1u32)
+  selected
+}
+
+pub fn nested_i32_i64(left: I32, right: I64) -> I64 {
+  let (_, (selected, _)) = identity((left, (right, left)), 1u32)
+  selected
+}
+
+pub fn nested_i64_i32(left: I64, right: I32) -> I64 {
+  let ((_, selected), _) = identity(((right, left), right), 1u32)
+  selected
+}
+
+pub fn erased_product(value: I64) -> I64 {
+  let (_, selected, _) = identity(((), value, ()), 1u32)
+  selected
+}

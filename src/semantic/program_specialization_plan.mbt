@@ -483,41 +483,6 @@ fn empty_program_trait_evidence_request() -> ProgramTraitEvidenceRequest {
 }
 
 ///|
-fn program_canonical_specialization_shape(
-  shape : PlannedValueShape,
-) -> PlannedValueShape {
-  match shape {
-    I8PlannedValueShape
-    | U8PlannedValueShape
-    | I16PlannedValueShape
-    | U16PlannedValueShape
-    | I32PlannedValueShape
-    | U32PlannedValueShape
-    | Swar32PlannedValueShape => I32PlannedValueShape
-    I64PlannedValueShape | U64PlannedValueShape | Swar64PlannedValueShape =>
-      I64PlannedValueShape
-    RefPlannedValueShape | GenericPlannedValueShape | ErrorPlannedValueShape =>
-      RefPlannedValueShape
-    _ => shape
-  }
-}
-
-///|
-fn program_specialization_shape_name(shape : PlannedValueShape) -> String {
-  match program_canonical_specialization_shape(shape) {
-    UnitPlannedValueShape => "unit"
-    NeverPlannedValueShape => "never"
-    I32PlannedValueShape => "i32"
-    I64PlannedValueShape => "i64"
-    F32PlannedValueShape => "f32"
-    F64PlannedValueShape => "f64"
-    V128PlannedValueShape => "v128"
-    RefPlannedValueShape => "eqref"
-    _ => "error"
-  }
-}
-
-///|
 fn write_program_trait_evidence_key(
   output : Buffer,
   request : ProgramTraitEvidenceRequest,
@@ -648,10 +613,12 @@ fn program_specialization_value_type(
     F32PlannedValueShape => Some(WasmF32Value)
     F64PlannedValueShape => Some(WasmF64Value)
     V128PlannedValueShape => Some(WasmV128Value)
-    RefPlannedValueShape
-    | GenericPlannedValueShape
-    | ProductPlannedValueShape(_)
-    | ErrorPlannedValueShape => Some(WasmNullableEqRefValue)
+    RefPlannedValueShape | ProductPlannedValueShape(_) =>
+      Some(WasmNullableEqRefValue)
+    GenericPlannedValueShape | ErrorPlannedValueShape =>
+      abort(
+        "SPC-301 invalid physical specialization shape=\{program_specialization_shape_name(shape)}",
+      )
   }
 }
 
@@ -829,13 +796,6 @@ fn program_resolve_specialized_shape(
           }
         }
       }
-      _ => ()
-    }
-  }
-  if specialization.length == 1 {
-    match fallback {
-      GenericPlannedValueShape | ErrorPlannedValueShape =>
-        return specialization_values[specialization.start]
       _ => ()
     }
   }
@@ -1206,6 +1166,13 @@ fn materialize_program_generic_specialization(
   evidence : ProgramTraitEvidenceRequest,
   erased_fallback : Bool,
 ) -> String? {
+  match
+    validate_program_specialization_request_shapes(
+      declaration, request_shapes, request,
+    ) {
+    Err(error) => abort(error)
+    Ok(_) => ()
+  }
   let owner_index = match module_lookup.get(semantic_id_module(declaration)) {
     Some(index) => index
     None => return None
@@ -1227,6 +1194,16 @@ fn materialize_program_generic_specialization(
     if function_.declaration == declaration &&
       function_.specialization_shapes.length > 0 &&
       function_.specialization_abi_key == specialization_abi_key {
+      if !program_specialization_shapes_equal(
+          module_.specialization_shapes,
+          function_.specialization_shapes,
+          request_shapes,
+          request,
+        ) {
+        abort(
+          "SPC-302 specialization key disagrees with structural shapes declaration=\{declaration} key=\{specialization_abi_key}",
+        )
+      }
       if erased_fallback && function_.visibility != Public {
         module_.functions[function_index] = { ..function_, visibility: Public, }
         modules[owner_index] = module_
@@ -1634,11 +1611,8 @@ fn materialize_program_expression_call(
   let source = owner.expressions[expression]
   match source.kind {
     PlannedFunctionReference(target, arguments) if arguments.length > 0 => {
-      if expression < 0 ||
-        expression >= owner.expression_evidence.length() ||
-        owner.expression_evidence[expression].length == 0 {
-        return
-      }
+      // Function references need the caller's generic substitution even when
+      // there are no trait prerequisites. Visit them with their owning body.
       let request_evidence = match
         resolve_program_expression_evidence(
           owner,
@@ -3226,34 +3200,6 @@ fn plan_program_wasmgc_fragments_for_root(
         )
       }
     }
-    for expression_index, expression in module_.expressions {
-      match expression.kind {
-        PlannedFunctionReference(declaration, arguments) if arguments.length > 0 => {
-          let roots = if expression_index >= 0 &&
-            expression_index < module_.expression_evidence.length() {
-            module_.expression_evidence[expression_index]
-          } else {
-            { start: 0, length: 0, }
-          }
-          if roots.length == 0 {
-            ignore(
-              materialize_program_generic_specialization(
-                analyzed,
-                lowering,
-                modules,
-                specialization_module_lookup,
-                declaration,
-                module_.expression_type_argument_shapes,
-                arguments,
-                empty_program_trait_evidence_request(),
-                false,
-              ),
-            )
-          }
-        }
-        _ => ()
-      }
-    }
   }
   materialize_program_trait_dictionary_methods(
     analyzed, lowering, modules, specialization_module_lookup,
@@ -3378,8 +3324,8 @@ fn plan_program_wasmgc_fragments_for_root(
 fn program_specialization_span_is_valid(span : HirSpan, length : Int) -> Bool {
   span.start >= 0 &&
   span.length >= 0 &&
-  span.start + span.length >= span.start &&
-  span.start + span.length <= length
+  span.start <= length &&
+  span.length <= length - span.start
 }
 
 ///|
@@ -3399,6 +3345,17 @@ fn validate_program_specialization_plan(
     match validate_module_wasmgc_arenas(module_) {
       Ok(_) => ()
       Err(error) => return Err(error)
+    }
+    for function_ in module_.functions {
+      match
+        validate_program_specialization_request_shapes(
+          function_.declaration,
+          module_.specialization_shapes,
+          function_.specialization_shapes,
+        ) {
+        Err(error) => return Err(error)
+        Ok(_) => ()
+      }
     }
   }
   for reference in plan.external_type_references {

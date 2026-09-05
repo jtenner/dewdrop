@@ -10,3 +10,4 @@ node tools/check-scalar-conversions.mjs tools/dew-test/scalar_conversions.wasm
 node tools/check-memory-operations.mjs tools/dew-test/memory_operations.wasm
 node tools/check-arithmetic-operations.mjs tools/dew-test/arithmetic_operations.wasm
 node tools/check-math-operations.mjs tools/dew-test/math_operations.wasm
+node tools/check-specialization-products.mjs tools/dew-test/specialization_products.wasm
