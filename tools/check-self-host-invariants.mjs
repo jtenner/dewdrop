@@ -11,6 +11,10 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "BOD-610 a linked function requires a source body",
+    expected: [610, 6, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 1n, 0n, 0n],
+  },
+  {
     name: "LNK-504 two named physical functions cannot own one declaration",
     expected: [504, 5, 77n, (77n << 32n) + 11n, 0n, 4294967295, 4n, 5n, 5n],
   },

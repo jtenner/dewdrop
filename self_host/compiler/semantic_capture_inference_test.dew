@@ -1,5 +1,6 @@
 open dew.std.testing
 open dew.std.array
+open dew.std.option
 
 fn self_host_assert_relative_capture_module(module_: SelfHostPlannedModuleLowering) -> Unit {
   assert(module_.inferred.diagnostics.length() == 0u32, "capture reads and mutable writes must infer without errors")
@@ -31,4 +32,39 @@ test "later immutable lambda capture cannot borrow earlier capture mutability" {
     b"fn first(seed: I32) -> fn() -> I32 {\n  let mut held = seed\n  fn() -> I32 {\n    held = held + 1i32\n    held\n  }\n}\nfn second(value: I32) -> fn() -> I32 {\n  fn() -> I32 {\n    value = 1i32\n    value\n  }\n}\n",
   )
   self_host_assert_immutable_capture_diagnostic(lowering.modules[0u32])
+}
+
+fn self_host_assert_lambda_body_verification(link: SelfHostPlannedProgramWasmGCLink) -> Unit {
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, "lambda roots must be checked against lambda results")
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[0u32])
+  assert(module_.lambdas.length() == 2u32, "two source lambdas")
+  let removed = module_.lambdas.pop()
+  assert(removed is Option::Some(_), "remove only the second source lambda")
+  let diagnostics = []
+  let mut checked = false
+  for body in plan.bodies {
+    if self_host_u32_equal(body.lambda, 1u32) {
+      self_host_verify_one_physical_body(link, body, diagnostics)
+      checked = true
+    }
+  }
+  assert(checked, "the second lambda has a physical body plan")
+  assert(diagnostics.length() == 1u32, "a missing lambda must not fall back to its parent")
+  assert(self_host_u32_equal(diagnostics[0u32].code, 610u32), "BOD-610 identifies the missing source body")
+}
+
+test "lambda body verification uses lambda identity and rejects a missing lambda" {
+  let fragments = self_host_physical_test_fragments(
+    b"pub fn first() -> fn() -> I32 {\n  fn() -> I32 {\n    7i32\n  }\n}\npub fn second() -> fn() -> I64 {\n  fn() -> I64 {\n    9i64\n  }\n}\n",
+  )
+  self_host_assert_lambda_body_verification(self_host_plan_program_wasmgc_link(fragments, false))
+}
+
+test "BOD-610 a linked function requires a source body" expect_trap "unreachable" {
+  let fragments = self_host_physical_test_fragments(b"pub fn run() -> I32 {\n  42i32\n}\n")
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[0u32])
+  let _ = module_.bodies.pop()
+  let _ = self_host_plan_program_wasm_bodies(link)
 }

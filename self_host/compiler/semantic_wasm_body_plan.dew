@@ -128,6 +128,9 @@ fn self_host_body_diagnostic_code(context: String) -> U32 {
   if context == "body root has no concrete physical value" {
     return 612u32
   }
+  if context == "physical source body is missing" {
+    return 610u32
+  }
   0u32
 }
 
@@ -1666,6 +1669,47 @@ fn self_host_body_lambda_lookup(
     }
   }
   Option::None
+}
+
+fn self_host_body_lookup_for_plan(
+  module_: SelfHostPlannedModuleLowering,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+) -> Option<SelfHostPlannedBodyLowering> {
+  if self_host_u32_equal(plan.lambda, 4294967295u32) {
+    self_host_body_lookup(module_, plan.body)
+  } else {
+    match self_host_body_lambda_lookup(module_, plan.lambda) {
+      Option::Some(body) => if self_host_u64_equal(body.body, plan.body) {
+        Option::Some(body)
+      } else {
+        Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+}
+
+fn self_host_body_require_linked_source(
+  source: Option<SelfHostPlannedBodyLowering>,
+  function_: SelfHostPlannedProgramWasmFunction,
+  body: U64,
+) -> Option<SelfHostPlannedBodyLowering> {
+  let _ = self_host_assert_compiler_invariant_with_failure(
+    source is Option::Some(_),
+    SelfHostInvariantFailure::{
+      code: 610u32
+      phase: 6u32
+      module_id: self_host_semantic_id_module(function_.declaration)
+      declaration: function_.declaration
+      body: body
+      expression: 4294967295u32
+      expected: 1u64
+      actual: 0u64
+      detail: u32_into_u64(function_.function_index)
+    },
+    "linked defined function has no source body",
+  )
+  source
 }
 
 fn self_host_body_expression_slot(
@@ -7770,13 +7814,15 @@ fn self_host_verify_one_physical_body(
   diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
 ) -> Unit {
   let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
-  let body = match self_host_body_lookup(module_, plan.body) {
+  let body = match self_host_body_lookup_for_plan(module_, plan) {
     Option::Some(value) => value
-    Option::None => match self_host_body_lambda_lookup(module_, plan.lambda) {
-      Option::Some(value) => value
-      Option::None => {
-        return
-      }
+    Option::None => {
+      self_host_body_add_diagnostic(
+        diagnostics, plan, module_, 4294967295u32, u32_into_u64(plan.lambda),
+        "physical source body is missing", plan.result_carrier,
+        SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+      )
+      return
     }
   }
   if !plan.converged {
@@ -8112,7 +8158,7 @@ fn self_host_verify_one_physical_body(
       expression,
     ) {
       Option::Some(value) => value.carrier
-      Option::None => SelfHostWasmBodyCarrier::UnitBodyCarrier
+      Option::None => SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
     }
     SelfHostHirBodyRoot::BlockBodyRoot(block) => self_host_body_block_carrier(
       module_,
@@ -8184,11 +8230,19 @@ pub fn self_host_plan_program_wasm_bodies(
         body_id,
       ) {
         Option::Some(value) => (Option::Some(value), 4294967295u32)
-        Option::None => (Option::None, 4294967295u32)
+        Option::None => (
+          self_host_body_require_linked_source(Option::None, function_, body_id),
+          4294967295u32,
+        )
       }
       SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(
         lambda_id,
-      ) => (self_host_body_lambda_lookup(module_, lambda_id), lambda_id)
+      ) => (
+        self_host_body_require_linked_source(
+          self_host_body_lambda_lookup(module_, lambda_id), function_, function_.declaration,
+        ),
+        lambda_id,
+      )
       _ => (Option::None, 4294967295u32)
     }
     match body {

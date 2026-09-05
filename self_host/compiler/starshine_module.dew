@@ -39399,7 +39399,7 @@ fn self_host_certify_one_physical_method_call_error(
       let module_ = link.fragments.specialization.lowering.modules[
         plan.module_index
       ]
-      match self_host_body_lookup(module_, plan.body) {
+      match self_host_body_lookup_for_plan(module_, plan) {
         Option::Some(body) => for expression_plan in plan.expressions {
           if self_host_u32_equal(
             expression_plan.call_function_index,
@@ -40067,7 +40067,7 @@ fn self_host_validate_emitted_local_carriers(
       let module_ = link.fragments.specialization.lowering.modules[
         plan.module_index
       ]
-      match self_host_body_lookup(module_, plan.body) {
+      match self_host_body_lookup_for_plan(module_, plan) {
         Option::Some(body) => {
           for expression_plan in plan.expressions {
             match module_.expressions[expression_plan.expression].kind {
