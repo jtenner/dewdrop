@@ -306,6 +306,8 @@ pub struct PlannedModuleWasmGCFragments {
   function_types : Array[PlannedWasmFunctionTypeFragment]
   function_type_by_resolved : Array[Int]
   closure_entry_type_by_resolved : Array[Int]
+  erased_closure_direct_type_by_resolved : Array[Int]
+  erased_closure_entry_type_by_resolved : Array[Int]
   lambda_entry_signature_indices : Array[Int]
   lambda_capture_parameter_indices : Array[Int]
   trait_layouts : Array[PlannedWasmTraitLayout]
@@ -3680,6 +3682,27 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     }
   }
   let closure_entry_type_by_resolved = Array::make(resolved.types.length(), -1)
+  let erased_closure_direct_type_by_resolved = Array::make(
+    resolved.types.length(),
+    -1,
+  )
+  let erased_closure_entry_type_by_resolved = Array::make(
+    resolved.types.length(),
+    -1,
+  )
+  if closure_abi {
+    let precise_count = function_types.length()
+    for index in 0..<precise_count {
+      let source = function_types[index]
+      let erased = wasmgc_append_erased_callback_signature(
+        function_types, function_value_types, source, next_signature_type,
+      )
+      erased_closure_direct_type_by_resolved[source.resolved_type] = erased
+      if erased == next_signature_type {
+        next_signature_type += 1
+      }
+    }
+  }
   if closure_abi {
     for type_id, type_ in resolved.types {
       if !required_function_types[type_id] {
@@ -3723,6 +3746,16 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           length: function_value_types.length() - result_start,
         },
       })
+      let erased = wasmgc_append_erased_callback_signature(
+        function_types,
+        function_value_types,
+        function_types[function_types.length() - 1],
+        next_signature_type,
+      )
+      erased_closure_entry_type_by_resolved[type_id] = erased
+      if erased == next_signature_type {
+        next_signature_type += 1
+      }
     }
   }
   let lambda_entry_signature_indices = Array::make(
@@ -4681,6 +4714,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     function_types,
     function_type_by_resolved,
     closure_entry_type_by_resolved,
+    erased_closure_direct_type_by_resolved,
+    erased_closure_entry_type_by_resolved,
     lambda_entry_signature_indices,
     lambda_capture_parameter_indices,
     trait_layouts,

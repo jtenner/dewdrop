@@ -268,16 +268,7 @@ priv enum StarshineEmitTask {
   FinishStarshineProduct(Int)
   FinishStarshineDirectLambdaCall(Int, @semantic.HirSpan, Int)
   FinishStarshineFunctionValueCall(Int, Int)
-  FinishStarshineClosureCall(
-    Int,
-    Int,
-    Int,
-    Int,
-    Int,
-    @semantic.PlannedValueShape,
-    Int,
-    Int
-  )
+  FinishStarshineClosureCall(StarshineClosureCallPlan, Int)
   FinishStarshineRefIntrinsic(Int)
   FinishStarshineFixedArray(Int, @semantic.PlannedValueShape, Int, Int, Int)
   FinishStarshineArrayLiteral(@semantic.PlannedValueShape, Int, Int, Int, Int)
@@ -5431,6 +5422,23 @@ fn starshine_program_specialized_type_code(
 }
 
 ///|
+fn starshine_program_value_matches_code(
+  value : @semantic.PlannedWasmValueType,
+  code : Int,
+) -> Bool {
+  match (value, code) {
+    (@semantic.WasmI32Value, 0)
+    | (@semantic.WasmI64Value, 1)
+    | (@semantic.WasmF32Value, 2)
+    | (@semantic.WasmF64Value, 3)
+    | (@semantic.WasmV128Value, 4)
+    | (@semantic.WasmNullableEqRefValue, 5)
+    | (@semantic.WasmStringRefValue, 5) => true
+    _ => false
+  }
+}
+
+///|
 fn starshine_program_signature_matches_codes(
   planned : @semantic.PlannedProgramWasmGCLink,
   candidate : @semantic.PlannedProgramWasmSignatureType,
@@ -5453,18 +5461,18 @@ fn starshine_program_signature_matches_codes(
     return false
   }
   for index in 0..<parameters.length {
-    if starshine_program_adapter_value_code(
+    if !starshine_program_value_matches_code(
         module_.function_value_types[parameters.start + index],
-      ) !=
-      parameter_codes[index] {
+        parameter_codes[index],
+      ) {
       return false
     }
   }
   for index in 0..<results.length {
-    if starshine_program_adapter_value_code(
+    if !starshine_program_value_matches_code(
         module_.function_value_types[results.start + index],
-      ) !=
-      result_codes[index] {
+        result_codes[index],
+      ) {
       return false
     }
   }
@@ -5976,8 +5984,8 @@ fn starshine_emit_body_instructions(
                         expression,
                       ) {
                       Some(target) if target.declaration == declaration &&
-                        target.function_index >= 0 && !target.elided =>
-                        Some(target)
+                        target.function_index >= 0 &&
+                        !target.elided => Some(target)
                       _ => return Err(MissingFunction(declaration))
                     }
                   _ => None
@@ -5995,14 +6003,14 @@ fn starshine_emit_body_instructions(
                         ),
                       )
                     } else {
-                    let mut global = -1
-                    for singleton in link.function_reference_singletons {
-                      if singleton.function_index == target.function_index {
-                        global = singleton.global_index
-                        break
+                      let mut global = -1
+                      for singleton in link.function_reference_singletons {
+                        if singleton.function_index == target.function_index {
+                          global = singleton.global_index
+                          break
+                        }
                       }
-                    }
-                    global
+                      global
                     }
                   }
                   Some(link) =>
@@ -6147,6 +6155,18 @@ fn starshine_emit_body_instructions(
                   )
                 None => direct_local_type
               }
+              let erased_direct = planned.erased_closure_direct_type_by_resolved[function_type]
+              let erased_entry = planned.erased_closure_entry_type_by_resolved[function_type]
+              let mut emitted_erased_direct = match program {
+                Some(link) =>
+                  link.signature_type_index(program_module_index, erased_direct)
+                None => erased_direct
+              }
+              let mut emitted_erased_entry = match program {
+                Some(link) =>
+                  link.signature_type_index(program_module_index, erased_entry)
+                None => erased_entry
+              }
               match (program, generic_specialization) {
                 (Some(link), Some(specialization)) =>
                   match
@@ -6156,6 +6176,8 @@ fn starshine_emit_body_instructions(
                     Some((entry, direct)) => {
                       emitted_type = entry
                       emitted_direct_type = direct
+                      emitted_erased_entry = entry
+                      emitted_erased_direct = direct
                     }
                     None => ()
                   }
@@ -6171,21 +6193,27 @@ fn starshine_emit_body_instructions(
               }
               tasks.push(
                 FinishStarshineClosureCall(
-                  emitted_type,
-                  emitted_direct_type,
-                  closure_type,
-                  scratch,
+                  {
+                    expression,
+                    entry_type: emitted_type,
+                    direct_type: emitted_direct_type,
+                    erased_entry_type: emitted_erased_entry,
+                    erased_direct_type: emitted_erased_direct,
+                    closure_type,
+                    closure_local: scratch,
+                    result_shape: starshine_specialized_shape(
+                      lowering,
+                      generic_specialization,
+                      source.type_,
+                      source.shape,
+                    ),
+                    result_local: match_result_local_indices[expression -
+                    body.expressions.start],
+                    result_cast_type: starshine_function_result_cast_type(
+                      planned, program, program_module_index, direct_local_type,
+                    ),
+                  },
                   arguments.length + 1,
-                  starshine_specialized_shape(
-                    lowering,
-                    generic_specialization,
-                    source.type_,
-                    source.shape,
-                  ),
-                  match_result_local_indices[expression - body.expressions.start],
-                  starshine_function_result_cast_type(
-                    planned, program, program_module_index, direct_local_type,
-                  ),
                 ),
               )
               let mut index = arguments.length
@@ -10594,139 +10622,12 @@ fn starshine_emit_body_instructions(
         )
         results.push(output)
       }
-      FinishStarshineClosureCall(
-        entry_type,
-        direct_type,
-        closure_type,
-        scratch,
-        count,
-        result_shape,
-        result_local,
-        result_cast_type
-      ) => {
+      FinishStarshineClosureCall(plan, count) => {
         let fragments = pop_starshine_fragments(results, count)
-        let output : Array[@lib.Instruction] = []
-        append_starshine_instructions(output, fragments[0])
-        output.push(
-          @lib.Instruction::local_set(
-            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
-          ),
-        )
-        let direct : Array[@lib.Instruction] = []
-        for index in 1..<count {
-          append_starshine_instructions(direct, fragments[index])
+        match starshine_emit_closure_call(body.body, plan, fragments) {
+          Ok(output) => results.push(output)
+          Err(error) => return Err(error)
         }
-        direct.push(
-          @lib.Instruction::local_get(
-            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
-          ),
-        )
-        direct.push(starshine_match_cast(closure_type))
-        direct.push(
-          @lib.Instruction::struct_get(
-            @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
-            @lib.U32::new(0U),
-          ),
-        )
-        direct.push(
-          @lib.Instruction::ref_cast(
-            false,
-            @lib.HeapType::new(
-              @lib.TypeIdx::new(direct_type.reinterpret_as_uint()),
-            ),
-          ),
-        )
-        direct.push(
-          @lib.Instruction::call_ref(
-            @lib.TypeIdx::new(direct_type.reinterpret_as_uint()),
-          ),
-        )
-        let captured : Array[@lib.Instruction] = [
-          @lib.Instruction::local_get(
-            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
-          ),
-        ]
-        for index in 1..<count {
-          append_starshine_instructions(captured, fragments[index])
-        }
-        captured.push(
-          @lib.Instruction::local_get(
-            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
-          ),
-        )
-        captured.push(starshine_match_cast(closure_type))
-        captured.push(
-          @lib.Instruction::struct_get(
-            @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
-            @lib.U32::new(0U),
-          ),
-        )
-        captured.push(
-          @lib.Instruction::ref_cast(
-            false,
-            @lib.HeapType::new(
-              @lib.TypeIdx::new(entry_type.reinterpret_as_uint()),
-            ),
-          ),
-        )
-        captured.push(
-          @lib.Instruction::call_ref(
-            @lib.TypeIdx::new(entry_type.reinterpret_as_uint()),
-          ),
-        )
-        output.push(
-          @lib.Instruction::local_get(
-            @lib.LocalIdx::new(scratch.reinterpret_as_uint()),
-          ),
-        )
-        output.push(starshine_match_cast(closure_type))
-        output.push(
-          @lib.Instruction::struct_get(
-            @lib.TypeIdx::new(closure_type.reinterpret_as_uint()),
-            @lib.U32::new(0U),
-          ),
-        )
-        output.push(
-          @lib.Instruction::ref_test(
-            false,
-            @lib.HeapType::new(
-              @lib.TypeIdx::new(direct_type.reinterpret_as_uint()),
-            ),
-          ),
-        )
-        if result_shape is @semantic.ProductPlannedValueShape(_) {
-          if result_local < 0 {
-            return Err(UnsupportedExpression(body.body, -503))
-          }
-          starshine_append_product_local_sets(
-            direct, result_local, result_shape,
-          )
-          starshine_append_product_local_sets(
-            captured, result_local, result_shape,
-          )
-          output.push(
-            @lib.Instruction::if_(
-              @lib.BlockType::void_(),
-              direct,
-              Some(captured),
-            ),
-          )
-          starshine_append_product_local_gets(
-            output, result_local, result_shape,
-          )
-        } else {
-          output.push(
-            @lib.Instruction::if_(
-              starshine_block_type(result_shape),
-              direct,
-              Some(captured),
-            ),
-          )
-        }
-        if result_cast_type >= 0 {
-          output.push(starshine_match_cast(result_cast_type))
-        }
-        results.push(output)
       }
       FinishStarshineProductBox(shape, scratch) => {
         if scratch < 0 {

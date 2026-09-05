@@ -10,6 +10,88 @@ fn readers<a, b>() -> (fn(a) -> a, fn(b) -> b) {
   (identity, identity)
 }
 
+struct Item {
+  value: I64
+}
+
+fn item_reader() -> fn(Item) -> Item {
+  identity
+}
+
+pub fn nominal_callback(value: I64) -> I64 {
+  let callback = item_reader()
+  callback(Item::{
+    value: value
+  }).value
+}
+
+pub fn generic_nominal_callback(value: I64) -> I64 {
+  let callback = reader::<Item>()
+  callback(Item::{
+    value: value
+  }).value
+}
+
+fn captured_reader<t>(held: t) -> fn(t) -> t {
+  fn(value: t) -> t {
+    held
+  }
+}
+
+fn captured_item_reader(held: Item) -> fn(Item) -> Item {
+  fn(value: Item) -> Item {
+    held
+  }
+}
+
+pub fn captured_nominal_callback(value: I64) -> I64 {
+  let callback = captured_item_reader(Item::{
+    value: value
+  })
+  callback(Item::{
+    value: 0i64
+  }).value
+}
+
+pub fn captured_generic_nominal_callback(value: I64) -> I64 {
+  let callback = captured_reader::<Item>(Item::{
+    value: value
+  })
+  callback(Item::{
+    value: 0i64
+  }).value
+}
+
+fn unit_middle(left: I32, effect: Unit, right: I64) -> I64 {
+  if left == 1i32 {
+    right
+  } else {
+    0i64
+  }
+}
+
+pub fn callback_evaluation_order(value: I64) -> I64 {
+  let mut order = 0i32
+  let callback = unit_middle
+  let first = fn() -> I32 {
+    order = order * 10i32 + 1i32
+    1i32
+  }
+  let second = fn() -> Unit {
+    order = order * 10i32 + 2i32
+  }
+  let third = fn() -> I64 {
+    order = order * 10i32 + 3i32
+    value
+  }
+  let result = callback(first(), second(), third())
+  if order == 123i32 {
+    result
+  } else {
+    0i64
+  }
+}
+
 pub fn pair_i32_i64(left: I32, right: I64) -> I64 {
   let callback = reader::<(I32, I64)>()
   let (_, selected) = callback((left, right))

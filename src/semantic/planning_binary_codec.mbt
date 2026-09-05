@@ -998,6 +998,8 @@ pub fn serialize_planned_module_wasmgc_fragments(
   }
   pb_write_int_array(writer, value.function_type_by_resolved)
   pb_write_int_array(writer, value.closure_entry_type_by_resolved)
+  pb_write_int_array(writer, value.erased_closure_direct_type_by_resolved)
+  pb_write_int_array(writer, value.erased_closure_entry_type_by_resolved)
   pb_write_int_array(writer, value.lambda_entry_signature_indices)
   pb_write_int_array(writer, value.lambda_capture_parameter_indices)
   writer.write_var_u64(value.trait_layouts.length().to_uint64())
@@ -1187,6 +1189,12 @@ pub fn deserialize_planned_module_wasmgc_fragments(
   let closure_entry_type_by_resolved = pb_read_int_array(
     reader, "closure_entry_type_by_resolved",
   )
+  let erased_closure_direct_type_by_resolved = pb_read_int_array(
+    reader, "erased_closure_direct_type_by_resolved",
+  )
+  let erased_closure_entry_type_by_resolved = pb_read_int_array(
+    reader, "erased_closure_entry_type_by_resolved",
+  )
   let lambda_entry_signature_indices = pb_read_int_array(
     reader, "lambda_entry_signature_indices",
   )
@@ -1367,6 +1375,8 @@ pub fn deserialize_planned_module_wasmgc_fragments(
     function_types,
     function_type_by_resolved,
     closure_entry_type_by_resolved,
+    erased_closure_direct_type_by_resolved,
+    erased_closure_entry_type_by_resolved,
     lambda_entry_signature_indices,
     lambda_capture_parameter_indices,
     trait_layouts,

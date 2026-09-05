@@ -53,8 +53,10 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   `native-specialization-shape-evidence-2026-09-05.md`. Broader fragment
   boundaries remain open. Inferred callback signatures now use a private,
   structural lowering pool and exact specialized targets; see
-  `inferred-callback-signatures-2026-09-05.md`. Nominal callback adaptation across
-  a generic function boundary remains open.
+  `inferred-callback-signatures-2026-09-05.md`. Native nominal callback invocation
+  now checks precise and erased signatures; see `nominal-callback-abi-2026-09-05.md`.
+  The differential source exposed a self-host lambda/plain-function identity
+  collision, which remains open.
 - [ ] Require valid collected source in compiler integration fixtures. A callback
   fixture used an invalid local type annotation but checked only inference
   diagnostics. Its valid-source replacement must exercise the actual call.

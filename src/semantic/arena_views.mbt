@@ -390,12 +390,26 @@ pub fn validate_module_wasmgc_arenas(
     indices in [
       module_.function_type_by_resolved,
       module_.closure_entry_type_by_resolved,
+      module_.erased_closure_direct_type_by_resolved,
+      module_.erased_closure_entry_type_by_resolved,
       module_.lambda_entry_signature_indices,
     ] {
     for index in indices {
       if index < -1 || index >= signature_limit {
         return Err("WasmGC signature lookup index is out of range")
       }
+    }
+  }
+  for
+    indices in [
+      module_.closure_entry_type_by_resolved,
+      module_.erased_closure_direct_type_by_resolved,
+      module_.erased_closure_entry_type_by_resolved,
+    ] {
+    if indices.length() != module_.function_type_by_resolved.length() {
+      return Err(
+        "WasmGC callback signature lookup arenas have different lengths",
+      )
     }
   }
   for index in module_.lambda_capture_parameter_indices {
