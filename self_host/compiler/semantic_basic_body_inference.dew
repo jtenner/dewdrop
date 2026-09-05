@@ -33,6 +33,7 @@ pub enum SelfHostBodyInferenceDiagnostic {
   ImmutableAssignmentTarget(U32, U32)
   ReturnOutsideCallable(U32)
   CallArgumentCountMismatch(U32, U64, U32, U32, U32)
+  CallTypeArgumentCountMismatch(U32, U64, U32, U32, U32)
   NoMatchingDirectCall(U32, U32, U32)
   AmbiguousDirectCall(U32, U32, U64, U64, U32, U32)
   FieldAccessRequiresNominal(U32, U32)
@@ -73,6 +74,7 @@ impl SelfHostBodyInferenceDiagnostic {
       SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, offset) => offset
       SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(offset) => offset
       SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::CallTypeArgumentCountMismatch(_, _, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::AmbiguousDirectCall(_, _, _, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::FieldAccessRequiresNominal(_, offset) => offset
@@ -3450,6 +3452,11 @@ impl SelfHostBasicBodyInferencer {
     signature: U32,
     origin: SelfHostTypeConstraintOrigin,
   ) -> Unit {
+    // A non-returning argument supplies no type evidence for the callee's
+    // generic parameter. Keep the same rule as constrain_assignable.
+    if self.is_primitive(actual, SelfHostPrimitiveType::NeverType) {
+      return
+    }
     let representative = self.solver.representative_type(actual)
     let actual_root = match self.solver.type_term(representative) {
       SelfHostBodyTypeTerm::BodyResolvedType(value) => value
@@ -3577,6 +3584,64 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn apply_explicit_call_types(
+    self,
+    expression: U32,
+    candidate_start: U32,
+    candidate_count: U32,
+    offset: U32,
+  ) -> Bool {
+    self_host_assert_compiler_invariant(
+      expression < self.collected.explicit_call_type_argument_spans.length(),
+      "ARN-103: explicit call type arena is not parallel with expressions",
+    )
+    let explicit = self_host_hir_span_at(self.collected.explicit_call_type_argument_spans, expression)
+    if explicit.length == 0u32 {
+      return true
+    }
+    if explicit.length != candidate_count {
+      return false
+    }
+    self_host_assert_compiler_invariant(
+      self_host_array_span_is_valid(explicit.start, explicit.length, self.resolved.explicit_call_type_arguments.length()) &&
+      self_host_array_span_is_valid(candidate_start, candidate_count, self.candidate_type_arguments.length()),
+      "ARN-101: invalid explicit call type span",
+    )
+    let origin = self_host_call_type_origin(expression, offset)
+    let mut valid = true
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < candidate_count {
+        let resolved = self.resolved.explicit_call_type_arguments[explicit.start + current]
+        let matches = self.solver.unify(
+          self.candidate_type_arguments[candidate_start + current],
+          self.solver.resolved_type(resolved),
+          origin,
+        )
+        valid = valid && matches
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    valid
+  }
+
+  fn reject_explicit_call_types(
+    self,
+    expression: U32,
+    declaration: U64,
+    expected: U32,
+    offset: U32,
+  ) -> Unit {
+    let actual = self_host_hir_span_at(self.collected.explicit_call_type_argument_spans, expression).length
+    if actual != expected {
+      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::CallTypeArgumentCountMismatch(expression, declaration, expected, actual, offset))
+    }
+    self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
+    self.solver.poison_type(self.expression_type(expression))
+  }
+
   fn select_local_callable(
     self,
     expression: U32,
@@ -3590,6 +3655,10 @@ impl SelfHostBasicBodyInferencer {
     )
     let declaration = selected_callable.declaration
     self.begin_signature_instantiation(declaration)
+    if !self.apply_explicit_call_types(expression, 0u32, self.candidate_type_arguments.length(), offset) {
+      self.reject_explicit_call_types(expression, declaration, self.candidate_type_arguments.length(), offset)
+      return true
+    }
     let parameters = self.collected.parameters_of(declaration)
     if !self_host_u32_equal(parameters.length, arguments.length) {
       self.diagnostics.push(
@@ -3701,7 +3770,7 @@ impl SelfHostBasicBodyInferencer {
     let snapshot = self.solver.snapshot()
     self.begin_signature_instantiation(declaration)
     let origin = self_host_call_type_origin(expression, offset)
-    let mut viable = true
+    let mut viable = self.apply_explicit_call_types(expression, 0u32, self.candidate_type_arguments.length(), offset)
     let mut index = 0u32
     let _ = while index {
       current => if viable && current < parameters.length {
@@ -3867,6 +3936,10 @@ impl SelfHostBasicBodyInferencer {
       return true
     }
     self.begin_imported_signature_instantiation(callable)
+    if !self.apply_explicit_call_types(expression, 0u32, self.candidate_type_arguments.length(), offset) {
+      self.reject_explicit_call_types(expression, declaration, self.candidate_type_arguments.length(), offset)
+      return true
+    }
     let origin = self_host_call_type_origin(expression, offset)
     let mut index = 0u32
     let _ = while index {
@@ -3925,7 +3998,7 @@ impl SelfHostBasicBodyInferencer {
     let snapshot = self.solver.snapshot()
     self.begin_imported_signature_instantiation(callable)
     let origin = self_host_call_type_origin(expression, offset)
-    let mut viable = true
+    let mut viable = self.apply_explicit_call_types(expression, 0u32, self.candidate_type_arguments.length(), offset)
     let mut index = 0u32
     let _ = while index {
       current => if viable && current < arguments.length {
@@ -4256,7 +4329,7 @@ impl SelfHostBasicBodyInferencer {
       receiver_type,
     )
     let origin = self_host_call_type_origin(expression, offset)
-    let mut viable = self.solver.unify(receiver_type, target, origin)
+    let mut viable = self.apply_explicit_call_types(expression, self.instantiation_generics.length, self.instantiation_method_generics.length, offset) && self.solver.unify(receiver_type, target, origin)
     if viable {
       viable = self.solver.unify(
         receiver_type,
@@ -4318,6 +4391,10 @@ impl SelfHostBasicBodyInferencer {
       declaration,
       receiver_type,
     )
+    if !self.apply_explicit_call_types(expression, self.instantiation_generics.length, self.instantiation_method_generics.length, offset) {
+      self.reject_explicit_call_types(expression, declaration, self.instantiation_method_generics.length, offset)
+      return
+    }
     let origin = self_host_call_type_origin(expression, offset)
     self.constrain(receiver_type, target_type, origin)
     self.constrain_resolved_signature_evidence(
@@ -4429,7 +4506,7 @@ impl SelfHostBasicBodyInferencer {
       receiver_type,
     )
     let origin = self_host_call_type_origin(expression, offset)
-    let mut viable = self.solver.unify(
+    let mut viable = self.apply_explicit_call_types(expression, implementation.generic_parameters.length, callable.generic_parameters.length, offset) && self.solver.unify(
       receiver_type,
       self.instantiate_signature_type(implementation.target_type),
       origin,
@@ -4489,6 +4566,10 @@ impl SelfHostBasicBodyInferencer {
       callable,
       receiver_type,
     )
+    if !self.apply_explicit_call_types(expression, implementation.generic_parameters.length, callable.generic_parameters.length, offset) {
+      self.reject_explicit_call_types(expression, callable.declaration, callable.generic_parameters.length, offset)
+      return
+    }
     let origin = self_host_call_type_origin(expression, offset)
     self.constrain(
       receiver_type,

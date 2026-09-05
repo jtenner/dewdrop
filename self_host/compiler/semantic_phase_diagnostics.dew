@@ -15,6 +15,7 @@ fn self_host_inference_diagnostic_name(diagnostic: SelfHostBodyInferenceDiagnost
     SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, _) => "no matching direct call"
     SelfHostBodyInferenceDiagnostic::AmbiguousDirectCall(_, _, _, _, _, _) => "ambiguous direct call"
     SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, _) => "call argument count"
+    SelfHostBodyInferenceDiagnostic::CallTypeArgumentCountMismatch(_, _, _, _, _) => "call type argument count"
     SelfHostBodyInferenceDiagnostic::FieldAccessRequiresNominal(_, _) => "field requires nominal"
     SelfHostBodyInferenceDiagnostic::UnknownFieldForType(_, _, _, _) => "unknown field"
     SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(_, _) => "invalid construction target"
@@ -31,6 +32,7 @@ fn self_host_inference_diagnostic_name(diagnostic: SelfHostBodyInferenceDiagnost
 
 fn self_host_inference_diagnostic_expression(diagnostic: SelfHostBodyInferenceDiagnostic) -> Option<U32> {
   match diagnostic {
+    SelfHostBodyInferenceDiagnostic::CallTypeArgumentCountMismatch(expression, _, _, _, _) => Option::Some(expression)
     SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(expression, _) => Option::Some(expression)
     SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(expression, _) => Option::Some(expression)
     SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(expression, _) => Option::Some(expression)

@@ -98,6 +98,7 @@ for (const [name, expected] of [
   ["self_host_emit_raw_bitcast_probe", -1],
   ["self_host_emit_raw_opcode_probe", 42],
   ["self_host_emit_raw_function_value_probe", 42],
+  ["self_host_emit_packed_into_probe", 42n],
   ["self_host_emit_pattern_guard_probe", 461],
   ["self_host_emit_literal_guard_probe", 205],
   ["self_host_emit_solver_control_probe", 1],

@@ -61,13 +61,14 @@ fn self_host_specialization_parameter_evidence_type(caller: Option<SelfHostPlann
     match caller {
       Option::Some(callable) => if self_host_u64_equal(callable.declaration, requests[specialization].declaration) && self_host_u64_equal(self_host_semantic_id_module(parameter), self_host_semantic_id_module(callable.declaration)) {
         let generics = self_host_program_specialization_callable_generics(callable)
-        let local = self_host_semantic_id_local(parameter)
-        if local >= generics.start {
-          let relative = local - generics.start
+        match generics.slot(parameter) {
+          Option::Some(relative) => {
           let types = self_host_specialization_request_evidence_types(requests[specialization])
-          if relative < generics.length && relative < types.length() {
+          if relative < types.length() {
             return types[relative]
           }
+          }
+          Option::None => {}
         }
       }
       _ => {}
@@ -93,7 +94,7 @@ fn self_host_program_specialization_call_evidence_types(lowering: SelfHostPlanne
     index => if index < arguments.length {
       let mut identity = SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType
       if index < generics.length {
-        let parameter = collected.generic_parameter_at(generics.start + index)
+        let parameter = collected.generic_parameter_at(generics.local(index))
         let bounds = parameter.bounds
         if self_host_u32_greater(bounds.length, 0u32) {
           has_evidence = true

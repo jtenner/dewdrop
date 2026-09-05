@@ -38,6 +38,9 @@ impl SelfHostBasicBodyInferencer {
       return false
     }
     self.begin_bound_method(trait_, bound, declaration, self.expression_type(receiver))
+    if !self.apply_explicit_call_types(expression, self.instantiation_generics.length, self.instantiation_method_generics.length, offset) {
+      return false
+    }
     let origin = self_host_call_type_origin(expression, offset)
     if !self.solver.unify(self.expression_type(receiver), self.instantiate_signature_type(self.resolved.parameter_types[parameters.start]), origin) {
       return false

@@ -271,13 +271,50 @@ fn self_host_program_specialization_callable(
   }
 }
 
+struct SelfHostCallableGenericParameters {
+  module_id: U64
+  owner: SelfHostHirSpan
+  method: SelfHostHirSpan
+  length: U32
+}
+
+impl SelfHostCallableGenericParameters {
+  fn slot(self, parameter: U64) -> Option<U32> {
+    if !self_host_u64_equal(self_host_semantic_id_module(parameter), self.module_id) {
+      return Option::None
+    }
+    let local = self_host_semantic_id_local(parameter)
+    if local >= self.owner.start && local - self.owner.start < self.owner.length {
+      return Option::Some(local - self.owner.start)
+    }
+    if local >= self.method.start && local - self.method.start < self.method.length {
+      return Option::Some(self.owner.length + local - self.method.start)
+    }
+    Option::None
+  }
+
+  fn local(self, slot: U32) -> U32 {
+    self_host_assert_array_index(slot, self.length, "SPC-301: callable generic slot is outside its parameter list")
+    if slot < self.owner.length {
+      self.owner.start + slot
+    } else {
+      self.method.start + (slot - self.owner.length)
+    }
+  }
+}
+
 fn self_host_program_specialization_callable_generics(
   callable: SelfHostPlannedCallable,
-) -> SelfHostHirSpan {
-  if self_host_u32_greater(callable.owner_generic_parameters.length, 0u32) {
-    callable.owner_generic_parameters
-  } else {
-    callable.generic_parameters
+) -> SelfHostCallableGenericParameters {
+  self_host_assert_compiler_invariant(
+    callable.generic_parameters.length <= 4294967295u32 - callable.owner_generic_parameters.length,
+    "SPC-301: callable generic parameter count overflows",
+  )
+  SelfHostCallableGenericParameters::{
+    module_id: self_host_semantic_id_module(callable.declaration)
+    owner: callable.owner_generic_parameters
+    method: callable.generic_parameters
+    length: callable.owner_generic_parameters.length + callable.generic_parameters.length
   }
 }
 
@@ -445,13 +482,11 @@ fn self_host_program_specialization_argument_shape(
         Option::Some(resolved_type) => if resolved_type < module_.resolved_types.types.length() {
           match module_.resolved_types.types[resolved_type] {
             SelfHostResolvedType::GenericParameterType(parameter) => {
-              let local = self_host_semantic_id_local(parameter)
-              if local >= generics.start &&
-                local < self_host_u32_add(generics.start, generics.length) {
-                let relative = local - generics.start
-                if relative < caller_shapes.length {
+              match generics.slot(parameter) {
+                Option::Some(relative) => if relative < caller_shapes.length {
                   return shapes[self_host_u32_add(caller_shapes.start, relative)]
                 }
+                Option::None => {}
               }
             }
             _ => {}

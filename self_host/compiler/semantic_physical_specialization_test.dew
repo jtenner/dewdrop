@@ -982,6 +982,107 @@ pub fn self_host_emit_raw_function_value_probe() -> Bytes {
   }
 }
 
+pub fn self_host_emit_packed_into_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"trait Into<t> {\n  fn into(self) -> t\n}\nbuiltin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\nimpl Into<U16x4> for I16x4 {\n  fn into(self) -> U16x4 {\n    cast::<U64, U16x4>(99u64)\n  }\n}\nimpl Into<U8x8> for I16x4 {\n  fn into(self) -> U8x8 {\n    cast::<I16x4, U8x8>(self)\n  }\n}\npub fn main() -> I64 {\n  let input = cast::<I64, I16x4>(42i64)\n  let output = input.into()\n  cast::<U8x8, I64>(output)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+test "explicit call types constrain local and imported generic functions" {
+  let link = self_host_physical_test_named_import_link(
+    "app.explicit",
+    b"pub builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\n",
+    b"open app.explicit\nfn identity<t>(value: t) -> t {\n  value\n}\npub fn run() -> U64 {\n  let packed = cast::<U64, I16x4>(42u64)\n  cast::<I16x4, U64>(identity::<I16x4>(packed))\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "explicit call type count mismatches remain diagnostics" {
+  let fragments = self_host_physical_test_fragments(
+    b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn main() -> I32 {\n  identity::<I32, I64>(42)\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
+  let mut found = false
+  for diagnostic in module_.inferred.diagnostics {
+    if diagnostic is SelfHostBodyInferenceDiagnostic::CallTypeArgumentCountMismatch(_, _, 1u32, 2u32, _) {
+      found = true
+    }
+  }
+  assert(found, "extra type arguments must not be discarded")
+}
+
+test "explicit call types cannot contradict argument types" {
+  let fragments = self_host_physical_test_fragments(
+    b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn main() -> I32 {\n  identity::<I64>(42)\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
+  let mut found = false
+  for diagnostic in module_.inferred.diagnostics {
+    if diagnostic is SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) {
+      found = true
+    }
+  }
+  assert(found, "explicit I64 must not become the inferred I32")
+}
+
+test "explicit method types exclude inferred owner parameters" {
+  let link = self_host_physical_test_named_import_link(
+    "app.explicit_methods",
+    b"pub struct Holder<t> {\n  value: t\n}\nimpl<t> Holder<t> {\n  fn other<unused>(self, value: unused) -> unused {\n    value\n  }\n  fn select<u>(self, value: u) -> u {\n    value\n  }\n}\n",
+    b"open app.explicit_methods\npub fn run(receiver: Holder<I32>) -> I64 {\n  receiver.select::<I64>(42i64)\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "callable generic slots retain both spans and module identity" {
+  let parameters = SelfHostCallableGenericParameters::{
+    module_id: 11u64
+    owner: SelfHostHirSpan::{
+      start: 3u32
+      length: 2u32
+    }
+    method: SelfHostHirSpan::{
+      start: 17u32
+      length: 1u32
+    }
+    length: 3u32
+  }
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 3u32)) is Option::Some(0u32), "first owner parameter")
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 4u32)) is Option::Some(1u32), "second owner parameter")
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 17u32)) is Option::Some(2u32), "method follows owner parameters")
+  assert(parameters.slot(self_host_make_semantic_id(12u64, 17u32)) is Option::None, "another module is not the same parameter")
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 5u32)) is Option::None, "span end is excluded")
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 2u32)) is Option::None, "below span is excluded")
+  assert(parameters.local(0u32) == 3u32 && parameters.local(1u32) == 4u32 && parameters.local(2u32) == 17u32, "slot mapping round trip")
+}
+
+test "explicit local method types cannot be ignored" {
+  let fragments = self_host_physical_test_fragments(
+    b"impl I32 {\n  fn select<t>(self, value: t) -> t {\n    value\n  }\n}\npub fn main() -> I32 {\n  1.select::<I64>(42)\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
+  let mut found = false
+  for diagnostic in module_.inferred.diagnostics {
+    if diagnostic is SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _) {
+      found = true
+    }
+  }
+  assert(found, "method selection must honor the explicit I64 type")
+}
+
 test "raw forwarding does not duplicate or reorder parameters" {
   let fragments = self_host_physical_test_fragments(
     b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\nbuiltin bits(a: U32, b: U32) -> U32 = \"i32.and\"\nfn good(a: I16x2, b: I16x2) -> I16x2 {\n  cast(bits(cast(a), cast(b)))\n}\nfn duplicate(a: I16x2, b: I16x2) -> I16x2 {\n  cast(bits(cast(a), cast(a)))\n}\nfn reverse(a: I16x2, b: I16x2) -> I16x2 {\n  cast(bits(cast(b), cast(a)))\n}\npub fn main() -> U32 {\n  cast(good(cast(42u32), cast(255u32)))\n}\n",
