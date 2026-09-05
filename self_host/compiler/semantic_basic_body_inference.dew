@@ -1702,6 +1702,28 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn imported_variant_owner_visible(self, declaration: U64) -> Bool {
+    match self.imported.scope {
+      Option::Some(scope) => scope.declaration_bindings.contains_key(declaration)
+      Option::None => false
+    }
+  }
+
+  fn bare_variant_candidate_count(self, name: String) -> U32 {
+    let mut count = 0u32
+    for variant in self.collected.variants {
+      if self.collected.name(variant.name) == name {
+        count = count + 1u32
+      }
+    }
+    for variant in self.imported.variants {
+      if self_host_basic_string_equal(variant.name, name) && self.imported_variant_owner_visible(variant.declaration) {
+        count = count + 1u32
+      }
+    }
+    count
+  }
+
   fn imported_variant_target(
     self,
     target: U32,
@@ -1728,6 +1750,12 @@ impl SelfHostBasicBodyInferencer {
       }
       _ => {}
     }
+    if name == "" {
+      return Option::None
+    }
+    if declaration == 18446744073709551615u64 && expected_owner is Option::None && self.bare_variant_candidate_count(name) != 1u32 {
+      return Option::None
+    }
     let mut selected = 4294967295u32
     let mut count = 0u32
     let mut index = 0u32
@@ -1743,7 +1771,8 @@ impl SelfHostBasicBodyInferencer {
           Option::Some(owner) => self_host_u64_equal(owner, variant.declaration)
           Option::None => true
         }
-        if owner_matches && expected_matches && self_host_basic_string_equal(
+        let visible = declaration != 18446744073709551615u64 || self.imported_variant_owner_visible(variant.declaration)
+        if visible && owner_matches && expected_matches && self_host_basic_string_equal(
           candidate_name,
           name,
         ) {
@@ -4971,6 +5000,9 @@ impl SelfHostBasicBodyInferencer {
     let expected_owner = self.inspect_nominal_type(expected)
     match self.names.expression_references[target] {
       SelfHostBodyNameReference::VariantNameReference(name) => {
+        if expected_owner is Option::None && self.bare_variant_candidate_count(self.collected.name(name)) != 1u32 {
+          return 4294967295u32
+        }
         let mut selected = 4294967295u32
         let mut count = 0u32
         let mut index = 0u32

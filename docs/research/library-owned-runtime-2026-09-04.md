@@ -61,3 +61,23 @@ passes all 92 tests and all 14 emission probes, including named-field
 construction and extraction inside an impl (expected result 42). Its cached
 generation takes 2.288 seconds. The self-host field pass also seeds ready fields
 before variant pattern selection; the full bootstrap check remains required.
+
+## Imported constructor ambiguity
+
+A new regression found that the self-host compiler selected a unique local
+constructor before considering an imported constructor with the same name.
+For a bare name without an expected enum, selection now counts candidates in
+both scopes. Imported candidates must have visible owning declarations.
+Expected enum types and explicit qualifications still select by declaration.
+An expression without a variant name exits before scanning candidate tables.
+The negative regression failed before the fix and now passes; the complete
+hardening lane passes 93 tests, 16 invariant records, two record decoder tests,
+14 execution probes, and four semantic probes (generation: 2.278 seconds).
+
+The routine native lane passes all 758 tests. After the named-field and Stack
+commits, the full A/B/C run validated both output modules and reached a byte
+fixed point (`1edc4483e750b84245943899512458a0c06d72069095433671db19649014cf03`).
+The final ambiguity change still requires a fresh full bootstrap run. Array,
+text, map, set, ring storage, and the remaining builtin migrations are not done;
+the checklist above is the remaining implementation scope, not a completion
+claim.

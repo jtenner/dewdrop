@@ -542,6 +542,16 @@ test "opened imported variants retain unqualified constructor identity" {
   assert(selected == 1u32, "the test must inspect the Some pattern")
 }
 
+test "bare constructors do not prefer a local enum over an imported enum" {
+  let link = self_host_physical_test_named_import_link(
+    "app.library",
+    b"pub enum Imported {\n  Chosen(I32)\n}\n",
+    b"open app.library\nenum Local {\n  Chosen(I32)\n}\npub fn run() -> Unit {\n  let value = Chosen(1)\n  ()\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() > 0u32, "ambiguous constructor must be diagnosed, not selected from local scope")
+}
+
 test "user Some and None patterns retain declaration identity" {
   let link = self_host_plan_program_wasmgc_link(
     self_host_physical_test_fragments(
