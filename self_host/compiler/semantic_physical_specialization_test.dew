@@ -948,7 +948,84 @@ test "raw bitcast rejects a changed physical width before emission" {
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
     Result::Ok(_) => assert(false, "invalid bitcast emitted a module")
-    Result::Err(error) => assert(error == "unsafe.bitcast requires equal concrete non-reference carriers", error)
+    Result::Err(error) => assert(error.contains("unsafe.bitcast requires equal concrete non-reference carriers"), error)
+  }
+}
+
+pub fn self_host_emit_raw_opcode_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\nbuiltin bits(a: U32, b: U32) -> U32 = \"i32.and\"\nbuiltin load(address: U32) -> U32 = \"i32.load\"\nbuiltin store(address: U32, value: U32) -> Unit = \"i32.store\"\nfn masked(a: I16x2, b: I16x2) -> I16x2 {\n  cast(bits(cast(a), cast(b)))\n}\npub fn main() -> U32 {\n  store(1u32, 298u32)\n  cast(masked(cast(load(1u32)), cast(255u32)))\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_raw_function_value_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\nbuiltin bits(a: U32, b: U32) -> U32 = \"i32.and\"\nfn masked(a: I16x2, b: I16x2) -> I16x2 {\n  cast(bits(cast(a), cast(b)))\n}\npub fn main() -> U32 {\n  let operation = masked\n  cast(operation(cast(298u32), cast(255u32)))\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+test "raw forwarding does not duplicate or reorder parameters" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\nbuiltin bits(a: U32, b: U32) -> U32 = \"i32.and\"\nfn good(a: I16x2, b: I16x2) -> I16x2 {\n  cast(bits(cast(a), cast(b)))\n}\nfn duplicate(a: I16x2, b: I16x2) -> I16x2 {\n  cast(bits(cast(a), cast(a)))\n}\nfn reverse(a: I16x2, b: I16x2) -> I16x2 {\n  cast(bits(cast(b), cast(a)))\n}\npub fn main() -> U32 {\n  cast(good(cast(42u32), cast(255u32)))\n}\n",
+  )
+  let lowering = fragments.specialization.lowering
+  let mut checked = 0u32
+  for module_ in lowering.modules {
+    for callable in module_.functions.callables {
+      if self_host_bytes_equal(callable.name, b"good") {
+        match self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) {
+          Option::Some(name) => assert(name.equals(b"i32.and"), "raw forwarding target")
+          Option::None => assert(false, "raw forwarding proof is missing")
+        }
+        checked = checked + 1u32
+      } else if self_host_bytes_equal(callable.name, b"duplicate") || self_host_bytes_equal(callable.name, b"reverse") {
+        assert(self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) is Option::None, "raw forwarding changed argument use")
+        checked = checked + 1u32
+      }
+    }
+  }
+  assert(checked == 3u32, "raw forwarding fixtures were not collected")
+}
+
+test "raw opcode rejects a user declaration with the wrong signature" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin wrong(left: I64, right: I64) -> I64 = \"i32.and\"\npub fn main() -> I64 {\n  wrong(1i64, 2i64)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(_) => assert(false, "wrong raw opcode signature emitted a module")
+    Result::Err(error) => assert(error.contains("raw intrinsic input or result carrier does not match its opcode"), error)
+  }
+}
+
+test "a diverging argument prevents raw intrinsic emission" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\nbuiltin stop() -> Never = \"dew_unreachable\"\npub fn main() -> U32 {\n  cast::<I32, U32>(stop())\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(_) => {}
+    Result::Err(error) => assert(false, error)
   }
 }
 

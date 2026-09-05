@@ -1,15 +1,39 @@
-builtin u32x2_from_swar64(value: Swar64) -> U32x2 = "dew_reinterpret"
-builtin u32x2_to_swar64(value: U32x2) -> Swar64 = "dew_reinterpret"
-builtin u32x2_reinterpret_as_i8x8(value: U32x2) -> I8x8 = "dew_reinterpret"
-builtin u32x2_reinterpret_as_u8x8(value: U32x2) -> U8x8 = "dew_reinterpret"
-builtin u32x2_reinterpret_as_i16x4(value: U32x2) -> I16x4 = "dew_reinterpret"
-builtin u32x2_reinterpret_as_u16x4(value: U32x2) -> U16x4 = "dew_reinterpret"
-builtin u32x2_reinterpret_as_i32x2(value: U32x2) -> I32x2 = "dew_reinterpret"
-builtin u32x2_load(address: U32) -> U32x2 = "dew_swar64_load"
-builtin u32x2_store(address: U32, value: U32x2) -> Unit = "dew_swar64_store"
-builtin u32x2_and(left: U32x2, right: U32x2) -> U32x2 = "swar64_and"
-builtin u32x2_or(left: U32x2, right: U32x2) -> U32x2 = "swar64_or"
-builtin u32x2_xor(left: U32x2, right: U32x2) -> U32x2 = "swar64_xor"
+fn u32x2_from_swar64(value: Swar64) -> U32x2 {
+  unsafe_bitcast::<Swar64, U32x2>(value)
+}
+fn u32x2_to_swar64(value: U32x2) -> Swar64 {
+  unsafe_bitcast::<U32x2, Swar64>(value)
+}
+fn u32x2_reinterpret_as_i8x8(value: U32x2) -> I8x8 {
+  unsafe_bitcast::<U32x2, I8x8>(value)
+}
+fn u32x2_reinterpret_as_u8x8(value: U32x2) -> U8x8 {
+  unsafe_bitcast::<U32x2, U8x8>(value)
+}
+fn u32x2_reinterpret_as_i16x4(value: U32x2) -> I16x4 {
+  unsafe_bitcast::<U32x2, I16x4>(value)
+}
+fn u32x2_reinterpret_as_u16x4(value: U32x2) -> U16x4 {
+  unsafe_bitcast::<U32x2, U16x4>(value)
+}
+fn u32x2_reinterpret_as_i32x2(value: U32x2) -> I32x2 {
+  unsafe_bitcast::<U32x2, I32x2>(value)
+}
+fn u32x2_load(address: U32) -> U32x2 {
+  unsafe_bitcast::<U64, U32x2>(u64_load(address))
+}
+fn u32x2_store(address: U32, value: U32x2) -> Unit {
+  u64_store(address, unsafe_bitcast::<U32x2, U64>(value))
+}
+fn u32x2_and(left: U32x2, right: U32x2) -> U32x2 {
+  unsafe_bitcast::<U64, U32x2>(u64_and(unsafe_bitcast::<U32x2, U64>(left), unsafe_bitcast::<U32x2, U64>(right)))
+}
+fn u32x2_or(left: U32x2, right: U32x2) -> U32x2 {
+  unsafe_bitcast::<U64, U32x2>(u64_or(unsafe_bitcast::<U32x2, U64>(left), unsafe_bitcast::<U32x2, U64>(right)))
+}
+fn u32x2_xor(left: U32x2, right: U32x2) -> U32x2 {
+  unsafe_bitcast::<U64, U32x2>(u64_xor(unsafe_bitcast::<U32x2, U64>(left), unsafe_bitcast::<U32x2, U64>(right)))
+}
 fn u32x2_splat(value: U32) -> U32x2 {
   u32x2_from_swar64(swar64_splat_i32(u32_into_i32(value)))
 }

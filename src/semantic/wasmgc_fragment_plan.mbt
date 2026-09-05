@@ -2301,28 +2301,20 @@ fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
   name == b"dew_i8_store" ||
   name == b"dew_i16_load" ||
   name == b"dew_i16_store" ||
-  name == b"dew_i32_load" ||
-  name == b"dew_i32_store" ||
-  name == b"dew_i64_load" ||
-  name == b"dew_i64_store" ||
+  name == b"i32.load" ||
+  name == b"i32.store" ||
+  name == b"i64.load" ||
+  name == b"i64.store" ||
   name == b"dew_u8_load" ||
   name == b"dew_u8_store" ||
   name == b"dew_u16_load" ||
   name == b"dew_u16_store" ||
-  name == b"dew_u32_load" ||
-  name == b"dew_u32_store" ||
-  name == b"dew_u64_load" ||
-  name == b"dew_u64_store" ||
   name == b"dew_f32_load" ||
   name == b"dew_f32_store" ||
   name == b"dew_f64_load" ||
   name == b"dew_f64_store" ||
-  name == b"dew_swar32_load" ||
-  name == b"dew_swar32_store" ||
-  name == b"dew_swar64_load" ||
-  name == b"dew_swar64_store" ||
-  name == b"dew_v128_load" ||
-  name == b"dew_v128_store" ||
+  name == b"v128.load" ||
+  name == b"v128.store" ||
   name == b"dew_wasi_fd_write" ||
   name == b"dew_wasi_fd_read" ||
   name == b"dew_test_assert" ||
@@ -2400,6 +2392,7 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
 
 ///|
 fn wasmgc_builtin_is_inline(name : Bytes) -> Bool {
+  raw_wasm_builtin_is_inline(name) ||
   name == b"unsafe.bitcast" ||
   (
     name.length() >= 4 &&
@@ -2411,20 +2404,7 @@ fn wasmgc_builtin_is_inline(name : Bytes) -> Bool {
   name == b"i32_add" ||
   name == b"i32_sub" ||
   name == b"i32_lt" ||
-  name == b"i32_lte" ||
-  name == b"swar32_from_bits" ||
-  name == b"swar32_to_bits" ||
-  name == b"swar32_and" ||
-  name == b"swar32_or" ||
-  name == b"swar32_xor" ||
-  name == b"swar64_from_bits" ||
-  name == b"swar64_to_bits" ||
-  name == b"swar64_and" ||
-  name == b"swar64_or" ||
-  name == b"swar64_xor" ||
-  name == b"v128_and" ||
-  name == b"v128_or" ||
-  name == b"v128_xor"
+  name == b"i32_lte"
 }
 
 ///|
@@ -2591,9 +2571,61 @@ fn wasmgc_plan_function_job(
 }
 
 ///|
+fn wasmgc_strip_carrier_identity_casts(
+  lowering : PlannedModuleLowering,
+  builtin_names : Map[DeclId, Bytes],
+  expressions : HirSpan,
+  expression : ExprId,
+) -> ExprId {
+  if expressions.start < 0 ||
+    expressions.start > lowering.expressions.length() ||
+    expressions.length < 0 ||
+    expressions.length > lowering.expressions.length() - expressions.start {
+    return expression
+  }
+  let mut current = expression
+  // This is an optional optimization. Invalid or symbolic casts are retained
+  // for the normal signature verifier; they must never be optimized away.
+  for _ in 0..<expressions.length {
+    if current < expressions.start ||
+      current - expressions.start >= expressions.length {
+      return expression
+    }
+    let value = lowering.expressions[current]
+    let (target, arguments) = match value.kind {
+      PlannedDirectCall(target, receiver, arguments, _) if receiver < 0 =>
+        (target, arguments)
+      _ => return current
+    }
+    match builtin_names.get(target) {
+      Some(name) if name == b"unsafe.bitcast" => ()
+      _ => return current
+    }
+    if arguments.length != 1 ||
+      arguments.start < 0 ||
+      arguments.start >= lowering.expression_children.length() {
+      return current
+    }
+    let input = lowering.expression_children[arguments.start]
+    if input < 0 || input >= lowering.expressions.length() {
+      return current
+    }
+    let carrier = raw_wasm_nonreference_carrier(value.shape)
+    if carrier is None ||
+      carrier !=
+      raw_wasm_nonreference_carrier(lowering.expressions[input].shape) {
+      return current
+    }
+    current = input
+  }
+  expression
+}
+
+///|
 fn wasmgc_direct_builtin_of(
   lowering : PlannedModuleLowering,
   callable : PlannedCallable,
+  builtin_names : Map[DeclId, Bytes],
 ) -> Bytes {
   let body_id = match callable.kind {
     PlannedFunctionCallable(body) => body
@@ -2620,7 +2652,26 @@ fn wasmgc_direct_builtin_of(
     PlannedExpressionItem(expression) => expression
     PlannedLetItem(_, _, _) | PlannedElidedLetItem(_) => return b""
   }
-  let (target, arguments) = match lowering.expressions[expression].kind {
+  if expression < body.expressions.start ||
+    expression - body.expressions.start >= body.expressions.length {
+    return b""
+  }
+  let unwrapped = wasmgc_strip_carrier_identity_casts(
+    lowering,
+    builtin_names,
+    body.expressions,
+    expression,
+  )
+  if unwrapped != expression &&
+    callable.parameters.length == 1 &&
+    lowering.expressions[unwrapped].kind is PlannedLocalGet(0) &&
+    body.locals.length >= 1 &&
+    body.locals.start >= 0 &&
+    body.locals.start < lowering.locals.length() &&
+    lowering.locals[body.locals.start].kind is ParameterLocal {
+    return b"unsafe.bitcast"
+  }
+  let (target, arguments) = match lowering.expressions[unwrapped].kind {
     PlannedDirectCall(target, receiver, arguments, type_arguments)
     | PlannedTailCall(target, receiver, arguments, type_arguments) => {
       if receiver >= 0 || type_arguments.length != 0 {
@@ -2630,11 +2681,24 @@ fn wasmgc_direct_builtin_of(
     }
     _ => return b""
   }
-  if arguments.length != callable.parameters.length {
+  if arguments.length != callable.parameters.length ||
+    arguments.start < 0 ||
+    arguments.start > lowering.expression_children.length() ||
+    arguments.length > lowering.expression_children.length() - arguments.start {
     return b""
   }
   for index in 0..<arguments.length {
-    let argument = lowering.expression_children[arguments.start + index]
+    let source = lowering.expression_children[arguments.start + index]
+    if source < body.expressions.start ||
+      source - body.expressions.start >= body.expressions.length {
+      return b""
+    }
+    let argument = wasmgc_strip_carrier_identity_casts(
+      lowering,
+      builtin_names,
+      body.expressions,
+      source,
+    )
     match lowering.expressions[argument].kind {
       PlannedLocalGet(local_id) => {
         if local_id != index || local_id >= body.locals.length {
@@ -2648,8 +2712,8 @@ fn wasmgc_direct_builtin_of(
       _ => return b""
     }
   }
-  match lowering.functions.callable_of(target) {
-    Some({ kind: PlannedBuiltinCallable(name), .. }) =>
+  match builtin_names.get(target) {
+    Some(name) =>
       if !wasmgc_builtin_is_runtime(name) && wasmgc_builtin_is_inline(name) {
         name
       } else {
@@ -2657,6 +2721,85 @@ fn wasmgc_direct_builtin_of(
       }
     _ => b""
   }
+}
+
+///|
+fn wasmgc_forwarding_builtins(
+  lowering : PlannedModuleLowering,
+  builtin_names : Map[DeclId, Bytes],
+) -> Array[Bytes] {
+  let callables = lowering.functions.callables
+  let result = Array::make(callables.length(), b"")
+  let dependents : Map[DeclId, Array[Int]] = {}
+  let queue : Array[Int] = []
+  let pending = Array::make(callables.length(), true)
+  for index, callable in callables {
+    queue.push(index)
+    let body_id = match callable.kind {
+      PlannedFunctionCallable(body)
+      | PlannedImplMethodCallable(_, Some(body)) => body
+      _ => continue
+    }
+    let body_index = semantic_id_local(body_id)
+    if body_index < 0 || body_index >= lowering.bodies.length() {
+      continue
+    }
+    let body = lowering.bodies[body_index]
+    let block = match body.root {
+      BlockBodyRoot(block) => block
+      _ => continue
+    }
+    if block < 0 ||
+      block >= lowering.blocks.length() ||
+      lowering.blocks[block].items.length != 1 {
+      continue
+    }
+    let span = body.expressions
+    if span.start < 0 ||
+      span.start > lowering.expressions.length() ||
+      span.length < 0 ||
+      span.length > lowering.expressions.length() - span.start {
+      continue
+    }
+    for expression in span.start..<(span.start + span.length) {
+      let target = match lowering.expressions[expression].kind {
+        PlannedDirectCall(target, _, _, _) | PlannedTailCall(target, _, _, _) =>
+          target
+        _ => continue
+      }
+      match dependents.get(target) {
+        Some(users) => users.push(index)
+        None => dependents[target] = [index]
+      }
+    }
+  }
+  // A declaration gains one proved opcode at most once. Only its users need
+  // another attempt. Recursive forwarding cycles remain ordinary functions.
+  while queue.length() > 0 {
+    let index = queue.pop().unwrap()
+    pending[index] = false
+    if result[index].length() > 0 {
+      continue
+    }
+    let callable = callables[index]
+    let name = wasmgc_direct_builtin_of(lowering, callable, builtin_names)
+    if name.length() == 0 {
+      continue
+    }
+    result[index] = name
+    builtin_names[callable.declaration] = name
+    match dependents.get(callable.declaration) {
+      Some(users) =>
+        for user in users {
+          if !pending[user] && result[user].length() == 0 {
+            pending[user] = true
+            queue.push(user)
+          }
+        }
+      None => ()
+    }
+  }
+  result
 }
 
 ///|
@@ -3661,11 +3804,31 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     )
   }
   wasmgc_add_runtime_dependencies(function_jobs, reachable_functions)
-  let direct_builtins : Array[Bytes] = []
+  let builtin_names : Map[DeclId, Bytes] = {}
+  for callable in functions.callables {
+    match callable.kind {
+      PlannedBuiltinCallable(name) => builtin_names[callable.declaration] = name
+      _ => ()
+    }
+  }
+  match imports {
+    Some(imports) =>
+      for index in imports.scope.imported_interfaces {
+        let interface_ = imports.scope.interfaces[index].unwrap()
+        for callable in interface_.callables {
+          match callable.kind {
+            FrozenBuiltinCallable(name) =>
+              builtin_names[callable.declaration] = name
+            _ => ()
+          }
+        }
+      }
+    None => ()
+  }
+  let direct_builtins = wasmgc_forwarding_builtins(lowering, builtin_names)
   let elided_functions = Array::make(functions.callables.length(), false)
   for callable_index, callable in functions.callables {
-    let direct_builtin = wasmgc_direct_builtin_of(lowering, callable)
-    direct_builtins.push(direct_builtin)
+    let direct_builtin = direct_builtins[callable_index]
     elided_functions[callable_index] = (
         direct_builtin.length() > 0 && callable.visibility == ModuleVisible
       ) ||

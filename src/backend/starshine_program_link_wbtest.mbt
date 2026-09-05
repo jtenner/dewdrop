@@ -322,6 +322,17 @@ test "cross module scalar call emits one valid linked module" {
   assert_eq(
     emit_starshine_program_type_section(link, helper_plan),
     @lib.TypeSec::new([
+      // Concrete preamble cast certificates precede the two user signatures.
+      @lib.RecType::new(
+        @lib.SubType::comp_type(
+          @lib.CompType::func([@lib.ValType::i32()], [@lib.ValType::i32()]),
+        ),
+      ),
+      @lib.RecType::new(
+        @lib.SubType::comp_type(
+          @lib.CompType::func([@lib.ValType::i64()], [@lib.ValType::i64()]),
+        ),
+      ),
       @lib.RecType::new(
         @lib.SubType::comp_type(
           @lib.CompType::func([@lib.ValType::i32()], [@lib.ValType::i32()]),

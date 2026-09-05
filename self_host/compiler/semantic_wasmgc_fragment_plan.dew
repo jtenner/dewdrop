@@ -67,6 +67,7 @@ pub enum SelfHostPlannedWasmFunctionKind {
 pub struct SelfHostPlannedWasmFunctionFragment {
   declaration: U64
   kind: SelfHostPlannedWasmFunctionKind
+  direct_builtin: Bytes
   parameters: SelfHostHirSpan
   results: SelfHostHirSpan
   specialization: U32
@@ -80,6 +81,7 @@ fn self_host_planned_wasm_function_fragment_identity(
   SelfHostPlannedWasmFunctionFragment::{
     declaration: fragment.declaration
     kind: fragment.kind
+    direct_builtin: fragment.direct_builtin
     parameters: fragment.parameters
     results: fragment.results
     specialization: fragment.specialization
@@ -577,6 +579,7 @@ fn self_host_wasmgc_function_kind(
 fn self_host_wasmgc_append_function(
   module_: SelfHostPlannedModuleLowering,
   callable: SelfHostPlannedCallable,
+  direct_builtin: Bytes,
   request: Option<SelfHostProgramSpecializationRequest>,
   request_index: U32,
   shapes: Array<SelfHostPlannedValueShape>,
@@ -628,6 +631,7 @@ fn self_host_wasmgc_append_function(
   functions.push(SelfHostPlannedWasmFunctionFragment::{
     declaration: callable.declaration
     kind: self_host_wasmgc_function_kind(callable)
+    direct_builtin: direct_builtin
     parameters: SelfHostHirSpan::{
       start: parameter_start
       length: result_start - parameter_start
@@ -675,6 +679,7 @@ fn self_host_wasmgc_append_lambda_function(
     kind: SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(
       lambda.lambda,
     )
+    direct_builtin: b""
     parameters: SelfHostHirSpan::{
       start: parameter_start
       length: result_start - parameter_start
@@ -841,9 +846,20 @@ fn self_host_plan_program_wasmgc_fragments(
       )
       for callable in source.functions.callables {
         let function_index = functions.length()
+        // Prove forwarding once. Call verification and emission only read the
+        // frozen result; neither phase walks or rewrites a target body.
+        let direct_builtin = match self_host_raw_forwarding_builtin(
+          specialization.lowering,
+          source,
+          callable.declaration,
+        ) {
+          Option::Some(name) => name
+          Option::None => b""
+        }
         self_host_wasmgc_append_function(
           source,
           callable,
+          direct_builtin,
           Option::None,
           4294967295u32,
           specialization.shapes,
@@ -879,6 +895,7 @@ fn self_host_plan_program_wasmgc_fragments(
               Option::Some(callable) => self_host_wasmgc_append_function(
                 source,
                 callable,
+                b"",
                 Option::Some(selected),
                 request,
                 specialization.shapes,

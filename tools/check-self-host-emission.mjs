@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
+import { execFileSync } from "node:child_process";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
 function unusedImports(module) {
@@ -95,6 +96,8 @@ compiler.exports.__dew_init?.();
 let failures = 0;
 for (const [name, expected] of [
   ["self_host_emit_raw_bitcast_probe", -1],
+  ["self_host_emit_raw_opcode_probe", 42],
+  ["self_host_emit_raw_function_value_probe", 42],
   ["self_host_emit_pattern_guard_probe", 461],
   ["self_host_emit_literal_guard_probe", 205],
   ["self_host_emit_solver_control_probe", 1],
@@ -120,6 +123,11 @@ for (const [name, expected] of [
     bytes[index] = compiler.exports.self_host_emission_probe_byte_at(result, index);
   }
   checkFunctionNames(bytes);
+  if (name === "self_host_emit_raw_opcode_probe") {
+    const wat = execFileSync("wasm-tools", ["print", "-"], { input: bytes, encoding: "utf8" });
+    assert.match(wat, /\bi32\.and\b/, "packed forwarding must emit the raw opcode");
+    assert.doesNotMatch(wat, /^\s+(?:return_)?call(?:_ref|_indirect)?\s/m, "packed forwarding must not add function calls");
+  }
   const emitted = await WebAssembly.compile(bytes);
   const instance = await WebAssembly.instantiate(emitted, unusedImports(emitted));
   instance.exports.__dew_init?.();

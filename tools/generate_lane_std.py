@@ -124,6 +124,35 @@ def builtin(name: str, params: str, result: str, target: str) -> str:
     return f'builtin {name}({params}) -> {result} = "{target}"\n'
 
 
+def carrier_helpers(type_name: str, carrier: str, family: list) -> str:
+    """Library-only casts, loads, stores, and bitwise carrier operations."""
+    prefix = type_name.lower()
+    raw = {"Swar32": "U32", "Swar64": "U64", "V128": "V128"}[carrier]
+
+    def cast(expression: str, source: str, target: str) -> str:
+        if source == target:
+            return expression
+        return f"unsafe_bitcast::<{source}, {target}>({expression})"
+
+    def function(name: str, params: str, result: str, body: str) -> str:
+        return f"fn {name}({params}) -> {result} {{\n  {body}\n}}\n"
+
+    output = [
+        function(f"{prefix}_from_{carrier.lower()}", f"value: {carrier}", type_name, cast("value", carrier, type_name)),
+        function(f"{prefix}_to_{carrier.lower()}", f"value: {type_name}", carrier, cast("value", type_name, carrier)),
+    ]
+    for target, *_ in family:
+        if target != type_name:
+            output.append(function(f"{prefix}_reinterpret_as_{target.lower()}", f"value: {type_name}", target, cast("value", type_name, target)))
+    output.append(function(f"{prefix}_load", "address: U32", type_name, cast(f"{raw.lower()}_load(address)", raw, type_name)))
+    output.append(function(f"{prefix}_store", f"address: U32, value: {type_name}", "Unit", f"{raw.lower()}_store(address, {cast('value', type_name, raw)})"))
+    for operation in ["and", "or", "xor"]:
+        operands = ", ".join(cast(name, type_name, raw) for name in ["left", "right"])
+        body = cast(f"{raw.lower()}_{operation}({operands})", raw, type_name)
+        output.append(function(f"{prefix}_{operation}", f"left: {type_name}, right: {type_name}", type_name, body))
+    return "".join(output)
+
+
 def method(name: str, params: str, result: str, call: str) -> str:
     return f"  fn {name}(self{params}) -> {result} {{\n    {call}\n  }}\n"
 
@@ -140,16 +169,8 @@ def trait_impl(trait: str, type_name: str, method_name: str, call_name: str) -> 
 
 def v128_source(type_name: str, scalar: str, lane: str, kind: str) -> str:
     p = type_name.lower()
-    out = []
-    out.append(builtin(f"{p}_from_v128", "value: V128", type_name, "dew_reinterpret"))
-    out.append(builtin(f"{p}_to_v128", f"value: {type_name}", "V128", "dew_reinterpret"))
+    out = [carrier_helpers(type_name, "V128", V128_TYPES)]
     reinterpretations = [target for target, _, _, _ in V128_TYPES if target != type_name]
-    for target in reinterpretations:
-        out.append(builtin(f"{p}_reinterpret_as_{target.lower()}", f"value: {type_name}", target, "dew_reinterpret"))
-    out.append(builtin(f"{p}_load", "address: U32", type_name, "dew_v128_load"))
-    out.append(builtin(f"{p}_store", f"address: U32, value: {type_name}", "Unit", "dew_v128_store"))
-    for op, target in (("and", "v128_and"), ("or", "v128_or"), ("xor", "v128_xor")):
-        out.append(builtin(f"{p}_{op}", f"left: {type_name}, right: {type_name}", type_name, target))
     out.append(builtin(f"{p}_not", f"value: {type_name}", type_name, "dew_v128_not"))
     out.append(builtin(f"{p}_andnot", f"left: {type_name}, right: {type_name}", type_name, "dew_v128_andnot"))
     out.append(builtin(f"{p}_bitselect", f"yes: {type_name}, no: {type_name}, mask: {type_name}", type_name, "dew_v128_bitselect"))
@@ -592,19 +613,11 @@ def swar_source(type_name: str, scalar: str, lane: str, kind: str, width: int) -
     p = type_name.lower()
     carrier = f"Swar{width}"
     raw = f"swar{width}"
-    out = []
-    extended_binary: list[str] = []
-    extended_unary: list[str] = []
-    out.append(builtin(f"{p}_from_{raw}", f"value: {carrier}", type_name, "dew_reinterpret"))
-    out.append(builtin(f"{p}_to_{raw}", f"value: {type_name}", carrier, "dew_reinterpret"))
     family = SWAR32_TYPES if width == 32 else SWAR64_TYPES
     reinterpretations = [target for target, _, _, _ in family if target != type_name]
-    for target in reinterpretations:
-        out.append(builtin(f"{p}_reinterpret_as_{target.lower()}", f"value: {type_name}", target, "dew_reinterpret"))
-    out.append(builtin(f"{p}_load", "address: U32", type_name, f"dew_{raw}_load"))
-    out.append(builtin(f"{p}_store", f"address: U32, value: {type_name}", "Unit", f"dew_{raw}_store"))
-    for op, target in (("and", f"{raw}_and"), ("or", f"{raw}_or"), ("xor", f"{raw}_xor")):
-        out.append(builtin(f"{p}_{op}", f"left: {type_name}, right: {type_name}", type_name, target))
+    out = [carrier_helpers(type_name, carrier, family)]
+    extended_binary: list[str] = []
+    extended_unary: list[str] = []
 
     if kind != "float":
         raw_lane = "I" + lane[1:]

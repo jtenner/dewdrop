@@ -11775,6 +11775,9 @@ fn self_host_linked_builtin_name(
             index,
           )
           if self_host_u64_equal(fragment.declaration, declaration) {
+            if !self_host_bytes_equal(fragment.direct_builtin, b"") {
+              return Option::Some(fragment.direct_builtin)
+            }
             match fragment.kind {
               SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(
                 name,
@@ -11798,6 +11801,9 @@ fn self_host_linked_builtin_name(
           current,
         )
         if self_host_u64_equal(fragment.declaration, declaration) {
+          if !self_host_bytes_equal(fragment.direct_builtin, b"") {
+            return Option::Some(fragment.direct_builtin)
+          }
           match fragment.kind {
             SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(
               name,
@@ -18033,6 +18039,30 @@ fn self_host_emit_linked_i32_expression(
               )
             } {
               Option::Some(function_index) => {
+                // Inline only a proved raw forwarding body. Keep its physical
+                // function for exports and function references, and check the
+                // frozen call recipe before replacing this direct call.
+                if module_.expressions[expression].flow.falls_through {
+                  match self_host_linked_builtin_name(link, declaration) {
+                    Option::Some(raw_name) => if raw_name.equals(b"unsafe.bitcast") || self_host_raw_intrinsic_signature(raw_name) is Option::Some(_) {
+                      match self_host_linked_assert_call_arguments(link, canonical_body_plan, module_, body, caller_specialization, expression, function_index, arguments) {
+                        Option::Some(error) => return Option::Some(error)
+                        Option::None => {}
+                      }
+                      match self_host_raw_intrinsic_error(raw_name, canonical_body_plan, module_, expression, arguments) {
+                        Option::Some(error) => return Option::Some(error)
+                        Option::None => {}
+                      }
+                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(raw_name, destination))
+                      match self_host_linked_i32_push_arguments(module_, arguments, destination, tasks, expression_depths, depth) {
+                        Option::Some(error) => return Option::Some(error)
+                        Option::None => {}
+                      }
+                      continue tasks.length()
+                    }
+                    Option::None => {}
+                  }
+                }
                 let declaration_name = self_host_linked_declaration_name(
                   link,
                   declaration,
@@ -19436,7 +19466,7 @@ fn self_host_emit_linked_i32_expression(
                       destination,
                     ))
                   } else {
-                    match self_host_raw_bitcast_error(name, canonical_body_plan, module_, expression, arguments) {
+                    match self_host_raw_intrinsic_error(name, canonical_body_plan, module_, expression, arguments) {
                       Option::Some(error) => return Option::Some(error)
                       Option::None => {}
                     }
@@ -21280,7 +21310,7 @@ fn self_host_emit_linked_i32_expression(
                         destination,
                       ))
                     } else {
-                      match self_host_raw_bitcast_error(name, canonical_body_plan, module_, expression, arguments) {
+                      match self_host_raw_intrinsic_error(name, canonical_body_plan, module_, expression, arguments) {
                         Option::Some(error) => return Option::Some(error)
                         Option::None => {}
                       }
@@ -21588,7 +21618,7 @@ fn self_host_emit_linked_i32_expression(
                             destination,
                           ))
                         } else {
-                          match self_host_raw_bitcast_error(builtin_name, canonical_body_plan, module_, expression, arguments) {
+                          match self_host_raw_intrinsic_error(builtin_name, canonical_body_plan, module_, expression, arguments) {
                             Option::Some(error) => return Option::Some(error)
                             Option::None => {}
                           }
@@ -24642,7 +24672,7 @@ fn self_host_emit_linked_i32_expression(
                             }
                           }
                         } else {
-                          match self_host_raw_bitcast_error(builtin_name, canonical_body_plan, module_, expression, arguments) {
+                          match self_host_raw_intrinsic_error(builtin_name, canonical_body_plan, module_, expression, arguments) {
                             Option::Some(error) => return Option::Some(error)
                             Option::None => {}
                           }

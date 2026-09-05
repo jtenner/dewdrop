@@ -6966,6 +6966,7 @@ fn self_host_verify_body_call_result(
   expression_plan: SelfHostPlannedPhysicalExpressionCarrier,
   diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
 ) -> Unit {
+  self_host_verify_body_raw_intrinsic(link, plan, module_, expression_plan, diagnostics)
   if expression_plan.call_function_index == 4294967295u32 {
     return
   }

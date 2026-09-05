@@ -119,6 +119,10 @@ pub fn plan_unoptimized_program_lowering(CollectedProgram, AnalyzedProgramSemant
 
 pub fn plan_unoptimized_program_lowering_with_type_layouts(CollectedProgram, AnalyzedProgramSemantics, Array[PlannedModuleTypeLayouts]) -> PlannedProgramLowering
 
+pub fn planned_i32_shape() -> PlannedValueShape
+
+pub fn planned_reference_shape() -> PlannedValueShape
+
 pub fn planned_value_shape_from_resolved_types(Array[ResolvedType], Array[Int], Int) -> PlannedValueShape
 
 pub fn program_resolved_trait_evidence_identity(PlannedModuleLowering, PlannedModuleWasmGCFragments, HirSpan, HirSpan, Int) -> (UInt64, String)?
@@ -126,6 +130,8 @@ pub fn program_resolved_trait_evidence_identity(PlannedModuleLowering, PlannedMo
 pub fn program_runtime_trait_evidence_parameter(PlannedModuleLowering, PlannedModuleWasmGCFragments, HirSpan, Int) -> (UInt64, Int)?
 
 pub fn program_runtime_trait_evidence_slot_parameter(PlannedModuleWasmGCFragments, HirSpan, Int) -> (UInt64, Int)?
+
+pub fn raw_wasm_builtin_signature(Bytes) -> RawWasmIntrinsicSignature?
 
 pub fn render_compiler_source_diagnostic(CollectedProgram, CompilerSourceDiagnostic) -> String
 
@@ -159,11 +165,17 @@ pub fn serialize_planned_module_wasmgc_fragments(PlannedModuleWasmGCFragments) -
 
 pub fn specialize_planned_body_value_shape(PlannedModuleLowering, Int, PlannedValueShape, HirSpan, Array[PlannedValueShape], HirSpan) -> PlannedValueShape
 
+pub fn standard_array_entry_iterator_type_declaration() -> UInt64
+
+pub fn standard_array_entry_type_declaration() -> UInt64
+
 pub fn standard_array_index_declaration() -> UInt64
 
 pub fn standard_array_index_set_declaration() -> UInt64
 
 pub fn standard_array_iterator_type_declaration() -> UInt64
+
+pub fn standard_array_key_iterator_type_declaration() -> UInt64
 
 pub fn standard_array_method_declaration(String) -> UInt64
 
@@ -958,7 +970,6 @@ pub struct HirBlock {
 
 pub enum HirBlockItem {
   HirLetItem(Bool, Int, UInt64, Int, UInt64)
-  HirReturnItem(Int, UInt64)
   HirExpressionItem(Int, UInt64)
 } derive(Eq, @debug.Debug)
 
@@ -1016,6 +1027,7 @@ pub enum HirExpr {
   HirIfExpr(Int, Int, Int, UInt64)
   HirMatchExpr(Int, HirSpan, UInt64)
   HirWhileExpr(Int, HirSpan, UInt64)
+  HirReturnExpr(Int, UInt64)
   HirBreakExpr(Int, UInt64)
   HirContinueExpr(Int, UInt64)
   HirPrefixExpr(HirPrefixOperator, Int, UInt64)
@@ -1537,7 +1549,6 @@ pub struct PlannedBlockItem {
 pub enum PlannedBlockItemKind {
   PlannedLetItem(Int, Bool, Int)
   PlannedElidedLetItem(Int)
-  PlannedReturnItem(Int)
   PlannedExpressionItem(Int)
 } derive(Eq, @debug.Debug)
 
@@ -1650,6 +1661,7 @@ pub enum PlannedExpressionKind {
   PlannedIfExpression(Int, Int, Int)
   PlannedMatchExpression(Int, HirSpan)
   PlannedWhileExpression(Int, Int, HirSpan)
+  PlannedReturnExpression(Int)
   PlannedBreakExpression(Int, Int)
   PlannedContinueExpression(Int, Int)
   PlannedPrefixExpression(HirPrefixOperator, Int)
@@ -1680,6 +1692,7 @@ pub enum PlannedExpressionKind {
   PlannedArrayIter(Int, Int, PlannedValueShape)
   PlannedArrayIterHasNext(Int)
   PlannedArrayIterNext(Int, PlannedValueShape)
+  PlannedArrayIterNextOption(Int, Int, PlannedValueShape)
   PlannedArrayMake(Int, Int, Int, PlannedValueShape)
   PlannedArrayReserve(Int, Int, Int, PlannedValueShape)
   PlannedArrayShrinkToFit(Int, Int, PlannedValueShape)
@@ -1724,8 +1737,11 @@ pub enum PlannedExpressionKind {
   PlannedMapEntries(Int, PlannedValueShape, PlannedValueShape)
   PlannedMapIterHasNext(Int, Int, PlannedValueShape, PlannedValueShape)
   PlannedMapKeyIterNext(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapKeyIterNextOption(Int, PlannedValueShape, PlannedValueShape)
   PlannedMapValueIterNext(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapValueIterNextOption(Int, PlannedValueShape, PlannedValueShape)
   PlannedMapEntryIterNext(Int, PlannedValueShape, PlannedValueShape)
+  PlannedMapEntryIterNextOption(Int, PlannedValueShape, PlannedValueShape)
   PlannedMapEntryKey(Int, PlannedValueShape, PlannedValueShape)
   PlannedMapEntryValue(Int, PlannedValueShape, PlannedValueShape)
   PlannedSetEmpty(PlannedValueShape, UInt64, UInt64)
@@ -1739,6 +1755,7 @@ pub enum PlannedExpressionKind {
   PlannedSetIter(Int, PlannedValueShape)
   PlannedSetIterHasNext(Int, PlannedValueShape)
   PlannedSetIterNext(Int, PlannedValueShape)
+  PlannedSetIterNextOption(Int, PlannedValueShape)
   PlannedDirectCall(UInt64, Int, HirSpan, HirSpan)
   PlannedTailCall(UInt64, Int, HirSpan, HirSpan)
   PlannedBoundDirectCall(UInt64, Int, Int, HirSpan, HirSpan)
@@ -2462,6 +2479,12 @@ pub enum ProgramWasmGCLinkDiagnostic {
   UnsupportedProgramGenericCall(UInt64, UInt64, UInt64)
   MissingProgramFunction(UInt64, UInt64, UInt64)
   EagerProgramInitializationCycle(UInt64, UInt64)
+} derive(Eq, @debug.Debug)
+
+pub struct RawWasmIntrinsicSignature {
+  first : PlannedWasmValueType
+  second : PlannedWasmValueType?
+  result : PlannedWasmValueType?
 } derive(Eq, @debug.Debug)
 
 pub struct ResolvedBodyNames {

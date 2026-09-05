@@ -86,11 +86,11 @@ fn starshine_numeric_builtin_instructions(
     Some([@lib.Instruction::i32_div_s(), @lib.Instruction::i32_extend16s()])
   } else if name == b"dew_i16_rem" {
     Some([@lib.Instruction::i32_rem_s(), @lib.Instruction::i32_extend16s()])
-  } else if name == b"dew_i32_or" {
+  } else if name == b"i32.or" {
     Some([@lib.Instruction::i32_or()])
-  } else if name == b"dew_i32_xor" {
+  } else if name == b"i32.xor" {
     Some([@lib.Instruction::i32_xor()])
-  } else if name == b"dew_i32_and" {
+  } else if name == b"i32.and" {
     Some([@lib.Instruction::i32_and()])
   } else if name == b"dew_i32_eq" {
     Some([@lib.Instruction::i32_eq()])
@@ -112,11 +112,11 @@ fn starshine_numeric_builtin_instructions(
     Some([@lib.Instruction::i32_div_s()])
   } else if name == b"dew_i32_rem" {
     Some([@lib.Instruction::i32_rem_s()])
-  } else if name == b"dew_i64_or" {
+  } else if name == b"i64.or" {
     Some([@lib.Instruction::i64_or()])
-  } else if name == b"dew_i64_xor" {
+  } else if name == b"i64.xor" {
     Some([@lib.Instruction::i64_xor()])
-  } else if name == b"dew_i64_and" {
+  } else if name == b"i64.and" {
     Some([@lib.Instruction::i64_and()])
   } else if name == b"dew_i64_eq" {
     Some([@lib.Instruction::i64_eq()])
@@ -296,12 +296,6 @@ fn starshine_numeric_builtin_instructions(
       @lib.Instruction::i32_const(@lib.I32::new(65535)),
       @lib.Instruction::i32_and(),
     ])
-  } else if name == b"dew_u32_or" {
-    Some([@lib.Instruction::i32_or()])
-  } else if name == b"dew_u32_xor" {
-    Some([@lib.Instruction::i32_xor()])
-  } else if name == b"dew_u32_and" {
-    Some([@lib.Instruction::i32_and()])
   } else if name == b"dew_u32_eq" {
     Some([@lib.Instruction::i32_eq()])
   } else if name == b"dew_u32_ne" {
@@ -330,12 +324,6 @@ fn starshine_numeric_builtin_instructions(
     Some([@lib.Instruction::i32_rem_u()])
   } else if name == b"dew_u32_ctz" {
     Some([@lib.Instruction::i32_ctz()])
-  } else if name == b"dew_u64_or" {
-    Some([@lib.Instruction::i64_or()])
-  } else if name == b"dew_u64_xor" {
-    Some([@lib.Instruction::i64_xor()])
-  } else if name == b"dew_u64_and" {
-    Some([@lib.Instruction::i64_and()])
   } else if name == b"dew_u64_eq" {
     Some([@lib.Instruction::i64_eq()])
   } else if name == b"dew_u64_ne" {

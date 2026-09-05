@@ -3,8 +3,8 @@
 test "standard preamble is a deterministic declaration prefix" {
   let source = b"pub fn identity(value: I32) -> I32 {\n  value\n}\n"
   let collected = collect_bytes_with_standard_preamble(995UL, source)
-  assert_eq(collected.preamble_declaration_count, 1308)
-  assert_eq(collected.declarations.length(), 811)
+  assert_eq(collected.preamble_declaration_count, 1309)
+  assert_eq(collected.declarations.length(), 812)
   assert_eq(collected.diagnostics.length(), 0)
   let identity = collected.lookup_value("identity").unwrap()
   assert_eq(semantic_id_local(identity), collected.preamble_declaration_count)
@@ -498,7 +498,7 @@ test "single-module phase helper never injects optional standard sources" {
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)
   let inferred = infer_module_bodies(collected, resolved, names)
-  assert_eq(collected.preamble_declaration_count, 1308)
+  assert_eq(collected.preamble_declaration_count, 1309)
   assert_eq(inferred.diagnostics.length(), 1)
   match inferred.diagnostics[0] {
     NoMatchingMethod(_, _, _) => ()

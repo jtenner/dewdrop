@@ -23,21 +23,13 @@ fn starshine_memory_builtin_instructions(
     Some([@lib.Instruction::i32_load16u(starshine_memory_argument(1U))])
   } else if name == b"dew_u16_store" {
     Some([@lib.Instruction::i32_store16(starshine_memory_argument(1U))])
-  } else if name == b"dew_i32_load" ||
-    name == b"dew_u32_load" ||
-    name == b"dew_swar32_load" {
+  } else if name == b"i32.load" {
     Some([@lib.Instruction::i32_load(starshine_memory_argument(2U))])
-  } else if name == b"dew_i32_store" ||
-    name == b"dew_u32_store" ||
-    name == b"dew_swar32_store" {
+  } else if name == b"i32.store" {
     Some([@lib.Instruction::i32_store(starshine_memory_argument(2U))])
-  } else if name == b"dew_i64_load" ||
-    name == b"dew_u64_load" ||
-    name == b"dew_swar64_load" {
+  } else if name == b"i64.load" {
     Some([@lib.Instruction::i64_load(starshine_memory_argument(3U))])
-  } else if name == b"dew_i64_store" ||
-    name == b"dew_u64_store" ||
-    name == b"dew_swar64_store" {
+  } else if name == b"i64.store" {
     Some([@lib.Instruction::i64_store(starshine_memory_argument(3U))])
   } else if name == b"dew_f32_load" {
     Some([@lib.Instruction::f32_load(starshine_memory_argument(2U))])
@@ -47,9 +39,9 @@ fn starshine_memory_builtin_instructions(
     Some([@lib.Instruction::f64_load(starshine_memory_argument(3U))])
   } else if name == b"dew_f64_store" {
     Some([@lib.Instruction::f64_store(starshine_memory_argument(3U))])
-  } else if name == b"dew_v128_load" {
+  } else if name == b"v128.load" {
     Some([@lib.Instruction::v128_load(starshine_memory_argument(4U))])
-  } else if name == b"dew_v128_store" {
+  } else if name == b"v128.store" {
     Some([@lib.Instruction::v128_store(starshine_memory_argument(4U))])
   } else {
     None

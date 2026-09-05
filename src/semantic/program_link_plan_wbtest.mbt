@@ -132,7 +132,8 @@ test "program linker rebases imported aggregate signatures" {
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
   let item = program.modules[1].lookup_type("Item").unwrap()
-  assert_eq(link.type_lookup.get(item), Some(0))
+  // The preamble's concrete i32/i64 cast signatures occupy indices 0 and 1.
+  assert_eq(link.type_lookup.get(item), Some(2))
   let run = link
     .function_of(program.modules[0].lookup_value("run").unwrap())
     .unwrap()

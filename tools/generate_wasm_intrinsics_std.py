@@ -26,6 +26,10 @@ BUILTIN_PATTERN = re.compile(
     re.MULTILINE,
 )
 BACKEND_NAME_PATTERN = re.compile(r'name\s*==\s*b"([^"]+)"')
+WRAPPER_PATTERN = re.compile(
+    r"^(?:pub\s+)?fn\s+(?P<name>\w+)(?P<signature>\([^\n]*\)\s*->\s*[^\n{]+?)"
+    r"\s*\{\n  (?P<body>[^\n]+)\n\}", re.MULTILINE,
+)
 
 
 @dataclass(frozen=True)
@@ -36,8 +40,11 @@ class IntrinsicDeclaration:
     generics: str
     signature: str
     target: str
+    body: str | None = None
 
     def render(self) -> str:
+        if self.body is not None:
+            return f"pub fn {self.alias}{self.signature} {{\n  {self.body}\n}}"
         return (
             f"pub builtin {self.alias}{self.generics}{self.signature} "
             f'= "{self.target}"'
@@ -161,6 +168,20 @@ def standard_builtin_declarations() -> list[IntrinsicDeclaration]:
                     target=match.group("target"),
                 )
             )
+        for match in WRAPPER_PATTERN.finditer(text):
+            # Keep existing packed API spellings as Dew code, never turn them
+            # back into compiler-owned aliases. These bodies use only preamble
+            # carrier operations, so there is no hidden module dependency.
+            if "unsafe_bitcast" in match.group("body"):
+                declarations.append(IntrinsicDeclaration(
+                    source=relative,
+                    name=match.group("name"),
+                    alias=f"wasm_{match.group('name')}",
+                    generics="",
+                    signature=match.group("signature"),
+                    target="",
+                    body=match.group("body"),
+                ))
     return declarations
 
 
@@ -170,7 +191,7 @@ def intrinsic_declarations() -> tuple[list[IntrinsicDeclaration], set[str]]:
     declarations.extend(
         declaration
         for declaration in standard_builtin_declarations()
-        if declaration.target in backend_names
+        if declaration.body is not None or declaration.target in backend_names
     )
     aliases: set[str] = set()
     duplicate_aliases: list[str] = []
@@ -182,7 +203,10 @@ def intrinsic_declarations() -> tuple[list[IntrinsicDeclaration], set[str]]:
         names = ", ".join(sorted(set(duplicate_aliases)))
         raise SystemExit(f"duplicate generated WebAssembly intrinsic aliases: {names}")
     declared_names = {declaration.target for declaration in declarations}
-    missing = sorted(backend_names - declared_names)
+    # These diagnostic-only helpers traverse the old Array representation.
+    # They are not Wasm instructions and must not become public intrinsics.
+    diagnostic_helpers = {"dew_array_backing_length_i32", "dew_array_backing_length_ref"}
+    missing = sorted(backend_names - declared_names - diagnostic_helpers)
     if missing:
         raise SystemExit(
             "backend inline builtins without Dew source declarations: "

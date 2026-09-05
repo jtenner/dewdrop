@@ -103,62 +103,22 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(4i32),
     )
-  } else if name.equals(b"dew_i32_load") {
+  } else if name.equals(b"i32.load") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(6i32),
     )
-  } else if name.equals(b"dew_u32_load") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(6i32),
-    )
-  } else if name.equals(b"dew_swar32_load") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(6i32),
-    )
-  } else if name.equals(b"dew_i32_store") {
+  } else if name.equals(b"i32.store") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(7i32),
     )
-  } else if name.equals(b"dew_u32_store") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(7i32),
-    )
-  } else if name.equals(b"dew_swar32_store") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(7i32),
-    )
-  } else if name.equals(b"dew_i64_load") {
+  } else if name.equals(b"i64.load") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(8i32),
     )
-  } else if name.equals(b"dew_u64_load") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(8i32),
-    )
-  } else if name.equals(b"dew_swar64_load") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(8i32),
-    )
-  } else if name.equals(b"dew_i64_store") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(9i32),
-    )
-  } else if name.equals(b"dew_u64_store") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(9i32),
-    )
-  } else if name.equals(b"dew_swar64_store") {
+  } else if name.equals(b"i64.store") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(9i32),
@@ -183,66 +143,31 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(13i32),
     )
-  } else if name.equals(b"dew_v128_load") {
+  } else if name.equals(b"v128.load") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(14i32),
     )
-  } else if name.equals(b"dew_v128_store") {
+  } else if name.equals(b"v128.store") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(15i32),
     )
-  } else if name.equals(b"swar32_and") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_and(),
-    )
-  } else if name.equals(b"swar32_or") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_or(),
-    )
-  } else if name.equals(b"swar32_xor") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_xor(),
-    )
-  } else if name.equals(b"swar64_and") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i64_and(),
-    )
-  } else if name.equals(b"swar64_or") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i64_or(),
-    )
-  } else if name.equals(b"swar64_xor") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i64_xor(),
-    )
-  } else if name.equals(b"v128_and") {
+  } else if name.equals(b"v128.and") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_v128_and(),
     )
-  } else if name.equals(b"v128_or") {
+  } else if name.equals(b"v128.or") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_v128_or(),
     )
-  } else if name.equals(b"v128_xor") {
+  } else if name.equals(b"v128.xor") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_v128_xor(),
     )
-  } else if name.equals(b"dew_reinterpret") {
-  } else if name.equals(b"swar32_from_bits") {
-  } else if name.equals(b"swar32_to_bits") {
-  } else if name.equals(b"swar64_from_bits") {
-  } else if name.equals(b"swar64_to_bits") {
   } else if name.equals(b"unsafe.bitcast") {
   } else if name.equals(b"dew_i8_or") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
@@ -516,17 +441,17 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32_extend16s(),
     )
-  } else if name.equals(b"dew_i32_or") {
+  } else if name.equals(b"i32.or") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32_or(),
     )
-  } else if name.equals(b"dew_i32_xor") {
+  } else if name.equals(b"i32.xor") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32_xor(),
     )
-  } else if name.equals(b"dew_i32_and") {
+  } else if name.equals(b"i32.and") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32_and(),
@@ -581,17 +506,17 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32_rem_s(),
     )
-  } else if name.equals(b"dew_i64_or") {
+  } else if name.equals(b"i64.or") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64_or(),
     )
-  } else if name.equals(b"dew_i64_xor") {
+  } else if name.equals(b"i64.xor") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64_xor(),
     )
-  } else if name.equals(b"dew_i64_and") {
+  } else if name.equals(b"i64.and") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64_and(),
@@ -1013,21 +938,6 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32_and(),
     )
-  } else if name.equals(b"dew_u32_or") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_or(),
-    )
-  } else if name.equals(b"dew_u32_xor") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_xor(),
-    )
-  } else if name.equals(b"dew_u32_and") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_and(),
-    )
   } else if name.equals(b"dew_u32_eq") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
@@ -1097,21 +1007,6 @@ fn self_host_emit_linked_builtin(
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32_ctz(),
-    )
-  } else if name.equals(b"dew_u64_or") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i64_or(),
-    )
-  } else if name.equals(b"dew_u64_xor") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i64_xor(),
-    )
-  } else if name.equals(b"dew_u64_and") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i64_and(),
     )
   } else if name.equals(b"dew_u64_eq") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(

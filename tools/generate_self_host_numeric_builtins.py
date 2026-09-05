@@ -70,8 +70,8 @@ def emit_push(expression: str) -> list[str]:
 def main() -> None:
     source = SOURCE.read_text()
     branches = BRANCH.findall(source)
-    if len(branches) != 162:
-        raise SystemExit(f"expected 162 numeric builtin branches, found {len(branches)}")
+    if len(branches) != 156:
+        raise SystemExit(f"expected 156 numeric builtin branches, found {len(branches)}")
     conversion_branches = BRANCH.findall(CONVERSION_SOURCE.read_text())
     if len(conversion_branches) != 100:
         raise SystemExit(
@@ -97,41 +97,22 @@ def main() -> None:
         ("dew_i16_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(4i32)"]),
         ("dew_u16_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(5i32)"]),
         ("dew_u16_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(4i32)"]),
-        ("dew_i32_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(6i32)"]),
-        ("dew_u32_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(6i32)"]),
-        ("dew_swar32_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(6i32)"]),
-        ("dew_i32_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(7i32)"]),
-        ("dew_u32_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(7i32)"]),
-        ("dew_swar32_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(7i32)"]),
-        ("dew_i64_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(8i32)"]),
-        ("dew_u64_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(8i32)"]),
-        ("dew_swar64_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(8i32)"]),
-        ("dew_i64_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(9i32)"]),
-        ("dew_u64_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(9i32)"]),
-        ("dew_swar64_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(9i32)"]),
+        ("i32.load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(6i32)"]),
+        ("i32.store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(7i32)"]),
+        ("i64.load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(8i32)"]),
+        ("i64.store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(9i32)"]),
         ("dew_f32_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(10i32)"]),
         ("dew_f32_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(11i32)"]),
         ("dew_f64_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(12i32)"]),
         ("dew_f64_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(13i32)"]),
-        ("dew_v128_load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(14i32)"]),
-        ("dew_v128_store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(15i32)"]),
-        ("swar32_and", ["StarshineFfi.ffi_lib_Instruction_i32_and()"]),
-        ("swar32_or", ["StarshineFfi.ffi_lib_Instruction_i32_or()"]),
-        ("swar32_xor", ["StarshineFfi.ffi_lib_Instruction_i32_xor()"]),
-        ("swar64_and", ["StarshineFfi.ffi_lib_Instruction_i64_and()"]),
-        ("swar64_or", ["StarshineFfi.ffi_lib_Instruction_i64_or()"]),
-        ("swar64_xor", ["StarshineFfi.ffi_lib_Instruction_i64_xor()"]),
-        ("v128_and", ["StarshineFfi.ffi_lib_Instruction_v128_and()"]),
-        ("v128_or", ["StarshineFfi.ffi_lib_Instruction_v128_or()"]),
-        ("v128_xor", ["StarshineFfi.ffi_lib_Instruction_v128_xor()"]),
+        ("v128.load", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(14i32)"]),
+        ("v128.store", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(15i32)"]),
+        ("v128.and", ["StarshineFfi.ffi_lib_Instruction_v128_and()"]),
+        ("v128.or", ["StarshineFfi.ffi_lib_Instruction_v128_or()"]),
+        ("v128.xor", ["StarshineFfi.ffi_lib_Instruction_v128_xor()"]),
     ]
     identities = {
         "unsafe.bitcast",
-        "swar32_from_bits",
-        "swar32_to_bits",
-        "swar64_from_bits",
-        "swar64_to_bits",
-        "dew_reinterpret",
     }
 
     lines = [

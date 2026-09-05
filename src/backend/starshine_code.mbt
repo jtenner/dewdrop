@@ -920,7 +920,7 @@ fn starshine_inline_builtin_instructions(
       starshine_match_cast(array_type),
       @lib.Instruction::array_len(),
     ])
-  } else if name == b"dew_reinterpret" || name == b"unsafe.bitcast" {
+  } else if name == b"unsafe.bitcast" {
     Ok([])
   } else if name == b"ref_null" {
     Ok([
@@ -938,28 +938,11 @@ fn starshine_inline_builtin_instructions(
     Ok([@lib.Instruction::i32_lt_s()])
   } else if name == b"i32_lte" {
     Ok([@lib.Instruction::i32_le_s()])
-  } else if name == b"swar32_from_bits" ||
-    name == b"swar32_to_bits" ||
-    name == b"swar64_from_bits" ||
-    name == b"swar64_to_bits" {
-    Ok([])
-  } else if name == b"swar32_and" {
-    Ok([@lib.Instruction::i32_and()])
-  } else if name == b"swar32_or" {
-    Ok([@lib.Instruction::i32_or()])
-  } else if name == b"swar32_xor" {
-    Ok([@lib.Instruction::i32_xor()])
-  } else if name == b"swar64_and" {
-    Ok([@lib.Instruction::i64_and()])
-  } else if name == b"swar64_or" {
-    Ok([@lib.Instruction::i64_or()])
-  } else if name == b"swar64_xor" {
-    Ok([@lib.Instruction::i64_xor()])
-  } else if name == b"v128_and" {
+  } else if name == b"v128.and" {
     Ok([@lib.Instruction::v128_and()])
-  } else if name == b"v128_or" {
+  } else if name == b"v128.or" {
     Ok([@lib.Instruction::v128_or()])
-  } else if name == b"v128_xor" {
+  } else if name == b"v128.xor" {
     Ok([@lib.Instruction::v128_xor()])
   } else {
     Err(UnsupportedBuiltin(name))

@@ -1,38 +1,182 @@
 open dew.std.option
 
+fn self_host_verify_body_raw_intrinsic(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  expression: SelfHostPlannedPhysicalExpressionCarrier,
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+) -> Unit {
+  let mut name = b""
+  let arguments = match module_.expressions[expression.expression].kind {
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(target, _, _, arguments, _) => {
+      name = target
+      arguments
+    }
+    SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, arguments, _) => {
+      match self_host_linked_builtin_name(link, declaration) {
+        Option::Some(target) => {
+          name = target
+        }
+        Option::None => return
+      }
+      arguments
+    }
+    _ => return
+  }
+  match self_host_raw_intrinsic_error(name, Option::Some(plan), module_, expression.expression, arguments) {
+    Option::Some(error) => {
+      let expected = match self_host_raw_intrinsic_signature(name) {
+        Option::Some(signature) => signature.result
+        Option::None => if arguments.length == 1u32 && arguments.start < module_.expression_children.length() {
+          match self_host_body_plan_expression(plan, module_.expression_children[arguments.start]) {
+            Option::Some(source) => source.carrier
+            Option::None => SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+          }
+        } else {
+          SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+        }
+      }
+      self_host_body_add_diagnostic(diagnostics, plan, module_, expression.expression, 0u64, error, expected, expression.carrier)
+    }
+    Option::None => {}
+  }
+}
+
+pub struct SelfHostRawIntrinsicSignature {
+  first: SelfHostWasmBodyCarrier
+  second: Option<SelfHostWasmBodyCarrier>
+  result: SelfHostWasmBodyCarrier
+}
+
+fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSignature> {
+  let mut carrier = SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+  let mut load = false
+  let mut store = false
+  if name.equals(b"i32.and") || name.equals(b"i32.or") || name.equals(b"i32.xor") {
+    carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+  } else if name.equals(b"i64.and") || name.equals(b"i64.or") || name.equals(b"i64.xor") {
+    carrier = SelfHostWasmBodyCarrier::I64BodyCarrier
+  } else if name.equals(b"v128.and") || name.equals(b"v128.or") || name.equals(b"v128.xor") {
+    carrier = SelfHostWasmBodyCarrier::V128BodyCarrier
+  } else if name.equals(b"i32.load") || name.equals(b"i32.store") {
+    carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+    load = name.equals(b"i32.load")
+    store = !load
+  } else if name.equals(b"i64.load") || name.equals(b"i64.store") {
+    carrier = SelfHostWasmBodyCarrier::I64BodyCarrier
+    load = name.equals(b"i64.load")
+    store = !load
+  } else if name.equals(b"v128.load") || name.equals(b"v128.store") {
+    carrier = SelfHostWasmBodyCarrier::V128BodyCarrier
+    load = name.equals(b"v128.load")
+    store = !load
+  } else {
+    return Option::None
+  }
+  Option::Some(SelfHostRawIntrinsicSignature::{
+    first: if load || store {
+      SelfHostWasmBodyCarrier::I32BodyCarrier
+    } else {
+      carrier
+    }
+    second: if load {
+      Option::None
+    } else {
+      Option::Some(carrier)
+    }
+    result: if store {
+      SelfHostWasmBodyCarrier::UnitBodyCarrier
+    } else {
+      carrier
+    }
+  })
+}
+
 // A no-op cast preserves a concrete non-reference Wasm carrier. Equal eqref
 // carriers do not establish equal heap types, so references are not accepted.
-fn self_host_raw_bitcast_error(
+fn self_host_raw_intrinsic_error(
   name: Bytes,
   plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
   module_: SelfHostPlannedModuleLowering,
   expression: U32,
   arguments: SelfHostHirSpan,
 ) -> Option<String> {
-  if !name.equals(b"unsafe.bitcast") {
+  let signature = self_host_raw_intrinsic_signature(name)
+  if !name.equals(b"unsafe.bitcast") && signature is Option::None {
     return Option::None
   }
-  if arguments.length != 1u32 || !self_host_array_span_is_valid(
+  let count = match signature {
+    Option::Some(value) => match value.second {
+      Option::Some(_) => 2u32
+      Option::None => 1u32
+    }
+    Option::None => 1u32
+  }
+  if arguments.length != count || !self_host_array_span_is_valid(
     arguments.start,
     arguments.length,
     module_.expression_children.length(),
   ) {
-    return Option::Some("unsafe.bitcast requires exactly one argument")
+    return Option::Some("raw intrinsic operand count does not match its opcode")
   }
   let body_plan = match plan {
     Option::Some(value) => value
-    Option::None => return Option::Some("unsafe.bitcast requires a physical body plan")
+    Option::None => return Option::Some("raw intrinsic requires a physical body plan")
+  }
+  let target = match self_host_body_plan_expression(body_plan, expression) {
+    Option::Some(value) => value.carrier
+    Option::None => return Option::Some("raw intrinsic result plan is missing")
+  }
+  // Never is flow, not an operand carrier. Require both frozen carrier and
+  // flow evidence before omitting the stack contract for an unexecuted opcode.
+  if target is SelfHostWasmBodyCarrier::NeverBodyCarrier &&
+    expression < module_.expressions.length() &&
+    !module_.expressions[expression].flow.falls_through {
+    let _ = while 0u32 {
+      index => if index < arguments.length {
+        let argument = module_.expression_children[arguments.start + index]
+        match self_host_body_plan_expression(body_plan, argument) {
+          Option::Some(operand) => if operand.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier &&
+            argument < module_.expressions.length() &&
+            !module_.expressions[argument].flow.falls_through {
+            return Option::None
+          }
+          Option::None => return Option::Some("raw intrinsic operand plan is missing")
+        }
+        continue index + 1u32
+      } else {
+        break ()
+      }
+    }
   }
   let source = match self_host_body_plan_expression(
     body_plan,
     module_.expression_children[arguments.start],
   ) {
     Option::Some(value) => value.carrier
-    Option::None => return Option::Some("unsafe.bitcast source plan is missing")
+    Option::None => return Option::Some("raw intrinsic source plan is missing")
   }
-  let target = match self_host_body_plan_expression(body_plan, expression) {
-    Option::Some(value) => value.carrier
-    Option::None => return Option::Some("unsafe.bitcast result plan is missing")
+  match signature {
+    Option::Some(value) => {
+      if !self_host_body_carrier_equal(source, value.first) || !self_host_body_carrier_equal(target, value.result) {
+        return Option::Some("raw intrinsic input or result carrier does not match its opcode")
+      }
+      match value.second {
+        Option::Some(expected) => {
+          let second = match self_host_body_plan_expression(body_plan, module_.expression_children[arguments.start + 1u32]) {
+            Option::Some(operand) => operand.carrier
+            Option::None => return Option::Some("raw intrinsic second operand plan is missing")
+          }
+          if !self_host_body_carrier_equal(second, expected) {
+            return Option::Some("raw intrinsic second operand carrier does not match its opcode")
+          }
+        }
+        Option::None => {}
+      }
+      return Option::None
+    }
+    Option::None => {}
   }
   let supported = match source {
     SelfHostWasmBodyCarrier::I32BodyCarrier => true

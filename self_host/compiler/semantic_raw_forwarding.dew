@@ -1,0 +1,187 @@
+open dew.std.option
+
+// Read the selected declaration's metadata. Do not recursively resolve wrapper
+// names here: an optimization must not change overload or specialization choice.
+fn self_host_raw_expression_target(
+  lowering: SelfHostPlannedProgramLowering,
+  value: SelfHostPlannedExpression,
+) -> Option<Bytes> {
+  let declaration = match value.kind {
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, declaration, _, _, _) => declaration
+    SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => declaration
+    _ => return Option::None
+  }
+  match lowering.index.declaration_owner(declaration) {
+    Option::Some(owner) => if owner < lowering.modules.length() {
+      match self_host_program_specialization_callable(lowering.modules[owner], declaration) {
+        Option::Some(callable) => if callable.has_receiver {
+          Option::None
+        } else {
+          match callable.kind {
+            SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => Option::Some(name)
+            _ => Option::None
+          }
+        }
+        Option::None => Option::None
+      }
+    } else {
+      Option::None
+    }
+    Option::None => Option::None
+  }
+}
+
+fn self_host_raw_expression_arguments(value: SelfHostPlannedExpression) -> SelfHostHirSpan {
+  match value.kind {
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, arguments, _) => arguments
+    SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, arguments, _) => arguments
+    _ => SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+  }
+}
+
+fn self_host_raw_strip_identity_casts(
+  lowering: SelfHostPlannedProgramLowering,
+  module_: SelfHostPlannedModuleLowering,
+  expressions: SelfHostHirSpan,
+  expression: U32,
+) -> U32 {
+  if !self_host_array_span_is_valid(expressions.start, expressions.length, module_.expressions.length()) {
+    return expression
+  }
+  let mut current = expression
+  let _ = while 0u32 {
+    hops => if hops < expressions.length && current < module_.expressions.length() {
+      if current < expressions.start || current - expressions.start >= expressions.length {
+        return expression
+      }
+      let value = module_.expressions[current]
+      match self_host_raw_expression_target(lowering, value) {
+        Option::Some(name) => if !name.equals(b"unsafe.bitcast") {
+          return current
+        }
+        Option::None => return current
+      }
+      let arguments = self_host_raw_expression_arguments(value)
+      if arguments.length != 1u32 || arguments.start >= module_.expression_children.length() {
+        return current
+      }
+      let input = module_.expression_children[arguments.start]
+      if input >= module_.expressions.length() {
+        return current
+      }
+      let carrier = self_host_body_carrier_from_shape(value.shape)
+      let concrete = match carrier {
+        SelfHostWasmBodyCarrier::I32BodyCarrier => true
+        SelfHostWasmBodyCarrier::I64BodyCarrier => true
+        SelfHostWasmBodyCarrier::F32BodyCarrier => true
+        SelfHostWasmBodyCarrier::F64BodyCarrier => true
+        SelfHostWasmBodyCarrier::V128BodyCarrier => true
+        _ => false
+      }
+      if !concrete || !self_host_body_carrier_equal(carrier, self_host_body_carrier_from_shape(module_.expressions[input].shape)) {
+        return current
+      }
+      current = input
+      continue hops + 1u32
+    } else {
+      break ()
+    }
+  }
+  expression
+}
+
+fn self_host_raw_forwarding_builtin(
+  lowering: SelfHostPlannedProgramLowering,
+  module_: SelfHostPlannedModuleLowering,
+  declaration: U64,
+) -> Option<Bytes> {
+  let callable = match self_host_program_specialization_callable(module_, declaration) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  if callable.has_receiver || self_host_program_specialization_callable_generics(callable).length != 0u32 {
+    return Option::None
+  }
+  let body_id = match self_host_program_specialization_callable_body(callable) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let index = self_host_semantic_id_local(body_id)
+  if index >= module_.bodies.length() {
+    return Option::None
+  }
+  let body = self_host_planned_body_lowering_identity(module_.bodies[index])
+  if !self_host_u64_equal(body.body, body_id) || self_host_u32_greater(callable.parameters.length, body.locals.length) || !self_host_array_span_is_valid(body.locals.start, body.locals.length, module_.locals.length()) {
+    return Option::None
+  }
+  let block = match body.root {
+    SelfHostHirBodyRoot::BlockBodyRoot(value) => value
+    _ => return Option::None
+  }
+  if block >= module_.blocks.length() {
+    return Option::None
+  }
+  let items = module_.blocks[block].items
+  if !self_host_u32_equal(items.length, 1u32) || !self_host_u32_greater(module_.block_items.length(), items.start) {
+    return Option::None
+  }
+  let expression = match module_.block_items[items.start].kind {
+    SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => value
+    _ => return Option::None
+  }
+  if expression < body.expressions.start || expression - body.expressions.start >= body.expressions.length {
+    return Option::None
+  }
+  let unwrapped = self_host_raw_strip_identity_casts(lowering, module_, body.expressions, expression)
+  if unwrapped >= module_.expressions.length() {
+    return Option::None
+  }
+  let value = module_.expressions[unwrapped]
+  if unwrapped != expression && callable.parameters.length == 1u32 {
+    match value.kind {
+      SelfHostPlannedExpressionKind::PlannedLocalGet(0u32) => if module_.locals[body.locals.start].kind is SelfHostBodyLocalKind::ParameterLocal {
+        return Option::Some(b"unsafe.bitcast")
+      }
+      _ => {}
+    }
+  }
+  let name = match self_host_raw_expression_target(lowering, value) {
+    Option::Some(target) => target
+    Option::None => return Option::None
+  }
+  if self_host_raw_intrinsic_signature(name) is Option::None {
+    return Option::None
+  }
+  let arguments = self_host_raw_expression_arguments(value)
+  if arguments.length != callable.parameters.length || !self_host_array_span_is_valid(arguments.start, arguments.length, module_.expression_children.length()) {
+    return Option::None
+  }
+  let _ = while 0u32 {
+    parameter => if parameter < arguments.length {
+      let source = module_.expression_children[arguments.start + parameter]
+      if source < body.expressions.start || source - body.expressions.start >= body.expressions.length {
+        return Option::None
+      }
+      let argument = self_host_raw_strip_identity_casts(lowering, module_, body.expressions, source)
+      if argument >= module_.expressions.length() {
+        return Option::None
+      }
+      match module_.expressions[argument].kind {
+        SelfHostPlannedExpressionKind::PlannedLocalGet(local) => if local != parameter {
+          return Option::None
+        }
+        _ => return Option::None
+      }
+      if !(module_.locals[self_host_u32_add(body.locals.start, parameter)].kind is SelfHostBodyLocalKind::ParameterLocal) {
+        return Option::None
+      }
+      continue parameter + 1u32
+    } else {
+      break ()
+    }
+  }
+  Option::Some(name)
+}

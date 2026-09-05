@@ -28,22 +28,6 @@ pub builtin wasm_bytes_load_u8x16(value: Bytes, start: U32) -> U8x16 = "dew_byte
 pub builtin wasm_string_load_u8x16(value: String, start: U32) -> U8x16 = "dew_string_load_u8x16"
 
 // std/f32x4.dew
-pub builtin wasm_f32x4_from_v128(value: V128) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_f32x4_to_v128(value: F32x4) -> V128 = "dew_reinterpret"
-pub builtin wasm_f32x4_reinterpret_as_i8x16(value: F32x4) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_f32x4_reinterpret_as_u8x16(value: F32x4) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_f32x4_reinterpret_as_i16x8(value: F32x4) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_f32x4_reinterpret_as_u16x8(value: F32x4) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_f32x4_reinterpret_as_i32x4(value: F32x4) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_f32x4_reinterpret_as_u32x4(value: F32x4) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_f32x4_reinterpret_as_i64x2(value: F32x4) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_f32x4_reinterpret_as_u64x2(value: F32x4) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_f32x4_reinterpret_as_f64x2(value: F32x4) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_f32x4_load(address: U32) -> F32x4 = "dew_v128_load"
-pub builtin wasm_f32x4_store(address: U32, value: F32x4) -> Unit = "dew_v128_store"
-pub builtin wasm_f32x4_and(left: F32x4, right: F32x4) -> F32x4 = "v128_and"
-pub builtin wasm_f32x4_or(left: F32x4, right: F32x4) -> F32x4 = "v128_or"
-pub builtin wasm_f32x4_xor(left: F32x4, right: F32x4) -> F32x4 = "v128_xor"
 pub builtin wasm_f32x4_not(value: F32x4) -> F32x4 = "dew_v128_not"
 pub builtin wasm_f32x4_andnot(left: F32x4, right: F32x4) -> F32x4 = "dew_v128_andnot"
 pub builtin wasm_f32x4_bitselect(yes: F32x4, no: F32x4, mask: F32x4) -> F32x4 = "dew_v128_bitselect"
@@ -91,24 +75,56 @@ pub builtin wasm_f32x4_ceil(value: F32x4) -> F32x4 = "dew_v128_ceil_f32"
 pub builtin wasm_f32x4_floor(value: F32x4) -> F32x4 = "dew_v128_floor_f32"
 pub builtin wasm_f32x4_trunc(value: F32x4) -> F32x4 = "dew_v128_trunc_f32"
 pub builtin wasm_f32x4_nearest(value: F32x4) -> F32x4 = "dew_v128_nearest_f32"
+pub fn wasm_f32x4_from_v128(value: V128) -> F32x4 {
+  unsafe_bitcast::<V128, F32x4>(value)
+}
+pub fn wasm_f32x4_to_v128(value: F32x4) -> V128 {
+  unsafe_bitcast::<F32x4, V128>(value)
+}
+pub fn wasm_f32x4_reinterpret_as_i8x16(value: F32x4) -> I8x16 {
+  unsafe_bitcast::<F32x4, I8x16>(value)
+}
+pub fn wasm_f32x4_reinterpret_as_u8x16(value: F32x4) -> U8x16 {
+  unsafe_bitcast::<F32x4, U8x16>(value)
+}
+pub fn wasm_f32x4_reinterpret_as_i16x8(value: F32x4) -> I16x8 {
+  unsafe_bitcast::<F32x4, I16x8>(value)
+}
+pub fn wasm_f32x4_reinterpret_as_u16x8(value: F32x4) -> U16x8 {
+  unsafe_bitcast::<F32x4, U16x8>(value)
+}
+pub fn wasm_f32x4_reinterpret_as_i32x4(value: F32x4) -> I32x4 {
+  unsafe_bitcast::<F32x4, I32x4>(value)
+}
+pub fn wasm_f32x4_reinterpret_as_u32x4(value: F32x4) -> U32x4 {
+  unsafe_bitcast::<F32x4, U32x4>(value)
+}
+pub fn wasm_f32x4_reinterpret_as_i64x2(value: F32x4) -> I64x2 {
+  unsafe_bitcast::<F32x4, I64x2>(value)
+}
+pub fn wasm_f32x4_reinterpret_as_u64x2(value: F32x4) -> U64x2 {
+  unsafe_bitcast::<F32x4, U64x2>(value)
+}
+pub fn wasm_f32x4_reinterpret_as_f64x2(value: F32x4) -> F64x2 {
+  unsafe_bitcast::<F32x4, F64x2>(value)
+}
+pub fn wasm_f32x4_load(address: U32) -> F32x4 {
+  unsafe_bitcast::<V128, F32x4>(v128_load(address))
+}
+pub fn wasm_f32x4_store(address: U32, value: F32x4) -> Unit {
+  v128_store(address, unsafe_bitcast::<F32x4, V128>(value))
+}
+pub fn wasm_f32x4_and(left: F32x4, right: F32x4) -> F32x4 {
+  unsafe_bitcast::<V128, F32x4>(v128_and(unsafe_bitcast::<F32x4, V128>(left), unsafe_bitcast::<F32x4, V128>(right)))
+}
+pub fn wasm_f32x4_or(left: F32x4, right: F32x4) -> F32x4 {
+  unsafe_bitcast::<V128, F32x4>(v128_or(unsafe_bitcast::<F32x4, V128>(left), unsafe_bitcast::<F32x4, V128>(right)))
+}
+pub fn wasm_f32x4_xor(left: F32x4, right: F32x4) -> F32x4 {
+  unsafe_bitcast::<V128, F32x4>(v128_xor(unsafe_bitcast::<F32x4, V128>(left), unsafe_bitcast::<F32x4, V128>(right)))
+}
 
 // std/f64x2.dew
-pub builtin wasm_f64x2_from_v128(value: V128) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_f64x2_to_v128(value: F64x2) -> V128 = "dew_reinterpret"
-pub builtin wasm_f64x2_reinterpret_as_i8x16(value: F64x2) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_f64x2_reinterpret_as_u8x16(value: F64x2) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_f64x2_reinterpret_as_i16x8(value: F64x2) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_f64x2_reinterpret_as_u16x8(value: F64x2) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_f64x2_reinterpret_as_i32x4(value: F64x2) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_f64x2_reinterpret_as_u32x4(value: F64x2) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_f64x2_reinterpret_as_i64x2(value: F64x2) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_f64x2_reinterpret_as_u64x2(value: F64x2) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_f64x2_reinterpret_as_f32x4(value: F64x2) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_f64x2_load(address: U32) -> F64x2 = "dew_v128_load"
-pub builtin wasm_f64x2_store(address: U32, value: F64x2) -> Unit = "dew_v128_store"
-pub builtin wasm_f64x2_and(left: F64x2, right: F64x2) -> F64x2 = "v128_and"
-pub builtin wasm_f64x2_or(left: F64x2, right: F64x2) -> F64x2 = "v128_or"
-pub builtin wasm_f64x2_xor(left: F64x2, right: F64x2) -> F64x2 = "v128_xor"
 pub builtin wasm_f64x2_not(value: F64x2) -> F64x2 = "dew_v128_not"
 pub builtin wasm_f64x2_andnot(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_andnot"
 pub builtin wasm_f64x2_bitselect(yes: F64x2, no: F64x2, mask: F64x2) -> F64x2 = "dew_v128_bitselect"
@@ -148,50 +164,126 @@ pub builtin wasm_f64x2_ceil(value: F64x2) -> F64x2 = "dew_v128_ceil_f64"
 pub builtin wasm_f64x2_floor(value: F64x2) -> F64x2 = "dew_v128_floor_f64"
 pub builtin wasm_f64x2_trunc(value: F64x2) -> F64x2 = "dew_v128_trunc_f64"
 pub builtin wasm_f64x2_nearest(value: F64x2) -> F64x2 = "dew_v128_nearest_f64"
+pub fn wasm_f64x2_from_v128(value: V128) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(value)
+}
+pub fn wasm_f64x2_to_v128(value: F64x2) -> V128 {
+  unsafe_bitcast::<F64x2, V128>(value)
+}
+pub fn wasm_f64x2_reinterpret_as_i8x16(value: F64x2) -> I8x16 {
+  unsafe_bitcast::<F64x2, I8x16>(value)
+}
+pub fn wasm_f64x2_reinterpret_as_u8x16(value: F64x2) -> U8x16 {
+  unsafe_bitcast::<F64x2, U8x16>(value)
+}
+pub fn wasm_f64x2_reinterpret_as_i16x8(value: F64x2) -> I16x8 {
+  unsafe_bitcast::<F64x2, I16x8>(value)
+}
+pub fn wasm_f64x2_reinterpret_as_u16x8(value: F64x2) -> U16x8 {
+  unsafe_bitcast::<F64x2, U16x8>(value)
+}
+pub fn wasm_f64x2_reinterpret_as_i32x4(value: F64x2) -> I32x4 {
+  unsafe_bitcast::<F64x2, I32x4>(value)
+}
+pub fn wasm_f64x2_reinterpret_as_u32x4(value: F64x2) -> U32x4 {
+  unsafe_bitcast::<F64x2, U32x4>(value)
+}
+pub fn wasm_f64x2_reinterpret_as_i64x2(value: F64x2) -> I64x2 {
+  unsafe_bitcast::<F64x2, I64x2>(value)
+}
+pub fn wasm_f64x2_reinterpret_as_u64x2(value: F64x2) -> U64x2 {
+  unsafe_bitcast::<F64x2, U64x2>(value)
+}
+pub fn wasm_f64x2_reinterpret_as_f32x4(value: F64x2) -> F32x4 {
+  unsafe_bitcast::<F64x2, F32x4>(value)
+}
+pub fn wasm_f64x2_load(address: U32) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(v128_load(address))
+}
+pub fn wasm_f64x2_store(address: U32, value: F64x2) -> Unit {
+  v128_store(address, unsafe_bitcast::<F64x2, V128>(value))
+}
+pub fn wasm_f64x2_and(left: F64x2, right: F64x2) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(v128_and(unsafe_bitcast::<F64x2, V128>(left), unsafe_bitcast::<F64x2, V128>(right)))
+}
+pub fn wasm_f64x2_or(left: F64x2, right: F64x2) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(v128_or(unsafe_bitcast::<F64x2, V128>(left), unsafe_bitcast::<F64x2, V128>(right)))
+}
+pub fn wasm_f64x2_xor(left: F64x2, right: F64x2) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(v128_xor(unsafe_bitcast::<F64x2, V128>(left), unsafe_bitcast::<F64x2, V128>(right)))
+}
 
 // std/i16x2.dew
-pub builtin wasm_i16x2_from_swar32(value: Swar32) -> I16x2 = "dew_reinterpret"
-pub builtin wasm_i16x2_to_swar32(value: I16x2) -> Swar32 = "dew_reinterpret"
-pub builtin wasm_i16x2_reinterpret_as_i8x4(value: I16x2) -> I8x4 = "dew_reinterpret"
-pub builtin wasm_i16x2_reinterpret_as_u8x4(value: I16x2) -> U8x4 = "dew_reinterpret"
-pub builtin wasm_i16x2_reinterpret_as_u16x2(value: I16x2) -> U16x2 = "dew_reinterpret"
-pub builtin wasm_i16x2_load(address: U32) -> I16x2 = "dew_swar32_load"
-pub builtin wasm_i16x2_store(address: U32, value: I16x2) -> Unit = "dew_swar32_store"
-pub builtin wasm_i16x2_and(left: I16x2, right: I16x2) -> I16x2 = "swar32_and"
-pub builtin wasm_i16x2_or(left: I16x2, right: I16x2) -> I16x2 = "swar32_or"
-pub builtin wasm_i16x2_xor(left: I16x2, right: I16x2) -> I16x2 = "swar32_xor"
+pub fn wasm_i16x2_from_swar32(value: Swar32) -> I16x2 {
+  unsafe_bitcast::<Swar32, I16x2>(value)
+}
+pub fn wasm_i16x2_to_swar32(value: I16x2) -> Swar32 {
+  unsafe_bitcast::<I16x2, Swar32>(value)
+}
+pub fn wasm_i16x2_reinterpret_as_i8x4(value: I16x2) -> I8x4 {
+  unsafe_bitcast::<I16x2, I8x4>(value)
+}
+pub fn wasm_i16x2_reinterpret_as_u8x4(value: I16x2) -> U8x4 {
+  unsafe_bitcast::<I16x2, U8x4>(value)
+}
+pub fn wasm_i16x2_reinterpret_as_u16x2(value: I16x2) -> U16x2 {
+  unsafe_bitcast::<I16x2, U16x2>(value)
+}
+pub fn wasm_i16x2_load(address: U32) -> I16x2 {
+  unsafe_bitcast::<U32, I16x2>(u32_load(address))
+}
+pub fn wasm_i16x2_store(address: U32, value: I16x2) -> Unit {
+  u32_store(address, unsafe_bitcast::<I16x2, U32>(value))
+}
+pub fn wasm_i16x2_and(left: I16x2, right: I16x2) -> I16x2 {
+  unsafe_bitcast::<U32, I16x2>(u32_and(unsafe_bitcast::<I16x2, U32>(left), unsafe_bitcast::<I16x2, U32>(right)))
+}
+pub fn wasm_i16x2_or(left: I16x2, right: I16x2) -> I16x2 {
+  unsafe_bitcast::<U32, I16x2>(u32_or(unsafe_bitcast::<I16x2, U32>(left), unsafe_bitcast::<I16x2, U32>(right)))
+}
+pub fn wasm_i16x2_xor(left: I16x2, right: I16x2) -> I16x2 {
+  unsafe_bitcast::<U32, I16x2>(u32_xor(unsafe_bitcast::<I16x2, U32>(left), unsafe_bitcast::<I16x2, U32>(right)))
+}
 
 // std/i16x4.dew
-pub builtin wasm_i16x4_from_swar64(value: Swar64) -> I16x4 = "dew_reinterpret"
-pub builtin wasm_i16x4_to_swar64(value: I16x4) -> Swar64 = "dew_reinterpret"
-pub builtin wasm_i16x4_reinterpret_as_i8x8(value: I16x4) -> I8x8 = "dew_reinterpret"
-pub builtin wasm_i16x4_reinterpret_as_u8x8(value: I16x4) -> U8x8 = "dew_reinterpret"
-pub builtin wasm_i16x4_reinterpret_as_u16x4(value: I16x4) -> U16x4 = "dew_reinterpret"
-pub builtin wasm_i16x4_reinterpret_as_i32x2(value: I16x4) -> I32x2 = "dew_reinterpret"
-pub builtin wasm_i16x4_reinterpret_as_u32x2(value: I16x4) -> U32x2 = "dew_reinterpret"
-pub builtin wasm_i16x4_load(address: U32) -> I16x4 = "dew_swar64_load"
-pub builtin wasm_i16x4_store(address: U32, value: I16x4) -> Unit = "dew_swar64_store"
-pub builtin wasm_i16x4_and(left: I16x4, right: I16x4) -> I16x4 = "swar64_and"
-pub builtin wasm_i16x4_or(left: I16x4, right: I16x4) -> I16x4 = "swar64_or"
-pub builtin wasm_i16x4_xor(left: I16x4, right: I16x4) -> I16x4 = "swar64_xor"
+pub fn wasm_i16x4_from_swar64(value: Swar64) -> I16x4 {
+  unsafe_bitcast::<Swar64, I16x4>(value)
+}
+pub fn wasm_i16x4_to_swar64(value: I16x4) -> Swar64 {
+  unsafe_bitcast::<I16x4, Swar64>(value)
+}
+pub fn wasm_i16x4_reinterpret_as_i8x8(value: I16x4) -> I8x8 {
+  unsafe_bitcast::<I16x4, I8x8>(value)
+}
+pub fn wasm_i16x4_reinterpret_as_u8x8(value: I16x4) -> U8x8 {
+  unsafe_bitcast::<I16x4, U8x8>(value)
+}
+pub fn wasm_i16x4_reinterpret_as_u16x4(value: I16x4) -> U16x4 {
+  unsafe_bitcast::<I16x4, U16x4>(value)
+}
+pub fn wasm_i16x4_reinterpret_as_i32x2(value: I16x4) -> I32x2 {
+  unsafe_bitcast::<I16x4, I32x2>(value)
+}
+pub fn wasm_i16x4_reinterpret_as_u32x2(value: I16x4) -> U32x2 {
+  unsafe_bitcast::<I16x4, U32x2>(value)
+}
+pub fn wasm_i16x4_load(address: U32) -> I16x4 {
+  unsafe_bitcast::<U64, I16x4>(u64_load(address))
+}
+pub fn wasm_i16x4_store(address: U32, value: I16x4) -> Unit {
+  u64_store(address, unsafe_bitcast::<I16x4, U64>(value))
+}
+pub fn wasm_i16x4_and(left: I16x4, right: I16x4) -> I16x4 {
+  unsafe_bitcast::<U64, I16x4>(u64_and(unsafe_bitcast::<I16x4, U64>(left), unsafe_bitcast::<I16x4, U64>(right)))
+}
+pub fn wasm_i16x4_or(left: I16x4, right: I16x4) -> I16x4 {
+  unsafe_bitcast::<U64, I16x4>(u64_or(unsafe_bitcast::<I16x4, U64>(left), unsafe_bitcast::<I16x4, U64>(right)))
+}
+pub fn wasm_i16x4_xor(left: I16x4, right: I16x4) -> I16x4 {
+  unsafe_bitcast::<U64, I16x4>(u64_xor(unsafe_bitcast::<I16x4, U64>(left), unsafe_bitcast::<I16x4, U64>(right)))
+}
 
 // std/i16x8.dew
-pub builtin wasm_i16x8_from_v128(value: V128) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_i16x8_to_v128(value: I16x8) -> V128 = "dew_reinterpret"
-pub builtin wasm_i16x8_reinterpret_as_i8x16(value: I16x8) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_i16x8_reinterpret_as_u8x16(value: I16x8) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_i16x8_reinterpret_as_u16x8(value: I16x8) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_i16x8_reinterpret_as_i32x4(value: I16x8) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_i16x8_reinterpret_as_u32x4(value: I16x8) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_i16x8_reinterpret_as_i64x2(value: I16x8) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_i16x8_reinterpret_as_u64x2(value: I16x8) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_i16x8_reinterpret_as_f32x4(value: I16x8) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_i16x8_reinterpret_as_f64x2(value: I16x8) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_i16x8_load(address: U32) -> I16x8 = "dew_v128_load"
-pub builtin wasm_i16x8_store(address: U32, value: I16x8) -> Unit = "dew_v128_store"
-pub builtin wasm_i16x8_and(left: I16x8, right: I16x8) -> I16x8 = "v128_and"
-pub builtin wasm_i16x8_or(left: I16x8, right: I16x8) -> I16x8 = "v128_or"
-pub builtin wasm_i16x8_xor(left: I16x8, right: I16x8) -> I16x8 = "v128_xor"
 pub builtin wasm_i16x8_not(value: I16x8) -> I16x8 = "dew_v128_not"
 pub builtin wasm_i16x8_andnot(left: I16x8, right: I16x8) -> I16x8 = "dew_v128_andnot"
 pub builtin wasm_i16x8_bitselect(yes: I16x8, no: I16x8, mask: I16x8) -> I16x8 = "dew_v128_bitselect"
@@ -256,38 +348,94 @@ pub builtin wasm_i16x8_all_true(value: I16x8) -> Bool = "dew_v128_all_true_i16"
 pub builtin wasm_i16x8_bitmask(value: I16x8) -> U32 = "dew_v128_bitmask_i16"
 pub builtin wasm_i16x8_shl(value: I16x8, count: U32) -> I16x8 = "dew_v128_shl_i16"
 pub builtin wasm_i16x8_shr_s(value: I16x8, count: U32) -> I16x8 = "dew_v128_shr_s_i16"
+pub fn wasm_i16x8_from_v128(value: V128) -> I16x8 {
+  unsafe_bitcast::<V128, I16x8>(value)
+}
+pub fn wasm_i16x8_to_v128(value: I16x8) -> V128 {
+  unsafe_bitcast::<I16x8, V128>(value)
+}
+pub fn wasm_i16x8_reinterpret_as_i8x16(value: I16x8) -> I8x16 {
+  unsafe_bitcast::<I16x8, I8x16>(value)
+}
+pub fn wasm_i16x8_reinterpret_as_u8x16(value: I16x8) -> U8x16 {
+  unsafe_bitcast::<I16x8, U8x16>(value)
+}
+pub fn wasm_i16x8_reinterpret_as_u16x8(value: I16x8) -> U16x8 {
+  unsafe_bitcast::<I16x8, U16x8>(value)
+}
+pub fn wasm_i16x8_reinterpret_as_i32x4(value: I16x8) -> I32x4 {
+  unsafe_bitcast::<I16x8, I32x4>(value)
+}
+pub fn wasm_i16x8_reinterpret_as_u32x4(value: I16x8) -> U32x4 {
+  unsafe_bitcast::<I16x8, U32x4>(value)
+}
+pub fn wasm_i16x8_reinterpret_as_i64x2(value: I16x8) -> I64x2 {
+  unsafe_bitcast::<I16x8, I64x2>(value)
+}
+pub fn wasm_i16x8_reinterpret_as_u64x2(value: I16x8) -> U64x2 {
+  unsafe_bitcast::<I16x8, U64x2>(value)
+}
+pub fn wasm_i16x8_reinterpret_as_f32x4(value: I16x8) -> F32x4 {
+  unsafe_bitcast::<I16x8, F32x4>(value)
+}
+pub fn wasm_i16x8_reinterpret_as_f64x2(value: I16x8) -> F64x2 {
+  unsafe_bitcast::<I16x8, F64x2>(value)
+}
+pub fn wasm_i16x8_load(address: U32) -> I16x8 {
+  unsafe_bitcast::<V128, I16x8>(v128_load(address))
+}
+pub fn wasm_i16x8_store(address: U32, value: I16x8) -> Unit {
+  v128_store(address, unsafe_bitcast::<I16x8, V128>(value))
+}
+pub fn wasm_i16x8_and(left: I16x8, right: I16x8) -> I16x8 {
+  unsafe_bitcast::<V128, I16x8>(v128_and(unsafe_bitcast::<I16x8, V128>(left), unsafe_bitcast::<I16x8, V128>(right)))
+}
+pub fn wasm_i16x8_or(left: I16x8, right: I16x8) -> I16x8 {
+  unsafe_bitcast::<V128, I16x8>(v128_or(unsafe_bitcast::<I16x8, V128>(left), unsafe_bitcast::<I16x8, V128>(right)))
+}
+pub fn wasm_i16x8_xor(left: I16x8, right: I16x8) -> I16x8 {
+  unsafe_bitcast::<V128, I16x8>(v128_xor(unsafe_bitcast::<I16x8, V128>(left), unsafe_bitcast::<I16x8, V128>(right)))
+}
 
 // std/i32x2.dew
-pub builtin wasm_i32x2_from_swar64(value: Swar64) -> I32x2 = "dew_reinterpret"
-pub builtin wasm_i32x2_to_swar64(value: I32x2) -> Swar64 = "dew_reinterpret"
-pub builtin wasm_i32x2_reinterpret_as_i8x8(value: I32x2) -> I8x8 = "dew_reinterpret"
-pub builtin wasm_i32x2_reinterpret_as_u8x8(value: I32x2) -> U8x8 = "dew_reinterpret"
-pub builtin wasm_i32x2_reinterpret_as_i16x4(value: I32x2) -> I16x4 = "dew_reinterpret"
-pub builtin wasm_i32x2_reinterpret_as_u16x4(value: I32x2) -> U16x4 = "dew_reinterpret"
-pub builtin wasm_i32x2_reinterpret_as_u32x2(value: I32x2) -> U32x2 = "dew_reinterpret"
-pub builtin wasm_i32x2_load(address: U32) -> I32x2 = "dew_swar64_load"
-pub builtin wasm_i32x2_store(address: U32, value: I32x2) -> Unit = "dew_swar64_store"
-pub builtin wasm_i32x2_and(left: I32x2, right: I32x2) -> I32x2 = "swar64_and"
-pub builtin wasm_i32x2_or(left: I32x2, right: I32x2) -> I32x2 = "swar64_or"
-pub builtin wasm_i32x2_xor(left: I32x2, right: I32x2) -> I32x2 = "swar64_xor"
+pub fn wasm_i32x2_from_swar64(value: Swar64) -> I32x2 {
+  unsafe_bitcast::<Swar64, I32x2>(value)
+}
+pub fn wasm_i32x2_to_swar64(value: I32x2) -> Swar64 {
+  unsafe_bitcast::<I32x2, Swar64>(value)
+}
+pub fn wasm_i32x2_reinterpret_as_i8x8(value: I32x2) -> I8x8 {
+  unsafe_bitcast::<I32x2, I8x8>(value)
+}
+pub fn wasm_i32x2_reinterpret_as_u8x8(value: I32x2) -> U8x8 {
+  unsafe_bitcast::<I32x2, U8x8>(value)
+}
+pub fn wasm_i32x2_reinterpret_as_i16x4(value: I32x2) -> I16x4 {
+  unsafe_bitcast::<I32x2, I16x4>(value)
+}
+pub fn wasm_i32x2_reinterpret_as_u16x4(value: I32x2) -> U16x4 {
+  unsafe_bitcast::<I32x2, U16x4>(value)
+}
+pub fn wasm_i32x2_reinterpret_as_u32x2(value: I32x2) -> U32x2 {
+  unsafe_bitcast::<I32x2, U32x2>(value)
+}
+pub fn wasm_i32x2_load(address: U32) -> I32x2 {
+  unsafe_bitcast::<U64, I32x2>(u64_load(address))
+}
+pub fn wasm_i32x2_store(address: U32, value: I32x2) -> Unit {
+  u64_store(address, unsafe_bitcast::<I32x2, U64>(value))
+}
+pub fn wasm_i32x2_and(left: I32x2, right: I32x2) -> I32x2 {
+  unsafe_bitcast::<U64, I32x2>(u64_and(unsafe_bitcast::<I32x2, U64>(left), unsafe_bitcast::<I32x2, U64>(right)))
+}
+pub fn wasm_i32x2_or(left: I32x2, right: I32x2) -> I32x2 {
+  unsafe_bitcast::<U64, I32x2>(u64_or(unsafe_bitcast::<I32x2, U64>(left), unsafe_bitcast::<I32x2, U64>(right)))
+}
+pub fn wasm_i32x2_xor(left: I32x2, right: I32x2) -> I32x2 {
+  unsafe_bitcast::<U64, I32x2>(u64_xor(unsafe_bitcast::<I32x2, U64>(left), unsafe_bitcast::<I32x2, U64>(right)))
+}
 
 // std/i32x4.dew
-pub builtin wasm_i32x4_from_v128(value: V128) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_i32x4_to_v128(value: I32x4) -> V128 = "dew_reinterpret"
-pub builtin wasm_i32x4_reinterpret_as_i8x16(value: I32x4) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_i32x4_reinterpret_as_u8x16(value: I32x4) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_i32x4_reinterpret_as_i16x8(value: I32x4) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_i32x4_reinterpret_as_u16x8(value: I32x4) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_i32x4_reinterpret_as_u32x4(value: I32x4) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_i32x4_reinterpret_as_i64x2(value: I32x4) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_i32x4_reinterpret_as_u64x2(value: I32x4) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_i32x4_reinterpret_as_f32x4(value: I32x4) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_i32x4_reinterpret_as_f64x2(value: I32x4) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_i32x4_load(address: U32) -> I32x4 = "dew_v128_load"
-pub builtin wasm_i32x4_store(address: U32, value: I32x4) -> Unit = "dew_v128_store"
-pub builtin wasm_i32x4_and(left: I32x4, right: I32x4) -> I32x4 = "v128_and"
-pub builtin wasm_i32x4_or(left: I32x4, right: I32x4) -> I32x4 = "v128_or"
-pub builtin wasm_i32x4_xor(left: I32x4, right: I32x4) -> I32x4 = "v128_xor"
 pub builtin wasm_i32x4_not(value: I32x4) -> I32x4 = "dew_v128_not"
 pub builtin wasm_i32x4_andnot(left: I32x4, right: I32x4) -> I32x4 = "dew_v128_andnot"
 pub builtin wasm_i32x4_bitselect(yes: I32x4, no: I32x4, mask: I32x4) -> I32x4 = "dew_v128_bitselect"
@@ -337,24 +485,56 @@ pub builtin wasm_i32x4_all_true(value: I32x4) -> Bool = "dew_v128_all_true_i32"
 pub builtin wasm_i32x4_bitmask(value: I32x4) -> U32 = "dew_v128_bitmask_i32"
 pub builtin wasm_i32x4_shl(value: I32x4, count: U32) -> I32x4 = "dew_v128_shl_i32"
 pub builtin wasm_i32x4_shr_s(value: I32x4, count: U32) -> I32x4 = "dew_v128_shr_s_i32"
+pub fn wasm_i32x4_from_v128(value: V128) -> I32x4 {
+  unsafe_bitcast::<V128, I32x4>(value)
+}
+pub fn wasm_i32x4_to_v128(value: I32x4) -> V128 {
+  unsafe_bitcast::<I32x4, V128>(value)
+}
+pub fn wasm_i32x4_reinterpret_as_i8x16(value: I32x4) -> I8x16 {
+  unsafe_bitcast::<I32x4, I8x16>(value)
+}
+pub fn wasm_i32x4_reinterpret_as_u8x16(value: I32x4) -> U8x16 {
+  unsafe_bitcast::<I32x4, U8x16>(value)
+}
+pub fn wasm_i32x4_reinterpret_as_i16x8(value: I32x4) -> I16x8 {
+  unsafe_bitcast::<I32x4, I16x8>(value)
+}
+pub fn wasm_i32x4_reinterpret_as_u16x8(value: I32x4) -> U16x8 {
+  unsafe_bitcast::<I32x4, U16x8>(value)
+}
+pub fn wasm_i32x4_reinterpret_as_u32x4(value: I32x4) -> U32x4 {
+  unsafe_bitcast::<I32x4, U32x4>(value)
+}
+pub fn wasm_i32x4_reinterpret_as_i64x2(value: I32x4) -> I64x2 {
+  unsafe_bitcast::<I32x4, I64x2>(value)
+}
+pub fn wasm_i32x4_reinterpret_as_u64x2(value: I32x4) -> U64x2 {
+  unsafe_bitcast::<I32x4, U64x2>(value)
+}
+pub fn wasm_i32x4_reinterpret_as_f32x4(value: I32x4) -> F32x4 {
+  unsafe_bitcast::<I32x4, F32x4>(value)
+}
+pub fn wasm_i32x4_reinterpret_as_f64x2(value: I32x4) -> F64x2 {
+  unsafe_bitcast::<I32x4, F64x2>(value)
+}
+pub fn wasm_i32x4_load(address: U32) -> I32x4 {
+  unsafe_bitcast::<V128, I32x4>(v128_load(address))
+}
+pub fn wasm_i32x4_store(address: U32, value: I32x4) -> Unit {
+  v128_store(address, unsafe_bitcast::<I32x4, V128>(value))
+}
+pub fn wasm_i32x4_and(left: I32x4, right: I32x4) -> I32x4 {
+  unsafe_bitcast::<V128, I32x4>(v128_and(unsafe_bitcast::<I32x4, V128>(left), unsafe_bitcast::<I32x4, V128>(right)))
+}
+pub fn wasm_i32x4_or(left: I32x4, right: I32x4) -> I32x4 {
+  unsafe_bitcast::<V128, I32x4>(v128_or(unsafe_bitcast::<I32x4, V128>(left), unsafe_bitcast::<I32x4, V128>(right)))
+}
+pub fn wasm_i32x4_xor(left: I32x4, right: I32x4) -> I32x4 {
+  unsafe_bitcast::<V128, I32x4>(v128_xor(unsafe_bitcast::<I32x4, V128>(left), unsafe_bitcast::<I32x4, V128>(right)))
+}
 
 // std/i64x2.dew
-pub builtin wasm_i64x2_from_v128(value: V128) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_i64x2_to_v128(value: I64x2) -> V128 = "dew_reinterpret"
-pub builtin wasm_i64x2_reinterpret_as_i8x16(value: I64x2) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_i64x2_reinterpret_as_u8x16(value: I64x2) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_i64x2_reinterpret_as_i16x8(value: I64x2) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_i64x2_reinterpret_as_u16x8(value: I64x2) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_i64x2_reinterpret_as_i32x4(value: I64x2) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_i64x2_reinterpret_as_u32x4(value: I64x2) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_i64x2_reinterpret_as_u64x2(value: I64x2) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_i64x2_reinterpret_as_f32x4(value: I64x2) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_i64x2_reinterpret_as_f64x2(value: I64x2) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_i64x2_load(address: U32) -> I64x2 = "dew_v128_load"
-pub builtin wasm_i64x2_store(address: U32, value: I64x2) -> Unit = "dew_v128_store"
-pub builtin wasm_i64x2_and(left: I64x2, right: I64x2) -> I64x2 = "v128_and"
-pub builtin wasm_i64x2_or(left: I64x2, right: I64x2) -> I64x2 = "v128_or"
-pub builtin wasm_i64x2_xor(left: I64x2, right: I64x2) -> I64x2 = "v128_xor"
 pub builtin wasm_i64x2_not(value: I64x2) -> I64x2 = "dew_v128_not"
 pub builtin wasm_i64x2_andnot(left: I64x2, right: I64x2) -> I64x2 = "dew_v128_andnot"
 pub builtin wasm_i64x2_bitselect(yes: I64x2, no: I64x2, mask: I64x2) -> I64x2 = "dew_v128_bitselect"
@@ -390,24 +570,56 @@ pub builtin wasm_i64x2_all_true(value: I64x2) -> Bool = "dew_v128_all_true_i64"
 pub builtin wasm_i64x2_bitmask(value: I64x2) -> U32 = "dew_v128_bitmask_i64"
 pub builtin wasm_i64x2_shl(value: I64x2, count: U32) -> I64x2 = "dew_v128_shl_i64"
 pub builtin wasm_i64x2_shr_s(value: I64x2, count: U32) -> I64x2 = "dew_v128_shr_s_i64"
+pub fn wasm_i64x2_from_v128(value: V128) -> I64x2 {
+  unsafe_bitcast::<V128, I64x2>(value)
+}
+pub fn wasm_i64x2_to_v128(value: I64x2) -> V128 {
+  unsafe_bitcast::<I64x2, V128>(value)
+}
+pub fn wasm_i64x2_reinterpret_as_i8x16(value: I64x2) -> I8x16 {
+  unsafe_bitcast::<I64x2, I8x16>(value)
+}
+pub fn wasm_i64x2_reinterpret_as_u8x16(value: I64x2) -> U8x16 {
+  unsafe_bitcast::<I64x2, U8x16>(value)
+}
+pub fn wasm_i64x2_reinterpret_as_i16x8(value: I64x2) -> I16x8 {
+  unsafe_bitcast::<I64x2, I16x8>(value)
+}
+pub fn wasm_i64x2_reinterpret_as_u16x8(value: I64x2) -> U16x8 {
+  unsafe_bitcast::<I64x2, U16x8>(value)
+}
+pub fn wasm_i64x2_reinterpret_as_i32x4(value: I64x2) -> I32x4 {
+  unsafe_bitcast::<I64x2, I32x4>(value)
+}
+pub fn wasm_i64x2_reinterpret_as_u32x4(value: I64x2) -> U32x4 {
+  unsafe_bitcast::<I64x2, U32x4>(value)
+}
+pub fn wasm_i64x2_reinterpret_as_u64x2(value: I64x2) -> U64x2 {
+  unsafe_bitcast::<I64x2, U64x2>(value)
+}
+pub fn wasm_i64x2_reinterpret_as_f32x4(value: I64x2) -> F32x4 {
+  unsafe_bitcast::<I64x2, F32x4>(value)
+}
+pub fn wasm_i64x2_reinterpret_as_f64x2(value: I64x2) -> F64x2 {
+  unsafe_bitcast::<I64x2, F64x2>(value)
+}
+pub fn wasm_i64x2_load(address: U32) -> I64x2 {
+  unsafe_bitcast::<V128, I64x2>(v128_load(address))
+}
+pub fn wasm_i64x2_store(address: U32, value: I64x2) -> Unit {
+  v128_store(address, unsafe_bitcast::<I64x2, V128>(value))
+}
+pub fn wasm_i64x2_and(left: I64x2, right: I64x2) -> I64x2 {
+  unsafe_bitcast::<V128, I64x2>(v128_and(unsafe_bitcast::<I64x2, V128>(left), unsafe_bitcast::<I64x2, V128>(right)))
+}
+pub fn wasm_i64x2_or(left: I64x2, right: I64x2) -> I64x2 {
+  unsafe_bitcast::<V128, I64x2>(v128_or(unsafe_bitcast::<I64x2, V128>(left), unsafe_bitcast::<I64x2, V128>(right)))
+}
+pub fn wasm_i64x2_xor(left: I64x2, right: I64x2) -> I64x2 {
+  unsafe_bitcast::<V128, I64x2>(v128_xor(unsafe_bitcast::<I64x2, V128>(left), unsafe_bitcast::<I64x2, V128>(right)))
+}
 
 // std/i8x16.dew
-pub builtin wasm_i8x16_from_v128(value: V128) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_i8x16_to_v128(value: I8x16) -> V128 = "dew_reinterpret"
-pub builtin wasm_i8x16_reinterpret_as_u8x16(value: I8x16) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_i8x16_reinterpret_as_i16x8(value: I8x16) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_i8x16_reinterpret_as_u16x8(value: I8x16) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_i8x16_reinterpret_as_i32x4(value: I8x16) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_i8x16_reinterpret_as_u32x4(value: I8x16) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_i8x16_reinterpret_as_i64x2(value: I8x16) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_i8x16_reinterpret_as_u64x2(value: I8x16) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_i8x16_reinterpret_as_f32x4(value: I8x16) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_i8x16_reinterpret_as_f64x2(value: I8x16) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_i8x16_load(address: U32) -> I8x16 = "dew_v128_load"
-pub builtin wasm_i8x16_store(address: U32, value: I8x16) -> Unit = "dew_v128_store"
-pub builtin wasm_i8x16_and(left: I8x16, right: I8x16) -> I8x16 = "v128_and"
-pub builtin wasm_i8x16_or(left: I8x16, right: I8x16) -> I8x16 = "v128_or"
-pub builtin wasm_i8x16_xor(left: I8x16, right: I8x16) -> I8x16 = "v128_xor"
 pub builtin wasm_i8x16_not(value: I8x16) -> I8x16 = "dew_v128_not"
 pub builtin wasm_i8x16_andnot(left: I8x16, right: I8x16) -> I8x16 = "dew_v128_andnot"
 pub builtin wasm_i8x16_bitselect(yes: I8x16, no: I8x16, mask: I8x16) -> I8x16 = "dew_v128_bitselect"
@@ -519,32 +731,124 @@ pub builtin wasm_i8x16_all_true(value: I8x16) -> Bool = "dew_v128_all_true_i8"
 pub builtin wasm_i8x16_bitmask(value: I8x16) -> U32 = "dew_v128_bitmask_i8"
 pub builtin wasm_i8x16_shl(value: I8x16, count: U32) -> I8x16 = "dew_v128_shl_i8"
 pub builtin wasm_i8x16_shr_s(value: I8x16, count: U32) -> I8x16 = "dew_v128_shr_s_i8"
+pub fn wasm_i8x16_from_v128(value: V128) -> I8x16 {
+  unsafe_bitcast::<V128, I8x16>(value)
+}
+pub fn wasm_i8x16_to_v128(value: I8x16) -> V128 {
+  unsafe_bitcast::<I8x16, V128>(value)
+}
+pub fn wasm_i8x16_reinterpret_as_u8x16(value: I8x16) -> U8x16 {
+  unsafe_bitcast::<I8x16, U8x16>(value)
+}
+pub fn wasm_i8x16_reinterpret_as_i16x8(value: I8x16) -> I16x8 {
+  unsafe_bitcast::<I8x16, I16x8>(value)
+}
+pub fn wasm_i8x16_reinterpret_as_u16x8(value: I8x16) -> U16x8 {
+  unsafe_bitcast::<I8x16, U16x8>(value)
+}
+pub fn wasm_i8x16_reinterpret_as_i32x4(value: I8x16) -> I32x4 {
+  unsafe_bitcast::<I8x16, I32x4>(value)
+}
+pub fn wasm_i8x16_reinterpret_as_u32x4(value: I8x16) -> U32x4 {
+  unsafe_bitcast::<I8x16, U32x4>(value)
+}
+pub fn wasm_i8x16_reinterpret_as_i64x2(value: I8x16) -> I64x2 {
+  unsafe_bitcast::<I8x16, I64x2>(value)
+}
+pub fn wasm_i8x16_reinterpret_as_u64x2(value: I8x16) -> U64x2 {
+  unsafe_bitcast::<I8x16, U64x2>(value)
+}
+pub fn wasm_i8x16_reinterpret_as_f32x4(value: I8x16) -> F32x4 {
+  unsafe_bitcast::<I8x16, F32x4>(value)
+}
+pub fn wasm_i8x16_reinterpret_as_f64x2(value: I8x16) -> F64x2 {
+  unsafe_bitcast::<I8x16, F64x2>(value)
+}
+pub fn wasm_i8x16_load(address: U32) -> I8x16 {
+  unsafe_bitcast::<V128, I8x16>(v128_load(address))
+}
+pub fn wasm_i8x16_store(address: U32, value: I8x16) -> Unit {
+  v128_store(address, unsafe_bitcast::<I8x16, V128>(value))
+}
+pub fn wasm_i8x16_and(left: I8x16, right: I8x16) -> I8x16 {
+  unsafe_bitcast::<V128, I8x16>(v128_and(unsafe_bitcast::<I8x16, V128>(left), unsafe_bitcast::<I8x16, V128>(right)))
+}
+pub fn wasm_i8x16_or(left: I8x16, right: I8x16) -> I8x16 {
+  unsafe_bitcast::<V128, I8x16>(v128_or(unsafe_bitcast::<I8x16, V128>(left), unsafe_bitcast::<I8x16, V128>(right)))
+}
+pub fn wasm_i8x16_xor(left: I8x16, right: I8x16) -> I8x16 {
+  unsafe_bitcast::<V128, I8x16>(v128_xor(unsafe_bitcast::<I8x16, V128>(left), unsafe_bitcast::<I8x16, V128>(right)))
+}
 
 // std/i8x4.dew
-pub builtin wasm_i8x4_from_swar32(value: Swar32) -> I8x4 = "dew_reinterpret"
-pub builtin wasm_i8x4_to_swar32(value: I8x4) -> Swar32 = "dew_reinterpret"
-pub builtin wasm_i8x4_reinterpret_as_u8x4(value: I8x4) -> U8x4 = "dew_reinterpret"
-pub builtin wasm_i8x4_reinterpret_as_i16x2(value: I8x4) -> I16x2 = "dew_reinterpret"
-pub builtin wasm_i8x4_reinterpret_as_u16x2(value: I8x4) -> U16x2 = "dew_reinterpret"
-pub builtin wasm_i8x4_load(address: U32) -> I8x4 = "dew_swar32_load"
-pub builtin wasm_i8x4_store(address: U32, value: I8x4) -> Unit = "dew_swar32_store"
-pub builtin wasm_i8x4_and(left: I8x4, right: I8x4) -> I8x4 = "swar32_and"
-pub builtin wasm_i8x4_or(left: I8x4, right: I8x4) -> I8x4 = "swar32_or"
-pub builtin wasm_i8x4_xor(left: I8x4, right: I8x4) -> I8x4 = "swar32_xor"
+pub fn wasm_i8x4_from_swar32(value: Swar32) -> I8x4 {
+  unsafe_bitcast::<Swar32, I8x4>(value)
+}
+pub fn wasm_i8x4_to_swar32(value: I8x4) -> Swar32 {
+  unsafe_bitcast::<I8x4, Swar32>(value)
+}
+pub fn wasm_i8x4_reinterpret_as_u8x4(value: I8x4) -> U8x4 {
+  unsafe_bitcast::<I8x4, U8x4>(value)
+}
+pub fn wasm_i8x4_reinterpret_as_i16x2(value: I8x4) -> I16x2 {
+  unsafe_bitcast::<I8x4, I16x2>(value)
+}
+pub fn wasm_i8x4_reinterpret_as_u16x2(value: I8x4) -> U16x2 {
+  unsafe_bitcast::<I8x4, U16x2>(value)
+}
+pub fn wasm_i8x4_load(address: U32) -> I8x4 {
+  unsafe_bitcast::<U32, I8x4>(u32_load(address))
+}
+pub fn wasm_i8x4_store(address: U32, value: I8x4) -> Unit {
+  u32_store(address, unsafe_bitcast::<I8x4, U32>(value))
+}
+pub fn wasm_i8x4_and(left: I8x4, right: I8x4) -> I8x4 {
+  unsafe_bitcast::<U32, I8x4>(u32_and(unsafe_bitcast::<I8x4, U32>(left), unsafe_bitcast::<I8x4, U32>(right)))
+}
+pub fn wasm_i8x4_or(left: I8x4, right: I8x4) -> I8x4 {
+  unsafe_bitcast::<U32, I8x4>(u32_or(unsafe_bitcast::<I8x4, U32>(left), unsafe_bitcast::<I8x4, U32>(right)))
+}
+pub fn wasm_i8x4_xor(left: I8x4, right: I8x4) -> I8x4 {
+  unsafe_bitcast::<U32, I8x4>(u32_xor(unsafe_bitcast::<I8x4, U32>(left), unsafe_bitcast::<I8x4, U32>(right)))
+}
 
 // std/i8x8.dew
-pub builtin wasm_i8x8_from_swar64(value: Swar64) -> I8x8 = "dew_reinterpret"
-pub builtin wasm_i8x8_to_swar64(value: I8x8) -> Swar64 = "dew_reinterpret"
-pub builtin wasm_i8x8_reinterpret_as_u8x8(value: I8x8) -> U8x8 = "dew_reinterpret"
-pub builtin wasm_i8x8_reinterpret_as_i16x4(value: I8x8) -> I16x4 = "dew_reinterpret"
-pub builtin wasm_i8x8_reinterpret_as_u16x4(value: I8x8) -> U16x4 = "dew_reinterpret"
-pub builtin wasm_i8x8_reinterpret_as_i32x2(value: I8x8) -> I32x2 = "dew_reinterpret"
-pub builtin wasm_i8x8_reinterpret_as_u32x2(value: I8x8) -> U32x2 = "dew_reinterpret"
-pub builtin wasm_i8x8_load(address: U32) -> I8x8 = "dew_swar64_load"
-pub builtin wasm_i8x8_store(address: U32, value: I8x8) -> Unit = "dew_swar64_store"
-pub builtin wasm_i8x8_and(left: I8x8, right: I8x8) -> I8x8 = "swar64_and"
-pub builtin wasm_i8x8_or(left: I8x8, right: I8x8) -> I8x8 = "swar64_or"
-pub builtin wasm_i8x8_xor(left: I8x8, right: I8x8) -> I8x8 = "swar64_xor"
+pub fn wasm_i8x8_from_swar64(value: Swar64) -> I8x8 {
+  unsafe_bitcast::<Swar64, I8x8>(value)
+}
+pub fn wasm_i8x8_to_swar64(value: I8x8) -> Swar64 {
+  unsafe_bitcast::<I8x8, Swar64>(value)
+}
+pub fn wasm_i8x8_reinterpret_as_u8x8(value: I8x8) -> U8x8 {
+  unsafe_bitcast::<I8x8, U8x8>(value)
+}
+pub fn wasm_i8x8_reinterpret_as_i16x4(value: I8x8) -> I16x4 {
+  unsafe_bitcast::<I8x8, I16x4>(value)
+}
+pub fn wasm_i8x8_reinterpret_as_u16x4(value: I8x8) -> U16x4 {
+  unsafe_bitcast::<I8x8, U16x4>(value)
+}
+pub fn wasm_i8x8_reinterpret_as_i32x2(value: I8x8) -> I32x2 {
+  unsafe_bitcast::<I8x8, I32x2>(value)
+}
+pub fn wasm_i8x8_reinterpret_as_u32x2(value: I8x8) -> U32x2 {
+  unsafe_bitcast::<I8x8, U32x2>(value)
+}
+pub fn wasm_i8x8_load(address: U32) -> I8x8 {
+  unsafe_bitcast::<U64, I8x8>(u64_load(address))
+}
+pub fn wasm_i8x8_store(address: U32, value: I8x8) -> Unit {
+  u64_store(address, unsafe_bitcast::<I8x8, U64>(value))
+}
+pub fn wasm_i8x8_and(left: I8x8, right: I8x8) -> I8x8 {
+  unsafe_bitcast::<U64, I8x8>(u64_and(unsafe_bitcast::<I8x8, U64>(left), unsafe_bitcast::<I8x8, U64>(right)))
+}
+pub fn wasm_i8x8_or(left: I8x8, right: I8x8) -> I8x8 {
+  unsafe_bitcast::<U64, I8x8>(u64_or(unsafe_bitcast::<I8x8, U64>(left), unsafe_bitcast::<I8x8, U64>(right)))
+}
+pub fn wasm_i8x8_xor(left: I8x8, right: I8x8) -> I8x8 {
+  unsafe_bitcast::<U64, I8x8>(u64_xor(unsafe_bitcast::<I8x8, U64>(left), unsafe_bitcast::<I8x8, U64>(right)))
+}
 
 // std/math.dew
 pub builtin wasm_f32_to_bits(value: F32) -> U32 = "dew_math_f32_to_bits"
@@ -570,19 +874,39 @@ pub builtin wasm_unreachable() -> Never = "dew_unreachable"
 pub builtin wasm_i32_add(left: I32, right: I32) -> I32 = "i32_add"
 pub builtin wasm_i32_sub(left: I32, right: I32) -> I32 = "i32_sub"
 pub builtin wasm_i32_lte(left: I32, right: I32) -> Bool = "i32_lte"
-pub builtin wasm_swar32_from_bits(value: U32) -> Swar32 = "swar32_from_bits"
-pub builtin wasm_swar32_to_bits(value: Swar32) -> U32 = "swar32_to_bits"
-pub builtin wasm_swar32_and(left: Swar32, right: Swar32) -> Swar32 = "swar32_and"
-pub builtin wasm_swar32_or(left: Swar32, right: Swar32) -> Swar32 = "swar32_or"
-pub builtin wasm_swar32_xor(left: Swar32, right: Swar32) -> Swar32 = "swar32_xor"
-pub builtin wasm_swar64_from_bits(value: U64) -> Swar64 = "swar64_from_bits"
-pub builtin wasm_swar64_to_bits(value: Swar64) -> U64 = "swar64_to_bits"
-pub builtin wasm_swar64_and(left: Swar64, right: Swar64) -> Swar64 = "swar64_and"
-pub builtin wasm_swar64_or(left: Swar64, right: Swar64) -> Swar64 = "swar64_or"
-pub builtin wasm_swar64_xor(left: Swar64, right: Swar64) -> Swar64 = "swar64_xor"
-pub builtin wasm_v128_and(left: V128, right: V128) -> V128 = "v128_and"
-pub builtin wasm_v128_or(left: V128, right: V128) -> V128 = "v128_or"
-pub builtin wasm_v128_xor(left: V128, right: V128) -> V128 = "v128_xor"
+pub builtin wasm_v128_and(left: V128, right: V128) -> V128 = "v128.and"
+pub builtin wasm_v128_or(left: V128, right: V128) -> V128 = "v128.or"
+pub builtin wasm_v128_xor(left: V128, right: V128) -> V128 = "v128.xor"
+pub fn wasm_swar32_from_bits(value: U32) -> Swar32 {
+  unsafe_bitcast(value)
+}
+pub fn wasm_swar32_to_bits(value: Swar32) -> U32 {
+  unsafe_bitcast(value)
+}
+pub fn wasm_swar32_and(left: Swar32, right: Swar32) -> Swar32 {
+  unsafe_bitcast(u32_and(unsafe_bitcast(left), unsafe_bitcast(right)))
+}
+pub fn wasm_swar32_or(left: Swar32, right: Swar32) -> Swar32 {
+  unsafe_bitcast(u32_or(unsafe_bitcast(left), unsafe_bitcast(right)))
+}
+pub fn wasm_swar32_xor(left: Swar32, right: Swar32) -> Swar32 {
+  unsafe_bitcast(u32_xor(unsafe_bitcast(left), unsafe_bitcast(right)))
+}
+pub fn wasm_swar64_from_bits(value: U64) -> Swar64 {
+  unsafe_bitcast(value)
+}
+pub fn wasm_swar64_to_bits(value: Swar64) -> U64 {
+  unsafe_bitcast(value)
+}
+pub fn wasm_swar64_and(left: Swar64, right: Swar64) -> Swar64 {
+  unsafe_bitcast(u64_and(unsafe_bitcast(left), unsafe_bitcast(right)))
+}
+pub fn wasm_swar64_or(left: Swar64, right: Swar64) -> Swar64 {
+  unsafe_bitcast(u64_or(unsafe_bitcast(left), unsafe_bitcast(right)))
+}
+pub fn wasm_swar64_xor(left: Swar64, right: Swar64) -> Swar64 {
+  unsafe_bitcast(u64_xor(unsafe_bitcast(left), unsafe_bitcast(right)))
+}
 
 // std/preamble/100-v128.dew
 pub builtin wasm_v128_not(value: V128) -> V128 = "dew_v128_not"
@@ -729,6 +1053,9 @@ pub builtin wasm_v128_neg_f64(value: V128) -> V128 = "dew_v128_neg_f64"
 // std/preamble/110-debug.dew
 pub builtin wasm___dew_debug_ignore(value: U32) -> Unit = "dew_debug_ignore"
 
+// std/preamble/30-packed.dew
+pub builtin wasm_unsafe_bitcast<source, target>(value: source) -> target = "unsafe.bitcast"
+
 // std/preamble/40-numeric-builtins.dew
 pub builtin wasm_i8_or(left: I8, right: I8) -> I8 = "dew_i8_or"
 pub builtin wasm_i8_xor(left: I8, right: I8) -> I8 = "dew_i8_xor"
@@ -762,9 +1089,9 @@ pub builtin wasm_i16_sub(left: I16, right: I16) -> I16 = "dew_i16_sub"
 pub builtin wasm_i16_mul(left: I16, right: I16) -> I16 = "dew_i16_mul"
 pub builtin wasm_i16_div(left: I16, right: I16) -> I16 = "dew_i16_div"
 pub builtin wasm_i16_rem(left: I16, right: I16) -> I16 = "dew_i16_rem"
-pub builtin wasm_i32_or(left: I32, right: I32) -> I32 = "dew_i32_or"
-pub builtin wasm_i32_xor(left: I32, right: I32) -> I32 = "dew_i32_xor"
-pub builtin wasm_i32_and(left: I32, right: I32) -> I32 = "dew_i32_and"
+pub builtin wasm_i32_or(left: I32, right: I32) -> I32 = "i32.or"
+pub builtin wasm_i32_xor(left: I32, right: I32) -> I32 = "i32.xor"
+pub builtin wasm_i32_and(left: I32, right: I32) -> I32 = "i32.and"
 pub builtin wasm_i32_eq(left: I32, right: I32) -> Bool = "dew_i32_eq"
 pub builtin wasm_i32_ne(left: I32, right: I32) -> Bool = "dew_i32_ne"
 pub builtin wasm_i32_lt(left: I32, right: I32) -> Bool = "dew_i32_lt"
@@ -775,9 +1102,9 @@ pub builtin wasm_i32_shr(left: I32, right: I32) -> I32 = "dew_i32_shr"
 pub builtin wasm_i32_mul(left: I32, right: I32) -> I32 = "dew_i32_mul"
 pub builtin wasm_i32_div(left: I32, right: I32) -> I32 = "dew_i32_div"
 pub builtin wasm_i32_rem(left: I32, right: I32) -> I32 = "dew_i32_rem"
-pub builtin wasm_i64_or(left: I64, right: I64) -> I64 = "dew_i64_or"
-pub builtin wasm_i64_xor(left: I64, right: I64) -> I64 = "dew_i64_xor"
-pub builtin wasm_i64_and(left: I64, right: I64) -> I64 = "dew_i64_and"
+pub builtin wasm_i64_or(left: I64, right: I64) -> I64 = "i64.or"
+pub builtin wasm_i64_xor(left: I64, right: I64) -> I64 = "i64.xor"
+pub builtin wasm_i64_and(left: I64, right: I64) -> I64 = "i64.and"
 pub builtin wasm_i64_eq(left: I64, right: I64) -> Bool = "dew_i64_eq"
 pub builtin wasm_i64_ne(left: I64, right: I64) -> Bool = "dew_i64_ne"
 pub builtin wasm_i64_lt(left: I64, right: I64) -> Bool = "dew_i64_lt"
@@ -823,9 +1150,9 @@ pub builtin wasm_u16_sub(left: U16, right: U16) -> U16 = "dew_u16_sub"
 pub builtin wasm_u16_mul(left: U16, right: U16) -> U16 = "dew_u16_mul"
 pub builtin wasm_u16_div(left: U16, right: U16) -> U16 = "dew_u16_div"
 pub builtin wasm_u16_rem(left: U16, right: U16) -> U16 = "dew_u16_rem"
-pub builtin wasm_u32_or(left: U32, right: U32) -> U32 = "dew_u32_or"
-pub builtin wasm_u32_xor(left: U32, right: U32) -> U32 = "dew_u32_xor"
-pub builtin wasm_u32_and(left: U32, right: U32) -> U32 = "dew_u32_and"
+pub builtin wasm_u32_or(left: U32, right: U32) -> U32 = "i32.or"
+pub builtin wasm_u32_xor(left: U32, right: U32) -> U32 = "i32.xor"
+pub builtin wasm_u32_and(left: U32, right: U32) -> U32 = "i32.and"
 pub builtin wasm_u32_eq(left: U32, right: U32) -> Bool = "dew_u32_eq"
 pub builtin wasm_u32_ne(left: U32, right: U32) -> Bool = "dew_u32_ne"
 pub builtin wasm_u32_lt(left: U32, right: U32) -> Bool = "dew_u32_lt"
@@ -839,9 +1166,9 @@ pub builtin wasm_u32_sub(left: U32, right: U32) -> U32 = "dew_u32_sub"
 pub builtin wasm_u32_mul(left: U32, right: U32) -> U32 = "dew_u32_mul"
 pub builtin wasm_u32_div(left: U32, right: U32) -> U32 = "dew_u32_div"
 pub builtin wasm_u32_rem(left: U32, right: U32) -> U32 = "dew_u32_rem"
-pub builtin wasm_u64_or(left: U64, right: U64) -> U64 = "dew_u64_or"
-pub builtin wasm_u64_xor(left: U64, right: U64) -> U64 = "dew_u64_xor"
-pub builtin wasm_u64_and(left: U64, right: U64) -> U64 = "dew_u64_and"
+pub builtin wasm_u64_or(left: U64, right: U64) -> U64 = "i64.or"
+pub builtin wasm_u64_xor(left: U64, right: U64) -> U64 = "i64.xor"
+pub builtin wasm_u64_and(left: U64, right: U64) -> U64 = "i64.and"
 pub builtin wasm_u64_eq(left: U64, right: U64) -> Bool = "dew_u64_eq"
 pub builtin wasm_u64_ne(left: U64, right: U64) -> Bool = "dew_u64_ne"
 pub builtin wasm_u64_lt(left: U64, right: U64) -> Bool = "dew_u64_lt"
@@ -881,28 +1208,36 @@ pub builtin wasm_i8_load(address: U32) -> I8 = "dew_i8_load"
 pub builtin wasm_i8_store(address: U32, value: I8) -> Unit = "dew_i8_store"
 pub builtin wasm_i16_load(address: U32) -> I16 = "dew_i16_load"
 pub builtin wasm_i16_store(address: U32, value: I16) -> Unit = "dew_i16_store"
-pub builtin wasm_i32_load(address: U32) -> I32 = "dew_i32_load"
-pub builtin wasm_i32_store(address: U32, value: I32) -> Unit = "dew_i32_store"
-pub builtin wasm_i64_load(address: U32) -> I64 = "dew_i64_load"
-pub builtin wasm_i64_store(address: U32, value: I64) -> Unit = "dew_i64_store"
+pub builtin wasm_i32_load(address: U32) -> I32 = "i32.load"
+pub builtin wasm_i32_store(address: U32, value: I32) -> Unit = "i32.store"
+pub builtin wasm_i64_load(address: U32) -> I64 = "i64.load"
+pub builtin wasm_i64_store(address: U32, value: I64) -> Unit = "i64.store"
 pub builtin wasm_u8_load(address: U32) -> U8 = "dew_u8_load"
 pub builtin wasm_u8_store(address: U32, value: U8) -> Unit = "dew_u8_store"
 pub builtin wasm_u16_load(address: U32) -> U16 = "dew_u16_load"
 pub builtin wasm_u16_store(address: U32, value: U16) -> Unit = "dew_u16_store"
-pub builtin wasm_u32_load(address: U32) -> U32 = "dew_u32_load"
-pub builtin wasm_u32_store(address: U32, value: U32) -> Unit = "dew_u32_store"
-pub builtin wasm_u64_load(address: U32) -> U64 = "dew_u64_load"
-pub builtin wasm_u64_store(address: U32, value: U64) -> Unit = "dew_u64_store"
+pub builtin wasm_u32_load(address: U32) -> U32 = "i32.load"
+pub builtin wasm_u32_store(address: U32, value: U32) -> Unit = "i32.store"
+pub builtin wasm_u64_load(address: U32) -> U64 = "i64.load"
+pub builtin wasm_u64_store(address: U32, value: U64) -> Unit = "i64.store"
 pub builtin wasm_f32_load(address: U32) -> F32 = "dew_f32_load"
 pub builtin wasm_f32_store(address: U32, value: F32) -> Unit = "dew_f32_store"
 pub builtin wasm_f64_load(address: U32) -> F64 = "dew_f64_load"
 pub builtin wasm_f64_store(address: U32, value: F64) -> Unit = "dew_f64_store"
-pub builtin wasm_swar32_load(address: U32) -> Swar32 = "dew_swar32_load"
-pub builtin wasm_swar32_store(address: U32, value: Swar32) -> Unit = "dew_swar32_store"
-pub builtin wasm_swar64_load(address: U32) -> Swar64 = "dew_swar64_load"
-pub builtin wasm_swar64_store(address: U32, value: Swar64) -> Unit = "dew_swar64_store"
-pub builtin wasm_v128_load(address: U32) -> V128 = "dew_v128_load"
-pub builtin wasm_v128_store(address: U32, value: V128) -> Unit = "dew_v128_store"
+pub builtin wasm_v128_load(address: U32) -> V128 = "v128.load"
+pub builtin wasm_v128_store(address: U32, value: V128) -> Unit = "v128.store"
+pub fn wasm_swar32_load(address: U32) -> Swar32 {
+  unsafe_bitcast(u32_load(address))
+}
+pub fn wasm_swar32_store(address: U32, value: Swar32) -> Unit {
+  u32_store(address, unsafe_bitcast(value))
+}
+pub fn wasm_swar64_load(address: U32) -> Swar64 {
+  unsafe_bitcast(u64_load(address))
+}
+pub fn wasm_swar64_store(address: U32, value: Swar64) -> Unit {
+  u64_store(address, unsafe_bitcast(value))
+}
 
 // std/preamble/70-into-builtins.dew
 pub builtin wasm_i8_into_i8(value: I8) -> I8 = "dew_i8_into_i8"
@@ -1007,48 +1342,76 @@ pub builtin wasm_f64_into_f32(value: F64) -> F32 = "dew_f64_into_f32"
 pub builtin wasm_f64_into_f64(value: F64) -> F64 = "dew_f64_into_f64"
 
 // std/u16x2.dew
-pub builtin wasm_u16x2_from_swar32(value: Swar32) -> U16x2 = "dew_reinterpret"
-pub builtin wasm_u16x2_to_swar32(value: U16x2) -> Swar32 = "dew_reinterpret"
-pub builtin wasm_u16x2_reinterpret_as_i8x4(value: U16x2) -> I8x4 = "dew_reinterpret"
-pub builtin wasm_u16x2_reinterpret_as_u8x4(value: U16x2) -> U8x4 = "dew_reinterpret"
-pub builtin wasm_u16x2_reinterpret_as_i16x2(value: U16x2) -> I16x2 = "dew_reinterpret"
-pub builtin wasm_u16x2_load(address: U32) -> U16x2 = "dew_swar32_load"
-pub builtin wasm_u16x2_store(address: U32, value: U16x2) -> Unit = "dew_swar32_store"
-pub builtin wasm_u16x2_and(left: U16x2, right: U16x2) -> U16x2 = "swar32_and"
-pub builtin wasm_u16x2_or(left: U16x2, right: U16x2) -> U16x2 = "swar32_or"
-pub builtin wasm_u16x2_xor(left: U16x2, right: U16x2) -> U16x2 = "swar32_xor"
+pub fn wasm_u16x2_from_swar32(value: Swar32) -> U16x2 {
+  unsafe_bitcast::<Swar32, U16x2>(value)
+}
+pub fn wasm_u16x2_to_swar32(value: U16x2) -> Swar32 {
+  unsafe_bitcast::<U16x2, Swar32>(value)
+}
+pub fn wasm_u16x2_reinterpret_as_i8x4(value: U16x2) -> I8x4 {
+  unsafe_bitcast::<U16x2, I8x4>(value)
+}
+pub fn wasm_u16x2_reinterpret_as_u8x4(value: U16x2) -> U8x4 {
+  unsafe_bitcast::<U16x2, U8x4>(value)
+}
+pub fn wasm_u16x2_reinterpret_as_i16x2(value: U16x2) -> I16x2 {
+  unsafe_bitcast::<U16x2, I16x2>(value)
+}
+pub fn wasm_u16x2_load(address: U32) -> U16x2 {
+  unsafe_bitcast::<U32, U16x2>(u32_load(address))
+}
+pub fn wasm_u16x2_store(address: U32, value: U16x2) -> Unit {
+  u32_store(address, unsafe_bitcast::<U16x2, U32>(value))
+}
+pub fn wasm_u16x2_and(left: U16x2, right: U16x2) -> U16x2 {
+  unsafe_bitcast::<U32, U16x2>(u32_and(unsafe_bitcast::<U16x2, U32>(left), unsafe_bitcast::<U16x2, U32>(right)))
+}
+pub fn wasm_u16x2_or(left: U16x2, right: U16x2) -> U16x2 {
+  unsafe_bitcast::<U32, U16x2>(u32_or(unsafe_bitcast::<U16x2, U32>(left), unsafe_bitcast::<U16x2, U32>(right)))
+}
+pub fn wasm_u16x2_xor(left: U16x2, right: U16x2) -> U16x2 {
+  unsafe_bitcast::<U32, U16x2>(u32_xor(unsafe_bitcast::<U16x2, U32>(left), unsafe_bitcast::<U16x2, U32>(right)))
+}
 
 // std/u16x4.dew
-pub builtin wasm_u16x4_from_swar64(value: Swar64) -> U16x4 = "dew_reinterpret"
-pub builtin wasm_u16x4_to_swar64(value: U16x4) -> Swar64 = "dew_reinterpret"
-pub builtin wasm_u16x4_reinterpret_as_i8x8(value: U16x4) -> I8x8 = "dew_reinterpret"
-pub builtin wasm_u16x4_reinterpret_as_u8x8(value: U16x4) -> U8x8 = "dew_reinterpret"
-pub builtin wasm_u16x4_reinterpret_as_i16x4(value: U16x4) -> I16x4 = "dew_reinterpret"
-pub builtin wasm_u16x4_reinterpret_as_i32x2(value: U16x4) -> I32x2 = "dew_reinterpret"
-pub builtin wasm_u16x4_reinterpret_as_u32x2(value: U16x4) -> U32x2 = "dew_reinterpret"
-pub builtin wasm_u16x4_load(address: U32) -> U16x4 = "dew_swar64_load"
-pub builtin wasm_u16x4_store(address: U32, value: U16x4) -> Unit = "dew_swar64_store"
-pub builtin wasm_u16x4_and(left: U16x4, right: U16x4) -> U16x4 = "swar64_and"
-pub builtin wasm_u16x4_or(left: U16x4, right: U16x4) -> U16x4 = "swar64_or"
-pub builtin wasm_u16x4_xor(left: U16x4, right: U16x4) -> U16x4 = "swar64_xor"
+pub fn wasm_u16x4_from_swar64(value: Swar64) -> U16x4 {
+  unsafe_bitcast::<Swar64, U16x4>(value)
+}
+pub fn wasm_u16x4_to_swar64(value: U16x4) -> Swar64 {
+  unsafe_bitcast::<U16x4, Swar64>(value)
+}
+pub fn wasm_u16x4_reinterpret_as_i8x8(value: U16x4) -> I8x8 {
+  unsafe_bitcast::<U16x4, I8x8>(value)
+}
+pub fn wasm_u16x4_reinterpret_as_u8x8(value: U16x4) -> U8x8 {
+  unsafe_bitcast::<U16x4, U8x8>(value)
+}
+pub fn wasm_u16x4_reinterpret_as_i16x4(value: U16x4) -> I16x4 {
+  unsafe_bitcast::<U16x4, I16x4>(value)
+}
+pub fn wasm_u16x4_reinterpret_as_i32x2(value: U16x4) -> I32x2 {
+  unsafe_bitcast::<U16x4, I32x2>(value)
+}
+pub fn wasm_u16x4_reinterpret_as_u32x2(value: U16x4) -> U32x2 {
+  unsafe_bitcast::<U16x4, U32x2>(value)
+}
+pub fn wasm_u16x4_load(address: U32) -> U16x4 {
+  unsafe_bitcast::<U64, U16x4>(u64_load(address))
+}
+pub fn wasm_u16x4_store(address: U32, value: U16x4) -> Unit {
+  u64_store(address, unsafe_bitcast::<U16x4, U64>(value))
+}
+pub fn wasm_u16x4_and(left: U16x4, right: U16x4) -> U16x4 {
+  unsafe_bitcast::<U64, U16x4>(u64_and(unsafe_bitcast::<U16x4, U64>(left), unsafe_bitcast::<U16x4, U64>(right)))
+}
+pub fn wasm_u16x4_or(left: U16x4, right: U16x4) -> U16x4 {
+  unsafe_bitcast::<U64, U16x4>(u64_or(unsafe_bitcast::<U16x4, U64>(left), unsafe_bitcast::<U16x4, U64>(right)))
+}
+pub fn wasm_u16x4_xor(left: U16x4, right: U16x4) -> U16x4 {
+  unsafe_bitcast::<U64, U16x4>(u64_xor(unsafe_bitcast::<U16x4, U64>(left), unsafe_bitcast::<U16x4, U64>(right)))
+}
 
 // std/u16x8.dew
-pub builtin wasm_u16x8_from_v128(value: V128) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_u16x8_to_v128(value: U16x8) -> V128 = "dew_reinterpret"
-pub builtin wasm_u16x8_reinterpret_as_i8x16(value: U16x8) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_u16x8_reinterpret_as_u8x16(value: U16x8) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_u16x8_reinterpret_as_i16x8(value: U16x8) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_u16x8_reinterpret_as_i32x4(value: U16x8) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_u16x8_reinterpret_as_u32x4(value: U16x8) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_u16x8_reinterpret_as_i64x2(value: U16x8) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_u16x8_reinterpret_as_u64x2(value: U16x8) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_u16x8_reinterpret_as_f32x4(value: U16x8) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_u16x8_reinterpret_as_f64x2(value: U16x8) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_u16x8_load(address: U32) -> U16x8 = "dew_v128_load"
-pub builtin wasm_u16x8_store(address: U32, value: U16x8) -> Unit = "dew_v128_store"
-pub builtin wasm_u16x8_and(left: U16x8, right: U16x8) -> U16x8 = "v128_and"
-pub builtin wasm_u16x8_or(left: U16x8, right: U16x8) -> U16x8 = "v128_or"
-pub builtin wasm_u16x8_xor(left: U16x8, right: U16x8) -> U16x8 = "v128_xor"
 pub builtin wasm_u16x8_not(value: U16x8) -> U16x8 = "dew_v128_not"
 pub builtin wasm_u16x8_andnot(left: U16x8, right: U16x8) -> U16x8 = "dew_v128_andnot"
 pub builtin wasm_u16x8_bitselect(yes: U16x8, no: U16x8, mask: U16x8) -> U16x8 = "dew_v128_bitselect"
@@ -1112,38 +1475,94 @@ pub builtin wasm_u16x8_all_true(value: U16x8) -> Bool = "dew_v128_all_true_i16"
 pub builtin wasm_u16x8_bitmask(value: U16x8) -> U32 = "dew_v128_bitmask_i16"
 pub builtin wasm_u16x8_shl(value: U16x8, count: U32) -> U16x8 = "dew_v128_shl_i16"
 pub builtin wasm_u16x8_shr_u(value: U16x8, count: U32) -> U16x8 = "dew_v128_shr_u_i16"
+pub fn wasm_u16x8_from_v128(value: V128) -> U16x8 {
+  unsafe_bitcast::<V128, U16x8>(value)
+}
+pub fn wasm_u16x8_to_v128(value: U16x8) -> V128 {
+  unsafe_bitcast::<U16x8, V128>(value)
+}
+pub fn wasm_u16x8_reinterpret_as_i8x16(value: U16x8) -> I8x16 {
+  unsafe_bitcast::<U16x8, I8x16>(value)
+}
+pub fn wasm_u16x8_reinterpret_as_u8x16(value: U16x8) -> U8x16 {
+  unsafe_bitcast::<U16x8, U8x16>(value)
+}
+pub fn wasm_u16x8_reinterpret_as_i16x8(value: U16x8) -> I16x8 {
+  unsafe_bitcast::<U16x8, I16x8>(value)
+}
+pub fn wasm_u16x8_reinterpret_as_i32x4(value: U16x8) -> I32x4 {
+  unsafe_bitcast::<U16x8, I32x4>(value)
+}
+pub fn wasm_u16x8_reinterpret_as_u32x4(value: U16x8) -> U32x4 {
+  unsafe_bitcast::<U16x8, U32x4>(value)
+}
+pub fn wasm_u16x8_reinterpret_as_i64x2(value: U16x8) -> I64x2 {
+  unsafe_bitcast::<U16x8, I64x2>(value)
+}
+pub fn wasm_u16x8_reinterpret_as_u64x2(value: U16x8) -> U64x2 {
+  unsafe_bitcast::<U16x8, U64x2>(value)
+}
+pub fn wasm_u16x8_reinterpret_as_f32x4(value: U16x8) -> F32x4 {
+  unsafe_bitcast::<U16x8, F32x4>(value)
+}
+pub fn wasm_u16x8_reinterpret_as_f64x2(value: U16x8) -> F64x2 {
+  unsafe_bitcast::<U16x8, F64x2>(value)
+}
+pub fn wasm_u16x8_load(address: U32) -> U16x8 {
+  unsafe_bitcast::<V128, U16x8>(v128_load(address))
+}
+pub fn wasm_u16x8_store(address: U32, value: U16x8) -> Unit {
+  v128_store(address, unsafe_bitcast::<U16x8, V128>(value))
+}
+pub fn wasm_u16x8_and(left: U16x8, right: U16x8) -> U16x8 {
+  unsafe_bitcast::<V128, U16x8>(v128_and(unsafe_bitcast::<U16x8, V128>(left), unsafe_bitcast::<U16x8, V128>(right)))
+}
+pub fn wasm_u16x8_or(left: U16x8, right: U16x8) -> U16x8 {
+  unsafe_bitcast::<V128, U16x8>(v128_or(unsafe_bitcast::<U16x8, V128>(left), unsafe_bitcast::<U16x8, V128>(right)))
+}
+pub fn wasm_u16x8_xor(left: U16x8, right: U16x8) -> U16x8 {
+  unsafe_bitcast::<V128, U16x8>(v128_xor(unsafe_bitcast::<U16x8, V128>(left), unsafe_bitcast::<U16x8, V128>(right)))
+}
 
 // std/u32x2.dew
-pub builtin wasm_u32x2_from_swar64(value: Swar64) -> U32x2 = "dew_reinterpret"
-pub builtin wasm_u32x2_to_swar64(value: U32x2) -> Swar64 = "dew_reinterpret"
-pub builtin wasm_u32x2_reinterpret_as_i8x8(value: U32x2) -> I8x8 = "dew_reinterpret"
-pub builtin wasm_u32x2_reinterpret_as_u8x8(value: U32x2) -> U8x8 = "dew_reinterpret"
-pub builtin wasm_u32x2_reinterpret_as_i16x4(value: U32x2) -> I16x4 = "dew_reinterpret"
-pub builtin wasm_u32x2_reinterpret_as_u16x4(value: U32x2) -> U16x4 = "dew_reinterpret"
-pub builtin wasm_u32x2_reinterpret_as_i32x2(value: U32x2) -> I32x2 = "dew_reinterpret"
-pub builtin wasm_u32x2_load(address: U32) -> U32x2 = "dew_swar64_load"
-pub builtin wasm_u32x2_store(address: U32, value: U32x2) -> Unit = "dew_swar64_store"
-pub builtin wasm_u32x2_and(left: U32x2, right: U32x2) -> U32x2 = "swar64_and"
-pub builtin wasm_u32x2_or(left: U32x2, right: U32x2) -> U32x2 = "swar64_or"
-pub builtin wasm_u32x2_xor(left: U32x2, right: U32x2) -> U32x2 = "swar64_xor"
+pub fn wasm_u32x2_from_swar64(value: Swar64) -> U32x2 {
+  unsafe_bitcast::<Swar64, U32x2>(value)
+}
+pub fn wasm_u32x2_to_swar64(value: U32x2) -> Swar64 {
+  unsafe_bitcast::<U32x2, Swar64>(value)
+}
+pub fn wasm_u32x2_reinterpret_as_i8x8(value: U32x2) -> I8x8 {
+  unsafe_bitcast::<U32x2, I8x8>(value)
+}
+pub fn wasm_u32x2_reinterpret_as_u8x8(value: U32x2) -> U8x8 {
+  unsafe_bitcast::<U32x2, U8x8>(value)
+}
+pub fn wasm_u32x2_reinterpret_as_i16x4(value: U32x2) -> I16x4 {
+  unsafe_bitcast::<U32x2, I16x4>(value)
+}
+pub fn wasm_u32x2_reinterpret_as_u16x4(value: U32x2) -> U16x4 {
+  unsafe_bitcast::<U32x2, U16x4>(value)
+}
+pub fn wasm_u32x2_reinterpret_as_i32x2(value: U32x2) -> I32x2 {
+  unsafe_bitcast::<U32x2, I32x2>(value)
+}
+pub fn wasm_u32x2_load(address: U32) -> U32x2 {
+  unsafe_bitcast::<U64, U32x2>(u64_load(address))
+}
+pub fn wasm_u32x2_store(address: U32, value: U32x2) -> Unit {
+  u64_store(address, unsafe_bitcast::<U32x2, U64>(value))
+}
+pub fn wasm_u32x2_and(left: U32x2, right: U32x2) -> U32x2 {
+  unsafe_bitcast::<U64, U32x2>(u64_and(unsafe_bitcast::<U32x2, U64>(left), unsafe_bitcast::<U32x2, U64>(right)))
+}
+pub fn wasm_u32x2_or(left: U32x2, right: U32x2) -> U32x2 {
+  unsafe_bitcast::<U64, U32x2>(u64_or(unsafe_bitcast::<U32x2, U64>(left), unsafe_bitcast::<U32x2, U64>(right)))
+}
+pub fn wasm_u32x2_xor(left: U32x2, right: U32x2) -> U32x2 {
+  unsafe_bitcast::<U64, U32x2>(u64_xor(unsafe_bitcast::<U32x2, U64>(left), unsafe_bitcast::<U32x2, U64>(right)))
+}
 
 // std/u32x4.dew
-pub builtin wasm_u32x4_from_v128(value: V128) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_u32x4_to_v128(value: U32x4) -> V128 = "dew_reinterpret"
-pub builtin wasm_u32x4_reinterpret_as_i8x16(value: U32x4) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_u32x4_reinterpret_as_u8x16(value: U32x4) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_u32x4_reinterpret_as_i16x8(value: U32x4) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_u32x4_reinterpret_as_u16x8(value: U32x4) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_u32x4_reinterpret_as_i32x4(value: U32x4) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_u32x4_reinterpret_as_i64x2(value: U32x4) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_u32x4_reinterpret_as_u64x2(value: U32x4) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_u32x4_reinterpret_as_f32x4(value: U32x4) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_u32x4_reinterpret_as_f64x2(value: U32x4) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_u32x4_load(address: U32) -> U32x4 = "dew_v128_load"
-pub builtin wasm_u32x4_store(address: U32, value: U32x4) -> Unit = "dew_v128_store"
-pub builtin wasm_u32x4_and(left: U32x4, right: U32x4) -> U32x4 = "v128_and"
-pub builtin wasm_u32x4_or(left: U32x4, right: U32x4) -> U32x4 = "v128_or"
-pub builtin wasm_u32x4_xor(left: U32x4, right: U32x4) -> U32x4 = "v128_xor"
 pub builtin wasm_u32x4_not(value: U32x4) -> U32x4 = "dew_v128_not"
 pub builtin wasm_u32x4_andnot(left: U32x4, right: U32x4) -> U32x4 = "dew_v128_andnot"
 pub builtin wasm_u32x4_bitselect(yes: U32x4, no: U32x4, mask: U32x4) -> U32x4 = "dew_v128_bitselect"
@@ -1190,24 +1609,56 @@ pub builtin wasm_u32x4_all_true(value: U32x4) -> Bool = "dew_v128_all_true_i32"
 pub builtin wasm_u32x4_bitmask(value: U32x4) -> U32 = "dew_v128_bitmask_i32"
 pub builtin wasm_u32x4_shl(value: U32x4, count: U32) -> U32x4 = "dew_v128_shl_i32"
 pub builtin wasm_u32x4_shr_u(value: U32x4, count: U32) -> U32x4 = "dew_v128_shr_u_i32"
+pub fn wasm_u32x4_from_v128(value: V128) -> U32x4 {
+  unsafe_bitcast::<V128, U32x4>(value)
+}
+pub fn wasm_u32x4_to_v128(value: U32x4) -> V128 {
+  unsafe_bitcast::<U32x4, V128>(value)
+}
+pub fn wasm_u32x4_reinterpret_as_i8x16(value: U32x4) -> I8x16 {
+  unsafe_bitcast::<U32x4, I8x16>(value)
+}
+pub fn wasm_u32x4_reinterpret_as_u8x16(value: U32x4) -> U8x16 {
+  unsafe_bitcast::<U32x4, U8x16>(value)
+}
+pub fn wasm_u32x4_reinterpret_as_i16x8(value: U32x4) -> I16x8 {
+  unsafe_bitcast::<U32x4, I16x8>(value)
+}
+pub fn wasm_u32x4_reinterpret_as_u16x8(value: U32x4) -> U16x8 {
+  unsafe_bitcast::<U32x4, U16x8>(value)
+}
+pub fn wasm_u32x4_reinterpret_as_i32x4(value: U32x4) -> I32x4 {
+  unsafe_bitcast::<U32x4, I32x4>(value)
+}
+pub fn wasm_u32x4_reinterpret_as_i64x2(value: U32x4) -> I64x2 {
+  unsafe_bitcast::<U32x4, I64x2>(value)
+}
+pub fn wasm_u32x4_reinterpret_as_u64x2(value: U32x4) -> U64x2 {
+  unsafe_bitcast::<U32x4, U64x2>(value)
+}
+pub fn wasm_u32x4_reinterpret_as_f32x4(value: U32x4) -> F32x4 {
+  unsafe_bitcast::<U32x4, F32x4>(value)
+}
+pub fn wasm_u32x4_reinterpret_as_f64x2(value: U32x4) -> F64x2 {
+  unsafe_bitcast::<U32x4, F64x2>(value)
+}
+pub fn wasm_u32x4_load(address: U32) -> U32x4 {
+  unsafe_bitcast::<V128, U32x4>(v128_load(address))
+}
+pub fn wasm_u32x4_store(address: U32, value: U32x4) -> Unit {
+  v128_store(address, unsafe_bitcast::<U32x4, V128>(value))
+}
+pub fn wasm_u32x4_and(left: U32x4, right: U32x4) -> U32x4 {
+  unsafe_bitcast::<V128, U32x4>(v128_and(unsafe_bitcast::<U32x4, V128>(left), unsafe_bitcast::<U32x4, V128>(right)))
+}
+pub fn wasm_u32x4_or(left: U32x4, right: U32x4) -> U32x4 {
+  unsafe_bitcast::<V128, U32x4>(v128_or(unsafe_bitcast::<U32x4, V128>(left), unsafe_bitcast::<U32x4, V128>(right)))
+}
+pub fn wasm_u32x4_xor(left: U32x4, right: U32x4) -> U32x4 {
+  unsafe_bitcast::<V128, U32x4>(v128_xor(unsafe_bitcast::<U32x4, V128>(left), unsafe_bitcast::<U32x4, V128>(right)))
+}
 
 // std/u64x2.dew
-pub builtin wasm_u64x2_from_v128(value: V128) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_u64x2_to_v128(value: U64x2) -> V128 = "dew_reinterpret"
-pub builtin wasm_u64x2_reinterpret_as_i8x16(value: U64x2) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_u64x2_reinterpret_as_u8x16(value: U64x2) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_u64x2_reinterpret_as_i16x8(value: U64x2) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_u64x2_reinterpret_as_u16x8(value: U64x2) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_u64x2_reinterpret_as_i32x4(value: U64x2) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_u64x2_reinterpret_as_u32x4(value: U64x2) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_u64x2_reinterpret_as_i64x2(value: U64x2) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_u64x2_reinterpret_as_f32x4(value: U64x2) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_u64x2_reinterpret_as_f64x2(value: U64x2) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_u64x2_load(address: U32) -> U64x2 = "dew_v128_load"
-pub builtin wasm_u64x2_store(address: U32, value: U64x2) -> Unit = "dew_v128_store"
-pub builtin wasm_u64x2_and(left: U64x2, right: U64x2) -> U64x2 = "v128_and"
-pub builtin wasm_u64x2_or(left: U64x2, right: U64x2) -> U64x2 = "v128_or"
-pub builtin wasm_u64x2_xor(left: U64x2, right: U64x2) -> U64x2 = "v128_xor"
 pub builtin wasm_u64x2_not(value: U64x2) -> U64x2 = "dew_v128_not"
 pub builtin wasm_u64x2_andnot(left: U64x2, right: U64x2) -> U64x2 = "dew_v128_andnot"
 pub builtin wasm_u64x2_bitselect(yes: U64x2, no: U64x2, mask: U64x2) -> U64x2 = "dew_v128_bitselect"
@@ -1237,24 +1688,56 @@ pub builtin wasm_u64x2_all_true(value: U64x2) -> Bool = "dew_v128_all_true_i64"
 pub builtin wasm_u64x2_bitmask(value: U64x2) -> U32 = "dew_v128_bitmask_i64"
 pub builtin wasm_u64x2_shl(value: U64x2, count: U32) -> U64x2 = "dew_v128_shl_i64"
 pub builtin wasm_u64x2_shr_u(value: U64x2, count: U32) -> U64x2 = "dew_v128_shr_u_i64"
+pub fn wasm_u64x2_from_v128(value: V128) -> U64x2 {
+  unsafe_bitcast::<V128, U64x2>(value)
+}
+pub fn wasm_u64x2_to_v128(value: U64x2) -> V128 {
+  unsafe_bitcast::<U64x2, V128>(value)
+}
+pub fn wasm_u64x2_reinterpret_as_i8x16(value: U64x2) -> I8x16 {
+  unsafe_bitcast::<U64x2, I8x16>(value)
+}
+pub fn wasm_u64x2_reinterpret_as_u8x16(value: U64x2) -> U8x16 {
+  unsafe_bitcast::<U64x2, U8x16>(value)
+}
+pub fn wasm_u64x2_reinterpret_as_i16x8(value: U64x2) -> I16x8 {
+  unsafe_bitcast::<U64x2, I16x8>(value)
+}
+pub fn wasm_u64x2_reinterpret_as_u16x8(value: U64x2) -> U16x8 {
+  unsafe_bitcast::<U64x2, U16x8>(value)
+}
+pub fn wasm_u64x2_reinterpret_as_i32x4(value: U64x2) -> I32x4 {
+  unsafe_bitcast::<U64x2, I32x4>(value)
+}
+pub fn wasm_u64x2_reinterpret_as_u32x4(value: U64x2) -> U32x4 {
+  unsafe_bitcast::<U64x2, U32x4>(value)
+}
+pub fn wasm_u64x2_reinterpret_as_i64x2(value: U64x2) -> I64x2 {
+  unsafe_bitcast::<U64x2, I64x2>(value)
+}
+pub fn wasm_u64x2_reinterpret_as_f32x4(value: U64x2) -> F32x4 {
+  unsafe_bitcast::<U64x2, F32x4>(value)
+}
+pub fn wasm_u64x2_reinterpret_as_f64x2(value: U64x2) -> F64x2 {
+  unsafe_bitcast::<U64x2, F64x2>(value)
+}
+pub fn wasm_u64x2_load(address: U32) -> U64x2 {
+  unsafe_bitcast::<V128, U64x2>(v128_load(address))
+}
+pub fn wasm_u64x2_store(address: U32, value: U64x2) -> Unit {
+  v128_store(address, unsafe_bitcast::<U64x2, V128>(value))
+}
+pub fn wasm_u64x2_and(left: U64x2, right: U64x2) -> U64x2 {
+  unsafe_bitcast::<V128, U64x2>(v128_and(unsafe_bitcast::<U64x2, V128>(left), unsafe_bitcast::<U64x2, V128>(right)))
+}
+pub fn wasm_u64x2_or(left: U64x2, right: U64x2) -> U64x2 {
+  unsafe_bitcast::<V128, U64x2>(v128_or(unsafe_bitcast::<U64x2, V128>(left), unsafe_bitcast::<U64x2, V128>(right)))
+}
+pub fn wasm_u64x2_xor(left: U64x2, right: U64x2) -> U64x2 {
+  unsafe_bitcast::<V128, U64x2>(v128_xor(unsafe_bitcast::<U64x2, V128>(left), unsafe_bitcast::<U64x2, V128>(right)))
+}
 
 // std/u8x16.dew
-pub builtin wasm_u8x16_from_v128(value: V128) -> U8x16 = "dew_reinterpret"
-pub builtin wasm_u8x16_to_v128(value: U8x16) -> V128 = "dew_reinterpret"
-pub builtin wasm_u8x16_reinterpret_as_i8x16(value: U8x16) -> I8x16 = "dew_reinterpret"
-pub builtin wasm_u8x16_reinterpret_as_i16x8(value: U8x16) -> I16x8 = "dew_reinterpret"
-pub builtin wasm_u8x16_reinterpret_as_u16x8(value: U8x16) -> U16x8 = "dew_reinterpret"
-pub builtin wasm_u8x16_reinterpret_as_i32x4(value: U8x16) -> I32x4 = "dew_reinterpret"
-pub builtin wasm_u8x16_reinterpret_as_u32x4(value: U8x16) -> U32x4 = "dew_reinterpret"
-pub builtin wasm_u8x16_reinterpret_as_i64x2(value: U8x16) -> I64x2 = "dew_reinterpret"
-pub builtin wasm_u8x16_reinterpret_as_u64x2(value: U8x16) -> U64x2 = "dew_reinterpret"
-pub builtin wasm_u8x16_reinterpret_as_f32x4(value: U8x16) -> F32x4 = "dew_reinterpret"
-pub builtin wasm_u8x16_reinterpret_as_f64x2(value: U8x16) -> F64x2 = "dew_reinterpret"
-pub builtin wasm_u8x16_load(address: U32) -> U8x16 = "dew_v128_load"
-pub builtin wasm_u8x16_store(address: U32, value: U8x16) -> Unit = "dew_v128_store"
-pub builtin wasm_u8x16_and(left: U8x16, right: U8x16) -> U8x16 = "v128_and"
-pub builtin wasm_u8x16_or(left: U8x16, right: U8x16) -> U8x16 = "v128_or"
-pub builtin wasm_u8x16_xor(left: U8x16, right: U8x16) -> U8x16 = "v128_xor"
 pub builtin wasm_u8x16_not(value: U8x16) -> U8x16 = "dew_v128_not"
 pub builtin wasm_u8x16_andnot(left: U8x16, right: U8x16) -> U8x16 = "dew_v128_andnot"
 pub builtin wasm_u8x16_bitselect(yes: U8x16, no: U8x16, mask: U8x16) -> U8x16 = "dew_v128_bitselect"
@@ -1365,29 +1848,121 @@ pub builtin wasm_u8x16_all_true(value: U8x16) -> Bool = "dew_v128_all_true_i8"
 pub builtin wasm_u8x16_bitmask(value: U8x16) -> U32 = "dew_v128_bitmask_i8"
 pub builtin wasm_u8x16_shl(value: U8x16, count: U32) -> U8x16 = "dew_v128_shl_i8"
 pub builtin wasm_u8x16_shr_u(value: U8x16, count: U32) -> U8x16 = "dew_v128_shr_u_i8"
+pub fn wasm_u8x16_from_v128(value: V128) -> U8x16 {
+  unsafe_bitcast::<V128, U8x16>(value)
+}
+pub fn wasm_u8x16_to_v128(value: U8x16) -> V128 {
+  unsafe_bitcast::<U8x16, V128>(value)
+}
+pub fn wasm_u8x16_reinterpret_as_i8x16(value: U8x16) -> I8x16 {
+  unsafe_bitcast::<U8x16, I8x16>(value)
+}
+pub fn wasm_u8x16_reinterpret_as_i16x8(value: U8x16) -> I16x8 {
+  unsafe_bitcast::<U8x16, I16x8>(value)
+}
+pub fn wasm_u8x16_reinterpret_as_u16x8(value: U8x16) -> U16x8 {
+  unsafe_bitcast::<U8x16, U16x8>(value)
+}
+pub fn wasm_u8x16_reinterpret_as_i32x4(value: U8x16) -> I32x4 {
+  unsafe_bitcast::<U8x16, I32x4>(value)
+}
+pub fn wasm_u8x16_reinterpret_as_u32x4(value: U8x16) -> U32x4 {
+  unsafe_bitcast::<U8x16, U32x4>(value)
+}
+pub fn wasm_u8x16_reinterpret_as_i64x2(value: U8x16) -> I64x2 {
+  unsafe_bitcast::<U8x16, I64x2>(value)
+}
+pub fn wasm_u8x16_reinterpret_as_u64x2(value: U8x16) -> U64x2 {
+  unsafe_bitcast::<U8x16, U64x2>(value)
+}
+pub fn wasm_u8x16_reinterpret_as_f32x4(value: U8x16) -> F32x4 {
+  unsafe_bitcast::<U8x16, F32x4>(value)
+}
+pub fn wasm_u8x16_reinterpret_as_f64x2(value: U8x16) -> F64x2 {
+  unsafe_bitcast::<U8x16, F64x2>(value)
+}
+pub fn wasm_u8x16_load(address: U32) -> U8x16 {
+  unsafe_bitcast::<V128, U8x16>(v128_load(address))
+}
+pub fn wasm_u8x16_store(address: U32, value: U8x16) -> Unit {
+  v128_store(address, unsafe_bitcast::<U8x16, V128>(value))
+}
+pub fn wasm_u8x16_and(left: U8x16, right: U8x16) -> U8x16 {
+  unsafe_bitcast::<V128, U8x16>(v128_and(unsafe_bitcast::<U8x16, V128>(left), unsafe_bitcast::<U8x16, V128>(right)))
+}
+pub fn wasm_u8x16_or(left: U8x16, right: U8x16) -> U8x16 {
+  unsafe_bitcast::<V128, U8x16>(v128_or(unsafe_bitcast::<U8x16, V128>(left), unsafe_bitcast::<U8x16, V128>(right)))
+}
+pub fn wasm_u8x16_xor(left: U8x16, right: U8x16) -> U8x16 {
+  unsafe_bitcast::<V128, U8x16>(v128_xor(unsafe_bitcast::<U8x16, V128>(left), unsafe_bitcast::<U8x16, V128>(right)))
+}
 
 // std/u8x4.dew
-pub builtin wasm_u8x4_from_swar32(value: Swar32) -> U8x4 = "dew_reinterpret"
-pub builtin wasm_u8x4_to_swar32(value: U8x4) -> Swar32 = "dew_reinterpret"
-pub builtin wasm_u8x4_reinterpret_as_i8x4(value: U8x4) -> I8x4 = "dew_reinterpret"
-pub builtin wasm_u8x4_reinterpret_as_i16x2(value: U8x4) -> I16x2 = "dew_reinterpret"
-pub builtin wasm_u8x4_reinterpret_as_u16x2(value: U8x4) -> U16x2 = "dew_reinterpret"
-pub builtin wasm_u8x4_load(address: U32) -> U8x4 = "dew_swar32_load"
-pub builtin wasm_u8x4_store(address: U32, value: U8x4) -> Unit = "dew_swar32_store"
-pub builtin wasm_u8x4_and(left: U8x4, right: U8x4) -> U8x4 = "swar32_and"
-pub builtin wasm_u8x4_or(left: U8x4, right: U8x4) -> U8x4 = "swar32_or"
-pub builtin wasm_u8x4_xor(left: U8x4, right: U8x4) -> U8x4 = "swar32_xor"
+pub fn wasm_u8x4_from_swar32(value: Swar32) -> U8x4 {
+  unsafe_bitcast::<Swar32, U8x4>(value)
+}
+pub fn wasm_u8x4_to_swar32(value: U8x4) -> Swar32 {
+  unsafe_bitcast::<U8x4, Swar32>(value)
+}
+pub fn wasm_u8x4_reinterpret_as_i8x4(value: U8x4) -> I8x4 {
+  unsafe_bitcast::<U8x4, I8x4>(value)
+}
+pub fn wasm_u8x4_reinterpret_as_i16x2(value: U8x4) -> I16x2 {
+  unsafe_bitcast::<U8x4, I16x2>(value)
+}
+pub fn wasm_u8x4_reinterpret_as_u16x2(value: U8x4) -> U16x2 {
+  unsafe_bitcast::<U8x4, U16x2>(value)
+}
+pub fn wasm_u8x4_load(address: U32) -> U8x4 {
+  unsafe_bitcast::<U32, U8x4>(u32_load(address))
+}
+pub fn wasm_u8x4_store(address: U32, value: U8x4) -> Unit {
+  u32_store(address, unsafe_bitcast::<U8x4, U32>(value))
+}
+pub fn wasm_u8x4_and(left: U8x4, right: U8x4) -> U8x4 {
+  unsafe_bitcast::<U32, U8x4>(u32_and(unsafe_bitcast::<U8x4, U32>(left), unsafe_bitcast::<U8x4, U32>(right)))
+}
+pub fn wasm_u8x4_or(left: U8x4, right: U8x4) -> U8x4 {
+  unsafe_bitcast::<U32, U8x4>(u32_or(unsafe_bitcast::<U8x4, U32>(left), unsafe_bitcast::<U8x4, U32>(right)))
+}
+pub fn wasm_u8x4_xor(left: U8x4, right: U8x4) -> U8x4 {
+  unsafe_bitcast::<U32, U8x4>(u32_xor(unsafe_bitcast::<U8x4, U32>(left), unsafe_bitcast::<U8x4, U32>(right)))
+}
 
 // std/u8x8.dew
-pub builtin wasm_u8x8_from_swar64(value: Swar64) -> U8x8 = "dew_reinterpret"
-pub builtin wasm_u8x8_to_swar64(value: U8x8) -> Swar64 = "dew_reinterpret"
-pub builtin wasm_u8x8_reinterpret_as_i8x8(value: U8x8) -> I8x8 = "dew_reinterpret"
-pub builtin wasm_u8x8_reinterpret_as_i16x4(value: U8x8) -> I16x4 = "dew_reinterpret"
-pub builtin wasm_u8x8_reinterpret_as_u16x4(value: U8x8) -> U16x4 = "dew_reinterpret"
-pub builtin wasm_u8x8_reinterpret_as_i32x2(value: U8x8) -> I32x2 = "dew_reinterpret"
-pub builtin wasm_u8x8_reinterpret_as_u32x2(value: U8x8) -> U32x2 = "dew_reinterpret"
-pub builtin wasm_u8x8_load(address: U32) -> U8x8 = "dew_swar64_load"
-pub builtin wasm_u8x8_store(address: U32, value: U8x8) -> Unit = "dew_swar64_store"
-pub builtin wasm_u8x8_and(left: U8x8, right: U8x8) -> U8x8 = "swar64_and"
-pub builtin wasm_u8x8_or(left: U8x8, right: U8x8) -> U8x8 = "swar64_or"
-pub builtin wasm_u8x8_xor(left: U8x8, right: U8x8) -> U8x8 = "swar64_xor"
+pub fn wasm_u8x8_from_swar64(value: Swar64) -> U8x8 {
+  unsafe_bitcast::<Swar64, U8x8>(value)
+}
+pub fn wasm_u8x8_to_swar64(value: U8x8) -> Swar64 {
+  unsafe_bitcast::<U8x8, Swar64>(value)
+}
+pub fn wasm_u8x8_reinterpret_as_i8x8(value: U8x8) -> I8x8 {
+  unsafe_bitcast::<U8x8, I8x8>(value)
+}
+pub fn wasm_u8x8_reinterpret_as_i16x4(value: U8x8) -> I16x4 {
+  unsafe_bitcast::<U8x8, I16x4>(value)
+}
+pub fn wasm_u8x8_reinterpret_as_u16x4(value: U8x8) -> U16x4 {
+  unsafe_bitcast::<U8x8, U16x4>(value)
+}
+pub fn wasm_u8x8_reinterpret_as_i32x2(value: U8x8) -> I32x2 {
+  unsafe_bitcast::<U8x8, I32x2>(value)
+}
+pub fn wasm_u8x8_reinterpret_as_u32x2(value: U8x8) -> U32x2 {
+  unsafe_bitcast::<U8x8, U32x2>(value)
+}
+pub fn wasm_u8x8_load(address: U32) -> U8x8 {
+  unsafe_bitcast::<U64, U8x8>(u64_load(address))
+}
+pub fn wasm_u8x8_store(address: U32, value: U8x8) -> Unit {
+  u64_store(address, unsafe_bitcast::<U8x8, U64>(value))
+}
+pub fn wasm_u8x8_and(left: U8x8, right: U8x8) -> U8x8 {
+  unsafe_bitcast::<U64, U8x8>(u64_and(unsafe_bitcast::<U8x8, U64>(left), unsafe_bitcast::<U8x8, U64>(right)))
+}
+pub fn wasm_u8x8_or(left: U8x8, right: U8x8) -> U8x8 {
+  unsafe_bitcast::<U64, U8x8>(u64_or(unsafe_bitcast::<U8x8, U64>(left), unsafe_bitcast::<U8x8, U64>(right)))
+}
+pub fn wasm_u8x8_xor(left: U8x8, right: U8x8) -> U8x8 {
+  unsafe_bitcast::<U64, U8x8>(u64_xor(unsafe_bitcast::<U8x8, U64>(left), unsafe_bitcast::<U8x8, U64>(right)))
+}

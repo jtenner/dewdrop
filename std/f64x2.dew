@@ -1,19 +1,51 @@
-builtin f64x2_from_v128(value: V128) -> F64x2 = "dew_reinterpret"
-builtin f64x2_to_v128(value: F64x2) -> V128 = "dew_reinterpret"
-builtin f64x2_reinterpret_as_i8x16(value: F64x2) -> I8x16 = "dew_reinterpret"
-builtin f64x2_reinterpret_as_u8x16(value: F64x2) -> U8x16 = "dew_reinterpret"
-builtin f64x2_reinterpret_as_i16x8(value: F64x2) -> I16x8 = "dew_reinterpret"
-builtin f64x2_reinterpret_as_u16x8(value: F64x2) -> U16x8 = "dew_reinterpret"
-builtin f64x2_reinterpret_as_i32x4(value: F64x2) -> I32x4 = "dew_reinterpret"
-builtin f64x2_reinterpret_as_u32x4(value: F64x2) -> U32x4 = "dew_reinterpret"
-builtin f64x2_reinterpret_as_i64x2(value: F64x2) -> I64x2 = "dew_reinterpret"
-builtin f64x2_reinterpret_as_u64x2(value: F64x2) -> U64x2 = "dew_reinterpret"
-builtin f64x2_reinterpret_as_f32x4(value: F64x2) -> F32x4 = "dew_reinterpret"
-builtin f64x2_load(address: U32) -> F64x2 = "dew_v128_load"
-builtin f64x2_store(address: U32, value: F64x2) -> Unit = "dew_v128_store"
-builtin f64x2_and(left: F64x2, right: F64x2) -> F64x2 = "v128_and"
-builtin f64x2_or(left: F64x2, right: F64x2) -> F64x2 = "v128_or"
-builtin f64x2_xor(left: F64x2, right: F64x2) -> F64x2 = "v128_xor"
+fn f64x2_from_v128(value: V128) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(value)
+}
+fn f64x2_to_v128(value: F64x2) -> V128 {
+  unsafe_bitcast::<F64x2, V128>(value)
+}
+fn f64x2_reinterpret_as_i8x16(value: F64x2) -> I8x16 {
+  unsafe_bitcast::<F64x2, I8x16>(value)
+}
+fn f64x2_reinterpret_as_u8x16(value: F64x2) -> U8x16 {
+  unsafe_bitcast::<F64x2, U8x16>(value)
+}
+fn f64x2_reinterpret_as_i16x8(value: F64x2) -> I16x8 {
+  unsafe_bitcast::<F64x2, I16x8>(value)
+}
+fn f64x2_reinterpret_as_u16x8(value: F64x2) -> U16x8 {
+  unsafe_bitcast::<F64x2, U16x8>(value)
+}
+fn f64x2_reinterpret_as_i32x4(value: F64x2) -> I32x4 {
+  unsafe_bitcast::<F64x2, I32x4>(value)
+}
+fn f64x2_reinterpret_as_u32x4(value: F64x2) -> U32x4 {
+  unsafe_bitcast::<F64x2, U32x4>(value)
+}
+fn f64x2_reinterpret_as_i64x2(value: F64x2) -> I64x2 {
+  unsafe_bitcast::<F64x2, I64x2>(value)
+}
+fn f64x2_reinterpret_as_u64x2(value: F64x2) -> U64x2 {
+  unsafe_bitcast::<F64x2, U64x2>(value)
+}
+fn f64x2_reinterpret_as_f32x4(value: F64x2) -> F32x4 {
+  unsafe_bitcast::<F64x2, F32x4>(value)
+}
+fn f64x2_load(address: U32) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(v128_load(address))
+}
+fn f64x2_store(address: U32, value: F64x2) -> Unit {
+  v128_store(address, unsafe_bitcast::<F64x2, V128>(value))
+}
+fn f64x2_and(left: F64x2, right: F64x2) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(v128_and(unsafe_bitcast::<F64x2, V128>(left), unsafe_bitcast::<F64x2, V128>(right)))
+}
+fn f64x2_or(left: F64x2, right: F64x2) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(v128_or(unsafe_bitcast::<F64x2, V128>(left), unsafe_bitcast::<F64x2, V128>(right)))
+}
+fn f64x2_xor(left: F64x2, right: F64x2) -> F64x2 {
+  unsafe_bitcast::<V128, F64x2>(v128_xor(unsafe_bitcast::<F64x2, V128>(left), unsafe_bitcast::<F64x2, V128>(right)))
+}
 builtin f64x2_not(value: F64x2) -> F64x2 = "dew_v128_not"
 builtin f64x2_andnot(left: F64x2, right: F64x2) -> F64x2 = "dew_v128_andnot"
 builtin f64x2_bitselect(yes: F64x2, no: F64x2, mask: F64x2) -> F64x2 = "dew_v128_bitselect"

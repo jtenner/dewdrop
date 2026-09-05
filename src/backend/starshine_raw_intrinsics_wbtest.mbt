@@ -47,3 +47,84 @@ test "raw bit casts reject references and erased signatures" {
     }
   }
 }
+
+///|
+test "packed wrappers reduce to one opcode without boxing or forwarding calls" {
+  let stages = backend_test_single_module_stages(
+    28204UL, b"pub fn masked(left: I16x2, right: I16x2) -> I16x2 {\n  unsafe_bitcast(u32_and(unsafe_bitcast(left), unsafe_bitcast(right)))\n}\npub fn loaded(address: U32) -> I16x4 {\n  unsafe_bitcast(u64_load(address))\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  let mut count = 0
+  for function_ in stages.link.functions {
+    if function_.name == b"masked" {
+      assert_eq(function_.direct_builtin, b"i32.and")
+      count += 1
+    } else if function_.name == b"loaded" {
+      assert_eq(function_.direct_builtin, b"i64.load")
+      count += 1
+    }
+  }
+  assert_eq(count, 2)
+  assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
+}
+
+///|
+test "raw opcode signatures are checked for ordinary user declarations" {
+  let stages = backend_test_single_module_stages(
+    28205UL, b"builtin wrong(left: I64, right: I64) -> I64 = \"i32.and\"\npub fn main() -> I64 {\n  wrong(1i64, 2i64)\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  match emit_starshine_program_module(stages.lowering, stages.link) {
+    Err(InvalidBuiltinSignature(name, _, _)) => assert_eq(name, b"i32.and")
+    _ => fail("expected raw opcode signature diagnostic")
+  }
+}
+
+///|
+test "raw forwarding requires every parameter once and in order" {
+  let stages = backend_test_single_module_stages(
+    28206UL, b"pub fn duplicate(left: I16x2, right: I16x2) -> I16x2 {\n  unsafe_bitcast(u32_and(unsafe_bitcast(left), unsafe_bitcast(left)))\n}\npub fn reverse(left: I16x2, right: I16x2) -> I16x2 {\n  unsafe_bitcast(u32_and(unsafe_bitcast(right), unsafe_bitcast(left)))\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  let mut count = 0
+  for function_ in stages.link.functions {
+    if function_.name == b"duplicate" || function_.name == b"reverse" {
+      assert_eq(function_.direct_builtin, b"")
+      count += 1
+    }
+  }
+  assert_eq(count, 2)
+  assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
+}
+
+///|
+test "packed forwarding functions remain usable as function values" {
+  let stages = backend_test_single_module_stages(
+    28207UL, b"fn masked(left: I16x2, right: I16x2) -> I16x2 {\n  unsafe_bitcast(u32_and(unsafe_bitcast(left), unsafe_bitcast(right)))\n}\npub fn main() -> U32 {\n  let operation = masked\n  unsafe_bitcast(operation(unsafe_bitcast(298u32), unsafe_bitcast(255u32)))\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
+}
+
+///|
+test "raw forwarding worklist closes a reverse-ordered dependency chain" {
+  let source = Buffer(size_hint=1024)
+  source.write_string_utf8(
+    "pub fn step0(value: I32) -> I32 {\n  unsafe_bitcast(value)\n}\n",
+  )
+  for index in 1..<12 {
+    source.write_string_utf8(
+      "pub fn step\{index}(value: I32) -> I32 {\n  step\{index - 1}(value)\n}\n",
+    )
+  }
+  let stages = backend_test_single_module_stages(28208UL, source.to_bytes())
+  assert_eq(stages.diagnostic_count(), 0)
+  let mut count = 0
+  for function_ in stages.link.modules[0].functions {
+    if function_.direct_builtin == b"unsafe.bitcast" {
+      count += 1
+    }
+  }
+  assert_eq(count, 12)
+  assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
+}

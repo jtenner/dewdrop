@@ -1,13 +1,33 @@
-builtin i16x2_from_swar32(value: Swar32) -> I16x2 = "dew_reinterpret"
-builtin i16x2_to_swar32(value: I16x2) -> Swar32 = "dew_reinterpret"
-builtin i16x2_reinterpret_as_i8x4(value: I16x2) -> I8x4 = "dew_reinterpret"
-builtin i16x2_reinterpret_as_u8x4(value: I16x2) -> U8x4 = "dew_reinterpret"
-builtin i16x2_reinterpret_as_u16x2(value: I16x2) -> U16x2 = "dew_reinterpret"
-builtin i16x2_load(address: U32) -> I16x2 = "dew_swar32_load"
-builtin i16x2_store(address: U32, value: I16x2) -> Unit = "dew_swar32_store"
-builtin i16x2_and(left: I16x2, right: I16x2) -> I16x2 = "swar32_and"
-builtin i16x2_or(left: I16x2, right: I16x2) -> I16x2 = "swar32_or"
-builtin i16x2_xor(left: I16x2, right: I16x2) -> I16x2 = "swar32_xor"
+fn i16x2_from_swar32(value: Swar32) -> I16x2 {
+  unsafe_bitcast::<Swar32, I16x2>(value)
+}
+fn i16x2_to_swar32(value: I16x2) -> Swar32 {
+  unsafe_bitcast::<I16x2, Swar32>(value)
+}
+fn i16x2_reinterpret_as_i8x4(value: I16x2) -> I8x4 {
+  unsafe_bitcast::<I16x2, I8x4>(value)
+}
+fn i16x2_reinterpret_as_u8x4(value: I16x2) -> U8x4 {
+  unsafe_bitcast::<I16x2, U8x4>(value)
+}
+fn i16x2_reinterpret_as_u16x2(value: I16x2) -> U16x2 {
+  unsafe_bitcast::<I16x2, U16x2>(value)
+}
+fn i16x2_load(address: U32) -> I16x2 {
+  unsafe_bitcast::<U32, I16x2>(u32_load(address))
+}
+fn i16x2_store(address: U32, value: I16x2) -> Unit {
+  u32_store(address, unsafe_bitcast::<I16x2, U32>(value))
+}
+fn i16x2_and(left: I16x2, right: I16x2) -> I16x2 {
+  unsafe_bitcast::<U32, I16x2>(u32_and(unsafe_bitcast::<I16x2, U32>(left), unsafe_bitcast::<I16x2, U32>(right)))
+}
+fn i16x2_or(left: I16x2, right: I16x2) -> I16x2 {
+  unsafe_bitcast::<U32, I16x2>(u32_or(unsafe_bitcast::<I16x2, U32>(left), unsafe_bitcast::<I16x2, U32>(right)))
+}
+fn i16x2_xor(left: I16x2, right: I16x2) -> I16x2 {
+  unsafe_bitcast::<U32, I16x2>(u32_xor(unsafe_bitcast::<I16x2, U32>(left), unsafe_bitcast::<I16x2, U32>(right)))
+}
 fn i16x2_splat(value: I16) -> I16x2 {
   i16x2_from_swar32(swar32_splat_i16(value))
 }
