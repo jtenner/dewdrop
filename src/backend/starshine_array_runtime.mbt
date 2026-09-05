@@ -27,11 +27,44 @@ fn starshine_array_trap_if_i32_gt_u(
 }
 
 ///|
+fn starshine_array_storage_carrier(shape : @semantic.PlannedValueShape) -> Int {
+  match shape {
+    // Unit has a logical array element but no operand. Its storage slot is a
+    // null marker; this does not turn Unit into an expression carrier.
+    @semantic.UnitPlannedValueShape => 5
+    _ => starshine_value_carrier(shape)
+  }
+}
+
+///|
+fn starshine_array_storage_value_type(
+  shape : @semantic.PlannedValueShape,
+) -> @lib.ValType? {
+  match shape {
+    @semantic.UnitPlannedValueShape => Some(@lib.ValType::eqref_null())
+    _ => starshine_shape_value_type(shape)
+  }
+}
+
+///|
+fn starshine_array_append_unit_marker(
+  output : Array[@lib.Instruction],
+  shape : @semantic.PlannedValueShape?,
+) -> Unit {
+  if shape is Some(@semantic.UnitPlannedValueShape) {
+    output.push(
+      @lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq())),
+    )
+  }
+}
+
+///|
 fn starshine_array_shape_uses_reference_storage(
   shape : @semantic.PlannedValueShape,
 ) -> Bool {
   match shape {
-    @semantic.RefPlannedValueShape
+    @semantic.UnitPlannedValueShape
+    | @semantic.RefPlannedValueShape
     | @semantic.GenericPlannedValueShape
     | @semantic.ProductPlannedValueShape(_) => true
     _ => false
@@ -684,7 +717,7 @@ fn starshine_finish_array(
     None => wrapper_type
   }
   let carrier = match shape {
-    Some(value) => starshine_value_carrier(value)
+    Some(value) => starshine_array_storage_carrier(value)
     None => -1
   }
   let array_type = starshine_fixed_array_base_for_body(planned, program) +
@@ -716,6 +749,7 @@ fn starshine_finish_array(
     output.push(starshine_array_local_set(backing_local))
     for index, fragment in fragments {
       append_starshine_instructions(output, fragment)
+      starshine_array_append_unit_marker(output, shape)
       output.push(starshine_array_local_set(value_local))
       output.push(starshine_array_local_get(backing_local))
       output.push(starshine_match_cast(array_type))
@@ -743,6 +777,7 @@ fn starshine_finish_array(
     }
     append_starshine_instructions(output, fragments[0])
     append_starshine_instructions(output, fragments[1])
+    starshine_array_append_unit_marker(output, shape)
     output.push(starshine_array_local_set(value_local))
     output.push(starshine_array_local_set(index_local))
     output.push(starshine_array_local_get(value_local))
@@ -1242,9 +1277,7 @@ fn starshine_finish_array(
       wrapper_type, wrapper_local, 2,
     )
     candidate.push(@lib.Instruction::i32_eqz())
-    let doubled = starshine_array_wrapper_field(
-      wrapper_type, wrapper_local, 2,
-    )
+    let doubled = starshine_array_wrapper_field(wrapper_type, wrapper_local, 2)
     doubled.push(@lib.Instruction::i32_const(@lib.I32::new(2)))
     doubled.push(@lib.Instruction::i32_mul())
     candidate.push(
@@ -1599,6 +1632,9 @@ fn starshine_finish_array(
         @lib.U32::new(1U),
       ),
     )
+    if shape is Some(@semantic.UnitPlannedValueShape) {
+      output.push(@lib.Instruction::drop())
+    }
     return Ok(output)
   }
   if operation == 16 {
@@ -1666,6 +1702,7 @@ fn starshine_finish_array(
     }
     append_starshine_instructions(output, fragments[1])
     append_starshine_instructions(output, fragments[2])
+    starshine_array_append_unit_marker(output, Some(shape))
     output.push(starshine_array_local_set(value_local))
     output.push(starshine_array_local_set(index_local))
   }
@@ -1678,6 +1715,7 @@ fn starshine_finish_array(
       return Err(UnsupportedExpression(body_id, -404))
     }
     append_starshine_instructions(output, fragments[fragments.length() - 1])
+    starshine_array_append_unit_marker(output, Some(shape))
     output.push(starshine_array_local_set(value_local))
   }
   if defer_wrapper_store {
@@ -1813,6 +1851,9 @@ fn starshine_finish_array(
           @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
         ),
       )
+      if shape is @semantic.UnitPlannedValueShape {
+        output.push(@lib.Instruction::drop())
+      }
       if shape is @semantic.ProductPlannedValueShape(_) {
         output.push(starshine_array_local_set(backing_local))
         match

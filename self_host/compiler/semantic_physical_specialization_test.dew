@@ -892,6 +892,36 @@ pub fn self_host_emission_probe_compile_source(source: BytesBuilder) -> Bytes {
   }
 }
 
+// Compile the real library manifest, not a hand-written builtin stand-in.
+pub fn self_host_emission_probe_compile_request(source: BytesBuilder) -> Bytes {
+  self_host_clear_invariant_failure()
+  let request = match decode_self_host_compile_request(source.finish()) {
+    Result::Ok(value) => value
+    Result::Err(error) => {
+      assert(false, error)
+      unreachable()
+    }
+  }
+  let link = self_host_physical_test_manifest_link(
+    self_host_manifest_with_default_preamble(request.manifest, request.default_preamble),
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let root = match request.root_module_index() {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "library probe root module is missing")
+      unreachable()
+    }
+  }
+  match build_self_host_linked_root_i32_module(link, root) {
+    Result::Ok(output) => output
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
 pub fn self_host_emit_bound_dispatch_probe() -> Bytes {
   let fragments = self_host_physical_test_fragments(
     b"trait Read {\n  fn read(self) -> I32\n}\nstruct First {}\nstruct Second {}\nimpl Read for First {\n  fn read(self) -> I32 {\n    3i32\n  }\n}\nimpl Read for Second {\n  fn read(self) -> I32 {\n    7i32\n  }\n}\nfn read<t: Read>(value: t) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  read(First::{}) + read(Second::{})\n}\n",

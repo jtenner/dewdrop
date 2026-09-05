@@ -76,15 +76,92 @@ impl<t> Iter<t> for ArrayIter<t> {
   }
 }
 
-builtin array_make_raw<t>(length: U32, value: t) -> Array<t> = "dew_array_make"
+fn array_make_raw<t>(length: U32, value: t) -> Array<t> {
+  let output = array_with_capacity(length)
+  while 0u32 {
+    index if index < length => {
+      array_push(output, value)
+      continue index + 1u32
+    }
+    _ => break array_unit()
+  }
+  output
+}
+
 builtin array_reserve_raw<t>(value: Array<t>, additional: U32) -> Unit = "dew_array_reserve"
 builtin array_shrink_to_fit_raw<t>(value: Array<t>) -> Unit = "dew_array_shrink_to_fit"
 builtin array_truncate_raw<t>(value: Array<t>, length: U32) -> Unit = "dew_array_truncate"
-builtin array_copy_raw<t>(value: Array<t>) -> Array<t> = "dew_array_copy"
-builtin array_copy_within_raw<t>(value: Array<t>, target: U32, start: U32, end: U32) -> Unit = "dew_array_copy_within"
-builtin array_fill_raw<t>(value: Array<t>, item: t, start: U32, end: U32) -> Unit = "dew_array_fill"
-builtin array_slice_raw<t>(value: Array<t>, start: U32, end: U32) -> Array<t> = "dew_array_slice"
-builtin array_extend_raw<t>(value: Array<t>, source: Array<t>) -> Unit = "dew_array_extend"
+
+fn array_copy_raw<t>(value: Array<t>) -> Array<t> {
+  array_slice_raw(value, 0u32, array_length(value))
+}
+
+fn array_copy_within_raw<t>(value: Array<t>, target: U32, start: U32, end: U32) -> Unit {
+  let length = array_length(value)
+  array_require_range(length, start, end)
+  let count = end - start
+  if target > length || count > length - target {
+    unreachable()
+  } else if target > start && target - start < count {
+    // Copy backward when the destination overlaps the unread source suffix.
+    while count {
+      remaining if remaining > 0u32 => {
+        let offset = remaining - 1u32
+        array_set_unchecked(value, target + offset, array_get_unchecked(value, start + offset))
+        continue offset
+      }
+      _ => break array_unit()
+    }
+  } else {
+    while 0u32 {
+      offset if offset < count => {
+        array_set_unchecked(value, target + offset, array_get_unchecked(value, start + offset))
+        continue offset + 1u32
+      }
+      _ => break array_unit()
+    }
+  }
+}
+
+fn array_fill_raw<t>(value: Array<t>, item: t, start: U32, end: U32) -> Unit {
+  array_require_range(array_length(value), start, end)
+  while start {
+    index if index < end => {
+      array_set_unchecked(value, index, item)
+      continue index + 1u32
+    }
+    _ => break array_unit()
+  }
+}
+
+fn array_slice_raw<t>(value: Array<t>, start: U32, end: U32) -> Array<t> {
+  array_require_range(array_length(value), start, end)
+  let output = array_with_capacity(end - start)
+  while start {
+    index if index < end => {
+      array_push(output, array_get_unchecked(value, index))
+      continue index + 1u32
+    }
+    _ => break array_unit()
+  }
+  output
+}
+
+fn array_extend_raw<t>(value: Array<t>, source: Array<t>) -> Unit {
+  // Capture the length before push: source may alias value.
+  let count = array_length(source)
+  if count > 4294967295u32 - array_length(value) {
+    unreachable()
+  } else {
+    while 0u32 {
+      index if index < count => {
+        array_push(value, array_get_unchecked(source, index))
+        continue index + 1u32
+      }
+      _ => break array_unit()
+    }
+  }
+}
 
 pub trait ArrayComparator<t> {
   fn before(self, left: t, right: t) -> Bool

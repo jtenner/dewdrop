@@ -30,15 +30,9 @@ enum StandardBuiltinOperation {
   ArrayIterHasNext
   ArrayIterNext
   ArrayIterNextOption
-  ArrayMake
   ArrayReserve
   ArrayShrinkToFit
   ArrayTruncate
-  ArrayCopy
-  ArrayCopyWithin
-  ArrayFill
-  ArraySlice
-  ArrayExtend
   QueueNew
   QueueWithCapacity
   QueueLength
@@ -258,15 +252,9 @@ fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
     14 => ArrayIterHasNext
     15 => ArrayIterNext
     35 | 168 => ArrayIterNextOption
-    36 => ArrayMake
     37 => ArrayReserve
     38 => ArrayShrinkToFit
     39 => ArrayTruncate
-    40 => ArrayCopy
-    41 => ArrayCopyWithin
-    42 => ArrayFill
-    43 => ArraySlice
-    44 => ArrayExtend
     _ => NoStandardBuiltinOperation
   }
 }

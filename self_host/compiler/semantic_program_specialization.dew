@@ -1964,6 +1964,16 @@ fn self_host_program_specialization_scan_reachable_declaration(
   }
 }
 
+// Transitional storage adapters for the remaining legacy runtime ABI. These
+// are builtin target contracts, never source declaration names. Unit remains
+// erased in the public signature; a separate Ref request owns the storage ABI.
+fn self_host_legacy_array_unit_adapter(name: Bytes) -> Bool {
+  name.equals(b"dew_array_push") ||
+  name.equals(b"dew_array_set_unchecked") ||
+  name.equals(b"dew_array_get_unchecked") ||
+  name.equals(b"dew_array_iter_next")
+}
+
 fn self_host_program_specialization_scan_request(
   lowering: SelfHostPlannedProgramLowering,
   request_index: U32,
@@ -1993,31 +2003,42 @@ fn self_host_program_specialization_scan_request(
         module_,
         request.declaration,
       ) {
-        Option::Some(callable) => match self_host_program_specialization_callable_body(
-          callable,
-        ) {
-          Option::Some(body_id) => match self_host_program_specialization_body(
-            module_,
-            body_id,
-          ) {
-            Option::Some(body) => self_host_program_specialization_scan_body(
-              lowering,
-              owner,
-              body,
-              Option::Some(callable),
-              request_index,
-              request.shapes,
-              reachable,
-              reachable_seen,
-              requests,
-              shapes,
-              request_head_by_declaration,
-              request_next,
-              calls,
-            )
+        Option::Some(callable) => {
+          match callable.kind {
+            SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if
+              self_host_legacy_array_unit_adapter(name) &&
+              request.shapes.length == 1u32 &&
+              shapes[request.shapes.start] is SelfHostPlannedValueShape::UnitPlannedValueShape {
+              let _ = self_host_program_specialization_add_request(
+                requests, shapes, request_head_by_declaration, request_next,
+                request.declaration, [SelfHostPlannedValueShape::RefPlannedValueShape],
+              )
+            }
+            _ => {}
+          }
+          match self_host_program_specialization_callable_body(callable) {
+            Option::Some(body_id) => match self_host_program_specialization_body(
+              module_, body_id,
+            ) {
+              Option::Some(body) => self_host_program_specialization_scan_body(
+                lowering,
+                owner,
+                body,
+                Option::Some(callable),
+                request_index,
+                request.shapes,
+                reachable,
+                reachable_seen,
+                requests,
+                shapes,
+                request_head_by_declaration,
+                request_next,
+                calls,
+              )
+              Option::None => {}
+            }
             Option::None => {}
           }
-          Option::None => {}
         }
         Option::None => {}
       }

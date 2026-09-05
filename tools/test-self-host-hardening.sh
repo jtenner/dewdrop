@@ -6,6 +6,11 @@ source tools/self-host-common.sh
 work=.tmp/self-host-hardening
 mkdir -p "$work"
 self_host_ensure_starshine_ffi
+self_host_measure 'hardening real-library request' \
+  moon run --target native --release src/self_host_bootstrap_fixture -- \
+    "$work/array.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-array-probe.wasm \
+    app.array_probes tools/dew-test/array_operations.dew
 mapfile -t compiler_sources < <(
   find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' ! -name main.dew | sort
 )

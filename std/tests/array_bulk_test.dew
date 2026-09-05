@@ -1,0 +1,139 @@
+open dew.std.array
+
+fn array_bulk_sequence() -> Array<I64> {
+  let values = Array::new()
+  values.push(10i64)
+  values.push(20i64)
+  values.push(30i64)
+  values.push(40i64)
+  values.push(50i64)
+  values
+}
+
+test "array overlapping copy preserves the original source values" {
+  let right = array_bulk_sequence()
+  right.copy_within(1u32, 0u32, 4u32)
+  assert(right[0u32] == 10i64 && right[1u32] == 10i64, "right copy prefix")
+  assert(right[2u32] == 20i64 && right[4u32] == 40i64, "right copy source overwritten")
+  let left = array_bulk_sequence()
+  left.copy_within(0u32, 1u32, 5u32)
+  assert(left[0u32] == 20i64 && left[3u32] == 50i64, "left copy source overwritten")
+  assert(left[4u32] == 50i64 && left.length() == 5u32, "copy changed length or tail")
+}
+
+test "array empty and identical copies do not change storage" {
+  let values = array_bulk_sequence()
+  values.copy_within(5u32, 5u32, 5u32)
+  values.copy_within(0u32, 0u32, 5u32)
+  values.fill(99i64, 5u32, 5u32)
+  assert(values[0u32] == 10i64 && values[4u32] == 50i64, "empty operation wrote data")
+  assert(values.length() == 5u32, "empty operation changed length")
+}
+
+test "array self extension copies only the original source range" {
+  let values = array_bulk_sequence()
+  let alias = values
+  values.extend(alias)
+  assert(values.length() == 10u32, "self extension did not stop at original length")
+  assert(values[0u32] == 10i64 && values[5u32] == 10i64, "self extension prefix")
+  assert(values[4u32] == 50i64 && values[9u32] == 50i64, "self extension suffix")
+  assert(alias.length() == 10u32, "extension replaced the array identity")
+}
+
+test "array copies and slices have independent storage" {
+  let source = array_bulk_sequence()
+  let copied = source.copy()
+  let sliced = source.slice(1u32, 4u32)
+  copied.fill(7i64, 0u32, copied.length())
+  sliced[0u32] = 8i64
+  assert(source[0u32] == 10i64 && source[1u32] == 20i64, "copy aliases source storage")
+  assert(copied[4u32] == 7i64, "fill missed end of range")
+  assert(sliced.length() == 3u32 && sliced[2u32] == 40i64, "slice used wrong range")
+  assert(source.slice(5u32, 5u32).length() == 0u32, "empty slice")
+}
+
+struct ArrayBulkCell {
+  mut value: I32
+}
+
+test "array bulk operations copy references without cloning objects" {
+  let cell = ArrayBulkCell::{
+    value: 3i32
+  }
+  let values = Array::make(3u32, cell)
+  let copied = values.copy()
+  let sliced = values.slice(1u32, 3u32)
+  cell.value = 8i32
+  assert(copied[0u32].value == 8i32 && sliced[1u32].value == 8i32, "reference identity lost")
+  let replacement = ArrayBulkCell::{
+    value: 9i32
+  }
+  copied.fill(replacement, 1u32, 3u32)
+  assert(copied[2u32].value == 9i32 && values[2u32].value == 8i32, "fill changed source storage")
+}
+
+test "array bulk operations preserve Unit elements and logical lengths" {
+  let values = Array::make(3u32, ())
+  values.copy_within(1u32, 0u32, 2u32)
+  values.fill((), 0u32, 3u32)
+  let copied = values.copy()
+  copied.extend(values)
+  assert(copied.length() == 6u32 && values.length() == 3u32, "Unit elements were erased from array length")
+  assert(copied.slice(1u32, 5u32).length() == 4u32, "Unit slice length")
+}
+
+struct ArrayUnitEffects {
+  mut count: U32
+}
+
+fn array_unit_effect(counter: ArrayUnitEffects) -> Unit {
+  counter.count = counter.count + 1u32
+}
+
+test "Unit array storage preserves effects bounds options and iteration" {
+  let counter = ArrayUnitEffects::{
+    count: 0u32
+  }
+  let values = [array_unit_effect(counter), array_unit_effect(counter)]
+  assert(counter.count == 2u32 && values.length() == 2u32, "Unit literal effects")
+  values.push(array_unit_effect(counter))
+  values.set_unchecked(0u32, array_unit_effect(counter))
+  values.get_unchecked(1u32)
+  assert(counter.count == 4u32, "Unit write effects")
+  assert(values.get(0u32) is Option::Some(_), "present Unit option")
+  assert(values.get(3u32) is Option::None, "missing Unit option")
+  let iterator = values.iter()
+  array_iter_next(iterator)
+  array_iter_next(iterator)
+  array_iter_next(iterator)
+  assert(!array_iter_has_next(iterator), "Unit iterator did not advance")
+  assert(values.pop() is Option::Some(_), "Unit pop must be present")
+  assert(values.length() == 2u32, "Unit pop length")
+  values.clear()
+  assert(values.pop() is Option::None, "empty Unit pop")
+}
+
+test "Unit array unchecked get still checks bounds" expect_trap "unreachable" {
+  let values = Array::make(0u32, ())
+  values.get_unchecked(0u32)
+}
+
+test "array copy rejects a reversed source range" expect_trap "unreachable" {
+  array_bulk_sequence().copy_within(0u32, 3u32, 2u32)
+}
+
+test "array copy rejects a destination beyond its length" expect_trap "unreachable" {
+  array_bulk_sequence().copy_within(4294967295u32, 0u32, 0u32)
+}
+
+test "array copy rejects an overflowing destination range" expect_trap "unreachable" {
+  array_bulk_sequence().copy_within(4u32, 0u32, 2u32)
+}
+
+test "array fill rejects an end beyond its length" expect_trap "unreachable" {
+  array_bulk_sequence().fill(7i64, 0u32, 6u32)
+}
+
+test "array slice rejects a reversed range" expect_trap "unreachable" {
+  let ignored = array_bulk_sequence().slice(3u32, 2u32)
+}

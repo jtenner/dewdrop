@@ -57,15 +57,9 @@
         "ArrayIterHasNext": [14],
         "ArrayIterNext": [15],
         "ArrayIterNextOption": [35, 168],
-        "ArrayMake": [36],
         "ArrayReserve": [37],
         "ArrayShrinkToFit": [38],
-        "ArrayTruncate": [39],
-        "ArrayCopy": [40],
-        "ArrayCopyWithin": [41],
-        "ArrayFill": [42],
-        "ArraySlice": [43],
-        "ArrayExtend": [44]
+        "ArrayTruncate": [39]
       }
     },
     "queue": {

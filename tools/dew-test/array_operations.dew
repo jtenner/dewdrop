@@ -1,0 +1,105 @@
+open dew.std.array
+open dew.std.option
+
+fn bulk_values() -> Array<I64> {
+  let values = Array::new()
+  values.push(10i64)
+  values.push(20i64)
+  values.push(30i64)
+  values.push(40i64)
+  values
+}
+
+struct BulkCell {
+  mut value: I32
+}
+
+fn bulk_effect(cell: BulkCell) -> Unit {
+  cell.value = cell.value + 1i32
+}
+
+pub fn main(case: U32) -> I32 {
+  if case == 0u32 {
+    let values = bulk_values()
+    values.copy_within(1u32, 0u32, 3u32)
+    if values[1u32] == 10i64 && values[3u32] == 30i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 1u32 {
+    let values = bulk_values()
+    values.extend(values)
+    if values.length() == 8u32 && values[4u32] == 10i64 && values[7u32] == 40i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 2u32 {
+    let values = bulk_values()
+    let copied = values.copy()
+    copied.fill(7i64, 0u32, 4u32)
+    let sliced = values.slice(1u32, 3u32)
+    if copied[3u32] == 7i64 && values[3u32] == 40i64 && sliced[0u32] == 20i64 && sliced.length() == 2u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 3u32 {
+    let cell = BulkCell::{
+      value: 3i32
+    }
+    let values = Array::make(3u32, cell)
+    let copied = values.copy()
+    cell.value = 8i32
+    if copied[2u32].value == 8i32 && copied.length() == 3u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 4u32 {
+    let cell = BulkCell::{
+      value: 0i32
+    }
+    let values = Array::make(2u32, bulk_effect(cell))
+    values.push(bulk_effect(cell))
+    values.set_unchecked(0u32, bulk_effect(cell))
+    values.get_unchecked(1u32)
+    let copied = values.copy()
+    copied.extend(values)
+    if cell.value == 3i32 && values.length() == 3u32 && copied.length() == 6u32 && values.get(0u32) is Option::Some(_) {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 5u32 {
+    bulk_values().copy_within(0u32, 3u32, 2u32)
+    0i32
+  } else if case == 6u32 {
+    bulk_values().copy_within(4294967295u32, 0u32, 0u32)
+    0i32
+  } else if case == 7u32 {
+    bulk_values().fill(7i64, 0u32, 5u32)
+    0i32
+  } else if case == 8u32 {
+    let values = Array::make(0u32, ())
+    values.get_unchecked(0u32)
+    0i32
+  } else {
+    let cell = BulkCell::{
+      value: 0i32
+    }
+    let values = [bulk_effect(cell), bulk_effect(cell)]
+    let iterator = values.iter()
+    array_iter_next(iterator)
+    array_iter_next(iterator)
+    let present = values.pop() is Option::Some(_)
+    let missing = values.get(1u32) is Option::None
+    values.clear()
+    if cell.value == 2i32 && !array_iter_has_next(iterator) && present && missing && values.pop() is Option::None {
+      1i32
+    } else {
+      0i32
+    }
+  }
+}

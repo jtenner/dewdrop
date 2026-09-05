@@ -4012,7 +4012,7 @@ fn starshine_body_locals(
                   )
                 }
                 _ =>
-                  match starshine_shape_value_type(element_shape) {
+                  match starshine_array_storage_value_type(element_shape) {
                     Some(type_) => {
                       map_value_local_indices[expression -
                       body.expressions.start] = parameter_count +
@@ -4052,7 +4052,7 @@ fn starshine_body_locals(
               value_source.type_,
               shape,
             )
-            match starshine_shape_value_type(element_shape) {
+            match starshine_array_storage_value_type(element_shape) {
               Some(type_) => {
                 map_value_local_indices[expression - body.expressions.start] = parameter_count +
                   body_local_types.length()
@@ -4072,7 +4072,7 @@ fn starshine_body_locals(
               value_source.type_,
               shape,
             )
-            match starshine_shape_value_type(element_shape) {
+            match starshine_array_storage_value_type(element_shape) {
               Some(type_) => {
                 map_value_local_indices[expression - body.expressions.start] = parameter_count +
                   body_local_types.length()
@@ -4085,7 +4085,7 @@ fn starshine_body_locals(
             let element_shape = starshine_specialized_shape(
               lowering, generic_specialization, element_type, shape,
             )
-            match starshine_shape_value_type(element_shape) {
+            match starshine_array_storage_value_type(element_shape) {
               Some(type_) => {
                 map_value_local_indices[expression - body.expressions.start] = parameter_count +
                   body_local_types.length()

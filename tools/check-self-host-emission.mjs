@@ -9,6 +9,7 @@ import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
 import { checkMathOperations } from "./math-operation-cases.mjs";
 import { checkSpecializationCallbacks } from "./specialization-callback-cases.mjs";
 import { checkMemberCalls } from "./member-call-cases.mjs";
+import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
@@ -103,13 +104,17 @@ if (compilerImports.wasi_snapshot_preview1?.fd_write) {
 compiler = await WebAssembly.instantiate(module, compilerImports);
 compiler.exports.__dew_init?.();
 async function compileSourceExports(fixture) {
+  return compileProbeBytes(new TextEncoder().encode(fixture), "self_host_emission_probe_compile_source");
+}
+
+async function compileProbeBytes(input, entry) {
   const builder = compiler.exports.self_host_emission_probe_source_new();
-  for (const byte of new TextEncoder().encode(fixture)) {
+  for (const byte of input) {
     compiler.exports.self_host_emission_probe_source_append(builder, byte);
   }
   let output;
   try {
-    output = compiler.exports.self_host_emission_probe_compile_source(builder);
+    output = compiler.exports[entry](builder);
   } catch (error) {
     const failure = readSelfHostInvariantFailure(compiler.exports.memory);
     if (failure) throw new Error(formatSelfHostInvariantFailure(failure), { cause: error });
@@ -460,6 +465,17 @@ pub fn main() -> I32 {
     failures++;
     console.error("self-host specialization callback probe failed");
     console.error(error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const request = await readFile(process.argv[3] ?? new URL("../.tmp/self-host-hardening/array.request.bin", import.meta.url));
+    const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+    console.log(`self-host real-library array checks passed: ${checkArrayOperations(exports.main)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+  } catch (error) {
+    failures++;
+    console.error("self-host real-library array probe failed", error);
   }
 }
 if (failures) throw new Error(`${failures} self-host emission probe(s) failed`);

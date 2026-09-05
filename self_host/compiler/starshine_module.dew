@@ -652,7 +652,8 @@ fn self_host_linked_exact_emitted_expression_carrier(
   }
   match canonical {
     Option::Some(plan) => match self_host_body_plan_expression(plan, expression) {
-      Option::Some(planned) => if link.erased_fields.get(planned.selected_field) is Option::Some(true) {
+      Option::Some(planned) => if link.erased_fields.get(planned.selected_field) is Option::Some(true) ||
+        module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, _) {
         return planned.value.carrier
       }
       Option::None => {}
@@ -14105,6 +14106,24 @@ fn self_host_linked_i32_push_planned_arguments(
   expression_depths: Array<U32>,
   depth: U32,
 ) -> Option<String> {
+  self_host_linked_i32_push_call_evaluations(canonical, link, module_, expression,
+    arguments, function_index, instructions, tasks, expression_depths, depth, false,
+  )
+}
+
+fn self_host_linked_i32_push_call_evaluations(
+  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  expression: U32,
+  arguments: SelfHostHirSpan,
+  function_index: U32,
+  instructions: StarshineInstructions,
+  tasks: Array<SelfHostLinkedI32EmitTask>,
+  expression_depths: Array<U32>,
+  depth: U32,
+  include_receiver: Bool,
+) -> Option<String> {
   let plan = match canonical {
     Option::Some(value) => value
     Option::None => return self_host_linked_i32_push_physical_arguments(
@@ -14162,7 +14181,7 @@ fn self_host_linked_i32_push_planned_arguments(
           break self_host_semantic_unit()
         }
       }
-      if !receiver {
+      if include_receiver || !receiver {
         match self_host_body_plan_expression(plan, source_expression) {
           Option::Some(source_plan) => if source_plan.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
             self_host_linked_i32_schedule_discarded_expression(
@@ -14226,6 +14245,32 @@ fn self_host_linked_i32_planned_call_emits(
     }
     Option::None => true
   }
+}
+
+fn self_host_linked_call_has_erased_specialization(
+  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  link: SelfHostPlannedProgramWasmGCLink,
+  expression: U32,
+) -> Bool {
+  match canonical {
+    Option::Some(plan) => match self_host_body_call_plan(plan, expression) {
+      Option::Some(call) => if call.specialization != 4294967295u32 {
+        let request = link.fragments.specialization.requests[call.specialization]
+        while 0u32 {
+          index if index < request.shapes.length => {
+            if link.fragments.specialization.shapes[request.shapes.start + index] is SelfHostPlannedValueShape::UnitPlannedValueShape {
+              return true
+            }
+            continue index + 1u32
+          }
+          _ => break self_host_semantic_unit()
+        }
+      }
+      Option::None => {}
+    }
+    Option::None => {}
+  }
+  false
 }
 
 fn self_host_body_plan_expression_from_optional(
@@ -18127,6 +18172,21 @@ fn self_host_emit_linked_i32_expression(
                     Option::None => {}
                   }
                 }
+                if self_host_linked_call_has_erased_specialization(canonical_body_plan, link, expression) {
+                  if self_host_linked_i32_planned_call_emits(canonical_body_plan, expression) {
+                    match self_host_linked_assert_call_arguments(link, canonical_body_plan, module_, body, caller_specialization, expression, function_index, arguments) {
+                      Option::Some(error) => return Option::Some(error)
+                      Option::None => {}
+                    }
+                    self_host_linked_schedule_call_result_adapter(canonical_body_plan, link, module_, body, caller_specialization, expression, function_index, tasks, destination)
+                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(function_index, destination))
+                  }
+                  match self_host_linked_i32_push_call_evaluations(canonical_body_plan, link, module_, expression, arguments, function_index, destination, tasks, expression_depths, depth, true) {
+                    Option::Some(error) => return Option::Some(error)
+                    Option::None => {}
+                  }
+                  continue tasks.length()
+                }
                 let declaration_name = self_host_linked_declaration_name(
                   link,
                   declaration,
@@ -20839,6 +20899,14 @@ fn self_host_emit_linked_i32_expression(
                     self_host_i32_to_u32(push_function),
                     destination,
                   ))
+                  match self_host_linked_canonical_expression_shape(canonical_body_plan, module_.expression_children[child_index]) {
+                    Option::Some(shape) => if shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+                      // Only storage receives this marker. Evaluate the Unit
+                      // child first, with its effects and control flow intact.
+                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
+                    }
+                    Option::None => return Option::Some("BOD-610 array literal child has no frozen shape")
+                  }
                   self_host_linked_i32_schedule_expression(
                     tasks,
                     expression_depths,
@@ -25336,14 +25404,6 @@ fn self_host_emit_linked_i32_expression(
                 body,
                 base,
               )
-              let array_usage_shape = self_host_linked_array_value_use_shape(
-                link,
-                module_,
-                body,
-                caller_specialization,
-                canonical_body_plan,
-                base,
-              )
               let selected_index_function = match target {
                 SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => self_host_linked_canonical_call_index(
                   canonical_body_plan,
@@ -25355,250 +25415,24 @@ fn self_host_emit_linked_i32_expression(
                 )
                 _ => Option::None
               }
-              let selected_index_specialization_shape = match selected_index_function {
-                Option::Some(function_index) => self_host_linked_physical_function_specialization_shape(
-                  link,
-                  function_index,
-                )
-                Option::None => SelfHostPlannedValueShape::ErrorPlannedValueShape
-              }
-              let backend_index_shape = self_host_linked_backend_expression_shape(
-                link,
-                module_,
-                body,
-                caller_specialization,
-                expression,
-              )
-              let source_element_shape = self_host_linked_expression_source_container_element_shape(
-                link,
-                module_,
-                body,
-                base,
-              )
-              let inferred_element_shape = match source_element_shape {
-                Option::Some(shape) => if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-                  shape
-                } else {
-                  match self_host_linked_type_first_argument_shape(
-                    module_,
-                    self_host_planned_expression_at(module_.expressions, base).type_,
-                  ) {
-                    Option::Some(value) => value
-                    Option::None => SelfHostPlannedValueShape::ErrorPlannedValueShape
-                  }
-                }
-                Option::None => match self_host_linked_type_first_argument_shape(
-                  module_,
-                  self_host_planned_expression_at(module_.expressions, base).type_,
-                ) {
-                  Option::Some(shape) => shape
-                  Option::None => match self_host_linked_expression_container_element_shape(
-                  link,
-                  module_,
-                  body,
-                  base,
-                ) {
-                  Option::Some(shape) => shape
-                  Option::None => match self_host_linked_call_first_type_argument_shape(
-                    module_,
-                    planned,
-                  ) {
-                    Option::Some(shape) => shape
-                    Option::None => match array_usage_shape {
-                      Option::Some(shape) => shape
-                      Option::None => if !(
-                        selected_index_specialization_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                      ) {
-                        selected_index_specialization_shape
-                      } else if !(
-                        backend_index_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                      ) {
-                        backend_index_shape
-                      } else {
-                        planned.shape
-                      }
-                    }
-                  }
-                }
-              }
-              }
-              let contextual_element_shape = self_host_linked_expression_expected_shape(
-                link,
-                module_,
-                body,
-                caller_specialization,
-                expression,
-              )
-              let canonical_materialized_result_shape = self_host_linked_canonical_materialized_local_shape(
-                canonical_body_plan,
-                module_,
-                body,
-                expression,
-              )
-              let declared_materialized_result_shape = self_host_linked_let_value_shape(
-                module_,
-                body,
-                expression,
-              )
-              let materialized_result_shape = match canonical_materialized_result_shape {
-                Option::Some(shape) => if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-                  Option::Some(shape)
-                } else {
-                  declared_materialized_result_shape
-                }
-                Option::None => match declared_materialized_result_shape {
-                  Option::Some(shape) => Option::Some(shape)
-                  Option::None => self_host_linked_let_value_usage_shape(
-                    link,
-                    module_,
-                    body,
-                    caller_specialization,
-                    expression,
-                  )
-                }
-              }
-              let exact_materialized_scalar = match materialized_result_shape {
-                Option::Some(shape) => !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                  self_host_specialization_canonical_scalar(
-                    shape,
-                  ) is SelfHostPlannedValueShape::RefPlannedValueShape
-                )
-                Option::None => false
-              }
-              let exact_contextual_element_shape = match materialized_result_shape {
-                Option::Some(shape) => if exact_materialized_scalar {
-                  shape
-                } else {
-                  contextual_element_shape
-                }
-                Option::None => contextual_element_shape
-              }
-              let exact_scalar_usage = match array_usage_shape {
-                Option::Some(shape) => !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                  self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
-                )
-                Option::None => false
-              }
-              let canonical_element_shape = self_host_linked_canonical_expression_shape(
-                canonical_body_plan,
-                expression,
-              )
-              let element_shape = match source_element_shape {
-                Option::Some(source_shape) => if !(source_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-                  let _ = self_host_linked_refine_canonical_expression_shape(
-                    canonical_body_plan,
-                    expression,
-                    source_shape,
-                  )
-                  source_shape
-                } else {
-                  inferred_element_shape
-                }
-                Option::None => match canonical_element_shape {
-                Option::Some(shape) => if !(
-                  shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                ) && !(shape is SelfHostPlannedValueShape::NeverPlannedValueShape) &&
-                  (exact_scalar_usage || exact_materialized_scalar) && self_host_specialization_canonical_scalar(
-                    shape,
-                  ) is SelfHostPlannedValueShape::RefPlannedValueShape && !(
-                    exact_contextual_element_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                  ) && !(self_host_specialization_canonical_scalar(
-                    exact_contextual_element_shape,
-                  ) is SelfHostPlannedValueShape::RefPlannedValueShape) {
-                  let _ = self_host_linked_refine_canonical_expression_shape(
-                    canonical_body_plan,
-                    expression,
-                    exact_contextual_element_shape,
-                  )
-                  exact_contextual_element_shape
-                } else if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                  shape is SelfHostPlannedValueShape::NeverPlannedValueShape
-                ) {
-                  shape
-                } else if !exact_scalar_usage && !(
-                  contextual_element_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                ) && self_host_specialization_canonical_scalar(
-                  contextual_element_shape,
-                ) is SelfHostPlannedValueShape::RefPlannedValueShape {
-                  contextual_element_shape
-                } else {
-                  inferred_element_shape
-                }
-                Option::None => if !exact_scalar_usage && !(
-                  contextual_element_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                ) && self_host_specialization_canonical_scalar(
-                  contextual_element_shape,
-                ) is SelfHostPlannedValueShape::RefPlannedValueShape {
-                  contextual_element_shape
-                } else if (inferred_element_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape ||
-                  self_host_specialization_canonical_scalar(inferred_element_shape) is SelfHostPlannedValueShape::RefPlannedValueShape) && !(
-                  contextual_element_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                ) && !(
-                  self_host_specialization_canonical_scalar(contextual_element_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
-                ) {
-                  contextual_element_shape
-                } else {
-                  inferred_element_shape
-                }
-              }
-              }
-              let specialized_element_shape = match canonical_materialized_result_shape {
-                // A materialized local is the immediate consumer of this read.
-                // Its final carrier is stronger proof than a generic source type.
-                Option::Some(shape) => if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                  shape is SelfHostPlannedValueShape::NeverPlannedValueShape
-                ) {
-                  self_host_body_specialization_shape(
-                    link,
-                    caller_specialization,
-                    shape,
-                  )
-                } else {
-                  self_host_body_specialization_shape(
-                    link,
-                    caller_specialization,
-                    element_shape,
-                  )
-                }
-                Option::None => self_host_body_specialization_shape(
-                  link,
-                  caller_specialization,
-                  element_shape,
-                )
-              }
-              match self_host_linked_canonical_expression_shape(
+              // Emission consumes the frozen carrier. It must not reconstruct
+              // an index result from generic source or local-usage heuristics.
+              let specialized_element_shape = match self_host_linked_canonical_expression_shape(
                 canonical_body_plan,
                 expression,
               ) {
-                Option::Some(expected_shape) => if !(
-                  expected_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                ) && !(
-                  expected_shape is SelfHostPlannedValueShape::NeverPlannedValueShape
-                ) && self_host_linked_array_carrier_from_shape(expected_shape) !=
-                  self_host_linked_array_carrier_from_shape(specialized_element_shape) {
-                  let message = StringBuilder::new()
-                  message.append("linked index carrier invariant failed module=")
-                  message.append_u64(module_.module_id)
-                  message.append(" declaration=")
-                  message.append_u64(body.declaration)
-                  message.append(" name=")
-                  message.append(bytes_to_string(self_host_linked_declaration_name(link, body.declaration)))
-                  message.append(" body=")
-                  message.append_u64(body.body)
-                  message.append(" specialization=")
-                  message.append_u32(caller_specialization)
-                  message.append(" expression=")
-                  message.append_u32(expression)
-                  message.append(" base=")
-                  message.append_u32(base)
-                  message.append(" expected=")
-                  message.append(self_host_linked_shape_name(expected_shape))
-                  message.append(" selected=")
-                  message.append(self_host_linked_shape_name(specialized_element_shape))
-                  return Option::Some(message.finish())
+                Option::Some(shape) => match shape {
+                  SelfHostPlannedValueShape::ErrorPlannedValueShape =>
+                    return Option::Some("BOD-610 index result has no frozen carrier")
+                  SelfHostPlannedValueShape::GenericPlannedValueShape =>
+                    return Option::Some("BOD-610 index result is still generic")
+                  SelfHostPlannedValueShape::NeverPlannedValueShape =>
+                    return Option::Some("BOD-611 non-returning index reached value emission")
+                  _ => shape
                 }
-                Option::None => {}
+                Option::None => return Option::Some("BOD-610 index expression is absent from the frozen plan")
               }
+              let element_shape = specialized_element_shape
               let declared_target_is_array_get = match target {
                 SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => self_host_linked_declaration_name(
                   link,
@@ -40612,7 +40446,9 @@ fn build_self_host_linked_i32_module(
               fragment_module,
               fragment,
             )
-            if !self_host_linked_append_runtime_function(
+            if !self_host_linked_append_unit_array_adapter(
+              link, functions, linked_function, fragment, name,
+            ) && !self_host_linked_append_runtime_function(
               link,
               functions,
               name,

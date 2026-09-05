@@ -1346,17 +1346,6 @@ fn plan_expression_kind(
                       PlannedArrayIterNextOption(
                         base, element_type, element_shape,
                       )
-                    ArrayMake =>
-                      PlannedArrayMake(
-                        base,
-                        key,
-                        element_type,
-                        planned_value_shape(
-                          resolved,
-                          inferred,
-                          inferred.expression_types[key],
-                        ),
-                      )
                     ArrayReserve =>
                       PlannedArrayReserve(
                         base, key, element_type, element_shape,
@@ -1367,36 +1356,6 @@ fn plan_expression_kind(
                       PlannedArrayTruncate(
                         base, key, element_type, element_shape,
                       )
-                    ArrayCopy =>
-                      PlannedArrayCopy(base, element_type, element_shape)
-                    ArrayCopyWithin =>
-                      PlannedArrayCopyWithin(
-                        base,
-                        key,
-                        value,
-                        collected.expression_children[arguments.start + 3],
-                        element_type,
-                        element_shape,
-                      )
-                    ArrayFill =>
-                      PlannedArrayFill(
-                        base,
-                        key,
-                        value,
-                        collected.expression_children[arguments.start + 3],
-                        element_type,
-                        planned_value_shape(
-                          resolved,
-                          inferred,
-                          inferred.expression_types[key],
-                        ),
-                      )
-                    ArraySlice =>
-                      PlannedArraySlice(
-                        base, key, value, element_type, element_shape,
-                      )
-                    ArrayExtend =>
-                      PlannedArrayExtend(base, key, element_type, element_shape)
                     _ =>
                       match standard_map_operation(declaration) {
                         MapSingleton => {
