@@ -2028,7 +2028,7 @@ fn self_host_linked_constructor_field_shape_matches(
     SelfHostPlannedValueShape::F32PlannedValueShape => physical_shape is SelfHostPlannedValueShape::F32PlannedValueShape
     SelfHostPlannedValueShape::F64PlannedValueShape => physical_shape is SelfHostPlannedValueShape::F64PlannedValueShape
     SelfHostPlannedValueShape::V128PlannedValueShape => physical_shape is SelfHostPlannedValueShape::V128PlannedValueShape
-    SelfHostPlannedValueShape::UnitPlannedValueShape => false
+    SelfHostPlannedValueShape::UnitPlannedValueShape => self_host_linked_erased_field_unit_storage(link, physical.declaration, physical.storage, SelfHostWasmBodyCarrier::UnitBodyCarrier)
     SelfHostPlannedValueShape::NeverPlannedValueShape => true
     _ => physical_shape is SelfHostPlannedValueShape::RefPlannedValueShape
   }
@@ -2640,6 +2640,7 @@ fn self_host_linked_schedule_object_constructor(
     type_index,
     destination,
   ))
+  let scratch = self_host_linked_i32_scratch_slot(canonical, link, module_, body, expression)
   let mut linked_position = 4294967295u32
   let mut linked_module = 0u32
   let mut linked_fragment = 0u32
@@ -2688,6 +2689,7 @@ fn self_host_linked_schedule_object_constructor(
         self_host_u32_add(physical.fields.start, previous),
       )
       let mut found = 4294967295u32
+      let mut found_position = 4294967295u32
       let mut source_position = 0u32
       let _ = while source_position {
         source => if source < fields.length {
@@ -2734,6 +2736,7 @@ fn self_host_linked_schedule_object_constructor(
                 physical_field,
               ) {
               found = source_field.value
+              found_position = source
               self_host_linked_bool_set(used, source, true)
             }
           }
@@ -2830,7 +2833,8 @@ fn self_host_linked_schedule_object_constructor(
         self_host_linked_storage_shape(physical_field.storage),
       )
       let box_type = self_host_linked_erased_field_box_type(link, physical_field.declaration, emitted_field_carrier)
-      if emitted_field_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier || (!(box_type is Option::Some(_)) && !(
+      let unit_marker = self_host_linked_erased_field_unit_storage(link, physical_field.declaration, physical_field.storage, emitted_field_carrier)
+      if emitted_field_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier || (!unit_marker && !(box_type is Option::Some(_)) && !(
         emitted_field_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier
       ) && !self_host_body_carrier_equal(
         emitted_field_carrier,
@@ -3050,24 +3054,35 @@ fn self_host_linked_schedule_object_constructor(
         found,
       )
       if field_value_is_unit && physical_field.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage {
-        tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
+        tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedLocalGet(scratch + found_position, destination))
       } else {
         match box_type {
           Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(type_, destination))
           Option::None => {}
         }
-        self_host_linked_i32_schedule_expression(
-          tasks,
-          expression_depths,
-          found,
-          destination,
-          depth,
-        )
+        tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedLocalGet(scratch + found_position, destination))
       }
       continue previous
     } else {
       break self_host_semantic_unit()
     }
+  }
+  // Evaluate every field exactly once in source order. The physical loads
+  // above run only after all source evaluations have finished.
+  let mut source_position = fields.length
+  while source_position {
+    current if current > 0u32 => {
+      let previous = current - 1u32
+      let child = module_.object_fields[fields.start + previous].value
+      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(scratch + previous, destination))
+      let carrier = self_host_linked_exact_emitted_expression_carrier(canonical, link, module_, body, caller_specialization, child)
+      if carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+        tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
+      }
+      self_host_linked_i32_schedule_expression(tasks, expression_depths, child, destination, depth)
+      continue previous
+    }
+    _ => break self_host_semantic_unit()
   }
   Option::None
 }
@@ -3213,7 +3228,8 @@ fn self_host_linked_schedule_variant_arguments(
         let physical_payload_carrier = self_host_body_carrier_from_shape(
           self_host_linked_storage_shape(physical_field.storage),
         )
-        if !(emitted_payload_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) && !(
+        let unit_marker = self_host_linked_variant_unit_storage(link, physical_field, emitted_payload_carrier)
+        if !unit_marker && !(emitted_payload_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) && !(
           emitted_payload_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier
         ) && !self_host_body_carrier_equal(
           emitted_payload_carrier,
@@ -7799,6 +7815,9 @@ fn self_host_linked_i32_scratch_count(
     current => if current < body.expressions.length {
       let expression = self_host_u32_add(body.expressions.start, current)
       match module_.expressions[expression].kind {
+        SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => {
+          count = count + fields.length
+        }
         SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, _, _, _, _) => if name.equals(b"array_new") {
           count = self_host_u32_add(count, 1u32)
         }
@@ -10761,6 +10780,9 @@ fn self_host_linked_i32_scratch_slot(
         )
       }
       match module_.expressions[candidate].kind {
+        SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => {
+          count = count + fields.length
+        }
         SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) => {
           count = self_host_u32_add(count, 1u32)
         }
@@ -19238,25 +19260,13 @@ fn self_host_emit_linked_i32_expression(
                   }
                 }
                 }
-                let direct_function_name = self_host_linked_physical_function_name(
-                  link,
-                  function_index,
-                )
                 let direct_declaration_module = self_host_semantic_id_module(
                   declaration,
                 )
-                let raw_array_get_owner = self_host_u64_equal(
-                  direct_declaration_module,
-                  link.array_module_id,
-                ) || self_host_u64_equal(
-                  direct_declaration_module,
-                  link.fixed_array_module_id,
-                )
-                let raw_array_get = raw_array_get_owner && (
-                  direct_function_name.ends_with(b"get_unchecked") ||
-                    direct_function_name.equals(b"array_get") ||
-                    direct_function_name.equals(b"wasm_array_get")
-                )
+                let raw_array_get = match self_host_linked_builtin_name(link, declaration) {
+                  Option::Some(name) => name.equals(b"dew_array_get_unchecked") || name.equals(b"array.get")
+                  Option::None => false
+                }
                 let receiver_element_nominal = if !self_host_u32_equal(
                   direct_array_receiver,
                   4294967295u32,
@@ -38222,6 +38232,26 @@ fn self_host_linked_scalar_locals(
     current => if current < body.expressions.length {
       let expression = self_host_u32_add(body.expressions.start, current)
       match module_.expressions[expression].kind {
+        SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => {
+          let mut position = 0u32
+          while position {
+            index if index < fields.length => {
+              let child = module_.object_fields[fields.start + index].value
+              let carrier = self_host_linked_exact_emitted_expression_carrier(canonical_body_plan, link, module_, body, caller_specialization, child)
+              let shape = if carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+                // A Unit source is evaluated, then a null storage marker is saved.
+                SelfHostPlannedValueShape::RefPlannedValueShape
+              } else {
+                self_host_body_carrier_shape(carrier)
+              }
+              if !self_host_linked_scalar_append_local_type(locals, shape) {
+                return Result::Err("constructor evaluation has no concrete scratch carrier")
+              }
+              continue index + 1u32
+            }
+            _ => break self_host_semantic_unit()
+          }
+        }
         SelfHostPlannedExpressionKind::PlannedMatchExpression(subject, _) => {
           let subject_shape = self_host_body_carrier_shape(
             self_host_linked_exact_emitted_expression_carrier(

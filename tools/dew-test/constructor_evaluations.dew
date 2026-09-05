@@ -1,0 +1,74 @@
+struct Counter {
+  mut value: I32
+}
+
+enum Choice<t> {
+  Empty
+  Present(t)
+}
+
+enum Triple {
+  Items(I32, Unit, I32)
+}
+
+struct Fields<t> {
+  first: I32
+  erased: t
+  last: I32
+}
+
+fn tick(counter: Counter) -> I32 {
+  counter.value = counter.value + 1i32
+  counter.value
+}
+
+fn effect(counter: Counter) -> Unit {
+  counter.value = counter.value + 1i32
+}
+
+pub fn main(case: U32) -> I32 {
+  let counter = Counter::{
+    value: 0i32
+  }
+  if case == 0u32 {
+    let value = Choice::Present(effect(counter))
+    if value is Choice::Present(_) && counter.value == 1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 1u32 {
+    let value = Triple::Items(tick(counter), effect(counter), tick(counter))
+    match value {
+      Triple::Items(first, _, last) => if first == 1i32 && last == 3i32 && counter.value == 3i32 {
+        1i32
+      } else {
+        0i32
+      }
+    }
+  } else if case == 2u32 {
+    let value = Fields::{
+      first: tick(counter)
+      erased: effect(counter)
+      last: tick(counter)
+    }
+    if value.first == 1i32 && value.last == 3i32 && counter.value == 3i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 3u32 {
+    let value = Fields::{
+      last: tick(counter)
+      erased: effect(counter)
+      first: tick(counter)
+    }
+    if value.last == 1i32 && value.first == 3i32 && counter.value == 3i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else {
+    0i32
+  }
+}

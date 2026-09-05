@@ -9,6 +9,7 @@ import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
 import { checkMathOperations } from "./math-operation-cases.mjs";
 import { checkSpecializationCallbacks } from "./specialization-callback-cases.mjs";
 import { checkMemberCalls } from "./member-call-cases.mjs";
+import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
@@ -476,6 +477,16 @@ pub fn main() -> I32 {
   } catch (error) {
     failures++;
     console.error("self-host real-library array probe failed", error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const source = await readFile(new URL("./dew-test/constructor_evaluations.dew", import.meta.url), "utf8");
+    console.log(`self-host constructor evaluation checks passed: ${checkConstructorEvaluations(await compileSource(source))} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+  } catch (error) {
+    failures++;
+    console.error("self-host constructor evaluation probe failed", error);
   }
 }
 if (failures) throw new Error(`${failures} self-host emission probe(s) failed`);

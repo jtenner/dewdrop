@@ -506,6 +506,7 @@ fn emit_starshine_program_function_body(
     map_growth_index_scratch_index,
     control_state_local_indices,
     control_result_local_indices,
+    constructor_local_indices,
   ) = starshine_body_locals(
     module_lowering,
     module_fragments,
@@ -575,6 +576,7 @@ fn emit_starshine_program_function_body(
       map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
+      constructor_local_indices,
       generic_specialization,
     ) {
     Ok(instructions) => {
@@ -859,6 +861,7 @@ fn emit_starshine_program_initializer_body(
     map_growth_index_scratch_index,
     control_state_local_indices,
     control_result_local_indices,
+    constructor_local_indices,
   ) = starshine_body_locals(
     module_lowering,
     module_fragments,
@@ -910,6 +913,7 @@ fn emit_starshine_program_initializer_body(
       map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
+      constructor_local_indices,
       None,
     ) {
     Ok(instructions) => {

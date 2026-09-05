@@ -248,7 +248,6 @@ priv enum StarshineEmitTask {
   EmitStarshineRawExpression(@semantic.ExprId)
   EmitStarshineBlock(@semantic.BlockId)
   EmitStarshineEmpty
-  EmitStarshineDefaultStorage(@semantic.PlannedWasmStorageType)
   FinishStarshineBlock(@semantic.BlockId)
   FinishStarshineLocalSet(Int, Int, @semantic.ExprId)
   FinishStarshineCaptureSet(Int, Int, @semantic.ExprId, Int)
@@ -323,12 +322,14 @@ priv enum StarshineEmitTask {
   )
   FinishStarshineProductBox(@semantic.PlannedValueShape, Int)
   FinishStarshineProductUnbox(@semantic.PlannedValueShape, Int)
-  FinishStarshineStructNew(
+  FinishStarshineConstructor(
     @semantic.PlannedProgramWasmGCLink?,
     Int,
     @semantic.PlannedModuleWasmGCFragments,
     @semantic.PlannedWasmPhysicalType,
-    Int
+    Int,
+    Array[@semantic.ExprId],
+    Array[Int]
   )
   FinishStarshineEnumSubtype(
     @semantic.PlannedProgramWasmGCLink?,
@@ -3414,6 +3415,27 @@ fn starshine_local_slot_types_are_compatible(
 }
 
 ///|
+fn starshine_constructor_evaluations(
+  lowering : @semantic.PlannedModuleLowering,
+  kind : @semantic.PlannedExpressionKind,
+) -> Array[@semantic.ExprId] {
+  let values : Array[@semantic.ExprId] = []
+  match kind {
+    @semantic.PlannedStructNew(_, _, fields)
+    | @semantic.PlannedVariantStructNew(_, _, fields) =>
+      for index in 0..<fields.length {
+        values.push(lowering.object_fields[fields.start + index].value)
+      }
+    @semantic.PlannedVariantTupleNew(_, _, arguments) =>
+      for index in 0..<arguments.length {
+        values.push(lowering.expression_children[arguments.start + index])
+      }
+    _ => ()
+  }
+  values
+}
+
+///|
 fn starshine_body_locals(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -3436,6 +3458,7 @@ fn starshine_body_locals(
   Int,
   Int,
   Int,
+  Array[Int],
   Array[Int],
   Array[Int],
 ) {
@@ -3626,6 +3649,7 @@ fn starshine_body_locals(
   }
   let match_local_indices = Array::make(body.expressions.length, -1)
   let match_result_local_indices = Array::make(body.expressions.length, -1)
+  let constructor_local_indices = Array::make(body.expressions.length, -1)
   let mut fixed_array_ref_scratch_index = -1
   let mut fixed_array_i32_scratch_index = -1
   let map_key_local_indices = Array::make(body.expressions.length, -1)
@@ -4351,12 +4375,47 @@ fn starshine_body_locals(
       _ => ()
     }
   }
+  // Constructor evaluations have their own slots. Physical field order must
+  // not change source evaluation order, and erased fields still execute.
+  for
+    expression in body.expressions.start..<(body.expressions.start +
+    body.expressions.length) {
+    for
+      value in starshine_constructor_evaluations(
+        lowering,
+        lowering.expressions[expression].kind,
+      ) {
+      let source = lowering.expressions[value]
+      let shape = starshine_specialized_shape(
+        lowering,
+        generic_specialization,
+        source.type_,
+        source.shape,
+      )
+      let slot = value - body.expressions.start
+      if constructor_local_indices[slot] < 0 {
+        let storage_type = match shape {
+          @semantic.ProductPlannedValueShape(_) =>
+            Some(@lib.ValType::eqref_null())
+          _ => starshine_shape_value_type(shape)
+        }
+        match storage_type {
+          Some(type_) => {
+            constructor_local_indices[slot] = parameter_count +
+              body_local_types.length()
+            body_local_types.push(type_)
+          }
+          None => ()
+        }
+      }
+    }
+  }
   (
     local_indices, body_local_types, match_local_indices, match_result_local_indices,
     fixed_array_ref_scratch_index, fixed_array_i32_scratch_index, map_key_local_indices,
     map_value_local_indices, map_ref_scratch_index, map_bucket_scratch_index, map_hash_scratch_index,
     map_entry_scratch_index, map_previous_scratch_index, map_growth_index_scratch_index,
-    control_state_local_indices, control_result_local_indices,
+    control_state_local_indices, control_result_local_indices, constructor_local_indices,
   )
 }
 
@@ -5851,6 +5910,7 @@ fn starshine_emit_body_instructions(
   map_growth_index_scratch_index : Int,
   control_state_local_indices : Array[Int],
   control_result_local_indices : Array[Int],
+  constructor_local_indices : Array[Int],
   generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let program = context.program
@@ -7575,6 +7635,13 @@ fn starshine_emit_body_instructions(
             if source.nominal != 0UL {
               tasks.push(FinishStarshineNominalResult(source.nominal))
             }
+            if element_shape is @semantic.ProductPlannedValueShape(_) {
+              tasks.push(
+                FinishStarshineProductUnbox(
+                  element_shape, fixed_array_ref_scratch_index,
+                ),
+              )
+            }
             tasks.push(
               FinishStarshineArray(
                 14,
@@ -8040,83 +8107,130 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(key))
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedStructNew(declaration, _, fields) => {
-            let physical_plan = match program {
+          @semantic.PlannedStructNew(_, _, _)
+          | @semantic.PlannedVariantTupleNew(_, _, _)
+          | @semantic.PlannedVariantStructNew(_, _, _) => {
+            let evaluations = starshine_constructor_evaluations(
+              lowering,
+              source.kind,
+            )
+            let declaration = match source.kind {
+              @semantic.PlannedStructNew(value, _, _)
+              | @semantic.PlannedVariantTupleNew(value, _, _)
+              | @semantic.PlannedVariantStructNew(value, _, _) => value
+              _ => return Err(UnsupportedExpression(body.body, expression))
+            }
+            let owner_module = match program {
               Some(link) =>
                 match
                   link.module_lookup.get(
                     @semantic.semantic_id_module(declaration),
                   ) {
-                  Some(owner_module) => link.modules[owner_module]
-                  None => planned
+                  Some(value) => value
+                  None =>
+                    return Err(UnsupportedExpression(body.body, expression))
                 }
+              None => program_module_index
+            }
+            let physical_plan = match program {
+              Some(link) => link.modules[owner_module]
               None => planned
             }
-            let physical = match
-              starshine_struct_physical_type(physical_plan, declaration) {
+            let shapes = evaluations.map(fn(value) {
+              let source = lowering.expressions[value]
+              starshine_specialized_shape(
+                lowering,
+                generic_specialization,
+                source.type_,
+                source.shape,
+              )
+            })
+            let (physical, tag) = match source.kind {
+              @semantic.PlannedStructNew(_, _, _) =>
+                (starshine_struct_physical_type(physical_plan, declaration), -1)
+              _ => {
+                let expected = match source.kind {
+                  @semantic.PlannedVariantTupleNew(_, _, _) =>
+                    StarshineExpectedTupleFields(shapes)
+                  @semantic.PlannedVariantStructNew(_, _, fields) => {
+                    let ids : Array[@semantic.FieldId] = []
+                    for index in 0..<fields.length {
+                      ids.push(
+                        lowering.object_fields[fields.start + index].field,
+                      )
+                    }
+                    StarshineExpectedStructFields(ids, shapes)
+                  }
+                  _ => return Err(UnsupportedExpression(body.body, expression))
+                }
+                let tag = match physical_plan.variant_tag_of(declaration) {
+                  Some(value) => value
+                  None =>
+                    return Err(UnsupportedExpression(body.body, expression))
+                }
+                (
+                  starshine_variant_payload_physical_type_for_fields(
+                    physical_plan, declaration, expected,
+                  ),
+                  tag,
+                )
+              }
+            }
+            let physical = match physical {
               Some(value) => value
               None => return Err(UnsupportedExpression(body.body, expression))
             }
-            let owner_module = match program {
-              Some(link) =>
-                link.module_lookup
-                .get(@semantic.semantic_id_module(declaration))
-                .unwrap_or(program_module_index)
-              None => program_module_index
-            }
-            tasks.push(
-              FinishStarshineStructNew(
-                program,
-                owner_module,
-                physical_plan,
-                physical,
-                physical.fields.length,
-              ),
-            )
-            let mut physical_offset = physical.fields.length
-            while physical_offset > 0 {
-              physical_offset -= 1
-              let planned_field = physical_plan.fields[physical.fields.start +
-                physical_offset]
-              let field = match planned_field.role {
-                @semantic.WasmStructField(field) => field
+            let sources : Array[Int] = []
+            let first_field = if tag < 0 { 0 } else { 1 }
+            for field_index in first_field..<physical.fields.length {
+              let field = physical_plan.fields[physical.fields.start +
+                field_index]
+              let mut source_index = -1
+              match (source.kind, field.role) {
+                (
+                  @semantic.PlannedVariantTupleNew(_, _, _),
+                  @semantic.WasmTuplePayloadField(_, index),
+                ) => source_index = index
+                (
+                  @semantic.PlannedStructNew(_, _, fields),
+                  @semantic.WasmStructField(id),
+                )
+                | (
+                  @semantic.PlannedVariantStructNew(_, _, fields),
+                  @semantic.WasmStructPayloadField(id),
+                ) =>
+                  for index in 0..<fields.length {
+                    if lowering.object_fields[fields.start + index].field == id {
+                      source_index = index
+                      break
+                    }
+                  }
                 _ => return Err(UnsupportedExpression(body.body, expression))
               }
-              let mut value = -1
-              for source_index in 0..<fields.length {
-                let candidate = lowering.object_fields[fields.start +
-                  source_index]
-                if candidate.field == field {
-                  value = candidate.value
-                  break
-                }
-              }
-              if value < 0 {
+              if source_index < 0 || source_index >= evaluations.length() {
                 return Err(UnsupportedExpression(body.body, expression))
               }
-              let value_source = lowering.expressions[value]
-              let value_shape = starshine_specialized_shape(
-                lowering,
-                generic_specialization,
-                value_source.type_,
-                value_source.shape,
+              sources.push(
+                if starshine_shape_matches_storage(
+                    shapes[source_index],
+                    field.storage,
+                  ) {
+                  source_index
+                } else {
+                  -1
+                },
               )
-              if starshine_shape_matches_storage(
-                  value_shape,
-                  planned_field.storage,
-                ) {
-                if value_shape is @semantic.ProductPlannedValueShape(_) {
-                  tasks.push(
-                    FinishStarshineProductBox(
-                      value_shape,
-                      match_result_local_indices[value - body.expressions.start],
-                    ),
-                  )
-                }
-                tasks.push(EmitStarshineExpression(value))
-              } else {
-                tasks.push(EmitStarshineDefaultStorage(planned_field.storage))
-              }
+            }
+            tasks.push(
+              FinishStarshineConstructor(
+                program, owner_module, physical_plan, physical, tag, evaluations,
+                sources,
+              ),
+            )
+            let mut index = evaluations.length()
+            while index > 0 {
+              index -= 1
+              tasks.push(EmitStarshineExpression(evaluations[index]))
             }
           }
           @semantic.PlannedPackedEnumPayload(tag, payload) => {
@@ -8149,208 +8263,6 @@ fn starshine_emit_body_instructions(
                 program, owner_module, variant_plan, physical, tag, 0,
               ),
             )
-          }
-          @semantic.PlannedVariantTupleNew(variant, _, arguments) => {
-            let owner_module = match program {
-              Some(link) =>
-                link.module_lookup
-                .get(@semantic.semantic_id_module(variant))
-                .unwrap_or(program_module_index)
-              None => program_module_index
-            }
-            let variant_plan = match program {
-              Some(link) => link.modules[owner_module]
-              None => planned
-            }
-            let tag = match variant_plan.variant_tag_of(variant) {
-              Some(value) => value
-              None => return Err(UnsupportedExpression(body.body, expression))
-            }
-            let expected_shapes : Array[@semantic.PlannedValueShape] = []
-            for source_index in 0..<arguments.length {
-              let value = lowering.expression_children[arguments.start +
-                source_index]
-              let value_source = lowering.expressions[value]
-              expected_shapes.push(
-                starshine_specialized_shape(
-                  lowering,
-                  generic_specialization,
-                  value_source.type_,
-                  value_source.shape,
-                ),
-              )
-            }
-            let physical = match
-              starshine_variant_payload_physical_type_for_fields(
-                variant_plan,
-                variant,
-                StarshineExpectedTupleFields(expected_shapes),
-              ) {
-              Some(value) => value
-              None => return Err(UnsupportedExpression(body.body, expression))
-            }
-            let values : Array[StarshineEmitTask] = []
-            for field_offset in 1..<physical.fields.length {
-              let field = variant_plan.fields[physical.fields.start +
-                field_offset]
-              let value = match field.role {
-                @semantic.WasmTuplePayloadField(_, source_index) =>
-                  lowering.expression_children[arguments.start + source_index]
-                _ => return Err(UnsupportedExpression(body.body, expression))
-              }
-              let value_source = lowering.expressions[value]
-              if starshine_shape_matches_storage(
-                  starshine_specialized_shape(
-                    lowering,
-                    generic_specialization,
-                    value_source.type_,
-                    value_source.shape,
-                  ),
-                  field.storage,
-                ) {
-                values.push(EmitStarshineExpression(value))
-              } else {
-                values.push(EmitStarshineDefaultStorage(field.storage))
-              }
-            }
-            tasks.push(
-              FinishStarshineEnumSubtype(
-                program,
-                owner_module,
-                variant_plan,
-                physical,
-                tag,
-                values.length(),
-              ),
-            )
-            let mut value_index = values.length()
-            while value_index > 0 {
-              value_index -= 1
-              match values[value_index] {
-                EmitStarshineExpression(value) => {
-                  let value_source = lowering.expressions[value]
-                  let value_shape = starshine_specialized_shape(
-                    lowering,
-                    generic_specialization,
-                    value_source.type_,
-                    value_source.shape,
-                  )
-                  if value_shape is @semantic.ProductPlannedValueShape(_) {
-                    tasks.push(
-                      FinishStarshineProductBox(
-                        value_shape,
-                        match_result_local_indices[value -
-                        body.expressions.start],
-                      ),
-                    )
-                  }
-                }
-                _ => ()
-              }
-              tasks.push(values[value_index])
-            }
-          }
-          @semantic.PlannedVariantStructNew(variant, _, fields) => {
-            let owner_module = match program {
-              Some(link) =>
-                link.module_lookup
-                .get(@semantic.semantic_id_module(variant))
-                .unwrap_or(program_module_index)
-              None => program_module_index
-            }
-            let variant_plan = match program {
-              Some(link) => link.modules[owner_module]
-              None => planned
-            }
-            let tag = match variant_plan.variant_tag_of(variant) {
-              Some(value) => value
-              None => return Err(UnsupportedExpression(body.body, expression))
-            }
-            let expected_fields : Array[@semantic.FieldId] = []
-            let expected_shapes : Array[@semantic.PlannedValueShape] = []
-            for source_index in 0..<fields.length {
-              let object_field = lowering.object_fields[fields.start +
-                source_index]
-              let value_source = lowering.expressions[object_field.value]
-              expected_fields.push(object_field.field)
-              expected_shapes.push(
-                starshine_specialized_shape(
-                  lowering,
-                  generic_specialization,
-                  value_source.type_,
-                  value_source.shape,
-                ),
-              )
-            }
-            let physical = match
-              starshine_variant_payload_physical_type_for_fields(
-                variant_plan,
-                variant,
-                StarshineExpectedStructFields(expected_fields, expected_shapes),
-              ) {
-              Some(value) => value
-              None => return Err(UnsupportedExpression(body.body, expression))
-            }
-            let values : Array[@semantic.ExprId] = []
-            for field_offset in 1..<physical.fields.length {
-              let physical_field = variant_plan.fields[physical.fields.start +
-                field_offset]
-              let field_id = match physical_field.role {
-                @semantic.WasmStructPayloadField(value) => value
-                _ => return Err(UnsupportedExpression(body.body, expression))
-              }
-              let mut value = -1
-              for source_index in 0..<fields.length {
-                let object_field = lowering.object_fields[fields.start +
-                  source_index]
-                if object_field.field == field_id {
-                  value = object_field.value
-                  break
-                }
-              }
-              if value < 0 {
-                return Err(UnsupportedExpression(body.body, expression))
-              }
-              values.push(value)
-            }
-            tasks.push(
-              FinishStarshineEnumSubtype(
-                program,
-                owner_module,
-                variant_plan,
-                physical,
-                tag,
-                values.length(),
-              ),
-            )
-            let mut value_index = values.length()
-            while value_index > 0 {
-              value_index -= 1
-              let field = variant_plan.fields[physical.fields.start +
-                value_index +
-                1]
-              let value = values[value_index]
-              let value_source = lowering.expressions[value]
-              let value_shape = starshine_specialized_shape(
-                lowering,
-                generic_specialization,
-                value_source.type_,
-                value_source.shape,
-              )
-              if starshine_shape_matches_storage(value_shape, field.storage) {
-                if value_shape is @semantic.ProductPlannedValueShape(_) {
-                  tasks.push(
-                    FinishStarshineProductBox(
-                      value_shape,
-                      match_result_local_indices[value - body.expressions.start],
-                    ),
-                  )
-                }
-                tasks.push(EmitStarshineExpression(value))
-              } else {
-                tasks.push(EmitStarshineDefaultStorage(field.storage))
-              }
-            }
           }
           @semantic.PlannedMatchExpression(scrutinee, arms) => {
             let scratch_local = match_local_indices[expression -
@@ -8636,8 +8548,6 @@ fn starshine_emit_body_instructions(
         }
       }
       EmitStarshineEmpty => results.push([])
-      EmitStarshineDefaultStorage(storage) =>
-        results.push(starshine_default_storage_instructions(storage))
       EmitStarshineBlock(block) => {
         let source = lowering.blocks[block]
         tasks.push(FinishStarshineBlock(block))
@@ -10671,36 +10581,109 @@ fn starshine_emit_body_instructions(
         }
         results.push(output)
       }
-      FinishStarshineStructNew(
+      FinishStarshineConstructor(
         program,
         owner_module,
         physical_plan,
         physical,
-        count
+        tag,
+        evaluations,
+        sources
       ) => {
-        let fragments = pop_starshine_fragments(results, count)
+        let fragments = pop_starshine_fragments(results, evaluations.length())
         let output : Array[@lib.Instruction] = []
-        for index, fragment in fragments {
-          append_starshine_instructions(output, fragment)
-          starshine_append_storage_cast(
-            output,
-            program,
-            owner_module,
-            physical_plan,
-            physical,
-            physical_plan.fields[physical.fields.start + index].storage,
+        let mut diverges = false
+        for index, value in evaluations {
+          append_starshine_instructions(output, fragments[index])
+          if !lowering.expressions[value].flow.may_fall_through() {
+            diverges = true
+            break
+          }
+          let source = lowering.expressions[value]
+          let shape = starshine_specialized_shape(
+            lowering,
+            generic_specialization,
+            source.type_,
+            source.shape,
+          )
+          if shape is @semantic.UnitPlannedValueShape {
+            continue
+          }
+          let slot = constructor_local_indices[value - body.expressions.start]
+          if slot < 0 {
+            return Err(UnsupportedExpression(body.body, value))
+          }
+          if shape is @semantic.ProductPlannedValueShape(_) {
+            let scratch = match_result_local_indices[value -
+              body.expressions.start]
+            if scratch < 0 {
+              return Err(UnsupportedExpression(body.body, value))
+            }
+            starshine_append_product_local_sets(output, scratch, shape)
+            match
+              starshine_product_box_from_locals(
+                planned,
+                program,
+                body.body,
+                scratch,
+                shape,
+              ) {
+              Ok(instructions) =>
+                append_starshine_instructions(output, instructions)
+              Err(error) => return Err(error)
+            }
+          }
+          output.push(
+            @lib.Instruction::local_set(
+              @lib.LocalIdx::new(slot.reinterpret_as_uint()),
+            ),
           )
         }
-        let type_index = starshine_local_physical_type_index(
-          program,
-          owner_module,
-          physical.type_index,
-        )
-        output.push(
-          @lib.Instruction::struct_new(
-            @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
-          ),
-        )
+        if !diverges {
+          let first_field = if tag < 0 { 0 } else { 1 }
+          if tag >= 0 {
+            output.push(@lib.Instruction::i32_const(@lib.I32::new(tag)))
+          }
+          if sources.length() + first_field != physical.fields.length {
+            return Err(UnsupportedExpression(body.body, -427))
+          }
+          for index, source in sources {
+            let storage = physical_plan.fields[physical.fields.start +
+              first_field +
+              index].storage
+            if source < 0 {
+              append_starshine_instructions(
+                output,
+                starshine_default_storage_instructions(storage),
+              )
+            } else {
+              let value = evaluations[source]
+              let slot = constructor_local_indices[value -
+                body.expressions.start]
+              if slot < 0 {
+                return Err(UnsupportedExpression(body.body, value))
+              }
+              output.push(
+                @lib.Instruction::local_get(
+                  @lib.LocalIdx::new(slot.reinterpret_as_uint()),
+                ),
+              )
+            }
+            starshine_append_storage_cast(
+              output, program, owner_module, physical_plan, physical, storage,
+            )
+          }
+          let type_index = starshine_local_physical_type_index(
+            program,
+            owner_module,
+            physical.type_index,
+          )
+          output.push(
+            @lib.Instruction::struct_new(
+              @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
+            ),
+          )
+        }
         results.push(output)
       }
       FinishStarshineEnumSubtype(
@@ -11717,6 +11700,7 @@ fn emit_starshine_lambda_body(
     map_growth_index_scratch_index,
     control_state_local_indices,
     control_result_local_indices,
+    constructor_local_indices,
   ) = starshine_body_locals(
     lowering,
     planned,
@@ -11764,6 +11748,7 @@ fn emit_starshine_lambda_body(
       map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
+      constructor_local_indices,
       None,
     ) {
     Ok(instructions) => {
@@ -11814,6 +11799,7 @@ fn emit_starshine_function_body(
     map_growth_index_scratch_index,
     control_state_local_indices,
     control_result_local_indices,
+    constructor_local_indices,
   ) = starshine_body_locals(lowering, planned, None, None, body, 0)
   let parameter_count = match planned.function_of(body.declaration) {
     Some(function_) => function_.parameters.length
@@ -11857,6 +11843,7 @@ fn emit_starshine_function_body(
       map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
+      constructor_local_indices,
       None,
     ) {
     Ok(instructions) => {

@@ -7675,7 +7675,8 @@ fn self_host_verify_body_constructor(
                 let expected_carrier = self_host_body_carrier_from_storage(
                   destination.storage,
                 )
-                let boxed = self_host_linked_erased_field_box_type(link, destination.declaration, actual.value.carrier) is Option::Some(_)
+                let boxed = self_host_linked_erased_field_box_type(link, destination.declaration, actual.value.carrier) is Option::Some(_) ||
+                  self_host_linked_erased_field_unit_storage(link, destination.declaration, destination.storage, actual.value.carrier)
                 if exact_argument && !boxed && !self_host_body_carrier_equal(
                   expected_carrier,
                   actual.value.carrier,
