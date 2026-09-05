@@ -284,6 +284,7 @@ enum SelfHostLinkedI32EmitTask {
     U32,
     SelfHostPlannedValueShape,
     SelfHostPlannedValueShape,
+    SelfHostPlannedValueShape,
   )
   VisitLinkedI32Block(U32, StarshineInstructions, Bool)
   EmitLinkedI32LocalSet(U32, StarshineInstructions)
@@ -15960,6 +15961,19 @@ fn self_host_emit_linked_i32_expression(
           if expression < discarded_expressions.length() {
             discarded_expressions[expression] = true
           }
+          // Control nodes discard their own children. Every other value is
+          // discarded here, including a direct scalar match arm.
+          let controls_discard = expression < module_.expressions.length() && (
+            module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _) ||
+              module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) ||
+              module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedWhileExpression(_, _, _) ||
+              module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedBlockExpression(_)
+          )
+          if !controls_discard && self_host_linked_planned_expression_emits_value(
+            canonical_body_plan, link, module_, body, caller_specialization, expression,
+          ) {
+            tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Drop(destination))
+          }
           tasks.push(SelfHostLinkedI32EmitTask::ClearLinkedI32Discard(
             expression,
           ))
@@ -17313,12 +17327,7 @@ fn self_host_emit_linked_i32_expression(
               }
               }
               }
-              let final_match_result_shape = if expression < discarded_expressions.length() && discarded_expressions[
-                expression
-              ] {
-                SelfHostPlannedValueShape::UnitPlannedValueShape
-              } else {
-                match self_host_linked_canonical_expression_shape(
+              let logical_match_result_shape = match self_host_linked_canonical_expression_shape(
                   canonical_body_plan,
                   expression,
                 ) {
@@ -17329,7 +17338,13 @@ fn self_host_emit_linked_i32_expression(
                     shape
                   }
                   Option::None => inferred_final_match_result_shape
-                }
+              }
+              let final_match_result_shape = if expression < discarded_expressions.length() && discarded_expressions[
+                expression
+              ] {
+                SelfHostPlannedValueShape::UnitPlannedValueShape
+              } else {
+                logical_match_result_shape
               }
               tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32MatchArms(
                 arms,
@@ -17340,6 +17355,7 @@ fn self_host_emit_linked_i32_expression(
                 depth,
                 final_match_result_shape,
                 match_payload_hint,
+                logical_match_result_shape,
               ))
               tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
                 scratch,
@@ -17425,6 +17441,7 @@ fn self_host_emit_linked_i32_expression(
                 self_host_u32_add(depth, 2u32),
                 SelfHostPlannedValueShape::UnitPlannedValueShape,
                 loop_payload_hint,
+                SelfHostPlannedValueShape::UnitPlannedValueShape,
               ))
               tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
                 scratch,
@@ -26721,6 +26738,7 @@ fn self_host_emit_linked_i32_expression(
           depth,
           result_shape,
           payload_hint,
+          logical_result_shape,
         ) => {
           if arm_offset >= arms.length {
             return Option::Some("linked I32 match has no remaining arm")
@@ -26740,10 +26758,10 @@ fn self_host_emit_linked_i32_expression(
           ) {
             Option::Some(arm_shape) => if !(arm_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
               arm_shape is SelfHostPlannedValueShape::NeverPlannedValueShape
-            ) && !(result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-              result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape
+            ) && !(logical_result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
+              logical_result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape
             ) && self_host_linked_array_carrier_from_shape(arm_shape) !=
-              self_host_linked_array_carrier_from_shape(result_shape) {
+              self_host_linked_array_carrier_from_shape(logical_result_shape) {
               let message = StringBuilder::new()
               message.append("linked match arm result invariant failed module=")
               message.append_u64(module_.module_id)
@@ -26760,7 +26778,7 @@ fn self_host_emit_linked_i32_expression(
               message.append(" expression=")
               message.append_u32(arm.body)
               message.append(" expected=")
-              message.append(self_host_linked_shape_name(result_shape))
+              message.append(self_host_linked_shape_name(logical_result_shape))
               message.append(" actual=")
               message.append(self_host_linked_shape_name(arm_shape))
               return Option::Some(message.finish())
@@ -27340,10 +27358,10 @@ fn self_host_emit_linked_i32_expression(
                                         physical_child,
                                       ) {
                                     Option::Some(field_shape) => if !(
-                                      result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                                    ) && !(result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) &&
+                                      logical_result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
+                                    ) && !(logical_result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) &&
                                       self_host_linked_array_carrier_from_shape(field_shape) !=
-                                        self_host_linked_array_carrier_from_shape(result_shape) {
+                                        self_host_linked_array_carrier_from_shape(logical_result_shape) {
                                       let message = StringBuilder::new()
                                       message.append("linked binding match payload/result invariant failed module=")
                                       message.append_u64(module_.module_id)
@@ -27364,7 +27382,7 @@ fn self_host_emit_linked_i32_expression(
                                       message.append(" local=")
                                       message.append_u32(local)
                                       message.append(" expected=")
-                                      message.append(self_host_linked_shape_name(result_shape))
+                                      message.append(self_host_linked_shape_name(logical_result_shape))
                                       message.append(" actual=")
                                       message.append(self_host_linked_shape_name(field_shape))
                                       return Option::Some(message.finish())
@@ -27483,6 +27501,7 @@ fn self_host_emit_linked_i32_expression(
                 self_host_u32_add(depth, 1u32),
                 result_shape,
                 payload_hint,
+                logical_result_shape,
               ))
             } else {
               StarshineFfi.ffi_ffi_bridge_instructions_push(
@@ -27681,24 +27700,6 @@ fn self_host_emit_linked_i32_expression(
                   body,
                   local,
                 ) {
-                  let discarded_control = value < module_.expressions.length() && (
-                    module_.expressions[value].kind is SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _) ||
-                      module_.expressions[value].kind is SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) ||
-                      module_.expressions[value].kind is SelfHostPlannedExpressionKind::PlannedWhileExpression(_, _, _) ||
-                      module_.expressions[value].kind is SelfHostPlannedExpressionKind::PlannedBlockExpression(_)
-                  )
-                  if !discarded_control && self_host_linked_planned_expression_emits_value(
-                    canonical_body_plan,
-                    link,
-                    module_,
-                    body,
-                    caller_specialization,
-                    value,
-                  ) {
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Drop(
-                      destination,
-                    ))
-                  }
                   self_host_linked_i32_schedule_discarded_expression(
                     tasks,
                     expression_depths,
@@ -27745,24 +27746,6 @@ fn self_host_emit_linked_i32_expression(
                     value,
                   )
                   let discarded_use = (nonfinal || discard_final) && !value_required
-                  let discarded_control = discarded_use && value < module_.expressions.length() && (
-                    module_.expressions[value].kind is SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _) ||
-                      module_.expressions[value].kind is SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) ||
-                      module_.expressions[value].kind is SelfHostPlannedExpressionKind::PlannedWhileExpression(_, _, _) ||
-                      module_.expressions[value].kind is SelfHostPlannedExpressionKind::PlannedBlockExpression(_)
-                  )
-                  if discarded_use && !discarded_control && self_host_linked_planned_expression_emits_value(
-                    canonical_body_plan,
-                    link,
-                    module_,
-                    body,
-                    caller_specialization,
-                    value,
-                  ) {
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Drop(
-                      destination,
-                    ))
-                  }
                   if discarded_use {
                     self_host_linked_i32_schedule_discarded_expression(
                       tasks,

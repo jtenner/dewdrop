@@ -76,7 +76,10 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   targets are frozen and checked; see `self-host-frozen-closure-targets-2026-09-05.md`.
   Calls, references, and trait calls inside generic lambdas now use their owning
   specialization; see `self-host-lambda-body-specialization-2026-09-05.md`.
-  A subsequent clean bootstrap and broader mutable pattern-binding coverage remain open.
+  Mutable tuple capture coverage passes. A subsequent clean bootstrap exposed
+  a discarded match result mismatch; the reduced case and discard fix pass the
+  focused lane. See `self-host-discarded-match-results-2026-09-05.md`.
+  A fresh clean bootstrap remains open.
 - [ ] Require valid collected source in compiler integration fixtures. A callback
   fixture used an invalid local type annotation but checked only inference
   diagnostics. Its valid-source replacement must exercise the actual call.

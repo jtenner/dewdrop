@@ -334,6 +334,11 @@ for (const [name, expected] of [
       ["call inside generic lambda", "fn maker<t>() -> fn(t) -> t {\n  fn(value: t) -> t {\n    identity(value)\n  }\n}\n", "let callback = maker::<I64>()\n  callback(value)"],
       ["reference inside generic lambda", "fn maker<t>() -> fn() -> fn(t) -> t {\n  fn() -> fn(t) -> t {\n    identity\n  }\n}\n", "let outer = maker::<I64>()\n  let callback = outer()\n  callback(value)"],
       ["trait call inside generic lambda", "trait Read {\n  fn read(self) -> I64\n}\nstruct Item {\n  value: I64\n}\nimpl Read for Item {\n  fn read(self) -> I64 {\n    self.value\n  }\n}\nfn maker<t: Read>() -> fn(t) -> I64 {\n  fn(value: t) -> I64 {\n    value.read()\n  }\n}\n", "let callback = maker::<Item>()\n  callback(Item::{\n    value: value\n  })"],
+      ["mutable tuple binding capture", "", "let mut (held, ignored) = (value, 0i32)\n  let callback = fn() -> I64 {\n    held = held\n    held\n  }\n  callback()"],
+      ["discarded scalar match", "", "match value {\n    0i64 => 1i32\n    _ => 2i32\n  }\n  value"],
+      ["discarded match effects", "", "let mut count = 0i32\n  let bump = fn() -> I32 {\n    count = count + 1i32\n    count\n  }\n  match value {\n    0i64 => bump()\n    _ => bump()\n  }\n  if count == 1i32 {\n    value\n  } else {\n    value + 1i64\n  }"],
+      ["unused match binding", "", "let unused = match value {\n    0i64 => 1i32\n    _ => 2i32\n  }\n  value"],
+      ["discarded conditional", "", "if value == 0i64 {\n    1i32\n  } else {\n    2i32\n  }\n  value"],
     ]) {
       const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
       let main;
