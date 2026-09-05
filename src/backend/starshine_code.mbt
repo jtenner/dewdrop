@@ -27,6 +27,11 @@ pub enum StarshineCodeEmissionError {
   InvalidLocal(@semantic.BodyId, @semantic.LocalId)
   UnsupportedExpression(@semantic.BodyId, @semantic.ExprId)
   UnsupportedBuiltin(Bytes)
+  InvalidBuiltinSignature(
+    Bytes,
+    Array[@semantic.PlannedWasmValueType],
+    Array[@semantic.PlannedWasmValueType]
+  )
   InvalidFunctionBody(@semantic.BodyId)
   ProgramLinkDiagnostics(Int)
 } derive(Eq, Debug)
@@ -675,8 +680,7 @@ fn starshine_body_emitted_root_shape(
       match
         lowering.block_items[source.items.start + source.items.length - 1].kind {
         @semantic.PlannedExpressionItem(expression) => expression
-        @semantic.PlannedLetItem(_, _, _)
-        | @semantic.PlannedElidedLetItem(_) =>
+        @semantic.PlannedLetItem(_, _, _) | @semantic.PlannedElidedLetItem(_) =>
           return None
       }
     }
@@ -916,7 +920,7 @@ fn starshine_inline_builtin_instructions(
       starshine_match_cast(array_type),
       @lib.Instruction::array_len(),
     ])
-  } else if name == b"dew_reinterpret" {
+  } else if name == b"dew_reinterpret" || name == b"unsafe.bitcast" {
     Ok([])
   } else if name == b"ref_null" {
     Ok([
@@ -1014,6 +1018,17 @@ fn starshine_finish_call(
   let function_ = match planned.function_of(declaration) {
     Some(function_) => function_
     None => return Err(MissingFunction(declaration))
+  }
+  match
+    starshine_verify_raw_builtin_signature(
+      function_.kind,
+      function_.direct_builtin,
+      planned.function_value_types,
+      function_.parameters,
+      function_.results,
+    ) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
   }
   if function_.direct_builtin.length() > 0 {
     match
@@ -1351,6 +1366,17 @@ fn starshine_finish_program_call(
       )
     }
     physical_parameter_index += physical_width
+  }
+  match
+    starshine_verify_raw_builtin_signature(
+      function_.kind,
+      function_.direct_builtin,
+      planned.modules[function_.module_index].function_value_types,
+      function_.parameters,
+      function_.results,
+    ) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
   }
   if physical_parameter_index + runtime_evidence_length !=
     function_.parameters.length {
@@ -3536,7 +3562,9 @@ fn starshine_body_locals(
               lowering, planned, program, planned_local,
             ) {
             Some(type_index) => {
-              let heap_type = @lib.TypeIdx::new(type_index.reinterpret_as_uint())
+              let heap_type = @lib.TypeIdx::new(
+                type_index.reinterpret_as_uint(),
+              )
               // Nested pattern tests bind locals inside condition frames.
               // A later arm cannot inherit non-null definite initialization
               // from those frames. Keep a defaultable slot and narrow at reads.
@@ -3622,10 +3650,7 @@ fn starshine_body_locals(
     }
   }
   let match_local_indices = Array::make(body.expressions.length, -1)
-  let match_result_local_indices = Array::make(
-    body.expressions.length,
-    -1,
-  )
+  let match_result_local_indices = Array::make(body.expressions.length, -1)
   let mut conversion_scratch_index = -1
   let mut fixed_array_ref_scratch_index = -1
   let mut fixed_array_i32_scratch_index = -1
@@ -4070,13 +4095,14 @@ fn starshine_body_locals(
                 _ =>
                   match starshine_shape_value_type(element_shape) {
                     Some(type_) => {
-                      map_value_local_indices[expression - body.expressions.start] = parameter_count +
+                      map_value_local_indices[expression -
+                      body.expressions.start] = parameter_count +
                         body_local_types.length()
                       body_local_types.push(type_)
                     }
                     None => ()
                   }
-                }
+              }
             }
           @semantic.PlannedArraySlice(_, _, _, _, _) => {
             map_value_local_indices[expression - body.expressions.start] = parameter_count +
@@ -6037,7 +6063,8 @@ fn starshine_emit_body_instructions(
                     )
                   None => -1
                 }
-                let cache_local = function_reference_cache_indices[expression - body.expressions.start]
+                let cache_local = function_reference_cache_indices[expression -
+                  body.expressions.start]
                 if singleton_global >= 0 {
                   results.push([
                     @lib.Instruction::global_get(
@@ -6131,7 +6158,8 @@ fn starshine_emit_body_instructions(
               Some(value) if value.signature_type_index >= 0 => value
               _ => return Err(SignatureOnlyCall(requirement))
             }
-            let scratch = match_local_indices[expression - body.expressions.start]
+            let scratch = match_local_indices[expression -
+              body.expressions.start]
             if receiver < 0 || scratch < 0 {
               return Err(UnsupportedExpression(body.body, expression))
             }
@@ -6163,7 +6191,8 @@ fn starshine_emit_body_instructions(
             if planned.closure_type_index >= 0 {
               let local_type = planned.closure_entry_type_by_resolved[function_type]
               let direct_local_type = planned.function_type_by_resolved[function_type]
-              let scratch = match_local_indices[expression - body.expressions.start]
+              let scratch = match_local_indices[expression -
+                body.expressions.start]
               if local_type < 0 || direct_local_type < 0 || scratch < 0 {
                 return Err(UnsupportedExpression(body.body, expression))
               }
@@ -6504,7 +6533,8 @@ fn starshine_emit_body_instructions(
                 starshine_precise_nominal_local_type_index(
                   lowering, planned, program, local_info,
                 ) {
-                Some(type_index) => output.push(starshine_match_cast(type_index))
+                Some(type_index) =>
+                  output.push(starshine_match_cast(type_index))
                 None => ()
               }
             }
@@ -6550,9 +6580,9 @@ fn starshine_emit_body_instructions(
             arguments,
             type_arguments
           ) => {
-            let has_receiver = receiver >= 0 && !(
-              lowering.expressions[receiver].kind is @semantic.PlannedConsumedExpression
-            )
+            let has_receiver = receiver >= 0 &&
+              !(lowering.expressions[receiver].kind
+              is @semantic.PlannedConsumedExpression)
             let receiver_count = if has_receiver { 1 } else { 0 }
             tasks.push(
               FinishStarshineCall(
@@ -6582,9 +6612,9 @@ fn starshine_emit_body_instructions(
             arguments,
             type_arguments
           ) => {
-            let has_receiver = receiver >= 0 && !(
-              lowering.expressions[receiver].kind is @semantic.PlannedConsumedExpression
-            )
+            let has_receiver = receiver >= 0 &&
+              !(lowering.expressions[receiver].kind
+              is @semantic.PlannedConsumedExpression)
             let receiver_count = if has_receiver { 1 } else { 0 }
             tasks.push(
               FinishStarshineTailCall(
@@ -6615,9 +6645,9 @@ fn starshine_emit_body_instructions(
             arguments,
             type_arguments
           ) => {
-            let has_receiver = receiver >= 0 && !(
-              lowering.expressions[receiver].kind is @semantic.PlannedConsumedExpression
-            )
+            let has_receiver = receiver >= 0 &&
+              !(lowering.expressions[receiver].kind
+              is @semantic.PlannedConsumedExpression)
             let receiver_count = if has_receiver { 1 } else { 0 }
             match
               starshine_runtime_bound_call_info(
@@ -6827,7 +6857,8 @@ fn starshine_emit_body_instructions(
                     elements.length,
                     map_key_local_indices[expression - body.expressions.start],
                     map_value_local_indices[expression - body.expressions.start],
-                    match_result_local_indices[expression - body.expressions.start],
+                    match_result_local_indices[expression -
+                    body.expressions.start],
                   ),
                 )
               _ =>
@@ -8231,7 +8262,8 @@ fn starshine_emit_body_instructions(
                     tasks.push(
                       FinishStarshineProductBox(
                         value_shape,
-                        match_result_local_indices[value - body.expressions.start],
+                        match_result_local_indices[value -
+                        body.expressions.start],
                       ),
                     )
                   }
@@ -8344,7 +8376,8 @@ fn starshine_emit_body_instructions(
             }
           }
           @semantic.PlannedMatchExpression(scrutinee, arms) => {
-            let scratch_local = match_local_indices[expression - body.expressions.start]
+            let scratch_local = match_local_indices[expression -
+              body.expressions.start]
             if scratch_local < 0 {
               return Err(UnsupportedExpression(body.body, expression))
             }
@@ -10534,7 +10567,8 @@ fn starshine_emit_body_instructions(
         for index, fragment in fragments {
           append_starshine_instructions(output, fragment)
           if index != selected {
-            let expression = lowering.expression_children[arguments.start + index]
+            let expression = lowering.expression_children[arguments.start +
+              index]
             let source = lowering.expressions[expression]
             starshine_append_shape_drops(
               output,
@@ -10778,13 +10812,17 @@ fn starshine_emit_body_instructions(
           if result_local < 0 {
             return Err(UnsupportedExpression(body.body, -503))
           }
-          starshine_append_product_local_sets(direct, result_local, result_shape)
+          starshine_append_product_local_sets(
+            direct, result_local, result_shape,
+          )
           starshine_append_product_local_sets(
             captured, result_local, result_shape,
           )
           output.push(
             @lib.Instruction::if_(
-              @lib.BlockType::void_(), direct, Some(captured),
+              @lib.BlockType::void_(),
+              direct,
+              Some(captured),
             ),
           )
           starshine_append_product_local_gets(
@@ -11044,7 +11082,8 @@ fn starshine_emit_body_instructions(
             @lib.LocalIdx::new(scratch_local.reinterpret_as_uint()),
           ),
         )
-        let result_local = match_result_local_indices[expression - body.expressions.start]
+        let result_local = match_result_local_indices[expression -
+          body.expressions.start]
         let result_source = lowering.expressions[expression]
         let result_shape = starshine_specialized_shape(
           lowering,
@@ -11477,7 +11516,11 @@ fn starshine_emit_body_instructions(
           (Some(link), Some(function_)) =>
             starshine_append_program_result_cast(link, function_, output)
           (None, _) if current_lambda < 0 =>
-            starshine_append_module_result_cast(planned, body.declaration, output)
+            starshine_append_module_result_cast(
+              planned,
+              body.declaration,
+              output,
+            )
           _ => ()
         }
         output.push(@lib.Instruction::return_())
@@ -11708,9 +11751,7 @@ fn starshine_emit_body_instructions(
     if body.result_shape is @semantic.UnitPlannedValueShape {
       match
         starshine_body_emitted_root_shape(
-          lowering,
-          generic_specialization,
-          body,
+          lowering, generic_specialization, body,
         ) {
         Some(shape) => starshine_append_shape_drops(output, shape)
         None => ()
@@ -11916,7 +11957,12 @@ fn emit_starshine_lambda_body(
     starshine_emit_body_instructions(
       lowering,
       planned,
-      { program, module_index: program_module_index, helper_plan: None, result_function: None, },
+      {
+        program,
+        module_index: program_module_index,
+        helper_plan: None,
+        result_function: None,
+      },
       body,
       lambda,
       local_indices,
@@ -12006,7 +12052,12 @@ fn emit_starshine_function_body(
     starshine_emit_body_instructions(
       lowering,
       planned,
-      { program: None, module_index: -1, helper_plan: None, result_function: None, },
+      {
+        program: None,
+        module_index: -1,
+        helper_plan: None,
+        result_function: None,
+      },
       body,
       -1,
       local_indices,

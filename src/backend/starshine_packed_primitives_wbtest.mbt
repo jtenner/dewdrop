@@ -53,8 +53,7 @@ test "nested pattern reference bindings are initialized across control frames" {
 ///|
 test "early array returns use the linked result reference type" {
   let stages = backend_test_single_module_stages(
-    28118UL,
-    b"open dew.std.array\npub fn run(flag: Bool, input: Array<I32>) -> Array<I32> {\n  let result = input\n  if flag {\n    return result\n  }\n  result\n}\n",
+    28118UL, b"open dew.std.array\npub fn run(flag: Bool, input: Array<I32>) -> Array<I32> {\n  let result = input\n  if flag {\n    return result\n  }\n  result\n}\n",
   )
   assert_eq(stages.diagnostic_count(), 0)
   let module_ = emit_starshine_program_module(stages.lowering, stages.link).unwrap()
@@ -180,6 +179,7 @@ test "Bytes search primitives and Option<U32> validate through Starshine" {
   assert_eq(diagnostics, 0)
   assert_false(backend_program_uses_linear_memory(fragments))
   let module_ = match emit_starshine_program_module(lowering, fragments) {
+    Err(InvalidBuiltinSignature(_, _, _)) => fail("invalid builtin signature")
     Ok(module_) => module_
     Err(MissingBody(_)) => abort("missing body")
     Err(MissingFunction(_)) => abort("missing function")

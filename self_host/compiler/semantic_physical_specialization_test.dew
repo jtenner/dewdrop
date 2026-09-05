@@ -925,6 +925,33 @@ pub fn self_host_emit_solver_control_probe() -> Bytes {
   }
 }
 
+pub fn self_host_emit_raw_bitcast_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\nfn pack(value: U32) -> I16x2 {\n  cast(value)\n}\nfn unpack(value: I16x2) -> U32 {\n  cast(value)\n}\npub fn main() -> U32 {\n  unpack(pack(4294967295u32))\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+test "raw bitcast rejects a changed physical width before emission" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\npub fn main() -> U64 {\n  cast(42u32)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(_) => assert(false, "invalid bitcast emitted a module")
+    Result::Err(error) => assert(error == "unsafe.bitcast requires equal concrete non-reference carriers", error)
+  }
+}
+
 pub fn self_host_emit_erased_field_probe() -> Bytes {
   let fragments = self_host_physical_test_fragments(
     b"struct Box<t> {\n  value: t\n}\nimpl<t> Box<t> {\n  fn make(value: t) -> Self {\n    Box::{\n      value: value\n    }\n  }\n  fn read(self) -> t {\n    self.value\n  }\n}\npub fn main() -> I64 {\n  let small = Box::make(7i32)\n  let large = Box::make(42i64)\n  if small.read() == 7i32 {\n    large.read()\n  } else {\n    0i64\n  }\n}\n",

@@ -432,6 +432,7 @@ test "wide imported enum construction validates through Starshine" {
   let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
   match emit_starshine_program_module(lowering, link) {
+    Err(InvalidBuiltinSignature(_, _, _)) => fail("invalid builtin signature")
     Ok(module_) => assert_eq(@validate.validate_module(module_), Ok(()))
     Err(UnsupportedExpression(_, _)) => fail("unsupported expression")
     Err(MissingBody(_)) => fail("missing body")

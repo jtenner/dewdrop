@@ -1,3 +1,6 @@
+// Unsafe: preserves bits only between equal non-reference Wasm carriers.
+pub builtin unsafe_bitcast<source, target>(value: source) -> target = "unsafe.bitcast"
+
 impl Swar32 {
   fn from_bits(value: U32) -> Swar32 {
     swar32_from_bits(value)

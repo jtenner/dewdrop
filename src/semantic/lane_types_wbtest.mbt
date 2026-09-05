@@ -6,7 +6,7 @@ test "all typed packed lane primitives resolve as distinct types" {
   let resolved = resolve_module_types(collected)
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(resolved.diagnostics.length(), 0)
-  assert_eq(collected.preamble_declaration_count, 1308)
+  assert_eq(collected.preamble_declaration_count, 1309)
 }
 
 ///|

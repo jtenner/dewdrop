@@ -94,6 +94,7 @@ compiler = await WebAssembly.instantiate(module, compilerImports);
 compiler.exports.__dew_init?.();
 let failures = 0;
 for (const [name, expected] of [
+  ["self_host_emit_raw_bitcast_probe", -1],
   ["self_host_emit_pattern_guard_probe", 461],
   ["self_host_emit_literal_guard_probe", 205],
   ["self_host_emit_solver_control_probe", 1],

@@ -126,6 +126,7 @@ def main() -> None:
         ("v128_xor", ["StarshineFfi.ffi_lib_Instruction_v128_xor()"]),
     ]
     identities = {
+        "unsafe.bitcast",
         "swar32_from_bits",
         "swar32_to_bits",
         "swar64_from_bits",

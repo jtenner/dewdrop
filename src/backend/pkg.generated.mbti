@@ -16,6 +16,8 @@ pub fn append_wasm_custom_section(Bytes, String, Bytes) -> Bytes
 
 pub fn append_wasm_metrics_section(Bytes, Int) -> Bytes
 
+pub fn attach_starshine_program_compiler_facts(@lib.Module, @semantic.PlannedProgramLowering, @semantic.PlannedProgramWasmGCLink) -> Result[(@lib.Module, StarshineCompilerFactSummary), String]
+
 pub fn emit_starshine_binary(@semantic.PlannedModuleLowering, @semantic.PlannedModuleWasmGCFragments) -> Result[Bytes, StarshineBinaryEmissionError]
 
 pub fn emit_starshine_code_section(@semantic.PlannedModuleLowering, @semantic.PlannedModuleWasmGCFragments) -> Result[@lib.CodeSec, StarshineCodeEmissionError]
@@ -34,7 +36,19 @@ pub fn emit_starshine_program_module(@semantic.PlannedProgramLowering, @semantic
 
 pub fn emit_starshine_type_section(@semantic.PlannedModuleWasmGCFragments) -> @lib.TypeSec
 
+pub fn measure_starshine_compiler_fact_size(@lib.Module) -> Result[StarshineCompilerFactSize, @binary.EncodeError]
+
+pub fn starshine_compiler_fact_family_audit() -> Array[(String, String)]
+
+pub fn starshine_compiler_fact_proof_strengths() -> Array[StarshineCompilerFactProofStrength]
+
 pub fn validate_starshine_type_fragments(@semantic.PlannedModuleWasmGCFragments) -> Result[Unit, @validate.ValidationError]
+
+pub fn validate_wasi_preview1_schema(WasiPreview1Schema) -> Result[Unit, String]
+
+pub fn wasi_preview1_fd_read_schema() -> WasiPreview1Schema
+
+pub fn wasi_preview1_fd_write_schema() -> WasiPreview1Schema
 
 // Errors
 
@@ -52,15 +66,90 @@ pub enum StarshineCodeEmissionError {
   InvalidLocal(UInt64, Int)
   UnsupportedExpression(UInt64, Int)
   UnsupportedBuiltin(Bytes)
+  InvalidBuiltinSignature(Bytes, Array[@semantic.PlannedWasmValueType], Array[@semantic.PlannedWasmValueType])
   InvalidFunctionBody(UInt64)
   ProgramLinkDiagnostics(Int)
 } derive(Eq, @debug.Debug)
 
+pub enum StarshineCompilerFactProofStrength {
+  StructuralCompilerFactProof
+  SemanticCompilerFactProof
+  WholeProgramCompilerFactProof
+  FlowSensitiveCompilerFactProof
+  ProfileHintCompilerFactProof
+} derive(Eq, @debug.Debug)
+
+pub struct StarshineCompilerFactSize {
+  core_wasm_bytes : Int
+  fact_bearing_wasm_bytes : Int
+  compiler_facts_bytes : Int
+  overhead_basis_points : Int
+} derive(Eq, @debug.Debug)
+
+pub struct StarshineCompilerFactSummary {
+  mut functions_with_facts : Int
+  mut function_effect_summaries : Int
+  mut parameter_facts : Int
+  mut parameter_no_escape_proofs : Int
+  mut result_facts : Int
+  fresh_result_facts : Int
+  mut signature_facts : Int
+  mut type_facts : Int
+  closed_type_populations : Int
+  mut field_facts : Int
+  mut closed_field_contents : Int
+  array_element_facts : Int
+  mut global_facts : Int
+  mut steady_state_globals : Int
+  table_facts : Int
+  complete_tables : Int
+  mut expression_facts : Int
+  mut integer_range_facts : Int
+  mut known_bit_facts : Int
+  mut float_facts : Int
+  mut reference_nonnull_facts : Int
+  mut exact_heap_types : Int
+  closed_heap_sets : Int
+  mut closed_function_target_sets : Int
+  mut callsite_facts : Int
+  mut exact_call_targets : Int
+  mut allocation_facts : Int
+  no_escape_allocations : Int
+  identity_unobserved_allocations : Int
+  access_facts : Int
+  proven_in_bounds_accesses : Int
+  numeric_facts : Int
+  no_wrap_facts : Int
+  exact_divisions : Int
+  relations : Int
+  hints : Int
+  mut provenance_bearing_site_facts : Int
+  mut generation_time_us : UInt64
+} derive(Eq, @debug.Debug)
+pub fn StarshineCompilerFactSummary::new() -> Self
+
 pub enum StarshineProgramBinaryEmissionError {
   StarshineProgramCodeError(StarshineCodeEmissionError)
   StarshineProgramValidationError(@validate.ValidationError)
+  StarshineProgramMappedValidationError(@validate.ValidationError, UInt64, UInt64, Bytes, String)
   StarshineProgramEncodingError(@binary.EncodeError)
 } derive(@debug.Debug)
+
+pub(all) enum WasiMarshalNode {
+  WasiI32
+  WasiInputBytes(Int)
+  WasiOutputBytes(Int)
+  WasiPointer(Array[WasiMarshalNode])
+  WasiList(WasiMarshalNode, Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct WasiPreview1Schema {
+  module_name : String
+  field : String
+  parameters : Array[WasiMarshalNode]
+  maximum_depth : Int
+  maximum_nodes : Int
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

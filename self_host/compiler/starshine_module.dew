@@ -19436,6 +19436,10 @@ fn self_host_emit_linked_i32_expression(
                       destination,
                     ))
                   } else {
+                    match self_host_raw_bitcast_error(name, canonical_body_plan, module_, expression, arguments) {
+                      Option::Some(error) => return Option::Some(error)
+                      Option::None => {}
+                    }
                     tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(
                       name,
                       destination,
@@ -21276,6 +21280,10 @@ fn self_host_emit_linked_i32_expression(
                         destination,
                       ))
                     } else {
+                      match self_host_raw_bitcast_error(name, canonical_body_plan, module_, expression, arguments) {
+                        Option::Some(error) => return Option::Some(error)
+                        Option::None => {}
+                      }
                       tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(
                         name,
                         destination,
@@ -21580,6 +21588,10 @@ fn self_host_emit_linked_i32_expression(
                             destination,
                           ))
                         } else {
+                          match self_host_raw_bitcast_error(builtin_name, canonical_body_plan, module_, expression, arguments) {
+                            Option::Some(error) => return Option::Some(error)
+                            Option::None => {}
+                          }
                           tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(
                             builtin_name,
                             destination,
@@ -24630,6 +24642,10 @@ fn self_host_emit_linked_i32_expression(
                             }
                           }
                         } else {
+                          match self_host_raw_bitcast_error(builtin_name, canonical_body_plan, module_, expression, arguments) {
+                            Option::Some(error) => return Option::Some(error)
+                            Option::None => {}
+                          }
                           tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(
                             builtin_name,
                             destination,

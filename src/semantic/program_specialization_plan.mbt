@@ -1243,6 +1243,7 @@ fn materialize_program_generic_specialization(
   let base = module_.functions[base_index]
   match base.kind {
     PlannedWasmDefinedFunction(_) => ()
+    PlannedWasmInlineBuiltinFunction(name) if name == b"unsafe.bitcast" => ()
     _ => return None
   }
   let callable = match

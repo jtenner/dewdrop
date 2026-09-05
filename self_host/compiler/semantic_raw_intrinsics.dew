@@ -1,0 +1,49 @@
+open dew.std.option
+
+// A no-op cast preserves a concrete non-reference Wasm carrier. Equal eqref
+// carriers do not establish equal heap types, so references are not accepted.
+fn self_host_raw_bitcast_error(
+  name: Bytes,
+  plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  module_: SelfHostPlannedModuleLowering,
+  expression: U32,
+  arguments: SelfHostHirSpan,
+) -> Option<String> {
+  if !name.equals(b"unsafe.bitcast") {
+    return Option::None
+  }
+  if arguments.length != 1u32 || !self_host_array_span_is_valid(
+    arguments.start,
+    arguments.length,
+    module_.expression_children.length(),
+  ) {
+    return Option::Some("unsafe.bitcast requires exactly one argument")
+  }
+  let body_plan = match plan {
+    Option::Some(value) => value
+    Option::None => return Option::Some("unsafe.bitcast requires a physical body plan")
+  }
+  let source = match self_host_body_plan_expression(
+    body_plan,
+    module_.expression_children[arguments.start],
+  ) {
+    Option::Some(value) => value.carrier
+    Option::None => return Option::Some("unsafe.bitcast source plan is missing")
+  }
+  let target = match self_host_body_plan_expression(body_plan, expression) {
+    Option::Some(value) => value.carrier
+    Option::None => return Option::Some("unsafe.bitcast result plan is missing")
+  }
+  let supported = match source {
+    SelfHostWasmBodyCarrier::I32BodyCarrier => true
+    SelfHostWasmBodyCarrier::I64BodyCarrier => true
+    SelfHostWasmBodyCarrier::F32BodyCarrier => true
+    SelfHostWasmBodyCarrier::F64BodyCarrier => true
+    SelfHostWasmBodyCarrier::V128BodyCarrier => true
+    _ => false
+  }
+  if supported && self_host_body_carrier_equal(source, target) {
+    return Option::None
+  }
+  Option::Some("unsafe.bitcast requires equal concrete non-reference carriers")
+}

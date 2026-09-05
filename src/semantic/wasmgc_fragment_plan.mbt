@@ -2400,6 +2400,7 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
 
 ///|
 fn wasmgc_builtin_is_inline(name : Bytes) -> Bool {
+  name == b"unsafe.bitcast" ||
   (
     name.length() >= 4 &&
     name[0] == b'd' &&

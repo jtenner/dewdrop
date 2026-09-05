@@ -3,6 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "== generated sources =="
+python3 tools/generate_preamble_sources.py --check
 python3 tools/generate_lane_std.py --check
 python3 tools/generate_string_std.py --check
 python3 tools/generate_wasi_std.py --check
@@ -54,4 +55,3 @@ node --check tools/run-dew-facet.mjs
 python3 -m py_compile tools/export-wasm-memory.py
 moon test --target native src/dew_bootstrap
 python3 tools/cli-fixtures.py
-
