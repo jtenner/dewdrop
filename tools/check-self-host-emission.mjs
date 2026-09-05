@@ -315,6 +315,7 @@ for (const [name, expected] of [
       ["scalar", "", "let callback = reader::<I64>()\n  callback(value)"],
       ["nominal", "struct Item {\n  value: I64\n}\n", "let callback = reader::<Item>()\n  callback(Item::{\n    value: value\n  }).value"],
       ["product", "", "let callback = reader::<(I32, I64)>()\n  let (_, result) = callback((7i32, value))\n  result"],
+      ["lambda", "fn maker() -> fn(I64) -> I64 {\n  fn(value: I64) -> I64 {\n    value\n  }\n}\n", "let callback = maker()\n  callback(value)"],
     ]) {
       const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
       const main = await compileSource(source);

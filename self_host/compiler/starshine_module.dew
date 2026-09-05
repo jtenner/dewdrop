@@ -15704,7 +15704,7 @@ fn self_host_linked_canonical_call_index(
 
 fn self_host_emit_linked_i32_expression(
   link: SelfHostPlannedProgramWasmGCLink,
-  body_plan: SelfHostPlannedProgramWasmBodyPlan,
+  canonical_body_plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
   function_value_signatures: Array<SelfHostLinkedFunctionValueSignature>,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
@@ -15712,12 +15712,6 @@ fn self_host_emit_linked_i32_expression(
   caller_specialization: U32,
   instructions: StarshineInstructions,
 ) -> Option<String> {
-  let canonical_body_plan = self_host_program_wasm_body_plan_for_identity(
-    body_plan,
-    module_.module_id,
-    body.body,
-    caller_specialization,
-  )
   let mut invariant_relative = 0u32
   let _ = while invariant_relative {
     current => if current < body.expressions.length {
@@ -37077,19 +37071,13 @@ fn self_host_linked_append_map_write_scratch(
 
 fn self_host_linked_scalar_locals(
   link: SelfHostPlannedProgramWasmGCLink,
-  body_plan: SelfHostPlannedProgramWasmBodyPlan,
+  canonical_body_plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
   expected_result_shape: SelfHostPlannedValueShape,
   caller_specialization: U32,
 ) -> Result<StarshineLocals, String> {
   let locals = StarshineFfi.ffi_lib_Locals_empty()
-  let canonical_body_plan = self_host_program_wasm_body_plan_for_identity(
-    body_plan,
-    module_.module_id,
-    body.body,
-    caller_specialization,
-  )
   let mut local = 0u32
   let _ = while local {
     current => if current < body.locals.length {
@@ -40425,6 +40413,10 @@ fn build_self_host_linked_i32_module(
           let linked_function = self_host_planned_program_wasm_function_identity(
             link.functions[current],
           )
+        let canonical_body_plan = self_host_program_wasm_body_plan_for_function(
+          body_plan,
+          self_host_linked_physical_function_index(linked_function.function_index),
+        )
         let fragment_module = link.fragments.modules[linked_function.module_index]
         let fragment = self_host_program_link_fragment_function(
           fragment_module,
@@ -40451,7 +40443,7 @@ fn build_self_host_linked_i32_module(
             // before instruction emission reads any local carrier.
             let locals = match self_host_linked_scalar_locals(
               link,
-              body_plan,
+              canonical_body_plan,
               lowering_module,
               body,
               result_shape,
@@ -40465,7 +40457,7 @@ fn build_self_host_linked_i32_module(
             let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
             match self_host_emit_linked_i32_expression(
               link,
-              body_plan,
+              canonical_body_plan,
               function_value_signatures,
               lowering_module,
               body,
@@ -40533,7 +40525,7 @@ fn build_self_host_linked_i32_module(
             )
             let locals = match self_host_linked_scalar_locals(
               link,
-              body_plan,
+              canonical_body_plan,
               lowering_module,
               body,
               result_shape,
@@ -40547,7 +40539,7 @@ fn build_self_host_linked_i32_module(
             let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
             match self_host_emit_linked_i32_expression(
               link,
-              body_plan,
+              canonical_body_plan,
               function_value_signatures,
               lowering_module,
               body,
@@ -40597,7 +40589,7 @@ fn build_self_host_linked_i32_module(
             }
             let initializer_locals = match self_host_linked_scalar_locals(
               link,
-              body_plan,
+              self_host_program_wasm_body_plan_for_identity(body_plan, lowering_module.module_id, body.body, 4294967295u32),
               lowering_module,
               body,
               initializer.shape,
@@ -40611,7 +40603,7 @@ fn build_self_host_linked_i32_module(
             let initializer_instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
             match self_host_emit_linked_i32_expression(
               link,
-              body_plan,
+              self_host_program_wasm_body_plan_for_identity(body_plan, lowering_module.module_id, body.body, 4294967295u32),
               function_value_signatures,
               lowering_module,
               body,
