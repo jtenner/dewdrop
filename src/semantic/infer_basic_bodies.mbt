@@ -1900,16 +1900,20 @@ fn BasicBodyInferencer::initialize_block_types(
 }
 
 ///|
-fn BasicBodyInferencer::reuse_block_expression_types(
+fn BasicBodyInferencer::constrain_block_expression_types(
   self : BasicBodyInferencer,
 ) -> Unit {
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
     match self.collected.expressions[expression] {
-      HirBlockExpr(block, _) =>
-        self.expression_types[self.expression_index(expression)] = self.block_type(
-          block,
+      HirBlockExpr(block, offset) =>
+        // Products can already hold the expression's original type variable.
+        // Replacing the table entry would leave those references unbound.
+        self.constrain(
+          self.expression_type(expression),
+          self.block_type(block),
+          expression_type_origin(expression, offset),
         )
       _ => ()
     }
@@ -3016,7 +3020,7 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   }
   self.initialize_expression_types()
   self.initialize_block_types()
-  self.reuse_block_expression_types()
+  self.constrain_block_expression_types()
   self.initialize_return_type()
   self.constrain_name_expressions()
   self.constrain_block_items()
