@@ -1,0 +1,207 @@
+open dew.std.option
+
+fn self_host_nested_pattern_payload_shape(module_: SelfHostPlannedModuleLowering, pattern: SelfHostPlannedPattern) -> SelfHostPlannedValueShape {
+  match pattern.source {
+    SelfHostHirPattern::TuplePattern(_, children, _) => if children.length > 0u32 && children.start < module_.pattern_children.length() {
+      let child = module_.pattern_children[children.start]
+      if child < module_.patterns.length() {
+        return module_.patterns[child].shape
+      }
+    }
+    _ => {}
+  }
+  SelfHostPlannedValueShape::ErrorPlannedValueShape
+}
+
+fn self_host_emit_pattern_path(scratch: U32, path: Array<SelfHostLinkedWasmFieldLink>, destination: StarshineInstructions) -> Unit {
+  StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_local_get(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(scratch))))
+  for field in path {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(self_host_u32_to_i32(field.type_index)))
+    StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_struct_get(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(field.type_index)), self_host_u32_to_i32(field.field_index)))
+  }
+}
+
+// Direct payload bindings retain their existing checked emission. This walk
+// adds bindings below those payloads, after every nested tag has matched.
+fn self_host_emit_nested_pattern_bindings(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  pattern: SelfHostPlannedPattern,
+  type_index: U32,
+  scratch: U32,
+  path: Array<SelfHostLinkedWasmFieldLink>,
+  destination: StarshineInstructions,
+) -> Option<String> {
+  if path.length() > module_.patterns.length() {
+    return Option::Some("nested binding path exceeds the pattern arena")
+  }
+  let children = match pattern.source {
+    SelfHostHirPattern::TuplePattern(_, children, _) => children
+    _ => return Option::None
+  }
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < children.length {
+      let child_slot = self_host_u32_add(children.start, current)
+      if child_slot >= module_.pattern_children.length() {
+        return Option::Some("nested binding child span is outside its arena")
+      }
+      let child_id = module_.pattern_children[child_slot]
+      if child_id >= module_.patterns.length() {
+        return Option::Some("nested binding child is outside its arena")
+      }
+      let child = self_host_planned_pattern_identity(module_.patterns[child_id])
+      let field = self_host_linked_variant_payload_field_index(link, type_index, current)
+      path.push(SelfHostLinkedWasmFieldLink::{
+        type_index: type_index
+        field_index: field
+      })
+      match child.reference {
+        SelfHostBodyPatternReference::PatternBindingReference(local) => if path.length() > 1u32 {
+          let slot = match self_host_linked_i32_local_slot(module_, body, local) {
+            Option::Some(value) => value
+            Option::None => return Option::Some("nested binding has no physical local")
+          }
+          let actual = match self_host_linked_physical_field_shape(link, type_index, field) {
+            Option::Some(shape) => self_host_body_carrier_from_shape(shape)
+            Option::None => return Option::Some("nested binding has no physical field")
+          }
+          let plan = match canonical {
+            Option::Some(value) => value
+            Option::None => return Option::Some("nested binding has no frozen body plan")
+          }
+          let local_slot = self_host_body_local_slot(module_, body, local)
+          if local_slot >= plan.local_values.length() {
+            return Option::Some("nested binding local is outside the body plan")
+          }
+          if !self_host_body_carrier_equal(plan.local_values[local_slot].carrier, actual) {
+            return Option::Some("nested binding field and local carriers disagree")
+          }
+          self_host_emit_pattern_path(scratch, path, destination)
+          StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_local_set(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(slot))))
+        }
+        _ => if child.source is SelfHostHirPattern::TuplePattern(_, _, _) {
+          let child_type = match self_host_linked_pattern_variant_type(link, module_, child, self_host_nested_pattern_payload_shape(module_, child), self_host_linked_type_nominal_declaration(module_, child.type_)) {
+            Option::Some(value) => value
+            Option::None => return Option::Some("nested binding has no exact parent variant")
+          }
+          match self_host_emit_nested_pattern_bindings(link, module_, body, canonical, child, child_type, scratch, path, destination) {
+            Option::Some(error) => return Option::Some(error)
+            Option::None => {}
+          }
+        }
+      }
+      let _ = path.pop()
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}
+
+// The incoming Boolean proves all parent tags. Each child test is guarded by
+// that Boolean, so a failed parent can never lead to a child ref.cast.
+fn self_host_emit_nested_pattern_tests(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  pattern: SelfHostPlannedPattern,
+  type_index: U32,
+  scratch: U32,
+  path: Array<SelfHostLinkedWasmFieldLink>,
+  destination: StarshineInstructions,
+) -> Option<String> {
+  if path.length() > module_.patterns.length() {
+    return Option::Some("nested pattern path exceeds the pattern arena")
+  }
+  let children = match pattern.source {
+    SelfHostHirPattern::TuplePattern(_, children, _) => children
+    _ => return Option::None
+  }
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < children.length {
+      let slot = self_host_u32_add(children.start, current)
+      if slot >= module_.pattern_children.length() {
+        return Option::Some("nested pattern child span is outside its arena")
+      }
+      let child_id = module_.pattern_children[slot]
+      if child_id >= module_.patterns.length() {
+        return Option::Some("nested pattern child is outside its arena")
+      }
+      let child = self_host_planned_pattern_identity(module_.patterns[child_id])
+      if !(child.reference is SelfHostBodyPatternReference::PatternBindingReference(_)) && !(child.source is SelfHostHirPattern::WildcardPattern(_)) {
+        let predicate = StarshineFfi.ffi_ffi_bridge_instructions_new()
+        let absent = StarshineFfi.ffi_ffi_bridge_instructions_new()
+        path.push(SelfHostLinkedWasmFieldLink::{
+          type_index: type_index
+          field_index: self_host_linked_variant_payload_field_index(link, type_index, current)
+        })
+        self_host_emit_pattern_path(scratch, path, predicate)
+        match child.source {
+          SelfHostHirPattern::LiteralPattern(expression, _) => {
+            if expression >= module_.expressions.length() {
+              return Option::Some("nested literal expression is outside its arena")
+            }
+            match module_.expressions[expression].kind {
+              SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
+                let bit = if value {
+                  1i32
+                } else {
+                  0i32
+                }
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(bit)))
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_eq())
+              }
+              SelfHostPlannedExpressionKind::PlannedI32Const(value) => {
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(u64_into_i32(value))))
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_eq())
+              }
+              SelfHostPlannedExpressionKind::PlannedU32Const(value) => {
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(u64_into_i32(value))))
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_eq())
+              }
+              SelfHostPlannedExpressionKind::PlannedI64Const(value) => {
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_const(StarshineFfi.ffi_lib_I64_new(self_host_u64_to_i64(value))))
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_eq())
+              }
+              SelfHostPlannedExpressionKind::PlannedU64Const(value) => {
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_const(StarshineFfi.ffi_lib_I64_new(self_host_u64_to_i64(value))))
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_eq())
+              }
+              SelfHostPlannedExpressionKind::PlannedStringConst(value) => {
+                let equality = self_host_linked_runtime_function_index(link, b"dew_string_equals")
+                if equality < 0i32 {
+                  return Option::Some("nested String pattern has no text equality function")
+                }
+                self_host_emit_linked_text_constant(link, value, true, predicate)
+                StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_call(StarshineFfi.ffi_lib_FuncIdx_new(self_host_u32_to_i32(self_host_linked_emitted_function_index(self_host_i32_to_u32(equality))))))
+              }
+              _ => return Option::Some("nested literal pattern has no physical comparison recipe")
+            }
+          }
+          _ => {
+            let child_type = match self_host_linked_pattern_variant_type(link, module_, child, self_host_nested_pattern_payload_shape(module_, child), self_host_linked_type_nominal_declaration(module_, child.type_)) {
+              Option::Some(value) => value
+              Option::None => return Option::Some("nested variant pattern has no exact physical type")
+            }
+            StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_ffi_bridge_instruction_ref_test_nominal(self_host_u32_to_i32(child_type)))
+            match self_host_emit_nested_pattern_tests(link, module_, child, child_type, scratch, path, predicate) {
+              Option::Some(error) => return Option::Some(error)
+              Option::None => {}
+            }
+          }
+        }
+        let _ = path.pop()
+        StarshineFfi.ffi_ffi_bridge_instructions_push(absent, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(0i32)))
+        StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_if(self_host_linked_block_type(SelfHostPlannedValueShape::I32PlannedValueShape), predicate, absent))
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}

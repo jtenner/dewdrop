@@ -1,0 +1,181 @@
+test "physical carrier conflicts are absorbing" {
+  let conflict = self_host_body_merge_carrier(
+    SelfHostWasmBodyCarrier::I32BodyCarrier,
+    SelfHostWasmBodyCarrier::I64BodyCarrier,
+  )
+  assert(
+    conflict is SelfHostWasmBodyCarrier::ConflictingBodyCarrier,
+    "different known carriers must conflict",
+  )
+  let later = self_host_body_merge_carrier(
+    conflict,
+    SelfHostWasmBodyCarrier::I32BodyCarrier,
+  )
+  assert(
+    later is SelfHostWasmBodyCarrier::ConflictingBodyCarrier,
+    "later evidence must not erase a carrier conflict",
+  )
+}
+
+test "physical carrier diagnostic IDs are stable" {
+  assert(
+    self_host_u32_equal(
+      self_host_body_diagnostic_code("body carrier conflict"),
+      601u32,
+    ),
+    "BOD-601",
+  )
+  assert(
+    self_host_u32_equal(
+      self_host_body_diagnostic_code("call argument carrier mismatch"),
+      705u32,
+    ),
+    "ABI-705",
+  )
+  assert(
+    self_host_u32_equal(
+      self_host_body_diagnostic_code(
+        "physical body carrier analysis did not converge",
+      ),
+      604u32,
+    ),
+    "BOD-604",
+  )
+}
+
+test "physical carrier work queue has no eight-step limit" {
+  let queue = []
+  let pending = []
+  let reached = []
+  let mut seed = 0u32
+  let _ = while seed {
+    current => if current < 10u32 {
+      pending.push(false)
+      reached.push(false)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_schedule_work_item(queue, pending, 0u32)
+  let mut head = 0u32
+  let _ = while head {
+    current => if current < queue.length() {
+      let item = queue[current]
+      pending[item] = false
+      if !reached[item] {
+        reached[item] = true
+        let next = item + 1u32
+        if next < reached.length() {
+          self_host_body_schedule_work_item(queue, pending, next)
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(reached[9u32], "work queue must propagate through ten cells")
+  assert(queue.length() == 10u32, "each queued cell must run once")
+}
+
+test "physical carrier work graph wakes only linked items" {
+  let graph = self_host_body_empty_work_graph(5u32)
+  self_host_body_add_work_pair(graph, 1u32, 3u32)
+  self_host_body_add_work_pair(graph, 1u32, 4u32)
+  let queue = []
+  let pending = [false, false, false, false, false]
+  self_host_body_schedule_work_dependents(graph, queue, pending, 1u32)
+  self_host_body_schedule_work_dependents(graph, queue, pending, 1u32)
+  assert(queue.length() == 2u32, "linked work items must be deduplicated")
+  assert(!pending[0u32], "unlinked block work must stay idle")
+  assert(!pending[1u32], "the source work item must stay idle")
+  assert(!pending[2u32], "unlinked expression work must stay idle")
+  assert(pending[3u32], "first linked item must be scheduled")
+  assert(pending[4u32], "second linked item must be scheduled")
+}
+
+test "resolved negative logical type evidence is stable" {
+  assert(
+    self_host_body_preferred_logical_type(-53i32, -134i32) == -53i32,
+    "a resolved negative type must not be replaced",
+  )
+  assert(
+    self_host_body_preferred_logical_type(-1i32, -134i32) == -134i32,
+    "the missing type sentinel must accept evidence",
+  )
+}
+
+test "physical call operand sources keep their expression identity" {
+  assert(
+    self_host_body_call_operand_expression(
+      SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(7u32),
+    ) == 7u32,
+    "explicit argument source",
+  )
+  assert(
+    self_host_body_call_operand_expression(
+      SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(9u32),
+    ) == 9u32,
+    "receiver source",
+  )
+  assert(
+    self_host_body_diagnostic_code("planned and emitted call target differ") ==
+      701u32,
+    "ABI-701",
+  )
+  assert(
+    self_host_body_diagnostic_code("call argument count mismatch") == 703u32,
+    "ABI-703",
+  )
+  assert(
+    self_host_body_diagnostic_code("erased call value became an operand") ==
+      708u32,
+    "ABI-708",
+  )
+}
+
+test "physical call plan erases Unit and Never operands" {
+  assert(
+    !self_host_body_carrier_emits_call_operand(
+      SelfHostWasmBodyCarrier::UnitBodyCarrier,
+    ),
+    "Unit must not become a call operand",
+  )
+  assert(
+    !self_host_body_carrier_emits_call_operand(
+      SelfHostWasmBodyCarrier::NeverBodyCarrier,
+    ),
+    "Never must stop call emission",
+  )
+  assert(
+    self_host_body_carrier_emits_call_operand(
+      SelfHostWasmBodyCarrier::I64BodyCarrier,
+    ),
+    "a scalar must become a call operand",
+  )
+}
+
+test "only a direct generic type takes a specialization carrier" {
+  assert(
+    self_host_wasmgc_resolved_type_is_direct_generic(
+      SelfHostResolvedType::GenericParameterType(7u64),
+    ),
+    "direct generic type",
+  )
+  assert(
+    !self_host_wasmgc_resolved_type_is_direct_generic(
+      SelfHostResolvedType::AppliedType(0u32, SelfHostHirSpan::{
+        start: 0u32
+        length: 1u32
+      }),
+    ),
+    "generic container keeps its reference carrier",
+  )
+  assert(
+    !self_host_wasmgc_resolved_type_is_direct_generic(
+      SelfHostResolvedType::SelfType(9u64),
+    ),
+    "method receiver keeps its reference carrier",
+  )
+}

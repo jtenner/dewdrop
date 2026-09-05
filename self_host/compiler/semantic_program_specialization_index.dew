@@ -70,6 +70,18 @@ fn self_host_program_specialization_add_request(
   declaration: U64,
   candidates: Array<SelfHostPlannedValueShape>,
 ) -> U32 {
+  self_host_program_specialization_add_request_with_evidence(requests, shapes, request_head_by_declaration, request_next, declaration, candidates, [])
+}
+
+fn self_host_program_specialization_add_request_with_evidence(
+  requests: Array<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  request_head_by_declaration: Map<U64, U32>,
+  request_next: Array<U32>,
+  declaration: U64,
+  candidates: Array<SelfHostPlannedValueShape>,
+  evidence_types: Array<SelfHostSpecializationEvidenceType>,
+) -> U32 {
   let missing = 4294967295u32
   let previous_head = match request_head_by_declaration.get(declaration) {
     Option::Some(index) => index
@@ -93,7 +105,7 @@ fn self_host_program_specialization_add_request(
         shapes,
         declaration,
         candidates,
-      ) {
+      ) && self_host_specialization_evidence_types_equal(requests[current].evidence_types, evidence_types) {
         break current
       }
       continue request_next[current]
@@ -110,8 +122,13 @@ fn self_host_program_specialization_add_request(
         }
       }
       let new_index = requests.length()
+      let evidence_copy = self_host_empty_specialization_evidence_types()
+      for evidence in evidence_types {
+        evidence_copy.push(evidence)
+      }
       requests.push(SelfHostProgramSpecializationRequest::{
         declaration: declaration
+        evidence_types: evidence_copy
         shapes: SelfHostHirSpan::{
           start: start
           length: candidates.length()

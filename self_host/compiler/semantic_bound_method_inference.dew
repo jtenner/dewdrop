@@ -1,0 +1,150 @@
+open dew.std.option
+
+impl SelfHostBasicBodyInferencer {
+  fn begin_bound_method(self, trait_: U64, bound: U32, method: U64, receiver: I32) -> Unit {
+    self.imported_instantiation_generics.clear()
+    self.instantiation_generics = self.collected.generic_parameters_of(trait_)
+    self.instantiation_method_generics = self.collected.generic_parameters_of(method)
+    self.candidate_type_arguments.clear()
+    let arguments = match self.resolved.types[bound] {
+      SelfHostResolvedType::AppliedType(_, arguments) => arguments
+      _ => self_host_empty_hir_span(0u32)
+    }
+    let _ = self_host_assert_compiler_invariant(arguments.length == self.instantiation_generics.length, "declared trait bound argument count")
+    let _ = while 0u32 {
+      index => if index < arguments.length {
+        self.candidate_type_arguments.push(self.solver.resolved_type(self.resolved.type_arguments[arguments.start + index]))
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let _ = while 0u32 {
+      index => if index < self.instantiation_method_generics.length {
+        self.candidate_type_arguments.push(self.solver.fresh_variable())
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.instantiation_self_owner = trait_
+    self.instantiation_self_type = receiver
+  }
+
+  fn bound_method_signature(self, expression: U32, receiver: U32, arguments: SelfHostHirSpan, offset: U32, trait_: U64, bound: U32, callable: U32) -> Bool {
+    let declaration = self.collected.callables[callable].declaration
+    let parameters = self.collected.parameters_of(declaration)
+    if self_host_u32_equal(parameters.length, 0u32) || !self_host_u32_equal(self_host_u32_subtract(parameters.length, 1u32), arguments.length) || !(self.collected.parameters[parameters.start].kind is SelfHostCollectedParameterKind::ReceiverParameterDecl) {
+      return false
+    }
+    self.begin_bound_method(trait_, bound, declaration, self.expression_type(receiver))
+    let origin = self_host_call_type_origin(expression, offset)
+    if !self.solver.unify(self.expression_type(receiver), self.instantiate_signature_type(self.resolved.parameter_types[parameters.start]), origin) {
+      return false
+    }
+    let _ = while 0u32 {
+      index => if index < arguments.length {
+        let actual = self.expression_type(self.collected.expression_children[arguments.start + index])
+        let expected = self.instantiate_signature_type(self.resolved.parameter_types[self_host_u32_add(parameters.start, index + 1u32)])
+        if !self.is_primitive(actual, SelfHostPrimitiveType::NeverType) && !self.solver.unify(actual, expected, origin) {
+          return false
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.solver.unify(self.expression_type(expression), self.instantiate_signature_type(self.resolved.callable_return_types[callable]), origin)
+  }
+
+  fn constrain_declared_bound_method(self, expression: U32, target: U32, receiver: U32, name: U32, arguments: SelfHostHirSpan, offset: U32) -> Bool {
+    let parameter_id = match self.solver.type_term(self.solver.representative_type(self.expression_type(receiver))) {
+      SelfHostBodyTypeTerm::BodyResolvedType(type_) => match self.resolved.types[type_] {
+        SelfHostResolvedType::GenericParameterType(parameter) => parameter
+        _ => return false
+      }
+      _ => return false
+    }
+    if !self_host_u64_equal(self_host_semantic_id_module(parameter_id), self.collected.module_id) {
+      return false
+    }
+    let parameter = self.collected.generic_parameter_at(self_host_semantic_id_local(parameter_id))
+    let bounds = parameter.bounds
+    let mut selected = 4294967295u32
+    let mut selected_trait = 0u64
+    let mut selected_bound = 0u32
+    let mut first = 0u64
+    let mut second = 0u64
+    let mut count = 0u32
+    let mut needs_evidence = false
+    let _ = while 0u32 {
+      index => if index < bounds.length {
+        let bound = self.resolved.generic_bound_types[self_host_u32_add(bounds.start, index)]
+        let trait_type = match self.resolved.types[bound] {
+          SelfHostResolvedType::AppliedType(base, _) => base
+          _ => bound
+        }
+        match self.resolved.types[trait_type] {
+          SelfHostResolvedType::TraitType(trait_) => if self_host_u64_equal(self_host_semantic_id_module(trait_), self.collected.module_id) {
+            for raw_method in self.collected.methods {
+              let method = self_host_collected_method_identity(raw_method)
+              if self_host_u64_equal(method.parent, trait_) && self_host_u32_equal(method.name, name) && method.kind is SelfHostCollectedMethodKind::TraitMethodDecl {
+                match self.local_callable_index_of_declaration(method.id) {
+                  Option::Some(callable) => {
+                    let snapshot = self.solver.snapshot()
+                    let viable = self.bound_method_signature(expression, receiver, arguments, offset, trait_, bound, callable)
+                    self.solver.rollback(snapshot)
+                    if viable && self.local_generics_require_evidence(method.id) {
+                      needs_evidence = true
+                    } else if viable {
+                      if count == 0u32 {
+                        first = method.id
+                        selected = callable
+                        selected_trait = trait_
+                        selected_bound = bound
+                      } else if count == 1u32 {
+                        second = method.id
+                      }
+                      count = count + 1u32
+                    }
+                  }
+                  Option::None => {}
+                }
+              }
+            }
+          }
+          _ => {}
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if needs_evidence {
+      self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
+      self.mark_unsupported(expression)
+      self.solver.poison_type(self.expression_type(target))
+      return true
+    }
+    if count == 0u32 {
+      return false
+    }
+    if count == 1u32 {
+      let valid = self.bound_method_signature(expression, receiver, arguments, offset, selected_trait, selected_bound, selected)
+      let _ = self_host_assert_compiler_invariant(valid, "selected declared bound signature changed after rollback")
+      let start = self.call_type_arguments.length()
+      self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)
+      self.store_call_target(expression, SelfHostBasicCallTarget::BoundTraitBasicCallTarget(first, parameter_id, selected_bound, SelfHostHirSpan::{
+        start: start
+        length: self.candidate_type_arguments.length()
+      }), 2u32)
+    } else {
+      self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
+      self.solver.poison_type(self.expression_type(expression))
+      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::AmbiguousMethod(name, expression, first, second, count, offset))
+    }
+    self.consumed_member_roots[self.expression_index(target)] = true
+    self.solver.poison_type(self.expression_type(target))
+    true
+  }
+}

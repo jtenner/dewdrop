@@ -1,0 +1,217 @@
+open dew.std.option
+
+fn self_host_inference_diagnostic_name(diagnostic: SelfHostBodyInferenceDiagnostic) -> String {
+  match diagnostic {
+    SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
+    SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _) => "no matching method"
+    SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _) => "unsupported expression"
+    SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => "type constraint"
+    SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, _) => "unresolved expression"
+    SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(_) => "return outside callable"
+    SelfHostBodyInferenceDiagnostic::UnresolvedLocalType(_, _, _) => "unresolved local"
+    SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(_, _) => "invalid pattern constructor"
+    SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(_, _) => "invalid assignment target"
+    SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, _) => "immutable assignment target"
+    SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, _) => "no matching direct call"
+    SelfHostBodyInferenceDiagnostic::AmbiguousDirectCall(_, _, _, _, _, _) => "ambiguous direct call"
+    SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, _) => "call argument count"
+    SelfHostBodyInferenceDiagnostic::FieldAccessRequiresNominal(_, _) => "field requires nominal"
+    SelfHostBodyInferenceDiagnostic::UnknownFieldForType(_, _, _, _) => "unknown field"
+    SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(_, _) => "invalid construction target"
+    SelfHostBodyInferenceDiagnostic::MissingConstructionField(_, _, _, _) => "missing construction field"
+    SelfHostBodyInferenceDiagnostic::MissingImportedConstructionField(_, _, _, _) => "missing imported construction field"
+    SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, _) => "no matching operator"
+    SelfHostBodyInferenceDiagnostic::AmbiguousOperator(_, _, _, _, _) => "ambiguous operator"
+    SelfHostBodyInferenceDiagnostic::ParameterLocalHasErrorType(_, _, _, _, _) => "parameter has error type"
+    SelfHostBodyInferenceDiagnostic::InvalidParameterResolvedType(_, _, _, _, _, _) => "invalid parameter type"
+    SelfHostBodyInferenceDiagnostic::UnresolvedModuleValue(_, _) => "unresolved module value"
+    _ => "inference error"
+  }
+}
+
+fn self_host_inference_diagnostic_expression(diagnostic: SelfHostBodyInferenceDiagnostic) -> Option<U32> {
+  match diagnostic {
+    SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(expression, _) => Option::Some(expression)
+    SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(expression, _) => Option::Some(expression)
+    SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(expression, _) => Option::Some(expression)
+    SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(expression, _) => Option::Some(expression)
+    SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(expression, _) => Option::Some(expression)
+    SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, expression, _) => Option::Some(expression)
+    SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, expression, _) => Option::Some(expression)
+    SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, expression, _, _, _, _) => Option::Some(expression)
+    SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(constraint) => {
+      let origin = match constraint {
+        SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(_, _, origin) => origin
+        SelfHostLocalInferenceDiagnostic::InfiniteLocalType(_, _, origin) => origin
+      }
+      match origin.kind {
+        SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint => Option::Some(origin.source)
+        SelfHostTypeConstraintOriginKind::CallTypeConstraint => Option::Some(origin.source)
+        SelfHostTypeConstraintOriginKind::OperatorTypeConstraint => Option::Some(origin.source)
+        _ => Option::None
+      }
+    }
+    _ => Option::None
+  }
+}
+
+fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering) -> Option<String> {
+  let report = StringBuilder::new()
+  let mut errors = 0u32
+  for raw_module in lowering.modules {
+    let module_ = self_host_planned_module_lowering_identity(raw_module)
+    let count = module_.inferred.diagnostics.length()
+    let name_count = module_.name_diagnostics.length()
+    let type_count = module_.resolved_types.diagnostics.length()
+    errors = errors + count + name_count + type_count
+    if count > 0u32 || name_count > 0u32 || type_count > 0u32 {
+      report.append("\nmodule=")
+      report.append_u64(module_.module_id)
+      report.append(" names=")
+      report.append_u32(name_count)
+      report.append(" signatures=")
+      report.append_u32(type_count)
+      report.append(" inference=")
+      report.append_u32(count)
+      let mut signature_shown = 0u32
+      for diagnostic in module_.resolved_types.diagnostics {
+        if signature_shown < 4u32 {
+          report.append("\n  signature rank=")
+          report.append_u32(diagnostic.rank())
+          report.append(" offset=")
+          report.append_u32(diagnostic.offset())
+          match diagnostic {
+            SelfHostTypeDiagnostic::UnknownType(name, owner, _) => {
+              report.append(" name-index=")
+              report.append_u32(name)
+              report.append(" owner=")
+              report.append_u64(owner)
+            }
+            SelfHostTypeDiagnostic::TypeArityMismatch(type_, expected, actual, owner, _) => {
+              report.append(" type=")
+              report.append_u32(type_)
+              report.append(" expected=")
+              report.append_u32(expected)
+              report.append(" actual=")
+              report.append_u32(actual)
+              report.append(" owner=")
+              report.append_u64(owner)
+            }
+            _ => {}
+          }
+          signature_shown = signature_shown + 1u32
+        }
+      }
+      let kinds = []
+      let counts = []
+      for diagnostic in module_.inferred.diagnostics {
+        let kind = self_host_inference_diagnostic_name(diagnostic)
+        let index = while 0u32 {
+          current => if current < kinds.length() && kinds[current] != kind {
+            continue current + 1u32
+          } else {
+            break current
+          }
+        }
+        if index == kinds.length() {
+          kinds.push(kind)
+          counts.push(1u32)
+        } else {
+          counts[index] = counts[index] + 1u32
+        }
+      }
+      let mut kind_index = 0u32
+      for kind in kinds {
+        report.append("\n  count ")
+        report.append(kind)
+        report.append("=")
+        report.append_u32(counts[kind_index])
+        kind_index = kind_index + 1u32
+      }
+      let shown = []
+      for kind in kinds {
+        let _ = kind
+        shown.push(0u32)
+      }
+      for diagnostic in module_.inferred.diagnostics {
+        let kind = self_host_inference_diagnostic_name(diagnostic)
+        let kind_slot = while 0u32 {
+          current => if current < kinds.length() && kinds[current] != kind {
+            continue current + 1u32
+          } else {
+            break current
+          }
+        }
+        if shown[kind_slot] < 2u32 {
+          report.append("\n  ")
+          report.append(self_host_inference_diagnostic_name(diagnostic))
+          report.append(" offset=")
+          report.append_u32(diagnostic.offset())
+          match self_host_inference_diagnostic_expression(diagnostic) {
+            Option::Some(expression) => match lowering.index.module_index(module_.module_id) {
+              Option::Some(module_index) => {
+                let collected = self_host_program_collected_module_at(lowering.collected, module_index)
+                if expression < collected.expression_files.length() {
+                  let file = collected.expression_files[expression]
+                  let mut file_index = 0u32
+                  for candidate in collected.files {
+                    if self_host_u64_equal(candidate, file) {
+                      report.append(" file=")
+                      report.append(collected.file_paths[file_index])
+                    }
+                    file_index = file_index + 1u32
+                  }
+                }
+                report.append(" expression=")
+                report.append_u32(expression)
+                if expression < module_.expressions.length() {
+                  let planned = self_host_program_specialization_expression(module_, expression)
+                  report.append(" kind=")
+                  report.append(self_host_body_expression_kind_name(planned.kind))
+                  match collected.expressions[expression] {
+                    SelfHostHirExpr::CallExpr(target, _, _) => match collected.expressions[target] {
+                      SelfHostHirExpr::FieldExpr(receiver, _, _) => {
+                        let value = self_host_program_specialization_expression(module_, receiver)
+                        report.append(" receiver=")
+                        report.append_u32(receiver)
+                        report.append(" receiver-type=")
+                        report.append_i32(value.type_)
+                        report.append(" receiver-kind=")
+                        report.append(self_host_body_expression_kind_name(value.kind))
+                      }
+                      _ => {}
+                    }
+                    _ => {}
+                  }
+                }
+              }
+              Option::None => {}
+            }
+            Option::None => {}
+          }
+          match diagnostic {
+            SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, first, second, count, _) => {
+              report.append(" first=")
+              report.append_u64(first)
+              report.append(" second=")
+              report.append_u64(second)
+              report.append(" candidates=")
+              report.append_u32(count)
+            }
+            _ => {}
+          }
+          shown[kind_slot] = shown[kind_slot] + 1u32
+        }
+      }
+    }
+  }
+  if errors == 0u32 {
+    Option::None
+  } else {
+    let message = StringBuilder::new()
+    message.append("INV-002: semantic diagnostics must be resolved before specialization; count=")
+    message.append_u32(errors)
+    message.append(report.finish())
+    Option::Some(message.finish())
+  }
+}

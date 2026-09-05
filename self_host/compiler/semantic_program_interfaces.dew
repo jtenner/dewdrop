@@ -170,6 +170,46 @@ fn self_host_program_files_for_manifest_module(
   files
 }
 
+fn self_host_manifest_with_default_preamble(
+  manifest: SelfHostProgramManifest,
+  enabled: Bool,
+) -> SelfHostProgramManifest {
+  if !enabled {
+    return manifest
+  }
+  let modules = []
+  for module_ in manifest.modules {
+    if self_host_manifest_string_equal(module_.path, "dew.std.preamble") {
+      modules.push(module_)
+    } else {
+      let files = []
+      // Append the implicit import as its own file. Existing file identities
+      // and source offsets must not change when the preamble is enabled.
+      let mut file_index = 0u32
+      let _ = while file_index {
+        current => if current < self_host_manifest_module_file_count(module_) {
+          files.push(self_host_manifest_module_file(module_, current))
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      files.push(SelfHostManifestFile::{
+        path: "__dew_default_preamble.dew"
+        source: b"open dew.std.preamble\n"
+        test_only: false
+      })
+      modules.push(SelfHostManifestModule::{
+        path: module_.path
+        files: files
+      })
+    }
+  }
+  SelfHostProgramManifest::{
+    modules: modules
+  }
+}
+
 fn self_host_collect_program_manifest(
   module_id_base: U64,
   manifest: SelfHostProgramManifest,

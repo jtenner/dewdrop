@@ -227,7 +227,10 @@ fn self_host_compile_request_semantic_plan(
   if 31022548779538u64 == 31022548779539u64 {
     return Result::Err("compile request U64 direct inequality contract failed")
   }
-  let collected = self_host_collect_program_manifest(7200u64, request.manifest)
+  let collected = self_host_collect_program_manifest(
+    7200u64,
+    self_host_manifest_with_default_preamble(request.manifest, request.default_preamble),
+  )
   if self_host_u32_greater(collected.diagnostics.length(), 0u32) {
     return Result::Err("compile request manifest is invalid")
   }
@@ -346,6 +349,10 @@ fn self_host_compile_request_semantic_plan(
     Option::None => {}
   }
   let lowering = self_host_plan_program_lowering(frozen)
+  match self_host_validate_program_inference(lowering) {
+    Option::Some(error) => return Result::Err(error)
+    Option::None => {}
+  }
   match self_host_validate_program_lowering(lowering) {
     Option::Some(error) => return Result::Err(error)
     Option::None => {}
@@ -418,6 +425,30 @@ pub fn main() -> U32 {
       if arguments.length() != 2u32 {
         self_host_error(process, "usage: COMPILER REQUEST")
       } else {
+        if arguments.get_unchecked(1u32) == "--check-semantic-probes" {
+          let primitives = self_host_bootstrap_primitive_probe()
+          let solver = self_host_bootstrap_solver_probe()
+          let import_check = self_host_bootstrap_import_check()
+          let imports = import_check.failures
+          let bodies = self_host_bootstrap_body_probe()
+          if primitives == 0u32 && solver == 0u32 && imports == 0u32 && bodies == 0u32 {
+            return 0u32
+          }
+          let report = StringBuilder::new()
+          report.append("bootstrap semantic probes: primitive=")
+          report.append_u32(primitives)
+          report.append(" solver=")
+          report.append_u32(solver)
+          report.append(" imports=")
+          report.append_u32(imports)
+          report.append(" bodies=")
+          report.append_u32(bodies)
+          match import_check.detail {
+            Option::Some(detail) => report.append(detail)
+            Option::None => {}
+          }
+          return self_host_error(process, report.finish())
+        }
         match relative_path(arguments.get_unchecked(1u32)) {
           Result::Err(_) => self_host_error(process, "request path is not relative")
           Result::Ok(request_path) => {

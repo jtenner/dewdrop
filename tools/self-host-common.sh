@@ -66,7 +66,12 @@ self_host_run_node_facet() {
   local request=$2
   local exported
   exported=$(self_host_node_facet_compiler "$compiler")
-  NODE_NO_WARNINGS=1 node --stack-size=65500 tools/run-dew-facet.mjs "$exported" "$request"
+  local profile_args=()
+  if [[ -n "${SELF_HOST_CPU_PROFILE_DIR:-}" ]]; then
+    mkdir -p "$SELF_HOST_CPU_PROFILE_DIR"
+    profile_args=(--cpu-prof --cpu-prof-dir="$SELF_HOST_CPU_PROFILE_DIR")
+  fi
+  NODE_NO_WARNINGS=1 node --stack-size=65500 "${profile_args[@]}" tools/run-dew-facet.mjs "$exported" "$request"
 }
 
 self_host_run_wago() {
@@ -106,6 +111,7 @@ self_host_run_cached_failure() {
       case "$runtime" in
         node-facet)
           sha256sum tools/run-dew-facet.mjs tools/export-wasm-memory.py
+          printf '%s\n' "${SELF_HOST_CPU_PROFILE_DIR:-}"
           ;;
         wago)
           local wago_home=${WAGO_HOME:-/home/metidos/.wago}

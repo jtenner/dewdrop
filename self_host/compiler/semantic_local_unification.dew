@@ -30,6 +30,7 @@ fn self_host_body_i32_to_u32(value: I32) -> U32 {
 }
 
 pub struct SelfHostInferenceSnapshot {
+  token: U32
   undo_start: U32
   variable_count: U32
   type_count: U32
@@ -41,7 +42,8 @@ fn self_host_inference_snapshot_equal(
   left: SelfHostInferenceSnapshot,
   right: SelfHostInferenceSnapshot,
 ) -> Bool {
-  left.undo_start == right.undo_start &&
+  left.token == right.token &&
+    left.undo_start == right.undo_start &&
     left.variable_count == right.variable_count &&
     left.type_count == right.type_count &&
     left.argument_count == right.argument_count &&
@@ -58,6 +60,7 @@ pub struct SelfHostLocalTypeSolver {
   variable_types: Array<I32>
   diagnostics: Array<SelfHostLocalInferenceDiagnostic>
   snapshots: Array<SelfHostInferenceSnapshot>
+  mut next_snapshot_token: U32
   undo_kinds: Array<U32>
   undo_indices: Array<U32>
   undo_values: Array<I32>
@@ -89,6 +92,7 @@ impl SelfHostLocalTypeSolver {
       variable_types: self_host_local_empty_i32()
       diagnostics: []
       snapshots: []
+      next_snapshot_token: 0u32
       undo_kinds: self_host_local_empty_u32()
       undo_indices: self_host_local_empty_u32()
       undo_values: self_host_local_empty_i32()
@@ -109,10 +113,80 @@ impl SelfHostLocalTypeSolver {
     }
   }
 
-  fn reset(self) -> Unit {
-    if self.snapshots.length() != 0u32 {
-      return
+  fn assert_solver_invariant(
+    self,
+    condition: Bool,
+    code: U32,
+    expected: U32,
+    actual: U32,
+    detail: U32,
+  ) -> Unit {
+    if !condition {
+      let _ = self_host_assert_compiler_invariant_with_failure(
+        false,
+        SelfHostInvariantFailure::{
+          code: code
+          phase: 2u32
+          module_id: self.resolved.module_id
+          declaration: 0u64
+          body: 0u64
+          expression: 4294967295u32
+          expected: u32_into_u64(expected)
+          actual: u32_into_u64(actual)
+          detail: u32_into_u64(detail)
+        },
+        "local solver contract failed",
+      )
     }
+  }
+
+  fn assert_variable_arrays(self) -> Unit {
+    let count = self.variable_parents.length()
+    self.assert_solver_invariant(
+      count == self.variable_sizes.length(),
+      201u32, count, self.variable_sizes.length(), 1u32,
+    )
+    self.assert_solver_invariant(
+      count == self.variable_bindings.length(),
+      201u32, count, self.variable_bindings.length(), 2u32,
+    )
+    self.assert_solver_invariant(
+      count == self.variable_types.length(),
+      201u32, count, self.variable_types.length(), 3u32,
+    )
+  }
+
+  fn assert_undo_arrays(self) -> Unit {
+    let count = self.undo_kinds.length()
+    self.assert_solver_invariant(
+      count == self.undo_indices.length(),
+      205u32, count, self.undo_indices.length(), 1u32,
+    )
+    self.assert_solver_invariant(
+      count == self.undo_values.length(),
+      205u32, count, self.undo_values.length(), 2u32,
+    )
+  }
+
+  fn assert_top_snapshot(self, snapshot: SelfHostInferenceSnapshot) -> Unit {
+    let depth = self.snapshots.length()
+    self.assert_solver_invariant(
+      depth > 0u32, 204u32, 1u32, depth, snapshot.token,
+    )
+    let top = self.snapshots[depth - 1u32]
+    self.assert_solver_invariant(
+      self_host_inference_snapshot_equal(top, snapshot),
+      204u32, top.token, snapshot.token, depth,
+    )
+  }
+
+  fn reset(self) -> Unit {
+    self.assert_solver_invariant(
+      self.snapshots.length() == 0u32,
+      206u32, 0u32, self.snapshots.length(), 0u32,
+    )
+    self.assert_variable_arrays()
+    self.assert_undo_arrays()
     self.types.clear()
     self.types.push(SelfHostBodyTypeTerm::BodyErrorType)
     self.type_arguments.clear()
@@ -179,6 +253,9 @@ impl SelfHostLocalTypeSolver {
     if type_ == self.resolved.error_type {
       self.error_type()
     } else {
+      self.assert_solver_invariant(
+        type_ <= 2147483646u32, 207u32, 2147483646u32, type_, 0u32,
+      )
       -self_host_body_u32_to_i32(type_) - 2i32
     }
   }
@@ -209,6 +286,7 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn fresh_variable(self) -> I32 {
+    self.assert_variable_arrays()
     let variable = self.variable_parents.length()
     let type_ = self.push_type_term(
       SelfHostBodyTypeTerm::BodyVariableType(variable),
@@ -284,11 +362,23 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn find_variable_root(self, variable: U32) -> U32 {
+    self.assert_variable_arrays()
+    let count = self.variable_parents.length()
+    let mut hops = 0u32
     let root = while variable {
-      current => if self.variable_parents[current] != current {
-        continue self.variable_parents[current]
-      } else {
-        break current
+      current => {
+        self.assert_solver_invariant(
+          current < count, 202u32, count, current, variable,
+        )
+        self.assert_solver_invariant(
+          hops < count, 202u32, count, hops, variable,
+        )
+        if self.variable_parents[current] != current {
+          hops = hops + 1u32
+          continue self.variable_parents[current]
+        } else {
+          break current
+        }
       }
     }
     if self.snapshots.length() == 0u32 {
@@ -326,6 +416,7 @@ impl SelfHostLocalTypeSolver {
 
   fn record_undo(self, kind: U32, index: U32, old_value: I32) -> Unit {
     if self.snapshots.length() > 0u32 {
+      self.assert_undo_arrays()
       self.undo_kinds.push(kind)
       self.undo_indices.push(index)
       self.undo_values.push(old_value)
@@ -367,6 +458,13 @@ impl SelfHostLocalTypeSolver {
       larger = right_root
       smaller = left_root
     }
+    self.assert_solver_invariant(
+      self.variable_sizes[larger] <= 4294967295u32 - self.variable_sizes[smaller],
+      203u32,
+      4294967295u32 - self.variable_sizes[smaller],
+      self.variable_sizes[larger],
+      larger,
+    )
     self.set_variable_parent(smaller, larger)
     self.set_variable_size(
       larger,
@@ -1072,39 +1170,59 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn snapshot(self) -> SelfHostInferenceSnapshot {
+    self.assert_variable_arrays()
+    self.assert_undo_arrays()
+    self.assert_solver_invariant(
+      self.next_snapshot_token < 4294967295u32,
+      204u32, 4294967295u32, self.next_snapshot_token, self.snapshots.length(),
+    )
     let snapshot = SelfHostInferenceSnapshot::{
+      token: self.next_snapshot_token
       undo_start: self.undo_kinds.length()
       variable_count: self.variable_parents.length()
       type_count: self.types.length()
       argument_count: self.type_arguments.length()
       diagnostic_count: self.diagnostics.length()
     }
+    // Do not reset this counter: a handle from an earlier inference job must
+    // not become valid again when a later job reaches the same arena sizes.
+    self.next_snapshot_token = self.next_snapshot_token + 1u32
     self.snapshots.push(snapshot)
     snapshot
   }
 
   fn restore_undo(self, start: U32) -> Unit {
+    self.assert_variable_arrays()
+    self.assert_undo_arrays()
+    self.assert_solver_invariant(
+      start <= self.undo_kinds.length(),
+      205u32, self.undo_kinds.length(), start, 0u32,
+    )
     let _ = while self.undo_kinds.length() {
       length => if length > start {
-        let kind = match self_host_array_pop(self.undo_kinds) {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
-        let index = match self_host_array_pop(self.undo_indices) {
-          Option::Some(value) => value
-          Option::None => 0u32
-        }
-        let old_value = match self_host_array_pop(self.undo_values) {
-          Option::Some(value) => value
-          Option::None => 0i32
-        }
+        let slot = length - 1u32
+        let kind = self.undo_kinds[slot]
+        let index = self.undo_indices[slot]
+        let old_value = self.undo_values[slot]
+        self.assert_solver_invariant(kind <= 2u32, 205u32, 2u32, kind, slot)
+        self.assert_solver_invariant(
+          index < self.variable_parents.length(),
+          205u32, self.variable_parents.length(), index, kind,
+        )
         if kind == 0u32 {
+          self.assert_solver_invariant(
+            self_host_body_i32_to_u32(old_value) < self.variable_parents.length(),
+            205u32, self.variable_parents.length(), self_host_body_i32_to_u32(old_value), index,
+          )
           self.variable_parents[index] = self_host_body_i32_to_u32(old_value)
         } else if kind == 1u32 {
           self.variable_sizes[index] = self_host_body_i32_to_u32(old_value)
         } else {
           self.variable_bindings[index] = old_value
         }
+        self.undo_kinds.truncate(slot)
+        self.undo_indices.truncate(slot)
+        self.undo_values.truncate(slot)
         continue length - 1u32
       } else {
         break self_host_semantic_unit()
@@ -1113,13 +1231,7 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn rollback(self, snapshot: SelfHostInferenceSnapshot) -> Unit {
-    if self.snapshots.length() == 0u32 {
-      return
-    }
-    let top = self.snapshots[self.snapshots.length() - 1u32]
-    if !self_host_inference_snapshot_equal(top, snapshot) {
-      return
-    }
+    self.assert_top_snapshot(snapshot)
     self.restore_undo(snapshot.undo_start)
     self.variable_parents.truncate(snapshot.variable_count)
     self.variable_sizes.truncate(snapshot.variable_count)
@@ -1140,13 +1252,9 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn commit(self, snapshot: SelfHostInferenceSnapshot) -> Unit {
-    if self.snapshots.length() == 0u32 {
-      return
-    }
-    let top = self.snapshots[self.snapshots.length() - 1u32]
-    if !self_host_inference_snapshot_equal(top, snapshot) {
-      return
-    }
+    self.assert_top_snapshot(snapshot)
+    self.assert_variable_arrays()
+    self.assert_undo_arrays()
     let _ = self_host_array_pop(self.snapshots)
     if self.snapshots.length() == 0u32 {
       self.undo_kinds.clear()
@@ -1184,9 +1292,10 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn zonk_type(self, root: I32) -> I32 {
-    if self.snapshots.length() > 0u32 {
-      return self.error_type()
-    }
+    self.assert_solver_invariant(
+      self.snapshots.length() == 0u32,
+      206u32, 0u32, self.snapshots.length(), 1u32,
+    )
     let representative = self.representative_type(root)
     if representative <= 0i32 {
       return representative

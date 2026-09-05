@@ -1,0 +1,54 @@
+open dew.std.bytes_builder
+
+fn self_host_name_section_u32(output: BytesBuilder, value: U32) -> Unit {
+  let _ = while value {
+    remaining => {
+      let low = remaining & 127u32
+      let next = remaining >> 7u32
+      if next == 0u32 {
+        output.append_byte(u32_into_u8(low))
+        break self_host_semantic_unit()
+      }
+      output.append_byte(u32_into_u8(low | 128u32))
+      continue next
+    }
+  }
+}
+
+// Standard Wasm debug names retain exact linked identity. They are diagnostic
+// metadata only and are never consulted to select a type or call target.
+fn self_host_append_linked_function_names(output: BytesBuilder, link: SelfHostPlannedProgramWasmGCLink) -> Unit {
+  let names = BytesBuilder::new()
+  let mut count = 0u32
+  for function_ in link.functions {
+    if !function_.imported {
+      count = count + 1u32
+    }
+  }
+  self_host_name_section_u32(names, count)
+  for raw_function in link.functions {
+    let function_ = self_host_planned_program_wasm_function_identity(raw_function)
+    if !function_.imported {
+      let index = self_host_linked_emitted_function_index(self_host_linked_physical_function_index(function_.function_index))
+      self_host_name_section_u32(names, index)
+      let name = StringBuilder::new()
+      name.append(bytes_to_string(self_host_linked_function_name(link, function_)))
+      name.append("#")
+      name.append_u64(function_.declaration)
+      name.append("#")
+      name.append_u32(function_.specialization)
+      let bytes = string_as_bytes(name.finish())
+      self_host_name_section_u32(names, bytes.byte_length())
+      names.append(bytes)
+    }
+  }
+  let payload = BytesBuilder::new()
+  self_host_name_section_u32(payload, 4u32)
+  payload.append(b"name")
+  payload.append_byte(1u8)
+  self_host_name_section_u32(payload, names.byte_length())
+  payload.append(names.finish())
+  output.append_byte(0u8)
+  self_host_name_section_u32(output, payload.byte_length())
+  output.append(payload.finish())
+}

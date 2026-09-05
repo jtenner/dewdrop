@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { decodeDewTestMetadata, testIdentity } from "./metadata.mjs";
+import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "../self-host-invariant-record.mjs";
 
 function usage() {
   console.log(`usage: node tools/dew-test/run.mjs [options]
@@ -153,8 +154,13 @@ async function instantiateWithWasi(module) {
     instance,
     resetStdout() {
       stdout = [];
+      if (readSelfHostInvariantFailure(instance.exports.memory)) {
+        new DataView(instance.exports.memory.buffer).setBigUint64(0, 0n, true);
+      }
     },
     assertionFailureSuffix() {
+      const failure = readSelfHostInvariantFailure(instance.exports.memory);
+      if (failure) return `: ${formatSelfHostInvariantFailure(failure)}`;
       if (stdout.length === 0) return "";
       const bytes = Buffer.concat(stdout);
       let message;

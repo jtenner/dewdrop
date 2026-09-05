@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+source tools/self-host-common.sh
+work=.tmp/self-host-hardening
+mkdir -p "$work"
+self_host_ensure_starshine_ffi
+mapfile -t compiler_sources < <(
+  find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' ! -name main.dew | sort
+)
+test_args=("$work/tests.raw.wasm" self_host.compiler self_host.compiler ffi.dew self_host/starshine/ffi.dew)
+for source in "${compiler_sources[@]}" \
+  self_host/compiler/compiler_runtime_assertions_test.dew \
+  self_host/compiler/semantic_wasm_body_plan_test.dew \
+  self_host/compiler/semantic_physical_specialization_test.dew \
+  self_host/compiler/semantic_local_unification_test.dew \
+  self_host/compiler/semantic_solver_invariants_test.dew
+do
+  test_args+=(self_host.compiler "${source#self_host/compiler/}" "$source")
+done
+self_host_measure 'hardening test generation' env DEW_STD_ROOT="$PWD" \
+  moon run --target native --release src/dew_test_gen -- "${test_args[@]}"
+self_host_measure 'hardening time provider' \
+  wasm-tools parse tools/moonbit-time-provider.wat -o "$work/time.wasm"
+self_host_measure 'hardening test link' \
+  moon run --target native --release src/self_host_link_fixture -- \
+    "$work/tests.raw.wasm" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    fixtures/facet/facet-adapter.wasm "$work/time.wasm" "$work/tests.wasm" \
+    --single-validation
+test_status=0
+self_host_measure 'hardening tests' \
+  node tools/dew-test/run.mjs --wasm "$work/tests.wasm" \
+    --label 'self-host hardening tests' "$@" || test_status=1
+self_host_measure 'hardening invariant records' \
+  node tools/check-self-host-invariants.mjs "$work/tests.wasm" || test_status=1
+self_host_measure 'hardening host record decoder' \
+  node --test tools/self-host-invariant-record.test.mjs || test_status=1
+self_host_measure 'hardening emission probes' \
+  node tools/check-self-host-emission.mjs "$work/tests.wasm" || test_status=1
+self_host_measure 'hardening semantic probes' \
+  node tools/check-self-host-semantic-probes.mjs "$work/tests.wasm" || test_status=1
+exit "$test_status"

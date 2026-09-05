@@ -455,22 +455,106 @@ fn self_host_wasmgc_plan_types(
   }
 }
 
+fn self_host_wasmgc_resolved_type_is_direct_generic(
+  type_: SelfHostResolvedType,
+) -> Bool {
+  type_ is SelfHostResolvedType::GenericParameterType(_)
+}
+
+fn self_host_wasmgc_specialized_resolved_shape(
+  module_: SelfHostPlannedModuleLowering,
+  type_: U32,
+  generic_parameters: SelfHostHirSpan,
+  request: SelfHostProgramSpecializationRequest,
+  shapes: Array<SelfHostPlannedValueShape>,
+  fallback: SelfHostPlannedValueShape,
+) -> SelfHostPlannedValueShape {
+  if type_ >= module_.resolved_types.types.length() {
+    return fallback
+  }
+  let resolved_type = module_.resolved_types.types[type_]
+  if self_host_wasmgc_resolved_type_is_direct_generic(resolved_type) {
+    match resolved_type {
+      SelfHostResolvedType::GenericParameterType(parameter) => {
+      let local = self_host_semantic_id_local(parameter)
+      if local >= generic_parameters.start {
+        let relative = local - generic_parameters.start
+        if relative < generic_parameters.length && relative < request.shapes.length {
+          let shape = self_host_u32_add(request.shapes.start, relative)
+          if shape < shapes.length() {
+            return shapes[shape]
+          }
+        }
+      }
+      fallback
+      }
+      _ => fallback
+    }
+  } else {
+  match resolved_type {
+    SelfHostResolvedType::ProductType(fields) => {
+      if fields.start > module_.resolved_types.type_arguments.length() ||
+        fields.length > module_.resolved_types.type_arguments.length() - fields.start {
+        return fallback
+      }
+      let specialized = []
+      let mut field = 0u32
+      let _ = while field {
+        current => if current < fields.length {
+          let field_type = module_.resolved_types.type_arguments[
+            self_host_u32_add(fields.start, current)
+          ]
+          let field_fallback = match fallback {
+            SelfHostPlannedValueShape::ProductPlannedValueShape(values) => if current < values.length() {
+              values[current]
+            } else {
+              self_host_planned_resolved_value_shape(
+                module_.resolved_types,
+                field_type,
+              )
+            }
+            _ => self_host_planned_resolved_value_shape(
+              module_.resolved_types,
+              field_type,
+            )
+          }
+          specialized.push(self_host_wasmgc_specialized_resolved_shape(
+            module_,
+            field_type,
+            generic_parameters,
+            request,
+            shapes,
+            field_fallback,
+          ))
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      SelfHostPlannedValueShape::ProductPlannedValueShape(specialized)
+    }
+    _ => fallback
+  }
+  }
+}
+
 fn self_host_wasmgc_specialized_shape(
+  module_: SelfHostPlannedModuleLowering,
   callable: SelfHostPlannedCallable,
   request: Option<SelfHostProgramSpecializationRequest>,
   shapes: Array<SelfHostPlannedValueShape>,
+  type_: U32,
   shape: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedValueShape {
   match request {
-    Option::Some(value) => if self_host_u32_equal(value.shapes.length, 1u32) {
-      match shape {
-        SelfHostPlannedValueShape::GenericPlannedValueShape => shapes[value.shapes.start]
-        SelfHostPlannedValueShape::ErrorPlannedValueShape => shapes[value.shapes.start]
-        _ => shape
-      }
-    } else {
-      shape
-    }
+    Option::Some(value) => self_host_wasmgc_specialized_resolved_shape(
+      module_,
+      type_,
+      self_host_program_specialization_callable_generics(callable),
+      value,
+      shapes,
+      shape,
+    )
     Option::None => shape
   }
 }
@@ -506,14 +590,23 @@ fn self_host_wasmgc_append_function(
       let source = module_.functions.parameters[
         self_host_u32_add(callable.parameters.start, current)
       ]
-      self_host_wasmgc_append_shape(
-        value_types,
+      let parameter_shape = if source.receiver {
+        // The receiver is the owner value. An owner type argument can change
+        // fields and results, but it cannot replace the receiver reference.
+        source.shape
+      } else {
         self_host_wasmgc_specialized_shape(
+          module_,
           callable,
           request,
           shapes,
+          source.type_,
           source.shape,
-        ),
+        )
+      }
+      self_host_wasmgc_append_shape(
+        value_types,
+        parameter_shape,
       )
       continue current + 1u32
     } else {
@@ -524,9 +617,11 @@ fn self_host_wasmgc_append_function(
   self_host_wasmgc_append_shape(
     value_types,
     self_host_wasmgc_specialized_shape(
+      module_,
       callable,
       request,
       shapes,
+      callable.result_type,
       callable.result_shape,
     ),
   )

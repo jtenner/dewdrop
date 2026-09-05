@@ -118,6 +118,7 @@ fn self_host_merge_call_target(
         self_host_merge_type_span(arguments, argument_base),
       )
     }
+    SelfHostBasicCallTarget::BoundTraitBasicCallTarget(requirement, parameter, bound, arguments) => SelfHostBasicCallTarget::BoundTraitBasicCallTarget(requirement, parameter, bound, self_host_merge_type_span(arguments, argument_base))
     _ => target
   }
 }

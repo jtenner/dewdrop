@@ -1,0 +1,68 @@
+open dew.std.map
+open dew.std.option
+
+// Only a declared type parameter permits erased field storage. Error and
+// missing type evidence never grant permission to box a value.
+fn self_host_build_erased_field_index(lowering: SelfHostPlannedProgramLowering) -> Map<U64, Bool> {
+  let fields = self_host_empty_erased_field_index()
+  for module_ in lowering.modules {
+    for field in self_host_erased_field_layouts(module_) {
+      if self_host_planned_resolved_value_shape(module_.resolved_types, field.type_) is SelfHostPlannedValueShape::GenericPlannedValueShape {
+        fields.set(field.field, true)
+      }
+    }
+  }
+  fields
+}
+
+fn self_host_erased_field_layouts(module_: SelfHostPlannedModuleLowering) -> Array<SelfHostPlannedFieldLayout> {
+  module_.type_layouts.fields
+}
+
+fn self_host_empty_erased_field_index() -> Map<U64, Bool> {
+  Map::empty()
+}
+
+fn self_host_linked_erased_field_box_type(link: SelfHostPlannedProgramWasmGCLink, field: U64, carrier: SelfHostWasmBodyCarrier) -> Option<U32> {
+  if !(link.erased_fields.get(field) is Option::Some(true)) {
+    return Option::None
+  }
+  let offset = match carrier {
+    SelfHostWasmBodyCarrier::I32BodyCarrier => 0u32
+    SelfHostWasmBodyCarrier::I64BodyCarrier => 1u32
+    SelfHostWasmBodyCarrier::F32BodyCarrier => 2u32
+    SelfHostWasmBodyCarrier::F64BodyCarrier => 3u32
+    SelfHostWasmBodyCarrier::V128BodyCarrier => 4u32
+    _ => return Option::None
+  }
+  Option::Some(self_host_linked_text_runtime_base(link) + 72u32 + offset)
+}
+
+fn self_host_body_field_read_carrier(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  specialization: U32,
+  expression: U32,
+  field: U64,
+  storage: SelfHostPlannedWasmStorageType,
+) -> SelfHostWasmBodyCarrier {
+  if link.erased_fields.get(field) is Option::Some(true) {
+    let type_ = module_.expressions[expression].type_
+    let shape = self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, type_)
+    return self_host_body_carrier_from_shape(self_host_body_specialization_shape_for_type(link, module_, specialization, type_, shape))
+  }
+  self_host_body_carrier_from_storage(storage)
+}
+
+fn self_host_linked_append_erased_field_box_types(rec_types: StarshineRecTypes) -> Unit {
+  for carrier in [0i32, 1i32, 2i32, 3i32, 4i32] {
+    let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+    StarshineFfi.ffi_ffi_bridge_field_types_push(fields, StarshineFfi.ffi_lib_FieldType_new(
+      StarshineFfi.ffi_lib_StorageType_val_type(self_host_linked_runtime_carrier_value_type(carrier)),
+      StarshineFfi.ffi_lib_Mut_const_(),
+    ))
+    StarshineFfi.ffi_ffi_bridge_rec_types_push(rec_types, StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_comp_type(StarshineFfi.ffi_lib_CompType_struct_(fields), wasm_ref_null()),
+    ))
+  }
+}

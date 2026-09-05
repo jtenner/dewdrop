@@ -134,17 +134,13 @@ fi
 rm -rf "$work"
 mkdir -p "$work/a" "$work/b" "$work/reject-fingerprint" "$work/reject-count"
 
+mapfile -t compiler_sources < <(
+  rg --files self_host/compiler -g '*.dew' -g '!*_test.dew' | sort
+)
 sources=(
   self_host/starshine/ffi.dew
   self_host/starshine/fingerprint.dew
-  "${parser_sources[@]}"
-  "${semantic_sources[@]}"
-  self_host/compiler/request.dew
-  self_host/compiler/facet_runtime.dew
-  self_host/compiler/starshine_builtin_emit.dew
-  self_host/compiler/starshine_runtime_emit.dew
-  self_host/compiler/starshine_module.dew
-  self_host/compiler/main.dew
+  "${compiler_sources[@]}"
 )
 
 build_compiler() {

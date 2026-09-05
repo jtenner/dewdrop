@@ -5,6 +5,7 @@ test "imported implementation accessor preserves physical fields" {
     declaration: 77u64
     generic_parameters: SelfHostHirSpan::{ start: 1u32 length: 2u32 }
     generic_bounds: SelfHostHirSpan::{ start: 3u32 length: 4u32 }
+    requires_evidence: true
     trait_type: Option::Some(5u32)
     target_type: 6u32
   }]

@@ -162,6 +162,9 @@ pub enum SelfHostBasicCallTarget {
   NoBasicCallTarget
   ErrorBasicCallTarget
   SelectedBasicCallTarget(U64, SelfHostHirSpan)
+  // Requirement, receiver generic parameter, declared bound, type arguments.
+  // This is logical evidence, not a selected physical implementation.
+  BoundTraitBasicCallTarget(U64, U64, U32, SelfHostHirSpan)
   FunctionValueBasicCallTarget(U32)
 }
 
@@ -755,6 +758,27 @@ impl SelfHostBasicBodyInferencer {
 
   fn begin_signature_instantiation(self, declaration: U64) -> Unit {
     self.imported_instantiation_generics.clear()
+    match self.collected.declaration_reference(declaration) {
+      Option::Some(reference) => match reference {
+        SelfHostCollectedDeclarationReference::Method(method) => {
+          let mut index = 0u32
+          let _ = while index {
+            current => if current < self.collected.impls.length() {
+              if self_host_u64_equal(self.collected.impls[current].declaration, method.parent) {
+                let owner = self.begin_method_instantiation(current, declaration, -1i32)
+                self.instantiation_self_type = owner
+                return
+              }
+              continue current + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+        _ => {}
+      }
+      _ => {}
+    }
     self.instantiation_generics = self.collected.generic_parameters_of(declaration)
     self.instantiation_method_generics = SelfHostHirSpan::{
       start: 0u32
@@ -778,6 +802,17 @@ impl SelfHostBasicBodyInferencer {
     self,
     callable: SelfHostResolvedImportedCallable,
   ) -> Unit {
+    match callable.kind {
+      SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(declaration) => match self.imported_implementation(declaration) {
+        Option::Some(implementation) => {
+          self.begin_imported_method_instantiation(implementation, callable, -1i32)
+          self.instantiation_self_type = self.instantiate_signature_type(implementation.target_type)
+          return
+        }
+        Option::None => {}
+      }
+      _ => {}
+    }
     self.imported_instantiation_generics.clear()
     self.instantiation_generics = SelfHostHirSpan::{
       start: 0u32
@@ -1396,11 +1431,29 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
-    if self_host_u32_equal(self.instantiation_results.length(), 1u32) {
-      self.instantiation_results[0u32]
-    } else {
-      self.solver.error_type()
+    self.solver.assert_solver_invariant(
+      self_host_u32_equal(self.instantiation_results.length(), 1u32),
+      206u32, 1u32, self.instantiation_results.length(), root,
+    )
+    if self.resolved.types[root] is SelfHostResolvedType::PrimitiveType(_) {
+      let expected = self.solver.resolved_type(root)
+      let actual = self_host_basic_i32_at(self.instantiation_results, 0u32)
+      if expected != actual {
+        let _ = self_host_assert_compiler_invariant_with_failure(false,
+          SelfHostInvariantFailure::{
+            code: 208u32
+            phase: 2u32
+            module_id: self.collected.module_id
+            declaration: self.body.declaration
+            body: self.body.id
+            expression: self.body.expressions.start
+            expected: u32_into_u64(self_host_body_i32_to_u32(expected))
+            actual: u32_into_u64(self_host_body_i32_to_u32(actual))
+            detail: u32_into_u64(root)
+          }, "primitive signature instantiation changed its type")
+      }
     }
+    self.instantiation_results[0u32]
   }
 
   fn local_callable_index_of_declaration(self, declaration: U64) -> Option<U32> {
@@ -1461,123 +1514,171 @@ impl SelfHostBasicBodyInferencer {
     Option::None
   }
 
-  fn imported_fixed_array_make_declaration(
-    self,
-    owner: U64,
-  ) -> U64 {
-    let method_module = self_host_semantic_id_module(owner) + 1u64
-    let mut selected = 18446744073709551615u64
-    let mut count = 0u32
-    let mut callable_index = 0u32
-    let _ = while callable_index {
-      current => if current < self.imported.callables.length() {
-        let callable = self_host_resolved_imported_callable_at(
-          self.imported.callables,
-          current,
-        )
-        if self_host_u64_equal(
-          self_host_semantic_id_module(callable.declaration),
-          method_module,
-        ) && self_host_basic_string_equal(callable.name, "make") &&
-          self_host_u32_equal(callable.parameters.length, 2u32) {
-          selected = callable.declaration
-          count = count + 1u32
+  fn static_owner_matches(self, base: U32, target_type: U32) -> Bool {
+    match self.names.expression_references[base] {
+      SelfHostBodyNameReference::PrimitiveTypeNameReference(primitive) => {
+        // Primitive owners have no nominal declaration. Compare their logical
+        // types, not their shared physical carrier or their source spelling.
+        match self.resolved.types[target_type] {
+          SelfHostResolvedType::PrimitiveType(_) => {
+            let snapshot = self.solver.snapshot()
+            let same = self.solver.unify(
+              self.primitive(primitive),
+              self.solver.resolved_type(target_type),
+              self_host_expression_type_origin(base, self_host_basic_expression_offset(self.collected.expressions[base])),
+            )
+            self.solver.rollback(snapshot)
+            same
+          }
+          _ => false
         }
-        continue current + 1u32
-      } else {
-        break self_host_semantic_unit()
       }
-    }
-    if self_host_u32_equal(count, 1u32) {
-      selected
-    } else {
-      18446744073709551615u64
+      SelfHostBodyNameReference::ModuleTypeNameReference(owner) => match if self_host_u64_equal(self_host_semantic_id_module(owner), self.collected.module_id) {
+        Option::Some(self.resolved.declaration_type(owner))
+      } else {
+        self.imported.type_declaration_types.get(owner)
+      } {
+        Option::Some(owner_type) => match self.resolved_nominal_head(owner_type) {
+          Option::Some(nominal) => match self.resolved_nominal_head(target_type) {
+            Option::Some(candidate) => self_host_u64_equal(nominal, candidate)
+            Option::None => false
+          }
+          Option::None => false
+        }
+        Option::None => false
+      }
+      _ => false
     }
   }
 
-  fn constrain_fixed_array_make_call(
+  fn constrain_static_call(
     self,
     expression: U32,
     target: U32,
     arguments: SelfHostHirSpan,
     offset: U32,
   ) -> Bool {
-    let mut owner_name = ""
-    let mut name = ""
-    let owner = match self.collected.expressions[target] {
+    let (base, name) = match self.collected.expressions[target] {
       SelfHostHirExpr::QualifiedExpr(base, property, _) => match self.names.expression_references[
         base
       ] {
-        SelfHostBodyNameReference::ModuleTypeNameReference(declaration) => {
-          name = self.collected.name(property)
-          match self.collected.expressions[base] {
-            SelfHostHirExpr::NameExpr(owner_name_id, _) => {
-              owner_name = self.collected.name(owner_name_id)
-            }
-            _ => {}
-          }
-          declaration
-        }
+        SelfHostBodyNameReference::ModuleTypeNameReference(_) => (base, property)
+        SelfHostBodyNameReference::PrimitiveTypeNameReference(_) => (base, property)
         _ => return false
       }
       _ => return false
     }
-    if !self_host_basic_string_equal(owner_name, "FixedArray") ||
-      !self_host_basic_string_equal(name, "make") || !self_host_u32_equal(
-      arguments.length,
-      2u32,
-    ) {
-      return false
-    }
-    let declaration = self.imported_fixed_array_make_declaration(owner)
-    if self_host_u64_equal(declaration, 18446744073709551615u64) {
-      return false
-    }
-    let length = self.collected.expression_children[arguments.start]
-    let value = self.collected.expression_children[
-      self_host_u32_add(arguments.start, 1u32)
-    ]
-    let element = self.expression_type(value)
-    let origin = self_host_call_type_origin(expression, offset)
-    self.constrain_assignable(
-      self.expression_type(length),
-      self.primitive(SelfHostPrimitiveType::U32Type),
-      origin,
-    )
-    let base_resolved = match self.imported.type_declaration_types.get(owner) {
-      Option::Some(value) => value
-      Option::None => return false
-    }
-    let result = self.solver.applied_type(
-      self.solver.resolved_type(base_resolved),
-      [element],
-    )
-    self.constrain_assignable(
-      result,
-      self.expression_type(expression),
-      origin,
-    )
-    let start = self.call_type_arguments.length()
-    self.call_type_arguments.push(element)
-    self.store_call_target(
-      expression,
-      SelfHostBasicCallTarget::SelectedBasicCallTarget(
-        declaration,
-        SelfHostHirSpan::{
-          start: start
-          length: 1u32
-        },
-      ),
-      2u32,
-    )
-    self.consumed_member_roots[self.expression_index(target)] = true
-    match self.collected.expressions[target] {
-      SelfHostHirExpr::QualifiedExpr(base, _, _) => {
-        self.consumed_member_roots[self.expression_index(base)] = true
+    let method_name = self.collected.name(name)
+    let mut selected = 4294967295u32
+    let mut first = 18446744073709551615u64
+    let mut second = 18446744073709551615u64
+    let mut named_count = 0u32
+    let mut viable_count = 0u32
+    let mut selected_local = 4294967295u32
+    let mut method_index = 0u32
+    let _ = while method_index {
+      current => if current < self.collected.methods.length() {
+        let method = self_host_collected_method_identity(self.collected.methods[current])
+        if self_host_u32_equal(method.name, name) {
+          let parameters = self.collected.parameters_of(method.id)
+          let has_receiver = self_host_u32_greater(parameters.length, 0u32) &&
+            (self.collected.parameters[parameters.start].kind is SelfHostCollectedParameterKind::ReceiverParameterDecl)
+          if !has_receiver {
+            let mut implementation = 0u32
+            let _ = while implementation {
+              candidate => if candidate < self.collected.impls.length() {
+                let impl_ = self.collected.impls[candidate]
+                if self_host_u64_equal(impl_.declaration, method.parent) && (impl_.trait_type is Option::None) &&
+                  self.static_owner_matches(base, self.resolved.impl_target_types[candidate]) {
+                  named_count = named_count + 1u32
+                  match self.local_callable_index_of_declaration(method.id) {
+                    Option::Some(callable) => if self.local_callable_candidate_viable(expression, arguments, offset, callable) {
+                      if viable_count == 0u32 {
+                        selected_local = callable
+                        first = method.id
+                      } else if viable_count == 1u32 {
+                        second = method.id
+                      }
+                      viable_count = viable_count + 1u32
+                    }
+                    Option::None => {}
+                  }
+                }
+                continue candidate + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
       }
-      _ => {}
     }
-    self.solver.poison_type(self.expression_type(target))
+    let mut callable_index = 0u32
+    let _ = while callable_index {
+      current => if current < self.imported.callables.length() {
+        let callable = self_host_resolved_imported_callable_at(self.imported.callables, current)
+        let has_receiver = callable.parameters.length > 0u32 &&
+          self.imported.parameter_receivers[callable.parameters.start]
+        if !has_receiver && self_host_basic_string_equal(callable.name, method_name) {
+          match callable.kind {
+            SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(implementation_id) => match self.imported_implementation(implementation_id) {
+              Option::Some(implementation) => if implementation.trait_type is Option::None {
+                if self.static_owner_matches(base, implementation.target_type) {
+                  named_count = named_count + 1u32
+                  if self.imported_callable_candidate_viable(expression, arguments, offset, callable) {
+                    if viable_count == 0u32 {
+                      selected = current
+                      first = callable.declaration
+                    } else if viable_count == 1u32 {
+                      second = callable.declaration
+                    }
+                    viable_count = viable_count + 1u32
+                  }
+                }
+              }
+              Option::None => {}
+            }
+            _ => {}
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if named_count == 0u32 {
+      return false
+    }
+    // Names locate candidates. Only owner identity and signature constraints
+    // select the declaration; neither module order nor spelling proves an ABI.
+    if viable_count == 1u32 {
+      if selected_local != 4294967295u32 {
+        let _ = self.select_local_callable(expression, target, arguments, offset, selected_local)
+      } else {
+        let _ = self.commit_imported_callable(
+          expression, target, arguments, offset,
+          self_host_resolved_imported_callable_at(self.imported.callables, selected),
+        )
+      }
+      // These nodes are now proven namespace/member selectors, not runtime
+      // values. Retire their provisional unsupported-expression markers.
+      self.unsupported_expressions[self.expression_index(target)] = false
+      self.unsupported_expressions[self.expression_index(base)] = false
+    } else {
+      self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
+      self.solver.poison_type(self.expression_type(expression))
+      self.solver.poison_type(self.expression_type(target))
+      if viable_count == 0u32 {
+        self.diagnostics.push(SelfHostBodyInferenceDiagnostic::NoMatchingMethod(name, expression, offset))
+      } else {
+        self.diagnostics.push(SelfHostBodyInferenceDiagnostic::AmbiguousMethod(name, expression, first, second, viable_count, offset))
+      }
+    }
+    self.consumed_member_roots[self.expression_index(target)] = true
+    self.consumed_member_roots[self.expression_index(base)] = true
     true
   }
 
@@ -1680,6 +1781,28 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn body_signature_type(self, type_: U32) -> I32 {
+    match self.resolved.types[type_] {
+      SelfHostResolvedType::SelfType(owner) => {
+        let mut implementation_index = 0u32
+        let _ = while implementation_index {
+          current => if current < self.collected.impls.length() {
+            if self_host_u64_equal(self.collected.impls[current].declaration, owner) {
+              // Inside an implementation, Self is its complete logical target,
+              // including generic arguments. Do not reduce it to a carrier.
+              return self.solver.resolved_type(self.resolved.impl_target_types[current])
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      _ => {}
+    }
+    self.solver.resolved_type(type_)
+  }
+
   fn initialize_locals(self) -> Unit {
     let mut local = 0u32
     let _ = while local {
@@ -1705,7 +1828,7 @@ impl SelfHostBasicBodyInferencer {
                     ),
                   )
                 } else {
-                  type_ = self.solver.resolved_type(resolved_type)
+                  type_ = self.body_signature_type(resolved_type)
                 }
               } else {
                 self.diagnostics.push(
@@ -1746,7 +1869,7 @@ impl SelfHostBasicBodyInferencer {
                     ),
                   )
                 } else {
-                  type_ = self.solver.resolved_type(resolved_type)
+                  type_ = self.body_signature_type(resolved_type)
                 }
               } else {
                 self.diagnostics.push(
@@ -2056,6 +2179,43 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn initial_call_result(self, target: U32) -> I32 {
+    // Only an existing, monomorphic function certificate can seed flow here.
+    // Do not infer divergence from a function's source spelling.
+    let result = match self.solver.type_term(self.expression_type(target)) {
+      SelfHostBodyTypeTerm::BodyResolvedType(type_) => match self.resolved.types[type_] {
+        SelfHostResolvedType::FunctionType(_, result) => result
+        _ => {
+          return self.solver.fresh_variable()
+        }
+      }
+      _ => {
+        return self.solver.fresh_variable()
+      }
+    }
+    if result != self.resolved.primitive(SelfHostPrimitiveType::NeverType) {
+      return self.solver.fresh_variable()
+    }
+    match self.names.expression_references[target] {
+      SelfHostBodyNameReference::ImportedModuleValueNameReference(declaration) => match self.imported_callable(declaration) {
+        Option::Some(selected) => {
+          let mut candidate_index = 0u32
+          for raw_candidate in self.imported.callables {
+            let candidate = self_host_resolved_imported_callable_at(self.imported.callables, candidate_index)
+            let _ = raw_candidate
+            candidate_index = candidate_index + 1u32
+            if !self_host_u64_equal(candidate.declaration, declaration) && self_host_semantic_id_module(candidate.declaration) == self_host_semantic_id_module(declaration) && self_host_basic_string_equal(candidate.name, selected.name) {
+              return self.solver.fresh_variable()
+            }
+          }
+        }
+        Option::None => {}
+      }
+      _ => {}
+    }
+    self.primitive(SelfHostPrimitiveType::NeverType)
+  }
+
   fn initialize_expressions(self) -> Unit {
     let negated = self.negative_boundary_literals()
     let mut expression = self.body.expressions.start
@@ -2131,6 +2291,7 @@ impl SelfHostBasicBodyInferencer {
             SelfHostBodyNameReference::ErrorNameReference => self.solver.error_type()
             _ => self.solver.fresh_variable()
           }
+          SelfHostHirExpr::CallExpr(target, _, _) => self.initial_call_result(target)
           SelfHostHirExpr::ProductExpr(fields, _) => {
             let types = []
             let mut index = 0u32
@@ -2151,7 +2312,22 @@ impl SelfHostBasicBodyInferencer {
                 self.solver.resolved_type(self.resolved.declaration_type(declaration)),
                 [element],
               )
-              Option::None => self.solver.applied_type(self.solver.fresh_variable(), [element])
+              Option::None => {
+                // An array literal names the Array type in the current scope,
+                // including imports. A fresh base loses the nominal identity
+                // needed to select methods on an initially empty array.
+                let base = match self.imported.scope {
+                  Option::Some(scope) => match scope.lookup_type("Array") {
+                    Option::Some(binding) => match self.imported.type_declaration_types.get(binding.declaration) {
+                      Option::Some(type_) => self.solver.resolved_type(type_)
+                      Option::None => self.solver.fresh_variable()
+                    }
+                    Option::None => self.solver.fresh_variable()
+                  }
+                  Option::None => self.solver.fresh_variable()
+                }
+                self.solver.applied_type(base, [element])
+              }
             }
           }
           SelfHostHirExpr::LambdaExpr(lambda, _) => if lambda < self.resolved.lambda_function_types.length() {
@@ -2235,11 +2411,13 @@ impl SelfHostBasicBodyInferencer {
     let _ = while expression {
       current => if current < expression_end {
         match self.collected.expressions[current] {
-          SelfHostHirExpr::BlockExpr(block_id, _) => {
-            self_host_store_inference_type(
-              self.expression_types,
-              self.expression_index(current),
+          SelfHostHirExpr::BlockExpr(block_id, offset) => {
+            // Parent blocks already hold this expression's initial type cell.
+            // Join it to the tail; replacing the slot severs that dependency.
+            self.constrain(
+              self.expression_type(current),
               self.block_type(block_id),
+              self_host_expression_type_origin(current, offset),
             )
           }
           _ => {}
@@ -2472,6 +2650,24 @@ impl SelfHostBasicBodyInferencer {
     )
   }
 
+  fn begin_pattern_nominal_instantiation(
+    self,
+    declaration: U64,
+    expected: I32,
+    pattern: U32,
+    offset: U32,
+    imported: Bool,
+  ) -> Bool {
+    // A selected constructor itself proves the subject's nominal type. The
+    // subject can still be a variable while fields or outer patterns resolve.
+    let instance = if imported {
+      self.begin_fresh_imported_nominal_instantiation(declaration)
+    } else {
+      self.begin_fresh_nominal_instantiation(declaration)
+    }
+    self.solver.unify(expected, instance, self_host_pattern_type_origin(pattern, offset))
+  }
+
   fn fail_pattern_constructor(self, pattern: U32) -> Unit {
     self_host_store_basic_pattern_constructor(
       self.pattern_constructors,
@@ -2501,9 +2697,12 @@ impl SelfHostBasicBodyInferencer {
         return
       }
     }
-    if !self.begin_imported_nominal_instantiation(
+    if !self.begin_pattern_nominal_instantiation(
       variant.declaration,
       self.pattern_type(pattern),
+      pattern,
+      offset,
+      true,
     ) {
       self.fail_pattern_constructor(pattern)
       return
@@ -2553,9 +2752,12 @@ impl SelfHostBasicBodyInferencer {
         ),
       )
     }
-    if !self.begin_imported_nominal_instantiation(
+    if !self.begin_pattern_nominal_instantiation(
       variant.declaration,
       expected,
+      pattern,
+      offset,
+      true,
     ) {
       self.fail_pattern_constructor(pattern)
       return
@@ -2613,7 +2815,7 @@ impl SelfHostBasicBodyInferencer {
         return
       }
     }
-    if !self.begin_nominal_instantiation(variant.declaration, expected) {
+    if !self.begin_pattern_nominal_instantiation(variant.declaration, expected, pattern, offset, false) {
       self.fail_pattern_constructor(pattern)
       return
     }
@@ -2688,7 +2890,7 @@ impl SelfHostBasicBodyInferencer {
         ),
       )
     }
-    if !self.begin_nominal_instantiation(variant.declaration, expected) {
+    if !self.begin_pattern_nominal_instantiation(variant.declaration, expected, pattern, offset, false) {
       self.fail_pattern_constructor(pattern)
       return
     }
@@ -2787,7 +2989,7 @@ impl SelfHostBasicBodyInferencer {
     expected: I32,
     offset: U32,
   ) -> Unit {
-    if !self.begin_imported_nominal_instantiation(declaration, expected) {
+    if !self.begin_pattern_nominal_instantiation(declaration, expected, pattern, offset, true) {
       self.fail_pattern_constructor(pattern)
       return
     }
@@ -2963,7 +3165,7 @@ impl SelfHostBasicBodyInferencer {
       self.fail_pattern_constructor(pattern)
       return
     }
-    if !self.begin_nominal_instantiation(declaration, expected) {
+    if !self.begin_pattern_nominal_instantiation(declaration, expected, pattern, offset, false) {
       self.fail_pattern_constructor(pattern)
       return
     }
@@ -4014,6 +4216,9 @@ impl SelfHostBasicBodyInferencer {
     ) {
       return false
     }
+    if !(self.collected.parameters[parameters.start].kind is SelfHostCollectedParameterKind::ReceiverParameterDecl) {
+      return false
+    }
     let snapshot = self.solver.snapshot()
     let receiver_type = self.expression_type(receiver)
     let target = self.begin_method_instantiation(
@@ -4184,6 +4389,9 @@ impl SelfHostBasicBodyInferencer {
     ) {
       return false
     }
+    if !self.imported.parameter_receivers[callable.parameters.start] {
+      return false
+    }
     let snapshot = self.solver.snapshot()
     let receiver_type = self.expression_type(receiver)
     self.begin_imported_method_instantiation(
@@ -4194,11 +4402,16 @@ impl SelfHostBasicBodyInferencer {
     let origin = self_host_call_type_origin(expression, offset)
     let mut viable = self.solver.unify(
       receiver_type,
-      self.instantiate_signature_type(
-        self.imported.parameter_types[callable.parameters.start],
-      ),
+      self.instantiate_signature_type(implementation.target_type),
       origin,
     )
+    if viable {
+      viable = self.solver.unify(
+        receiver_type,
+        self.instantiate_signature_type(self.imported.parameter_types[callable.parameters.start]),
+        origin,
+      )
+    }
     let mut index = 0u32
     let _ = while index {
       current => if viable && current < arguments.length {
@@ -4248,6 +4461,11 @@ impl SelfHostBasicBodyInferencer {
       receiver_type,
     )
     let origin = self_host_call_type_origin(expression, offset)
+    self.constrain(
+      receiver_type,
+      self.instantiate_signature_type(implementation.target_type),
+      origin,
+    )
     self.constrain(
       receiver_type,
       self.instantiate_signature_type(
@@ -4300,6 +4518,19 @@ impl SelfHostBasicBodyInferencer {
     self.solver.poison_type(self.expression_type(target))
   }
 
+  fn inherent_method_owner_matches(self, receiver: U32, target_type: U32) -> Bool {
+    match self.resolved.types[target_type] {
+      SelfHostResolvedType::PrimitiveType(primitive) => self.is_primitive(self.expression_type(receiver), primitive)
+      _ => match self.resolved_nominal_head(target_type) {
+        Option::Some(owner) => match self.inspect_nominal_type(self.expression_type(receiver)) {
+          Option::Some(actual) => self_host_u64_equal(owner, actual)
+          Option::None => false
+        }
+        Option::None => false
+      }
+    }
+  }
+
   fn constrain_imported_method_call(
     self,
     expression: U32,
@@ -4308,7 +4539,6 @@ impl SelfHostBasicBodyInferencer {
     name: U32,
     arguments: SelfHostHirSpan,
     offset: U32,
-    receiver_declaration: U64,
   ) -> Bool {
     let method_name = self.collected.name(name)
     let mut selected_callable = 4294967295u32
@@ -4327,12 +4557,8 @@ impl SelfHostBasicBodyInferencer {
               implementation_declaration,
             ) => match self.imported_implementation(implementation_declaration) {
               Option::Some(implementation) => match implementation.trait_type {
-                Option::None => match self.resolved_nominal_head(
-                  implementation.target_type,
-                ) {
-                  Option::Some(owner) => if self_host_u64_equal(
-                    owner,
-                    receiver_declaration,
+                Option::None => if self.inherent_method_owner_matches(
+                    receiver, implementation.target_type,
                   ) && self.imported_method_candidate_viable(
                     expression,
                     receiver,
@@ -4364,8 +4590,6 @@ impl SelfHostBasicBodyInferencer {
                     }
                     count = count + 1u32
                   }
-                  Option::None => {}
-                }
                 Option::Some(_) => {}
               }
               Option::None => {}
@@ -4413,6 +4637,144 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn local_generics_require_evidence(self, declaration: U64) -> Bool {
+    let parameters = self.collected.generic_parameters_of(declaration)
+    let _ = while 0u32 {
+      index => if index < parameters.length {
+        let parameter = self.collected.generic_parameter_at(self_host_u32_add(parameters.start, index))
+        let bounds = parameter.bounds
+        if self_host_u32_greater(bounds.length, 0u32) {
+          return true
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    false
+  }
+
+  fn constrain_imported_ground_trait_method_call(
+    self,
+    expression: U32,
+    target: U32,
+    receiver: U32,
+    name: U32,
+    arguments: SelfHostHirSpan,
+    offset: U32,
+  ) -> Bool {
+    let method_name = self.collected.name(name)
+    let mut selected = 4294967295u32
+    let mut implementation_id = 18446744073709551615u64
+    let mut first = 18446744073709551615u64
+    let mut second = 18446744073709551615u64
+    let mut count = 0u32
+    let mut needs_evidence = false
+    let mut local_implementation = 4294967295u32
+    let mut local_callable = 4294967295u32
+    for raw_method in self.collected.methods {
+      let method = self_host_collected_method_identity(raw_method)
+      if self_host_u32_equal(method.name, name) {
+        let _ = while 0u32 {
+          implementation => if implementation < self.collected.impls.length() {
+            let impl_ = self.collected.impls[implementation]
+            if self_host_u64_equal(impl_.declaration, method.parent) && impl_.trait_type is Option::Some(_) {
+              match self.local_callable_index_of_declaration(method.id) {
+                Option::Some(callable) => if self.method_candidate_viable(expression, receiver, arguments, offset, implementation, callable) {
+                  if self.local_generics_require_evidence(impl_.declaration) || self.local_generics_require_evidence(method.id) {
+                    needs_evidence = true
+                  } else {
+                    if count == 0u32 {
+                      local_implementation = implementation
+                      local_callable = callable
+                      first = method.id
+                    } else if count == 1u32 {
+                      second = method.id
+                    }
+                    count = count + 1u32
+                  }
+                }
+                Option::None => {}
+              }
+            }
+            continue implementation + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+    }
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < self.imported.callables.length() {
+        let callable = self_host_resolved_imported_callable_at(self.imported.callables, current)
+        if self_host_basic_string_equal(callable.name, method_name) {
+          match callable.kind {
+            SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(owner) => match self.imported_implementation(owner) {
+              Option::Some(implementation) => if (implementation.trait_type is Option::Some(_)) &&
+                self.imported_method_candidate_viable(expression, receiver, arguments, offset, implementation, callable) {
+                // Generic parameters are solved by the signature probe. Only
+                // actual prerequisite bounds require a separate trait proof.
+                if !implementation.requires_evidence && !callable.requires_evidence {
+                  if count == 0u32 {
+                    selected = current
+                    implementation_id = owner
+                    first = callable.declaration
+                  } else if count == 1u32 {
+                    second = callable.declaration
+                  }
+                  count = count + 1u32
+                } else {
+                  needs_evidence = true
+                }
+              }
+              Option::None => {}
+            }
+            _ => {}
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if needs_evidence {
+      // An applicable generic candidate must not disappear merely because this
+      // path only proves ground evidence. Leave an explicit unsupported result
+      // for the full evidence solver instead of selecting a ground competitor.
+      self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
+      self.mark_unsupported(expression)
+      self.solver.poison_type(self.expression_type(target))
+      return true
+    }
+    if count == 0u32 {
+      return false
+    }
+    // These implementations have no unproved generic prerequisites. Select
+    // only when logical receiver, argument, and result constraints agree.
+    if count == 1u32 {
+      if local_callable != 4294967295u32 {
+        self.select_method_candidate(expression, target, receiver, arguments, offset, local_implementation, local_callable)
+        return true
+      }
+      match self.imported_implementation(implementation_id) {
+        Option::Some(implementation) => self.select_imported_method_candidate(
+          expression, target, receiver, arguments, offset, implementation,
+          self_host_resolved_imported_callable_at(self.imported.callables, selected),
+        )
+        Option::None => {
+          let _ = self_host_assert_compiler_invariant(false, "selected imported trait implementation is missing")
+        }
+      }
+    } else {
+      self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
+      self.solver.poison_type(self.expression_type(expression))
+      self.solver.poison_type(self.expression_type(target))
+      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::AmbiguousMethod(name, expression, first, second, count, offset))
+    }
+    true
+  }
+
   fn constrain_pending_method_call(self, expression: U32) -> Unit {
     let (target, arguments, offset) = match self.collected.expressions[expression] {
       SelfHostHirExpr::CallExpr(call_target, call_arguments, call_offset) => (
@@ -4430,22 +4792,8 @@ impl SelfHostBasicBodyInferencer {
         return
       }
     }
-    let receiver_declaration = match self.inspect_nominal_type(
-      self.expression_type(receiver),
-    ) {
-      Option::Some(value) => value
-      Option::None => {
-        self.diagnostics.push(
-          SelfHostBodyInferenceDiagnostic::NoMatchingMethod(
-            name,
-            expression,
-            offset,
-          ),
-        )
-        self.solver.poison_type(self.expression_type(expression))
-        self.solver.poison_type(self.expression_type(target))
-        return
-      }
+    if self.constrain_declared_bound_method(expression, target, receiver, name, arguments, offset) {
+      return
     }
     let mut selected_impl = 4294967295u32
     let mut selected_callable = 4294967295u32
@@ -4465,12 +4813,8 @@ impl SelfHostBasicBodyInferencer {
               let impl_ = self.collected.impls[impl_index]
               if self_host_u64_equal(impl_.declaration, method.parent) {
                 match impl_.trait_type {
-                  Option::None => match self.resolved_nominal_head(
-                    self.resolved.impl_target_types[impl_index],
-                  ) {
-                    Option::Some(declaration) => if self_host_u64_equal(
-                      declaration,
-                      receiver_declaration,
+                  Option::None => if self.inherent_method_owner_matches(
+                      receiver, self.resolved.impl_target_types[impl_index],
                     ) {
                       match self.local_callable_index_of_declaration(method.id) {
                         Option::Some(callable) => if self.method_candidate_viable(
@@ -4493,8 +4837,6 @@ impl SelfHostBasicBodyInferencer {
                         Option::None => {}
                       }
                     }
-                    Option::None => {}
-                  }
                   Option::Some(_) => {}
                 }
               }
@@ -4516,8 +4858,10 @@ impl SelfHostBasicBodyInferencer {
       name,
       arguments,
       offset,
-      receiver_declaration,
     ) {
+      return
+    }
+    if viable_count == 0u32 && self.constrain_imported_ground_trait_method_call(expression, target, receiver, name, arguments, offset) {
       return
     }
     if self_host_u32_equal(viable_count, 1u32) {
@@ -4562,18 +4906,47 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn constrain_pending_method_calls(self) -> Unit {
-    let mut index = 0u32
-    let _ = while index {
-      current => if current < self.pending_method_calls.length() {
-        self.constrain_pending_method_call(
-          self_host_basic_u32_at(self.pending_method_calls, current),
-        )
-        continue current + 1u32
-      } else {
-        break self_host_semantic_unit()
+    let mut method_cursor = 0u32
+    let mut operator_cursor = 0u32
+    let mut field_cursor = 0u32
+    // Merge the three arena-ordered queues without allocating another list.
+    // An index result can feed a field or method, and a method result can feed
+    // the next index. Unready fields remain for the final field work pass.
+    let _ = while true {
+      _ => {
+        let method = if method_cursor < self.pending_method_calls.length() {
+          self_host_basic_u32_at(self.pending_method_calls, method_cursor)
+        } else {
+          4294967295u32
+        }
+        let operator = if operator_cursor < self.pending_operators.length() {
+          self_host_basic_u32_at(self.pending_operators, operator_cursor)
+        } else {
+          4294967295u32
+        }
+        let field = if field_cursor < self.pending_fields.length() {
+          self_host_basic_u32_at(self.pending_fields, field_cursor)
+        } else {
+          4294967295u32
+        }
+        if method == 4294967295u32 && operator == 4294967295u32 && field == 4294967295u32 {
+          break self_host_semantic_unit()
+        }
+        if field < method && field < operator {
+          self.constrain_ready_field(field)
+          field_cursor = field_cursor + 1u32
+        } else if operator < method {
+          self.constrain_pending_operator(operator)
+          operator_cursor = operator_cursor + 1u32
+        } else {
+          self.constrain_pending_method_call(method)
+          method_cursor = method_cursor + 1u32
+        }
+        continue true
       }
     }
     self.pending_method_calls.clear()
+    self.pending_operators.clear()
   }
 
   fn is_local_variant_target(self, target: U32) -> Bool {
@@ -5067,18 +5440,9 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn declaration_is_struct(self, declaration: U64) -> Bool {
-    if !self_host_u64_equal(
-      self_host_semantic_id_module(declaration),
-      self.collected.module_id,
-    ) {
-      return false
-    }
-    let local = self_host_semantic_id_local(declaration)
-    if local >= self.collected.declarations.length() {
-      return false
-    }
-    match self.collected.declarations[local].kind {
-      SelfHostCollectedDeclKind::StructDecl => true
+    // Declaration IDs include methods. The top-level arena does not.
+    match self.collected.declaration_reference(declaration) {
+      Option::Some(SelfHostCollectedDeclarationReference::TopLevel(value)) => self_host_u64_equal(value.id, declaration) && value.kind is SelfHostCollectedDeclKind::StructDecl
       _ => false
     }
   }
@@ -5730,6 +6094,20 @@ impl SelfHostBasicBodyInferencer {
     true
   }
 
+  fn constrain_ready_field(self, expression: U32) -> Unit {
+    if !self.consumed_member_roots[self.expression_index(expression)] {
+      match self.expression_selections[self.expression_index(expression)] {
+        SelfHostBasicExpressionSelection::NoBasicExpressionSelection => match self.collected.expressions[expression] {
+          SelfHostHirExpr::FieldExpr(base, name, offset) => {
+            let _ = self.select_field_expression(expression, base, name, offset)
+          }
+          _ => {}
+        }
+        _ => {}
+      }
+    }
+  }
+
   fn constrain_pending_fields(self) -> Unit {
     let mut pass = 0u32
     let mut progress = true
@@ -5788,8 +6166,47 @@ impl SelfHostBasicBodyInferencer {
     self.pending_fields.clear()
   }
 
+  fn constrain_foreign_namespace_call(self, expression: U32, target: U32, arguments: SelfHostHirSpan, offset: U32) -> Bool {
+    let (base, name) = match self.collected.expressions[target] {
+      SelfHostHirExpr::FieldExpr(base, name, _) => (base, name)
+      SelfHostHirExpr::QualifiedExpr(base, name, _) => (base, name)
+      _ => return false
+    }
+    let library = match self.names.expression_references[base] {
+      SelfHostBodyNameReference::ForeignLibraryNameReference(library) => library
+      _ => return false
+    }
+    self.consumed_member_roots[self.expression_index(target)] = true
+    self.consumed_member_roots[self.expression_index(base)] = true
+    self.unsupported_expressions[self.expression_index(target)] = false
+    self.unsupported_expressions[self.expression_index(base)] = false
+    for raw_method in self.collected.methods {
+      let method = self_host_collected_method_identity(raw_method)
+      if self_host_u64_equal(method.parent, library) && self_host_u32_equal(method.name, name) && method.kind is SelfHostCollectedMethodKind::ForeignLibraryMemberDecl {
+        match self.local_callable_index_of_declaration(method.id) {
+          Option::Some(callable) => {
+            // The namespace is not an argument. Signature constraints precede
+            // pending method selection, including conversions in its arguments.
+            return self.select_local_callable(expression, target, arguments, offset, callable)
+          }
+          Option::None => {
+            let _ = self_host_assert_compiler_invariant(false, "foreign member has no callable signature")
+          }
+        }
+      }
+    }
+    self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
+    self.solver.poison_type(self.expression_type(expression))
+    self.solver.poison_type(self.expression_type(target))
+    self.diagnostics.push(SelfHostBodyInferenceDiagnostic::UnknownQualifiedMember(name, library, expression, offset))
+    true
+  }
+
   fn constrain_call(self, expression: U32, target: U32, arguments: SelfHostHirSpan, offset: U32) -> Unit {
-    if self.constrain_fixed_array_make_call(
+    if self.constrain_foreign_namespace_call(expression, target, arguments, offset) {
+      return
+    }
+    if self.constrain_static_call(
       expression,
       target,
       arguments,
@@ -5846,6 +6263,11 @@ impl SelfHostBasicBodyInferencer {
               ) {
                 self.consumed_member_roots[self.expression_index(target)] = true
                 self.consumed_member_roots[self.expression_index(base)] = true
+                // A selected module member consumes both namespace selectors.
+                // Their provisional errors do not describe runtime values.
+                // Failed lookup/selection does not enter this branch.
+                self.unsupported_expressions[self.expression_index(target)] = false
+                self.unsupported_expressions[self.expression_index(base)] = false
                 return
               }
               Option::None => {}
@@ -6314,26 +6736,70 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn queue_index_operator(self, expression: U32) -> Bool {
-    let trait_name = self.index_trait_name(expression)
-    let method_name = self.index_method_name(expression)
-    match trait_name {
-      Option::Some(trait_spelling) => match method_name {
-        Option::Some(method_spelling) => match self.local_trait_named(
-          trait_spelling,
-        ) {
-          Option::Some(_) => match self.collected.find_name(method_spelling) {
-            Option::Some(_) => {
-              self.pending_operators.push(expression)
-              true
-            }
-            Option::None => false
-          }
-          Option::None => false
-        }
-        Option::None => false
+    match self.index_trait_declaration(expression) {
+      Option::Some(_) => {
+        self.pending_operators.push(expression)
+        true
       }
       Option::None => false
     }
+  }
+
+  fn index_trait_declaration(self, expression: U32) -> Option<U64> {
+    match self.index_trait_name(expression) {
+      Option::Some(spelling) => match self.local_trait_named(spelling) {
+        Option::Some(declaration) => Option::Some(declaration)
+        Option::None => match self.imported.scope {
+          Option::Some(scope) => match scope.lookup_trait(spelling) {
+            Option::Some(binding) => Option::Some(binding.declaration)
+            Option::None => Option::None
+          }
+          Option::None => Option::None
+        }
+      }
+      Option::None => Option::None
+    }
+  }
+
+  fn constrain_imported_index_signature(
+    self,
+    expression: U32,
+    implementation: SelfHostResolvedImportedImplementation,
+    callable: SelfHostResolvedImportedCallable,
+  ) -> Bool {
+    let operands = match self.collected.expressions[expression] {
+      SelfHostHirExpr::IndexExpr(base, index, _) => [base, index]
+      SelfHostHirExpr::IndexSetExpr(base, index, value, _) => [base, index, value]
+      _ => return false
+    }
+    if callable.parameters.length != operands.length() ||
+      !self.imported.parameter_receivers[callable.parameters.start] {
+      return false
+    }
+    let receiver_type = self.expression_type(operands[0u32])
+    self.begin_imported_method_instantiation(implementation, callable, receiver_type)
+    let origin = self_host_operator_type_origin(
+      expression, self_host_basic_expression_offset(self.collected.expressions[expression]),
+    )
+    if !self.solver.unify(receiver_type, self.instantiate_signature_type(implementation.target_type), origin) {
+      return false
+    }
+    let mut index = 0u32
+    let _ = while index {
+      current => if current < operands.length() {
+        if !self.solver.unify(
+          self.expression_type(operands[current]),
+          self.instantiate_signature_type(self.imported.parameter_types[callable.parameters.start + current]),
+          origin,
+        ) {
+          return false
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    self.solver.unify(self.expression_type(expression), self.instantiate_signature_type(callable.result_type), origin)
   }
 
   fn index_operator_candidate_viable(
@@ -6525,24 +6991,14 @@ impl SelfHostBasicBodyInferencer {
     let offset = self_host_basic_expression_offset(
       self.collected.expressions[expression],
     )
-    let trait_declaration = match self.index_trait_name(expression) {
-      Option::Some(spelling) => match self.local_trait_named(spelling) {
-        Option::Some(value) => value
-        Option::None => {
-          return
-        }
-      }
+    let trait_declaration = match self.index_trait_declaration(expression) {
+      Option::Some(value) => value
       Option::None => {
         return
       }
     }
     let method_name = match self.index_method_name(expression) {
-      Option::Some(spelling) => match self.collected.find_name(spelling) {
-        Option::Some(value) => value
-        Option::None => {
-          return
-        }
-      }
+      Option::Some(spelling) => spelling
       Option::None => {
         return
       }
@@ -6568,8 +7024,8 @@ impl SelfHostBasicBodyInferencer {
                   let method = self_host_collected_method_identity(
                     self.collected.methods[method_slot],
                   )
-                  if self_host_u64_equal(method.parent, impl_declaration) && self_host_u32_equal(
-                    method.name,
+                  if self_host_u64_equal(method.parent, impl_declaration) && self_host_basic_string_equal(
+                    self.collected.name(method.name),
                     method_name,
                   ) {
                     match self.local_callable_index_of_declaration(method.id) {
@@ -6606,6 +7062,80 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
+    let mut imported_selection = 4294967295u32
+    let mut needs_evidence = false
+    let mut imported_index = 0u32
+    let _ = while imported_index {
+      current => if current < self.imported.callables.length() {
+        let callable = self_host_resolved_imported_callable_at(self.imported.callables, current)
+        if self_host_basic_string_equal(callable.name, method_name) {
+          match callable.kind {
+            SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(owner) => match self.imported_implementation(owner) {
+              Option::Some(implementation) => match implementation.trait_type {
+                Option::Some(trait_type) => match self.resolved_trait_head(trait_type) {
+                  Option::Some(candidate_trait) => if self_host_u64_equal(candidate_trait, trait_declaration) {
+                    let snapshot = self.solver.snapshot()
+                    let viable = self.constrain_imported_index_signature(expression, implementation, callable)
+                    self.solver.rollback(snapshot)
+                    if viable {
+                      if implementation.requires_evidence || callable.requires_evidence {
+                        needs_evidence = true
+                      } else {
+                        viable_count = viable_count + 1u32
+                        if viable_count == 1u32 {
+                          imported_selection = current
+                          selected_declaration = callable.declaration
+                        } else if viable_count == 2u32 {
+                          second_declaration = callable.declaration
+                        }
+                      }
+                    }
+                  }
+                  Option::None => {}
+                }
+                Option::None => {}
+              }
+              Option::None => {}
+            }
+            _ => {}
+          }
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if needs_evidence {
+      self.mark_unsupported(expression)
+      self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), SelfHostBasicCallTarget::ErrorBasicCallTarget)
+      return
+    }
+    if viable_count == 1u32 && imported_selection != 4294967295u32 {
+      let callable = self_host_resolved_imported_callable_at(self.imported.callables, imported_selection)
+      match callable.kind {
+        SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(owner) => match self.imported_implementation(owner) {
+          Option::Some(implementation) => {
+            let valid = self.constrain_imported_index_signature(expression, implementation, callable)
+            let _ = self_host_assert_compiler_invariant(valid, "selected imported index signature changed after its probe")
+            let start = self.call_type_arguments.length()
+            self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)
+            self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression),
+              SelfHostBasicCallTarget::SelectedBasicCallTarget(callable.declaration, SelfHostHirSpan::{
+                start: start
+                length: self.candidate_type_arguments.length()
+              }),
+            )
+          }
+          Option::None => {
+            let _ = self_host_assert_compiler_invariant(false, "selected imported index implementation is missing")
+          }
+        }
+        _ => {
+          let _ = self_host_assert_compiler_invariant(false, "selected imported index is not a method")
+        }
+      }
+      return
+    }
     if self_host_u32_equal(viable_count, 1u32) {
       self.select_index_operator_candidate(
         expression,
@@ -6641,12 +7171,8 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn constrain_pending_operators(self) -> Unit {
-    let mut pending_operator_index = 0u32
-    let _ = while pending_operator_index {
-      current => if current < self.pending_operators.length() {
-        let expression = self_host_basic_u32_at(self.pending_operators, current)
-      match self.collected.expressions[expression] {
+  fn constrain_pending_operator(self, expression: U32) -> Unit {
+    match self.collected.expressions[expression] {
         SelfHostHirExpr::BinaryExpr(_, _, _, _) => self.constrain_pending_binary_operator(
           expression,
         )
@@ -6657,18 +7183,13 @@ impl SelfHostBasicBodyInferencer {
           expression,
         )
         _ => {}
-      }
-            continue current + 1u32
-      } else {
-        break self_host_semantic_unit()
-      }
     }
-    self.pending_operators.clear()
   }
 
   fn constrain_match(self, expression: U32, scrutinee: U32, arms: SelfHostHirSpan, offset: U32) -> Unit {
     let expected = self.expression_type(scrutinee)
     let result = self.expression_type(expression)
+    let mut all_never = arms.length > 0u32
     let mut index = 0u32
     let _ = while index {
       current => if current < arms.length {
@@ -6681,6 +7202,9 @@ impl SelfHostBasicBodyInferencer {
             self_host_expression_type_origin(arm.guard_condition, arm.offset),
           )
         }
+        if !self.is_primitive(self.expression_type(arm.body), SelfHostPrimitiveType::NeverType) {
+          all_never = false
+        }
         self.constrain_assignable(
           self.expression_type(arm.body),
           result,
@@ -6690,6 +7214,9 @@ impl SelfHostBasicBodyInferencer {
       } else {
         break self_host_semantic_unit()
       }
+    }
+    if all_never {
+      self.constrain(result, self.primitive(SelfHostPrimitiveType::NeverType), self_host_expression_type_origin(expression, offset))
     }
   }
 
@@ -6790,6 +7317,10 @@ impl SelfHostBasicBodyInferencer {
             self.constrain(self.expression_type(condition), self.primitive(SelfHostPrimitiveType::BoolType), self_host_expression_type_origin(condition, offset))
             if alternative == 4294967295u32 {
               self.constrain(self.expression_type(current), self.primitive(SelfHostPrimitiveType::UnitType), self_host_expression_type_origin(current, offset))
+            } else if self.is_primitive(self.block_type(block), SelfHostPrimitiveType::NeverType) && self.is_primitive(self.expression_type(alternative), SelfHostPrimitiveType::NeverType) {
+              // No branch completes with a value. Skipping both Never inputs
+              // would leave an unconstrained result variable behind.
+              self.constrain(self.expression_type(current), self.primitive(SelfHostPrimitiveType::NeverType), self_host_expression_type_origin(current, offset))
             } else {
               self.constrain_assignable(self.block_type(block), self.expression_type(current), self_host_expression_type_origin(current, offset))
               self.constrain_assignable(self.expression_type(alternative), self.expression_type(current), self_host_expression_type_origin(current, offset))
@@ -6833,17 +7364,25 @@ impl SelfHostBasicBodyInferencer {
             }
           }
           SelfHostHirExpr::AssignmentExpr(target, value, _) => {
-            let mutable_ = match self.names.expression_references[target] {
-              SelfHostBodyNameReference::LocalNameReference(local) => self.names.locals[self.name_info.locals.start + local].mutable_
-              SelfHostBodyNameReference::ErrorNameReference => false
-              _ => {
-                self.diagnostics.push(SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(current, offset))
-                false
+            let field_target = self.collected.expressions[target] is SelfHostHirExpr::FieldExpr(_, _, _)
+            let mutable_ = if field_target {
+              // Field identity and mutability are verified after member selection.
+              true
+            } else {
+              match self.names.expression_references[target] {
+                SelfHostBodyNameReference::LocalNameReference(local) => self.names.locals[self.name_info.locals.start + local].mutable_
+                SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => capture >= self.capture_span.start && capture - self.capture_span.start < self.capture_span.length && self.names.captures[capture].mutable_
+                SelfHostBodyNameReference::ErrorNameReference => false
+                _ => {
+                  self.diagnostics.push(SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(current, offset))
+                  false
+                }
               }
             }
             if !mutable_ {
               match self.names.expression_references[target] {
                 SelfHostBodyNameReference::LocalNameReference(_) => self.diagnostics.push(SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(current, offset))
+                SelfHostBodyNameReference::LambdaCaptureNameReference(_) => self.diagnostics.push(SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(current, offset))
                 _ => {}
               }
             }
@@ -7114,11 +7653,11 @@ impl SelfHostBasicBodyInferencer {
     self.initialize_blocks()
     self.initialize_patterns()
     self.declared_return_type = if self.lambda_index != 4294967295u32 {
-      self.solver.resolved_type(self.resolved.lambda_return_types[self.lambda_index])
+      self.body_signature_type(self.resolved.lambda_return_types[self.lambda_index])
     } else if self.callable_index == 4294967295u32 {
       self.solver.error_type()
     } else {
-      self.solver.resolved_type(self_host_basic_u32_at(self.resolved.callable_return_types, self.callable_index))
+      self.body_signature_type(self_host_basic_u32_at(self.resolved.callable_return_types, self.callable_index))
     }
     self.constrain_patterns()
     self.constrain_block_items()
@@ -7129,15 +7668,38 @@ impl SelfHostBasicBodyInferencer {
     self.constrain_pending_variant_calls()
     self.constrain_pending_variant_values()
     self.constrain_pending_constructions()
-    self.constrain_pending_method_calls()
-    self.constrain_pending_operators()
-    self.constrain_pending_fields()
+    // Variant declarations prove the types of their bound locals. Fields and
+    // methods in the arm must see those types before they select a member.
     self.constrain_variant_patterns()
+    self.constrain_pending_method_calls()
+    self.constrain_pending_fields()
   }
 
   fn run(self) -> SelfHostBasicInferredBody {
     self.constrain_body()
+    self.validate_field_assignments()
     self.finalize()
+  }
+
+  fn validate_field_assignments(self) -> Unit {
+    let _ = while self.body.expressions.start {
+      expression => if expression - self.body.expressions.start < self.body.expressions.length {
+        match self.collected.expressions[expression] {
+          SelfHostHirExpr::AssignmentExpr(target, _, offset) => if self.collected.expressions[target] is SelfHostHirExpr::FieldExpr(_, _, _) {
+            match self.expression_selections[self.expression_index(target)] {
+              SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(_, mutable_, _) => if !mutable_ {
+                self.diagnostics.push(SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(expression, offset))
+              }
+              _ => {}
+            }
+          }
+          _ => {}
+        }
+        continue expression + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
   }
 }
 

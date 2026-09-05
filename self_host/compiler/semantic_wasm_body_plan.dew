@@ -5,6 +5,7 @@ open dew.std.string_builder
 
 pub enum SelfHostWasmBodyCarrier {
   UnresolvedBodyCarrier
+  ConflictingBodyCarrier
   UnitBodyCarrier
   NeverBodyCarrier
   I32BodyCarrier
@@ -19,6 +20,8 @@ pub enum SelfHostWasmBodyCarrier {
 pub struct SelfHostPlannedPhysicalValueInfo {
   logical_type: I32
   carrier: SelfHostWasmBodyCarrier
+  conflict_expected: SelfHostWasmBodyCarrier
+  conflict_actual: SelfHostWasmBodyCarrier
   nominal_owner: U64
   physical_heap_type: U32
 }
@@ -27,6 +30,8 @@ pub struct SelfHostPlannedPhysicalExpressionCarrier {
   expression: U32
   value: SelfHostPlannedPhysicalValueInfo
   carrier: SelfHostWasmBodyCarrier
+  conflict_expected: SelfHostWasmBodyCarrier
+  conflict_actual: SelfHostWasmBodyCarrier
   receiver_expression: U32
   receiver_logical_type: I32
   receiver_nominal_owner: U64
@@ -46,7 +51,26 @@ pub struct SelfHostPlannedPhysicalScratchCarrier {
   context: String
 }
 
+pub enum SelfHostPhysicalOperandSource {
+  ExplicitArgumentPhysicalOperand(U32)
+  ReceiverPhysicalOperand(U32)
+  TraitEvidencePhysicalOperand(U32)
+  ClosureEnvironmentPhysicalOperand(U32)
+  RuntimeContextPhysicalOperand(U32)
+}
+
+pub struct SelfHostPhysicalCallPlan {
+  expression: U32
+  declaration: U64
+  specialization: U32
+  physical_function: U32
+  emits_call: Bool
+  evaluations: SelfHostHirSpan
+  operands: SelfHostHirSpan
+}
+
 pub struct SelfHostPhysicalCarrierDiagnostic {
+  code: U32
   module_id: U64
   declaration: U64
   declaration_name: Bytes
@@ -70,7 +94,46 @@ pub struct SelfHostPhysicalCarrierDiagnostic {
   actual: SelfHostWasmBodyCarrier
 }
 
+fn self_host_body_diagnostic_code(context: String) -> U32 {
+  if context == "body carrier conflict" {
+    return 601u32
+  }
+  if context == "physical body carrier analysis did not converge" {
+    return 604u32
+  }
+  if context == "call target is missing" {
+    return 607u32
+  }
+  if context == "planned and emitted call target differ" {
+    return 701u32
+  }
+  if context == "call argument count mismatch" {
+    return 703u32
+  }
+  if context == "call argument has no physical value plan" {
+    return 704u32
+  }
+  if context == "call argument carrier mismatch" {
+    return 705u32
+  }
+  if context == "call receiver count mismatch" {
+    return 707u32
+  }
+  if context == "erased call value became an operand" {
+    return 708u32
+  }
+  if context == "call result" {
+    return 709u32
+  }
+  if context == "body root has no concrete physical value" {
+    return 612u32
+  }
+  0u32
+}
+
 pub struct SelfHostPlannedPhysicalBodyCarrierPlan {
+  converged: Bool
+  stalled_work_item: U32
   module_index: U32
   module_id: U64
   declaration: U64
@@ -89,6 +152,9 @@ pub struct SelfHostPlannedPhysicalBodyCarrierPlan {
   control_result_values: Array<SelfHostPlannedPhysicalValueInfo>
   control_results: Array<SelfHostWasmBodyCarrier>
   scratches: Array<SelfHostPlannedPhysicalScratchCarrier>
+  calls: Array<SelfHostPhysicalCallPlan>
+  call_evaluations: Array<U32>
+  call_operands: Array<SelfHostPhysicalOperandSource>
 }
 
 pub struct SelfHostPlannedProgramWasmBodyPlan {
@@ -146,6 +212,7 @@ fn self_host_body_carrier_equal(
 ) -> Bool {
   match left {
     SelfHostWasmBodyCarrier::UnresolvedBodyCarrier => right is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    SelfHostWasmBodyCarrier::ConflictingBodyCarrier => right is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
     SelfHostWasmBodyCarrier::UnitBodyCarrier => right is SelfHostWasmBodyCarrier::UnitBodyCarrier
     SelfHostWasmBodyCarrier::NeverBodyCarrier => right is SelfHostWasmBodyCarrier::NeverBodyCarrier
     SelfHostWasmBodyCarrier::I32BodyCarrier => right is SelfHostWasmBodyCarrier::I32BodyCarrier
@@ -162,6 +229,7 @@ fn self_host_body_carrier_is_value(
   carrier: SelfHostWasmBodyCarrier,
 ) -> Bool {
   !(carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
+    !(carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier) &&
     !(carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) &&
     !(carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier)
 }
@@ -309,6 +377,41 @@ fn self_host_body_specialization_shape(
   }
 }
 
+fn self_host_body_specialization_shape_for_type(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  specialization: U32,
+  logical_type: I32,
+  shape: SelfHostPlannedValueShape,
+) -> SelfHostPlannedValueShape {
+  if !(shape is SelfHostPlannedValueShape::GenericPlannedValueShape) ||
+    specialization == 4294967295u32 ||
+    specialization >= link.fragments.specialization.requests.length() {
+    return shape
+  }
+  let request = link.fragments.specialization.requests[specialization]
+  match self_host_program_specialization_callable(
+    module_,
+    request.declaration,
+  ) {
+    Option::Some(callable) => match self_host_program_specialization_resolved_type(
+      module_,
+      logical_type,
+    ) {
+      Option::Some(resolved_type) => self_host_wasmgc_specialized_resolved_shape(
+        module_,
+        resolved_type,
+        self_host_program_specialization_callable_generics(callable),
+        request,
+        link.fragments.specialization.shapes,
+        shape,
+      )
+      Option::None => shape
+    }
+    Option::None => shape
+  }
+}
+
 fn self_host_body_specialization_key(
   link: SelfHostPlannedProgramWasmGCLink,
   declaration: U64,
@@ -344,6 +447,20 @@ fn self_host_body_specialization_key(
         continue current + 1u32
       } else {
         break self_host_semantic_unit()
+      }
+    }
+    for evidence in self_host_specialization_request_evidence_types(request) {
+      output.append(";")
+      match evidence {
+        SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType => output.append("unknown-evidence")
+        SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(owner) => {
+          output.append("nominal=")
+          output.append_u64(owner)
+        }
+        SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(primitive) => {
+          output.append("primitive=")
+          output.append_u32(primitive.rank())
+        }
       }
     }
   }
@@ -449,15 +566,6 @@ fn self_host_body_function_uses_call_site_result(
             if body is Option::None {
               return true
             }
-            if callable.name.ends_with(b"into") {
-              return true
-            }
-            if callable.name.ends_with(b"get_unchecked") {
-              return true
-            }
-            if callable.name.ends_with(b"indexed_get") {
-              return true
-            }
           }
           _ => {}
         }
@@ -485,10 +593,10 @@ fn self_host_build_physical_body_indexes(
       break self_host_semantic_unit()
     }
   }
-  let specialized_call_head_by_body = self_host_body_empty_u64_u32_map()
-  let specialized_call_keys = []
-  let specialized_call_functions = []
-  let specialized_call_next = []
+  let specialized_call_head_by_body = link.call_index.heads
+  let specialized_call_keys = link.call_index.keys
+  let specialized_call_functions = link.call_index.functions
+  let specialized_call_next = link.call_index.next
   for linked_type in link.types {
     let module_ = self_host_body_fragment_module(
       link,
@@ -551,7 +659,9 @@ fn self_host_build_physical_body_indexes(
     }
   }
   for function_ in link.functions {
-    if self_host_u32_equal(function_.specialization, 4294967295u32) {
+    if self_host_u32_equal(function_.specialization, 4294967295u32) && !(
+      self_host_u64_equal(function_.declaration, 0u64)
+    ) {
       function_by_declaration[function_.declaration] = function_.function_index
     }
     if self_host_body_function_uses_call_site_result(link, function_) {
@@ -567,17 +677,6 @@ fn self_host_build_physical_body_indexes(
         true,
       )
     }
-  }
-  for call in link.specialized_calls {
-    self_host_body_specialized_call_index_append(
-      specialized_call_head_by_body,
-      specialized_call_keys,
-      specialized_call_functions,
-      specialized_call_next,
-      call.caller_body,
-      self_host_body_call_key(call.caller_specialization, call.expression),
-      call.function_index,
-    )
   }
   SelfHostPhysicalBodyIndexes::{
     type_by_declaration: type_by_declaration
@@ -617,6 +716,8 @@ fn self_host_body_physical_value(
   SelfHostPlannedPhysicalValueInfo::{
     logical_type: logical_type
     carrier: carrier
+    conflict_expected: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    conflict_actual: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
     nominal_owner: nominal_owner
     physical_heap_type: self_host_body_physical_heap_type(
       indexes,
@@ -632,6 +733,8 @@ fn self_host_body_value_with_carrier(
   SelfHostPlannedPhysicalValueInfo::{
     logical_type: value.logical_type
     carrier: carrier
+    conflict_expected: value.conflict_expected
+    conflict_actual: value.conflict_actual
     nominal_owner: value.nominal_owner
     physical_heap_type: value.physical_heap_type
   }
@@ -641,12 +744,36 @@ fn self_host_body_merge_value_provenance(
   preferred: SelfHostPlannedPhysicalValueInfo,
   source: SelfHostPlannedPhysicalValueInfo,
 ) -> SelfHostPlannedPhysicalValueInfo {
+  let merged_carrier = self_host_body_merge_carrier(
+    preferred.carrier,
+    source.carrier,
+  )
+  let conflict_expected = if preferred.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+    preferred.conflict_expected
+  } else if source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+    source.conflict_expected
+  } else if merged_carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+    preferred.carrier
+  } else {
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+  }
+  let conflict_actual = if preferred.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+    preferred.conflict_actual
+  } else if source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+    source.conflict_actual
+  } else if merged_carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+    source.carrier
+  } else {
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+  }
   SelfHostPlannedPhysicalValueInfo::{
     logical_type: self_host_body_preferred_logical_type(
       preferred.logical_type,
       source.logical_type,
     )
-    carrier: self_host_body_merge_carrier(preferred.carrier, source.carrier)
+    carrier: merged_carrier
+    conflict_expected: conflict_expected
+    conflict_actual: conflict_actual
     nominal_owner: if !self_host_u64_equal(preferred.nominal_owner, 0u64) {
       preferred.nominal_owner
     } else {
@@ -1041,6 +1168,11 @@ fn self_host_body_call_function(
     Option::Some(value) => return value
     Option::None => {}
   }
+  if self_host_u64_equal(declaration, 0u64) {
+    // Zero is the missing declaration sentinel. It must never alias a linked
+    // function or become a source of physical ABI evidence.
+    return 4294967295u32
+  }
   match indexes.function_by_declaration.get(declaration) {
     Option::Some(value) => return value
     Option::None => {}
@@ -1057,18 +1189,16 @@ fn self_host_body_call_function(
     }
     Option::None => {}
   }
-  let mut fallback = 4294967295u32
   for function_ in link.functions {
     if self_host_u64_equal(function_.declaration, declaration) {
       if self_host_u32_equal(function_.specialization, 4294967295u32) {
         return function_.function_index
       }
-      if self_host_u32_equal(fallback, 4294967295u32) {
-        fallback = function_.function_index
-      }
     }
   }
-  fallback
+  // Link order is not specialization evidence. A missing exact mapping stays
+  // missing until a later constraint proves one unique compatible function.
+  4294967295u32
 }
 
 fn self_host_body_function_declaration(
@@ -1456,20 +1586,30 @@ fn self_host_body_plan_set_call_function(
   expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
   expression: U32,
   function_index: U32,
-) -> Unit {
+) -> Bool {
   if self_host_u32_equal(function_index, 4294967295u32) ||
     expression < body.expressions.start || expression >= self_host_u32_add(
       body.expressions.start,
       body.expressions.length,
     ) {
-    return
+    return false
   }
   let slot = self_host_body_expression_slot(body, expression)
   let source = expressions[slot]
+  if self_host_u32_equal(source.call_function_index, function_index) {
+    return false
+  }
+  if !self_host_u32_equal(source.call_function_index, 4294967295u32) {
+    // A call-site key is functional. A later target cannot replace the first
+    // exact target selected for this physical plan.
+    return false
+  }
   expressions[slot] = SelfHostPlannedPhysicalExpressionCarrier::{
     expression: source.expression
     value: source.value
     carrier: source.carrier
+    conflict_expected: source.conflict_expected
+    conflict_actual: source.conflict_actual
     receiver_expression: source.receiver_expression
     receiver_logical_type: source.receiver_logical_type
     receiver_nominal_owner: source.receiver_nominal_owner
@@ -1480,6 +1620,7 @@ fn self_host_body_plan_set_call_function(
     selected_storage: source.selected_storage
     call_function_index: function_index
   }
+  true
 }
 
 fn self_host_body_lookup(
@@ -1638,6 +1779,10 @@ fn self_host_body_merge_carrier(
   left: SelfHostWasmBodyCarrier,
   right: SelfHostWasmBodyCarrier,
 ) -> SelfHostWasmBodyCarrier {
+  if left is SelfHostWasmBodyCarrier::ConflictingBodyCarrier ||
+    right is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+    return SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+  }
   if left is SelfHostWasmBodyCarrier::NeverBodyCarrier {
     return right
   }
@@ -1653,7 +1798,115 @@ fn self_host_body_merge_carrier(
   if self_host_body_carrier_equal(left, right) {
     left
   } else {
-    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+  }
+}
+
+fn self_host_body_schedule_work_item(
+  queue: Array<U32>,
+  pending: Array<Bool>,
+  item: U32,
+) -> Unit {
+  if item < pending.length() && !pending[item] {
+    pending[item] = true
+    queue.push(item)
+  }
+}
+
+fn self_host_body_schedule_all_work_items(
+  queue: Array<U32>,
+  pending: Array<Bool>,
+) -> Unit {
+  self_host_body_schedule_work_item(queue, pending, 0u32)
+  let mut item = self_host_u32_subtract(pending.length(), 1u32)
+  let _ = while item {
+    current => if current > 0u32 {
+      self_host_body_schedule_work_item(queue, pending, current)
+      continue self_host_u32_subtract(current, 1u32)
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+struct SelfHostBodyWorkGraph {
+  heads: Array<U32>
+  targets: Array<U32>
+  next: Array<U32>
+}
+
+fn self_host_body_empty_work_graph(item_count: U32) -> SelfHostBodyWorkGraph {
+  let heads = []
+  let mut item = 0u32
+  let _ = while item {
+    current => if current < item_count {
+      heads.push(4294967295u32)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostBodyWorkGraph::{
+    heads: heads
+    targets: []
+    next: []
+  }
+}
+
+fn self_host_body_add_work_dependency(
+  graph: SelfHostBodyWorkGraph,
+  source: U32,
+  target: U32,
+) -> Unit {
+  if source >= graph.heads.length() || target >= graph.heads.length() ||
+    self_host_u32_equal(source, target) {
+    return
+  }
+  let mut edge = graph.heads[source]
+  let _ = while edge {
+    current => if current != 4294967295u32 && current < graph.targets.length() &&
+      current < graph.next.length() {
+      if self_host_u32_equal(graph.targets[current], target) {
+        return
+      }
+      continue graph.next[current]
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let index = graph.targets.length()
+  graph.targets.push(target)
+  graph.next.push(graph.heads[source])
+  graph.heads[source] = index
+}
+
+fn self_host_body_add_work_pair(
+  graph: SelfHostBodyWorkGraph,
+  left: U32,
+  right: U32,
+) -> Unit {
+  self_host_body_add_work_dependency(graph, left, right)
+  self_host_body_add_work_dependency(graph, right, left)
+}
+
+fn self_host_body_schedule_work_dependents(
+  graph: SelfHostBodyWorkGraph,
+  queue: Array<U32>,
+  pending: Array<Bool>,
+  item: U32,
+) -> Unit {
+  if item >= graph.heads.length() {
+    return
+  }
+  let mut edge = graph.heads[item]
+  let _ = while edge {
+    current => if current != 4294967295u32 && current < graph.targets.length() &&
+      current < graph.next.length() {
+      self_host_body_schedule_work_item(queue, pending, graph.targets[current])
+      continue graph.next[current]
+    } else {
+      break self_host_semantic_unit()
+    }
   }
 }
 
@@ -1719,7 +1972,13 @@ fn self_host_body_seed_expression(
     module_.expressions[expression],
   )
   let mut carrier = self_host_body_carrier_from_shape(
-    self_host_body_specialization_shape(link, specialization, planned.shape),
+    self_host_body_specialization_shape_for_type(
+      link,
+      module_,
+      specialization,
+      planned.type_,
+      planned.shape,
+    ),
   )
   let mut nominal_owner = if !self_host_u64_equal(planned.nominal, 0u64) {
     planned.nominal
@@ -1775,15 +2034,11 @@ fn self_host_body_seed_expression(
     ) => {
       constructor_selection = true
       carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
-      let variant_name = if self_host_u32_greater(
-        self_host_linked_module_name_count(module_),
-        planned.source_name,
-      ) {
-        self_host_linked_module_name_at(module_, planned.source_name)
-      } else {
-        ""
+      let runtime_none = match link.runtime_variant_adapters.get(variant) {
+        Option::Some(SelfHostRuntimeVariantAdapter::RuntimeOptionNone) => true
+        _ => false
       }
-      if variant_name == "None" {
+      if runtime_none {
         selected_type_index = self_host_linked_array_runtime_base(link) + 10u32
         physical_heap_type = selected_type_index
       } else {
@@ -1805,7 +2060,7 @@ fn self_host_body_seed_expression(
         selected_type_index = value.physical_type_index
         selected_field_index = value.physical_field_index
         selected_storage = Option::Some(value.storage)
-        carrier = self_host_body_carrier_from_storage(value.storage)
+        carrier = self_host_body_field_read_carrier(link, module_, specialization, expression, field, value.storage)
         nominal_owner = self_host_body_field_value_nominal_owner(
           link,
           value.field_declaration,
@@ -1947,22 +2202,12 @@ fn self_host_body_seed_expression(
           declared_result_owner,
         )
       }
-      let physical_call_index = if call_function_index == 4294967295u32 {
-        4294967295u32
-      } else {
-        self_host_linked_physical_function_index(call_function_index)
-      }
       if self_host_linked_call_returns_array_element(
         link,
         body.body,
         specialization,
         expression,
-      ) ||
-        (physical_call_index != 4294967295u32 &&
-          self_host_linked_physical_function_name(
-            link,
-            physical_call_index,
-          ).ends_with(b"get_unchecked")) {
+      ) {
         let element_shape = match self_host_linked_call_first_type_argument_shape(
           module_,
           planned,
@@ -2240,7 +2485,7 @@ fn self_host_body_seed_expression(
         selected_type_index = value.physical_type_index
         selected_field_index = value.physical_field_index
         selected_storage = Option::Some(value.storage)
-        carrier = self_host_body_carrier_from_storage(value.storage)
+        carrier = self_host_body_field_read_carrier(link, module_, specialization, expression, field, value.storage)
         nominal_owner = self_host_body_field_value_nominal_owner(
           link,
           value.field_declaration,
@@ -2260,15 +2505,24 @@ fn self_host_body_seed_expression(
     }
     _ => {}
   }
+  if !planned.flow.falls_through {
+    // The absence of a Wasm result does not distinguish Unit from Never.
+    // Keep the proven logical control-flow fact after target ABI seeding.
+    carrier = SelfHostWasmBodyCarrier::NeverBodyCarrier
+  }
   SelfHostPlannedPhysicalExpressionCarrier::{
     expression: expression
     value: SelfHostPlannedPhysicalValueInfo::{
       logical_type: planned.type_
       carrier: carrier
+      conflict_expected: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+      conflict_actual: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
       nominal_owner: nominal_owner
       physical_heap_type: physical_heap_type
     }
     carrier: carrier
+    conflict_expected: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    conflict_actual: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
     receiver_expression: receiver_expression
     receiver_logical_type: receiver_logical_type
     receiver_nominal_owner: receiver_nominal_owner
@@ -2294,14 +2548,38 @@ fn self_host_body_plan_force_expression_carrier(
     return false
   }
   let slot = self_host_body_expression_slot(body, expression)
-  if self_host_body_carrier_equal(expressions[slot].carrier, carrier) {
+  let current = expressions[slot].carrier
+  if self_host_body_carrier_equal(current, carrier) ||
+    current is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    return false
+  }
+  let forced_carrier = if current is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
+    carrier
+  } else {
+    SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+  }
+  if self_host_body_carrier_equal(current, forced_carrier) {
     return false
   }
   let source = expressions[slot]
   expressions[slot] = SelfHostPlannedPhysicalExpressionCarrier::{
     expression: source.expression
-    value: self_host_body_value_with_carrier(source.value, carrier)
-    carrier: carrier
+    value: self_host_body_value_with_carrier(source.value, forced_carrier)
+    carrier: forced_carrier
+    conflict_expected: if forced_carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+      current is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+    ) {
+      current
+    } else {
+      source.conflict_expected
+    }
+    conflict_actual: if forced_carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+      current is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+    ) {
+      carrier
+    } else {
+      source.conflict_actual
+    }
     receiver_expression: source.receiver_expression
     receiver_logical_type: source.receiver_logical_type
     receiver_nominal_owner: source.receiver_nominal_owner
@@ -2325,8 +2603,9 @@ fn self_host_body_plan_set_local_carrier(
     self_host_body_carrier_equal(locals[local], carrier) {
     return false
   }
-  if locals[local] is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
-    locals[local] = carrier
+  let merged = self_host_body_merge_carrier(locals[local], carrier)
+  if !self_host_body_carrier_equal(merged, locals[local]) {
+    locals[local] = merged
     return true
   }
   false
@@ -2345,15 +2624,30 @@ fn self_host_body_plan_set_expression_carrier(
     return false
   }
   let slot = self_host_body_expression_slot(body, expression)
-  if self_host_body_carrier_equal(expressions[slot].carrier, carrier) {
+  if expressions[slot].carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier || self_host_body_carrier_equal(expressions[slot].carrier, carrier) {
     return false
   }
-  if expressions[slot].carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
+  let merged = self_host_body_merge_carrier(expressions[slot].carrier, carrier)
+  if !self_host_body_carrier_equal(merged, expressions[slot].carrier) {
     let source = expressions[slot]
     expressions[slot] = SelfHostPlannedPhysicalExpressionCarrier::{
       expression: source.expression
-      value: self_host_body_value_with_carrier(source.value, carrier)
-      carrier: carrier
+      value: self_host_body_value_with_carrier(source.value, merged)
+      carrier: merged
+      conflict_expected: if merged is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+        source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+      ) {
+        source.carrier
+      } else {
+        source.conflict_expected
+      }
+      conflict_actual: if merged is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+        source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+      ) {
+        carrier
+      } else {
+        source.conflict_actual
+      }
       receiver_expression: source.receiver_expression
       receiver_logical_type: source.receiver_logical_type
       receiver_nominal_owner: source.receiver_nominal_owner
@@ -2375,6 +2669,13 @@ fn self_host_body_value_info_equal(
 ) -> Bool {
   left.logical_type == right.logical_type &&
     self_host_body_carrier_equal(left.carrier, right.carrier) &&
+    self_host_body_carrier_equal(
+      left.conflict_expected,
+      right.conflict_expected,
+    ) && self_host_body_carrier_equal(
+      left.conflict_actual,
+      right.conflict_actual,
+    ) &&
     self_host_u64_equal(left.nominal_owner, right.nominal_owner) &&
     self_host_u32_equal(left.physical_heap_type, right.physical_heap_type)
 }
@@ -2383,8 +2684,13 @@ fn self_host_body_preferred_logical_type(
   preferred: I32,
   fallback: I32,
 ) -> I32 {
-  let fallback_mask = preferred >> 31i32
-  (preferred & (fallback_mask ^ -1i32)) | (fallback & fallback_mask)
+  // Negative values encode resolved types. Only -1 is the missing sentinel.
+  // Replacing one valid negative type with another made branch joins oscillate.
+  if preferred == -1i32 {
+    fallback
+  } else {
+    preferred
+  }
 }
 
 fn self_host_body_plan_set_local_value(
@@ -2416,28 +2722,10 @@ fn self_host_body_plan_force_local_value(
     return false
   }
   let current = values[local]
-  if source.carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier && !(
-    current.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-  ) && !(current.carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier) {
+  if current.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
     return false
   }
-  let forced = SelfHostPlannedPhysicalValueInfo::{
-    logical_type: self_host_body_preferred_logical_type(
-      current.logical_type,
-      source.logical_type,
-    )
-    carrier: source.carrier
-    nominal_owner: if !self_host_u64_equal(source.nominal_owner, 0u64) {
-      source.nominal_owner
-    } else {
-      current.nominal_owner
-    }
-    physical_heap_type: if source.physical_heap_type != 4294967295u32 {
-      source.physical_heap_type
-    } else {
-      current.physical_heap_type
-    }
-  }
+  let forced = self_host_body_merge_value_provenance(current, source)
   if self_host_body_value_info_equal(current, forced) {
     return false
   }
@@ -2460,13 +2748,35 @@ fn self_host_body_plan_force_expression_value(
   }
   let slot = self_host_body_expression_slot(body, expression)
   let source = expressions[slot]
-  if self_host_body_value_info_equal(source.value, value) {
+  if source.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    return false
+  }
+  let forced = self_host_body_merge_value_provenance(source.value, value)
+  if self_host_body_value_info_equal(source.value, forced) {
     return false
   }
   expressions[slot] = SelfHostPlannedPhysicalExpressionCarrier::{
     expression: source.expression
-    value: value
-    carrier: value.carrier
+    value: forced
+    carrier: forced.carrier
+    conflict_expected: if value.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+      value.conflict_expected
+    } else if forced.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+      source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+    ) {
+      source.carrier
+    } else {
+      source.conflict_expected
+    }
+    conflict_actual: if value.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+      value.conflict_actual
+    } else if forced.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+      source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+    ) {
+      value.carrier
+    } else {
+      source.conflict_actual
+    }
     receiver_expression: source.receiver_expression
     receiver_logical_type: source.receiver_logical_type
     receiver_nominal_owner: source.receiver_nominal_owner
@@ -2494,6 +2804,9 @@ fn self_host_body_plan_set_expression_value(
   }
   let slot = self_host_body_expression_slot(body, expression)
   let source = expressions[slot]
+  if source.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    return false
+  }
   let merged = self_host_body_merge_value_provenance(source.value, value)
   if self_host_body_value_info_equal(source.value, merged) {
     return false
@@ -2502,6 +2815,24 @@ fn self_host_body_plan_set_expression_value(
     expression: source.expression
     value: merged
     carrier: merged.carrier
+    conflict_expected: if value.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+      value.conflict_expected
+    } else if merged.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+      source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+    ) {
+      source.carrier
+    } else {
+      source.conflict_expected
+    }
+    conflict_actual: if value.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+      value.conflict_actual
+    } else if merged.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+      source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+    ) {
+      value.carrier
+    } else {
+      source.conflict_actual
+    }
     receiver_expression: source.receiver_expression
     receiver_logical_type: source.receiver_logical_type
     receiver_nominal_owner: source.receiver_nominal_owner
@@ -2520,6 +2851,7 @@ fn self_host_body_plan_resolve_field(
   indexes: SelfHostPhysicalBodyIndexes,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
+  specialization: U32,
   expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
   embedded_targets: Array<Bool>,
   expression: U32,
@@ -2594,6 +2926,8 @@ fn self_host_body_plan_resolve_field(
         SelfHostPlannedPhysicalValueInfo::{
           logical_type: receiver_source.logical_type
           carrier: receiver_source.carrier
+          conflict_expected: receiver_source.conflict_expected
+          conflict_actual: receiver_source.conflict_actual
           nominal_owner: field.owner
           physical_heap_type: if self_host_u64_equal(field.owner, 0u64) {
             4294967295u32
@@ -2627,15 +2961,21 @@ fn self_host_body_plan_resolve_field(
       let exact_expression = self_host_planned_expression_identity(
         module_.expressions[expression],
       )
-      let result = SelfHostPlannedPhysicalValueInfo::{
+      let result_evidence = SelfHostPlannedPhysicalValueInfo::{
         logical_type: exact_expression.type_
-        carrier: self_host_body_carrier_from_storage(field.storage)
+        carrier: self_host_body_field_read_carrier(link, module_, specialization, expression, field.field_declaration, field.storage)
+        conflict_expected: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+        conflict_actual: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
         nominal_owner: result_owner
         physical_heap_type: self_host_body_physical_heap_type(
           indexes,
           result_owner,
         )
       }
+      let result = self_host_body_merge_value_provenance(
+        source.value,
+        result_evidence,
+      )
       let changed = !self_host_u64_equal(
         source.selected_field,
         field.field_declaration,
@@ -2657,6 +2997,20 @@ fn self_host_body_plan_resolve_field(
           expression: source.expression
           value: result
           carrier: result.carrier
+          conflict_expected: if result.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+            source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+          ) {
+            source.carrier
+          } else {
+            source.conflict_expected
+          }
+          conflict_actual: if result.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier && !(
+            source.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+          ) {
+            result_evidence.carrier
+          } else {
+            source.conflict_actual
+          }
           receiver_expression: base
           receiver_logical_type: receiver.logical_type
           receiver_nominal_owner: receiver.nominal_owner
@@ -2772,6 +3126,30 @@ fn self_host_body_pattern_payload_value(
   field_index: U32,
   fallback: SelfHostPlannedPhysicalValueInfo,
 ) -> SelfHostPlannedPhysicalValueInfo {
+  let declaration = self_host_pattern_constructor_declaration(module_, pattern)
+  if link.runtime_variant_adapters.get(declaration) is Option::Some(_) {
+    // Standard Option/Result values use a payload-specialized runtime type,
+    // not the erased reference field in the generic declaration fragment.
+    match pattern.source {
+      SelfHostHirPattern::TuplePattern(_, children, _) => if field_index < children.length {
+        let child_slot = self_host_u32_add(children.start, field_index)
+        if child_slot < module_.pattern_children.length() {
+          let child = module_.pattern_children[child_slot]
+          if child < module_.patterns.length() {
+            let type_ = module_.patterns[child].type_
+            return self_host_body_physical_value(
+              indexes,
+              type_,
+              self_host_body_carrier_from_shape(self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, type_)),
+              self_host_linked_type_nominal_declaration(module_, type_),
+            )
+          }
+        }
+      }
+      _ => {}
+    }
+    return self_host_body_physical_value(indexes, -1i32, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, 0u64)
+  }
   let selected_constructor = match pattern.selected_constructor {
     SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(_, _, _) => {
       pattern.selected_constructor
@@ -3555,6 +3933,8 @@ fn self_host_body_seed_match_payload_binding(
           SelfHostPlannedPhysicalValueInfo::{
             logical_type: local_values[current].logical_type
             carrier: self_host_body_carrier_from_shape(payload_shape)
+            conflict_expected: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+            conflict_actual: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
             nominal_owner: owner
             physical_heap_type: self_host_body_physical_heap_type(indexes, owner)
           },
@@ -3714,7 +4094,7 @@ fn self_host_body_force_constructor_field_carriers(
               break self_host_semantic_unit()
             }
           }
-          if !self_host_u32_equal(argument, 4294967295u32) &&
+          if !(link.erased_fields.get(destination.declaration) is Option::Some(true)) && !self_host_u32_equal(argument, 4294967295u32) &&
             self_host_body_plan_force_expression_carrier(
               body,
               expressions,
@@ -3817,12 +4197,50 @@ fn self_host_body_force_call_arguments(
     link,
     physical_function,
   )
-  if parameter_count < arguments.length {
+  let flatten_product = self_host_u32_equal(arguments.length, 1u32) &&
+    self_host_u32_equal(parameter_count, 2u32)
+  let mut physical_argument_count = 0u32
+  let mut count_argument = 0u32
+  let _ = while count_argument {
+    current => if current < arguments.length {
+      let child = self_host_u32_add(arguments.start, current)
+      if child < module_.expression_children.length() {
+        let argument_expression = module_.expression_children[child]
+        if argument_expression >= body.expressions.start && argument_expression <
+          self_host_u32_add(body.expressions.start, body.expressions.length) {
+          let carrier = expressions[self_host_body_expression_slot(
+            body,
+            argument_expression,
+          )].carrier
+          if !(carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) && !(
+            carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier
+          ) {
+            let count = if flatten_product && argument_expression < module_.expressions.length() {
+              match module_.expressions[argument_expression].kind {
+                SelfHostPlannedExpressionKind::PlannedProductNew(fields) => fields.length
+                _ => 1u32
+              }
+            } else {
+              1u32
+            }
+            physical_argument_count = self_host_u32_add(
+              physical_argument_count,
+              count,
+            )
+          }
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  if parameter_count < physical_argument_count {
     return false
   }
   let parameter_offset = self_host_u32_subtract(
     parameter_count,
-    arguments.length,
+    physical_argument_count,
   )
   let expression_end = self_host_u32_add(
     body.expressions.start,
@@ -3830,6 +4248,7 @@ fn self_host_body_force_call_arguments(
   )
   let mut changed = false
   let mut argument = 0u32
+  let mut physical_argument = parameter_offset
   let _ = while argument {
     current => if current < arguments.length {
       let child = self_host_u32_add(arguments.start, current)
@@ -3837,10 +4256,18 @@ fn self_host_body_force_call_arguments(
         let argument_expression = module_.expression_children[child]
         if argument_expression >= body.expressions.start &&
           argument_expression < expression_end {
+          let actual_carrier = expressions[self_host_body_expression_slot(
+            body,
+            argument_expression,
+          )].carrier
+          if actual_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier ||
+            actual_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+            continue current + 1u32
+          }
           let expected_shape = self_host_linked_physical_function_parameter_shape(
             link,
             physical_function,
-            self_host_u32_add(parameter_offset, current),
+            physical_argument,
           )
           let expected = self_host_body_carrier_from_shape(expected_shape)
           if !(expected is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
@@ -3870,6 +4297,7 @@ fn self_host_body_force_call_arguments(
               _ => {}
             }
           }
+          physical_argument = self_host_u32_add(physical_argument, 1u32)
         }
       }
       continue current + 1u32
@@ -3886,6 +4314,8 @@ fn self_host_body_empty_physical_values(
   let values = [SelfHostPlannedPhysicalValueInfo::{
     logical_type: -1i32
     carrier: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    conflict_expected: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    conflict_actual: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
     nominal_owner: 0u64
     physical_heap_type: 4294967295u32
   }]
@@ -3907,10 +4337,14 @@ fn self_host_body_empty_physical_expressions(
     value: SelfHostPlannedPhysicalValueInfo::{
       logical_type: -1i32
       carrier: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+      conflict_expected: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+      conflict_actual: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
       nominal_owner: 0u64
       physical_heap_type: 4294967295u32
     }
     carrier: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    conflict_expected: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+    conflict_actual: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
     receiver_expression: 4294967295u32
     receiver_logical_type: -1i32
     receiver_nominal_owner: 0u64
@@ -3945,6 +4379,8 @@ fn self_host_body_empty_scratches(
     value: SelfHostPlannedPhysicalValueInfo::{
       logical_type: -1i32
       carrier: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+      conflict_expected: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+      conflict_actual: SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
       nominal_owner: 0u64
       physical_heap_type: 4294967295u32
     }
@@ -3953,6 +4389,761 @@ fn self_host_body_empty_scratches(
   }]
   values.truncate(0u32)
   values
+}
+
+fn self_host_body_empty_call_plans() -> Array<SelfHostPhysicalCallPlan> {
+  let values = [SelfHostPhysicalCallPlan::{
+    expression: 0u32
+    declaration: 0u64
+    specialization: 4294967295u32
+    physical_function: 4294967295u32
+    emits_call: false
+    evaluations: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    operands: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+  }]
+  values.truncate(0u32)
+  values
+}
+
+fn self_host_body_call_target_identity(
+  link: SelfHostPlannedProgramWasmGCLink,
+  function_index: U32,
+) -> Option<SelfHostPlannedProgramWasmFunction> {
+  for function_ in link.functions {
+    if self_host_u32_equal(function_.function_index, function_index) {
+      return Option::Some(function_)
+    }
+  }
+  Option::None
+}
+
+fn self_host_body_call_receiver_expression(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  expression: U32,
+  declaration: U64,
+) -> U32 {
+  if self_host_u64_equal(declaration, 0u64) ||
+    !self_host_linked_declaration_has_receiver(link, declaration) ||
+    expression >= module_.expressions.length() {
+    return 4294967295u32
+  }
+  let target = match module_.expressions[expression].kind {
+    SelfHostPlannedExpressionKind::PlannedDirectCall(_, value, _, _) => value
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(value, _) => value
+    _ => 4294967295u32
+  }
+  if target >= module_.expressions.length() {
+    return 4294967295u32
+  }
+  match self_host_linked_direct_receiver_expression(module_, target) {
+    Option::Some(receiver) => receiver
+    Option::None => 4294967295u32
+  }
+}
+
+fn self_host_body_call_operand_expression(
+  source: SelfHostPhysicalOperandSource,
+) -> U32 {
+  match source {
+    SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(value) => value
+    SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(value) => value
+    SelfHostPhysicalOperandSource::TraitEvidencePhysicalOperand(value) => value
+    SelfHostPhysicalOperandSource::ClosureEnvironmentPhysicalOperand(value) => value
+    SelfHostPhysicalOperandSource::RuntimeContextPhysicalOperand(value) => value
+  }
+}
+
+fn self_host_body_carrier_emits_call_operand(
+  carrier: SelfHostWasmBodyCarrier,
+) -> Bool {
+  !(carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) && !(
+    carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier
+  )
+}
+
+fn self_host_body_plan_call_argument(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  evaluation_expression: U32,
+  flatten_product: Bool,
+  call_evaluations: Array<U32>,
+  call_operands: Array<SelfHostPhysicalOperandSource>,
+) -> Bool {
+  call_evaluations.push(evaluation_expression)
+  if evaluation_expression < body.expressions.start || evaluation_expression >=
+    self_host_u32_add(body.expressions.start, body.expressions.length) {
+    call_operands.push(
+      SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(
+        evaluation_expression,
+      ),
+    )
+    return true
+  }
+  let planned = expressions[self_host_body_expression_slot(
+    body,
+    evaluation_expression,
+  )]
+  if planned.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    return false
+  }
+  if !self_host_body_carrier_emits_call_operand(planned.carrier) {
+    return true
+  }
+  match module_.expressions[evaluation_expression].kind {
+    SelfHostPlannedExpressionKind::PlannedProductNew(fields) => if flatten_product {
+      let mut field = 0u32
+      let _ = while field {
+        current => if current < fields.length {
+          let child = self_host_u32_add(fields.start, current)
+          if child < module_.expression_children.length() {
+            call_operands.push(
+              SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(
+                module_.expression_children[child],
+              ),
+            )
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    } else {
+      call_operands.push(
+        SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(
+          evaluation_expression,
+        ),
+      )
+    }
+    _ => call_operands.push(
+      SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(
+        evaluation_expression,
+      ),
+    )
+  }
+  true
+}
+
+fn self_host_body_build_physical_call_plans(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  call_evaluations: Array<U32>,
+  call_operands: Array<SelfHostPhysicalOperandSource>,
+) -> Array<SelfHostPhysicalCallPlan> {
+  let calls = self_host_body_empty_call_plans()
+  let expression_end = self_host_u32_add(
+    body.expressions.start,
+    body.expressions.length,
+  )
+  let mut expression = body.expressions.start
+  let _ = while expression {
+    current => if current < expression_end && current < module_.expressions.length() {
+      let expression_plan = expressions[self_host_body_expression_slot(body, current)]
+      if !self_host_u32_equal(
+        expression_plan.call_function_index,
+        4294967295u32,
+      ) {
+        match self_host_body_call_target_identity(
+          link,
+          expression_plan.call_function_index,
+        ) {
+          Option::Some(target) => {
+            let arguments = match module_.expressions[current].kind {
+              SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, values, _) => values
+              SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, values) => values
+              SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, _, _, values) => values
+              SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, values, _) => values
+              _ => SelfHostHirSpan::{
+                start: 0u32
+                length: 0u32
+              }
+            }
+            let evaluation_start = call_evaluations.length()
+            let operand_start = call_operands.length()
+            let mut emits_call = true
+            let receiver = self_host_body_call_receiver_expression(
+              link,
+              module_,
+              current,
+              target.declaration,
+            )
+            if receiver != 4294967295u32 {
+              call_evaluations.push(receiver)
+              call_operands.push(
+                SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(receiver),
+              )
+            }
+            let parameter_count = self_host_linked_physical_function_parameter_count(
+              link,
+              self_host_linked_physical_function_index(target.function_index),
+            )
+            let receiver_count = if receiver == 4294967295u32 {
+              0u32
+            } else {
+              1u32
+            }
+            let flatten_product = self_host_u32_equal(arguments.length, 1u32) &&
+              self_host_u32_equal(parameter_count, receiver_count + 2u32)
+            let mut argument = 0u32
+            let _ = while argument {
+              offset => if offset < arguments.length && emits_call {
+                let child = self_host_u32_add(arguments.start, offset)
+                if child < module_.expression_children.length() {
+                  emits_call = self_host_body_plan_call_argument(
+                    module_,
+                    body,
+                    expressions,
+                    module_.expression_children[child],
+                    flatten_product,
+                    call_evaluations,
+                    call_operands,
+                  )
+                } else {
+                  call_evaluations.push(4294967295u32)
+                  call_operands.push(
+                    SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(
+                      4294967295u32,
+                    ),
+                  )
+                }
+                continue offset + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            calls.push(SelfHostPhysicalCallPlan::{
+              expression: current
+              declaration: target.declaration
+              specialization: target.specialization
+              physical_function: self_host_linked_physical_function_index(
+                target.function_index,
+              )
+              emits_call: emits_call
+              evaluations: SelfHostHirSpan::{
+                start: evaluation_start
+                length: call_evaluations.length() - evaluation_start
+              }
+              operands: SelfHostHirSpan::{
+                start: operand_start
+                length: call_operands.length() - operand_start
+              }
+            })
+          }
+          Option::None => {}
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  calls
+}
+
+fn self_host_body_call_plan(
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  expression: U32,
+) -> Option<SelfHostPhysicalCallPlan> {
+  for call in plan.calls {
+    if self_host_u32_equal(call.expression, expression) {
+      return Option::Some(call)
+    }
+  }
+  Option::None
+}
+
+fn self_host_body_expression_work_item(
+  body: SelfHostPlannedBodyLowering,
+  expression: U32,
+) -> U32 {
+  if expression < body.expressions.start {
+    return 4294967295u32
+  }
+  let relative = expression - body.expressions.start
+  if relative >= body.expressions.length {
+    return 4294967295u32
+  }
+  self_host_u32_add(relative, 1u32)
+}
+
+fn self_host_body_link_expression_work(
+  graph: SelfHostBodyWorkGraph,
+  body: SelfHostPlannedBodyLowering,
+  owner_item: U32,
+  expression: U32,
+) -> Unit {
+  let child_item = self_host_body_expression_work_item(body, expression)
+  if child_item != 4294967295u32 {
+    self_host_body_add_work_pair(graph, owner_item, child_item)
+  }
+}
+
+fn self_host_body_link_expression_span_work(
+  graph: SelfHostBodyWorkGraph,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  owner_item: U32,
+  children: SelfHostHirSpan,
+) -> Unit {
+  let mut child = 0u32
+  let _ = while child {
+    current => if current < children.length {
+      let index = self_host_u32_add(children.start, current)
+      if index < module_.expression_children.length() {
+        self_host_body_link_expression_work(
+          graph,
+          body,
+          owner_item,
+          module_.expression_children[index],
+        )
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_body_link_object_field_work(
+  graph: SelfHostBodyWorkGraph,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  owner_item: U32,
+  fields: SelfHostHirSpan,
+) -> Unit {
+  let mut field = 0u32
+  let _ = while field {
+    current => if current < fields.length {
+      let index = self_host_u32_add(fields.start, current)
+      if index < module_.object_fields.length() {
+        self_host_body_link_expression_work(
+          graph,
+          body,
+          owner_item,
+          module_.object_fields[index].value,
+        )
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_body_link_local_work(
+  graph: SelfHostBodyWorkGraph,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  local_base: U32,
+  owner_item: U32,
+  local_id: U32,
+) -> Unit {
+  let slot = self_host_body_local_slot(module_, body, local_id)
+  if slot < body.locals.length {
+    self_host_body_add_work_pair(
+      graph,
+      owner_item,
+      self_host_u32_add(local_base, slot),
+    )
+  }
+}
+
+fn self_host_body_link_pattern_local_work(
+  graph: SelfHostBodyWorkGraph,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  local_base: U32,
+  owner_item: U32,
+  pattern: U32,
+) -> Unit {
+  let mut local = 0u32
+  let _ = while local {
+    current => if current < body.locals.length {
+      let index = self_host_u32_add(body.locals.start, current)
+      if index < module_.locals.length() && self_host_linked_pattern_binds_local(
+        module_,
+        pattern,
+        module_.locals[index].local_id,
+      ) {
+        self_host_body_add_work_pair(
+          graph,
+          owner_item,
+          self_host_u32_add(local_base, current),
+        )
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_body_link_arm_work(
+  graph: SelfHostBodyWorkGraph,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  local_base: U32,
+  owner_item: U32,
+  arms: SelfHostHirSpan,
+) -> Unit {
+  let mut arm = 0u32
+  let _ = while arm {
+    current => if current < arms.length {
+      let child = self_host_u32_add(arms.start, current)
+      if child < module_.arm_children.length() {
+        let arm_index = module_.arm_children[child]
+        if arm_index < module_.pattern_arms.length() {
+          let source = module_.pattern_arms[arm_index]
+          self_host_body_link_expression_work(
+            graph,
+            body,
+            owner_item,
+            source.body,
+          )
+          self_host_body_link_pattern_local_work(
+            graph,
+            module_,
+            body,
+            local_base,
+            owner_item,
+            source.pattern,
+          )
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_body_build_work_graph(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  maximum_control: U32,
+) -> SelfHostBodyWorkGraph {
+  let local_base = self_host_u32_add(body.expressions.length, 1u32)
+  let control_state_base = self_host_u32_add(local_base, body.locals.length)
+  let control_result_base = self_host_u32_add(control_state_base, maximum_control)
+  let work_item_count = self_host_u32_add(control_result_base, maximum_control)
+  let graph = self_host_body_empty_work_graph(work_item_count)
+  let expression_end = self_host_u32_add(
+    body.expressions.start,
+    body.expressions.length,
+  )
+  let mut relative = 0u32
+  let _ = while relative {
+    current => if current < body.expressions.length {
+      let expression = self_host_u32_add(body.expressions.start, current)
+      let owner_item = self_host_u32_add(current, 1u32)
+      if expression < module_.expressions.length() {
+        match module_.expressions[expression].kind {
+          SelfHostPlannedExpressionKind::PlannedConsumedExpression => if expression > body.expressions.start {
+            self_host_body_link_expression_work(
+              graph,
+              body,
+              owner_item,
+              expression - 1u32,
+            )
+          }
+          SelfHostPlannedExpressionKind::PlannedProductNew(children) => self_host_body_link_expression_span_work(
+            graph,
+            module_,
+            body,
+            owner_item,
+            children,
+          )
+          SelfHostPlannedExpressionKind::PlannedArrayLiteral(children) => self_host_body_link_expression_span_work(
+            graph,
+            module_,
+            body,
+            owner_item,
+            children,
+          )
+          SelfHostPlannedExpressionKind::PlannedObjectNew(fields) => self_host_body_link_object_field_work(
+            graph,
+            module_,
+            body,
+            owner_item,
+            fields,
+          )
+          SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => self_host_body_link_object_field_work(
+            graph,
+            module_,
+            body,
+            owner_item,
+            fields,
+          )
+          SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => self_host_body_link_expression_work(
+            graph,
+            body,
+            owner_item,
+            self_host_body_block_tail_expression(module_, block),
+          )
+          SelfHostPlannedExpressionKind::PlannedIfExpression(
+            condition,
+            then_block,
+            else_expression,
+          ) => {
+            self_host_body_link_expression_work(graph, body, owner_item, condition)
+            self_host_body_link_expression_work(
+              graph,
+              body,
+              owner_item,
+              self_host_body_block_tail_expression(module_, then_block),
+            )
+            self_host_body_link_expression_work(
+              graph,
+              body,
+              owner_item,
+              else_expression,
+            )
+          }
+          SelfHostPlannedExpressionKind::PlannedMatchExpression(subject, arms) => {
+            self_host_body_link_expression_work(graph, body, owner_item, subject)
+            self_host_body_link_arm_work(
+              graph,
+              module_,
+              body,
+              local_base,
+              owner_item,
+              arms,
+            )
+          }
+          SelfHostPlannedExpressionKind::PlannedWhileExpression(
+            control,
+            initial,
+            arms,
+          ) => {
+            self_host_body_link_expression_work(graph, body, owner_item, initial)
+            self_host_body_link_arm_work(
+              graph,
+              module_,
+              body,
+              local_base,
+              owner_item,
+              arms,
+            )
+            if control < maximum_control {
+              self_host_body_add_work_pair(
+                graph,
+                owner_item,
+                self_host_u32_add(control_state_base, control),
+              )
+              self_host_body_add_work_pair(
+                graph,
+                owner_item,
+                self_host_u32_add(control_result_base, control),
+              )
+            }
+          }
+          SelfHostPlannedExpressionKind::PlannedReturnExpression(value) => self_host_body_link_expression_work(
+            graph,
+            body,
+            owner_item,
+            value,
+          )
+          SelfHostPlannedExpressionKind::PlannedBreakExpression(control, value) => {
+            self_host_body_link_expression_work(graph, body, owner_item, value)
+            if control < maximum_control {
+              self_host_body_add_work_pair(
+                graph,
+                owner_item,
+                self_host_u32_add(control_result_base, control),
+              )
+            }
+          }
+          SelfHostPlannedExpressionKind::PlannedContinueExpression(control, value) => {
+            self_host_body_link_expression_work(graph, body, owner_item, value)
+            if control < maximum_control {
+              self_host_body_add_work_pair(
+                graph,
+                owner_item,
+                self_host_u32_add(control_state_base, control),
+              )
+            }
+          }
+          SelfHostPlannedExpressionKind::PlannedPrefixExpression(_, value) => self_host_body_link_expression_work(
+            graph,
+            body,
+            owner_item,
+            value,
+          )
+          SelfHostPlannedExpressionKind::PlannedBinaryExpression(_, left, right) => {
+            self_host_body_link_expression_work(graph, body, owner_item, left)
+            self_host_body_link_expression_work(graph, body, owner_item, right)
+          }
+          SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, left, right, arguments) => {
+            self_host_body_link_expression_work(graph, body, owner_item, left)
+            self_host_body_link_expression_work(graph, body, owner_item, right)
+            self_host_body_link_expression_span_work(
+              graph,
+              module_,
+              body,
+              owner_item,
+              arguments,
+            )
+          }
+          SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, target, arguments, _) => {
+            self_host_body_link_expression_work(graph, body, owner_item, target)
+            self_host_body_link_expression_span_work(
+              graph,
+              module_,
+              body,
+              owner_item,
+              arguments,
+            )
+          }
+          SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, arguments, _) => {
+            self_host_body_link_expression_work(graph, body, owner_item, target)
+            self_host_body_link_expression_span_work(
+              graph,
+              module_,
+              body,
+              owner_item,
+              arguments,
+            )
+          }
+          SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, arguments, _) => {
+            self_host_body_link_expression_work(graph, body, owner_item, target)
+            self_host_body_link_expression_span_work(
+              graph,
+              module_,
+              body,
+              owner_item,
+              arguments,
+            )
+          }
+          SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments) => {
+            self_host_body_link_expression_work(graph, body, owner_item, target)
+            self_host_body_link_expression_span_work(
+              graph,
+              module_,
+              body,
+              owner_item,
+              arguments,
+            )
+          }
+          SelfHostPlannedExpressionKind::PlannedFieldGet(_, base, _) => self_host_body_link_expression_work(
+            graph,
+            body,
+            owner_item,
+            base,
+          )
+          SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => self_host_body_link_expression_work(
+            graph,
+            body,
+            owner_item,
+            base,
+          )
+          SelfHostPlannedExpressionKind::PlannedProductField(base, _, _) => self_host_body_link_expression_work(
+            graph,
+            body,
+            owner_item,
+            base,
+          )
+          SelfHostPlannedExpressionKind::PlannedIndexGet(base, index, _) => {
+            self_host_body_link_expression_work(graph, body, owner_item, base)
+            self_host_body_link_expression_work(graph, body, owner_item, index)
+          }
+          SelfHostPlannedExpressionKind::PlannedLocalGet(local) => self_host_body_link_local_work(
+            graph,
+            module_,
+            body,
+            local_base,
+            owner_item,
+            local,
+          )
+          SelfHostPlannedExpressionKind::PlannedLocalSet(local, value) => {
+            self_host_body_link_local_work(
+              graph,
+              module_,
+              body,
+              local_base,
+              owner_item,
+              local,
+            )
+            self_host_body_link_expression_work(graph, body, owner_item, value)
+          }
+          SelfHostPlannedExpressionKind::PlannedCaptureSet(_, value) => self_host_body_link_expression_work(
+            graph,
+            body,
+            owner_item,
+            value,
+          )
+          SelfHostPlannedExpressionKind::PlannedFieldSet(_, base, value) => {
+            self_host_body_link_expression_work(graph, body, owner_item, base)
+            self_host_body_link_expression_work(graph, body, owner_item, value)
+          }
+          SelfHostPlannedExpressionKind::PlannedIndexSet(base, index, value, _) => {
+            self_host_body_link_expression_work(graph, body, owner_item, base)
+            self_host_body_link_expression_work(graph, body, owner_item, index)
+            self_host_body_link_expression_work(graph, body, owner_item, value)
+          }
+          _ => {}
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut block = 0u32
+  let _ = while block {
+    current => if current < body.blocks.length {
+      let block_index = self_host_u32_add(body.blocks.start, current)
+      if block_index < module_.blocks.length() {
+        let items = module_.blocks[block_index].items
+        let mut item = 0u32
+        let _ = while item {
+          offset => if offset < items.length {
+            let index = self_host_u32_add(items.start, offset)
+            if index < module_.block_items.length() {
+              match module_.block_items[index].kind {
+                SelfHostPlannedBlockItemKind::PlannedLetItem(
+                  local,
+                  _,
+                  initializer,
+                ) => {
+                  self_host_body_link_expression_work(
+                    graph,
+                    body,
+                    0u32,
+                    initializer,
+                  )
+                  self_host_body_link_local_work(
+                    graph,
+                    module_,
+                    body,
+                    local_base,
+                    0u32,
+                    local,
+                  )
+                }
+                _ => {}
+              }
+            }
+            continue offset + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  graph
 }
 
 fn self_host_plan_one_physical_body(
@@ -4056,6 +5247,44 @@ fn self_host_plan_one_physical_body(
         ),
       )
       locals.push(local_carrier)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut loop_local_offset = 0u32
+  let _ = while loop_local_offset {
+    current => if current < body.locals.length {
+      let local_index = self_host_u32_add(body.locals.start, current)
+      if local_index < module_.locals.length() && current < local_values.length() &&
+        current < locals.length() {
+        let planned_local = module_.locals[local_index]
+        let nominal = self_host_linked_loop_binding_nominal_declaration(
+          link,
+          module_,
+          body,
+          planned_local.local_id,
+        )
+        if !self_host_u64_equal(nominal, 0u64) && self_host_u64_equal(
+          local_values[current].nominal_owner,
+          0u64,
+        ) {
+          let carrier = if local_values[current].carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
+            SelfHostWasmBodyCarrier::EqRefBodyCarrier
+          } else {
+            local_values[current].carrier
+          }
+          local_values[current] = SelfHostPlannedPhysicalValueInfo::{
+            logical_type: local_values[current].logical_type
+            carrier: carrier
+            conflict_expected: local_values[current].conflict_expected
+            conflict_actual: local_values[current].conflict_actual
+            nominal_owner: nominal
+            physical_heap_type: self_host_body_physical_heap_type(indexes, nominal)
+          }
+          locals[current] = carrier
+        }
+      }
       continue current + 1u32
     } else {
       break self_host_semantic_unit()
@@ -4224,12 +5453,69 @@ fn self_host_plan_one_physical_body(
       }
     }
   }
-  let mut changed = true
-  let mut pass = 0u32
-  let _ = while pass {
-    current_pass => if current_pass < 8u32 && changed {
-      changed = false
-      let mut block_offset = 0u32
+  self_host_body_force_declared_pattern_payloads(
+    link,
+    indexes,
+    module_,
+    body,
+    local_values,
+    locals,
+  )
+  self_host_body_force_return_carriers(
+    module_,
+    body,
+    expressions,
+    physical_result_carrier,
+  )
+  // Work item zero owns block/local-initializer constraints. The next items
+  // own expression constraints. Local and control items are dependency hubs:
+  // they wake only the expressions that read or write the changed cell.
+  let work_graph = self_host_body_build_work_graph(
+    module_,
+    body,
+    maximum_control,
+  )
+  let work_item_count = work_graph.heads.length()
+  let work_queue = []
+  let work_pending = []
+  let mut work_item = 0u32
+  let _ = while work_item {
+    current => if current < work_item_count {
+      work_pending.push(false)
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_schedule_work_item(work_queue, work_pending, 0u32)
+  let mut expression_work_item = body.expressions.length
+  let _ = while expression_work_item {
+    current => if current > 0u32 {
+      self_host_body_schedule_work_item(work_queue, work_pending, current)
+      continue self_host_u32_subtract(current, 1u32)
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut work_limit_exceeded = false
+  let mut stalled_work_item = 4294967295u32
+  let mut work_head = 0u32
+  let mut processed_work_items = 0u32
+  let mut successful_changes = 0u32
+  // Each work item owns fewer than sixteen finite-height evidence components.
+  // This bound is proportional to the plan size. It detects a transfer that
+  // changes facts back and forth without restoring the old fixed-pass limit.
+  let maximum_changes = work_item_count * 16u32
+  let _ = while work_head {
+    current_work_head => if current_work_head < work_queue.length() && !work_limit_exceeded {
+      let current_work_item = work_queue[current_work_head]
+      work_pending[current_work_item] = false
+      let mut changed = false
+      let mut block_offset = if self_host_u32_equal(current_work_item, 0u32) {
+        0u32
+      } else {
+        body.blocks.length
+      }
       let _ = while block_offset {
         current_block => if current_block < body.blocks.length {
           let block_index = self_host_u32_add(body.blocks.start, current_block)
@@ -4301,7 +5587,12 @@ fn self_host_plan_one_physical_body(
       // Parents have larger expression ids than their children. Walk backward
       // so an expected carrier reaches a branch tail, local, and initializer
       // in one pass instead of one graph edge per pass.
-      expression = expression_end
+      expression = if self_host_u32_equal(current_work_item, 0u32) ||
+        current_work_item > body.expressions.length {
+        body.expressions.start
+      } else {
+        self_host_u32_add(body.expressions.start, current_work_item)
+      }
       let _ = while expression {
         remaining => if remaining > body.expressions.start {
           let current = self_host_u32_subtract(remaining, 1u32)
@@ -4311,6 +5602,7 @@ fn self_host_plan_one_physical_body(
             indexes,
             module_,
             body,
+            linked_function.specialization,
             expressions,
             embedded_targets,
             current,
@@ -4553,14 +5845,52 @@ fn self_host_plan_one_physical_body(
                   arguments.length,
                 )
                 if recovered != 4294967295u32 {
-                  self_host_body_plan_set_call_function(
+                  if self_host_body_plan_set_call_function(
                     body,
                     expressions,
                     current,
                     recovered,
-                  )
+                  ) {
+                    changed = true
+                  }
                   call_function_index = recovered
-                  changed = true
+                }
+              }
+              if call_function_index == 4294967295u32 && self_host_u32_greater(
+                arguments.length,
+                0u32,
+              ) {
+                let declaration = match module_.expressions[current].call_target {
+                  SelfHostBasicCallTarget::SelectedBasicCallTarget(value, _) => value
+                  _ => 0u64
+                }
+                let child_index = self_host_u32_add(
+                  arguments.start,
+                  arguments.length - 1u32,
+                )
+                if !self_host_u64_equal(declaration, 0u64) &&
+                  child_index < module_.expression_children.length() {
+                  let argument_expression = module_.expression_children[child_index]
+                  if argument_expression >= body.expressions.start &&
+                    argument_expression < expression_end {
+                    let selected = self_host_body_unique_function_for_last_parameter_carrier(
+                      link,
+                      declaration,
+                      expressions[self_host_body_expression_slot(
+                        body,
+                        argument_expression,
+                      )].carrier,
+                    )
+                    if self_host_body_plan_set_call_function(
+                      body,
+                      expressions,
+                      current,
+                      selected,
+                    ) {
+                      call_function_index = selected
+                      changed = true
+                    }
+                  }
                 }
               }
               if self_host_body_force_call_result(
@@ -4863,7 +6193,10 @@ fn self_host_plan_one_physical_body(
               }
               let subject_carrier = subject_value.carrier
               let expected_match_carrier = expressions[slot].carrier
-              let mut merged = SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+              // Never is the identity for a join over branch completions.
+              // Unknown here erased an all-diverging match on each visit;
+              // its parent then restored Never and kept the queue alive.
+              let mut merged = SelfHostWasmBodyCarrier::NeverBodyCarrier
               let mut arm = 0u32
               let _ = while arm {
                 current_arm => if current_arm < arms.length {
@@ -5185,6 +6518,21 @@ fn self_host_plan_one_physical_body(
             ) => if loop_control < control_states.length() &&
               value >= body.expressions.start && value < expression_end {
               let value_slot = self_host_body_expression_slot(body, value)
+              let boundary_value = match self_host_body_loop_initial_value(
+                module_,
+                body,
+                expressions,
+                loop_control,
+              ) {
+                Option::Some(initial_value) => if !(
+                  initial_value.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+                ) {
+                  initial_value
+                } else {
+                  control_state_values[loop_control]
+                }
+                Option::None => control_state_values[loop_control]
+              }
               if self_host_body_plan_set_local_value(
                 control_state_values,
                 control_states,
@@ -5197,7 +6545,7 @@ fn self_host_plan_one_physical_body(
                 body,
                 expressions,
                 value,
-                control_state_values[loop_control],
+                boundary_value,
               ) {
                 changed = true
               }
@@ -5216,335 +6564,56 @@ fn self_host_plan_one_physical_body(
               let _ = slot
             }
           }
-          continue current
+          break self_host_semantic_unit()
         } else {
           break self_host_semantic_unit()
         }
       }
-      continue current_pass + 1u32
+      if current_work_item > body.expressions.length {
+        // A hub has no transfer rule. Its job is to wake the exact expressions
+        // and block constraints that depend on its local or control cell.
+        self_host_body_schedule_work_dependents(
+          work_graph,
+          work_queue,
+          work_pending,
+          current_work_item,
+        )
+      }
+      if changed {
+        successful_changes = self_host_u32_add(successful_changes, 1u32)
+        if successful_changes > maximum_changes {
+          work_limit_exceeded = true
+          stalled_work_item = current_work_item
+        } else {
+          self_host_body_schedule_work_dependents(
+            work_graph,
+            work_queue,
+            work_pending,
+            current_work_item,
+          )
+        }
+      }
+      let next_work_head = self_host_u32_add(current_work_head, 1u32)
+      processed_work_items = next_work_head
+      continue next_work_head
     } else {
       break self_host_semantic_unit()
     }
   }
-  // A return boundary is exact proof from the physical function signature.
-  // Reapply it after the fixed point so broad local propagation cannot erase it.
-  self_host_body_force_declared_pattern_payloads(
+  let analysis_converged = processed_work_items >= work_queue.length() &&
+    !work_limit_exceeded
+  // The plan is frozen here. All physical facts above are worklist facts.
+  // The remaining work only materializes immutable call and scratch recipes.
+  let call_evaluations = []
+  let call_operands = []
+  let calls = self_host_body_build_physical_call_plans(
     link,
-    indexes,
-    module_,
-    body,
-    local_values,
-    locals,
-  )
-  self_host_body_force_return_carriers(
     module_,
     body,
     expressions,
-    physical_result_carrier,
+    call_evaluations,
+    call_operands,
   )
-  let mut field_plan_index = 0u32
-  while field_plan_index {
-    current => if current < expressions.length() {
-      let expression_plan = self_host_body_physical_expression_at(
-        expressions,
-        current,
-      )
-      match module_.expressions[expression_plan.expression].kind {
-        SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _) => {
-          let _ = self_host_body_plan_resolve_field(
-            link,
-            indexes,
-            module_,
-            body,
-            expressions,
-            embedded_targets,
-            expression_plan.expression,
-          )
-        }
-        SelfHostPlannedExpressionKind::PlannedUnresolvedField(_, _) => {
-          let _ = self_host_body_plan_resolve_field(
-            link,
-            indexes,
-            module_,
-            body,
-            expressions,
-            embedded_targets,
-            expression_plan.expression,
-          )
-        }
-        _ => {}
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let mut final_local_offset = 0u32
-  let _ = while final_local_offset {
-    current => if current < body.locals.length {
-      let local_index = self_host_u32_add(body.locals.start, current)
-      if local_index < module_.locals.length() {
-        let planned_local = module_.locals[local_index]
-        if planned_local.shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-          match self_host_linked_local_initializer_expression(
-            module_,
-            body,
-            planned_local.local_id,
-          ) {
-            Option::Some(initializer) => if initializer >= body.expressions.start &&
-              initializer < expression_end {
-              let actual = expressions[self_host_body_expression_slot(
-                body,
-                initializer,
-              )]
-              if current < local_values.length() && !(
-                actual.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-              ) && !(actual.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) &&
-                local_values[current].carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier && !(
-                  actual.carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier
-                ) {
-                let _ = self_host_body_plan_force_local_value(
-                  local_values,
-                  locals,
-                  current,
-                  actual.value,
-                )
-              }
-            }
-            Option::None => {}
-          }
-        }
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let mut loop_local_offset = 0u32
-  let _ = while loop_local_offset {
-    current => if current < body.locals.length {
-      let local_index = self_host_u32_add(body.locals.start, current)
-      if local_index < module_.locals.length() && current < local_values.length() &&
-        current < locals.length() {
-        let local = module_.locals[local_index]
-        let nominal = self_host_linked_loop_binding_nominal_declaration(
-          link,
-          module_,
-          body,
-          local.local_id,
-        )
-        if !self_host_u64_equal(nominal, 0u64) && !self_host_u64_equal(
-          local_values[current].nominal_owner,
-          nominal,
-        ) {
-          // Loop planning must keep the exact nominal element type before emission.
-          let carrier = if local_values[current].carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
-            SelfHostWasmBodyCarrier::EqRefBodyCarrier
-          } else {
-            local_values[current].carrier
-          }
-          local_values[current] = SelfHostPlannedPhysicalValueInfo::{
-            logical_type: local_values[current].logical_type
-            carrier: carrier
-            nominal_owner: nominal
-            physical_heap_type: self_host_body_physical_heap_type(
-              indexes,
-              nominal,
-            )
-          }
-          locals[current] = carrier
-        }
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let mut call_plan_index = 0u32
-  while call_plan_index {
-    current => if current < expressions.length() {
-      let expression_plan = self_host_body_physical_expression_at(
-        expressions,
-        current,
-      )
-      match module_.expressions[expression_plan.expression].kind {
-        SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => {
-          let _ = self_host_body_force_call_result(
-            link,
-            indexes,
-            module_,
-            body,
-            expression_plan.expression,
-            expression_plan.call_function_index,
-            expressions,
-            local_by_initializer,
-            local_values,
-            locals,
-          )
-        }
-        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => {
-          let _ = self_host_body_force_call_result(
-            link,
-            indexes,
-            module_,
-            body,
-            expression_plan.expression,
-            expression_plan.call_function_index,
-            expressions,
-            local_by_initializer,
-            local_values,
-            locals,
-          )
-        }
-        _ => {}
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let mut argument_plan_index = 0u32
-  while argument_plan_index {
-    current => if current < expressions.length() {
-      let expression_plan = self_host_body_physical_expression_at(
-        expressions,
-        current,
-      )
-      let planned_expression = module_.expressions[expression_plan.expression]
-      match planned_expression.kind {
-        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => if self_host_u32_equal(
-          expression_plan.call_function_index,
-          4294967295u32,
-        ) && self_host_u32_greater(
-          arguments.length,
-          0u32,
-        ) {
-          let declaration = match planned_expression.call_target {
-            SelfHostBasicCallTarget::SelectedBasicCallTarget(value, _) => value
-            _ => self_host_body_function_declaration(
-              link,
-              expression_plan.call_function_index,
-            )
-          }
-          if !self_host_u64_equal(declaration, 0u64) {
-            let child_index = self_host_u32_add(
-              arguments.start,
-              arguments.length - 1u32,
-            )
-            if child_index < module_.expression_children.length() {
-              let argument_expression = module_.expression_children[child_index]
-              if argument_expression >= body.expressions.start &&
-                argument_expression < expression_end {
-                let argument_carrier = expressions[
-                  self_host_body_expression_slot(body, argument_expression)
-                ].carrier
-                self_host_body_plan_set_call_function(
-                  body,
-                  expressions,
-                  expression_plan.expression,
-                  self_host_body_unique_function_for_last_parameter_carrier(
-                    link,
-                    declaration,
-                    argument_carrier,
-                  ),
-                )
-              }
-            }
-          }
-        }
-        _ => {}
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let mut transfer_plan_index = 0u32
-  while transfer_plan_index {
-    current => if current < expressions.length() {
-      let expression_plan = self_host_body_physical_expression_at(
-        expressions,
-        current,
-      )
-      match module_.expressions[expression_plan.expression].kind {
-        SelfHostPlannedExpressionKind::PlannedContinueExpression(
-          loop_control,
-          value,
-        ) => if loop_control < control_state_values.length() &&
-          value >= body.expressions.start && value < expression_end {
-          let boundary_value = match self_host_body_loop_initial_value(
-            module_,
-            body,
-            expressions,
-            loop_control,
-          ) {
-            Option::Some(initial_value) => if !(
-              initial_value.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-            ) {
-              initial_value
-            } else {
-              control_state_values[loop_control]
-            }
-            Option::None => control_state_values[loop_control]
-          }
-          if !(boundary_value.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
-            let _ = self_host_body_plan_force_expression_value(
-              body,
-              expressions,
-              value,
-              boundary_value,
-            )
-            match self_host_body_wrapped_local_get(module_, value) {
-              Option::Some(local_id) => {
-                let slot = self_host_body_local_slot(module_, body, local_id)
-                if slot < local_values.length() && slot < locals.length() {
-                  let _ = self_host_body_plan_force_local_value(
-                    local_values,
-                    locals,
-                    slot,
-                    boundary_value,
-                  )
-                }
-              }
-              Option::None => {}
-            }
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedBreakExpression(
-          loop_control,
-          value,
-        ) => if loop_control < control_result_values.length() &&
-          value >= body.expressions.start && value < expression_end && !(
-            control_result_values[loop_control].carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-          ) {
-          let _ = self_host_body_plan_force_expression_value(
-            body,
-            expressions,
-            value,
-            control_result_values[loop_control],
-          )
-          match self_host_body_wrapped_local_get(module_, value) {
-            Option::Some(local_id) => {
-              let slot = self_host_body_local_slot(module_, body, local_id)
-              if slot < local_values.length() && slot < locals.length() {
-                let _ = self_host_body_plan_force_local_value(
-                  local_values,
-                  locals,
-                  slot,
-                  control_result_values[loop_control],
-                )
-              }
-            }
-            Option::None => {}
-          }
-        }
-        _ => {}
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
   let scratches = self_host_body_empty_scratches()
   let mut scratch_plan_index = 0u32
   while scratch_plan_index {
@@ -5613,6 +6682,8 @@ fn self_host_plan_one_physical_body(
   }
   let result_carrier = physical_result_carrier
   SelfHostPlannedPhysicalBodyCarrierPlan::{
+    converged: analysis_converged
+    stalled_work_item: stalled_work_item
     module_index: linked_function.module_index
     module_id: module_.module_id
     declaration: linked_function.declaration
@@ -5638,6 +6709,9 @@ fn self_host_plan_one_physical_body(
     control_result_values: control_result_values
     control_results: control_results
     scratches: scratches
+    calls: calls
+    call_evaluations: call_evaluations
+    call_operands: call_operands
   }
 }
 
@@ -5736,6 +6810,7 @@ fn self_host_body_add_known_expression_diagnostic(
     Option::None => b""
   }
   diagnostics.push(SelfHostPhysicalCarrierDiagnostic::{
+    code: self_host_body_diagnostic_code(context)
     module_id: plan.module_id
     declaration: plan.declaration
     declaration_name: declaration_name
@@ -5790,6 +6865,7 @@ fn self_host_body_add_diagnostic(
     Option::None => b""
   }
   diagnostics.push(SelfHostPhysicalCarrierDiagnostic::{
+    code: self_host_body_diagnostic_code(context)
     module_id: plan.module_id
     declaration: plan.declaration
     declaration_name: declaration_name
@@ -5848,6 +6924,7 @@ fn self_host_body_add_nominal_diagnostic(
     Option::None => b""
   }
   diagnostics.push(SelfHostPhysicalCarrierDiagnostic::{
+    code: self_host_body_diagnostic_code(context)
     module_id: plan.module_id
     declaration: plan.declaration
     declaration_name: declaration_name
@@ -5901,21 +6978,32 @@ fn self_host_verify_body_call_result(
     }
     _ => {}
   }
-  let physical_function = self_host_linked_physical_function_index(
-    expression_plan.call_function_index,
-  )
-  let function_name = self_host_linked_physical_function_name(
-    link,
-    physical_function,
-  )
-  if function_name.ends_with(b"get_unchecked") ||
-    function_name.ends_with(b"indexed_get") || function_name.ends_with(b"into") {
-    return
-  }
   let expected = self_host_body_function_result_carrier(
     link,
     expression_plan.call_function_index,
   )
+  if expression_plan.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier && !module_.expressions[expression_plan.expression].flow.falls_through {
+    match self_host_body_call_plan(plan, expression_plan.expression) {
+      Option::Some(call) => if !call.emits_call {
+        // A diverging argument ends evaluation before the call instruction.
+        return
+      }
+      _ => {}
+    }
+    let target = expression_plan.call_function_index
+    if target < link.functions.length() && expected is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+      let function_ = self_host_planned_program_wasm_function_identity(link.functions[target])
+      if self_host_u32_equal(function_.function_index, target) {
+        match self_host_program_specialization_callable(link.fragments.specialization.lowering.modules[function_.module_index], function_.declaration) {
+          Option::Some(callable) => if callable.result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape {
+            // Both proofs are required: declared divergence and zero ABI results.
+            return
+          }
+          _ => {}
+        }
+      }
+    }
+  }
   if !self_host_body_carrier_equal(expected, expression_plan.carrier) {
     self_host_body_add_diagnostic(
       diagnostics,
@@ -5928,6 +7016,193 @@ fn self_host_verify_body_call_result(
       expression_plan.carrier,
     )
   }
+}
+
+fn self_host_verify_body_call_arguments(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expression_plan: SelfHostPlannedPhysicalExpressionCarrier,
+  arguments: SelfHostHirSpan,
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+) -> Unit {
+  match module_.expressions[expression_plan.expression].selection {
+    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(_, _) => {
+      return
+    }
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _) => {
+      return
+    }
+    _ => {}
+  }
+  if expression_plan.call_function_index == 4294967295u32 {
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      expression_plan.expression,
+      0u64,
+      "call target is missing",
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+    )
+    return
+  }
+  let physical_function = self_host_linked_physical_function_index(
+    expression_plan.call_function_index,
+  )
+  let parameter_count = self_host_linked_physical_function_parameter_count(
+    link,
+    physical_function,
+  )
+  let call = match self_host_body_call_plan(plan, expression_plan.expression) {
+    Option::Some(value) => value
+    Option::None => {
+      self_host_body_add_diagnostic(
+        diagnostics,
+        plan,
+        module_,
+        expression_plan.expression,
+        u32_into_u64(expression_plan.call_function_index),
+        "call argument has no physical value plan",
+        SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+        SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+      )
+      return
+    }
+  }
+  if !self_host_u32_equal(call.physical_function, physical_function) {
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      expression_plan.expression,
+      u32_into_u64(call.physical_function),
+      "planned and emitted call target differ",
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+    )
+    return
+  }
+  if !call.emits_call {
+    return
+  }
+  if !self_host_u32_equal(parameter_count, call.operands.length) {
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      expression_plan.expression,
+      u32_into_u64(expression_plan.call_function_index),
+      "call argument count mismatch",
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+    )
+    return
+  }
+  let expected_receiver_count = if self_host_linked_declaration_has_receiver(
+    link,
+    call.declaration,
+  ) {
+    1u32
+  } else {
+    0u32
+  }
+  let mut receiver_count = 0u32
+  let mut operand = 0u32
+  let _ = while operand {
+    current => if current < call.operands.length {
+      let operand_index = self_host_u32_add(call.operands.start, current)
+      if operand_index >= plan.call_operands.length() {
+        self_host_body_add_diagnostic(
+          diagnostics,
+          plan,
+          module_,
+          expression_plan.expression,
+          u32_into_u64(current),
+          "call argument has no physical value plan",
+          SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+          SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+        )
+      } else {
+        let source = plan.call_operands[operand_index]
+        match source {
+          SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(_) => {
+            receiver_count = self_host_u32_add(receiver_count, 1u32)
+          }
+          _ => {}
+        }
+        let argument_expression = self_host_body_call_operand_expression(source)
+        let expected = self_host_body_carrier_from_shape(
+          self_host_linked_physical_function_parameter_shape(
+            link,
+            physical_function,
+            current,
+          ),
+        )
+        match self_host_body_plan_expression(plan, argument_expression) {
+          Option::Some(actual) => if actual.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier ||
+            actual.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+            self_host_body_add_diagnostic(
+              diagnostics,
+              plan,
+              module_,
+              argument_expression,
+              u32_into_u64(current),
+              "erased call value became an operand",
+              expected,
+              actual.carrier,
+            )
+          } else if (
+            actual.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier ||
+              actual.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier ||
+              expected is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier ||
+              expected is SelfHostWasmBodyCarrier::ConflictingBodyCarrier ||
+              !self_host_body_carrier_equal(expected, actual.carrier)
+          ) {
+            self_host_body_add_diagnostic(
+              diagnostics,
+              plan,
+              module_,
+              argument_expression,
+              u32_into_u64(current),
+              "call argument carrier mismatch",
+              expected,
+              actual.carrier,
+            )
+          }
+          Option::None => self_host_body_add_diagnostic(
+            diagnostics,
+            plan,
+            module_,
+            argument_expression,
+            u32_into_u64(current),
+            "call argument has no physical value plan",
+            expected,
+            SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+          )
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  if !self_host_u32_equal(receiver_count, expected_receiver_count) {
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      expression_plan.expression,
+      u32_into_u64(receiver_count),
+      "call receiver count mismatch",
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+    )
+  }
+  let _ = arguments
+  let _ = body
 }
 
 fn self_host_body_embedded_targets(
@@ -6274,7 +7549,8 @@ fn self_host_verify_body_constructor(
                 let expected_carrier = self_host_body_carrier_from_storage(
                   destination.storage,
                 )
-                if exact_argument && !self_host_body_carrier_equal(
+                let boxed = self_host_linked_erased_field_box_type(link, destination.declaration, actual.value.carrier) is Option::Some(_)
+                if exact_argument && !boxed && !self_host_body_carrier_equal(
                   expected_carrier,
                   actual.value.carrier,
                 ) && !(actual.value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) && !(
@@ -6507,6 +7783,28 @@ fn self_host_verify_one_physical_body(
       }
     }
   }
+  if !plan.converged {
+    let stalled_expression = if plan.stalled_work_item == 4294967295u32 ||
+      self_host_u32_equal(plan.stalled_work_item, 0u32) {
+      body.expressions.start
+    } else {
+      self_host_u32_add(
+        body.expressions.start,
+        self_host_u32_subtract(plan.stalled_work_item, 1u32),
+      )
+    }
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      stalled_expression,
+      u32_into_u64(plan.stalled_work_item),
+      "physical body carrier analysis did not converge",
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+    )
+    return
+  }
   self_host_verify_body_pattern_payloads(
     link,
     plan,
@@ -6583,6 +7881,18 @@ fn self_host_verify_one_physical_body(
         _ => {}
       }
     }
+    if expression_plan.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+      self_host_body_add_diagnostic(
+        diagnostics,
+        plan,
+        module_,
+        expression,
+        0u64,
+        "body carrier conflict",
+        expression_plan.conflict_expected,
+        expression_plan.conflict_actual,
+      )
+    }
     match source.kind {
       SelfHostPlannedExpressionKind::PlannedLocalGet(_) => {}
       SelfHostPlannedExpressionKind::PlannedLocalSet(local_id, value) => {
@@ -6641,7 +7951,7 @@ fn self_host_verify_one_physical_body(
         )
         match expression_plan.selected_storage {
         Option::Some(storage) => {
-          let expected = self_host_body_carrier_from_storage(storage)
+          let expected = self_host_body_field_read_carrier(link, module_, plan.specialization, expression, expression_plan.selected_field, storage)
           if !self_host_body_carrier_equal(expected, expression_plan.carrier) {
             self_host_body_add_diagnostic(
               diagnostics,
@@ -6689,13 +7999,24 @@ fn self_host_verify_one_physical_body(
         fields,
         diagnostics,
       )
-      SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => self_host_verify_body_call_result(
-        link,
-        plan,
-        module_,
-        expression_plan,
-        diagnostics,
-      )
+      SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, arguments, _) => {
+        self_host_verify_body_call_result(
+          link,
+          plan,
+          module_,
+          expression_plan,
+          diagnostics,
+        )
+        self_host_verify_body_call_arguments(
+          link,
+          plan,
+          module_,
+          body,
+          expression_plan,
+          arguments,
+          diagnostics,
+        )
+      }
       SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, _, _) => self_host_verify_body_call_result(
         link,
         plan,
@@ -6710,13 +8031,24 @@ fn self_host_verify_one_physical_body(
         expression_plan,
         diagnostics,
       )
-      SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => self_host_verify_body_call_result(
-        link,
-        plan,
-        module_,
-        expression_plan,
-        diagnostics,
-      )
+      SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => {
+        self_host_verify_body_call_result(
+          link,
+          plan,
+          module_,
+          expression_plan,
+          diagnostics,
+        )
+        self_host_verify_body_call_arguments(
+          link,
+          plan,
+          module_,
+          body,
+          expression_plan,
+          arguments,
+          diagnostics,
+        )
+      }
       SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, _) => self_host_verify_body_call_result(
         link,
         plan,
@@ -6796,7 +8128,8 @@ fn self_host_verify_one_physical_body(
   if !(plan.result_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) &&
     !self_host_body_carrier_equal(plan.result_carrier, root_carrier) &&
     !(root_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) &&
-    !(root_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
+    !(root_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) &&
+    !(root_carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier) {
     self_host_body_add_diagnostic(
       diagnostics,
       plan,
@@ -6807,6 +8140,24 @@ fn self_host_verify_one_physical_body(
       },
       0u64,
       "function result",
+      plan.result_carrier,
+      root_carrier,
+    )
+  }
+  if !(plan.result_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) && (
+    root_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier ||
+      root_carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier
+  ) {
+    self_host_body_add_diagnostic(
+      diagnostics,
+      plan,
+      module_,
+      match body.root {
+        SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => expression
+        SelfHostHirBodyRoot::BlockBodyRoot(_) => body.expressions.start
+      },
+      0u64,
+      "body root has no concrete physical value",
       plan.result_carrier,
       root_carrier,
     )
@@ -6924,13 +8275,32 @@ pub fn self_host_body_carrier_shape(
     SelfHostWasmBodyCarrier::V128BodyCarrier => SelfHostPlannedValueShape::V128PlannedValueShape
     SelfHostWasmBodyCarrier::EqRefBodyCarrier => SelfHostPlannedValueShape::RefPlannedValueShape
     SelfHostWasmBodyCarrier::FuncRefBodyCarrier => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostWasmBodyCarrier::ConflictingBodyCarrier => SelfHostPlannedValueShape::ErrorPlannedValueShape
     SelfHostWasmBodyCarrier::UnresolvedBodyCarrier => SelfHostPlannedValueShape::ErrorPlannedValueShape
+  }
+}
+
+// Stable crash-record encoding, independent of enum layout.
+fn self_host_body_carrier_code(carrier: SelfHostWasmBodyCarrier) -> U64 {
+  match carrier {
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier => 0u64
+    SelfHostWasmBodyCarrier::ConflictingBodyCarrier => 1u64
+    SelfHostWasmBodyCarrier::UnitBodyCarrier => 2u64
+    SelfHostWasmBodyCarrier::NeverBodyCarrier => 3u64
+    SelfHostWasmBodyCarrier::I32BodyCarrier => 4u64
+    SelfHostWasmBodyCarrier::I64BodyCarrier => 5u64
+    SelfHostWasmBodyCarrier::F32BodyCarrier => 6u64
+    SelfHostWasmBodyCarrier::F64BodyCarrier => 7u64
+    SelfHostWasmBodyCarrier::V128BodyCarrier => 8u64
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier => 9u64
+    SelfHostWasmBodyCarrier::FuncRefBodyCarrier => 10u64
   }
 }
 
 fn self_host_body_carrier_name(carrier: SelfHostWasmBodyCarrier) -> String {
   match carrier {
     SelfHostWasmBodyCarrier::UnresolvedBodyCarrier => "unresolved"
+    SelfHostWasmBodyCarrier::ConflictingBodyCarrier => "conflict"
     SelfHostWasmBodyCarrier::UnitBodyCarrier => "unit"
     SelfHostWasmBodyCarrier::NeverBodyCarrier => "never"
     SelfHostWasmBodyCarrier::I32BodyCarrier => "i32"
@@ -6951,7 +8321,9 @@ pub fn self_host_program_wasm_body_plan_error_report(
   output.append_u32(plan.diagnostics.length())
   output.append(" error(s)")
   for diagnostic in plan.diagnostics {
-    output.append("\nmodule=")
+    output.append("\ncode=")
+    output.append_u32(diagnostic.code)
+    output.append(" module=")
     output.append_u64(diagnostic.module_id)
     output.append(" declaration=")
     output.append_u64(diagnostic.declaration)

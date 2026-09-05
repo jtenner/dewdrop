@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
 const [wasmArgument, requestArgument] = process.argv.slice(2);
 if (!wasmArgument || !requestArgument) {
@@ -278,6 +279,10 @@ try {
   if (error instanceof FacetExit) {
     process.exitCode = error.status;
   } else {
+    const invariant = readSelfHostInvariantFailure(instance?.exports.memory);
+    if (invariant) {
+      console.error(formatSelfHostInvariantFailure(invariant));
+    }
     console.error(error instanceof Error && error.stack ? error.stack : String(error));
     process.exitCode = 1;
   }

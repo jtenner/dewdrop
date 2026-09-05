@@ -1,0 +1,178 @@
+open dew.std.option
+
+fn self_host_body_trace_seen() -> Map<U32, Bool> {
+  Map::empty()
+}
+
+// This report runs only after verification fails. It preserves the lowering
+// facts next to the frozen facts, so a later repair cannot hide their origin.
+fn self_host_program_wasm_body_failure_report(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedProgramWasmBodyPlan,
+) -> String {
+  let output = StringBuilder::new()
+  output.append(self_host_program_wasm_body_plan_error_report(plan))
+  let seen = self_host_body_trace_seen()
+  let mut count = 0u32
+  for diagnostic in plan.diagnostics {
+    if count < 4u32 && !seen.contains_key(diagnostic.physical_function_index) {
+      seen[diagnostic.physical_function_index] = true
+      count = count + 1u32
+      match self_host_program_wasm_body_plan_for_function(plan, diagnostic.physical_function_index) {
+        Option::Some(body) => {
+          let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[body.module_index])
+          output.append("\ntrace body=")
+          output.append_u64(body.body)
+          output.append(" name=")
+          output.append(bytes_to_string(diagnostic.declaration_name))
+          output.append(" inference_diagnostics=")
+          output.append_u32(module_.inferred.diagnostics.length())
+          output.append(" name_diagnostics=")
+          output.append_u32(module_.name_diagnostics.length())
+          let mut inference_count = 0u32
+          for inference_error in module_.inferred.diagnostics {
+            if inference_count < 4u32 {
+              output.append("\ntrace inference_error=")
+              output.append(match inference_error {
+                SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
+                SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _) => "no matching method"
+                SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _) => "unsupported expression"
+                SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => "type constraint"
+                SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, _) => "unresolved expression"
+                _ => "other"
+              })
+              output.append(" offset=")
+              output.append_u32(inference_error.offset())
+              match inference_error {
+                SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, first, second, count, _) => {
+                  output.append(" first=")
+                  output.append_u64(first)
+                  output.append(" second=")
+                  output.append_u64(second)
+                  output.append(" count=")
+                  output.append_u32(count)
+                }
+                SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(constraint) => match constraint {
+                  SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(left, right, _) => {
+                    output.append(" left=")
+                    output.append_i32(left)
+                    output.append(" right=")
+                    output.append_i32(right)
+                  }
+                  _ => {}
+                }
+                _ => {}
+              }
+              inference_count = inference_count + 1u32
+            }
+          }
+          let mut name_count = 0u32
+          for name_error in module_.name_diagnostics {
+            if name_count < 4u32 {
+              output.append("\ntrace name_error=")
+              output.append_u32(name_error.rank())
+              output.append(" offset=")
+              output.append_u32(name_error.offset())
+              let name = match name_error {
+                SelfHostBodyResolutionDiagnostic::UnknownValueName(name, _, _) => name
+                SelfHostBodyResolutionDiagnostic::UnknownQualifiedRoot(name, _, _) => name
+                SelfHostBodyResolutionDiagnostic::AmbiguousImportedQualifiedRoot(name, _, _) => name
+                SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(name, _, _) => name
+                _ => 4294967295u32
+              }
+              if name < module_.names.length() {
+                output.append(" name=")
+                output.append(module_.names[name])
+              }
+              name_count = name_count + 1u32
+            }
+          }
+          match self_host_program_specialization_body(module_, body.body) {
+            Option::Some(lowered) => {
+              let mut index = 0u32
+              let _ = while index {
+                current => if current < lowered.patterns.length {
+                  let id = lowered.patterns.start + current
+                  let pattern = self_host_planned_pattern_identity(module_.patterns[id])
+                  output.append("\ntrace pattern=")
+                  output.append_u32(id)
+                  output.append(" logical=")
+                  output.append_i32(pattern.type_)
+                  output.append(" shape=")
+                  output.append(self_host_body_carrier_name(self_host_body_carrier_from_shape(pattern.shape)))
+                  match pattern.selected_constructor {
+                    SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(declaration, _, _) => {
+                      output.append(" constructor=")
+                      output.append_u64(declaration)
+                    }
+                    _ => output.append(" constructor=missing")
+                  }
+                  match pattern.reference {
+                    SelfHostBodyPatternReference::PatternBindingReference(local) => {
+                      output.append(" local=")
+                      output.append_u32(local)
+                    }
+                    _ => {}
+                  }
+                  match pattern.source {
+                    SelfHostHirPattern::TuplePattern(target, _, _) => {
+                      output.append(" tuple_target=")
+                      output.append_u32(target)
+                    }
+                    _ => {}
+                  }
+                  continue current + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            Option::None => {}
+          }
+          for expression in body.expressions {
+            let source = self_host_planned_expression_identity(module_.expressions[expression.expression])
+            output.append("\ntrace expr=")
+            output.append_u32(expression.expression)
+            output.append(" offset=")
+            output.append_u32(source.offset)
+            output.append(" kind=")
+            output.append(self_host_body_expression_kind_name(source.kind))
+            output.append(" logical=")
+            output.append_i32(source.type_)
+            output.append(" lowered=")
+            output.append(self_host_body_carrier_name(self_host_body_carrier_from_shape(source.shape)))
+            output.append(" frozen=")
+            output.append(self_host_body_carrier_name(expression.carrier))
+            output.append(" target=")
+            output.append_u32(expression.call_function_index)
+            match source.call_target {
+              SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
+                output.append(" inferred_target=")
+                output.append_u64(declaration)
+              }
+              SelfHostBasicCallTarget::ErrorBasicCallTarget => output.append(" inferred_target=error")
+              _ => {}
+            }
+            match source.kind {
+              SelfHostPlannedExpressionKind::PlannedLocalGet(local) => {
+                output.append(" local=")
+                output.append_u32(local)
+              }
+              SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => {
+                output.append(" declaration=")
+                output.append_u64(declaration)
+              }
+              SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, declaration, _, _, _) => {
+                output.append(" declaration=")
+                output.append_u64(declaration)
+              }
+              _ => {}
+            }
+          }
+        }
+        Option::None => output.append("\ntrace missing body plan")
+      }
+    }
+  }
+  output.finish()
+}

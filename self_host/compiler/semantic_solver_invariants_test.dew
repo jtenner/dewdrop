@@ -1,0 +1,112 @@
+test "SOL-204 nested snapshots with identical state are distinct" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let outer = solver.snapshot()
+  let _ = solver.snapshot()
+  solver.commit(outer)
+}
+
+test "SOL-204 a committed snapshot cannot be replayed" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let old = solver.snapshot()
+  solver.commit(old)
+  let _ = solver.snapshot()
+  solver.rollback(old)
+}
+
+test "SOL-204 commit requires an open snapshot" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let old = solver.snapshot()
+  solver.commit(old)
+  solver.commit(old)
+}
+
+test "SOL-205 undo arrays must remain parallel" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  let snapshot = solver.snapshot()
+  solver.set_variable_binding(0u32, 0i32)
+  solver.undo_indices.clear()
+  solver.rollback(snapshot)
+}
+
+test "SOL-205 undo kind must be valid" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  let snapshot = solver.snapshot()
+  solver.set_variable_binding(0u32, 0i32)
+  solver.undo_kinds[0u32] = 3u32
+  solver.rollback(snapshot)
+}
+
+test "SOL-205 undo index must be in its arena" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  let snapshot = solver.snapshot()
+  solver.set_variable_binding(0u32, 0i32)
+  solver.undo_indices[0u32] = 1u32
+  solver.rollback(snapshot)
+}
+
+test "SOL-206 reset requires closed snapshots" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.snapshot()
+  solver.reset()
+}
+
+test "SOL-206 zonk requires closed snapshots" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.snapshot()
+  let _ = solver.zonk_type(0i32)
+}
+
+test "solver accepts nested snapshots without mutations" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let outer = solver.snapshot()
+  let inner = solver.snapshot()
+  solver.commit(inner)
+  solver.rollback(outer)
+  assert(solver.snapshot_count() == 0u32, "snapshots must close in order")
+}
+
+test "SOL-201 variable arrays must remain parallel" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  solver.variable_sizes.clear()
+  let _ = solver.find_variable_root(0u32)
+}
+
+test "SOL-202 parent cycles have a bounded walk" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  let _ = solver.fresh_variable()
+  let _ = solver.union_variables(0u32, 1u32)
+  solver.variable_parents[0u32] = 1u32
+  let _ = solver.find_variable_root(0u32)
+}
+
+test "SOL-202 parents must stay in the variable arena" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  solver.variable_parents[0u32] = 1u32
+  let _ = solver.find_variable_root(0u32)
+}
+
+test "SOL-203 union size cannot overflow" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  let _ = solver.fresh_variable()
+  solver.variable_sizes[0u32] = 4294967295u32
+  let _ = solver.union_variables(0u32, 1u32)
+}
+
+test "SOL-207 resolved type encoding cannot overflow" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.resolved_type(2147483647u32)
+}
+
+test "resolved type encoding round trips at the signed limit" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let encoded = solver.resolved_type(2147483646u32)
+  assert(encoded == -2147483648i32, "last encodable resolved type")
+  assert(solver.decoded_resolved_type(encoded) == 2147483646u32, "decode the last encodable type")
+}

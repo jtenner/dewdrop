@@ -47,6 +47,7 @@ fn self_host_specialization_pairs(
 pub struct SelfHostProgramSpecializationRequest {
   declaration: U64
   shapes: SelfHostHirSpan
+  evidence_types: Array<SelfHostSpecializationEvidenceType>
 }
 
 pub struct SelfHostProgramSpecializedCall {
@@ -1213,13 +1214,14 @@ fn self_host_program_specialization_scan_body(
       )
       match self_host_program_specialization_call_recipe(expression) {
         Option::Some(recipe) => {
-          let target = self_host_program_specialization_evidence_target(
+          let evidence_target = self_host_program_specialization_evidence_target(
             lowering,
             module_,
             body,
             current,
             recipe.target,
           )
+          let target = self_host_program_specialization_bound_target(lowering, module_, body, current, caller, caller_specialization, requests, evidence_target)
           if !self_host_u64_equal(target, 0u64) {
             self_host_program_specialization_add_reachable(
               reachable,
@@ -1257,13 +1259,15 @@ fn self_host_program_specialization_scan_body(
                   break self_host_semantic_unit()
                 }
               }
-              let request = self_host_program_specialization_add_request(
+              let evidence_types = self_host_program_specialization_call_evidence_types(lowering, module_, caller, caller_specialization, requests, target, type_arguments)
+              let request = self_host_program_specialization_add_request_with_evidence(
                 requests,
                 shapes,
                 request_head_by_declaration,
                 request_next,
                 target,
                 candidate_shapes,
+                evidence_types,
               )
               self_host_program_specialization_record_call(
                 calls,
@@ -1282,6 +1286,9 @@ fn self_host_program_specialization_scan_body(
                   let generic_parameters = self_host_program_specialization_callable_generics(
                     callable,
                   )
+                  if generic_parameters.length == 0u32 && !self_host_u64_equal(target, recipe.target) {
+                    self_host_program_specialization_record_call(calls, body.body, caller_specialization, expression_index, target, 4294967295u32)
+                  }
                   if self_host_u32_greater(generic_parameters.length, 0u32) {
                     let candidate_shapes = []
                     let mut complete = true

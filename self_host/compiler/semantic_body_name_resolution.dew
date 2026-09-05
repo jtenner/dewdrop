@@ -2019,6 +2019,7 @@ impl SelfHostBodyNameResolver {
 
 fn self_host_body_variant_names(
   collected: SelfHostCollectedModule,
+  imports: Option<SelfHostModuleImportScope>,
 ) -> Map<U32, Bool> {
   let names = self_host_empty_u32_bool_map()
   let mut variant_index = 0u32
@@ -2032,6 +2033,45 @@ fn self_host_body_variant_names(
     } else {
       break self_host_semantic_unit()
     }
+  }
+  match imports {
+    Option::Some(scope) => {
+      let visible_owners = self_host_empty_u64_bool_map()
+      for interface_index in scope.imported_interfaces {
+        let interface_ = scope.interfaces.at(interface_index)
+        let mut index = 0u32
+        let _ = while index {
+          current => if current < interface_.declaration_count() {
+            let declaration = interface_.declaration_at(current)
+            match scope.lookup_type(declaration.name) {
+              Option::Some(binding) => if self_host_u64_equal(binding.declaration, declaration.declaration) {
+                visible_owners[declaration.declaration] = true
+              }
+              Option::None => {}
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        index = 0u32
+        let _ = while index {
+          current => if current < interface_.variant_count() {
+            let variant = interface_.variant_at(current)
+            if visible_owners.contains_key(variant.declaration) {
+              match collected.find_name(variant.name) {
+                Option::Some(name) => names.set(name, true)
+                Option::None => {}
+              }
+            }
+            continue current + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+    }
+    Option::None => {}
   }
   names
 }
@@ -2487,7 +2527,7 @@ fn self_host_resolve_module_names_with_optional_imports_in_order(
       break self_host_semantic_unit()
     }
   }
-  let variant_names = self_host_body_variant_names(collected)
+  let variant_names = self_host_body_variant_names(collected, imports)
   let slots = SelfHostLambdaEnvironmentSlots::new(collected.lambdas.length())
   let builder = SelfHostBodyNameMergeBuilder::new(collected)
   let mut body_index = 0u32

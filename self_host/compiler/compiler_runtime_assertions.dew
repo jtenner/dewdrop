@@ -1,18 +1,156 @@
 // Shared runtime checks for compiler arena and parallel-array contracts.
 // Keep these checks at typed API boundaries so invalid compiler state traps
 // before an unchecked Wasm array access loses the source-level invariant.
-fn self_host_assert_compiler_invariant(
+import dew.std.wasm.intrinsics as @wasm
+
+pub struct SelfHostInvariantFailure {
+  code: U32
+  phase: U32
+  module_id: U64
+  declaration: U64
+  body: U64
+  expression: U32
+  expected: U64
+  actual: U64
+  detail: U64
+}
+
+fn self_host_invariant_failure_is_present() -> Bool {
+  @wasm.wasm_u64_load(0u32) == 4919706420659244884u64 &&
+    @wasm.wasm_u64_load(8u32) == 1u64
+}
+
+fn self_host_record_invariant_failure(
+  failure: SelfHostInvariantFailure,
+) -> Unit {
+  // The compiler and Facet runtimes reserve low memory as transient scratch.
+  // Write the magic last so a partial write never looks like a complete record.
+  // The trap follows immediately, so no later guest operation can reuse it.
+  @wasm.wasm_u64_store(8u32, 1u64)
+  @wasm.wasm_u32_store(16u32, failure.code)
+  @wasm.wasm_u32_store(20u32, failure.phase)
+  @wasm.wasm_u64_store(24u32, failure.module_id)
+  @wasm.wasm_u64_store(32u32, failure.declaration)
+  @wasm.wasm_u64_store(40u32, failure.body)
+  @wasm.wasm_u32_store(48u32, failure.expression)
+  @wasm.wasm_u64_store(56u32, failure.expected)
+  @wasm.wasm_u64_store(64u32, failure.actual)
+  @wasm.wasm_u64_store(72u32, failure.detail)
+  @wasm.wasm_u64_store(0u32, 4919706420659244884u64)
+}
+
+fn self_host_clear_invariant_failure() -> Unit {
+  @wasm.wasm_u64_store(0u32, 0u64)
+}
+
+pub fn self_host_invariant_failure_code() -> U32 {
+  if self_host_invariant_failure_is_present() {
+    @wasm.wasm_u32_load(16u32)
+  } else {
+    0u32
+  }
+}
+
+pub fn self_host_invariant_failure_phase() -> U32 {
+  if self_host_invariant_failure_is_present() {
+    @wasm.wasm_u32_load(20u32)
+  } else {
+    0u32
+  }
+}
+
+pub fn self_host_invariant_failure_module_id() -> U64 {
+  if self_host_invariant_failure_is_present() {
+    @wasm.wasm_u64_load(24u32)
+  } else {
+    0u64
+  }
+}
+
+pub fn self_host_invariant_failure_declaration() -> U64 {
+  if self_host_invariant_failure_is_present() {
+    @wasm.wasm_u64_load(32u32)
+  } else {
+    0u64
+  }
+}
+
+pub fn self_host_invariant_failure_body() -> U64 {
+  if self_host_invariant_failure_is_present() {
+    @wasm.wasm_u64_load(40u32)
+  } else {
+    0u64
+  }
+}
+
+pub fn self_host_invariant_failure_expression() -> U32 {
+  if self_host_invariant_failure_is_present() {
+    @wasm.wasm_u32_load(48u32)
+  } else {
+    4294967295u32
+  }
+}
+
+pub fn self_host_invariant_failure_expected() -> U64 {
+  if self_host_invariant_failure_is_present() {
+    @wasm.wasm_u64_load(56u32)
+  } else {
+    0u64
+  }
+}
+
+pub fn self_host_invariant_failure_actual() -> U64 {
+  if self_host_invariant_failure_is_present() {
+    @wasm.wasm_u64_load(64u32)
+  } else {
+    0u64
+  }
+}
+
+pub fn self_host_invariant_failure_detail() -> U64 {
+  if self_host_invariant_failure_is_present() {
+    @wasm.wasm_u64_load(72u32)
+  } else {
+    0u64
+  }
+}
+
+fn self_host_assert_compiler_invariant_with_failure(
   condition: Bool,
+  failure: SelfHostInvariantFailure,
   message: String,
 ) -> Bool {
   if condition {
     true
   } else {
-    // The message stays on the typed compiler API. The Wasm trap keeps the
-    // failing helper name in the runtime stack until diagnostic I/O is valid.
-    let _message = message
+    // Formatting and assert output use the same low-memory scratch area.
+    // Nothing may run between publishing this record and trapping. The host
+    // renders the numeric context after it catches the trap.
+    let _ = message
+    self_host_record_invariant_failure(failure)
     unreachable()
   }
+}
+
+fn self_host_assert_compiler_invariant(
+  condition: Bool,
+  message: String,
+) -> Bool {
+  self_host_assert_compiler_invariant_with_failure(
+    condition,
+    SelfHostInvariantFailure::{
+      code: 1u32
+      phase: 0u32
+      module_id: 0u64
+      declaration: 0u64
+      body: 0u64
+      expression: 4294967295u32
+      expected: 0u64
+      actual: 0u64
+      detail: 0u64
+    },
+    message,
+  )
 }
 
 fn self_host_assert_array_index(

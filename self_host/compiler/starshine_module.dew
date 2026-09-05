@@ -542,6 +542,9 @@ fn self_host_linked_canonical_field_carrier(
     Option::Some(value) => value
     Option::None => return SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
   }
+  if link.erased_fields.get(planned.selected_field) is Option::Some(true) {
+    return planned.value.carrier
+  }
   match planned.selected_storage {
     Option::Some(storage) => return self_host_body_carrier_from_shape(
       self_host_linked_storage_shape(storage),
@@ -639,6 +642,15 @@ fn self_host_linked_exact_emitted_expression_carrier(
 ) -> SelfHostWasmBodyCarrier {
   if expression >= module_.expressions.length() {
     return SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+  }
+  match canonical {
+    Option::Some(plan) => match self_host_body_plan_expression(plan, expression) {
+      Option::Some(planned) => if link.erased_fields.get(planned.selected_field) is Option::Some(true) {
+        return planned.value.carrier
+      }
+      Option::None => {}
+    }
+    Option::None => {}
   }
   if self_host_linked_expression_is_variant_call(
     link,
@@ -1172,11 +1184,12 @@ fn self_host_linked_assert_field_get_carrier(
   if expression >= module_.expressions.length() {
     return Option::Some("linked field carrier assertion has an invalid expression")
   }
-  let expected_shape = self_host_planned_merged_body_value_shape(
+  let logical_shape = self_host_planned_merged_body_value_shape(
     module_.resolved_types,
     module_.inferred,
     self_host_planned_expression_at(module_.expressions, expression).type_,
   )
+  let expected_shape = self_host_body_specialization_shape_for_type(link, module_, caller_specialization, module_.expressions[expression].type_, logical_shape)
   let actual_shape = match self_host_linked_physical_field_shape(
     link,
     field_link.type_index,
@@ -1192,7 +1205,7 @@ fn self_host_linked_assert_field_get_carrier(
   if expected is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
     return Option::None
   }
-  if self_host_body_carrier_equal(expected, actual) {
+  if self_host_body_carrier_equal(expected, actual) || (actual is SelfHostWasmBodyCarrier::EqRefBodyCarrier && self_host_linked_erased_field_box_type(link, field, expected) is Option::Some(_)) {
     return Option::None
   }
   // Field emission must use the carrier of the resolved expression type.
@@ -1998,6 +2011,9 @@ fn self_host_linked_constructor_field_shape_matches(
     return true
   }
   let physical_shape = self_host_linked_storage_shape(physical.storage)
+  if self_host_linked_erased_field_box_type(link, physical.declaration, self_host_body_carrier_from_shape(source_shape)) is Option::Some(_) {
+    return physical_shape is SelfHostPlannedValueShape::RefPlannedValueShape
+  }
   match self_host_specialization_canonical_scalar(source_shape) {
     SelfHostPlannedValueShape::I32PlannedValueShape => physical_shape is SelfHostPlannedValueShape::I32PlannedValueShape
     SelfHostPlannedValueShape::I64PlannedValueShape => physical_shape is SelfHostPlannedValueShape::I64PlannedValueShape
@@ -2805,7 +2821,8 @@ fn self_host_linked_schedule_object_constructor(
       let physical_field_carrier = self_host_body_carrier_from_shape(
         self_host_linked_storage_shape(physical_field.storage),
       )
-      if emitted_field_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier || (!(
+      let box_type = self_host_linked_erased_field_box_type(link, physical_field.declaration, emitted_field_carrier)
+      if emitted_field_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier || (!(box_type is Option::Some(_)) && !(
         emitted_field_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier
       ) && !self_host_body_carrier_equal(
         emitted_field_carrier,
@@ -3027,6 +3044,10 @@ fn self_host_linked_schedule_object_constructor(
       if field_value_is_unit && physical_field.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage {
         tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
       } else {
+        match box_type {
+          Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(type_, destination))
+          Option::None => {}
+        }
         self_host_linked_i32_schedule_expression(
           tasks,
           expression_depths,
@@ -3756,6 +3777,15 @@ fn self_host_linked_pattern_variant_type(
   payload_hint: SelfHostPlannedValueShape,
   subject_nominal: U64,
 ) -> Option<U32> {
+  let declaration = self_host_pattern_constructor_declaration(module_, pattern)
+  let adapter = match link.runtime_variant_adapters.get(declaration) {
+    Option::Some(value) => value
+    Option::None => {
+      // User variants, including ones named Some/None/Ok/Err, must use their
+      // selected declaration. A missing constructor is not name evidence.
+      return self_host_linked_variant_type_index(link, declaration)
+    }
+  }
   let mut selected_type = 4294967295u32
   match pattern.selected_constructor {
     SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
@@ -3797,9 +3827,9 @@ fn self_host_linked_pattern_variant_type(
   }
   if name < self_host_linked_module_name_count(module_) {
     let pattern_name = self_host_linked_module_name_at(module_, name)
-    if pattern_name == "None" {
+    if adapter is SelfHostRuntimeVariantAdapter::RuntimeOptionNone {
       Option::Some(self_host_linked_array_runtime_base(link) + 10u32)
-    } else if pattern_name == "Some" {
+    } else if adapter is SelfHostRuntimeVariantAdapter::RuntimeOptionSome {
       let mut carrier = if payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape {
         5i32
       } else {
@@ -3838,7 +3868,7 @@ fn self_host_linked_pattern_variant_type(
       Option::Some(
         self_host_linked_array_runtime_base(link) + 11u32 + self_host_i32_to_u32(carrier),
       )
-    } else if pattern_name == "Ok" || pattern_name == "Err" {
+    } else if adapter is SelfHostRuntimeVariantAdapter::RuntimeResultOk || adapter is SelfHostRuntimeVariantAdapter::RuntimeResultErr {
       let mut carrier = if payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape {
         5i32
       } else {
@@ -3875,7 +3905,7 @@ fn self_host_linked_pattern_variant_type(
       }
       }
       Option::Some(
-        self_host_linked_array_runtime_base(link) + if pattern_name == "Ok" {
+        self_host_linked_array_runtime_base(link) + if adapter is SelfHostRuntimeVariantAdapter::RuntimeResultOk {
           18u32
         } else {
           24u32
@@ -4173,30 +4203,14 @@ fn self_host_linked_expression_variant_type(
   if self_host_u64_equal(variant_declaration, 0u64) {
     variant_declaration = declaration
   }
-  let mut name = ""
-  if planned.source_name < self_host_linked_module_name_count(module_) {
-    name = self_host_linked_module_name_at(module_, planned.source_name)
-  }
-  if name != "Some" && name != "None" {
-    for candidate_module in link.fragments.specialization.lowering.modules {
-      let mut candidate = 0u32
-      let _ = while candidate {
-        current => if current < self_host_linked_named_variant_count(
-          candidate_module,
-        ) {
-          let variant = self_host_linked_named_variant_at(
-            candidate_module,
-            current,
-          )
-          if self_host_u64_equal(variant.declaration, variant_declaration) {
-            name = variant.name
-          }
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
+  let name = match link.runtime_variant_adapters.get(variant_declaration) {
+    Option::Some(adapter) => match adapter {
+      SelfHostRuntimeVariantAdapter::RuntimeOptionNone => "None"
+      SelfHostRuntimeVariantAdapter::RuntimeOptionSome => "Some"
+      SelfHostRuntimeVariantAdapter::RuntimeResultOk => "Ok"
+      SelfHostRuntimeVariantAdapter::RuntimeResultErr => "Err"
     }
+    Option::None => return self_host_linked_variant_type_index(link, variant_declaration)
   }
   if name == "None" {
     Option::Some(self_host_linked_array_runtime_base(link) + 10u32)
@@ -4396,16 +4410,8 @@ fn self_host_linked_zero_arity_variant_type(
     Option::Some(value) => value
     Option::None => return Option::None
   }
-  let name = self_host_linked_module_name_at(module_, planned.source_name)
-  if name == "None" {
-    let option_none_type = self_host_u32_add(
-      self_host_linked_array_runtime_base(link),
-      10u32,
-    )
-    if self_host_u32_equal(type_index, option_none_type) {
-      return Option::Some(type_index)
-    }
-    return Option::None
+  if self_host_u32_equal(type_index, self_host_linked_array_runtime_base(link) + 10u32) {
+    return Option::Some(type_index)
   }
   match self_host_linked_type_field_count(link, type_index) {
     Option::Some(0u32) => Option::Some(type_index)
@@ -6322,35 +6328,15 @@ fn self_host_linked_direct_receiver_expression(
   module_: SelfHostPlannedModuleLowering,
   target: U32,
 ) -> Option<U32> {
-  let mut current = target
-  let mut depth = 0u32
-  let _ = while depth {
-    level => if level < 8u32 && current < module_.expressions.length() {
-      match module_.expressions[current].kind {
-        SelfHostPlannedExpressionKind::PlannedFieldGet(_, base, _) => {
-          current = base
-          continue level + 1u32
-        }
-        SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => {
-          current = base
-          continue level + 1u32
-        }
-        SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
-          current,
-          0u32,
-        ) {
-          current = current - 1u32
-          continue level + 1u32
-        } else {
-          return Option::None
-        }
-        _ => return Option::Some(current)
-      }
-    } else {
-      break self_host_semantic_unit()
-    }
+  if target >= module_.expressions.length() {
+    return Option::None
   }
-  Option::None
+  let base = self_host_planned_expression_at(module_.expressions, target).member_base
+  if base < module_.expressions.length() {
+    Option::Some(base)
+  } else {
+    Option::None
+  }
 }
 
 fn self_host_linked_direct_get_result_shape(
@@ -7953,6 +7939,15 @@ fn self_host_linked_expression_is_string_constant(
     }
   }
   false
+}
+
+fn self_host_linked_expression_is_string_value(module_: SelfHostPlannedModuleLowering, expression: U32) -> Bool {
+  if expression >= module_.expressions.length() {
+    return false
+  }
+  // String identity comes from the resolved logical type, not whether an
+  // operand happens to be a literal. Eqref is only its physical carrier.
+  self_host_u32_equal(self_host_linked_body_primitive_rank(module_, module_.expressions[expression].type_), 9u32)
 }
 
 fn self_host_linked_expression_wraps_expression(
@@ -10921,37 +10916,20 @@ fn self_host_linked_physical_function_module_id(
   link: SelfHostPlannedProgramWasmGCLink,
   physical_function_index: U32,
 ) -> U64 {
-  if physical_function_index < 2u32 {
-    return 0u64
+  match self_host_linked_physical_function(link, physical_function_index) {
+    Option::Some(function_) => link.fragments.specialization.lowering.modules[function_.module_index].module_id
+    Option::None => 0u64
   }
-  let logical = self_host_u32_subtract(physical_function_index, 2u32)
-  for function_ in link.functions {
-    if self_host_u32_equal(function_.function_index, logical) {
-      return link.fragments.specialization.lowering.modules[
-        function_.module_index
-      ].module_id
-    }
-  }
-  0u64
 }
 
 fn self_host_linked_physical_function_has_receiver(
   link: SelfHostPlannedProgramWasmGCLink,
   physical_function_index: U32,
 ) -> Bool {
-  if physical_function_index < 2u32 {
-    return false
+  match self_host_linked_physical_function(link, physical_function_index) {
+    Option::Some(function_) => self_host_linked_declaration_has_receiver(link, function_.declaration)
+    Option::None => false
   }
-  let logical = self_host_u32_subtract(physical_function_index, 2u32)
-  for function_ in link.functions {
-    if self_host_u32_equal(function_.function_index, logical) {
-      return self_host_linked_declaration_has_receiver(
-        link,
-        function_.declaration,
-      )
-    }
-  }
-  false
 }
 
 fn self_host_linked_physical_function_is_import(
@@ -11039,13 +11017,11 @@ fn self_host_linked_physical_function_specialization_shape_at(
   physical_function_index: U32,
   position: U32,
 ) -> SelfHostPlannedValueShape {
-  if physical_function_index < 2u32 {
-    return SelfHostPlannedValueShape::ErrorPlannedValueShape
+  let function_ = match self_host_linked_physical_function(link, physical_function_index) {
+    Option::Some(value) => value
+    Option::None => return SelfHostPlannedValueShape::ErrorPlannedValueShape
   }
-  let logical = self_host_u32_subtract(physical_function_index, 2u32)
-  for function_ in link.functions {
-    if self_host_u32_equal(function_.function_index, logical) &&
-      !self_host_u32_equal(function_.specialization, 4294967295u32) &&
+  if !self_host_u32_equal(function_.specialization, 4294967295u32) &&
       self_host_u32_greater(
         link.fragments.specialization.requests.length(),
         function_.specialization,
@@ -11057,7 +11033,6 @@ fn self_host_linked_physical_function_specialization_shape_at(
           return link.fragments.specialization.shapes[index]
         }
       }
-    }
   }
   SelfHostPlannedValueShape::ErrorPlannedValueShape
 }
@@ -11066,21 +11041,14 @@ fn self_host_linked_physical_function_specialization_shape(
   link: SelfHostPlannedProgramWasmGCLink,
   physical_function_index: U32,
 ) -> SelfHostPlannedValueShape {
-  if physical_function_index < 2u32 {
-    return SelfHostPlannedValueShape::ErrorPlannedValueShape
+  let function_ = match self_host_linked_physical_function(link, physical_function_index) {
+    Option::Some(value) => value
+    Option::None => return SelfHostPlannedValueShape::ErrorPlannedValueShape
   }
-  let logical = self_host_u32_subtract(physical_function_index, 2u32)
-  for function_ in link.functions {
-    if self_host_u32_equal(function_.function_index, logical) {
-      match self_host_linked_specialization_first_shape(link, function_) {
-        Option::Some(shape) => {
-          return shape
-        }
-        Option::None => {}
-      }
-    }
+  match self_host_linked_specialization_first_shape(link, function_) {
+    Option::Some(shape) => shape
+    Option::None => SelfHostPlannedValueShape::ErrorPlannedValueShape
   }
-  SelfHostPlannedValueShape::ErrorPlannedValueShape
 }
 
 fn self_host_linked_physical_function_returns_generic_ref(
@@ -11763,43 +11731,24 @@ fn self_host_linked_i32_call_index(
   ) {
     return Option::None
   }
-  for call in link.specialized_calls {
-    if self_host_u64_equal(call.caller_body, caller_body) &&
-      self_host_u32_equal(call.caller_specialization, caller_specialization) &&
-      self_host_u32_equal(call.expression, expression) &&
-      self_host_linked_function_declaration_module_matches(
-        link,
-        call.function_index,
-        declaration,
-      ) {
-      return Option::Some(
-        self_host_linked_physical_function_index(call.function_index),
-      )
-    }
-  }
-  let mut fallback = 4294967295u32
-  for function_ in link.functions {
-    if self_host_u64_equal(function_.declaration, declaration) &&
-      self_host_linked_function_declaration_module_matches(
-        link,
-        function_.function_index,
-        declaration,
-      ) {
-      if self_host_u32_equal(function_.specialization, 4294967295u32) {
-        return Option::Some(
-          self_host_linked_physical_function_index(function_.function_index),
-        )
+  match self_host_linked_call_index_get(link.call_index, caller_body, caller_specialization, expression) {
+    Option::Some(function_index) => {
+      if self_host_linked_function_declaration_module_matches(link, function_index, declaration) || self_host_linked_bound_call_declaration_matches(link, caller_body, caller_specialization, expression, declaration, function_index) {
+        return Option::Some(self_host_linked_physical_function_index(function_index))
       }
-      if self_host_u32_equal(fallback, 4294967295u32) {
-        fallback = function_.function_index
-      }
+      return Option::None
     }
+    Option::None => {}
   }
-  if self_host_u32_equal(fallback, 4294967295u32) {
-    Option::None
-  } else {
-    Option::Some(self_host_linked_physical_function_index(fallback))
+  match link.call_index.plain_functions.get(declaration) {
+    Option::Some(function_index) => if self_host_linked_function_declaration_module_matches(link, function_index, declaration) {
+      return Option::Some(self_host_linked_physical_function_index(function_index))
+    }
+    Option::None => {}
   }
+  // A specialized function is valid only with an exact call-site record.
+  // Link order must not select a physical ABI.
+  Option::None
 }
 
 fn self_host_linked_builtin_name(
@@ -12086,6 +12035,15 @@ fn self_host_linked_call_argument_shape(
   caller_specialization: U32,
   expression: U32,
 ) -> SelfHostPlannedValueShape {
+  match canonical {
+    Option::Some(plan) => match self_host_body_plan_expression(plan, expression) {
+      Option::Some(planned) => if link.erased_fields.get(planned.selected_field) is Option::Some(true) {
+        return self_host_body_carrier_shape(planned.value.carrier)
+      }
+      Option::None => {}
+    }
+    Option::None => {}
+  }
   if expression < module_.expressions.length() {
     match module_.expressions[expression].kind {
       SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _) => match canonical {
@@ -13545,6 +13503,90 @@ fn self_host_linked_assert_array_get_carrier(
   Option::None
 }
 
+fn self_host_linked_assert_planned_call_operands(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  expression: U32,
+  function_index: U32,
+  call: SelfHostPhysicalCallPlan,
+) -> Option<String> {
+  if !self_host_u32_equal(call.physical_function, function_index) {
+    let message = StringBuilder::new()
+    message.append("ABI-701 planned call target differs from emitted target expression=")
+    message.append_u32(expression)
+    message.append(" planned=")
+    message.append_u32(call.physical_function)
+    message.append(" emitted=")
+    message.append_u32(function_index)
+    return Option::Some(message.finish())
+  }
+  if !call.emits_call {
+    return Option::Some("ABI-708 a non-returning argument reached call emission")
+  }
+  let parameter_count = self_host_linked_physical_function_parameter_count(
+    link,
+    function_index,
+  )
+  if !self_host_u32_equal(parameter_count, call.operands.length) {
+    let message = StringBuilder::new()
+    message.append("ABI-703 physical call operand count mismatch expression=")
+    message.append_u32(expression)
+    message.append(" parameters=")
+    message.append_u32(parameter_count)
+    message.append(" operands=")
+    message.append_u32(call.operands.length)
+    return Option::Some(message.finish())
+  }
+  let mut operand = 0u32
+  let _ = while operand {
+    current => if current < call.operands.length {
+      let source_index = self_host_u32_add(call.operands.start, current)
+      if source_index >= plan.call_operands.length() {
+        return Option::Some("ABI-704 physical call operand is outside its arena")
+      }
+      let source = plan.call_operands[source_index]
+      let source_expression = self_host_body_call_operand_expression(source)
+      let expected = self_host_body_carrier_from_shape(
+        self_host_linked_physical_function_parameter_shape(
+          link,
+          function_index,
+          current,
+        ),
+      )
+      match self_host_body_plan_expression(plan, source_expression) {
+        Option::Some(actual) => if actual.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier ||
+          actual.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+          return Option::Some("ABI-708 erased value reached physical call emission")
+        } else if actual.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier ||
+          actual.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier ||
+          !self_host_body_carrier_equal(expected, actual.carrier) {
+          let message = StringBuilder::new()
+          message.append("ABI-705 physical call operand carrier mismatch expression=")
+          message.append_u32(expression)
+          message.append(" operand=")
+          message.append_u32(current)
+          message.append(" source=")
+          message.append_u32(source_expression)
+          message.append(" expected=")
+          message.append(self_host_body_carrier_name(expected))
+          message.append(" actual=")
+          message.append(self_host_body_carrier_name(actual.carrier))
+          return Option::Some(message.finish())
+        }
+        Option::None => return Option::Some(
+          "ABI-704 physical call operand has no expression plan",
+        )
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let _ = module_
+  Option::None
+}
+
 fn self_host_linked_assert_call_arguments(
   link: SelfHostPlannedProgramWasmGCLink,
   canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
@@ -13641,6 +13683,20 @@ fn self_host_linked_assert_call_arguments(
     message.append(" actual=")
     message.append(self_host_body_carrier_name(physical_result_carrier))
     return Option::Some(message.finish())
+  }
+  match canonical {
+    Option::Some(plan) => match self_host_body_call_plan(plan, expression) {
+      Option::Some(call) => return self_host_linked_assert_planned_call_operands(
+        link,
+        plan,
+        module_,
+        expression,
+        function_index,
+        call,
+      )
+      Option::None => {}
+    }
+    Option::None => {}
   }
   if parameter_count < arguments.length {
     let message = StringBuilder::new()
@@ -13997,6 +14053,141 @@ fn self_host_linked_i32_push_physical_arguments(
     expression_depths,
     depth,
   )
+}
+
+fn self_host_linked_i32_push_planned_arguments(
+  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  expression: U32,
+  arguments: SelfHostHirSpan,
+  function_index: U32,
+  instructions: StarshineInstructions,
+  tasks: Array<SelfHostLinkedI32EmitTask>,
+  expression_depths: Array<U32>,
+  depth: U32,
+) -> Option<String> {
+  let plan = match canonical {
+    Option::Some(value) => value
+    Option::None => return self_host_linked_i32_push_physical_arguments(
+      link,
+      module_,
+      arguments,
+      function_index,
+      instructions,
+      tasks,
+      expression_depths,
+      depth,
+    )
+  }
+  let call = match self_host_body_call_plan(plan, expression) {
+    Option::Some(value) => value
+    Option::None => return Option::Some(
+      "ABI-704 emitted call has no physical operand recipe",
+    )
+  }
+  if !self_host_u32_equal(call.physical_function, function_index) {
+    return Option::Some("ABI-701 planned and emitted call targets differ")
+  }
+  let flatten_product = self_host_u32_equal(arguments.length, 1u32) &&
+    self_host_u32_equal(
+      self_host_linked_physical_function_parameter_count(link, function_index),
+      2u32,
+    )
+  let mut evaluation = call.evaluations.length
+  let _ = while evaluation {
+    current => if current > 0u32 {
+      let previous = current - 1u32
+      let index = self_host_u32_add(call.evaluations.start, previous)
+      if index >= plan.call_evaluations.length() {
+        return Option::Some("ABI-702 call evaluation is outside its arena")
+      }
+      let source_expression = plan.call_evaluations[index]
+      let mut receiver = false
+      let mut operand = 0u32
+      let _ = while operand {
+        position => if position < call.operands.length {
+          let operand_index = self_host_u32_add(call.operands.start, position)
+          if operand_index < plan.call_operands.length() {
+            match plan.call_operands[operand_index] {
+              SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(value) => if self_host_u32_equal(
+                value,
+                source_expression,
+              ) {
+                receiver = true
+              }
+              _ => {}
+            }
+          }
+          continue position + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      if !receiver {
+        match self_host_body_plan_expression(plan, source_expression) {
+          Option::Some(source_plan) => if source_plan.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+            self_host_linked_i32_schedule_discarded_expression(
+              tasks,
+              expression_depths,
+              source_expression,
+              instructions,
+              depth,
+            )
+          } else if flatten_product && source_expression < module_.expressions.length() {
+            match module_.expressions[source_expression].kind {
+              SelfHostPlannedExpressionKind::PlannedProductNew(fields) => match self_host_linked_i32_push_arguments(
+                module_,
+                fields,
+                instructions,
+                tasks,
+                expression_depths,
+                depth,
+              ) {
+                Option::Some(error) => return Option::Some(error)
+                Option::None => {}
+              }
+              _ => self_host_linked_i32_schedule_expression(
+                tasks,
+                expression_depths,
+                source_expression,
+                instructions,
+                depth,
+              )
+            }
+          } else {
+            self_host_linked_i32_schedule_expression(
+              tasks,
+              expression_depths,
+              source_expression,
+              instructions,
+              depth,
+            )
+          }
+          Option::None => return Option::Some(
+            "ABI-704 call evaluation has no expression plan",
+          )
+        }
+      }
+      continue previous
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_i32_planned_call_emits(
+  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  expression: U32,
+) -> Bool {
+  match canonical {
+    Option::Some(plan) => match self_host_body_call_plan(plan, expression) {
+      Option::Some(call) => call.emits_call
+      Option::None => true
+    }
+    Option::None => true
+  }
 }
 
 fn self_host_body_plan_expression_from_optional(
@@ -14505,33 +14696,44 @@ fn self_host_linked_refine_canonical_expression_shape(
   if carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier {
     return false
   }
-  let mut current = 0u32
-  let _ = while current {
-    index => if index < plan.expressions.length() {
-      let source = plan.expressions[index]
-      if self_host_u32_equal(source.expression, expression) {
-        if self_host_body_carrier_equal(source.carrier, carrier) {
-          return false
-        }
-        plan.expressions[index] = SelfHostPlannedPhysicalExpressionCarrier::{
-          expression: source.expression
-          value: self_host_body_value_with_carrier(source.value, carrier)
-          carrier: carrier
-          receiver_expression: source.receiver_expression
-          receiver_logical_type: source.receiver_logical_type
-          receiver_nominal_owner: source.receiver_nominal_owner
-          receiver_physical_heap_type: source.receiver_physical_heap_type
-          selected_field: source.selected_field
-          selected_type_index: source.selected_type_index
-          selected_field_index: source.selected_field_index
-          selected_storage: source.selected_storage
-          call_function_index: source.call_function_index
-        }
-        return true
+  // A canonical plan has passed the planner's freeze point. Emission may
+  // check its evidence, but must never repair or replace that evidence.
+  match self_host_body_plan_expression(plan, expression) {
+    Option::Some(source) => {
+      if !self_host_body_carrier_equal(source.carrier, carrier) {
+        let _ = self_host_assert_compiler_invariant_with_failure(
+          false,
+          SelfHostInvariantFailure::{
+            code: 605u32
+            phase: 6u32
+            module_id: plan.module_id
+            declaration: plan.declaration
+            body: plan.body
+            expression: expression
+            expected: self_host_body_carrier_code(source.carrier)
+            actual: self_host_body_carrier_code(carrier)
+            detail: u32_into_u64(plan.physical_function_index)
+          },
+          "emission attempted to change a frozen carrier",
+        )
       }
-      continue index + 1u32
-    } else {
-      break self_host_semantic_unit()
+    }
+    Option::None => {
+      let _ = self_host_assert_compiler_invariant_with_failure(
+        false,
+        SelfHostInvariantFailure::{
+          code: 606u32
+          phase: 6u32
+          module_id: plan.module_id
+          declaration: plan.declaration
+          body: plan.body
+          expression: expression
+          expected: u32_into_u64(plan.expressions.length())
+          actual: u32_into_u64(expression)
+          detail: u32_into_u64(plan.physical_function_index)
+        },
+        "emission expression is absent from the frozen plan",
+      )
     }
   }
   false
@@ -17749,6 +17951,11 @@ fn self_host_emit_linked_i32_expression(
                   Option::Some(error) => return Option::Some(error)
                   Option::None => {}
                 }
+                let value_carrier = self_host_linked_exact_emitted_expression_carrier(canonical_body_plan, link, module_, body, caller_specialization, expression)
+                match self_host_linked_erased_field_box_type(link, field, value_carrier) {
+                  Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructGet(type_, 0u32, destination))
+                  Option::None => {}
+                }
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructGet(
                   field_link.type_index,
                   field_link.field_index,
@@ -17777,6 +17984,11 @@ fn self_host_emit_linked_i32_expression(
                   field_link.field_index,
                   destination,
                 ))
+                let value_carrier = self_host_linked_exact_emitted_expression_carrier(canonical_body_plan, link, module_, body, caller_specialization, value)
+                match self_host_linked_erased_field_box_type(link, field, value_carrier) {
+                  Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(type_, destination))
+                  Option::None => {}
+                }
                 self_host_linked_i32_schedule_expression(
                   tasks,
                   expression_depths,
@@ -17836,49 +18048,10 @@ fn self_host_emit_linked_i32_expression(
                   module_,
                   target,
                 )
-                let physical_map_has_receiver = self_host_linked_physical_function_has_receiver(
-                  link,
-                  function_index,
-                )
-                let syntactic_map_has_receiver = target < module_.expressions.length() && match module_.expressions[target].kind {
-                  SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _) => true
-                  SelfHostPlannedExpressionKind::PlannedUnresolvedField(_, _) => true
-                  SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
-                    target,
-                    0u32,
-                  ) {
-                    match module_.expressions[target - 1u32].kind {
-                      SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _) => true
-                      SelfHostPlannedExpressionKind::PlannedUnresolvedField(_, _) => true
-                      _ => false
-                    }
-                  } else {
-                    false
-                  }
-                  _ => false
-                }
-                let direct_map_has_receiver = physical_map_has_receiver || syntactic_map_has_receiver ||
+                let direct_map_has_receiver = !direct_target_is_static_module &&
                   self_host_linked_declaration_has_receiver(link, declaration)
-                let direct_map_receiver_expression = if direct_map_has_receiver &&
-                  target < module_.expressions.length() {
-                  match module_.expressions[target].kind {
-                    SelfHostPlannedExpressionKind::PlannedFieldGet(_, base, _) => base
-                    SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => base
-                    SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
-                      target,
-                      0u32,
-                    ) {
-                      let candidate = target - 1u32
-                      match module_.expressions[candidate].kind {
-                        SelfHostPlannedExpressionKind::PlannedFieldGet(_, base, _) => base
-                        SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => base
-                        _ => candidate
-                      }
-                    } else {
-                      4294967295u32
-                    }
-                    _ => target
-                  }
+                let direct_map_receiver_expression = if direct_map_has_receiver {
+                  self_host_body_call_receiver_expression(link, module_, expression, declaration)
                 } else if self_host_u32_greater(arguments.length, 0u32) &&
                   arguments.start < module_.expression_children.length() {
                   module_.expression_children[arguments.start]
@@ -18456,51 +18629,8 @@ fn self_host_emit_linked_i32_expression(
                     continue tasks.length()
                   }
                 }
-                let direct_array_receiver_source = if declaration_name.equals(
-                  b"self_host_array_pop",
-                ) && self_host_u32_greater(arguments.length, 0u32) &&
-                  arguments.start < module_.expression_children.length() {
-                  module_.expression_children[arguments.start]
-                } else if self_host_u32_equal(
-                  arguments.length,
-                  1u32,
-                ) && target < module_.expressions.length() {
-                  match module_.expressions[target].kind {
-                    SelfHostPlannedExpressionKind::PlannedFieldGet(_, base, _) => base
-                    SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => base
-                    SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
-                      target,
-                      0u32,
-                    ) {
-                      let candidate = target - 1u32
-                      let candidate_owner = match self_host_linked_canonical_expression_heap_type(
-                        canonical_body_plan,
-                        module_,
-                        body,
-                        candidate,
-                      ) {
-                        Option::Some(type_index) => self_host_linked_physical_type_owner_module_id(
-                          link,
-                          type_index,
-                        )
-                        Option::None => 0u64
-                      }
-                      if self_host_u64_equal(candidate_owner, link.array_module_id) ||
-                        self_host_linked_expression_is_array_value(
-                          link,
-                          module_,
-                          body,
-                          candidate,
-                        ) {
-                        candidate
-                      } else {
-                        4294967295u32
-                      }
-                    } else {
-                      4294967295u32
-                    }
-                    _ => 4294967295u32
-                  }
+                let direct_array_receiver = if self_host_linked_declaration_has_receiver(link, declaration) {
+                  self_host_body_call_receiver_expression(link, module_, expression, declaration)
                 } else if self_host_u32_greater(
                   arguments.length,
                   0u32,
@@ -18508,16 +18638,6 @@ fn self_host_emit_linked_i32_expression(
                   module_.expression_children[arguments.start]
                 } else {
                   4294967295u32
-                }
-                let direct_array_receiver = if self_host_array_index_is_valid(
-                  direct_array_receiver_source,
-                  module_.expressions.length(),
-                ) &&
-                  module_.expressions[direct_array_receiver_source].kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression &&
-                  self_host_u32_greater(direct_array_receiver_source, 0u32) {
-                  self_host_u32_subtract(direct_array_receiver_source, 1u32)
-                } else {
-                  direct_array_receiver_source
                 }
                 if declaration_name.equals(b"self_host_array_pop") &&
                   self_host_u32_equal(arguments.length, 1u32) && !self_host_u32_equal(
@@ -19170,52 +19290,54 @@ fn self_host_emit_linked_i32_expression(
                       _ => {}
                     }
                   }
-                  if logical_not_after_call {
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Prefix(
-                      SelfHostHirPrefixOperator::LogicalNot,
-                      destination,
-                    ))
-                  }
-                  match self_host_linked_assert_call_arguments(
-                    link,
+                  let emit_physical_call = self_host_linked_i32_planned_call_emits(
                     canonical_body_plan,
-                    module_,
-                    body,
-                    caller_specialization,
                     expression,
-                    function_index,
-                    arguments,
-                  ) {
-                    Option::Some(error) => return Option::Some(error)
-                    Option::None => {}
-                  }
-                  self_host_linked_schedule_call_result_adapter(
-                    canonical_body_plan,
-                    link,
-                    module_,
-                    body,
-                    caller_specialization,
-                    expression,
-                    function_index,
-                    tasks,
-                    destination,
                   )
-                  if direct_qualified_owner_name == "FixedArray" && (
-                    declaration_name.equals(b"make") || declaration_name.equals(b"new")
-                  ) {
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructGet(
-                      self_host_linked_array_wrapper_type(link),
-                      0u32,
+                  if emit_physical_call {
+                    if logical_not_after_call {
+                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Prefix(
+                        SelfHostHirPrefixOperator::LogicalNot,
+                        destination,
+                      ))
+                    }
+                    match self_host_linked_assert_call_arguments(
+                      link,
+                      canonical_body_plan,
+                      module_,
+                      body,
+                      caller_specialization,
+                      expression,
+                      function_index,
+                      arguments,
+                    ) {
+                      Option::Some(error) => return Option::Some(error)
+                      Option::None => {}
+                    }
+                    self_host_linked_schedule_call_result_adapter(
+                      canonical_body_plan,
+                      link,
+                      module_,
+                      body,
+                      caller_specialization,
+                      expression,
+                      function_index,
+                      tasks,
+                      destination,
+                    )
+                    // The selected function returns its declared physical
+                    // result. FixedArray factories already return a raw array;
+                    // their source name cannot authorize an Array-wrapper read.
+                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
+                      function_index,
                       destination,
                     ))
                   }
-                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
-                    function_index,
-                    destination,
-                  ))
-                  match self_host_linked_i32_push_physical_arguments(
+                  match self_host_linked_i32_push_planned_arguments(
+                    canonical_body_plan,
                     link,
                     module_,
+                    expression,
                     arguments,
                     function_index,
                     destination,
@@ -19599,13 +19721,11 @@ fn self_host_emit_linked_i32_expression(
               _ => {
                 let string_comparison = (operator is SelfHostHirBinaryOperator::Equal ||
                   operator is SelfHostHirBinaryOperator::NotEqual) && (
-                  self_host_linked_expression_is_string_constant(
+                  self_host_linked_expression_is_string_value(
                     module_,
-                    body,
                     left,
-                  ) || self_host_linked_expression_is_string_constant(
+                  ) && self_host_linked_expression_is_string_value(
                     module_,
-                    body,
                     right,
                   )
                 )
@@ -21723,28 +21843,49 @@ fn self_host_emit_linked_i32_expression(
                       static_declaration,
                     ) {
                       Option::Some(function_index) => {
-                        let discard_namespace_call = expression < discarded_expressions.length() &&
-                          discarded_expressions[expression]
-                        if !discard_namespace_call {
-                          self_host_linked_schedule_call_result_adapter(
-                            canonical_body_plan,
+                        let emit_physical_call = self_host_linked_i32_planned_call_emits(
+                          canonical_body_plan,
+                          expression,
+                        )
+                        if emit_physical_call {
+                          match self_host_linked_assert_call_arguments(
                             link,
+                            canonical_body_plan,
                             module_,
                             body,
                             caller_specialization,
                             expression,
                             function_index,
-                            tasks,
+                            arguments,
+                          ) {
+                            Option::Some(error) => return Option::Some(error)
+                            Option::None => {}
+                          }
+                          let discard_namespace_call = expression < discarded_expressions.length() &&
+                            discarded_expressions[expression]
+                          if !discard_namespace_call {
+                            self_host_linked_schedule_call_result_adapter(
+                              canonical_body_plan,
+                              link,
+                              module_,
+                              body,
+                              caller_specialization,
+                              expression,
+                              function_index,
+                              tasks,
+                              destination,
+                            )
+                          }
+                          tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
+                            function_index,
                             destination,
-                          )
+                          ))
                         }
-                        tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
-                          function_index,
-                          destination,
-                        ))
-                        match self_host_linked_i32_push_physical_arguments(
+                        match self_host_linked_i32_push_planned_arguments(
+                          canonical_body_plan,
                           link,
                           module_,
+                          expression,
                           arguments,
                           function_index,
                           destination,
@@ -22990,6 +23131,7 @@ fn self_host_emit_linked_i32_expression(
                     0u64,
                   ) {
                     Option::Some(function_index) => {
+                      let mut raw_physical_call = false
                       if (method_name == "length" || method_name == "capacity") &&
                         canonical_receiver_is_array {
                         let message = StringBuilder::new()
@@ -23355,32 +23497,54 @@ fn self_host_emit_linked_i32_expression(
                           destination,
                         ))
                       } else {
-                        match self_host_linked_assert_call_arguments(
-                          link,
+                        let emit_physical_call = self_host_linked_i32_planned_call_emits(
                           canonical_body_plan,
-                          module_,
-                          body,
-                          caller_specialization,
                           expression,
-                          function_index,
-                          arguments,
-                        ) {
-                          Option::Some(error) => return Option::Some(error)
-                          Option::None => {}
+                        )
+                        if emit_physical_call {
+                          match self_host_linked_assert_call_arguments(
+                            link,
+                            canonical_body_plan,
+                            module_,
+                            body,
+                            caller_specialization,
+                            expression,
+                            function_index,
+                            arguments,
+                          ) {
+                            Option::Some(error) => return Option::Some(error)
+                            Option::None => {}
+                          }
+                          tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
+                            function_index,
+                            destination,
+                          ))
                         }
-                        tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
+                        raw_physical_call = true
+                      }
+                      match if raw_physical_call {
+                        self_host_linked_i32_push_planned_arguments(
+                          canonical_body_plan,
+                          link,
+                          module_,
+                          expression,
+                          arguments,
                           function_index,
                           destination,
-                        ))
-                      }
-                      match self_host_linked_i32_push_arguments(
-                        module_,
-                        arguments,
-                        destination,
-                        tasks,
-                        expression_depths,
-                        depth,
-                      ) {
+                          tasks,
+                          expression_depths,
+                          depth,
+                        )
+                      } else {
+                        self_host_linked_i32_push_arguments(
+                          module_,
+                          arguments,
+                          destination,
+                          tasks,
+                          expression_depths,
+                          depth,
+                        )
+                      } {
                         Option::Some(error) => {
                           return Option::Some(error)
                         }
@@ -26922,6 +27086,12 @@ fn self_host_emit_linked_i32_expression(
               return Option::Some("linked pattern kind is unsupported")
             }
           }
+          if condition_ready && variant_type != 4294967295u32 {
+            match self_host_emit_nested_pattern_tests(link, module_, pattern, variant_type, scratch, [], destination) {
+              Option::Some(error) => return Option::Some(error)
+              Option::None => {}
+            }
+          }
           if catch_all && self_host_u32_equal(
             arm.guard_condition,
             4294967295u32,
@@ -26946,6 +27116,12 @@ fn self_host_emit_linked_i32_expression(
           } else {
             let consequent = StarshineFfi.ffi_ffi_bridge_instructions_new()
             let alternative = StarshineFfi.ffi_ffi_bridge_instructions_new()
+            let guarded_pattern = !catch_all && arm.guard_condition != 4294967295u32
+            let binding_destination = if guarded_pattern {
+              StarshineFfi.ffi_ffi_bridge_instructions_new()
+            } else {
+              consequent
+            }
             tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32If(
               destination,
               consequent,
@@ -26953,6 +27129,10 @@ fn self_host_emit_linked_i32_expression(
               result_shape,
             ))
             if !self_host_u32_equal(variant_type, 4294967295u32) {
+              match self_host_emit_nested_pattern_bindings(link, module_, body, canonical_body_plan, pattern, variant_type, scratch, [], binding_destination) {
+                Option::Some(error) => return Option::Some(error)
+                Option::None => {}
+              }
               match pattern.source {
                 SelfHostHirPattern::TuplePattern(_, children, _) => {
                   let mut child_offset = 0u32
@@ -27080,7 +27260,7 @@ fn self_host_emit_linked_i32_expression(
                                   Option::None => {}
                                 }
                                 StarshineFfi.ffi_ffi_bridge_instructions_push(
-                                  consequent,
+                                  binding_destination,
                                   StarshineFfi.ffi_lib_Instruction_local_get(
                                     StarshineFfi.ffi_lib_LocalIdx_new(
                                       scratch.into(),
@@ -27088,13 +27268,13 @@ fn self_host_emit_linked_i32_expression(
                                   ),
                                 )
                                 StarshineFfi.ffi_ffi_bridge_instructions_push(
-                                  consequent,
+                                  binding_destination,
                                   StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(
                                     self_host_u32_to_i32(variant_type),
                                   ),
                                 )
                                 StarshineFfi.ffi_ffi_bridge_instructions_push(
-                                  consequent,
+                                  binding_destination,
                                   StarshineFfi.ffi_lib_Instruction_struct_get(
                                     StarshineFfi.ffi_lib_TypeIdx_new(
                                     self_host_u32_to_i32(variant_type),
@@ -27103,7 +27283,7 @@ fn self_host_emit_linked_i32_expression(
                                   ),
                                 )
                                 StarshineFfi.ffi_ffi_bridge_instructions_push(
-                                  consequent,
+                                  binding_destination,
                                   StarshineFfi.ffi_lib_Instruction_local_set(
                                     StarshineFfi.ffi_lib_LocalIdx_new(slot.into()),
                                   ),
@@ -27161,6 +27341,24 @@ fn self_host_emit_linked_i32_expression(
                 self_host_u32_add(depth, 1u32),
               )
             }
+            if guarded_pattern {
+              // A guard runs only after the complete pattern matched and its
+              // locals were bound. Keep one shared next-arm path, so a chain
+              // of guarded arms grows linearly rather than duplicating tails.
+              let guard_false = StarshineFfi.ffi_ffi_bridge_instructions_new()
+              StarshineFfi.ffi_ffi_bridge_instructions_push(
+                guard_false,
+                StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(0i32)),
+              )
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32If(
+                destination, binding_destination, guard_false,
+                SelfHostPlannedValueShape::I32PlannedValueShape,
+              ))
+              self_host_linked_i32_schedule_expression(
+                tasks, expression_depths, arm.guard_condition,
+                binding_destination, self_host_u32_add(depth, 1u32),
+              )
+            }
             if catch_all {
               self_host_linked_i32_schedule_expression(
                 tasks,
@@ -27170,12 +27368,7 @@ fn self_host_emit_linked_i32_expression(
                 depth,
               )
             } else if !condition_ready {
-              if !self_host_u32_equal(
-                arm.guard_condition,
-                4294967295u32,
-              ) {
-                return Option::Some("linked literal match guards are not emitted yet")
-              }
+
               if self_host_linked_expression_is_string_constant(
                 module_,
                 body,
@@ -29112,12 +29305,8 @@ fn self_host_linked_physical_function_parameter_argument_shape(
   explicit_argument_count: U32,
   type_argument: U32,
 ) -> Option<SelfHostPlannedValueShape> {
-  if physical_function_index < 2u32 {
-    return Option::None
-  }
-  let logical = self_host_u32_subtract(physical_function_index, 2u32)
-  for function_ in link.functions {
-    if self_host_u32_equal(function_.function_index, logical) {
+  match self_host_linked_physical_function(link, physical_function_index) {
+    Option::Some(function_) => {
       let module_ = link.fragments.specialization.lowering.modules[
         function_.module_index
       ]
@@ -29131,7 +29320,7 @@ fn self_host_linked_physical_function_parameter_argument_shape(
           } else {
             0u32
           }
-          return self_host_linked_callable_parameter_argument_shape_from_callable(
+          self_host_linked_callable_parameter_argument_shape_from_callable(
             module_,
             callable,
             self_host_u32_add(explicit_position, receiver_offset),
@@ -29139,11 +29328,11 @@ fn self_host_linked_physical_function_parameter_argument_shape(
             type_argument,
           )
         }
-        Option::None => return Option::None
+        Option::None => Option::None
       }
     }
+    Option::None => Option::None
   }
-  Option::None
 }
 
 fn self_host_linked_local_call_container_argument_shape(
@@ -31276,21 +31465,11 @@ fn self_host_linked_specialized_function_result_shape(
   module_: SelfHostPlannedModuleWasmGCFragments,
   fragment: SelfHostPlannedWasmFunctionFragment,
 ) -> SelfHostPlannedValueShape {
-  let fallback = self_host_linked_fragment_result_shape(module_, fragment)
-  let name = self_host_linked_function_name(link, linked_function)
-  if (name.ends_with(b"get_unchecked") || name.ends_with(b"indexed_get") ||
-    self_host_linked_function_returns_array_element(
-      link,
-      linked_function,
-      fragment,
-    )) && fallback is SelfHostPlannedValueShape::RefPlannedValueShape {
-    match self_host_linked_specialization_first_shape(link, linked_function) {
-      Option::Some(shape) => shape
-      Option::None => fallback
-    }
-  } else {
-    fallback
-  }
+  // Specialization is complete before linking. The fragment is the ABI
+  // certificate; neither a method name nor an element shape can replace it.
+  let _ = link
+  let _ = linked_function
+  self_host_linked_fragment_result_shape(module_, fragment)
 }
 
 fn self_host_linked_fragment_result_shape(
@@ -31952,7 +32131,7 @@ fn self_host_linked_append_function_value_signatures(
   rec_types: StarshineRecTypes,
   signatures: Array<SelfHostLinkedFunctionValueSignature>,
 ) -> Option<String> {
-  let mut next_type = self_host_linked_text_runtime_base(link) + 72u32
+  let mut next_type = self_host_linked_text_runtime_base(link) + 77u32
   let mut module_index = 0u32
   let _ = while module_index {
     current_module => if current_module < self_host_linked_lowering_module_count(link) {
@@ -38806,7 +38985,10 @@ fn self_host_encode_linked_i32_module(
           ))
           continue index + 1u32
         }
-        _ => break Result::Ok(output.finish())
+        _ => {
+          self_host_append_linked_function_names(output, link)
+          break Result::Ok(output.finish())
+        }
       }
     }
   }
@@ -39298,15 +39480,15 @@ fn self_host_certify_one_physical_method_call_error(
                               }
                             }
                           }
-                          self_host_body_plan_set_call_function(
-                          body,
-                          plan.expressions,
-                          expression_plan.expression,
-                          4294967294u32,
-                        )
+                          let _ = self_host_body_plan_set_call_function(
+                            body,
+                            plan.expressions,
+                            expression_plan.expression,
+                            4294967294u32,
+                          )
                         return Option::Some(message.finish())
                         }
-                        self_host_body_plan_set_call_function(
+                        let _ = self_host_body_plan_set_call_function(
                           body,
                           plan.expressions,
                           expression_plan.expression,
@@ -39362,7 +39544,7 @@ fn self_host_certify_one_physical_method_call_error(
                           }
                           Option::None => message.append(" receiver_plan=missing")
                         }
-                        self_host_body_plan_set_call_function(
+                        let _ = self_host_body_plan_set_call_function(
                           body,
                           plan.expressions,
                           expression_plan.expression,
@@ -39435,15 +39617,15 @@ fn self_host_certify_one_physical_method_call_error(
                               }
                             }
                           }
-                          self_host_body_plan_set_call_function(
-                          body,
-                          plan.expressions,
-                          expression_plan.expression,
-                          4294967294u32,
-                        )
+                          let _ = self_host_body_plan_set_call_function(
+                            body,
+                            plan.expressions,
+                            expression_plan.expression,
+                            4294967294u32,
+                          )
                         return Option::Some(message.finish())
                         }
-                        self_host_body_plan_set_call_function(
+                        let _ = self_host_body_plan_set_call_function(
                           body,
                           plan.expressions,
                           expression_plan.expression,
@@ -39755,7 +39937,7 @@ fn self_host_certify_one_physical_method_call_error(
                           }
                           Option::None => message.append(" receiver_plan=missing")
                         }
-                        self_host_body_plan_set_call_function(
+                        let _ = self_host_body_plan_set_call_function(
                           body,
                           plan.expressions,
                           expression_plan.expression,
@@ -39941,7 +40123,7 @@ fn build_self_host_linked_i32_module(
   let body_plan = self_host_plan_program_wasm_bodies(link)
   if self_host_u32_greater(body_plan.diagnostics.length(), 0u32) {
     return Result::Err(
-      self_host_program_wasm_body_plan_error_report(body_plan),
+      self_host_program_wasm_body_failure_report(link, body_plan),
     )
   }
   let method_call_certification = self_host_certify_physical_method_calls(
@@ -40122,6 +40304,7 @@ fn build_self_host_linked_i32_module(
       self_host_linked_append_wasi_void_signature(rec_types, 1u32)
       self_host_linked_append_text_runtime_types(link, rec_types)
       self_host_linked_append_array_runtime_types(link, rec_types)
+      self_host_linked_append_erased_field_box_types(rec_types)
       let function_value_signature_error = self_host_linked_append_function_value_signatures(
         link,
         rec_types,
@@ -40132,7 +40315,7 @@ fn build_self_host_linked_i32_module(
         Option::None => {}
       }
       let initializer_type_index = self_host_linked_text_runtime_base(link) +
-        72u32 + function_value_signatures.length() * 2u32
+        77u32 + function_value_signatures.length() * 2u32
       if self_host_u32_greater(link.initializers.length(), 0u32) {
         self_host_linked_append_function_value_type(
           rec_types,

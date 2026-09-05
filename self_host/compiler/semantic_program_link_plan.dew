@@ -72,6 +72,8 @@ pub struct SelfHostPlannedProgramWasmGCLink {
   module_type_bases: Array<U32>
   functions: Array<SelfHostPlannedProgramWasmFunction>
   specialized_calls: Array<SelfHostPlannedProgramSpecializedCallLink>
+  call_index: SelfHostLinkedCallIndex
+  erased_fields: Map<U64, Bool>
   initializers: Array<SelfHostPlannedProgramInitializer>
   imported_function_count: U32
   defined_function_count: U32
@@ -79,6 +81,7 @@ pub struct SelfHostPlannedProgramWasmGCLink {
   fixed_array_module_id: U64
   array_module_id: U64
   map_module_id: U64
+  runtime_variant_adapters: Map<U64, SelfHostRuntimeVariantAdapter>
   diagnostics: Array<SelfHostProgramWasmGCLinkDiagnostic>
 }
 
@@ -1142,6 +1145,8 @@ fn self_host_plan_program_wasmgc_link(
     module_type_bases: module_type_bases
     functions: functions
     specialized_calls: specialized_calls
+    call_index: self_host_build_linked_call_index(functions, specialized_calls)
+    erased_fields: self_host_build_erased_field_index(fragments.specialization.lowering)
     initializers: initializers
     imported_function_count: imported_count
     defined_function_count: defined_count
@@ -1149,6 +1154,7 @@ fn self_host_plan_program_wasmgc_link(
     fixed_array_module_id: fixed_array_module_id
     array_module_id: array_module_id
     map_module_id: map_module_id
+    runtime_variant_adapters: self_host_plan_runtime_variant_adapters(fragments)
     diagnostics: diagnostics
   }
 }

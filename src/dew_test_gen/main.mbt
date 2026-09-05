@@ -198,7 +198,7 @@ fn main {
       compiled.lowering,
       compiled.link,
     ) {
-    abort("Dew test source produced semantic diagnostics")
+    dew_test_fail("Dew test source produced semantic diagnostics")
   }
   let binary = match compiled.emit_binary() {
     Ok(binary) => binary

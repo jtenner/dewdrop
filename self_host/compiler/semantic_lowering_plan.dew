@@ -76,6 +76,7 @@ pub struct SelfHostPlannedExpression {
   call_target: SelfHostBasicCallTarget
   call_type_arguments: SelfHostHirSpan
   source_name: U32
+  member_base: U32
   offset: U32
 }
 
@@ -93,6 +94,7 @@ fn self_host_planned_expression_identity(
     call_target: expression.call_target
     call_type_arguments: expression.call_type_arguments
     source_name: expression.source_name
+    member_base: expression.member_base
     offset: expression.offset
   }
 }
@@ -275,6 +277,7 @@ pub struct SelfHostPlannedLambdaLowering {
 pub struct SelfHostPlannedModuleLowering {
   module_id: U64
   names: Array<String>
+  name_diagnostics: Array<SelfHostBodyResolutionDiagnostic>
   resolved_types: SelfHostResolvedModuleTypes
   type_layouts: SelfHostPlannedModuleTypeLayouts
   initialization: SelfHostPlannedModuleInitialization
@@ -509,6 +512,9 @@ fn self_host_lowering_expression_kind(
       _ => SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right)
     }
     SelfHostHirExpr::CallExpr(target, arguments, _) => match call_target {
+      // Keep the requirement identity. It has no physical body: a live call
+      // still needs implementation evidence before physical target lookup.
+      SelfHostBasicCallTarget::BoundTraitBasicCallTarget(requirement, _, _, type_arguments) => SelfHostPlannedExpressionKind::PlannedDirectCall(requirement, target, arguments, type_arguments)
       SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, type_arguments) => match selection {
         SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
           _,
@@ -605,6 +611,7 @@ fn self_host_lowering_target_type_arguments(
 ) -> SelfHostHirSpan {
   match target {
     SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => arguments
+    SelfHostBasicCallTarget::BoundTraitBasicCallTarget(_, _, _, arguments) => arguments
     _ => SelfHostHirSpan::{
       start: 0u32
       length: 0u32
@@ -627,6 +634,7 @@ fn self_host_lowering_error_expression() -> SelfHostPlannedExpression {
       length: 0u32
     }
     source_name: 4294967295u32
+    member_base: 4294967295u32
     offset: 0u32
   }
 }
@@ -711,6 +719,11 @@ fn self_host_lowering_plan_expressions(
           SelfHostHirExpr::NameExpr(name, _) => name
           SelfHostHirExpr::FieldExpr(_, name, _) => name
           SelfHostHirExpr::QualifiedExpr(_, name, _) => name
+          _ => 4294967295u32
+        }
+        member_base: match source_expression {
+          SelfHostHirExpr::FieldExpr(base, _, _) => base
+          SelfHostHirExpr::QualifiedExpr(base, _, _) => base
           _ => 4294967295u32
         }
         offset: self_host_basic_expression_offset(source_expression)
@@ -995,6 +1008,7 @@ fn self_host_lowering_consume_expression_target(
       call_target: source.call_target
       call_type_arguments: source.call_type_arguments
       source_name: source.source_name
+      member_base: source.member_base
       offset: source.offset
     }
   }
@@ -1291,6 +1305,7 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
   SelfHostPlannedModuleLowering::{
     module_id: collected.module_id
     names: collected.names
+    name_diagnostics: names.diagnostics
     resolved_types: resolved
     type_layouts: type_layouts
     initialization: initialization

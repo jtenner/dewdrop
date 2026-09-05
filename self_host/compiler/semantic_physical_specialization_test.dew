@@ -1,0 +1,1382 @@
+open dew.std.option
+
+test "trait evidence identities remain part of specialization keys" {
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let first = self_host_program_specialization_add_request_with_evidence(requests, shapes, heads, next, 11u64,
+    [SelfHostPlannedValueShape::RefPlannedValueShape], [SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(100u64)])
+  let second = self_host_program_specialization_add_request_with_evidence(requests, shapes, heads, next, 11u64,
+    [SelfHostPlannedValueShape::RefPlannedValueShape], [SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(101u64)])
+  let repeated = self_host_program_specialization_add_request_with_evidence(requests, shapes, heads, next, 11u64,
+    [SelfHostPlannedValueShape::RefPlannedValueShape], [SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(100u64)])
+  assert(first != second, "equal reference carriers do not erase trait receiver identity")
+  assert(first == repeated, "equal structural evidence deduplicates")
+  assert(!self_host_specialization_evidence_type_equal(
+    SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(SelfHostPrimitiveType::I32Type),
+    SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(SelfHostPrimitiveType::U32Type),
+  ), "equal scalar carriers do not erase logical primitive identity")
+}
+
+fn self_host_physical_test_link_trace(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> String {
+  let output = StringBuilder::new()
+  let mut function_index = 0u32
+  let _ = while function_index {
+    current => if current < link.functions.length() {
+      let function_ = self_host_planned_program_wasm_function_identity(link.functions[current])
+      output.append("\nlinked ")
+      output.append_u32(function_.function_index)
+      output.append(" name=")
+      output.append(bytes_to_string(self_host_linked_function_name(link, function_)))
+      output.append(" key=")
+      output.append(self_host_body_specialization_key(link, function_.declaration, function_.specialization))
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < link.fragments.specialization.lowering.modules.length() {
+      let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[current])
+      let mut expression_index = 0u32
+      let _ = while expression_index {
+        index => if index < module_.expressions.length() {
+          let expression = self_host_program_specialization_expression(module_, index)
+          output.append("\nexpr module=")
+          output.append_u64(module_.module_id)
+          output.append(" index=")
+          output.append_u32(index)
+          output.append(" kind=")
+          output.append(self_host_body_expression_kind_name(expression.kind))
+          output.append(" type=")
+          output.append_i32(expression.type_)
+          output.append(" shape=")
+          output.append(self_host_body_carrier_name(self_host_body_carrier_from_shape(expression.shape)))
+          output.append(" nominal=")
+          output.append_u64(expression.nominal)
+          if expression.source_name < module_.names.length() {
+            output.append(" name=")
+            output.append(module_.names[expression.source_name])
+          }
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  output.finish()
+}
+
+fn self_host_physical_test_module(
+  fragments: SelfHostPlannedProgramWasmGCFragments,
+) -> SelfHostPlannedModuleWasmGCFragments {
+  fragments.modules[0u32]
+}
+
+fn self_host_physical_test_assert_clean_inference(
+  link: SelfHostPlannedProgramWasmGCLink,
+) -> Unit {
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < link.fragments.specialization.lowering.modules.length() {
+      let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[current])
+      let report = StringBuilder::new()
+      report.append("inference diagnostics in module ")
+      report.append_u64(module_.module_id)
+      report.append(": ")
+      report.append_u32(module_.inferred.diagnostics.length())
+      if module_.inferred.diagnostics.length() > 0u32 {
+        let diagnostic = module_.inferred.diagnostics[0u32]
+        report.append(" first_offset=")
+        report.append_u32(diagnostic.offset())
+        report.append(" kind=")
+        report.append(match diagnostic {
+          SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _) => "unsupported expression"
+          SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, _) => "unresolved expression"
+          SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _) => "no matching method"
+          SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
+          SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => "type constraint"
+          SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(_) => "return outside callable"
+          SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, _) => "no matching direct call"
+          SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(_, _) => "invalid pattern constructor"
+          SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(_, _) => "invalid construction target"
+          _ => "other"
+        })
+        report.append(self_host_physical_test_link_trace(link))
+      }
+      assert(module_.inferred.diagnostics.length() == 0u32, report.finish())
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_physical_test_fragments(
+  source: Bytes,
+) -> SelfHostPlannedProgramWasmGCFragments {
+  let collected = self_host_collect_program_manifest(
+    5100u64,
+    SelfHostProgramManifest::{
+      modules: [SelfHostManifestModule::{
+        path: "app.main"
+        files: [SelfHostManifestFile::{
+          path: "main.dew"
+          source: source
+          test_only: false
+        }]
+      }]
+    },
+  )
+  assert(collected.diagnostics.length() == 0u32, "single-module fixture manifest must parse")
+  let source_module = collected.modules.at(0u32)
+  assert(source_module.diagnostic_count() == 0u32, "single-module fixture source must parse and collect")
+  let lowering = self_host_plan_program_lowering(
+    self_host_freeze_program_signature_interfaces(collected),
+  )
+  self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(lowering, false),
+  )
+}
+
+fn self_host_physical_test_frozen_body() -> SelfHostPlannedPhysicalBodyCarrierPlan {
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(b"pub fn run() -> I32 {\n  42\n}\n"),
+    false,
+  )
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, "the source plan must be valid")
+  assert(plan.bodies.length() == 1u32, "the source has one body")
+  plan.bodies[0u32]
+}
+
+fn self_host_physical_test_body_at(plan: SelfHostPlannedProgramWasmBodyPlan, index: U32) -> SelfHostPlannedPhysicalBodyCarrierPlan {
+  plan.bodies[index]
+}
+
+fn self_host_physical_test_import_link(runtime: Bytes, source: Bytes) -> SelfHostPlannedProgramWasmGCLink {
+  self_host_physical_test_named_import_link("app.runtime", runtime, source)
+}
+
+fn self_host_physical_test_named_import_link(runtime_path: String, runtime: Bytes, source: Bytes) -> SelfHostPlannedProgramWasmGCLink {
+  self_host_physical_test_manifest_link(
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: runtime_path
+          files: [SelfHostManifestFile::{
+            path: "runtime.dew"
+            source: runtime
+            test_only: false
+          }]
+        },
+        SelfHostManifestModule::{
+          path: "app.main"
+          files: [SelfHostManifestFile::{
+            path: "main.dew"
+            source: source
+            test_only: false
+          }]
+        },
+      ]
+    },
+  )
+}
+
+fn self_host_physical_test_manifest_link(manifest: SelfHostProgramManifest) -> SelfHostPlannedProgramWasmGCLink {
+  let collected = self_host_collect_program_manifest(5500u64, manifest)
+  assert(collected.diagnostics.length() == 0u32, "runtime fixture collection must have no diagnostics")
+  let mut module_index = 0u32
+  let _ = while module_index {
+    current => if current < collected.modules.length() {
+      let module_ = collected.modules.at(current)
+      if module_.diagnostic_count() > 0u32 {
+        let report = StringBuilder::new()
+        report.append("runtime fixture parse/collection diagnostics module=")
+        report.append_u32(current)
+        match module_.diagnostic_at(0u32) {
+          SelfHostCollectionDiagnostic::ParseDiagnostic(_, _, _, offset, _, token) => {
+            report.append(" offset=")
+            report.append_u32(offset)
+            report.append(" token=")
+            report.append(token)
+          }
+          _ => {}
+        }
+        assert(false, report.finish())
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_plan_program_wasmgc_link(
+    self_host_plan_program_wasmgc_fragments(
+      self_host_plan_program_specialization(
+        self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected)),
+        false,
+      ),
+    ),
+    false,
+  )
+}
+
+test "frozen body accepts an unchanged expression carrier" {
+  let plan = self_host_physical_test_frozen_body()
+  assert(
+    !self_host_linked_refine_canonical_expression_shape(
+      Option::Some(plan),
+      plan.expressions[0u32].expression,
+      SelfHostPlannedValueShape::I32PlannedValueShape,
+    ),
+    "emission must not change the plan",
+  )
+}
+
+test "BOD-605 emission cannot rewrite a frozen carrier" expect_trap "unreachable" {
+  let plan = self_host_physical_test_frozen_body()
+  self_host_linked_refine_canonical_expression_shape(
+    Option::Some(plan),
+    plan.expressions[0u32].expression,
+    SelfHostPlannedValueShape::I64PlannedValueShape,
+  )
+}
+
+test "physical generic method keeps receiver and specializes result" {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Box<t> {\n  value: t\n}\nimpl<t> Box<t> {\n  fn get_unchecked(self) -> t {\n    self.value\n  }\n}\nstruct Holder {\n  boxed: Box<I64>\n}\nimpl Holder {\n  fn read(self) -> I64 {\n    self.boxed.get_unchecked()\n  }\n}\n",
+  )
+  let module_ = self_host_physical_test_module(fragments)
+  let mut found = false
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < self_host_program_link_fragment_function_count(module_) {
+    let function_ = self_host_program_link_fragment_function(module_, current)
+    if function_.specialization != 4294967295u32 {
+      assert(function_.parameters.length == 1u32, "method has one receiver")
+      assert(function_.results.length == 1u32, "method has one result")
+      assert(
+        module_.function_value_types[function_.parameters.start] is SelfHostPlannedWasmValueType::WasmNullableEqRefValue,
+        "Box<I64> receiver must remain a reference",
+      )
+      assert(
+        module_.function_value_types[function_.results.start] is SelfHostPlannedWasmValueType::WasmI64Value,
+        "generic result must use the selected i64 shape",
+      )
+      found = true
+    }
+    continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(found, "generic method specialization must be present")
+}
+
+test "linked result does not change for a method named get_unchecked" {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Box<t> {\n  value: t\n}\nimpl<t> Box<t> {\n  fn get_unchecked(self) -> Box<t> {\n    self\n  }\n}\nstruct Holder {\n  boxed: Box<I64>\n}\nimpl Holder {\n  fn read(self) -> Box<I64> {\n    self.boxed.get_unchecked()\n  }\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  let mut found = false
+  let mut index = 0u32
+  let _ = while index {
+    current => if current < link.functions.length() {
+      let function_ = self_host_planned_program_wasm_function_identity(
+        link.functions[current],
+      )
+      if function_.specialization != 4294967295u32 {
+        let shape = self_host_linked_physical_function_result_shape(
+          link,
+          self_host_linked_physical_function_index(function_.function_index),
+        )
+        assert(
+          shape is SelfHostPlannedValueShape::RefPlannedValueShape,
+          "a Box<I64> result must stay a reference regardless of method name",
+        )
+        found = true
+      }
+      continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(found, "named generic method must have a linked specialization")
+}
+
+test "builder factory locals keep their reference carrier" {
+  let collected = self_host_collect_program_manifest(
+    5400u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.builders"
+          files: [SelfHostManifestFile::{
+            path: "builders.dew"
+            source: b"pub builtin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = \"dew_string_builder_with_capacity\"\npub builtin string_builder_append_ascii(builder: StringBuilder, byte: U8) -> Unit = \"dew_string_builder_append_ascii\"\nimpl BytesBuilder {\n  fn with_capacity(capacity: U32) -> StringBuilder {\n    string_builder_with_capacity_raw(capacity)\n  }\n}\nimpl StringBuilder {\n  fn with_capacity(capacity: U32) -> StringBuilder {\n    string_builder_with_capacity_raw(capacity)\n  }\n}\n"
+            test_only: false
+          }]
+        },
+        SelfHostManifestModule::{
+          path: "app.main"
+          files: [SelfHostManifestFile::{
+            path: "main.dew"
+            source: b"open app.builders\npub fn run() -> Unit {\n  let builder = StringBuilder::with_capacity(4u32)\n  string_builder_append_ascii(builder, 47u8)\n}\n"
+            test_only: false
+          }]
+        },
+      ]
+    },
+  )
+  let fragments = self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(
+      self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected)),
+      false,
+    ),
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 3u32, "all builder fixture bodies must be planned")
+  assert(
+    plan.diagnostics.length() == 0u32,
+    self_host_program_wasm_body_plan_error_report(plan),
+  )
+}
+
+test "primitive inherent methods preserve their logical receiver" {
+  let fragments = self_host_physical_test_fragments(
+    b"impl U32 {\n  fn read(self) -> U64 {\n    1u64\n  }\n}\nimpl I32 {\n  fn read(self) -> U64 {\n    2u64\n  }\n}\npub fn run(value: U32) -> U64 {\n  value.read()\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 3u32, "both methods and their caller must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
+}
+
+test "string view builtin results keep their reference carrier" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin string_view_byte_length(value: StringView) -> U32 = \"dew_string_view_byte_length\"\nimpl StringView {\n  fn byte_length(self) -> U32 {\n    string_view_byte_length(self)\n  }\n}\npub fn run(value: String) -> U32 {\n  let view = string_view(value, 0u32, 3u32)\n  view.byte_length()\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 2u32, "the string view method and caller must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
+}
+
+test "a static parameter cannot become a method receiver" {
+  let fragments = self_host_physical_test_fragments(
+    b"impl U32 {\n  fn read(value: U32) -> U64 {\n    1u64\n  }\n}\npub fn run(value: U32) -> U64 {\n  value.read()\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "the invalid receiver must produce one diagnostic")
+  assert(
+    module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _),
+    "a value parameter is not a declared receiver",
+  )
+}
+
+test "string slice retains a view across calls" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin string_view_byte_length(value: StringView) -> U32 = \"dew_string_view_byte_length\"\nbuiltin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = \"dew_string_builder_with_capacity\"\nbuiltin string_builder_append_view(builder: StringBuilder, view: StringView) -> Unit = \"dew_string_builder_append_view\"\nbuiltin string_builder_finish(builder: StringBuilder) -> String = \"dew_string_builder_finish\"\nimpl StringView {\n  fn byte_length(self) -> U32 {\n    string_view_byte_length(self)\n  }\n}\nimpl String {\n  fn slice(self, start: U32, end: U32) -> String {\n    let view = string_view(self, start, end - start)\n    let builder = string_builder_with_capacity_raw(view.byte_length())\n    string_builder_append_view(builder, view)\n    string_builder_finish(builder)\n  }\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 2u32, "both methods must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
+}
+
+test "string slice retains an imported builtin view across calls" {
+  let link = self_host_physical_test_import_link(
+    b"pub builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\npub builtin string_view_byte_length(value: StringView) -> U32 = \"dew_string_view_byte_length\"\npub builtin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = \"dew_string_builder_with_capacity\"\npub builtin string_builder_append_view(builder: StringBuilder, view: StringView) -> Unit = \"dew_string_builder_append_view\"\npub builtin string_builder_finish(builder: StringBuilder) -> String = \"dew_string_builder_finish\"\n",
+    b"open app.runtime\nimpl StringView {\n  fn byte_length(self) -> U32 {\n    string_view_byte_length(self)\n  }\n}\nimpl String {\n  fn slice(self, start: U32, end: U32) -> String {\n    let view = string_view(self, start, end - start)\n    let builder = string_builder_with_capacity_raw(view.byte_length())\n    string_builder_append_view(builder, view)\n    string_builder_finish(builder)\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 2u32, "both imported-runtime caller methods must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
+}
+
+test "into calls retain the selected logical result" {
+  let link = self_host_physical_test_import_link(
+    b"pub trait Into<t> {\n  fn into(self) -> t\n}\nimpl Into<U32> for U32 {\n  fn into(self) -> U32 {\n    self\n  }\n}\nimpl Into<I64> for U32 {\n  fn into(self) -> I64 {\n    1i64\n  }\n}\nimpl Into<U64> for U32 {\n  fn into(self) -> U64 {\n    2u64\n  }\n}\n",
+    b"open app.runtime\npub fn run(value: U32) -> U64 {\n  value.into()\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 4u32, "all three conversions and their caller must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
+}
+
+test "standard runtime helpers cross the frozen interface" {
+  let link = self_host_physical_test_named_import_link(
+    "dew.std.text_runtime",
+    b"builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin string_view_byte_length(value: StringView) -> U32 = \"dew_string_view_byte_length\"\n",
+    b"open dew.std.text_runtime\npub fn run(value: String) -> U32 {\n  let view = string_view(value, 0u32, 3u32)\n  string_view_byte_length(view)\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 1u32, "the standard runtime caller must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
+}
+
+test "standard publication does not expose ordinary private helpers" {
+  let collected = self_host_collect_bytes(5500u64, b"fn hidden() -> U32 {\n  1u32\n}\n")
+  let resolved = self_host_resolve_module_types(collected)
+  for path in ["app.runtime", "dew.std.string", "dew.std.string_builder", "dew.std.bytes", "dew.std.bytes_builder"] {
+    let interface_ = self_host_freeze_module_signature_interface(path, collected, resolved)
+    assert(interface_.declaration_count() == 0u32, "private helper must stay private")
+  }
+}
+
+test "default preamble supplies core calls without changing source files" {
+  let manifest = SelfHostProgramManifest::{
+    modules: [
+      SelfHostManifestModule::{
+        path: "dew.std.preamble"
+        files: [SelfHostManifestFile::{
+          path: "core.dew"
+          source: b"fn core_identity(value: U32) -> U32 {\n  value\n}\n"
+          test_only: false
+        }]
+      },
+      SelfHostManifestModule::{
+        path: "app.main"
+        files: [SelfHostManifestFile::{
+          path: "main.dew"
+          source: b"pub fn run() -> U32 {\n  core_identity(7u32)\n}\n"
+          test_only: false
+        }]
+      },
+    ]
+  }
+  let disabled = self_host_manifest_with_default_preamble(manifest, false)
+  assert(self_host_manifest_module_file_count(disabled.modules[1u32]) == 1u32, "disabled preamble must not add an import")
+  let enabled = self_host_manifest_with_default_preamble(manifest, true)
+  assert(self_host_manifest_module_file_count(enabled.modules[1u32]) == 2u32, "enabled preamble adds one import file")
+  assert(self_host_manifest_module_file(enabled.modules[1u32], 0u32).path == "main.dew", "original file IDs must remain stable")
+  assert(self_host_manifest_module_file_count(manifest.modules[1u32]) == 1u32, "preparation must not mutate the source manifest")
+  let frozen = self_host_freeze_program_signature_interfaces(self_host_collect_program_manifest(5500u64, enabled))
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_plan_program_wasmgc_fragments(
+      self_host_plan_program_specialization(self_host_plan_program_lowering(frozen), false),
+    ),
+    false,
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 2u32, "core function and caller must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
+}
+
+test "nested error patterns retain scalar payloads" {
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(
+      b"enum LexError {\n  InvalidEscape(U32)\n  InvalidText(String)\n}\nenum ParseError {\n  Lexical(LexError, U32)\n  Expected(U32, String, U32)\n}\nstruct Diagnostic {\n  error: ParseError\n}\nenum CollectionError {\n  Parse(U64, Diagnostic, U32)\n}\npub fn run(diagnostic: CollectionError) -> U32 {\n  match diagnostic {\n    CollectionError::Parse(_, detail, _) => match detail.error {\n      ParseError::Lexical(error, offset) => match error {\n        LexError::InvalidEscape(unit) => unit + offset\n        LexError::InvalidText(_) => offset\n      }\n      ParseError::Expected(_, _, offset) => offset\n    }\n  }\n}\n",
+    ),
+    false,
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 1u32, "nested error reader must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "a pattern constructor cannot replace a different subject type" {
+  let fragments = self_host_physical_test_fragments(
+    b"enum Left {\n  Value(U32)\n}\nenum Right {\n  Value(U32)\n}\npub fn run(value: Left) -> U32 {\n  match value {\n    Right::Value(item) => item\n  }\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
+  let mut found = false
+  for diagnostic in module_.inferred.diagnostics {
+    if diagnostic is SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) {
+      found = true
+    }
+  }
+  assert(found, "different nominal owners must produce a type constraint diagnostic")
+}
+
+test "standard Option scalar payloads use their runtime adapter" {
+  let link = self_host_physical_test_named_import_link(
+    "dew.std.option",
+    b"pub enum Option<t> {\n  None\n  Some(t)\n}\n",
+    b"open dew.std.option\npub fn run(value: Option<U32>) -> U32 {\n  match value {\n    Option::Some(index) => index\n    Option::None => 0u32\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 1u32, "Option reader must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "opened imported variants retain unqualified constructor identity" {
+  let link = self_host_physical_test_named_import_link(
+    "dew.std.option",
+    b"pub enum Option<t> {\n  None\n  Some(t)\n}\n",
+    b"open dew.std.option\npub fn run(value: Option<U32>) -> U32 {\n  match value {\n    Some(index) => index\n    None => 0u32\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  let mut selected = 0u32
+  for pattern in module_.patterns {
+    match pattern.source {
+      SelfHostHirPattern::TuplePattern(_, _, _) => {
+        let declaration = self_host_pattern_constructor_declaration(module_, pattern)
+        assert(link.runtime_variant_adapters.contains_key(declaration), "unqualified Some must have a selected declaration")
+        assert(self_host_linked_pattern_variant_type(link, module_, pattern, SelfHostPlannedValueShape::U32PlannedValueShape, 0u64) is Option::Some(_), "emission must use that selected runtime adapter")
+        selected = selected + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(selected == 1u32, "the test must inspect the Some pattern")
+}
+
+test "user Some and None patterns retain declaration identity" {
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(
+      b"enum Local {\n  None\n  Some(U32)\n}\npub fn run(value: Local) -> U32 {\n  match value {\n    Local::Some(index) => index\n    Local::None => 0u32\n  }\n}\n",
+    ),
+    false,
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[0u32])
+  let mut checked = 0u32
+  for pattern in module_.patterns {
+    match pattern.selected_constructor {
+      SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(declaration, _, _) => {
+        let expected = self_host_linked_variant_type_index(link, declaration)
+        let actual = self_host_linked_pattern_variant_type(link, module_, pattern, SelfHostPlannedValueShape::ErrorPlannedValueShape, 0u64)
+        match expected {
+          Option::Some(left) => match actual {
+            Option::Some(right) => assert(left == right, "source spelling cannot replace the selected variant type")
+            Option::None => assert(false, "the planned variant type must exist")
+          }
+          Option::None => assert(false, "the linked variant type must exist")
+        }
+        checked = checked + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(checked == 2u32, "both Some and None identities must be checked")
+}
+
+test "a user None constructor keeps its physical type" {
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(
+      b"enum Local {\n  None\n  Value(I64)\n}\npub fn run() -> Local {\n  Local::None\n}\n",
+    ),
+    false,
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+  let body = self_host_physical_test_body_at(plan, 0u32)
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[0u32])
+  let mut checked = false
+  for expression in body.expressions {
+    let source = self_host_planned_expression_identity(module_.expressions[expression.expression])
+    match source.selection {
+      SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(declaration, _, _) => {
+        match self_host_linked_variant_type_index(link, declaration) {
+          Option::Some(expected) => assert(self_host_u32_equal(expression.selected_type_index, expected), "user None must not use the runtime Option type")
+          Option::None => assert(false, "user None must have a linked type")
+        }
+        checked = true
+      }
+      _ => {}
+    }
+  }
+  assert(checked, "the constructor selection must be present")
+}
+
+test "nested fixed array reads keep their scalar result" {
+  let fragments = self_host_physical_test_fragments(
+    b"pub struct WasmArray<t> {}\npub builtin wasm_array_get<t>(value: WasmArray<t>, index: U32) -> t = \"array_get\"\npub type FixedArray<t> = WasmArray<t>\nimpl<t> FixedArray<t> {\n  fn get_unchecked(self, index: U32) -> t {\n    wasm_array_get(self, index)\n  }\n}\nstruct Holder {\n  items: FixedArray<U32>\n}\nimpl Holder {\n  fn read(self, index: U32) -> U32 {\n    self.items.get_unchecked(self.items.get_unchecked(index))\n  }\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() > 0u32, "the fixture must have planned bodies")
+  let report = StringBuilder::new()
+  report.append(self_host_program_wasm_body_plan_error_report(plan))
+  if plan.diagnostics.length() > 0u32 {
+    report.append(self_host_physical_test_link_trace(link))
+  }
+  assert(
+    plan.diagnostics.length() == 0u32,
+    report.finish(),
+  )
+}
+
+test "empty array literals select imported scalar push" {
+  let link = self_host_physical_test_named_import_link(
+    "dew.std.array",
+    b"pub struct Array<t> {}\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {}\n}\n",
+    b"open dew.std.array\npub fn run() -> Unit {\n  let values = []\n  values.push(42i64)\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "imported index results constrain later array operands" {
+  let link = self_host_physical_test_named_import_link(
+    "dew.std.array",
+    b"pub struct Array<t> {}\npub trait IndexedGet<i, t> {\n  fn indexed_get(self, index: i) -> t\n}\npub builtin array_get_unchecked<t>(value: Array<t>, index: U32) -> t = \"dew_array_get_unchecked\"\nimpl<t> IndexedGet<U32, t> for Array<t> {\n  fn indexed_get(self, index: U32) -> t {\n    array_get_unchecked(self, index)\n  }\n}\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {}\n}\n",
+    b"open dew.std.array\npub fn run(source: Array<I64>) -> Unit {\n  let values = []\n  values.push(source[0u32])\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "an imported index result supplies the next method receiver" {
+  let link = self_host_physical_test_named_import_link(
+    "app.indexed",
+    b"pub struct Item {\n  value: I64\n}\npub struct Items {\n  item: Item\n}\npub trait IndexedGet<i, t> {\n  fn indexed_get(self, index: i) -> t\n}\nimpl IndexedGet<U32, Item> for Items {\n  fn indexed_get(self, index: U32) -> Item {\n    self.item\n  }\n}\nimpl Item {\n  fn read(self) -> I64 {\n    self.value\n  }\n}\n",
+    b"open app.indexed\npub fn run(source: Items) -> I64 {\n  source[0u32].read()\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "imported index candidates with prerequisites stay diagnostic" {
+  let link = self_host_physical_test_named_import_link(
+    "app.indexed",
+    b"pub trait Marker {}\npub trait IndexedGet<i, t> {\n  fn indexed_get(self, index: i) -> t\n}\nimpl<t: Marker> IndexedGet<U32, U32> for t {\n  fn indexed_get(self, index: U32) -> U32 {\n    index\n  }\n}\n",
+    b"open app.indexed\npub fn run(source: U64) -> U32 {\n  source[0u32]\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "the missing Marker proof must remain a diagnostic")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _), "an unproved index candidate must not be selected")
+}
+
+test "duplicate imported index candidates remain ambiguous" {
+  let link = self_host_physical_test_named_import_link(
+    "app.indexed",
+    b"pub trait IndexedGet<i, t> {\n  fn indexed_get(self, index: i) -> t\n}\nimpl IndexedGet<U32, U32> for U64 {\n  fn indexed_get(self, index: U32) -> U32 {\n    index\n  }\n}\nimpl IndexedGet<U32, U32> for U64 {\n  fn indexed_get(self, index: U32) -> U32 {\n    index\n  }\n}\n",
+    b"open app.indexed\npub fn run(source: U64) -> U32 {\n  source[0u32]\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "both compatible index methods must remain visible")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousOperator(_, _, _, 2u32, _), "link order cannot choose an index method")
+}
+
+test "local static factories supply later method receivers" {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Interner {}\nimpl Interner {\n  fn new() -> Interner {\n    Interner::{}\n  }\n  fn intern(self, key: U64) -> U32 {\n    7u32\n  }\n}\npub fn run() -> U32 {\n  let interner = Interner::new()\n  interner.intern(42u64)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "local generic static factories bind owner and Self types" {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Box<t> {\n  value: t\n}\nimpl<t> Box<t> {\n  fn make(value: t) -> Self {\n    Box::{\n      value: value\n    }\n  }\n  fn read(self) -> t {\n    self.value\n  }\n}\npub fn run() -> I64 {\n  Box::make(42i64).read()\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "erased field adapters require declared generic storage and a concrete scalar" {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Box<t> {\n  value: t\n}\nstruct Scalar {\n  value: I32\n}\npub fn run() -> I32 {\n  0i32\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[0u32])
+  let fields = self_host_erased_field_layouts(module_)
+  let generic = fields[0u32].field
+  let concrete = fields[1u32].field
+  assert(self_host_linked_erased_field_box_type(link, generic, SelfHostWasmBodyCarrier::I64BodyCarrier) is Option::Some(_), "a declared generic field can box a proven scalar")
+  assert(self_host_linked_erased_field_box_type(link, concrete, SelfHostWasmBodyCarrier::I64BodyCarrier) is Option::None, "a concrete scalar mismatch cannot gain an adapter")
+  assert(self_host_linked_erased_field_box_type(link, generic, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) is Option::None, "missing evidence cannot gain an adapter")
+  assert(self_host_linked_erased_field_box_type(link, generic, SelfHostWasmBodyCarrier::ConflictingBodyCarrier) is Option::None, "a conflict cannot gain an adapter")
+  assert(self_host_linked_erased_field_box_type(link, 18446744073709551615u64, SelfHostWasmBodyCarrier::I64BodyCarrier) is Option::None, "an unknown field cannot gain an adapter")
+}
+
+test "INV-002 rejects semantic errors before specialization" {
+  let valid = self_host_physical_test_fragments(b"pub fn run() -> I32 {\n  7i32\n}\n")
+  assert(self_host_validate_program_inference(valid.specialization.lowering) is Option::None, "valid inference can cross the phase boundary")
+  let invalid = self_host_physical_test_fragments(b"pub fn run() -> I32 {\n  missing()\n}\n")
+  match self_host_validate_program_inference(invalid.specialization.lowering) {
+    Option::Some(message) => assert(message.starts_with("INV-002:"), "the phase failure has a stable invariant ID")
+    Option::None => assert(false, "an unresolved name cannot cross the phase boundary")
+  }
+}
+
+test "selected imported namespace calls retire provisional name errors" {
+  let link = self_host_physical_test_named_import_link(
+    "app.values",
+    b"pub fn value() -> I32 {\n  7i32\n}\n",
+    b"import app.values as @values\npub fn run() -> I32 {\n  @values.value()\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+}
+
+test "unselected imported namespace calls keep their errors" {
+  let link = self_host_physical_test_named_import_link(
+    "app.values",
+    b"pub fn value() -> I32 {\n  7i32\n}\n",
+    b"import app.values as @values\npub fn run() -> I32 {\n  @values.missing()\n}\n",
+  )
+  assert(self_host_validate_program_inference(link.fragments.specialization.lowering) is Option::Some(_), "an unselected namespace call must remain an error")
+}
+
+test "Never call results do not constrain a completing branch" {
+  let fragments = self_host_physical_test_fragments(
+    b"fn stop() -> Never {\n  stop()\n}\npub fn run(flag: Bool) -> I32 {\n  if flag {\n    stop()\n  } else {\n    7i32\n  }\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "struct construction uses declaration locations after method IDs" {
+  let fragments = self_host_physical_test_fragments(
+    b"struct First {}\nimpl First {\n  fn make() -> Self {\n    First::{}\n  }\n}\nstruct Second {\n  value: I32\n}\npub fn run() -> I32 {\n  let value = Second::{\n    value: 7i32\n  }\n  value.value\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(self_host_plan_program_wasmgc_link(fragments, false))
+}
+
+test "field assignment uses the selected field mutability" {
+  let valid = self_host_physical_test_fragments(
+    b"struct Cell {\n  mut value: I32\n}\npub fn run(cell: Cell) -> Unit {\n  cell.value = 7i32\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(self_host_plan_program_wasmgc_link(valid, false))
+  let invalid = self_host_physical_test_fragments(
+    b"struct Cell {\n  value: I32\n}\npub fn run(cell: Cell) -> Unit {\n  cell.value = 7i32\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(invalid.specialization.lowering.modules[0u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "immutable field assignment has one exact error")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, _), "the selected field is immutable")
+}
+
+test "match with only diverging arms has a Never result" {
+  let fragments = self_host_physical_test_fragments(
+    b"pub fn run(flag: Bool) -> I32 {\n  let _ = if flag {\n    return 7i32\n  } else {\n    match flag {\n      true => return 8i32\n      false => return 9i32\n    }\n  }\n  0i32\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "foreign namespace calls use their declared signature without a receiver" {
+  let fragments = self_host_physical_test_fragments(
+    b"foreign impl \"first\" as First {\n  fn value(input: I32) -> I32 = \"value\"\n}\nforeign impl \"second\" as Second {\n  fn value(input: I64) -> I64 = \"value\"\n}\npub fn run() -> I64 {\n  let _ = First.value(7i32)\n  Second.value(8i64)\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(self_host_plan_program_wasmgc_link(fragments, false))
+  let invalid = self_host_physical_test_fragments(
+    b"foreign impl \"first\" as First {\n  fn value(input: I32) -> I32 = \"value\"\n}\npub fn run() -> I32 {\n  First.value()\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(invalid.specialization.lowering.modules[0u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "a foreign argument count error stays visible")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, 1u32, 0u32, _), "foreign calls use the full logical signature")
+}
+
+test "local trait implementations participate in method selection" {
+  let fragments = self_host_physical_test_fragments(
+    b"trait Read {\n  fn read(self) -> I32\n}\nstruct Cell {}\nimpl Read for Cell {\n  fn read(self) -> I32 {\n    7i32\n  }\n}\npub fn run(cell: Cell) -> I32 {\n  cell.read()\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(self_host_plan_program_wasmgc_link(fragments, false))
+}
+
+test "local and imported trait competitors remain ambiguous" {
+  let link = self_host_physical_test_named_import_link(
+    "app.values",
+    b"pub trait First {\n  fn read(self) -> I32\n}\nimpl First for I32 {\n  fn read(self) -> I32 {\n    7i32\n  }\n}\n",
+    b"open app.values\ntrait Second {\n  fn read(self) -> I32\n}\nimpl Second for I32 {\n  fn read(self) -> I32 {\n    8i32\n  }\n}\npub fn run(value: I32) -> I32 {\n  value.read()\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "one ambiguity must remain visible")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _), "both applicable implementations count")
+}
+
+test "declared generic bounds preserve logical method evidence" {
+  let fragments = self_host_physical_test_fragments(
+    b"trait Read<t> {\n  fn read(self) -> t\n}\nfn read<t: Read<I64>>(value: t) -> I64 {\n  value.read()\n}\npub fn run() -> I32 {\n  7i32\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(self_host_plan_program_wasmgc_link(fragments, false))
+  let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
+  let mut found = false
+  for target in module_.inferred.call_targets {
+    if target is SelfHostBasicCallTarget::BoundTraitBasicCallTarget(_, _, _, _) {
+      found = true
+    }
+  }
+  assert(found, "declared bounds remain distinct from physical implementation selection")
+  let invalid = self_host_physical_test_fragments(
+    b"trait Read<t> {\n  fn read(self) -> t\n}\nfn read<t>(value: t) -> I64 {\n  value.read()\n}\npub fn run() -> I32 {\n  7i32\n}\n",
+  )
+  assert(self_host_validate_program_inference(invalid.specialization.lowering) is Option::Some(_), "an undeclared bound cannot supply evidence")
+}
+
+test "competing declared bounds stay ambiguous" {
+  let fragments = self_host_physical_test_fragments(
+    b"trait First {\n  fn read(self) -> I64\n}\ntrait Second {\n  fn read(self) -> I64\n}\nfn read<t: First + Second>(value: t) -> I64 {\n  value.read()\n}\npub fn run() -> I32 {\n  7i32\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "both declared requirements must participate")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _), "declared bounds do not select the first method")
+}
+
+test "nested block results keep one shared type variable" {
+  let valid = self_host_physical_test_fragments(
+    b"pub fn run(flag: Bool) -> Unit {\n  if flag {\n    ()\n  } else {\n    ()\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(self_host_plan_program_wasmgc_link(valid, false))
+  let invalid = self_host_physical_test_fragments(
+    b"pub fn run(flag: Bool) -> I32 {\n  if flag {\n    7i32\n  } else {\n    ()\n  }\n}\n",
+  )
+  assert(self_host_validate_program_inference(invalid.specialization.lowering) is Option::Some(_), "a nested Unit result cannot become I32 by replacing a type cell")
+}
+
+pub fn self_host_emission_probe_bytes_length(bytes: Bytes) -> U32 {
+  bytes.byte_length()
+}
+
+pub fn self_host_emit_bound_dispatch_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"trait Read {\n  fn read(self) -> I32\n}\nstruct First {}\nstruct Second {}\nimpl Read for First {\n  fn read(self) -> I32 {\n    3i32\n  }\n}\nimpl Read for Second {\n  fn read(self) -> I32 {\n    7i32\n  }\n}\nfn read<t: Read>(value: t) -> I32 {\n  value.read()\n}\npub fn main() -> I32 {\n  read(First::{}) + read(Second::{})\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(message) => {
+      assert(false, message)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_pattern_guard_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"enum Cell {\n  Empty\n  Value(I32)\n}\nstruct Counter {\n  mut calls: U32\n}\nfn check(counter: Counter, value: I32) -> Bool {\n  counter.calls = counter.calls + 1u32\n  value == 7i32\n}\nfn classify(counter: Counter, cell: Cell) -> U32 {\n  match cell {\n    Cell::Value(value) if check(counter, value) => 10u32\n    Cell::Value(_) => 20u32\n    Cell::Empty => 30u32\n  }\n}\nfn conjunction(counter: Counter, cell: Cell) -> U32 {\n  if cell is Cell::Value(value) && check(counter, value) {\n    1u32\n  } else {\n    0u32\n  }\n}\npub fn main() -> U32 {\n  let counter = Counter::{\n    calls: 0u32\n  }\n  let result = classify(counter, Cell::Value(7i32)) + classify(counter, Cell::Value(8i32)) + classify(counter, Cell::Empty) + conjunction(counter, Cell::Value(7i32)) + conjunction(counter, Cell::Value(8i32)) + conjunction(counter, Cell::Empty)\n  result + counter.calls * 100u32\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(message) => {
+      assert(false, message)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_literal_guard_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Counter {\n  mut calls: U32\n}\nfn accepts(counter: Counter, value: I32) -> Bool {\n  counter.calls = counter.calls + 1u32\n  value == 7i32\n}\nfn classify(counter: Counter, value: I32) -> U32 {\n  match value {\n    7i32 if accepts(counter, 8i32) => 1u32\n    7i32 if accepts(counter, 7i32) => 2u32\n    _ => 3u32\n  }\n}\npub fn main() -> U32 {\n  let counter = Counter::{\n    calls: 0u32\n  }\n  let result = classify(counter, 7i32) + classify(counter, 9i32)\n  result + counter.calls * 100u32\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(message) => {
+      assert(false, message)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_solver_control_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin equals(left: String, right: String) -> Bool = \"dew_string_equals\"\nstruct Solver {\n  mut failures: U32\n}\nimpl Solver {\n  fn candidate(self, left: I32, right: I32) -> Bool {\n    let mut viable = self.unify(left, left)\n    if viable {\n      viable = self.unify(left, right)\n    }\n    let _ = while 0u32 {\n      index => if viable && index < 0u32 {\n        viable = true\n        continue index + 1u32\n      } else {\n        break ()\n      }\n    }\n    viable\n  }\n  fn mismatch(self) -> Bool {\n    self.failures = self.failures + 1u32\n    false\n  }\n  fn unify(self, left: I32, right: I32) -> Bool {\n    let _ = while 1u32 {\n      length => if length > 0u32 {\n        if left == right {\n          continue 0u32\n        }\n        let compatible = false\n        if !compatible {\n          return self.mismatch()\n        }\n        continue 0u32\n      } else {\n        break ()\n      }\n    }\n    true\n  }\n}\nfn primitive(name: String) -> I32 {\n  match name {\n    \"Unit\" => 0i32\n    \"I32\" => 2i32\n    \"U32\" => 3i32\n    _ => -1i32\n  }\n}\npub fn main() -> I32 {\n  let solver = Solver::{\n    failures: 0u32\n  }\n  if !solver.unify(-4i32, -5i32) && solver.unify(-4i32, -4i32) && solver.failures == 1u32 && !solver.candidate(-4i32, -5i32) && primitive(\"U32\") == 3i32 && primitive(\"Missing\") == -1i32 {\n    1i32\n  } else {\n    0i32\n  }\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(message) => {
+      assert(false, message)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_erased_field_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Box<t> {\n  value: t\n}\nimpl<t> Box<t> {\n  fn make(value: t) -> Self {\n    Box::{\n      value: value\n    }\n  }\n  fn read(self) -> t {\n    self.value\n  }\n}\npub fn main() -> I64 {\n  let small = Box::make(7i32)\n  let large = Box::make(42i64)\n  if small.read() == 7i32 {\n    large.read()\n  } else {\n    0i64\n  }\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_string_map_probe() -> Bytes {
+  let manifest = SelfHostProgramManifest::{
+    modules: [
+      SelfHostManifestModule::{
+        path: "dew.std.option"
+        files: [SelfHostManifestFile::{
+          path: "option.dew"
+          source: b"pub enum Option<t> {\n  None\n  Some(t)\n}\n"
+          test_only: false
+        }]
+      },
+      SelfHostManifestModule::{
+        path: "dew.std.map"
+        files: [SelfHostManifestFile::{
+          path: "map.dew"
+          test_only: false
+          source: b"open dew.std.option\npub struct Map<k, v> {}\npub builtin map_empty<k, v>() -> Map<k, v> = \"dew_map_empty\"\npub builtin map_set<k, v>(map: Map<k, v>, key: k, value: v) -> Unit = \"dew_map_set\"\npub builtin map_get<k, v>(map: Map<k, v>, key: k) -> Option<v> = \"dew_map_get\"\nimpl<k, v> Map<k, v> {\n  fn empty() -> Map<k, v> {\n    map_empty()\n  }\n  fn set(self, key: k, value: v) -> Unit {\n    map_set(self, key, value)\n  }\n  fn get(self, key: k) -> Option<v> {\n    map_get(self, key)\n  }\n}\n"
+        }]
+      },
+      SelfHostManifestModule::{
+        path: "app.main"
+        files: [SelfHostManifestFile::{
+          path: "main.dew"
+          test_only: false
+          source: b"open dew.std.option\nopen dew.std.map\nbuiltin concat(left: String, right: String) -> String = \"dew_string_concat\"\nbuiltin equals(left: String, right: String) -> Bool = \"dew_string_equals\"\nfn empty() -> Map<String, U32> {\n  Map::empty()\n}\nfn lookup(map: Map<String, U32>, key: String) -> U32 {\n  match map.get(key) {\n    Option::Some(value) => value\n    Option::None => 0u32\n  }\n}\npub fn main() -> U32 {\n  let map = empty()\n  let key = concat(\"Op\", \"tion\")\n  if equals(key, \"Option\") {\n    map.set(key, 9u32)\n    map.set(\"Result\", 17u32)\n    lookup(map, concat(\"Opt\", \"ion\")) + lookup(map, \"Result\") + lookup(map, \"Missing\")\n  } else {\n    1u32\n  }\n}\n"
+        }]
+      },
+    ]
+  }
+  let link = self_host_physical_test_manifest_link(manifest)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5502u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_string_equality_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin concat(left: String, right: String) -> String = \"dew_string_concat\"\nbuiltin equals(left: String, right: String) -> Bool = \"dew_string_equals\"\nstruct Label {\n  name: String\n}\nfn same(left: String, right: String) -> Bool {\n  left == right\n}\nfn different(left: String, right: String) -> Bool {\n  left != right\n}\nfn field_same(left: Label, right: String) -> Bool {\n  left.name == right\n}\npub fn main() -> I32 {\n  let left = concat(\"Op\", \"tion\")\n  let right = concat(\"Opt\", \"ion\")\n  if equals(left, right) && same(left, right) && !different(left, right) && field_same(Label::{\n    name: left\n  }, right) {\n    1i32\n  } else {\n    0i32\n  }\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_nested_variant_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"enum Inner {\n  A\n  B\n}\nenum Outer {\n  Wrap(Inner)\n}\nfn classify(value: Outer) -> I32 {\n  match value {\n    Outer::Wrap(Inner::B) => 2i32\n    Outer::Wrap(Inner::A) => 1i32\n  }\n}\npub fn main() -> I32 {\n  classify(Outer::Wrap(Inner::A)) * 10i32 + classify(Outer::Wrap(Inner::B))\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_nested_binding_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"enum Inner {\n  Value(I64)\n}\nenum Outer {\n  Wrap(Inner)\n  Empty\n}\nfn read(value: Outer) -> I64 {\n  match value {\n    Outer::Wrap(Inner::Value(item)) => item\n    Outer::Empty => 0i64\n  }\n}\npub fn main() -> I64 {\n  read(Outer::Wrap(Inner::Value(42i64))) + read(Outer::Empty)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_nested_literal_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"enum Value {\n  Flag(Bool)\n  Number(U32)\n  Empty\n}\nfn classify(value: Value) -> I32 {\n  match value {\n    Value::Flag(true) => 1i32\n    Value::Flag(false) => 2i32\n    Value::Number(7u32) => 3i32\n    Value::Number(_) => 4i32\n    Value::Empty => 5i32\n  }\n}\npub fn main() -> I32 {\n  classify(Value::Flag(false)) * 100i32 + classify(Value::Number(7u32)) * 10i32 + classify(Value::Empty)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_type_stack_probe() -> Bytes {
+  let link = self_host_physical_test_manifest_link(SelfHostProgramManifest::{
+    modules: [
+      SelfHostManifestModule::{
+        path: "dew.std.option"
+        files: [SelfHostManifestFile::{
+          path: "option.dew"
+          source: b"pub enum Option<t> {\n  None\n  Some(t)\n}\n"
+          test_only: false
+        }]
+      },
+      SelfHostManifestModule::{
+        path: "dew.std.array"
+        files: [SelfHostManifestFile::{
+          path: "array.dew"
+          source: b"pub struct Array<t> {}\npub builtin array_new<t>() -> Array<t> = \"dew_array_new\"\npub builtin array_push<t>(array: Array<t>, value: t) -> Unit = \"dew_array_push\"\npub builtin array_length<t>(array: Array<t>) -> U32 = \"dew_array_length\"\npub builtin array_get<t>(array: Array<t>, index: U32) -> t = \"dew_array_get_unchecked\"\npub builtin array_truncate<t>(array: Array<t>, length: U32) -> Unit = \"dew_array_truncate\"\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {\n    array_push(self, value)\n  }\n  fn length(self) -> U32 {\n    array_length(self)\n  }\n  fn get_unchecked(self, index: U32) -> t {\n    array_get(self, index)\n  }\n  fn truncate(self, length: U32) -> Unit {\n    array_truncate(self, length)\n  }\n}\n"
+          test_only: false
+        }]
+      },
+      SelfHostManifestModule::{
+        path: "app.main"
+        files: [SelfHostManifestFile::{
+          path: "main.dew"
+          source: b"open dew.std.array\nopen dew.std.option\nenum Task {\n  Visit(I32)\n}\nfn self_host_array_pop<t>(values: Array<t>) -> Option<t> {\n  let length = values.length()\n  if length == 0u32 {\n    Option::None\n  } else {\n    let index = length - 1u32\n    let value = values.get_unchecked(index)\n    values.truncate(index)\n    Option::Some(value)\n  }\n}\nfn unit() -> Unit {\n}\nfn empty_tasks() -> Array<Task> {\n  []\n}\nfn empty_results() -> Array<I32> {\n  []\n}\nfn instantiate(root: I32) -> I32 {\n  let tasks = empty_tasks()\n  let results = empty_results()\n  tasks.push(Task::Visit(root))\n  let _ = while tasks.length() {\n    length => if length > 0u32 {\n      let task = match self_host_array_pop(tasks) {\n        Option::Some(value) => value\n        Option::None => Task::Visit(0i32)\n      }\n      match task {\n        Task::Visit(value) => results.push(-value - 2i32)\n      }\n      continue tasks.length()\n    } else {\n      break unit()\n    }\n  }\n  if results.length() == 1u32 {\n    results.get_unchecked(0u32)\n  } else {\n    0i32\n  }\n}\npub fn main() -> I32 {\n  instantiate(3i32) * 100i32 + instantiate(5i32)\n}\n"
+          test_only: false
+        }]
+      },
+    ]
+  })
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_root_i32_module(link, 2u32) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      let report = StringBuilder::new()
+      report.append(error)
+      report.append(self_host_physical_test_link_trace(link))
+      assert(false, report.finish())
+      b""
+    }
+  }
+}
+
+pub fn self_host_emission_probe_byte_at(bytes: Bytes, index: U32) -> U32 {
+  u8_into_u32(bytes.byte_at(index))
+}
+
+pub fn self_host_emit_fixed_array_field_probe() -> Bytes {
+  let link = self_host_physical_test_named_import_link(
+    "dew.std.fixed_array",
+    b"pub struct WasmArray<t> {}\npub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = \"array_new\"\npub builtin wasm_array_get<t>(value: WasmArray<t>, index: U32) -> t = \"array_get\"\npub type FixedArray<t> = WasmArray<t>\nimpl<t> FixedArray<t> {\n  fn make(length: U32, value: t) -> FixedArray<t> {\n    wasm_array_new(length, value)\n  }\n  fn get_unchecked(self, index: U32) -> t {\n    wasm_array_get(self, index)\n  }\n}\n",
+    b"open dew.std.fixed_array\nstruct Holder {\n  values: FixedArray<I32>\n}\nfn read(holder: Holder) -> I32 {\n  holder.values.get_unchecked(0u32)\n}\npub fn main() -> I32 {\n  read(Holder::{\n    values: FixedArray::make(2u32, 7i32)\n  })\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_root_i32_module(link, 1u32) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+pub fn self_host_emit_scalar_iterator_probe() -> Bytes {
+  let link = self_host_physical_test_manifest_link(SelfHostProgramManifest::{
+    modules: [
+      SelfHostManifestModule::{
+        path: "dew.std.option"
+        files: [SelfHostManifestFile::{
+          path: "option.dew"
+          source: b"pub enum Option<t> {\n  None\n  Some(t)\n}\n"
+          test_only: false
+        }]
+      },
+      SelfHostManifestModule::{
+        path: "dew.std.array"
+        files: [SelfHostManifestFile::{
+          path: "array.dew"
+          source: b"open dew.std.option\npub struct Array<t> {}\npub struct ArrayIter<t> {}\npub builtin array_new<t>() -> Array<t> = \"dew_array_new\"\npub builtin array_push<t>(array: Array<t>, value: t) -> Unit = \"dew_array_push\"\npub builtin array_iter<t>(value: Array<t>) -> ArrayIter<t> = \"dew_array_iter\"\npub builtin array_iter_next_option<t>(value: ArrayIter<t>) -> Option<t> = \"dew_array_iter_next_option\"\npub trait Iter<t> {\n  fn next(self) -> Option<t>\n}\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {\n    array_push(self, value)\n  }\n  fn iter(self) -> ArrayIter<t> {\n    array_iter(self)\n  }\n}\nimpl<t> Iter<t> for ArrayIter<t> {\n  fn next(self) -> Option<t> {\n    array_iter_next_option(self)\n  }\n}\n"
+          test_only: false
+        }]
+      },
+      SelfHostManifestModule::{
+        path: "app.main"
+        files: [SelfHostManifestFile::{
+          path: "main.dew"
+          source: b"open dew.std.option\nopen dew.std.array\npub fn main() -> I32 {\n  let values = []\n  values.push(1i32)\n  values.push(2i32)\n  values.push(3i32)\n  let mut total = 0i32\n  for value in values {\n    total = total + value\n  }\n  total\n}\n"
+          test_only: false
+        }]
+      },
+    ]
+  })
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_root_i32_module(link, 2u32) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
+test "a method receiver retains its field access" {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Cell {\n  value: I64\n}\nstruct Holder {\n  cell: Cell\n}\nimpl Cell {\n  fn read(self) -> I64 {\n    self.value\n  }\n}\npub fn run(holder: Holder) -> I64 {\n  holder.cell.read()\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[0u32])
+  let mut checked = 0u32
+  for expression in module_.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => {
+        match self_host_linked_direct_receiver_expression(module_, target) {
+          Option::Some(receiver) => assert(module_.expressions[receiver].kind is SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _), "the receiver is holder.cell, not holder")
+          Option::None => assert(false, "a selected method must retain its receiver")
+        }
+        checked = checked + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(checked == 1u32, "one method receiver must be inspected")
+}
+
+test "field and method dependencies preserve source order" {
+  let fragments = self_host_physical_test_fragments(
+    b"struct Cell {\n  value: I64\n}\nimpl Cell {\n  fn identity(self) -> Self {\n    self\n  }\n  fn read(self, value: I64) -> I64 {\n    value\n  }\n}\nstruct Holder {\n  cell: Cell\n}\nimpl Holder {\n  fn run(self) -> I64 {\n    self.cell.identity().read(self.cell.value)\n  }\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 3u32, "all three methods must have bodies")
+  assert(
+    plan.diagnostics.length() == 0u32,
+    self_host_program_wasm_body_plan_error_report(plan),
+  )
+}
+
+test "imported fixed array permutation keeps its scalar operands" {
+  let collected = self_host_collect_program_manifest(
+    5100u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.arr"
+          files: [SelfHostManifestFile::{
+            path: "arr.dew"
+            source: b"pub struct WasmArray<t> {}\npub builtin wasm_array_get<t>(value: WasmArray<t>, index: U32) -> t = \"array_get\"\npub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = \"array_new\"\npub builtin wasm_array_set<t>(value: WasmArray<t>, index: U32, item: t) -> Unit = \"array_set\"\npub type FixedArray<t> = WasmArray<t>\nimpl<t> FixedArray<t> {\n  fn make(length: U32, value: t) -> FixedArray<t> {\n    wasm_array_new(length, value)\n  }\n  fn get_unchecked(self, index: U32) -> t {\n    wasm_array_get(self, index)\n  }\n  fn set_unchecked(self, index: U32, value: t) -> Unit {\n    wasm_array_set(self, index, value)\n  }\n}\n"
+            test_only: false
+          }]
+        },
+        SelfHostManifestModule::{
+          path: "app.main"
+          files: [SelfHostManifestFile::{
+            path: "main.dew"
+            source: b"open app.arr\nfn make_input() -> FixedArray<U32> {\n  FixedArray::make(16u32, 0u32)\n}\npub fn run(message: FixedArray<U32>) -> FixedArray<U32> {\n  let permutation = make_input()\n  let output = FixedArray::make(16u32, 0u32)\n  while 0u32 {\n    index if index < 16u32 => {\n      output.set_unchecked(index, message.get_unchecked(permutation.get_unchecked(index)))\n      continue index + 1u32\n    }\n    _ => break output\n  }\n}\n"
+            test_only: false
+          }]
+        },
+      ]
+    },
+  )
+  let fragments = self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(
+      self_host_plan_program_lowering(
+        self_host_freeze_program_signature_interfaces(collected),
+      ),
+      false,
+    ),
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() > 0u32, "the fixture must have planned bodies")
+  let report = StringBuilder::new()
+  report.append(self_host_program_wasm_body_plan_error_report(plan))
+  if plan.diagnostics.length() > 0u32 {
+    report.append(self_host_physical_test_link_trace(link))
+  }
+  assert(
+    plan.diagnostics.length() == 0u32,
+    report.finish(),
+  )
+}
+
+test "imported static factories use owner identity and arbitrary names" {
+  let collected = self_host_collect_program_manifest(
+    5200u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.ring"
+          files: [SelfHostManifestFile::{
+            path: "ring.dew"
+            source: b"pub struct WasmArray<t> {}\npub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = \"array_new\"\npub type Ring<t> = WasmArray<t>\npub struct Other {}\nimpl Other {\n  fn create(length: U32, value: I64) -> Ring<I64> {\n    wasm_array_new(length, value)\n  }\n}\nimpl<t> Ring<t> {\n  fn create(length: U32, value: t) -> Ring<t> {\n    wasm_array_new(length, value)\n  }\n}\n"
+            test_only: false
+          }]
+        },
+        SelfHostManifestModule::{
+          path: "app.main"
+          files: [SelfHostManifestFile::{
+            path: "main.dew"
+            source: b"open app.ring\npub fn run() -> Ring<I64> {\n  Ring::create(1u32, 7i64)\n}\n"
+            test_only: false
+          }]
+        },
+      ]
+    },
+  )
+  let fragments = self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(
+      self_host_plan_program_lowering(
+        self_host_freeze_program_signature_interfaces(collected),
+      ),
+      false,
+    ),
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() > 0u32, "the fixture must have planned bodies")
+  let report = StringBuilder::new()
+  report.append(self_host_program_wasm_body_plan_error_report(plan))
+  if plan.diagnostics.length() > 0u32 {
+    report.append(self_host_physical_test_link_trace(link))
+  }
+  assert(plan.diagnostics.length() == 0u32, report.finish())
+  self_host_physical_test_assert_clean_inference(link)
+  let body = match self_host_program_wasm_body_plan_for_identity(
+    plan, 5201u64, 5201u64 << 32u64, 4294967295u32,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "the run body must be present")
+      unreachable()
+    }
+  }
+  assert(body.calls.length() == 1u32, "run must have exactly one call")
+  let callable = match self_host_program_specialization_program_callable(
+    link.fragments.specialization.lowering, body.calls[0u32].declaration,
+  ) {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "the selected factory must be present")
+      unreachable()
+    }
+  }
+  assert(
+    self_host_linked_resolved_nominal_declaration(
+      self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[0u32]),
+      callable.self_type,
+    ) == 5200u64 << 32u64,
+    "the factory must belong to Ring, not an ABI-compatible Other method",
+  )
+}
+
+fn self_host_physical_test_trait_link(source: Bytes) -> SelfHostPlannedProgramWasmGCLink {
+  let collected = self_host_collect_program_manifest(
+    5300u64,
+    SelfHostProgramManifest::{
+      modules: [
+        SelfHostManifestModule::{
+          path: "app.convert"
+          files: [SelfHostManifestFile::{
+            path: "convert.dew"
+            source: source
+            test_only: false
+          }]
+        },
+        SelfHostManifestModule::{
+          path: "app.main"
+          files: [SelfHostManifestFile::{
+            path: "main.dew"
+            source: b"open app.convert\npub fn run(value: U32) -> U64 {\n  value.convert()\n}\n"
+            test_only: false
+          }]
+        },
+      ]
+    },
+  )
+  let fragments = self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(
+      self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected)),
+      false,
+    ),
+  )
+  self_host_plan_program_wasmgc_link(fragments, false)
+}
+
+test "imported concrete trait methods use receiver and result types" {
+  let link = self_host_physical_test_trait_link(
+    b"pub trait Convert<t> {\n  fn convert(self) -> t\n}\nimpl Convert<U32> for U32 {\n  fn convert(self) -> U32 {\n    self\n  }\n}\nimpl Convert<U64> for I32 {\n  fn convert(self) -> U64 {\n    8u64\n  }\n}\nimpl Convert<U64> for U32 {\n  fn convert(self) -> U64 {\n    7u64\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() >= 1u32, "the caller body must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
+}
+
+test "imported primitive inherent methods preserve their logical receiver" {
+  let link = self_host_physical_test_trait_link(
+    b"impl I32 {\n  fn convert(self) -> U64 {\n    1u64\n  }\n}\nimpl U32 {\n  fn convert(self) -> U64 {\n    2u64\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.bodies.length() == 3u32, "both primitive methods and their caller must be planned")
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
+}
+
+test "ambiguous concrete trait methods stay ambiguous" {
+  let link = self_host_physical_test_trait_link(
+    b"pub trait First {\n  fn convert(self) -> U64\n}\npub trait Second {\n  fn convert(self) -> U64\n}\nimpl First for U32 {\n  fn convert(self) -> U64 {\n    7u64\n  }\n}\nimpl Second for U32 {\n  fn convert(self) -> U64 {\n    8u64\n  }\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "one method ambiguity must be reported")
+  assert(
+    module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _),
+    "neither compatible trait method may win by link order",
+  )
+}
+
+test "unbounded generic trait methods retain scalar arguments" {
+  let link = self_host_physical_test_named_import_link(
+    "app.traits",
+    b"pub struct Holder<t> {}\npub trait Select<t> {\n  fn select(self, value: t) -> t\n}\nimpl<t> Select<t> for Holder<t> {\n  fn select(self, value: t) -> t {\n    value\n  }\n}\n",
+    b"open app.traits\npub fn run(receiver: Holder<I64>) -> I64 {\n  receiver.select(7i64)\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "unproved generic trait candidates cannot disappear" {
+  let link = self_host_physical_test_trait_link(
+    b"pub trait Marker {}\npub trait First {\n  fn convert(self) -> U64\n}\npub trait Second {\n  fn convert(self) -> U64\n}\nimpl First for U32 {\n  fn convert(self) -> U64 {\n    7u64\n  }\n}\nimpl<t: Marker> Second for t {\n  fn convert(self) -> U64 {\n    8u64\n  }\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "unproved evidence must produce a diagnostic")
+  assert(
+    module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _),
+    "a concrete competitor must not hide a candidate that still needs evidence",
+  )
+}
+
+test "unbounded generic trait competitors remain ambiguous" {
+  let link = self_host_physical_test_trait_link(
+    b"pub trait First {\n  fn convert(self) -> U64\n}\npub trait Second {\n  fn convert(self) -> U64\n}\nimpl First for U32 {\n  fn convert(self) -> U64 {\n    7u64\n  }\n}\nimpl<t> Second for t {\n  fn convert(self) -> U64 {\n    8u64\n  }\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "both viable trait methods must remain visible")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _), "generic parameters alone do not remove a viable method")
+}

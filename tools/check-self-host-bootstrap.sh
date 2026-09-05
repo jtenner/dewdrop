@@ -148,6 +148,10 @@ link_stage_output "$work/a/compiler-b-core.wasm" "$work/b/compiler.raw.wasm"
 prepare_compiler "$work/b/compiler.raw.wasm" "$work/b/compiler.wasm" B
 self_host_measure "compiler B validation" \
   wasm-tools validate --features all "$work/b/compiler.wasm"
+if [[ "$self_host_runtime" == node-facet ]]; then
+  self_host_measure "compiler B semantic probes" \
+    node --stack-size=65500 tools/run-dew-facet.mjs "$work/b/compiler.wasm" --check-semantic-probes
+fi
 
 if (( through_b )); then
   echo "self-host compiler B checkpoint passed"

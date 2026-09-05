@@ -1,0 +1,93 @@
+test "invariant record keeps numeric context" {
+  self_host_record_invariant_failure(
+    SelfHostInvariantFailure::{
+      code: 701u32
+      phase: 7u32
+      module_id: 11u64
+      declaration: 13u64
+      body: 17u64
+      expression: 19u32
+      expected: 23u64
+      actual: 29u64
+      detail: 31u64
+    },
+  )
+  assert(
+    self_host_u32_equal(self_host_invariant_failure_code(), 701u32),
+    "failure code",
+  )
+  assert(
+    self_host_u32_equal(self_host_invariant_failure_phase(), 7u32),
+    "failure phase",
+  )
+  assert(self_host_invariant_failure_module_id() == 11u64, "failure module")
+  assert(self_host_invariant_failure_declaration() == 13u64, "failure declaration")
+  assert(self_host_invariant_failure_body() == 17u64, "failure body")
+  assert(
+    self_host_u32_equal(self_host_invariant_failure_expression(), 19u32),
+    "failure expression",
+  )
+  assert(self_host_invariant_failure_expected() == 23u64, "failure expected")
+  assert(self_host_invariant_failure_actual() == 29u64, "failure actual")
+  assert(self_host_invariant_failure_detail() == 31u64, "failure detail")
+  self_host_clear_invariant_failure()
+}
+
+test "INV-001 trap preserves complete numeric context" expect_trap "unreachable" {
+  self_host_assert_compiler_invariant_with_failure(
+    false,
+    SelfHostInvariantFailure::{
+      code: 701u32
+      phase: 7u32
+      module_id: 11u64
+      declaration: 13u64
+      body: 17u64
+      expression: 19u32
+      expected: 23u64
+      actual: 29u64
+      detail: 31u64
+    },
+    "numeric context must survive the trap",
+  )
+}
+
+test "specialized call index retains exact caller keys" {
+  let calls = [
+    SelfHostPlannedProgramSpecializedCallLink::{
+      caller_body: 17u64
+      caller_specialization: 3u32
+      expression: 19u32
+      function_index: 23u32
+    },
+    SelfHostPlannedProgramSpecializedCallLink::{
+      caller_body: 17u64
+      caller_specialization: 4u32
+      expression: 19u32
+      function_index: 29u32
+    },
+  ]
+  calls.push(calls[0u32])
+  let index = self_host_build_linked_call_index([], calls)
+  assert(self_host_linked_call_index_get(index, 17u64, 3u32, 19u32) is Option::Some(23u32), "first exact key")
+  assert(self_host_linked_call_index_get(index, 17u64, 4u32, 19u32) is Option::Some(29u32), "different caller specialization")
+  assert(self_host_linked_call_index_get(index, 18u64, 3u32, 19u32) is Option::None, "different caller body")
+  assert(self_host_linked_call_index_get(index, 17u64, 3u32, 20u32) is Option::None, "different expression")
+  assert(index.keys.length() == 2u32, "an identical duplicate adds no entry")
+}
+
+test "SPC-303 one call key cannot select two targets" expect_trap "unreachable" {
+  let _ = self_host_build_linked_call_index([], [
+    SelfHostPlannedProgramSpecializedCallLink::{
+      caller_body: 17u64
+      caller_specialization: 3u32
+      expression: 19u32
+      function_index: 23u32
+    },
+    SelfHostPlannedProgramSpecializedCallLink::{
+      caller_body: 17u64
+      caller_specialization: 3u32
+      expression: 19u32
+      function_index: 29u32
+    },
+  ])
+}

@@ -716,11 +716,22 @@ fn self_host_frozen_callable_exported(
   }
 }
 
+fn self_host_frozen_module_publishes_standard_top_level(path: String) -> Bool {
+  // Match the native compiler's standard package publication contract.
+  // This is module visibility, not physical type or call-target evidence.
+  path.starts_with("dew.std.") &&
+    path != "dew.std.string" &&
+    path != "dew.std.string_builder" &&
+    path != "dew.std.bytes" &&
+    path != "dew.std.bytes_builder"
+}
+
 fn self_host_freeze_module_signature_interface(
   path: String,
   collected: SelfHostCollectedModule,
   resolved: SelfHostResolvedModuleTypes,
 ) -> SelfHostFrozenModuleInterface {
+  let publish_standard_top_level = self_host_frozen_module_publishes_standard_top_level(path)
   let declarations = []
   let exported_declarations = self_host_empty_u64_bool_map()
   let mut declaration_index = 0u32
@@ -729,7 +740,7 @@ fn self_host_freeze_module_signature_interface(
       let declaration = self_host_collected_declaration_identity(
         collected.declarations[current],
       )
-    if declaration.visibility is SelfHostSemanticVisibility::Public &&
+    if (publish_standard_top_level || declaration.visibility is SelfHostSemanticVisibility::Public) &&
       !collected.declaration_is_test_only(declaration.id) &&
       !self_host_u32_equal(declaration.name, 4294967295u32) {
       match self_host_freeze_declaration_kind(declaration.kind) {
