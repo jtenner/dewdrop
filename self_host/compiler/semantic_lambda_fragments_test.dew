@@ -99,3 +99,38 @@ test "ARN-103 frozen physical local slots remain parallel" expect_trap "unreacha
   let _ = body.local_slots.pop()
   self_host_verify_one_physical_body(link, body, [])
 }
+
+fn self_host_assert_generic_lambda_fragments(module_: SelfHostPlannedModuleWasmGCFragments) -> Unit {
+  let mut closure_count = 0u32
+  let mut entry_count = 0u32
+  let mut unit_entries = 0u32
+  for type_ in module_.physical_types {
+    match type_.kind {
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(lambda, request) => {
+        assert(self_host_u32_equal(lambda, 0u32), "one source lambda")
+        assert(!self_host_u32_equal(request, 4294967295u32), "no unspecialized generic environment")
+        closure_count = closure_count + 1u32
+      }
+      _ => {}
+    }
+  }
+  for function_ in module_.functions {
+    match function_.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_) => {
+        assert(!self_host_u32_equal(function_.specialization, 4294967295u32), "entry carries its owning request")
+        assert(self_host_u32_equal(function_.parameters.length, 1u32), "only the environment parameter")
+        if self_host_u32_equal(function_.results.length, 0u32) {
+          unit_entries = unit_entries + 1u32
+        }
+        entry_count = entry_count + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(closure_count == 3u32 && entry_count == 3u32 && unit_entries == 1u32, "I32, I64, and Unit require three exact closure entries")
+}
+
+test "generic lambdas retain separate scalar and Unit specialization identities" {
+  let fragments = self_host_physical_test_fragments(b"fn maker<t>(held: t) -> fn() -> t {\n  fn() -> t {\n    held\n  }\n}\npub fn run(value: I64) -> I64 {\n  let first = maker::<I32>(7i32)\n  let second = maker::<I64>(value)\n  let third = maker::<Unit>(())\n  first()\n  third()\n  second()\n}\n")
+  self_host_assert_generic_lambda_fragments(fragments.modules[0u32])
+}

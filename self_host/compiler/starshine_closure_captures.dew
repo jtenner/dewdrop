@@ -16,7 +16,7 @@ fn self_host_linked_local_capture_cell(link: SelfHostPlannedProgramWasmGCLink, p
     Option::None => return Option::None
   }
   let relative = self_host_body_local_slot(module_, body, local)
-  match self_host_linked_capture_cell_type(link, canonical.module_index, body.locals.start + relative) {
+  match self_host_linked_capture_cell_type(link, canonical.module_index, body.locals.start + relative, canonical.specialization) {
     Option::Some(type_) => Option::Some(SelfHostLinkedCaptureCell::{
       type_index: type_
       local_slot: slot
@@ -30,7 +30,7 @@ fn self_host_emit_capture_parameters(link: SelfHostPlannedProgramWasmGCLink, pla
   while index {
     _ => if index < body.locals.length {
     let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + index])
-    if local.kind is SelfHostBodyLocalKind::ParameterLocal && self_host_local_needs_capture_cell(module_, local) {
+    if local.kind is SelfHostBodyLocalKind::ParameterLocal && self_host_local_needs_capture_cell(module_, local) && !self_host_linked_local_is_erased(plan, module_, body, local.local_id) {
       let cell = match self_host_linked_local_capture_cell(link, plan, module_, body, local.local_id) {
         Option::Some(value) => value
         Option::None => return Option::Some("captured parameter has no physical cell")
@@ -61,12 +61,22 @@ fn self_host_capture_write_type(link: SelfHostPlannedProgramWasmGCLink, plan: Se
   for capture in module_.captures {
     if self_host_u32_equal(capture.lambda, plan.lambda) && self_host_u32_equal(capture.capture, capture_id) && capture.mutable_ {
       match self_host_capture_source_local(module_, capture.source) {
-        Option::Some(local) => return self_host_linked_capture_cell_type(link, plan.module_index, local)
+        Option::Some(local) => return self_host_linked_capture_cell_type(link, plan.module_index, local, plan.specialization)
         Option::None => return Option::None
       }
     }
   }
   Option::None
+}
+
+fn self_host_capture_write_is_erased(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32) -> Bool {
+  let module_ = self_host_linked_lowering_module_at(link, plan.module_index)
+  for capture in module_.captures {
+    if self_host_u32_equal(capture.lambda, plan.lambda) && self_host_u32_equal(capture.capture, capture_id) && capture.mutable_ {
+      return !self_host_capture_has_value(self_host_body_specialization_shape_for_type(link, module_, plan.specialization, capture.type_, capture.shape))
+    }
+  }
+  false
 }
 
 fn self_host_emit_capture_local_get(slot: U32, destination: StarshineInstructions) -> Unit {
@@ -84,15 +94,18 @@ fn self_host_emit_capture_field_get(type_: U32, field: U32, destination: Starshi
   )
 }
 
-fn self_host_linked_capture_cell_type(link: SelfHostPlannedProgramWasmGCLink, module_index: U32, local_index: U32) -> Option<U32> {
+fn self_host_linked_capture_cell_type(link: SelfHostPlannedProgramWasmGCLink, module_index: U32, local_index: U32, specialization: U32) -> Option<U32> {
   let fragments = self_host_body_fragment_module(link, module_index)
-  if local_index >= fragments.capture_cell_type_indices.length() {
-    return Option::None
-  }
-  let fragment = fragments.capture_cell_type_indices[local_index]
   for type_ in link.types {
-    if self_host_u32_equal(type_.module_index, module_index) && self_host_u32_equal(type_.fragment_index, fragment) {
-      return Option::Some(type_.type_index)
+    if self_host_u32_equal(type_.module_index, module_index) {
+      match fragments.physical_types[type_.fragment_index].kind {
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(local, request) => {
+          if self_host_u32_equal(local, local_index) && self_host_u32_equal(request, specialization) {
+            return Option::Some(type_.type_index)
+          }
+        }
+        _ => {}
+      }
     }
   }
   Option::None
@@ -107,7 +120,7 @@ fn self_host_linked_capture_cell_slot(canonical: Option<SelfHostPlannedPhysicalB
   while index {
     _ => if index < body.locals.length {
     let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + index])
-    if self_host_local_needs_capture_cell(module_, local) {
+    if self_host_local_needs_capture_cell(module_, local) && !self_host_linked_local_is_erased(canonical, module_, body, local.local_id) {
       if self_host_u32_equal(local.local_id, local_id) {
         return Option::Some(base + offset)
       }
@@ -128,12 +141,24 @@ fn self_host_linked_capture_field(link: SelfHostPlannedProgramWasmGCLink, plan: 
     Option::Some(value) => value
     Option::None => return Option::None
   }
-  let type_ = match self_host_linked_lambda_type_index(link, plan.module_index, position) {
+  let type_ = match self_host_linked_lambda_type_index(link, plan.module_index, position, plan.specialization) {
     Option::Some(value) => value
     Option::None => return Option::None
   }
   let fragments = self_host_body_fragment_module(link, plan.module_index)
-  for field in fragments.fields {
+  let mut field_start = 0u32
+  let mut field_count = 0u32
+  for linked in link.types {
+    if self_host_u32_equal(linked.type_index, type_) && self_host_u32_equal(linked.module_index, plan.module_index) {
+      let physical = self_host_linked_physical_type_at(fragments, linked.fragment_index)
+      field_start = physical.fields.start
+      field_count = physical.fields.length
+    }
+  }
+  let mut index = 0u32
+  while index {
+    _ => if index < field_count {
+    let field = self_host_linked_physical_field_at(fragments, field_start + index)
     match field.role {
       SelfHostPlannedWasmFieldRole::WasmLambdaCaptureField(lambda, capture) => {
         if self_host_u32_equal(lambda, plan.lambda) && self_host_u32_equal(capture, capture_id) {
@@ -144,6 +169,11 @@ fn self_host_linked_capture_field(link: SelfHostPlannedProgramWasmGCLink, plan: 
         }
       }
       _ => {}
+    }
+    index = index + 1u32
+    continue index
+    } else {
+      break self_host_semantic_unit()
     }
   }
   Option::None
@@ -172,7 +202,7 @@ fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: Self
     "capture read must belong to its lambda span",
   )
   let capture = module_.captures[self_host_u32_add(lambda.captures.start, capture_id)]
-  if !self_host_capture_has_value(capture.shape) {
+  if !self_host_capture_has_value(self_host_body_specialization_shape_for_type(link, module_, plan.specialization, capture.type_, capture.shape)) {
     return Option::None
   }
   let field = match self_host_linked_capture_field(link, plan, capture_id) {
@@ -186,7 +216,7 @@ fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: Self
       Option::Some(value) => value
       Option::None => return Option::Some("capture cell has no source local")
     }
-    let cell = match self_host_linked_capture_cell_type(link, plan.module_index, local) {
+    let cell = match self_host_linked_capture_cell_type(link, plan.module_index, local, plan.specialization) {
       Option::Some(value) => value
       Option::None => return Option::Some("capture cell has no physical type")
     }
@@ -196,10 +226,10 @@ fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: Self
 }
 
 fn self_host_emit_closure_capture(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, body: SelfHostPlannedBodyLowering, capture: SelfHostPlannedCapture, destination: StarshineInstructions) -> Option<String> {
-  if !self_host_capture_has_value(capture.shape) {
+  let module_ = self_host_linked_lowering_module_at(link, plan.module_index)
+  if !self_host_capture_has_value(self_host_body_specialization_shape_for_type(link, module_, plan.specialization, capture.type_, capture.shape)) {
     return Option::None
   }
-  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
   let mut index = 0u32
   while index {
     _ => if index < body.locals.length {

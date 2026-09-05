@@ -327,6 +327,10 @@ for (const [name, expected] of [
       ["Unit product effects", "", "let mut order = 0i32\n  let first = fn() -> Unit {\n    order = order * 10i32 + 1i32\n  }\n  let last = fn() -> Unit {\n    order = order * 10i32 + 2i32\n  }\n  let (_, selected, _) = (first(), value, last())\n  if order == 12i32 {\n    selected\n  } else {\n    0i64\n  }"],
       ["generic captured scalar", "fn maker<t>(held: t) -> fn() -> t {\n  fn() -> t {\n    held\n  }\n}\n", "let callback = maker::<I64>(value)\n  callback()"],
       ["generic Unit callback", "", "let callback = reader::<Unit>()\n  callback(())\n  value"],
+      ["two capture specializations", "fn maker<t>(held: t) -> fn() -> t {\n  fn() -> t {\n    held\n  }\n}\n", "let left = maker::<I32>(7i32)\n  let right = maker::<I64>(value)\n  if left() == 7i32 {\n    right()\n  } else {\n    0i64\n  }"],
+      ["generic mutable capture", "fn maker<t>(seed: t) -> fn(t) -> t {\n  let mut held = seed\n  fn(next: t) -> t {\n    let previous = held\n    held = next\n    previous\n  }\n}\n", "let callback = maker::<I64>(value)\n  callback(0i64)"],
+      ["generic Unit capture", "fn maker<t>(held: t) -> fn() -> t {\n  fn() -> t {\n    held\n  }\n}\n", "let callback = maker::<Unit>(())\n  callback()\n  value"],
+      ["generic mutable Unit capture", "fn maker<t>(seed: t) -> fn(t) -> t {\n  let mut held = seed\n  fn(next: t) -> t {\n    held = next\n    held\n  }\n}\n", "let callback = maker::<Unit>(())\n  callback(())\n  value"],
     ]) {
       const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
       let main;

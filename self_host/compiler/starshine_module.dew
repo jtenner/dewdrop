@@ -20863,6 +20863,7 @@ fn self_host_emit_linked_i32_expression(
                 link,
                 module_index,
                 lambda_position,
+                caller_specialization,
               ) {
                 Option::Some(value) => value
                 Option::None => {
@@ -20873,6 +20874,7 @@ fn self_host_emit_linked_i32_expression(
                 link,
                 module_index,
                 lambda_id,
+                caller_specialization,
               ) {
                 Option::Some(value) => value
                 Option::None => {
@@ -25781,6 +25783,9 @@ fn self_host_emit_linked_i32_expression(
                 Option::Some(value) => value
                 Option::None => return Option::Some("capture write has no frozen body plan")
               }
+              if self_host_capture_write_is_erased(link, plan, capture) {
+                self_host_linked_i32_schedule_expression(tasks, expression_depths, value, destination, depth)
+              } else {
               let cell = match self_host_capture_write_type(link, plan, capture) {
                 Option::Some(value) => value
                 Option::None => return Option::Some("capture write has no mutable physical cell")
@@ -25794,6 +25799,7 @@ fn self_host_emit_linked_i32_expression(
               )
               tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructSet(cell, 0u32, destination))
               self_host_linked_i32_schedule_expression(tasks, expression_depths, value, destination, depth)
+              }
             }
             SelfHostPlannedExpressionKind::PlannedIndexSet(
               base,
@@ -28058,21 +28064,24 @@ fn self_host_linked_lambda_type_index(
   link: SelfHostPlannedProgramWasmGCLink,
   module_index: U32,
   lambda_position: U32,
+  specialization: U32,
 ) -> Option<U32> {
-  let fragment_module = link.fragments.modules[module_index]
-  if lambda_position >= self_host_linked_lambda_closure_type_count(
-    fragment_module,
-  ) {
+  let module_ = self_host_linked_lowering_module_at(link, module_index)
+  if lambda_position >= module_.lambdas.length() {
     return Option::None
   }
-  let fragment_index = self_host_linked_lambda_closure_type_at(
-    fragment_module,
-    lambda_position,
-  )
+  let lambda = module_.lambdas[lambda_position]
+  let fragment_module = self_host_body_fragment_module(link, module_index)
   for linked_type in link.types {
-    if self_host_u32_equal(linked_type.module_index, module_index) &&
-      self_host_u32_equal(linked_type.fragment_index, fragment_index) {
-      return Option::Some(linked_type.type_index)
+    if self_host_u32_equal(linked_type.module_index, module_index) {
+      match fragment_module.physical_types[linked_type.fragment_index].kind {
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(id, request) => {
+          if self_host_u32_equal(id, lambda.lambda) && self_host_u32_equal(request, specialization) {
+            return Option::Some(linked_type.type_index)
+          }
+        }
+        _ => {}
+      }
     }
   }
   Option::None
@@ -28082,9 +28091,10 @@ fn self_host_linked_lambda_function_index(
   link: SelfHostPlannedProgramWasmGCLink,
   module_index: U32,
   lambda_id: U32,
+  specialization: U32,
 ) -> Option<U32> {
   for linked_function in link.functions {
-    if self_host_u32_equal(linked_function.module_index, module_index) {
+    if self_host_u32_equal(linked_function.module_index, module_index) && self_host_u32_equal(linked_function.specialization, specialization) {
       let fragment_module = link.fragments.modules[module_index]
       let fragment = self_host_program_link_fragment_function(
         fragment_module,
@@ -28278,7 +28288,7 @@ fn self_host_linked_append_physical_types(
           wasm_ref_null(),
         )
       }
-      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(_) => match self_host_linked_closure_base_type_index(
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(_, _) => match self_host_linked_closure_base_type_index(
         link,
         linked_type.module_index,
       ) {
@@ -39085,7 +39095,7 @@ fn self_host_linked_scalar_locals(
   while capture_local {
     _ => if capture_local < body.locals.length {
     let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + capture_local])
-    if self_host_local_needs_capture_cell(module_, local) {
+    if self_host_local_needs_capture_cell(module_, local) && !self_host_linked_local_is_erased(canonical_body_plan, module_, body, local.local_id) {
       if !self_host_linked_scalar_append_local_type(locals, SelfHostPlannedValueShape::RefPlannedValueShape) {
         return Result::Err("captured local cell storage is unsupported")
       }

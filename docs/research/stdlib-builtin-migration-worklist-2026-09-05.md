@@ -71,7 +71,10 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   Generic Unit local slots now use frozen physical mappings; see
   `self-host-frozen-local-slots-2026-09-05.md`. The clean bootstrap at `686ed7d`
   passed with identical B/C hashes, but A/B execution exceeded 30 seconds.
-  Generic scalar captures and a subsequent clean bootstrap remain open.
+  Generic scalar/Unit capture environments and entry signatures now specialize
+  together; see `self-host-specialized-closures-2026-09-05.md`. Frozen closure
+  construction targets, calls inside generic lambdas, and a subsequent clean
+  bootstrap remain open.
 - [ ] Require valid collected source in compiler integration fixtures. A callback
   fixture used an invalid local type annotation but checked only inference
   diagnostics. Its valid-source replacement must exercise the actual call.
