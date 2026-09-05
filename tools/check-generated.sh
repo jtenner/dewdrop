@@ -6,6 +6,8 @@ echo "== generated sources =="
 python3 tools/generate_preamble_sources.py --check
 python3 tools/generate_lane_std.py --check
 python3 tools/test_packed_builtin_policy.py
+python3 tools/test_scalar_builtin_policy.py
+python3 tools/generate_self_host_numeric_builtins.py --check
 python3 tools/generate_string_std.py --check
 python3 tools/generate_wasi_std.py --check
 python3 tools/generate_wasm_intrinsics_std.py --check

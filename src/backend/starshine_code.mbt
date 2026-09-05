@@ -256,13 +256,11 @@ priv enum StarshineEmitTask {
     @semantic.DeclId,
     @semantic.ExprId,
     Int,
-    Int,
     @semantic.HirSpan
   )
   FinishStarshineTailCall(
     @semantic.DeclId,
     @semantic.ExprId,
-    Int,
     Int,
     @semantic.HirSpan
   )
@@ -861,12 +859,11 @@ fn starshine_signed_i16_constant(value : UInt64) -> Int {
 ///|
 fn starshine_inline_builtin_instructions(
   name : Bytes,
-  scratch_index : Int,
   test_assert_function_index : Int,
   array_runtime_base : Int,
   array_wrapper_type : Int,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
-  match starshine_conversion_builtin_instructions(name, scratch_index) {
+  match starshine_conversion_builtin_instructions(name) {
     Some(instructions) => return Ok(instructions)
     None => ()
   }
@@ -979,7 +976,6 @@ fn starshine_finish_call(
   planned : @semantic.PlannedModuleWasmGCFragments,
   declaration : @semantic.DeclId,
   fragments : Array[Array[@lib.Instruction]],
-  scratch_index : Int,
   tail : Bool,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let output : Array[@lib.Instruction] = []
@@ -1017,7 +1013,6 @@ fn starshine_finish_call(
     match
       starshine_inline_builtin_instructions(
         function_.direct_builtin,
-        scratch_index,
         test_assert_function_index,
         starshine_fixed_array_runtime_base(planned),
         array_wrapper_type,
@@ -1031,7 +1026,6 @@ fn starshine_finish_call(
         match
           starshine_inline_builtin_instructions(
             name,
-            scratch_index,
             test_assert_function_index,
             starshine_fixed_array_runtime_base(planned),
             array_wrapper_type,
@@ -1234,7 +1228,6 @@ fn starshine_finish_program_call(
   type_arguments : @semantic.HirSpan?,
   generic_specialization : StarshineGenericSpecialization?,
   fragments : Array[Array[@lib.Instruction]],
-  scratch_index : Int,
   tail : Bool,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let output : Array[@lib.Instruction] = []
@@ -1390,7 +1383,6 @@ fn starshine_finish_program_call(
     match
       starshine_inline_builtin_instructions(
         function_.direct_builtin,
-        scratch_index,
         test_assert_function_index,
         planned.fixed_array_type_base,
         array_wrapper_type,
@@ -1404,7 +1396,6 @@ fn starshine_finish_program_call(
         match
           starshine_inline_builtin_instructions(
             name,
-            scratch_index,
             test_assert_function_index,
             planned.fixed_array_type_base,
             array_wrapper_type,
@@ -3435,7 +3426,6 @@ fn starshine_body_locals(
   Array[Int],
   Int,
   Int,
-  Int,
   Array[Int],
   Array[Int],
   Int,
@@ -3634,7 +3624,6 @@ fn starshine_body_locals(
   }
   let match_local_indices = Array::make(body.expressions.length, -1)
   let match_result_local_indices = Array::make(body.expressions.length, -1)
-  let mut conversion_scratch_index = -1
   let mut fixed_array_ref_scratch_index = -1
   let mut fixed_array_i32_scratch_index = -1
   let map_key_local_indices = Array::make(body.expressions.length, -1)
@@ -3737,42 +3726,6 @@ fn starshine_body_locals(
               }
               None => ()
             }
-        }
-      }
-      @semantic.PlannedDirectCall(declaration, _, _, _)
-      | @semantic.PlannedTailCall(declaration, _, _, _) => {
-        let name = match program {
-          Some(link) =>
-            match link.function_of(declaration) {
-              Some(function_) =>
-                if function_.direct_builtin.length() > 0 {
-                  function_.direct_builtin
-                } else {
-                  match function_.kind {
-                    @semantic.PlannedWasmInlineBuiltinFunction(name) => name
-                    _ => b""
-                  }
-                }
-              None => b""
-            }
-          None =>
-            match planned.function_of(declaration) {
-              Some(function_) =>
-                if function_.direct_builtin.length() > 0 {
-                  function_.direct_builtin
-                } else {
-                  match function_.kind {
-                    @semantic.PlannedWasmInlineBuiltinFunction(name) => name
-                    _ => b""
-                  }
-                }
-              None => b""
-            }
-        }
-        if conversion_scratch_index < 0 &&
-          starshine_conversion_builtin_needs_scratch(name) {
-          conversion_scratch_index = parameter_count + body_local_types.length()
-          body_local_types.push(@lib.ValType::i32())
         }
       }
       @semantic.PlannedFunctionValueCall(_, _, _) => {
@@ -4398,10 +4351,10 @@ fn starshine_body_locals(
   }
   (
     local_indices, body_local_types, match_local_indices, match_result_local_indices,
-    conversion_scratch_index, fixed_array_ref_scratch_index, fixed_array_i32_scratch_index,
-    map_key_local_indices, map_value_local_indices, map_ref_scratch_index, map_bucket_scratch_index,
-    map_hash_scratch_index, map_entry_scratch_index, map_previous_scratch_index,
-    map_growth_index_scratch_index, control_state_local_indices, control_result_local_indices,
+    fixed_array_ref_scratch_index, fixed_array_i32_scratch_index, map_key_local_indices,
+    map_value_local_indices, map_ref_scratch_index, map_bucket_scratch_index, map_hash_scratch_index,
+    map_entry_scratch_index, map_previous_scratch_index, map_growth_index_scratch_index,
+    control_state_local_indices, control_result_local_indices,
   )
 }
 
@@ -4922,7 +4875,6 @@ fn starshine_map_call(
   program : @semantic.PlannedProgramWasmGCLink?,
   declaration : @semantic.DeclId,
   arguments : Array[Array[@lib.Instruction]],
-  scratch_index : Int,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   match program {
     Some(link) =>
@@ -4936,13 +4888,9 @@ fn starshine_map_call(
         None,
         None,
         arguments,
-        scratch_index,
         false,
       )
-    None =>
-      starshine_finish_call(
-        planned, declaration, arguments, scratch_index, false,
-      )
+    None => starshine_finish_call(planned, declaration, arguments, false)
   }
 }
 
@@ -5877,7 +5825,6 @@ fn starshine_emit_body_instructions(
   match_local_indices : Array[Int],
   match_result_local_indices : Array[Int],
   function_reference_cache_indices : Array[Int],
-  conversion_scratch_index : Int,
   fixed_array_ref_scratch_index : Int,
   fixed_array_i32_scratch_index : Int,
   map_key_local_indices : Array[Int],
@@ -6572,7 +6519,6 @@ fn starshine_emit_body_instructions(
                 declaration,
                 expression,
                 arguments.length + receiver_count,
-                conversion_scratch_index,
                 type_arguments,
               ),
             )
@@ -6604,7 +6550,6 @@ fn starshine_emit_body_instructions(
                 declaration,
                 expression,
                 arguments.length + receiver_count,
-                conversion_scratch_index,
                 type_arguments,
               ),
             )
@@ -6652,7 +6597,6 @@ fn starshine_emit_body_instructions(
                     requirement,
                     expression,
                     arguments.length + receiver_count,
-                    conversion_scratch_index,
                     type_arguments,
                   ),
                 )
@@ -6678,9 +6622,7 @@ fn starshine_emit_body_instructions(
             type_arguments
           ) => {
             tasks.push(
-              FinishStarshineCall(
-                declaration, expression, 2, conversion_scratch_index, type_arguments,
-              ),
+              FinishStarshineCall(declaration, expression, 2, type_arguments),
             )
             tasks.push(EmitStarshineExpression(right))
             tasks.push(EmitStarshineExpression(left))
@@ -6706,7 +6648,7 @@ fn starshine_emit_body_instructions(
               None =>
                 tasks.push(
                   FinishStarshineCall(
-                    requirement, expression, 2, conversion_scratch_index, type_arguments,
+                    requirement, expression, 2, type_arguments,
                   ),
                 )
             }
@@ -6715,9 +6657,7 @@ fn starshine_emit_body_instructions(
           }
           @semantic.PlannedIndexCall(declaration, base, index, type_arguments) => {
             tasks.push(
-              FinishStarshineCall(
-                declaration, expression, 2, conversion_scratch_index, type_arguments,
-              ),
+              FinishStarshineCall(declaration, expression, 2, type_arguments),
             )
             tasks.push(EmitStarshineExpression(index))
             tasks.push(EmitStarshineExpression(base))
@@ -6730,9 +6670,7 @@ fn starshine_emit_body_instructions(
             type_arguments
           ) => {
             tasks.push(
-              FinishStarshineCall(
-                declaration, expression, 3, conversion_scratch_index, type_arguments,
-              ),
+              FinishStarshineCall(declaration, expression, 3, type_arguments),
             )
             tasks.push(EmitStarshineExpression(value))
             tasks.push(EmitStarshineExpression(index))
@@ -9356,19 +9294,13 @@ fn starshine_emit_body_instructions(
           ),
         )
         let hash_call = match
-          starshine_map_call(
-            planned,
-            program,
-            hash_declaration,
+          starshine_map_call(planned, program, hash_declaration, [
             [
-              [
-                @lib.Instruction::local_get(
-                  @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
-                ),
-              ],
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+              ),
             ],
-            conversion_scratch_index,
-          ) {
+          ]) {
           Ok(value) => value
           Err(error) => return Err(error)
         }
@@ -9644,29 +9576,23 @@ fn starshine_emit_body_instructions(
         ]
         let on_hash : Array[@lib.Instruction] = []
         let eq_call = match
-          starshine_map_call(
-            planned,
-            program,
-            eq_declaration,
+          starshine_map_call(planned, program, eq_declaration, [
             [
-              [
-                @lib.Instruction::local_get(
-                  @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
-                ),
-                starshine_match_cast(entry_type),
-                starshine_map_entry_get(
-                  entry_type,
-                  starshine_map_entry_field(key_shape, false),
-                ),
-              ],
-              [
-                @lib.Instruction::local_get(
-                  @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
-                ),
-              ],
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+              ),
+              starshine_match_cast(entry_type),
+              starshine_map_entry_get(
+                entry_type,
+                starshine_map_entry_field(key_shape, false),
+              ),
             ],
-            conversion_scratch_index,
-          ) {
+            [
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+              ),
+            ],
+          ]) {
           Ok(value) => value
           Err(error) => return Err(error)
         }
@@ -9949,19 +9875,13 @@ fn starshine_emit_body_instructions(
           )
         }
         let hash_call = match
-          starshine_map_call(
-            planned,
-            program,
-            hash_declaration,
+          starshine_map_call(planned, program, hash_declaration, [
             [
-              [
-                @lib.Instruction::local_get(
-                  @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
-                ),
-              ],
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+              ),
             ],
-            conversion_scratch_index,
-          ) {
+          ]) {
           Ok(value) => value
           Err(error) => return Err(error)
         }
@@ -10292,26 +10212,20 @@ fn starshine_emit_body_instructions(
         let on_hash : Array[@lib.Instruction] = []
         let key_field = starshine_map_entry_field(key_shape, false)
         let eq_call = match
-          starshine_map_call(
-            planned,
-            program,
-            eq_declaration,
+          starshine_map_call(planned, program, eq_declaration, [
             [
-              [
-                @lib.Instruction::local_get(
-                  @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
-                ),
-                starshine_match_cast(entry_type),
-                starshine_map_entry_get(entry_type, key_field),
-              ],
-              [
-                @lib.Instruction::local_get(
-                  @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
-                ),
-              ],
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(entry_local.reinterpret_as_uint()),
+              ),
+              starshine_match_cast(entry_type),
+              starshine_map_entry_get(entry_type, key_field),
             ],
-            conversion_scratch_index,
-          ) {
+            [
+              @lib.Instruction::local_get(
+                @lib.LocalIdx::new(key_local.reinterpret_as_uint()),
+              ),
+            ],
+          ]) {
           Ok(value) => value
           Err(error) => return Err(error)
         }
@@ -10566,13 +10480,7 @@ fn starshine_emit_body_instructions(
         }
         results.push(output)
       }
-      FinishStarshineCall(
-        declaration,
-        expression,
-        count,
-        scratch_index,
-        type_arguments
-      ) => {
+      FinishStarshineCall(declaration, expression, count, type_arguments) => {
         let fragments = pop_starshine_fragments(results, count)
         let emitted = match program {
           Some(link) =>
@@ -10586,13 +10494,9 @@ fn starshine_emit_body_instructions(
               Some(type_arguments),
               generic_specialization,
               fragments,
-              scratch_index,
               false,
             )
-          None =>
-            starshine_finish_call(
-              planned, declaration, fragments, scratch_index, false,
-            )
+          None => starshine_finish_call(planned, declaration, fragments, false)
         }
         match emitted {
           Ok(output) => {
@@ -10610,13 +10514,7 @@ fn starshine_emit_body_instructions(
           Err(error) => return Err(error)
         }
       }
-      FinishStarshineTailCall(
-        declaration,
-        expression,
-        count,
-        scratch_index,
-        type_arguments
-      ) => {
+      FinishStarshineTailCall(declaration, expression, count, type_arguments) => {
         let fragments = pop_starshine_fragments(results, count)
         let emitted = match program {
           Some(link) =>
@@ -10630,13 +10528,9 @@ fn starshine_emit_body_instructions(
               Some(type_arguments),
               generic_specialization,
               fragments,
-              scratch_index,
               true,
             )
-          None =>
-            starshine_finish_call(
-              planned, declaration, fragments, scratch_index, true,
-            )
+          None => starshine_finish_call(planned, declaration, fragments, true)
         }
         match emitted {
           Ok(output) => results.push(output)
@@ -11904,7 +11798,6 @@ fn emit_starshine_lambda_body(
     body_local_types,
     match_local_indices,
     match_result_local_indices,
-    conversion_scratch_index,
     fixed_array_ref_scratch_index,
     fixed_array_i32_scratch_index,
     map_key_local_indices,
@@ -11952,7 +11845,6 @@ fn emit_starshine_lambda_body(
       match_local_indices,
       match_result_local_indices,
       function_reference_cache_indices,
-      conversion_scratch_index,
       fixed_array_ref_scratch_index,
       fixed_array_i32_scratch_index,
       map_key_local_indices,
@@ -12003,7 +11895,6 @@ fn emit_starshine_function_body(
     body_local_types,
     match_local_indices,
     match_result_local_indices,
-    conversion_scratch_index,
     fixed_array_ref_scratch_index,
     fixed_array_i32_scratch_index,
     map_key_local_indices,
@@ -12047,7 +11938,6 @@ fn emit_starshine_function_body(
       match_local_indices,
       match_result_local_indices,
       function_reference_cache_indices,
-      conversion_scratch_index,
       fixed_array_ref_scratch_index,
       fixed_array_i32_scratch_index,
       map_key_local_indices,

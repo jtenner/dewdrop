@@ -145,4 +145,51 @@ for (const [name, expected] of [
     console.error(error);
   }
 }
+// Compile the real library source, not a second copy of its conversion rules.
+// Compilation failures and missing exports fail before any expected-trap check.
+{
+  const start = performance.now();
+  try {
+    const source = "builtin unsafe_bitcast<a, b>(value: a) -> b = \"unsafe.bitcast\"\n" +
+      "builtin unreachable() -> Never = \"dew_unreachable\"\n" +
+      await readFile(new URL("../std/preamble/70-into-builtins.dew", import.meta.url), "utf8");
+    let checks = 0;
+    for (const width of [32, 64]) {
+      for (const [target, min, max] of [["i8", -128, 127], ["i16", -32768, 32767], ["u8", 0, 255], ["u16", 0, 65535]]) {
+        const name = `f${width}_into_${target}`;
+        const type = target.toUpperCase();
+        const fixture = source + `\npub fn main(value: F${width}) -> I32 {\n  unsafe_bitcast::<${type}, I32>(${name}(value))\n}\n`;
+        const builder = compiler.exports.self_host_emission_probe_source_new();
+        for (const byte of new TextEncoder().encode(fixture)) {
+          compiler.exports.self_host_emission_probe_source_append(builder, byte);
+        }
+        const output = compiler.exports.self_host_emission_probe_compile_source(builder);
+        const bytes = new Uint8Array(compiler.exports.self_host_emission_probe_bytes_length(output));
+        for (let index = 0; index < bytes.length; index++) {
+          bytes[index] = compiler.exports.self_host_emission_probe_byte_at(output, index);
+        }
+        const module = await WebAssembly.compile(bytes);
+        const instance = await WebAssembly.instantiate(module, unusedImports(module));
+        instance.exports.__dew_init?.();
+        const convert = instance.exports.main;
+        assert.equal(typeof convert, "function", `${name}: export is missing`);
+        for (const [input, expected] of [[min, min], [max, max], [42.75, 42], [-0.75, 0]]) {
+          assert.equal(convert(input), expected, `${name}(${input})`);
+          checks++;
+        }
+        for (const input of [min - 1, max + 1, NaN, Infinity, -Infinity]) {
+          assert.throws(() => convert(input), WebAssembly.RuntimeError, `${name}(${input}) must trap`);
+          checks++;
+        }
+      }
+    }
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`self-host narrow float conversions passed: ${checks} (${elapsed.toFixed(3)} seconds)`);
+    if (elapsed > 30) throw new Error("narrow float conversion compiler performance exceeds 30 seconds");
+  } catch (error) {
+    failures++;
+    console.error("self-host narrow float conversion probe failed");
+    console.error(error);
+  }
+}
 if (failures) throw new Error(`${failures} self-host emission probe(s) failed`);

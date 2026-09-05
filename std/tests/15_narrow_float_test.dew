@@ -1,0 +1,21 @@
+test "signed float conversions truncate before checking the narrow range" {
+  assert(f32_into_i8(-128.75f32) == -128i8, "f32 I8 lower boundary")
+  assert(f32_into_i8(127.75f32) == 127i8, "f32 I8 upper boundary")
+  assert(f64_into_i8(-128.75f64) == -128i8, "f64 I8 lower boundary")
+  assert(f64_into_i8(127.75f64) == 127i8, "f64 I8 upper boundary")
+  assert(f32_into_i16(-32768.75f32) == -32768i16, "f32 I16 lower boundary")
+  assert(f32_into_i16(32767.75f32) == 32767i16, "f32 I16 upper boundary")
+  assert(f64_into_i16(-32768.75f64) == -32768i16, "f64 I16 lower boundary")
+  assert(f64_into_i16(32767.75f64) == 32767i16, "f64 I16 upper boundary")
+}
+
+test "unsigned float conversions truncate before checking the narrow range" {
+  assert(f32_into_u8(-0.75f32) == 0u8, "f32 U8 truncation to zero")
+  assert(f32_into_u8(255.75f32) == 255u8, "f32 U8 upper boundary")
+  assert(f64_into_u8(-0.75f64) == 0u8, "f64 U8 truncation to zero")
+  assert(f64_into_u8(255.75f64) == 255u8, "f64 U8 upper boundary")
+  assert(f32_into_u16(-0.75f32) == 0u16, "f32 U16 truncation to zero")
+  assert(f32_into_u16(65535.75f32) == 65535u16, "f32 U16 upper boundary")
+  assert(f64_into_u16(-0.75f64) == 0u16, "f64 U16 truncation to zero")
+  assert(f64_into_u16(65535.75f64) == 65535u16, "f64 U16 upper boundary")
+}

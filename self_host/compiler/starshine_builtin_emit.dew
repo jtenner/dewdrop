@@ -1685,16 +1685,6 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64_convert_i64u(),
     )
-  } else if name.equals(b"dew_f32_into_i8") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_trunc_f32s(),
-    )
-  } else if name.equals(b"dew_f32_into_i16") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_trunc_f32s(),
-    )
   } else if name.equals(b"dew_f32_into_i32") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
@@ -1704,16 +1694,6 @@ fn self_host_emit_linked_builtin(
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64_trunc_f32s(),
-    )
-  } else if name.equals(b"dew_f32_into_u8") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_trunc_f32u(),
-    )
-  } else if name.equals(b"dew_f32_into_u16") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_trunc_f32u(),
     )
   } else if name.equals(b"dew_f32_into_u32") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
@@ -1731,16 +1711,6 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64_promote_f32(),
     )
-  } else if name.equals(b"dew_f64_into_i8") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_trunc_f64s(),
-    )
-  } else if name.equals(b"dew_f64_into_i16") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_trunc_f64s(),
-    )
   } else if name.equals(b"dew_f64_into_i32") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
@@ -1750,16 +1720,6 @@ fn self_host_emit_linked_builtin(
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64_trunc_f64s(),
-    )
-  } else if name.equals(b"dew_f64_into_u8") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_trunc_f64u(),
-    )
-  } else if name.equals(b"dew_f64_into_u16") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_lib_Instruction_i32_trunc_f64u(),
     )
   } else if name.equals(b"dew_f64_into_u32") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(

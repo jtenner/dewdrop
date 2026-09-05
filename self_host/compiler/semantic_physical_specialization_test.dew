@@ -1,4 +1,5 @@
 open dew.std.option
+open dew.std.bytes_builder
 
 test "trait evidence identities remain part of specialization keys" {
   let requests = []
@@ -861,6 +862,27 @@ test "nested block results keep one shared type variable" {
 
 pub fn self_host_emission_probe_bytes_length(bytes: Bytes) -> U32 {
   bytes.byte_length()
+}
+
+pub fn self_host_emission_probe_source_new() -> BytesBuilder {
+  BytesBuilder::new()
+}
+
+pub fn self_host_emission_probe_source_append(source: BytesBuilder, value: U8) -> Unit {
+  source.append_byte(value)
+}
+
+pub fn self_host_emission_probe_compile_source(source: BytesBuilder) -> Bytes {
+  let fragments = self_host_physical_test_fragments(source.finish())
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
 }
 
 pub fn self_host_emit_bound_dispatch_probe() -> Bytes {

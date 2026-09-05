@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,14 +69,17 @@ def emit_push(expression: str) -> list[str]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
     source = SOURCE.read_text()
     branches = BRANCH.findall(source)
     if len(branches) != 156:
         raise SystemExit(f"expected 156 numeric builtin branches, found {len(branches)}")
     conversion_branches = BRANCH.findall(CONVERSION_SOURCE.read_text())
-    if len(conversion_branches) != 100:
+    if len(conversion_branches) != 92:
         raise SystemExit(
-            f"expected 100 conversion builtin branches, found {len(conversion_branches)}"
+            f"expected 92 conversion builtin branches, found {len(conversion_branches)}"
         )
     v128_branches = BRANCH.findall(V128_SOURCE.read_text())
     if len(v128_branches) != 150:
@@ -164,21 +168,9 @@ def main() -> None:
         lines.append(f"  }} else if name.equals(b\"{name}\") {{")
         for instruction in split_instructions(body):
             lines.extend(emit_push(translate_instruction(instruction)))
-    narrow_float_conversions = {
-        "dew_f32_into_i8",
-        "dew_f32_into_i16",
-        "dew_f32_into_u8",
-        "dew_f32_into_u16",
-        "dew_f64_into_i8",
-        "dew_f64_into_i16",
-        "dew_f64_into_u8",
-        "dew_f64_into_u16",
-    }
     for name, body in conversion_branches:
         lines.append(f"  }} else if name.equals(b\"{name}\") {{")
         instructions = split_instructions(body)
-        if name in narrow_float_conversions:
-            instructions = instructions[:1]
         for instruction in instructions:
             lines.extend(emit_push(translate_instruction(instruction)))
     for name, body in v128_branches:
@@ -195,7 +187,13 @@ def main() -> None:
             "",
         ]
     )
-    OUTPUT.write_text("\n".join(lines))
+    expected = "\n".join(lines)
+    if args.check:
+        if OUTPUT.read_text() != expected:
+            raise SystemExit(f"stale {OUTPUT.relative_to(ROOT)}")
+        print(f"checked {OUTPUT.relative_to(ROOT)}")
+    else:
+        OUTPUT.write_text(expected)
 
 
 if __name__ == "__main__":

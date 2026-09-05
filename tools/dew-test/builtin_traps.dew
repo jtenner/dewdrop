@@ -2,6 +2,70 @@ open dew.std.string
 open dew.std.string_builder
 open dew.std.bytes
 open dew.std.bytes_builder
+
+pub fn float32_i8_below_range() -> I8 {
+  f32_into_i8(-129.0f32)
+}
+
+pub fn float32_i8_above_range() -> I8 {
+  f32_into_i8(128.0f32)
+}
+
+pub fn float32_i16_below_range() -> I16 {
+  f32_into_i16(-32769.0f32)
+}
+
+pub fn float32_i16_above_range() -> I16 {
+  f32_into_i16(32768.0f32)
+}
+
+pub fn float32_u8_below_range() -> U8 {
+  f32_into_u8(-1.0f32)
+}
+
+pub fn float32_u8_above_range() -> U8 {
+  f32_into_u8(256.0f32)
+}
+
+pub fn float32_u16_below_range() -> U16 {
+  f32_into_u16(-1.0f32)
+}
+
+pub fn float32_u16_above_range() -> U16 {
+  f32_into_u16(65536.0f32)
+}
+
+pub fn float64_i8_below_range() -> I8 {
+  f64_into_i8(-129.0f64)
+}
+
+pub fn float64_i8_above_range() -> I8 {
+  f64_into_i8(128.0f64)
+}
+
+pub fn float64_i16_below_range() -> I16 {
+  f64_into_i16(-32769.0f64)
+}
+
+pub fn float64_i16_above_range() -> I16 {
+  f64_into_i16(32768.0f64)
+}
+
+pub fn float64_u8_below_range() -> U8 {
+  f64_into_u8(-1.0f64)
+}
+
+pub fn float64_u8_above_range() -> U8 {
+  f64_into_u8(256.0f64)
+}
+
+pub fn float64_u16_below_range() -> U16 {
+  f64_into_u16(-1.0f64)
+}
+
+pub fn float64_u16_above_range() -> U16 {
+  f64_into_u16(65536.0f64)
+}
 test "assert false traps" {
   assert(false, "intentional assertion failure")
 }
