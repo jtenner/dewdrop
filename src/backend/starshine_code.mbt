@@ -3953,7 +3953,7 @@ fn starshine_body_locals(
           value_source.type_,
           shape,
         )
-        match starshine_shape_value_type(element_shape) {
+        match starshine_array_storage_value_type(element_shape) {
           Some(type_) => {
             map_value_local_indices[expression - body.expressions.start] = parameter_count +
               body_local_types.length()
@@ -4961,7 +4961,7 @@ fn starshine_fixed_array_backing_prefix(
   program : @semantic.PlannedProgramWasmGCLink?,
   shape : @semantic.PlannedValueShape,
 ) -> (Array[@lib.Instruction], Int)? {
-  let carrier = starshine_fixed_array_carrier(shape)
+  let carrier = @semantic.wasmgc_raw_array_storage_carrier(shape)
   guard carrier >= 0 else { return None }
   let array_type = starshine_fixed_array_base_for_body(planned, program) +
     carrier
@@ -8864,6 +8864,7 @@ fn starshine_emit_body_instructions(
           }
           append_starshine_instructions(output, fragments[0])
           append_starshine_instructions(output, fragments[1])
+          starshine_array_append_unit_marker(output, Some(shape))
           output.push(
             @lib.Instruction::local_set(
               @lib.LocalIdx::new(ref_scratch.reinterpret_as_uint()),
@@ -8898,11 +8899,15 @@ fn starshine_emit_body_instructions(
           append_starshine_instructions(output, backing_prefix)
           append_starshine_instructions(output, fragments[1])
           output.push(starshine_fixed_array_get_instruction(shape, array_type))
+          if shape is @semantic.UnitPlannedValueShape {
+            output.push(@lib.Instruction::drop())
+          }
         } else if operation == 5 {
           append_starshine_instructions(output, fragments[0])
           append_starshine_instructions(output, backing_prefix)
           append_starshine_instructions(output, fragments[1])
           append_starshine_instructions(output, fragments[2])
+          starshine_array_append_unit_marker(output, Some(shape))
           output.push(
             @lib.Instruction::array_set(
               @lib.TypeIdx::new(array_type.reinterpret_as_uint()),

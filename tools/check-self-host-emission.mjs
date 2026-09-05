@@ -12,6 +12,7 @@ import { checkMemberCalls } from "./member-call-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { checkRawGcStorage } from "./raw-gc-storage-cases.mjs";
+import { checkRawGcUnit } from "./raw-gc-unit-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
@@ -499,6 +500,17 @@ pub fn main() -> I32 {
   } catch (error) {
     failures++;
     console.error("self-host raw GC storage probe failed", error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const request = await readFile(process.argv[5] ?? new URL("../.tmp/self-host-hardening/raw-gc-unit.request.bin", import.meta.url));
+    const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+    console.log(`self-host raw Unit array checks passed: ${checkRawGcUnit(exports.main)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+  } catch (error) {
+    failures++;
+    console.error("self-host raw Unit array probe failed", error);
   }
 }
 if (failures) throw new Error(`${failures} self-host emission probe(s) failed`);

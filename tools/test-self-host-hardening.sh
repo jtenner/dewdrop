@@ -16,6 +16,11 @@ self_host_measure 'hardening raw GC storage request' \
     "$work/raw-gc.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-raw-gc-probe.wasm \
     app.raw_gc tools/dew-test/raw_gc_storage.dew
+self_host_measure 'hardening raw Unit array request' \
+  moon run --target native --release src/self_host_bootstrap_fixture -- \
+    "$work/raw-gc-unit.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-raw-gc-unit-probe.wasm \
+    app.raw_gc_unit tools/dew-test/raw_gc_unit.dew
 mapfile -t compiler_sources < <(
   find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' ! -name main.dew | sort
 )

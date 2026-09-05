@@ -1368,7 +1368,7 @@ fn wasmgc_storage_type(
               // evidence that the backing array contains reference elements.
               return Some(WasmNullableEqRefStorage)
             }
-            let carrier = wasmgc_fixed_array_carrier(
+            let carrier = wasmgc_raw_array_storage_carrier(
               planned_resolved_value_shape(resolved, element),
             )
             if carrier >= 0 {
@@ -2143,6 +2143,19 @@ pub fn wasmgc_fixed_array_carrier(shape : PlannedValueShape) -> Int {
 }
 
 ///|
+// Raw array storage is distinct from expression and enum payload carriers.
+// Unit occupies a null marker cell; unknown evidence never selects that cell.
+pub fn wasmgc_raw_array_storage_carrier(shape : PlannedValueShape) -> Int {
+  match shape {
+    UnitPlannedValueShape => 5
+    GenericPlannedValueShape
+    | ErrorPlannedValueShape
+    | NeverPlannedValueShape => -1
+    _ => wasmgc_fixed_array_carrier(shape)
+  }
+}
+
+///|
 fn wasmgc_value_type(
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
@@ -2268,7 +2281,7 @@ fn wasmgc_value_type(
           NominalType(declaration) if declaration ==
             standard_fixed_array_type_declaration() &&
             arguments.length == 1 => {
-            let carrier = wasmgc_fixed_array_carrier(
+            let carrier = wasmgc_raw_array_storage_carrier(
               planned_resolved_value_shape(
                 resolved,
                 resolved.type_arguments[arguments.start],

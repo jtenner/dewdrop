@@ -21123,6 +21123,10 @@ fn self_host_emit_linked_i32_expression(
                 // including nested constructors and side-effecting arguments.
                 let length_local = self_host_linked_i32_scratch_slot(canonical_body_plan, link, module_, body, expression)
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedLocalGet(length_local, destination))
+                if value_shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+                  // Storage marker only: the source Unit expression still runs.
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
+                }
                 self_host_linked_i32_schedule_expression(
                   tasks,
                   expression_depths,
@@ -21208,6 +21212,9 @@ fn self_host_emit_linked_i32_expression(
                   array_type,
                   destination,
                 ))
+                if value_shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
+                }
                 self_host_linked_i32_schedule_expression(
                   tasks,
                   expression_depths,
@@ -21387,6 +21394,11 @@ fn self_host_emit_linked_i32_expression(
                     self_host_linked_array_carrier_from_shape(element_shape),
                   ),
                 )
+                if self_host_linked_canonical_expression_shape(canonical_body_plan, expression) is Option::Some(SelfHostPlannedValueShape::UnitPlannedValueShape) {
+                  // array.get still executes and checks bounds. Its stored
+                  // marker is not a logical result or a caller operand.
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Drop(destination))
+                }
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGet(
                   array_type,
                   destination,

@@ -1,0 +1,33 @@
+open dew.std.wasm.intrinsics
+
+struct RawUnitCounter {
+  mut value: U32
+}
+
+fn raw_unit_effect(counter: RawUnitCounter) -> Unit {
+  counter.value = counter.value + 1u32
+}
+
+pub fn main(case: U32) -> I32 {
+  let counter = RawUnitCounter::{
+    value: 0u32
+  }
+  let values = wasm_array_new(2u32, raw_unit_effect(counter))
+  if case == 0u32 {
+    wasm_array_set(values, 0u32, raw_unit_effect(counter))
+    wasm_array_get(values, 1u32)
+    if counter.value == 2u32 && wasm_array_len(values) == 2u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 1u32 {
+    wasm_array_get(values, 2u32)
+    0i32
+  } else if case == 2u32 {
+    wasm_array_set(values, 2u32, raw_unit_effect(counter))
+    0i32
+  } else {
+    0i32
+  }
+}

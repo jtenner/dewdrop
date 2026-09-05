@@ -750,7 +750,7 @@ fn program_fixed_array_specialization_value_type(
               shape_span,
             ) {
             Some(shape) => {
-              let carrier = wasmgc_fixed_array_carrier(shape)
+              let carrier = wasmgc_raw_array_storage_carrier(shape)
               if carrier >= 0 {
                 Some(WasmFixedArrayRefValue(carrier))
               } else {
@@ -1307,7 +1307,7 @@ fn materialize_program_generic_specialization(
       None =>
         match base_value {
           Some(WasmFixedArrayRefValue(_)) if specialization_shapes.length == 1 => {
-            let carrier = wasmgc_fixed_array_carrier(
+            let carrier = wasmgc_raw_array_storage_carrier(
               module_.specialization_shapes[specialization_shapes.start],
             )
             if carrier >= 0 {
@@ -1386,7 +1386,7 @@ fn materialize_program_generic_specialization(
       if base.results.length == 1 && specialization_shapes.length == 1 {
         match module_.function_value_types[base.results.start] {
           WasmFixedArrayRefValue(_) => {
-            let carrier = wasmgc_fixed_array_carrier(
+            let carrier = wasmgc_raw_array_storage_carrier(
               module_.specialization_shapes[specialization_shapes.start],
             )
             if carrier >= 0 {

@@ -68,6 +68,7 @@ def main() -> None:
         ("member_calls", "app.member_probes"),
         ("constructor_evaluations", "app.constructor_probes"),
         ("raw_gc_storage", "app.raw_gc"),
+        ("raw_gc_unit", "app.raw_gc_unit"),
         ("array_operations", "app.array_probes"),
     ]:
         subprocess.run(

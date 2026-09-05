@@ -5,6 +5,9 @@ tracks remaining implementation work; passing one batch is not completion of the
 whole request. Each library family must keep its own bounded implementation commit
 and regression tests. No new compiler-owned library algorithm is permitted.
 
+The current implementation handoff, including compile-time type queries and the
+remaining self-host audit, is in [`../../agent-todo.md`](../../agent-todo.md).
+
 ## Completed before this worklist
 
 - Packed carrier helpers are Dew functions using checked equal-carrier casts and
@@ -56,6 +59,9 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   Ordinary generic structs can now hold typed raw Wasm arrays without an
   invalid cast; seven shared execution cases pass. See
   `generic-raw-array-storage-2026-09-05.md`.
+  Raw Unit arrays now have explicit marker storage without changing logical
+  Unit erasure. Effects and bounds checks pass in both compilers; see
+  `raw-gc-unit-storage-2026-09-05.md`.
   Basic storage/growth and remaining legacy dispatch are still open.
 - [ ] Map and Set: move hashing, buckets, growth, lookup, and iteration into Dew.
 - [ ] Queue, circular buffer, and deque: move storage algorithms into Dew.

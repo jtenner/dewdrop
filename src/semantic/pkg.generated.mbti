@@ -133,6 +133,8 @@ pub fn program_runtime_trait_evidence_slot_parameter(PlannedModuleWasmGCFragment
 
 pub fn raw_wasm_builtin_signature(Bytes) -> RawWasmIntrinsicSignature?
 
+pub fn raw_wasm_shuffle_immediates(Bytes) -> Array[Int]?
+
 pub fn render_compiler_source_diagnostic(CollectedProgram, CompilerSourceDiagnostic) -> String
 
 pub fn required_standard_library_source_paths(ProgramManifest, Bool) -> Array[String]
@@ -248,6 +250,8 @@ pub fn wasmgc_collect_generic_enum_instantiations_into(ResolvedModuleTypes, Map[
 pub fn wasmgc_fixed_array_carrier(PlannedValueShape) -> Int
 
 pub fn wasmgc_fixed_array_carrier_for_resolved_type(Array[ResolvedType], Int) -> Int
+
+pub fn wasmgc_raw_array_storage_carrier(PlannedValueShape) -> Int
 
 pub fn wasmgc_trait_evidence_key(PlannedModuleLowering, Int) -> String
 
@@ -750,6 +754,7 @@ pub enum CollectedParameterKind {
 pub struct CollectedProgram {
   module_id_base : UInt64
   default_preamble : Bool
+  manifest_module_count : Int
   module_paths : Array[String]
   module_lookup : Map[String, Int]
   modules : Array[CollectedModule]
@@ -1921,6 +1926,8 @@ pub struct PlannedModuleWasmGCFragments {
   function_types : Array[PlannedWasmFunctionTypeFragment]
   function_type_by_resolved : Array[Int]
   closure_entry_type_by_resolved : Array[Int]
+  erased_closure_direct_type_by_resolved : Array[Int]
+  erased_closure_entry_type_by_resolved : Array[Int]
   lambda_entry_signature_indices : Array[Int]
   lambda_capture_parameter_indices : Array[Int]
   trait_layouts : Array[PlannedWasmTraitLayout]
@@ -2468,6 +2475,10 @@ pub struct ProgramManifest {
 } derive(Eq, @debug.Debug)
 pub fn ProgramManifest::new(Array[ManifestModule]) -> Self
 
+type ProgramSpecializationShapeNameTask
+
+type ProgramSpecializationShapeTask
+
 pub struct ProgramSpecializedCallKey {
   body : UInt64
   specialization_abi_key : String
@@ -2482,8 +2493,7 @@ pub enum ProgramWasmGCLinkDiagnostic {
 } derive(Eq, @debug.Debug)
 
 pub struct RawWasmIntrinsicSignature {
-  first : PlannedWasmValueType
-  second : PlannedWasmValueType?
+  inputs : Array[PlannedWasmValueType]
   result : PlannedWasmValueType?
 } derive(Eq, @debug.Debug)
 
