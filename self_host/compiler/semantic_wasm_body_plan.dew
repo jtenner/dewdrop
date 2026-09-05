@@ -150,6 +150,8 @@ pub struct SelfHostPlannedPhysicalBodyCarrierPlan {
   expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>
   local_values: Array<SelfHostPlannedPhysicalValueInfo>
   locals: Array<SelfHostWasmBodyCarrier>
+  local_slots: Array<U32>
+  physical_local_count: U32
   control_state_values: Array<SelfHostPlannedPhysicalValueInfo>
   control_states: Array<SelfHostWasmBodyCarrier>
   control_result_values: Array<SelfHostPlannedPhysicalValueInfo>
@@ -1724,6 +1726,10 @@ fn self_host_body_local_slot(
   body: SelfHostPlannedBodyLowering,
   local_id: U32,
 ) -> U32 {
+  if local_id < body.locals.length &&
+    self_host_u32_equal(module_.locals[self_host_u32_add(body.locals.start, local_id)].local_id, local_id) {
+    return local_id
+  }
   let mut relative = 0u32
   let _ = while relative {
     current => if current < body.locals.length {
@@ -5244,7 +5250,14 @@ fn self_host_plan_one_physical_body(
       let source = self_host_body_planned_local_identity(
         module_.locals[self_host_u32_add(body.locals.start, current)],
       )
-      let local_carrier = if source.kind is SelfHostBodyLocalKind::ParameterLocal &&
+      let source_shape = self_host_body_specialization_shape_for_type(
+        link, module_, linked_function.specialization, source.type_, source.shape,
+      )
+      let local_carrier = if source_shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+        SelfHostWasmBodyCarrier::UnitBodyCarrier
+      } else if source_shape is SelfHostPlannedValueShape::NeverPlannedValueShape {
+        SelfHostWasmBodyCarrier::NeverBodyCarrier
+      } else if source.kind is SelfHostBodyLocalKind::ParameterLocal &&
         parameter_index < fragment.parameters.length {
         let value_index = self_host_u32_add(fragment.parameters.start, parameter_index)
         let parameter_carrier = if self_host_u32_greater(
@@ -6726,6 +6739,21 @@ fn self_host_plan_one_physical_body(
     }
   }
   let result_carrier = physical_result_carrier
+  let local_slots = []
+  let mut physical_local_count = 0u32
+  let parameter_offset = if self_host_u32_equal(lambda, 4294967295u32) {
+    0u32
+  } else {
+    1u32
+  }
+  for value in local_values {
+    if value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+      local_slots.push(4294967295u32)
+    } else {
+      local_slots.push(parameter_offset + physical_local_count)
+      physical_local_count = physical_local_count + 1u32
+    }
+  }
   SelfHostPlannedPhysicalBodyCarrierPlan::{
     converged: analysis_converged
     stalled_work_item: stalled_work_item
@@ -6749,6 +6777,8 @@ fn self_host_plan_one_physical_body(
     expressions: expressions
     local_values: local_values
     locals: locals
+    local_slots: local_slots
+    physical_local_count: physical_local_count
     control_state_values: control_state_values
     control_states: control_states
     control_result_values: control_result_values
@@ -7820,6 +7850,21 @@ fn self_host_verify_one_physical_body(
   plan: SelfHostPlannedPhysicalBodyCarrierPlan,
   diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
 ) -> Unit {
+  let _ = self_host_assert_compiler_invariant_with_failure(
+    self_host_u32_equal(plan.local_slots.length(), plan.local_values.length()),
+    SelfHostInvariantFailure::{
+      code: 103u32
+      phase: 6u32
+      module_id: plan.module_id
+      declaration: plan.declaration
+      body: plan.body
+      expression: 4294967295u32
+      expected: u32_into_u64(plan.local_values.length())
+      actual: u32_into_u64(plan.local_slots.length())
+      detail: 710u64
+    },
+    "physical local slots must remain parallel to logical local values",
+  )
   let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
   let body = match self_host_body_lookup_for_plan(module_, plan) {
     Option::Some(value) => value

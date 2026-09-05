@@ -100,7 +100,7 @@ fn self_host_emit_nested_pattern_bindings(
       })
       match child.reference {
         SelfHostBodyPatternReference::PatternBindingReference(local) => if path.length() > 1u32 || pattern.source is StructPattern(_, _, _, _, _) {
-          let slot = match self_host_linked_i32_local_slot(module_, body, local) {
+          let slot = match self_host_linked_i32_local_slot(canonical, module_, body, local) {
             Option::Some(value) => value
             Option::None => return Option::Some("nested binding has no physical local")
           }

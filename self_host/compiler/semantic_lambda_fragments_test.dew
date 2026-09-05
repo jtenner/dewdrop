@@ -73,3 +73,29 @@ test "FRG-401 lambda parameters require parameter locals" expect_trap "unreachab
   }
   self_host_wasmgc_append_lambda_function(module_, lambda, [], [])
 }
+
+fn self_host_assert_erased_parameter_slots(plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  assert(plan.local_slots.length() == 3u32, "three logical parameters")
+  assert(self_host_u32_equal(plan.physical_local_count, 1u32), "one physical parameter")
+  assert(self_host_u32_equal(plan.local_slots[0u32], 4294967295u32), "first Unit is erased")
+  assert(self_host_u32_equal(plan.local_slots[1u32], 0u32), "I64 uses the first physical slot")
+  assert(self_host_u32_equal(plan.local_slots[2u32], 4294967295u32), "last Unit is erased")
+  assert(plan.local_values[0u32].carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier, "Unit does not borrow the next parameter's carrier")
+  assert(plan.local_values[1u32].carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "scalar retains its own carrier")
+}
+
+test "frozen parameter slots omit Unit without shifting scalar carriers" {
+  let fragments = self_host_physical_test_fragments(b"pub fn select(left: Unit, value: I64, right: Unit) -> I64 {\n  value\n}\n")
+  let plan = self_host_plan_program_wasm_bodies(self_host_plan_program_wasmgc_link(fragments, false))
+  assert(plan.diagnostics.length() == 0u32, "valid erased signature")
+  self_host_assert_erased_parameter_slots(plan.bodies[0u32])
+}
+
+test "ARN-103 frozen physical local slots remain parallel" expect_trap "unreachable" {
+  let fragments = self_host_physical_test_fragments(b"pub fn select(left: Unit, value: I64, right: Unit) -> I64 {\n  value\n}\n")
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  let body = plan.bodies[0u32]
+  let _ = body.local_slots.pop()
+  self_host_verify_one_physical_body(link, body, [])
+}

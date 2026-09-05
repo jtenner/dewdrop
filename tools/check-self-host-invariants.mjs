@@ -11,6 +11,10 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "ARN-103 frozen physical local slots remain parallel",
+    expected: [103, 6, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 3n, 2n, 710n],
+  },
+  {
     name: "FRG-401 lambda parameters cannot exceed their local span",
     expected: [401, 4, 5100n, (5100n << 32n) + 1n, 5100n << 32n, 4294967295, 3n, 4n, 0n],
   },

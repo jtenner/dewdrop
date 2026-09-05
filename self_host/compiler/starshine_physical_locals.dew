@@ -1,16 +1,26 @@
 // Logical Unit/Never locals have no Wasm slot. All local and scratch offsets use
 // this same projection; a logical arena position is never a physical local ID.
-fn self_host_linked_local_is_erased(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local_id: U32) -> Bool {
+fn self_host_linked_local_is_erased(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local_id: U32) -> Bool {
   let relative = self_host_body_local_slot(module_, body, local_id)
+  match canonical {
+    Option::Some(plan) => if relative < plan.local_slots.length() {
+      return self_host_u32_equal(plan.local_slots[relative], 4294967295u32)
+    }
+    Option::None => {}
+  }
   relative < body.locals.length && !self_host_capture_has_value(module_.locals[body.locals.start + relative].shape)
 }
 
-fn self_host_linked_physical_local_count(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> U32 {
+fn self_host_linked_physical_local_count(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> U32 {
+  match canonical {
+    Option::Some(plan) => return plan.physical_local_count
+    Option::None => {}
+  }
   let mut count = 0u32
   let mut index = 0u32
   while index {
     _ => if index < body.locals.length {
-      if self_host_capture_has_value(module_.locals[body.locals.start + index].shape) {
+      if !self_host_linked_local_is_erased(canonical, module_, body, module_.locals[body.locals.start + index].local_id) {
         count = count + 1u32
       }
       index = index + 1u32
@@ -20,4 +30,17 @@ fn self_host_linked_physical_local_count(module_: SelfHostPlannedModuleLowering,
     }
   }
   count
+}
+
+fn self_host_linked_planned_expression_emits_value(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, expression: U32) -> Bool {
+  match canonical {
+    Option::Some(plan) => match self_host_body_plan_expression(plan, expression) {
+      Option::Some(value) => if value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+        return false
+      }
+      Option::None => {}
+    }
+    Option::None => {}
+  }
+  self_host_linked_expression_emits_value(link, module_, body, specialization, expression)
 }

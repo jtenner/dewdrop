@@ -7,7 +7,7 @@ struct SelfHostLinkedCaptureCell {
 }
 
 fn self_host_linked_local_capture_cell(link: SelfHostPlannedProgramWasmGCLink, plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local: U32) -> Option<SelfHostLinkedCaptureCell> {
-  let slot = match self_host_linked_capture_cell_slot(module_, body, local) {
+  let slot = match self_host_linked_capture_cell_slot(plan, module_, body, local) {
     Option::Some(value) => value
     Option::None => return Option::None
   }
@@ -35,7 +35,7 @@ fn self_host_emit_capture_parameters(link: SelfHostPlannedProgramWasmGCLink, pla
         Option::Some(value) => value
         Option::None => return Option::Some("captured parameter has no physical cell")
       }
-      let source = match self_host_linked_i32_local_slot(module_, body, local.local_id) {
+      let source = match self_host_linked_i32_local_slot(plan, module_, body, local.local_id) {
         Option::Some(value) => value
         Option::None => return Option::Some("captured parameter has no physical argument")
       }
@@ -100,8 +100,8 @@ fn self_host_linked_capture_cell_type(link: SelfHostPlannedProgramWasmGCLink, mo
 
 // Hidden cell locals follow the normal locals and all expression scratch slots.
 // The scalar local's logical carrier remains unchanged in the frozen body plan.
-fn self_host_linked_capture_cell_slot(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local_id: U32) -> Option<U32> {
-  let base = self_host_linked_body_parameter_offset(module_, body) + self_host_linked_physical_local_count(module_, body) + self_host_linked_i32_scratch_count(module_, body)
+fn self_host_linked_capture_cell_slot(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local_id: U32) -> Option<U32> {
+  let base = self_host_linked_body_parameter_offset(module_, body) + self_host_linked_physical_local_count(canonical, module_, body) + self_host_linked_i32_scratch_count(module_, body)
   let mut offset = 0u32
   let mut index = 0u32
   while index {
@@ -206,9 +206,9 @@ fn self_host_emit_closure_capture(link: SelfHostPlannedProgramWasmGCLink, plan: 
     let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + index])
     if self_host_capture_source_is_local(capture.source, local) {
       let slot = match (if capture.mutable_ {
-        self_host_linked_capture_cell_slot(module_, body, local.local_id)
+        self_host_linked_capture_cell_slot(Option::Some(plan), module_, body, local.local_id)
       } else {
-        self_host_linked_i32_local_slot(module_, body, local.local_id)
+        self_host_linked_i32_local_slot(Option::Some(plan), module_, body, local.local_id)
       }) {
         Option::Some(value) => value
         Option::None => return Option::Some("closure capture has no source physical local")

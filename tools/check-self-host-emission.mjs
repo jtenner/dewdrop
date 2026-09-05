@@ -325,9 +325,18 @@ for (const [name, expected] of [
       ["Unit local and capture", "", "let effect = ()\n  let callback = fn() -> I64 {\n    effect\n    value\n  }\n  callback()"],
       ["Unit product field", "", "let (effect, selected) = ((), value)\n  effect\n  selected"],
       ["Unit product effects", "", "let mut order = 0i32\n  let first = fn() -> Unit {\n    order = order * 10i32 + 1i32\n  }\n  let last = fn() -> Unit {\n    order = order * 10i32 + 2i32\n  }\n  let (_, selected, _) = (first(), value, last())\n  if order == 12i32 {\n    selected\n  } else {\n    0i64\n  }"],
+      ["generic captured scalar", "fn maker<t>(held: t) -> fn() -> t {\n  fn() -> t {\n    held\n  }\n}\n", "let callback = maker::<I64>(value)\n  callback()"],
+      ["generic Unit callback", "", "let callback = reader::<Unit>()\n  callback(())\n  value"],
     ]) {
       const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
-      const main = await compileSource(source);
+      let main;
+      try {
+        main = await compileSource(source);
+      } catch (error) {
+        failures++;
+        console.error(new Error(`${name} source probe failed`, { cause: error }));
+        continue;
+      }
       for (const value of specializationI64Values) {
         assert.equal(main(value), value, `${name} function reference(${value})`);
         checks++;
