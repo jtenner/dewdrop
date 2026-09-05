@@ -113,6 +113,7 @@ priv struct StarshineExpressionEmissionContext {
   program : @semantic.PlannedProgramWasmGCLink?
   module_index : Int
   helper_plan : StarshineProgramAdapterHelperPlan?
+  result_function : @semantic.PlannedProgramWasmFunction?
 }
 
 ///|
@@ -1308,23 +1309,6 @@ fn starshine_finish_program_call(
   let mut physical_parameter_index = 0
   for logical_parameter_index, fragment in fragments {
     append_starshine_instructions(output, fragment)
-    let needs_cast = starshine_program_argument_needs_nominal_cast(
-        lowering, expression, logical_parameter_index,
-      ) ||
-      (
-        !cross_module_or_specialized &&
-        starshine_program_parameter_is_external_nominal(
-          planned, function_, physical_parameter_index,
-        ) &&
-        starshine_program_local_external_argument_needs_nominal_cast(
-          lowering, expression, logical_parameter_index,
-        )
-      )
-    if needs_cast {
-      starshine_append_program_argument_cast(
-        planned, function_, physical_parameter_index, output,
-      )
-    }
     let physical_width = match lowering {
       Some(caller_lowering) => {
         let argument = starshine_program_call_argument(
@@ -1345,6 +1329,26 @@ fn starshine_finish_program_call(
         }
       }
       None => 1
+    }
+    let needs_cast = starshine_program_argument_needs_nominal_cast(
+        lowering, expression, logical_parameter_index,
+      ) ||
+      (
+        !cross_module_or_specialized &&
+        starshine_program_parameter_is_external_nominal(
+          planned, function_, physical_parameter_index,
+        ) &&
+        starshine_program_local_external_argument_needs_nominal_cast(
+          lowering, expression, logical_parameter_index,
+        )
+      )
+    // Unit and Never stay in the logical evaluation schedule, but they do not
+    // produce a physical operand. A cast for an erased argument would consume
+    // the preceding operand or underflow an empty stack.
+    if physical_width > 0 && needs_cast {
+      starshine_append_program_argument_cast(
+        planned, function_, physical_parameter_index, output,
+      )
     }
     physical_parameter_index += physical_width
   }
@@ -3531,12 +3535,19 @@ fn starshine_body_locals(
             starshine_precise_nominal_local_type_index(
               lowering, planned, program, planned_local,
             ) {
-            Some(type_index) =>
+            Some(type_index) => {
+              let heap_type = @lib.TypeIdx::new(type_index.reinterpret_as_uint())
+              // Nested pattern tests bind locals inside condition frames.
+              // A later arm cannot inherit non-null definite initialization
+              // from those frames. Keep a defaultable slot and narrow at reads.
               Some(
-                starshine_nominal_ref(
-                  @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
-                ),
+                if planned_local.kind is @semantic.PatternLocal {
+                  starshine_nullable_nominal_ref(heap_type)
+                } else {
+                  starshine_nominal_ref(heap_type)
+                },
               )
+            }
             None =>
               starshine_body_value_type(
                 lowering,
@@ -6486,6 +6497,15 @@ fn starshine_emit_body_instructions(
                     output.push(starshine_match_cast(type_index))
                   None => ()
                 }
+              }
+            }
+            if cell_slot < 0 && local_info.kind is @semantic.PatternLocal {
+              match
+                starshine_precise_nominal_local_type_index(
+                  lowering, planned, program, local_info,
+                ) {
+                Some(type_index) => output.push(starshine_match_cast(type_index))
+                None => ()
               }
             }
             results.push(output)
@@ -11450,6 +11470,16 @@ fn starshine_emit_body_instructions(
       }
       FinishStarshineReturn => {
         let output = results.pop().unwrap()
+        // A local can use broad, nullable reference storage while its function
+        // returns a precise reference. Early returns need the same checked
+        // narrowing as the normal body tail, using this exact specialization.
+        match (program, context.result_function) {
+          (Some(link), Some(function_)) =>
+            starshine_append_program_result_cast(link, function_, output)
+          (None, _) if current_lambda < 0 =>
+            starshine_append_module_result_cast(planned, body.declaration, output)
+          _ => ()
+        }
         output.push(@lib.Instruction::return_())
         results.push(output)
       }
@@ -11886,7 +11916,7 @@ fn emit_starshine_lambda_body(
     starshine_emit_body_instructions(
       lowering,
       planned,
-      { program, module_index: program_module_index, helper_plan: None, },
+      { program, module_index: program_module_index, helper_plan: None, result_function: None, },
       body,
       lambda,
       local_indices,
@@ -11976,7 +12006,7 @@ fn emit_starshine_function_body(
     starshine_emit_body_instructions(
       lowering,
       planned,
-      { program: None, module_index: -1, helper_plan: None, },
+      { program: None, module_index: -1, helper_plan: None, result_function: None, },
       body,
       -1,
       local_indices,

@@ -41,6 +41,27 @@ fn backend_program_uses_linear_memory(
 }
 
 ///|
+test "nested pattern reference bindings are initialized across control frames" {
+  let (lowering, fragments, diagnostics) = backend_packed_primitive_pipeline(
+    b"struct Item {\n  value: U64\n}\nenum Inner {\n  Item(Item)\n  Other\n}\nenum Maybe {\n  Some(Inner)\n  None\n}\npub fn run(input: Maybe) -> U64 {\n  match input {\n    Maybe::Some(Inner::Item(item)) => {\n      let _ = while 0u32 {\n        current => if current < 2u32 {\n          if item.value > 0u64 {\n            return item.value\n          }\n          continue current + 1u32\n        } else {\n          break ()\n        }\n      }\n      0u64\n    }\n    _ => 0u64\n  }\n}\n",
+  )
+  assert_eq(diagnostics, 0)
+  let module_ = emit_starshine_program_module(lowering, fragments).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
+test "early array returns use the linked result reference type" {
+  let stages = backend_test_single_module_stages(
+    28118UL,
+    b"open dew.std.array\npub fn run(flag: Bool, input: Array<I32>) -> Array<I32> {\n  let result = input\n  if flag {\n    return result\n  }\n  result\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  let module_ = emit_starshine_program_module(stages.lowering, stages.link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
 test "Swar32 and Swar64 bit carriers compile without wrappers or imports" {
   let (lowering, fragments, diagnostics) = backend_packed_primitive_pipeline(
