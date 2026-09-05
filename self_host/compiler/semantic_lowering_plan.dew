@@ -31,6 +31,7 @@ pub enum SelfHostPlannedExpressionKind {
   PlannedLocalGet(U32)
   PlannedCaptureGet(U32)
   PlannedModuleValueGet(U64)
+  PlannedFunctionReference(U64)
   PlannedProductNew(SelfHostHirSpan)
   PlannedArrayLiteral(SelfHostHirSpan)
   PlannedLambdaClosure(U32)
@@ -452,6 +453,12 @@ fn self_host_lowering_expression_kind(
   let operator_target = inferred.operator_targets[
     self_host_u32_add(job.operator_targets.start, relative)
   ]
+  if collected.expressions[expression] is SelfHostHirExpr::NameExpr(_, _) {
+    match call_target {
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => return SelfHostPlannedExpressionKind::PlannedFunctionReference(declaration)
+      _ => {}
+    }
+  }
   match collected.expressions[expression] {
     SelfHostHirExpr::I8Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI8Const(value)
     SelfHostHirExpr::I16Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI16Const(value)

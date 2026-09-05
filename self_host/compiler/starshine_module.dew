@@ -20460,6 +20460,12 @@ fn self_host_emit_linked_i32_expression(
             SelfHostPlannedExpressionKind::PlannedCaptureGet(_) => {
               return Option::Some("linked closure captures are not emitted yet")
             }
+            SelfHostPlannedExpressionKind::PlannedFunctionReference(declaration) => {
+              match self_host_emit_planned_function_reference(link, canonical_body_plan, expression, declaration, destination) {
+                Option::Some(error) => return Option::Some(error)
+                Option::None => {}
+              }
+            }
             SelfHostPlannedExpressionKind::PlannedModuleValueGet(
               declaration,
             ) => match self_host_linked_global_index(link, declaration) {

@@ -7,6 +7,7 @@ import { checkMemoryOperations } from "./memory-operation-cases.mjs";
 import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
 import { checkMathOperations } from "./math-operation-cases.mjs";
 import { checkSpecializationCallbacks } from "./specialization-callback-cases.mjs";
+import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
@@ -303,6 +304,31 @@ for (const [name, expected] of [
   } catch (error) {
     failures++;
     console.error("self-host math operation probe failed");
+    console.error(error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    let checks = 0;
+    for (const [name, declarations, body] of [
+      ["scalar", "", "let callback = reader::<I64>()\n  callback(value)"],
+      ["nominal", "struct Item {\n  value: I64\n}\n", "let callback = reader::<Item>()\n  callback(Item::{\n    value: value\n  }).value"],
+      ["product", "", "let callback = reader::<(I32, I64)>()\n  let (_, result) = callback((7i32, value))\n  result"],
+    ]) {
+      const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
+      const main = await compileSource(source);
+      for (const value of specializationI64Values) {
+        assert.equal(main(value), value, `${name} function reference(${value})`);
+        checks++;
+      }
+    }
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`self-host exact function reference checks passed: ${checks} (${elapsed.toFixed(3)} seconds)`);
+    assert.ok(elapsed <= 30, "function reference compiler performance exceeds 30 seconds");
+  } catch (error) {
+    failures++;
+    console.error("self-host exact function reference probe failed");
     console.error(error);
   }
 }

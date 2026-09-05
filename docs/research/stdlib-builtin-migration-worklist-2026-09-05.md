@@ -59,7 +59,9 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   `self-host-lambda-link-identity-2026-09-05.md`. Lambda-relative capture inference
   is fixed; see `self-host-relative-captures-2026-09-05.md`. Lambda body verification
   and missing-body checks are fixed; see `self-host-lambda-body-verification-2026-09-05.md`.
-  The shared source now exposes missing self-host generic function-reference targets.
+  Exact self-host generic function-reference targets now pass 18 execution checks;
+  see `self-host-exact-function-references-2026-09-05.md`. The shared source now
+  exposes missing captured closure emission.
   Callback differential execution and the subsequent clean bootstrap remain open.
 - [ ] Require valid collected source in compiler integration fixtures. A callback
   fixture used an invalid local type annotation but checked only inference

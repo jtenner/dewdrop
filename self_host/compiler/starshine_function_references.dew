@@ -1,0 +1,35 @@
+open dew.std.option
+
+fn self_host_emit_planned_function_reference(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  expression: U32,
+  declaration: U64,
+  destination: StarshineInstructions,
+) -> Option<String> {
+  let body_plan = match plan {
+    Option::Some(value) => value
+    Option::None => return Option::Some("function reference has no frozen body plan")
+  }
+  let reference = match self_host_body_plan_expression(body_plan, expression) {
+    Option::Some(value) => value
+    Option::None => return Option::Some("function reference has no expression plan")
+  }
+  let selected = reference.call_function_index
+  if selected == 4294967295u32 || !self_host_linked_function_declaration_module_matches(link, selected, declaration) {
+    return Option::Some("function reference has no exact physical target")
+  }
+  let closure_type = match self_host_linked_closure_base_type_index(link, body_plan.module_index) {
+    Option::Some(value) => value
+    Option::None => return Option::Some("function reference has no closure type")
+  }
+  // Use the frozen physical target. Do not repeat name or specialization lookup.
+  let function_index = self_host_linked_emitted_function_index(self_host_linked_physical_function_index(selected))
+  StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+    StarshineFfi.ffi_lib_Instruction_ref_func(StarshineFfi.ffi_lib_FuncIdx_new(self_host_u32_to_i32(function_index))),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+    StarshineFfi.ffi_lib_Instruction_struct_new(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(closure_type))),
+  )
+  Option::None
+}

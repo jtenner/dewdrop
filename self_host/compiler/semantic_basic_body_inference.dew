@@ -1724,15 +1724,21 @@ impl SelfHostBasicBodyInferencer {
   fn imported_callable_function_type(
     self,
     declaration: U64,
+    expression: U32,
+    reference: Bool,
   ) -> Option<I32> {
     match self.imported_callable(declaration) {
-      Option::Some(callable) => if self_host_u32_equal(
-        callable.generic_parameters.length,
-        0u32,
-      ) {
-        Option::Some(self.solver.resolved_type(callable.function_type))
-      } else {
-        Option::None
+      Option::Some(callable) => {
+        if !reference {
+          if self_host_u32_equal(callable.generic_parameters.length, 0u32) {
+            return Option::Some(self.solver.resolved_type(callable.function_type))
+          }
+          return Option::None
+        }
+        self.begin_imported_signature_instantiation(callable)
+        let type_ = self.instantiate_signature_type(callable.function_type)
+        self.record_function_reference(expression, declaration)
+        Option::Some(type_)
       }
       Option::None => match self.imported.module_value_types.get(declaration) {
         Option::Some(type_) => Option::Some(self.solver.resolved_type(type_))
@@ -1830,20 +1836,32 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn local_callable_function_type(self, name: U32) -> Option<I32> {
+  fn record_function_reference(self, expression: U32, declaration: U64) -> Unit {
+    let start = self.call_type_arguments.length()
+    self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)
+    self.store_call_target(expression, SelfHostBasicCallTarget::SelectedBasicCallTarget(
+      declaration,
+      SelfHostHirSpan::{
+        start: start
+        length: self.candidate_type_arguments.length()
+      },
+    ), 0u32)
+  }
+
+  fn local_callable_function_type(self, name: U32, expression: U32, reference: Bool) -> Option<I32> {
     match self.unique_local_callable_index(name) {
       Option::Some(index) => {
         let declaration = self.collected.callables[index].declaration
-        let generics = self.collected.generic_parameters_of(declaration)
-        if self_host_u32_equal(generics.length, 0u32) {
-          Option::Some(
-            self.solver.resolved_type(
-              self.resolved.callable_function_types[index],
-            ),
-          )
-        } else {
-          Option::None
+        if !reference {
+          if self_host_u32_equal(self.collected.generic_parameters_of(declaration).length, 0u32) {
+            return Option::Some(self.solver.resolved_type(self.resolved.callable_function_types[index]))
+          }
+          return Option::None
         }
+        self.begin_signature_instantiation(declaration)
+        let type_ = self.instantiate_signature_type(self.resolved.callable_function_types[index])
+        self.record_function_reference(expression, declaration)
+        Option::Some(type_)
       }
       Option::None => Option::None
     }
@@ -2286,6 +2304,22 @@ impl SelfHostBasicBodyInferencer {
 
   fn initialize_expressions(self) -> Unit {
     let negated = self.negative_boundary_literals()
+    let direct_targets = self_host_inference_bool_slots(self.body.expressions.length)
+    let mut target_offset = 0u32
+    let _ = while target_offset {
+      current => if current < self.body.expressions.length {
+        match self.collected.expressions[self.body.expressions.start + current] {
+          SelfHostHirExpr::CallExpr(target, _, _) => if target >= self.body.expressions.start &&
+            target - self.body.expressions.start < self.body.expressions.length {
+            direct_targets[target - self.body.expressions.start] = true
+          }
+          _ => {}
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
     let mut expression = self.body.expressions.start
     let end = self.body.expressions.start + self.body.expressions.length
     let _ = while expression {
@@ -2330,7 +2364,7 @@ impl SelfHostBasicBodyInferencer {
               let _ = self.capture_index(capture, current)
               self.capture_types[capture]
             }
-            SelfHostBodyNameReference::ModuleValueNameReference(_) => match self.local_callable_function_type(name) {
+            SelfHostBodyNameReference::ModuleValueNameReference(_) => match self.local_callable_function_type(name, current, !direct_targets[self.expression_index(current)]) {
               Option::Some(function_type) => function_type
               Option::None => match self_host_module_value_declaration(self.collected, name) {
                 Option::Some(declaration) => match self.imported.local_module_value_types.get(
@@ -2348,7 +2382,7 @@ impl SelfHostBasicBodyInferencer {
             }
             SelfHostBodyNameReference::ImportedModuleValueNameReference(
               declaration,
-            ) => match self.imported_callable_function_type(declaration) {
+            ) => match self.imported_callable_function_type(declaration, current, !direct_targets[self.expression_index(current)]) {
               Option::Some(function_type) => function_type
               Option::None => self.solver.fresh_variable()
             }

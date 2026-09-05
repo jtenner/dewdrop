@@ -407,6 +407,10 @@ fn self_host_program_specialization_add_reachable(
 fn self_host_program_specialization_call_recipe(
   expression: SelfHostPlannedExpression,
 ) -> Option<SelfHostProgramCallRecipe> {
+  // A selected name consumed by a direct call is not a separate reference.
+  if expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression {
+    return Option::None
+  }
   // A variant constructor has a physical type, not a physical function.
   match expression.selection {
     SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
