@@ -1,4 +1,41 @@
 ///|
+test "assignment expressions preserve explicit call argument arenas" {
+  for statement in ["value = 2", "value[0] = 2"] {
+    let collected = collect_bytes(
+      29UL,
+      @utf8.encode(
+        "fn mutate() -> Unit {\n let mut value = 1\n \{statement}\n}\nfn later() -> I32 {\n identity::<I32>(3)\n}\n",
+      ),
+    )
+    assert_eq(collected.diagnostics.length(), 0)
+    assert_eq(
+      collected.expressions.length(),
+      collected.expression_files.length(),
+    )
+    assert_eq(
+      collected.expressions.length(),
+      collected.explicit_call_type_argument_spans.length(),
+    )
+    let mut explicit_calls = 0
+    for expression in 0..<collected.expressions.length() {
+      let span = collected.explicit_call_type_argument_spans[expression]
+      if span.length != 0 {
+        match collected.expressions[expression] {
+          HirCallExpr(_, _, _) => ()
+          _ => fail("explicit type arguments belong to a call expression")
+        }
+        assert_eq(span.length, 1)
+        assert_true(
+          span.start < collected.explicit_call_type_arguments.length(),
+        )
+        explicit_calls += 1
+      }
+    }
+    assert_eq(explicit_calls, 1)
+  }
+}
+
+///|
 test "collection assigns stable bodies to lets functions and impl methods" {
   let collected = collect_bytes(
     21UL, b"let answer = left + right * 2\ntrait Empty {\n  fn read(self) -> I32\n}\nfn choose(value: I32) -> I32 {\n  let next = value + 1\n  next\n}\nimpl State {\n  fn step(self) -> State {\n    self\n  }\n}\n",

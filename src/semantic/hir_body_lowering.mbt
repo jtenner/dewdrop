@@ -77,14 +77,27 @@ fn CollectionBuilder::schedule_arm(
 }
 
 ///|
-fn CollectionBuilder::emit_expr(
+fn CollectionBuilder::append_expr(
   self : CollectionBuilder,
   expression : HirExpr,
 ) -> ExprId {
   let id = self.expressions.length()
+  guard self.expression_files.length() == id &&
+    self.explicit_call_type_argument_spans.length() == id else {
+    abort("ARN-103: collection expression arenas have different lengths")
+  }
   self.expressions.push(expression)
   self.expression_files.push(self.current_file)
   self.explicit_call_type_argument_spans.push({ start: 0, length: 0, })
+  id
+}
+
+///|
+fn CollectionBuilder::emit_expr(
+  self : CollectionBuilder,
+  expression : HirExpr,
+) -> ExprId {
+  let id = self.append_expr(expression)
   self.body_expr_results.push(id)
   id
 }
@@ -511,21 +524,18 @@ fn CollectionBuilder::finish_block_source(
         result_index += 1
       }
       @parser.AssignmentItem(_, _, offset) => {
-        let expression = self.expressions.length()
-        self.expressions.push(
+        let expression = self.append_expr(
           HirAssignmentExpr(
             self.body_expr_results[result_index],
             self.body_expr_results[result_index + 1],
             offset,
           ),
         )
-        self.expression_files.push(self.current_file)
         self.block_items.push(HirExpressionItem(expression, offset))
         result_index += 2
       }
       @parser.IndexSetItem(_, _, offset) => {
-        let expression = self.expressions.length()
-        self.expressions.push(
+        let expression = self.append_expr(
           HirIndexSetExpr(
             self.body_expr_results[result_index],
             self.body_expr_results[result_index + 1],
@@ -533,7 +543,6 @@ fn CollectionBuilder::finish_block_source(
             offset,
           ),
         )
-        self.expression_files.push(self.current_file)
         self.block_items.push(HirExpressionItem(expression, offset))
         result_index += 3
       }
