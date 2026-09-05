@@ -56,8 +56,9 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   `inferred-callback-signatures-2026-09-05.md`. Native nominal callback invocation
   now checks precise and erased signatures; see `nominal-callback-abi-2026-09-05.md`.
   The self-host lambda/plain-function identity collision is fixed; see
-  `self-host-lambda-link-identity-2026-09-05.md`. The shared differential source
-  now exposes lambda-relative capture indices used as global inference indices.
+  `self-host-lambda-link-identity-2026-09-05.md`. Lambda-relative capture inference
+  is fixed; see `self-host-relative-captures-2026-09-05.md`. The shared source now
+  exposes the verifier selecting a parent body when it must select a lambda.
   Callback differential execution and the subsequent clean bootstrap remain open.
 - [ ] Require valid collected source in compiler integration fixtures. A callback
   fixture used an invalid local type annotation but checked only inference

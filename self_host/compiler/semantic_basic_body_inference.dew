@@ -688,6 +688,43 @@ impl SelfHostBasicBodyInferencer {
     expression - self.body.expressions.start
   }
 
+  fn capture_index(self, capture: U32, expression: U32) -> U32 {
+    let _ = self_host_assert_compiler_invariant_with_failure(
+      self_host_array_span_is_valid(self.capture_span.start, self.capture_span.length, self.names.captures.length()) &&
+        capture < self.capture_span.length && capture < self.capture_types.length(),
+      SelfHostInvariantFailure::{
+        code: 102u32
+        phase: 2u32
+        module_id: self.collected.module_id
+        declaration: self.body.declaration
+        body: self.body.id
+        expression: expression
+        expected: u32_into_u64(self.capture_span.length)
+        actual: u32_into_u64(capture)
+        detail: u32_into_u64(self.capture_span.start)
+      },
+      "lambda-relative capture must belong to its capture span",
+    )
+    let index = self.capture_span.start + capture
+    let selected = self.names.captures[index]
+    let _ = self_host_assert_compiler_invariant_with_failure(
+      self_host_u32_equal(selected.id, capture) && self_host_u32_equal(selected.lambda, self.lambda_index),
+      SelfHostInvariantFailure::{
+        code: 106u32
+        phase: 2u32
+        module_id: self.collected.module_id
+        declaration: self.body.declaration
+        body: self.body.id
+        expression: expression
+        expected: u32_into_u64(self.lambda_index)
+        actual: u32_into_u64(selected.lambda)
+        detail: u32_into_u64(index)
+      },
+      "capture identity must belong to the current lambda",
+    )
+    index
+  }
+
   fn block_index(self, block: U32) -> U32 {
     block - self.body.blocks.start
   }
@@ -2289,13 +2326,9 @@ impl SelfHostBasicBodyInferencer {
           SelfHostHirExpr::BytesExpr(_, _) => self.primitive(SelfHostPrimitiveType::BytesType)
           SelfHostHirExpr::NameExpr(name, _) => match self.names.expression_references[current] {
             SelfHostBodyNameReference::LocalNameReference(local) => self.local_types[local]
-            SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => if capture >= self.capture_span.start && capture < self_host_u32_add(
-              self.capture_span.start,
-              self.capture_span.length,
-            ) {
-              self.capture_types[capture - self.capture_span.start]
-            } else {
-              self.solver.error_type()
+            SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => {
+              let _ = self.capture_index(capture, current)
+              self.capture_types[capture]
             }
             SelfHostBodyNameReference::ModuleValueNameReference(_) => match self.local_callable_function_type(name) {
               Option::Some(function_type) => function_type
@@ -7484,7 +7517,7 @@ impl SelfHostBasicBodyInferencer {
             } else {
               match self.names.expression_references[target] {
                 SelfHostBodyNameReference::LocalNameReference(local) => self.names.locals[self.name_info.locals.start + local].mutable_
-                SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => capture >= self.capture_span.start && capture - self.capture_span.start < self.capture_span.length && self.names.captures[capture].mutable_
+                SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => self.names.captures[self.capture_index(capture, current)].mutable_
                 SelfHostBodyNameReference::ErrorNameReference => false
                 _ => {
                   self.diagnostics.push(SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(current, offset))
