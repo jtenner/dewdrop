@@ -483,8 +483,8 @@ fn json_parse_string_with_provenance(
     let builder = StringBuilder::new()
     let mut segment = content
     let mut index = first_special
-    while true {
-      true => {
+    while () {
+      _ => {
       let special = json_scan_string_special_simd(parser.source, index)
       if special >= length {
         break Result::Err(JsonParseError::UnexpectedEnd(length))
@@ -570,7 +570,7 @@ fn json_parse_string_with_provenance(
         if builder.byte_length() > parser.limits.max_string_bytes {
           break Result::Err(JsonParseError::StringLimitExceeded(special))
         } else {
-          continue true
+          continue ()
         }
       }
       }
@@ -682,8 +682,8 @@ fn json_parse_array(
     json_parser_set_offset(parser, json_parser_offset(parser) + 1u32)
     Result::Ok(JsonValue::Array(values))
   } else {
-    while true {
-      true => {
+    while () {
+      _ => {
       match json_parse_value(parser, depth + 1u32) {
         Result::Err(error) => break Result::Err(error)
         Result::Ok(value) => values.push(value)
@@ -704,7 +704,7 @@ fn json_parse_array(
       } else {
         break Result::Err(JsonParseError::UnexpectedByte(offset, byte))
       }
-      continue true
+      continue ()
       }
     }
   }
@@ -786,8 +786,8 @@ fn json_parse_object(
     json_parser_set_offset(parser, json_parser_offset(parser) + 1u32)
     Result::Ok(JsonValue::Object(members))
   } else {
-    while true {
-      true => {
+    while () {
+      _ => {
       let key_offset = json_parser_offset(parser)
       if key_offset >= parser.input.byte_length() {
         break Result::Err(JsonParseError::UnexpectedEnd(key_offset))
@@ -898,7 +898,7 @@ fn json_parse_object(
       } else {
         break Result::Err(JsonParseError::UnexpectedByte(offset, byte))
       }
-      continue true
+      continue ()
       }
     }
   }
@@ -1009,8 +1009,8 @@ fn json_validate_value(
           json_parser_set_offset(parser, json_parser_offset(parser) + 1u32)
           Result::Ok(json_unit())
         } else {
-          while true {
-            true => {
+          while () {
+            _ => {
               match json_validate_value(parser, depth + 1u32) {
                 Result::Err(error) => break Result::Err(error)
                 Result::Ok(_) => {
@@ -1029,7 +1029,7 @@ fn json_validate_value(
               } else if delimiter == 44u8 {
                 json_parser_set_offset(parser, next + 1u32)
                 json_parser_skip_whitespace(parser)
-                continue true
+                continue ()
               } else {
                 break Result::Err(JsonParseError::UnexpectedByte(next, delimiter))
               }
@@ -1049,8 +1049,8 @@ fn json_validate_value(
           json_parser_set_offset(parser, json_parser_offset(parser) + 1u32)
           Result::Ok(json_unit())
         } else {
-          while true {
-            true => {
+          while () {
+            _ => {
               let key_offset = json_parser_offset(parser)
               if key_offset >= parser.input.byte_length() {
                 break Result::Err(JsonParseError::UnexpectedEnd(key_offset))
@@ -1156,7 +1156,7 @@ fn json_validate_value(
               } else if delimiter == 44u8 {
                 json_parser_set_offset(parser, next + 1u32)
                 json_parser_skip_whitespace(parser)
-                continue true
+                continue ()
               } else {
                 break Result::Err(JsonParseError::UnexpectedByte(next, delimiter))
               }
