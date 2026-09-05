@@ -640,6 +640,12 @@ fn self_host_linked_exact_emitted_expression_carrier(
   caller_specialization: U32,
   expression: U32,
 ) -> SelfHostWasmBodyCarrier {
+  if expression < module_.expressions.length() &&
+    module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedProductField(_, _, _) &&
+    module_.expressions[expression].shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+    // Product projection consumes the stored Unit marker; it emits no value.
+    return SelfHostWasmBodyCarrier::UnitBodyCarrier
+  }
   if expression >= module_.expressions.length() {
     return SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
   }
@@ -20656,6 +20662,13 @@ fn self_host_emit_linked_i32_expression(
                   if child_index >= module_.expression_children.length() {
                     return Option::Some("linked tuple child is outside its arena")
                   }
+                  let child_expression = module_.expression_children[child_index]
+                  if module_.expressions[child_expression].shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+                    // The existing boxed-pair layout has a reference field for
+                    // logical Unit. Materialize its explicit null marker only
+                    // inside this product; the Unit evaluation emits no value.
+                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
+                  }
                   self_host_linked_i32_schedule_expression(
                     tasks,
                     expression_depths,
@@ -25100,6 +25113,10 @@ fn self_host_emit_linked_i32_expression(
             ) => {
               if field >= count {
                 return Option::Some("linked tuple field is outside its product")
+              }
+              if planned.shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+                // Unbox the Unit marker without exposing a stack operand.
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Drop(destination))
               }
               if self_host_u32_equal(count, 2u32) {
                 let pair_type = match self_host_linked_pair_type_for_match_result(

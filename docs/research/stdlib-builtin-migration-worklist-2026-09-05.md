@@ -61,12 +61,14 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   and missing-body checks are fixed; see `self-host-lambda-body-verification-2026-09-05.md`.
   Exact self-host generic function-reference targets now pass 18 execution checks;
   see `self-host-exact-function-references-2026-09-05.md`. The shared source now
-  has reached the Unit-parameter local-index defect. Captured closure reads,
+  now passes all 66 shared callback checks. Captured closure reads,
   shared mutation, and nested forwarding now pass executable checks; see
   `self-host-captured-closures-2026-09-05.md`.
   Lambda fragment spans, parameter roles/order, Unit erasure, and owning
   declaration now have checked contracts; see `self-host-lambda-fragment-contract-2026-09-05.md`.
-  Callback differential execution and the subsequent clean bootstrap remain open.
+  Source Unit local erasure and boxed Unit product operations are fixed; see
+  `self-host-erased-local-slots-2026-09-05.md` and `self-host-boxed-unit-products-2026-09-05.md`.
+  Generic scalar/Unit captures and a subsequent clean bootstrap remain open.
 - [ ] Require valid collected source in compiler integration fixtures. A callback
   fixture used an invalid local type annotation but checked only inference
   diagnostics. Its valid-source replacement must exercise the actual call.

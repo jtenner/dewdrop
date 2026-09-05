@@ -323,6 +323,8 @@ for (const [name, expected] of [
       ["Unit parameters", "fn select(left: Unit, value: I64, right: Unit) -> I64 {\n  value\n}\n", "let callback = select\n  callback((), value, ())"],
       ["Unit lambda parameter", "", "let callback = fn(left: I32, effect: Unit, right: I64) -> I64 {\n    if left == 7i32 {\n      right\n    } else {\n      0i64\n    }\n  }\n  callback(7i32, (), value)"],
       ["Unit local and capture", "", "let effect = ()\n  let callback = fn() -> I64 {\n    effect\n    value\n  }\n  callback()"],
+      ["Unit product field", "", "let (effect, selected) = ((), value)\n  effect\n  selected"],
+      ["Unit product effects", "", "let mut order = 0i32\n  let first = fn() -> Unit {\n    order = order * 10i32 + 1i32\n  }\n  let last = fn() -> Unit {\n    order = order * 10i32 + 2i32\n  }\n  let (_, selected, _) = (first(), value, last())\n  if order == 12i32 {\n    selected\n  } else {\n    0i64\n  }"],
     ]) {
       const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
       const main = await compileSource(source);
@@ -344,7 +346,20 @@ for (const [name, expected] of [
   const start = performance.now();
   try {
     const source = await readFile(new URL("./dew-test/specialization_callbacks.dew", import.meta.url), "utf8");
-    const exports = await compileSourceExports(source + "\npub fn main() -> I32 {\n  0i32\n}\n");
+    // The self-host standalone entrypoint exports main, not all public source
+    // functions. Compile a typed main wrapper for every shared oracle entry.
+    const exports = Object.create(null);
+    for (const [name, parameters, arguments_] of [
+      ["pair_i32_i64", "left: I32, right: I64", "left, right"],
+      ["pair_i64_i32", "left: I64, right: I32", "left, right"],
+      ["nested_i32_i64", "left: I32, right: I64", "left, right"],
+      ["nested_i64_i32", "left: I64, right: I32", "left, right"],
+      ...["erased_product", "mixed_scalars", "nominal_callback", "generic_nominal_callback",
+        "captured_nominal_callback", "captured_generic_nominal_callback", "callback_evaluation_order"]
+        .map(name => [name, "value: I64", "value"]),
+    ]) {
+      exports[name] = await compileSource(source + `\npub fn main(${parameters}) -> I64 {\n  ${name}(${arguments_})\n}\n`);
+    }
     const checks = checkSpecializationCallbacks(exports);
     const elapsed = (performance.now() - start) / 1000;
     console.log(`self-host specialization callback checks passed: ${checks} (${elapsed.toFixed(3)} seconds)`);
