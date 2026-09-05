@@ -3,18 +3,41 @@ open dew.std.array
 pub type Stack<t> = Array<t>
 pub type StackIter<t> = ArrayIter<t>
 
-pub builtin stack_new<t>() -> Stack<t> = "dew_stack_new"
-pub builtin stack_with_capacity<t>(capacity: U32) -> Stack<t> = "dew_stack_with_capacity"
-pub builtin stack_length<t>(stack: Stack<t>) -> U32 = "dew_stack_length"
-
-pub builtin stack_is_empty<t>(stack: Stack<t>) -> Bool = "dew_stack_is_empty"
-
-pub builtin stack_push<t>(stack: Stack<t>, value: t) -> Unit = "dew_stack_push"
-pub builtin stack_pop<t>(stack: Stack<t>) -> Option<t> = "dew_stack_pop"
-
-pub builtin stack_peek<t>(stack: Stack<t>) -> Option<t> = "dew_stack_peek"
-
-pub builtin stack_clear<t>(stack: Stack<t>) -> Unit = "dew_stack_clear"
-pub builtin stack_iter<t>(stack: Stack<t>) -> StackIter<t> = "dew_stack_iter"
-pub builtin stack_iter_has_next<t>(iter: StackIter<t>) -> Bool = "dew_stack_iter_has_next"
-pub builtin stack_iter_next<t>(iter: StackIter<t>) -> t = "dew_stack_iter_next"
+pub fn stack_new<t>() -> Stack<t> {
+  array_new()
+}
+pub fn stack_with_capacity<t>(capacity: U32) -> Stack<t> {
+  array_with_capacity(capacity)
+}
+pub fn stack_length<t>(stack: Stack<t>) -> U32 {
+  array_length(stack)
+}
+pub fn stack_is_empty<t>(stack: Stack<t>) -> Bool {
+  array_length(stack) == 0u32
+}
+pub fn stack_push<t>(stack: Stack<t>, value: t) -> Unit {
+  array_push(stack, value)
+}
+pub fn stack_pop<t>(stack: Stack<t>) -> Option<t> {
+  array_pop(stack)
+}
+pub fn stack_peek<t>(stack: Stack<t>) -> Option<t> {
+  let length = array_length(stack)
+  if length == 0u32 {
+    None
+  } else {
+    array_get(stack, length - 1u32)
+  }
+}
+pub fn stack_clear<t>(stack: Stack<t>) -> Unit {
+  array_clear(stack)
+}
+pub fn stack_iter<t>(stack: Stack<t>) -> StackIter<t> {
+  array_iter(stack)
+}
+pub fn stack_iter_has_next<t>(iter: StackIter<t>) -> Bool {
+  array_iter_has_next(iter)
+}
+pub fn stack_iter_next<t>(iter: StackIter<t>) -> t {
+  array_iter_next(iter)
+}

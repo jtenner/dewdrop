@@ -1123,22 +1123,7 @@ fn plan_expression_kind(
           } else {
             ErrorPlannedValueShape
           }
-          let stack_or_array_operation = match
-            standard_stack_operation(declaration) {
-            StackNew => ArrayNew
-            StackWithCapacity => ArrayWithCapacity
-            StackLength => ArrayLength
-            StackIsEmpty => StackIsEmpty
-            StackPush => ArrayPush
-            StackPop => ArrayPop
-            StackPeek => StackPeek
-            StackClear => ArrayClear
-            StackIter => ArrayIter
-            StackIterHasNext => ArrayIterHasNext
-            StackIterNext => ArrayIterNext
-            _ => standard_array_operation(declaration)
-          }
-          let array_operation = stack_or_array_operation
+          let array_operation = standard_array_operation(declaration)
           let queue_or_circular_operation = match
             standard_queue_operation(declaration) {
             QueueNew => QueueNew
@@ -1294,7 +1279,6 @@ fn plan_expression_kind(
                         base, element_type, element_shape,
                       )
                     ArrayLength => PlannedArrayLength(base)
-                    StackIsEmpty => PlannedStackIsEmpty(base)
                     ArrayCapacity => PlannedArrayCapacity(base)
                     ArrayGet =>
                       PlannedArrayGet(base, key, element_type, element_shape)
@@ -1342,7 +1326,6 @@ fn plan_expression_kind(
                       )
                     ArrayPop =>
                       PlannedArrayPop(base, element_type, element_shape)
-                    StackPeek => PlannedStackPeek(base, element_shape)
                     QueueDequeue => PlannedQueueDequeue(base, element_shape)
                     QueuePeek => PlannedQueuePeek(base, element_shape)
                     ArrayClear =>

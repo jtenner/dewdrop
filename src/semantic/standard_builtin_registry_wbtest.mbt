@@ -109,14 +109,10 @@ test "generated standard builtin registry matches collected bootstrap declaratio
     .unwrap()]
   assert_eq(stack.module_id, standard_library_module_id(14))
   assert_standard_registry_declaration(stack, 0, "Stack")
-  assert_eq(
-    standard_stack_operation(make_semantic_id(stack.module_id, 2)),
-    StackNew,
-  )
-  assert_eq(
-    standard_stack_operation(make_semantic_id(stack.module_id, 10)),
-    StackIter,
-  )
+  // Stack is an ordinary library module, not a builtin identity table.
+  for callable in stack.callables {
+    assert_true(stack.body_of(callable.declaration) is Some(_))
+  }
 
   let queue = program.modules[program.module_index("dew.std.queue").unwrap()]
   assert_eq(queue.module_id, standard_library_module_id(15))

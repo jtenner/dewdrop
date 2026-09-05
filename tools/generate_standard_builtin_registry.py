@@ -29,7 +29,7 @@ def rendered_source() -> str:
     operation_names = [
         name
         for module in (
-            "wasm_intrinsics", "fixed_array", "array", "stack", "queue", "circular_buffer", "deque", "map", "set"
+            "wasm_intrinsics", "fixed_array", "array", "queue", "circular_buffer", "deque", "map", "set"
         )
         for name in modules[module]["operations"]
     ]
@@ -59,7 +59,7 @@ def rendered_source() -> str:
     )
 
     for module_name in (
-        "fixed_array", "array", "stack", "queue", "circular_buffer", "deque", "map", "set"
+        "fixed_array", "array", "queue", "circular_buffer", "deque", "map", "set"
     ):
         module = modules[module_name]
         prefix = f"standard_{module_name}"

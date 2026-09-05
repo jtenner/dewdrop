@@ -1,6 +1,6 @@
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "stack standard module has stable identities and lowering" {
+test "stack standard module uses ordinary functions and lowering" {
   let program = collect_program_manifest(
     2630UL,
     ProgramManifest::new([
@@ -18,10 +18,9 @@ test "stack standard module has stable identities and lowering" {
   assert_eq(stack.diagnostics, [])
   assert_eq(semantic_id_local(stack.lookup_type("Stack").unwrap()), 0)
   assert_eq(semantic_id_local(stack.lookup_value("stack_new").unwrap()), 2)
-  assert_eq(
-    standard_stack_operation(stack.lookup_value("stack_push").unwrap()),
-    StackPush,
-  )
+  for callable in stack.callables {
+    assert_true(stack.body_of(callable.declaration) is Some(_))
+  }
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.frozen.import_diagnostics, [])
   for module_ in analyzed.modules {

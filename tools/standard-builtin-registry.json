@@ -68,25 +68,6 @@
         "ArrayExtend": [44]
       }
     },
-    "stack": {
-      "slot": 14,
-      "path": "dew.std.collections.stack",
-      "type": 0,
-      "methods": {},
-      "operations": {
-        "StackNew": [2],
-        "StackWithCapacity": [3],
-        "StackLength": [4],
-        "StackIsEmpty": [5],
-        "StackPush": [6],
-        "StackPop": [7],
-        "StackPeek": [8],
-        "StackClear": [9],
-        "StackIter": [10],
-        "StackIterHasNext": [11],
-        "StackIterNext": [12]
-      }
-    },
     "queue": {
       "slot": 15,
       "path": "dew.std.queue",

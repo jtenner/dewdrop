@@ -219,10 +219,6 @@ pub fn standard_set_method_declaration(String) -> UInt64
 
 pub fn standard_set_type_declaration() -> UInt64
 
-pub fn standard_stack_method_declaration(String) -> UInt64
-
-pub fn standard_stack_type_declaration() -> UInt64
-
 pub fn synthetic_type_origin(Int, UInt64) -> TypeConstraintOrigin
 
 pub fn validate_cached_module_wasmgc_fragments(PlannedModuleWasmGCFragments, UInt64, WasmGCPlanningOptions) -> Result[Unit, String]
