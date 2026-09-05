@@ -1669,6 +1669,19 @@ fn materialize_program_expression_call(
         Some(value) => value
         None => return
       }
+      record_program_specialized_call(
+        specialized_calls,
+        specialized_call_runtime_evidence_parameters,
+        body,
+        match caller {
+          Some(function_) => function_.specialization_abi_key
+          None => ""
+        },
+        expression,
+        target,
+        target_key,
+        forwarded_runtime_evidence_parameters,
+      )
       match caller {
         Some(caller) if request_evidence.roots.length() > 0 &&
           (

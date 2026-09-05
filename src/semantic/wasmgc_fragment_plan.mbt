@@ -3245,6 +3245,11 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
   if resolved.module_id != lowering.module_id {
     abort("WasmGC fragment inputs belong to different modules")
   }
+  let resolved = {
+    ..resolved,
+    types: lowering.resolved_types,
+    type_arguments: lowering.resolved_type_arguments,
+  }
   let layouts = lowering.type_layouts
   let functions = lowering.functions
   let runtime_traits = wasmgc_runtime_trait_declarations(
@@ -3569,8 +3574,15 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
   let local_function_value_roots : Map[DeclId, Bool] = Map::default()
   for expression in lowering.expressions {
     match expression.kind {
-      PlannedFunctionReference(declaration, _) =>
+      PlannedFunctionReference(declaration, _) => {
         local_function_value_roots[declaration] = true
+        let source_type = program_body_resolved_type(lowering, expression.type_)
+        if source_type >= 0 {
+          function_type_work.push(source_type)
+        }
+      }
+      PlannedFunctionValueCall(_, _, type_) if type_ >= 0 =>
+        function_type_work.push(type_)
       _ => ()
     }
   }

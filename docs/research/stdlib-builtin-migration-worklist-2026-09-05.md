@@ -51,7 +51,10 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   `specialization-shape-evidence-2026-09-05.md`. Native requests now reject both
   states too, and tuple keys are structural; see
   `native-specialization-shape-evidence-2026-09-05.md`. Broader fragment
-  boundaries and inferred callback signature materialization remain open.
+  boundaries remain open. Inferred callback signatures now use a private,
+  structural lowering pool and exact specialized targets; see
+  `inferred-callback-signatures-2026-09-05.md`. Nominal callback adaptation across
+  a generic function boundary remains open.
 - [ ] Require valid collected source in compiler integration fixtures. A callback
   fixture used an invalid local type annotation but checked only inference
   diagnostics. Its valid-source replacement must exercise the actual call.

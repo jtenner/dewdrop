@@ -1742,6 +1742,15 @@ fn plan_body_lowering_job(
       ),
       offset: collected.expressions[expression].offset(),
     }
+    if expressions[local_index].kind is PlannedFunctionReference(_, _) {
+      let function_type = planned_function_type(resolved, inferred, inferred.expression_types[expression])
+      if function_type >= 0 {
+        expressions[local_index] = {
+          ..expressions[local_index],
+          type_: -function_type - 2,
+        }
+      }
+    }
     match collected.expressions[expression] {
       HirCallExpr(target, _, _) =>
         match inferred.call_targets[expression] {
@@ -2202,6 +2211,7 @@ fn plan_module_lowering_in_order(
   if order.length() != collected.bodies.length() {
     abort("lowering plan order does not cover every body")
   }
+  let resolved = materialize_body_function_types(resolved, inferred)
   let jobs : Array[BodyLoweringPlanJob?] = Array::make(
     collected.bodies.length(),
     None,

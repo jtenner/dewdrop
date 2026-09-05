@@ -5190,14 +5190,9 @@ fn starshine_function_reference_cache_indices(
     match lowering.expressions[expression].kind {
       @semantic.PlannedFunctionReference(declaration, type_arguments) =>
         if (match program {
-            Some(link) if type_arguments.length > 0 =>
-              link.specialized_function_reference_singleton_global(
-                declaration,
-                lowering.expression_type_argument_shapes,
-                type_arguments,
-                -1,
-              ) <
-              0
+            // Specialized references use a physical singleton or an evidence
+            // closure. A declaration-only local cache would merge distinct ABIs.
+            Some(_) if type_arguments.length > 0 => false
             Some(link) =>
               link.function_reference_singleton_global(
                 program_module_index, declaration,
@@ -5969,16 +5964,47 @@ fn starshine_emit_body_instructions(
                 results.push(output)
               }
               None => {
-                let singleton_global = match program {
+                let exact_target = match program {
                   Some(link) if type_arguments.length > 0 =>
-                    link.specialized_function_reference_singleton_global(
-                      declaration,
-                      lowering.expression_type_argument_shapes,
-                      type_arguments,
-                      starshine_program_expression_function_type_index(
-                        lowering, planned, link, program_module_index, expression,
-                      ),
-                    )
+                    match
+                      link.specialized_call_function(
+                        body.body,
+                        match generic_specialization {
+                          Some(value) => value.specialization_abi_key
+                          None => ""
+                        },
+                        expression,
+                      ) {
+                      Some(target) if target.declaration == declaration &&
+                        target.function_index >= 0 && !target.elided =>
+                        Some(target)
+                      _ => return Err(MissingFunction(declaration))
+                    }
+                  _ => None
+                }
+                let singleton_global = match program {
+                  Some(link) if exact_target is Some(_) => {
+                    let target = exact_target.unwrap()
+                    if generic_specialization is None {
+                      link.specialized_function_reference_singleton_global(
+                        declaration,
+                        link.modules[target.module_index].specialization_shapes,
+                        target.specialization_shapes,
+                        starshine_program_expression_function_type_index(
+                          lowering, planned, link, program_module_index, expression,
+                        ),
+                      )
+                    } else {
+                    let mut global = -1
+                    for singleton in link.function_reference_singletons {
+                      if singleton.function_index == target.function_index {
+                        global = singleton.global_index
+                        break
+                      }
+                    }
+                    global
+                    }
+                  }
                   Some(link) =>
                     link.function_reference_singleton_global(
                       program_module_index, declaration,
@@ -6002,17 +6028,8 @@ fn starshine_emit_body_instructions(
                     ),
                   ])
                 } else {
-                  let function_index = match program {
-                    Some(link) if type_arguments.length > 0 =>
-                      match
-                        link.specialized_function_of(
-                          declaration,
-                          lowering.expression_type_argument_shapes,
-                          type_arguments,
-                        ) {
-                        Some(function_) => function_.function_index
-                        None => return Err(MissingFunction(declaration))
-                      }
+                  let function_index = match exact_target {
+                    Some(target) => target.function_index
                     _ =>
                       match
                         starshine_function_reference_index(

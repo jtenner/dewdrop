@@ -983,23 +983,13 @@ test "concrete bounded generic function references preserve evidence" {
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
 test "unbounded generic function references keep the singleton fast path" {
-  let program = @semantic.collect_program_manifest(
-    2487UL,
-    @semantic.ProgramManifest::new([
-      @semantic.ManifestModule::new("app.main", [
-        @semantic.ManifestFile::new(
-          "main.dew", b"fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main() -> I32 {\n  let callback: fn(I32) -> I32 = reader()\n  callback(42)\n}\n",
-        ),
-      ]),
-    ]),
+  let stages = backend_test_single_module_stages(
+    2487UL, b"fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main() -> I32 {\n  let callback = reader::<I32>()\n  callback(42)\n}\n",
   )
-  let analyzed = @semantic.analyze_program_semantics(program)
-  assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
-  let lowering = @semantic.plan_program_lowering(program, analyzed)
-  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
-  assert_eq(link.diagnostics.length(), 0)
-  assert_eq(link.evidence_function_references.length(), 0)
-  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(stages.diagnostic_count(), 0)
+  assert_eq(stages.link.evidence_function_references.length(), 0)
+  assert_true(stages.link.function_reference_singletons.length() > 0)
+  let module_ = emit_starshine_program_module(stages.lowering, stages.link).unwrap()
   assert_eq(@validate.validate_module(module_), Ok(()))
 }
 

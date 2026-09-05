@@ -63,6 +63,7 @@ def main() -> None:
         ("arithmetic_operations", "dew.std.arithmetic"),
         ("math_operations", "dew.std.math_probes"),
         ("specialization_products", "app.specialization_probes"),
+        ("specialization_callbacks", "app.callback_probes"),
     ]:
         subprocess.run(
             [

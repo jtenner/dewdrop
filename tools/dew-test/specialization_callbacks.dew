@@ -1,0 +1,50 @@
+fn identity<t>(value: t) -> t {
+  value
+}
+
+fn reader<t>() -> fn(t) -> t {
+  identity
+}
+
+fn readers<a, b>() -> (fn(a) -> a, fn(b) -> b) {
+  (identity, identity)
+}
+
+pub fn pair_i32_i64(left: I32, right: I64) -> I64 {
+  let callback = reader::<(I32, I64)>()
+  let (_, selected) = callback((left, right))
+  selected
+}
+
+pub fn pair_i64_i32(left: I64, right: I32) -> I64 {
+  let callback = reader::<(I64, I32)>()
+  let (selected, _) = callback((left, right))
+  selected
+}
+
+pub fn nested_i32_i64(left: I32, right: I64) -> I64 {
+  let callback = reader::<(I32, (I64, I32))>()
+  let (_, (selected, _)) = callback((left, (right, left)))
+  selected
+}
+
+pub fn nested_i64_i32(left: I64, right: I32) -> I64 {
+  let callback = reader::<((I32, I64), I32)>()
+  let ((_, selected), _) = callback(((right, left), right))
+  selected
+}
+
+pub fn erased_product(value: I64) -> I64 {
+  let callback = reader::<(Unit, I64, Unit)>()
+  let (_, selected, _) = callback(((), value, ()))
+  selected
+}
+
+pub fn mixed_scalars(value: I64) -> I64 {
+  let (left, right) = readers::<I32, I64>()
+  if left(7i32) == 7i32 {
+    right(value)
+  } else {
+    0i64
+  }
+}

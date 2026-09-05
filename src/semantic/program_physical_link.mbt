@@ -1624,6 +1624,49 @@ pub fn link_program_wasmgc_fragments(
       ignore(expression_index)
     }
   }
+  // References in generic bodies need their caller-specific target, not the
+  // unspecialized expression shape. Keep one singleton per physical function.
+  let function_by_specialization : Map[String, Int] = Map::default()
+  for index, function_ in functions {
+    if function_.specialization_abi_key != "" && function_.function_index >= 0 {
+      function_by_specialization[function_.specialization_abi_key] = index
+    }
+  }
+  for call in fragments.specialized_calls {
+    if call.caller_specialization_abi_key == "" {
+      // The concrete source reference scan above also selects exact-reference
+      // adapters. Do not add an unused raw singleton beside that adapter.
+      continue
+    }
+    let module_index = lowering.index.body_owner(call.caller_body).unwrap()
+    let source = lowering.modules[module_index].expressions[call.expression]
+    if !(source.kind is PlannedFunctionReference(_, _)) ||
+      call.runtime_evidence_parameters.length > 0 {
+      continue
+    }
+    match function_by_specialization.get(call.target_specialization_abi_key) {
+      Some(index) => {
+        let target = functions[index]
+        guard target.declaration == call.target else {
+          abort("SPC-302 function reference key changed declaration identity")
+        }
+        if !singleton_functions.contains(target.function_index) {
+          singleton_functions[target.function_index] = true
+          function_reference_singletons.push({
+            module_index,
+            declaration: target.declaration,
+            function_index: target.function_index,
+            specialization_module_index: target.module_index,
+            specialization_shapes: target.specialization_shapes,
+            signature_type_index: target.signature_type_index,
+            global_index,
+          })
+          global_index += 1
+        }
+      }
+      None => () // The link verifier reports the absent exact target.
+    }
+  }
   let trait_dictionary_globals : Array[PlannedProgramTraitDictionaryGlobal] = []
   for module_index, module_ in fragments.modules {
     for dictionary_index in 0..<module_.trait_dictionaries.length() {
