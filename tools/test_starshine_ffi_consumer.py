@@ -6,6 +6,34 @@ import generate_starshine_ffi_consumer as generator
 
 
 class StarshineFfiConsumerTests(unittest.TestCase):
+    def test_public_signatures_use_stable_carrier_names(self) -> None:
+        bindings = [self.binding(
+            "CodeSec::new", "((ref 176)) -> (ref 176)",
+            parameters=(["ref", "176"],), results=(["ref", "176"],),
+        )]
+        rendered = generator.render_dew(bindings, "digest", {
+            "StarshineFunctions": 176, "StarshineCodeSec": 176,
+        })
+        self.assertNotIn("StarshineRef", rendered)
+        self.assertIn("pub foreign type StarshineFunctions", rendered)
+        self.assertIn("pub type StarshineCodeSec = StarshineFunctions", rendered)
+        self.assertIn("value0: StarshineFunctions", rendered)
+        self.assertIn('-> StarshineCodeSec = "CodeSec::new"', rendered)
+
+    def test_reference_renumbering_does_not_change_dew_declarations(self) -> None:
+        def render(index: int) -> str:
+            return generator.render_dew([self.binding(
+                "consume", "reference", parameters=(["ref", "null", str(index)],),
+            )], "digest", {"StarshineTypeMetadata": index})
+        self.assertEqual(render(12), render(900))
+        self.assertIn("NullableRef<StarshineTypeMetadata>", render(12))
+
+    def test_unnamed_reference_is_a_generation_error(self) -> None:
+        with self.assertRaisesRegex(ValueError, "no stable carrier name"):
+            generator.render_dew([self.binding(
+                "new", "reference", results=(["ref", "42"],),
+            )], "digest", {})
+
     def binding(
         self,
         name: str,

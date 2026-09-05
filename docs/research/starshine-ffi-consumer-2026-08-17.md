@@ -26,7 +26,30 @@ Outputs:
 - `self_host/starshine/fingerprint-prefix.bin`
 - `self_host/starshine/fingerprint.dew`
 
-The generator checks that the binary function-export set exactly matches Starshine's export-name metadata. It reads each exported Core Wasm function signature and maps primitive carriers directly. Each concrete WasmGC reference type gets a Dew foreign marker type. Nullable signatures use `NullableRef<StarshineRefN>` and preserve the same underlying marker identity.
+The generator checks that the binary function-export set exactly matches Starshine's export-name metadata. It reads each exported Core Wasm function signature and maps primitive carriers directly. Each concrete WasmGC reference type gets one stably named Dew foreign marker type. Nullable signatures use `NullableRef<NamedCarrier>` and preserve the same underlying marker identity.
+
+## Stable carrier names (2026-09-04)
+
+All 17 selected reference carriers now have names derived from the provider API,
+not from Wasm heap type numbers. For example, `StarshineModule`,
+`StarshineFieldType`, and `StarshineEncodedModule` name foreign types directly.
+`CodeSec::new` returns `StarshineCodeSec`, an alias of `StarshineFunctions`.
+Sections that share their backing array retain one foreign identity. The
+generator checks each alias against explicit provider signature probes and
+rejects references without an assigned name. Nullability remains at each use.
+Raw indices remain in `ffi-bindings.json` for physical linking and diagnostics.
+
+Regeneration includes the previously pending provider metadata and fingerprints
+for pinned revision `89be0d37df99fc8cfcb0a7983b0865ca67d439d6`: 386 selected
+exports from 4,190 available exports. Two provider generated-export files remain
+modified in the submodule; clean-provider reproduction must be verified before
+calling this a clean-checkout bootstrap result.
+
+Validation: all eight generator tests pass (0.05 seconds), generation takes
+4.12 seconds, and the self-host hardening lane passes: 92 Dew tests, 16 trap
+records, two record-decoder tests, 13 emission probes, and four semantic probes.
+Tests check stable declarations after type renumbering, nullable named types,
+constructor result aliases, and missing-name diagnostics.
 
 At pinned Starshine revision `c544a96d367351145aecdbbc9c6e40e6095e13ca`, the provider has 3,366 concrete function exports. The typed bridge API was introduced in `664cafba9`; `c544a96d3` keeps its generated interface in Moon's canonical form. Dew declares the exact 32 exports used by the linked smoke compiler. Nullable signatures lower to exact `(ref null N)` parameters and results.
 

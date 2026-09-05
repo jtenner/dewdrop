@@ -139,7 +139,7 @@ def main() -> None:
         "",
         "fn self_host_emit_linked_builtin(",
         "  name: Bytes,",
-        "  destination: StarshineRef45,",
+        "  destination: StarshineInstructions,",
         ") -> Bool {",
     ]
 
