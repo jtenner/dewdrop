@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source tools/self-host-common.sh
 
 # The combined semantic runner has severe contention. Run one owning file at a
 # time so that the lane has steady progress and bounded memory use.
@@ -24,7 +25,10 @@ files=(
   src/semantic/text_ordering_wbtest.mbt
 )
 
+test_status=0
 for test_file in "${files[@]}"; do
   echo "== $test_file =="
-  moon test --target native --include-skipped "$test_file" "$@"
+  self_host_measure "native integration $test_file" \
+    moon test --target native --include-skipped "$test_file" "$@" || test_status=1
 done
+exit "$test_status"
