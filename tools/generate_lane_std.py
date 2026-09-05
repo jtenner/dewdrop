@@ -174,12 +174,13 @@ def trait_impl(trait: str, type_name: str, method_name: str, call_name: str) -> 
 
 def v128_source(type_name: str, scalar: str, lane: str, kind: str) -> str:
     p = type_name.lower()
+    wasm_lane = {"i8": "i8x16", "i16": "i16x8", "i32": "i32x4", "i64": "i64x2", "f32": "f32x4", "f64": "f64x2"}[lane]
     out = [carrier_helpers(type_name, "V128", V128_TYPES)]
-    out.append(builtin(f"{p}_not", f"value: {type_name}", type_name, "dew_v128_not"))
-    out.append(builtin(f"{p}_andnot", f"left: {type_name}, right: {type_name}", type_name, "dew_v128_andnot"))
-    out.append(builtin(f"{p}_bitselect", f"yes: {type_name}, no: {type_name}, mask: {type_name}", type_name, "dew_v128_bitselect"))
-    out.append(builtin(f"{p}_any_true", f"value: {type_name}", "Bool", "dew_v128_any_true"))
-    out.append(builtin(f"{p}_splat", f"value: {scalar}", type_name, f"dew_v128_splat_{lane}"))
+    out.append(builtin(f"{p}_not", f"value: {type_name}", type_name, "v128.not"))
+    out.append(builtin(f"{p}_andnot", f"left: {type_name}, right: {type_name}", type_name, "v128.andnot"))
+    out.append(builtin(f"{p}_bitselect", f"yes: {type_name}, no: {type_name}, mask: {type_name}", type_name, "v128.bitselect"))
+    out.append(builtin(f"{p}_any_true", f"value: {type_name}", "Bool", "v128.any_true"))
+    out.append(builtin(f"{p}_splat", f"value: {scalar}", type_name, f"{wasm_lane}.splat"))
     lane_count = int(type_name.split("x", 1)[1])
     out.append(builtin(f"{p}_load_splat", "address: U32", type_name, f"dew_{p}_load_splat"))
     for result, suffix, _, _ in V128_SPECIAL_MEMORY:
@@ -235,14 +236,14 @@ def v128_source(type_name: str, scalar: str, lane: str, kind: str) -> str:
         shifts = ["shl", "shr_s" if kind == "signed" else "shr_u"]
 
     for op in binary + comparisons:
-        out.append(builtin(f"{p}_{op}", f"left: {type_name}, right: {type_name}", type_name, f"dew_v128_{op}_{lane}"))
+        out.append(builtin(f"{p}_{op}", f"left: {type_name}, right: {type_name}", type_name, f"{wasm_lane}.{op}"))
     for op in unary:
-        out.append(builtin(f"{p}_{op}", f"value: {type_name}", type_name, f"dew_v128_{op}_{lane}"))
+        out.append(builtin(f"{p}_{op}", f"value: {type_name}", type_name, f"{wasm_lane}.{op}"))
     for op in reductions:
         result = "Bool" if op == "all_true" else "U32"
-        out.append(builtin(f"{p}_{op}", f"value: {type_name}", result, f"dew_v128_{op}_{lane}"))
+        out.append(builtin(f"{p}_{op}", f"value: {type_name}", result, f"{wasm_lane}.{op}"))
     for op in shifts:
-        out.append(builtin(f"{p}_{op}", f"value: {type_name}, count: U32", type_name, f"dew_v128_{op}_{lane}"))
+        out.append(builtin(f"{p}_{op}", f"value: {type_name}, count: U32", type_name, f"{wasm_lane}.{op}"))
 
     out.append(f"impl {type_name} {{\n")
     out.append(method("to_v128", "", "V128", f"{p}_to_v128(self)"))
@@ -694,10 +695,10 @@ def v128_memory_backend_source() -> str:
     for type_name, _, lane, _ in V128_TYPES:
         prefix = type_name.lower()
         bits, align = widths[lane]
-        keyword = "if" if first else "else if"
+        keyword = "  if" if first else "else if"
         first = False
         branches.append(
-            f"  {keyword} name == b\"dew_{prefix}_load_splat\" {{\n"
+            f"{keyword} name == b\"dew_{prefix}_load_splat\" {{\n"
             f"    Some([@lib.Instruction::v128_load{bits}_splat(starshine_memory_argument({align}U))])\n"
             f"  }} "
         )
@@ -729,11 +730,11 @@ def v128_shuffle_backend_source() -> str:
     for type_name in ("I8x16", "U8x16"):
         prefix = type_name.lower()
         for name, indices in V128_BYTE_SHUFFLES.items():
-            keyword = "if" if first else "else if"
+            keyword = "  if" if first else "else if"
             first = False
             args = ", ".join(lane_index(index) for index in indices)
             branches.append(
-                f"  {keyword} name == b\"dew_{prefix}_{name}\" {{\n"
+                f"{keyword} name == b\"dew_{prefix}_{name}\" {{\n"
                 f"    Some([@lib.Instruction::i8x16_shuffle({args})])\n"
                 f"  }} "
             )
@@ -748,9 +749,9 @@ def v128_cross_backend_source() -> str:
     branches: list[str] = []
     for index, (result, suffix, _, instruction) in enumerate(V128_CROSS_OPS):
         prefix = result.lower()
-        keyword = "if" if index == 0 else "else if"
+        keyword = "  if" if index == 0 else "else if"
         branches.append(
-            f"  {keyword} name == b\"dew_{prefix}_{suffix}\" {{\n"
+            f"{keyword} name == b\"dew_{prefix}_{suffix}\" {{\n"
             f"    Some([@lib.Instruction::{instruction}()])\n"
             f"  }} "
         )
@@ -791,11 +792,11 @@ def v128_lane_backend_source() -> str:
         prefix = type_name.lower()
         lane_count = int(type_name.split("x", 1)[1])
         for index in range(lane_count):
-            keyword = "if" if first else "else if"
+            keyword = "  if" if first else "else if"
             first = False
             index_value = lane_index(index)
             branches.append(
-                f"  {keyword} name == b\"dew_{prefix}_extract_{index}\" {{\n"
+                f"{keyword} name == b\"dew_{prefix}_extract_{index}\" {{\n"
                 f"    Some([@lib.Instruction::{instruction[type_name]}({index_value})])\n"
                 f"  }} "
             )

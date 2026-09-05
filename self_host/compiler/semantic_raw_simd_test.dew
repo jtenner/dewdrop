@@ -1,0 +1,28 @@
+test "raw SIMD bitselect checks all three operands" {
+  let valid = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"builtin operation(left: V128, right: V128, mask: V128) -> V128 = \"v128.bitselect\"\npub fn main(left: V128, right: V128, mask: V128) -> V128 {\n  operation(left, right, mask)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(valid)
+  match build_self_host_linked_i32_module(valid, 5100u64) {
+    Result::Ok(_) => {}
+    Result::Err(error) => assert(false, error)
+  }
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(left: V128, right: V128, mask: I32) -> V128 = \"v128.bitselect\"\npub fn main(left: V128, right: V128, mask: I32) -> V128 {\n  operation(left, right, mask)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(left: V128, right: I64, mask: V128) -> V128 = \"v128.bitselect\"\npub fn main(left: V128, right: I64, mask: V128) -> V128 {\n  operation(left, right, mask)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(left: I32, right: V128, mask: V128) -> V128 = \"v128.bitselect\"\npub fn main(left: I32, right: V128, mask: V128) -> V128 {\n  operation(left, right, mask)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(left: V128, right: V128, mask: V128) -> I32 = \"v128.bitselect\"\npub fn main(left: V128, right: V128, mask: V128) -> I32 {\n  operation(left, right, mask)\n}\n",
+  )
+}
+
+test "raw SIMD shifts require an I32 count" {
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: V128, count: I64) -> V128 = \"i16x8.shl\"\npub fn main(value: V128, count: I64) -> V128 {\n  operation(value, count)\n}\n",
+  )
+}

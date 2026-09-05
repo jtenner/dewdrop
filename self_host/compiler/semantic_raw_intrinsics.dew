@@ -44,23 +44,20 @@ fn self_host_verify_body_raw_intrinsic(
 }
 
 pub struct SelfHostRawIntrinsicSignature {
-  first: SelfHostWasmBodyCarrier
-  second: Option<SelfHostWasmBodyCarrier>
+  inputs: Array<SelfHostWasmBodyCarrier>
   result: SelfHostWasmBodyCarrier
 }
 
 fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSignature> {
   if name.equals(b"i32.reinterpret_f32") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F32BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
   if name.equals(b"f32.reinterpret_i32") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier]
       result: SelfHostWasmBodyCarrier::F32BodyCarrier
     })
   }
@@ -71,22 +68,19 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     name.equals(b"f32.trunc") ||
     name.equals(b"f32.nearest") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F32BodyCarrier]
       result: SelfHostWasmBodyCarrier::F32BodyCarrier
     })
   }
   if name.equals(b"i64.reinterpret_f64") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F64BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F64BodyCarrier]
       result: SelfHostWasmBodyCarrier::I64BodyCarrier
     })
   }
   if name.equals(b"f64.reinterpret_i64") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I64BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I64BodyCarrier]
       result: SelfHostWasmBodyCarrier::F64BodyCarrier
     })
   }
@@ -97,15 +91,13 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     name.equals(b"f64.trunc") ||
     name.equals(b"f64.nearest") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F64BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F64BodyCarrier]
       result: SelfHostWasmBodyCarrier::F64BodyCarrier
     })
   }
   if name.equals(b"i32.ctz") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
@@ -130,8 +122,7 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     name.equals(b"i32.div_u") ||
     name.equals(b"i32.rem_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I32BodyCarrier
-      second: Option::Some(SelfHostWasmBodyCarrier::I32BodyCarrier)
+      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier, SelfHostWasmBodyCarrier::I32BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
@@ -146,8 +137,7 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     name.equals(b"i64.gt_u") ||
     name.equals(b"i64.ge_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I64BodyCarrier
-      second: Option::Some(SelfHostWasmBodyCarrier::I64BodyCarrier)
+      inputs: [SelfHostWasmBodyCarrier::I64BodyCarrier, SelfHostWasmBodyCarrier::I64BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
@@ -162,8 +152,7 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     name.equals(b"i64.div_u") ||
     name.equals(b"i64.rem_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I64BodyCarrier
-      second: Option::Some(SelfHostWasmBodyCarrier::I64BodyCarrier)
+      inputs: [SelfHostWasmBodyCarrier::I64BodyCarrier, SelfHostWasmBodyCarrier::I64BodyCarrier]
       result: SelfHostWasmBodyCarrier::I64BodyCarrier
     })
   }
@@ -174,8 +163,7 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     name.equals(b"f32.gt") ||
     name.equals(b"f32.ge") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F32BodyCarrier
-      second: Option::Some(SelfHostWasmBodyCarrier::F32BodyCarrier)
+      inputs: [SelfHostWasmBodyCarrier::F32BodyCarrier, SelfHostWasmBodyCarrier::F32BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
@@ -184,8 +172,7 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     name.equals(b"f32.mul") ||
     name.equals(b"f32.div") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F32BodyCarrier
-      second: Option::Some(SelfHostWasmBodyCarrier::F32BodyCarrier)
+      inputs: [SelfHostWasmBodyCarrier::F32BodyCarrier, SelfHostWasmBodyCarrier::F32BodyCarrier]
       result: SelfHostWasmBodyCarrier::F32BodyCarrier
     })
   }
@@ -196,8 +183,7 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     name.equals(b"f64.gt") ||
     name.equals(b"f64.ge") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F64BodyCarrier
-      second: Option::Some(SelfHostWasmBodyCarrier::F64BodyCarrier)
+      inputs: [SelfHostWasmBodyCarrier::F64BodyCarrier, SelfHostWasmBodyCarrier::F64BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
@@ -206,99 +192,85 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     name.equals(b"f64.mul") ||
     name.equals(b"f64.div") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F64BodyCarrier
-      second: Option::Some(SelfHostWasmBodyCarrier::F64BodyCarrier)
+      inputs: [SelfHostWasmBodyCarrier::F64BodyCarrier, SelfHostWasmBodyCarrier::F64BodyCarrier]
       result: SelfHostWasmBodyCarrier::F64BodyCarrier
     })
   }
   if name.equals(b"i32.extend8_s") || name.equals(b"i32.extend16_s") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
   if name.equals(b"i32.wrap_i64") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I64BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I64BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
   if name.equals(b"i64.extend_i32_s") || name.equals(b"i64.extend_i32_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier]
       result: SelfHostWasmBodyCarrier::I64BodyCarrier
     })
   }
   if name.equals(b"f32.convert_i32_s") || name.equals(b"f32.convert_i32_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier]
       result: SelfHostWasmBodyCarrier::F32BodyCarrier
     })
   }
   if name.equals(b"i32.trunc_f32_s") || name.equals(b"i32.trunc_f32_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F32BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
   if name.equals(b"f32.convert_i64_s") || name.equals(b"f32.convert_i64_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I64BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I64BodyCarrier]
       result: SelfHostWasmBodyCarrier::F32BodyCarrier
     })
   }
   if name.equals(b"i64.trunc_f32_s") || name.equals(b"i64.trunc_f32_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F32BodyCarrier]
       result: SelfHostWasmBodyCarrier::I64BodyCarrier
     })
   }
   if name.equals(b"f64.convert_i32_s") || name.equals(b"f64.convert_i32_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier]
       result: SelfHostWasmBodyCarrier::F64BodyCarrier
     })
   }
   if name.equals(b"i32.trunc_f64_s") || name.equals(b"i32.trunc_f64_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F64BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F64BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier
     })
   }
   if name.equals(b"f64.convert_i64_s") || name.equals(b"f64.convert_i64_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::I64BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::I64BodyCarrier]
       result: SelfHostWasmBodyCarrier::F64BodyCarrier
     })
   }
   if name.equals(b"i64.trunc_f64_s") || name.equals(b"i64.trunc_f64_u") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F64BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F64BodyCarrier]
       result: SelfHostWasmBodyCarrier::I64BodyCarrier
     })
   }
   if name.equals(b"f32.demote_f64") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F64BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F64BodyCarrier]
       result: SelfHostWasmBodyCarrier::F32BodyCarrier
     })
   }
   if name.equals(b"f64.promote_f32") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
-      first: SelfHostWasmBodyCarrier::F32BodyCarrier
-      second: Option::None
+      inputs: [SelfHostWasmBodyCarrier::F32BodyCarrier]
       result: SelfHostWasmBodyCarrier::F64BodyCarrier
     })
   }
@@ -336,18 +308,15 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     load = name.equals(b"v128.load")
     store = !load
   } else {
-    return Option::None
+    return self_host_raw_simd_signature(name)
   }
   Option::Some(SelfHostRawIntrinsicSignature::{
-    first: if load || store {
-      SelfHostWasmBodyCarrier::I32BodyCarrier
+    inputs: if load {
+      [SelfHostWasmBodyCarrier::I32BodyCarrier]
+    } else if store {
+      [SelfHostWasmBodyCarrier::I32BodyCarrier, carrier]
     } else {
-      carrier
-    }
-    second: if load {
-      Option::None
-    } else {
-      Option::Some(carrier)
+      [carrier, carrier]
     }
     result: if store {
       SelfHostWasmBodyCarrier::UnitBodyCarrier
@@ -371,10 +340,7 @@ fn self_host_raw_intrinsic_error(
     return Option::None
   }
   let count = match signature {
-    Option::Some(value) => match value.second {
-      Option::Some(_) => 2u32
-      Option::None => 1u32
-    }
+    Option::Some(value) => value.inputs.length()
     Option::None => 1u32
   }
   if arguments.length != count || !self_host_array_span_is_valid(
@@ -423,20 +389,22 @@ fn self_host_raw_intrinsic_error(
   }
   match signature {
     Option::Some(value) => {
-      if !self_host_body_carrier_equal(source, value.first) || !self_host_body_carrier_equal(target, value.result) {
+      if !self_host_body_carrier_equal(target, value.result) {
         return Option::Some("raw intrinsic input or result carrier does not match its opcode")
       }
-      match value.second {
-        Option::Some(expected) => {
-          let second = match self_host_body_plan_expression(body_plan, module_.expression_children[arguments.start + 1u32]) {
+      let _ = while 0u32 {
+        index => if index < value.inputs.length() {
+          let actual = match self_host_body_plan_expression(body_plan, module_.expression_children[arguments.start + index]) {
             Option::Some(operand) => operand.carrier
-            Option::None => return Option::Some("raw intrinsic second operand plan is missing")
+            Option::None => return Option::Some("raw intrinsic operand plan is missing")
           }
-          if !self_host_body_carrier_equal(second, expected) {
-            return Option::Some("raw intrinsic second operand carrier does not match its opcode")
+          if !self_host_body_carrier_equal(actual, value.inputs[index]) {
+            return Option::Some("raw intrinsic input or result carrier does not match its opcode")
           }
+          continue index + 1u32
+        } else {
+          break ()
         }
-        Option::None => {}
       }
       return Option::None
     }

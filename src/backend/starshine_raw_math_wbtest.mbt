@@ -31,8 +31,8 @@ test "raw math instructions validate inputs and results" {
   assert_eq(stages.link.imported_function_count, 0)
   assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
   let planned = stages.link.modules[0]
-  let i32 = @semantic.raw_wasm_builtin_signature(b"i32.add").unwrap().first
-  let i64 = @semantic.raw_wasm_builtin_signature(b"i64.add").unwrap().first
+  let i32 = @semantic.raw_wasm_builtin_signature(b"i32.add").unwrap().inputs[0]
+  let i64 = @semantic.raw_wasm_builtin_signature(b"i64.add").unwrap().inputs[0]
   let mut checked = 0
   for index, case_ in cases {
     let (opcode, _, _) = case_

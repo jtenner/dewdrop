@@ -25,15 +25,11 @@ fn starshine_verify_raw_builtin_signature(
   let outputs = types[results.start:results.start + results.length].to_owned()
   match signature {
     Some(signature) => {
-      let expected_inputs = match signature.second {
-        Some(second) => [signature.first, second]
-        None => [signature.first]
-      }
       let expected_outputs = match signature.result {
         Some(result) => [result]
         None => []
       }
-      if inputs == expected_inputs && outputs == expected_outputs {
+      if inputs == signature.inputs && outputs == expected_outputs {
         return Ok(())
       }
       return Err(InvalidBuiltinSignature(name, inputs, outputs))

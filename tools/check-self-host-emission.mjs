@@ -310,6 +310,27 @@ for (const [name, expected] of [
 {
   const start = performance.now();
   try {
+    const cases = JSON.parse(await readFile(new URL("./dew-test/simd-opcodes.json", import.meta.url), "utf8"));
+    for (const [opcode, inputs, result] of cases) {
+      const parameters = inputs.map((type, index) => `value${index}: ${type}`).join(", ");
+      const arguments_ = inputs.map((_, index) => `value${index}`).join(", ");
+      try {
+        await compileSource(`builtin operation(${parameters}) -> ${result} = "${opcode}"\npub fn main(${parameters}) -> ${result} {\n  operation(${arguments_})\n}\n`);
+      } catch (error) {
+        throw new Error(`SIMD opcode ${opcode} failed self-host compilation or Wasm validation`, { cause: error });
+      }
+    }
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`self-host SIMD opcode validation passed: ${cases.length} (${elapsed.toFixed(3)} seconds)`);
+    assert.ok(elapsed <= 30, "SIMD opcode compiler performance exceeds 30 seconds");
+  } catch (error) {
+    failures++;
+    console.error(error);
+  }
+}
+{
+  const start = performance.now();
+  try {
     let checks = 0;
     for (const [name, declarations, body] of [
       ["scalar", "", "let callback = reader::<I64>()\n  callback(value)"],

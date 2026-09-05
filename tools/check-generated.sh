@@ -5,6 +5,8 @@ cd "$(dirname "$0")/.."
 echo "== generated sources =="
 python3 tools/generate_preamble_sources.py --check
 python3 tools/generate_lane_std.py --check
+python3 tools/generate_simd_intrinsics.py --check
+python3 tools/test_simd_builtin_policy.py
 python3 tools/test_packed_builtin_policy.py
 python3 tools/test_scalar_builtin_policy.py
 python3 tools/test_memory_builtin_policy.py

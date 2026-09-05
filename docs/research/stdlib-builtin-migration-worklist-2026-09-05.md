@@ -29,6 +29,9 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   `raw-memory-instructions-2026-09-05.md`.
 - [ ] Remaining SIMD operations: explicit instruction/immediate contracts; express
   compositions, permutations, and convenience algorithms in Dew.
+  The first 150 immediate-free opcode contracts pass checks in both compilers;
+  see `raw-simd-instructions-2026-09-05.md`. Immediate-bearing and cross-lane
+  operations remain open.
 - [x] Math: all 17 primitive helper targets use checked raw instructions;
   higher-level algorithms remain Dew. See `raw-math-instructions-2026-09-05.md`.
 - [ ] Array: move mutable length/capacity, growth, mutation, iteration, and bulk

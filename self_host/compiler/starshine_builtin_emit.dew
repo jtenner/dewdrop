@@ -669,752 +669,752 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64_promote_f32(),
     )
-  } else if name.equals(b"dew_v128_not") {
+  } else if name.equals(b"v128.not") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_v128_not(),
     )
-  } else if name.equals(b"dew_v128_andnot") {
+  } else if name.equals(b"v128.andnot") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_v128_andnot(),
     )
-  } else if name.equals(b"dew_v128_bitselect") {
+  } else if name.equals(b"v128.bitselect") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_v128_bitselect(),
     )
-  } else if name.equals(b"dew_v128_any_true") {
+  } else if name.equals(b"v128.any_true") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_v128_any_true(),
     )
-  } else if name.equals(b"dew_v128_splat_i8") {
+  } else if name.equals(b"i8x16.splat") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_splat(),
     )
-  } else if name.equals(b"dew_v128_splat_i16") {
+  } else if name.equals(b"i16x8.splat") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_splat(),
     )
-  } else if name.equals(b"dew_v128_splat_i32") {
+  } else if name.equals(b"i32x4.splat") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_splat(),
     )
-  } else if name.equals(b"dew_v128_splat_i64") {
+  } else if name.equals(b"i64x2.splat") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_splat(),
     )
-  } else if name.equals(b"dew_v128_splat_f32") {
+  } else if name.equals(b"f32x4.splat") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_splat(),
     )
-  } else if name.equals(b"dew_v128_splat_f64") {
+  } else if name.equals(b"f64x2.splat") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_splat(),
     )
-  } else if name.equals(b"dew_v128_add_i8") {
+  } else if name.equals(b"i8x16.add") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_add(),
     )
-  } else if name.equals(b"dew_v128_sub_i8") {
+  } else if name.equals(b"i8x16.sub") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_sub(),
     )
-  } else if name.equals(b"dew_v128_min_s_i8") {
+  } else if name.equals(b"i8x16.min_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_min_s(),
     )
-  } else if name.equals(b"dew_v128_min_u_i8") {
+  } else if name.equals(b"i8x16.min_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_min_u(),
     )
-  } else if name.equals(b"dew_v128_max_s_i8") {
+  } else if name.equals(b"i8x16.max_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_max_s(),
     )
-  } else if name.equals(b"dew_v128_max_u_i8") {
+  } else if name.equals(b"i8x16.max_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_max_u(),
     )
-  } else if name.equals(b"dew_v128_avgr_u_i8") {
+  } else if name.equals(b"i8x16.avgr_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_avgr_u(),
     )
-  } else if name.equals(b"dew_v128_add_sat_s_i8") {
+  } else if name.equals(b"i8x16.add_sat_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_add_sat_s(),
     )
-  } else if name.equals(b"dew_v128_add_sat_u_i8") {
+  } else if name.equals(b"i8x16.add_sat_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_add_sat_u(),
     )
-  } else if name.equals(b"dew_v128_sub_sat_s_i8") {
+  } else if name.equals(b"i8x16.sub_sat_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_sub_sat_s(),
     )
-  } else if name.equals(b"dew_v128_sub_sat_u_i8") {
+  } else if name.equals(b"i8x16.sub_sat_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_sub_sat_u(),
     )
-  } else if name.equals(b"dew_v128_eq_i8") {
+  } else if name.equals(b"i8x16.eq") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_eq(),
     )
-  } else if name.equals(b"dew_v128_ne_i8") {
+  } else if name.equals(b"i8x16.ne") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_ne(),
     )
-  } else if name.equals(b"dew_v128_lt_s_i8") {
+  } else if name.equals(b"i8x16.lt_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_lt_s(),
     )
-  } else if name.equals(b"dew_v128_lt_u_i8") {
+  } else if name.equals(b"i8x16.lt_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_lt_u(),
     )
-  } else if name.equals(b"dew_v128_le_s_i8") {
+  } else if name.equals(b"i8x16.le_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_le_s(),
     )
-  } else if name.equals(b"dew_v128_le_u_i8") {
+  } else if name.equals(b"i8x16.le_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_le_u(),
     )
-  } else if name.equals(b"dew_v128_gt_s_i8") {
+  } else if name.equals(b"i8x16.gt_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_gt_s(),
     )
-  } else if name.equals(b"dew_v128_gt_u_i8") {
+  } else if name.equals(b"i8x16.gt_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_gt_u(),
     )
-  } else if name.equals(b"dew_v128_ge_s_i8") {
+  } else if name.equals(b"i8x16.ge_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_ge_s(),
     )
-  } else if name.equals(b"dew_v128_ge_u_i8") {
+  } else if name.equals(b"i8x16.ge_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_ge_u(),
     )
-  } else if name.equals(b"dew_v128_abs_i8") {
+  } else if name.equals(b"i8x16.abs") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_abs(),
     )
-  } else if name.equals(b"dew_v128_neg_i8") {
+  } else if name.equals(b"i8x16.neg") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_neg(),
     )
-  } else if name.equals(b"dew_v128_popcnt_i8") {
+  } else if name.equals(b"i8x16.popcnt") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_popcnt(),
     )
-  } else if name.equals(b"dew_v128_all_true_i8") {
+  } else if name.equals(b"i8x16.all_true") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_all_true(),
     )
-  } else if name.equals(b"dew_v128_bitmask_i8") {
+  } else if name.equals(b"i8x16.bitmask") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_bitmask(),
     )
-  } else if name.equals(b"dew_v128_shl_i8") {
+  } else if name.equals(b"i8x16.shl") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_shl(),
     )
-  } else if name.equals(b"dew_v128_shr_s_i8") {
+  } else if name.equals(b"i8x16.shr_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_shr_s(),
     )
-  } else if name.equals(b"dew_v128_shr_u_i8") {
+  } else if name.equals(b"i8x16.shr_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i8x16_shr_u(),
     )
-  } else if name.equals(b"dew_v128_add_i16") {
+  } else if name.equals(b"i16x8.add") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_add(),
     )
-  } else if name.equals(b"dew_v128_sub_i16") {
+  } else if name.equals(b"i16x8.sub") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_sub(),
     )
-  } else if name.equals(b"dew_v128_mul_i16") {
+  } else if name.equals(b"i16x8.mul") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_mul(),
     )
-  } else if name.equals(b"dew_v128_min_s_i16") {
+  } else if name.equals(b"i16x8.min_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_min_s(),
     )
-  } else if name.equals(b"dew_v128_min_u_i16") {
+  } else if name.equals(b"i16x8.min_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_min_u(),
     )
-  } else if name.equals(b"dew_v128_max_s_i16") {
+  } else if name.equals(b"i16x8.max_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_max_s(),
     )
-  } else if name.equals(b"dew_v128_max_u_i16") {
+  } else if name.equals(b"i16x8.max_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_max_u(),
     )
-  } else if name.equals(b"dew_v128_avgr_u_i16") {
+  } else if name.equals(b"i16x8.avgr_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_avgr_u(),
     )
-  } else if name.equals(b"dew_v128_add_sat_s_i16") {
+  } else if name.equals(b"i16x8.add_sat_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_add_sat_s(),
     )
-  } else if name.equals(b"dew_v128_add_sat_u_i16") {
+  } else if name.equals(b"i16x8.add_sat_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_add_sat_u(),
     )
-  } else if name.equals(b"dew_v128_sub_sat_s_i16") {
+  } else if name.equals(b"i16x8.sub_sat_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_sub_sat_s(),
     )
-  } else if name.equals(b"dew_v128_sub_sat_u_i16") {
+  } else if name.equals(b"i16x8.sub_sat_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_sub_sat_u(),
     )
-  } else if name.equals(b"dew_v128_eq_i16") {
+  } else if name.equals(b"i16x8.eq") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_eq(),
     )
-  } else if name.equals(b"dew_v128_ne_i16") {
+  } else if name.equals(b"i16x8.ne") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_ne(),
     )
-  } else if name.equals(b"dew_v128_lt_s_i16") {
+  } else if name.equals(b"i16x8.lt_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_lt_s(),
     )
-  } else if name.equals(b"dew_v128_lt_u_i16") {
+  } else if name.equals(b"i16x8.lt_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_lt_u(),
     )
-  } else if name.equals(b"dew_v128_le_s_i16") {
+  } else if name.equals(b"i16x8.le_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_le_s(),
     )
-  } else if name.equals(b"dew_v128_le_u_i16") {
+  } else if name.equals(b"i16x8.le_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_le_u(),
     )
-  } else if name.equals(b"dew_v128_gt_s_i16") {
+  } else if name.equals(b"i16x8.gt_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_gt_s(),
     )
-  } else if name.equals(b"dew_v128_gt_u_i16") {
+  } else if name.equals(b"i16x8.gt_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_gt_u(),
     )
-  } else if name.equals(b"dew_v128_ge_s_i16") {
+  } else if name.equals(b"i16x8.ge_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_ge_s(),
     )
-  } else if name.equals(b"dew_v128_ge_u_i16") {
+  } else if name.equals(b"i16x8.ge_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_ge_u(),
     )
-  } else if name.equals(b"dew_v128_abs_i16") {
+  } else if name.equals(b"i16x8.abs") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_abs(),
     )
-  } else if name.equals(b"dew_v128_neg_i16") {
+  } else if name.equals(b"i16x8.neg") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_neg(),
     )
-  } else if name.equals(b"dew_v128_all_true_i16") {
+  } else if name.equals(b"i16x8.all_true") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_all_true(),
     )
-  } else if name.equals(b"dew_v128_bitmask_i16") {
+  } else if name.equals(b"i16x8.bitmask") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_bitmask(),
     )
-  } else if name.equals(b"dew_v128_shl_i16") {
+  } else if name.equals(b"i16x8.shl") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_shl(),
     )
-  } else if name.equals(b"dew_v128_shr_s_i16") {
+  } else if name.equals(b"i16x8.shr_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_shr_s(),
     )
-  } else if name.equals(b"dew_v128_shr_u_i16") {
+  } else if name.equals(b"i16x8.shr_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i16x8_shr_u(),
     )
-  } else if name.equals(b"dew_v128_add_i32") {
+  } else if name.equals(b"i32x4.add") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_add(),
     )
-  } else if name.equals(b"dew_v128_sub_i32") {
+  } else if name.equals(b"i32x4.sub") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_sub(),
     )
-  } else if name.equals(b"dew_v128_mul_i32") {
+  } else if name.equals(b"i32x4.mul") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_mul(),
     )
-  } else if name.equals(b"dew_v128_min_s_i32") {
+  } else if name.equals(b"i32x4.min_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_min_s(),
     )
-  } else if name.equals(b"dew_v128_min_u_i32") {
+  } else if name.equals(b"i32x4.min_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_min_u(),
     )
-  } else if name.equals(b"dew_v128_max_s_i32") {
+  } else if name.equals(b"i32x4.max_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_max_s(),
     )
-  } else if name.equals(b"dew_v128_max_u_i32") {
+  } else if name.equals(b"i32x4.max_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_max_u(),
     )
-  } else if name.equals(b"dew_v128_eq_i32") {
+  } else if name.equals(b"i32x4.eq") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_eq(),
     )
-  } else if name.equals(b"dew_v128_ne_i32") {
+  } else if name.equals(b"i32x4.ne") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_ne(),
     )
-  } else if name.equals(b"dew_v128_lt_s_i32") {
+  } else if name.equals(b"i32x4.lt_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_lt_s(),
     )
-  } else if name.equals(b"dew_v128_lt_u_i32") {
+  } else if name.equals(b"i32x4.lt_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_lt_u(),
     )
-  } else if name.equals(b"dew_v128_le_s_i32") {
+  } else if name.equals(b"i32x4.le_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_le_s(),
     )
-  } else if name.equals(b"dew_v128_le_u_i32") {
+  } else if name.equals(b"i32x4.le_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_le_u(),
     )
-  } else if name.equals(b"dew_v128_gt_s_i32") {
+  } else if name.equals(b"i32x4.gt_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_gt_s(),
     )
-  } else if name.equals(b"dew_v128_gt_u_i32") {
+  } else if name.equals(b"i32x4.gt_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_gt_u(),
     )
-  } else if name.equals(b"dew_v128_ge_s_i32") {
+  } else if name.equals(b"i32x4.ge_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_ge_s(),
     )
-  } else if name.equals(b"dew_v128_ge_u_i32") {
+  } else if name.equals(b"i32x4.ge_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_ge_u(),
     )
-  } else if name.equals(b"dew_v128_abs_i32") {
+  } else if name.equals(b"i32x4.abs") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_abs(),
     )
-  } else if name.equals(b"dew_v128_neg_i32") {
+  } else if name.equals(b"i32x4.neg") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_neg(),
     )
-  } else if name.equals(b"dew_v128_all_true_i32") {
+  } else if name.equals(b"i32x4.all_true") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_all_true(),
     )
-  } else if name.equals(b"dew_v128_bitmask_i32") {
+  } else if name.equals(b"i32x4.bitmask") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_bitmask(),
     )
-  } else if name.equals(b"dew_v128_shl_i32") {
+  } else if name.equals(b"i32x4.shl") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_shl(),
     )
-  } else if name.equals(b"dew_v128_shr_s_i32") {
+  } else if name.equals(b"i32x4.shr_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_shr_s(),
     )
-  } else if name.equals(b"dew_v128_shr_u_i32") {
+  } else if name.equals(b"i32x4.shr_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32x4_shr_u(),
     )
-  } else if name.equals(b"dew_v128_add_i64") {
+  } else if name.equals(b"i64x2.add") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_add(),
     )
-  } else if name.equals(b"dew_v128_sub_i64") {
+  } else if name.equals(b"i64x2.sub") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_sub(),
     )
-  } else if name.equals(b"dew_v128_mul_i64") {
+  } else if name.equals(b"i64x2.mul") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_mul(),
     )
-  } else if name.equals(b"dew_v128_eq_i64") {
+  } else if name.equals(b"i64x2.eq") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_eq(),
     )
-  } else if name.equals(b"dew_v128_ne_i64") {
+  } else if name.equals(b"i64x2.ne") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_ne(),
     )
-  } else if name.equals(b"dew_v128_lt_s_i64") {
+  } else if name.equals(b"i64x2.lt_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_lt_s(),
     )
-  } else if name.equals(b"dew_v128_le_s_i64") {
+  } else if name.equals(b"i64x2.le_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_le_s(),
     )
-  } else if name.equals(b"dew_v128_gt_s_i64") {
+  } else if name.equals(b"i64x2.gt_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_gt_s(),
     )
-  } else if name.equals(b"dew_v128_ge_s_i64") {
+  } else if name.equals(b"i64x2.ge_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_ge_s(),
     )
-  } else if name.equals(b"dew_v128_abs_i64") {
+  } else if name.equals(b"i64x2.abs") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_abs(),
     )
-  } else if name.equals(b"dew_v128_neg_i64") {
+  } else if name.equals(b"i64x2.neg") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_neg(),
     )
-  } else if name.equals(b"dew_v128_all_true_i64") {
+  } else if name.equals(b"i64x2.all_true") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_all_true(),
     )
-  } else if name.equals(b"dew_v128_bitmask_i64") {
+  } else if name.equals(b"i64x2.bitmask") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_bitmask(),
     )
-  } else if name.equals(b"dew_v128_shl_i64") {
+  } else if name.equals(b"i64x2.shl") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_shl(),
     )
-  } else if name.equals(b"dew_v128_shr_s_i64") {
+  } else if name.equals(b"i64x2.shr_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_shr_s(),
     )
-  } else if name.equals(b"dew_v128_shr_u_i64") {
+  } else if name.equals(b"i64x2.shr_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_i64x2_shr_u(),
     )
-  } else if name.equals(b"dew_v128_add_f32") {
+  } else if name.equals(b"f32x4.add") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_add(),
     )
-  } else if name.equals(b"dew_v128_sub_f32") {
+  } else if name.equals(b"f32x4.sub") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_sub(),
     )
-  } else if name.equals(b"dew_v128_mul_f32") {
+  } else if name.equals(b"f32x4.mul") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_mul(),
     )
-  } else if name.equals(b"dew_v128_div_f32") {
+  } else if name.equals(b"f32x4.div") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_div(),
     )
-  } else if name.equals(b"dew_v128_min_f32") {
+  } else if name.equals(b"f32x4.min") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_min(),
     )
-  } else if name.equals(b"dew_v128_max_f32") {
+  } else if name.equals(b"f32x4.max") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_max(),
     )
-  } else if name.equals(b"dew_v128_pmin_f32") {
+  } else if name.equals(b"f32x4.pmin") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_pmin(),
     )
-  } else if name.equals(b"dew_v128_pmax_f32") {
+  } else if name.equals(b"f32x4.pmax") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_pmax(),
     )
-  } else if name.equals(b"dew_v128_eq_f32") {
+  } else if name.equals(b"f32x4.eq") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_eq(),
     )
-  } else if name.equals(b"dew_v128_ne_f32") {
+  } else if name.equals(b"f32x4.ne") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_ne(),
     )
-  } else if name.equals(b"dew_v128_lt_f32") {
+  } else if name.equals(b"f32x4.lt") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_lt(),
     )
-  } else if name.equals(b"dew_v128_le_f32") {
+  } else if name.equals(b"f32x4.le") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_le(),
     )
-  } else if name.equals(b"dew_v128_gt_f32") {
+  } else if name.equals(b"f32x4.gt") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_gt(),
     )
-  } else if name.equals(b"dew_v128_ge_f32") {
+  } else if name.equals(b"f32x4.ge") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_ge(),
     )
-  } else if name.equals(b"dew_v128_abs_f32") {
+  } else if name.equals(b"f32x4.abs") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_abs(),
     )
-  } else if name.equals(b"dew_v128_neg_f32") {
+  } else if name.equals(b"f32x4.neg") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_neg(),
     )
-  } else if name.equals(b"dew_v128_sqrt_f32") {
+  } else if name.equals(b"f32x4.sqrt") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_sqrt(),
     )
-  } else if name.equals(b"dew_v128_ceil_f32") {
+  } else if name.equals(b"f32x4.ceil") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_ceil(),
     )
-  } else if name.equals(b"dew_v128_floor_f32") {
+  } else if name.equals(b"f32x4.floor") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_floor(),
     )
-  } else if name.equals(b"dew_v128_trunc_f32") {
+  } else if name.equals(b"f32x4.trunc") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_trunc(),
     )
-  } else if name.equals(b"dew_v128_nearest_f32") {
+  } else if name.equals(b"f32x4.nearest") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f32x4_nearest(),
     )
-  } else if name.equals(b"dew_v128_add_f64") {
+  } else if name.equals(b"f64x2.add") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_add(),
     )
-  } else if name.equals(b"dew_v128_sub_f64") {
+  } else if name.equals(b"f64x2.sub") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_sub(),
     )
-  } else if name.equals(b"dew_v128_mul_f64") {
+  } else if name.equals(b"f64x2.mul") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_mul(),
     )
-  } else if name.equals(b"dew_v128_div_f64") {
+  } else if name.equals(b"f64x2.div") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_div(),
     )
-  } else if name.equals(b"dew_v128_min_f64") {
+  } else if name.equals(b"f64x2.min") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_min(),
     )
-  } else if name.equals(b"dew_v128_max_f64") {
+  } else if name.equals(b"f64x2.max") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_max(),
     )
-  } else if name.equals(b"dew_v128_pmin_f64") {
+  } else if name.equals(b"f64x2.pmin") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_pmin(),
     )
-  } else if name.equals(b"dew_v128_pmax_f64") {
+  } else if name.equals(b"f64x2.pmax") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_pmax(),
     )
-  } else if name.equals(b"dew_v128_eq_f64") {
+  } else if name.equals(b"f64x2.eq") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_eq(),
     )
-  } else if name.equals(b"dew_v128_ne_f64") {
+  } else if name.equals(b"f64x2.ne") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_ne(),
     )
-  } else if name.equals(b"dew_v128_lt_f64") {
+  } else if name.equals(b"f64x2.lt") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_lt(),
     )
-  } else if name.equals(b"dew_v128_le_f64") {
+  } else if name.equals(b"f64x2.le") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_le(),
     )
-  } else if name.equals(b"dew_v128_gt_f64") {
+  } else if name.equals(b"f64x2.gt") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_gt(),
     )
-  } else if name.equals(b"dew_v128_ge_f64") {
+  } else if name.equals(b"f64x2.ge") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_ge(),
     )
-  } else if name.equals(b"dew_v128_abs_f64") {
+  } else if name.equals(b"f64x2.abs") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_abs(),
     )
-  } else if name.equals(b"dew_v128_neg_f64") {
+  } else if name.equals(b"f64x2.neg") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_neg(),
     )
-  } else if name.equals(b"dew_v128_sqrt_f64") {
+  } else if name.equals(b"f64x2.sqrt") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_sqrt(),
     )
-  } else if name.equals(b"dew_v128_ceil_f64") {
+  } else if name.equals(b"f64x2.ceil") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_ceil(),
     )
-  } else if name.equals(b"dew_v128_floor_f64") {
+  } else if name.equals(b"f64x2.floor") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_floor(),
     )
-  } else if name.equals(b"dew_v128_trunc_f64") {
+  } else if name.equals(b"f64x2.trunc") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_trunc(),
     )
-  } else if name.equals(b"dew_v128_nearest_f64") {
+  } else if name.equals(b"f64x2.nearest") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_nearest(),
