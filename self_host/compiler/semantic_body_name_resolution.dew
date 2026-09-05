@@ -792,6 +792,13 @@ impl SelfHostBodyNameResolver {
         }
         Option::None => {}
       }
+      if self.variant_names.contains_key(name) {
+        self.set_expression_reference(
+          expression,
+          SelfHostBodyNameReference::VariantNameReference(name),
+        )
+        return
+      }
       self.diagnose(
         SelfHostBodyResolutionDiagnostic::UnknownQualifiedRoot(
           name,

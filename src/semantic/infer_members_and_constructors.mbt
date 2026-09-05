@@ -282,6 +282,18 @@ fn BasicBodyInferencer::infer_construct_expression(
 ) -> Unit {
   self.consume_member_root(target)
   match self.names.expression_references[target] {
+    VariantNameReference(name) => {
+      match self.select_value_variant(
+        name, self.expression_type(expression), expression, offset,
+      ) {
+        SelectedLocalValueVariant(index) =>
+          self.select_variant_construction(expression, fields, index, offset)
+        SelectedImportedValueVariant(variant) =>
+          self.select_imported_variant_construction(expression, fields, variant, offset)
+        NoSelectedValueVariant => self.fail_expression_selection(expression)
+      }
+      return
+    }
     ModuleTypeNameReference(declaration) => {
       if declaration == standard_nullable_ref_type_declaration() {
         self.diagnose(InvalidConstructionTarget(expression, offset))

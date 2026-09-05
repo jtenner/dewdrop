@@ -2542,6 +2542,31 @@ fn BasicBodyInferencer::constrain_match_expression(
   arms : HirSpan,
   offset : UInt64,
 ) -> Unit {
+  // A field's declared type is context for variant selection. Resolve only
+  // the subject's field chain here; method selectors are not field reads.
+  let fields : Array[ExprId] = []
+  let mut subject = scrutinee
+  while true {
+    match self.collected.expressions[subject] {
+      HirFieldExpr(base, _, _) => {
+        if self.expression_selections[self.expression_index(subject)] != NoExpressionSelection {
+          break
+        }
+        fields.push(subject)
+        subject = base
+      }
+      _ => break
+    }
+  }
+  while fields.length() > 0 {
+    let field = fields.pop().unwrap()
+    match self.collected.expressions[field] {
+      HirFieldExpr(base, name, field_offset) => {
+        let _ = self.try_infer_field_expression(field, base, name, field_offset)
+      }
+      _ => abort("match subject field work item changed kind")
+    }
+  }
   let expected = self.expression_type(scrutinee)
   let result = self.expression_type(expression)
   let mut all_never = arms.length > 0

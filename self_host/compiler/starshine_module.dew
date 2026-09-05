@@ -26943,6 +26943,16 @@ fn self_host_emit_linked_i32_expression(
                 return Option::Some("linked qualified pattern has no variant type")
               }
             }
+            SelfHostHirPattern::StructPattern(_, _, _, _, _) => {
+              let type_index = match self_host_linked_pattern_variant_type(link, module_, pattern, canonical_payload_hint, subject_nominal) {
+                Option::Some(value) => value
+                Option::None => return Option::Some("linked named-field pattern has no exact variant type")
+              }
+              variant_type = type_index
+              StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_local_get(StarshineFfi.ffi_lib_LocalIdx_new(scratch.into())))
+              StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_ref_test_nominal(self_host_u32_to_i32(type_index)))
+              condition_ready = true
+            }
             SelfHostHirPattern::TuplePattern(_, _, _) => match self_host_linked_pattern_variant_type(
               link,
               module_,

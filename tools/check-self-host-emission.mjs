@@ -104,6 +104,7 @@ for (const [name, expected] of [
   ["self_host_emit_string_map_probe", 26],
   ["self_host_emit_string_equality_probe", 1],
   ["self_host_emit_nested_variant_probe", 12],
+  ["self_host_emit_short_constructor_probe", 42],
   ["self_host_emit_nested_binding_probe", 42n],
   ["self_host_emit_nested_literal_probe", 235],
   ["self_host_emit_type_stack_probe", -507],

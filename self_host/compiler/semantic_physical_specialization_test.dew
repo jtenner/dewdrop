@@ -985,6 +985,21 @@ pub fn self_host_emit_string_equality_probe() -> Bytes {
   }
 }
 
+pub fn self_host_emit_short_constructor_probe() -> Bytes {
+  let fragments = self_host_physical_test_fragments(
+    b"enum Payload {\n  Entry {\n    value: I32\n  }\n}\nimpl Payload {\n  fn read(self) -> I32 {\n    match self {\n      Entry {\n        value\n      } => value\n    }\n  }\n}\nfn make() -> Payload {\n  Entry::{\n    value: 42\n  }\n}\npub fn main() -> I32 {\n  make().read()\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
 pub fn self_host_emit_nested_variant_probe() -> Bytes {
   let fragments = self_host_physical_test_fragments(
     b"enum Inner {\n  A\n  B\n}\nenum Outer {\n  Wrap(Inner)\n}\nfn classify(value: Outer) -> I32 {\n  match value {\n    Outer::Wrap(Inner::B) => 2i32\n    Outer::Wrap(Inner::A) => 1i32\n  }\n}\npub fn main() -> I32 {\n  classify(Outer::Wrap(Inner::A)) * 10i32 + classify(Outer::Wrap(Inner::B))\n}\n",

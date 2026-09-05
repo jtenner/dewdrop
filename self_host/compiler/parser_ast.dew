@@ -153,15 +153,15 @@ pub enum SelfHostPattern {
 impl SelfHostPattern {
   fn offset(self) -> U32 {
     match self {
-      SelfHostPattern::WildcardPattern(offset) => offset
-      SelfHostPattern::BindingPattern(_, offset) => offset
-      SelfHostPattern::ImportAliasPattern(_, offset) => offset
-      SelfHostPattern::RestPattern(offset) => offset
-      SelfHostPattern::LiteralPattern(_, offset) => offset
-      SelfHostPattern::QualifiedPattern(_, _, offset) => offset
-      SelfHostPattern::TuplePattern(_, _, offset) => offset
-      SelfHostPattern::StructPattern(_, _, _, offset) => offset
-      SelfHostPattern::AlternativePattern(_, _, offset) => offset
+      WildcardPattern(offset) => offset
+      BindingPattern(_, offset) => offset
+      ImportAliasPattern(_, offset) => offset
+      RestPattern(offset) => offset
+      LiteralPattern(_, offset) => offset
+      QualifiedPattern(_, _, offset) => offset
+      TuplePattern(_, _, offset) => offset
+      StructPattern(_, _, _, offset) => offset
+      AlternativePattern(_, _, offset) => offset
     }
   }
 }

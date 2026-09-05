@@ -7668,6 +7668,11 @@ impl SelfHostBasicBodyInferencer {
     self.constrain_pending_variant_calls()
     self.constrain_pending_variant_values()
     self.constrain_pending_constructions()
+    // Declared fields on already known receivers supply the enum context for
+    // short pattern names. Unready fields remain queued for the later pass.
+    for expression in self.pending_fields {
+      self.constrain_ready_field(expression)
+    }
     // Variant declarations prove the types of their bound locals. Fields and
     // methods in the arm must see those types before they select a member.
     self.constrain_variant_patterns()

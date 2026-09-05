@@ -568,6 +568,10 @@ fn BodyNameResolver::resolve_expression_name(
       }
       None => ()
     }
+    if self.variant_names.contains(name) {
+      self.set_expression_reference(expression, VariantNameReference(name))
+      return
+    }
     self.diagnose(UnknownQualifiedRoot(name, expression, offset))
     self.set_expression_reference(expression, ErrorNameReference)
     return

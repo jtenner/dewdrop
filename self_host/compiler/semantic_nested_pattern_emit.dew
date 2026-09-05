@@ -1,5 +1,49 @@
 open dew.std.option
 
+fn self_host_pattern_payload_span(pattern: SelfHostPlannedPattern) -> SelfHostHirSpan {
+  match pattern.source {
+    TuplePattern(_, children, _) => children
+    StructPattern(_, fields, _, _, _) => fields
+    _ => SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+  }
+}
+
+fn self_host_pattern_payload_child(module_: SelfHostPlannedModuleLowering, pattern: SelfHostPlannedPattern, index: U32) -> U32 {
+  let span = self_host_pattern_payload_span(pattern)
+  self_host_assert_compiler_invariant(index < span.length, "pattern payload index is outside its span")
+  match pattern.source {
+    StructPattern(_, _, _, _, _) => {
+      self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, module_.pattern_fields.length()), "pattern field span is outside its arena")
+      module_.pattern_fields[span.start + index].pattern
+    }
+    _ => {
+      self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, module_.pattern_children.length()), "pattern child span is outside its arena")
+      module_.pattern_children[span.start + index]
+    }
+  }
+}
+
+fn self_host_pattern_payload_field(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, pattern: SelfHostPlannedPattern, type_index: U32, index: U32) -> Option<U32> {
+  match pattern.source {
+    StructPattern(_, fields, _, _, _) => {
+      let _ = self_host_pattern_payload_child(module_, pattern, index)
+      let name = module_.pattern_fields[fields.start + index].name
+      match self_host_linked_field_by_name(link, self_host_pattern_constructor_declaration(module_, pattern), name) {
+        Option::Some(field) => if field.type_index == type_index {
+          Option::Some(field.field_index)
+        } else {
+          Option::None
+        }
+        Option::None => Option::None
+      }
+    }
+    _ => Option::Some(self_host_linked_variant_payload_field_index(link, type_index, index))
+  }
+}
+
 fn self_host_nested_pattern_payload_shape(module_: SelfHostPlannedModuleLowering, pattern: SelfHostPlannedPattern) -> SelfHostPlannedValueShape {
   match pattern.source {
     SelfHostHirPattern::TuplePattern(_, children, _) => if children.length > 0u32 && children.start < module_.pattern_children.length() {
@@ -37,29 +81,25 @@ fn self_host_emit_nested_pattern_bindings(
   if path.length() > module_.patterns.length() {
     return Option::Some("nested binding path exceeds the pattern arena")
   }
-  let children = match pattern.source {
-    SelfHostHirPattern::TuplePattern(_, children, _) => children
-    _ => return Option::None
-  }
+  let children = self_host_pattern_payload_span(pattern)
   let mut index = 0u32
   let _ = while index {
     current => if current < children.length {
-      let child_slot = self_host_u32_add(children.start, current)
-      if child_slot >= module_.pattern_children.length() {
-        return Option::Some("nested binding child span is outside its arena")
-      }
-      let child_id = module_.pattern_children[child_slot]
+      let child_id = self_host_pattern_payload_child(module_, pattern, current)
       if child_id >= module_.patterns.length() {
         return Option::Some("nested binding child is outside its arena")
       }
       let child = self_host_planned_pattern_identity(module_.patterns[child_id])
-      let field = self_host_linked_variant_payload_field_index(link, type_index, current)
+      let field = match self_host_pattern_payload_field(link, module_, pattern, type_index, current) {
+        Option::Some(value) => value
+        Option::None => return Option::Some("pattern field has no exact physical identity")
+      }
       path.push(SelfHostLinkedWasmFieldLink::{
         type_index: type_index
         field_index: field
       })
       match child.reference {
-        SelfHostBodyPatternReference::PatternBindingReference(local) => if path.length() > 1u32 {
+        SelfHostBodyPatternReference::PatternBindingReference(local) => if path.length() > 1u32 || pattern.source is StructPattern(_, _, _, _, _) {
           let slot = match self_host_linked_i32_local_slot(module_, body, local) {
             Option::Some(value) => value
             Option::None => return Option::Some("nested binding has no physical local")
@@ -82,7 +122,7 @@ fn self_host_emit_nested_pattern_bindings(
           self_host_emit_pattern_path(scratch, path, destination)
           StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_local_set(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(slot))))
         }
-        _ => if child.source is SelfHostHirPattern::TuplePattern(_, _, _) {
+        _ => if self_host_pattern_payload_span(child).length > 0u32 {
           let child_type = match self_host_linked_pattern_variant_type(link, module_, child, self_host_nested_pattern_payload_shape(module_, child), self_host_linked_type_nominal_declaration(module_, child.type_)) {
             Option::Some(value) => value
             Option::None => return Option::Some("nested binding has no exact parent variant")
@@ -116,18 +156,11 @@ fn self_host_emit_nested_pattern_tests(
   if path.length() > module_.patterns.length() {
     return Option::Some("nested pattern path exceeds the pattern arena")
   }
-  let children = match pattern.source {
-    SelfHostHirPattern::TuplePattern(_, children, _) => children
-    _ => return Option::None
-  }
+  let children = self_host_pattern_payload_span(pattern)
   let mut index = 0u32
   let _ = while index {
     current => if current < children.length {
-      let slot = self_host_u32_add(children.start, current)
-      if slot >= module_.pattern_children.length() {
-        return Option::Some("nested pattern child span is outside its arena")
-      }
-      let child_id = module_.pattern_children[slot]
+      let child_id = self_host_pattern_payload_child(module_, pattern, current)
       if child_id >= module_.patterns.length() {
         return Option::Some("nested pattern child is outside its arena")
       }
@@ -135,9 +168,13 @@ fn self_host_emit_nested_pattern_tests(
       if !(child.reference is SelfHostBodyPatternReference::PatternBindingReference(_)) && !(child.source is SelfHostHirPattern::WildcardPattern(_)) {
         let predicate = StarshineFfi.ffi_ffi_bridge_instructions_new()
         let absent = StarshineFfi.ffi_ffi_bridge_instructions_new()
+        let field = match self_host_pattern_payload_field(link, module_, pattern, type_index, current) {
+          Option::Some(value) => value
+          Option::None => return Option::Some("pattern test field has no exact physical identity")
+        }
         path.push(SelfHostLinkedWasmFieldLink::{
           type_index: type_index
-          field_index: self_host_linked_variant_payload_field_index(link, type_index, current)
+          field_index: field
         })
         self_host_emit_pattern_path(scratch, path, predicate)
         match child.source {
