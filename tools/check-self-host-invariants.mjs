@@ -10,6 +10,10 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...["generic", "parameter"].map((kind, field) => ({
+    name: `ARN-106 imported ${kind} spans cannot alias a local declaration`,
+    expected: [106, 1, 5700n, 5701n << 32n, 0n, 4294967295, 5700n, 5701n, BigInt(field)],
+  })),
   {
     name: "ARN-103 frozen physical local slots remain parallel",
     expected: [103, 6, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 3n, 2n, 710n],

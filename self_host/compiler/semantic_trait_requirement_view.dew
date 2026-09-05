@@ -1,0 +1,93 @@
+// Resolved trait signatures retain their owning generic-ID arena. Imported
+// declarations must never index the local collected module by their low bits.
+struct SelfHostTraitRequirementView {
+  declaration: U64
+  name: String
+  receiver: Bool
+  generics: SelfHostHirSpan
+  parameters: Array<U32>
+  result: U32
+}
+
+struct SelfHostTraitSignatureView {
+  imported_parameter_ids: Option<Array<U64>>
+  generics: SelfHostHirSpan
+  requirements: Array<SelfHostTraitRequirementView>
+}
+
+fn self_host_trait_signature_view(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  imports: Option<SelfHostResolvedModuleImports>,
+  declaration: U64,
+) -> Option<SelfHostTraitSignatureView> {
+  let requirements = []
+  if self_host_semantic_id_module(declaration) == collected.module_id {
+    for method in collected.methods {
+      if method.parent == declaration {
+        let signature = collected.parameters_of(method.id)
+        let parameters = []
+        while 0u32 {
+          index if index < signature.length => {
+            parameters.push(resolved.parameter_types[signature.start + index])
+            continue index + 1u32
+          }
+          _ => break self_host_semantic_unit()
+        }
+        let callable = match self_host_impl_callable_index(collected, method.id) {
+          Option::Some(value) => value
+          Option::None => return Option::None
+        }
+        requirements.push(SelfHostTraitRequirementView::{
+          declaration: method.id
+          name: collected.name(method.name)
+          receiver: self_host_impl_method_has_receiver(collected, method.id)
+          generics: collected.generic_parameters_of(method.id)
+          parameters: parameters
+          result: resolved.callable_return_types[callable]
+        })
+      }
+    }
+    return Option::Some(SelfHostTraitSignatureView::{
+      imported_parameter_ids: Option::None
+      generics: collected.generic_parameters_of(declaration)
+      requirements: requirements
+    })
+  }
+  let imported = match imports {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let generics = match imported.type_generic_spans.get(declaration) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  for callable in imported.callables {
+    match callable.kind {
+      SelfHostFrozenInterfaceCallableKind::FrozenTraitCallable(owner) => if owner == declaration {
+        let parameters = []
+        while 0u32 {
+          index if index < callable.parameters.length => {
+            parameters.push(imported.parameter_types[callable.parameters.start + index])
+            continue index + 1u32
+          }
+          _ => break self_host_semantic_unit()
+        }
+        requirements.push(SelfHostTraitRequirementView::{
+          declaration: callable.declaration
+          name: callable.name
+          receiver: callable.parameters.length > 0u32 && imported.parameter_receivers[callable.parameters.start]
+          generics: callable.generic_parameters
+          parameters: parameters
+          result: callable.result_type
+        })
+      }
+      _ => {}
+    }
+  }
+  Option::Some(SelfHostTraitSignatureView::{
+    imported_parameter_ids: Option::Some(imported.generic_parameter_ids)
+    generics: generics
+    requirements: requirements
+  })
+}

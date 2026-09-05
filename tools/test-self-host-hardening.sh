@@ -28,6 +28,9 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_capture_inference_test.dew \
   self_host/compiler/semantic_lambda_fragments_test.dew \
   self_host/compiler/semantic_local_unification_test.dew \
+  self_host/compiler/semantic_impl_index_test.dew \
+  self_host/compiler/semantic_imported_semantics_test.dew \
+  self_host/compiler/semantic_imported_trait_contract_test.dew \
   self_host/compiler/semantic_solver_invariants_test.dew
 do
   test_args+=(self_host.compiler "${source#self_host/compiler/}" "$source")

@@ -1030,7 +1030,8 @@ impl SelfHostImportedRecipeBuilder {
     let _ = while declaration_index {
       current => if current < interface_.declaration_count() {
         let declaration = interface_.declaration_at(current)
-        if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
+        if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration ||
+          declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
           let (generic_parameters, _generic_parameter_bounds) = self.copy_generic_parameters(
             interface_index,
             declaration.generic_parameters,
