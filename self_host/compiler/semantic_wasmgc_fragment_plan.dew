@@ -656,16 +656,52 @@ fn self_host_wasmgc_append_lambda_function(
 ) -> Unit {
   let parameter_start = value_types.length()
   value_types.push(SelfHostPlannedWasmValueType::WasmNullableEqRefValue)
+  let owner = self_host_program_specialization_body(module_, lambda.root_body)
+  let declaration = match owner {
+    Option::Some(body) => body.declaration
+    Option::None => 0u64
+  }
+  let _ = self_host_assert_compiler_invariant_with_failure(
+    owner is Option::Some(_) &&
+      self_host_array_span_is_valid(lambda.locals.start, lambda.locals.length, module_.locals.length()) &&
+      !self_host_u32_greater(lambda.parameter_count, lambda.locals.length),
+    SelfHostInvariantFailure::{
+      code: 401u32
+      phase: 4u32
+      module_id: module_.module_id
+      declaration: declaration
+      body: lambda.root_body
+      expression: 4294967295u32
+      expected: u32_into_u64(lambda.locals.length)
+      actual: u32_into_u64(lambda.parameter_count)
+      detail: u32_into_u64(lambda.lambda)
+    },
+    "lambda parameters must belong to a valid local span and source body",
+  )
   let mut parameter = 0u32
   let _ = while parameter {
     current => if current < lambda.parameter_count {
       let local_index = self_host_u32_add(lambda.locals.start, current)
-      if local_index < module_.locals.length() {
-        self_host_wasmgc_append_shape(
-          value_types,
-          module_.locals[local_index].shape,
-        )
-      }
+      let local = self_host_body_planned_local_identity(module_.locals[local_index])
+      let _ = self_host_assert_compiler_invariant_with_failure(
+        local.kind is SelfHostBodyLocalKind::ParameterLocal &&
+          self_host_u64_equal(local.body, lambda.root_body) &&
+          self_host_u32_equal(local.lambda, lambda.lambda) &&
+          self_host_u32_equal(local.local_id, current),
+        SelfHostInvariantFailure::{
+          code: 401u32
+          phase: 4u32
+          module_id: module_.module_id
+          declaration: declaration
+          body: lambda.root_body
+          expression: 4294967295u32
+          expected: u32_into_u64(current)
+          actual: u32_into_u64(local.local_id)
+          detail: u32_into_u64(local_index)
+        },
+        "lambda parameters must retain source order and lambda ownership",
+      )
+      self_host_wasmgc_append_shape(value_types, local.shape)
       continue current + 1u32
     } else {
       break self_host_semantic_unit()
@@ -674,7 +710,7 @@ fn self_host_wasmgc_append_lambda_function(
   let result_start = value_types.length()
   self_host_wasmgc_append_shape(value_types, lambda.result_shape)
   functions.push(SelfHostPlannedWasmFunctionFragment::{
-    declaration: lambda.root_body
+    declaration: declaration
     kind: SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(
       lambda.lambda,
     )

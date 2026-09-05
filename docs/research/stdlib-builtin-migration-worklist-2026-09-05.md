@@ -62,6 +62,8 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   Exact self-host generic function-reference targets now pass 18 execution checks;
   see `self-host-exact-function-references-2026-09-05.md`. The shared source now
   exposes missing captured closure emission.
+  Lambda fragment spans, parameter roles/order, Unit erasure, and owning
+  declaration now have checked contracts; see `self-host-lambda-fragment-contract-2026-09-05.md`.
   Callback differential execution and the subsequent clean bootstrap remain open.
 - [ ] Require valid collected source in compiler integration fixtures. A callback
   fixture used an invalid local type annotation but checked only inference

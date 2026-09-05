@@ -1,0 +1,75 @@
+open dew.std.testing
+open dew.std.option
+
+fn self_host_lambda_fragment_fixture() -> SelfHostPlannedModuleLowering {
+  let lowering = self_host_physical_test_lowering(
+    b"struct Item {\n  value: I64\n}\npub fn maker() -> fn(I32, Unit, I64) -> I64 {\n  fn(left: I32, effect: Unit, right: I64) -> I64 {\n    right\n  }\n}\n",
+  )
+  lowering.modules[0u32]
+}
+
+fn self_host_lambda_test_parameter_count(lambda: SelfHostPlannedLambdaLowering, count: U32) -> SelfHostPlannedLambdaLowering {
+  SelfHostPlannedLambdaLowering::{
+    lambda: lambda.lambda
+    root_body: lambda.root_body
+    parameter_count: count
+    root: lambda.root
+    root_type: lambda.root_type
+    root_shape: lambda.root_shape
+    result_shape: lambda.result_shape
+    flow: lambda.flow
+    locals: lambda.locals
+    local_initializers: lambda.local_initializers
+    local_assignments: lambda.local_assignments
+    captures: lambda.captures
+    expressions: lambda.expressions
+    blocks: lambda.blocks
+    patterns: lambda.patterns
+    pattern_arms: lambda.pattern_arms
+  }
+}
+
+test "lambda fragments preserve declaration identity and erase Unit parameters in order" {
+  let module_ = self_host_lambda_fragment_fixture()
+  assert(module_.inferred.diagnostics.length() == 0u32, "valid lambda source")
+  let lambda = module_.lambdas[0u32]
+  let functions = []
+  let values = []
+  self_host_wasmgc_append_lambda_function(module_, lambda, functions, values)
+  assert(values.length() == 4u32, "environment, two scalar parameters, one result")
+  assert(values[0u32] is SelfHostPlannedWasmValueType::WasmNullableEqRefValue, "environment first")
+  assert(values[1u32] is SelfHostPlannedWasmValueType::WasmI32Value, "first logical parameter")
+  assert(values[2u32] is SelfHostPlannedWasmValueType::WasmI64Value, "third logical parameter")
+  assert(values[3u32] is SelfHostPlannedWasmValueType::WasmI64Value, "result")
+  match self_host_program_specialization_body(module_, lambda.root_body) {
+    Option::Some(owner) => {
+      assert(self_host_u64_equal(functions[0u32].declaration, owner.declaration), "stored identity is the owning declaration")
+      assert(!self_host_u64_equal(owner.declaration, lambda.root_body), "fixture distinguishes body and declaration IDs")
+    }
+    Option::None => assert(false, "lambda owner is required")
+  }
+}
+
+test "FRG-401 lambda parameters cannot exceed their local span" expect_trap "unreachable" {
+  let module_ = self_host_lambda_fragment_fixture()
+  let lambda = self_host_lambda_test_parameter_count(module_.lambdas[0u32], 4u32)
+  self_host_wasmgc_append_lambda_function(module_, lambda, [], [])
+}
+
+test "FRG-401 lambda parameters require parameter locals" expect_trap "unreachable" {
+  let module_ = self_host_lambda_fragment_fixture()
+  let lambda = module_.lambdas[0u32]
+  let local = self_host_body_planned_local_identity(module_.locals[lambda.locals.start])
+  module_.locals[lambda.locals.start] = SelfHostPlannedLocal::{
+    body: local.body
+    lambda: local.lambda
+    local_id: local.local_id
+    kind: SelfHostBodyLocalKind::LetLocal
+    mutable_: local.mutable_
+    type_: local.type_
+    shape: local.shape
+    nominal: local.nominal
+    offset: local.offset
+  }
+  self_host_wasmgc_append_lambda_function(module_, lambda, [], [])
+}

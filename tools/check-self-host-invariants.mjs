@@ -11,6 +11,14 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "FRG-401 lambda parameters cannot exceed their local span",
+    expected: [401, 4, 5100n, (5100n << 32n) + 1n, 5100n << 32n, 4294967295, 3n, 4n, 0n],
+  },
+  {
+    name: "FRG-401 lambda parameters require parameter locals",
+    expected: [401, 4, 5100n, (5100n << 32n) + 1n, 5100n << 32n, 4294967295, 0n, 0n, 0n],
+  },
+  {
     name: "BOD-610 a linked function requires a source body",
     expected: [610, 6, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 1n, 0n, 0n],
   },
