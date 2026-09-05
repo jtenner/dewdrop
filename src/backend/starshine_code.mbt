@@ -927,14 +927,6 @@ fn starshine_inline_builtin_instructions(
     Ok([@lib.Instruction::ref_is_null()])
   } else if name == b"ref_as_non_null" {
     Ok([@lib.Instruction::ref_as_non_null()])
-  } else if name == b"i32_add" {
-    Ok([@lib.Instruction::i32_add()])
-  } else if name == b"i32_sub" {
-    Ok([@lib.Instruction::i32_sub()])
-  } else if name == b"i32_lt" {
-    Ok([@lib.Instruction::i32_lt_s()])
-  } else if name == b"i32_lte" {
-    Ok([@lib.Instruction::i32_le_s()])
   } else if name == b"v128.and" {
     Ok([@lib.Instruction::v128_and()])
   } else if name == b"v128.or" {

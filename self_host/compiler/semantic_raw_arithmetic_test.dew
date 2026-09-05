@@ -1,0 +1,606 @@
+fn self_host_assert_invalid_raw_arithmetic(source: Bytes) -> Unit {
+  let fragments = self_host_physical_test_fragments(source)
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(_) => assert(false, "raw arithmetic accepted a wrong carrier")
+    Result::Err(error) => assert(error.contains("raw intrinsic") && error.contains("carrier does not match its opcode"), error)
+  }
+}
+
+test "raw arithmetic rejects incorrect first and second operands and results" {
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.add\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.add\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.add\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.sub\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.sub\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.sub\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.le_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.le_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.le_s\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.or\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.or\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.or\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.xor\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.xor\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.xor\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.and\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.and\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.and\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.eq\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.eq\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.eq\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.ne\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.ne\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.ne\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.lt_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.lt_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.lt_s\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.gt_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.gt_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.gt_s\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.ge_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.ge_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.ge_s\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.shl\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.shl\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.shl\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.shr_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.shr_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.shr_s\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.mul\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.mul\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.mul\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.div_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.div_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.div_s\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.rem_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.rem_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.rem_s\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.or\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.or\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.or\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.xor\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.xor\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.xor\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.and\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.and\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.and\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.eq\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.eq\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.eq\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.ne\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.ne\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.ne\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.lt_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.lt_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.lt_s\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.le_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.le_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.le_s\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.gt_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.gt_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.gt_s\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.ge_s\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.ge_s\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.ge_s\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.shl\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.shl\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.shl\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.shr_s\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.shr_s\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.shr_s\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.add\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.add\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.add\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.sub\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.sub\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.sub\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.mul\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.mul\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.mul\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.div_s\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.div_s\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.div_s\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.rem_s\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.rem_s\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.rem_s\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.lt_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.lt_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.lt_u\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.le_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.le_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.le_u\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.gt_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.gt_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.gt_u\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.ge_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.ge_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.ge_u\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.shr_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.shr_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.shr_u\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.div_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.div_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.div_u\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i32.rem_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i32.rem_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I32) -> I64 = \"i32.rem_u\"\npub fn main(left: I32, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.lt_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.lt_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.lt_u\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.le_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.le_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.le_u\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.gt_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.gt_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.gt_u\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I32 = \"i64.ge_u\"\npub fn main(left: I32, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I32 = \"i64.ge_u\"\npub fn main(left: I64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I64 = \"i64.ge_u\"\npub fn main(left: I64, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.shr_u\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.shr_u\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.shr_u\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.div_u\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.div_u\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.div_u\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: I64) -> I64 = \"i64.rem_u\"\npub fn main(left: I32, right: I64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I32) -> I64 = \"i64.rem_u\"\npub fn main(left: I64, right: I32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I64, right: I64) -> I32 = \"i64.rem_u\"\npub fn main(left: I64, right: I64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> I32 = \"f32.eq\"\npub fn main(left: I32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> I32 = \"f32.eq\"\npub fn main(left: F32, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I64 = \"f32.eq\"\npub fn main(left: F32, right: F32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> I32 = \"f32.ne\"\npub fn main(left: I32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> I32 = \"f32.ne\"\npub fn main(left: F32, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I64 = \"f32.ne\"\npub fn main(left: F32, right: F32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> I32 = \"f32.lt\"\npub fn main(left: I32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> I32 = \"f32.lt\"\npub fn main(left: F32, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I64 = \"f32.lt\"\npub fn main(left: F32, right: F32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> I32 = \"f32.le\"\npub fn main(left: I32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> I32 = \"f32.le\"\npub fn main(left: F32, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I64 = \"f32.le\"\npub fn main(left: F32, right: F32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> I32 = \"f32.gt\"\npub fn main(left: I32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> I32 = \"f32.gt\"\npub fn main(left: F32, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I64 = \"f32.gt\"\npub fn main(left: F32, right: F32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> I32 = \"f32.ge\"\npub fn main(left: I32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> I32 = \"f32.ge\"\npub fn main(left: F32, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I64 = \"f32.ge\"\npub fn main(left: F32, right: F32) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> F32 = \"f32.add\"\npub fn main(left: I32, right: F32) -> F32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> F32 = \"f32.add\"\npub fn main(left: F32, right: I32) -> F32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I32 = \"f32.add\"\npub fn main(left: F32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> F32 = \"f32.sub\"\npub fn main(left: I32, right: F32) -> F32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> F32 = \"f32.sub\"\npub fn main(left: F32, right: I32) -> F32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I32 = \"f32.sub\"\npub fn main(left: F32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> F32 = \"f32.mul\"\npub fn main(left: I32, right: F32) -> F32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> F32 = \"f32.mul\"\npub fn main(left: F32, right: I32) -> F32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I32 = \"f32.mul\"\npub fn main(left: F32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F32) -> F32 = \"f32.div\"\npub fn main(left: I32, right: F32) -> F32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: I32) -> F32 = \"f32.div\"\npub fn main(left: F32, right: I32) -> F32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F32, right: F32) -> I32 = \"f32.div\"\npub fn main(left: F32, right: F32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> I32 = \"f64.eq\"\npub fn main(left: I32, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> I32 = \"f64.eq\"\npub fn main(left: F64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I64 = \"f64.eq\"\npub fn main(left: F64, right: F64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> I32 = \"f64.ne\"\npub fn main(left: I32, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> I32 = \"f64.ne\"\npub fn main(left: F64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I64 = \"f64.ne\"\npub fn main(left: F64, right: F64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> I32 = \"f64.lt\"\npub fn main(left: I32, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> I32 = \"f64.lt\"\npub fn main(left: F64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I64 = \"f64.lt\"\npub fn main(left: F64, right: F64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> I32 = \"f64.le\"\npub fn main(left: I32, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> I32 = \"f64.le\"\npub fn main(left: F64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I64 = \"f64.le\"\npub fn main(left: F64, right: F64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> I32 = \"f64.gt\"\npub fn main(left: I32, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> I32 = \"f64.gt\"\npub fn main(left: F64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I64 = \"f64.gt\"\npub fn main(left: F64, right: F64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> I32 = \"f64.ge\"\npub fn main(left: I32, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> I32 = \"f64.ge\"\npub fn main(left: F64, right: I32) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I64 = \"f64.ge\"\npub fn main(left: F64, right: F64) -> I64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> F64 = \"f64.add\"\npub fn main(left: I32, right: F64) -> F64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> F64 = \"f64.add\"\npub fn main(left: F64, right: I32) -> F64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I32 = \"f64.add\"\npub fn main(left: F64, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> F64 = \"f64.sub\"\npub fn main(left: I32, right: F64) -> F64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> F64 = \"f64.sub\"\npub fn main(left: F64, right: I32) -> F64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I32 = \"f64.sub\"\npub fn main(left: F64, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> F64 = \"f64.mul\"\npub fn main(left: I32, right: F64) -> F64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> F64 = \"f64.mul\"\npub fn main(left: F64, right: I32) -> F64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I32 = \"f64.mul\"\npub fn main(left: F64, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: I32, right: F64) -> F64 = \"f64.div\"\npub fn main(left: I32, right: F64) -> F64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: I32) -> F64 = \"f64.div\"\npub fn main(left: F64, right: I32) -> F64 {\n  operation(left, right)\n}\n",
+  )
+  self_host_assert_invalid_raw_arithmetic(
+    b"builtin operation(left: F64, right: F64) -> I32 = \"f64.div\"\npub fn main(left: F64, right: F64) -> I32 {\n  operation(left, right)\n}\n",
+  )
+}

@@ -1,8 +1,8 @@
 pub builtin assert(condition: Bool, message: String) -> Unit = "dew_assert"
 pub builtin unreachable() -> Never = "dew_unreachable"
-pub builtin i32_add(left: I32, right: I32) -> I32 = "i32_add"
-pub builtin i32_sub(left: I32, right: I32) -> I32 = "i32_sub"
-pub builtin i32_lte(left: I32, right: I32) -> Bool = "i32_lte"
+pub builtin i32_add(left: I32, right: I32) -> I32 = "i32.add"
+pub builtin i32_sub(left: I32, right: I32) -> I32 = "i32.sub"
+pub builtin i32_lte(left: I32, right: I32) -> Bool = "i32.le_s"
 pub fn swar32_from_bits(value: U32) -> Swar32 {
   unsafe_bitcast(value)
 }

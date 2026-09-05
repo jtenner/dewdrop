@@ -57,26 +57,21 @@ def main() -> None:
     print(
         f"compiled {len(paths)} manifest-ordered Dew test files deterministically and builtin traps"
     )
-    subprocess.run(
-        [
-            "moon", "run", "--target", "native", "src/dew_test_gen", "--",
-            "tools/dew-test/scalar_conversions.wasm", "dew.std.conversions",
-            "dew.std.conversions", "tools/dew-test/scalar_conversions_test.dew",
-            str(ROOT / "tools/dew-test/scalar_conversions.dew"),
-        ],
-        cwd=ROOT,
-        check=True,
-    )
-    subprocess.run(
-        [
-            "moon", "run", "--target", "native", "src/dew_test_gen", "--",
-            "tools/dew-test/memory_operations.wasm", "dew.std.memory",
-            "dew.std.memory", "tools/dew-test/memory_operations_test.dew",
-            str(ROOT / "tools/dew-test/memory_operations.dew"),
-        ],
-        cwd=ROOT,
-        check=True,
-    )
+    for fixture, module in [
+        ("scalar_conversions", "dew.std.conversions"),
+        ("memory_operations", "dew.std.memory"),
+        ("arithmetic_operations", "dew.std.arithmetic"),
+    ]:
+        subprocess.run(
+            [
+                "moon", "run", "--target", "native", "src/dew_test_gen", "--",
+                f"tools/dew-test/{fixture}.wasm", module,
+                module, f"tools/dew-test/{fixture}_test.dew",
+                str(ROOT / f"tools/dew-test/{fixture}.dew"),
+            ],
+            cwd=ROOT,
+            check=True,
+        )
 
 
 if __name__ == "__main__":

@@ -74,8 +74,8 @@ def main() -> None:
     args = parser.parse_args()
     source = SOURCE.read_text()
     branches = BRANCH.findall(source)
-    if len(branches) != 156:
-        raise SystemExit(f"expected 156 numeric builtin branches, found {len(branches)}")
+    if len(branches) != 83:
+        raise SystemExit(f"expected 83 numeric instruction branches, found {len(branches)}")
     conversion_branches = BRANCH.findall(CONVERSION_SOURCE.read_text())
     if len(conversion_branches) != 23:
         raise SystemExit(
@@ -86,10 +86,6 @@ def main() -> None:
         raise SystemExit(f"expected 150 V128 builtin branches, found {len(v128_branches)}")
 
     aliases: list[tuple[str, list[str]]] = [
-        ("i32_add", ["StarshineFfi.ffi_lib_Instruction_i32_add()"]),
-        ("i32_sub", ["StarshineFfi.ffi_lib_Instruction_i32_sub()"]),
-        ("i32_lt", ["StarshineFfi.ffi_lib_Instruction_i32_lt_s()"]),
-        ("i32_lte", ["StarshineFfi.ffi_lib_Instruction_i32_le_s()"]),
         ("dew_debug_ignore", ["StarshineFfi.ffi_lib_Instruction_drop()"]),
         ("dew_debug_dispatch", ["StarshineFfi.ffi_lib_Instruction_drop()"]),
         ("dew_unreachable", ["StarshineFfi.ffi_lib_Instruction_unreachable_()"]),

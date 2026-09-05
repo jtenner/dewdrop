@@ -1062,7 +1062,7 @@ pub fn self_host_emit_nested_raw_array_probe() -> Bytes {
 
 pub fn self_host_emit_raw_array_name_collision_probe() -> Bytes {
   let fragments = self_host_physical_test_fragments(
-    b"builtin wasm_array_new(a: I32, b: I32) -> I32 = \"i32_add\"\nbuiltin wasm_array_len(a: I32, b: I32) -> I32 = \"i32_add\"\nbuiltin wasm_array_get(a: I32, b: I32) -> I32 = \"i32_add\"\nbuiltin wasm_array_set(a: I32, b: I32) -> I32 = \"i32_add\"\npub fn main() -> I32 {\n  wasm_array_set(wasm_array_get(wasm_array_len(wasm_array_new(1, 2), 3), 4), 5)\n}\n",
+    b"builtin wasm_array_new(a: I32, b: I32) -> I32 = \"i32.add\"\nbuiltin wasm_array_len(a: I32, b: I32) -> I32 = \"i32.add\"\nbuiltin wasm_array_get(a: I32, b: I32) -> I32 = \"i32.add\"\nbuiltin wasm_array_set(a: I32, b: I32) -> I32 = \"i32.add\"\npub fn main() -> I32 {\n  wasm_array_set(wasm_array_get(wasm_array_len(wasm_array_new(1, 2), 3), 4), 5)\n}\n",
   )
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)

@@ -114,7 +114,7 @@ EXTRA_DECLARATIONS = [
         alias="wasm_core_i32_lt",
         generics="",
         signature="(left: I32, right: I32) -> Bool",
-        target="i32_lt",
+        target="i32.lt_s",
     ),
     IntrinsicDeclaration(
         source="backend-only Core operations",

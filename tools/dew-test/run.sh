@@ -8,3 +8,4 @@ node tools/dew-test/run.mjs \
   "$@"
 node tools/check-scalar-conversions.mjs tools/dew-test/scalar_conversions.wasm
 node tools/check-memory-operations.mjs tools/dew-test/memory_operations.wasm
+node tools/check-arithmetic-operations.mjs tools/dew-test/arithmetic_operations.wasm

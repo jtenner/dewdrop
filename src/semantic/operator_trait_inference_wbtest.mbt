@@ -1,6 +1,6 @@
 ///|
 fn operator_trait_test_source() -> Bytes {
-  b"builtin i32_add(left: I32, right: I32) -> I32 = \"i32_add\"\nbuiltin i32_sub(left: I32, right: I32) -> I32 = \"i32_sub\"\nbuiltin i32_lte(left: I32, right: I32) -> Bool = \"i32_lte\"\ntrait Add {\n  fn add(self, right: Self) -> Self\n}\ntrait Sub {\n  fn sub(self, right: Self) -> Self\n}\ntrait Lte {\n  fn lte(self, right: Self) -> Bool\n}\nimpl Add for I32 {\n  fn add(self, right: I32) -> I32 {\n    i32_add(self, right)\n  }\n}\nimpl Sub for I32 {\n  fn sub(self, right: I32) -> I32 {\n    i32_sub(self, right)\n  }\n}\nimpl Lte for I32 {\n  fn lte(self, right: I32) -> Bool {\n    i32_lte(self, right)\n  }\n}\npub fn fib(value: I32) -> I32 {\n  if value <= 1 {\n    value\n  } else {\n    fib(value - 1) + fib(value - 2)\n  }\n}\n"
+  b"builtin i32_add(left: I32, right: I32) -> I32 = \"i32.add\"\nbuiltin i32_sub(left: I32, right: I32) -> I32 = \"i32.sub\"\nbuiltin i32_lte(left: I32, right: I32) -> Bool = \"i32.le_s\"\ntrait Add {\n  fn add(self, right: Self) -> Self\n}\ntrait Sub {\n  fn sub(self, right: Self) -> Self\n}\ntrait Lte {\n  fn lte(self, right: Self) -> Bool\n}\nimpl Add for I32 {\n  fn add(self, right: I32) -> I32 {\n    i32_add(self, right)\n  }\n}\nimpl Sub for I32 {\n  fn sub(self, right: I32) -> I32 {\n    i32_sub(self, right)\n  }\n}\nimpl Lte for I32 {\n  fn lte(self, right: I32) -> Bool {\n    i32_lte(self, right)\n  }\n}\npub fn fib(value: I32) -> I32 {\n  if value <= 1 {\n    value\n  } else {\n    fib(value - 1) + fib(value - 2)\n  }\n}\n"
 }
 
 ///|

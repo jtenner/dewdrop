@@ -22,10 +22,10 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   and range policy with 23 checked raw Wasm conversion instructions. All 100
   `Into` implementations remain in use. See `scalar-conversions-2026-09-05.md`
   and `narrow-float-conversions-2026-09-05.md`.
-- [ ] Scalar arithmetic, comparison, and memory helpers: raw opcode contracts plus
-  Dew normalization where logical widths differ from physical widths.
-  Scalar and whole-V128 memory operations now use 16 checked raw instructions;
-  arithmetic and comparison migration remains open. See
+- [x] Scalar arithmetic, comparison, and memory helpers: 64 narrow functions now
+  use Dew normalization; full-width operations use 66 checked arithmetic opcodes.
+  Scalar and whole-V128 memory operations use 16 checked instructions. See
+  `raw-arithmetic-instructions-2026-09-05.md` and
   `raw-memory-instructions-2026-09-05.md`.
 - [ ] Remaining SIMD operations: explicit instruction/immediate contracts; express
   compositions, permutations, and convenience algorithms in Dew.

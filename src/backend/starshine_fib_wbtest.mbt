@@ -37,11 +37,11 @@ test "trait based Fibonacci emits a valid complete Starshine module" {
   for function_ in fragments.functions {
     if function_.direct_builtin.length() > 0 {
       assert_true(function_.elided)
-      if function_.direct_builtin == b"i32_add" {
+      if function_.direct_builtin == b"i32.add" {
         found_add = true
-      } else if function_.direct_builtin == b"i32_sub" {
+      } else if function_.direct_builtin == b"i32.sub" {
         found_sub = true
-      } else if function_.direct_builtin == b"i32_lte" {
+      } else if function_.direct_builtin == b"i32.le_s" {
         found_lte = true
       }
     }

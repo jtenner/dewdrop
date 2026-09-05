@@ -1,0 +1,445 @@
+// Exercise actual library arithmetic functions with boundary values supplied by JS.
+pub fn probe_i8_or(left: I8, right: I8) -> I8 {
+  i8_or(left, right)
+}
+pub fn probe_i8_xor(left: I8, right: I8) -> I8 {
+  i8_xor(left, right)
+}
+pub fn probe_i8_and(left: I8, right: I8) -> I8 {
+  i8_and(left, right)
+}
+pub fn probe_i8_eq(left: I8, right: I8) -> Bool {
+  i8_eq(left, right)
+}
+pub fn probe_i8_ne(left: I8, right: I8) -> Bool {
+  i8_ne(left, right)
+}
+pub fn probe_i8_lt(left: I8, right: I8) -> Bool {
+  i8_lt(left, right)
+}
+pub fn probe_i8_lte(left: I8, right: I8) -> Bool {
+  i8_lte(left, right)
+}
+pub fn probe_i8_gt(left: I8, right: I8) -> Bool {
+  i8_gt(left, right)
+}
+pub fn probe_i8_gte(left: I8, right: I8) -> Bool {
+  i8_gte(left, right)
+}
+pub fn probe_i8_shl(left: I8, right: I8) -> I8 {
+  i8_shl(left, right)
+}
+pub fn probe_i8_shr(left: I8, right: I8) -> I8 {
+  i8_shr(left, right)
+}
+pub fn probe_i8_add(left: I8, right: I8) -> I8 {
+  i8_add(left, right)
+}
+pub fn probe_i8_sub(left: I8, right: I8) -> I8 {
+  i8_sub(left, right)
+}
+pub fn probe_i8_mul(left: I8, right: I8) -> I8 {
+  i8_mul(left, right)
+}
+pub fn probe_i8_div(left: I8, right: I8) -> I8 {
+  i8_div(left, right)
+}
+pub fn probe_i8_rem(left: I8, right: I8) -> I8 {
+  i8_rem(left, right)
+}
+pub fn probe_u8_or(left: U8, right: U8) -> U8 {
+  u8_or(left, right)
+}
+pub fn probe_u8_xor(left: U8, right: U8) -> U8 {
+  u8_xor(left, right)
+}
+pub fn probe_u8_and(left: U8, right: U8) -> U8 {
+  u8_and(left, right)
+}
+pub fn probe_u8_eq(left: U8, right: U8) -> Bool {
+  u8_eq(left, right)
+}
+pub fn probe_u8_ne(left: U8, right: U8) -> Bool {
+  u8_ne(left, right)
+}
+pub fn probe_u8_lt(left: U8, right: U8) -> Bool {
+  u8_lt(left, right)
+}
+pub fn probe_u8_lte(left: U8, right: U8) -> Bool {
+  u8_lte(left, right)
+}
+pub fn probe_u8_gt(left: U8, right: U8) -> Bool {
+  u8_gt(left, right)
+}
+pub fn probe_u8_gte(left: U8, right: U8) -> Bool {
+  u8_gte(left, right)
+}
+pub fn probe_u8_shl(left: U8, right: U8) -> U8 {
+  u8_shl(left, right)
+}
+pub fn probe_u8_shr(left: U8, right: U8) -> U8 {
+  u8_shr(left, right)
+}
+pub fn probe_u8_add(left: U8, right: U8) -> U8 {
+  u8_add(left, right)
+}
+pub fn probe_u8_sub(left: U8, right: U8) -> U8 {
+  u8_sub(left, right)
+}
+pub fn probe_u8_mul(left: U8, right: U8) -> U8 {
+  u8_mul(left, right)
+}
+pub fn probe_u8_div(left: U8, right: U8) -> U8 {
+  u8_div(left, right)
+}
+pub fn probe_u8_rem(left: U8, right: U8) -> U8 {
+  u8_rem(left, right)
+}
+pub fn probe_i16_or(left: I16, right: I16) -> I16 {
+  i16_or(left, right)
+}
+pub fn probe_i16_xor(left: I16, right: I16) -> I16 {
+  i16_xor(left, right)
+}
+pub fn probe_i16_and(left: I16, right: I16) -> I16 {
+  i16_and(left, right)
+}
+pub fn probe_i16_eq(left: I16, right: I16) -> Bool {
+  i16_eq(left, right)
+}
+pub fn probe_i16_ne(left: I16, right: I16) -> Bool {
+  i16_ne(left, right)
+}
+pub fn probe_i16_lt(left: I16, right: I16) -> Bool {
+  i16_lt(left, right)
+}
+pub fn probe_i16_lte(left: I16, right: I16) -> Bool {
+  i16_lte(left, right)
+}
+pub fn probe_i16_gt(left: I16, right: I16) -> Bool {
+  i16_gt(left, right)
+}
+pub fn probe_i16_gte(left: I16, right: I16) -> Bool {
+  i16_gte(left, right)
+}
+pub fn probe_i16_shl(left: I16, right: I16) -> I16 {
+  i16_shl(left, right)
+}
+pub fn probe_i16_shr(left: I16, right: I16) -> I16 {
+  i16_shr(left, right)
+}
+pub fn probe_i16_add(left: I16, right: I16) -> I16 {
+  i16_add(left, right)
+}
+pub fn probe_i16_sub(left: I16, right: I16) -> I16 {
+  i16_sub(left, right)
+}
+pub fn probe_i16_mul(left: I16, right: I16) -> I16 {
+  i16_mul(left, right)
+}
+pub fn probe_i16_div(left: I16, right: I16) -> I16 {
+  i16_div(left, right)
+}
+pub fn probe_i16_rem(left: I16, right: I16) -> I16 {
+  i16_rem(left, right)
+}
+pub fn probe_u16_or(left: U16, right: U16) -> U16 {
+  u16_or(left, right)
+}
+pub fn probe_u16_xor(left: U16, right: U16) -> U16 {
+  u16_xor(left, right)
+}
+pub fn probe_u16_and(left: U16, right: U16) -> U16 {
+  u16_and(left, right)
+}
+pub fn probe_u16_eq(left: U16, right: U16) -> Bool {
+  u16_eq(left, right)
+}
+pub fn probe_u16_ne(left: U16, right: U16) -> Bool {
+  u16_ne(left, right)
+}
+pub fn probe_u16_lt(left: U16, right: U16) -> Bool {
+  u16_lt(left, right)
+}
+pub fn probe_u16_lte(left: U16, right: U16) -> Bool {
+  u16_lte(left, right)
+}
+pub fn probe_u16_gt(left: U16, right: U16) -> Bool {
+  u16_gt(left, right)
+}
+pub fn probe_u16_gte(left: U16, right: U16) -> Bool {
+  u16_gte(left, right)
+}
+pub fn probe_u16_shl(left: U16, right: U16) -> U16 {
+  u16_shl(left, right)
+}
+pub fn probe_u16_shr(left: U16, right: U16) -> U16 {
+  u16_shr(left, right)
+}
+pub fn probe_u16_add(left: U16, right: U16) -> U16 {
+  u16_add(left, right)
+}
+pub fn probe_u16_sub(left: U16, right: U16) -> U16 {
+  u16_sub(left, right)
+}
+pub fn probe_u16_mul(left: U16, right: U16) -> U16 {
+  u16_mul(left, right)
+}
+pub fn probe_u16_div(left: U16, right: U16) -> U16 {
+  u16_div(left, right)
+}
+pub fn probe_u16_rem(left: U16, right: U16) -> U16 {
+  u16_rem(left, right)
+}
+pub fn probe_i32_or(left: I32, right: I32) -> I32 {
+  i32_or(left, right)
+}
+pub fn probe_i32_xor(left: I32, right: I32) -> I32 {
+  i32_xor(left, right)
+}
+pub fn probe_i32_and(left: I32, right: I32) -> I32 {
+  i32_and(left, right)
+}
+pub fn probe_i32_eq(left: I32, right: I32) -> Bool {
+  i32_eq(left, right)
+}
+pub fn probe_i32_ne(left: I32, right: I32) -> Bool {
+  i32_ne(left, right)
+}
+pub fn probe_i32_lt(left: I32, right: I32) -> Bool {
+  i32_lt(left, right)
+}
+pub fn probe_i32_lte(left: I32, right: I32) -> Bool {
+  i32_lte(left, right)
+}
+pub fn probe_i32_gt(left: I32, right: I32) -> Bool {
+  i32_gt(left, right)
+}
+pub fn probe_i32_gte(left: I32, right: I32) -> Bool {
+  i32_gte(left, right)
+}
+pub fn probe_i32_shl(left: I32, right: I32) -> I32 {
+  i32_shl(left, right)
+}
+pub fn probe_i32_shr(left: I32, right: I32) -> I32 {
+  i32_shr(left, right)
+}
+pub fn probe_i32_add(left: I32, right: I32) -> I32 {
+  i32_add(left, right)
+}
+pub fn probe_i32_sub(left: I32, right: I32) -> I32 {
+  i32_sub(left, right)
+}
+pub fn probe_i32_mul(left: I32, right: I32) -> I32 {
+  i32_mul(left, right)
+}
+pub fn probe_i32_div(left: I32, right: I32) -> I32 {
+  i32_div(left, right)
+}
+pub fn probe_i32_rem(left: I32, right: I32) -> I32 {
+  i32_rem(left, right)
+}
+pub fn probe_u32_or(left: U32, right: U32) -> U32 {
+  u32_or(left, right)
+}
+pub fn probe_u32_xor(left: U32, right: U32) -> U32 {
+  u32_xor(left, right)
+}
+pub fn probe_u32_and(left: U32, right: U32) -> U32 {
+  u32_and(left, right)
+}
+pub fn probe_u32_eq(left: U32, right: U32) -> Bool {
+  u32_eq(left, right)
+}
+pub fn probe_u32_ne(left: U32, right: U32) -> Bool {
+  u32_ne(left, right)
+}
+pub fn probe_u32_lt(left: U32, right: U32) -> Bool {
+  u32_lt(left, right)
+}
+pub fn probe_u32_lte(left: U32, right: U32) -> Bool {
+  u32_lte(left, right)
+}
+pub fn probe_u32_gt(left: U32, right: U32) -> Bool {
+  u32_gt(left, right)
+}
+pub fn probe_u32_gte(left: U32, right: U32) -> Bool {
+  u32_gte(left, right)
+}
+pub fn probe_u32_shl(left: U32, right: U32) -> U32 {
+  u32_shl(left, right)
+}
+pub fn probe_u32_shr(left: U32, right: U32) -> U32 {
+  u32_shr(left, right)
+}
+pub fn probe_u32_add(left: U32, right: U32) -> U32 {
+  u32_add(left, right)
+}
+pub fn probe_u32_sub(left: U32, right: U32) -> U32 {
+  u32_sub(left, right)
+}
+pub fn probe_u32_mul(left: U32, right: U32) -> U32 {
+  u32_mul(left, right)
+}
+pub fn probe_u32_div(left: U32, right: U32) -> U32 {
+  u32_div(left, right)
+}
+pub fn probe_u32_rem(left: U32, right: U32) -> U32 {
+  u32_rem(left, right)
+}
+pub fn probe_i64_or(left: I64, right: I64) -> I64 {
+  i64_or(left, right)
+}
+pub fn probe_i64_xor(left: I64, right: I64) -> I64 {
+  i64_xor(left, right)
+}
+pub fn probe_i64_and(left: I64, right: I64) -> I64 {
+  i64_and(left, right)
+}
+pub fn probe_i64_eq(left: I64, right: I64) -> Bool {
+  i64_eq(left, right)
+}
+pub fn probe_i64_ne(left: I64, right: I64) -> Bool {
+  i64_ne(left, right)
+}
+pub fn probe_i64_lt(left: I64, right: I64) -> Bool {
+  i64_lt(left, right)
+}
+pub fn probe_i64_lte(left: I64, right: I64) -> Bool {
+  i64_lte(left, right)
+}
+pub fn probe_i64_gt(left: I64, right: I64) -> Bool {
+  i64_gt(left, right)
+}
+pub fn probe_i64_gte(left: I64, right: I64) -> Bool {
+  i64_gte(left, right)
+}
+pub fn probe_i64_shl(left: I64, right: I64) -> I64 {
+  i64_shl(left, right)
+}
+pub fn probe_i64_shr(left: I64, right: I64) -> I64 {
+  i64_shr(left, right)
+}
+pub fn probe_i64_add(left: I64, right: I64) -> I64 {
+  i64_add(left, right)
+}
+pub fn probe_i64_sub(left: I64, right: I64) -> I64 {
+  i64_sub(left, right)
+}
+pub fn probe_i64_mul(left: I64, right: I64) -> I64 {
+  i64_mul(left, right)
+}
+pub fn probe_i64_div(left: I64, right: I64) -> I64 {
+  i64_div(left, right)
+}
+pub fn probe_i64_rem(left: I64, right: I64) -> I64 {
+  i64_rem(left, right)
+}
+pub fn probe_u64_or(left: U64, right: U64) -> U64 {
+  u64_or(left, right)
+}
+pub fn probe_u64_xor(left: U64, right: U64) -> U64 {
+  u64_xor(left, right)
+}
+pub fn probe_u64_and(left: U64, right: U64) -> U64 {
+  u64_and(left, right)
+}
+pub fn probe_u64_eq(left: U64, right: U64) -> Bool {
+  u64_eq(left, right)
+}
+pub fn probe_u64_ne(left: U64, right: U64) -> Bool {
+  u64_ne(left, right)
+}
+pub fn probe_u64_lt(left: U64, right: U64) -> Bool {
+  u64_lt(left, right)
+}
+pub fn probe_u64_lte(left: U64, right: U64) -> Bool {
+  u64_lte(left, right)
+}
+pub fn probe_u64_gt(left: U64, right: U64) -> Bool {
+  u64_gt(left, right)
+}
+pub fn probe_u64_gte(left: U64, right: U64) -> Bool {
+  u64_gte(left, right)
+}
+pub fn probe_u64_shl(left: U64, right: U64) -> U64 {
+  u64_shl(left, right)
+}
+pub fn probe_u64_shr(left: U64, right: U64) -> U64 {
+  u64_shr(left, right)
+}
+pub fn probe_u64_add(left: U64, right: U64) -> U64 {
+  u64_add(left, right)
+}
+pub fn probe_u64_sub(left: U64, right: U64) -> U64 {
+  u64_sub(left, right)
+}
+pub fn probe_u64_mul(left: U64, right: U64) -> U64 {
+  u64_mul(left, right)
+}
+pub fn probe_u64_div(left: U64, right: U64) -> U64 {
+  u64_div(left, right)
+}
+pub fn probe_u64_rem(left: U64, right: U64) -> U64 {
+  u64_rem(left, right)
+}
+pub fn probe_f32_eq(left: F32, right: F32) -> Bool {
+  f32_eq(left, right)
+}
+pub fn probe_f32_ne(left: F32, right: F32) -> Bool {
+  f32_ne(left, right)
+}
+pub fn probe_f32_lt(left: F32, right: F32) -> Bool {
+  f32_lt(left, right)
+}
+pub fn probe_f32_lte(left: F32, right: F32) -> Bool {
+  f32_lte(left, right)
+}
+pub fn probe_f32_gt(left: F32, right: F32) -> Bool {
+  f32_gt(left, right)
+}
+pub fn probe_f32_gte(left: F32, right: F32) -> Bool {
+  f32_gte(left, right)
+}
+pub fn probe_f32_add(left: F32, right: F32) -> F32 {
+  f32_add(left, right)
+}
+pub fn probe_f32_sub(left: F32, right: F32) -> F32 {
+  f32_sub(left, right)
+}
+pub fn probe_f32_mul(left: F32, right: F32) -> F32 {
+  f32_mul(left, right)
+}
+pub fn probe_f32_div(left: F32, right: F32) -> F32 {
+  f32_div(left, right)
+}
+pub fn probe_f64_eq(left: F64, right: F64) -> Bool {
+  f64_eq(left, right)
+}
+pub fn probe_f64_ne(left: F64, right: F64) -> Bool {
+  f64_ne(left, right)
+}
+pub fn probe_f64_lt(left: F64, right: F64) -> Bool {
+  f64_lt(left, right)
+}
+pub fn probe_f64_lte(left: F64, right: F64) -> Bool {
+  f64_lte(left, right)
+}
+pub fn probe_f64_gt(left: F64, right: F64) -> Bool {
+  f64_gt(left, right)
+}
+pub fn probe_f64_gte(left: F64, right: F64) -> Bool {
+  f64_gte(left, right)
+}
+pub fn probe_f64_add(left: F64, right: F64) -> F64 {
+  f64_add(left, right)
+}
+pub fn probe_f64_sub(left: F64, right: F64) -> F64 {
+  f64_sub(left, right)
+}
+pub fn probe_f64_mul(left: F64, right: F64) -> F64 {
+  f64_mul(left, right)
+}
+pub fn probe_f64_div(left: F64, right: F64) -> F64 {
+  f64_div(left, right)
+}

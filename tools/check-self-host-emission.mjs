@@ -4,6 +4,7 @@ import { performance } from "node:perf_hooks";
 import { execFileSync } from "node:child_process";
 import { checkScalarConversions } from "./scalar-conversion-cases.mjs";
 import { checkMemoryOperations } from "./memory-operation-cases.mjs";
+import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
 function unusedImports(module) {
@@ -240,6 +241,25 @@ for (const [name, expected] of [
   } catch (error) {
     failures++;
     console.error("self-host memory operation probe failed");
+    console.error(error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    let source = "builtin unsafe_bitcast<a, b>(value: a) -> b = \"unsafe.bitcast\"\n";
+    for (const file of ["00-builtins.dew", "40-numeric-builtins.dew", "70-into-builtins.dew"]) {
+      source += await readFile(new URL(`../std/preamble/${file}`, import.meta.url), "utf8");
+    }
+    const checks = await checkArithmeticOperations(async (type, _op, name, result) => {
+      return compileSource(source + `\npub fn main(left: ${type}, right: ${type}) -> ${result} {\n  ${name}(left, right)\n}\n`);
+    });
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`self-host arithmetic operation checks passed: ${checks} (${elapsed.toFixed(3)} seconds)`);
+    if (elapsed > 30) throw new Error("arithmetic compiler performance exceeds 30 seconds");
+  } catch (error) {
+    failures++;
+    console.error("self-host arithmetic operation probe failed");
     console.error(error);
   }
 }

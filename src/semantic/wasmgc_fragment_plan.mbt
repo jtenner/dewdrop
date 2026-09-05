@@ -2398,11 +2398,7 @@ fn wasmgc_builtin_is_inline(name : Bytes) -> Bool {
     name[1] == b'e' &&
     name[2] == b'w' &&
     name[3] == b'_'
-  ) ||
-  name == b"i32_add" ||
-  name == b"i32_sub" ||
-  name == b"i32_lt" ||
-  name == b"i32_lte"
+  )
 }
 
 ///|

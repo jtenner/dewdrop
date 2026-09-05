@@ -9,7 +9,7 @@ fn parse_test_declaration(
 test "public builtin declaration preserves complete signature" {
   assert_eq(
     parse_test_declaration(
-      b"pub builtin i32_add(a: I32, b: I32) -> I32 = \"i32_add\"",
+      b"pub builtin i32_add(a: I32, b: I32) -> I32 = \"i32.add\"",
     ),
     Ok(
       Builtin({
@@ -22,7 +22,7 @@ test "public builtin declaration preserves complete signature" {
           { name: "b", type_: NamedType("I32", 31UL), offset: 28UL, },
         ],
         return_type: NamedType("I32", 39UL),
-        builtin_name: b"i32_add",
+        builtin_name: b"i32.add",
         offset: 0UL,
       }),
     ),
