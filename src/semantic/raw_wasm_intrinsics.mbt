@@ -74,13 +74,21 @@ pub fn raw_wasm_builtin_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
         second: Some(WasmV128Value),
         result: Some(WasmV128Value),
       })
-    b"i32.load" =>
+    b"i32.load" | b"i32.load8_s" | b"i32.load8_u" | b"i32.load16_s" | b"i32.load16_u" =>
       Some({ first: WasmI32Value, second: None, result: Some(WasmI32Value), })
+    b"f32.load" =>
+      Some({ first: WasmI32Value, second: None, result: Some(WasmF32Value), })
+    b"f32.store" =>
+      Some({ first: WasmI32Value, second: Some(WasmF32Value), result: None, })
+    b"f64.load" =>
+      Some({ first: WasmI32Value, second: None, result: Some(WasmF64Value), })
+    b"f64.store" =>
+      Some({ first: WasmI32Value, second: Some(WasmF64Value), result: None, })
     b"i64.load" =>
       Some({ first: WasmI32Value, second: None, result: Some(WasmI64Value), })
     b"v128.load" =>
       Some({ first: WasmI32Value, second: None, result: Some(WasmV128Value), })
-    b"i32.store" =>
+    b"i32.store" | b"i32.store8" | b"i32.store16" =>
       Some({ first: WasmI32Value, second: Some(WasmI32Value), result: None, })
     b"i64.store" =>
       Some({ first: WasmI32Value, second: Some(WasmI64Value), result: None, })

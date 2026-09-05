@@ -1,0 +1,76 @@
+// Exercise the checked-in library memory functions with host-supplied memory.
+pub fn probe_i8(address: U32, value: I8, write: Bool) -> I8 {
+  if write {
+    i8_store(address, value)
+  }
+  i8_load(address)
+}
+pub fn probe_u8(address: U32, value: U8, write: Bool) -> U8 {
+  if write {
+    u8_store(address, value)
+  }
+  u8_load(address)
+}
+pub fn probe_i16(address: U32, value: I16, write: Bool) -> I16 {
+  if write {
+    i16_store(address, value)
+  }
+  i16_load(address)
+}
+pub fn probe_u16(address: U32, value: U16, write: Bool) -> U16 {
+  if write {
+    u16_store(address, value)
+  }
+  u16_load(address)
+}
+pub fn probe_i32(address: U32, value: I32, write: Bool) -> I32 {
+  if write {
+    i32_store(address, value)
+  }
+  i32_load(address)
+}
+pub fn probe_u32(address: U32, value: U32, write: Bool) -> U32 {
+  if write {
+    u32_store(address, value)
+  }
+  u32_load(address)
+}
+pub fn probe_i64(address: U32, value: I64, write: Bool) -> I64 {
+  if write {
+    i64_store(address, value)
+  }
+  i64_load(address)
+}
+pub fn probe_u64(address: U32, value: U64, write: Bool) -> U64 {
+  if write {
+    u64_store(address, value)
+  }
+  u64_load(address)
+}
+pub fn probe_f32(address: U32, value: F32, write: Bool) -> F32 {
+  if write {
+    f32_store(address, value)
+  }
+  f32_load(address)
+}
+pub fn probe_f64(address: U32, value: F64, write: Bool) -> F64 {
+  if write {
+    f64_store(address, value)
+  }
+  f64_load(address)
+}
+pub fn probe_swar32(address: U32, value: Swar32, write: Bool) -> Swar32 {
+  if write {
+    swar32_store(address, value)
+  }
+  swar32_load(address)
+}
+pub fn probe_swar64(address: U32, value: Swar64, write: Bool) -> Swar64 {
+  if write {
+    swar64_store(address, value)
+  }
+  swar64_load(address)
+}
+pub fn probe_vector_copy(source: U32, destination: U32) -> Unit {
+  v128_store(destination, v128_load(source))
+}

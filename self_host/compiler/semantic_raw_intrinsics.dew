@@ -154,6 +154,18 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
     load = name.equals(b"i32.load")
     store = !load
+  } else if name.equals(b"i32.load8_s") || name.equals(b"i32.load8_u") || name.equals(b"i32.load16_s") || name.equals(b"i32.load16_u") || name.equals(b"i32.store8") || name.equals(b"i32.store16") {
+    carrier = SelfHostWasmBodyCarrier::I32BodyCarrier
+    store = name.equals(b"i32.store8") || name.equals(b"i32.store16")
+    load = !store
+  } else if name.equals(b"f32.load") || name.equals(b"f32.store") {
+    carrier = SelfHostWasmBodyCarrier::F32BodyCarrier
+    load = name.equals(b"f32.load")
+    store = !load
+  } else if name.equals(b"f64.load") || name.equals(b"f64.store") {
+    carrier = SelfHostWasmBodyCarrier::F64BodyCarrier
+    load = name.equals(b"f64.load")
+    store = !load
   } else if name.equals(b"i64.load") || name.equals(b"i64.store") {
     carrier = SelfHostWasmBodyCarrier::I64BodyCarrier
     load = name.equals(b"i64.load")

@@ -24,6 +24,9 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   and `narrow-float-conversions-2026-09-05.md`.
 - [ ] Scalar arithmetic, comparison, and memory helpers: raw opcode contracts plus
   Dew normalization where logical widths differ from physical widths.
+  Scalar and whole-V128 memory operations now use 16 checked raw instructions;
+  arithmetic and comparison migration remains open. See
+  `raw-memory-instructions-2026-09-05.md`.
 - [ ] Remaining SIMD operations: explicit instruction/immediate contracts; express
   compositions, permutations, and convenience algorithms in Dew.
 - [ ] Math: use raw instructions for primitive operations and Dew for algorithms.
@@ -36,6 +39,8 @@ and regression tests. No new compiler-owned library algorithm is permitted.
 - [ ] Remaining host operations: use foreign declarations, not opaque builtins.
 - [ ] Remove standard module path/ordinal/name dispatch after its owning library
   migration. Physical type choices must use explicit declaration metadata.
+  Interface cache membership now uses recorded module origin, not `dew.std.`
+  name prefixes; see `interface-cache-module-origin-2026-09-05.md`.
 - [ ] Remove legacy builtin emission paths and enforce a complete opcode/unsafe
   cast inventory across every source module and generator.
 - [ ] Finish physical-boundary checks for missing/error specialization evidence;

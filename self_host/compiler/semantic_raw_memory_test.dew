@@ -1,0 +1,108 @@
+fn self_host_assert_invalid_raw_memory(source: Bytes) -> Unit {
+  let fragments = self_host_physical_test_fragments(source)
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(_) => assert(false, "raw memory operation accepted a wrong carrier")
+    Result::Err(error) => assert(error.contains("raw intrinsic") && error.contains("carrier does not match its opcode"), error)
+  }
+}
+
+test "raw memory operations reject incorrect address, value, and result carriers" {
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64) -> I32 = \"i32.load8_s\"\npub fn main(address: I64) -> I32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32) -> I64 = \"i32.load8_s\"\npub fn main(address: I32) -> I64 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64, value: I32) -> Unit = \"i32.store8\"\npub fn main(address: I64, value: I32) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32, value: I64) -> Unit = \"i32.store8\"\npub fn main(address: I32, value: I64) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64) -> I32 = \"i32.load8_u\"\npub fn main(address: I64) -> I32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32) -> I64 = \"i32.load8_u\"\npub fn main(address: I32) -> I64 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64) -> I32 = \"i32.load16_s\"\npub fn main(address: I64) -> I32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32) -> I64 = \"i32.load16_s\"\npub fn main(address: I32) -> I64 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64, value: I32) -> Unit = \"i32.store16\"\npub fn main(address: I64, value: I32) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32, value: I64) -> Unit = \"i32.store16\"\npub fn main(address: I32, value: I64) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64) -> I32 = \"i32.load16_u\"\npub fn main(address: I64) -> I32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32) -> I64 = \"i32.load16_u\"\npub fn main(address: I32) -> I64 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64) -> I32 = \"i32.load\"\npub fn main(address: I64) -> I32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32) -> I64 = \"i32.load\"\npub fn main(address: I32) -> I64 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64, value: I32) -> Unit = \"i32.store\"\npub fn main(address: I64, value: I32) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32, value: I64) -> Unit = \"i32.store\"\npub fn main(address: I32, value: I64) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64) -> I64 = \"i64.load\"\npub fn main(address: I64) -> I64 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32) -> I32 = \"i64.load\"\npub fn main(address: I32) -> I32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64, value: I64) -> Unit = \"i64.store\"\npub fn main(address: I64, value: I64) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32, value: I32) -> Unit = \"i64.store\"\npub fn main(address: I32, value: I32) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64) -> F32 = \"f32.load\"\npub fn main(address: I64) -> F32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32) -> I32 = \"f32.load\"\npub fn main(address: I32) -> I32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64, value: F32) -> Unit = \"f32.store\"\npub fn main(address: I64, value: F32) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32, value: I32) -> Unit = \"f32.store\"\npub fn main(address: I32, value: I32) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64) -> F64 = \"f64.load\"\npub fn main(address: I64) -> F64 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32) -> I32 = \"f64.load\"\npub fn main(address: I32) -> I32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64, value: F64) -> Unit = \"f64.store\"\npub fn main(address: I64, value: F64) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32, value: I32) -> Unit = \"f64.store\"\npub fn main(address: I32, value: I32) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64) -> V128 = \"v128.load\"\npub fn main(address: I64) -> V128 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32) -> I32 = \"v128.load\"\npub fn main(address: I32) -> I32 {\n  operation(address)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I64, value: V128) -> Unit = \"v128.store\"\npub fn main(address: I64, value: V128) -> Unit {\n  operation(address, value)\n}\n",
+  )
+  self_host_assert_invalid_raw_memory(
+    b"builtin operation(address: I32, value: I32) -> Unit = \"v128.store\"\npub fn main(address: I32, value: I32) -> Unit {\n  operation(address, value)\n}\n",
+  )
+}

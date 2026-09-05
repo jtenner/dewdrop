@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { execFileSync } from "node:child_process";
 import { checkScalarConversions } from "./scalar-conversion-cases.mjs";
+import { checkMemoryOperations } from "./memory-operation-cases.mjs";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
 function unusedImports(module) {
@@ -94,7 +95,7 @@ if (compilerImports.wasi_snapshot_preview1?.fd_write) {
 }
 compiler = await WebAssembly.instantiate(module, compilerImports);
 compiler.exports.__dew_init?.();
-async function compileSource(fixture) {
+async function compileSourceExports(fixture) {
   const builder = compiler.exports.self_host_emission_probe_source_new();
   for (const byte of new TextEncoder().encode(fixture)) {
     compiler.exports.self_host_emission_probe_source_append(builder, byte);
@@ -108,7 +109,11 @@ async function compileSource(fixture) {
   const instance = await WebAssembly.instantiate(module, unusedImports(module));
   instance.exports.__dew_init?.();
   assert.equal(typeof instance.exports.main, "function", "source probe main export is missing");
-  return instance.exports.main;
+  return instance.exports;
+}
+
+async function compileSource(fixture) {
+  return (await compileSourceExports(fixture)).main;
 }
 
 let failures = 0;
@@ -213,6 +218,28 @@ for (const [name, expected] of [
   } catch (error) {
     failures++;
     console.error("self-host scalar Into conversion probe failed");
+    console.error(error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const source = "builtin unsafe_bitcast<a, b>(value: a) -> b = \"unsafe.bitcast\"\n" +
+      await readFile(new URL("../std/preamble/60-memory.dew", import.meta.url), "utf8");
+    const checks = await checkMemoryOperations(async type => {
+      const name = type.toLowerCase();
+      const exports = await compileSourceExports(source + `\npub fn main(address: U32, value: ${type}, write: Bool) -> ${type} {\n  if write {\n    ${name}_store(address, value)\n  }\n  ${name}_load(address)\n}\n`);
+      return { operation: exports.main, memory: exports.memory };
+    }, async () => {
+      const exports = await compileSourceExports(source + "\npub fn main(source: U32, destination: U32) -> Unit {\n  v128_store(destination, v128_load(source))\n}\n");
+      return { copy: exports.main, memory: exports.memory };
+    });
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`self-host memory operation checks passed: ${checks} (${elapsed.toFixed(3)} seconds)`);
+    if (elapsed > 30) throw new Error("memory operation compiler performance exceeds 30 seconds");
+  } catch (error) {
+    failures++;
+    console.error("self-host memory operation probe failed");
     console.error(error);
   }
 }

@@ -2297,22 +2297,20 @@ fn wasmgc_builtin_is_debug_runtime(name : Bytes) -> Bool {
 fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
   wasmgc_builtin_is_debug_runtime(name) ||
   wasmgc_builtin_has_v128_memory_marker(name) ||
-  name == b"dew_i8_load" ||
-  name == b"dew_i8_store" ||
-  name == b"dew_i16_load" ||
-  name == b"dew_i16_store" ||
+  name == b"i32.load8_s" ||
+  name == b"i32.load8_u" ||
+  name == b"i32.store8" ||
+  name == b"i32.load16_s" ||
+  name == b"i32.load16_u" ||
+  name == b"i32.store16" ||
   name == b"i32.load" ||
   name == b"i32.store" ||
   name == b"i64.load" ||
   name == b"i64.store" ||
-  name == b"dew_u8_load" ||
-  name == b"dew_u8_store" ||
-  name == b"dew_u16_load" ||
-  name == b"dew_u16_store" ||
-  name == b"dew_f32_load" ||
-  name == b"dew_f32_store" ||
-  name == b"dew_f64_load" ||
-  name == b"dew_f64_store" ||
+  name == b"f32.load" ||
+  name == b"f32.store" ||
+  name == b"f64.load" ||
+  name == b"f64.store" ||
   name == b"v128.load" ||
   name == b"v128.store" ||
   name == b"dew_wasi_fd_write" ||

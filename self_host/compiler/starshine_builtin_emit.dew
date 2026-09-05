@@ -63,45 +63,35 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_unreachable_(),
     )
-  } else if name.equals(b"dew_i8_load") {
+  } else if name.equals(b"i32.load8_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(0i32),
     )
-  } else if name.equals(b"dew_i8_store") {
+  } else if name.equals(b"i32.store8") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(1i32),
     )
-  } else if name.equals(b"dew_u8_load") {
+  } else if name.equals(b"i32.load8_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(2i32),
     )
-  } else if name.equals(b"dew_u8_store") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(1i32),
-    )
-  } else if name.equals(b"dew_i16_load") {
+  } else if name.equals(b"i32.load16_s") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(3i32),
     )
-  } else if name.equals(b"dew_i16_store") {
+  } else if name.equals(b"i32.store16") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(4i32),
     )
-  } else if name.equals(b"dew_u16_load") {
+  } else if name.equals(b"i32.load16_u") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(5i32),
-    )
-  } else if name.equals(b"dew_u16_store") {
-    StarshineFfi.ffi_ffi_bridge_instructions_push(
-      destination,
-      StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(4i32),
     )
   } else if name.equals(b"i32.load") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
@@ -123,22 +113,22 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(9i32),
     )
-  } else if name.equals(b"dew_f32_load") {
+  } else if name.equals(b"f32.load") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(10i32),
     )
-  } else if name.equals(b"dew_f32_store") {
+  } else if name.equals(b"f32.store") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(11i32),
     )
-  } else if name.equals(b"dew_f64_load") {
+  } else if name.equals(b"f64.load") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(12i32),
     )
-  } else if name.equals(b"dew_f64_store") {
+  } else if name.equals(b"f64.store") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,
       StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(13i32),

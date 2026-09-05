@@ -67,6 +67,16 @@ def main() -> None:
         cwd=ROOT,
         check=True,
     )
+    subprocess.run(
+        [
+            "moon", "run", "--target", "native", "src/dew_test_gen", "--",
+            "tools/dew-test/memory_operations.wasm", "dew.std.memory",
+            "dew.std.memory", "tools/dew-test/memory_operations_test.dew",
+            str(ROOT / "tools/dew-test/memory_operations.dew"),
+        ],
+        cwd=ROOT,
+        check=True,
+    )
 
 
 if __name__ == "__main__":

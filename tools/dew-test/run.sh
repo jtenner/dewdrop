@@ -7,3 +7,4 @@ node tools/dew-test/run.mjs \
   --label "Dew stdlib tests" \
   "$@"
 node tools/check-scalar-conversions.mjs tools/dew-test/scalar_conversions.wasm
+node tools/check-memory-operations.mjs tools/dew-test/memory_operations.wasm
