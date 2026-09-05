@@ -4,7 +4,7 @@ import re
 import unittest
 from pathlib import Path
 
-from wasm_simd_intrinsics import SIMD_INSTRUCTIONS, SIMD_CROSS_OPERATIONS, SIMD_LANE_INSTRUCTIONS, simd_shuffle_immediates
+from wasm_simd_intrinsics import SIMD_INSTRUCTIONS, SIMD_CROSS_OPERATIONS, SIMD_LANE_INSTRUCTIONS, SIMD_MEMORY_INSTRUCTIONS, SIMD_SIGNATURES, simd_shuffle_immediates
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -60,6 +60,19 @@ class SimdBuiltinPolicyTests(unittest.TestCase):
             self.assertIsNone(simd_shuffle_immediates("i8x16.shuffle " + " ".join(bad)))
         for bad in (descriptor + " 0", descriptor[:-3], descriptor.replace(" 0 ", " 00 ")):
             self.assertIsNone(simd_shuffle_immediates(bad))
+
+    def test_memory_contracts_and_all_typed_module_builtins(self):
+        self.assertEqual(len(SIMD_MEMORY_INSTRUCTIONS), 72)
+        contracts = {opcode: (inputs, result) for opcode, _, inputs, result in SIMD_SIGNATURES}
+        self.assertEqual(contracts["v128.store64_lane 1"], (("I32", "V128"), "Unit"))
+        self.assertEqual(contracts["v128.load8x8_s"], (("I32",), "V128"))
+        for family in ("i8x16", "u8x16", "i16x8", "u16x8", "i32x4", "u32x4", "i64x2", "u64x2", "f32x4", "f64x2"):
+            source = (ROOT / f"std/{family}.dew").read_text()
+            targets = re.findall(r'^builtin .* = "([^"]+)"$', source, re.M)
+            self.assertTrue(targets)
+            for target in targets:
+                with self.subTest(module=family, target=target):
+                    self.assertTrue(target in contracts or simd_shuffle_immediates(target) is not None)
 
 
 if __name__ == "__main__":

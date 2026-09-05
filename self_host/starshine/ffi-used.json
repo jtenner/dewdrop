@@ -446,6 +446,27 @@
     "Instruction::f64x2_extract_lane",
     "Instruction::f64x2_replace_lane",
     "Instruction::i8x16_shuffle",
-    "LaneIdx::new"
+    "LaneIdx::new",
+    "Instruction::v128_load8_splat",
+    "Instruction::v128_load8_lane",
+    "Instruction::v128_store8_lane",
+    "Instruction::v128_load16_splat",
+    "Instruction::v128_load16_lane",
+    "Instruction::v128_store16_lane",
+    "Instruction::v128_load32_splat",
+    "Instruction::v128_load32_lane",
+    "Instruction::v128_store32_lane",
+    "Instruction::v128_load64_splat",
+    "Instruction::v128_load64_lane",
+    "Instruction::v128_store64_lane",
+    "Instruction::v128_load8x8s",
+    "Instruction::v128_load8x8u",
+    "Instruction::v128_load16x4s",
+    "Instruction::v128_load16x4u",
+    "Instruction::v128_load32x2s",
+    "Instruction::v128_load32x2u",
+    "Instruction::v128_load32_zero",
+    "Instruction::v128_load64_zero",
+    "ffi_bridge::memory_argument"
   ]
 }

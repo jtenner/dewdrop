@@ -8,10 +8,6 @@ fn starshine_v128_builtin_instructions(
     Some(instruction) => return Some([instruction])
     None => ()
   }
-  match starshine_v128_memory_builtin_instructions(name) {
-    Some(instructions) => return Some(instructions)
-    None => ()
-  }
   if name == b"v128.not" {
     Some([@lib.Instruction::v128_not()])
   } else if name == b"v128.andnot" {
@@ -592,6 +588,450 @@ fn starshine_v128_builtin_instructions(
     Some([@lib.Instruction::f64x2_extract_lane(@lib.LaneIdx::new(b'\x01'))])
   } else if name == b"f64x2.replace_lane 1" {
     Some([@lib.Instruction::f64x2_replace_lane(@lib.LaneIdx::new(b'\x01'))])
+  } else if name == b"v128.load8_splat" {
+    Some([@lib.Instruction::v128_load8_splat(starshine_memory_argument(0U))])
+  } else if name == b"v128.load8_lane 0" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x00'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 0" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x00'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 1" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x01'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 1" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x01'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 2" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x02'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 2" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x02'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 3" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x03'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 3" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x03'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 4" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x04'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 4" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x04'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 5" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x05'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 5" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x05'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 6" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x06'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 6" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x06'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 7" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x07'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 7" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x07'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 8" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x08'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 8" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x08'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 9" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x09'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 9" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x09'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 10" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0A'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 10" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0A'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 11" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0B'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 11" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0B'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 12" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0C'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 12" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0C'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 13" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0D'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 13" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0D'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 14" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0E'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 14" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0E'),
+      ),
+    ])
+  } else if name == b"v128.load8_lane 15" {
+    Some([
+      @lib.Instruction::v128_load8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0F'),
+      ),
+    ])
+  } else if name == b"v128.store8_lane 15" {
+    Some([
+      @lib.Instruction::v128_store8_lane(
+        starshine_memory_argument(0U),
+        @lib.LaneIdx::new(b'\x0F'),
+      ),
+    ])
+  } else if name == b"v128.load16_splat" {
+    Some([@lib.Instruction::v128_load16_splat(starshine_memory_argument(1U))])
+  } else if name == b"v128.load16_lane 0" {
+    Some([
+      @lib.Instruction::v128_load16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x00'),
+      ),
+    ])
+  } else if name == b"v128.store16_lane 0" {
+    Some([
+      @lib.Instruction::v128_store16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x00'),
+      ),
+    ])
+  } else if name == b"v128.load16_lane 1" {
+    Some([
+      @lib.Instruction::v128_load16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x01'),
+      ),
+    ])
+  } else if name == b"v128.store16_lane 1" {
+    Some([
+      @lib.Instruction::v128_store16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x01'),
+      ),
+    ])
+  } else if name == b"v128.load16_lane 2" {
+    Some([
+      @lib.Instruction::v128_load16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x02'),
+      ),
+    ])
+  } else if name == b"v128.store16_lane 2" {
+    Some([
+      @lib.Instruction::v128_store16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x02'),
+      ),
+    ])
+  } else if name == b"v128.load16_lane 3" {
+    Some([
+      @lib.Instruction::v128_load16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x03'),
+      ),
+    ])
+  } else if name == b"v128.store16_lane 3" {
+    Some([
+      @lib.Instruction::v128_store16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x03'),
+      ),
+    ])
+  } else if name == b"v128.load16_lane 4" {
+    Some([
+      @lib.Instruction::v128_load16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x04'),
+      ),
+    ])
+  } else if name == b"v128.store16_lane 4" {
+    Some([
+      @lib.Instruction::v128_store16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x04'),
+      ),
+    ])
+  } else if name == b"v128.load16_lane 5" {
+    Some([
+      @lib.Instruction::v128_load16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x05'),
+      ),
+    ])
+  } else if name == b"v128.store16_lane 5" {
+    Some([
+      @lib.Instruction::v128_store16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x05'),
+      ),
+    ])
+  } else if name == b"v128.load16_lane 6" {
+    Some([
+      @lib.Instruction::v128_load16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x06'),
+      ),
+    ])
+  } else if name == b"v128.store16_lane 6" {
+    Some([
+      @lib.Instruction::v128_store16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x06'),
+      ),
+    ])
+  } else if name == b"v128.load16_lane 7" {
+    Some([
+      @lib.Instruction::v128_load16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x07'),
+      ),
+    ])
+  } else if name == b"v128.store16_lane 7" {
+    Some([
+      @lib.Instruction::v128_store16_lane(
+        starshine_memory_argument(1U),
+        @lib.LaneIdx::new(b'\x07'),
+      ),
+    ])
+  } else if name == b"v128.load32_splat" {
+    Some([@lib.Instruction::v128_load32_splat(starshine_memory_argument(2U))])
+  } else if name == b"v128.load32_lane 0" {
+    Some([
+      @lib.Instruction::v128_load32_lane(
+        starshine_memory_argument(2U),
+        @lib.LaneIdx::new(b'\x00'),
+      ),
+    ])
+  } else if name == b"v128.store32_lane 0" {
+    Some([
+      @lib.Instruction::v128_store32_lane(
+        starshine_memory_argument(2U),
+        @lib.LaneIdx::new(b'\x00'),
+      ),
+    ])
+  } else if name == b"v128.load32_lane 1" {
+    Some([
+      @lib.Instruction::v128_load32_lane(
+        starshine_memory_argument(2U),
+        @lib.LaneIdx::new(b'\x01'),
+      ),
+    ])
+  } else if name == b"v128.store32_lane 1" {
+    Some([
+      @lib.Instruction::v128_store32_lane(
+        starshine_memory_argument(2U),
+        @lib.LaneIdx::new(b'\x01'),
+      ),
+    ])
+  } else if name == b"v128.load32_lane 2" {
+    Some([
+      @lib.Instruction::v128_load32_lane(
+        starshine_memory_argument(2U),
+        @lib.LaneIdx::new(b'\x02'),
+      ),
+    ])
+  } else if name == b"v128.store32_lane 2" {
+    Some([
+      @lib.Instruction::v128_store32_lane(
+        starshine_memory_argument(2U),
+        @lib.LaneIdx::new(b'\x02'),
+      ),
+    ])
+  } else if name == b"v128.load32_lane 3" {
+    Some([
+      @lib.Instruction::v128_load32_lane(
+        starshine_memory_argument(2U),
+        @lib.LaneIdx::new(b'\x03'),
+      ),
+    ])
+  } else if name == b"v128.store32_lane 3" {
+    Some([
+      @lib.Instruction::v128_store32_lane(
+        starshine_memory_argument(2U),
+        @lib.LaneIdx::new(b'\x03'),
+      ),
+    ])
+  } else if name == b"v128.load64_splat" {
+    Some([@lib.Instruction::v128_load64_splat(starshine_memory_argument(3U))])
+  } else if name == b"v128.load64_lane 0" {
+    Some([
+      @lib.Instruction::v128_load64_lane(
+        starshine_memory_argument(3U),
+        @lib.LaneIdx::new(b'\x00'),
+      ),
+    ])
+  } else if name == b"v128.store64_lane 0" {
+    Some([
+      @lib.Instruction::v128_store64_lane(
+        starshine_memory_argument(3U),
+        @lib.LaneIdx::new(b'\x00'),
+      ),
+    ])
+  } else if name == b"v128.load64_lane 1" {
+    Some([
+      @lib.Instruction::v128_load64_lane(
+        starshine_memory_argument(3U),
+        @lib.LaneIdx::new(b'\x01'),
+      ),
+    ])
+  } else if name == b"v128.store64_lane 1" {
+    Some([
+      @lib.Instruction::v128_store64_lane(
+        starshine_memory_argument(3U),
+        @lib.LaneIdx::new(b'\x01'),
+      ),
+    ])
+  } else if name == b"v128.load8x8_s" {
+    Some([@lib.Instruction::v128_load8x8s(starshine_memory_argument(3U))])
+  } else if name == b"v128.load8x8_u" {
+    Some([@lib.Instruction::v128_load8x8u(starshine_memory_argument(3U))])
+  } else if name == b"v128.load16x4_s" {
+    Some([@lib.Instruction::v128_load16x4s(starshine_memory_argument(3U))])
+  } else if name == b"v128.load16x4_u" {
+    Some([@lib.Instruction::v128_load16x4u(starshine_memory_argument(3U))])
+  } else if name == b"v128.load32x2_s" {
+    Some([@lib.Instruction::v128_load32x2s(starshine_memory_argument(3U))])
+  } else if name == b"v128.load32x2_u" {
+    Some([@lib.Instruction::v128_load32x2u(starshine_memory_argument(3U))])
+  } else if name == b"v128.load32_zero" {
+    Some([@lib.Instruction::v128_load32_zero(starshine_memory_argument(2U))])
+  } else if name == b"v128.load64_zero" {
+    Some([@lib.Instruction::v128_load64_zero(starshine_memory_argument(3U))])
   } else {
     None
   }

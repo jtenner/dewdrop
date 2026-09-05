@@ -2246,39 +2246,6 @@ fn wasmgc_value_type(
 }
 
 ///|
-fn wasmgc_builtin_has_v128_memory_marker(name : Bytes) -> Bool {
-  if name.length() < 10 ||
-    name[0] != b'd' ||
-    name[1] != b'e' ||
-    name[2] != b'w' ||
-    name[3] != b'_' {
-    return false
-  }
-  for index in 4..<(name.length() - 5) {
-    if name[index] == b'_' &&
-      (
-        (
-          name[index + 1] == b'l' &&
-          name[index + 2] == b'o' &&
-          name[index + 3] == b'a' &&
-          name[index + 4] == b'd' &&
-          name[index + 5] == b'_'
-        ) ||
-        (
-          name[index + 1] == b's' &&
-          name[index + 2] == b't' &&
-          name[index + 3] == b'o' &&
-          name[index + 4] == b'r' &&
-          name[index + 5] == b'e'
-        )
-      ) {
-      return true
-    }
-  }
-  false
-}
-
-///|
 fn wasmgc_builtin_is_debug_runtime(name : Bytes) -> Bool {
   name == b"dew_debug_i8" ||
   name == b"dew_debug_i16" ||
@@ -2298,7 +2265,9 @@ fn wasmgc_builtin_is_debug_runtime(name : Bytes) -> Bool {
 ///|
 fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
   wasmgc_builtin_is_debug_runtime(name) ||
-  wasmgc_builtin_has_v128_memory_marker(name) ||
+  raw_wasm_simd_uses_memory(name) ||
+  name == b"dew_bytes_load_u8x16" ||
+  name == b"dew_string_load_u8x16" ||
   name == b"i32.load8_s" ||
   name == b"i32.load8_u" ||
   name == b"i32.store8" ||

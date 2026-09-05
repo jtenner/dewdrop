@@ -8,12 +8,12 @@ import sys
 from pathlib import Path
 
 from wasm_simd_intrinsics import SIMD_CROSS_OPERATIONS as V128_CROSS_OPS, simd_cross_opcode
+from wasm_simd_intrinsics import SIMD_MEMORY_INSTRUCTIONS
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "std"
 EMBEDDED = ROOT / "src" / "standard_sources" / "standard_lane_sources.mbt"
 TYPED_PARITY = ROOT / "tools" / "swar-parity" / "typed_lane_parity.dew"
-V128_MEMORY_BACKEND = ROOT / "src" / "backend" / "starshine_v128_memory_builtins.mbt"
 
 V128_TYPES = [
     ("I8x16", "I8", "i8", "signed"),
@@ -133,16 +133,18 @@ def v128_source(type_name: str, scalar: str, lane: str, kind: str) -> str:
     out.append(builtin(f"{p}_any_true", f"value: {type_name}", "Bool", "v128.any_true"))
     out.append(builtin(f"{p}_splat", f"value: {scalar}", type_name, f"{wasm_lane}.splat"))
     lane_count = int(type_name.split("x", 1)[1])
-    out.append(builtin(f"{p}_load_splat", "address: U32", type_name, f"dew_{p}_load_splat"))
-    for result, suffix, _, _ in V128_SPECIAL_MEMORY:
+    width = int(lane[1:])
+    out.append(builtin(f"{p}_load_splat", "address: U32", type_name, f"v128.load{width}_splat"))
+    memory_opcodes = {instruction: opcode for opcode, instruction, _, _, _, index in SIMD_MEMORY_INSTRUCTIONS if index is None}
+    for result, suffix, instruction, _ in V128_SPECIAL_MEMORY:
         if result == type_name:
-            out.append(builtin(f"{p}_{suffix}", "address: U32", type_name, f"dew_{p}_{suffix}"))
+            out.append(builtin(f"{p}_{suffix}", "address: U32", type_name, memory_opcodes[instruction]))
     for index in range(lane_count):
         signedness = ("_s" if kind == "signed" else "_u") if lane in ("i8", "i16") else ""
         out.append(builtin(f"{p}_extract_{index}", f"value: {type_name}", scalar, f"{wasm_lane}.extract_lane{signedness} {index}"))
         out.append(builtin(f"{p}_replace_{index}", f"value: {type_name}, lane: {scalar}", type_name, f"{wasm_lane}.replace_lane {index}"))
-        out.append(builtin(f"{p}_load_lane_{index}", f"address: U32, value: {type_name}", type_name, f"dew_{p}_load_lane_{index}"))
-        out.append(builtin(f"{p}_store_lane_{index}", f"address: U32, value: {type_name}", "Unit", f"dew_{p}_store_lane_{index}"))
+        out.append(builtin(f"{p}_load_lane_{index}", f"address: U32, value: {type_name}", type_name, f"v128.load{width}_lane {index}"))
+        out.append(builtin(f"{p}_store_lane_{index}", f"address: U32, value: {type_name}", "Unit", f"v128.store{width}_lane {index}"))
     if lane == "i8":
         for shuffle, indices in V128_BYTE_SHUFFLES.items():
             assert len(indices) == 16 and all(0 <= index < 32 for index in indices)
@@ -638,44 +640,6 @@ def swar_source(type_name: str, scalar: str, lane: str, kind: str, width: int) -
     return "".join(out)
 
 
-def lane_index(index: int) -> str:
-    return f"@lib.LaneIdx::new(b'\\x{index:02X}')"
-
-
-def v128_memory_backend_source() -> str:
-    branches: list[str] = []
-    first = True
-    widths = {"i8": ("8", 0), "i16": ("16", 1), "i32": ("32", 2), "f32": ("32", 2), "i64": ("64", 3), "f64": ("64", 3)}
-    for type_name, _, lane, _ in V128_TYPES:
-        prefix = type_name.lower()
-        bits, align = widths[lane]
-        keyword = "  if" if first else "else if"
-        first = False
-        branches.append(
-            f"{keyword} name == b\"dew_{prefix}_load_splat\" {{\n"
-            f"    Some([@lib.Instruction::v128_load{bits}_splat(starshine_memory_argument({align}U))])\n"
-            f"  }} "
-        )
-        for index in range(int(type_name.split("x", 1)[1])):
-            branches.append(
-                f"else if name == b\"dew_{prefix}_load_lane_{index}\" {{\n"
-                f"    Some([@lib.Instruction::v128_load{bits}_lane(starshine_memory_argument({align}U), {lane_index(index)})])\n"
-                f"  }} else if name == b\"dew_{prefix}_store_lane_{index}\" {{\n"
-                f"    Some([@lib.Instruction::v128_store{bits}_lane(starshine_memory_argument({align}U), {lane_index(index)})])\n"
-                f"  }} "
-            )
-    for type_name, suffix, instruction, align in V128_SPECIAL_MEMORY:
-        prefix = type_name.lower()
-        branches.append(
-            f"else if name == b\"dew_{prefix}_{suffix}\" {{\n"
-            f"    Some([@lib.Instruction::{instruction}(starshine_memory_argument({align}U))])\n"
-            f"  }} "
-        )
-    return (
-        "///|\nfn starshine_v128_memory_builtin_instructions(name : Bytes) -> Array[@lib.Instruction]? {\n"
-        + "".join(branches)
-        + "else {\n    None\n  }\n}\n"
-    )
 
 
 
@@ -756,7 +720,6 @@ def main() -> None:
         [
             (EMBEDDED, embedded),
             (TYPED_PARITY, typed_parity_source()),
-            (V128_MEMORY_BACKEND, v128_memory_backend_source()),
         ]
     )
     if check:

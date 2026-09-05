@@ -250,7 +250,19 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
   }
   if name.equals(b"i8x16.splat") ||
     name.equals(b"i16x8.splat") ||
-    name.equals(b"i32x4.splat") {
+    name.equals(b"i32x4.splat") ||
+    name.equals(b"v128.load8_splat") ||
+    name.equals(b"v128.load16_splat") ||
+    name.equals(b"v128.load32_splat") ||
+    name.equals(b"v128.load64_splat") ||
+    name.equals(b"v128.load8x8_s") ||
+    name.equals(b"v128.load8x8_u") ||
+    name.equals(b"v128.load16x4_s") ||
+    name.equals(b"v128.load16x4_u") ||
+    name.equals(b"v128.load32x2_s") ||
+    name.equals(b"v128.load32x2_u") ||
+    name.equals(b"v128.load32_zero") ||
+    name.equals(b"v128.load64_zero") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
       inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier]
       result: SelfHostWasmBodyCarrier::V128BodyCarrier
@@ -363,6 +375,76 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     return Option::Some(SelfHostRawIntrinsicSignature::{
       inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::F64BodyCarrier]
       result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    })
+  }
+  if name.equals(b"v128.load8_lane 0") ||
+    name.equals(b"v128.load8_lane 1") ||
+    name.equals(b"v128.load8_lane 2") ||
+    name.equals(b"v128.load8_lane 3") ||
+    name.equals(b"v128.load8_lane 4") ||
+    name.equals(b"v128.load8_lane 5") ||
+    name.equals(b"v128.load8_lane 6") ||
+    name.equals(b"v128.load8_lane 7") ||
+    name.equals(b"v128.load8_lane 8") ||
+    name.equals(b"v128.load8_lane 9") ||
+    name.equals(b"v128.load8_lane 10") ||
+    name.equals(b"v128.load8_lane 11") ||
+    name.equals(b"v128.load8_lane 12") ||
+    name.equals(b"v128.load8_lane 13") ||
+    name.equals(b"v128.load8_lane 14") ||
+    name.equals(b"v128.load8_lane 15") ||
+    name.equals(b"v128.load16_lane 0") ||
+    name.equals(b"v128.load16_lane 1") ||
+    name.equals(b"v128.load16_lane 2") ||
+    name.equals(b"v128.load16_lane 3") ||
+    name.equals(b"v128.load16_lane 4") ||
+    name.equals(b"v128.load16_lane 5") ||
+    name.equals(b"v128.load16_lane 6") ||
+    name.equals(b"v128.load16_lane 7") ||
+    name.equals(b"v128.load32_lane 0") ||
+    name.equals(b"v128.load32_lane 1") ||
+    name.equals(b"v128.load32_lane 2") ||
+    name.equals(b"v128.load32_lane 3") ||
+    name.equals(b"v128.load64_lane 0") ||
+    name.equals(b"v128.load64_lane 1") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier, SelfHostWasmBodyCarrier::V128BodyCarrier]
+      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    })
+  }
+  if name.equals(b"v128.store8_lane 0") ||
+    name.equals(b"v128.store8_lane 1") ||
+    name.equals(b"v128.store8_lane 2") ||
+    name.equals(b"v128.store8_lane 3") ||
+    name.equals(b"v128.store8_lane 4") ||
+    name.equals(b"v128.store8_lane 5") ||
+    name.equals(b"v128.store8_lane 6") ||
+    name.equals(b"v128.store8_lane 7") ||
+    name.equals(b"v128.store8_lane 8") ||
+    name.equals(b"v128.store8_lane 9") ||
+    name.equals(b"v128.store8_lane 10") ||
+    name.equals(b"v128.store8_lane 11") ||
+    name.equals(b"v128.store8_lane 12") ||
+    name.equals(b"v128.store8_lane 13") ||
+    name.equals(b"v128.store8_lane 14") ||
+    name.equals(b"v128.store8_lane 15") ||
+    name.equals(b"v128.store16_lane 0") ||
+    name.equals(b"v128.store16_lane 1") ||
+    name.equals(b"v128.store16_lane 2") ||
+    name.equals(b"v128.store16_lane 3") ||
+    name.equals(b"v128.store16_lane 4") ||
+    name.equals(b"v128.store16_lane 5") ||
+    name.equals(b"v128.store16_lane 6") ||
+    name.equals(b"v128.store16_lane 7") ||
+    name.equals(b"v128.store32_lane 0") ||
+    name.equals(b"v128.store32_lane 1") ||
+    name.equals(b"v128.store32_lane 2") ||
+    name.equals(b"v128.store32_lane 3") ||
+    name.equals(b"v128.store64_lane 0") ||
+    name.equals(b"v128.store64_lane 1") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier, SelfHostWasmBodyCarrier::V128BodyCarrier]
+      result: SelfHostWasmBodyCarrier::UnitBodyCarrier
     })
   }
   self_host_raw_shuffle_signature(name)

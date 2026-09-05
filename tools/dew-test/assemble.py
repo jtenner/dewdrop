@@ -60,6 +60,7 @@ def main() -> None:
     for fixture, module in [
         ("scalar_conversions", "dew.std.conversions"),
         ("memory_operations", "dew.std.memory"),
+        ("simd-memory-operations", "app.simd_memory"),
         ("arithmetic_operations", "dew.std.arithmetic"),
         ("math_operations", "dew.std.math_probes"),
         ("specialization_products", "app.specialization_probes"),

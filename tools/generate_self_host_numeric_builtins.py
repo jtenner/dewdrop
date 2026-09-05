@@ -7,7 +7,7 @@ import re
 import argparse
 from pathlib import Path
 
-from wasm_simd_intrinsics import SIMD_INSTRUCTIONS, SIMD_LANE_INSTRUCTIONS
+from wasm_simd_intrinsics import SIMD_INSTRUCTIONS, SIMD_LANE_INSTRUCTIONS, SIMD_MEMORY_INSTRUCTIONS
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src/backend/starshine_numeric_builtins.mbt"
@@ -174,6 +174,12 @@ def main() -> None:
     for name, instruction, _, _, indices in SIMD_LANE_INSTRUCTIONS:
         lines.append(f"  }} else if name.equals(b\"{name}\") {{")
         arguments = ", ".join(f"StarshineFfi.ffi_lib_LaneIdx_new({index}i32)" for index in indices)
+        lines.extend(emit_push(f"StarshineFfi.ffi_lib_Instruction_{instruction}({arguments})"))
+    for name, instruction, _, _, align, lane in SIMD_MEMORY_INSTRUCTIONS:
+        lines.append(f"  }} else if name.equals(b\"{name}\") {{")
+        arguments = f"StarshineFfi.ffi_ffi_bridge_memory_argument({align}i32, 0i64)"
+        if lane is not None:
+            arguments += f", StarshineFfi.ffi_lib_LaneIdx_new({lane}i32)"
         lines.extend(emit_push(f"StarshineFfi.ffi_lib_Instruction_{instruction}({arguments})"))
     lines.extend(
         [

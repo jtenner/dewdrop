@@ -2122,6 +2122,366 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_f64x2_replace_lane(StarshineFfi.ffi_lib_LaneIdx_new(1i32)),
     )
+  } else if name.equals(b"v128.load8_splat") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_splat(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load8_lane 0") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(0i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 0") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(0i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 1") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(1i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 1") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(1i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 2") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(2i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 2") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(2i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 3") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(3i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 3") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(3i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 4") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(4i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 4") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(4i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 5") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(5i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 5") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(5i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 6") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(6i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 6") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(6i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 7") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(7i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 7") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(7i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 8") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(8i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 8") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(8i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 9") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(9i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 9") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(9i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 10") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(10i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 10") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(10i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 11") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(11i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 11") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(11i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 12") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(12i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 12") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(12i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 13") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(13i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 13") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(13i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 14") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(14i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 14") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(14i32)),
+    )
+  } else if name.equals(b"v128.load8_lane 15") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(15i32)),
+    )
+  } else if name.equals(b"v128.store8_lane 15") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store8_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(0i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(15i32)),
+    )
+  } else if name.equals(b"v128.load16_splat") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16_splat(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load16_lane 0") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(0i32)),
+    )
+  } else if name.equals(b"v128.store16_lane 0") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(0i32)),
+    )
+  } else if name.equals(b"v128.load16_lane 1") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(1i32)),
+    )
+  } else if name.equals(b"v128.store16_lane 1") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(1i32)),
+    )
+  } else if name.equals(b"v128.load16_lane 2") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(2i32)),
+    )
+  } else if name.equals(b"v128.store16_lane 2") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(2i32)),
+    )
+  } else if name.equals(b"v128.load16_lane 3") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(3i32)),
+    )
+  } else if name.equals(b"v128.store16_lane 3") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(3i32)),
+    )
+  } else if name.equals(b"v128.load16_lane 4") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(4i32)),
+    )
+  } else if name.equals(b"v128.store16_lane 4") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(4i32)),
+    )
+  } else if name.equals(b"v128.load16_lane 5") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(5i32)),
+    )
+  } else if name.equals(b"v128.store16_lane 5") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(5i32)),
+    )
+  } else if name.equals(b"v128.load16_lane 6") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(6i32)),
+    )
+  } else if name.equals(b"v128.store16_lane 6") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(6i32)),
+    )
+  } else if name.equals(b"v128.load16_lane 7") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(7i32)),
+    )
+  } else if name.equals(b"v128.store16_lane 7") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store16_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(1i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(7i32)),
+    )
+  } else if name.equals(b"v128.load32_splat") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load32_splat(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load32_lane 0") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load32_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(0i32)),
+    )
+  } else if name.equals(b"v128.store32_lane 0") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store32_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(0i32)),
+    )
+  } else if name.equals(b"v128.load32_lane 1") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load32_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(1i32)),
+    )
+  } else if name.equals(b"v128.store32_lane 1") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store32_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(1i32)),
+    )
+  } else if name.equals(b"v128.load32_lane 2") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load32_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(2i32)),
+    )
+  } else if name.equals(b"v128.store32_lane 2") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store32_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(2i32)),
+    )
+  } else if name.equals(b"v128.load32_lane 3") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load32_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(3i32)),
+    )
+  } else if name.equals(b"v128.store32_lane 3") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store32_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(3i32)),
+    )
+  } else if name.equals(b"v128.load64_splat") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load64_splat(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load64_lane 0") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load64_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(0i32)),
+    )
+  } else if name.equals(b"v128.store64_lane 0") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store64_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(0i32)),
+    )
+  } else if name.equals(b"v128.load64_lane 1") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load64_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(1i32)),
+    )
+  } else if name.equals(b"v128.store64_lane 1") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_store64_lane(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64), StarshineFfi.ffi_lib_LaneIdx_new(1i32)),
+    )
+  } else if name.equals(b"v128.load8x8_s") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8x8s(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load8x8_u") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load8x8u(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load16x4_s") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16x4s(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load16x4_u") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load16x4u(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load32x2_s") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load32x2s(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load32x2_u") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load32x2u(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load32_zero") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load32_zero(StarshineFfi.ffi_ffi_bridge_memory_argument(2i32, 0i64)),
+    )
+  } else if name.equals(b"v128.load64_zero") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_v128_load64_zero(StarshineFfi.ffi_ffi_bridge_memory_argument(3i32, 0i64)),
+    )
   } else {
     return false
   }

@@ -3,6 +3,7 @@ open dew.std.u8x16
 open dew.std.i16x8
 open dew.std.u16x8
 open dew.std.i32x4
+open dew.std.i64x2
 open dew.std.f32x4
 
 test "SIMD narrowing saturates signed lanes" {
@@ -55,4 +56,32 @@ test "SIMD reverse and concat retain all source lanes" {
   assert(shifted.extract_0() == 7i8, "concat last left lane")
   assert(shifted.extract_1() == 42i8, "concat first right lane")
   assert(shifted.extract_15() == 42i8, "concat final right lane")
+}
+
+test "SIMD widening load preserves signed unaligned bytes" {
+  u64_store(257u32, 0u64)
+  i8_store(257u32, -128i8)
+  i8_store(264u32, 127i8)
+  let value = i16x8_load_extend_i8x8_s(257u32)
+  assert(value.extract_0() == -128i16, "signed widening load first lane")
+  assert(value.extract_7() == 127i16, "signed widening load final lane")
+}
+
+test "SIMD zero load clears high lanes" {
+  u32_store(273u32, 4294967295u32)
+  let value = i32x4_load_zero(273u32)
+  assert(value.extract_0() == -1i32, "zero load preserves input bits")
+  assert(value.extract_3() == 0i32, "zero load clears upper bits")
+}
+
+test "SIMD lane memory preserves other lanes and bytes" {
+  i64_store(281u32, -9223372036854775808i64)
+  let value = i64x2_splat(7i64).load_lane_1(281u32)
+  assert(value.extract_0() == 7i64, "lane load changed another lane")
+  assert(value.extract_1() == -9223372036854775808i64, "lane load lost I64 bits")
+  u32_store(296u32, 2864434397u32)
+  i16x8_splat(1234i16).store_lane_7(297u32)
+  assert(u8_load(296u32) == 221u8, "lane store changed preceding byte")
+  assert(u16_load(297u32) == 1234u16, "lane store chose wrong value")
+  assert(u8_load(299u32) == 170u8, "lane store changed following byte")
 }

@@ -262,3 +262,32 @@ def simd_shuffle_immediates(descriptor):
     ):
         return None
     return tuple(map(int, tokens))
+
+
+def _memory_instructions():
+    instructions = []
+    for width, align, lanes in ((8, 0, 16), (16, 1, 8), (32, 2, 4), (64, 3, 2)):
+        instructions.append((
+            f"v128.load{width}_splat", f"v128_load{width}_splat", ("I32",), "V128", align, None,
+        ))
+        for index in range(lanes):
+            for operation in ("load", "store"):
+                instructions.append((
+                    f"v128.{operation}{width}_lane {index}", f"v128_{operation}{width}_lane",
+                    ("I32", "V128"), "V128" if operation == "load" else "Unit", align, index,
+                ))
+    for width, count in ((8, 8), (16, 4), (32, 2)):
+        for sign in ("s", "u"):
+            instructions.append((
+                f"v128.load{width}x{count}_{sign}", f"v128_load{width}x{count}{sign}",
+                ("I32",), "V128", 3, None,
+            ))
+    for width, align in ((32, 2), (64, 3)):
+        instructions.append((
+            f"v128.load{width}_zero", f"v128_load{width}_zero", ("I32",), "V128", align, None,
+        ))
+    return tuple(instructions)
+
+
+SIMD_MEMORY_INSTRUCTIONS = _memory_instructions()
+SIMD_SIGNATURES += tuple(row[:4] for row in SIMD_MEMORY_INSTRUCTIONS)

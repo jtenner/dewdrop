@@ -195,6 +195,10 @@ CARRIER_ASSERTIONS += tuple(
                                ("ffi_bridge::imports_new", "result", 0))),
         ("StarshineExpr", (("Expr::new", "result", 0),
                           ("ffi_bridge::instructions_new", "result", 0))),
+        ("StarshineMemArg", (("ffi_bridge::memory_argument", "result", 0),
+                            ("Instruction::v128_load8_splat", "parameter", 0),
+                            ("Instruction::v128_load8_lane", "parameter", 0),
+                            ("Instruction::v128_store64_lane", "parameter", 0))),
     )
 )
 

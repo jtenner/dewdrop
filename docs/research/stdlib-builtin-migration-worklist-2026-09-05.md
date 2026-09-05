@@ -27,7 +27,7 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   Scalar and whole-V128 memory operations use 16 checked instructions. See
   `raw-arithmetic-instructions-2026-09-05.md` and
   `raw-memory-instructions-2026-09-05.md`.
-- [ ] Remaining SIMD operations: explicit instruction/immediate contracts; express
+- [x] Remaining SIMD operations: explicit instruction/immediate contracts; express
   compositions, permutations, and convenience algorithms in Dew.
   The first 150 immediate-free opcode contracts pass checks in both compilers;
   see `raw-simd-instructions-2026-09-05.md`. Another 44 cross-lane opcode contracts
@@ -35,7 +35,9 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   `raw-simd-cross-lane-instructions-2026-09-05.md`. Lane and generic shuffle
   contracts pass native, self-host, library, and generated-source checks; see
   `raw-simd-immediates-2026-09-05.md`.
-  Partial vector memory operations remain open.
+  Partial vector memory operations now use 72 checked descriptors and exact
+  memory metadata. Native, execution, self-host, generated-source, and clean
+  bootstrap checks pass. See `raw-simd-memory-instructions-2026-09-05.md`.
 - [x] Math: all 17 primitive helper targets use checked raw instructions;
   higher-level algorithms remain Dew. See `raw-math-instructions-2026-09-05.md`.
 - [ ] Array: move mutable length/capacity, growth, mutation, iteration, and bulk

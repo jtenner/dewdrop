@@ -28,7 +28,7 @@ test "raw SIMD instructions validate every operand and result" {
   let i64 = @semantic.raw_wasm_builtin_signature(b"i64.add").unwrap().inputs[0]
   let mut checked = 0
   for index, case_ in cases {
-    let (opcode, inputs, _) = case_
+    let (opcode, inputs, output) = case_
     for function_ in planned.functions {
       if function_.name != @utf8.encode("operation\{index}") {
         continue
@@ -37,8 +37,8 @@ test "raw SIMD instructions validate every operand and result" {
       let parameters = function_.parameters
       let results = function_.results
       assert_eq(parameters.length, inputs.length())
-      assert_eq(results.length, 1)
-      for position in 0..<=parameters.length {
+      assert_eq(results.length, if output == "Unit" { 0 } else { 1 })
+      for position in 0..<(parameters.length + results.length) {
         let slot = if position == parameters.length {
           results.start
         } else {
@@ -61,7 +61,7 @@ test "raw SIMD instructions validate every operand and result" {
       }
     }
   }
-  assert_eq(checked, 293)
+  assert_eq(checked, 365)
 }
 
 ///|
@@ -70,7 +70,8 @@ test "invalid SIMD immediates fail before Wasm emission" {
     opcode in [
       "i8x16.extract_lane_s 16", "i16x8.replace_lane 8", "i8x16.shuffle 32 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15",
       "i8x16.shuffle 00 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15", "i8x16.shuffle 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14",
-      "i8x16.shuffle 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16",
+      "i8x16.shuffle 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16", "v128.load8_lane 16",
+      "v128.store64_lane 2",
     ] {
     let name = @utf8.encode(opcode)
     assert_eq(@semantic.raw_wasm_builtin_signature(name), None)

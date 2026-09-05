@@ -4,6 +4,7 @@ import { performance } from "node:perf_hooks";
 import { execFileSync } from "node:child_process";
 import { checkScalarConversions } from "./scalar-conversion-cases.mjs";
 import { checkMemoryOperations } from "./memory-operation-cases.mjs";
+import { checkSimdMemoryOperations } from "./simd-memory-operation-cases.mjs";
 import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
 import { checkMathOperations } from "./math-operation-cases.mjs";
 import { checkSpecializationCallbacks } from "./specialization-callback-cases.mjs";
@@ -320,6 +321,11 @@ for (const [name, expected] of [
         throw new Error(`SIMD opcode ${opcode} failed self-host compilation or Wasm validation`, { cause: error });
       }
     }
+    const memoryChecks = await checkSimdMemoryOperations(async (_, source) => {
+      const exports = await compileSourceExports(source);
+      return { operation: exports.main, memory: exports.memory };
+    });
+    console.log(`self-host SIMD memory operation checks passed: ${memoryChecks}`);
     const declarations = `
 builtin splat8(value: I32) -> V128 = "i8x16.splat"
 builtin splat16(value: I32) -> V128 = "i16x8.splat"

@@ -47,6 +47,8 @@ test "shuffle immediates are bounded and independent of library recipes" {
     b"i8x16.shuffle 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16",
     b"i8x16.extract_lane_s 16",
     b"i16x8.replace_lane 8",
+    b"v128.load8_lane 16",
+    b"v128.store64_lane 2",
   ]
   let _ = while 0u32 {
     index => if index < invalid.length() {
