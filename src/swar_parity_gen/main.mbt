@@ -1,4 +1,11 @@
 ///|
+fn swar_parity_io_error_message(error : @fs.IOError) -> String {
+  match error {
+    @fs.IOError(message) => message
+  }
+}
+
+///|
 fn compile_swar_parity(source : Bytes) -> Bytes {
   let manifest = @semantic.ProgramManifest::new([
     @semantic.ManifestModule::new("parity.swar", [
@@ -24,10 +31,10 @@ fn compile_swar_parity(source : Bytes) -> Bytes {
 ///|
 fn main {
   let source = @fs.read_file_to_bytes("tools/swar-parity/swar_parity.dew") catch {
-    error => abort(error.to_string())
+    error => abort(swar_parity_io_error_message(error))
   }
   let typed = @fs.read_file_to_bytes("tools/swar-parity/typed_lane_parity.dew") catch {
-    error => abort(error.to_string())
+    error => abort(swar_parity_io_error_message(error))
   }
   let combined = Buffer(size_hint=source.length() + typed.length() + 1)
   combined.write_bytes(typed)
@@ -35,7 +42,7 @@ fn main {
   combined.write_bytes(source)
   let binary = compile_swar_parity(combined.to_bytes())
   @fs.write_bytes_to_file("tools/swar-parity/swar_parity.wasm", binary) catch {
-    error => abort(error.to_string())
+    error => abort(swar_parity_io_error_message(error))
   }
   println("wrote tools/swar-parity/swar_parity.wasm")
 }
