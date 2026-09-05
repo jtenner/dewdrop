@@ -22,4 +22,9 @@ execution checks, and all 66 shared callback checks. New source cases cover a
 discarded scalar match, one observable arm effect, an unused match binding, a
 discarded conditional, and a mutable tuple binding captured by a closure.
 The previous lane failed on the scalar match with the same Unit/I32 error as
-the bootstrap. A fresh clean bootstrap is being checked separately.
+the bootstrap.
+
+The clean bootstrap at `3a952e9` passed. Compiler B and C have the same raw and
+linked SHA-256: `2ccf6ec22e33d1c98c8cef989b1e82772edb7195421baaee3e210d2f206104d0`.
+Compiler A built in 34.816 seconds and executed in 69.845 seconds; the complete
+lane took 203.241 seconds. These over-30-second runs remain performance bugs.
