@@ -1,0 +1,83 @@
+open dew.std.wasm.intrinsics
+
+struct RawBacking<t> {
+  mut storage: WasmArray<t>
+}
+
+struct RawCell {
+  value: I64
+}
+
+fn raw_backing<t>(value: t) -> RawBacking<t> {
+  RawBacking::{
+    storage: wasm_array_new(1u32, value)
+  }
+}
+
+fn raw_backing_read<t>(value: RawBacking<t>) -> t {
+  wasm_array_get(value.storage, 0u32)
+}
+
+fn raw_backing_array<t>(value: RawBacking<t>) -> WasmArray<t> {
+  value.storage
+}
+
+pub fn main(case: U32) -> I32 {
+  if case == 0u32 {
+    let backing = raw_backing(41i32)
+    wasm_array_set(backing.storage, 0u32, 42i32)
+    if raw_backing_read(backing) == 42i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 1u32 {
+    let backing = raw_backing(4294967297i64)
+    wasm_array_set(backing.storage, 0u32, 4294967298i64)
+    if raw_backing_read(backing) == 4294967298i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 2u32 {
+    let backing = raw_backing(RawCell::{
+      value: 42i64
+    })
+    if raw_backing_read(backing).value == 42i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 3u32 {
+    let backing = raw_backing(4294967297i64)
+    if wasm_array_get(raw_backing_array(backing), 0u32) == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 4u32 {
+    let backing = raw_backing(1.5f32)
+    if raw_backing_read(backing) == 1.5f32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 5u32 {
+    let backing = raw_backing(1.5f64)
+    if raw_backing_read(backing) == 1.5f64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 6u32 {
+    let backing = raw_backing(1i64)
+    backing.storage = wasm_array_new(2u32, 4294967297i64)
+    if wasm_array_len(backing.storage) == 2u32 && raw_backing_read(backing) == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else {
+    0i32
+  }
+}

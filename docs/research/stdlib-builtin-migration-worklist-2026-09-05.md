@@ -53,6 +53,9 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   Seventeen shared array checks pass in both compilers; see
   `array-checked-library-2026-09-05.md`. Constructor effects/source order and
   explicit Unit storage are fixed; see `constructor-evaluation-order-2026-09-05.md`.
+  Ordinary generic structs can now hold typed raw Wasm arrays without an
+  invalid cast; seven shared execution cases pass. See
+  `generic-raw-array-storage-2026-09-05.md`.
   Basic storage/growth and remaining legacy dispatch are still open.
 - [ ] Map and Set: move hashing, buckets, growth, lookup, and iteration into Dew.
 - [ ] Queue, circular buffer, and deque: move storage algorithms into Dew.

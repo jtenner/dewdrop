@@ -1361,11 +1361,15 @@ fn wasmgc_storage_type(
           NominalType(declaration) if declaration ==
             standard_fixed_array_type_declaration() &&
             arguments.length == 1 => {
+            let element = resolved.type_arguments[arguments.start]
+            if resolved.types[element] is GenericParameterType(_) {
+              // A shared generic field can hold any Wasm array heap type.
+              // Its declared type parameter is an erasure contract, not
+              // evidence that the backing array contains reference elements.
+              return Some(WasmNullableEqRefStorage)
+            }
             let carrier = wasmgc_fixed_array_carrier(
-              planned_resolved_value_shape(
-                resolved,
-                resolved.type_arguments[arguments.start],
-              ),
+              planned_resolved_value_shape(resolved, element),
             )
             if carrier >= 0 {
               return Some(WasmFixedArrayRefStorage(carrier))
