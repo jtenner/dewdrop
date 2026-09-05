@@ -20859,28 +20859,19 @@ fn self_host_emit_linked_i32_expression(
                 }
               }
               let lambda = module_.lambdas[lambda_position]
-              let type_index = match self_host_linked_lambda_type_index(
-                link,
-                module_index,
-                lambda_position,
-                caller_specialization,
-              ) {
+              let plan = match canonical_body_plan {
                 Option::Some(value) => value
-                Option::None => {
-                  return Option::Some("linked lambda closure type is missing")
-                }
+                Option::None => return Option::Some("closure creation has no frozen body plan")
               }
-              let function_index = match self_host_linked_lambda_function_index(
-                link,
-                module_index,
-                lambda_id,
-                caller_specialization,
-              ) {
+              let closure = match self_host_body_plan_expression(plan, expression) {
                 Option::Some(value) => value
-                Option::None => {
-                  return Option::Some("linked lambda function is missing")
-                }
+                Option::None => return Option::Some("closure creation has no frozen expression plan")
               }
+              if !self_host_lambda_construction_target_matches(link, plan, closure, lambda_id) {
+                return Option::Some("closure construction target differs from its frozen lambda identity")
+              }
+              let type_index = closure.selected_type_index
+              let function_index = self_host_linked_physical_function_index(closure.call_function_index)
               StarshineFfi.ffi_ffi_bridge_instructions_push(
                 destination,
                 StarshineFfi.ffi_lib_Instruction_ref_func(
@@ -20895,10 +20886,6 @@ fn self_host_emit_linked_i32_expression(
                 type_index,
                 destination,
               ))
-              let plan = match canonical_body_plan {
-                Option::Some(value) => value
-                Option::None => return Option::Some("closure creation has no frozen body plan")
-              }
               let mut capture_index = 0u32
               while capture_index {
                 _ => if capture_index < lambda.captures.length {

@@ -2165,8 +2165,28 @@ fn self_host_body_seed_expression(
     SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => {
       carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
     }
-    SelfHostPlannedExpressionKind::PlannedLambdaClosure(_) => {
+    SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda) => {
       carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+      match self_host_linked_module_index_by_id(link, module_.module_id) {
+        Option::Some(module_index) => {
+          match self_host_linked_lambda_position(module_, lambda) {
+            Option::Some(position) => match self_host_linked_lambda_type_index(link, module_index, position, specialization) {
+              Option::Some(type_) => {
+                selected_type_index = type_
+              }
+              Option::None => {}
+            }
+            Option::None => {}
+          }
+          match self_host_linked_lambda_function_index(link, module_index, lambda, specialization) {
+            Option::Some(function_) => if function_ >= 2u32 {
+              call_function_index = function_ - 2u32
+            }
+            Option::None => {}
+          }
+        }
+        Option::None => {}
+      }
     }
     SelfHostPlannedExpressionKind::PlannedObjectNew(_) => {
       carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
@@ -7994,6 +8014,15 @@ fn self_host_verify_one_physical_body(
           !self_host_linked_function_declaration_module_matches(link, expression_plan.call_function_index, declaration) {
           self_host_body_add_diagnostic(
             diagnostics, plan, module_, expression, declaration, "call target is missing",
+            SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+            SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+          )
+        }
+      }
+      SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda) => {
+        if !self_host_lambda_construction_target_matches(link, plan, expression_plan, lambda) {
+          self_host_body_add_diagnostic(
+            diagnostics, plan, module_, expression, plan.declaration, "call target is missing",
             SelfHostWasmBodyCarrier::EqRefBodyCarrier,
             SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
           )

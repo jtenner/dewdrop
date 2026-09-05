@@ -134,3 +134,54 @@ test "generic lambdas retain separate scalar and Unit specialization identities"
   let fragments = self_host_physical_test_fragments(b"fn maker<t>(held: t) -> fn() -> t {\n  fn() -> t {\n    held\n  }\n}\npub fn run(value: I64) -> I64 {\n  let first = maker::<I32>(7i32)\n  let second = maker::<I64>(value)\n  let third = maker::<Unit>(())\n  first()\n  third()\n  second()\n}\n")
   self_host_assert_generic_lambda_fragments(fragments.modules[0u32])
 }
+
+fn self_host_test_closure_target_mutation(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  let module_ = self_host_linked_lowering_module_at(link, plan.module_index)
+  let mut index = 0u32
+  let mut checked = false
+  while index {
+    _ => if index < plan.expressions.length() {
+      let source = self_host_body_physical_expression_at(plan.expressions, index)
+      match module_.expressions[source.expression].kind {
+        SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda) => {
+          assert(self_host_lambda_construction_target_matches(link, plan, source, lambda), "valid construction target")
+          plan.expressions[index] = SelfHostPlannedPhysicalExpressionCarrier::{
+            expression: source.expression
+            value: source.value
+            carrier: source.carrier
+            conflict_expected: source.conflict_expected
+            conflict_actual: source.conflict_actual
+            receiver_expression: source.receiver_expression
+            receiver_logical_type: source.receiver_logical_type
+            receiver_nominal_owner: source.receiver_nominal_owner
+            receiver_physical_heap_type: source.receiver_physical_heap_type
+            selected_field: source.selected_field
+            selected_type_index: source.selected_type_index
+            selected_field_index: source.selected_field_index
+            selected_storage: source.selected_storage
+            call_function_index: plan.physical_function_index - 2u32
+          }
+          assert(!self_host_lambda_construction_target_matches(link, plan, plan.expressions[index], lambda), "a parent function cannot replace the lambda entry")
+          checked = true
+        }
+        _ => {}
+      }
+      index = index + 1u32
+      continue index
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(checked, "fixture has a closure construction")
+  let diagnostics = []
+  self_host_verify_one_physical_body(link, plan, diagnostics)
+  assert(diagnostics.length() == 1u32, "one target mutation has one diagnostic")
+  assert(self_host_u32_equal(diagnostics[0u32].code, 607u32), "BOD-607 identifies the wrong closure target")
+}
+
+test "frozen closure construction rejects a different entry function" {
+  let fragments = self_host_physical_test_fragments(b"pub fn maker() -> fn() -> I64 {\n  fn() -> I64 {\n    42i64\n  }\n}\n")
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  self_host_test_closure_target_mutation(link, plan.bodies[0u32])
+}

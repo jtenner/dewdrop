@@ -1,6 +1,33 @@
 open dew.std.array
 open dew.std.option
 
+fn self_host_lambda_construction_target_matches(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, expression: SelfHostPlannedPhysicalExpressionCarrier, lambda: U32) -> Bool {
+  let target = expression.call_function_index
+  if target >= link.functions.length() || expression.selected_type_index == 4294967295u32 {
+    return false
+  }
+  let function_ = self_host_planned_program_wasm_function_identity(link.functions[target])
+  if !self_host_u32_equal(function_.function_index, target) ||
+    !self_host_u32_equal(function_.module_index, plan.module_index) ||
+    !self_host_u64_equal(function_.declaration, plan.declaration) ||
+    !self_host_u32_equal(function_.lambda, lambda) ||
+    !self_host_u32_equal(function_.specialization, plan.specialization) {
+    return false
+  }
+  let fragments = self_host_body_fragment_module(link, plan.module_index)
+  for type_ in link.types {
+    if self_host_u32_equal(type_.type_index, expression.selected_type_index) && self_host_u32_equal(type_.module_index, plan.module_index) {
+      match fragments.physical_types[type_.fragment_index].kind {
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(id, request) => {
+          return self_host_u32_equal(id, lambda) && self_host_u32_equal(request, plan.specialization)
+        }
+        _ => return false
+      }
+    }
+  }
+  false
+}
+
 fn self_host_lambda_owner_callable(module_: SelfHostPlannedModuleLowering, body_id: U64) -> Option<SelfHostPlannedCallable> {
   match self_host_program_specialization_body(module_, body_id) {
     Option::Some(body) => self_host_program_specialization_callable(module_, body.declaration)
