@@ -1,0 +1,44 @@
+open dew.std.option
+open dew.std.array
+
+fn self_host_capture_source_is_local(source: SelfHostLambdaCaptureSource, local: SelfHostPlannedLocal) -> Bool {
+  match source {
+    SelfHostLambdaCaptureSource::BodyLocalCapture(body, id) =>
+      self_host_u32_equal(local.lambda, 4294967295u32) && self_host_u64_equal(body, local.body) && self_host_u32_equal(id, local.local_id)
+    SelfHostLambdaCaptureSource::LambdaLocalCapture(lambda, id) =>
+      self_host_u32_equal(lambda, local.lambda) && self_host_u32_equal(id, local.local_id)
+  }
+}
+
+fn self_host_capture_has_value(shape: SelfHostPlannedValueShape) -> Bool {
+  !(shape is SelfHostPlannedValueShape::UnitPlannedValueShape) && !(shape is SelfHostPlannedValueShape::NeverPlannedValueShape)
+}
+
+fn self_host_local_has_capture(module_: SelfHostPlannedModuleLowering, local: SelfHostPlannedLocal) -> Bool {
+  for capture in module_.captures {
+    if self_host_capture_source_is_local(capture.source, local) {
+      return true
+    }
+  }
+  false
+}
+
+fn self_host_local_needs_capture_cell(module_: SelfHostPlannedModuleLowering, local: SelfHostPlannedLocal) -> Bool {
+  local.mutable_ && self_host_capture_has_value(local.shape) && self_host_local_has_capture(module_, local)
+}
+
+fn self_host_capture_source_local(module_: SelfHostPlannedModuleLowering, source: SelfHostLambdaCaptureSource) -> Option<U32> {
+  let mut index = 0u32
+  while index {
+    _ => if index < module_.locals.length() {
+    if self_host_capture_source_is_local(source, module_.locals[index]) {
+      return Option::Some(index)
+    }
+    index = index + 1u32
+    continue index
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}

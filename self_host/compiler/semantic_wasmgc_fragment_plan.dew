@@ -760,7 +760,7 @@ fn self_host_wasmgc_plan_closures(
   let _ = while local_index {
     current => if current < module_.locals.length() {
       let local = module_.locals[current]
-      if local.mutable_ {
+      if self_host_local_needs_capture_cell(module_, local) {
         let type_index = physical_types.length()
         let field_start = fields.length()
         fields.push(SelfHostPlannedWasmField::{
@@ -809,14 +809,21 @@ fn self_host_wasmgc_plan_closures(
           let source = module_.captures[
             self_host_u32_add(lambda.captures.start, current_capture)
           ]
+          if !self_host_capture_has_value(source.shape) {
+            continue current_capture + 1u32
+          }
           fields.push(SelfHostPlannedWasmField::{
             role: SelfHostPlannedWasmFieldRole::WasmLambdaCaptureField(
               lambda.lambda,
               current_capture,
             )
             declaration: 0u64
-            physical_index: current_capture + 1u32
-            storage: self_host_wasmgc_storage_type(source.shape)
+            physical_index: fields.length() - field_start
+            storage: if source.mutable_ {
+              SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+            } else {
+              self_host_wasmgc_storage_type(source.shape)
+            }
             mutable_: false
             exact_nominal: false
             offset: source.offset

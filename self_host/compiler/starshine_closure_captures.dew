@@ -1,0 +1,232 @@
+open dew.std.option
+open dew.std.array
+
+struct SelfHostLinkedCaptureCell {
+  type_index: U32
+  local_slot: U32
+}
+
+fn self_host_linked_local_capture_cell(link: SelfHostPlannedProgramWasmGCLink, plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local: U32) -> Option<SelfHostLinkedCaptureCell> {
+  let slot = match self_host_linked_capture_cell_slot(module_, body, local) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let canonical = match plan {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let relative = self_host_body_local_slot(module_, body, local)
+  match self_host_linked_capture_cell_type(link, canonical.module_index, body.locals.start + relative) {
+    Option::Some(type_) => Option::Some(SelfHostLinkedCaptureCell::{
+      type_index: type_
+      local_slot: slot
+    })
+    Option::None => Option::None
+  }
+}
+
+fn self_host_emit_capture_parameters(link: SelfHostPlannedProgramWasmGCLink, plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, destination: StarshineInstructions) -> Option<String> {
+  let mut index = 0u32
+  while index {
+    _ => if index < body.locals.length {
+    let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + index])
+    if local.kind is SelfHostBodyLocalKind::ParameterLocal && self_host_local_needs_capture_cell(module_, local) {
+      let cell = match self_host_linked_local_capture_cell(link, plan, module_, body, local.local_id) {
+        Option::Some(value) => value
+        Option::None => return Option::Some("captured parameter has no physical cell")
+      }
+      let source = match self_host_linked_i32_local_slot(module_, body, local.local_id) {
+        Option::Some(value) => value
+        Option::None => return Option::Some("captured parameter has no physical argument")
+      }
+      self_host_emit_capture_local_get(source, destination)
+      StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+        StarshineFfi.ffi_lib_Instruction_struct_new(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(cell.type_index))),
+      )
+      StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+        StarshineFfi.ffi_lib_Instruction_local_set(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(cell.local_slot))),
+      )
+    }
+    index = index + 1u32
+    continue index
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}
+
+fn self_host_capture_write_type(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32) -> Option<U32> {
+  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  for capture in module_.captures {
+    if self_host_u32_equal(capture.lambda, plan.lambda) && self_host_u32_equal(capture.capture, capture_id) && capture.mutable_ {
+      match self_host_capture_source_local(module_, capture.source) {
+        Option::Some(local) => return self_host_linked_capture_cell_type(link, plan.module_index, local)
+        Option::None => return Option::None
+      }
+    }
+  }
+  Option::None
+}
+
+fn self_host_emit_capture_local_get(slot: U32, destination: StarshineInstructions) -> Unit {
+  StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+    StarshineFfi.ffi_lib_Instruction_local_get(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(slot))),
+  )
+}
+
+fn self_host_emit_capture_field_get(type_: U32, field: U32, destination: StarshineInstructions) -> Unit {
+  StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+    StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(self_host_u32_to_i32(type_)),
+  )
+  StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+    StarshineFfi.ffi_lib_Instruction_struct_get(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(type_)), StarshineFfi.ffi_lib_U32_new(self_host_u32_to_i32(field))),
+  )
+}
+
+fn self_host_linked_capture_cell_type(link: SelfHostPlannedProgramWasmGCLink, module_index: U32, local_index: U32) -> Option<U32> {
+  let fragments = self_host_body_fragment_module(link, module_index)
+  if local_index >= fragments.capture_cell_type_indices.length() {
+    return Option::None
+  }
+  let fragment = fragments.capture_cell_type_indices[local_index]
+  for type_ in link.types {
+    if self_host_u32_equal(type_.module_index, module_index) && self_host_u32_equal(type_.fragment_index, fragment) {
+      return Option::Some(type_.type_index)
+    }
+  }
+  Option::None
+}
+
+// Hidden cell locals follow the normal locals and all expression scratch slots.
+// The scalar local's logical carrier remains unchanged in the frozen body plan.
+fn self_host_linked_capture_cell_slot(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local_id: U32) -> Option<U32> {
+  let base = self_host_linked_body_parameter_offset(module_, body) + body.locals.length + self_host_linked_i32_scratch_count(module_, body)
+  let mut offset = 0u32
+  let mut index = 0u32
+  while index {
+    _ => if index < body.locals.length {
+    let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + index])
+    if self_host_local_needs_capture_cell(module_, local) {
+      if self_host_u32_equal(local.local_id, local_id) {
+        return Option::Some(base + offset)
+      }
+      offset = offset + 1u32
+    }
+    index = index + 1u32
+    continue index
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_capture_field(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32) -> Option<SelfHostLinkedWasmFieldLink> {
+  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let position = match self_host_linked_lambda_position(module_, plan.lambda) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let type_ = match self_host_linked_lambda_type_index(link, plan.module_index, position) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let fragments = self_host_body_fragment_module(link, plan.module_index)
+  for field in fragments.fields {
+    match field.role {
+      SelfHostPlannedWasmFieldRole::WasmLambdaCaptureField(lambda, capture) => {
+        if self_host_u32_equal(lambda, plan.lambda) && self_host_u32_equal(capture, capture_id) {
+          return Option::Some(SelfHostLinkedWasmFieldLink::{
+            type_index: type_
+            field_index: field.physical_index
+          })
+        }
+      }
+      _ => {}
+    }
+  }
+  Option::None
+}
+
+fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32, dereference: Bool, destination: StarshineInstructions) -> Option<String> {
+  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let position = match self_host_linked_lambda_position(module_, plan.lambda) {
+    Option::Some(value) => value
+    Option::None => return Option::Some("capture read has no owning lambda")
+  }
+  let lambda = module_.lambdas[position]
+  let _ = self_host_assert_compiler_invariant_with_failure(
+    self_host_array_span_is_valid(lambda.captures.start, lambda.captures.length, module_.captures.length()) && capture_id < lambda.captures.length,
+    SelfHostInvariantFailure::{
+      code: 102u32
+      phase: 7u32
+      module_id: module_.module_id
+      declaration: plan.declaration
+      body: plan.body
+      expression: 4294967295u32
+      expected: u32_into_u64(lambda.captures.length)
+      actual: u32_into_u64(capture_id)
+      detail: u32_into_u64(plan.lambda)
+    },
+    "capture read must belong to its lambda span",
+  )
+  let capture = module_.captures[self_host_u32_add(lambda.captures.start, capture_id)]
+  if !self_host_capture_has_value(capture.shape) {
+    return Option::None
+  }
+  let field = match self_host_linked_capture_field(link, plan, capture_id) {
+    Option::Some(value) => value
+    Option::None => return Option::Some("capture read has no physical field")
+  }
+  self_host_emit_capture_local_get(0u32, destination)
+  self_host_emit_capture_field_get(field.type_index, field.field_index, destination)
+  if capture.mutable_ && dereference {
+    let local = match self_host_capture_source_local(module_, capture.source) {
+      Option::Some(value) => value
+      Option::None => return Option::Some("capture cell has no source local")
+    }
+    let cell = match self_host_linked_capture_cell_type(link, plan.module_index, local) {
+      Option::Some(value) => value
+      Option::None => return Option::Some("capture cell has no physical type")
+    }
+    self_host_emit_capture_field_get(cell, 0u32, destination)
+  }
+  Option::None
+}
+
+fn self_host_emit_closure_capture(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, body: SelfHostPlannedBodyLowering, capture: SelfHostPlannedCapture, destination: StarshineInstructions) -> Option<String> {
+  if !self_host_capture_has_value(capture.shape) {
+    return Option::None
+  }
+  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let mut index = 0u32
+  while index {
+    _ => if index < body.locals.length {
+    let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + index])
+    if self_host_capture_source_is_local(capture.source, local) {
+      let slot = match (if capture.mutable_ {
+        self_host_linked_capture_cell_slot(module_, body, local.local_id)
+      } else {
+        self_host_linked_i32_local_slot(module_, body, local.local_id)
+      }) {
+        Option::Some(value) => value
+        Option::None => return Option::Some("closure capture has no source physical local")
+      }
+      self_host_emit_capture_local_get(slot, destination)
+      return Option::None
+    }
+    index = index + 1u32
+    continue index
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  // A nested closure can forward a capture from its enclosing environment.
+  for outer in module_.captures {
+    if self_host_u32_equal(outer.lambda, plan.lambda) && self_host_lambda_capture_source_equal(outer.source, capture.source) {
+      return self_host_emit_capture_get(link, plan, outer.capture, false, destination)
+    }
+  }
+  Option::Some("closure capture source is outside its enclosing body and environment")
+}

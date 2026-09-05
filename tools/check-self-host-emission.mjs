@@ -316,6 +316,10 @@ for (const [name, expected] of [
       ["nominal", "struct Item {\n  value: I64\n}\n", "let callback = reader::<Item>()\n  callback(Item::{\n    value: value\n  }).value"],
       ["product", "", "let callback = reader::<(I32, I64)>()\n  let (_, result) = callback((7i32, value))\n  result"],
       ["lambda", "fn maker() -> fn(I64) -> I64 {\n  fn(value: I64) -> I64 {\n    value\n  }\n}\n", "let callback = maker()\n  callback(value)"],
+      ["captured parameter", "fn maker(held: I64) -> fn() -> I64 {\n  fn() -> I64 {\n    held\n  }\n}\n", "let callback = maker(value)\n  callback()"],
+      ["captured local", "", "let held = value\n  let callback = fn() -> I64 {\n    held\n  }\n  callback()"],
+      ["shared capture", "", "let mut held = 0i64\n  let write = fn(next: I64) -> Unit {\n    held = next\n  }\n  let read = fn() -> I64 {\n    held\n  }\n  write(value)\n  read()"],
+      ["forwarded capture", "fn maker(held: I64) -> fn() -> fn() -> I64 {\n  fn() -> fn() -> I64 {\n    fn() -> I64 {\n      held\n    }\n  }\n}\n", "let first = maker(value)\n  let second = first()\n  second()"],
     ]) {
       const source = declarations + "fn identity<t>(value: t) -> t {\n  value\n}\nfn reader<t>() -> fn(t) -> t {\n  identity\n}\npub fn main(value: I64) -> I64 {\n  " + body + "\n}\n";
       const main = await compileSource(source);

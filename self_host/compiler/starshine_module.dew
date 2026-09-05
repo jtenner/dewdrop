@@ -15712,6 +15712,10 @@ fn self_host_emit_linked_i32_expression(
   caller_specialization: U32,
   instructions: StarshineInstructions,
 ) -> Option<String> {
+  match self_host_emit_capture_parameters(link, canonical_body_plan, module_, body, instructions) {
+    Option::Some(error) => return Option::Some(error)
+    Option::None => {}
+  }
   let mut invariant_relative = 0u32
   let _ = while invariant_relative {
     current => if current < body.expressions.length {
@@ -16122,12 +16126,15 @@ fn self_host_emit_linked_i32_expression(
               body,
               local,
             ) {
-              Option::Some(slot) => StarshineFfi.ffi_ffi_bridge_instructions_push(
-                destination,
-                StarshineFfi.ffi_lib_Instruction_local_get(
-                  StarshineFfi.ffi_lib_LocalIdx_new(slot.into()),
-                ),
-              )
+              Option::Some(slot) => {
+                match self_host_linked_local_capture_cell(link, canonical_body_plan, module_, body, local) {
+                  Option::Some(cell) => {
+                    self_host_emit_capture_local_get(cell.local_slot, destination)
+                    self_host_emit_capture_field_get(cell.type_index, 0u32, destination)
+                  }
+                  Option::None => self_host_emit_capture_local_get(slot, destination)
+                }
+              }
               Option::None => {
                 return Option::Some("linked I32 local read has no physical slot")
               }
@@ -16138,10 +16145,16 @@ fn self_host_emit_linked_i32_expression(
               local,
             ) {
               Option::Some(slot) => {
-                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
-                  slot,
-                  destination,
-                ))
+                match self_host_linked_local_capture_cell(link, canonical_body_plan, module_, body, local) {
+                  Option::Some(cell) => {
+                    self_host_emit_capture_local_get(cell.local_slot, destination)
+                    StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+                      StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(self_host_u32_to_i32(cell.type_index)),
+                    )
+                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructSet(cell.type_index, 0u32, destination))
+                  }
+                  Option::None => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(slot, destination))
+                }
                 self_host_linked_i32_schedule_expression(
                   tasks,
                   expression_depths,
@@ -20451,8 +20464,15 @@ fn self_host_emit_linked_i32_expression(
               false,
               destination,
             )
-            SelfHostPlannedExpressionKind::PlannedCaptureGet(_) => {
-              return Option::Some("linked closure captures are not emitted yet")
+            SelfHostPlannedExpressionKind::PlannedCaptureGet(capture) => {
+              let plan = match canonical_body_plan {
+                Option::Some(value) => value
+                Option::None => return Option::Some("capture read has no frozen body plan")
+              }
+              match self_host_emit_capture_get(link, plan, capture, true, destination) {
+                Option::Some(error) => return Option::Some(error)
+                Option::None => {}
+              }
             }
             SelfHostPlannedExpressionKind::PlannedFunctionReference(declaration) => {
               match self_host_emit_planned_function_reference(link, canonical_body_plan, expression, declaration, destination) {
@@ -20792,9 +20812,6 @@ fn self_host_emit_linked_i32_expression(
                 }
               }
               let lambda = module_.lambdas[lambda_position]
-              if self_host_u32_greater(lambda.captures.length, 0u32) {
-                return Option::Some("linked lambda captures are not emitted yet")
-              }
               let type_index = match self_host_linked_lambda_type_index(
                 link,
                 module_index,
@@ -20829,6 +20846,24 @@ fn self_host_emit_linked_i32_expression(
                 type_index,
                 destination,
               ))
+              let plan = match canonical_body_plan {
+                Option::Some(value) => value
+                Option::None => return Option::Some("closure creation has no frozen body plan")
+              }
+              let mut capture_index = 0u32
+              while capture_index {
+                _ => if capture_index < lambda.captures.length {
+                let capture = module_.captures[self_host_u32_add(lambda.captures.start, capture_index)]
+                match self_host_emit_closure_capture(link, plan, body, capture, destination) {
+                  Option::Some(error) => return Option::Some(error)
+                  Option::None => {}
+                }
+                capture_index = capture_index + 1u32
+                continue capture_index
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
             }
             SelfHostPlannedExpressionKind::PlannedObjectNew(_) => {
               return Option::Some("linked object values are not emitted yet")
@@ -25677,8 +25712,24 @@ fn self_host_emit_linked_i32_expression(
             SelfHostPlannedExpressionKind::PlannedLocalSet(_, _) => {
               return Option::Some("linked local writes are not emitted yet")
             }
-            SelfHostPlannedExpressionKind::PlannedCaptureSet(_, _) => {
-              return Option::Some("linked capture writes are not emitted yet")
+            SelfHostPlannedExpressionKind::PlannedCaptureSet(capture, value) => {
+              let plan = match canonical_body_plan {
+                Option::Some(value) => value
+                Option::None => return Option::Some("capture write has no frozen body plan")
+              }
+              let cell = match self_host_capture_write_type(link, plan, capture) {
+                Option::Some(value) => value
+                Option::None => return Option::Some("capture write has no mutable physical cell")
+              }
+              match self_host_emit_capture_get(link, plan, capture, false, destination) {
+                Option::Some(error) => return Option::Some(error)
+                Option::None => {}
+              }
+              StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+                StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(self_host_u32_to_i32(cell)),
+              )
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructSet(cell, 0u32, destination))
+              self_host_linked_i32_schedule_expression(tasks, expression_depths, value, destination, depth)
             }
             SelfHostPlannedExpressionKind::PlannedIndexSet(
               base,
@@ -27601,10 +27652,13 @@ fn self_host_emit_linked_i32_expression(
                     local,
                   ) {
                     Option::Some(slot) => {
-                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
-                        slot,
-                        destination,
-                      ))
+                      match self_host_linked_local_capture_cell(link, canonical_body_plan, module_, body, local) {
+                        Option::Some(cell) => {
+                          tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(cell.local_slot, destination))
+                          tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(cell.type_index, destination))
+                        }
+                        Option::None => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(slot, destination))
+                      }
                       self_host_linked_i32_schedule_expression(
                         tasks,
                         expression_depths,
@@ -28895,6 +28949,10 @@ fn self_host_linked_local_is_read(
   body: SelfHostPlannedBodyLowering,
   local_id: U32,
 ) -> Bool {
+  let local_slot = self_host_body_local_slot(module_, body, local_id)
+  if local_slot < body.locals.length && self_host_local_has_capture(module_, module_.locals[body.locals.start + local_slot]) {
+    return true
+  }
   let mut relative = 0u32
   let _ = while relative {
     current => if current < body.expressions.length {
@@ -38946,6 +39004,21 @@ fn self_host_linked_scalar_locals(
         _ => {}
       }
       continue current + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let mut capture_local = 0u32
+  while capture_local {
+    _ => if capture_local < body.locals.length {
+    let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + capture_local])
+    if self_host_local_needs_capture_cell(module_, local) {
+      if !self_host_linked_scalar_append_local_type(locals, SelfHostPlannedValueShape::RefPlannedValueShape) {
+        return Result::Err("captured local cell storage is unsupported")
+      }
+    }
+    capture_local = capture_local + 1u32
+    continue capture_local
     } else {
       break self_host_semantic_unit()
     }
