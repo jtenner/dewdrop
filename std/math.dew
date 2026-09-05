@@ -758,14 +758,14 @@ pub fn u64_checked_rem(left: U64, right: U64) -> Option<U64> {
   }
 }
 
-pub builtin f32_to_bits(value: F32) -> U32 = "dew_math_f32_to_bits"
-pub builtin f32_from_bits(value: U32) -> F32 = "dew_math_f32_from_bits"
-pub builtin f32_abs(value: F32) -> F32 = "dew_math_f32_abs"
-pub builtin f32_sqrt(value: F32) -> F32 = "dew_math_f32_sqrt"
-pub builtin f32_ceil(value: F32) -> F32 = "dew_math_f32_ceil"
-pub builtin f32_floor(value: F32) -> F32 = "dew_math_f32_floor"
-pub builtin f32_trunc(value: F32) -> F32 = "dew_math_f32_trunc"
-pub builtin f32_nearest(value: F32) -> F32 = "dew_math_f32_nearest"
+pub builtin f32_to_bits(value: F32) -> U32 = "i32.reinterpret_f32"
+pub builtin f32_from_bits(value: U32) -> F32 = "f32.reinterpret_i32"
+pub builtin f32_abs(value: F32) -> F32 = "f32.abs"
+pub builtin f32_sqrt(value: F32) -> F32 = "f32.sqrt"
+pub builtin f32_ceil(value: F32) -> F32 = "f32.ceil"
+pub builtin f32_floor(value: F32) -> F32 = "f32.floor"
+pub builtin f32_trunc(value: F32) -> F32 = "f32.trunc"
+pub builtin f32_nearest(value: F32) -> F32 = "f32.nearest"
 
 pub fn f32_is_nan(value: F32) -> Bool {
   value != value
@@ -844,14 +844,14 @@ pub fn f32_clamp(value: F32, lower: F32, upper: F32) -> F32 {
   }
 }
 
-pub builtin f64_to_bits(value: F64) -> U64 = "dew_math_f64_to_bits"
-pub builtin f64_from_bits(value: U64) -> F64 = "dew_math_f64_from_bits"
-pub builtin f64_abs(value: F64) -> F64 = "dew_math_f64_abs"
-pub builtin f64_sqrt(value: F64) -> F64 = "dew_math_f64_sqrt"
-pub builtin f64_ceil(value: F64) -> F64 = "dew_math_f64_ceil"
-pub builtin f64_floor(value: F64) -> F64 = "dew_math_f64_floor"
-pub builtin f64_trunc(value: F64) -> F64 = "dew_math_f64_trunc"
-pub builtin f64_nearest(value: F64) -> F64 = "dew_math_f64_nearest"
+pub builtin f64_to_bits(value: F64) -> U64 = "i64.reinterpret_f64"
+pub builtin f64_from_bits(value: U64) -> F64 = "f64.reinterpret_i64"
+pub builtin f64_abs(value: F64) -> F64 = "f64.abs"
+pub builtin f64_sqrt(value: F64) -> F64 = "f64.sqrt"
+pub builtin f64_ceil(value: F64) -> F64 = "f64.ceil"
+pub builtin f64_floor(value: F64) -> F64 = "f64.floor"
+pub builtin f64_trunc(value: F64) -> F64 = "f64.trunc"
+pub builtin f64_nearest(value: F64) -> F64 = "f64.nearest"
 
 pub fn f64_is_nan(value: F64) -> Bool {
   value != value

@@ -1,0 +1,72 @@
+open dew.std.math
+open dew.std.wasm.intrinsics
+
+pub fn probe_f32_abs(value: F32) -> F32 {
+  f32_abs(value)
+}
+pub fn probe_f32_sqrt(value: F32) -> F32 {
+  f32_sqrt(value)
+}
+pub fn probe_f32_ceil(value: F32) -> F32 {
+  f32_ceil(value)
+}
+pub fn probe_f32_floor(value: F32) -> F32 {
+  f32_floor(value)
+}
+pub fn probe_f32_trunc(value: F32) -> F32 {
+  f32_trunc(value)
+}
+pub fn probe_f32_nearest(value: F32) -> F32 {
+  f32_nearest(value)
+}
+pub fn probe_f32_roundtrip_bits(value: U32) -> U32 {
+  f32_to_bits(f32_from_bits(value))
+}
+pub fn probe_f32_min_bits(left: U32, right: U32) -> U32 {
+  f32_to_bits(f32_min(f32_from_bits(left), f32_from_bits(right)))
+}
+pub fn probe_f32_max_bits(left: U32, right: U32) -> U32 {
+  f32_to_bits(f32_max(f32_from_bits(left), f32_from_bits(right)))
+}
+pub fn probe_f32_copysign_bits(left: U32, right: U32) -> U32 {
+  f32_to_bits(f32_copysign(f32_from_bits(left), f32_from_bits(right)))
+}
+pub fn probe_f32_clamp(value: F32, lower: F32, upper: F32) -> F32 {
+  f32_clamp(value, lower, upper)
+}
+pub fn probe_f64_abs(value: F64) -> F64 {
+  f64_abs(value)
+}
+pub fn probe_f64_sqrt(value: F64) -> F64 {
+  f64_sqrt(value)
+}
+pub fn probe_f64_ceil(value: F64) -> F64 {
+  f64_ceil(value)
+}
+pub fn probe_f64_floor(value: F64) -> F64 {
+  f64_floor(value)
+}
+pub fn probe_f64_trunc(value: F64) -> F64 {
+  f64_trunc(value)
+}
+pub fn probe_f64_nearest(value: F64) -> F64 {
+  f64_nearest(value)
+}
+pub fn probe_f64_roundtrip_bits(value: U64) -> U64 {
+  f64_to_bits(f64_from_bits(value))
+}
+pub fn probe_f64_min_bits(left: U64, right: U64) -> U64 {
+  f64_to_bits(f64_min(f64_from_bits(left), f64_from_bits(right)))
+}
+pub fn probe_f64_max_bits(left: U64, right: U64) -> U64 {
+  f64_to_bits(f64_max(f64_from_bits(left), f64_from_bits(right)))
+}
+pub fn probe_f64_copysign_bits(left: U64, right: U64) -> U64 {
+  f64_to_bits(f64_copysign(f64_from_bits(left), f64_from_bits(right)))
+}
+pub fn probe_f64_clamp(value: F64, lower: F64, upper: F64) -> F64 {
+  f64_clamp(value, lower, upper)
+}
+pub fn probe_ctz(value: U32) -> U32 {
+  wasm_u32_ctz(value)
+}

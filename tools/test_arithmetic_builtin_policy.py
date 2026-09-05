@@ -18,7 +18,7 @@ class ArithmeticBuiltinPolicyTests(unittest.TestCase):
     def test_numeric_backend_contains_only_single_instructions(self):
         source = (ROOT / "src/backend/starshine_numeric_builtins.mbt").read_text()
         branches = re.findall(r'name == b"([^"]+)" \{\s+Some\(\[(.*?)\]\)', source, re.S)
-        # 66 arithmetic opcodes and 17 existing single-instruction math helpers.
+        # 66 binary arithmetic and 17 unary math instructions.
         self.assertEqual(len(branches), 83)
         for name, body in branches:
             with self.subTest(opcode=name):

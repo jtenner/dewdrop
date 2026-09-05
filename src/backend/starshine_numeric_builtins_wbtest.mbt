@@ -1,23 +1,23 @@
 ///|
 test "scalar math builtins map to deterministic Wasm instructions" {
   assert_eq(
-    starshine_numeric_builtin_instructions(b"dew_math_f32_to_bits"),
+    starshine_numeric_builtin_instructions(b"i32.reinterpret_f32"),
     Some([@lib.Instruction::i32_reinterpret_f32()]),
   )
   assert_eq(
-    starshine_numeric_builtin_instructions(b"dew_math_f32_sqrt"),
+    starshine_numeric_builtin_instructions(b"f32.sqrt"),
     Some([@lib.Instruction::f32_sqrt()]),
   )
   assert_eq(
-    starshine_numeric_builtin_instructions(b"dew_math_f64_from_bits"),
+    starshine_numeric_builtin_instructions(b"f64.reinterpret_i64"),
     Some([@lib.Instruction::f64_reinterpret_i64()]),
   )
   assert_eq(
-    starshine_numeric_builtin_instructions(b"dew_math_f64_nearest"),
+    starshine_numeric_builtin_instructions(b"f64.nearest"),
     Some([@lib.Instruction::f64_nearest()]),
   )
   assert_eq(
-    starshine_numeric_builtin_instructions(b"dew_u32_ctz"),
+    starshine_numeric_builtin_instructions(b"i32.ctz"),
     Some([@lib.Instruction::i32_ctz()]),
   )
 }

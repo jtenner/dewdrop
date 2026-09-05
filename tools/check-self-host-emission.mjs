@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { checkScalarConversions } from "./scalar-conversion-cases.mjs";
 import { checkMemoryOperations } from "./memory-operation-cases.mjs";
 import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
+import { checkMathOperations } from "./math-operation-cases.mjs";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
 function unusedImports(module) {
@@ -260,6 +261,39 @@ for (const [name, expected] of [
   } catch (error) {
     failures++;
     console.error("self-host arithmetic operation probe failed");
+    console.error(error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const math = await readFile(new URL("../std/math.dew", import.meta.url), "utf8");
+    const floatStart = math.indexOf("pub builtin f32_to_bits(");
+    assert.ok(floatStart >= 0, "math library float section is missing");
+    const source = "builtin unreachable() -> Never = \"dew_unreachable\"\n" + math.slice(floatStart);
+    assert.equal((source.match(/^pub builtin /gm) ?? []).length, 16, "math float instruction inventory differs");
+    const checks = await checkMathOperations(
+      (width, op) => compileSource(source + `\npub fn main(value: F${width}) -> F${width} {\n  f${width}_${op}(value)\n}\n`),
+      (width, op) => {
+        const parameters = op === "roundtrip" ? `value: U${width}` : `left: U${width}, right: U${width}`;
+        const expression = op === "roundtrip" ? `f${width}_from_bits(value)` :
+          `f${width}_${op}(f${width}_from_bits(left), f${width}_from_bits(right))`;
+        return compileSource(source + `\npub fn main(${parameters}) -> U${width} {\n  f${width}_to_bits(${expression})\n}\n`);
+      },
+      width => compileSource(source + `\npub fn main(value: F${width}, lower: F${width}, upper: F${width}) -> F${width} {\n  f${width}_clamp(value, lower, upper)\n}\n`),
+      async () => {
+        const intrinsics = await readFile(new URL("../std/wasm/intrinsics.dew", import.meta.url), "utf8");
+        const declaration = intrinsics.match(/^pub builtin wasm_u32_ctz\([^\n]+$/m);
+        assert.ok(declaration, "raw count-trailing-zeros declaration is missing");
+        return compileSource(declaration[0] + "\npub fn main(value: U32) -> U32 {\n  wasm_u32_ctz(value)\n}\n");
+      },
+    );
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`self-host math operation checks passed: ${checks} (${elapsed.toFixed(3)} seconds)`);
+    if (elapsed > 30) throw new Error("math compiler performance exceeds 30 seconds");
+  } catch (error) {
+    failures++;
+    console.error("self-host math operation probe failed");
     console.error(error);
   }
 }

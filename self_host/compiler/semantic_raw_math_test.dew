@@ -1,0 +1,114 @@
+fn self_host_assert_invalid_raw_math(source: Bytes) -> Unit {
+  let fragments = self_host_physical_test_fragments(source)
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(_) => assert(false, "raw math accepted a wrong carrier")
+    Result::Err(error) => assert(error.contains("raw intrinsic input or result carrier does not match its opcode"), error)
+  }
+}
+
+test "raw math rejects incorrect input and result carriers" {
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> I32 = \"i32.reinterpret_f32\"\npub fn main(value: I32) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F32) -> I64 = \"i32.reinterpret_f32\"\npub fn main(value: F32) -> I64 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I64) -> F32 = \"f32.reinterpret_i32\"\npub fn main(value: I64) -> F32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> I32 = \"f32.reinterpret_i32\"\npub fn main(value: I32) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F32 = \"f32.abs\"\npub fn main(value: I32) -> F32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F32) -> I32 = \"f32.abs\"\npub fn main(value: F32) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F32 = \"f32.sqrt\"\npub fn main(value: I32) -> F32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F32) -> I32 = \"f32.sqrt\"\npub fn main(value: F32) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F32 = \"f32.ceil\"\npub fn main(value: I32) -> F32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F32) -> I32 = \"f32.ceil\"\npub fn main(value: F32) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F32 = \"f32.floor\"\npub fn main(value: I32) -> F32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F32) -> I32 = \"f32.floor\"\npub fn main(value: F32) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F32 = \"f32.trunc\"\npub fn main(value: I32) -> F32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F32) -> I32 = \"f32.trunc\"\npub fn main(value: F32) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F32 = \"f32.nearest\"\npub fn main(value: I32) -> F32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F32) -> I32 = \"f32.nearest\"\npub fn main(value: F32) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> I64 = \"i64.reinterpret_f64\"\npub fn main(value: I32) -> I64 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F64) -> I32 = \"i64.reinterpret_f64\"\npub fn main(value: F64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F64 = \"f64.reinterpret_i64\"\npub fn main(value: I32) -> F64 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I64) -> I32 = \"f64.reinterpret_i64\"\npub fn main(value: I64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F64 = \"f64.abs\"\npub fn main(value: I32) -> F64 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F64) -> I32 = \"f64.abs\"\npub fn main(value: F64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F64 = \"f64.sqrt\"\npub fn main(value: I32) -> F64 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F64) -> I32 = \"f64.sqrt\"\npub fn main(value: F64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F64 = \"f64.ceil\"\npub fn main(value: I32) -> F64 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F64) -> I32 = \"f64.ceil\"\npub fn main(value: F64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F64 = \"f64.floor\"\npub fn main(value: I32) -> F64 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F64) -> I32 = \"f64.floor\"\npub fn main(value: F64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F64 = \"f64.trunc\"\npub fn main(value: I32) -> F64 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F64) -> I32 = \"f64.trunc\"\npub fn main(value: F64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> F64 = \"f64.nearest\"\npub fn main(value: I32) -> F64 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: F64) -> I32 = \"f64.nearest\"\npub fn main(value: F64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I64) -> I32 = \"i32.ctz\"\npub fn main(value: I64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> I64 = \"i32.ctz\"\npub fn main(value: I32) -> I64 {\n  operation(value)\n}\n",
+  )
+}

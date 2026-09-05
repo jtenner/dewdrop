@@ -200,14 +200,15 @@ def float_source(
     exponent_mask: str,
 ) -> str:
     zero = f"0.0{stem}"
-    return f'''pub builtin {stem}_to_bits(value: {type_}) -> {bits} = "dew_math_{stem}_to_bits"
-pub builtin {stem}_from_bits(value: {bits}) -> {type_} = "dew_math_{stem}_from_bits"
-pub builtin {stem}_abs(value: {type_}) -> {type_} = "dew_math_{stem}_abs"
-pub builtin {stem}_sqrt(value: {type_}) -> {type_} = "dew_math_{stem}_sqrt"
-pub builtin {stem}_ceil(value: {type_}) -> {type_} = "dew_math_{stem}_ceil"
-pub builtin {stem}_floor(value: {type_}) -> {type_} = "dew_math_{stem}_floor"
-pub builtin {stem}_trunc(value: {type_}) -> {type_} = "dew_math_{stem}_trunc"
-pub builtin {stem}_nearest(value: {type_}) -> {type_} = "dew_math_{stem}_nearest"
+    integer = f"i{type_[1:]}"
+    return f'''pub builtin {stem}_to_bits(value: {type_}) -> {bits} = "{integer}.reinterpret_{stem}"
+pub builtin {stem}_from_bits(value: {bits}) -> {type_} = "{stem}.reinterpret_{integer}"
+pub builtin {stem}_abs(value: {type_}) -> {type_} = "{stem}.abs"
+pub builtin {stem}_sqrt(value: {type_}) -> {type_} = "{stem}.sqrt"
+pub builtin {stem}_ceil(value: {type_}) -> {type_} = "{stem}.ceil"
+pub builtin {stem}_floor(value: {type_}) -> {type_} = "{stem}.floor"
+pub builtin {stem}_trunc(value: {type_}) -> {type_} = "{stem}.trunc"
+pub builtin {stem}_nearest(value: {type_}) -> {type_} = "{stem}.nearest"
 
 pub fn {stem}_is_nan(value: {type_}) -> Bool {{
   value != value

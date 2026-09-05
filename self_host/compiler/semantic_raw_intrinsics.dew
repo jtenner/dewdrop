@@ -50,6 +50,65 @@ pub struct SelfHostRawIntrinsicSignature {
 }
 
 fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSignature> {
+  if name.equals(b"i32.reinterpret_f32") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I32BodyCarrier
+    })
+  }
+  if name.equals(b"f32.reinterpret_i32") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F32BodyCarrier
+    })
+  }
+  if name.equals(b"f32.abs") ||
+    name.equals(b"f32.sqrt") ||
+    name.equals(b"f32.ceil") ||
+    name.equals(b"f32.floor") ||
+    name.equals(b"f32.trunc") ||
+    name.equals(b"f32.nearest") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F32BodyCarrier
+    })
+  }
+  if name.equals(b"i64.reinterpret_f64") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F64BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I64BodyCarrier
+    })
+  }
+  if name.equals(b"f64.reinterpret_i64") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I64BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F64BodyCarrier
+    })
+  }
+  if name.equals(b"f64.abs") ||
+    name.equals(b"f64.sqrt") ||
+    name.equals(b"f64.ceil") ||
+    name.equals(b"f64.floor") ||
+    name.equals(b"f64.trunc") ||
+    name.equals(b"f64.nearest") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::F64BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::F64BodyCarrier
+    })
+  }
+  if name.equals(b"i32.ctz") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      first: SelfHostWasmBodyCarrier::I32BodyCarrier
+      second: Option::None
+      result: SelfHostWasmBodyCarrier::I32BodyCarrier
+    })
+  }
   if name.equals(b"i32.add") ||
     name.equals(b"i32.sub") ||
     name.equals(b"i32.le_s") ||

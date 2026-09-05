@@ -29,7 +29,8 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   `raw-memory-instructions-2026-09-05.md`.
 - [ ] Remaining SIMD operations: explicit instruction/immediate contracts; express
   compositions, permutations, and convenience algorithms in Dew.
-- [ ] Math: use raw instructions for primitive operations and Dew for algorithms.
+- [x] Math: all 17 primitive helper targets use checked raw instructions;
+  higher-level algorithms remain Dew. See `raw-math-instructions-2026-09-05.md`.
 - [ ] Array: move mutable length/capacity, growth, mutation, iteration, and bulk
   operations out of compiler runtime builders.
 - [ ] Map and Set: move hashing, buckets, growth, lookup, and iteration into Dew.

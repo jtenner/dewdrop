@@ -122,7 +122,7 @@ EXTRA_DECLARATIONS = [
         alias="wasm_u32_ctz",
         generics="",
         signature="(value: U32) -> U32",
-        target="dew_u32_ctz",
+        target="i32.ctz",
     ),
     IntrinsicDeclaration(
         source="WasmGC text representation bridges",
