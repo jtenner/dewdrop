@@ -44,9 +44,11 @@ for pinned revision `89be0d37df99fc8cfcb0a7983b0865ca67d439d6`: 386 selected
 exports from 4,190 available exports. The two pending provider generated-export
 files are now committed in the submodule as `2f9f705a0`, and the parent pin and
 fingerprints include that revision. The provider worktree is clean. A fresh
-provider rebuild and clean-checkout bootstrap still need verification; local
-passing tests alone are not a clean-checkout result. These new commits are local
-and have not been pushed.
+provider rebuild took 11.218 seconds and reproduced the same provider bytes.
+The cache-disabled A/B/C check also passes from clean tracked source; see
+[the final verification record](library-owned-runtime-2026-09-04.md#final-verification-for-this-commit-series).
+A separate cloned checkout was not tested. These new commits are local and
+have not been pushed.
 
 Validation: all eight generator tests pass (0.05 seconds), generation takes
 4.12 seconds, and the self-host hardening lane passes: 92 Dew tests, 16 trap

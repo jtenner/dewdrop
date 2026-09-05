@@ -16,10 +16,10 @@ together, with tests for emitted behavior. Do not rewrite published history.
 ## Work list
 
 - Stable FFI carrier names and pending generated binding metadata: committed.
-- Pending Starshine generated export wrappers and clean-provider reproduction.
+- Starshine generated export wrappers and clean-provider rebuild: committed and verified.
 - Short tuple, unit, and named-field variant constructors; contextual selection,
   imports, opens, impl receivers, ambiguity, and self-host emission.
-- Stack: ordinary library functions, no declaration-ID builtin dispatch.
+- Stack: ordinary library functions, no declaration-ID builtin dispatch (committed and verified).
 - Array: library-owned storage, growth, mutation, iteration, and erasure.
 - Map and Set: library-owned storage, equality/hash evidence, and iteration.
 - CircularBuffer, Queue, and Deque: library-owned ring storage and policies.
@@ -77,7 +77,26 @@ hardening lane passes 93 tests, 16 invariant records, two record decoder tests,
 The routine native lane passes all 758 tests. After the named-field and Stack
 commits, the full A/B/C run validated both output modules and reached a byte
 fixed point (`1edc4483e750b84245943899512458a0c06d72069095433671db19649014cf03`).
-The final ambiguity change still requires a fresh full bootstrap run. Array,
-text, map, set, ring storage, and the remaining builtin migrations are not done;
+Array, text, map, set, ring storage, and the remaining builtin migrations are not done;
 the checklist above is the remaining implementation scope, not a completion
 claim.
+
+## Final verification for this commit series
+
+Rebuilding the clean pinned Starshine provider takes 11.218 seconds and produces
+the same SHA-256, `fca7ab4f7db569732f60ff25213e45c5ec7c158b0098b2169e662ff2f95d81d9`.
+The binding generator's check mode passes against those rebuilt bytes. Both
+repository worktrees contain the complete committed source and metadata.
+
+`tools/check-self-host-bootstrap.sh --clean --fast` passes after the ambiguity
+fix, with the native build cache disabled. B and C both validate and are
+byte-identical: `8ed9f21e5d1c02ac93eadf8f4da116b0e485a8f4062b0c3c95d44b544a4e07c0`.
+A builds in 27.992 seconds. A-to-B takes 48.893 seconds; B-to-C takes 52.081
+seconds. The latter two still exceed the 30-second performance limit.
+This is a clean-worktree, rebuilt-provider check, not a separate cloned checkout.
+
+The final hardening run passes 93 tests and all 14 execution probes. The
+named-field probe now constructs and matches fields in reverse declaration
+order, tests a literal field, and reads a different bound field. It returns 42,
+so position-only field selection cannot pass this test. Cached test generation
+takes 2.276 seconds. All commits remain local; neither repository was pushed.

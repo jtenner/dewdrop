@@ -997,7 +997,7 @@ pub fn self_host_emit_string_equality_probe() -> Bytes {
 
 pub fn self_host_emit_short_constructor_probe() -> Bytes {
   let fragments = self_host_physical_test_fragments(
-    b"enum Payload {\n  Entry {\n    value: I32\n  }\n}\nimpl Payload {\n  fn read(self) -> I32 {\n    match self {\n      Entry {\n        value\n      } => value\n    }\n  }\n}\nfn make() -> Payload {\n  Entry::{\n    value: 42\n  }\n}\npub fn main() -> I32 {\n  make().read()\n}\n",
+    b"enum Payload {\n  Entry {\n    value: I32\n    other: I32\n  }\n}\nimpl Payload {\n  fn read(self) -> I32 {\n    match self {\n      Entry {\n        other: 99\n        value\n      } => value\n      _ => -1\n    }\n  }\n}\nfn make() -> Payload {\n  Entry::{\n    other: 99\n    value: 42\n  }\n}\npub fn main() -> I32 {\n  make().read()\n}\n",
   )
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
