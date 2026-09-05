@@ -66,11 +66,11 @@ pub fn InterfaceBundlePolicy::for_compilation(
 fn interface_bundle_cache_key(
   loaded : StandardLibraryLoad,
 ) -> InterfaceBundleCacheKey {
-  if loaded.dependency_fingerprint == "" {
-    return { fingerprint: loaded.fingerprint, }
+  if loaded.fingerprint == "" {
+    return { fingerprint: "", }
   }
   let output = Buffer()
-  output.write_bytes(b"DEW_INTERFACE_BUNDLE_KEY_V1_MUTABLE_FIELDS\x00")
+  output.write_bytes(b"DEW_INTERFACE_BUNDLE_KEY_V1_MODULE_ORIGIN\x00")
   output.write_string_utf8(loaded.fingerprint)
   output.write_byte(0)
   output.write_string_utf8(loaded.dependency_fingerprint)
@@ -93,8 +93,13 @@ fn interface_bundle_module_is_cacheable(
   index : Int,
   policy : InterfaceBundlePolicy,
 ) -> Bool {
-  program.module_paths[index].has_prefix("dew.std.") ||
-  (policy.include_dependencies && index != policy.root_module_index)
+  guard program.manifest_module_count >= 0 &&
+    program.manifest_module_count <= program.modules.length() &&
+    index >= 0 && index < program.modules.length() else {
+    abort("interface bundle module origin is outside the collected program")
+  }
+  index != policy.root_module_index &&
+  (index >= program.manifest_module_count || policy.include_dependencies)
 }
 
 ///|

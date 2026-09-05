@@ -136,6 +136,8 @@ pub enum ManifestDiagnostic {
 pub struct CollectedProgram {
   module_id_base : ModuleId
   default_preamble : Bool
+  // The manifest prefix is followed by modules supplied by the source loader.
+  manifest_module_count : Int
   module_paths : Array[String]
   module_lookup : Map[String, Int]
   modules : Array[CollectedModule]
@@ -1301,6 +1303,7 @@ pub fn collect_program_manifest_with_standard_sources(
   {
     module_id_base,
     default_preamble,
+    manifest_module_count: manifest.modules.length(),
     module_paths,
     module_lookup: first_module,
     modules,

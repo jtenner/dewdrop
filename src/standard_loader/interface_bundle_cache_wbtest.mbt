@@ -261,6 +261,47 @@ test "interface bundle cache key includes dependency provenance" {
     cacheable: true,
   }
   let dependency = { ..base, dependency_fingerprint: "dependency", }
-  assert_eq(interface_bundle_cache_key(base).fingerprint, "standard")
-  assert_true(interface_bundle_cache_key(dependency).fingerprint != "standard")
+  let key = interface_bundle_cache_key(base).fingerprint
+  assert_true(key != "standard")
+  assert_true(interface_bundle_cache_key(dependency).fingerprint != key)
+  assert_eq(
+    interface_bundle_cache_key({ ..base, fingerprint: "", }).fingerprint,
+    "",
+  )
+}
+
+///|
+test "workspace module spelling cannot select dependency bundle membership" {
+  let program = @semantic.collect_program_manifest(
+    23020UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("dew.std.conversions", [
+        @semantic.ManifestFile::new(
+          "root.dew", b"pub fn main() -> I32 {\n  1\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("dew.std.memory", [
+        @semantic.ManifestFile::new(
+          "other.dew", b"pub fn value() -> I32 {\n  2\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let policy : InterfaceBundlePolicy = {
+    enabled: true,
+    store_on_miss: true,
+    root_module_index: 0,
+    include_dependencies: false,
+  }
+  assert_false(interface_bundle_module_is_cacheable(program, 0, policy))
+  assert_false(interface_bundle_module_is_cacheable(program, 1, policy))
+  for index in 2..<program.modules.length() {
+    assert_true(interface_bundle_module_is_cacheable(program, index, policy))
+  }
+  let dependencies = { ..policy, include_dependencies: true, }
+  assert_false(interface_bundle_module_is_cacheable(program, 0, dependencies))
+  assert_true(interface_bundle_module_is_cacheable(program, 1, dependencies))
+  // A one-field mutation must not change the recorded source provenance.
+  program.module_paths[2] = "vendor.supplied"
+  assert_true(interface_bundle_module_is_cacheable(program, 2, policy))
 }
