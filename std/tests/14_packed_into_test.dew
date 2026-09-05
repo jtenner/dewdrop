@@ -1,0 +1,49 @@
+open dew.std.i8x4
+open dew.std.i16x2
+open dew.std.u16x2
+open dew.std.i8x8
+open dew.std.u8x8
+open dew.std.i16x4
+open dew.std.u16x4
+open dew.std.i32x2
+open dew.std.u32x2
+open dew.std.i8x16
+open dew.std.u32x4
+open dew.std.f32x4
+
+test "packed Into preserves the high bit in a 32-bit round trip" {
+  let original = unsafe_bitcast::<U32, U16x2>(2147549699u32)
+  let bytes = original.into()
+  assert(unsafe_bitcast::<I8x4, U32>(bytes) == 2147549699u32, "byte view changed bits")
+  let signed = bytes.into()
+  assert(unsafe_bitcast::<I16x2, U32>(signed) == 2147549699u32, "signed view changed bits")
+  let restored = signed.into()
+  assert(unsafe_bitcast::<U16x2, U32>(restored) == 2147549699u32, "packed Into changed bits")
+}
+
+test "I16x4 Into selects each peer view" {
+  let original = unsafe_bitcast::<U64, I16x4>(18364758544493064720u64)
+  let signed_bytes = original.into()
+  let bytes = original.into()
+  let words = original.into()
+  let signed_ints = original.into()
+  let ints = original.into()
+  assert(unsafe_bitcast::<I8x8, U64>(signed_bytes) == 18364758544493064720u64, "I8x8 Into changed bits")
+  assert(unsafe_bitcast::<U8x8, U64>(bytes) == 18364758544493064720u64, "U8x8 Into changed bits")
+  assert(unsafe_bitcast::<U16x4, U64>(words) == 18364758544493064720u64, "U16x4 Into changed bits")
+  assert(unsafe_bitcast::<I32x2, U64>(signed_ints) == 18364758544493064720u64, "I32x2 Into changed bits")
+  assert(unsafe_bitcast::<U32x2, U64>(ints) == 18364758544493064720u64, "U32x2 Into changed bits")
+}
+
+test "packed Into preserves a floating-point NaN payload" {
+  let original = u32x4_splat(2143289345u32)
+  let floats = original.into()
+  assert(unsafe_bitcast::<F32x4, U32x4>(floats).extract_0() == 2143289345u32, "float view changed bits")
+  let bytes = floats.into()
+  assert(unsafe_bitcast::<I8x16, U32x4>(bytes).extract_0() == 2143289345u32, "byte view changed bits")
+  let restored = unsafe_bitcast::<U32x4, U32x4>(bytes.into())
+  assert(restored.extract_0() == 2143289345u32, "lane zero payload changed")
+  assert(restored.extract_1() == 2143289345u32, "lane one payload changed")
+  assert(restored.extract_2() == 2143289345u32, "lane two payload changed")
+  assert(restored.extract_3() == 2143289345u32, "lane three payload changed")
+}

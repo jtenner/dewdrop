@@ -4,14 +4,20 @@ fn u16x2_from_swar32(value: Swar32) -> U16x2 {
 fn u16x2_to_swar32(value: U16x2) -> Swar32 {
   unsafe_bitcast::<U16x2, Swar32>(value)
 }
-fn u16x2_reinterpret_as_i8x4(value: U16x2) -> I8x4 {
-  unsafe_bitcast::<U16x2, I8x4>(value)
+impl Into<I8x4> for U16x2 {
+  fn into(self) -> I8x4 {
+    unsafe_bitcast::<U16x2, I8x4>(self)
+  }
 }
-fn u16x2_reinterpret_as_u8x4(value: U16x2) -> U8x4 {
-  unsafe_bitcast::<U16x2, U8x4>(value)
+impl Into<U8x4> for U16x2 {
+  fn into(self) -> U8x4 {
+    unsafe_bitcast::<U16x2, U8x4>(self)
+  }
 }
-fn u16x2_reinterpret_as_i16x2(value: U16x2) -> I16x2 {
-  unsafe_bitcast::<U16x2, I16x2>(value)
+impl Into<I16x2> for U16x2 {
+  fn into(self) -> I16x2 {
+    unsafe_bitcast::<U16x2, I16x2>(self)
+  }
 }
 fn u16x2_load(address: U32) -> U16x2 {
   unsafe_bitcast::<U32, U16x2>(u32_load(address))
@@ -120,15 +126,6 @@ fn u16x2_all_true(value: U16x2) -> Bool {
 impl U16x2 {
   fn to_swar32(self) -> Swar32 {
     u16x2_to_swar32(self)
-  }
-  fn reinterpret_as_i8x4(self) -> I8x4 {
-    u16x2_reinterpret_as_i8x4(self)
-  }
-  fn reinterpret_as_u8x4(self) -> U8x4 {
-    u16x2_reinterpret_as_u8x4(self)
-  }
-  fn reinterpret_as_i16x2(self) -> I16x2 {
-    u16x2_reinterpret_as_i16x2(self)
   }
   fn extract(self, index: U8) -> U16 {
     u16x2_extract(self, index)

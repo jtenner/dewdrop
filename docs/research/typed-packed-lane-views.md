@@ -86,13 +86,15 @@ The API must distinguish three operations that are often conflated:
 2. **Lane conversion** converts values numerically and may widen, narrow, saturate, truncate, or trap.
 3. **Lane rearrangement** changes ordering or lane count through shuffle, extension, narrowing, concatenation, or extraction.
 
-Same-width bit reinterpretation should therefore be explicit rather than ordinary `Into<t>`:
+As of 2026-09-05, packed peer types use `Into<t>` for same-width bit
+reinterpretation. This supersedes the original named-reinterpretation API.
+The expected result type selects the view; numeric lane conversions remain
+separately named operations and are not selected by these implementations:
 
 ```dew
-bits.reinterpret_as_i32x4()
-values.reinterpret_as_f32x4()
-values.as_unsigned()
-values.as_v128()
+fn float_view(value: I32x4) -> F32x4 {
+  value.into()
+}
 ```
 
 Examples of zero-instruction reinterpretations include:

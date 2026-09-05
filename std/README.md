@@ -255,11 +255,13 @@ I8x16 U8x16 I16x8 U16x8 I32x4 U32x4
 I64x2 U64x2 F32x4 F64x2                       -> v128
 ```
 
-Same-carrier reinterpretation is explicit and emits no instruction:
+For packed peer types with the same carrier, `Into` preserves every bit and
+emits no instruction. The result type selects the conversion:
 
 ```dew
-let integers = floats.reinterpret_as_i32x4()
-let bytes = words.reinterpret_as_u8x16()
+fn integer_view(value: F32x4) -> I32x4 {
+  value.into()
+}
 ```
 
 Numeric lane conversion uses separately named operations, for example:

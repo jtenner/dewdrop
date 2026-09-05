@@ -4,32 +4,50 @@ fn f64x2_from_v128(value: V128) -> F64x2 {
 fn f64x2_to_v128(value: F64x2) -> V128 {
   unsafe_bitcast::<F64x2, V128>(value)
 }
-fn f64x2_reinterpret_as_i8x16(value: F64x2) -> I8x16 {
-  unsafe_bitcast::<F64x2, I8x16>(value)
+impl Into<I8x16> for F64x2 {
+  fn into(self) -> I8x16 {
+    unsafe_bitcast::<F64x2, I8x16>(self)
+  }
 }
-fn f64x2_reinterpret_as_u8x16(value: F64x2) -> U8x16 {
-  unsafe_bitcast::<F64x2, U8x16>(value)
+impl Into<U8x16> for F64x2 {
+  fn into(self) -> U8x16 {
+    unsafe_bitcast::<F64x2, U8x16>(self)
+  }
 }
-fn f64x2_reinterpret_as_i16x8(value: F64x2) -> I16x8 {
-  unsafe_bitcast::<F64x2, I16x8>(value)
+impl Into<I16x8> for F64x2 {
+  fn into(self) -> I16x8 {
+    unsafe_bitcast::<F64x2, I16x8>(self)
+  }
 }
-fn f64x2_reinterpret_as_u16x8(value: F64x2) -> U16x8 {
-  unsafe_bitcast::<F64x2, U16x8>(value)
+impl Into<U16x8> for F64x2 {
+  fn into(self) -> U16x8 {
+    unsafe_bitcast::<F64x2, U16x8>(self)
+  }
 }
-fn f64x2_reinterpret_as_i32x4(value: F64x2) -> I32x4 {
-  unsafe_bitcast::<F64x2, I32x4>(value)
+impl Into<I32x4> for F64x2 {
+  fn into(self) -> I32x4 {
+    unsafe_bitcast::<F64x2, I32x4>(self)
+  }
 }
-fn f64x2_reinterpret_as_u32x4(value: F64x2) -> U32x4 {
-  unsafe_bitcast::<F64x2, U32x4>(value)
+impl Into<U32x4> for F64x2 {
+  fn into(self) -> U32x4 {
+    unsafe_bitcast::<F64x2, U32x4>(self)
+  }
 }
-fn f64x2_reinterpret_as_i64x2(value: F64x2) -> I64x2 {
-  unsafe_bitcast::<F64x2, I64x2>(value)
+impl Into<I64x2> for F64x2 {
+  fn into(self) -> I64x2 {
+    unsafe_bitcast::<F64x2, I64x2>(self)
+  }
 }
-fn f64x2_reinterpret_as_u64x2(value: F64x2) -> U64x2 {
-  unsafe_bitcast::<F64x2, U64x2>(value)
+impl Into<U64x2> for F64x2 {
+  fn into(self) -> U64x2 {
+    unsafe_bitcast::<F64x2, U64x2>(self)
+  }
 }
-fn f64x2_reinterpret_as_f32x4(value: F64x2) -> F32x4 {
-  unsafe_bitcast::<F64x2, F32x4>(value)
+impl Into<F32x4> for F64x2 {
+  fn into(self) -> F32x4 {
+    unsafe_bitcast::<F64x2, F32x4>(self)
+  }
 }
 fn f64x2_load(address: U32) -> F64x2 {
   unsafe_bitcast::<V128, F64x2>(v128_load(address))
@@ -88,33 +106,6 @@ builtin f64x2_nearest(value: F64x2) -> F64x2 = "dew_v128_nearest_f64"
 impl F64x2 {
   fn to_v128(self) -> V128 {
     f64x2_to_v128(self)
-  }
-  fn reinterpret_as_i8x16(self) -> I8x16 {
-    f64x2_reinterpret_as_i8x16(self)
-  }
-  fn reinterpret_as_u8x16(self) -> U8x16 {
-    f64x2_reinterpret_as_u8x16(self)
-  }
-  fn reinterpret_as_i16x8(self) -> I16x8 {
-    f64x2_reinterpret_as_i16x8(self)
-  }
-  fn reinterpret_as_u16x8(self) -> U16x8 {
-    f64x2_reinterpret_as_u16x8(self)
-  }
-  fn reinterpret_as_i32x4(self) -> I32x4 {
-    f64x2_reinterpret_as_i32x4(self)
-  }
-  fn reinterpret_as_u32x4(self) -> U32x4 {
-    f64x2_reinterpret_as_u32x4(self)
-  }
-  fn reinterpret_as_i64x2(self) -> I64x2 {
-    f64x2_reinterpret_as_i64x2(self)
-  }
-  fn reinterpret_as_u64x2(self) -> U64x2 {
-    f64x2_reinterpret_as_u64x2(self)
-  }
-  fn reinterpret_as_f32x4(self) -> F32x4 {
-    f64x2_reinterpret_as_f32x4(self)
   }
   fn not(self) -> F64x2 {
     f64x2_not(self)

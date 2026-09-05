@@ -9,6 +9,16 @@ import generate_lane_std as lanes
 
 
 class PackedBuiltinPolicyTests(unittest.TestCase):
+    def test_peer_reinterpretations_are_into_implementations(self):
+        for width, family in [(32, lanes.SWAR32_TYPES), (64, lanes.SWAR64_TYPES), (128, lanes.V128_TYPES)]:
+            for args in family:
+                source = lanes.v128_source(*args) if width == 128 else lanes.swar_source(*args, width)
+                for target, *_ in family:
+                    if target != args[0]:
+                        with self.subTest(source=args[0], target=target):
+                            self.assertIn(f"impl Into<{target}> for {args[0]} {{", source)
+                self.assertNotIn("reinterpret_as_", source)
+
     def test_every_swar_module_has_only_library_functions(self):
         for width, family in [(32, lanes.SWAR32_TYPES), (64, lanes.SWAR64_TYPES)]:
             for args in family:

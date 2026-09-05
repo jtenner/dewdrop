@@ -4,32 +4,50 @@ fn i64x2_from_v128(value: V128) -> I64x2 {
 fn i64x2_to_v128(value: I64x2) -> V128 {
   unsafe_bitcast::<I64x2, V128>(value)
 }
-fn i64x2_reinterpret_as_i8x16(value: I64x2) -> I8x16 {
-  unsafe_bitcast::<I64x2, I8x16>(value)
+impl Into<I8x16> for I64x2 {
+  fn into(self) -> I8x16 {
+    unsafe_bitcast::<I64x2, I8x16>(self)
+  }
 }
-fn i64x2_reinterpret_as_u8x16(value: I64x2) -> U8x16 {
-  unsafe_bitcast::<I64x2, U8x16>(value)
+impl Into<U8x16> for I64x2 {
+  fn into(self) -> U8x16 {
+    unsafe_bitcast::<I64x2, U8x16>(self)
+  }
 }
-fn i64x2_reinterpret_as_i16x8(value: I64x2) -> I16x8 {
-  unsafe_bitcast::<I64x2, I16x8>(value)
+impl Into<I16x8> for I64x2 {
+  fn into(self) -> I16x8 {
+    unsafe_bitcast::<I64x2, I16x8>(self)
+  }
 }
-fn i64x2_reinterpret_as_u16x8(value: I64x2) -> U16x8 {
-  unsafe_bitcast::<I64x2, U16x8>(value)
+impl Into<U16x8> for I64x2 {
+  fn into(self) -> U16x8 {
+    unsafe_bitcast::<I64x2, U16x8>(self)
+  }
 }
-fn i64x2_reinterpret_as_i32x4(value: I64x2) -> I32x4 {
-  unsafe_bitcast::<I64x2, I32x4>(value)
+impl Into<I32x4> for I64x2 {
+  fn into(self) -> I32x4 {
+    unsafe_bitcast::<I64x2, I32x4>(self)
+  }
 }
-fn i64x2_reinterpret_as_u32x4(value: I64x2) -> U32x4 {
-  unsafe_bitcast::<I64x2, U32x4>(value)
+impl Into<U32x4> for I64x2 {
+  fn into(self) -> U32x4 {
+    unsafe_bitcast::<I64x2, U32x4>(self)
+  }
 }
-fn i64x2_reinterpret_as_u64x2(value: I64x2) -> U64x2 {
-  unsafe_bitcast::<I64x2, U64x2>(value)
+impl Into<U64x2> for I64x2 {
+  fn into(self) -> U64x2 {
+    unsafe_bitcast::<I64x2, U64x2>(self)
+  }
 }
-fn i64x2_reinterpret_as_f32x4(value: I64x2) -> F32x4 {
-  unsafe_bitcast::<I64x2, F32x4>(value)
+impl Into<F32x4> for I64x2 {
+  fn into(self) -> F32x4 {
+    unsafe_bitcast::<I64x2, F32x4>(self)
+  }
 }
-fn i64x2_reinterpret_as_f64x2(value: I64x2) -> F64x2 {
-  unsafe_bitcast::<I64x2, F64x2>(value)
+impl Into<F64x2> for I64x2 {
+  fn into(self) -> F64x2 {
+    unsafe_bitcast::<I64x2, F64x2>(self)
+  }
 }
 fn i64x2_load(address: U32) -> I64x2 {
   unsafe_bitcast::<V128, I64x2>(v128_load(address))
@@ -84,33 +102,6 @@ builtin i64x2_shr_s(value: I64x2, count: U32) -> I64x2 = "dew_v128_shr_s_i64"
 impl I64x2 {
   fn to_v128(self) -> V128 {
     i64x2_to_v128(self)
-  }
-  fn reinterpret_as_i8x16(self) -> I8x16 {
-    i64x2_reinterpret_as_i8x16(self)
-  }
-  fn reinterpret_as_u8x16(self) -> U8x16 {
-    i64x2_reinterpret_as_u8x16(self)
-  }
-  fn reinterpret_as_i16x8(self) -> I16x8 {
-    i64x2_reinterpret_as_i16x8(self)
-  }
-  fn reinterpret_as_u16x8(self) -> U16x8 {
-    i64x2_reinterpret_as_u16x8(self)
-  }
-  fn reinterpret_as_i32x4(self) -> I32x4 {
-    i64x2_reinterpret_as_i32x4(self)
-  }
-  fn reinterpret_as_u32x4(self) -> U32x4 {
-    i64x2_reinterpret_as_u32x4(self)
-  }
-  fn reinterpret_as_u64x2(self) -> U64x2 {
-    i64x2_reinterpret_as_u64x2(self)
-  }
-  fn reinterpret_as_f32x4(self) -> F32x4 {
-    i64x2_reinterpret_as_f32x4(self)
-  }
-  fn reinterpret_as_f64x2(self) -> F64x2 {
-    i64x2_reinterpret_as_f64x2(self)
   }
   fn not(self) -> I64x2 {
     i64x2_not(self)

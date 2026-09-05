@@ -143,7 +143,12 @@ def carrier_helpers(type_name: str, carrier: str, family: list) -> str:
     ]
     for target, *_ in family:
         if target != type_name:
-            output.append(function(f"{prefix}_reinterpret_as_{target.lower()}", f"value: {type_name}", target, cast("value", type_name, target)))
+            output.append(
+                f"impl Into<{target}> for {type_name} {{\n"
+                f"  fn into(self) -> {target} {{\n"
+                f"    {cast('self', type_name, target)}\n"
+                "  }\n}\n"
+            )
     output.append(function(f"{prefix}_load", "address: U32", type_name, cast(f"{raw.lower()}_load(address)", raw, type_name)))
     output.append(function(f"{prefix}_store", f"address: U32, value: {type_name}", "Unit", f"{raw.lower()}_store(address, {cast('value', type_name, raw)})"))
     for operation in ["and", "or", "xor"]:
@@ -170,7 +175,6 @@ def trait_impl(trait: str, type_name: str, method_name: str, call_name: str) -> 
 def v128_source(type_name: str, scalar: str, lane: str, kind: str) -> str:
     p = type_name.lower()
     out = [carrier_helpers(type_name, "V128", V128_TYPES)]
-    reinterpretations = [target for target, _, _, _ in V128_TYPES if target != type_name]
     out.append(builtin(f"{p}_not", f"value: {type_name}", type_name, "dew_v128_not"))
     out.append(builtin(f"{p}_andnot", f"left: {type_name}, right: {type_name}", type_name, "dew_v128_andnot"))
     out.append(builtin(f"{p}_bitselect", f"yes: {type_name}, no: {type_name}, mask: {type_name}", type_name, "dew_v128_bitselect"))
@@ -242,8 +246,6 @@ def v128_source(type_name: str, scalar: str, lane: str, kind: str) -> str:
 
     out.append(f"impl {type_name} {{\n")
     out.append(method("to_v128", "", "V128", f"{p}_to_v128(self)"))
-    for target in reinterpretations:
-        out.append(method(f"reinterpret_as_{target.lower()}", "", target, f"{p}_reinterpret_as_{target.lower()}(self)"))
     out.append(method("not", "", type_name, f"{p}_not(self)"))
     out.append(method("andnot", f", right: {type_name}", type_name, f"{p}_andnot(self, right)"))
     out.append(method("bitselect", f", no: {type_name}, mask: {type_name}", type_name, f"{p}_bitselect(self, no, mask)"))
@@ -614,7 +616,6 @@ def swar_source(type_name: str, scalar: str, lane: str, kind: str, width: int) -
     carrier = f"Swar{width}"
     raw = f"swar{width}"
     family = SWAR32_TYPES if width == 32 else SWAR64_TYPES
-    reinterpretations = [target for target, _, _, _ in family if target != type_name]
     out = [carrier_helpers(type_name, carrier, family)]
     extended_binary: list[str] = []
     extended_unary: list[str] = []
@@ -655,8 +656,6 @@ def swar_source(type_name: str, scalar: str, lane: str, kind: str, width: int) -
 
     out.append(f"impl {type_name} {{\n")
     out.append(method(f"to_{raw}", "", carrier, f"{p}_to_{raw}(self)"))
-    for target in reinterpretations:
-        out.append(method(f"reinterpret_as_{target.lower()}", "", target, f"{p}_reinterpret_as_{target.lower()}(self)"))
     if kind != "float":
         out.append(method("extract", ", index: U8", scalar, f"{p}_extract(self, index)"))
         replace_lane = scalar

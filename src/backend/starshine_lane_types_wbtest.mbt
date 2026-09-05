@@ -79,7 +79,7 @@ test "typed native lane extraction and replacement freeze immediate indices" {
 #skip("compiler integration case; run tools/test-integration-native.sh")
 test "same-carrier typed lane reinterpretations are zero-wrapper calls" {
   let (lowering, fragments, diagnostics) = backend_packed_primitive_pipeline(
-    b"open dew.std.f32x4\nopen dew.std.i32x4\nopen dew.std.i32x2\nopen dew.std.u8x8\nopen dew.std.u16x2\nopen dew.std.i8x4\npub fn native(value: F32x4) -> I32x4 {\n  value.reinterpret_as_i32x4()\n}\npub fn scalar64(value: I32x2) -> U8x8 {\n  value.reinterpret_as_u8x8()\n}\npub fn scalar32(value: U16x2) -> I8x4 {\n  value.reinterpret_as_i8x4()\n}\n",
+    b"open dew.std.f32x4\nopen dew.std.i32x4\nopen dew.std.i32x2\nopen dew.std.u8x8\nopen dew.std.u16x2\nopen dew.std.i8x4\npub fn native(value: F32x4) -> I32x4 {\n  value.into()\n}\npub fn scalar64(value: I32x2) -> U8x8 {\n  value.into()\n}\npub fn scalar32(value: U16x2) -> I8x4 {\n  value.into()\n}\n",
   )
   assert_eq(diagnostics, 0)
   assert_eq(fragments.imported_function_count, 0)

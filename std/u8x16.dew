@@ -4,32 +4,50 @@ fn u8x16_from_v128(value: V128) -> U8x16 {
 fn u8x16_to_v128(value: U8x16) -> V128 {
   unsafe_bitcast::<U8x16, V128>(value)
 }
-fn u8x16_reinterpret_as_i8x16(value: U8x16) -> I8x16 {
-  unsafe_bitcast::<U8x16, I8x16>(value)
+impl Into<I8x16> for U8x16 {
+  fn into(self) -> I8x16 {
+    unsafe_bitcast::<U8x16, I8x16>(self)
+  }
 }
-fn u8x16_reinterpret_as_i16x8(value: U8x16) -> I16x8 {
-  unsafe_bitcast::<U8x16, I16x8>(value)
+impl Into<I16x8> for U8x16 {
+  fn into(self) -> I16x8 {
+    unsafe_bitcast::<U8x16, I16x8>(self)
+  }
 }
-fn u8x16_reinterpret_as_u16x8(value: U8x16) -> U16x8 {
-  unsafe_bitcast::<U8x16, U16x8>(value)
+impl Into<U16x8> for U8x16 {
+  fn into(self) -> U16x8 {
+    unsafe_bitcast::<U8x16, U16x8>(self)
+  }
 }
-fn u8x16_reinterpret_as_i32x4(value: U8x16) -> I32x4 {
-  unsafe_bitcast::<U8x16, I32x4>(value)
+impl Into<I32x4> for U8x16 {
+  fn into(self) -> I32x4 {
+    unsafe_bitcast::<U8x16, I32x4>(self)
+  }
 }
-fn u8x16_reinterpret_as_u32x4(value: U8x16) -> U32x4 {
-  unsafe_bitcast::<U8x16, U32x4>(value)
+impl Into<U32x4> for U8x16 {
+  fn into(self) -> U32x4 {
+    unsafe_bitcast::<U8x16, U32x4>(self)
+  }
 }
-fn u8x16_reinterpret_as_i64x2(value: U8x16) -> I64x2 {
-  unsafe_bitcast::<U8x16, I64x2>(value)
+impl Into<I64x2> for U8x16 {
+  fn into(self) -> I64x2 {
+    unsafe_bitcast::<U8x16, I64x2>(self)
+  }
 }
-fn u8x16_reinterpret_as_u64x2(value: U8x16) -> U64x2 {
-  unsafe_bitcast::<U8x16, U64x2>(value)
+impl Into<U64x2> for U8x16 {
+  fn into(self) -> U64x2 {
+    unsafe_bitcast::<U8x16, U64x2>(self)
+  }
 }
-fn u8x16_reinterpret_as_f32x4(value: U8x16) -> F32x4 {
-  unsafe_bitcast::<U8x16, F32x4>(value)
+impl Into<F32x4> for U8x16 {
+  fn into(self) -> F32x4 {
+    unsafe_bitcast::<U8x16, F32x4>(self)
+  }
 }
-fn u8x16_reinterpret_as_f64x2(value: U8x16) -> F64x2 {
-  unsafe_bitcast::<U8x16, F64x2>(value)
+impl Into<F64x2> for U8x16 {
+  fn into(self) -> F64x2 {
+    unsafe_bitcast::<U8x16, F64x2>(self)
+  }
 }
 fn u8x16_load(address: U32) -> U8x16 {
   unsafe_bitcast::<V128, U8x16>(v128_load(address))
@@ -162,33 +180,6 @@ builtin u8x16_shr_u(value: U8x16, count: U32) -> U8x16 = "dew_v128_shr_u_i8"
 impl U8x16 {
   fn to_v128(self) -> V128 {
     u8x16_to_v128(self)
-  }
-  fn reinterpret_as_i8x16(self) -> I8x16 {
-    u8x16_reinterpret_as_i8x16(self)
-  }
-  fn reinterpret_as_i16x8(self) -> I16x8 {
-    u8x16_reinterpret_as_i16x8(self)
-  }
-  fn reinterpret_as_u16x8(self) -> U16x8 {
-    u8x16_reinterpret_as_u16x8(self)
-  }
-  fn reinterpret_as_i32x4(self) -> I32x4 {
-    u8x16_reinterpret_as_i32x4(self)
-  }
-  fn reinterpret_as_u32x4(self) -> U32x4 {
-    u8x16_reinterpret_as_u32x4(self)
-  }
-  fn reinterpret_as_i64x2(self) -> I64x2 {
-    u8x16_reinterpret_as_i64x2(self)
-  }
-  fn reinterpret_as_u64x2(self) -> U64x2 {
-    u8x16_reinterpret_as_u64x2(self)
-  }
-  fn reinterpret_as_f32x4(self) -> F32x4 {
-    u8x16_reinterpret_as_f32x4(self)
-  }
-  fn reinterpret_as_f64x2(self) -> F64x2 {
-    u8x16_reinterpret_as_f64x2(self)
   }
   fn not(self) -> U8x16 {
     u8x16_not(self)

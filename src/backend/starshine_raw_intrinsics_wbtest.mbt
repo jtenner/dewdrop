@@ -128,3 +128,36 @@ test "raw forwarding worklist closes a reverse-ordered dependency chain" {
   assert_eq(count, 12)
   assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
 }
+
+///|
+test "packed peer Into implementations select the expected result type" {
+  let source = Buffer(size_hint=16384)
+  source.write_string_utf8(
+    "open dew.std.i8x4\nopen dew.std.u8x4\nopen dew.std.i16x2\nopen dew.std.u16x2\nopen dew.std.i8x8\nopen dew.std.u8x8\nopen dew.std.i16x4\nopen dew.std.u16x4\nopen dew.std.i32x2\nopen dew.std.u32x2\nopen dew.std.i8x16\nopen dew.std.u8x16\nopen dew.std.i16x8\nopen dew.std.u16x8\nopen dew.std.i32x4\nopen dew.std.u32x4\nopen dew.std.i64x2\nopen dew.std.u64x2\nopen dew.std.f32x4\nopen dew.std.f64x2\n",
+  )
+  let families = [
+    ["I8x4", "U8x4", "I16x2", "U16x2"],
+    ["I8x8", "U8x8", "I16x4", "U16x4", "I32x2", "U32x2"],
+    [
+      "I8x16", "U8x16", "I16x8", "U16x8", "I32x4", "U32x4", "I64x2", "U64x2", "F32x4",
+      "F64x2",
+    ],
+  ]
+  let mut count = 0
+  for family in families {
+    for source_type in family {
+      for target_type in family {
+        if source_type != target_type {
+          source.write_string_utf8(
+            "pub fn convert\{count}(value: \{source_type}) -> \{target_type} {\n  value.into()\n}\n",
+          )
+          count += 1
+        }
+      }
+    }
+  }
+  assert_eq(count, 132)
+  let stages = backend_test_single_module_stages(28209UL, source.to_bytes())
+  assert_eq(stages.diagnostic_count(), 0)
+  assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
+}
