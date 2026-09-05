@@ -1,11 +1,134 @@
 # Dew Agent TODO
 
-> Execution-only backlog synchronized with [`docs/roadmap.md`](docs/roadmap.md) on August 27, 2026. Completed work is intentionally omitted. Each implementation tranche should land with focused tests, documentation, measurements where relevant, and one bounded atomic commit.
+> Current handoff updated September 5, 2026. The older deferred backlog below
+> comes from [`docs/roadmap.md`](docs/roadmap.md); it is not a claim that the whole
+> roadmap was re-audited today. Use small commits with tests, docs, and measured
+> compiler runs. Fix correctness before speed. Do not push without a new request.
+
+## Current work — do this first
+
+The standard-library migration and compiler audit are not complete. The detailed
+history is in [`docs/research/stdlib-builtin-migration-worklist-2026-09-05.md`](docs/research/stdlib-builtin-migration-worklist-2026-09-05.md).
+Scalar, packed `Into`, SIMD, and math migrations have landed. Typed Starshine FFI
+names and unqualified enum support have also had implementation work; do not
+restart them from scratch. Raw Unit array storage now passes both compilers.
+
+### Compile-time type queries and branch removal
+
+- [ ] Add `is_unit::<t>()` as a compile-time type query, not a Wasm builtin.
+  Test the logical type: Unit is true, other known types are false, and unknown
+  types stay pending. Never is not Unit. Resolve the query by identity, not by
+  matching the name of an ordinary user function.
+- [ ] Replace the query with a Boolean constant in each specialized body, then
+  replace the `if` with its selected branch. Keep the shared generic body intact.
+  This must run in debug builds too, before physical storage and call planning.
+- [ ] Keep type-dependent checks inside their branch until the type is known.
+  Check the selected branch with its known type facts. Both branches need valid
+  syntax; unrelated source errors must not disappear.
+- [ ] Make later passes visit only reachable code in that specialized body.
+  Removed branches must not add calls, trait requests, locals, or storage types.
+  Refresh flow and effect facts, keep source IDs for errors, and ensure distinct
+  query results cannot share one specialized body by an ABI-key collision.
+- [ ] Test the rewrite in native and self-host compilers. Cover Unit, scalar,
+  reference, alias, Never, pending/error types, nested branches, separate
+  specializations, branch-local type checks, and side effects. Check the IR and
+  emitted Wasm, not only the returned value. No query or discarded branch may
+  reach emission.
+
+### Finish the standard-library migration
+
+- [ ] Remove special `FixedArray` method and index dispatch. Compile the existing
+  Dew method bodies and delete unused checked-read builders. Test Unit and tuple
+  values, bounds, and evaluation order.
+- [ ] Finish raw Wasm array contracts and storage adapters. Add product
+  box/unbox support where needed; check full heap types, multiple generic
+  parameters, and Unit effects. Missing types must not become reference storage.
+  Raw instruction declarations must describe one Wasm instruction each.
+- [ ] Move Array fields, length, capacity, growth, mutation, and iteration into
+  Dew. Fifteen legacy Array builtins remain. Keep typed raw backing arrays;
+  do not box every scalar to bypass a compiler defect. Nine checked/bulk
+  algorithms already run in Dew.
+- [ ] Remove the old Array wrapper layout and literal shortcuts. Use declared
+  fields and exact construction recipes, not a guessed three-field layout.
+- [ ] Move Map and Set hashing, buckets, growth, lookup, and iteration into Dew.
+  Keep their values and bounds correct before tuning them.
+- [ ] Move Queue, circular-buffer, and deque storage algorithms into Dew.
+  Commit each library family separately with order and boundary tests.
+- [ ] Move Text, Bytes, views, and builders out of compiler-owned algorithms.
+  Keep encoding, bounds, and lifetime checks in ordinary library code.
+- [ ] Convert remaining host-operation builtins into foreign declarations.
+  Keep generated Dew types, provider metadata, and emitted signatures in sync.
+- [ ] Remove all remaining standard-module path, declaration-number, and name
+  dispatch. Use declaration IDs and explicit representation metadata, including
+  Option variants and collection types. Names such as None, into, or RoadMap
+  must not change compiler rules.
+- [ ] Delete unused legacy builtin plans/builders after each migration. Enforce
+  the opcode-or-unsafe-cast rule across every module, registry, and generator.
+  Keep conversion behavior in `Into` impls where it is a type conversion.
+
+### Finish the compiler correctness audit
+
+- [ ] Complete physical-boundary checks. Reject missing, Generic, Error,
+  conflicting, or consumed evidence before a reachable value reaches emission.
+  Extend the existing specialization checks to every fragment/storage boundary.
+- [ ] Finish exact call-target checks. A second different target must report
+  SPC-303, not silently keep the first. Remove remaining first-candidate and
+  name-based exceptions. Verify the emitter uses the frozen target.
+- [ ] Finish call operand recipes for all call kinds and hidden arguments.
+  Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
+  Evaluate each source once in order; stop after a non-returning argument.
+- [ ] Complete full Wasm reference checks. Check heap type and nullability,
+  not just an eqref label, for call operands, results, locals, and branches.
+- [ ] Put constructor and other temporary locals in the frozen physical plan.
+  No emitter step may invent a new carrier or overwrite conflicting evidence.
+  Verify all worklist constraints at the fixed point and reject later mutation.
+- [ ] Finish constructor non-returning-value tests. A Never field or payload
+  must prevent later effects and construction, including generic tuple payloads.
+- [ ] Complete the emission shadow stack. Track operand types and control
+  frames through each instruction, including unreachable code and adapters.
+- [ ] Complete solver transaction and arena checks. Require LIFO snapshots,
+  parallel undo arrays, valid undo entries, bounded parent walks, and exact
+  rollback contents. Check span ownership before relative-index subtraction.
+- [ ] Complete SCC and linker checks. Every module must occur once, dependency
+  order must hold, and stored identities, physical indices, and import offsets
+  must agree. Missing bases or bodies must produce a diagnostic.
+- [ ] Separate trait cycles and search limits from ordinary missing evidence.
+  Use visited obligations and explicit limit errors, including implementation
+  comparison and module-interface traversal.
+- [ ] Complete stable numeric failure records and the negative invariant tests.
+  Start with a valid state, change one field, and check the exact code and source
+  context. Missing data or an unexpected trap must never count as a pass.
+- [ ] Add stable phase snapshots to both compilers. Compare by semantic identity
+  and stop at the first difference, from collection through emission. Keep
+  bootstrap byte comparison as an additional check, not a substitute.
+- [ ] Finish nested anonymous tuple patterns, such as `Some((left, right))`,
+  in both parsers and downstream pattern handling. Current fixtures use a named
+  payload followed by tuple destructuring. Extend imported/unqualified enum
+  ambiguity and construction coverage while removing name-based backend rules.
+- [ ] Keep readable, typed Starshine FFI names through regeneration. Audit any
+  remaining numbered references; test identity and signature agreement rather
+  than merely renaming incompatible reference types.
+
+### Final checks for this work
+
+- [ ] Run `tools/test-native.sh`, `tools/test-integration-native.sh`,
+  `tools/dew-test/run.sh`, `tools/test-self-host-hardening.sh`, and
+  `tools/check-generated.sh` after the remaining implementation batches.
+- [ ] Run `tools/test-stress-native.sh` and `tools/test-starshine-native.sh`.
+  These full lanes have not yet been run for this migration tranche.
+- [ ] Run `tools/check-self-host-bootstrap.sh --clean --fast` after compiler
+  changes. Require successful A/B/C builds and identical B/C output; the lane
+  already exists and has passed, so extend it rather than creating it again.
+- [ ] Measure every compiler run and record runs above 30 seconds as performance
+  bugs. Cold native generation, aggregate test lanes, and bootstrap execution
+  still exceed the limit. Address speed after the correctness work above.
 
 ## P1 — self-hosting
 
-1. Port the parser, semantic analysis, optimization, backend, cache codecs, and compiler driver to Dew in dependency order. The source-Bytes tokenizer, full parser, semantic pipeline through specialization and fragment/link planning, the physical body-carrier plan, and linked Starshine emission are ported into the smoke compiler; compiler B remains in bootstrap validation with one known carrier class. Cache codecs and the compiler driver port remain.
-2. Add the fixed-point bootstrap test: MoonBit builds A, A builds B, B builds C, and B/C are byte-identical.
+1. Finish the compiler port, including remaining optimization parity, cache codecs,
+   and the compiler driver. The Dew parser, semantic pipeline, physical planning,
+   and Starshine emission already pass a clean A/B/C fixed-point bootstrap.
+   The current correctness and library tasks above remain active.
 
 Use [`docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md`](docs/research/self-hosting-compiler-gap-catalog-2026-08-16.md) for the audited host, Wasm, collection, and port-surface gaps. Port-enabling options in that catalog remain decisions, not active backlog items, until explicitly selected.
 
@@ -23,8 +146,8 @@ Parallel module/body jobs, completion-order tests, and parallel-output checks ar
 
 ## Post-release performance work
 
-The current measured baseline is fast enough for the first release. These items
-are follow-up hardening and observability work, not release blockers.
+These are older, deferred performance tasks. They do not override the current
+self-host timing bugs or the correctness work listed above.
 
 - [ ] Define compiler budgets for graph size, nesting/width, alias expansion, inference, trait search, pattern usefulness, specialization growth, and diagnostic volume.
 - [ ] Diagnose budget exhaustion deterministically without panic or partial cache publication.
@@ -93,7 +216,9 @@ are follow-up hardening and observability work, not release blockers.
 - [ ] Add deterministic Name and source-information sections.
 - [ ] Deduplicate equivalent ABI signatures.
 - [ ] Define and continuously test the supported WasmGC runtime baseline.
-- [ ] Define builtin-registry extensions, Wasm imports/exports, JavaScript bindings, and string/reference interop.
+- [ ] Define checked raw-opcode registry extensions, Wasm imports/exports,
+  JavaScript bindings, and string/reference interop. Registry entries must not
+  add compiler-owned library algorithms.
 - [ ] Define component-model/WIT integration only after the core Wasm ABI stabilizes.
 - [ ] Provide explicit low-level escape hatches without ambient semantics.
 
