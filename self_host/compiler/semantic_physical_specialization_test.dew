@@ -109,7 +109,7 @@ fn self_host_physical_test_assert_clean_inference(
           SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, _) => "no matching direct call"
           SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(_, _) => "invalid pattern constructor"
           SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(_, _) => "invalid construction target"
-          _ => "other"
+          _ => self_host_inference_diagnostic_name(diagnostic)
         })
         report.append(self_host_physical_test_link_trace(link))
       }

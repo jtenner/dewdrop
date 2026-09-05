@@ -14,6 +14,16 @@ struct BulkCell {
   mut value: I32
 }
 
+struct BulkIndexCell<t> {
+  value: t
+}
+
+impl<t> IndexedGet<U32, t> for BulkIndexCell<t> {
+  fn indexed_get(self, key: U32) -> t {
+    self.value
+  }
+}
+
 fn bulk_effect(cell: BulkCell) -> Unit {
   cell.value = cell.value + 1i32
 }
@@ -85,18 +95,30 @@ pub fn main(case: U32) -> I32 {
     let values = Array::make(0u32, ())
     values.get_unchecked(0u32)
     0i32
+  } else if case == 10u32 {
+    let values = bulk_values()
+    values[unreachable()]
+    0i32
+  } else if case == 11u32 {
+    let value = BulkIndexCell::{
+      value: 42i32
+    }
+    value[unreachable()]
+    0i32
   } else {
     let cell = BulkCell::{
       value: 0i32
     }
     let values = [bulk_effect(cell), bulk_effect(cell)]
+    values[0u32]
+    values[0u32] = bulk_effect(cell)
     let iterator = values.iter()
     array_iter_next(iterator)
     array_iter_next(iterator)
     let present = values.pop() is Option::Some(_)
     let missing = values.get(1u32) is Option::None
     values.clear()
-    if cell.value == 2i32 && !array_iter_has_next(iterator) && present && missing && values.pop() is Option::None {
+    if cell.value == 3i32 && !array_iter_has_next(iterator) && present && missing && values.pop() is Option::None {
       1i32
     } else {
       0i32

@@ -2374,8 +2374,16 @@ fn self_host_body_seed_expression(
     SelfHostPlannedExpressionKind::PlannedFieldSet(_, _, _) => {
       carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
     }
-    SelfHostPlannedExpressionKind::PlannedIndexSet(_, _, _, _) => {
+    SelfHostPlannedExpressionKind::PlannedIndexSet(_, _, _, target) => {
       carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
+      match target {
+        SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
+          call_function_index = self_host_body_call_function(
+            link, indexes, body.body, specialization, expression, declaration,
+          )
+        }
+        _ => {}
+      }
     }
     SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => {
       let qualified_declaration = self_host_body_qualified_call_declaration(
@@ -4506,6 +4514,8 @@ fn self_host_body_call_receiver_expression(
     return 4294967295u32
   }
   let target = match module_.expressions[expression].kind {
+    SelfHostPlannedExpressionKind::PlannedIndexGet(base, _, _) => return base
+    SelfHostPlannedExpressionKind::PlannedIndexSet(base, _, _, _) => return base
     SelfHostPlannedExpressionKind::PlannedDirectCall(_, value, _, _) => value
     SelfHostPlannedExpressionKind::PlannedUnresolvedCall(value, _) => value
     _ => 4294967295u32
@@ -4648,32 +4658,51 @@ fn self_host_body_build_physical_call_plans(
               target.declaration,
             )
             if receiver != 4294967295u32 {
-              call_evaluations.push(receiver)
-              call_operands.push(
-                SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(receiver),
+              emits_call = self_host_body_plan_call_argument(module_, body, expressions,
+                receiver, false, call_evaluations, call_operands,
               )
+              if call_operands.length() > operand_start {
+                call_operands[operand_start] = SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(receiver)
+              }
             }
             let parameter_count = self_host_linked_physical_function_parameter_count(
               link,
               self_host_linked_physical_function_index(target.function_index),
             )
-            let receiver_count = if receiver == 4294967295u32 {
-              0u32
-            } else {
+            let receiver_count = call_operands.length() - operand_start
+            let (index_argument, index_value) = match module_.expressions[current].kind {
+              SelfHostPlannedExpressionKind::PlannedIndexGet(_, index, _) => (index, 4294967295u32)
+              SelfHostPlannedExpressionKind::PlannedIndexSet(_, index, value, _) => (index, value)
+              _ => (4294967295u32, 4294967295u32)
+            }
+            let argument_count = if index_value != 4294967295u32 {
+              2u32
+            } else if index_argument != 4294967295u32 {
               1u32
+            } else {
+              arguments.length
             }
             let flatten_product = self_host_u32_equal(arguments.length, 1u32) &&
               self_host_u32_equal(parameter_count, receiver_count + 2u32)
             let mut argument = 0u32
             let _ = while argument {
-              offset => if offset < arguments.length && emits_call {
+              offset => if offset < argument_count && emits_call {
                 let child = self_host_u32_add(arguments.start, offset)
-                if child < module_.expression_children.length() {
+                if index_argument != 4294967295u32 || child < module_.expression_children.length() {
+                  let source = if index_argument != 4294967295u32 {
+                    if offset == 0u32 {
+                      index_argument
+                    } else {
+                      index_value
+                    }
+                  } else {
+                    module_.expression_children[child]
+                  }
                   emits_call = self_host_body_plan_call_argument(
                     module_,
                     body,
                     expressions,
-                    module_.expression_children[child],
+                    source,
                     flatten_product,
                     call_evaluations,
                     call_operands,
@@ -8182,13 +8211,24 @@ fn self_host_verify_one_physical_body(
           diagnostics,
         )
       }
-      SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, _) => self_host_verify_body_call_result(
-        link,
-        plan,
-        module_,
-        expression_plan,
-        diagnostics,
-      )
+      SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, _) => {
+        self_host_verify_body_call_result(link, plan, module_, expression_plan, diagnostics)
+        self_host_verify_body_call_arguments(link, plan, module_, body, expression_plan,
+          SelfHostHirSpan::{
+            start: 0u32
+            length: 0u32
+          }, diagnostics,
+        )
+      }
+      SelfHostPlannedExpressionKind::PlannedIndexSet(_, _, _, _) => {
+        self_host_verify_body_call_result(link, plan, module_, expression_plan, diagnostics)
+        self_host_verify_body_call_arguments(link, plan, module_, body, expression_plan,
+          SelfHostHirSpan::{
+            start: 0u32
+            length: 0u32
+          }, diagnostics,
+        )
+      }
       _ => {}
     }
   }

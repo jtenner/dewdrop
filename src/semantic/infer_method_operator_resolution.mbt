@@ -399,14 +399,14 @@ fn BasicBodyInferencer::try_index_candidate(
     )
   }
   if viable {
-    viable = self.solver.unify(
+    viable = self.assignable_viable(
       self.expression_type(index),
       self.instantiate_signature_type(self.call_parameter_type(declaration, 1)),
       origin,
     )
   }
   if viable && value >= 0 {
-    viable = self.solver.unify(
+    viable = self.assignable_viable(
       self.expression_type(value),
       self.instantiate_signature_type(self.call_parameter_type(declaration, 2)),
       origin,

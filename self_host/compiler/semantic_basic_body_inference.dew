@@ -787,6 +787,16 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn try_constrain_assignable(
+    self,
+    actual: I32,
+    expected: I32,
+    origin: SelfHostTypeConstraintOrigin,
+  ) -> Bool {
+    self.is_primitive(actual, SelfHostPrimitiveType::NeverType) ||
+      self.solver.unify(actual, expected, origin)
+  }
+
   fn mark_unsupported(self, expression: U32) -> Unit {
     let index = self.expression_index(expression)
     if !self.unsupported_expressions[index] {
@@ -6967,7 +6977,7 @@ impl SelfHostBasicBodyInferencer {
     let mut index = 0u32
     let _ = while index {
       current => if current < operands.length() {
-        if !self.solver.unify(
+        if !self.try_constrain_assignable(
           self.expression_type(operands[current]),
           self.instantiate_signature_type(self.imported.parameter_types[callable.parameters.start + current]),
           origin,
@@ -7032,7 +7042,7 @@ impl SelfHostBasicBodyInferencer {
       )
     }
     if viable {
-      viable = self.solver.unify(
+      viable = self.try_constrain_assignable(
         self.expression_type(index),
         self.instantiate_signature_type(
           self.resolved.parameter_types[
@@ -7043,7 +7053,7 @@ impl SelfHostBasicBodyInferencer {
       )
     }
     if viable && !self_host_u32_equal(value, 4294967295u32) {
-      viable = self.solver.unify(
+      viable = self.try_constrain_assignable(
         self.expression_type(value),
         self.instantiate_signature_type(
           self.resolved.parameter_types[

@@ -47,6 +47,8 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   `member-index-fixed-point-2026-09-05.md`. Six bulk operations now run in Dew,
   and Unit storage, effects, iteration, and erased call targets pass the shared
   native/self-host execution corpus. See `array-bulk-library-2026-09-05.md`.
+  Unit index reads/writes and non-returning indices now use explicit call
+  evaluation recipes. See `index-call-evaluation-recipes-2026-09-05.md`.
   Basic storage/growth and remaining legacy dispatch are still open.
 - [ ] Map and Set: move hashing, buckets, growth, lookup, and iteration into Dew.
 - [ ] Queue, circular buffer, and deque: move storage algorithms into Dew.
@@ -65,7 +67,10 @@ and regression tests. No new compiler-owned library algorithm is permitted.
   with exact SPC-301 records; normalization preserves the distinction. See
   `specialization-shape-evidence-2026-09-05.md`. Native requests now reject both
   states too, and tuple keys are structural; see
-  `native-specialization-shape-evidence-2026-09-05.md`. Broader fragment
+  `native-specialization-shape-evidence-2026-09-05.md`. Imported trait signatures
+  now use their owning generic
+  arenas; wrong-module span access produces an exact ARN-106 record. See
+  `imported-trait-contracts-2026-09-05.md`. Broader fragment
   boundaries remain open. Inferred callback signatures now use a private,
   structural lowering pool and exact specialized targets; see
   `inferred-callback-signatures-2026-09-05.md`. Native nominal callback invocation

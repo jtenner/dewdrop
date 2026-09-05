@@ -8,5 +8,8 @@ export function checkArrayOperations(main) {
     assert.throws(() => main(test), WebAssembly.RuntimeError, `array bounds case ${test}`);
   }
   assert.equal(main(9), 1, "Unit literal, iteration, pop, clear, and option checks");
-  return 10;
+  for (const test of [10, 11]) {
+    assert.throws(() => main(test), WebAssembly.RuntimeError, `non-returning index ${test}`);
+  }
+  return 12;
 }

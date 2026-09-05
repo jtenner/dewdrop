@@ -14247,6 +14247,37 @@ fn self_host_linked_i32_planned_call_emits(
   }
 }
 
+fn self_host_linked_schedule_frozen_call(
+  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  specialization: U32,
+  expression: U32,
+  function_index: U32,
+  arguments: SelfHostHirSpan,
+  destination: StarshineInstructions,
+  tasks: Array<SelfHostLinkedI32EmitTask>,
+  expression_depths: Array<U32>,
+  depth: U32,
+) -> Option<String> {
+  match canonical {
+    Option::Some(plan) => if self_host_body_call_plan(plan, expression) is Option::None {
+      return Option::Some("ABI-704 call is missing its frozen evaluation recipe")
+    }
+    Option::None => return Option::Some("BOD-610 call is missing its frozen body plan")
+  }
+  if self_host_linked_i32_planned_call_emits(canonical, expression) {
+    match self_host_linked_assert_call_arguments(link, canonical, module_, body, specialization, expression, function_index, arguments) {
+      Option::Some(error) => return Option::Some(error)
+      Option::None => {}
+    }
+    self_host_linked_schedule_call_result_adapter(canonical, link, module_, body, specialization, expression, function_index, tasks, destination)
+    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(function_index, destination))
+  }
+  self_host_linked_i32_push_call_evaluations(canonical, link, module_, expression, arguments, function_index, destination, tasks, expression_depths, depth, true)
+}
+
 fn self_host_linked_call_has_erased_specialization(
   canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
   link: SelfHostPlannedProgramWasmGCLink,
@@ -18173,15 +18204,7 @@ fn self_host_emit_linked_i32_expression(
                   }
                 }
                 if self_host_linked_call_has_erased_specialization(canonical_body_plan, link, expression) {
-                  if self_host_linked_i32_planned_call_emits(canonical_body_plan, expression) {
-                    match self_host_linked_assert_call_arguments(link, canonical_body_plan, module_, body, caller_specialization, expression, function_index, arguments) {
-                      Option::Some(error) => return Option::Some(error)
-                      Option::None => {}
-                    }
-                    self_host_linked_schedule_call_result_adapter(canonical_body_plan, link, module_, body, caller_specialization, expression, function_index, tasks, destination)
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(function_index, destination))
-                  }
-                  match self_host_linked_i32_push_call_evaluations(canonical_body_plan, link, module_, expression, arguments, function_index, destination, tasks, expression_depths, depth, true) {
+                  match self_host_linked_schedule_frozen_call(canonical_body_plan, link, module_, body, caller_specialization, expression, function_index, arguments, destination, tasks, expression_depths, depth) {
                     Option::Some(error) => return Option::Some(error)
                     Option::None => {}
                   }
@@ -25415,12 +25438,32 @@ fn self_host_emit_linked_i32_expression(
                 )
                 _ => Option::None
               }
+              let frozen_index_shape = self_host_linked_canonical_expression_shape(canonical_body_plan, expression)
+              let erased_index = match frozen_index_shape {
+                Option::Some(shape) => shape is SelfHostPlannedValueShape::UnitPlannedValueShape ||
+                  shape is SelfHostPlannedValueShape::NeverPlannedValueShape
+                Option::None => false
+              }
+              if erased_index || !self_host_linked_i32_planned_call_emits(canonical_body_plan, expression) {
+                let function_index = match selected_index_function {
+                  Option::Some(value) => value
+                  Option::None => return Option::Some("BOD-607 erased index has no frozen target")
+                }
+                // Index operands already have a frozen evaluation/operand
+                // recipe. There is no HIR direct-call argument span here.
+                let arguments = SelfHostHirSpan::{
+                  start: 0u32
+                  length: 0u32
+                }
+                match self_host_linked_schedule_frozen_call(canonical_body_plan, link, module_, body, caller_specialization, expression, function_index, arguments, destination, tasks, expression_depths, depth) {
+                  Option::Some(error) => return Option::Some(error)
+                  Option::None => {}
+                }
+                continue tasks.length()
+              }
               // Emission consumes the frozen carrier. It must not reconstruct
               // an index result from generic source or local-usage heuristics.
-              let specialized_element_shape = match self_host_linked_canonical_expression_shape(
-                canonical_body_plan,
-                expression,
-              ) {
+              let specialized_element_shape = match frozen_index_shape {
                 Option::Some(shape) => match shape {
                   SelfHostPlannedValueShape::ErrorPlannedValueShape =>
                     return Option::Some("BOD-610 index result has no frozen carrier")
@@ -25645,6 +25688,26 @@ fn self_host_emit_linked_i32_expression(
               value,
               target,
             ) => {
+              if self_host_linked_call_has_erased_specialization(canonical_body_plan, link, expression) ||
+                !self_host_linked_i32_planned_call_emits(canonical_body_plan, expression) {
+                let function_index = match target {
+                  SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => match self_host_linked_canonical_call_index(canonical_body_plan, link, body, caller_specialization, expression, declaration) {
+                    Option::Some(value) => value
+                    Option::None => return Option::Some("BOD-607 erased index write has no frozen target")
+                  }
+                  _ => return Option::Some("BOD-607 erased index write has no declaration")
+                }
+                match self_host_linked_schedule_frozen_call(canonical_body_plan, link, module_, body, caller_specialization, expression, function_index,
+                  SelfHostHirSpan::{
+                    start: 0u32
+                    length: 0u32
+                  }, destination, tasks, expression_depths, depth,
+                ) {
+                  Option::Some(error) => return Option::Some(error)
+                  Option::None => {}
+                }
+                continue tasks.length()
+              }
               if value >= module_.expressions.length() || base >= module_.expressions.length() {
                 return Option::Some("linked index write operand is outside its arena")
               }

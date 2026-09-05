@@ -1042,6 +1042,25 @@ fn starshine_finish_call(
 }
 
 ///|
+fn starshine_diverging_call_evaluations(
+  lowering : @semantic.PlannedModuleLowering,
+  expression : @semantic.ExprId,
+  fragments : Array[Array[@lib.Instruction]],
+) -> Array[@lib.Instruction]? {
+  for index in 0..<fragments.length() {
+    let argument = starshine_program_call_argument(lowering, expression, index)
+    if argument >= 0 && !lowering.expressions[argument].flow.may_fall_through() {
+      let output : Array[@lib.Instruction] = []
+      for previous in 0..<=index {
+        append_starshine_instructions(output, fragments[previous])
+      }
+      return Some(output)
+    }
+  }
+  None
+}
+
+///|
 fn starshine_program_call_argument(
   lowering : @semantic.PlannedModuleLowering,
   expression : @semantic.ExprId,
@@ -10488,6 +10507,11 @@ fn starshine_emit_body_instructions(
       }
       FinishStarshineCall(declaration, expression, count, type_arguments) => {
         let fragments = pop_starshine_fragments(results, count)
+        if starshine_diverging_call_evaluations(lowering, expression, fragments)
+          is Some(output) {
+          results.push(output)
+          continue
+        }
         let emitted = match program {
           Some(link) =>
             starshine_finish_program_call(
@@ -10522,6 +10546,11 @@ fn starshine_emit_body_instructions(
       }
       FinishStarshineTailCall(declaration, expression, count, type_arguments) => {
         let fragments = pop_starshine_fragments(results, count)
+        if starshine_diverging_call_evaluations(lowering, expression, fragments)
+          is Some(output) {
+          results.push(output)
+          continue
+        }
         let emitted = match program {
           Some(link) =>
             starshine_finish_program_call(
