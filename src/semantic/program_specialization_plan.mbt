@@ -706,16 +706,14 @@ fn program_specialization_shapes_equal(
 fn program_generic_parameter_shape(
   resolved : ResolvedModuleTypes,
   type_ : ResolvedTypeId,
-  generic_parameters : HirSpan,
+  generic_parameters : CallableGenericParameters,
   shapes : Array[PlannedValueShape],
   shape_span : HirSpan,
 ) -> PlannedValueShape? {
   match resolved.types[type_] {
     GenericParameterType(parameter) => {
       let parameter_local = semantic_id_local(parameter)
-      if parameter_local >= generic_parameters.start &&
-        parameter_local < generic_parameters.start + generic_parameters.length {
-        let relative = parameter_local - generic_parameters.start
+      if generic_parameters.relative_index(parameter_local) is Some(relative) {
         if relative < shape_span.length {
           return Some(shapes[shape_span.start + relative])
         }
@@ -792,7 +790,7 @@ fn program_append_specialization_value_types(
 fn program_fixed_array_specialization_value_type(
   resolved : ResolvedModuleTypes,
   type_ : ResolvedTypeId,
-  generic_parameters : HirSpan,
+  generic_parameters : CallableGenericParameters,
   shapes : Array[PlannedValueShape],
   shape_span : HirSpan,
 ) -> PlannedWasmValueType? {
@@ -829,7 +827,7 @@ fn program_fixed_array_specialization_value_type(
 ///|
 fn program_resolve_specialized_shape(
   module_ : PlannedModuleLowering,
-  generic_parameters : HirSpan,
+  generic_parameters : CallableGenericParameters,
   specialization_values : Array[PlannedValueShape],
   specialization : HirSpan,
   type_ : BodyTypeId,
@@ -849,9 +847,7 @@ fn program_resolve_specialized_shape(
     match module_.resolved_types[resolved_type] {
       GenericParameterType(parameter) => {
         let parameter_local = semantic_id_local(parameter)
-        if parameter_local >= generic_parameters.start &&
-          parameter_local < generic_parameters.start + generic_parameters.length {
-          let relative = parameter_local - generic_parameters.start
+        if generic_parameters.relative_index(parameter_local) is Some(relative) {
           if relative < specialization.length {
             return specialization_values[specialization.start + relative]
           }

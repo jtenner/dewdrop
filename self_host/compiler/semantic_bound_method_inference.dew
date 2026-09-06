@@ -145,15 +145,15 @@ impl SelfHostBasicBodyInferencer {
     let parameter_id = match self.solver.type_term(self.solver.representative_type(self.expression_type(receiver))) {
       SelfHostBodyTypeTerm::BodyResolvedType(type_) => match self.resolved.types[type_] {
         SelfHostResolvedType::GenericParameterType(parameter) => parameter
-        _ => return false
+        _ => 18446744073709551615u64
       }
-      _ => return false
+      _ => 18446744073709551615u64
     }
-    if !self_host_u64_equal(self_host_semantic_id_module(parameter_id), self.collected.module_id) {
-      return false
+    let bounds = if self_host_u64_equal(self_host_semantic_id_module(parameter_id), self.collected.module_id) {
+      self.collected.generic_parameter_at(self_host_semantic_id_local(parameter_id)).bounds
+    } else {
+      self_host_empty_hir_span(0u32)
     }
-    let parameter = self.collected.generic_parameter_at(self_host_semantic_id_local(parameter_id))
-    let bounds = parameter.bounds
     let candidates = self_host_empty_semantic_ids()
     let _ = while 0u32 {
       index => if index < bounds.length {
@@ -163,7 +163,7 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
-    for bound in self.guarded_trait_bounds(expression, parameter_id) {
+    for bound in self.guarded_trait_bounds(expression, self.expression_type(receiver)) {
       let mut present = false
       for previous in candidates {
         if previous == bound {

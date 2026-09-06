@@ -38,7 +38,7 @@ pub enum StarshineCodeEmissionError {
 
 ///|
 priv struct StarshineGenericSpecialization {
-  generic_parameters : @semantic.HirSpan
+  generic_parameters : @semantic.CallableGenericParameters
   shapes : Array[@semantic.PlannedValueShape]
   specialization_shapes : @semantic.HirSpan
   specialization_evidence : @semantic.HirSpan
@@ -190,12 +190,8 @@ fn starshine_program_captured_trait_dictionary_for_adapter(
 ///|
 fn starshine_callable_generic_parameters(
   callable : @semantic.PlannedCallable,
-) -> @semantic.HirSpan {
-  if callable.owner_generic_parameters.length > 0 {
-    callable.owner_generic_parameters
-  } else {
-    callable.generic_parameters
-  }
+) -> @semantic.CallableGenericParameters {
+  callable.all_generic_parameters()
 }
 
 ///|
@@ -5442,12 +5438,8 @@ fn starshine_program_append_specialized_resolved_codes(
     match lowering.resolved_types[type_] {
       @semantic.GenericParameterType(parameter) => {
         let parameter_index = @semantic.semantic_id_local(parameter)
-        if parameter_index >= specialization.generic_parameters.start &&
-          parameter_index <
-          specialization.generic_parameters.start +
-          specialization.generic_parameters.length {
-          let relative = parameter_index -
-            specialization.generic_parameters.start
+        if specialization.generic_parameters.relative_index(parameter_index)
+          is Some(relative) {
           if relative < specialization.specialization_shapes.length {
             starshine_program_append_shape_codes(
               specialization.shapes[specialization.specialization_shapes.start +
@@ -5493,12 +5485,8 @@ fn starshine_program_specialized_type_code(
     match lowering.resolved_types[type_] {
       @semantic.GenericParameterType(parameter) => {
         let parameter_index = @semantic.semantic_id_local(parameter)
-        if parameter_index >= specialization.generic_parameters.start &&
-          parameter_index <
-          specialization.generic_parameters.start +
-          specialization.generic_parameters.length {
-          let relative = parameter_index -
-            specialization.generic_parameters.start
+        if specialization.generic_parameters.relative_index(parameter_index)
+          is Some(relative) {
           if relative < specialization.specialization_shapes.length {
             return starshine_program_adapter_shape_code(
               specialization.shapes[specialization.specialization_shapes.start +
@@ -11119,6 +11107,11 @@ fn starshine_emit_body_instructions(
             output.push(starshine_match_local_get(result_local))
           }
         }
+        // Wasm does not carry unreachable stack state out of a void block.
+        // A Never match must remain unreachable at its enclosing value join.
+        if result_shape is @semantic.NeverPlannedValueShape {
+          output.push(@lib.Instruction::unreachable_())
+        }
         results.push(output)
       }
       FinishStarshineWhile(expression, control, arms, state_local, result_local) => {
@@ -11368,6 +11361,9 @@ fn starshine_emit_body_instructions(
               Some(alternative),
             ),
           )
+        }
+        if shape is @semantic.NeverPlannedValueShape {
+          output.push(@lib.Instruction::unreachable_())
         }
         results.push(output)
       }

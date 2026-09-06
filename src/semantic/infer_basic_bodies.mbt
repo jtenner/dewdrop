@@ -1391,7 +1391,6 @@ fn BasicBodyInferencer::function_reference_candidate_viable(
   candidate_type : ResolvedTypeId,
   offset : UInt64,
 ) -> Bool {
-  ignore(candidate_type)
   let expected = match
     self.resolved_function_signature(self.expression_type(expression)) {
     Some(signature) => signature
@@ -1404,24 +1403,8 @@ fn BasicBodyInferencer::function_reference_candidate_viable(
   let diagnostic_start = self.solver.diagnostics.length()
   self.begin_call_candidate(declaration)
   let origin = expression_type_origin(expression, offset)
-  for index in 0..<expected.parameters.length() {
-    ignore(
-      self.solver.unify(
-        expected.parameters[index],
-        self.instantiate_signature_type(
-          self.call_parameter_type(declaration, index),
-        ),
-        origin,
-      ),
-    )
-  }
-  ignore(
-    self.solver.unify(
-      expected.result,
-      self.instantiate_signature_type(self.call_result_type(declaration)),
-      origin,
-    ),
-  )
+  let signature = self.instantiate_signature_type(candidate_type)
+  ignore(self.solver.unify(self.expression_type(expression), signature, origin))
   let viable = self.solver.diagnostics.length() == diagnostic_start
   self.solver.rollback(snapshot)
   viable
@@ -1435,30 +1418,19 @@ fn BasicBodyInferencer::commit_function_reference(
   candidate_type : ResolvedTypeId,
   offset : UInt64,
 ) -> Unit {
-  ignore(candidate_type)
-  let expected = self
-    .resolved_function_signature(self.expression_type(expression))
-    .unwrap()
   self.begin_call_candidate(declaration)
   let origin = expression_type_origin(expression, offset)
-  for index in 0..<expected.parameters.length() {
-    ignore(
-      self.solver.unify(
-        expected.parameters[index],
-        self.instantiate_signature_type(
-          self.call_parameter_type(declaration, index),
-        ),
-        origin,
-      ),
+  let signature = self.instantiate_signature_type(candidate_type)
+  let valid = self.solver.unify(
+    self.expression_type(expression),
+    signature,
+    origin,
+  )
+  guard valid else {
+    abort(
+      "SPC-303 selected function reference signature changed after rollback",
     )
   }
-  ignore(
-    self.solver.unify(
-      expected.result,
-      self.instantiate_signature_type(self.call_result_type(declaration)),
-      origin,
-    ),
-  )
   let start = self.expression_type_arguments.length()
   for type_ in self.call_scratch.candidate_type_arguments {
     self.expression_type_arguments.push(self.solver.representative_type(type_))

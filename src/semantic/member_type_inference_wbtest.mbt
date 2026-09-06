@@ -131,6 +131,56 @@ test "compile time member projection cannot infer its owner or hide a cycle" {
 }
 
 ///|
+test "compile time projection equation worklist waits for owners and rolls back exactly" {
+  let collected = collect_bytes(24020UL, b"struct Record {\n  item: I64\n}\n")
+  let resolved = resolve_module_types(collected)
+  let declaration = collected.declarations[0].id
+  let context : BodyMemberTypeContext = {
+    declarations: Map([
+      (
+        declaration,
+        {
+          parameters: [],
+          fields: { "item": resolved.primitive(I64Type) },
+          variants: {},
+        },
+      ),
+    ]),
+  }
+  let solver = LocalTypeSolver::new(resolved, member_types=Some(context))
+  let owner = solver.fresh_variable()
+  let projection = solver.member_projection_type(
+    owner, b"types.field_type", "item",
+  )
+  let scalar = solver.resolved_type(resolved.primitive(I64Type))
+  let record = solver.resolved_type(resolved.declaration_type(declaration))
+  let left = solver.product_type([projection, owner])
+  let right = solver.product_type([scalar, record])
+  let parents = solver.variable_parents.copy()
+  let sizes = solver.variable_sizes.copy()
+  let bindings = solver.variable_bindings.copy()
+  let types = solver.types.copy()
+  let arguments = solver.type_arguments.copy()
+  let origin = call_type_origin(19, 47UL)
+  let snapshot = solver.snapshot()
+  assert_true(solver.unify(left, right, origin))
+  assert_eq(solver.representative_type(owner), record)
+  assert_eq(solver.reduce_member_type(projection, 0), Ok(scalar))
+  assert_eq(solver.diagnostics, [])
+  solver.rollback(snapshot)
+  assert_eq(solver.variable_parents, parents)
+  assert_eq(solver.variable_sizes, sizes)
+  assert_eq(solver.variable_bindings, bindings)
+  assert_eq(solver.types, types)
+  assert_eq(solver.type_arguments, arguments)
+  assert_false(solver.unify(projection, scalar, origin))
+  assert_eq(solver.representative_type(owner), owner)
+  assert_true(
+    solver.diagnostics[0] is LocalTypeMismatch(_, _, actual) && actual == origin,
+  )
+}
+
+///|
 test "compile time member projection codec retains owner and error origin" {
   let type_ = BodyMemberTypeProjection(
     -7, b"types.variant_payload_types", "Value",

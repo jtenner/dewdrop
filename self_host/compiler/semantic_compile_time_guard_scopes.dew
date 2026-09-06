@@ -353,16 +353,64 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn guarded_trait_bounds(self, expression: U32, parameter: U64) -> Array<U32> {
+  fn guard_type_has_generic(self, root: U32) -> Bool {
+    let work = [root]
+    let seen = self_host_empty_u32_bool_map()
+    let _ = while work.length() {
+      length => if length > 0u32 {
+        let id = work[length - 1u32]
+        work.truncate(length - 1u32)
+        if seen.contains_key(id) {
+          continue work.length()
+        }
+        seen.set(id, true)
+        self_host_assert_array_index(id, self.resolved.types.length(), "ARN-104 guarded target type")
+        let span = match self.resolved.types[id] {
+          SelfHostResolvedType::GenericParameterType(_) => return true
+          SelfHostResolvedType::ProductType(span) => span
+          SelfHostResolvedType::AppliedType(base, span) => {
+            work.push(base)
+            span
+          }
+          SelfHostResolvedType::FunctionType(span, result) => {
+            work.push(result)
+            span
+          }
+          SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
+            work.push(owner)
+            continue work.length()
+          }
+          _ => continue work.length()
+        }
+        self_host_assert_array_span(span.start, span.length, self.resolved.type_arguments.length(), "ARN-101 guarded target type arguments")
+        let _ = while 0u32 {
+          index => if index < span.length {
+            work.push(self.resolved.type_arguments[span.start + index])
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        continue work.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    false
+  }
+
+  fn guarded_trait_bounds(self, expression: U32, target_type: I32) -> Array<U32> {
     self.prepare_guard_scopes()
     let result = self_host_empty_semantic_ids()
     match self.guarded_trait_scopes.get(expression) {
       Option::Some(facts) => for fact in facts {
-        match self.resolved.types[fact.target] {
-          SelfHostResolvedType::GenericParameterType(id) => if fact.is_trait && id == parameter {
+        if fact.is_trait && self.guard_type_has_generic(fact.target) {
+          let snapshot = self.solver.snapshot()
+          let matches = self.solver.unify(target_type, self.solver.resolved_type(fact.target), self_host_expression_type_origin(expression, self.collected.expressions[expression].offset()))
+          self.solver.rollback(snapshot)
+          if matches {
             result.push(fact.bound)
           }
-          _ => {}
         }
       }
       Option::None => {}

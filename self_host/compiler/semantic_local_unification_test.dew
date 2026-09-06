@@ -1,4 +1,54 @@
 open dew.std.testing
+open dew.std.map
+open dew.std.option
+open dew.std.result
+
+test "projection equations wait for owners and restore their snapshot" {
+  let collected = self_host_collect_bytes(24020u64, b"struct Record {\n  item: I64\n}\n")
+  let resolved = self_host_resolve_module_types(collected)
+  let declaration = collected.declaration_at(0u32).id
+  let declarations = self_host_empty_member_declarations()
+  let fields = self_host_empty_member_fields()
+  fields.set("item", resolved.primitive(SelfHostPrimitiveType::I64Type))
+  declarations.set(declaration, SelfHostBodyMemberTypeDeclaration::{
+    parameters: []
+    fields: fields
+    variants: self_host_empty_member_variants()
+  })
+  let solver = SelfHostLocalTypeSolver::new(resolved)
+  solver.member_types = Option::Some(SelfHostBodyMemberTypeContext::{
+    declarations: declarations
+  })
+  let owner = solver.fresh_variable()
+  let projection = solver.member_projection_type(owner, b"types.field_type", "item")
+  let scalar = solver.resolved_type(resolved.primitive(SelfHostPrimitiveType::I64Type))
+  let record = solver.resolved_type(resolved.declaration_type(declaration))
+  let left = solver.product_type([projection, owner])
+  let right = solver.product_type([scalar, record])
+  let parents = solver.variable_parents.copy()
+  let sizes = solver.variable_sizes.copy()
+  let bindings = solver.variable_bindings.copy()
+  let types_length = solver.types.length()
+  let arguments_length = solver.type_arguments.length()
+  let origin = self_host_call_type_origin(19u32, 47u32)
+  let snapshot = solver.snapshot()
+  assert(solver.unify(left, right, origin), "later owner resolves the earlier projection")
+  assert(solver.representative_type(owner) == record, "exact owner")
+  match solver.reduce_member_type(projection, 0u32) {
+    Result::Ok(value) => assert(value == scalar, "exact field type")
+    Result::Err(_) => assert(false, "field projection must resolve")
+  }
+  assert(solver.diagnostic_count() == 0u32, "no deferred diagnostic")
+  solver.rollback(snapshot)
+  assert(solver.types.length() == types_length, "type arena restored")
+  assert(solver.type_arguments.length() == arguments_length, "argument arena restored")
+  assert(solver.variable_parents[0u32] == parents[0u32], "parent restored")
+  assert(solver.variable_sizes[0u32] == sizes[0u32], "size restored")
+  assert(solver.variable_bindings[0u32] == bindings[0u32], "binding restored")
+  assert(!solver.unify(projection, scalar, origin), "a field type cannot infer its owner")
+  assert(solver.representative_type(owner) == owner, "unknown owner stays unknown")
+  assert(solver.diagnostic_count() == 1u32, "unresolved equation has a visible diagnostic")
+}
 
 pub struct SelfHostUnificationTestTypes {
   collected: SelfHostCollectedModule

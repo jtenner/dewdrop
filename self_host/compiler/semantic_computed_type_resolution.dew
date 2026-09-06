@@ -157,6 +157,15 @@ impl SelfHostTypeResolver {
     Result::Err("CT-030 missing imported type-query callable")
   }
 
+  fn computed_self_target(self, owner: U64) -> Option<U32> {
+    for implementation in self.collected.impls {
+      if implementation.declaration == owner {
+        return Option::Some(self.computed_dependency(owner, implementation.target_type))
+      }
+    }
+    Option::None
+  }
+
   fn computed_nominal(self, input: U32) -> Result<SelfHostComputedNominalOwner, String> {
     let visited = self_host_empty_u64_bool_map()
     let result = while input {
@@ -187,7 +196,14 @@ impl SelfHostTypeResolver {
         let declaration = match self.interner.types[base] {
           SelfHostResolvedType::NominalType(value) => value
           SelfHostResolvedType::GenericParameterType(_) => return Result::Ok(SelfHostComputedNominalOwner::DeferredComputedOwner(current))
-          SelfHostResolvedType::SelfType(_) => return Result::Ok(SelfHostComputedNominalOwner::DeferredComputedOwner(current))
+          SelfHostResolvedType::SelfType(owner) => match self.computed_self_target(owner) {
+            Option::Some(target) => if target == self.interner.error_type {
+              return Result::Err("CT-033 invalid implementation Self type")
+            } else {
+              continue target
+            }
+            Option::None => return Result::Ok(SelfHostComputedNominalOwner::DeferredComputedOwner(current))
+          }
           SelfHostResolvedType::MemberTypeProjection(_, _, _) => return Result::Ok(SelfHostComputedNominalOwner::DeferredComputedOwner(current))
           _ => return Result::Err("CT-032 member type query requires a struct or enum")
         }

@@ -116,10 +116,7 @@ fn BasicBodyInferencer::declared_body_trait_evidence(
   method_name : NameId,
   expression? : ExprId = -1,
 ) -> Array[DeclaredBodyTraitEvidence] {
-  let parameter = match self.direct_body_generic_parameter(target_type) {
-    Some(value) => value
-    None => return []
-  }
+  let parameter = self.direct_body_generic_parameter(target_type)
   let (owner, method_parameters) = self.body_generic_parameter_spans()
   let mut evidence_index = 0
   let evidence : Array[DeclaredBodyTraitEvidence] = []
@@ -131,7 +128,7 @@ fn BasicBodyInferencer::declared_body_trait_evidence(
         generic_offset]
       for bound_offset in 0..<generic.bounds.length {
         let bound_index = generic.bounds.start + bound_offset
-        if generic.id == parameter {
+        if parameter == Some(generic.id) {
           let bound_type = self.resolved.generic_bound_types[bound_index]
           match self.resolved_bound_trait(bound_type) {
             Some(trait_declaration) =>
@@ -160,7 +157,7 @@ fn BasicBodyInferencer::declared_body_trait_evidence(
   }
   for
     guarded in self.guarded_trait_evidence(
-      expression, parameter, trait_filter, method_name,
+      expression, target_type, trait_filter, method_name,
     ) {
     if !evidence.any(value => {
         value.bound_type == guarded.bound_type &&

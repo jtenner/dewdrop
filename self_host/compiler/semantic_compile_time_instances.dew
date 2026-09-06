@@ -1,6 +1,7 @@
 open dew.std.array
 open dew.std.map
 open dew.std.option
+open dew.std.result
 
 fn self_host_clone_compile_time_module(source: SelfHostPlannedModuleLowering) -> SelfHostPlannedModuleLowering {
   let projections = self_host_query_module_has_projections(source)
@@ -75,6 +76,43 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
   let module_ = self_host_clone_compile_time_module(lowering.modules[owner])
   let caller = self_host_program_specialization_callable(module_, request.declaration)
   let bindings = self_host_compile_time_caller_bindings(caller, specialization, requests)
+  match caller {
+    Option::Some(callable) => match callable.kind {
+      SelfHostPlannedCallableKind::PlannedImplMethodCallable(implementation, _) => {
+        let collected = lowering.collected.modules.at(owner)
+        let mut target = 4294967295u32
+        let _ = while 0u32 {
+          index => if index < collected.impls.length() {
+            if collected.impls[index].declaration == implementation {
+              self_host_assert_array_index(index, module_.resolved_types.impl_target_types.length(), "ARN-103 implementation Self types")
+              target = module_.resolved_types.impl_target_types[index]
+              break self_host_semantic_unit()
+            }
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        self_host_assert_array_index(target, module_.resolved_types.types.length(), "LNK-504 query instance implementation Self type")
+        match self_host_read_compile_time_type(module_, -self_host_body_u32_to_i32(target) - 2i32, bindings, 0u32) {
+          Result::Ok(self_type) => {
+            let concrete = match self_host_compile_time_types_concrete([self_type]) {
+              Result::Ok(value) => value
+              Result::Err(_) => false
+            }
+            self_host_assert_compiler_invariant(concrete, "SPC-301 implementation Self type is not concrete")
+            bindings.set(implementation, self_type)
+          }
+          Result::Err(_) => {
+            self_host_assert_compiler_invariant(false, "SPC-301 implementation Self type could not be resolved")
+            unreachable()
+          }
+        }
+      }
+      _ => {}
+    }
+    Option::None => {}
+  }
   lowering.compile_time.instances.set(specialization, SelfHostCompileTimeInstance::{
     declaration: request.declaration
     evidence_types: request.evidence_types.copy()

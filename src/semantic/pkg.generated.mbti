@@ -169,7 +169,7 @@ pub fn serialize_planned_module_type_layouts(PlannedModuleTypeLayouts) -> Result
 
 pub fn serialize_planned_module_wasmgc_fragments(PlannedModuleWasmGCFragments) -> Result[Bytes, String]
 
-pub fn specialize_planned_body_value_shape(PlannedModuleLowering, Int, PlannedValueShape, HirSpan, Array[PlannedValueShape], HirSpan) -> PlannedValueShape
+pub fn specialize_planned_body_value_shape(PlannedModuleLowering, Int, PlannedValueShape, CallableGenericParameters, Array[PlannedValueShape], HirSpan) -> PlannedValueShape
 
 pub fn standard_array_entry_iterator_type_declaration() -> UInt64
 
@@ -542,6 +542,14 @@ pub enum BodyTypeTerm {
   BodyFunctionType(HirSpan, Int)
   BodyMemberTypeProjection(Int, Bytes, String)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+
+pub struct CallableGenericParameters {
+  owner : HirSpan
+  method : HirSpan
+  length : Int
+} derive(Eq, @debug.Debug)
+pub fn CallableGenericParameters::relative_index(Self, Int) -> Int?
+pub fn CallableGenericParameters::source_index(Self, Int) -> Int
 
 pub struct CollectedAlias {
   declaration : UInt64
@@ -1649,6 +1657,7 @@ pub struct PlannedCallable {
   result_shape : PlannedValueShape
   offset : UInt64
 } derive(Eq, @debug.Debug)
+pub fn PlannedCallable::all_generic_parameters(Self) -> CallableGenericParameters
 
 pub enum PlannedCallableKind {
   PlannedBuiltinCallable(Bytes)

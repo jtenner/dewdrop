@@ -454,12 +454,10 @@ fn transparent_callback_call_summary(
 }
 
 ///|
-fn program_callable_generic_parameters(callable : PlannedCallable) -> HirSpan {
-  if callable.owner_generic_parameters.length > 0 {
-    callable.owner_generic_parameters
-  } else {
-    callable.generic_parameters
-  }
+fn program_callable_generic_parameters(
+  callable : PlannedCallable,
+) -> CallableGenericParameters {
+  callable.all_generic_parameters()
 }
 
 ///|

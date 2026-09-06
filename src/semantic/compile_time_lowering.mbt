@@ -124,7 +124,19 @@ fn fold_program_compile_time_queries(
     return lowering
   }
   for index, module_ in lowering.modules {
-    fold_module_compile_time_queries(context, index, module_, {}, None)
+    let bindings = {}
+    for callable in module_.functions.callables {
+      if callable.kind is PlannedImplMethodCallable(implementation, _) &&
+        callable.all_generic_parameters().length == 0 {
+        match
+          compile_time_read_type(module_, -callable.self_type - 2, bindings) {
+          Ok(type_) if compile_time_types_are_concrete([type_]) == Ok(true) =>
+            bindings[implementation] = type_
+          _ => abort("SPC-301 concrete implementation has no logical Self type")
+        }
+      }
+    }
+    fold_module_compile_time_queries(context, index, module_, bindings, None)
   }
   { ..lowering, compile_time: Some(context), }
 }

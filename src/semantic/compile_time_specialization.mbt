@@ -224,14 +224,39 @@ fn compile_time_specialization_key(
   }
   let collected = context.program.modules[owner_index]
   guard program_specialization_span_is_valid(
-    parameters,
-    collected.generic_parameters.length(),
-  ) else {
+      parameters.owner,
+      collected.generic_parameters.length(),
+    ) &&
+    program_specialization_span_is_valid(
+      parameters.method,
+      collected.generic_parameters.length(),
+    ) else {
     abort("ARN-101 logical specialization parameters are outside their arena")
   }
   let bindings : Map[GenericParameterId, CompileTimeType] = Map([])
   for index in 0..<parameters.length {
-    bindings[collected.generic_parameters[parameters.start + index].id] = logical_types[index]
+    bindings[collected.generic_parameters[parameters.source_index(index)].id] = logical_types[index]
+  }
+  if callable.kind is PlannedImplMethodCallable(implementation, _) {
+    let resolved = context.analyzed.frozen.interfaces[owner_index].resolved_types
+    let mut target = -1
+    for index, candidate in collected.impls {
+      if candidate.declaration == implementation {
+        target = resolved.impl_target_types[index]
+        break
+      }
+    }
+    guard target >= 0 else {
+      abort("LNK-504 query instance has no implementation Self type")
+    }
+    let self_type = match compile_time_read_type(owner, -target - 2, bindings) {
+      Ok(value) => value
+      Err(_) => abort("SPC-301 implementation Self type could not be resolved")
+    }
+    guard compile_time_types_are_concrete([self_type]) == Ok(true) else {
+      abort("SPC-301 implementation Self type is not concrete")
+    }
+    bindings[implementation] = self_type
   }
   let instances = [owner]
   prepare_program_optimization_mutation(instances)

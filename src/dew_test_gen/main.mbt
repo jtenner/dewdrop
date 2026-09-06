@@ -209,6 +209,17 @@ fn main {
         ) =>
           for module_ in compiled.lowering.modules {
             for body in module_.bodies {
+              if body.body == body_id && expression < 0 {
+                let name = match
+                  module_.functions.callable_of(body.declaration) {
+                  Some(callable) => @debug.to_string(callable.name)
+                  None => "<module value>"
+                }
+                println(
+                  "unsupported emission module=\{module_.module_id} declaration=\{body.declaration} body=\{body_id} code=\{expression} callable=" +
+                  name,
+                )
+              }
               if body.body == body_id &&
                 expression >= 0 &&
                 expression < module_.expressions.length() {

@@ -16907,6 +16907,11 @@ fn self_host_emit_linked_i32_expression(
                 ))
                 return Option::Some(message.finish())
               }
+              if !planned.flow.falls_through {
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedUnreachable(
+                  destination,
+                ))
+              }
               tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32If(
                 destination,
                 consequent,
@@ -17455,6 +17460,13 @@ fn self_host_emit_linked_i32_expression(
                 SelfHostPlannedValueShape::UnitPlannedValueShape
               } else {
                 logical_match_result_shape
+              }
+              // A structured block does not export its unreachable stack state.
+              // Preserve proven divergence at the enclosing value join.
+              if !planned.flow.falls_through {
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedUnreachable(
+                  destination,
+                ))
               }
               tasks.push(SelfHostLinkedI32EmitTask::VisitLinkedI32MatchArms(
                 arms,

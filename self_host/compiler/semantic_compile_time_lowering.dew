@@ -423,7 +423,28 @@ fn self_host_fold_program_compile_time_queries(lowering: SelfHostPlannedProgramL
       if lowering.compile_time.sensitive.contains_key(body.declaration) {
         match self_host_program_specialization_callable(module_, body.declaration) {
           Option::Some(callable) => if self_host_program_specialization_callable_generics(callable).length == 0u32 {
-            self_host_fold_compile_time_body(lowering, module_, body, 4294967295u32, self_host_empty_compile_time_bindings())
+            let bindings = self_host_empty_compile_time_bindings()
+            match callable.kind {
+              SelfHostPlannedCallableKind::PlannedImplMethodCallable(implementation, _) => {
+                self_host_assert_array_index(callable.self_type, module_.resolved_types.types.length(), "LNK-504 concrete implementation Self type")
+                match self_host_read_compile_time_type(module_, -self_host_body_u32_to_i32(callable.self_type) - 2i32, bindings, 0u32) {
+                  Result::Ok(self_type) => {
+                    let concrete = match self_host_compile_time_types_concrete([self_type]) {
+                      Result::Ok(value) => value
+                      Result::Err(_) => false
+                    }
+                    self_host_assert_compiler_invariant(concrete, "SPC-301 concrete implementation Self type is unresolved")
+                    bindings.set(implementation, self_type)
+                  }
+                  Result::Err(_) => {
+                    self_host_assert_compiler_invariant(false, "SPC-301 concrete implementation Self type could not be read")
+                    unreachable()
+                  }
+                }
+              }
+              _ => {}
+            }
+            self_host_fold_compile_time_body(lowering, module_, body, 4294967295u32, bindings)
           }
           Option::None => {}
         }

@@ -559,7 +559,7 @@ pub fn planned_value_shape_from_resolved_types(
 fn specialized_resolved_value_shape(
   lowering : PlannedModuleLowering,
   type_ : ResolvedTypeId,
-  generic_parameters : HirSpan,
+  generic_parameters : CallableGenericParameters,
   shapes : Array[PlannedValueShape],
   shape_span : HirSpan,
   fallback : PlannedValueShape,
@@ -570,9 +570,7 @@ fn specialized_resolved_value_shape(
   match lowering.resolved_types[type_] {
     GenericParameterType(parameter) => {
       let parameter_local = semantic_id_local(parameter)
-      if parameter_local >= generic_parameters.start &&
-        parameter_local < generic_parameters.start + generic_parameters.length {
-        let relative = parameter_local - generic_parameters.start
+      if generic_parameters.relative_index(parameter_local) is Some(relative) {
         if relative >= 0 && relative < shape_span.length {
           return shapes[shape_span.start + relative]
         }
@@ -613,7 +611,7 @@ pub fn specialize_planned_body_value_shape(
   lowering : PlannedModuleLowering,
   type_ : BodyTypeId,
   fallback : PlannedValueShape,
-  generic_parameters : HirSpan,
+  generic_parameters : CallableGenericParameters,
   shapes : Array[PlannedValueShape],
   shape_span : HirSpan,
 ) -> PlannedValueShape {

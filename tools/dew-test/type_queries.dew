@@ -69,6 +69,14 @@ fn query_guarded_bounded_read<t>(value: t) -> I32 {
   }
 }
 
+fn query_compound_guard<t>(value: QueryBox<t>) -> I32 {
+  if implements::<QueryBox<t>, QueryRead>() {
+    value.query_read()
+  } else {
+    0i32
+  }
+}
+
 fn query_guarded_read<t>(value: t) -> I32 {
   if implements::<t, QueryRead>() {
     value.query_read()
@@ -130,6 +138,60 @@ impl QueryMark for QueryLeft {
 
 struct QueryBox<t> {
   item: t
+}
+
+impl<t> QueryBox<t> {
+  fn query_self_item(self, value: field_type<Self>("item")) -> field_type<Self>("item") {
+    value
+  }
+
+  fn query_self_identity(self) -> Bool {
+    type_equal::<Self, QueryBox<t>>()
+  }
+
+  fn query_unrelated<u>(self, value: u) -> u {
+    value
+  }
+
+  fn query_compare<u>(self, value: u) -> Bool {
+    type_equal::<t, u>()
+  }
+
+  fn query_method_value<u>(self, value: u) -> u {
+    static_assert(is_unit::<t>() || !is_unit::<t>(), "owner query is concrete")
+    value
+  }
+}
+
+impl QueryLeft {
+  fn query_concrete_self_identity(self) -> Bool {
+    type_equal::<Self, QueryLeft>()
+  }
+
+  fn query_concrete_self_item(self, value: field_type<Self>("value")) -> field_type<Self>("value") {
+    value
+  }
+}
+
+fn query_projected_callback<t>(value: field_type<t>("item"), owner: t) -> field_type<t>("item") {
+  value
+}
+
+fn query_invoke_projected(callback: fn(I64, QueryBox<I64>) -> I64) -> I64 {
+  callback(71i64, QueryBox::{
+    item: 0i64
+  })
+}
+
+fn query_nested_projected_callback<t>(value: (field_type<t>("item"), t)) -> field_type<t>("item") {
+  let (item, owner) = value
+  item
+}
+
+fn query_invoke_nested_projected(callback: fn((I64, QueryBox<I64>)) -> I64) -> I64 {
+  callback((73i64, QueryBox::{
+    item: 0i64
+  }))
 }
 
 enum QueryMessage<t> {
@@ -531,7 +593,63 @@ pub fn main(case: U32) -> Bool {
       item: 69i32
     }
     query_guarded_bounded_read::<I32>(68i32) == 68i32 && query_guarded_bounded_read::<Unit>(()) == 0i32 && query_guarded_bounded_read::<QueryBox<I32>>(box) == 69i32
+  } else if case == 67u32 {
+    let box = QueryBox::{
+      item: 0i64
+    }
+    box.query_self_item(70i64) == 70i64
+  } else if case == 68u32 {
+    query_invoke_projected(query_projected_callback) == 71i64
+  } else if case == 69u32 {
+    let yes = QueryBox::{
+      item: 72i32
+    }
+    let no = QueryBox::{
+      item: 0i64
+    }
+    query_compound_guard(yes) == 72i32 && query_compound_guard(no) == 0i32
+  } else if case == 70u32 {
+    query_invoke_nested_projected(query_nested_projected_callback) == 73i64
+  } else if case == 71u32 {
+    let generic = QueryBox::{
+      item: 0i64
+    }
+    let concrete = QueryLeft::{
+      value: 0i32
+    }
+    generic.query_self_identity() && concrete.query_concrete_self_item(74i32) == 74i32
+  } else if case == 72u32 {
+    query_nested_transfer(0i32) == 42i64 && query_nested_transfer(1i32) == 43i64 && query_nested_transfer(2i32) == 44i64 && query_nested_transfer(3i32) == 42i64
+  } else if case == 73u32 {
+    let box = QueryBox::{
+      item: 0i32
+    }
+    box.query_compare(0i32) && !box.query_compare(0i64) && box.query_method_value(75i64) == 75i64
+  } else if case == 74u32 {
+    let concrete = QueryLeft::{
+      value: 0i32
+    }
+    concrete.query_concrete_self_identity()
   } else {
     false
+  }
+}
+
+fn query_nested_transfer(initial: I32) -> I64 {
+  while initial {
+    state => {
+      let value = match state {
+        0 => 42i64
+        _ => match state {
+          1 => return 43i64
+          _ => if state == 2 {
+            return 44i64
+          } else {
+            continue 0i32
+          }
+        }
+      }
+      break value
+    }
   }
 }

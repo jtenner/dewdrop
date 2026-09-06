@@ -806,7 +806,35 @@ pub fn LocalTypeSolver::unify(
   self.unify_left.clear()
   self.unify_right.clear()
   self.push_unification_pair(left, right)
-  while self.unify_left.length() > 0 {
+  let mut deferred : Array[(BodyTypeId, BodyTypeId)]? = None
+  let mut bound_since_retry = false
+  while true {
+    if self.unify_left.is_empty() {
+      match deferred {
+        Some(pairs) if !pairs.is_empty() => {
+          if !bound_since_retry {
+            let (left, right) = pairs[0]
+            return self.report_mismatch(
+              left,
+              right,
+              self.representative_type(left),
+              self.representative_type(right),
+              origin,
+            )
+          }
+          for pair in pairs {
+            let (left, right) = pair
+            self.push_unification_pair(left, right)
+          }
+          pairs.clear()
+          bound_since_retry = false
+        }
+        _ => break
+      }
+    }
+    guard self.unify_left.length() == self.unify_right.length() else {
+      abort("SOL-205 unification work arrays differ")
+    }
     let left_original = self.unify_left.pop().unwrap()
     let right_original = self.unify_right.pop().unwrap()
     let left_type = match self.reduce_member_type(left_original, 0) {
@@ -848,6 +876,7 @@ pub fn LocalTypeSolver::unify(
         if !self.bind_variable(variable, right_type, origin) {
           return false
         }
+        bound_since_retry = true
         continue
       }
       _ => ()
@@ -857,11 +886,29 @@ pub fn LocalTypeSolver::unify(
         if !self.bind_variable(variable, left_type, origin) {
           return false
         }
+        bound_since_retry = true
         continue
       }
       _ => ()
     }
     if left_type == self.error_type() || right_type == self.error_type() {
+      continue
+    }
+    // A member projection cannot reveal its owner. Let other equations bind
+    // that owner, then retry this exact pair. Each retry round requires a new
+    // variable binding, so the queue cannot spin on an unknown owner.
+    if (
+        self.member_projection(left_type) is Some(_) &&
+        self.has_pending_member_projection(left_type)
+      ) ||
+      (
+        self.member_projection(right_type) is Some(_) &&
+        self.has_pending_member_projection(right_type)
+      ) {
+      match deferred {
+        Some(pairs) => pairs.push((left_original, right_original))
+        None => deferred = Some([(left_original, right_original)])
+      }
       continue
     }
     let compatible = match

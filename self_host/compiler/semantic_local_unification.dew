@@ -3,6 +3,11 @@ open dew.std.option
 open dew.std.map
 open dew.std.result
 
+struct SelfHostDeferredProjectionEquation {
+  left: I32
+  right: I32
+}
+
 fn self_host_local_i32_at(values: Array<I32>, index: U32) -> I32 {
   array_get_unchecked(values, index)
 }
@@ -956,6 +961,8 @@ impl SelfHostLocalTypeSolver {
     self.unify_left.clear()
     self.unify_right.clear()
     self.push_unification_pair(left, right)
+    let mut deferred = Option::None
+    let mut bound_since_retry = false
     let _ = while self.unify_left.length() {
       length => if length > 0u32 {
         if self.unify_right.length() == 0u32 {
@@ -1008,6 +1015,7 @@ impl SelfHostLocalTypeSolver {
             if !self.bind_variable(variable, right_type, origin) {
               return false
             }
+            bound_since_retry = true
             continue self.unify_left.length()
           }
           _ => {}
@@ -1017,11 +1025,27 @@ impl SelfHostLocalTypeSolver {
             if !self.bind_variable(variable, left_type, origin) {
               return false
             }
+            bound_since_retry = true
             continue self.unify_left.length()
           }
           _ => {}
         }
         if left_type == self.error_type() || right_type == self.error_type() {
+          continue self.unify_left.length()
+        }
+        if (self.member_projection(left_type) is Option::Some(_) && self.has_pending_member_projection(left_type)) || (self.member_projection(right_type) is Option::Some(_) && self.has_pending_member_projection(right_type)) {
+          match deferred {
+            Option::Some(pairs) => pairs.push(SelfHostDeferredProjectionEquation::{
+              left: left_original
+              right: right_original
+            })
+            Option::None => {
+              deferred = Option::Some([SelfHostDeferredProjectionEquation::{
+                left: left_original
+                right: right_original
+              }])
+            }
+          }
           continue self.unify_left.length()
         }
         let left_term = self.type_term(left_type)
@@ -1193,6 +1217,21 @@ impl SelfHostLocalTypeSolver {
         }
         continue self.unify_left.length()
       } else {
+        match deferred {
+          Option::Some(pairs) => if pairs.length() > 0u32 {
+            if !bound_since_retry {
+              let pair = pairs[0u32]
+              return self.report_mismatch(pair.left, pair.right, self.representative_type(pair.left), self.representative_type(pair.right), origin)
+            }
+            for pair in pairs {
+              self.push_unification_pair(pair.left, pair.right)
+            }
+            pairs.clear()
+            bound_since_retry = false
+            continue self.unify_left.length()
+          }
+          Option::None => {}
+        }
         break self_host_semantic_unit()
       }
     }

@@ -167,6 +167,19 @@ fn TypeResolver::computed_builtin_recipe(
 }
 
 ///|
+fn TypeResolver::computed_self_target(
+  self : TypeResolver,
+  owner : DeclId,
+) -> ResolvedTypeId? {
+  for implementation in self.collected.impls {
+    if implementation.declaration == owner {
+      return Some(self.computed_dependency(owner, implementation.target_type))
+    }
+  }
+  None
+}
+
+///|
 fn TypeResolver::computed_nominal(
   self : TypeResolver,
   input : ResolvedTypeId,
@@ -199,7 +212,18 @@ fn TypeResolver::computed_nominal(
     }
     let declaration = match self.interner.types[base] {
       NominalType(declaration) => declaration
-      GenericParameterType(_) | SelfType(_) | MemberTypeProjection(_, _, _) =>
+      SelfType(owner) =>
+        match self.computed_self_target(owner) {
+          Some(target) => {
+            if target == self.interner.error_type {
+              return Err("CT-033 invalid implementation Self type")
+            }
+            current = target
+            continue
+          }
+          None => return Ok(DeferredComputedOwner(current))
+        }
+      GenericParameterType(_) | MemberTypeProjection(_, _, _) =>
         return Ok(DeferredComputedOwner(current))
       _ => return Err("CT-032 member type query requires a struct or enum")
     }

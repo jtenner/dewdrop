@@ -3,6 +3,41 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Query owner and projection edge cases
+
+Both paths now pass 76 shared execution checks. Generic and concrete impl `Self`
+queries use the implementation's resolved target identity. Inline member types
+reduce that owner before physical planning; generic pure queries bind it in the
+exact instance. Owner and method type arguments use two ordered spans, not one
+span that could include another method's parameters. The native emitter and
+signature planner use this same mapping.
+
+Projection equations now wait for other equations to bind their owners, even
+inside tuples and function signatures. A retry requires a new variable binding.
+An unresolved owner still reports its original equation; projection results do
+not infer owners. Native function-reference selection unifies the whole signature
+in one transaction. Rollback tests cover the resulting bindings and arenas. The
+self-host queue uses a named record because tuple Array storage is not supported.
+
+An `implements<Box<T>, Trait>()` guard can supply a scoped method proof for the
+whole receiver type. Concrete/inherent method dispatch keeps its normal rules.
+
+These tests exposed a separate emitter defect: a void Wasm block does not export
+its internal unreachable stack state. Both emitters now preserve proven
+divergence after nested match/if expressions. The execution test failed before
+the change with `local.set` missing its I64 operand. The small Starshine validator
+test alone did not catch it; the Node execution fixture does.
+
+Validation: native query execution 76/76 (generation 0.524 s, execution 0.029 s);
+self-host hardening 204 tests, 29 invariant records, and 76 query checks
+(32.985 s). The total exceeds the 30 s budget and remains a performance issue.
+General branch-dependent checks and final integration/bootstrap validation remain
+open. No diagnostic has been discarded to make these checks pass.
+
+The full routine native lane passes 882 tests (107.791 s). Semantic tests take
+51.398 s and backend tests 35.408 s; both exceed the budget. The scoped API check
+also passes. These measurements include compiler rebuild work after the API change.
+
 ## Imported and captured guard proofs
 
 Both paths now pass 62 shared execution checks. The additions cover an imported

@@ -26,6 +26,14 @@ fn starshine_while_test_module(source : Bytes) -> @lib.Module {
 }
 
 ///|
+test "diverging nested matches and ifs preserve unreachable value joins" {
+  let module_ = starshine_while_test_module(
+    b"pub fn main(initial: I32) -> I64 {\n  while initial {\n    state => {\n      let value = match state {\n        0 => 42i64\n        _ => match state {\n          1 => return 43i64\n          _ => if state == 2 {\n            return 44i64\n          } else {\n            continue 0\n          }\n        }\n      }\n      break value\n    }\n  }\n}\n",
+  )
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}
+
+///|
 test "unit if without else emits an empty alternative" {
   let module_ = starshine_while_test_module(
     b"pub fn main() -> I32 {\n  let mut value = 1\n  if value == 1 {\n    value = 42\n  }\n  value\n}\n",

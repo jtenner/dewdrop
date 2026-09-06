@@ -366,7 +366,7 @@ fn BasicBodyInferencer::prepare_guard_scopes(
 fn BasicBodyInferencer::guarded_trait_evidence(
   self : BasicBodyInferencer,
   expression : ExprId,
-  parameter : GenericParameterId,
+  target_type : BodyTypeId,
   trait_filter : DeclId?,
   method_name : NameId,
 ) -> Array[DeclaredBodyTraitEvidence] {
@@ -380,7 +380,20 @@ fn BasicBodyInferencer::guarded_trait_evidence(
       TraitGuardFact(target, bound_type) => (target, bound_type)
       _ => continue
     }
-    if self.resolved.types[target] != GenericParameterType(parameter) {
+    if !impl_type_contains_generic(self.resolved, target) {
+      continue
+    }
+    let snapshot = self.solver.snapshot()
+    let matches = self.solver.unify(
+      target_type,
+      self.solver.resolved_type(target),
+      expression_type_origin(
+        expression,
+        self.collected.expressions[expression].offset(),
+      ),
+    )
+    self.solver.rollback(snapshot)
+    if !matches {
       continue
     }
     let trait_declaration = match self.resolved_bound_trait(bound_type) {
