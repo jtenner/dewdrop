@@ -596,6 +596,8 @@ fn starshine_finish_array(
     | 17
     | 18
     | 19
+    | 20
+    | 21
     | 23
     | 25
     | 26
@@ -687,18 +689,29 @@ fn starshine_finish_array(
     )
     return Ok(output)
   }
-  if operation == 33 {
-    if carrier < 0 {
+  if operation == 20 || operation == 21 || operation == 33 {
+    let has_capacity = operation != 33
+    if carrier < 0 || (has_capacity && index_local < 0) {
       return Err(UnsupportedExpression(body_id, -402))
     }
-    output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    if has_capacity {
+      append_starshine_instructions(output, fragments[0])
+      output.push(starshine_array_local_set(index_local))
+      output.push(starshine_array_local_get(index_local))
+    } else {
+      output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
+    }
     output.push(
       @lib.Instruction::array_new_default(
         @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
       ),
     )
     output.push(@lib.Instruction::i32_const(@lib.I32::new(0)))
-    output.push(@lib.Instruction::i32_const(@lib.I32::new(-2147483648)))
+    output.push(
+      @lib.Instruction::i32_const(
+        @lib.I32::new(if operation == 20 { 0 } else { -2147483648 }),
+      ),
+    )
     output.push(
       @lib.Instruction::struct_new(
         @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),

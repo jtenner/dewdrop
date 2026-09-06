@@ -13,6 +13,15 @@ emitters for them.
   `UnsupportedExpression(body, -409)` diagnostic, before any layout lookup.
 - Keep ring and string-array literal code until its owning data type is migrated.
 
+The next Queue execution tests exposed two ring constructors (operation codes
+20 and 21) incorrectly classified as dead. Their capacity-aware allocation is
+restored. A direct emitter test now emits both bounded and growable constructors
+against a valid Array wrapper plan (3 backend tests passed in 12.599 seconds).
+Removed Array-only allocation codes 1 and 2 still fail with the exact diagnostic.
+End-to-end Queue tests also expose old generic ring scratch-type and missing
+wrapper-demand defects. Those are not solved by restoring allocation; the
+circular-buffer migration must remove the old ring representation altogether.
+
 The source-policy test first failed with the legacy nodes present. It now passes.
 The negative emitter test checks the diagnostic, not just an error or a trap.
 The 28 shared Array execution checks still cover the library algorithms.
