@@ -1774,7 +1774,7 @@ fn starshine_precise_nominal_local_type_index(
   planned_local : @semantic.PlannedLocal,
 ) -> Int? {
   if planned_local.nominal == 0UL ||
-    planned_local.nominal == @semantic.standard_fixed_array_type_declaration() ||
+    lowering.raw_array_declarations.contains(planned_local.nominal) ||
     planned_local.nominal == @semantic.standard_array_type_declaration() ||
     planned_local.nominal ==
     @semantic.standard_array_iterator_type_declaration() ||
@@ -1810,19 +1810,14 @@ fn starshine_nominal_expression_result_is_precise(
     @semantic.PlannedLocalGet(_)
     | @semantic.PlannedCaptureGet(_)
     | @semantic.PlannedModuleValueGet(_, _)
-    | @semantic.PlannedDirectCall(_, _, _, _)
-    | @semantic.PlannedTailCall(_, _, _, _)
-    | @semantic.PlannedOperatorCall(_, _, _, _, _)
-    | @semantic.PlannedIndexCall(_, _, _, _)
-    | @semantic.PlannedIndexSetCall(_, _, _, _, _)
-    | @semantic.PlannedFunctionValueCall(_, _, _)
-    | @semantic.PlannedDirectLambdaCall(_, _, _)
     | @semantic.PlannedStructNew(_, _, _)
     | @semantic.PlannedVariantTupleNew(_, _, _)
     | @semantic.PlannedVariantStructNew(_, _, _)
     | @semantic.PlannedUnitVariant(_, _)
     | @semantic.PlannedPackedEnumPayload(_, _)
     | @semantic.PlannedParameterSelect(_, _) => true
+    // A logical nominal call can use an erased eqref result in its linked
+    // generic ABI. Call syntax alone does not prove a precise heap type.
     _ => false
   }
 }
@@ -3022,8 +3017,9 @@ fn starshine_fixed_array_carrier_for_resolved(
   match lowering.resolved_types[resolved_type] {
     @semantic.AppliedType(base, arguments) if arguments.length == 1 =>
       match lowering.resolved_types[base] {
-        @semantic.NominalType(declaration) if declaration ==
-          @semantic.standard_fixed_array_type_declaration() =>
+        @semantic.NominalType(declaration) if lowering.raw_array_declarations.contains(
+            declaration,
+          ) =>
           @semantic.wasmgc_fixed_array_carrier_for_resolved_type(
             lowering.resolved_types,
             lowering.resolved_type_arguments[arguments.start],
@@ -3955,8 +3951,11 @@ fn starshine_body_locals(
         }
       }
       @semantic.PlannedFixedArrayGetUnchecked(_, _, shape) => {
-        let element_shape = starshine_specialized_implicit_shape(
-          lowering, generic_specialization, shape,
+        let element_shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          lowering.expressions[expression].type_,
+          shape,
         )
         if element_shape is @semantic.ProductPlannedValueShape(_) &&
           fixed_array_ref_scratch_index < 0 {
@@ -6855,8 +6854,11 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(value))
           }
           @semantic.PlannedFixedArrayMake(length, value, shape) => {
-            let element_shape = starshine_specialized_implicit_shape(
-              lowering, generic_specialization, shape,
+            let element_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              lowering.expressions[value].type_,
+              shape,
             )
             tasks.push(
               FinishStarshineFixedArray(
@@ -6890,8 +6892,11 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedFixedArrayGetUnchecked(base, index, shape) => {
-            let element_shape = starshine_specialized_implicit_shape(
-              lowering, generic_specialization, shape,
+            let element_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              source.type_,
+              shape,
             )
             if element_shape is @semantic.ProductPlannedValueShape(_) {
               tasks.push(
@@ -6909,8 +6914,11 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(base))
           }
           @semantic.PlannedFixedArraySetUnchecked(base, index, value, shape) => {
-            let element_shape = starshine_specialized_implicit_shape(
-              lowering, generic_specialization, shape,
+            let element_shape = starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              lowering.expressions[value].type_,
+              shape,
             )
             tasks.push(
               FinishStarshineFixedArray(
@@ -6928,6 +6936,32 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(value))
             tasks.push(EmitStarshineExpression(index))
             tasks.push(EmitStarshineExpression(base))
+          }
+          @semantic.PlannedRawArrayNewDefault(length, element, shape) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element, shape,
+            )
+            tasks.push(FinishStarshineFixedArray(6, element_shape, 1, -1, -1))
+            tasks.push(EmitStarshineExpression(length))
+          }
+          @semantic.PlannedRawArrayCopy(
+            target,
+            target_index,
+            source,
+            source_index,
+            length,
+            element,
+            shape
+          ) => {
+            let element_shape = starshine_specialized_shape(
+              lowering, generic_specialization, element, shape,
+            )
+            tasks.push(FinishStarshineFixedArray(7, element_shape, 5, -1, -1))
+            tasks.push(EmitStarshineExpression(length))
+            tasks.push(EmitStarshineExpression(source_index))
+            tasks.push(EmitStarshineExpression(source))
+            tasks.push(EmitStarshineExpression(target_index))
+            tasks.push(EmitStarshineExpression(target))
           }
           @semantic.PlannedProductNew(elements) => {
             tasks.push(FinishStarshineProduct(elements.length))
@@ -8910,6 +8944,18 @@ fn starshine_emit_body_instructions(
         i32_scratch
       ) => {
         let fragments = pop_starshine_fragments(results, count)
+        if operation == 2 {
+          let output = fragments[0]
+          output.push(
+            @lib.Instruction::ref_cast(
+              false,
+              @lib.HeapType::abs(@lib.AbsHeapType::array()),
+            ),
+          )
+          output.push(@lib.Instruction::array_len())
+          results.push(output)
+          continue
+        }
         let backing = match
           starshine_fixed_array_backing_prefix(planned, program, shape) {
           Some(value) => value
@@ -8950,10 +8996,6 @@ fn starshine_emit_body_instructions(
               @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
             ),
           )
-        } else if operation == 2 {
-          append_starshine_instructions(output, fragments[0])
-          append_starshine_instructions(output, backing_prefix)
-          output.push(@lib.Instruction::array_len())
         } else if operation == 4 {
           append_starshine_instructions(output, fragments[0])
           append_starshine_instructions(output, backing_prefix)
@@ -8970,6 +9012,27 @@ fn starshine_emit_body_instructions(
           starshine_array_append_unit_marker(output, Some(shape))
           output.push(
             @lib.Instruction::array_set(
+              @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+            ),
+          )
+        } else if operation == 6 {
+          append_starshine_instructions(output, fragments[0])
+          output.push(
+            @lib.Instruction::array_new_default(
+              @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
+            ),
+          )
+        } else if operation == 7 {
+          append_starshine_instructions(output, fragments[0])
+          append_starshine_instructions(output, backing_prefix)
+          append_starshine_instructions(output, fragments[1])
+          append_starshine_instructions(output, fragments[2])
+          append_starshine_instructions(output, backing_prefix)
+          append_starshine_instructions(output, fragments[3])
+          append_starshine_instructions(output, fragments[4])
+          output.push(
+            @lib.Instruction::array_copy(
+              @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
               @lib.TypeIdx::new(array_type.reinterpret_as_uint()),
             ),
           )

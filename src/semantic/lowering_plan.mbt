@@ -79,6 +79,16 @@ pub enum PlannedExpressionKind {
   PlannedWasmRefIsNull(ExprId)
   PlannedWasmRefAsNonNull(ExprId)
   PlannedFixedArrayMake(ExprId, ExprId, PlannedValueShape)
+  PlannedRawArrayNewDefault(ExprId, BodyTypeId, PlannedValueShape)
+  PlannedRawArrayCopy(
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+    ExprId,
+    BodyTypeId,
+    PlannedValueShape
+  )
   PlannedFixedArrayLength(ExprId, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
@@ -289,6 +299,7 @@ pub struct PlannedPatternArm {
 
 ///|
 pub enum LoweringPlanDiagnostic {
+  InvalidRawArrayContract(DeclId, String, UInt64)
   UnsupportedIndexLowering(ExprId, UInt64)
   CompileTimeQueryDiagnostic(ExprId, String, UInt64)
 } derive(Eq, Debug)
@@ -297,7 +308,8 @@ pub enum LoweringPlanDiagnostic {
 pub fn LoweringPlanDiagnostic::offset(self : LoweringPlanDiagnostic) -> UInt64 {
   match self {
     UnsupportedIndexLowering(_, offset)
-    | CompileTimeQueryDiagnostic(_, _, offset) => offset
+    | CompileTimeQueryDiagnostic(_, _, offset)
+    | InvalidRawArrayContract(_, _, offset) => offset
   }
 }
 
@@ -387,6 +399,8 @@ pub struct PlannedModuleLowering {
   arm_children : Array[PatternArmId]
   resolved_types : Array[ResolvedType]
   resolved_type_arguments : Array[ResolvedTypeId]
+  raw_array_declarations : Map[DeclId, Bool]
+  raw_array_operations : Map[DeclId, Int]
   types : Array[BodyTypeTerm]
   type_arguments : Array[BodyTypeId]
   expression_type_arguments : Array[BodyTypeId]
@@ -917,12 +931,23 @@ fn plan_expression_kind(
         HirIfExpr(_, _, _, _) => ()
         _ => return PlannedDeferredExpression
       }
-    StructConstructionSelection(declaration, type_arguments) =>
+    StructConstructionSelection(declaration, type_arguments) => {
+      if resolved.raw_array_declarations.contains(declaration) {
+        diagnostics.push(
+          InvalidRawArrayContract(
+            declaration,
+            "raw array storage must be allocated by an array instruction, not a struct constructor",
+            collected.expressions[expression].offset(),
+          ),
+        )
+        return PlannedPoisonExpression
+      }
       match collected.expressions[expression] {
         HirObjectExpr(fields, _) | HirConstructExpr(_, fields, _) =>
           return PlannedStructNew(declaration, type_arguments, fields)
         _ => return PlannedPoisonExpression
       }
+    }
     VariantConstructionSelection(variant, type_arguments) =>
       match collected.expressions[expression] {
         HirCallExpr(_, arguments, _) =>
@@ -1075,6 +1100,13 @@ fn plan_expression_kind(
     HirCallExpr(_, arguments, _) =>
       match inferred.call_targets[expression] {
         SelectedInferredCallTarget(declaration, type_arguments) => {
+          match resolved.raw_array_operations.get(declaration) {
+            Some(operation) =>
+              return plan_raw_array_call(
+                collected, resolved, inferred, expression, arguments, operation,
+              )
+            None => ()
+          }
           let receiver = if collected.foreign_function(declaration) is Some(_) {
             -1
           } else {
@@ -1251,40 +1283,6 @@ fn plan_expression_kind(
                 WasmRefNull => PlannedWasmRefNull
                 WasmRefIsNull => PlannedWasmRefIsNull(base)
                 WasmRefAsNonNull => PlannedWasmRefAsNonNull(base)
-                WasmArrayNew => {
-                  let item = collected.expression_children[arguments.start + 1]
-                  PlannedFixedArrayMake(
-                    collected.expression_children[arguments.start],
-                    item,
-                    planned_value_shape(
-                      resolved,
-                      inferred,
-                      inferred.expression_types[item],
-                    ),
-                  )
-                }
-                WasmArrayLen => PlannedFixedArrayLength(base, element_shape)
-                WasmArrayGet =>
-                  PlannedFixedArrayGetUnchecked(
-                    base,
-                    key,
-                    planned_value_shape(
-                      resolved,
-                      inferred,
-                      inferred.expression_types[expression],
-                    ),
-                  )
-                WasmArraySet =>
-                  PlannedFixedArraySetUnchecked(
-                    base,
-                    key,
-                    value,
-                    planned_value_shape(
-                      resolved,
-                      inferred,
-                      inferred.expression_types[value],
-                    ),
-                  )
                 _ =>
                   match array_operation {
                     ArrayNew => PlannedArrayNew(element_type, element_shape)
@@ -2368,6 +2366,8 @@ fn plan_module_lowering_in_order(
     arm_children: collected.arm_children,
     resolved_types: resolved.types,
     resolved_type_arguments: resolved.type_arguments,
+    raw_array_declarations: resolved.raw_array_declarations,
+    raw_array_operations: resolved.raw_array_operations,
     types: inferred.types,
     type_arguments: inferred.type_arguments,
     expression_type_arguments: inferred.expression_type_arguments,

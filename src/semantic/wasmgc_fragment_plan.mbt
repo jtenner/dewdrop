@@ -751,6 +751,7 @@ fn wasmgc_physical_type_count_with_options(
     Map::default(),
     false,
     Map::default(),
+    Map::default(),
   )
   sources.length()
 }
@@ -760,6 +761,7 @@ fn wasmgc_physical_type_count_with_instantiations(
   layouts : PlannedModuleTypeLayouts,
   options : WasmGCPlanningOptions,
   generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
+  raw_array_declarations : Map[DeclId, Bool],
 ) -> Int {
   let (sources, _, _) = wasmgc_build_physical_sources(
     layouts,
@@ -767,6 +769,7 @@ fn wasmgc_physical_type_count_with_instantiations(
     Map::default(),
     false,
     generic_enum_instantiations,
+    raw_array_declarations,
   )
   sources.length()
 }
@@ -794,6 +797,7 @@ fn wasmgc_build_physical_sources(
   required_declarations : Map[DeclId, Bool],
   prune_unrequired : Bool,
   generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
+  raw_array_declarations : Map[DeclId, Bool],
 ) -> (Array[WasmPhysicalTypeSource], Array[Int], Array[Int]) {
   let sources : Array[WasmPhysicalTypeSource] = []
   let entity_by_declaration = Array::make(
@@ -804,7 +808,7 @@ fn wasmgc_build_physical_sources(
   for layout in layouts.layouts {
     if (layout.test_only && !options.emit_tests) ||
       (prune_unrequired && !required_declarations.contains(layout.declaration)) ||
-      layout.declaration == standard_fixed_array_type_declaration() {
+      raw_array_declarations.contains(layout.declaration) {
       continue
     }
     let root = sources.length()
@@ -1310,7 +1314,7 @@ fn wasmgc_storage_type(
       | ProductType(_)
       | FunctionType(_, _) => return Some(WasmNullableEqRefStorage)
       NominalType(declaration) => {
-        if declaration == standard_fixed_array_type_declaration() {
+        if resolved.raw_array_declarations.contains(declaration) {
           return Some(WasmNullableEqRefStorage)
         }
         if semantic_id_module(declaration) != resolved.module_id {
@@ -1366,8 +1370,9 @@ fn wasmgc_storage_type(
               _ => return Some(WasmNullableEqRefStorage)
             }
           }
-          NominalType(declaration) if declaration ==
-            standard_fixed_array_type_declaration() &&
+          NominalType(declaration) if resolved.raw_array_declarations.contains(
+              declaration,
+            ) &&
             arguments.length == 1 => {
             let element = resolved.type_arguments[arguments.start]
             if resolved.types[element] is GenericParameterType(_) {
@@ -2156,6 +2161,21 @@ pub fn wasmgc_fixed_array_carrier(shape : PlannedValueShape) -> Int {
 // Raw array storage is distinct from expression and enum payload carriers.
 // Unit occupies a null marker cell; unknown evidence never selects that cell.
 pub fn wasmgc_raw_array_storage_carrier(shape : PlannedValueShape) -> Int {
+  if shape is ProductPlannedValueShape(_) {
+    let work = [shape]
+    while work.length() > 0 {
+      match work.pop().unwrap() {
+        GenericPlannedValueShape
+        | ErrorPlannedValueShape
+        | NeverPlannedValueShape => return -1
+        ProductPlannedValueShape(fields) =>
+          for field in fields {
+            work.push(field)
+          }
+        _ => ()
+      }
+    }
+  }
   match shape {
     UnitPlannedValueShape => 5
     GenericPlannedValueShape
@@ -2249,7 +2269,7 @@ fn wasmgc_value_type(
           return Some(WasmNullableEqRefValue)
         }
       NominalType(declaration) => {
-        if declaration == standard_fixed_array_type_declaration() ||
+        if resolved.raw_array_declarations.contains(declaration) ||
           declaration == standard_array_entry_type_declaration() ||
           declaration == standard_map_entry_type_declaration() {
           return Some(WasmNullableEqRefValue)
@@ -2292,8 +2312,9 @@ fn wasmgc_value_type(
               _ => return Some(WasmNullableEqRefValue)
             }
           }
-          NominalType(declaration) if declaration ==
-            standard_fixed_array_type_declaration() &&
+          NominalType(declaration) if resolved.raw_array_declarations.contains(
+              declaration,
+            ) &&
             arguments.length == 1 => {
             let carrier = wasmgc_raw_array_storage_carrier(
               planned_resolved_value_shape(
@@ -3301,6 +3322,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     ..resolved,
     types: lowering.resolved_types,
     type_arguments: lowering.resolved_type_arguments,
+    raw_array_declarations: lowering.raw_array_declarations,
   }
   let layouts = lowering.type_layouts
   let functions = lowering.functions
@@ -3332,6 +3354,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     required_declarations,
     program_roots.length() > 0,
     generic_enum_instantiations,
+    lowering.raw_array_declarations,
   )
   let effective_type_order = if program_roots.length() > 0 {
     let order : Array[Int] = []
@@ -4497,6 +4520,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       body.expressions.length) {
       match lowering.expressions[expression].kind {
         PlannedFixedArrayMake(_, _, _)
+        | PlannedRawArrayNewDefault(_, _, _)
+        | PlannedRawArrayCopy(_, _, _, _, _, _, _)
         | PlannedFixedArrayLength(_, _)
         | PlannedArrayLiteral(_, _, _)
         | PlannedArrayNew(_, _)
@@ -4850,6 +4875,7 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
       lowering.type_layouts,
       options,
       generic_enum_instantiations,
+      lowering.raw_array_declarations,
     ) {
     type_order.push(index)
   }

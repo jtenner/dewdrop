@@ -3,10 +3,6 @@
 ///|
 enum StandardBuiltinOperation {
   NoStandardBuiltinOperation
-  WasmArrayNew
-  WasmArrayLen
-  WasmArrayGet
-  WasmArraySet
   WasmRefNull
   WasmRefIsNull
   WasmRefAsNonNull
@@ -112,11 +108,6 @@ fn standard_indexed_trait_kind(declaration : DeclId) -> Int {
     54 => 2
     _ => 0
   }
-}
-
-///|
-pub fn standard_fixed_array_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(9), 0)
 }
 
 ///|
@@ -486,10 +477,6 @@ fn standard_wasm_intrinsics_operation(
     return NoStandardBuiltinOperation
   }
   match semantic_id_local(declaration) {
-    3 => WasmArrayNew
-    4 => WasmArrayLen
-    5 => WasmArrayGet
-    6 => WasmArraySet
     7 => WasmRefNull
     8 => WasmRefIsNull
     9 => WasmRefAsNonNull

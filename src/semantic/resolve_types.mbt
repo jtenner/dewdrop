@@ -1338,6 +1338,8 @@ fn TypeResolver::finish(self : TypeResolver) -> ResolvedModuleTypes {
   self.sort_diagnostics()
   {
     module_id: self.collected.module_id,
+    raw_array_declarations: {},
+    raw_array_operations: {},
     types: self.interner.types,
     type_arguments: self.interner.arguments,
     syntax_types: self.syntax_types,

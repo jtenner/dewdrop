@@ -974,6 +974,8 @@ pub fn collect_compiler_source_diagnostics(
     }
     for diagnostic in planned.diagnostics {
       let primary = match diagnostic {
+        InvalidRawArrayContract(declaration, _, offset) =>
+          location_at(collected.declaration_location(declaration), offset)
         UnsupportedIndexLowering(expression, offset)
         | CompileTimeQueryDiagnostic(expression, _, offset) =>
           location_at(collected.expression_location(expression), offset)

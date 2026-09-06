@@ -129,6 +129,7 @@ fn compile_time_push_expression(
     | PlannedWasmRefIsNull(value0)
     | PlannedWasmRefAsNonNull(value0)
     | PlannedFixedArrayLength(value0, _)
+    | PlannedRawArrayNewDefault(value0, _, _)
     | PlannedArrayWithCapacity(value0, _, _)
     | PlannedArrayLength(value0)
     | PlannedArrayCapacity(value0)
@@ -230,6 +231,13 @@ fn compile_time_push_expression(
       work.push(CtReachExpression(value1))
       work.push(CtReachExpression(value2))
       work.push(CtReachExpression(value3))
+    }
+    PlannedRawArrayCopy(value0, value1, value2, value3, value4, _, _) => {
+      work.push(CtReachExpression(value0))
+      work.push(CtReachExpression(value1))
+      work.push(CtReachExpression(value2))
+      work.push(CtReachExpression(value3))
+      work.push(CtReachExpression(value4))
     }
     PlannedDirectCall(_, value0, arguments, _)
     | PlannedTailCall(_, value0, arguments, _)

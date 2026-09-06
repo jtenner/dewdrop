@@ -195,8 +195,6 @@ pub fn standard_deque_method_declaration(String) -> UInt64
 
 pub fn standard_deque_type_declaration() -> UInt64
 
-pub fn standard_fixed_array_type_declaration() -> UInt64
-
 pub fn standard_library_source_paths() -> Array[String]
 
 pub fn standard_map_entry_iterator_type_declaration() -> UInt64
@@ -1488,6 +1486,7 @@ pub fn LocalTypeSolver::unify(Self, Int, Int, TypeConstraintOrigin) -> Bool
 pub fn LocalTypeSolver::zonk_type(Self, Int, origin? : TypeConstraintOrigin) -> Int
 
 pub enum LoweringPlanDiagnostic {
+  InvalidRawArrayContract(UInt64, String, UInt64)
   UnsupportedIndexLowering(Int, UInt64)
   CompileTimeQueryDiagnostic(Int, String, UInt64)
 } derive(Eq, @debug.Debug)
@@ -1735,6 +1734,8 @@ pub enum PlannedExpressionKind {
   PlannedWasmRefIsNull(Int)
   PlannedWasmRefAsNonNull(Int)
   PlannedFixedArrayMake(Int, Int, PlannedValueShape)
+  PlannedRawArrayNewDefault(Int, Int, PlannedValueShape)
+  PlannedRawArrayCopy(Int, Int, Int, Int, Int, Int, PlannedValueShape)
   PlannedFixedArrayLength(Int, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(Int, Int, PlannedValueShape)
   PlannedFixedArraySetUnchecked(Int, Int, Int, PlannedValueShape)
@@ -1931,6 +1932,8 @@ pub struct PlannedModuleLowering {
   arm_children : Array[Int]
   resolved_types : Array[ResolvedType]
   resolved_type_arguments : Array[Int]
+  raw_array_declarations : Map[UInt64, Bool]
+  raw_array_operations : Map[UInt64, Int]
   types : Array[BodyTypeTerm]
   type_arguments : Array[Int]
   expression_type_arguments : Array[Int]
@@ -2666,6 +2669,8 @@ pub fn ResolvedModuleNames::local_info(Self, UInt64, Int) -> BodyLocal?
 
 pub struct ResolvedModuleTypes {
   module_id : UInt64
+  raw_array_declarations : Map[UInt64, Bool]
+  raw_array_operations : Map[UInt64, Int]
   types : Array[ResolvedType]
   type_arguments : Array[Int]
   syntax_types : Array[Int]

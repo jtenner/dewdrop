@@ -18,5 +18,6 @@ node tools/check-constructor-evaluations.mjs tools/dew-test/constructor_evaluati
 node tools/check-raw-gc-storage.mjs tools/dew-test/raw_gc_storage.wasm
 node tools/check-raw-gc-unit.mjs tools/dew-test/raw_gc_unit.wasm
 node tools/check-fixed-array-operations.mjs tools/dew-test/fixed_array_operations.wasm
+node tools/check-raw-array-contracts.mjs tools/dew-test/raw_array_contracts.wasm
 node tools/check-array-operations.mjs tools/dew-test/array_operations.wasm
 node tools/check-type-queries.mjs tools/dew-test/type_queries.wasm

@@ -735,6 +735,9 @@ fn FrozenInterfaceCacheReader::read_resolved_types(
     diagnostics: [],
     error_type: self.read_int(),
     primitive_types: self.read_int_array(),
+    // Physical contracts are derived from the current program after thawing.
+    raw_array_declarations: {},
+    raw_array_operations: {},
   }
 }
 

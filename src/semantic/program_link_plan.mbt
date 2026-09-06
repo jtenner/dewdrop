@@ -495,6 +495,7 @@ pub fn plan_unoptimized_program_lowering_with_type_layouts(
     program.modules.length() == type_layouts.length() else {
     abort("program lowering inputs have different module counts")
   }
+  let raw_arrays = bind_program_raw_array_contracts(program, analyzed)
   let slots : Array[PlannedModuleLowering?] = Array::make(
     program.modules.length(),
     None,
@@ -504,7 +505,11 @@ pub fn plan_unoptimized_program_lowering_with_type_layouts(
       let module_index = analyzed.frozen.graph.scc_modules[scc.start + index]
       let collected = program.modules[module_index]
       let semantic = analyzed.modules[module_index]
-      let resolved = analyzed.frozen.interfaces[module_index].resolved_types
+      let resolved = {
+        ..analyzed.frozen.interfaces[module_index].resolved_types,
+        raw_array_declarations: raw_arrays.declarations,
+        raw_array_operations: raw_arrays.operations,
+      }
       let layouts = type_layouts[module_index]
       guard layouts.module_id == collected.module_id else {
         abort("program type layout belongs to another module")
@@ -537,6 +542,9 @@ pub fn plan_unoptimized_program_lowering_with_type_layouts(
   let modules : Array[PlannedModuleLowering] = []
   for slot in slots {
     let module_ = slot.unwrap()
+    for diagnostic in raw_arrays.diagnostics[module_.module_id] {
+      module_.diagnostics.push(diagnostic)
+    }
     match validate_planned_module_lowering_arenas(module_) {
       Ok(_) => ()
       Err(error) => abort(error)

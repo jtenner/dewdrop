@@ -165,6 +165,8 @@ fn compile_time_inference_types(
       ..resolved,
       types: arena.resolved_types,
       type_arguments: arena.resolved_type_arguments,
+      raw_array_declarations: template.raw_array_declarations,
+      raw_array_operations: template.raw_array_operations,
     },
     mapping,
   )

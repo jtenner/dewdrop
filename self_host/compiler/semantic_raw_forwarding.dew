@@ -18,7 +18,7 @@ fn self_host_raw_expression_target(
           Option::None
         } else {
           match callable.kind {
-            SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => Option::Some(name)
+            SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => Option::Some(self_host_raw_array_canonical_opcode(name))
             _ => Option::None
           }
         }

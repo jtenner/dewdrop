@@ -60,7 +60,7 @@ EXTRA_DECLARATIONS = [
         alias="wasm_array_new",
         generics="<t>",
         signature="(length: U32, value: t) -> WasmArray<t>",
-        target="array_new",
+        target="array.new",
     ),
     IntrinsicDeclaration(
         source="WasmGC array operations",
@@ -68,7 +68,7 @@ EXTRA_DECLARATIONS = [
         alias="wasm_array_len",
         generics="<t>",
         signature="(value: WasmArray<t>) -> U32",
-        target="array_len",
+        target="array.len",
     ),
     IntrinsicDeclaration(
         source="WasmGC array operations",
@@ -76,7 +76,7 @@ EXTRA_DECLARATIONS = [
         alias="wasm_array_get",
         generics="<t>",
         signature="(value: WasmArray<t>, index: U32) -> t",
-        target="array_get",
+        target="array.get",
     ),
     IntrinsicDeclaration(
         source="WasmGC array operations",
@@ -84,7 +84,7 @@ EXTRA_DECLARATIONS = [
         alias="wasm_array_set",
         generics="<t>",
         signature="(value: WasmArray<t>, index: U32, item: t) -> Unit",
-        target="array_set",
+        target="array.set",
     ),
     IntrinsicDeclaration(
         source="WasmGC nullable foreign references",
@@ -109,6 +109,22 @@ EXTRA_DECLARATIONS = [
         generics="<t>",
         signature="(value: NullableRef<t>) -> t",
         target="ref_as_non_null",
+    ),
+    IntrinsicDeclaration(
+        source="WasmGC array operations",
+        name="array_new_default",
+        alias="wasm_array_new_default",
+        generics="<t>",
+        signature="(length: U32) -> WasmArray<t>",
+        target="array.new_default",
+    ),
+    IntrinsicDeclaration(
+        source="WasmGC array operations",
+        name="array_copy",
+        alias="wasm_array_copy",
+        generics="<t>",
+        signature="(target: WasmArray<t>, target_index: U32, source: WasmArray<t>, source_index: U32, length: U32) -> Unit",
+        target="array.copy",
     ),
     IntrinsicDeclaration(
         source="backend-only Core operations",

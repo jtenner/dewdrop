@@ -344,6 +344,7 @@ fn program_reachable_callable_roots(
         let resolved = {
           ..analyzed.frozen.interfaces[module_index].resolved_types,
           types: module_.resolved_types,
+          raw_array_declarations: module_.raw_array_declarations,
           type_arguments: module_.resolved_type_arguments,
         }
         for index in 0..<callable.parameters.length {
@@ -403,11 +404,6 @@ fn program_reachable_callable_roots(
             PlannedStructNew(declaration, _, _) => reachable[declaration] = true
             PlannedArrayLiteral(_, _, _) =>
               reachable[standard_array_type_declaration()] = true
-            PlannedFixedArrayMake(_, _, _)
-            | PlannedFixedArrayLength(_, _)
-            | PlannedFixedArrayGetUnchecked(_, _, _)
-            | PlannedFixedArraySetUnchecked(_, _, _, _) =>
-              reachable[standard_fixed_array_type_declaration()] = true
             PlannedMapSingleton(_, _, _, _, _, _)
             | PlannedMapEmpty(_, _, _, _)
             | PlannedMapLength(_)
@@ -797,8 +793,9 @@ fn program_fixed_array_specialization_value_type(
   match resolved.types[type_] {
     AppliedType(base, arguments) if arguments.length == 1 =>
       match resolved.types[base] {
-        NominalType(declaration) if declaration ==
-          standard_fixed_array_type_declaration() =>
+        NominalType(declaration) if resolved.raw_array_declarations.contains(
+            declaration,
+          ) =>
           match
             program_generic_parameter_shape(
               resolved,
@@ -1358,6 +1355,7 @@ fn materialize_program_generic_specialization(
   let resolved = {
     ..analyzed.frozen.interfaces[owner_index].resolved_types,
     types: selected.resolved_types,
+    raw_array_declarations: selected.raw_array_declarations,
     type_arguments: selected.resolved_type_arguments,
   }
   let base = if compile_time_projected_signature(

@@ -9,15 +9,19 @@ pub struct NullableRef<t> {}
 pub builtin i64_trunc_i32(value: I64) -> I32 = "i32.wrap_i64"
 
 // WasmGC array operations
-pub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = "array_new"
-pub builtin wasm_array_len<t>(value: WasmArray<t>) -> U32 = "array_len"
-pub builtin wasm_array_get<t>(value: WasmArray<t>, index: U32) -> t = "array_get"
-pub builtin wasm_array_set<t>(value: WasmArray<t>, index: U32, item: t) -> Unit = "array_set"
+pub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = "array.new"
+pub builtin wasm_array_len<t>(value: WasmArray<t>) -> U32 = "array.len"
+pub builtin wasm_array_get<t>(value: WasmArray<t>, index: U32) -> t = "array.get"
+pub builtin wasm_array_set<t>(value: WasmArray<t>, index: U32, item: t) -> Unit = "array.set"
 
 // WasmGC nullable foreign references
 pub builtin wasm_ref_null<t>() -> NullableRef<t> = "ref_null"
 pub builtin wasm_ref_is_null<t>(value: NullableRef<t>) -> Bool = "ref_is_null"
 pub builtin wasm_ref_as_non_null<t>(value: NullableRef<t>) -> t = "ref_as_non_null"
+
+// WasmGC array operations
+pub builtin wasm_array_new_default<t>(length: U32) -> WasmArray<t> = "array.new_default"
+pub builtin wasm_array_copy<t>(target: WasmArray<t>, target_index: U32, source: WasmArray<t>, source_index: U32, length: U32) -> Unit = "array.copy"
 
 // backend-only Core operations
 pub builtin wasm_core_i32_lt(left: I32, right: I32) -> Bool = "i32.lt_s"

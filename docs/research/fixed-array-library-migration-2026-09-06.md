@@ -65,8 +65,8 @@ method-name emission shortcuts. Raw Wasm instructions remain distinct operations
 
 ## Remaining work in this tranche
 
-Complete raw array declaration identity and storage contracts, then move the
-remaining Array algorithms into Dew. Full stress and pinned Starshine lanes
-remain scheduled for the end of the larger migration tranche.
-The registry still identifies the raw WasmArray carrier by its legacy intrinsic
-declaration; this commit does not claim to remove every raw-storage shortcut.
+Raw array declaration identity and storage contracts are complete in the
+[follow-up change](raw-array-contracts-2026-09-06.md). That change removes the
+legacy raw carrier registry and remaining FixedArray source-name shortcuts.
+Move the remaining Array algorithms into Dew next. Full stress and pinned
+Starshine lanes remain scheduled for the end of the larger migration tranche.

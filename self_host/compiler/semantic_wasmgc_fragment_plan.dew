@@ -282,12 +282,13 @@ fn self_host_wasmgc_payload_exact_nominal(
 fn self_host_wasmgc_plan_types(
   module_: SelfHostPlannedModuleLowering,
   required: Map<U64, Bool>,
+  raw_arrays: Map<U64, Bool>,
   physical_types: Array<SelfHostPlannedWasmPhysicalType>,
   fields: Array<SelfHostPlannedWasmField>,
   type_lookup: Array<U32>,
 ) -> Unit {
   for layout in module_.type_layouts.layouts {
-    if required.contains_key(layout.declaration) {
+    if required.contains_key(layout.declaration) && !raw_arrays.contains_key(layout.declaration) {
       self_host_wasmgc_plan_type(module_, layout, physical_types, fields, type_lookup)
     }
   }
@@ -878,7 +879,7 @@ fn self_host_plan_program_wasmgc_fragments(
       let lambda_function_indices = self_host_wasmgc_u32_slots(
         source.lambdas.length(),
       )
-      self_host_wasmgc_plan_types(source, required_types, physical_types, fields, type_lookup)
+      self_host_wasmgc_plan_types(source, required_types, specialization.lowering.raw_arrays.declarations, physical_types, fields, type_lookup)
       let closure_type_index = self_host_wasmgc_plan_closures(
         source,
         physical_types,

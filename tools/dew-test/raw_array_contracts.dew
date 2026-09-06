@@ -1,0 +1,164 @@
+// This is a user module. Neither the type name nor declaration positions are
+// part of the raw instruction contract.
+open dew.std.types
+
+struct UnrelatedRecord {
+  value: I64
+}
+
+pub struct LocalStorage<t> {}
+
+builtin local_new<unused, t>(length: U32, value: t) -> LocalStorage<t> = "array_new"
+builtin local_get<t>(value: LocalStorage<t>, index: U32) -> t = "array_get"
+builtin local_set<t>(value: LocalStorage<t>, index: U32, item: t) -> Unit = "array_set"
+builtin local_length<t>(value: LocalStorage<t>) -> U32 = "array_len"
+builtin local_default<t>(length: U32) -> LocalStorage<t> = "array.new_default"
+builtin local_copy<t>(target: LocalStorage<t>, target_index: U32, source: LocalStorage<t>, source_index: U32, length: U32) -> Unit = "array.copy"
+// The standard Wasm spelling must use the same declared type contract.
+builtin spelled_new<t>(length: U32, value: t) -> LocalStorage<t> = "array.new"
+
+fn initialized<unused, t>(value: t) -> LocalStorage<t> {
+  let result = local_default::<t>(2u32)
+  local_set(result, 0u32, value)
+  result
+}
+
+fn copy_initialized<t>(value: t) -> t {
+  if is_unit::<t>() {
+    let values = local_default::<t>(2u32)
+    local_copy(values, 1u32, values, 0u32, 1u32)
+    value
+  } else {
+    let source = initialized::<I32, t>(value)
+    let target = local_default::<t>(1u32)
+    local_copy(target, 0u32, source, 0u32, 1u32)
+    local_get(target, 0u32)
+  }
+}
+
+struct StorageOwner<t> {
+  mut storage: LocalStorage<t>
+}
+
+struct Trace {
+  mut value: U32
+}
+
+fn traced_storage<t>(trace: Trace, step: U32, value: LocalStorage<t>) -> LocalStorage<t> {
+  trace.value = trace.value * 10u32 + step
+  value
+}
+
+fn traced_index(trace: Trace, step: U32, value: U32) -> U32 {
+  trace.value = trace.value * 10u32 + step
+  value
+}
+
+fn read_owner<t>(owner: StorageOwner<t>) -> t {
+  local_get(owner.storage, 0u32)
+}
+
+pub fn main(case: U32) -> I32 {
+  if case == 0u32 {
+    let owner = StorageOwner::{
+      storage: local_new::<I64, I32>(2u32, 41i32)
+    }
+    local_set(owner.storage, 0u32, 42i32)
+    if read_owner(owner) == 42i32 && local_length(owner.storage) == 2u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 1u32 {
+    let owner = StorageOwner::{
+      storage: local_new::<I32, I64>(2u32, 4294967297i64)
+    }
+    if read_owner(owner) == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 2u32 {
+    let values = local_default::<I64>(3u32)
+    if local_length(values) == 3u32 && local_get(values, 0u32) == 0i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 3u32 {
+    let values = local_new::<I64, I32>(4u32, 0i32)
+    local_set(values, 0u32, 1i32)
+    local_set(values, 1u32, 2i32)
+    local_set(values, 2u32, 3i32)
+    local_copy(values, 1u32, values, 0u32, 3u32)
+    if local_get(values, 1u32) == 1i32 && local_get(values, 2u32) == 2i32 && local_get(values, 3u32) == 3i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 4u32 {
+    let values = local_default::<I32>(1u32)
+    local_copy(values, 1u32, values, 0u32, 1u32)
+    0i32
+  } else if case == 5u32 {
+    if copy_initialized(4294967297i64) == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 6u32 {
+    let source = UnrelatedRecord::{
+      value: 4294967297i64
+    }
+    let result = copy_initialized(source)
+    if result.value == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 7u32 {
+    let (left, right) = copy_initialized((7i32, 4294967297i64))
+    if left == 7i32 && right == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 8u32 {
+    copy_initialized(())
+    1i32
+  } else if case == 9u32 {
+    if copy_initialized(255u8) == 255u8 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 10u32 {
+    let values = local_default::<Unit>(1u32)
+    local_copy(values, 1u32, values, 0u32, 1u32)
+    0i32
+  } else if case == 11u32 {
+    let values = local_default::<I32>(1u32)
+    local_copy(values, 1u32, values, 1u32, 0u32)
+    1i32
+  } else if case == 12u32 {
+    let values = spelled_new(2u32, 7i32)
+    if local_get(values, 0u32) == 7i32 && local_length(values) == 2u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 13u32 {
+    let trace = Trace::{
+      value: 0u32
+    }
+    let values = local_default::<Unit>(2u32)
+    local_copy(traced_storage(trace, 1u32, values), traced_index(trace, 2u32, 1u32), traced_storage(trace, 3u32, values), traced_index(trace, 4u32, 0u32), traced_index(trace, 5u32, 1u32))
+    if trace.value == 12345u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else {
+    0i32
+  }
+}

@@ -13,12 +13,16 @@ CHECKED_OPERATIONS = ("get", "set", "iter_next_option")
 
 
 class ArrayBuiltinPolicyTests(unittest.TestCase):
+    def test_raw_array_intrinsics_use_wasm_instruction_names(self):
+        source = (ROOT / "std/wasm/intrinsics.dew").read_text()
+        for operation in ("new", "len", "get", "set", "new_default", "copy"):
+            self.assertRegex(source, rf'pub builtin wasm_array_{operation}<t>\([^\n]+ = "array\.{operation}"')
+
     def test_fixed_array_methods_have_no_declaration_ordinal_dispatch(self):
         registry = json.loads((ROOT / "tools/standard-builtin-registry.json").read_text())
-        module = registry["modules"]["fixed_array"]
-        self.assertEqual(module["operations"], {})
-        for key in ("methods", "index", "index_set"):
-            self.assertNotIn(key, module)
+        self.assertNotIn("fixed_array", registry["modules"])
+        operations = registry["modules"]["wasm_intrinsics"]["operations"]
+        self.assertFalse(any(name.startswith("WasmArray") for name in operations))
 
     def test_fixed_array_has_only_library_functions(self):
         source = (ROOT / "std/fixed_array.dew").read_text()

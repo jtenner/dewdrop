@@ -381,7 +381,7 @@ fn self_host_lowering_builtin_name(
     current => if current < recipes.length() {
       let recipe = recipes[current]
       if self_host_u64_equal(recipe.declaration, declaration) {
-        break Option::Some(recipe.builtin_name)
+        break Option::Some(self_host_raw_array_canonical_opcode(recipe.builtin_name))
       }
       continue current + 1u32
     } else {

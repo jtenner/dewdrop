@@ -7,4 +7,20 @@ test "raw Unit array storage does not change logical or enum carrier evidence" {
   assert_eq(wasmgc_raw_array_storage_carrier(GenericPlannedValueShape), -1)
   assert_eq(wasmgc_raw_array_storage_carrier(ErrorPlannedValueShape), -1)
   assert_eq(wasmgc_raw_array_storage_carrier(NeverPlannedValueShape), -1)
+  for
+    invalid in [
+      GenericPlannedValueShape,
+      ErrorPlannedValueShape,
+      NeverPlannedValueShape,
+    ] {
+    assert_eq(
+      wasmgc_raw_array_storage_carrier(
+        ProductPlannedValueShape([
+          I32PlannedValueShape,
+          ProductPlannedValueShape([invalid]),
+        ]),
+      ),
+      -1,
+    )
+  }
 }

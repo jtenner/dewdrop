@@ -55,6 +55,7 @@ fn self_host_compile_time_planning_lowering(lowering: SelfHostPlannedProgramLowe
     diagnostics: diagnostics
   }
   SelfHostPlannedProgramLowering::{
+    raw_arrays: lowering.raw_arrays
     collected: lowering.collected
     modules: lowering.modules
     index: lowering.index

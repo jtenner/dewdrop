@@ -1,6 +1,49 @@
 open dew.std.option
 open dew.std.bytes_builder
 
+test "raw array storage rejects unresolved and uninhabited nested elements" {
+  let invalid = [
+    SelfHostPlannedValueShape::GenericPlannedValueShape,
+    SelfHostPlannedValueShape::ErrorPlannedValueShape,
+    SelfHostPlannedValueShape::NeverPlannedValueShape,
+  ]
+  for shape in invalid {
+    assert(self_host_raw_array_storage_carrier(shape) is Option::None, "raw invalid carrier")
+    let product = SelfHostPlannedValueShape::ProductPlannedValueShape([
+      SelfHostPlannedValueShape::I32PlannedValueShape,
+      SelfHostPlannedValueShape::ProductPlannedValueShape([shape]),
+    ])
+    assert(self_host_raw_array_storage_carrier(product) is Option::None, "raw nested invalid carrier")
+  }
+  match self_host_raw_array_storage_carrier(SelfHostPlannedValueShape::UnitPlannedValueShape) {
+    Option::Some(carrier) => assert(carrier == 5i32, "Unit uses a storage marker only")
+    Option::None => assert(false, "Unit storage is supported")
+  }
+}
+
+test "raw array contracts reject invalid signatures before physical emission" {
+  let lowering = self_host_physical_test_lowering(b"pub struct Storage<t> {}\nbuiltin read<t>(value: Storage<t>, index: I64) -> t = \"array_get\"\n")
+  assert(lowering.raw_arrays.diagnostics.length() == 1u32, "one invalid raw array signature")
+  match lowering.raw_arrays.diagnostics[0u32] {
+    SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(declaration, message, _) => {
+      assert(self_host_semantic_id_local(declaration) == 1u32, "the invalid builtin declaration")
+      assert(message == "raw array instruction signature does not match its operands", "the exact signature diagnostic")
+    }
+    _ => assert(false, "expected InvalidRawArrayContract")
+  }
+}
+
+test "raw array contracts reject ordinary storage constructors" {
+  let lowering = self_host_physical_test_lowering(b"pub struct Storage<t> {}\nbuiltin create<t>(length: U32, value: t) -> Storage<t> = \"array_new\"\npub fn bad() -> Storage<I32> {\n  Storage::{}\n}\n")
+  assert(lowering.raw_arrays.diagnostics.length() == 1u32, "one invalid raw array constructor")
+  match lowering.raw_arrays.diagnostics[0u32] {
+    SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(_, message, _) => {
+      assert(message == "raw array storage must be allocated by an array instruction, not a struct constructor", "the exact storage diagnostic")
+    }
+    _ => assert(false, "expected InvalidRawArrayContract")
+  }
+}
+
 test "trait evidence identities remain part of specialization keys" {
   let requests = []
   let shapes = []

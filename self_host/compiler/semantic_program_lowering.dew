@@ -92,6 +92,7 @@ pub struct SelfHostProgramModuleGraph {
 }
 
 pub struct SelfHostPlannedProgramLowering {
+  raw_arrays: SelfHostRawArrayContracts
   collected: SelfHostCollectedProgram
   modules: Array<SelfHostPlannedModuleLowering>
   index: SelfHostProgramLoweringIndex
@@ -720,6 +721,10 @@ fn self_host_program_lowering_expression_error(
 fn self_host_validate_program_lowering(
   lowering: SelfHostPlannedProgramLowering,
 ) -> Option<String> {
+  match self_host_raw_array_contract_error(lowering.raw_arrays) {
+    Option::Some(error) => return Option::Some(error)
+    Option::None => {}
+  }
   if lowering.compile_time.diagnostics.length() > 0u32 {
     return Option::Some(lowering.compile_time.diagnostics[0u32])
   }
@@ -1773,6 +1778,7 @@ fn self_host_plan_program_lowering(
     }
   }
   let result = SelfHostPlannedProgramLowering::{
+    raw_arrays: self_host_bind_raw_array_contracts(modules)
     collected: frozen.collected
     modules: modules
     index: SelfHostProgramLoweringIndex::{

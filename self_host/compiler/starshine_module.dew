@@ -228,6 +228,9 @@ enum SelfHostLinkedI32EmitTask {
   )
   EmitLinkedArrayBuiltin(Bytes, U32, U32, StarshineInstructions)
   EmitLinkedArrayNew(U32, StarshineInstructions)
+  EmitLinkedArrayNewDefault(U32, StarshineInstructions)
+  EmitLinkedArrayCopy(U32, StarshineInstructions)
+  EmitLinkedRawArrayCast(StarshineInstructions)
   EmitLinkedArrayLen(StarshineInstructions)
   EmitLinkedArrayEmpty(U32, StarshineInstructions)
   EmitLinkedArrayLiteral(U32, U32, U32, StarshineInstructions)
@@ -1753,10 +1756,13 @@ fn self_host_linked_nominal_field_type_index(
   declaration: U64,
   allow_struct: Bool,
 ) -> Option<U32> {
+  if self_host_linked_is_raw_array_owner(link, declaration) {
+    return Option::None
+  }
   let name = self_host_linked_declaration_name(link, declaration)
   if name.equals(b"String") || name.equals(b"StringView") ||
     name.equals(b"Bytes") || name.equals(b"Array") ||
-    name.equals(b"FixedArray") || name.equals(b"Map") {
+    name.equals(b"Map") {
     return Option::None
   }
   if allow_struct {
@@ -2494,10 +2500,6 @@ fn self_host_linked_schedule_call_result_adapter(
     caller_specialization,
     expression,
   )
-  let function_name = self_host_linked_physical_function_name(
-    link,
-    function_index,
-  )
   let planned = module_.expressions[expression]
   let semantic_result_shape = self_host_planned_merged_body_value_shape(
     module_.resolved_types,
@@ -2506,66 +2508,6 @@ fn self_host_linked_schedule_call_result_adapter(
   )
   let semantic_result_is_unit = semantic_result_shape is SelfHostPlannedValueShape::UnitPlannedValueShape ||
     planned.shape is SelfHostPlannedValueShape::UnitPlannedValueShape
-  let result_nominal = if self_host_u64_equal(planned.nominal, 0u64) {
-    self_host_linked_type_nominal_declaration(module_, planned.type_)
-  } else {
-    planned.nominal
-  }
-  let result_name = self_host_linked_declaration_name(link, result_nominal)
-  let returns_fixed_array = result_name.equals(b"FixedArray") || result_name.ends_with(
-    b".FixedArray",
-  )
-  let mut expects_backing_array = returns_fixed_array
-  let array_base = self_host_linked_array_runtime_base(link)
-  match self_host_linked_canonical_type(canonical, expression) {
-    Option::Some(expected_type) => if expected_type >= array_base &&
-      expected_type < array_base + 6u32 {
-      expects_backing_array = true
-    }
-    Option::None => {}
-  }
-  match self_host_linked_canonical_materialized_local_type(
-    canonical,
-    module_,
-    body,
-    expression,
-  ) {
-    Option::Some(expected_type) => if expected_type >= array_base &&
-      expected_type < array_base + 6u32 {
-      expects_backing_array = true
-    }
-    Option::None => {}
-  }
-  let body_result_expression = match body.root {
-    SelfHostHirBodyRoot::ExpressionBodyRoot(root) => root
-    SelfHostHirBodyRoot::BlockBodyRoot(block) => self_host_body_block_tail_expression(
-      module_,
-      block,
-    )
-  }
-  if !self_host_u32_equal(body_result_expression, 4294967295u32) &&
-    self_host_linked_expression_wraps_expression(
-      module_,
-      body_result_expression,
-      expression,
-    ) {
-    match canonical {
-      Option::Some(plan) => if plan.result.physical_heap_type >= array_base &&
-        plan.result.physical_heap_type < array_base + 6u32 {
-        expects_backing_array = true
-      }
-      Option::None => {}
-    }
-  }
-  if expects_backing_array && (function_name.equals(b"dew_array_make") ||
-    function_name.equals(b"dew_array_new") || function_name.equals(b"make") ||
-    function_name.equals(b"new")) {
-    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructGet(
-      self_host_linked_array_wrapper_type(link),
-      0u32,
-      destination,
-    ))
-  }
   if self_host_u32_equal(
     self_host_linked_physical_function_result_count(link, function_index),
     0u32,
@@ -11836,12 +11778,12 @@ fn self_host_linked_builtin_name(
           )
           if self_host_u64_equal(fragment.declaration, declaration) {
             if !self_host_bytes_equal(fragment.direct_builtin, b"") {
-              return Option::Some(fragment.direct_builtin)
+              return Option::Some(self_host_raw_array_canonical_opcode(fragment.direct_builtin))
             }
             match fragment.kind {
               SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(
                 name,
-              ) => return Option::Some(name)
+              ) => return Option::Some(self_host_raw_array_canonical_opcode(name))
               _ => return Option::None
             }
           }
@@ -12399,7 +12341,7 @@ fn self_host_linked_qualified_owner_name(
       let source_name = module_.expressions[current].source_name
       if source_name < self_host_linked_module_name_count(module_) {
         let name = self_host_linked_module_name_at(module_, source_name)
-        if name == "FixedArray" || name == "Array" || name == "Map" ||
+        if name == "Array" || name == "Map" ||
           name == "StringBuilder" || name == "BytesBuilder" ||
           name == "Option" || name == "Result" {
           return name
@@ -14619,191 +14561,22 @@ fn self_host_linked_canonical_expression_heap_type(
   Option::None
 }
 
-fn self_host_linked_expression_is_fixed_array_constructor(
-  module_: SelfHostPlannedModuleLowering,
-  expression: U32,
-) -> Bool {
-  if expression >= module_.expressions.length() {
-    return false
-  }
-  let target = match module_.expressions[expression].kind {
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(value, _) => value
-    SelfHostPlannedExpressionKind::PlannedDirectCall(_, value, _, _) => value
-    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(value, _, _) => value
-    SelfHostPlannedExpressionKind::PlannedConsumedExpression => return false
-    _ => return false
-  }
-  if target >= module_.expressions.length() || !self_host_u32_greater(
-    self_host_linked_module_name_count(module_),
-    module_.expressions[target].source_name,
-  ) {
-    return false
-  }
-  let name = self_host_linked_module_name_at(
-    module_,
-    module_.expressions[target].source_name,
-  )
-  self_host_linked_qualified_owner_name(module_, target) == "FixedArray" && (
-    name == "make" || name == "new"
-  )
-}
-
-fn self_host_linked_local_has_fixed_array_operations(
-  link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
-  local_id: U32,
-) -> Bool {
-  let end = self_host_u32_add(body.expressions.start, body.expressions.length)
-  let mut expression = body.expressions.start
-  let _ = while expression {
-    current => if current < end && current < module_.expressions.length() {
-      match module_.expressions[current].kind {
-        SelfHostPlannedExpressionKind::PlannedDirectCall(
-          declaration,
-          target,
-          _,
-          _,
-        ) => if self_host_linked_declaration_has_receiver(link, declaration) {
-          let method_name = self_host_linked_declaration_name(link, declaration)
-          if method_name.ends_with(b"get_unchecked") || method_name.ends_with(
-            b"set_unchecked",
-          ) {
-            let receiver = if target < module_.expressions.length() {
-              match module_.expressions[target].kind {
-                SelfHostPlannedExpressionKind::PlannedFieldGet(_, base, _) => base
-                SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, _) => base
-                SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
-                  target,
-                  0u32,
-                ) {
-                  target - 1u32
-                } else {
-                  4294967295u32
-                }
-                _ => 4294967295u32
-              }
-            } else {
-              4294967295u32
-            }
-            if receiver < module_.expressions.length() && self_host_linked_expression_wraps_local(
-              module_,
-              receiver,
-              local_id,
-            ) {
-              return true
-            }
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => if target < module_.expressions.length() {
-          match module_.expressions[target].kind {
-            SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name) => if self_host_u32_greater(
-              self_host_linked_module_name_count(module_),
-              name,
-            ) {
-              let method_name = self_host_linked_module_name_at(module_, name)
-              if (method_name == "get_unchecked" || method_name == "set_unchecked") &&
-                self_host_linked_expression_wraps_local(
-                  module_,
-                  base,
-                  local_id,
-                ) {
-                return true
-              }
-            }
-            _ => {}
-          }
-        }
-        _ => {}
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  false
-}
-
 fn self_host_linked_expression_is_fixed_array_value(
   link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
+  _body: SelfHostPlannedBodyLowering,
   expression: U32,
 ) -> Bool {
   if expression >= module_.expressions.length() {
     return false
   }
-  let nominal = self_host_linked_expression_nominal_declaration(
-    link,
-    module_,
-    body,
-    expression,
-  )
-  if !self_host_u64_equal(nominal, 0u64) {
-    let nominal_name = self_host_linked_declaration_name(link, nominal)
-    if nominal_name.equals(b"FixedArray") || nominal_name.ends_with(
-      b".FixedArray",
-    ) {
-      return true
-    }
-    if nominal_name.equals(b"Array") || nominal_name.ends_with(b".Array") {
-      return false
-    }
+  let planned = module_.expressions[expression]
+  let owner = if planned.nominal != 0u64 {
+    planned.nominal
+  } else {
+    self_host_linked_type_nominal_declaration(module_, planned.type_)
   }
-  // A proved dynamic Array must not be reclassified from its indexed uses.
-  // Array literals and Array-producing initializers use the wrapper layout.
-  if self_host_linked_expression_is_array_value(
-    link,
-    module_,
-    body,
-    expression,
-  ) {
-    return false
-  }
-  match module_.expressions[expression].kind {
-    SelfHostPlannedExpressionKind::PlannedLocalGet(local_id) => {
-      let parameter_nominal = self_host_linked_local_parameter_nominal_declaration(
-        link,
-        module_,
-        body,
-        local_id,
-      )
-      if !self_host_u64_equal(parameter_nominal, 0u64) {
-        let parameter_name = self_host_linked_declaration_name(
-          link,
-          parameter_nominal,
-        )
-        if parameter_name.equals(b"FixedArray") || parameter_name.equals(
-          b"WasmArray",
-        ) {
-          return true
-        }
-        if parameter_name.equals(b"Array") {
-          return false
-        }
-      }
-      match self_host_linked_local_initializer_expression(
-        module_,
-        body,
-        local_id,
-      ) {
-        Option::Some(initializer) => self_host_linked_expression_is_fixed_array_constructor(
-          module_,
-          initializer,
-        )
-        Option::None => self_host_linked_local_has_fixed_array_operations(
-          link,
-          module_,
-          body,
-          local_id,
-        )
-      }
-    }
-    _ => self_host_linked_expression_is_fixed_array_constructor(
-      module_,
-      expression,
-    )
-  }
+  self_host_linked_is_raw_array_owner(link, owner)
 }
 
 fn self_host_linked_canonical_expression_shape(
@@ -20877,6 +20650,43 @@ fn self_host_emit_linked_i32_expression(
                 }
                 continue tasks.length()
               }
+              if name.equals(b"array.new_default") {
+                if arguments.length != 1u32 || !self_host_array_span_is_valid(arguments.start, arguments.length, module_.expression_children.length()) {
+                  return Option::Some("ABI-703 raw array.new_default needs one length")
+                }
+                let shape = match self_host_raw_array_expression_element_shape(link, module_, caller_specialization, expression) {
+                  Option::Some(value) => value
+                  Option::None => return Option::Some("SPC-301 raw array.new_default element type is not concrete")
+                }
+                let array_type = self_host_linked_array_runtime_base(link) + self_host_i32_to_u32(self_host_linked_array_carrier_from_shape(shape))
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayNewDefault(array_type, destination))
+                self_host_linked_i32_schedule_expression(tasks, expression_depths, module_.expression_children[arguments.start], destination, depth)
+                continue tasks.length()
+              }
+              if name.equals(b"array.copy") {
+                if arguments.length != 5u32 || !self_host_array_span_is_valid(arguments.start, arguments.length, module_.expression_children.length()) {
+                  return Option::Some("ABI-703 raw array.copy needs five operands")
+                }
+                let array_expression = module_.expression_children[arguments.start]
+                let shape = match self_host_raw_array_expression_element_shape(link, module_, caller_specialization, array_expression) {
+                  Option::Some(value) => value
+                  Option::None => return Option::Some("SPC-301 raw array.copy element type is not concrete")
+                }
+                let array_type = self_host_linked_array_runtime_base(link) + self_host_i32_to_u32(self_host_linked_array_carrier_from_shape(shape))
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayCopy(array_type, destination))
+                while 5u32 {
+                  remaining if remaining > 0u32 => {
+                    let operand = remaining - 1u32
+                    if operand == 0u32 || operand == 2u32 {
+                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefCast(array_type, destination))
+                    }
+                    self_host_linked_i32_schedule_expression(tasks, expression_depths, module_.expression_children[arguments.start + operand], destination, depth)
+                    continue operand
+                  }
+                  _ => break self_host_semantic_unit()
+                }
+                continue tasks.length()
+              }
               if name.equals(b"array_new") {
                 if !self_host_u32_equal(arguments.length, 2u32) ||
                   self_host_u32_add(arguments.start, 1u32) >= module_.expression_children.length() {
@@ -20886,17 +20696,19 @@ fn self_host_emit_linked_i32_expression(
                 let value_expression = module_.expression_children[
                   self_host_u32_add(arguments.start, 1u32)
                 ]
-                let value_shape = self_host_linked_call_argument_shape(
+                let value_shape = self_host_body_specialization_shape_for_type(
                   link,
-                  canonical_body_plan,
                   module_,
-                  body,
                   caller_specialization,
-                  value_expression,
+                  module_.expressions[value_expression].type_,
+                  module_.expressions[value_expression].shape,
                 )
                 let array_type = self_host_linked_array_runtime_base(link) +
                   self_host_i32_to_u32(
-                    self_host_linked_array_carrier_from_shape(value_shape),
+                    match self_host_raw_array_storage_carrier(value_shape) {
+                      Option::Some(carrier) => carrier
+                      Option::None => return Option::Some("SPC-301 raw array.new element type is not concrete")
+                    },
                   )
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayNew(
                   array_type,
@@ -20934,29 +20746,10 @@ fn self_host_emit_linked_i32_expression(
                   return Option::Some("linked raw array length needs one array")
                 }
                 let array_expression = module_.expression_children[arguments.start]
-                let element_shape = match self_host_linked_expression_container_argument_shape(
-                  link,
-                  module_,
-                  body,
-                  array_expression,
-                  0u32,
-                ) {
-                  Option::Some(shape) => shape
-                  Option::None => self_host_body_specialization_shape(
-                    link,
-                    caller_specialization,
-                    SelfHostPlannedValueShape::GenericPlannedValueShape,
-                  )
-                }
-                let array_type = self_host_linked_array_runtime_base(link) +
-                  self_host_i32_to_u32(
-                    self_host_linked_array_carrier_from_shape(element_shape),
-                  )
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayLen(
                   destination,
                 ))
-                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefCast(
-                  array_type,
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRawArrayCast(
                   destination,
                 ))
                 self_host_linked_i32_schedule_expression(
@@ -20976,17 +20769,19 @@ fn self_host_emit_linked_i32_expression(
                 let value_expression = module_.expression_children[
                   self_host_u32_add(arguments.start, 2u32)
                 ]
-                let value_shape = self_host_linked_call_argument_shape(
+                let value_shape = self_host_body_specialization_shape_for_type(
                   link,
-                  canonical_body_plan,
                   module_,
-                  body,
                   caller_specialization,
-                  value_expression,
+                  module_.expressions[value_expression].type_,
+                  module_.expressions[value_expression].shape,
                 )
                 let array_type = self_host_linked_array_runtime_base(link) +
                   self_host_i32_to_u32(
-                    self_host_linked_array_carrier_from_shape(value_shape),
+                    match self_host_raw_array_storage_carrier(value_shape) {
+                      Option::Some(carrier) => carrier
+                      Option::None => return Option::Some("SPC-301 raw array.set element type is not concrete")
+                    },
                   )
                 let array_expression = module_.expression_children[arguments.start]
                 let index_expression = module_.expression_children[
@@ -21139,7 +20934,10 @@ fn self_host_emit_linked_i32_expression(
                 let array_type = self_host_u32_add(
                   self_host_linked_array_runtime_base(link),
                   self_host_i32_to_u32(
-                    self_host_linked_array_carrier_from_shape(element_shape),
+                    match self_host_raw_array_storage_carrier(element_shape) {
+                      Option::Some(carrier) => carrier
+                      Option::None => return Option::Some("SPC-301 raw array.get element type is not concrete")
+                    },
                   ),
                 )
                 if self_host_linked_canonical_expression_shape(canonical_body_plan, expression) is Option::Some(SelfHostPlannedValueShape::UnitPlannedValueShape) {
@@ -21452,53 +21250,6 @@ fn self_host_emit_linked_i32_expression(
                   }
                   continue tasks.length()
                 }
-                let qualified_owner_name = self_host_linked_qualified_owner_name(
-                  module_,
-                  target,
-                )
-                if qualified_owner_name == "FixedArray" && name == "make" {
-                  if !self_host_u32_equal(arguments.length, 2u32) ||
-                    self_host_u32_add(arguments.start, 1u32) >= module_.expression_children.length() {
-                    return Option::Some("linked FixedArray make needs length and value")
-                  }
-                  let length_expression = module_.expression_children[arguments.start]
-                  let value_expression = module_.expression_children[
-                    self_host_u32_add(arguments.start, 1u32)
-                  ]
-                  let value_shape = self_host_linked_backend_expression_shape(
-                    link,
-                    module_,
-                    body,
-                    caller_specialization,
-                    value_expression,
-                  )
-                  if value_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-                    return Option::Some("linked FixedArray make value carrier is not proved")
-                  }
-                  let array_type = self_host_linked_array_runtime_base(link) +
-                    self_host_i32_to_u32(
-                      self_host_linked_array_carrier_from_shape(value_shape),
-                    )
-                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayNew(
-                    array_type,
-                    destination,
-                  ))
-                  self_host_linked_i32_schedule_expression(
-                    tasks,
-                    expression_depths,
-                    length_expression,
-                    destination,
-                    depth,
-                  )
-                  self_host_linked_i32_schedule_expression(
-                    tasks,
-                    expression_depths,
-                    value_expression,
-                    destination,
-                    depth,
-                  )
-                  continue tasks.length()
-                }
                 let result_nominal = if self_host_u64_equal(planned.nominal, 0u64) {
                   self_host_linked_type_nominal_declaration(module_, planned.type_)
                 } else {
@@ -21518,15 +21269,6 @@ fn self_host_emit_linked_i32_expression(
                     callable.declaration,
                   ) {
                     Option::Some(function_index) => {
-                      if qualified_owner_name == "FixedArray" && (
-                        name == "make" || name == "new"
-                      ) {
-                        tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructGet(
-                          self_host_linked_array_wrapper_type(link),
-                          0u32,
-                          destination,
-                        ))
-                      }
                       tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
                         function_index,
                         destination,
@@ -24185,188 +23927,6 @@ fn self_host_emit_linked_i32_expression(
                       Option::None => {}
                     }
                   }
-                  let unresolved_builtin_name = if self_host_u32_greater(
-                    self_host_linked_module_name_count(module_),
-                    module_.expressions[target].source_name,
-                  ) {
-                    self_host_linked_module_name_at(
-                      module_,
-                      module_.expressions[target].source_name,
-                    )
-                  } else {
-                    ""
-                  }
-                  if unresolved_builtin_name == "wasm_array_new" {
-                    if !self_host_u32_equal(arguments.length, 2u32) ||
-                      self_host_u32_add(arguments.start, 1u32) >= module_.expression_children.length() {
-                      return Option::Some("linked unresolved raw array new needs length and value")
-                    }
-                    let length_expression = module_.expression_children[arguments.start]
-                    let value_expression = module_.expression_children[
-                      self_host_u32_add(arguments.start, 1u32)
-                    ]
-                    let value_shape = self_host_linked_call_argument_shape(
-                      link,
-                      canonical_body_plan,
-                      module_,
-                      body,
-                      caller_specialization,
-                      value_expression,
-                    )
-                    let array_type = self_host_linked_array_runtime_base(link) +
-                      self_host_i32_to_u32(
-                        self_host_linked_array_carrier_from_shape(value_shape),
-                      )
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayNew(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      length_expression,
-                      destination,
-                      depth,
-                    )
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      value_expression,
-                      destination,
-                      depth,
-                    )
-                    continue tasks.length()
-                  }
-                  if unresolved_builtin_name == "wasm_array_len" {
-                    if !self_host_u32_equal(arguments.length, 1u32) ||
-                      arguments.start >= module_.expression_children.length() {
-                      return Option::Some("linked unresolved raw array length needs one array")
-                    }
-                    let array_expression = module_.expression_children[arguments.start]
-                    let element_shape = match self_host_linked_expression_container_argument_shape(
-                      link,
-                      module_,
-                      body,
-                      array_expression,
-                      0u32,
-                    ) {
-                      Option::Some(shape) => shape
-                      Option::None => self_host_body_specialization_shape(
-                        link,
-                        caller_specialization,
-                        SelfHostPlannedValueShape::GenericPlannedValueShape,
-                      )
-                    }
-                    let array_type = self_host_linked_array_runtime_base(link) +
-                      self_host_i32_to_u32(
-                        self_host_linked_array_carrier_from_shape(element_shape),
-                      )
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayLen(
-                      destination,
-                    ))
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefCast(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      array_expression,
-                      destination,
-                      depth,
-                    )
-                    continue tasks.length()
-                  }
-                  if unresolved_builtin_name == "wasm_array_set" {
-                    if !self_host_u32_equal(arguments.length, 3u32) ||
-                      self_host_u32_add(arguments.start, 2u32) >= module_.expression_children.length() {
-                      return Option::Some("linked unresolved raw array set needs array index and value")
-                    }
-                    let value_expression = module_.expression_children[
-                      self_host_u32_add(arguments.start, 2u32)
-                    ]
-                    let value_shape = self_host_linked_call_argument_shape(
-                      link,
-                      canonical_body_plan,
-                      module_,
-                      body,
-                      caller_specialization,
-                      value_expression,
-                    )
-                    let array_type = self_host_linked_array_runtime_base(link) +
-                      self_host_i32_to_u32(
-                        self_host_linked_array_carrier_from_shape(value_shape),
-                      )
-                    let array_expression = module_.expression_children[arguments.start]
-                    let index_expression = module_.expression_children[
-                      self_host_u32_add(arguments.start, 1u32)
-                    ]
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArraySet(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      value_expression,
-                      destination,
-                      depth,
-                    )
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      index_expression,
-                      destination,
-                      depth,
-                    )
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGetPrefix(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      array_expression,
-                      destination,
-                      depth,
-                    )
-                    continue tasks.length()
-                  }
-                  if unresolved_builtin_name == "wasm_array_get" {
-                    if !self_host_u32_equal(arguments.length, 2u32) ||
-                      self_host_u32_add(arguments.start, 1u32) >= module_.expression_children.length() {
-                      return Option::Some("linked unresolved raw array get needs array and index")
-                    }
-                    let array_type = self_host_linked_array_runtime_base(link) +
-                      self_host_i32_to_u32(
-                        self_host_linked_array_carrier_from_shape(planned.shape),
-                      )
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGet(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      module_.expression_children[
-                        self_host_u32_add(arguments.start, 1u32)
-                      ],
-                      destination,
-                      depth,
-                    )
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGetPrefix(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      module_.expression_children[arguments.start],
-                      destination,
-                      depth,
-                    )
-                    continue tasks.length()
-                  }
                   match self_host_linked_canonical_call_index(
                     canonical_body_plan,
                     link,
@@ -24387,30 +23947,6 @@ fn self_host_emit_linked_i32_expression(
                         tasks,
                         destination,
                       )
-                      let unresolved_owner_name = self_host_linked_qualified_owner_name(
-                        module_,
-                        target,
-                      )
-                      let unresolved_target_name = if self_host_u32_greater(
-                        self_host_linked_module_name_count(module_),
-                        module_.expressions[target].source_name,
-                      ) {
-                        self_host_linked_module_name_at(
-                          module_,
-                          module_.expressions[target].source_name,
-                        )
-                      } else {
-                        ""
-                      }
-                      if unresolved_owner_name == "FixedArray" && (
-                        unresolved_target_name == "make" || unresolved_target_name == "new"
-                      ) {
-                        tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructGet(
-                          self_host_linked_array_wrapper_type(link),
-                          0u32,
-                          destination,
-                        ))
-                      }
                       tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
                         function_index,
                         destination,
@@ -25665,6 +25201,18 @@ fn self_host_emit_linked_i32_expression(
           StarshineFfi.ffi_lib_Instruction_array_new(
             StarshineFfi.ffi_lib_TypeIdx_new(array_type.into()),
           ),
+        )
+        SelfHostLinkedI32EmitTask::EmitLinkedArrayNewDefault(array_type, destination) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_array_new_default(StarshineFfi.ffi_lib_TypeIdx_new(array_type.into())),
+        )
+        SelfHostLinkedI32EmitTask::EmitLinkedArrayCopy(array_type, destination) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_array_copy(StarshineFfi.ffi_lib_TypeIdx_new(array_type.into()), StarshineFfi.ffi_lib_TypeIdx_new(array_type.into())),
+        )
+        SelfHostLinkedI32EmitTask::EmitLinkedRawArrayCast(destination) => StarshineFfi.ffi_ffi_bridge_instructions_push(
+          destination,
+          StarshineFfi.ffi_lib_Instruction_ref_cast(0i32, StarshineFfi.ffi_lib_HeapType_abs(StarshineFfi.ffi_lib_AbsHeapType_array())),
         )
         SelfHostLinkedI32EmitTask::EmitLinkedArrayLen(destination) => StarshineFfi.ffi_ffi_bridge_instructions_push(
           destination,
@@ -30080,41 +29628,6 @@ fn self_host_linked_expression_container_argument_shape(
   let _ = while depth {
     current => if current < 8u32 && expression < module_.expressions.length() {
       let planned = module_.expressions[expression]
-      if self_host_u32_equal(argument, 0u32) && self_host_linked_expression_is_fixed_array_constructor(
-        module_,
-        expression,
-      ) {
-        let constructor_arguments = match planned.kind {
-          SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, arguments, _) => arguments
-          SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => arguments
-          SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, arguments, _) => arguments
-          _ => SelfHostHirSpan::{
-            start: 0u32
-            length: 0u32
-          }
-        }
-        if self_host_u32_greater(constructor_arguments.length, 1u32) {
-          let value_child = self_host_u32_add(
-            constructor_arguments.start,
-            constructor_arguments.length - 1u32,
-          )
-          if value_child < module_.expression_children.length() {
-            let value = module_.expression_children[value_child]
-            if value < module_.expressions.length() {
-              let shape = self_host_linked_static_expression_shape(
-                link,
-                module_,
-                value,
-              )
-              if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                shape is SelfHostPlannedValueShape::GenericPlannedValueShape
-              ) {
-                return Option::Some(shape)
-              }
-            }
-          }
-        }
-      }
       match planned.kind {
         SelfHostPlannedExpressionKind::PlannedLocalGet(local_id) => {
           match self_host_linked_type_argument_shape(
@@ -30956,17 +30469,6 @@ fn self_host_linked_function_returns_array_element(
     ) {
       Option::Some(name) => name.equals(b"array_get")
       Option::None => false
-    }
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => if target < module_.expressions.length() {
-      let source_name = module_.expressions[target].source_name
-      if source_name < self_host_linked_module_name_count(module_) {
-        let name = self_host_linked_module_name_at(module_, source_name)
-        name == "wasm_array_get" || name == "array_get"
-      } else {
-        false
-      }
-    } else {
-      false
     }
     _ => false
   }

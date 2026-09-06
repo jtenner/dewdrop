@@ -17,10 +17,9 @@ test "fixed arrays emit carrier-specialized WasmGC indexing" {
   assert_eq(lowering.modules[0].diagnostics.length(), 0)
   let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
-  assert_true(
-    link.type_lookup.get(@semantic.standard_fixed_array_type_declaration())
-    is None,
-  )
+  for declaration, _ in lowering.modules[0].raw_array_declarations {
+    assert_true(link.type_lookup.get(declaration) is None)
+  }
   match emit_starshine_program_module(lowering, link) {
     Ok(module_) => assert_eq(@validate.validate_module(module_), Ok(()))
     Err(error) => assert_eq(error, UnsupportedBuiltin(b"expected-debug"))

@@ -58,10 +58,6 @@ test "generated standard builtin registry matches collected bootstrap declaratio
   assert_standard_registry_declaration(wasm_intrinsics, 3, "wasm_array_new")
   assert_standard_registry_declaration(wasm_intrinsics, 7, "wasm_ref_null")
   assert_eq(
-    standard_fixed_array_type_declaration(),
-    make_semantic_id(wasm_intrinsics.module_id, 0),
-  )
-  assert_eq(
     standard_nullable_ref_type_declaration(),
     make_semantic_id(wasm_intrinsics.module_id, 1),
   )
@@ -69,19 +65,19 @@ test "generated standard builtin registry matches collected bootstrap declaratio
     standard_wasm_intrinsics_operation(
       make_semantic_id(wasm_intrinsics.module_id, 3),
     ),
-    WasmArrayNew,
+    NoStandardBuiltinOperation,
   )
   assert_eq(
     standard_wasm_intrinsics_operation(
       make_semantic_id(wasm_intrinsics.module_id, 5),
     ),
-    WasmArrayGet,
+    NoStandardBuiltinOperation,
   )
   assert_eq(
     standard_wasm_intrinsics_operation(
       make_semantic_id(wasm_intrinsics.module_id, 6),
     ),
-    WasmArraySet,
+    NoStandardBuiltinOperation,
   )
   assert_eq(
     standard_wasm_intrinsics_operation(

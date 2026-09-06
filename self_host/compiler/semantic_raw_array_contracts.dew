@@ -1,0 +1,273 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+pub struct SelfHostRawArrayContracts {
+  declarations: Map<U64, Bool>
+  diagnostics: Array<SelfHostProgramWasmGCLinkDiagnostic>
+}
+
+fn self_host_raw_array_canonical_opcode(name: Bytes) -> Bytes {
+  if name.equals(b"array.new") {
+    b"array_new"
+  } else if name.equals(b"array.len") {
+    b"array_len"
+  } else if name.equals(b"array.get") {
+    b"array_get"
+  } else if name.equals(b"array.set") {
+    b"array_set"
+  } else {
+    name
+  }
+}
+
+fn self_host_raw_array_opcode(name: Bytes) -> U32 {
+  if name.equals(b"array_new") || name.equals(b"array.new") {
+    0u32
+  } else if name.equals(b"array_len") || name.equals(b"array.len") {
+    1u32
+  } else if name.equals(b"array_get") || name.equals(b"array.get") {
+    2u32
+  } else if name.equals(b"array_set") || name.equals(b"array.set") {
+    3u32
+  } else if name.equals(b"array.new_default") {
+    4u32
+  } else if name.equals(b"array.copy") {
+    5u32
+  } else {
+    4294967295u32
+  }
+}
+
+fn self_host_raw_array_storage_carrier(root: SelfHostPlannedValueShape) -> Option<I32> {
+  let work = [root]
+  while work.length() {
+    length if length > 0u32 => {
+      let shape = match work.pop() {
+        Option::Some(value) => value
+        Option::None => {
+          assert(false, "ARN-103 raw array shape work stack lost an entry")
+          unreachable()
+        }
+      }
+      match shape {
+        SelfHostPlannedValueShape::GenericPlannedValueShape => return Option::None
+        SelfHostPlannedValueShape::ErrorPlannedValueShape => return Option::None
+        SelfHostPlannedValueShape::NeverPlannedValueShape => return Option::None
+        SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+          for field in fields {
+            work.push(field)
+          }
+        }
+        _ => {}
+      }
+      continue work.length()
+    }
+    _ => break ()
+  }
+  Option::Some(self_host_linked_array_carrier_from_shape(root))
+}
+
+fn self_host_raw_array_element(
+  resolved: SelfHostResolvedModuleTypes,
+  type_: U32,
+) -> Option<U32> {
+  if type_ >= resolved.types.length() {
+    return Option::None
+  }
+  match resolved.types[type_] {
+    SelfHostResolvedType::AppliedType(base, arguments) => if arguments.length == 1u32 &&
+      base < resolved.types.length() &&
+      self_host_array_span_is_valid(arguments.start, arguments.length, resolved.type_arguments.length()) {
+      match resolved.types[base] {
+        SelfHostResolvedType::NominalType(_) => Option::Some(resolved.type_arguments[arguments.start])
+        _ => Option::None
+      }
+    } else {
+      Option::None
+    }
+    _ => Option::None
+  }
+}
+
+fn self_host_raw_array_is_u32(resolved: SelfHostResolvedModuleTypes, type_: U32) -> Bool {
+  type_ < resolved.types.length() && resolved.types[type_] is SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::U32Type)
+}
+
+fn self_host_raw_array_is_unit(resolved: SelfHostResolvedModuleTypes, type_: U32) -> Bool {
+  type_ < resolved.types.length() && resolved.types[type_] is SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::UnitType)
+}
+
+fn self_host_raw_array_contract_owner(
+  module_: SelfHostPlannedModuleLowering,
+  callable: SelfHostPlannedCallable,
+  operation: U32,
+) -> Option<U64> {
+  let count = if operation == 0u32 || operation == 2u32 {
+    2u32
+  } else if operation == 1u32 || operation == 4u32 {
+    1u32
+  } else if operation == 3u32 {
+    3u32
+  } else {
+    5u32
+  }
+  if callable.has_receiver || callable.parameters.length != count ||
+    !self_host_array_span_is_valid(callable.parameters.start, callable.parameters.length, module_.functions.parameters.length()) {
+    return Option::None
+  }
+  let parameters = []
+  while 0u32 {
+    offset if offset < count => {
+      parameters.push(module_.functions.parameters[callable.parameters.start + offset].type_)
+      continue offset + 1u32
+    }
+    _ => break self_host_semantic_unit()
+  }
+  let array_type = if operation == 0u32 || operation == 4u32 {
+    callable.result_type
+  } else {
+    parameters[0u32]
+  }
+  let resolved = module_.resolved_types
+  let element = match self_host_raw_array_element(resolved, array_type) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let valid = if operation == 0u32 {
+    self_host_raw_array_is_u32(resolved, parameters[0u32]) && parameters[1u32] == element
+  } else if operation == 1u32 {
+    self_host_raw_array_is_u32(resolved, callable.result_type)
+  } else if operation == 2u32 {
+    self_host_raw_array_is_u32(resolved, parameters[1u32]) && callable.result_type == element
+  } else if operation == 3u32 {
+    self_host_raw_array_is_u32(resolved, parameters[1u32]) && parameters[2u32] == element && self_host_raw_array_is_unit(resolved, callable.result_type)
+  } else if operation == 4u32 {
+    self_host_raw_array_is_u32(resolved, parameters[0u32])
+  } else {
+    self_host_raw_array_is_u32(resolved, parameters[1u32]) && parameters[2u32] == array_type &&
+      self_host_raw_array_is_u32(resolved, parameters[3u32]) && self_host_raw_array_is_u32(resolved, parameters[4u32]) &&
+      self_host_raw_array_is_unit(resolved, callable.result_type)
+  }
+  if valid {
+    Option::Some(self_host_linked_resolved_nominal_declaration(module_, array_type))
+  } else {
+    Option::None
+  }
+}
+
+fn self_host_bind_raw_array_contracts(modules: Array<SelfHostPlannedModuleLowering>) -> SelfHostRawArrayContracts {
+  let declarations = self_host_empty_u64_bool_map()
+  let empty_owners = self_host_empty_u64_bool_map()
+  let diagnostics = []
+  for module_ in modules {
+    for layout in module_.type_layouts.layouts {
+      match layout.kind {
+        SelfHostPlannedNominalLayoutKind::PlannedStructLayout(fields) => if fields.length == 0u32 && layout.generic_parameters.length == 1u32 {
+          empty_owners.set(layout.declaration, true)
+        }
+        _ => {}
+      }
+    }
+  }
+  for module_ in modules {
+    for callable in module_.functions.callables {
+      match callable.kind {
+        SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => {
+          let operation = self_host_raw_array_opcode(name)
+          if operation < 6u32 {
+            match self_host_raw_array_contract_owner(module_, callable, operation) {
+              Option::Some(owner) => if empty_owners.contains_key(owner) {
+                declarations.set(owner, true)
+              } else {
+                diagnostics.push(SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(callable.declaration, "raw array owner must be an empty struct with one element parameter", callable.offset))
+              }
+              Option::None => diagnostics.push(SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(callable.declaration, "raw array instruction signature does not match its operands", callable.offset))
+            }
+          }
+        }
+        _ => {}
+      }
+    }
+  }
+  for module_ in modules {
+    for expression in module_.expressions {
+      match expression.selection {
+        SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(owner, _) => if declarations.contains_key(owner) {
+          diagnostics.push(SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(owner, "raw array storage must be allocated by an array instruction, not a struct constructor", expression.offset))
+        }
+        _ => {}
+      }
+    }
+  }
+  SelfHostRawArrayContracts::{
+    declarations: declarations
+    diagnostics: diagnostics
+  }
+}
+
+fn self_host_raw_array_contract_error(contracts: SelfHostRawArrayContracts) -> Option<String> {
+  if contracts.diagnostics.length() == 0u32 {
+    return Option::None
+  }
+  match contracts.diagnostics[0u32] {
+    SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(declaration, detail, offset) => {
+      let message = StringBuilder::new()
+      message.append("ABI-714 invalid raw array contract declaration=")
+      message.append_u64(declaration)
+      message.append(" offset=")
+      message.append_u32(offset)
+      message.append(" ")
+      message.append(detail)
+      Option::Some(message.finish())
+    }
+    _ => {
+      assert(false, "INV-001 raw array contract diagnostics contain another phase's failure")
+      unreachable()
+    }
+  }
+}
+
+fn self_host_linked_is_raw_array_owner(link: SelfHostPlannedProgramWasmGCLink, declaration: U64) -> Bool {
+  link.fragments.specialization.lowering.raw_arrays.declarations.contains_key(declaration)
+}
+
+fn self_host_raw_array_expression_element_shape(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  specialization: U32,
+  expression: U32,
+) -> Option<SelfHostPlannedValueShape> {
+  if expression >= module_.expressions.length() {
+    return Option::None
+  }
+  let type_ = module_.expressions[expression].type_
+  let mut element_type = -1i32
+  if type_ >= 0i32 && self_host_i32_to_u32(type_) < module_.inferred.types.length() {
+    match module_.inferred.types[self_host_i32_to_u32(type_)] {
+      SelfHostBodyTypeTerm::BodyAppliedType(_, arguments) => if arguments.length == 1u32 && self_host_array_span_is_valid(arguments.start, arguments.length, module_.inferred.type_arguments.length()) {
+        element_type = module_.inferred.type_arguments[arguments.start]
+      }
+      _ => {}
+    }
+  }
+  if element_type == -1i32 {
+    match self_host_program_specialization_resolved_type(module_, type_) {
+      Option::Some(resolved) => match self_host_raw_array_element(module_.resolved_types, resolved) {
+        Option::Some(element) => {
+          element_type = -self_host_u32_to_i32(element) - 2i32
+        }
+        Option::None => {}
+      }
+      Option::None => {}
+    }
+  }
+  if element_type == -1i32 {
+    return Option::None
+  }
+  let shape = self_host_body_specialization_shape_for_type(link, module_, specialization, element_type, self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, element_type))
+  match self_host_raw_array_storage_carrier(shape) {
+    Option::Some(_) => Option::Some(shape)
+    Option::None => Option::None
+  }
+}

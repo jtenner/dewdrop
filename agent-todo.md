@@ -61,11 +61,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   tests cover Unit, tuples, references, packed values, bounds, and evaluation
   order. Native/self-host checks and a clean B/C fixed point pass. See the
   [migration log](docs/research/fixed-array-library-migration-2026-09-06.md).
-- [ ] Finish raw Wasm array contracts and storage adapters. Add product
-  box/unbox support where needed; check full heap types, multiple generic
-  parameters, and Unit effects. Missing types must not become reference storage.
-  Add `array.new_default` and `array.copy`, with declaration-based representation
-  metadata. Raw instruction declarations must describe one Wasm instruction each.
+- [x] Finish raw Wasm array contracts and storage adapters. Both compilers bind
+  raw owners from checked declarations, preserve typed scalar and product
+  storage, and support `array.new_default` and `array.copy`. Fourteen shared
+  cases cover multiple generic parameters, Unit effects, and storage bounds.
+  Missing types fail at the storage boundary. Clean bootstrap passes. See the
+  [contract log](docs/research/raw-array-contracts-2026-09-06.md).
 - [ ] Move Array fields, length, capacity, growth, mutation, and iteration into
   Dew. Fifteen legacy Array builtins remain. Keep typed raw backing arrays;
   do not box every scalar to bypass a compiler defect. Nine checked/bulk
