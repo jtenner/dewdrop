@@ -2570,7 +2570,12 @@ fn wasmgc_plan_function_job(
   }
   let kind = match callable.kind {
     PlannedBuiltinCallable(name) =>
-      if wasmgc_builtin_is_runtime(name) {
+      if compile_time_type_query_arity(name) is Some(_) ||
+        name == b"types.static_assert" {
+        // Queries have no runtime implementation or import. Any surviving use
+        // is a planning error, never a host function with the same spelling.
+        PlannedWasmSignatureOnlyFunction
+      } else if wasmgc_builtin_is_runtime(name) {
         PlannedWasmRuntimeFunction(name)
       } else if wasmgc_builtin_is_inline(name) {
         PlannedWasmInlineBuiltinFunction(name)

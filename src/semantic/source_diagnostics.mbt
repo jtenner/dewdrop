@@ -972,7 +972,8 @@ pub fn collect_compiler_source_diagnostics(
     }
     for diagnostic in planned.diagnostics {
       let primary = match diagnostic {
-        UnsupportedIndexLowering(expression, offset) =>
+        UnsupportedIndexLowering(expression, offset)
+        | CompileTimeQueryDiagnostic(expression, _, offset) =>
           location_at(collected.expression_location(expression), offset)
       }
       let mut already_diagnosed = false
@@ -1005,7 +1006,8 @@ pub fn collect_compiler_source_diagnostics(
       MissingProgramType(module_id, declaration) =>
         (module_id, declaration, 0UL)
       UnsupportedProgramGenericCall(module_id, declaration, offset)
-      | MissingProgramFunction(module_id, declaration, offset) =>
+      | MissingProgramFunction(module_id, declaration, offset)
+      | ProgramCompileTimeFailure(module_id, declaration, _, _, _, offset) =>
         (module_id, declaration, offset)
       EagerProgramInitializationCycle(_, second) =>
         (semantic_id_module(second), second, 0UL)

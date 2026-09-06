@@ -1,0 +1,149 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "jtenner/dewdrop/standard_sources"
+
+// Values
+pub fn bootstrap_standard_source(String) -> Bytes?
+
+pub fn standard_array_source() -> Bytes
+
+pub fn standard_binary_heap_source() -> Bytes
+
+pub fn standard_blake3_source() -> Bytes
+
+pub fn standard_bloom_filter_source() -> Bytes
+
+pub fn standard_circular_buffer_source() -> Bytes
+
+pub fn standard_debug_preamble_source() -> Bytes
+
+pub fn standard_decode_source() -> Bytes
+
+pub fn standard_deque_source() -> Bytes
+
+pub fn standard_disposable_source() -> Bytes
+
+pub fn standard_encode_source() -> Bytes
+
+pub fn standard_facet_clock_source() -> Bytes
+
+pub fn standard_facet_core_source() -> Bytes
+
+pub fn standard_facet_fs_source() -> Bytes
+
+pub fn standard_facet_imports_source() -> Bytes
+
+pub fn standard_facet_net_source() -> Bytes
+
+pub fn standard_facet_poll_source() -> Bytes
+
+pub fn standard_facet_process_source() -> Bytes
+
+pub fn standard_facet_random_source() -> Bytes
+
+pub fn standard_facet_source() -> Bytes
+
+pub fn standard_fixed_array_source() -> Bytes
+
+pub fn standard_format_source() -> Bytes
+
+pub fn standard_fs_source() -> Bytes
+
+pub fn standard_fs_wasi_source() -> Bytes
+
+pub fn standard_into_builtins_source() -> Bytes
+
+pub fn standard_into_impls_source() -> Bytes
+
+pub fn standard_io_source() -> Bytes
+
+pub fn standard_iter_source() -> Bytes
+
+pub fn standard_json_source() -> Bytes
+
+pub fn standard_lane_sources() -> Array[Bytes]
+
+pub fn standard_map_source() -> Bytes
+
+pub fn standard_math_source() -> Bytes
+
+pub fn standard_memory_preamble_source() -> Bytes
+
+pub fn standard_numeric_builtins_source() -> Bytes
+
+pub fn standard_numeric_impls_source() -> Bytes
+
+pub fn standard_option_source() -> Bytes
+
+pub fn standard_ordered_map_source() -> Bytes
+
+pub fn standard_ordered_set_source() -> Bytes
+
+pub fn standard_ordering_source() -> Bytes
+
+pub fn standard_package_artifact_source() -> Bytes
+
+pub fn standard_package_source() -> Bytes
+
+pub fn standard_path_source() -> Bytes
+
+pub fn standard_preamble_builtins_source() -> Bytes
+
+pub fn standard_preamble_i32_source() -> Bytes
+
+pub fn standard_preamble_packed_source() -> Bytes
+
+pub fn standard_preamble_traits_source() -> Bytes
+
+pub fn standard_priority_queue_source() -> Bytes
+
+pub fn standard_process_source() -> Bytes
+
+pub fn standard_process_wasi_source() -> Bytes
+
+pub fn standard_queue_source() -> Bytes
+
+pub fn standard_red_black_tree_source() -> Bytes
+
+pub fn standard_result_source() -> Bytes
+
+pub fn standard_semver_source() -> Bytes
+
+pub fn standard_set_source() -> Bytes
+
+pub fn standard_sha256_source() -> Bytes
+
+pub fn standard_show_source() -> Bytes
+
+pub fn standard_source_paths() -> Array[String]
+
+pub fn standard_stack_source() -> Bytes
+
+pub fn standard_string_fixed_array_source() -> Bytes
+
+pub fn standard_swar_preamble_source() -> Bytes
+
+pub fn standard_testing_source() -> Bytes
+
+pub fn standard_text_iteration_source() -> Bytes
+
+pub fn standard_text_sources() -> Array[Bytes]
+
+pub fn standard_types_source() -> Bytes
+
+pub fn standard_utf8_source() -> Bytes
+
+pub fn standard_v128_preamble_source() -> Bytes
+
+pub fn standard_wasi_source() -> Bytes
+
+pub fn standard_wasm_intrinsics_source() -> Bytes
+
+pub fn standard_wasm_wasi_source() -> Bytes
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

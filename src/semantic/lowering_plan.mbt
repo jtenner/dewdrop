@@ -288,12 +288,14 @@ pub struct PlannedPatternArm {
 ///|
 pub enum LoweringPlanDiagnostic {
   UnsupportedIndexLowering(ExprId, UInt64)
+  CompileTimeQueryDiagnostic(ExprId, String, UInt64)
 } derive(Eq, Debug)
 
 ///|
 pub fn LoweringPlanDiagnostic::offset(self : LoweringPlanDiagnostic) -> UInt64 {
   match self {
-    UnsupportedIndexLowering(_, offset) => offset
+    UnsupportedIndexLowering(_, offset)
+    | CompileTimeQueryDiagnostic(_, _, offset) => offset
   }
 }
 

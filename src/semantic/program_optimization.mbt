@@ -7862,5 +7862,6 @@ pub fn optimize_program_lowering(
     modules,
     index: lowering.index,
     elided_trait_wrappers,
+    compile_time: lowering.compile_time,
   }
 }

@@ -468,7 +468,9 @@ fn emit_starshine_program_function_body(
   body_id : @semantic.BodyId,
   helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
-  let module_lowering = lowering.modules[function_.module_index]
+  let module_lowering = @semantic.program_function_lowering(
+    lowering, function_.module_index, function_.specialization_abi_key,
+  )
   let module_fragments = planned.modules[function_.module_index]
   let body_index = @semantic.semantic_id_local(body_id)
   if body_index < 0 || body_index >= module_lowering.bodies.length() {

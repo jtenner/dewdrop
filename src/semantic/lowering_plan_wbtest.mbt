@@ -254,6 +254,7 @@ test "unsupported indexes remain explicit poison lowering operations" {
   for diagnostic in planned.diagnostics {
     match diagnostic {
       UnsupportedIndexLowering(_, _) => unsupported += 1
+      CompileTimeQueryDiagnostic(_, _, _) => abort("unexpected compile-time query diagnostic")
     }
   }
   assert_eq(unsupported, 1)

@@ -1,0 +1,16 @@
+// Pure compiler queries. These declarations never make runtime calls.
+// Type identity is logical identity, not Wasm carrier equality.
+pub builtin type_equal<a, b>() -> Bool = "types.type_equal"
+pub builtin is_unit<t>() -> Bool = "types.is_unit"
+pub builtin is_never<t>() -> Bool = "types.is_never"
+pub builtin is_integer<t>() -> Bool = "types.is_integer"
+pub builtin is_signed_integer<t>() -> Bool = "types.is_signed_integer"
+pub builtin is_float<t>() -> Bool = "types.is_float"
+pub builtin bit_width<t>() -> U32 = "types.bit_width"
+pub builtin can_bitcast<from, to>() -> Bool = "types.can_bitcast"
+pub builtin lane_count<t>() -> U32 = "types.lane_count"
+pub builtin lane_bit_width<t>() -> U32 = "types.lane_bit_width"
+pub builtin tuple_length<t>() -> U32 = "types.tuple_length"
+// Only a proved absence returns false. Search errors remain diagnostics.
+pub builtin implements<t, trait_>() -> Bool = "types.implements"
+pub builtin static_assert(condition: Bool, message: String) -> Unit = "types.static_assert"

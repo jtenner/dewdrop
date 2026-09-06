@@ -1165,6 +1165,7 @@ fn materialize_program_generic_specialization(
   request : HirSpan,
   evidence : ProgramTraitEvidenceRequest,
   erased_fallback : Bool,
+  logical_types? : Array[CompileTimeType] = [],
 ) -> String? {
   match
     validate_program_specialization_request_shapes(
@@ -1178,9 +1179,19 @@ fn materialize_program_generic_specialization(
     None => return None
   }
   let module_ = modules[owner_index]
-  let specialization_abi_key = program_specialization_abi_key(
-    declaration, request_shapes, request, evidence,
-  )
+  let specialization_abi_key = match
+    compile_time_specialization_key(
+      lowering,
+      declaration,
+      program_specialization_abi_key(
+        declaration, request_shapes, request, evidence,
+      ),
+      logical_types,
+      erased_fallback,
+    ) {
+    Some(key) => key
+    None => return None
+  }
   let mut runtime_evidence_parameter_count = 0
   for node in evidence.evidence {
     match node.kind {
@@ -1607,7 +1618,13 @@ fn materialize_program_expression_call(
   evidence_function_references : Array[PlannedProgramEvidenceFunctionReference],
   evidence_function_reference_runtime_evidence_parameters : Array[Int],
 ) -> Unit {
-  let owner = lowering.modules[caller_module_index]
+  let caller_key = match caller {
+    Some(function_) => function_.specialization_abi_key
+    None => ""
+  }
+  let owner = program_function_lowering(
+    lowering, caller_module_index, caller_key,
+  )
   let source = owner.expressions[expression]
   match source.kind {
     PlannedFunctionReference(target, arguments) if arguments.length > 0 => {
@@ -1665,6 +1682,9 @@ fn materialize_program_expression_call(
           { start: 0, length: request_shapes.length(), },
           request_evidence,
           false,
+          logical_types=compile_time_call_arguments(
+            lowering, owner, caller_key, arguments, true,
+          ),
         ) {
         Some(value) => value
         None => return
@@ -1759,6 +1779,9 @@ fn materialize_program_expression_call(
           { start: 0, length: request_shapes.length(), },
           request_evidence,
           false,
+          logical_types=compile_time_call_arguments(
+            lowering, owner, caller_key, arguments, false,
+          ),
         ) {
         Some(target_key) =>
           record_program_specialized_call(

@@ -28,12 +28,14 @@ pub fn standard_source_paths() -> Array[String] {
     ] {
     paths.push("std/" + name + ".dew")
   }
+  paths.push("std/types.dew")
   paths
 }
 
 ///|
 pub fn bootstrap_standard_source(path : String) -> Bytes? {
   match path {
+    "std/types.dew" => Some(standard_types_source())
     "std/preamble/00-builtins.dew" => Some(standard_preamble_builtins_source())
     "std/preamble/10-traits.dew" => Some(standard_preamble_traits_source())
     "std/preamble/20-i32.dew" => Some(standard_preamble_i32_source())

@@ -875,6 +875,37 @@ pub fn link_program_wasmgc_fragments(
   let type_lookup : Map[DeclId, Int] = Map::default()
   let module_lookup = lowering.index.module_lookup
   let diagnostics : Array[ProgramWasmGCLinkDiagnostic] = []
+  match lowering.compile_time {
+    Some(context) =>
+      for module_ in fragments.modules {
+        for function_ in module_.functions {
+          match context.instances.get(function_.specialization_abi_key) {
+            Some(instance) =>
+              for diagnostic in instance.module_.diagnostics {
+                match diagnostic {
+                  CompileTimeQueryDiagnostic(expression, message, offset) =>
+                    diagnostics.push(
+                      ProgramCompileTimeFailure(
+                        module_.module_id,
+                        function_.declaration,
+                        function_.specialization_abi_key,
+                        expression,
+                        message,
+                        offset,
+                      ),
+                    )
+                  _ =>
+                    abort(
+                      "INV-001 unexpected diagnostic in compile-time instance",
+                    )
+                }
+              }
+            None => ()
+          }
+        }
+      }
+    None => ()
+  }
   let test_ordinals : Map[DeclId, Int] = Map::default()
   let mut next_test_ordinal = 0
   for module_ in fragments.modules {
@@ -1780,6 +1811,7 @@ pub fn link_program_wasmgc_fragments(
       _ => ()
     }
   }
+  verify_program_compile_time_closure(lowering, functions, diagnostics)
   {
     root_module_index,
     graph: lowering.graph,

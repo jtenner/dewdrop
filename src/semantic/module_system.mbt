@@ -442,6 +442,9 @@ pub fn required_standard_library_source_paths(
       )
     }
   }
+  if standard_types_requested(files) {
+    required.push("std/types.dew")
+  }
   required
 }
 
@@ -526,6 +529,7 @@ pub fn collect_program_manifest_with_standard_sources(
   let mut selected_collection_mask = 0
   let mut selected_facet_mask = 0
   let mut selected_lane_mask = 0
+  let mut selected_types = false
   for module_index, module_ in manifest.modules {
     if module_.path.length() == 0 {
       diagnostics.push(EmptyModulePath(module_index))
@@ -574,6 +578,7 @@ pub fn collect_program_manifest_with_standard_sources(
       facet_mask,
       lane_mask,
     ) = selected_standard_modules(files)
+    selected_types = selected_types || standard_types_requested(files)
     selected_text_mask = selected_text_mask | text_mask
     selected_show = selected_show || include_show
     selected_disposable = selected_disposable || include_disposable
@@ -1299,6 +1304,15 @@ pub fn collect_program_manifest_with_standard_sources(
         ),
       ),
     )
+  }
+  if selected_types {
+    let module_id = standard_library_module_id(70)
+    first_module["dew.std.types"] = modules.length()
+    module_paths.push("dew.std.types")
+    modules.push(collect_program_files_with_frozen_standard_imports(
+      module_id,
+      standard_library_program_files(module_id, "std/types.dew", standard_sources, false, false),
+    ))
   }
   {
     module_id_base,

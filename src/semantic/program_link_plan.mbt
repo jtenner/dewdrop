@@ -66,6 +66,7 @@ pub struct PlannedProgramLowering {
   modules : Array[PlannedModuleLowering]
   index : ProgramIndex
   elided_trait_wrappers : Array[DeclId]
+  compile_time : CompileTimeProgramContext?
 }
 
 ///|
@@ -73,6 +74,7 @@ pub enum ProgramWasmGCLinkDiagnostic {
   MissingProgramType(ModuleId, DeclId)
   UnsupportedProgramGenericCall(ModuleId, DeclId, UInt64)
   MissingProgramFunction(ModuleId, DeclId, UInt64)
+  ProgramCompileTimeFailure(ModuleId, DeclId, String, ExprId, String, UInt64)
   EagerProgramInitializationCycle(DeclId, DeclId)
 } derive(Eq, Debug)
 
@@ -541,12 +543,13 @@ pub fn plan_unoptimized_program_lowering_with_type_layouts(
     }
     modules.push(module_)
   }
-  {
+  fold_program_compile_time_queries(program, analyzed, {
     graph: analyzed.frozen.graph,
     index: build_program_index(modules),
     modules,
     elided_trait_wrappers: [],
-  }
+    compile_time: None,
+  })
 }
 
 ///|

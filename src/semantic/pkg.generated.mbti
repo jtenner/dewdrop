@@ -125,6 +125,8 @@ pub fn planned_reference_shape() -> PlannedValueShape
 
 pub fn planned_value_shape_from_resolved_types(Array[ResolvedType], Array[Int], Int) -> PlannedValueShape
 
+pub fn program_function_lowering(PlannedProgramLowering, Int, String) -> PlannedModuleLowering
+
 pub fn program_resolved_trait_evidence_identity(PlannedModuleLowering, PlannedModuleWasmGCFragments, HirSpan, HirSpan, Int) -> (UInt64, String)?
 
 pub fn program_runtime_trait_evidence_parameter(PlannedModuleLowering, PlannedModuleWasmGCFragments, HirSpan, Int) -> (UInt64, Int)?
@@ -802,6 +804,22 @@ pub enum CollectionDiagnostic {
   InvalidUtf8ForeignExportName(UInt64, UInt64)
 } derive(Eq, @debug.Debug)
 
+type CompileTimeConstant derive(Eq, @debug.Debug)
+
+type CompileTimeEvidenceSearch
+
+type CompileTimeProgramContext
+
+type CompileTimeReachTask
+
+type CompileTimeSpecializedBody
+
+type CompileTimeType derive(Eq, @debug.Debug)
+
+type CompileTimeTypeError derive(Eq, @debug.Debug)
+
+type CompileTimeTypeReadTask
+
 pub struct CompilerDiagnosticLabel {
   location : SourceLocation
   message : String
@@ -1437,6 +1455,7 @@ pub fn LocalTypeSolver::zonk_type(Self, Int) -> Int
 
 pub enum LoweringPlanDiagnostic {
   UnsupportedIndexLowering(Int, UInt64)
+  CompileTimeQueryDiagnostic(Int, String, UInt64)
 } derive(Eq, @debug.Debug)
 pub fn LoweringPlanDiagnostic::offset(Self) -> UInt64
 
@@ -2056,6 +2075,7 @@ pub struct PlannedProgramLowering {
   modules : Array[PlannedModuleLowering]
   index : ProgramIndex
   elided_trait_wrappers : Array[UInt64]
+  compile_time : CompileTimeProgramContext?
 }
 
 pub struct PlannedProgramModuleInitializer {
@@ -2489,6 +2509,7 @@ pub enum ProgramWasmGCLinkDiagnostic {
   MissingProgramType(UInt64, UInt64)
   UnsupportedProgramGenericCall(UInt64, UInt64, UInt64)
   MissingProgramFunction(UInt64, UInt64, UInt64)
+  ProgramCompileTimeFailure(UInt64, UInt64, String, Int, String, UInt64)
   EagerProgramInitializationCycle(UInt64, UInt64)
 } derive(Eq, @debug.Debug)
 

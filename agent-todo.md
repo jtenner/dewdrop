@@ -15,7 +15,22 @@ restart them from scratch. Raw Unit array storage now passes both compilers.
 
 ### Compile-time type queries and branch removal
 
-- [ ] Add `is_unit::<t>()` as a compile-time type query, not a Wasm builtin.
+Native work is in progress. See
+[`docs/research/compile-time-types-2026-09-05.md`](docs/research/compile-time-types-2026-09-05.md)
+for the exact tested scope and the remaining work. The native path now has 13
+query/assertion declarations, logical generic keys, selected IR bodies, and
+physical-boundary checks. This is not yet self-host parity or the full feature.
+
+- [ ] Add real type-valued expressions for `field_type` and
+  `variant_payload_types`. The user confirmed that the results must work in
+  declarations and generic arguments; names and metadata are not enough.
+- [ ] Add `field_names` and `variant_names`. Preserve declaration identity and
+  source order, including imported and generic types.
+- [ ] Define valid layout-query types for `size_of`, `align_of`, and
+  `field_offset`. WasmGC object byte layouts are not exposed; never invent them.
+- [ ] Port all query, trait search, assertion, and logical instance handling to
+  the self-host compiler. Check both compilers with the same execution fixtures.
+- [x] Add native `is_unit::<t>()` as a pure compiler builtin with no Wasm call.
   Test the logical type: Unit is true, other known types are false, and unknown
   types stay pending. Never is not Unit. Resolve the query by identity, not by
   matching the name of an ordinary user function.

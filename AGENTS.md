@@ -9,7 +9,7 @@
 - Design for modularity and performance. Runtime performance is the highest priority, followed by a low memory footprint.
 - Measure all compiler related activities as you do them. Things that take longer than half a minute should be considered bugs.
 - Use runtime assertions in the compiler to validate type assumptions. Make assertion failures visible and diagnostic.
-- Builtins are only for one-to-one WebAssembly instructions and explicit unsafe casts. Implement runtime algorithms in Dew library functions, and host calls with foreign declarations. Standard modules must use the same semantic and emission rules as user modules; do not dispatch on a standard module path, declaration ordinal, or source spelling.
+- Builtins are only for one-to-one WebAssembly instructions, explicit unsafe casts, and pure compile-time queries/assertions. Compile-time builtins must be resolved before physical planning and must not emit runtime calls. Implement runtime algorithms in Dew library functions, and host calls with foreign declarations. Standard modules must use the same semantic and emission rules as user modules; do not dispatch on a standard module path, declaration ordinal, or source spelling.
 - All versions and codecs are version 1. Dewdrop is not released yet, so breaking format changes do not break a released format.
 - Use `tools/test-native.sh` for routine native tests. Use `tools/test-integration-native.sh` for complete compiler/backend integration cases, `tools/test-stress-native.sh` for large compiler stress tests, and `tools/test-starshine-native.sh` for the full pinned Starshine test suite. A raw workspace-wide `moon test` is not the routine Dewdrop lane.
 

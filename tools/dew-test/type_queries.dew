@@ -1,0 +1,94 @@
+open dew.std.types
+
+type Nothing = Unit
+
+struct QueryLeft {
+  value: I32
+}
+
+struct QueryRight {
+  value: I32
+}
+
+trait QueryMark {
+}
+
+impl QueryMark for QueryLeft {
+}
+
+fn query_signed<t>() -> Bool {
+  is_signed_integer::<t>()
+}
+
+fn query_forward<t>() -> Bool {
+  query_signed::<t>()
+}
+
+fn query_signed_value<t>(value: t) -> Bool {
+  is_signed_integer::<t>()
+}
+
+fn query_reader<t>() -> fn(t) -> Bool {
+  query_signed_value
+}
+
+fn query_branch<t>() -> U32 {
+  if is_unit::<t>() {
+    static_assert(type_equal::<t, Unit>(), "Unit branch")
+    1u32
+  } else {
+    static_assert(!is_unit::<t>(), "value branch")
+    2u32
+  }
+}
+
+fn query_marked<t>() -> Bool {
+  implements::<t, QueryMark>()
+}
+
+pub fn main(case: U32) -> Bool {
+  if case == 0u32 {
+    is_unit::<Nothing>()
+  } else if case == 1u32 {
+    !is_unit::<Never>() && is_never::<Never>()
+  } else if case == 2u32 {
+    !type_equal::<I8, I32>()
+  } else if case == 3u32 {
+    !type_equal::<QueryLeft, QueryRight>()
+  } else if case == 4u32 {
+    type_equal::<QueryLeft, QueryLeft>()
+  } else if case == 5u32 {
+    is_integer::<U64>() && !is_integer::<F64>()
+  } else if case == 6u32 {
+    is_signed_integer::<I8>() && !is_signed_integer::<U8>()
+  } else if case == 7u32 {
+    is_float::<F64>() && !is_float::<I64>()
+  } else if case == 8u32 {
+    bit_width::<I16>() == 16u32
+  } else if case == 9u32 {
+    can_bitcast::<I16x2, U32>() && !can_bitcast::<I32, F32>()
+  } else if case == 10u32 {
+    !can_bitcast::<QueryLeft, QueryLeft>()
+  } else if case == 11u32 {
+    lane_count::<U8x16>() == 16u32
+  } else if case == 12u32 {
+    lane_bit_width::<F64x2>() == 64u32
+  } else if case == 13u32 {
+    tuple_length::<(Unit, I64, QueryLeft)>() == 3u32
+  } else if case == 14u32 {
+    type_equal::<(Unit, I64), (Unit, I64)>() &&
+      !type_equal::<(Unit, I64), (I64, Unit)>()
+  } else if case == 15u32 {
+    query_forward::<I8>() && !query_forward::<U8>()
+  } else if case == 16u32 {
+    query_branch::<Unit>() == 1u32 && query_branch::<I64>() == 2u32
+  } else if case == 17u32 {
+    query_marked::<QueryLeft>() && !query_marked::<QueryRight>()
+  } else if case == 18u32 {
+    let signed = query_reader::<I8>()
+    let unsigned = query_reader::<U8>()
+    signed(1i8) && !unsigned(1u8)
+  } else {
+    false
+  }
+}

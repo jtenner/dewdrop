@@ -70,6 +70,7 @@ def main() -> None:
         ("raw_gc_storage", "app.raw_gc"),
         ("raw_gc_unit", "app.raw_gc_unit"),
         ("array_operations", "app.array_probes"),
+        ("type_queries", "app.type_queries"),
     ]:
         subprocess.run(
             [
