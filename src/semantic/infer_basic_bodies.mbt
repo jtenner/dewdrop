@@ -11,6 +11,9 @@ let instantiate_finish_function = 2
 let instantiate_finish_product = 3
 
 ///|
+let instantiate_finish_projection = 4
+
+///|
 let import_value_visit = 0
 
 ///|
@@ -166,6 +169,10 @@ fn BodyJobTypeImporter::import_type(
     }
     if state == 0 {
       match job.types[source] {
+        BodyMemberTypeProjection(owner, _, _) => {
+          self.push(source, 4, self.results.length())
+          self.push(owner, 0, 0)
+        }
         BodyProductType(fields) => {
           self.push(source, 3, self.results.length())
           let mut index = fields.length
@@ -197,6 +204,19 @@ fn BodyJobTypeImporter::import_type(
         BodyResolvedType(type_) =>
           self.results.push(self.solver.resolved_type(type_))
       }
+    } else if state == 4 {
+      let (operation, selector) = match job.types[source] {
+        BodyMemberTypeProjection(_, operation, selector) =>
+          (operation, selector)
+        _ => abort("INV-001 imported projection task changed type")
+      }
+      let result = self.solver.member_projection_type(
+        self.results[result_start],
+        operation,
+        selector,
+      )
+      self.results.truncate(result_start)
+      self.results.push(result)
     } else if state == 1 {
       let arguments = match job.types[source] {
         BodyAppliedType(_, arguments) => arguments
@@ -454,6 +474,10 @@ fn ModuleValueImporter::import_type(
         continue
       }
       match self.values.types[source] {
+        BodyMemberTypeProjection(owner, _, _) => {
+          self.push_task(source, 4, self.results.length())
+          self.push_task(owner, 0, 0)
+        }
         BodyProductType(fields) => {
           self.push_task(
             source,
@@ -513,6 +537,21 @@ fn ModuleValueImporter::import_type(
         BodyResolvedType(type_) =>
           self.results.push(self.solver.resolved_type(type_))
       }
+    } else if state == 4 {
+      let (operation, selector) = match self.values.types[source] {
+        BodyMemberTypeProjection(_, operation, selector) =>
+          (operation, selector)
+        _ => abort("INV-001 imported value projection changed type")
+      }
+      let result = self.solver.member_projection_type(
+        self.results[result_start],
+        operation,
+        selector,
+      )
+      self.marks[source] = self.generation
+      self.cached[source] = result
+      self.results.truncate(result_start)
+      self.results.push(result)
     } else if state == import_value_finish_application {
       let arguments = match self.values.types[source] {
         BodyAppliedType(_, arguments) => arguments
@@ -642,6 +681,7 @@ priv struct BasicBodyInferencer {
   variant_spans : Array[HirSpan]
   field_spans : Array[HirSpan]
   solver : LocalTypeSolver
+  pending_member_equations : Array[PendingBodyMemberEquation]
   expression_types : Array[BodyTypeId]
   mut local_types : Array[BodyTypeId]
   block_types : Array[BodyTypeId]
@@ -741,6 +781,7 @@ fn BasicBodyInferencer::new(
     variant_spans,
     field_spans,
     solver,
+    pending_member_equations: [],
     expression_types: Array::make(body.expressions.length, 0),
     local_types: Array::make(name_info.locals.length, 0),
     block_types: Array::make(body.blocks.length, 0),
@@ -936,6 +977,15 @@ fn BasicBodyInferencer::constrain(
   right : BodyTypeId,
   origin : TypeConstraintOrigin,
 ) -> Unit {
+  if self.solver.snapshots.is_empty() &&
+    self.solver.member_types is Some(_) &&
+    (
+      self.solver.has_pending_member_projection(left) ||
+      self.solver.has_pending_member_projection(right)
+    ) {
+    self.pending_member_equations.push({ left, right, origin, })
+    return
+  }
   ignore(self.solver.unify(left, right, origin))
 }
 
@@ -2146,17 +2196,35 @@ fn BasicBodyInferencer::instantiate_signature_type(
           self.call_scratch.instantiation_values[source] = result
           self.call_scratch.instantiation_results.push(result)
         }
-        ErrorType
-        | PrimitiveType(_)
-        | NominalType(_)
-        | TraitType(_)
-        | MemberTypeProjection(_, _, _) => {
+        MemberTypeProjection(owner, _, _) => {
+          self.push_instantiation_task(
+            source,
+            instantiate_finish_projection,
+            self.call_scratch.instantiation_results.length(),
+          )
+          self.push_instantiation_task(owner, instantiate_visit, 0)
+        }
+        ErrorType | PrimitiveType(_) | NominalType(_) | TraitType(_) => {
           let result = self.solver.resolved_type(source)
           self.call_scratch.instantiation_marks[source] = self.call_scratch.instantiation_generation
           self.call_scratch.instantiation_values[source] = result
           self.call_scratch.instantiation_results.push(result)
         }
       }
+    } else if state == instantiate_finish_projection {
+      let (operation, selector) = match self.resolved.types[source] {
+        MemberTypeProjection(_, operation, selector) => (operation, selector)
+        _ => abort("INV-001 signature projection task changed type")
+      }
+      let result = self.solver.member_projection_type(
+        self.call_scratch.instantiation_results[result_start],
+        operation,
+        selector,
+      )
+      self.call_scratch.instantiation_marks[source] = self.call_scratch.instantiation_generation
+      self.call_scratch.instantiation_values[source] = result
+      self.call_scratch.instantiation_results.truncate(result_start)
+      self.call_scratch.instantiation_results.push(result)
     } else if state == instantiate_finish_application {
       let (base, arguments) = match self.resolved.types[source] {
         AppliedType(base, arguments) => (base, arguments)
@@ -3050,13 +3118,14 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
     self.constrain_members(false)
     self.constrain_operator_calls(false)
     self.constrain_members(false)
+    let member_progress = self.constrain_pending_member_equations(false)
     let after = self.call_scratch.pending_methods.length() +
       self.call_scratch.pending_operators.length() +
       self.call_scratch.pending_function_calls.length()
     guard after <= before else {
       abort("body inference constraint queue grew during resolution")
     }
-    if after == before {
+    if after == before && !member_progress {
       break
     }
   }
@@ -3067,6 +3136,7 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   self.validate_field_assignments()
   self.constrain_function_references()
   self.constrain_pending_function_calls(true)
+  ignore(self.constrain_pending_member_equations(true))
   self.solver_diagnostic_end = self.solver.diagnostics.length()
 }
 
@@ -3304,6 +3374,16 @@ fn remap_job_diagnostic(
   type_start : Int,
 ) -> BodyInferenceDiagnostic {
   match diagnostic {
+    BodyConstraintDiagnostic(
+      InvalidLocalMemberProjection(type_, message, origin)
+    ) =>
+      BodyConstraintDiagnostic(
+        InvalidLocalMemberProjection(
+          remap_job_type(type_, type_start),
+          message,
+          origin,
+        ),
+      )
     BodyConstraintDiagnostic(LocalTypeMismatch(left, right, origin)) =>
       BodyConstraintDiagnostic(
         LocalTypeMismatch(
@@ -3335,6 +3415,14 @@ fn append_module_value_job(
   let type_start = values.types.length()
   for local_type_id in 1..<job.types.length() {
     match job.types[local_type_id] {
+      BodyMemberTypeProjection(owner, operation, selector) =>
+        values.types.push(
+          BodyMemberTypeProjection(
+            remap_job_type(owner, type_start),
+            operation,
+            selector,
+          ),
+        )
       BodyVariableType(variable) =>
         values.types.push(BodyVariableType(variable))
       BodyProductType(fields) => {
@@ -3433,7 +3521,10 @@ fn infer_module_values_internal(
     return { values, jobs, }
   }
   let let_indices = module_let_indices_by_declaration(collected)
-  let solver = LocalTypeSolver::new(resolved)
+  let solver = LocalTypeSolver::new(
+    resolved,
+    member_types=body_member_type_context(collected, resolved, imports),
+  )
   let call_scratch = CallInferenceScratch::new()
   let module_values = ModuleValueInferenceContext::new(
     values, let_indices, solver,
@@ -3673,6 +3764,14 @@ fn merge_body_inference_jobs(
     let argument_start = type_arguments.length()
     for local_type_id in 1..<job.types.length() {
       match job.types[local_type_id] {
+        BodyMemberTypeProjection(owner, operation, selector) =>
+          types.push(
+            BodyMemberTypeProjection(
+              remap_job_type(owner, type_start),
+              operation,
+              selector,
+            ),
+          )
         BodyVariableType(variable) => types.push(BodyVariableType(variable))
         BodyProductType(fields) => {
           let start = type_arguments.length()
@@ -3901,6 +4000,14 @@ fn merge_body_inference_jobs(
     let argument_start = type_arguments.length()
     for local_type_id in 1..<job.types.length() {
       match job.types[local_type_id] {
+        BodyMemberTypeProjection(owner, operation, selector) =>
+          types.push(
+            BodyMemberTypeProjection(
+              remap_job_type(owner, type_start),
+              operation,
+              selector,
+            ),
+          )
         BodyVariableType(variable) => types.push(BodyVariableType(variable))
         BodyProductType(fields) => {
           let start = type_arguments.length()
@@ -4205,7 +4312,10 @@ fn infer_module_bodies_with_imports_in_order_and_family_cache(
     None,
   )
   let seen = Array::make(collected.bodies.length(), false)
-  let solver = LocalTypeSolver::new(resolved)
+  let solver = LocalTypeSolver::new(
+    resolved,
+    member_types=body_member_type_context(collected, resolved, imports),
+  )
   let call_scratch = CallInferenceScratch::new()
   let module_values = if collected.lets.length() == 0 {
     None

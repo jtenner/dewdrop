@@ -682,6 +682,7 @@ fn planned_value_shape(
     match inferred.type_term(type_) {
       BodyErrorType => return ErrorPlannedValueShape
       BodyVariableType(_) => return ErrorPlannedValueShape
+      BodyMemberTypeProjection(_, _, _) => return GenericPlannedValueShape
       BodyProductType(fields) => {
         let shapes : Array[PlannedValueShape] = []
         for index in 0..<fields.length {
@@ -715,6 +716,20 @@ fn planned_body_type_matches_resolved(
     return false
   }
   match inferred.type_term(body_type) {
+    BodyMemberTypeProjection(owner, operation, selector) =>
+      match resolved.types[resolved_type] {
+        MemberTypeProjection(
+          resolved_owner,
+          resolved_operation,
+          resolved_selector
+        ) =>
+          operation == resolved_operation &&
+          selector == resolved_selector &&
+          planned_body_type_matches_resolved(
+            resolved, inferred, owner, resolved_owner,
+          )
+        _ => false
+      }
     BodyResolvedType(value) => value == resolved_type
     BodyProductType(body_fields) =>
       match resolved.types[resolved_type] {
@@ -838,7 +853,8 @@ fn planned_nominal_declaration(
       BodyErrorType
       | BodyVariableType(_)
       | BodyProductType(_)
-      | BodyFunctionType(_, _) => return 0UL
+      | BodyFunctionType(_, _)
+      | BodyMemberTypeProjection(_, _, _) => return 0UL
     }
   }
   0UL

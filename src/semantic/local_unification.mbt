@@ -20,6 +20,9 @@ let zonk_finish_function = 2
 let zonk_finish_product = 3
 
 ///|
+let zonk_finish_projection = 4
+
+///|
 pub struct InferenceSnapshot {
   undo_start : Int
   variable_count : Int
@@ -31,6 +34,7 @@ pub struct InferenceSnapshot {
 ///|
 pub struct LocalTypeSolver {
   resolved : ResolvedModuleTypes
+  member_types : BodyMemberTypeContext?
   types : Array[BodyTypeTerm]
   type_arguments : Array[BodyTypeId]
   variable_parents : Array[TypeVariableId]
@@ -59,9 +63,13 @@ pub struct LocalTypeSolver {
 }
 
 ///|
-pub fn LocalTypeSolver::new(resolved : ResolvedModuleTypes) -> LocalTypeSolver {
+pub fn LocalTypeSolver::new(
+  resolved : ResolvedModuleTypes,
+  member_types? : BodyMemberTypeContext? = None,
+) -> LocalTypeSolver {
   {
     resolved,
+    member_types,
     types: [BodyErrorType],
     type_arguments: [],
     variable_parents: [],
@@ -442,6 +450,7 @@ fn LocalTypeSolver::occurs_in(
         if self.find_variable_root(variable) == variable_root {
           return true
         }
+      BodyMemberTypeProjection(owner, _, _) => self.occurs_stack.push(owner)
       BodyProductType(fields) => {
         let mut index = fields.length
         while index > 0 {
@@ -800,9 +809,38 @@ pub fn LocalTypeSolver::unify(
   while self.unify_left.length() > 0 {
     let left_original = self.unify_left.pop().unwrap()
     let right_original = self.unify_right.pop().unwrap()
-    let left_type = self.representative_type(left_original)
-    let right_type = self.representative_type(right_original)
+    let left_type = match self.reduce_member_type(left_original, 0) {
+      Ok(value) => value
+      Err(error) => {
+        self.diagnostics.push(
+          InvalidLocalMemberProjection(left_original, error, origin),
+        )
+        return false
+      }
+    }
+    let right_type = match self.reduce_member_type(right_original, 0) {
+      Ok(value) => value
+      Err(error) => {
+        self.diagnostics.push(
+          InvalidLocalMemberProjection(right_original, error, origin),
+        )
+        return false
+      }
+    }
     if left_type == right_type {
+      continue
+    }
+    // Projection operators are not injective: equal member types do not prove
+    // equal owners. Only an already identical symbolic owner discharges this
+    // equation; never infer an owner by unifying through the projection.
+    if self.member_projection(left_type)
+      is Some((left_owner, left_op, left_name)) &&
+      self.member_projection(right_type)
+      is Some((right_owner, right_op, right_name)) &&
+      self.representative_type(left_owner) ==
+      self.representative_type(right_owner) &&
+      left_op == right_op &&
+      left_name == right_name {
       continue
     }
     match self.type_term(left_type) {
@@ -1039,16 +1077,20 @@ fn LocalTypeSolver::push_zonk_task(
 pub fn LocalTypeSolver::zonk_type(
   self : LocalTypeSolver,
   root : BodyTypeId,
+  origin? : TypeConstraintOrigin = synthetic_type_origin(-1, 0UL),
 ) -> BodyTypeId {
   guard self.snapshots.length() == 0 else {
     abort("cannot freeze a type while an inference snapshot is active")
   }
-  let representative = self.representative_type(root)
+  let representative = self.zonk_member_type(root, origin)
   if representative <= 0 {
     return representative
   }
   match self.types[representative] {
-    BodyProductType(_) | BodyAppliedType(_, _) | BodyFunctionType(_, _) => ()
+    BodyProductType(_)
+    | BodyAppliedType(_, _)
+    | BodyFunctionType(_, _)
+    | BodyMemberTypeProjection(_, _, _) => ()
     _ => return representative
   }
   self.next_zonk_generation()
@@ -1061,7 +1103,7 @@ pub fn LocalTypeSolver::zonk_type(
     let source = self.zonk_task_types.pop().unwrap()
     let state = self.zonk_task_states.pop().unwrap()
     let result_start = self.zonk_result_starts.pop().unwrap()
-    let current = self.representative_type(source)
+    let current = self.zonk_member_type(source, origin)
     if state == zonk_visit {
       if current < 0 {
         self.zonk_results.push(current)
@@ -1072,6 +1114,14 @@ pub fn LocalTypeSolver::zonk_type(
         continue
       }
       match self.types[current] {
+        BodyMemberTypeProjection(owner, _, _) => {
+          self.push_zonk_task(
+            current,
+            zonk_finish_projection,
+            self.zonk_results.length(),
+          )
+          self.push_zonk_task(owner, zonk_visit, 0)
+        }
         BodyProductType(fields) => {
           self.push_zonk_task(
             current,
@@ -1128,6 +1178,22 @@ pub fn LocalTypeSolver::zonk_type(
           self.zonk_results.push(current)
         }
       }
+    } else if state == zonk_finish_projection {
+      let (owner, operation, selector) = match self.types[current] {
+        BodyMemberTypeProjection(owner, operation, selector) =>
+          (owner, operation, selector)
+        _ => abort("INV-001 zonk projection task changed type")
+      }
+      let selected = self.zonk_results[result_start]
+      let result = if selected == owner {
+        current
+      } else {
+        self.member_projection_type(selected, operation, selector)
+      }
+      self.zonk_marks[current] = self.zonk_generation
+      self.zonk_values[current] = result
+      self.zonk_results.truncate(result_start)
+      self.zonk_results.push(result)
     } else if state == zonk_finish_application {
       let original = match self.types[current] {
         BodyAppliedType(_, arguments) => arguments
@@ -1250,7 +1316,10 @@ pub fn LocalTypeSolver::has_unresolved_variable(
   }
   match self.types[representative] {
     BodyVariableType(_) => return true
-    BodyProductType(_) | BodyAppliedType(_, _) | BodyFunctionType(_, _) => ()
+    BodyProductType(_)
+    | BodyAppliedType(_, _)
+    | BodyFunctionType(_, _)
+    | BodyMemberTypeProjection(_, _, _) => ()
     BodyErrorType | BodyResolvedType(_) => return false
   }
   self.next_occurs_generation()
@@ -1304,6 +1373,7 @@ pub fn LocalTypeSolver::has_unresolved_variable(
     self.occurs_local_marks[current] = self.occurs_generation
     match self.types[current] {
       BodyVariableType(_) => return true
+      BodyMemberTypeProjection(owner, _, _) => self.occurs_stack.push(owner)
       BodyProductType(fields) => {
         let mut index = fields.length
         while index > 0 {

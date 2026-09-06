@@ -274,7 +274,10 @@ fn BasicBodyInferencer::body_impl_target_head(
   let representative = self.solver.representative_type(type_)
   match self.solver.type_term(representative) {
     BodyErrorType => Some(ErrorImplTargetHead)
-    BodyVariableType(_) | BodyProductType(_) | BodyFunctionType(_, _) => None
+    BodyVariableType(_)
+    | BodyProductType(_)
+    | BodyFunctionType(_, _)
+    | BodyMemberTypeProjection(_, _, _) => None
     BodyResolvedType(resolved_type) => {
       let (head, _) = resolved_impl_target_head(self.resolved, resolved_type)
       Some(head)
@@ -672,7 +675,7 @@ fn BasicBodyInferencer::trait_evidence_argument(
   match self.solver.type_term(representative) {
     BodyErrorType =>
       Some(ShapeInferredTraitEvidenceArgument(ErrorPlannedValueShape))
-    BodyVariableType(_) => None
+    BodyVariableType(_) | BodyMemberTypeProjection(_, _, _) => None
     BodyProductType(_) | BodyFunctionType(_, _) =>
       Some(ShapeInferredTraitEvidenceArgument(RefPlannedValueShape))
     BodyAppliedType(_, _) =>

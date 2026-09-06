@@ -12,6 +12,7 @@ pub enum BodyTypeTerm {
   BodyProductType(HirSpan)
   BodyAppliedType(BodyTypeId, HirSpan)
   BodyFunctionType(HirSpan, BodyTypeId)
+  BodyMemberTypeProjection(BodyTypeId, Bytes, String)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -36,6 +37,7 @@ pub struct TypeConstraintOrigin {
 pub enum LocalInferenceDiagnostic {
   LocalTypeMismatch(BodyTypeId, BodyTypeId, TypeConstraintOrigin)
   InfiniteLocalType(TypeVariableId, BodyTypeId, TypeConstraintOrigin)
+  InvalidLocalMemberProjection(BodyTypeId, String, TypeConstraintOrigin)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -43,8 +45,9 @@ pub fn LocalInferenceDiagnostic::offset(
   self : LocalInferenceDiagnostic,
 ) -> UInt64 {
   match self {
-    LocalTypeMismatch(_, _, origin) | InfiniteLocalType(_, _, origin) =>
-      origin.offset
+    LocalTypeMismatch(_, _, origin)
+    | InfiniteLocalType(_, _, origin)
+    | InvalidLocalMemberProjection(_, _, origin) => origin.offset
   }
 }
 

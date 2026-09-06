@@ -227,6 +227,12 @@ fn ib_write_body_type(
 ) -> Unit {
   match value {
     BodyErrorType => writer.write_byte(0)
+    BodyMemberTypeProjection(owner, operation, selector) => {
+      writer.write_byte(6)
+      ib_write_int(writer, owner)
+      writer.write_bytes(operation)
+      writer.write_string(selector)
+    }
     BodyResolvedType(type_) => {
       writer.write_byte(1)
       ib_write_int(writer, type_)
@@ -266,6 +272,12 @@ fn ib_read_body_type(
     4 =>
       BodyFunctionType(ib_read_span(reader, field), ib_read_int(reader, field))
     5 => BodyProductType(ib_read_span(reader, field))
+    6 =>
+      BodyMemberTypeProjection(
+        ib_read_int(reader, field),
+        reader.read_bytes(inference_binary_maximum_text, field),
+        reader.read_string(inference_binary_maximum_text, field),
+      )
     _ => {
       reader.fail(field, "unknown body-type discriminant")
       BodyErrorType
@@ -360,6 +372,12 @@ fn ib_write_local_diagnostic(
       ib_write_int(writer, type_)
       ib_write_origin(writer, origin)
     }
+    InvalidLocalMemberProjection(type_, message, origin) => {
+      writer.write_byte(2)
+      ib_write_int(writer, type_)
+      writer.write_string(message)
+      ib_write_origin(writer, origin)
+    }
   }
 }
 
@@ -379,6 +397,12 @@ fn ib_read_local_diagnostic(
       InfiniteLocalType(
         ib_read_int(reader, field),
         ib_read_int(reader, field),
+        ib_read_origin(reader, field),
+      )
+    2 =>
+      InvalidLocalMemberProjection(
+        ib_read_int(reader, field),
+        reader.read_string(inference_binary_maximum_text, field),
         ib_read_origin(reader, field),
       )
     _ => {
@@ -2185,6 +2209,12 @@ fn ib_validate_type_graph(
   }
   for index, type_ in types {
     match type_ {
+      BodyMemberTypeProjection(owner, operation, _) =>
+        if !ib_type_valid(owner, types.length()) ||
+          owner >= index ||
+          !computed_type_builtin(operation) {
+          return false
+        }
       BodyProductType(span) =>
         if !ib_span_valid(span, arguments.length()) {
           return false

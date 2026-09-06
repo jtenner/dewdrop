@@ -309,7 +309,8 @@ fn BodyFlowAnalyzer::expression_is_never(
       BodyErrorType
       | BodyVariableType(_)
       | BodyProductType(_)
-      | BodyFunctionType(_, _) => return false
+      | BodyFunctionType(_, _)
+      | BodyMemberTypeProjection(_, _, _) => return false
       BodyAppliedType(base, _) => type_ = base
       BodyResolvedType(resolved_type) => {
         let mut current = resolved_type
@@ -512,7 +513,8 @@ fn BodyFlowAnalyzer::coverage_domain(
   let mut current = type_
   while true {
     match self.inferred.type_term(current) {
-      BodyErrorType | BodyVariableType(_) => return ErrorCoverageDomain
+      BodyErrorType | BodyVariableType(_) | BodyMemberTypeProjection(_, _, _) =>
+        return ErrorCoverageDomain
       BodyProductType(_) | BodyFunctionType(_, _) => return OpenCoverageDomain
       BodyAppliedType(base, _) => current = base
       BodyResolvedType(resolved_type) => {

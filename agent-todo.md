@@ -33,8 +33,10 @@ Deferred type checking and layout work below still prevent full completion.
     scalar and tuple calls, parser recovery, cycles, and metatype storage errors.
   - [ ] Defer queries on an unconstrained generic owner until specialization.
     Generic aliases and pure queries now retain a structural member projection
-    and reduce it with exact logical arguments. Runtime generic member
-    signatures and branch-local type checking still need that reduction.
+    and reduce it with exact logical arguments. Native call inference now
+    substitutes projected parameter/result types, including imported types,
+    forwarding, and an owner supplied by a later argument. Exact physical
+    instance types, the self-host inference port, and guarded checks remain.
   - [x] Port inline computed member syntax and local/imported generic member
     resolution to the self-host parser and resolver; test exact source errors.
   - [x] Add local compile-time type bindings. `type Item = ...` has block scope,

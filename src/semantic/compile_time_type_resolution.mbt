@@ -33,6 +33,10 @@ fn compile_time_read_type(
           return Err(CtInvalidType)
         }
         match module_.types[index] {
+          BodyMemberTypeProjection(owner, operation, selector) => {
+            work.push(CtBuildMemberProjection(operation, selector))
+            work.push(CtReadBody(owner))
+          }
           BodyErrorType => return Err(CtInvalidType)
           BodyVariableType(_) => results.push(CtUnknown)
           BodyResolvedType(index) => work.push(CtReadResolved(index))

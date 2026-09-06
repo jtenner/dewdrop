@@ -2256,7 +2256,12 @@ fn BasicBodyInferencer::try_call_candidate(
     self.call_result_type(declaration),
   )
   let mut viable = true
-  for index in 0..<arguments.length {
+  let parameter_order = self.solver.projection_parameter_order(parameter_types)
+  for slot in 0..<arguments.length {
+    let index = match parameter_order {
+      Some(order) => order[slot]
+      None => slot
+    }
     let parameter_type = parameter_types[index]
     let argument = self.collected.expression_children[arguments.start + index]
     if !self.object_argument_matches_nominal_shape(argument, parameter_type) ||

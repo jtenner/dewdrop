@@ -623,7 +623,9 @@ fn program_link_type_is_symbolic(
       }
       match module_.types[current] {
         BodyResolvedType(value) => resolved_pending.push(value)
-        BodyVariableType(_) | BodyErrorType => return true
+        BodyVariableType(_)
+        | BodyErrorType
+        | BodyMemberTypeProjection(_, _, _) => return true
         BodyProductType(fields) =>
           for index in 0..<fields.length {
             body_pending.push(module_.type_arguments[fields.start + index])

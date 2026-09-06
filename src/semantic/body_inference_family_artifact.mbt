@@ -47,6 +47,14 @@ fn rebase_family_local_diagnostic(
   offset_delta : Int,
 ) -> LocalInferenceDiagnostic {
   match diagnostic {
+    InvalidLocalMemberProjection(type_, message, origin) =>
+      InvalidLocalMemberProjection(
+        type_,
+        message,
+        rebase_family_origin(
+          origin, expression_delta, pattern_delta, offset_delta,
+        ),
+      )
     LocalTypeMismatch(left, right, origin) =>
       LocalTypeMismatch(
         left,
@@ -438,6 +446,12 @@ fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool 
   let type_length = job.types.length()
   for index in 1..<type_length {
     match job.types[index] {
+      BodyMemberTypeProjection(owner, operation, _) =>
+        if !body_family_type_is_valid(owner, type_length) ||
+          owner >= index ||
+          !computed_type_builtin(operation) {
+          return false
+        }
       BodyVariableType(_) => ()
       BodyProductType(fields) => {
         if !body_family_span_is_valid(fields, job.type_arguments.length()) {

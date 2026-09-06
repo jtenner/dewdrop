@@ -480,6 +480,16 @@ pub enum BodyLocalKind {
   PatternLocal
 } derive(Eq, @debug.Debug)
 
+pub struct BodyMemberTypeContext {
+  declarations : Map[UInt64, BodyMemberTypeDeclaration]
+}
+
+pub struct BodyMemberTypeDeclaration {
+  parameters : Array[UInt64]
+  fields : Map[String, Int]
+  variants : Map[String, Array[Int]]
+}
+
 pub enum BodyNameReference {
   NoNameReference
   ErrorNameReference
@@ -530,6 +540,7 @@ pub enum BodyTypeTerm {
   BodyProductType(HirSpan)
   BodyAppliedType(Int, HirSpan)
   BodyFunctionType(HirSpan, Int)
+  BodyMemberTypeProjection(Int, Bytes, String)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct CollectedAlias {
@@ -1416,11 +1427,13 @@ pub enum LambdaCaptureSource {
 pub enum LocalInferenceDiagnostic {
   LocalTypeMismatch(Int, Int, TypeConstraintOrigin)
   InfiniteLocalType(Int, Int, TypeConstraintOrigin)
+  InvalidLocalMemberProjection(Int, String, TypeConstraintOrigin)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn LocalInferenceDiagnostic::offset(Self) -> UInt64
 
 pub struct LocalTypeSolver {
   resolved : ResolvedModuleTypes
+  member_types : BodyMemberTypeContext?
   types : Array[BodyTypeTerm]
   type_arguments : Array[Int]
   variable_parents : Array[Int]
@@ -1453,7 +1466,8 @@ pub fn LocalTypeSolver::error_type(Self) -> Int
 pub fn LocalTypeSolver::fresh_variable(Self) -> Int
 pub fn LocalTypeSolver::function_type(Self, Array[Int], Int) -> Int
 pub fn LocalTypeSolver::has_unresolved_variable(Self, Int) -> Bool
-pub fn LocalTypeSolver::new(ResolvedModuleTypes) -> Self
+pub fn LocalTypeSolver::member_projection_type(Self, Int, Bytes, String) -> Int
+pub fn LocalTypeSolver::new(ResolvedModuleTypes, member_types? : BodyMemberTypeContext?) -> Self
 pub fn LocalTypeSolver::poison_type(Self, Int) -> Unit
 pub fn LocalTypeSolver::product_type(Self, Array[Int]) -> Int
 pub fn LocalTypeSolver::representative_type(Self, Int) -> Int
@@ -1463,7 +1477,7 @@ pub fn LocalTypeSolver::rollback(Self, InferenceSnapshot) -> Unit
 pub fn LocalTypeSolver::snapshot(Self) -> InferenceSnapshot
 pub fn LocalTypeSolver::type_term(Self, Int) -> BodyTypeTerm
 pub fn LocalTypeSolver::unify(Self, Int, Int, TypeConstraintOrigin) -> Bool
-pub fn LocalTypeSolver::zonk_type(Self, Int) -> Int
+pub fn LocalTypeSolver::zonk_type(Self, Int, origin? : TypeConstraintOrigin) -> Int
 
 pub enum LoweringPlanDiagnostic {
   UnsupportedIndexLowering(Int, UInt64)

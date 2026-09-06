@@ -184,6 +184,8 @@ fn materialize_body_function_types(
         BodyProductType(span) => (1, -1, span)
         BodyAppliedType(base, span) => (2, base, span)
         BodyFunctionType(span, result) => (3, result, span)
+        BodyMemberTypeProjection(owner, _, _) =>
+          (4, owner, { start: 0, length: 0, })
       }
       guard arena_span_is_valid(span, inferred.type_arguments.length()) else {
         abort("body signature child span is outside its arena")
@@ -230,7 +232,26 @@ fn materialize_body_function_types(
           complete = false
         }
         if complete {
-          mapping[type_] = pool.intern(kind, resolved_extra, arguments)
+          mapping[type_] = if inferred.type_term(type_)
+            is BodyMemberTypeProjection(_, operation, selector) {
+            let projected = MemberTypeProjection(
+              resolved_extra, operation, selector,
+            )
+            let mut selected = -1
+            for index, candidate in pool.types {
+              if candidate == projected {
+                selected = index
+                break
+              }
+            }
+            if selected < 0 {
+              selected = pool.types.length()
+              pool.types.push(projected)
+            }
+            selected
+          } else {
+            pool.intern(kind, resolved_extra, arguments)
+          }
         }
         state[type_] = 2
       }

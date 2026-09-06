@@ -557,7 +557,8 @@ test "body inference never mutates the frozen resolved type interner" {
       BodyVariableType(_)
       | BodyProductType(_)
       | BodyAppliedType(_, _)
-      | BodyFunctionType(_, _) => ()
+      | BodyFunctionType(_, _)
+      | BodyMemberTypeProjection(_, _, _) => ()
       BodyErrorType | BodyResolvedType(_) => ()
     }
   }

@@ -346,3 +346,40 @@ types remain separate unfinished work.
 
 The full native integration lane also passes in 51.474 s; that elapsed time is
 still over budget. The scoped generated-API refresh passes in 3.503 s.
+
+## Native inferred member projection terms
+
+Native inference now retains `BodyMemberTypeProjection(owner, operation, name)`
+when a signature's owner is not yet known. Substitution visits the owner instead
+of treating the projection as an opaque resolved ID. An immutable per-module
+recipe table retains local/imported generic parameter IDs, field declarations,
+and ordered variant payloads. Concrete owners reduce through these recipes;
+unknown owners remain symbolic. Projection operators are not injective: the
+solver does not infer an owner from the projected field type.
+
+Call checking orders ordinary parameter constraints before dependent member
+constraints. If the owner expression itself still needs inference, the body
+holds the equation with its original source location and drains it in the shared
+resolution loop. Speculative solver transactions cannot append these persistent
+equations. A final unresolved equation is a visible failure, not an erased check.
+This does not yet defer errors under compile-time branch guards.
+
+Projection owners survive zonking, body/lambda/module-value copying, compaction,
+logical query reads, signature pooling, and frozen module values. V1 body codecs
+use type tag 6 and diagnostic tag 2. New graph checks reject invalid operations
+and cyclic/forward projection-owner links. Missing members and resource limits
+keep a dedicated diagnostic and its constraint origin. Freezing also retains any
+new diagnostics rather than dropping them after the constraint phase.
+
+The two original call-inference tests failed before the change. The later-owner
+argument test exposed a separate early-check error and now passes too. All 46
+focused query tests pass in 23.080 s, including eight projection tests covering
+imports, generic forwarding, ordered payloads, call origins, codecs, and occurs
+checks. The routine native suite passed 857 tests in 84.445 s before the final
+two projection cases. Semantic (34.359 s) and backend (31.588 s) lanes remain over
+budget. Hardening passes 196 tests, 29 invariant records, and 52 execution checks
+in 38.248 s; the API refresh passes in 3.394 s.
+
+This checkpoint covers native inference, not runtime emission of generic member
+signatures. Exact private physical types and the self-host solver port are next.
+Native nominal demand and guarded branch inference also remain open.

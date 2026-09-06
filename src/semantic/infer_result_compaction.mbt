@@ -12,6 +12,7 @@ fn BasicBodyInferencer::sort_diagnostics(self : BasicBodyInferencer) -> Unit {
 
 ///|
 fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
+  let freeze_diagnostic_start = self.solver.diagnostics.length()
   for index in self.solver_diagnostic_start..<self.solver_diagnostic_end {
     self.diagnostics.push(
       BodyConstraintDiagnostic(self.solver.diagnostics[index]),
@@ -158,7 +159,13 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
   }
   for index in 0..<self.expression_types.length() {
     let expression = self.body.expressions.start + index
-    let frozen = self.solver.zonk_type(self.expression_types[index])
+    let frozen = self.solver.zonk_type(
+      self.expression_types[index],
+      origin=expression_type_origin(
+        expression,
+        self.collected.expressions[expression].offset(),
+      ),
+    )
     self.expression_types[index] = frozen
     if !self.unsupported_expressions[index] &&
       (
@@ -175,7 +182,13 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
     }
   }
   for local_id in 0..<self.local_types.length() {
-    let frozen = self.solver.zonk_type(self.local_types[local_id])
+    let frozen = self.solver.zonk_type(
+      self.local_types[local_id],
+      origin=local_type_origin(
+        local_id,
+        self.names.locals[self.local_span.start + local_id].offset,
+      ),
+    )
     self.local_types[local_id] = frozen
     if self.solver.has_unresolved_variable(frozen) {
       let local_info = self.names.locals[self.local_span.start + local_id]
@@ -206,6 +219,11 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
     )
   }
   self.result_type = self.solver.zonk_type(self.result_type)
+  for index in freeze_diagnostic_start..<self.solver.diagnostics.length() {
+    self.diagnostics.push(
+      BodyConstraintDiagnostic(self.solver.diagnostics[index]),
+    )
+  }
   self.sort_diagnostics()
 }
 
@@ -241,6 +259,7 @@ fn BasicBodyInferencer::mark_compact_type(
         }
         self.compact_stack.push(base)
       }
+      BodyMemberTypeProjection(owner, _, _) => self.compact_stack.push(owner)
       BodyFunctionType(parameters, result) => {
         self.compact_stack.push(result)
         let mut index = parameters.length
@@ -295,7 +314,8 @@ fn BasicBodyInferencer::mark_compact_roots(self : BasicBodyInferencer) -> Unit {
         self.mark_compact_type(left)
         self.mark_compact_type(right)
       }
-      BodyConstraintDiagnostic(InfiniteLocalType(_, type_, _)) =>
+      BodyConstraintDiagnostic(InfiniteLocalType(_, type_, _))
+      | BodyConstraintDiagnostic(InvalidLocalMemberProjection(type_, _, _)) =>
         self.mark_compact_type(type_)
       _ => ()
     }
@@ -377,7 +397,8 @@ fn BasicBodyInferencer::has_positive_compact_root(
         if left > 0 || right > 0 {
           return true
         }
-      BodyConstraintDiagnostic(InfiniteLocalType(_, type_, _)) =>
+      BodyConstraintDiagnostic(InfiniteLocalType(_, type_, _))
+      | BodyConstraintDiagnostic(InvalidLocalMemberProjection(type_, _, _)) =>
         if type_ > 0 {
           return true
         }
@@ -408,6 +429,14 @@ fn BasicBodyInferencer::build_compact_types(self : BasicBodyInferencer) -> Unit 
     let new_id = self.compact_types.length()
     self.compact_mapping[old_id] = new_id
     match self.solver.types[old_id] {
+      BodyMemberTypeProjection(owner, operation, selector) =>
+        self.compact_types.push(
+          BodyMemberTypeProjection(
+            self.compact_type_id(owner),
+            operation,
+            selector,
+          ),
+        )
       BodyVariableType(variable) =>
         self.compact_types.push(BodyVariableType(variable))
       BodyProductType(fields) => {
@@ -465,6 +494,16 @@ fn BasicBodyInferencer::build_compact_types(self : BasicBodyInferencer) -> Unit 
 fn BasicBodyInferencer::remap_diagnostics(self : BasicBodyInferencer) -> Unit {
   for index in 0..<self.diagnostics.length() {
     self.diagnostics[index] = match self.diagnostics[index] {
+      BodyConstraintDiagnostic(
+        InvalidLocalMemberProjection(type_, message, origin)
+      ) =>
+        BodyConstraintDiagnostic(
+          InvalidLocalMemberProjection(
+            self.compact_type_id(type_),
+            message,
+            origin,
+          ),
+        )
       BodyConstraintDiagnostic(LocalTypeMismatch(left, right, origin)) =>
         BodyConstraintDiagnostic(
           LocalTypeMismatch(

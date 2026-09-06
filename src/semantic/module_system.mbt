@@ -2429,6 +2429,18 @@ fn frozen_body_type_to_resolved(
   root : BodyTypeId,
 ) -> ResolvedTypeId {
   match inferred.type_term(root) {
+    BodyMemberTypeProjection(owner, operation, selector) => {
+      let owner = frozen_body_type_to_resolved(resolved, inferred, owner)
+      let projected = MemberTypeProjection(owner, operation, selector)
+      for index, candidate in resolved.types {
+        if candidate == projected {
+          return index
+        }
+      }
+      let index = resolved.types.length()
+      resolved.types.push(projected)
+      index
+    }
     BodyErrorType | BodyVariableType(_) => resolved.error_type
     BodyResolvedType(type_) => type_
     BodyProductType(fields) => {

@@ -343,6 +343,7 @@ fn BodyInferenceDiagnostic::primary_location(
 ) -> SourceLocation? {
   match self {
     BodyConstraintDiagnostic(LocalTypeMismatch(_, _, origin))
+    | BodyConstraintDiagnostic(InvalidLocalMemberProjection(_, _, origin))
     | BodyConstraintDiagnostic(InfiniteLocalType(_, _, origin)) =>
       constraint_origin_location(origin, module_, fallback_file)
     NumericLiteralOutOfRange(expression, _, offset)

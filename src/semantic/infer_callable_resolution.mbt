@@ -533,7 +533,12 @@ fn BasicBodyInferencer::select_call_candidate(
   for type_ in self.call_scratch.candidate_type_arguments {
     self.call_type_arguments.push(type_)
   }
-  for index in 0..<arguments.length {
+  let parameter_order = self.solver.projection_parameter_order(parameter_types)
+  for slot in 0..<arguments.length {
+    let index = match parameter_order {
+      Some(order) => order[slot]
+      None => slot
+    }
     self.constrain_expression_assignable(
       self.collected.expression_children[arguments.start + index],
       parameter_types[index],
