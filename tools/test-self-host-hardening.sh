@@ -3,26 +3,32 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 source tools/self-host-common.sh
+native_build_flags=(--release)
+case "${DEW_HARDENING_NATIVE_PROFILE:-release}" in
+  release) ;;
+  debug) native_build_flags=() ;;
+  *) echo "DEW_HARDENING_NATIVE_PROFILE must be release or debug" >&2; exit 2 ;;
+esac
 work=.tmp/self-host-hardening
 mkdir -p "$work"
 self_host_ensure_starshine_ffi
 self_host_measure 'hardening real-library request' \
-  moon run --target native --release src/self_host_bootstrap_fixture -- \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/array.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-array-probe.wasm \
     app.array_probes tools/dew-test/array_operations.dew
 self_host_measure 'hardening raw GC storage request' \
-  moon run --target native --release src/self_host_bootstrap_fixture -- \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/raw-gc.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-raw-gc-probe.wasm \
     app.raw_gc tools/dew-test/raw_gc_storage.dew
 self_host_measure 'hardening raw Unit array request' \
-  moon run --target native --release src/self_host_bootstrap_fixture -- \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/raw-gc-unit.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-raw-gc-unit-probe.wasm \
     app.raw_gc_unit tools/dew-test/raw_gc_unit.dew
 self_host_measure 'hardening type-query request' \
-  moon run --target native --release src/self_host_bootstrap_fixture -- \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/type-queries.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-type-query-probe.wasm \
     app.type_queries tools/dew-test/type_queries.dew
@@ -54,11 +60,11 @@ do
   test_args+=(self_host.compiler "${source#self_host/compiler/}" "$source")
 done
 self_host_measure 'hardening test generation' env DEW_STD_ROOT="$PWD" \
-  moon run --target native --release src/dew_test_gen -- "${test_args[@]}"
+  moon run --target native "${native_build_flags[@]}" src/dew_test_gen -- "${test_args[@]}"
 self_host_measure 'hardening time provider' \
   wasm-tools parse tools/moonbit-time-provider.wat -o "$work/time.wasm"
 self_host_measure 'hardening test link' \
-  moon run --target native --release src/self_host_link_fixture -- \
+  moon run --target native "${native_build_flags[@]}" src/self_host_link_fixture -- \
     "$work/tests.raw.wasm" starshine-mb/dist/ffi/starshine-ffi.wasm \
     fixtures/facet/facet-adapter.wasm "$work/time.wasm" "$work/tests.wasm" \
     --single-validation
