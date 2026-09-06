@@ -483,6 +483,12 @@ fn parse_read_visibility(
 ///|
 fn parse_write_type(writer : @cache_binary.Writer, value : TypeExpr) -> Unit {
   match value {
+    ComputedType(target, selector, offset) => {
+      writer.write_byte(5)
+      parse_write_type(writer, target)
+      writer.write_bytes(selector)
+      parse_write_offset(writer, offset)
+    }
     NamedType(name, offset) => {
       writer.write_byte(0)
       writer.write_string(name)
@@ -535,6 +541,12 @@ fn parse_read_type(
     return NamedType("", 0UL)
   }
   match reader.read_byte(field + ".tag") {
+    5 =>
+      ComputedType(
+        parse_read_type(reader, field + ".target", depth + 1),
+        reader.read_bytes(parse_event_maximum_bytes, field + ".selector"),
+        parse_read_offset(reader, field + ".offset"),
+      )
     0 =>
       NamedType(
         reader.read_string(parse_event_maximum_text, field + ".name"),
@@ -2560,6 +2572,12 @@ fn parse_write_expression_error(
   value : ExpressionError,
 ) -> Unit {
   match value {
+    TypeArgumentError(expectation, token, offset) => {
+      writer.write_byte(47)
+      parse_write_expectation(writer, expectation)
+      parse_write_optional_token(writer, token)
+      parse_write_offset(writer, offset)
+    }
     ExpectedValue(token) => {
       writer.write_byte(0)
       parse_write_optional_token(writer, token)
@@ -2929,6 +2947,12 @@ fn parse_read_expression_error(
         parse_read_offset(reader, field + ".offset"),
       )
     44 => UnclosedArray(parse_read_offset(reader, field + ".offset"))
+    47 =>
+      TypeArgumentError(
+        parse_read_expectation(reader, field + ".expectation"),
+        parse_read_optional_token(reader, field + ".token"),
+        parse_read_offset(reader, field + ".offset"),
+      )
     45 =>
       ExpectedForIn(
         parse_read_optional_token(reader, field + ".token"),

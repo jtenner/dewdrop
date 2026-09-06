@@ -17,13 +17,19 @@ restart them from scratch. Raw Unit array storage now passes both compilers.
 
 Native work is in progress. See
 [`docs/research/compile-time-types-2026-09-05.md`](docs/research/compile-time-types-2026-09-05.md)
-for the exact tested scope and the remaining work. The native path now has 13
+for the exact tested scope and the remaining work. The native path now has 15
 query/assertion declarations, logical generic keys, selected IR bodies, and
 physical-boundary checks. This is not yet self-host parity or the full feature.
 
 - [ ] Add real type-valued expressions for `field_type` and
   `variant_payload_types`. The user confirmed that the results must work in
   declarations and generic arguments; names and metadata are not enough.
+  - [x] Native inline type positions: preserve local/imported member identity,
+    generic owner arguments, aliases, and variant payload order. Test real Wasm
+    scalar and tuple calls, parser recovery, cycles, and metatype storage errors.
+  - [ ] Defer queries on an unconstrained generic owner until specialization.
+    `field_type<Box<T>>("item")` works; `field_type<T>("item")` reports CT-035.
+  - [ ] Add local compile-time type bindings and self-host parser/resolver parity.
 - [ ] Add `field_names` and `variant_names`. Preserve declaration identity and
   source order, including imported and generic types.
 - [ ] Define valid layout-query types for `size_of`, `align_of`, and

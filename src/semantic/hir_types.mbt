@@ -20,6 +20,7 @@ pub enum HirTypeSyntax {
   ProductTypeSyntax(HirSpan, UInt64)
   AppliedTypeSyntax(HirTypeId, HirSpan, UInt64)
   FunctionTypeSyntax(HirSpan, HirTypeId, UInt64)
+  ComputedTypeSyntax(HirTypeId, Bytes, UInt64)
 } derive(Eq, Debug)
 
 ///|
@@ -29,7 +30,8 @@ pub fn HirTypeSyntax::offset(self : HirTypeSyntax) -> UInt64 {
     | QualifiedTypeSyntax(_, _, offset, _)
     | ProductTypeSyntax(_, offset)
     | AppliedTypeSyntax(_, _, offset)
-    | FunctionTypeSyntax(_, _, offset) => offset
+    | FunctionTypeSyntax(_, _, offset)
+    | ComputedTypeSyntax(_, _, offset) => offset
   }
 }
 
@@ -76,6 +78,14 @@ fn CollectionBuilder::lower_type(
           self.type_syntax_files.push(self.current_file)
           results.push(id)
         }
+        @parser.ComputedType(target, _, _) => {
+          sources.push(source)
+          states.push(1)
+          result_starts.push(results.length())
+          sources.push(target)
+          states.push(0)
+          result_starts.push(0)
+        }
         @parser.ProductType(fields, _) => {
           sources.push(source)
           states.push(1)
@@ -121,6 +131,15 @@ fn CollectionBuilder::lower_type(
       }
     } else {
       match source {
+        @parser.ComputedType(_, selector, offset) => {
+          let id = self.type_syntax.length()
+          self.type_syntax.push(
+            ComputedTypeSyntax(results[result_start], selector, offset),
+          )
+          self.type_syntax_files.push(self.current_file)
+          results.truncate(result_start)
+          results.push(id)
+        }
         @parser.ProductType(fields, offset) => {
           let field_start = self.type_arguments.length()
           for index in 0..<fields.length() {

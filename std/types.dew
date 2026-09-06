@@ -14,3 +14,6 @@ pub builtin tuple_length<t>() -> U32 = "types.tuple_length"
 // Only a proved absence returns false. Search errors remain diagnostics.
 pub builtin implements<t, trait_>() -> Bool = "types.implements"
 pub builtin static_assert(condition: Bool, message: String) -> Unit = "types.static_assert"
+// These return real types. Use them in type aliases, signatures, or type arguments.
+pub builtin field_type<t>(name: String) -> Type = "types.field_type"
+pub builtin variant_payload_types<t>(name: String) -> Type = "types.variant_payload_types"

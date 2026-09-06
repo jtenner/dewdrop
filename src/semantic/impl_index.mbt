@@ -181,6 +181,7 @@ fn impl_primitive_key(primitive : PrimitiveType) -> UInt64 {
     StringViewType => 38UL
     StringBuilderType => 39UL
     BytesBuilderType => 40UL
+    CompileTimeTypeType => 41UL
   }
 }
 

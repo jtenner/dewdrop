@@ -264,7 +264,8 @@ fn TypeDiagnostic::primary_location(
     | TypeNotApplicable(_, value, _)
     | NullableRefRequiresForeignType(_, value, _)
     | SelfOutsideContext(value, _)
-    | AliasExpansionLimit(value, _, _) => value
+    | AliasExpansionLimit(value, _, _)
+    | ComputedTypeFailure(value, _, _) => value
     AliasCycle(span, _) =>
       if span.length > 0 &&
         span.start >= 0 &&

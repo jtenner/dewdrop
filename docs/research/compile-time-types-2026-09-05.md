@@ -18,7 +18,8 @@ that requirement.
 
 The module declares `type_equal`, `is_unit`, `is_never`, `is_integer`,
 `is_signed_integer`, `is_float`, `bit_width`, `can_bitcast`, `lane_count`,
-`lane_bit_width`, `tuple_length`, `implements`, and `static_assert`.
+`lane_bit_width`, `tuple_length`, `implements`, `static_assert`, `field_type`, and
+`variant_payload_types`.
 
 - Query dispatch uses builtin metadata and declaration identity, not names or a
   standard-module ordinal.
@@ -41,6 +42,62 @@ The module declares `type_equal`, `is_unit`, `is_never`, `is_integer`,
   and self-host type resolution. This fixes `is_unit<AliasToUnit>` returning false.
 
 ## Checks
+
+### Native computed member types
+
+Type positions now accept a builtin call with a constant string selector:
+
+```dew
+open dew.std.types
+struct Box<t> {
+  item: t
+}
+type Item<t> = field_type<Box<t>>("item")
+fn keep(value: Item<I64>) -> field_type<Box<I64>>("item") {
+  value
+}
+```
+
+Both `field_type<T>("item")` and `field_type::<T>("item")` work, including
+qualified module aliases. The selected member becomes an ordinary resolved type,
+with its full generic arguments and declaration identity. It is not an opaque
+reference or a name. Imported members and transparent aliases use the same
+substitution path. Nested dependency resolution owns its substitution scratch
+state, so a cached substitution from one generic instance cannot leak to another.
+
+`variant_payload_types<T>("Value")` returns a tuple type in declaration order.
+Struct-variant fields retain source order; a unit variant returns the empty tuple.
+The tuple can be used as an explicit function type argument and carry real values.
+
+`Type` is compile-time-only. Runtime parameters, results, fields, and payloads
+cannot store it (`CT-037`); calling a type-returning query in a value expression
+reports `CT-036`. Builtin contracts are checked by metadata, not by source spelling.
+Bad targets/signatures/members report `CT-030` through `CT-032`. Dependency cycles
+and limits report `CT-033`/`CT-034`; an alias cycle retains the existing `AliasCycle`
+diagnostic. Malformed selectors in generic calls produce parser errors, not traps.
+The version-one parse codec includes the computed type and its source offset.
+
+This first slice resolves a known owner such as `Box<T>`. A query on an
+unconstrained owner `field_type<T>("item")` still reports `CT-035`: it needs a
+deferred type-projection representation and specialization-time resolution.
+Local compile-time bindings and self-host support are still pending.
+
+- Four parser and six semantic tests passed (1.913 and 10.942 seconds), including
+  renamed builtin identity, frozen-interface round trips, and rejection of query
+  calls in runtime value positions.
+- Native Wasm execution passed 24 checks in 0.036 seconds, including a reflected
+  I64 parameter/result, same-carrier signed/unsigned fields, and a reflected tuple
+  passed through a generic function. Warm fixture generation took 0.252 seconds.
+- The native lane passed 828 tests in 78.221 seconds before the final two focused
+  semantic tests were added. The backend package alone took 34.640 seconds; this
+  is a performance bug under the repository's 30-second limit.
+- Full native integration passed 266 tests in 46.292 seconds. Generated checks
+  passed in 18.518 seconds. Public parser/semantic interfaces were refreshed with
+  scoped `moon info src/parser src/semantic` (5.364 seconds). Unscoped `moon info
+  --target native` failed in unrelated platform-specific tool packages; `--target`
+  does not change the canonical backend that `moon info` writes.
+
+### Earlier query checkpoint
 
 - The new generic identity regression failed before logical specialization was
   connected, then passed after the change.
@@ -76,9 +133,9 @@ This is not the completed feature set.
 2. Add guarded inference obligations. The current `implements` query does not yet
    make an otherwise invalid generic trait call legal inside its true branch.
    Both branches still undergo ordinary source type checking before lowering.
-3. Add real type-valued expressions and their declaration/generic-argument syntax.
-   Then implement `field_type` and `variant_payload_types`, including generic
-   substitution, imported declarations, aliases, cycles, and source diagnostics.
+3. Extend computed member types to deferred queries on an unconstrained generic
+   owner and to local compile-time bindings. Port the native inline type-position
+   syntax and resolution to the self-host compiler.
 4. Implement `field_names` and `variant_names` with stable source order and
    declaration-based selection.
 5. Define layout-query semantics before implementing `size_of`, `align_of`, and

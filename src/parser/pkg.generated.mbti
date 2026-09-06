@@ -303,6 +303,7 @@ pub enum ExpressionError {
   InvalidOperatorState(UInt64)
   UsingDoubleDispose(String, UInt64)
   UsingValueEscape(String, UInt64)
+  TypeArgumentError(DeclarationExpectation, @tokenizer.Token?, UInt64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn ExpressionError::offset(Self) -> UInt64
 
@@ -524,6 +525,7 @@ pub enum TypeExpr {
   ProductType(Array[TypeExpr], UInt64)
   AppliedType(TypeExpr, Array[TypeExpr], UInt64)
   FunctionType(Array[TypeExpr], TypeExpr, UInt64)
+  ComputedType(TypeExpr, Bytes, UInt64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn TypeExpr::offset(Self) -> UInt64
 

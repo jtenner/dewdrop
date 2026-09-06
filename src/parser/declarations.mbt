@@ -15,6 +15,7 @@ pub enum TypeExpr {
   ProductType(Array[TypeExpr], UInt64)
   AppliedType(TypeExpr, Array[TypeExpr], UInt64)
   FunctionType(Array[TypeExpr], TypeExpr, UInt64)
+  ComputedType(TypeExpr, Bytes, UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -24,7 +25,8 @@ pub fn TypeExpr::offset(self : TypeExpr) -> UInt64 {
     | QualifiedType(_, _, offset, _)
     | ProductType(_, offset)
     | AppliedType(_, _, offset)
-    | FunctionType(_, _, offset) => offset
+    | FunctionType(_, _, offset)
+    | ComputedType(_, _, offset) => offset
   }
 }
 
@@ -591,20 +593,60 @@ fn Parser::parse_type_inner(
       }
     None => return Err(self.declaration_error(Type))
   }
+  let mut type_ = base
+  // Type queries accept both field_type<T>("name") and the explicit call
+  // spelling field_type::<T>("name"). A bare :: is never a type suffix.
+  let explicit_call = match self.peek_token() {
+    Some(token) if token.kind() == @tokenizer.Symbol(@tokenizer.DoubleColon) => {
+      self.consume_lookahead()
+      true
+    }
+    _ => false
+  }
   match self.peek_token() {
-    Some(token) =>
-      match token.kind() {
-        @tokenizer.Symbol(@tokenizer.Less) => {
-          let open_offset = token.offset()
-          self.consume_lookahead()
-          match self.parse_type_arguments(state, base, open_offset) {
-            Ok(value) => Ok(value)
-            Err(error) => Err(error.inside_angle())
-          }
-        }
-        _ => Ok(base)
+    Some(token) if token.kind() == @tokenizer.Symbol(@tokenizer.Less) => {
+      self.consume_lookahead()
+      type_ = match self.parse_type_arguments(state, base, token.offset()) {
+        Ok(value) => value
+        Err(error) => return Err(error.inside_angle())
       }
-    None => Ok(base)
+    }
+    _ => if explicit_call { return Err(self.declaration_error(Type)) }
+  }
+  // A split >> token may still close the enclosing type argument list. The
+  // following parentheses then belong to that outer call, not this type.
+  if state.pending > 0 {
+    return Ok(type_)
+  }
+  match self.peek_token() {
+    Some(token) if token.kind() == @tokenizer.Symbol(@tokenizer.LeftParen) => {
+      self.consume_lookahead()
+      self.skip_newlines()
+      let selector = match self.peek_token() {
+        Some(token) =>
+          match token.kind() {
+            @tokenizer.StringLiteral(value) => {
+              self.consume_lookahead()
+              value
+            }
+            _ => return Err(self.declaration_error(Type))
+          }
+        None => return Err(self.declaration_error(Type))
+      }
+      self.skip_newlines()
+      match self.peek_token() {
+        Some(token) if token.kind() == @tokenizer.Symbol(@tokenizer.RightParen) =>
+          self.consume_lookahead()
+        _ => return Err(self.declaration_error(Type))
+      }
+      Ok(ComputedType(type_, selector, base.offset()))
+    }
+    _ =>
+      if explicit_call {
+        Err(self.declaration_error(Type))
+      } else {
+        Ok(type_)
+      }
   }
 }
 

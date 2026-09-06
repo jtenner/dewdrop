@@ -171,8 +171,14 @@ fn RecoveryFailure::expression_error(self : RecoveryFailure) -> ExpressionError 
       | InsideAngle(inner) => current = inner
       ExpressionFailure(error) => return error
       PatternFailure(error) => return MatchPatternError(error)
-      DeclarationFailure(_) =>
-        abort("declaration failure escaped through expression parser")
+      DeclarationFailure(error) =>
+        return match error {
+          ExpectedDeclarationSyntax(expectation, token) =>
+            TypeArgumentError(expectation, token, error.offset())
+          DeclarationLexicalError(error, offset) => LexicalError(error, offset)
+          DeclarationExpressionError(error) => error
+          _ => TypeArgumentError(Type, None, error.offset())
+        }
     }
   } nobreak {
     abort("unreachable expression failure traversal")

@@ -39,6 +39,8 @@ priv struct TypeResolver {
   task_expectations : Array[Int]
   task_constructor_positions : Array[Bool]
   application_scratch : Array[ResolvedTypeId]
+  computed_active : Array[Bool]
+  computed_depth : Int
   import_type_memos : Array[Array[ResolvedTypeId]]
   import_task_interfaces : Array[Int]
   import_task_types : Array[ResolvedTypeId]
@@ -151,6 +153,8 @@ fn TypeResolver::new(
     task_expectations: [],
     task_constructor_positions: [],
     application_scratch: [],
+    computed_active: Array::make(collected.type_syntax.length(), false),
+    computed_depth: 0,
     import_type_memos,
     import_task_interfaces: [],
     import_task_types: [],
@@ -900,6 +904,21 @@ fn TypeResolver::resolve_syntax(
   syntax : HirTypeId,
   expectation : Int,
 ) -> ResolvedTypeId {
+  if self.computed_active[syntax] || self.computed_depth >= 256 {
+    self.diagnose(
+      ComputedTypeFailure(
+        owner,
+        if self.computed_active[syntax] {
+          "CT-033 cyclic computed type"
+        } else {
+          "CT-034 computed type nesting limit exceeded"
+        },
+        self.collected.type_syntax[syntax].offset(),
+      ),
+    )
+    return self.interner.error_type
+  }
+  self.computed_active[syntax] = true
   let self_owner = self.self_context(owner)
   self.task_syntax.clear()
   self.task_states.clear()
@@ -912,6 +931,10 @@ fn TypeResolver::resolve_syntax(
     let current_expectation = self.task_expectations.pop().unwrap()
     let constructor_position = self.task_constructor_positions.pop().unwrap()
     match self.collected.type_syntax[current] {
+      ComputedTypeSyntax(target, selector, offset) =>
+        self.syntax_types[current] = self.resolve_computed_type(
+          owner, target, selector, offset,
+        )
       NamedTypeSyntax(name, offset) =>
         self.syntax_types[current] = self.resolve_named_type(
           owner, self_owner, name, offset, current_expectation, constructor_position,
@@ -997,6 +1020,7 @@ fn TypeResolver::resolve_syntax(
         }
     }
   }
+  self.computed_active[syntax] = false
   self.syntax_types[syntax]
 }
 
@@ -1257,6 +1281,7 @@ fn TypeDiagnostic::rank(self : TypeDiagnostic) -> Int {
     SelfOutsideContext(_, _) => 9
     AliasCycle(_, _) => 10
     AliasExpansionLimit(_, _, _) => 11
+    ComputedTypeFailure(_, _, _) => 12
   }
 }
 
@@ -1323,6 +1348,7 @@ fn resolve_module_types_with_imports_and_alias_expansion_limit(
   resolver.collect_alias_dependencies()
   resolver.find_alias_cycles()
   resolver.normalize_aliases(alias_expansion_limit)
+  resolver.validate_compile_time_storage()
   resolver.finish()
 }
 

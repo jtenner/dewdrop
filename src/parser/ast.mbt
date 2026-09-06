@@ -198,6 +198,7 @@ pub enum ExpressionError {
   InvalidOperatorState(UInt64)
   UsingDoubleDispose(String, UInt64)
   UsingValueEscape(String, UInt64)
+  TypeArgumentError(DeclarationExpectation, @tokenizer.Token?, UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -214,6 +215,8 @@ fn optional_expression_token_offset(
 ///|
 pub fn ExpressionError::offset(self : ExpressionError) -> UInt64 {
   match self {
+    TypeArgumentError(_, token, offset) =>
+      optional_expression_token_offset(token, offset)
     ExpectedValue(token)
     | ExpectedCallDelimiter(token)
     | ExpectedFieldName(token)

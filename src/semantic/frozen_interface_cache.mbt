@@ -137,6 +137,7 @@ fn cache_primitive_from_rank(rank : Int) -> PrimitiveType? {
     38 => Some(StringViewType)
     39 => Some(StringBuilderType)
     40 => Some(BytesBuilderType)
+    41 => Some(CompileTimeTypeType)
     _ => None
   }
 }

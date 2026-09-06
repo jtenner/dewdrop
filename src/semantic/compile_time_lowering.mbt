@@ -8,7 +8,8 @@ fn compile_time_builtin_targets(
       match callable.kind {
         PlannedBuiltinCallable(name) if compile_time_type_query_arity(name)
           is Some(_) ||
-          name == b"types.static_assert" => result[callable.declaration] = name
+          name == b"types.static_assert" ||
+          computed_type_builtin(name) => result[callable.declaration] = name
         _ => ()
       }
     }
@@ -27,6 +28,9 @@ fn compile_time_fold_call(
   bindings : Map[GenericParameterId, CompileTimeType],
   evidence : CompileTimeEvidenceSearch?,
 ) -> Result[PlannedExpression?, String] {
+  if computed_type_builtin(name) {
+    return Err("CT-036 a type-producing query must be used in a type position")
+  }
   if receiver >= 0 || arguments.length != 0 {
     return Err("CT-001 type query requires zero runtime operands")
   }

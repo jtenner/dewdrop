@@ -146,6 +146,8 @@ fn derived_type_mentions_parameter(
       }
       false
     }
+    ComputedType(target, _, _) =>
+      derived_type_mentions_parameter(target, parameter)
     FunctionType(parameters, result, _) => {
       for type_ in parameters {
         if derived_type_mentions_parameter(type_, parameter) {

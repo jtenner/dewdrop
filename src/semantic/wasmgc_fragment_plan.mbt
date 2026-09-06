@@ -1248,7 +1248,7 @@ fn wasmgc_storage_type(
   while true {
     match resolved.types[current] {
       ErrorType => return Some(WasmNullableEqRefStorage)
-      PrimitiveType(UnitType | NeverType) => return None
+      PrimitiveType(UnitType | NeverType | CompileTimeTypeType) => return None
       PrimitiveType(I8Type) => return Some(WasmI8SignedStorage)
       PrimitiveType(U8Type) => return Some(WasmI8UnsignedStorage)
       PrimitiveType(I16Type) => return Some(WasmI16SignedStorage)
@@ -2069,6 +2069,7 @@ pub fn wasmgc_fixed_array_carrier_for_resolved_type(
     return 5
   }
   match types[root] {
+    PrimitiveType(CompileTimeTypeType) => -1
     PrimitiveType(I8Type | U8Type) => 6
     PrimitiveType(I16Type | U16Type) => 7
     PrimitiveType(
@@ -2168,7 +2169,7 @@ fn wasmgc_value_type(
   while true {
     match resolved.types[current] {
       ErrorType => return Some(WasmNullableEqRefValue)
-      PrimitiveType(UnitType | NeverType) => return None
+      PrimitiveType(UnitType | NeverType | CompileTimeTypeType) => return None
       PrimitiveType(
         BoolType
         | I8Type
@@ -2571,7 +2572,8 @@ fn wasmgc_plan_function_job(
   let kind = match callable.kind {
     PlannedBuiltinCallable(name) =>
       if compile_time_type_query_arity(name) is Some(_) ||
-        name == b"types.static_assert" {
+        name == b"types.static_assert" ||
+        computed_type_builtin(name) {
         // Queries have no runtime implementation or import. Any surviving use
         // is a planning error, never a host function with the same spelling.
         PlannedWasmSignatureOnlyFunction

@@ -239,20 +239,20 @@ fn TypeResolver::substitute_alias_target(
 
 ///|
 fn imported_alias_parameter_argument(
-  binding : ImportedDeclarationBinding,
+  declaration : DeclId,
+  parameters : HirSpan,
   parameter : GenericParameterId,
   arguments : Array[ResolvedTypeId],
 ) -> ResolvedTypeId? {
-  guard semantic_id_module(parameter) == semantic_id_module(binding.declaration) else {
+  guard semantic_id_module(parameter) == semantic_id_module(declaration) else {
     return None
   }
   let local_index = semantic_id_local(parameter)
-  if local_index < binding.generic_parameters.start ||
-    local_index >=
-    binding.generic_parameters.start + binding.generic_parameters.length {
+  if local_index < parameters.start ||
+    local_index - parameters.start >= parameters.length {
     None
   } else {
-    Some(arguments[local_index - binding.generic_parameters.start])
+    Some(arguments[local_index - parameters.start])
   }
 }
 
@@ -263,6 +263,26 @@ fn TypeResolver::substitute_imported_alias_target(
   target : ResolvedTypeId,
   arguments : Array[ResolvedTypeId],
 ) -> ResolvedTypeId {
+  self.substitute_declared_type(
+    binding.declaration,
+    binding.generic_parameters,
+    target,
+    arguments,
+  )
+}
+
+///|
+// Shared structural substitution for aliases and computed member types.
+fn TypeResolver::substitute_declared_type(
+  self : TypeResolver,
+  declaration : DeclId,
+  parameters : HirSpan,
+  target : ResolvedTypeId,
+  arguments : Array[ResolvedTypeId],
+) -> ResolvedTypeId {
+  guard parameters.length == arguments.length() else {
+    abort("SPC-301 declared type substitution arity mismatch")
+  }
   self.substitution_generation = next_traversal_generation(
     self.substitution_marks,
     self.substitution_generation,
@@ -285,7 +305,7 @@ fn TypeResolver::substitute_imported_alias_target(
       match self.interner.types[current] {
         GenericParameterType(parameter) => {
           let result = imported_alias_parameter_argument(
-            binding, parameter, arguments,
+            declaration, parameters, parameter, arguments,
           ).unwrap_or(current)
           self.substitution_marks[current] = self.substitution_generation
           self.substitution_values[current] = result

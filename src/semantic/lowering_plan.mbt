@@ -484,7 +484,8 @@ pub fn planned_value_shape_from_resolved_types(
   let mut current = root
   while true {
     match types[current] {
-      ErrorType => return ErrorPlannedValueShape
+      ErrorType | PrimitiveType(CompileTimeTypeType) =>
+        return ErrorPlannedValueShape
       PrimitiveType(UnitType) => return UnitPlannedValueShape
       PrimitiveType(BoolType | I32Type) => return I32PlannedValueShape
       PrimitiveType(I8Type) => return I8PlannedValueShape
@@ -1687,7 +1688,11 @@ fn plan_body_lowering_job(
       offset: collected.expressions[expression].offset(),
     }
     if expressions[local_index].kind is PlannedFunctionReference(_, _) {
-      let function_type = planned_function_type(resolved, inferred, inferred.expression_types[expression])
+      let function_type = planned_function_type(
+        resolved,
+        inferred,
+        inferred.expression_types[expression],
+      )
       if function_type >= 0 {
         expressions[local_index] = {
           ..expressions[local_index],

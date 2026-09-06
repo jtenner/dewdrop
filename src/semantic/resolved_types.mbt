@@ -44,6 +44,7 @@ pub enum PrimitiveType {
   StringViewType
   StringBuilderType
   BytesBuilderType
+  CompileTimeTypeType
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
@@ -90,6 +91,7 @@ fn PrimitiveType::rank(self : PrimitiveType) -> Int {
     StringViewType => 38
     StringBuilderType => 39
     BytesBuilderType => 40
+    CompileTimeTypeType => 41
   }
 }
 
@@ -114,6 +116,7 @@ fn primitive_type_from_name(name : String) -> PrimitiveType? {
     "StringView" => Some(StringViewType)
     "StringBuilder" => Some(StringBuilderType)
     "BytesBuilder" => Some(BytesBuilderType)
+    "Type" => Some(CompileTimeTypeType)
     "V128" => Some(V128Type)
     "Swar32" => Some(Swar32Type)
     "Swar64" => Some(Swar64Type)
@@ -168,6 +171,7 @@ pub enum TypeDiagnostic {
   SelfOutsideContext(DeclId, UInt64)
   AliasCycle(HirSpan, UInt64)
   AliasExpansionLimit(DeclId, Int, UInt64)
+  ComputedTypeFailure(DeclId, String, UInt64)
 } derive(Eq, Debug)
 
 ///|
@@ -184,7 +188,8 @@ pub fn TypeDiagnostic::offset(self : TypeDiagnostic) -> UInt64 {
     | NullableRefRequiresForeignType(_, _, offset)
     | SelfOutsideContext(_, offset)
     | AliasCycle(_, offset)
-    | AliasExpansionLimit(_, _, offset) => offset
+    | AliasExpansionLimit(_, _, offset)
+    | ComputedTypeFailure(_, _, offset) => offset
   }
 }
 
@@ -341,6 +346,7 @@ fn ResolvedTypeInterner::new() -> ResolvedTypeInterner {
     StringViewType,
     StringBuilderType,
     BytesBuilderType,
+    CompileTimeTypeType,
   ]
   for primitive in primitives {
     interner.primitive_types.push(
