@@ -1010,6 +1010,9 @@ fn BasicBodyInferencer::constrain(
     self.pending_member_equations.push({ left, right, origin, })
     return
   }
+  if self.defer_type_constraint(left, right, origin) {
+    return
+  }
   ignore(self.solver.unify(left, right, origin))
 }
 

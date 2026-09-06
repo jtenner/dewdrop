@@ -1,0 +1,176 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+enum SelfHostDeferredConstraintShape {
+  UnknownDeferredConstraint
+  AtomDeferredConstraint(I32)
+  CompoundDeferredConstraint(U32, Array<I32>)
+  InvalidDeferredConstraint
+}
+
+fn self_host_empty_deferred_constraint_pairs() -> Map<I32, Map<I32, I32>> {
+  Map::empty()
+}
+
+impl SelfHostBasicBodyInferencer {
+  fn deferred_constraint_arguments(self, span: SelfHostHirSpan, resolved: Bool) -> Array<I32> {
+    let result = self_host_inference_i32_slots(0u32, 0i32)
+    let length = if resolved {
+      self.resolved.type_arguments.length()
+    } else {
+      self.solver.type_arguments.length()
+    }
+    self_host_assert_array_span(span.start, span.length, length, "ARN-101 deferred constraint arguments")
+    let _ = while 0u32 {
+      index => if index < span.length {
+        if resolved {
+          result.push(self.solver.resolved_type(self.resolved.type_arguments[span.start + index]))
+        } else {
+          result.push(self.solver.type_arguments[span.start + index])
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    result
+  }
+
+  fn deferred_constraint_shape(self, root: I32) -> SelfHostDeferredConstraintShape {
+    match self.solver.type_term(self.solver.representative_type(root)) {
+      SelfHostBodyTypeTerm::BodyVariableType(_) => SelfHostDeferredConstraintShape::UnknownDeferredConstraint
+      SelfHostBodyTypeTerm::BodyResolvedType(id) => match self.resolved.types[id] {
+        SelfHostResolvedType::GenericParameterType(_) => SelfHostDeferredConstraintShape::UnknownDeferredConstraint
+        SelfHostResolvedType::SelfType(_) => SelfHostDeferredConstraintShape::UnknownDeferredConstraint
+        SelfHostResolvedType::ProductType(span) => SelfHostDeferredConstraintShape::CompoundDeferredConstraint(0u32, self.deferred_constraint_arguments(span, true))
+        SelfHostResolvedType::AppliedType(base, span) => {
+          let children = self.deferred_constraint_arguments(span, true)
+          children.push(self.solver.resolved_type(base))
+          SelfHostDeferredConstraintShape::CompoundDeferredConstraint(1u32, children)
+        }
+        SelfHostResolvedType::FunctionType(span, result) => {
+          let children = self.deferred_constraint_arguments(span, true)
+          children.push(self.solver.resolved_type(result))
+          SelfHostDeferredConstraintShape::CompoundDeferredConstraint(2u32, children)
+        }
+        SelfHostResolvedType::MemberTypeProjection(_, _, _) => if self.guard_type_has_generic(id) {
+          SelfHostDeferredConstraintShape::UnknownDeferredConstraint
+        } else {
+          SelfHostDeferredConstraintShape::AtomDeferredConstraint(root)
+        }
+        _ => SelfHostDeferredConstraintShape::AtomDeferredConstraint(root)
+      }
+      SelfHostBodyTypeTerm::BodyProductType(span) => SelfHostDeferredConstraintShape::CompoundDeferredConstraint(0u32, self.deferred_constraint_arguments(span, false))
+      SelfHostBodyTypeTerm::BodyAppliedType(base, span) => {
+        let children = self.deferred_constraint_arguments(span, false)
+        children.push(base)
+        SelfHostDeferredConstraintShape::CompoundDeferredConstraint(1u32, children)
+      }
+      SelfHostBodyTypeTerm::BodyFunctionType(span, result) => {
+        let children = self.deferred_constraint_arguments(span, false)
+        children.push(result)
+        SelfHostDeferredConstraintShape::CompoundDeferredConstraint(2u32, children)
+      }
+      SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => if self.type_depends_on_parameter(owner) {
+        SelfHostDeferredConstraintShape::UnknownDeferredConstraint
+      } else {
+        SelfHostDeferredConstraintShape::InvalidDeferredConstraint
+      }
+      _ => SelfHostDeferredConstraintShape::InvalidDeferredConstraint
+    }
+  }
+
+  fn deferred_constraint_has_no_independent_mismatch(self, left: I32, right: I32, origin: SelfHostTypeConstraintOrigin) -> Bool {
+    let work = [SelfHostDeferredProjectionEquation::{
+      left: left
+      right: right
+    }]
+    let seen = self_host_empty_deferred_constraint_pairs()
+    let _ = while work.length() {
+      count => if count > 0u32 {
+        let pair = work[count - 1u32]
+        work.truncate(count - 1u32)
+        let left = self.solver.representative_type(pair.left)
+        let right = self.solver.representative_type(pair.right)
+        if left == right {
+          continue work.length()
+        }
+        let rights = match seen.get(left) {
+          Option::Some(value) => value
+          Option::None => {
+            let value = self_host_empty_query_type_cache()
+            seen.set(left, value)
+            value
+          }
+        }
+        if rights.contains_key(right) {
+          continue work.length()
+        }
+        rights.set(right, right)
+        let a = self.deferred_constraint_shape(left)
+        let b = self.deferred_constraint_shape(right)
+        if a is SelfHostDeferredConstraintShape::UnknownDeferredConstraint || b is SelfHostDeferredConstraintShape::UnknownDeferredConstraint {
+          continue work.length()
+        }
+        match a {
+          SelfHostDeferredConstraintShape::AtomDeferredConstraint(left) => match b {
+            SelfHostDeferredConstraintShape::AtomDeferredConstraint(right) => {
+              let snapshot = self.solver.snapshot()
+              let equal = self.solver.unify(left, right, origin)
+              self.solver.rollback(snapshot)
+              if !equal {
+                return false
+              }
+            }
+            _ => return false
+          }
+          SelfHostDeferredConstraintShape::CompoundDeferredConstraint(kind, xs) => match b {
+            SelfHostDeferredConstraintShape::CompoundDeferredConstraint(other, ys) => {
+              if kind != other || xs.length() != ys.length() {
+                return false
+              }
+              let _ = while 0u32 {
+                index => if index < xs.length() {
+                  work.push(SelfHostDeferredProjectionEquation::{
+                    left: xs[index]
+                    right: ys[index]
+                  })
+                  continue index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            _ => return false
+          }
+          _ => return false
+        }
+        continue work.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    true
+  }
+
+  fn defer_type_constraint(self, left: I32, right: I32, origin: SelfHostTypeConstraintOrigin) -> Bool {
+    match origin.kind {
+      SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint => {}
+      SelfHostTypeConstraintOriginKind::CallTypeConstraint => {}
+      SelfHostTypeConstraintOriginKind::OperatorTypeConstraint => {}
+      SelfHostTypeConstraintOriginKind::ReturnTypeConstraint => {}
+      _ => return false
+    }
+    if self.solver.snapshots.length() > 0u32 || !self.can_defer_expression_check(origin.source, [left, right]) {
+      return false
+    }
+    let snapshot = self.solver.snapshot()
+    let viable = self.solver.unify(left, right, origin)
+    self.solver.rollback(snapshot)
+    if viable || !self.deferred_constraint_has_no_independent_mismatch(left, right, origin) {
+      return false
+    }
+    self.defer_expression_check(origin.source, [left, right])
+  }
+}

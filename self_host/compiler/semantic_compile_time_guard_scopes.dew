@@ -3,7 +3,7 @@ open dew.std.map
 open dew.std.option
 
 fn self_host_guard_builtin(name: Bytes) -> Bool {
-  name == b"types.implements" || name == b"types.type_equal" || name == b"types.is_unit" || name == b"types.is_never" || name == b"types.is_integer" || name == b"types.is_signed_integer" || name == b"types.is_float"
+  self_host_compile_time_type_query_arity(name) is Option::Some(_)
 }
 
 struct SelfHostCompileTimeGuardFact {
@@ -105,7 +105,7 @@ impl SelfHostBasicBodyInferencer {
                   Option::Some(value) => value
                   Option::None => unreachable()
                 }
-                if name == b"types.is_integer" || name == b"types.is_signed_integer" || name == b"types.is_float" {
+                if name != b"types.implements" && name != b"types.type_equal" && name != b"types.is_unit" && name != b"types.is_never" {
                   continue work.length()
                 }
                 let arity = if name == b"types.is_unit" || name == b"types.is_never" {

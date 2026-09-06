@@ -81,7 +81,15 @@ impl SelfHostBasicBodyInferencer {
               work.push(left)
               work.push(right)
             }
-            SelfHostHirExpr::CallExpr(target, _, _) => {
+            SelfHostHirExpr::FieldExpr(value, _, _) => work.push(value)
+            SelfHostHirExpr::QualifiedExpr(value, _, _) => work.push(value)
+            SelfHostHirExpr::ProductFieldExpr(value, _, _, _) => work.push(value)
+            SelfHostHirExpr::IndexExpr(left, right, _) => {
+              work.push(left)
+              work.push(right)
+            }
+            SelfHostHirExpr::CallExpr(target, arguments, _) => {
+              self_host_assert_array_index(target, self.names.expression_references.length(), "ARN-104 deferred query target")
               let declaration = match self.names.expression_references[target] {
                 SelfHostBodyNameReference::ModuleValueNameReference(name) => match self.unique_local_callable_index(name) {
                   Option::Some(index) => self.collected.callables[index].declaration
@@ -89,6 +97,16 @@ impl SelfHostBasicBodyInferencer {
                 }
                 SelfHostBodyNameReference::ImportedModuleValueNameReference(declaration) => declaration
                 _ => 18446744073709551615u64
+              }
+              work.push(target)
+              self_host_assert_array_span(arguments.start, arguments.length, self.collected.expression_children.length(), "ARN-101 deferred query operands")
+              let _ = while 0u32 {
+                index => if index < arguments.length {
+                  work.push(self.collected.expression_children[arguments.start + index])
+                  continue index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
               }
               if targets.contains_key(declaration) {
                 let span = self.collected.explicit_call_type_argument_spans[expression]
@@ -190,6 +208,18 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn defer_expression_check(self, expression: U32, inputs: Array<I32>) -> Bool {
+    if !self.can_defer_expression_check(expression, inputs) {
+      return false
+    }
+    self_host_store_basic_expression_selection(self.expression_selections, self.expression_index(expression), SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection)
+    self.deferred_types.push(self.expression_type(expression))
+    true
+  }
+
+  fn can_defer_expression_check(self, expression: U32, inputs: Array<I32>) -> Bool {
+    if expression < self.body.expressions.start || expression - self.body.expressions.start >= self.body.expressions.length {
+      return false
+    }
     match self.reachability {
       Option::Some(live) => if live.declaration == self.body.declaration {
         return false
@@ -204,7 +234,14 @@ impl SelfHostBasicBodyInferencer {
     }
     if !dependent {
       self.prepare_guard_scopes()
-      if !self.deferred_guard_scopes.contains_key(expression) {
+      let mut guarded = self.deferred_guard_scopes.contains_key(expression)
+      match self.collected.expressions[expression] {
+        SelfHostHirExpr::IfExpr(condition, _, _, _) => {
+          guarded = guarded || self.guard_condition_dependent(condition, self.guard_builtin_targets())
+        }
+        _ => {}
+      }
+      if !guarded {
         return false
       }
       for type_ in inputs {
@@ -216,8 +253,6 @@ impl SelfHostBasicBodyInferencer {
         return false
       }
     }
-    self_host_store_basic_expression_selection(self.expression_selections, self.expression_index(expression), SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection)
-    self.deferred_types.push(self.expression_type(expression))
     true
   }
 }

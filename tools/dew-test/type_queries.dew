@@ -63,6 +63,54 @@ fn query_integer_twice<t>(value: t) -> t {
   }
 }
 
+fn query_deferred_method<t>(value: t) -> I32 {
+  if is_unit::<t>() {
+    0i32
+  } else {
+    value.query_read()
+  }
+}
+
+fn query_accept_i64(value: I64, flag: Bool) -> I64 {
+  if flag {
+    value
+  } else {
+    0i64
+  }
+}
+
+fn query_deferred_call<t>(value: t) -> I64 {
+  if is_integer::<t>() {
+    query_accept_i64(value, true)
+  } else {
+    0i64
+  }
+}
+
+fn query_deferred_result<t>() -> t {
+  if is_integer::<t>() {
+    0i64
+  } else {
+    ()
+  }
+}
+
+fn query_width_call<t>(value: t) -> I64 {
+  if bit_width::<t>() == 64u32 {
+    query_accept_i64(value, true)
+  } else {
+    0i64
+  }
+}
+
+fn query_deferred_bound<t>(value: t) -> I32 {
+  if is_integer::<t>() {
+    query_bounded_read(value)
+  } else {
+    0i32
+  }
+}
+
 fn query_negated_unit_join<t>(fallback: t) -> t {
   if !is_unit::<t>() {
     fallback
@@ -663,6 +711,17 @@ pub fn main(case: U32) -> Bool {
   } else if case == 77u32 {
     query_integer_twice(())
     query_integer_twice(39i64) == 78i64 && query_integer_twice(21u32) == 42u32 && query_integer_twice(3.5f32) == 3.5f32
+  } else if case == 78u32 {
+    query_deferred_method(()) == 0i32 && query_deferred_method(78i32) == 78i32
+  } else if case == 79u32 {
+    query_deferred_call(()) == 0i64 && query_deferred_call(79i64) == 79i64
+  } else if case == 80u32 {
+    query_deferred_result::<Unit>()
+    query_deferred_result::<I64>() == 0i64
+  } else if case == 81u32 {
+    query_width_call(7i32) == 0i64 && query_width_call(81i64) == 81i64
+  } else if case == 82u32 {
+    query_deferred_bound(()) == 0i32 && query_deferred_bound(82i32) == 82i32
   } else {
     false
   }

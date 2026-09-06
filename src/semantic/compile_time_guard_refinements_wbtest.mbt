@@ -48,23 +48,21 @@ test "compile time equality proofs preserve transitive aliases" {
 
 ///|
 test "compile time Unit proof does not leak to a sibling branch" {
-  let program = collect_program_manifest(
-    24011UL,
-    ProgramManifest::new([
-      ManifestModule::new("app.main", [
-        ManifestFile::new(
-          "main.dew", b"open dew.std.types\nfn accept(value: Unit) -> I32 {\n  7i32\n}\nfn guarded<t>(value: t) -> I32 {\n  if is_unit::<t>() {\n    accept(value)\n  } else {\n    accept(value)\n  }\n}\n",
-        ),
-      ]),
-    ]),
+  let (program, lowering) = compile_time_evidence_test(
+    b"open dew.std.types\nfn accept(value: Unit) -> I32 {\n  7i32\n}\nfn guarded<t>(value: t) -> I32 {\n  if is_unit::<t>() {\n    accept(value)\n  } else {\n    accept(value)\n  }\n}\npub fn main() -> I32 {\n  guarded(7i64)\n}\n",
   )
-  let analyzed = analyze_program_semantics(program)
-  assert_eq(program.modules[0].diagnostics, [])
-  assert_eq(analyzed.modules[0].names.diagnostics, [])
+  let fragments = plan_program_wasmgc_fragments(
+    analyze_program_semantics(program),
+    lowering,
+  )
+  let linked = link_program_wasmgc_fragments(fragments, lowering, 0)
   assert_true(
-    analyzed.modules[0].inferred.diagnostics.any(diagnostic => {
-      diagnostic is BodyConstraintDiagnostic(LocalTypeMismatch(_, _, _)) ||
-      diagnostic is NoMatchingCallOverload(_, _, _)
+    linked.diagnostics.any(diagnostic => {
+      match diagnostic {
+        ProgramCompileTimeFailure(_, _, _, expression, message, _) =>
+          expression >= 0 && message.has_prefix("CT-041")
+        _ => false
+      }
     }),
   )
 }

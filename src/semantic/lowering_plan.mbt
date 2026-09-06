@@ -924,7 +924,12 @@ fn plan_expression_kind(
   }
   match inferred.expression_selections[expression] {
     ErrorExpressionSelection => return PlannedPoisonExpression
-    DeferredExpressionSelection => return PlannedDeferredExpression
+    DeferredExpressionSelection =>
+      match collected.expressions[expression] {
+        // Keep branch structure for constant folding before its result check.
+        HirIfExpr(_, _, _, _) => ()
+        _ => return PlannedDeferredExpression
+      }
     StructConstructionSelection(declaration, type_arguments) =>
       match collected.expressions[expression] {
         HirObjectExpr(fields, _) | HirConstructExpr(_, fields, _) =>

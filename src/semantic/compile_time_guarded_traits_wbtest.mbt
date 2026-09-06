@@ -24,22 +24,21 @@ test "compile time implements guards a trait method without a hard bound" {
 
 ///|
 test "compile time implements guard does not leak into the false branch" {
-  let program = collect_program_manifest(
-    24010UL,
-    ProgramManifest::new([
-      ManifestModule::new("app.main", [
-        ManifestFile::new(
-          "main.dew", b"open dew.std.types\ntrait Read {\n  fn read(self) -> I32\n}\nfn read_or_zero<t>(value: t) -> I32 {\n  if implements::<t, Read>() {\n    0i32\n  } else {\n    value.read()\n  }\n}\n",
-        ),
-      ]),
-    ]),
+  let (program, lowering) = compile_time_evidence_test(
+    b"open dew.std.types\ntrait Read {\n  fn read(self) -> I32\n}\nfn read_or_zero<t>(value: t) -> I32 {\n  if implements::<t, Read>() {\n    0i32\n  } else {\n    value.read()\n  }\n}\npub fn main() -> I32 {\n  read_or_zero(7i64)\n}\n",
   )
-  assert_eq(program.modules[0].diagnostics, [])
-  let analyzed = analyze_program_semantics(program)
-  assert_eq(analyzed.modules[0].names.diagnostics, [])
+  let fragments = plan_program_wasmgc_fragments(
+    analyze_program_semantics(program),
+    lowering,
+  )
+  let linked = link_program_wasmgc_fragments(fragments, lowering, 0)
   assert_true(
-    analyzed.modules[0].inferred.diagnostics.any(diagnostic => {
-      diagnostic is NoMatchingMethod(_, _, _)
+    linked.diagnostics.any(diagnostic => {
+      match diagnostic {
+        ProgramCompileTimeFailure(_, _, _, expression, message, _) =>
+          expression >= 0 && message.has_prefix("CT-041")
+        _ => false
+      }
     }),
   )
 }
@@ -80,22 +79,21 @@ test "compile time implements proof satisfies a guarded ordinary function bound"
 
 ///|
 test "compile time implements proof cannot satisfy a sibling function call bound" {
-  let program = collect_program_manifest(
-    24012UL,
-    ProgramManifest::new([
-      ManifestModule::new("app.main", [
-        ManifestFile::new(
-          "main.dew", b"open dew.std.types\ntrait Read {\n  fn read(self) -> I32\n}\nfn read<t: Read>(value: t) -> I32 {\n  value.read()\n}\nfn guarded<t>(value: t) -> I32 {\n  if implements::<t, Read>() {\n    0i32\n  } else {\n    read(value)\n  }\n}\n",
-        ),
-      ]),
-    ]),
+  let (program, lowering) = compile_time_evidence_test(
+    b"open dew.std.types\ntrait Read {\n  fn read(self) -> I32\n}\nfn read<t: Read>(value: t) -> I32 {\n  value.read()\n}\nfn guarded<t>(value: t) -> I32 {\n  if implements::<t, Read>() {\n    0i32\n  } else {\n    read(value)\n  }\n}\npub fn main() -> I32 {\n  guarded(7i64)\n}\n",
   )
-  let analyzed = analyze_program_semantics(program)
-  assert_eq(program.modules[0].diagnostics, [])
-  assert_eq(analyzed.modules[0].names.diagnostics, [])
+  let fragments = plan_program_wasmgc_fragments(
+    analyze_program_semantics(program),
+    lowering,
+  )
+  let linked = link_program_wasmgc_fragments(fragments, lowering, 0)
   assert_true(
-    analyzed.modules[0].inferred.diagnostics.any(diagnostic => {
-      diagnostic is UnsatisfiedTraitObligation(_, _, _, _, _)
+    linked.diagnostics.any(diagnostic => {
+      match diagnostic {
+        ProgramCompileTimeFailure(_, _, _, expression, message, _) =>
+          expression >= 0 && message.has_prefix("CT-041")
+        _ => false
+      }
     }),
   )
 }

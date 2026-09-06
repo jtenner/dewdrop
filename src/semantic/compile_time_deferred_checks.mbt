@@ -57,6 +57,25 @@ fn BasicBodyInferencer::defer_expression_check(
   expression : ExprId,
   inputs : Array[BodyTypeId],
 ) -> Bool {
+  if !self.can_defer_expression_check(expression, inputs) {
+    return false
+  }
+  self.ensure_member_storage()
+  self.expression_selections[self.expression_index(expression)] = DeferredExpressionSelection
+  self.deferred_types.push(self.expression_type(expression))
+  true
+}
+
+///|
+fn BasicBodyInferencer::can_defer_expression_check(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  inputs : Array[BodyTypeId],
+) -> Bool {
+  if expression < self.body.expressions.start ||
+    expression - self.body.expressions.start >= self.body.expressions.length {
+    return false
+  }
   // Concrete rechecks can never create another deferred check.
   if self.reachability is Some(live) &&
     live.declaration == self.body.declaration {
@@ -70,16 +89,17 @@ fn BasicBodyInferencer::defer_expression_check(
   }
   if !dependent {
     self.prepare_guard_scopes()
-    let guarded = self.guarded_trait_scopes
+    let mut guarded = self.guarded_trait_scopes
       .get(expression)
       .unwrap_or([])
       .any(fact => fact is ConditionalGuardFact(_, _))
+    if self.collected.expressions[expression] is HirIfExpr(condition, _, _, _) {
+      guarded = guarded ||
+        self.guard_condition_dependent(condition, self.guard_builtin_targets())
+    }
     if !guarded || !inputs.any(type_ => self.type_depends_on_parameter(type_)) {
       return false
     }
   }
-  self.ensure_member_storage()
-  self.expression_selections[self.expression_index(expression)] = DeferredExpressionSelection
-  self.deferred_types.push(self.expression_type(expression))
   true
 }

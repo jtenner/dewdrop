@@ -937,11 +937,16 @@ fn BasicBodyInferencer::validate_generic_parameter_obligations(
       ) {
       Some(evidence) => self.trait_evidence_roots.push(evidence)
       None =>
-        self.diagnose(
-          UnsatisfiedTraitObligation(
-            declaration, parameter, trait_declaration, expression, offset,
-          ),
-        )
+        if !self.defer_expression_check(expression, [
+            self.call_type_arguments[type_arguments.start + generic_offset],
+            bound,
+          ]) {
+          self.diagnose(
+            UnsatisfiedTraitObligation(
+              declaration, parameter, trait_declaration, expression, offset,
+            ),
+          )
+        }
     }
   }
 }

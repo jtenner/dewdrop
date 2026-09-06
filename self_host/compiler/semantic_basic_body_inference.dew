@@ -801,6 +801,9 @@ impl SelfHostBasicBodyInferencer {
       })
       return
     }
+    if self.defer_type_constraint(left, right, origin) {
+      return
+    }
     let _ = self.solver.unify(left, right, origin)
   }
 
@@ -5068,6 +5071,10 @@ impl SelfHostBasicBodyInferencer {
       }
     }
     if self.constrain_declared_bound_method(expression, target, receiver, name, arguments, offset) {
+      return
+    }
+    if self.defer_expression_check(expression, [self.expression_type(receiver)]) {
+      self.consumed_member_roots[self.expression_index(target)] = true
       return
     }
     let mut selected_impl = 4294967295u32

@@ -3,6 +3,33 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Selected calls, result contracts, and compound query conditions
+
+Both compilers now defer generic-dependent method selection and failed call or
+return equations until the exact selected body is checked. A separate structural
+check rejects independent concrete mismatches within product/function/application
+types. Solver probes roll back before a deferred check is recorded; no relaxed
+probe supplies a target, a type, or physical evidence. Native generic call
+obligations also retain an explicit deferred check when their target depends on
+a query branch.
+
+All pure type queries can mark a condition as type-dependent, including numeric
+comparisons such as bit_width<T>() == 64. This is not a positive type proof:
+only implements, type_equal, is_unit, and is_never supply the existing exact
+branch facts. Deferred if-result checks retain the if structure for folding.
+
+The five new cases failed before the native change. Both compilers now execute
+84 shared checks. Independent bad second arguments and tuple siblings remain
+errors in unused generic functions. The old false-branch proof tests now make
+an exact invalid call and check CT-041, rather than rejecting all generic source.
+All 79 focused native query tests pass (45.241 s for the lane); hardening passes
+208 tests, 29 records, and 84 execution checks (44.255 s). Both lane totals are
+performance defects. Native generation/execution take 1.762 s/0.024 s; API
+checking takes 3.454 s.
+
+Method-generic bound verification, unused projected type bindings, complete
+selected-source flow masks, and final bootstrap checks remain open.
+
 ## Selected-body field and operator checks (both compilers)
 
 Native inference now has an explicit deferred expression selection. A field or

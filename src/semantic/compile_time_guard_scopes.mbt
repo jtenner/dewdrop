@@ -59,13 +59,7 @@ fn BasicBodyInferencer::guarded_trait_obligation(
 
 ///|
 fn compile_time_guard_builtin(name : Bytes) -> Bool {
-  name == b"types.is_integer" ||
-  name == b"types.is_signed_integer" ||
-  name == b"types.is_float" ||
-  name == b"types.implements" ||
-  name == b"types.type_equal" ||
-  name == b"types.is_unit" ||
-  name == b"types.is_never"
+  compile_time_type_query_arity(name) is Some(_)
 }
 
 ///|
@@ -103,6 +97,9 @@ fn BasicBodyInferencer::guard_condition_facts(
   targets : Map[DeclId, Bytes],
 ) -> Array[CompileTimeGuardFact] {
   let facts = []
+  if self.guard_condition_dependent(expression, targets) {
+    facts.push(ConditionalGuardFact(expression, truth))
+  }
   let work = [(expression, truth)]
   while work.length() > 0 {
     let (expression, truth) = work.pop().unwrap()
@@ -141,6 +138,12 @@ fn BasicBodyInferencer::guard_condition_facts(
         let name = match targets.get(declaration) {
           Some(value) => value
           None => continue
+        }
+        if name != b"types.implements" &&
+          name != b"types.type_equal" &&
+          name != b"types.is_unit" &&
+          name != b"types.is_never" {
+          continue
         }
         let arguments = self.explicit_call_type_arguments(expression)
         let count = if name == b"types.implements" ||

@@ -21,7 +21,7 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 20
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compiler paths pass 79 shared execution checks.
+physical-boundary checks. Both compiler paths pass 84 shared execution checks.
 The September 6 compiler-B/C bootstrap now reaches a byte-identical fixed point.
 Deferred type checking and layout work below still prevent full completion.
 
@@ -112,8 +112,10 @@ Deferred type checking and layout work below still prevent full completion.
   logical keys through self-host helper calls. General deferred branch checks
   still need completion. Both paths now retain explicit deferred field and
   operator selections and recheck the selected source body with exact types.
-  Dead source slots use a separate reachability mask. Both paths pass 79 shared
-  execution checks; broader call/join checks are still pending.
+  Dead source slots use a separate reachability mask. Calls, branch-result
+  equations, and numeric query guards now pass in both paths (84 shared checks).
+  Concrete bad argument/tuple siblings still fail immediately. Method-generic
+  bounds, unused projected bindings, and full selected-source flow masks remain.
 - [ ] Make later passes visit only reachable code in that specialized body.
   Removed branches must not add calls, trait requests, locals, or storage types.
   Refresh flow and effect facts, keep source IDs for errors, and ensure distinct

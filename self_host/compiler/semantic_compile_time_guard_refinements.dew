@@ -153,6 +153,9 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn guard_has_condition_facts(self, condition: U32) -> Bool {
+    if self.guard_condition_dependent(condition, self.guard_builtin_targets()) {
+      return true
+    }
     let targets = self.guard_builtin_targets()
     self.guard_condition_facts(condition, true, targets).length() > 0u32 || self.guard_condition_facts(condition, false, targets).length() > 0u32
   }

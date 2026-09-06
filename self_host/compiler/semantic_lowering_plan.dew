@@ -459,7 +459,9 @@ fn self_host_lowering_expression_kind(
     self_host_u32_add(job.expression_selections.start, relative)
   ]
   if selection is SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection {
-    return SelfHostPlannedExpressionKind::PlannedDeferredExpression
+    if !(collected.expressions[expression] is SelfHostHirExpr::IfExpr(_, _, _, _)) {
+      return SelfHostPlannedExpressionKind::PlannedDeferredExpression
+    }
   }
   let operator_target = inferred.operator_targets[
     self_host_u32_add(job.operator_targets.start, relative)

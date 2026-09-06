@@ -2132,6 +2132,9 @@ fn BasicBodyInferencer::try_resolve_method_call(
     ) {
     return true
   }
+  if self.defer_expression_check(expression, [self.expression_type(receiver)]) {
+    return true
+  }
   if !self.collect_method_candidates(self.expression_type(receiver), name) {
     return false
   }
