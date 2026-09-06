@@ -235,7 +235,7 @@ fn self_host_resolve_guarded_calls(lowering: SelfHostPlannedProgramLowering, mod
                   let imports = self_host_resolve_module_imports(context.frozen.interfaces.at(caller_owner).resolved_types, context.frozen.import_scopes.at(caller_owner))
                   search = Option::Some(SelfHostCompileTimeEvidenceSearch::{
                     collected: collected
-                    module_: module_
+                    resolved: module_.resolved_types
                     imports: imports
                     index: self_host_index_module_implementations_with_imports(collected, imports)
                     active: []

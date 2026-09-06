@@ -1235,6 +1235,13 @@ fn BasicBodyInferencer::select_declared_bound_method(
       length: self.call_scratch.candidate_type_arguments.length(),
     })
   }
+  self.validate_method_call_obligations(
+    expression,
+    declaration,
+    { start, length: self.call_scratch.candidate_type_arguments.length(), },
+    self.call_scratch.candidate_type_arguments.length() - method_count,
+    offset,
+  )
   true
 }
 

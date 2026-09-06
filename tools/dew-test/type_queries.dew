@@ -750,6 +750,10 @@ pub fn main(case: U32) -> Bool {
     query_selected_short_circuit(7i64) == 42i32
   } else if case == 88u32 {
     query_selected_never(7i64, false) == 42i32
+  } else if case == 89u32 {
+    query_method_guard(7i64) == 42i32 && query_method_guard(()) == 0i32
+  } else if case == 90u32 {
+    query_method_numeric_guard(7i64) == 42i32 && query_method_numeric_guard(()) == 0i32
   } else {
     false
   }
@@ -823,4 +827,32 @@ fn query_selected_never<T>(value: T, flag: Bool) -> I32 {
 
 fn query_selected_accept(left: I32, right: I32) -> I32 {
   right
+}
+
+trait QueryMethodMark<X> {
+}
+impl QueryMethodMark<Unit> for I32 {
+}
+trait QueryMethodReader<X> {
+  fn query_method_apply<U: QueryMethodMark<X>>(self, item: U) -> I32
+}
+impl QueryMethodReader<Unit> for I64 {
+  fn query_method_apply<U: QueryMethodMark<Unit>>(self, item: U) -> I32 {
+    42i32
+  }
+}
+fn query_method_guard<T>(value: T) -> I32 {
+  if implements::<T, QueryMethodReader<Unit>>() {
+    value.query_method_apply(7i32)
+  } else {
+    0i32
+  }
+}
+
+fn query_method_numeric_guard<T>(value: T) -> I32 {
+  if is_integer::<T>() {
+    value.query_method_apply(7i32)
+  } else {
+    0i32
+  }
 }

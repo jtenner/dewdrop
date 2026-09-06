@@ -1,4 +1,24 @@
 ///|
+fn BasicBodyInferencer::imported_obligation_method_owner(
+  self : BasicBodyInferencer,
+  declaration : DeclId,
+) -> DeclId {
+  let imports = self.imports.unwrap()
+  for interface_index in imports.scope.imported_interfaces {
+    let interface_ = imports.scope.interfaces[interface_index].unwrap()
+    for callable in interface_.callables {
+      if callable.declaration == declaration {
+        match callable.kind {
+          FrozenTraitCallable(owner) | FrozenImplCallable(owner) => return owner
+          _ => abort("SPC-303 imported obligation is not a method")
+        }
+      }
+    }
+  }
+  abort("LNK-504 imported method obligation identity is missing")
+}
+
+///|
 priv struct DeclaredBodyTraitEvidence {
   bound_type : ResolvedTypeId
   trait_declaration : DeclId
@@ -192,7 +212,7 @@ fn BasicBodyInferencer::begin_declared_body_trait_evidence(
     self.collected.module_id {
     self.collected.generic_parameters_of(evidence.requirement)
   } else {
-    { start: 0, length: self.call_generic_count(evidence.requirement), }
+    self.imported_callable_of(evidence.requirement).unwrap().generic_parameters
   }
   self.call_scratch.candidate_type_arguments.clear()
   match self.resolved.types[evidence.bound_type] {
@@ -513,14 +533,12 @@ fn BasicBodyInferencer::validate_method_call_obligations(
   if method_generic_count <= 0 {
     return
   }
+  guard implementation_generic_count >= 0 &&
+    implementation_generic_count + method_generic_count == type_arguments.length else {
+    abort("SPC-303 complete method obligation argument sequence")
+  }
   self.validate_call_obligations(
-    expression,
-    declaration,
-    {
-      start: type_arguments.start + implementation_generic_count,
-      length: method_generic_count,
-    },
-    offset,
+    expression, declaration, type_arguments, offset,
   )
 }
 
@@ -913,6 +931,33 @@ fn BasicBodyInferencer::validate_generic_parameter_obligations(
   let origin = call_type_origin(expression, offset)
   for bound_offset in bounds.start..<(bounds.start + bounds.length) {
     self.begin_call_candidate(declaration)
+    let owner_count = type_arguments.length -
+      self.call_generic_count(declaration)
+    if owner_count > 0 {
+      let owner = if semantic_id_module(declaration) == self.collected.module_id {
+        match self.collected.declaration(declaration) {
+          Some(MethodReference(method_info)) => method_info.parent
+          _ => abort("SPC-303 owner arguments on a non-method obligation")
+        }
+      } else {
+        self.imported_obligation_method_owner(declaration)
+      }
+      self.call_scratch.instantiation_method_generics = self.call_scratch.instantiation_generics
+      self.call_scratch.instantiation_generics = if semantic_id_module(owner) ==
+        self.collected.module_id {
+        self.collected.generic_parameters_of(owner)
+      } else {
+        self.imports.unwrap().generic_parameters_of(owner)
+      }
+      guard self.call_scratch.instantiation_generics.length == owner_count else {
+        abort("SPC-303 method obligation owner argument count")
+      }
+      for _ in 0..<owner_count {
+        self.call_scratch.candidate_type_arguments.push(
+          self.solver.fresh_variable(),
+        )
+      }
+    }
     for index in 0..<type_arguments.length {
       self.call_scratch.candidate_type_arguments[index] = self.call_type_arguments[type_arguments.start +
         index]
@@ -960,6 +1005,10 @@ fn BasicBodyInferencer::validate_call_obligations_now(
   offset : UInt64,
 ) -> Unit {
   let evidence_start = self.trait_evidence_roots.length()
+  let owner_count = type_arguments.length - self.call_generic_count(declaration)
+  guard owner_count >= 0 else {
+    abort("SPC-303 obligation type argument count")
+  }
   if semantic_id_module(declaration) == self.collected.module_id {
     let generics = self.collected.generic_parameters_of(declaration)
     for generic_offset in 0..<generics.length {
@@ -969,7 +1018,7 @@ fn BasicBodyInferencer::validate_call_obligations_now(
         expression,
         declaration,
         type_arguments,
-        generic_offset,
+        owner_count + generic_offset,
         parameter.id,
         parameter.bounds,
         self.resolved.generic_bound_types,
@@ -995,7 +1044,7 @@ fn BasicBodyInferencer::validate_call_obligations_now(
               expression,
               declaration,
               type_arguments,
-              generic_offset,
+              owner_count + generic_offset,
               imports.generic_parameter_ids[parameter_index],
               imports.generic_parameter_bounds[parameter_index],
               imports.generic_bound_types,

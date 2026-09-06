@@ -179,7 +179,6 @@ impl SelfHostBasicBodyInferencer {
     let mut first = 0u64
     let mut second = 0u64
     let mut count = 0u32
-    let mut needs_evidence = false
     let mut guarded = false
     let _ = while 0u32 {
       index => if index < candidates.length() {
@@ -198,9 +197,7 @@ impl SelfHostBasicBodyInferencer {
                     let snapshot = self.solver.snapshot()
                     let viable = self.bound_method_signature(expression, receiver, arguments, offset, trait_, bound, method.id)
                     self.solver.rollback(snapshot)
-                    if viable && self.local_generics_require_evidence(method.id) {
-                      needs_evidence = true
-                    } else if viable {
+                    if viable {
                       if count == 0u32 {
                         first = method.id
                         selected_trait = trait_
@@ -226,9 +223,7 @@ impl SelfHostBasicBodyInferencer {
                 let snapshot = self.solver.snapshot()
                 let viable = self.bound_method_signature(expression, receiver, arguments, offset, trait_, bound, method.declaration)
                 self.solver.rollback(snapshot)
-                if viable && method.requires_evidence {
-                  needs_evidence = true
-                } else if viable {
+                if viable {
                   if count == 0u32 {
                     first = method.declaration
                     selected_trait = trait_
@@ -249,18 +244,21 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
-    if needs_evidence {
-      self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
-      self.mark_unsupported(expression)
-      self.solver.poison_type(self.expression_type(target))
-      return true
-    }
     if count == 0u32 {
       return false
     }
     if count == 1u32 {
       let valid = self.bound_method_signature(expression, receiver, arguments, offset, selected_trait, selected_bound, first)
       let _ = self_host_assert_compiler_invariant(valid, "selected declared bound signature changed after rollback")
+      let method_count = if self_host_semantic_id_module(first) == self.collected.module_id {
+        self.collected.generic_parameters_of(first).length
+      } else {
+        match self.imported_callable(first) {
+          Option::Some(callable) => callable.generic_parameters.length
+          Option::None => unreachable()
+        }
+      }
+      self.validate_selected_method_bounds(expression, first, self.candidate_type_arguments.length() - method_count, method_count, offset)
       let start = self.call_type_arguments.length()
       self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)
       let arguments = SelfHostHirSpan::{

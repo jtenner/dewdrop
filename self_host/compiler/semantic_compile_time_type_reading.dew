@@ -13,16 +13,25 @@ fn self_host_read_compile_time_resolved_type(
   bindings: Map<U64, SelfHostCompileTimeType>,
   depth: U32,
 ) -> Result<SelfHostCompileTimeType, String> {
+  self_host_read_compile_time_resolved_arena(module_.resolved_types, index, bindings, depth)
+}
+
+fn self_host_read_compile_time_resolved_arena(
+  resolved: SelfHostResolvedModuleTypes,
+  index: U32,
+  bindings: Map<U64, SelfHostCompileTimeType>,
+  depth: U32,
+) -> Result<SelfHostCompileTimeType, String> {
   if depth >= 256u32 {
     return Result::Err("CT-002 type query nesting limit exceeded")
   }
-  if index >= module_.resolved_types.types.length() {
+  if index >= resolved.types.length() {
     return Result::Err("CT-002 resolved query type index is outside its arena")
   }
-  let type_ = module_.resolved_types.types[index]
+  let type_ = resolved.types[index]
   let span = match type_ {
     SelfHostResolvedType::ErrorType => return Result::Err("CT-002 erroneous type query argument")
-    SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_resolved_type(module_, owner, bindings, depth + 1u32) {
+    SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_resolved_arena(resolved, owner, bindings, depth + 1u32) {
       Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::MemberProjectionCompileTimeType(value, operation, selector))
       Result::Err(error) => Result::Err(error)
     }
@@ -41,13 +50,13 @@ fn self_host_read_compile_time_resolved_type(
     SelfHostResolvedType::AppliedType(_, span) => span
     SelfHostResolvedType::FunctionType(span, _) => span
   }
-  if !self_host_array_span_is_valid(span.start, span.length, module_.resolved_types.type_arguments.length()) {
+  if !self_host_array_span_is_valid(span.start, span.length, resolved.type_arguments.length()) {
     return Result::Err("CT-002 resolved query arguments are outside their arena")
   }
   let fields = self_host_empty_compile_time_types()
   let _ = while 0u32 {
     offset => if offset < span.length {
-      match self_host_read_compile_time_resolved_type(module_, module_.resolved_types.type_arguments[span.start + offset], bindings, depth + 1u32) {
+      match self_host_read_compile_time_resolved_arena(resolved, resolved.type_arguments[span.start + offset], bindings, depth + 1u32) {
         Result::Ok(value) => fields.push(value)
         Result::Err(error) => return Result::Err(error)
       }
@@ -58,11 +67,11 @@ fn self_host_read_compile_time_resolved_type(
   }
   match type_ {
     SelfHostResolvedType::ProductType(_) => Result::Ok(SelfHostCompileTimeType::ProductCompileTimeType(fields))
-    SelfHostResolvedType::AppliedType(base, _) => match self_host_read_compile_time_resolved_type(module_, base, bindings, depth + 1u32) {
+    SelfHostResolvedType::AppliedType(base, _) => match self_host_read_compile_time_resolved_arena(resolved, base, bindings, depth + 1u32) {
       Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::AppliedCompileTimeType(value, fields))
       Result::Err(error) => Result::Err(error)
     }
-    SelfHostResolvedType::FunctionType(_, result) => match self_host_read_compile_time_resolved_type(module_, result, bindings, depth + 1u32) {
+    SelfHostResolvedType::FunctionType(_, result) => match self_host_read_compile_time_resolved_arena(resolved, result, bindings, depth + 1u32) {
       Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::FunctionCompileTimeType(fields, value))
       Result::Err(error) => Result::Err(error)
     }

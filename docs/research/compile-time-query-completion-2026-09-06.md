@@ -3,6 +3,28 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Generic method obligations
+
+Native declared/guarded method calls now validate their method bounds. The full
+owner-plus-method argument sequence survives pending obligation checks. Imported
+method parameters use their stored span, not a zero-based guessed span.
+
+Self-host method selection now checks bounds with the same structural trait
+search used by implements. The resolved type reader no longer requires a physical
+plan. A checked solver reader supplies logical arguments during inference.
+Independent missing method bounds report EVD-214 with the declaration, expression,
+and offset. Dependent checks can wait for an exact selected source body; cycles
+and search limits retain their own errors. Search setup is lazy and cached per
+body. Selected local and imported impl methods use the same bound check.
+
+Positive and negative tests cover local/imported requirements and bounds that
+refer to an owner type parameter. All 44 focused native bound tests pass in
+14.696 s. Both compilers execute 92 shared checks (native generation 2.325 s,
+execution 0.022 s). Hardening passes 215 tests and 29 records in 31.874 s; the
+aggregate lane remains over budget. Deferred overload selection and final full
+validation remain. This does not claim that the older non-query implementation
+prerequisite fallback has been removed from every self-host operation.
+
 ## Selected source follows retained evaluation
 
 Both source recheck paths now use the selected plan's block prefixes and

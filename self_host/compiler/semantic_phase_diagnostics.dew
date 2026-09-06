@@ -4,6 +4,7 @@ fn self_host_inference_diagnostic_name(diagnostic: SelfHostBodyInferenceDiagnost
   match diagnostic {
     SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
     SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _) => "no matching method"
+    SelfHostBodyInferenceDiagnostic::TraitObligationFailure(_, _, message, _) => message
     SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _) => "unsupported expression"
     SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => "type constraint"
     SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, _) => "unresolved expression"
@@ -39,6 +40,7 @@ fn self_host_inference_diagnostic_expression(diagnostic: SelfHostBodyInferenceDi
     SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(expression, _) => Option::Some(expression)
     SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(expression, _) => Option::Some(expression)
     SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, expression, _) => Option::Some(expression)
+    SelfHostBodyInferenceDiagnostic::TraitObligationFailure(_, expression, _, _) => Option::Some(expression)
     SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, expression, _) => Option::Some(expression)
     SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, expression, _, _, _, _) => Option::Some(expression)
     SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(constraint) => {

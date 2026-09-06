@@ -96,7 +96,7 @@ fn self_host_compile_time_match(pattern: SelfHostCompileTimeType, actual: SelfHo
 
 struct SelfHostCompileTimeEvidenceSearch {
   collected: SelfHostCollectedModule
-  module_: SelfHostPlannedModuleLowering
+  resolved: SelfHostResolvedModuleTypes
   imports: SelfHostResolvedModuleImports
   index: SelfHostModuleImplIndex
   active: Array<SelfHostCompileTimeTypePair>
@@ -125,7 +125,7 @@ fn self_host_empty_compile_time_prerequisites() -> Array<SelfHostCompileTimePrer
 
 impl SelfHostCompileTimeEvidenceSearch {
   fn read(self, type_: U32, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<SelfHostCompileTimeType, String> {
-    self_host_read_compile_time_resolved_type(self.module_, type_, bindings, 0u32)
+    self_host_read_compile_time_resolved_arena(self.resolved, type_, bindings, 0u32)
   }
 
   fn prerequisites(self, declaration: U64, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<Option<Array<SelfHostCompileTimeTraitWitness>>, String> {
@@ -338,7 +338,7 @@ fn self_host_evaluate_compile_time_implements(lowering: SelfHostPlannedProgramLo
   let imports = self_host_resolve_module_imports(context.frozen.interfaces.at(owner).resolved_types, context.frozen.import_scopes.at(owner))
   let search = SelfHostCompileTimeEvidenceSearch::{
     collected: collected
-    module_: module_
+    resolved: module_.resolved_types
     imports: imports
     index: self_host_index_module_implementations_with_imports(collected, imports)
     active: []

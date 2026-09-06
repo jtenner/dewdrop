@@ -44,6 +44,7 @@ pub enum SelfHostBodyInferenceDiagnostic {
   MissingImportedConstructionField(U32, String, U64, U32)
   DuplicateConstructionField(U32, U32, U32)
   NoMatchingMethod(U32, U32, U32)
+  TraitObligationFailure(U64, U32, String, U32)
   AmbiguousMethod(U32, U32, U64, U64, U32, U32)
   UnknownQualifiedMember(U32, U64, U32, U32)
   ConstructionPayloadKindMismatch(U32, U64, U32)
@@ -85,6 +86,7 @@ impl SelfHostBodyInferenceDiagnostic {
       SelfHostBodyInferenceDiagnostic::MissingImportedConstructionField(_, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::DuplicateConstructionField(_, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, offset) => offset
+      SelfHostBodyInferenceDiagnostic::TraitObligationFailure(_, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::UnknownQualifiedMember(_, _, _, offset) => offset
       SelfHostBodyInferenceDiagnostic::ConstructionPayloadKindMismatch(_, _, offset) => offset
@@ -511,6 +513,7 @@ struct SelfHostBasicBodyInferencer {
   mut guarded_trait_scopes_ready: Bool
   pending_guarded_joins: Array<U32>
   mut guard_builtin_cache: Option<Map<U64, Bytes>>
+  mut trait_obligation_search: Option<SelfHostCompileTimeEvidenceSearch>
   module_value_import_tasks: Array<SelfHostModuleValueImportTask>
   module_value_import_results: Array<I32>
   module_value_import_cache: Array<I32>
@@ -620,6 +623,7 @@ impl SelfHostBasicBodyInferencer {
       guarded_trait_scopes_ready: false
       pending_guarded_joins: []
       guard_builtin_cache: Option::None
+      trait_obligation_search: Option::None
       module_value_import_tasks: []
       module_value_import_results: []
       module_value_import_cache: []
@@ -4606,6 +4610,7 @@ impl SelfHostBasicBodyInferencer {
       ),
       origin,
     )
+    self.validate_selected_method_bounds(expression, declaration, self.instantiation_generics.length, self.instantiation_method_generics.length, offset)
     let argument_start = self.call_type_arguments.length()
     self_host_basic_copy_i32_values(
       self.candidate_type_arguments,
@@ -4776,6 +4781,7 @@ impl SelfHostBasicBodyInferencer {
       self.instantiate_signature_type(callable.result_type),
       origin,
     )
+    self.validate_selected_method_bounds(expression, callable.declaration, implementation.generic_parameters.length, callable.generic_parameters.length, offset)
     let start = self.call_type_arguments.length()
     self_host_basic_copy_i32_values(
       self.candidate_type_arguments,
@@ -4959,7 +4965,7 @@ impl SelfHostBasicBodyInferencer {
             if self_host_u64_equal(impl_.declaration, method.parent) && impl_.trait_type is Option::Some(_) {
               match self.local_callable_index_of_declaration(method.id) {
                 Option::Some(callable) => if self.method_candidate_viable(expression, receiver, arguments, offset, implementation, callable) {
-                  if self.local_generics_require_evidence(impl_.declaration) || self.local_generics_require_evidence(method.id) {
+                  if self.local_generics_require_evidence(impl_.declaration) {
                     needs_evidence = true
                   } else {
                     if count == 0u32 {
@@ -4993,7 +4999,7 @@ impl SelfHostBasicBodyInferencer {
                 self.imported_method_candidate_viable(expression, receiver, arguments, offset, implementation, callable) {
                 // Generic parameters are solved by the signature probe. Only
                 // actual prerequisite bounds require a separate trait proof.
-                if !implementation.requires_evidence && !callable.requires_evidence {
+                if !implementation.requires_evidence {
                   if count == 0u32 {
                     selected = current
                     implementation_id = owner
