@@ -2061,12 +2061,19 @@ fn starshine_match_literal_condition(
 fn starshine_pattern_uses_general_emission(
   lowering : @semantic.PlannedModuleLowering,
   root : @semantic.PatternId,
+  generic_specialization : StarshineGenericSpecialization?,
 ) -> Bool {
   let pending : Array[@semantic.PatternId] = [root]
   while pending.length() > 0 {
     let pattern = pending.pop().unwrap()
     let planned = lowering.patterns[pattern]
-    if planned.shape is @semantic.ProductPlannedValueShape(_) {
+    if starshine_specialized_shape(
+        lowering,
+        generic_specialization,
+        planned.type_,
+        planned.shape,
+      )
+      is @semantic.ProductPlannedValueShape(_) {
       return true
     }
     match planned.selected_constructor {
@@ -2078,7 +2085,13 @@ fn starshine_pattern_uses_general_emission(
       @semantic.HirTuplePattern(_, arguments, _) =>
         for index in 0..<arguments.length {
           let child = lowering.pattern_children[arguments.start + index]
-          if lowering.patterns[child].shape
+          let child_plan = lowering.patterns[child]
+          if starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              child_plan.type_,
+              child_plan.shape,
+            )
             is @semantic.ProductPlannedValueShape(_) {
             return true
           }
@@ -2092,7 +2105,13 @@ fn starshine_pattern_uses_general_emission(
       @semantic.HirStructPattern(_, fields, _, _, _) =>
         for index in 0..<fields.length {
           let child = lowering.pattern_fields[fields.start + index].pattern
-          if lowering.patterns[child].shape
+          let child_plan = lowering.patterns[child]
+          if starshine_specialized_shape(
+              lowering,
+              generic_specialization,
+              child_plan.type_,
+              child_plan.shape,
+            )
             is @semantic.ProductPlannedValueShape(_) {
             return true
           }
@@ -2929,7 +2948,9 @@ fn starshine_match_pattern_instructions(
   (Array[@lib.Instruction], Array[@lib.Instruction]),
   StarshineCodeEmissionError,
 ] {
-  if starshine_pattern_uses_general_emission(lowering, pattern) {
+  if starshine_pattern_uses_general_emission(
+      lowering, pattern, generic_specialization,
+    ) {
     starshine_general_match_pattern_instructions(
       lowering, planned, program, program_module_index, body, pattern, scratch_local,
       product_ref_scratch, local_indices, generic_specialization,
@@ -3654,7 +3675,14 @@ fn starshine_body_locals(
   let mut map_growth_index_scratch_index = -1
   for
     pattern in body.patterns.start..<(body.patterns.start + body.patterns.length) {
-    if lowering.patterns[pattern].shape is @semantic.ProductPlannedValueShape(_) {
+    let pattern_plan = lowering.patterns[pattern]
+    if starshine_specialized_shape(
+        lowering,
+        generic_specialization,
+        pattern_plan.type_,
+        pattern_plan.shape,
+      )
+      is @semantic.ProductPlannedValueShape(_) {
       fixed_array_ref_scratch_index = parameter_count +
         body_local_types.length()
       body_local_types.push(@lib.ValType::eqref_null())
@@ -10026,7 +10054,11 @@ fn starshine_emit_body_instructions(
           for arm_index in 0..<arms.length {
             let arm = lowering.pattern_arms[lowering.arm_children[arms.start +
               arm_index]]
-            if starshine_pattern_uses_general_emission(lowering, arm.pattern) {
+            if starshine_pattern_uses_general_emission(
+                lowering,
+                arm.pattern,
+                generic_specialization,
+              ) {
               dense_dispatch = false
               break
             }

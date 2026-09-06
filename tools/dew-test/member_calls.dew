@@ -37,6 +37,18 @@ struct MemberWrapper {
   inner: MemberCell
 }
 
+enum MemberPayload<t> {
+  Empty
+  Value(t)
+}
+
+fn member_extract<t>(value: MemberPayload<t>, fallback: t) -> t {
+  match value {
+    MemberPayload::Value(item) => item
+    MemberPayload::Empty => fallback
+  }
+}
+
 builtin member_add(left: I32, right: I32) -> I32 = "i32.add"
 
 fn member_unit_receiver(cell: MemberCell) -> MemberSlot<Unit> {
@@ -53,6 +65,8 @@ pub fn main(value: I32, expected: I32) -> I32 {
   member_unit_receiver(cell).item
   member_unit_receiver(cell)[0u32]
   let receiver_effects = cell.value == 2i32
+  let (tuple_left, tuple_right) = member_extract(MemberPayload::Value((7i32, 11i64)), (0i32, 0i64))
+  let tuple_binding = tuple_left == 7i32 && tuple_right == 11i64
   cell.value = 0i32
   let wrapper = MemberWrapper::{
     inner: cell
@@ -68,7 +82,7 @@ pub fn main(value: I32, expected: I32) -> I32 {
   }
   slot[0u32] = wrapper
   slot[0u32].inner.value = value
-  if receiver_effects && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
+  if tuple_binding && receiver_effects && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
     slot[0u32].inner.read()
   } else {
     -1i32
