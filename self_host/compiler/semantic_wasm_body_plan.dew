@@ -466,6 +466,7 @@ fn self_host_body_specialization_key(
           output.append("primitive=")
           output.append_u32(primitive.rank())
         }
+        SelfHostSpecializationEvidenceType::StructuralSpecializationEvidenceType(_) => output.append("structural-evidence")
       }
     }
   }

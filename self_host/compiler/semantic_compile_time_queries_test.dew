@@ -80,3 +80,35 @@ test "compile-time scalar layouts and lanes agree with native contracts" {
     _ => assert(false, "GC object has no exposed byte size")
   }
 }
+
+test "compile-time logical keys retain nested types through generic callers" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin query<t>() -> Bool = \"types.is_unit\"\nstruct Box<t> {}\nfn inner<t>() -> Bool {\n query::<t>()\n}\nfn outer<t>() -> Bool {\n inner::<Box<t>>()\n}\npub fn run() -> Bool {\n outer::<I8>() || outer::<U8>()\n}\n",
+  )
+  let plan = self_host_plan_program_specialization(lowering, false)
+  let module_ = lowering.modules[0u32]
+  let mut inner = 0u64
+  let mut outer = 0u64
+  for callable in module_.functions.callables {
+    if callable.name == b"inner" {
+      inner = callable.declaration
+    }
+    if callable.name == b"outer" {
+      outer = callable.declaration
+    }
+  }
+  assert(inner != 0u64 && outer != 0u64, "query caller identities")
+  assert(lowering.compile_time.sensitive.contains_key(inner), "direct query caller needs a logical key")
+  assert(lowering.compile_time.sensitive.contains_key(outer), "transitive query caller needs a logical key")
+  let mut count = 0u32
+  let identities = self_host_empty_compile_time_types()
+  for request in plan.requests {
+    if request.declaration == inner {
+      assert(request.evidence_types.length() == 1u32, "one exact logical generic argument")
+      identities.push(self_host_compile_time_evidence_type(request.evidence_types[0u32]))
+      count = count + 1u32
+    }
+  }
+  assert(count == 2u32, "same ABI must keep two nested logical instances")
+  self_host_test_query_bool(b"types.type_equal", identities, false)
+}

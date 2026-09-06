@@ -7,6 +7,7 @@ pub enum SelfHostSpecializationEvidenceType {
   UnknownSpecializationEvidenceType
   NominalSpecializationEvidenceType(U64)
   PrimitiveSpecializationEvidenceType(SelfHostPrimitiveType)
+  StructuralSpecializationEvidenceType(SelfHostCompileTimeType)
 }
 
 fn self_host_specialization_request_evidence_types(request: SelfHostProgramSpecializationRequest) -> Array<SelfHostSpecializationEvidenceType> {
@@ -26,6 +27,16 @@ fn self_host_specialization_evidence_type_equal(left: SelfHostSpecializationEvid
     }
     SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(primitive) => match right {
       SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(other) => primitive.rank() == other.rank()
+      _ => false
+    }
+    SelfHostSpecializationEvidenceType::StructuralSpecializationEvidenceType(value) => match right {
+      SelfHostSpecializationEvidenceType::StructuralSpecializationEvidenceType(other) => match self_host_compile_time_types_equal(value, other) {
+        Result::Ok(equal) => equal
+        Result::Err(message) => {
+          self_host_assert_compiler_invariant(false, message)
+          unreachable()
+        }
+      }
       _ => false
     }
   }
@@ -79,6 +90,21 @@ fn self_host_specialization_parameter_evidence_type(caller: Option<SelfHostPlann
 
 fn self_host_program_specialization_call_evidence_types(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, caller: Option<SelfHostPlannedCallable>, specialization: U32, requests: Array<SelfHostProgramSpecializationRequest>, target: U64, arguments: SelfHostHirSpan) -> Array<SelfHostSpecializationEvidenceType> {
   let result = self_host_empty_specialization_evidence_types()
+  if lowering.compile_time.sensitive.contains_key(target) {
+    let bindings = self_host_compile_time_caller_bindings(caller, specialization, requests)
+    match self_host_read_compile_time_arguments(module_, arguments, bindings) {
+      Result::Ok(types) => {
+        for type_ in types {
+          result.push(self_host_compile_time_to_evidence_type(type_))
+        }
+      }
+      Result::Err(message) => {
+        self_host_assert_compiler_invariant(false, message)
+        unreachable()
+      }
+    }
+    return result
+  }
   let owner = match lowering.index.declaration_owner(target) {
     Option::Some(owner) => owner
     Option::None => return result

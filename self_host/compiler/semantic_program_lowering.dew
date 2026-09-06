@@ -97,6 +97,7 @@ pub struct SelfHostPlannedProgramLowering {
   index: SelfHostProgramLoweringIndex
   graph: SelfHostProgramModuleGraph
   elided_trait_wrappers: Array<U64>
+  compile_time: SelfHostCompileTimeProgramContext
 }
 
 fn self_host_program_imported_interface_count(
@@ -1775,6 +1776,7 @@ fn self_host_plan_program_lowering(
     }
     graph: graph
     elided_trait_wrappers: []
+    compile_time: self_host_compile_time_program_context(frozen, modules)
   }
 }
 

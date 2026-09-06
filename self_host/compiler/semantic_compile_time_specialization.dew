@@ -1,0 +1,142 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.map
+open dew.std.option
+
+pub struct SelfHostCompileTimeProgramContext {
+  frozen: SelfHostFrozenSignatureProgram
+  targets: Map<U64, Bytes>
+  sensitive: Map<U64, Bool>
+  instances: Map<U32, SelfHostPlannedModuleLowering>
+  diagnostics: Array<String>
+}
+
+fn self_host_compile_time_target_map() -> Map<U64, Bytes> {
+  Map::empty()
+}
+
+fn self_host_compile_time_caller_map() -> Map<U64, Array<U64>> {
+  Map::empty()
+}
+
+fn self_host_compile_time_instance_map() -> Map<U32, SelfHostPlannedModuleLowering> {
+  Map::empty()
+}
+
+fn self_host_empty_compile_time_owners() -> Array<U64> {
+  []
+}
+
+fn self_host_is_compile_time_builtin(name: Bytes) -> Bool {
+  self_host_compile_time_type_query_arity(name) is Option::Some(_) ||
+  self_host_computed_type_builtin(name) || name == b"types.static_assert"
+}
+
+fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram, modules: Array<SelfHostPlannedModuleLowering>) -> SelfHostCompileTimeProgramContext {
+  let targets = self_host_compile_time_target_map()
+  let sensitive = self_host_empty_u64_bool_map()
+  let callers = self_host_compile_time_caller_map()
+  let work = self_host_empty_compile_time_owners()
+  for module_ in modules {
+    for callable in module_.functions.callables {
+      match callable.kind {
+        SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if self_host_is_compile_time_builtin(name) {
+          targets.set(callable.declaration, name)
+        }
+        _ => {}
+      }
+    }
+  }
+  if targets.length() > 0u32 {
+    for module_ in modules {
+      for body in module_.bodies {
+        self_host_assert_array_span(body.expressions.start, body.expressions.length, module_.expressions.length(), "ARN-101 query owner expressions")
+        let _ = while 0u32 {
+          offset => if offset < body.expressions.length {
+            let expression = module_.expressions[body.expressions.start + offset]
+            match self_host_program_specialization_call_recipe(expression) {
+              Option::Some(recipe) => {
+                if targets.contains_key(recipe.target) && !sensitive.contains_key(body.declaration) {
+                  sensitive.set(body.declaration, true)
+                  work.push(body.declaration)
+                }
+                match callers.get(recipe.target) {
+                  Option::Some(values) => values.push(body.declaration)
+                  Option::None => callers.set(recipe.target, [body.declaration])
+                }
+              }
+              Option::None => {}
+            }
+            continue offset + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+    }
+  }
+  let _ = while work.length() {
+    length => if length > 0u32 {
+      let target = work[length - 1u32]
+      work.truncate(length - 1u32)
+      match callers.get(target) {
+        Option::Some(values) => for caller in values {
+          if !sensitive.contains_key(caller) {
+            sensitive.set(caller, true)
+            work.push(caller)
+          }
+        }
+        Option::None => {}
+      }
+      continue work.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  SelfHostCompileTimeProgramContext::{
+    frozen: frozen
+    targets: targets
+    sensitive: sensitive
+    instances: self_host_compile_time_instance_map()
+    diagnostics: []
+  }
+}
+
+fn self_host_compile_time_evidence_type(value: SelfHostSpecializationEvidenceType) -> SelfHostCompileTimeType {
+  match value {
+    SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType => SelfHostCompileTimeType::UnknownCompileTimeType
+    SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(value) => SelfHostCompileTimeType::PrimitiveCompileTimeType(value)
+    SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(value) => SelfHostCompileTimeType::NominalCompileTimeType(value)
+    SelfHostSpecializationEvidenceType::StructuralSpecializationEvidenceType(value) => value
+  }
+}
+
+fn self_host_compile_time_to_evidence_type(value: SelfHostCompileTimeType) -> SelfHostSpecializationEvidenceType {
+  match value {
+    SelfHostCompileTimeType::PrimitiveCompileTimeType(value) => SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(value)
+    SelfHostCompileTimeType::NominalCompileTimeType(value) => SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(value)
+    _ => SelfHostSpecializationEvidenceType::StructuralSpecializationEvidenceType(value)
+  }
+}
+
+fn self_host_compile_time_caller_bindings(caller: Option<SelfHostPlannedCallable>, specialization: U32, requests: Array<SelfHostProgramSpecializationRequest>) -> Map<U64, SelfHostCompileTimeType> {
+  let bindings = self_host_empty_compile_time_bindings()
+  if specialization < requests.length() {
+    let request = requests[specialization]
+    match caller {
+      Option::Some(callable) => if callable.declaration == request.declaration {
+        let parameters = self_host_program_specialization_callable_generics(callable)
+        let _ = while 0u32 {
+          offset => if offset < parameters.length && offset < request.evidence_types.length() {
+            bindings.set(self_host_make_semantic_id(parameters.module_id, parameters.local(offset)), self_host_compile_time_evidence_type(request.evidence_types[offset]))
+            continue offset + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      Option::None => {}
+    }
+  }
+  bindings
+}

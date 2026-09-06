@@ -61,3 +61,17 @@ The hardening suite passes 175 tests, 29 exact numeric trap records, both host
 record tests, and all emission/semantic probes in 19.264 s. The initial cold C
 build took 90.092 s and is a visible performance defect. Intermediate parser and
 typing failures were corrected before the passing run.
+
+## Self-host logical specialization keys
+
+Query-sensitive functions and their transitive callers now retain structural
+logical arguments in the existing specialization request index. Equality is
+structural, not based on a hash or Wasm carrier. Nested applications, products,
+functions, nominal IDs, trait IDs, and primitive identities survive reading from
+both resolved and inferred arenas. Generic caller bindings use complete semantic
+IDs; the I32 resolved-type encoding adds before negation to avoid overflow.
+
+A source test forwards `I8` and `U8` through `outer<T>` into `inner<Box<T>>` and
+checks that both logical requests survive. The hardening suite passes 176 tests
+and the existing record and execution probes. Folding into per-request bodies
+and using those bodies at every emission boundary remains the next step.
