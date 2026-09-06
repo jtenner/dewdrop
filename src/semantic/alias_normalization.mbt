@@ -735,6 +735,13 @@ fn TypeResolver::normalize_type(
 
 ///|
 fn TypeResolver::normalize_signature_tables(self : TypeResolver) -> Unit {
+  for index in 0..<self.explicit_call_type_arguments.length() {
+    if self.explicit_call_type_arguments[index] >= 0 {
+      self.explicit_call_type_arguments[index] = self.normalize_type(
+        self.explicit_call_type_arguments[index],
+      )
+    }
+  }
   for index in 0..<self.parameter_types.length() {
     self.parameter_types[index] = self.normalize_type(
       self.parameter_types[index],

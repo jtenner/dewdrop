@@ -7,6 +7,33 @@ pub struct SelfHostImportedSemanticsFixture {
   imports: SelfHostResolvedModuleImports
 }
 
+test "explicit call aliases retain logical Unit and integer types" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\ntype Nothing = Unit\ntype Signed = I8\ntype Unsigned = U8\npub fn run() -> Unit {\n  identity::<Nothing, Signed, Unsigned>()\n}\n",
+    b"pub fn identity<a, b, c>() -> Unit {\n}\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "imports")
+  let resolved = fixture.frozen.interfaces.at(0u32).resolved_types
+  assert(resolved.diagnostics.length() == 0u32, "alias diagnostics")
+  assert(resolved.explicit_call_type_arguments.length() == 3u32, "three logical arguments")
+  let expected = [0u32, 10u32, 12u32]
+  while 0u32 {
+    index => if index < 3u32 {
+      let type_ = resolved.explicit_call_type_arguments[index]
+      assert(type_ < resolved.types.length(), "explicit argument type index")
+      match resolved.types[type_] {
+        SelfHostResolvedType::PrimitiveType(primitive) => {
+          assert(primitive.rank() == expected[index], "normalized logical type")
+        }
+        _ => assert(false, "an explicit alias must normalize to its target")
+      }
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
 fn self_host_imported_semantics_fixture(
   consumer: Bytes,
   library: Bytes,

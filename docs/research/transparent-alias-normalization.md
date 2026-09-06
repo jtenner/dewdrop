@@ -275,3 +275,14 @@ interfaces, visibility checks, nominal-layout legality, module-value inference,
 trait obligations, runtime representation, and backend planning are implemented
 by later phases. Body-local type-annotation syntax remains a separate language
 design question. Current product work is tracked in `docs/roadmap.md`.
+
+## Explicit call arguments (September 5, 2026)
+
+Both compilers now normalize aliases in explicit call type arguments, not only
+declaration signatures. The self-host regression checks aliases to Unit, I8,
+and U8 through an imported generic callable. Logical signedness and width remain
+intact; normalization does not replace types with Wasm carriers.
+
+Validation: the self-host hardening lane passed 162 tests and 27 invariant-record
+checks. It took 119.148 seconds, including 99.237 seconds for test generation.
+These times exceed the 30-second threshold and remain performance bugs.

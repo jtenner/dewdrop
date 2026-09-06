@@ -1269,6 +1269,18 @@ impl SelfHostTypeResolver {
   fn normalize_signature_tables(self) -> Unit {
     let mut index = 0u32
     let _ = while index {
+      current => if current < self.explicit_call_type_arguments.length() {
+        let value = self.explicit_call_type_arguments[current]
+        if value != 4294967295u32 {
+          self.explicit_call_type_arguments[current] = self.normalize_type(value)
+        }
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = 0u32
+    let _ = while index {
       current => if current < self.parameter_types.length() {
         self.parameter_types[current] = self.normalize_type(
           self.parameter_types[current],
