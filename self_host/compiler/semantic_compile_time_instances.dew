@@ -12,6 +12,7 @@ fn self_host_clone_compile_time_module(source: SelfHostPlannedModuleLowering) ->
     source.functions
   }
   SelfHostPlannedModuleLowering::{
+    local_initializer_sources: source.local_initializer_sources
     module_id: source.module_id
     names: source.names.copy()
     name_diagnostics: source.name_diagnostics.copy()

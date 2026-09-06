@@ -688,6 +688,7 @@ priv struct BasicBodyInferencer {
   mut guarded_trait_scopes_ready : Bool
   pending_guarded_joins : Array[ExprId]
   mut guard_builtin_cache : Map[DeclId, Bytes]?
+  mut guard_local_sources : Map[ExprId, ExprId]?
   expression_types : Array[BodyTypeId]
   mut local_types : Array[BodyTypeId]
   block_types : Array[BodyTypeId]
@@ -795,6 +796,7 @@ fn BasicBodyInferencer::new(
     guarded_trait_scopes_ready: false,
     pending_guarded_joins: [],
     guard_builtin_cache: None,
+    guard_local_sources: None,
     expression_types: Array::make(body.expressions.length, 0),
     local_types: Array::make(name_info.locals.length, 0),
     block_types: Array::make(body.blocks.length, 0),

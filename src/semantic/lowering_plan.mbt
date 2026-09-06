@@ -1828,7 +1828,17 @@ fn plan_body_lowering_job(
   }
   let root_shape = planned_value_shape(resolved, inferred, root_type)
   let result_shape = if lambda >= 0 {
-    planned_resolved_value_shape(resolved, resolved.lambda_return_types[lambda])
+    let declared = resolved.lambda_return_types[lambda]
+    let selected = match reachability {
+      Some(live) => {
+        guard declared >= 0 && declared < live.type_substitutions.length() else {
+          abort("ARN-104 selected lambda return type")
+        }
+        live.type_substitutions[declared]
+      }
+      None => declared
+    }
+    planned_resolved_value_shape(resolved, selected)
   } else {
     match functions.callable_of(body.declaration) {
       Some(callable) => callable.result_shape

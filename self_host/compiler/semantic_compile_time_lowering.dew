@@ -354,6 +354,12 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
     offset => if offset < owned.length() {
       let index = owned[offset]
       let source = module_.expressions[index]
+      match self_host_compile_time_local_constant(module_, index) {
+        Option::Some(kind) => {
+          module_.expressions[index] = self_host_compile_time_replace_kind(source, kind)
+        }
+        Option::None => {}
+      }
       match source.kind {
         SelfHostPlannedExpressionKind::PlannedPrefixExpression(operator, operand) => if operator is SelfHostHirPrefixOperator::LogicalNot {
           match module_.expressions[operand].kind {

@@ -1,0 +1,118 @@
+open dew.std.option
+
+struct SelfHostQueryLocalScope {
+  expressions: SelfHostHirSpan
+  locals: SelfHostHirSpan
+  captures: SelfHostHirSpan
+}
+
+fn self_host_empty_query_local_scopes() -> Array<SelfHostQueryLocalScope> {
+  []
+}
+
+// Name references are relative to their body or lambda. Build one immutable
+// source map before inference; never use a relative ID as a module arena ID.
+fn self_host_query_local_sources(collected: SelfHostCollectedModule, names: SelfHostResolvedModuleNames) -> Map<U32, U32> {
+  let initializers = self_host_u32_slots(names.locals.length(), 4294967295u32)
+  let mut index = 0u32
+  for local in names.locals {
+    if local.kind is SelfHostBodyLocalKind::LetLocal && !local.mutable_ {
+      self_host_assert_array_index(local.source, collected.block_items.length(), "ARN-104 query local initializer")
+      let item = collected.block_items[local.source]
+      self_host_assert_compiler_invariant(item.kind == 0u32, "ARN-106 query local source")
+      initializers[index] = item.value
+    }
+    index = index + 1u32
+  }
+  let capture_initializers = self_host_u32_slots(names.captures.length(), 4294967295u32)
+  index = 0u32
+  for capture in names.captures {
+    let locals = match capture.source {
+      SelfHostLambdaCaptureSource::BodyLocalCapture(body, _) => match names.body(body) {
+        Option::Some(body) => body.locals
+        Option::None => {
+          self_host_assert_compiler_invariant(false, "ARN-106 query capture body")
+          unreachable()
+        }
+      }
+      SelfHostLambdaCaptureSource::LambdaLocalCapture(lambda, _) => {
+        self_host_assert_array_index(lambda, names.lambdas.length(), "ARN-104 query capture lambda")
+        names.lambdas[lambda].locals
+      }
+    }
+    let relative = match capture.source {
+      SelfHostLambdaCaptureSource::BodyLocalCapture(_, local) => local
+      SelfHostLambdaCaptureSource::LambdaLocalCapture(_, local) => local
+    }
+    self_host_assert_array_span(locals.start, locals.length, initializers.length(), "ARN-101 query capture locals")
+    self_host_assert_array_index(relative, locals.length, "ARN-102 query captured local")
+    if !capture.mutable_ {
+      capture_initializers[index] = initializers[locals.start + relative]
+    }
+    index = index + 1u32
+  }
+  let scopes = self_host_empty_query_local_scopes()
+  index = 0u32
+  for body in collected.bodies {
+    scopes.push(SelfHostQueryLocalScope::{
+      expressions: body.expressions
+      locals: names.bodies[index].locals
+      captures: self_host_empty_hir_span(0u32)
+    })
+    index = index + 1u32
+  }
+  index = 0u32
+  for lambda in collected.lambdas {
+    scopes.push(SelfHostQueryLocalScope::{
+      expressions: lambda.body.expressions
+      locals: names.lambdas[index].locals
+      captures: names.lambdas[index].captures
+    })
+    index = index + 1u32
+  }
+  let owners = self_host_u32_slots(collected.expressions.length(), 4294967295u32)
+  let lengths = self_host_u32_slots(collected.expressions.length(), 4294967295u32)
+  index = 0u32
+  for scope in scopes {
+    let span = scope.expressions
+    self_host_assert_array_span(span.start, span.length, owners.length(), "ARN-101 query local scope")
+    let _ = while 0u32 {
+      offset => if offset < span.length {
+        let expression = span.start + offset
+        if span.length <= lengths[expression] {
+          lengths[expression] = span.length
+          owners[expression] = index
+        }
+        continue offset + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    index = index + 1u32
+  }
+  let result = self_host_empty_u32_u32_map()
+  index = 0u32
+  for owner in owners {
+    if owner != 4294967295u32 {
+      let scope = scopes[owner]
+      let source = match names.expression_references[index] {
+        SelfHostBodyNameReference::LocalNameReference(local) => {
+          self_host_assert_array_span(scope.locals.start, scope.locals.length, initializers.length(), "ARN-101 query local arena")
+          self_host_assert_array_index(local, scope.locals.length, "ARN-102 query local reference")
+          initializers[scope.locals.start + local]
+        }
+        SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => {
+          self_host_assert_array_span(scope.captures.start, scope.captures.length, capture_initializers.length(), "ARN-101 query capture arena")
+          self_host_assert_array_index(capture, scope.captures.length, "ARN-102 query capture reference")
+          capture_initializers[scope.captures.start + capture]
+        }
+        _ => 4294967295u32
+      }
+      if source != 4294967295u32 {
+        result.set(index, source)
+      }
+    }
+    index = index + 1u32
+  }
+  result
+}

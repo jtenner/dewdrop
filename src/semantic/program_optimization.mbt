@@ -2274,8 +2274,16 @@ fn program_fold_binary(
 }
 
 ///|
-fn fold_program_constants(modules : Array[PlannedModuleLowering]) -> Unit {
+fn fold_program_constants(
+  modules : Array[PlannedModuleLowering],
+  fold_immutable_locals? : Bool = false,
+) -> Unit {
   for module_ in modules {
+    let local_sources = if fold_immutable_locals {
+      compile_time_planned_local_initializers(module_)
+    } else {
+      Map([])
+    }
     let mut changed = true
     let mut remaining = module_.expressions.length() + 1
     while changed && remaining > 0 {
@@ -2283,6 +2291,11 @@ fn fold_program_constants(modules : Array[PlannedModuleLowering]) -> Unit {
       changed = false
       for expression in 0..<module_.expressions.length() {
         let folded = match module_.expressions[expression].kind {
+          PlannedLocalGet(_) | PlannedCaptureGet(_) =>
+            match local_sources.get(expression) {
+              Some(initializer) => program_fold_constant(module_, initializer)
+              None => None
+            }
           PlannedPrefixExpression(operator, value) =>
             match program_fold_constant(module_, value) {
               Some(constant) => program_fold_prefix(operator, constant)

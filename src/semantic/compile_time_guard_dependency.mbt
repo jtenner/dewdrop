@@ -17,6 +17,22 @@ fn BasicBodyInferencer::guard_condition_dependent(
     }
     seen[expression] = true
     match self.collected.expressions[expression] {
+      HirNameExpr(_, _) => {
+        let sources = match self.guard_local_sources {
+          Some(value) => value
+          None => {
+            let value = compile_time_source_local_initializers(
+              self.collected,
+              self.names,
+            )
+            self.guard_local_sources = Some(value)
+            value
+          }
+        }
+        if sources.get(expression) is Some(initializer) {
+          work.push(initializer)
+        }
+      }
       HirPrefixExpr(_, value, _)
       | HirFieldExpr(value, _, _)
       | HirQualifiedExpr(value, _, _)

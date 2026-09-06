@@ -757,6 +757,14 @@ pub fn main(case: U32) -> Bool {
   } else if case == 91u32 {
     query_overloaded_select(())
     query_overloaded_select(7i32) == 14i32 && query_overloaded_select(8i64) == 16i64
+  } else if case == 92u32 {
+    query_local_guard(())
+    query_local_guard(21i64) == 42i64
+  } else if case == 93u32 {
+    query_captured_guard(())
+    query_captured_guard(21i64) == 42i64
+  } else if case == 94u32 {
+    query_local_width(7i32) == 0i64 && query_local_width(42i64) == 42i64
   } else {
     false
   }
@@ -830,6 +838,37 @@ fn query_selected_never<T>(value: T, flag: Bool) -> I32 {
 
 fn query_selected_accept(left: I32, right: I32) -> I32 {
   right
+}
+
+fn query_local_guard<T>(value: T) -> T {
+  let integer = is_integer::<T>()
+  let selected = integer
+  if selected {
+    value + value
+  } else {
+    value
+  }
+}
+
+fn query_captured_guard<T>(value: T) -> T {
+  let integer = is_integer::<T>()
+  let read = fn() -> T {
+    if integer {
+      value + value
+    } else {
+      value
+    }
+  }
+  read()
+}
+
+fn query_local_width<T>(value: T) -> I64 {
+  let width = bit_width::<T>()
+  if width == 64u32 {
+    query_accept_i64(value, true)
+  } else {
+    0i64
+  }
 }
 
 builtin query_overloaded_add(value: I32, right: I32) -> I32 = "i32.add"

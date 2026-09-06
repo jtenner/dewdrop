@@ -201,6 +201,19 @@ fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering
             Option::None => {}
           }
           match diagnostic {
+            SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(constraint) => match constraint {
+              SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(left, right, _) => {
+                report.append(" left-type=")
+                report.append_i32(left)
+                report.append(" left-shape=")
+                report.append(self_host_linked_shape_name(self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, left)))
+                report.append(" right-type=")
+                report.append_i32(right)
+                report.append(" right-shape=")
+                report.append(self_host_linked_shape_name(self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, right)))
+              }
+              _ => {}
+            }
             SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, first, second, count, _) => {
               report.append(" first=")
               report.append_u64(first)

@@ -449,6 +449,7 @@ fn self_host_basic_empty_local_module_value_map() -> Map<U64, I32> {
 }
 
 struct SelfHostBasicImportedInputs {
+  local_initializer_sources: Map<U32, U32>
   resolved_imports: Option<SelfHostResolvedModuleImports>
   scope: Option<SelfHostModuleImportScope>
   callables: Array<SelfHostResolvedImportedCallable>
@@ -8246,6 +8247,7 @@ fn self_host_infer_basic_module_bodies(
     resolved,
     names,
     SelfHostBasicImportedInputs::{
+      local_initializer_sources: self_host_query_local_sources(collected, names)
       resolved_imports: Option::None
       scope: Option::None
       callables: []
@@ -8333,6 +8335,7 @@ fn self_host_basic_imported_inputs(
     }
   }
   SelfHostBasicImportedInputs::{
+      local_initializer_sources: self_host_query_local_sources(collected, names)
       resolved_imports: Option::Some(resolved_imports)
       scope: Option::Some(scope)
       callables: callables

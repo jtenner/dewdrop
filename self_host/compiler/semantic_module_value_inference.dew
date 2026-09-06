@@ -65,6 +65,7 @@ fn self_host_module_value_inputs_with_slots(
   local_types: Map<U64, I32>,
 ) -> SelfHostBasicImportedInputs {
   SelfHostBasicImportedInputs::{
+    local_initializer_sources: imported.local_initializer_sources
     resolved_imports: imported.resolved_imports
     scope: imported.scope
     callables: imported.callables
@@ -248,6 +249,7 @@ fn self_host_infer_module_values(
     resolved,
     names,
     SelfHostBasicImportedInputs::{
+      local_initializer_sources: self_host_query_local_sources(collected, names)
       resolved_imports: Option::None
       scope: Option::None
       callables: []
@@ -290,6 +292,7 @@ fn self_host_infer_module_values_with_imports(
     resolved,
     names,
     SelfHostBasicImportedInputs::{
+      local_initializer_sources: self_host_query_local_sources(collected, names)
       resolved_imports: Option::None
       scope: Option::None
       callables: callables

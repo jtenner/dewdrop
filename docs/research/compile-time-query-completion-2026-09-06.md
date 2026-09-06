@@ -3,6 +3,27 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Local and captured query values
+
+Both compilers now follow immutable local initializers when finding dependent
+query guards and folding scalar query results. Local and capture IDs are relative
+to a body or lambda, not a module. Checked expression-to-initializer maps preserve
+that ownership across bodies, captures, and selected source copies. Mutable
+values are not treated as constants. This map records dependence; it does not
+invent trait evidence or a physical type.
+
+Selected lambda return annotations use the private type substitution map. A
+selected source error stays a source diagnostic instead of reaching lambda
+signature creation. Generic lambda failures now include the owner and lambda.
+
+The first single-body tests missed the ID error. The shared multi-body corpus
+exposed it in both compilers. All 96 shared cases now execute: native generation
+12.317 s and execution 0.023 s; self-host hardening passes 220 tests, 29 numeric
+records, and all 96 cases in 32.616 s. The hardening aggregate remains a
+performance defect. Final full-lane and bootstrap validation follows this batch.
+All seven native selected-source tests pass, including the optimized multi-body
+capture regression. The filtered routine lane takes 32.293 s (over budget).
+
 ## Deferred overload selection
 
 Both compilers can defer local and imported overload selection inside a query

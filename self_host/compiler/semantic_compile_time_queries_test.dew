@@ -2,6 +2,38 @@ open dew.std.testing
 open dew.std.string
 open dew.std.string_builder
 
+test "local numeric query guards retain source dependence" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\nfn read<T>(value: T) -> I64 {\n  let width = bit_width::<T>()\n  if width == 64u32 {\n    accept(value)\n  } else {\n    0i64\n  }\n}\n",
+    b"pub builtin bit_width<T>() -> U32 = \"types.bit_width\"\npub fn accept(value: I64) -> I64 {\n  value\n}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let imports = fixture.imports
+  let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
+  let inputs = self_host_basic_imported_inputs(collected, imports.resolved, names, imports.scope, imports.callables, imports.generic_parameter_ids, imports.parameter_types, imports.parameter_receivers, imports.implementations, imports.fields, imports.variants, imports.variant_payload_types, imports.type_declaration_types, imports.type_generic_spans, imports.module_value_types, imports)
+  let inferencer = SelfHostBasicBodyInferencer::new(collected, imports.resolved, names, inputs, collected.bodies[0u32], names.bodies[0u32])
+  let targets = inferencer.guard_builtin_targets()
+  assert(targets.length() == 1u32, "one imported type query target")
+  let mut found = false
+  for expression in collected.expressions {
+    match expression {
+      SelfHostHirExpr::IfExpr(condition, _, _, _) => {
+        found = true
+        assert(inferencer.guard_condition_dependent(condition, targets), "a query in a local initializer marks its condition as dependent")
+      }
+      _ => {}
+    }
+  }
+  assert(found, "fixture contains a conditional")
+  let result = inferencer.run()
+  for diagnostic in result.diagnostics {
+    match diagnostic {
+      SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => assert(false, "the retained call equation must wait for its generic argument")
+      _ => {}
+    }
+  }
+}
+
 test "imported overloads reject independent operand errors before selection" {
   let fixture = self_host_imported_semantics_fixture(b"open app.library\nbuiltin is_integer<T>() -> Bool = \"types.is_integer\"\nfn select<T>(value: T) -> T {\n  if is_integer::<T>() {\n    consume(value, true)\n  } else {\n    value\n  }\n}\npub fn main() -> I64 {\n  select(7i32)\n  select(())\n  select(7i64)\n}\n", b"pub builtin consume(value: I32, right: I32) -> I32 = \"i32.add\"\npub builtin consume(value: I64, right: I64) -> I64 = \"i64.add\"\n")
   assert(fixture.frozen.import_diagnostics.length() == 0u32, "overload fixture import scope")

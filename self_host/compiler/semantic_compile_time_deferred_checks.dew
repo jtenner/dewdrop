@@ -76,6 +76,10 @@ impl SelfHostBasicBodyInferencer {
           self_host_assert_array_index(expression, self.collected.expressions.length(), "ARN-104 deferred guard expression")
           seen.set(expression, true)
           match self.collected.expressions[expression] {
+            SelfHostHirExpr::NameExpr(_, _) => match self.imported.local_initializer_sources.get(expression) {
+              Option::Some(initializer) => work.push(initializer)
+              Option::None => {}
+            }
             SelfHostHirExpr::PrefixExpr(_, value, _) => work.push(value)
             SelfHostHirExpr::BinaryExpr(_, left, right, _) => {
               work.push(left)

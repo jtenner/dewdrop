@@ -65,6 +65,11 @@ fn materialize_compile_time_lambdas(
     Some(value) => value.module_
     None => return 0
   }
+  // A source diagnostic is not a physical type certificate. The linker keeps
+  // that diagnostic; do not replace it with a generic-carrier assertion here.
+  if instance.diagnostics.length() > 0 {
+    return 0
+  }
   let root = match owner.kind {
     PlannedWasmDefinedFunction(body) => body
     _ => return 0
@@ -125,16 +130,31 @@ fn materialize_compile_time_lambdas(
       }
     }
     let result_start = fragments.function_value_types.length()
+    let result_shape = program_resolve_specialized_shape(
+      instance,
+      generics,
+      fragments.specialization_shapes,
+      owner.specialization_shapes,
+      lambda.root_type,
+      lambda.result_shape,
+    )
+    if result_shape == GenericPlannedValueShape {
+      abort(
+        "SPC-301 unresolved lambda result owner=" +
+        owner.name.to_string() +
+        " lambda=" +
+        index.to_string() +
+        " root=" +
+        lambda.root_type.to_string() +
+        " root-shape=" +
+        @debug.to_string(lambda.root_shape) +
+        " declared=" +
+        @debug.to_string(lambda.result_shape),
+      )
+    }
     program_append_specialization_value_types(
       fragments.function_value_types,
-      program_resolve_specialized_shape(
-        instance,
-        generics,
-        fragments.specialization_shapes,
-        owner.specialization_shapes,
-        lambda.root_type,
-        lambda.result_shape,
-      ),
+      result_shape,
     )
     let parameters = {
       start: parameter_start,

@@ -284,6 +284,7 @@ pub struct SelfHostPlannedLambdaLowering {
 }
 
 pub struct SelfHostPlannedModuleLowering {
+  local_initializer_sources: Map<U32, U32>
   module_id: U64
   names: Array<String>
   name_diagnostics: Array<SelfHostBodyResolutionDiagnostic>
@@ -1351,6 +1352,7 @@ fn self_host_plan_module_lowering_with_reachability(
   }
   self_host_lowering_directize_targets(expressions)
   SelfHostPlannedModuleLowering::{
+    local_initializer_sources: self_host_query_local_sources(collected, names)
     module_id: collected.module_id
     names: collected.names
     name_diagnostics: names.diagnostics

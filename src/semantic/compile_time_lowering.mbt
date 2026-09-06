@@ -221,7 +221,7 @@ fn fold_module_compile_time_queries(
       _ => ()
     }
   }
-  fold_program_constants([module_])
+  fold_program_constants([module_], fold_immutable_locals=true)
   // A constant left operand proves that the right operand is not evaluated.
   // Its type may still be deferred, so do not require a right-hand constant.
   for index, source in module_.expressions {
