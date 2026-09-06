@@ -424,6 +424,16 @@ still above the performance budget. Shared native Wasm generation and 57
 execution checks pass (9.239 s and 0.023 s). Guarded type checking remains the
 main unfinished query feature; final integration and B/C checks follow it.
 
+### Projected types / nominal demand bootstrap checkpoint
+
+The first bootstrap exposed an unwanted `dew_map_entries` host dependency in
+member recipe construction. Imported nominal nodes now come from the interned
+type arena, with checked imported generic spans; no Map iterator is required.
+The next complete bootstrap passes, with B and C byte-identical in raw/core and
+linked form: `bc9fd31d157f9e96ccaf8d246530feedd3556d7da3bce80f99fad24681b2f4e0`.
+Total time is 148.762 s; A→B is 46.722 s and B→C is 50.323 s. These remain
+performance defects. This checkpoint precedes guarded trait/type checking.
+
 Projection owners survive zonking, body/lambda/module-value copying, compaction,
 logical query reads, signature pooling, and frozen module values. V1 body codecs
 use type tag 6 and diagnostic tag 2. New graph checks reject invalid operations

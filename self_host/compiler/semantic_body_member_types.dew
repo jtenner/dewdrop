@@ -127,28 +127,34 @@ fn self_host_body_member_type_context(collected: SelfHostCollectedModule, resolv
       break self_host_semantic_unit()
     }
   }
-  let entries = imported.type_generic_spans.entries()
-  let _ = while entries.next() {
-    Option::Some(pair) => {
-      let declaration = pair.key()
-      let span = pair.value()
-      let parameters = self_host_empty_member_parameters()
-      let _ = while 0u32 {
-        index => if index < span.length {
-          parameters.push(imported.generic_parameter_ids[span.start + index])
-          continue index + 1u32
-        } else {
-          break self_host_semantic_unit()
+  // Nominal nodes are interned once. Walk that arena instead of requesting a
+  // runtime Map iterator while the bootstrap compiler builds member recipes.
+  for type_ in resolved.types {
+    match type_ {
+      SelfHostResolvedType::NominalType(declaration) => if !declarations.contains_key(declaration) {
+        match imported.type_generic_spans.get(declaration) {
+          Option::Some(span) => {
+            self_host_assert_array_span(span.start, span.length, imported.generic_parameter_ids.length(), "ARN-101 imported member generic IDs")
+            let parameters = self_host_empty_member_parameters()
+            let _ = while 0u32 {
+              index => if index < span.length {
+                parameters.push(imported.generic_parameter_ids[span.start + index])
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            declarations.set(declaration, SelfHostBodyMemberTypeDeclaration::{
+              parameters: parameters
+              fields: self_host_empty_member_fields()
+              variants: self_host_empty_member_variants()
+            })
+          }
+          Option::None => {}
         }
       }
-      declarations.set(declaration, SelfHostBodyMemberTypeDeclaration::{
-        parameters: parameters
-        fields: self_host_empty_member_fields()
-        variants: self_host_empty_member_variants()
-      })
-        continue entries.next()
+      _ => {}
     }
-    Option::None => break self_host_semantic_unit()
   }
   for field in imported.fields {
     if field.variant is Option::None {
