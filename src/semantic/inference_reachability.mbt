@@ -23,8 +23,13 @@ fn selected_inference_source(
   names : ResolvedModuleNames,
   declaration : DeclId,
   conditions : Map[ExprId, Bool],
+  selected_plan? : PlannedModuleLowering? = None,
 ) -> (CollectedModule, InferenceReachability) {
-  let source = { ..collected, expressions: collected.expressions.copy(), }
+  let source = {
+    ..collected,
+    expressions: collected.expressions.copy(),
+    blocks: collected.blocks.copy(),
+  }
   let live : InferenceReachability = {
     declaration,
     expressions: Array::make(collected.expressions.length(), true),
@@ -110,11 +115,40 @@ fn selected_inference_source(
             source.expressions[expression] = HirBlockExpr(block, offset)
             break
           }
+          if alternative < 0 {
+            // The language gives an if without else a logical Unit result.
+            source.expressions[expression] = HirProductExpr(
+              { start: 0, length: 0, }, offset,
+            )
+            break
+          }
           guard alternative >= 0 && alternative < source.expressions.length() else {
             abort("ARN-104 selected inference alternative")
           }
           original = alternative
           source.expressions[expression] = collected.expressions[original]
+        }
+        if selected_plan is Some(plan) {
+          match (source.expressions[expression], plan.expressions[expression].kind) {
+            (HirBinaryExpr(HirLogicalAnd, _, _, offset), PlannedBoolConst(value))
+            | (HirBinaryExpr(HirLogicalOr, _, _, offset), PlannedBoolConst(value)) =>
+              source.expressions[expression] = HirBoolExpr(value, offset)
+            _ => ()
+          }
+          if plan.expressions[expression].kind is PlannedParameterSelect(prefix, _) &&
+            !plan.expressions[expression].flow.may_fall_through() {
+            guard program_specialization_span_is_valid(prefix, plan.expression_children.length()) else {
+              abort("ARN-101 selected inference operand prefix")
+            }
+            for offset in 0..<prefix.length {
+              work.push(InferenceExpression(plan.expression_children[prefix.start + offset]))
+            }
+            // Static callee syntax still participates in source checking.
+            if source.expressions[expression] is HirCallExpr(target, _, _) {
+              work.push(InferenceExpression(target))
+            }
+            continue
+          }
         }
         match source.expressions[expression] {
           HirBlockExpr(block, _) => work.push(InferenceBlock(block))
@@ -175,7 +209,21 @@ fn selected_inference_source(
           continue
         }
         live.blocks[block] = true
-        let items = collected.blocks[block].items
+        let original = collected.blocks[block]
+        let items = match selected_plan {
+          Some(plan) => {
+            let length = plan.blocks[block].items.length
+            guard length <= original.items.length else {
+              abort("ARN-101 selected inference block prefix")
+            }
+            { ..original.items, length, }
+          }
+          None => original.items
+        }
+        source.blocks[block] = { ..original, items, }
+        guard program_specialization_span_is_valid(items, collected.block_items.length()) else {
+          abort("ARN-101 selected inference block items")
+        }
         for offset in 0..<items.length {
           match collected.block_items[items.start + offset] {
             HirExpressionItem(value, _) => work.push(InferenceExpression(value))

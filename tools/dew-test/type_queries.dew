@@ -740,6 +740,16 @@ pub fn main(case: U32) -> Bool {
     query_binding_only::<QueryLeft>() == 42i32
   } else if case == 84u32 {
     query_guarded_binding::<Unit>() == 0i32 && query_guarded_binding::<QueryRight>() == 42i32
+  } else if case == 85u32 {
+    query_selected_lambda(()) == 0i32 && query_selected_lambda(QueryLeft::{
+      value: 42i32
+    }) == 42i32
+  } else if case == 86u32 {
+    query_selected_return(7i64) == 42i32
+  } else if case == 87u32 {
+    query_selected_short_circuit(7i64) == 42i32
+  } else if case == 88u32 {
+    query_selected_never(7i64, false) == 42i32
   } else {
     false
   }
@@ -762,4 +772,55 @@ fn query_nested_transfer(initial: I32) -> I64 {
       break value
     }
   }
+}
+
+fn query_selected_lambda<T>(value: T) -> I32 {
+  let call = fn(item: T) -> I32 {
+    if is_unit::<T>() {
+      0i32
+    } else {
+      item.value
+    }
+  }
+  call(value)
+}
+
+fn query_selected_return<T>(value: T) -> I32 {
+  if is_integer::<T>() {
+    return 42i32
+    value.missing
+  } else {
+    0i32
+  }
+}
+
+fn query_selected_short_circuit<T>(value: T) -> I32 {
+  if is_integer::<T>() {
+    let yes = is_integer::<T>() || value.missing
+    if yes {
+      42i32
+    } else {
+      0i32
+    }
+  } else {
+    0i32
+  }
+}
+
+builtin query_unreachable() -> Never = "dew_unreachable"
+
+fn query_selected_never<T>(value: T, flag: Bool) -> I32 {
+  if is_integer::<T>() {
+    if flag {
+      query_selected_accept(query_unreachable(), value.missing)
+    } else {
+      42i32
+    }
+  } else {
+    0i32
+  }
+}
+
+fn query_selected_accept(left: I32, right: I32) -> I32 {
+  right
 }

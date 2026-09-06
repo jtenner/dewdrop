@@ -35,6 +35,7 @@ fn recheck_compile_time_body(
     analyzed.names,
     declaration,
     conditions,
+    selected_plan=Some(previous),
   )
   let (resolved, substitutions) = compile_time_inference_types(
     owner,

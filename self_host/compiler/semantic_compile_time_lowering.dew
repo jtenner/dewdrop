@@ -281,6 +281,14 @@ fn self_host_fold_compile_time_assertion(module_: SelfHostPlannedModuleLowering,
 
 fn self_host_compile_time_bool_binary(module_: SelfHostPlannedModuleLowering, operator: SelfHostHirBinaryOperator, left: U32, right: U32) -> Option<Bool> {
   match module_.expressions[left].kind {
+    SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
+      if (operator is SelfHostHirBinaryOperator::LogicalOr && value) || (operator is SelfHostHirBinaryOperator::LogicalAnd && !value) {
+        return Option::Some(value)
+      }
+    }
+    _ => {}
+  }
+  match module_.expressions[left].kind {
     SelfHostPlannedExpressionKind::PlannedBoolConst(a) => match module_.expressions[right].kind {
       SelfHostPlannedExpressionKind::PlannedBoolConst(b) => match operator {
         SelfHostHirBinaryOperator::LogicalAnd => Option::Some(a && b)

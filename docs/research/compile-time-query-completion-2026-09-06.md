@@ -3,6 +3,22 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Selected source follows retained evaluation
+
+Both source recheck paths now use the selected plan's block prefixes and
+non-returning operand prefixes. Constant short-circuit expressions remove the
+unused right operand before source rechecking. Lambda parameter types use the
+private source substitution map. A false no-else branch has its declared Unit
+result. Source IDs remain stable; no live type is replaced with guessed evidence.
+
+Four native regression tests pass. Both compilers execute 90 shared checks,
+including typed lambdas, code after return, short-circuit right operands, and
+arguments after Never. Hardening passes 211 tests and 29 failure records in
+31.872 s (an aggregate performance defect). Native shared generation takes
+2.199 s and execution 0.024 s. The first fixture used the wrong unreachable
+builtin ID; the import check rejected it, and the corrected fixture uses
+dew_unreachable. Method bounds, deferred overloads, and final checks remain.
+
 ## Unused projected type bindings
 
 Both compilers now make a function query-sensitive when an unused local type

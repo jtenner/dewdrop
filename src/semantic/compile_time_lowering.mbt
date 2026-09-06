@@ -222,6 +222,24 @@ fn fold_module_compile_time_queries(
     }
   }
   fold_program_constants([module_])
+  // A constant left operand proves that the right operand is not evaluated.
+  // Its type may still be deferred, so do not require a right-hand constant.
+  for index, source in module_.expressions {
+    if !compile_time_in_body(module_, index, active) {
+      continue
+    }
+    match source.kind {
+      PlannedBinaryExpression(HirLogicalOr, left, _) =>
+        if module_.expressions[left].kind is PlannedBoolConst(true) {
+          module_.expressions[index] = { ..source, kind: PlannedBoolConst(true), }
+        }
+      PlannedBinaryExpression(HirLogicalAnd, left, _) =>
+        if module_.expressions[left].kind is PlannedBoolConst(false) {
+          module_.expressions[index] = { ..source, kind: PlannedBoolConst(false), }
+        }
+      _ => ()
+    }
+  }
   if selected_conditions is Some(conditions) {
     for expression, source in context.program.modules[module_index].expressions {
       if compile_time_in_body(module_, expression, active) &&

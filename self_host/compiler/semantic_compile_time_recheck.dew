@@ -22,7 +22,7 @@ fn self_host_recheck_compile_time_body(lowering: SelfHostPlannedProgramLowering,
   let collected = lowering.collected.modules.at(owner)
   let imports = self_host_resolve_module_imports(frozen.interfaces.at(owner).resolved_types, frozen.import_scopes.at(owner))
   let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
-  let selected_source = self_host_selected_inference_source(collected, names, declaration, conditions)
+  let selected_source = self_host_selected_inference_source(collected, names, declaration, conditions, previous)
   let source = selected_source.source
   let live = selected_source.live
   let arena = self_host_clone_compile_time_module(original)

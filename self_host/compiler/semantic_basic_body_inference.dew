@@ -2509,7 +2509,7 @@ impl SelfHostBasicBodyInferencer {
             }
           }
           SelfHostHirExpr::LambdaExpr(lambda, _) => if lambda < self.resolved.lambda_function_types.length() {
-            self.solver.resolved_type(self.resolved.lambda_function_types[lambda])
+            self.body_signature_type(self.resolved.lambda_function_types[lambda])
           } else {
             self.solver.error_type()
           }

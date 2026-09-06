@@ -88,6 +88,7 @@ struct SelfHostSelectedInferenceSource {
   source: SelfHostCollectedModule
   live: SelfHostInferenceReachability
   conditions: Map<U32, Bool>
+  plan: SelfHostPlannedModuleLowering
 }
 
 impl SelfHostSelectedInferenceSource {
@@ -128,7 +129,17 @@ impl SelfHostSelectedInferenceSource {
               continue work.length()
             }
             self.live.blocks[block] = true
-            let span = self.collected.blocks[block].items
+            let original = self.collected.blocks[block]
+            let length = self.plan.blocks[block].items.length
+            self_host_assert_compiler_invariant(length <= original.items.length, "ARN-101 selected inference block prefix")
+            let span = SelfHostHirSpan::{
+              start: original.items.start
+              length: length
+            }
+            self.source.blocks[block] = SelfHostHirBlock::{
+              items: span
+              offset: original.offset
+            }
             self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.block_items.length()), "ARN-101 guarded block items")
             let _ = while 0u32 {
               index => if index < span.length {
@@ -203,6 +214,10 @@ impl SelfHostSelectedInferenceSource {
                       self.source.expressions[expression] = SelfHostHirExpr::BlockExpr(block, offset)
                       break self_host_semantic_unit()
                     } else {
+                      if alternative == 4294967295u32 {
+                        self.source.expressions[expression] = SelfHostHirExpr::ProductExpr(self_host_empty_hir_span(0u32), offset)
+                        break self_host_semantic_unit()
+                      }
                       self_host_assert_array_index(alternative, self.collected.expressions.length(), "ARN-104 selected alternative")
                       original = alternative
                       self.source.expressions[expression] = self.collected.expressions[original]
@@ -213,6 +228,37 @@ impl SelfHostSelectedInferenceSource {
                   _ => break self_host_semantic_unit()
                 }
               }
+            }
+            let planned = self.plan.expressions[expression]
+            match self.source.expressions[expression] {
+              SelfHostHirExpr::BinaryExpr(operator, _, _, offset) => if operator is SelfHostHirBinaryOperator::LogicalAnd || operator is SelfHostHirBinaryOperator::LogicalOr {
+                match planned.kind {
+                  SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
+                    self.source.expressions[expression] = SelfHostHirExpr::BoolExpr(value, offset)
+                  }
+                  _ => {}
+                }
+              }
+              _ => {}
+            }
+            match planned.kind {
+              SelfHostPlannedExpressionKind::PlannedEvaluationSequence(prefix) => if !planned.flow.falls_through {
+                self_host_assert_array_span(prefix.start, prefix.length, self.plan.expression_children.length(), "ARN-101 selected inference operand prefix")
+                let _ = while 0u32 {
+                  index => if index < prefix.length {
+                    work.push(SelfHostCompileTimeGuardWalk::GuardExpression(self.plan.expression_children[prefix.start + index]))
+                    continue index + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+                match self.source.expressions[expression] {
+                  SelfHostHirExpr::CallExpr(target, _, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(target))
+                  _ => {}
+                }
+                continue work.length()
+              }
+              _ => {}
             }
             match self.source.expressions[expression] {
               SelfHostHirExpr::ProductExpr(span, _) => self.guard_expression_children(span, work)
@@ -304,7 +350,7 @@ impl SelfHostSelectedInferenceSource {
 
 }
 
-fn self_host_selected_inference_source(collected: SelfHostCollectedModule, names: SelfHostResolvedModuleNames, declaration: U64, conditions: Map<U32, Bool>) -> SelfHostSelectedInferenceSource {
+fn self_host_selected_inference_source(collected: SelfHostCollectedModule, names: SelfHostResolvedModuleNames, declaration: U64, conditions: Map<U32, Bool>, plan: SelfHostPlannedModuleLowering) -> SelfHostSelectedInferenceSource {
   let live = SelfHostInferenceReachability::{
     declaration: declaration
     expressions: self_host_inference_bool_slots(collected.expressions.length())
@@ -355,6 +401,7 @@ fn self_host_selected_inference_source(collected: SelfHostCollectedModule, names
     source: self_host_clone_selected_source(collected)
     live: live
     conditions: conditions
+    plan: plan
   }
   match root.root {
     SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => selected.walk(SelfHostCompileTimeGuardWalk::GuardExpression(expression))

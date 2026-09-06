@@ -1833,7 +1833,7 @@ fn BasicBodyInferencer::initialize_expression_types(
           _ => self.solver.fresh_variable()
         }
       HirLambdaExpr(lambda, _) =>
-        self.solver.resolved_type(self.resolved.lambda_function_types[lambda])
+        self.body_signature_type(self.resolved.lambda_function_types[lambda])
       HirIfExpr(_, _, alternative, _) if alternative < 0 =>
         self.primitive(UnitType)
       HirAssignmentExpr(_, _, _) => self.primitive(UnitType)
