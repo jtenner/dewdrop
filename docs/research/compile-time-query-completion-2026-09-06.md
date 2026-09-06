@@ -29,6 +29,25 @@ exposed a native heap-type narrowing gap. Assigning each branch's known span
 directly avoids that gap here; the broader reference-boundary audit must still
 cover conditional field writes.
 
+## Query fixture encoder boundary
+
+The expanded 65-check query fixture exposed recursive instruction encoding in
+Starshine on Node's normal stack. A bounded nested-control byte test reproduced
+the failure. Starshine now uses an explicit work stack with sequence cursors;
+leaf opcode encoding does not recurse into control bodies. Both public encoder
+entry points preserve exact bytes, including legacy catch and delegate endings.
+All 136 binary tests pass in native (10.735 s) and Wasm (0.474 s) builds.
+The FFI provider was rebuilt in 23.613 s and its consumer fingerprints and
+source metadata regenerated. Hardening passes 203 tests, 29 invariant records,
+and 65 query checks in 50.048 s on the normal stack. The total is still a
+performance bug; increasing the Node stack is not required for this fix.
+
+Before the new branch-read work, checkpoint `932ea66` also passed compiler-B/C
+bootstrap with identical raw and linked bytes:
+`f73ae90506439c7fd57cdcdeac65736686c7062b8ebb71cc7db33c046f4ab4e0`.
+The 157.305 s total, 37.336 s A build, and 51.952 s B-to-C run remain performance
+bugs. Final bootstrap must run again after the remaining query changes.
+
 ## Native guarded trait calls
 
 `implements<T, Trait>()` supplies branch-local proof of the exact trait
