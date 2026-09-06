@@ -3521,7 +3521,7 @@ fn starshine_body_locals(
         }
       }
       @semantic.LetLocal | @semantic.PatternLocal => {
-        if elided_locals[local_id] {
+        if planned_local.elided || elided_locals[local_id] {
           continue
         }
         let cell_slot = starshine_local_capture_cell_slot(

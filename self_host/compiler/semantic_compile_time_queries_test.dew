@@ -2,10 +2,8 @@ open dew.std.testing
 open dew.std.string
 open dew.std.string_builder
 
-test "compile-time flow cuts non-returning call operands and remains stable" {
-  let collected = self_host_collect_bytes(24722u64,
-    b"builtin stop() -> Never = \"dew_unreachable\"\nfn later() -> I32 {\n  9i32\n}\nfn consume(left: I32, middle: I32, right: I32) -> I32 {\n  right\n}\npub fn main() -> I32 {\n  consume(1i32, stop(), later())\n}\n",
-  )
+fn self_host_test_query_flow_module(source: Bytes) -> SelfHostPlannedModuleLowering {
+  let collected = self_host_collect_bytes(24722u64, source)
   assert(collected.diagnostics.length() == 0u32, "flow fixture syntax")
   let resolved = self_host_resolve_module_types(collected)
   assert(resolved.diagnostics.length() == 0u32, "flow fixture signature types")
@@ -14,11 +12,34 @@ test "compile-time flow cuts non-returning call operands and remains stable" {
   let basic = self_host_infer_basic_module_bodies(collected, resolved, names)
   let merged = self_host_merge_module_inference(basic)
   assert(merged.diagnostics.length() == 0u32, "flow fixture inferred types")
-  let module_ = self_host_plan_module_lowering(collected, resolved,
+  self_host_plan_module_lowering(collected, resolved,
     self_host_plan_module_type_layouts(collected, resolved),
     self_host_plan_module_initialization(collected, values),
     self_host_plan_module_functions(collected, resolved), names, merged,
     self_host_analyze_basic_module_flows(collected, resolved, basic),
+  )
+}
+
+test "compile-time dead locals retain their logical type" {
+  let module_ = self_host_test_query_flow_module(
+    b"pub fn main(flag: Bool) -> I32 {\n  if true {\n    let live = 7i32\n    live\n  } else {\n    let dead = 9i64\n    0i32\n  }\n}\n",
+  )
+  let _ = self_host_prune_compile_time_body(module_, module_.bodies[0u32])
+  let mut count = 0u32
+  for local in module_.locals {
+    if local.shape is SelfHostPlannedValueShape::I64PlannedValueShape {
+      assert(local.elided, "dead I64 keeps its type but has no physical slot")
+      count = count + 1u32
+    } else {
+      assert(!local.elided, "live local and declared parameter remain present")
+    }
+  }
+  assert(count == 1u32, "one dead scalar local")
+}
+
+test "compile-time flow cuts non-returning call operands and remains stable" {
+  let module_ = self_host_test_query_flow_module(
+    b"builtin stop() -> Never = \"dew_unreachable\"\nfn later() -> I32 {\n  9i32\n}\nfn consume(left: I32, middle: I32, right: I32) -> I32 {\n  right\n}\npub fn main() -> I32 {\n  consume(1i32, stop(), later())\n}\n",
   )
   let body = module_.bodies[module_.bodies.length() - 1u32]
   let _ = self_host_prune_compile_time_body(module_, body)

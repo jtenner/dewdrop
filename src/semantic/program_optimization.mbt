@@ -5207,6 +5207,7 @@ fn scalar_replace_synthesized_struct_components(
         component_locals[field_index] = module_.locals.length() -
           new_locals_start
         module_.locals.push({
+          elided: false,
           body: module_.locals[new_locals_start + local_id].body,
           lambda: module_.locals[new_locals_start + local_id].lambda,
           local_id: component_locals[field_index],

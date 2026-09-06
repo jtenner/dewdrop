@@ -4,6 +4,7 @@ enum CompileTimeReachTask {
   CtReachBlock(BlockId)
   CtFinishExpression(ExprId)
   CtFinishBlock(BlockId)
+  CtReachPattern(PatternId)
 }
 
 ///|
@@ -61,6 +62,7 @@ fn compile_time_push_expression(
           abort("ARN-104 compile-time arm is outside its arena")
         }
         let arm = module_.pattern_arms[arm_id]
+        work.push(CtReachPattern(arm.pattern))
         work.push(CtReachExpression(arm.guard_condition))
         work.push(CtReachExpression(arm.body))
       }
@@ -269,6 +271,7 @@ fn prune_compile_time_branches_pass(
 ) -> Unit {
   let reached = Array::make(module_.expressions.length(), false)
   let blocks = Array::make(module_.blocks.length(), false)
+  let patterns = Array::make(module_.patterns.length(), false)
   let work : Array[CompileTimeReachTask] = []
   for body in module_.bodies {
     if active is Some(declaration) && body.declaration != declaration {
@@ -281,6 +284,19 @@ fn prune_compile_time_branches_pass(
   }
   while work.length() > 0 {
     match work.pop().unwrap() {
+      CtReachPattern(pattern) => {
+        if pattern < 0 {
+          continue
+        }
+        guard pattern < patterns.length() else {
+          abort("ARN-104 reachable pattern is outside its arena")
+        }
+        if patterns[pattern] {
+          continue
+        }
+        patterns[pattern] = true
+        compile_time_push_pattern(module_, pattern, work)
+      }
       CtReachBlock(block) => {
         guard block >= 0 && block < blocks.length() else {
           abort("ARN-104 compile-time block is outside its arena")
@@ -366,6 +382,7 @@ fn prune_compile_time_branches_pass(
       module_.expressions[index] = { ..source, kind: PlannedPoisonExpression, }
     }
   }
+  prune_compile_time_locals(module_, active, reached, blocks, patterns)
   for index, lambda in module_.lambdas {
     let owner = module_.bodies[semantic_id_local(lambda.root_body)].declaration
     if active is Some(declaration) && owner != declaration {

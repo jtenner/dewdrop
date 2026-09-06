@@ -64,6 +64,7 @@ test "FRG-401 lambda parameters require parameter locals" expect_trap "unreachab
     body: local.body
     lambda: local.lambda
     local_id: local.local_id
+    elided: local.elided
     kind: SelfHostBodyLocalKind::LetLocal
     mutable_: local.mutable_
     type_: local.type_

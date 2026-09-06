@@ -262,6 +262,7 @@ pub struct PlannedObjectField {
 
 ///|
 pub struct PlannedPattern {
+  elided : Bool
   type_ : BodyTypeId
   shape : PlannedValueShape
   source : HirPattern
@@ -305,6 +306,7 @@ pub struct PlannedLocal {
   body : BodyId
   lambda : LambdaId
   local_id : LocalId
+  elided : Bool
   kind : BodyLocalKind
   mutable_ : Bool
   type_ : BodyTypeId
@@ -1769,6 +1771,7 @@ fn plan_body_lowering_job(
       source: collected.patterns[pattern],
       reference: names.pattern_references[pattern],
       selected_constructor: inferred.pattern_constructors[pattern],
+      elided: false,
       offset: collected.patterns[pattern].offset(),
     })
   }
@@ -2211,6 +2214,7 @@ fn plan_module_lowering_in_order(
     body: 0UL,
     lambda: -1,
     local_id: -1,
+    elided: false,
     kind: ParameterLocal,
     mutable_: false,
     type_: 0,
@@ -2227,6 +2231,7 @@ fn plan_module_lowering_in_order(
         body: body_info.body,
         lambda: -1,
         local_id: source.id,
+        elided: false,
         kind: source.kind,
         mutable_: source.mutable_,
         type_,
@@ -2245,6 +2250,7 @@ fn plan_module_lowering_in_order(
         body: collected.lambdas[lambda_info.lambda].root_body,
         lambda: lambda_info.lambda,
         local_id: source.id,
+        elided: false,
         kind: source.kind,
         mutable_: source.mutable_,
         type_,
@@ -2339,6 +2345,7 @@ fn plan_module_lowering_in_order(
       source: HirWildcardPattern(0UL),
       reference: NoPatternReference,
       selected_constructor: NoInferredPatternConstructor,
+      elided: false,
       offset: 0UL,
     }),
     pattern_fields: collected.pattern_fields.map(fn(field) {

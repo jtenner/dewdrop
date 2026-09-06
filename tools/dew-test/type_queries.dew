@@ -67,6 +67,28 @@ fn query_return<t>() -> I32 {
   8i32
 }
 
+fn query_local_storage<t>() -> I32 {
+  if is_unit::<t>() {
+    let live = 7i32
+    live
+  } else {
+    let other = 9i64
+    if other == 9i64 {
+      8i32
+    } else {
+      0i32
+    }
+  }
+}
+
+fn query_pattern<t>(value: I32) -> I32 {
+  let _ = is_unit::<t>()
+  match value {
+    1i32 => 11i32
+    other => other
+  }
+}
+
 fn query_item(value: QueryItem<I64>) -> field_type<QueryBox<I64>>("item") {
   query_identity::<QueryItem<I64>>(value)
 }
@@ -305,6 +327,10 @@ pub fn main(case: U32) -> Bool {
     query_sequence::<Unit>() == 1i32 && query_sequence::<I64>() == 1i32
   } else if case == 47u32 {
     query_return::<Unit>() == 7i32 && query_return::<I64>() == 8i32
+  } else if case == 48u32 {
+    query_local_storage::<Unit>() == 7i32 && query_local_storage::<I32>() == 8i32
+  } else if case == 49u32 {
+    query_pattern::<Unit>(1i32) == 11i32 && query_pattern::<I64>(2i32) == 2i32
   } else {
     false
   }

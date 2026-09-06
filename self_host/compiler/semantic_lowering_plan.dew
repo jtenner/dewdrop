@@ -150,6 +150,7 @@ pub struct SelfHostPlannedNamedVariant {
 }
 
 pub struct SelfHostPlannedPattern {
+  elided: Bool
   type_: I32
   shape: SelfHostPlannedValueShape
   source: SelfHostHirPattern
@@ -162,6 +163,7 @@ fn self_host_planned_pattern_identity(
   pattern: SelfHostPlannedPattern,
 ) -> SelfHostPlannedPattern {
   SelfHostPlannedPattern::{
+    elided: pattern.elided
     type_: pattern.type_
     shape: pattern.shape
     source: pattern.source
@@ -223,6 +225,7 @@ pub struct SelfHostPlannedLocal {
   body: U64
   lambda: U32
   local_id: U32
+  elided: Bool
   kind: SelfHostBodyLocalKind
   mutable_: Bool
   type_: I32
@@ -822,6 +825,7 @@ fn self_host_lowering_plan_job_structures(
       ]
       let source_pattern = collected.patterns[index]
       patterns[index] = SelfHostPlannedPattern::{
+        elided: false
         type_: type_
         shape: self_host_planned_merged_body_value_shape(
           resolved,
@@ -903,6 +907,7 @@ fn self_host_lowering_pattern_slots(length: U32) -> Array<SelfHostPlannedPattern
   let _ = while index {
     current => if current < length {
       values.push(SelfHostPlannedPattern::{
+        elided: false
         type_: -1i32
         shape: SelfHostPlannedValueShape::ErrorPlannedValueShape
         source: SelfHostHirPattern::WildcardPattern(0u32)
@@ -1437,6 +1442,7 @@ fn self_host_lowering_plan_locals(
         body: body
         lambda: lambda
         local_id: source_local.id
+        elided: false
         kind: source_local.kind
         mutable_: source_local.mutable_
         type_: type_

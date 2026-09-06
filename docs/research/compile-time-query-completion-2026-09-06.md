@@ -270,3 +270,29 @@ The full A/B/C bootstrap also passes after these changes. Compiler B and C are
 byte-identical in raw, core, and linked form. A builds in 35.931 s; A-to-B takes
 45.321 s and B-to-C 47.857 s. The full check takes 148.050 s. These long build
 times remain performance defects; the fixed-point and semantic checks pass.
+
+## Dead local and pattern storage
+
+Planned locals and patterns now record explicit elision. Their logical type,
+shape, and identity stay intact. Each selected body and lambda marks its live
+local reads, writes, declarations, and pattern bindings. Parameters keep their
+declared ABI positions; erased Unit parameters still use the normal projection.
+Native local allocation and self-host frozen local-slot allocation omit dead
+locals. They do not rewrite dead I64 types to Unit or Ref.
+
+The reachability graph now visits patterns and their literal expressions.
+Previously a live numeric match literal could be poisoned by query pruning.
+Native nominal-demand scans ignore dead patterns, and dead lambda signatures
+are not roots of physical function-type planning.
+
+Two focused native storage tests pass (8.333 s). Both compilers pass 51 shared
+execution checks, including separate generic local layouts and literal matches.
+The native fixture built in 9.058 s and ran in 0.030 s. Hardening passed in
+38.577 s before the final dedicated local-elision test. The full native
+integration lane passes in 63.039 s. Both totals exceed the performance budget.
+Self-host nominal type tables and generic template storage still require an
+earlier demand boundary; this checkpoint does not claim to finish that work.
+
+Final checkpoint hardening passes 193 tests, 29 exact invariant records, and
+51 shared execution checks in 41.005 s. The added local-elision test passes;
+the elapsed time remains over the performance budget.

@@ -1839,6 +1839,7 @@ pub struct PlannedLocal {
   body : UInt64
   lambda : Int
   local_id : Int
+  elided : Bool
   kind : BodyLocalKind
   mutable_ : Bool
   type_ : Int
@@ -2031,6 +2032,7 @@ pub struct PlannedParameter {
 } derive(Eq, @debug.Debug)
 
 pub struct PlannedPattern {
+  elided : Bool
   type_ : Int
   shape : PlannedValueShape
   source : HirPattern

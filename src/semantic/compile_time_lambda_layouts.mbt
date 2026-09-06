@@ -131,7 +131,7 @@ fn prepare_compile_time_lambda_layouts(
     } else {
       local_.body == root
     }
-    if owned {
+    if owned && !local_.elided {
       let shape = program_resolve_specialized_shape(
         instance,
         generics,

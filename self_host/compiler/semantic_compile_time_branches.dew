@@ -5,6 +5,7 @@ enum SelfHostCompileTimeReachTask {
   BlockCompileTimeReach(U32)
   FinishExpressionCompileTimeReach(U32)
   FinishBlockCompileTimeReach(U32)
+  PatternCompileTimeReach(U32)
 }
 
 fn self_host_compile_time_owned_expressions(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Array<U32> {
@@ -84,6 +85,7 @@ fn self_host_compile_time_push_arms(module_: SelfHostPlannedModuleLowering, span
       let arm_id = module_.arm_children[span.start + index]
       self_host_assert_array_index(arm_id, module_.pattern_arms.length(), "ARN-104 compile-time arm")
       let arm = module_.pattern_arms[arm_id]
+      work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(arm.pattern))
       work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(arm.guard_condition))
       work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(arm.body))
       continue index + 1u32
@@ -223,6 +225,7 @@ fn self_host_prune_compile_time_body(module_: SelfHostPlannedModuleLowering, bod
 fn self_host_prune_compile_time_body_pass(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Array<Bool> {
   let live = self_host_bool_slots(module_.expressions.length(), false)
   let blocks = self_host_bool_slots(module_.blocks.length(), false)
+  let patterns = self_host_bool_slots(module_.patterns.length(), false)
   let work = [SelfHostCompileTimeReachTask::BlockCompileTimeReach(0u32)]
   work.clear()
   self_host_compile_time_push_root(body.root, work)
@@ -231,6 +234,13 @@ fn self_host_prune_compile_time_body_pass(module_: SelfHostPlannedModuleLowering
       let task = work[length - 1u32]
       work.truncate(length - 1u32)
       match task {
+        SelfHostCompileTimeReachTask::PatternCompileTimeReach(index) => if index != 4294967295u32 {
+          self_host_assert_array_index(index, patterns.length(), "ARN-104 reachable pattern")
+          if !patterns[index] {
+            patterns[index] = true
+            self_host_compile_time_push_pattern(module_, index, work)
+          }
+        }
         SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(index) => if index != 4294967295u32 {
           self_host_assert_array_index(index, live.length(), "ARN-104 compile-time reached expression")
           if !live[index] {
@@ -320,5 +330,11 @@ fn self_host_prune_compile_time_body_pass(module_: SelfHostPlannedModuleLowering
       }
   }
   self_host_refresh_compile_time_body_flow(module_, body)
+  self_host_prune_compile_time_scope_locals(module_, body.locals, body.expressions, body.blocks, body.patterns, live, blocks, patterns)
+  for lambda in module_.lambdas {
+    if lambda.root_body == body.body {
+      self_host_prune_compile_time_scope_locals(module_, lambda.locals, lambda.expressions, lambda.blocks, lambda.patterns, live, blocks, patterns)
+    }
+  }
   live
 }

@@ -6808,8 +6808,11 @@ fn self_host_plan_one_physical_body(
   } else {
     1u32
   }
+  let mut logical_local = 0u32
   for value in local_values {
-    if value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    let elided = module_.locals[body.locals.start + logical_local].elided
+    logical_local = logical_local + 1u32
+    if elided || value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
       local_slots.push(4294967295u32)
     } else {
       local_slots.push(parameter_offset + physical_local_count)

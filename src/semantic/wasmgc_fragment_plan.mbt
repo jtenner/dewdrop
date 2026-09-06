@@ -1179,6 +1179,9 @@ fn wasmgc_required_nominal_declarations(
     for
       pattern in body.patterns.start..<(body.patterns.start +
       body.patterns.length) {
+      if lowering.patterns[pattern].elided {
+        continue
+      }
       match lowering.patterns[pattern].selected_constructor {
         StructInferredPatternConstructor(declaration, _) =>
           required[declaration] = true
@@ -3644,8 +3647,10 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       _ => ()
     }
   }
-  for type_ in resolved.lambda_function_types {
-    function_type_work.push(type_)
+  for index, type_ in resolved.lambda_function_types {
+    if !lowering.lambdas[index].elided {
+      function_type_work.push(type_)
+    }
   }
   while function_type_work.length() > 0 {
     let type_ = function_type_work.pop().unwrap()

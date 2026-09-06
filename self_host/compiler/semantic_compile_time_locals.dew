@@ -1,0 +1,133 @@
+open dew.std.array
+
+fn self_host_compile_time_push_pattern(module_: SelfHostPlannedModuleLowering, pattern: U32, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
+  match module_.patterns[pattern].source {
+    SelfHostHirPattern::WildcardPattern(_) => {}
+    SelfHostHirPattern::BindingPattern(_, _) => {}
+    SelfHostHirPattern::ImportAliasPattern(_, _) => {}
+    SelfHostHirPattern::RestPattern(_) => {}
+    SelfHostHirPattern::LiteralPattern(value, _) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostHirPattern::QualifiedPattern(base, _, _) => work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(base))
+    SelfHostHirPattern::TuplePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, base, children, false, work)
+    SelfHostHirPattern::AlternativePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, base, children, false, work)
+    SelfHostHirPattern::StructPattern(base, fields, _, _, _) => self_host_compile_time_push_pattern_children(module_, base, fields, true, work)
+  }
+}
+
+fn self_host_compile_time_push_pattern_children(module_: SelfHostPlannedModuleLowering, base: U32, children: SelfHostHirSpan, fields: Bool, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
+  work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(base))
+  let length = if fields {
+    module_.pattern_fields.length()
+  } else {
+    module_.pattern_children.length()
+  }
+  self_host_assert_array_span(children.start, children.length, length, "ARN-101 reachable pattern children")
+  let _ = while 0u32 {
+    index => if index < children.length {
+      let child = if fields {
+        module_.pattern_fields[children.start + index].pattern
+      } else {
+        module_.pattern_children[children.start + index]
+      }
+      work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(child))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_compile_time_mark_local(live: Array<Bool>, local: U32) -> Unit {
+  self_host_assert_array_index(local, live.length(), "ARN-104 reachable local")
+  live[local] = true
+}
+
+fn self_host_prune_compile_time_scope_locals(module_: SelfHostPlannedModuleLowering, locals: SelfHostHirSpan, expressions: SelfHostHirSpan, blocks: SelfHostHirSpan, patterns: SelfHostHirSpan, reached: Array<Bool>, live_blocks: Array<Bool>, live_patterns: Array<Bool>) -> Unit {
+  self_host_assert_array_span(locals.start, locals.length, module_.locals.length(), "ARN-101 compile-time locals")
+  self_host_assert_array_span(expressions.start, expressions.length, reached.length(), "ARN-101 compile-time local expressions")
+  self_host_assert_array_span(blocks.start, blocks.length, live_blocks.length(), "ARN-101 compile-time local blocks")
+  self_host_assert_array_span(patterns.start, patterns.length, live_patterns.length(), "ARN-101 compile-time local patterns")
+  let live = self_host_bool_slots(locals.length, false)
+  let _ = while 0u32 {
+    offset => if offset < expressions.length {
+      let id = expressions.start + offset
+      if reached[id] {
+        match module_.expressions[id].kind {
+          SelfHostPlannedExpressionKind::PlannedLocalGet(local) => self_host_compile_time_mark_local(live, local)
+          SelfHostPlannedExpressionKind::PlannedLocalSet(local, _) => self_host_compile_time_mark_local(live, local)
+          _ => {}
+        }
+      }
+      continue offset + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let _ = while 0u32 {
+    offset => if offset < blocks.length {
+      let id = blocks.start + offset
+      if live_blocks[id] {
+        let items = module_.blocks[id].items
+        let _ = while 0u32 {
+          index => if index < items.length {
+            match module_.block_items[items.start + index].kind {
+              SelfHostPlannedBlockItemKind::PlannedLetItem(local, _, _) => self_host_compile_time_mark_local(live, local)
+              _ => {}
+            }
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      continue offset + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let _ = while 0u32 {
+    offset => if offset < patterns.length {
+      let id = patterns.start + offset
+      let pattern = module_.patterns[id]
+      module_.patterns[id] = SelfHostPlannedPattern::{
+        elided: !live_patterns[id]
+        type_: pattern.type_
+        shape: pattern.shape
+        source: pattern.source
+        reference: pattern.reference
+        selected_constructor: pattern.selected_constructor
+        offset: pattern.offset
+      }
+      if live_patterns[id] {
+        match module_.patterns[id].reference {
+          SelfHostBodyPatternReference::PatternBindingReference(local) => self_host_compile_time_mark_local(live, local)
+          _ => {}
+        }
+      }
+      continue offset + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let _ = while 0u32 {
+    offset => if offset < locals.length {
+      let id = locals.start + offset
+      let local = module_.locals[id]
+      module_.locals[id] = SelfHostPlannedLocal::{
+        body: local.body
+        lambda: local.lambda
+        local_id: local.local_id
+        elided: !(local.kind is SelfHostBodyLocalKind::ParameterLocal) && !live[offset]
+        kind: local.kind
+        mutable_: local.mutable_
+        type_: local.type_
+        shape: local.shape
+        nominal: local.nominal
+        offset: local.offset
+      }
+      continue offset + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}

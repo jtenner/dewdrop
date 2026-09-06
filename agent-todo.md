@@ -21,7 +21,7 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 20
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compiler paths pass 49 shared execution checks.
+physical-boundary checks. Both compiler paths pass 51 shared execution checks.
 The September 6 compiler-B/C bootstrap now reaches a byte-identical fixed point.
 Deferred type checking and layout work below still prevent full completion.
 
@@ -80,6 +80,11 @@ Deferred type checking and layout work below still prevent full completion.
     erased Unit slots and scalar mutable cells. Indirect call signatures use
     the caller specialization. Test both compilers and native plan round trips.
   - [ ] Finish the earlier physical storage boundary for discarded code.
+    Dead locals now have an explicit elision flag, with unchanged logical types.
+    Live patterns retain their literal expressions; dead pattern bindings are
+    elided. Native nominal-demand scans and dead lambda signature roots honor
+    pruning. Self-host nominal type-table pruning and generic template storage
+    still need work.
 - [ ] Keep type-dependent checks inside their branch until the type is known.
   Check the selected branch with its known type facts. Both branches need valid
   syntax; unrelated source errors must not disappear.

@@ -84,6 +84,9 @@ fn program_body_uses_string_literal_pattern(
 ) -> Bool {
   for
     pattern in body.patterns.start..<(body.patterns.start + body.patterns.length) {
+    if module_.patterns[pattern].elided {
+      continue
+    }
     match module_.patterns[pattern].source {
       HirLiteralPattern(expression, _) =>
         match module_.expressions[expression].kind {
@@ -397,6 +400,9 @@ fn program_reachable_callable_roots(
       for
         pattern in body.patterns.start..<(body.patterns.start +
         body.patterns.length) {
+        if module_.patterns[pattern].elided {
+          continue
+        }
         match module_.patterns[pattern].selected_constructor {
           StructInferredPatternConstructor(declaration, _) =>
             reachable[declaration] = true

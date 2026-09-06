@@ -2,6 +2,9 @@
 // this same projection; a logical arena position is never a physical local ID.
 fn self_host_linked_local_is_erased(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local_id: U32) -> Bool {
   let relative = self_host_body_local_slot(module_, body, local_id)
+  if relative < body.locals.length && module_.locals[body.locals.start + relative].elided {
+    return true
+  }
   match canonical {
     Option::Some(plan) => if relative < plan.local_slots.length() {
       return self_host_u32_equal(plan.local_slots[relative], 4294967295u32)
