@@ -49,6 +49,36 @@ fn self_host_linked_erased_field_unit_storage(
     link.erased_fields.get(field) is Option::Some(true)
 }
 
+fn self_host_linked_physical_erased_unit_field(
+  link: SelfHostPlannedProgramWasmGCLink,
+  field: U64,
+  field_link: SelfHostLinkedWasmFieldLink,
+) -> Bool {
+  for linked_type in link.types {
+    if linked_type.type_index == field_link.type_index {
+      let module_ = link.fragments.modules[linked_type.module_index]
+      let physical = module_.physical_types[linked_type.fragment_index]
+      if !self_host_array_span_is_valid(physical.fields.start, physical.fields.length, module_.fields.length()) {
+        return false
+      }
+      while 0u32 {
+        offset if offset < physical.fields.length => {
+          let candidate = module_.fields[physical.fields.start + offset]
+          if candidate.physical_index == field_link.field_index {
+            return candidate.declaration == field && self_host_linked_erased_field_unit_storage(
+              link, field, candidate.storage, SelfHostWasmBodyCarrier::UnitBodyCarrier,
+            )
+          }
+          continue offset + 1u32
+        }
+        _ => break ()
+      }
+      return false
+    }
+  }
+  false
+}
+
 fn self_host_linked_variant_unit_storage(
   link: SelfHostPlannedProgramWasmGCLink,
   field: SelfHostPlannedWasmField,

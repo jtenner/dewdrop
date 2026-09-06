@@ -37,10 +37,23 @@ struct MemberWrapper {
   inner: MemberCell
 }
 
+builtin member_add(left: I32, right: I32) -> I32 = "i32.add"
+
+fn member_unit_receiver(cell: MemberCell) -> MemberSlot<Unit> {
+  cell.value = member_add(cell.value, 1i32)
+  MemberSlot::{
+    item: ()
+  }
+}
+
 pub fn main(value: I32, expected: I32) -> I32 {
   let cell = MemberCell::{
     value: 0i32
   }
+  member_unit_receiver(cell).item
+  member_unit_receiver(cell)[0u32]
+  let receiver_effects = cell.value == 2i32
+  cell.value = 0i32
   let wrapper = MemberWrapper::{
     inner: cell
   }
@@ -55,7 +68,7 @@ pub fn main(value: I32, expected: I32) -> I32 {
   }
   slot[0u32] = wrapper
   slot[0u32].inner.value = value
-  if slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
+  if receiver_effects && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
     slot[0u32].inner.read()
   } else {
     -1i32

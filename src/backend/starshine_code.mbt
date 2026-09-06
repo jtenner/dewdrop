@@ -344,6 +344,7 @@ priv enum StarshineEmitTask {
     @semantic.PlannedValueShape
   )
   FinishStarshineFieldSet(Int, Int)
+  FinishStarshineUnitFieldGet
   FinishStarshineUnitFieldSet
   FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
   FinishStarshineWhile(
@@ -7612,6 +7613,11 @@ fn starshine_emit_body_instructions(
               source.type_,
               source.shape,
             )
+            if field_shape is @semantic.UnitPlannedValueShape {
+              tasks.push(FinishStarshineUnitFieldGet)
+              tasks.push(EmitStarshineExpression(base))
+              continue
+            }
             let locations = starshine_field_locations(
               field_plan, program, owner_module, field, field_shape,
             )
@@ -9946,6 +9952,11 @@ fn starshine_emit_body_instructions(
             @lib.U32::new(field_index.reinterpret_as_uint()),
           ),
         )
+        results.push(output)
+      }
+      FinishStarshineUnitFieldGet => {
+        let output = results.pop().unwrap()
+        output.push(@lib.Instruction::drop())
         results.push(output)
       }
       FinishStarshineUnitFieldSet => {

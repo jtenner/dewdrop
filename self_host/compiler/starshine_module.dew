@@ -1222,6 +1222,9 @@ fn self_host_linked_assert_field_get_carrier(
   if self_host_body_carrier_equal(expected, actual) || (actual is SelfHostWasmBodyCarrier::EqRefBodyCarrier && self_host_linked_erased_field_box_type(link, field, expected) is Option::Some(_)) {
     return Option::None
   }
+  if expected is SelfHostWasmBodyCarrier::UnitBodyCarrier && self_host_linked_physical_erased_unit_field(link, field, field_link) {
+    return Option::None
+  }
   // Field emission must use the carrier of the resolved expression type.
   let message = StringBuilder::new()
   message.append("linked field get carrier invariant failed module=")
@@ -17901,6 +17904,9 @@ fn self_host_emit_linked_i32_expression(
                   Option::None => {}
                 }
                 let value_carrier = self_host_linked_exact_emitted_expression_carrier(canonical_body_plan, link, module_, body, caller_specialization, expression)
+                if value_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Drop(destination))
+                }
                 match self_host_linked_erased_field_box_type(link, field, value_carrier) {
                   Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructGet(type_, 0u32, destination))
                   Option::None => {}
