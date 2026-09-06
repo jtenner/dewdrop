@@ -217,6 +217,7 @@ impl SelfHostCollectionBuilder {
     self.pending_lambda_offsets.push(offset)
     self.pending_lambda_parents.push(self.state.current_lambda)
     self.pending_lambda_root_bodies.push(self.state.current_root_body)
+    self.pending_lambda_type_bindings.push(self.state.local_type_bindings.copy())
     id
   }
 
@@ -714,12 +715,28 @@ impl SelfHostCollectionBuilder {
   }
 
   fn lower_block(self, source: SelfHostBlock) -> U32 {
+    let bindings_start = self.state.local_type_bindings.length()
     let lowered_items = self_host_empty_lowered_block_items()
     let mut source_item_index = 0u32
     let _ = while source_item_index {
       current => if current < source.items.length() {
         let item = self_host_body_lowering_block_item_at(source.items, current)
-        if self_host_block_item_is_let(item) {
+        if item.kind == 4u32 {
+          let target = match item.type_binding {
+            Option::Some(value) => value
+            Option::None => {
+              self_host_assert_compiler_invariant(false, "INV-001 local type binding has no type syntax")
+              unreachable()
+            }
+          }
+          let syntax = self.lower_type(target)
+          self.state.local_type_bindings.push(SelfHostLocalTypeBinding::{
+            name: item.name
+            syntax: syntax
+          })
+          let expression = self.emit_expression(SelfHostHirExpr::TypeBindingExpr(syntax, item.offset))
+          lowered_items.push(self_host_hir_expression_item(expression, item.offset))
+        } else if self_host_block_item_is_let(item) {
           let value_id = self.lower_expression(item.value)
           if item.name == "_" {
             lowered_items.push(
@@ -823,6 +840,7 @@ impl SelfHostCollectionBuilder {
       },
     )
     self.block_files.push(self.state.current_file)
+    self.state.local_type_bindings.truncate(bindings_start)
     id
   }
 
@@ -984,11 +1002,16 @@ impl SelfHostCollectionBuilder {
   }
 
   fn lower_pending_lambda_bodies(self) -> Unit {
+    let outer_bindings = self.state.local_type_bindings.copy()
     let _ = while self.lambdas.length() {
       index => if index < self.pending_lambda_bodies.length() {
         self.state.current_file = self.pending_lambda_files[index]
         self.state.current_lambda = index
         self.state.current_root_body = self.pending_lambda_root_bodies[index]
+        self.state.local_type_bindings.clear()
+        for binding in self.pending_lambda_type_bindings[index] {
+          self.state.local_type_bindings.push(binding)
+        }
         let expression_start = self.expressions.length()
         let expression_child_start = self.expression_children.length()
         let block_start = self.blocks.length()
@@ -1060,5 +1083,9 @@ impl SelfHostCollectionBuilder {
       }
     }
     self.state.current_lambda = 4294967295u32
+    self.state.local_type_bindings.clear()
+    for binding in outer_bindings {
+      self.state.local_type_bindings.push(binding)
+    }
   }
 }

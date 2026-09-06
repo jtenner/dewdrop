@@ -251,12 +251,18 @@ fn self_host_name_is_main(name: String) -> Bool {
   self_host_name_main_code(name) == 1296124238u32
 }
 
+struct SelfHostLocalTypeBinding {
+  name: String
+  syntax: U32
+}
+
 struct SelfHostCollectionBuilderState {
   module_id: U64
   mut current_file: U64
   mut current_file_test_only: Bool
   mut current_lambda: U32
   mut current_root_body: U64
+  local_type_bindings: Array<SelfHostLocalTypeBinding>
   diagnostics: Array<SelfHostCollectionDiagnostic>
   name_lookup: Map<String, U32>
   type_bindings: Map<U32, U64>
@@ -315,6 +321,7 @@ pub struct SelfHostCollectionBuilder {
   pending_lambda_offsets: Array<U32>
   pending_lambda_parents: Array<U32>
   pending_lambda_root_bodies: Array<U64>
+  pending_lambda_type_bindings: Array<Array<SelfHostLocalTypeBinding>>
   bodies: Array<SelfHostHirBody>
   body_by_declaration: Array<Option<U32>>
   expressions: Array<SelfHostHirExpr>
@@ -347,6 +354,7 @@ impl SelfHostCollectionBuilder {
         current_file_test_only: false
         current_lambda: 4294967295u32
         current_root_body: 0u64
+        local_type_bindings: []
         diagnostics: []
         name_lookup: self_host_empty_name_lookup()
         type_bindings: self_host_empty_id_lookup()
@@ -402,6 +410,7 @@ impl SelfHostCollectionBuilder {
       pending_lambda_offsets: []
       pending_lambda_parents: []
       pending_lambda_root_bodies: []
+      pending_lambda_type_bindings: []
       bodies: []
       body_by_declaration: []
       expressions: []
@@ -682,6 +691,20 @@ impl SelfHostCollectionBuilder {
         if state == 0u32 {
           match source {
             SelfHostTypeExpr::NamedType(name, offset) => {
+              let found = while self.state.local_type_bindings.length() {
+                index => if index > 0u32 {
+                  let binding = self.state.local_type_bindings[index - 1u32]
+                  if binding.name == name {
+                    break Option::Some(binding.syntax)
+                  }
+                  continue index - 1u32
+                } else {
+                  break Option::None
+                }
+              }
+              if found is Option::Some(syntax) {
+                results.push(syntax)
+              } else {
               let id = self.type_syntax.length()
               self.type_syntax.push(
                 SelfHostHirTypeSyntax::NamedTypeSyntax(
@@ -691,6 +714,7 @@ impl SelfHostCollectionBuilder {
               )
               self.type_syntax_files.push(self.state.current_file)
               results.push(id)
+              }
             }
             SelfHostTypeExpr::QualifiedType(alias, name, offset, name_offset) => {
               let id = self.type_syntax.length()

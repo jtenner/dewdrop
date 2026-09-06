@@ -313,6 +313,7 @@ fn defer_transform_block_item(
     return
   }
   match item {
+    TypeBindingItem(_, _, _) => output.push(item)
     LetItem(mutable_, name, name_offset, value, offset) =>
       output.push(
         LetItem(
@@ -455,6 +456,7 @@ fn deferred_block_dispose_offset(block : Block, name : String) -> UInt64? {
       continue
     }
     match item {
+      TypeBindingItem(_, _, _) => ()
       LetItem(_, bound, _, value, _) => {
         match deferred_expression_dispose_offset(value, name) {
           Some(offset) => return Some(offset)
@@ -647,6 +649,7 @@ fn deferred_block_escape_offset(block : Block, name : String) -> UInt64? {
       continue
     }
     match item {
+      TypeBindingItem(_, _, _) => ()
       LetItem(_, bound, _, value, _) => {
         match deferred_expression_escape_offset(value, name) {
           Some(offset) => return Some(offset)
@@ -742,6 +745,7 @@ fn deferred_using_violation(
       None => continue
     }
     let dispose_offset = match item {
+      TypeBindingItem(_, _, _) => None
       LetItem(_, _, _, value, _) | ExpressionItem(value, _) =>
         deferred_expression_dispose_offset(value, name)
       AssignmentItem(target, value, _) | IndexSetItem(target, value, _) =>
@@ -755,6 +759,7 @@ fn deferred_using_violation(
       None => ()
     }
     let escape_offset = match item {
+      TypeBindingItem(_, _, _) => None
       ExpressionItem(value, _) | LetItem(_, _, _, value, _) =>
         deferred_expression_escape_offset(value, name)
       AssignmentItem(target, value, _) | IndexSetItem(target, value, _) =>

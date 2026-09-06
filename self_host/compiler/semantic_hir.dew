@@ -328,6 +328,7 @@ pub enum SelfHostHirExpr {
   NameExpr(U32, U32)
   ImportAliasExpr(U32, U32)
   ProductExpr(SelfHostHirSpan, U32)
+  TypeBindingExpr(U32, U32)
   ArrayExpr(SelfHostHirSpan, U32)
   LambdaExpr(U32, U32)
   ObjectExpr(SelfHostHirSpan, U32)
@@ -369,6 +370,7 @@ impl SelfHostHirExpr {
       SelfHostHirExpr::NameExpr(_, offset) => offset
       SelfHostHirExpr::ImportAliasExpr(_, offset) => offset
       SelfHostHirExpr::ProductExpr(_, offset) => offset
+      SelfHostHirExpr::TypeBindingExpr(_, offset) => offset
       SelfHostHirExpr::ArrayExpr(_, offset) => offset
       SelfHostHirExpr::LambdaExpr(_, offset) => offset
       SelfHostHirExpr::ObjectExpr(_, offset) => offset

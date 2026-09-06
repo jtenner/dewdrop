@@ -2413,6 +2413,7 @@ impl SelfHostBasicBodyInferencer {
             }
             self.solver.product_type(types)
           }
+          SelfHostHirExpr::TypeBindingExpr(_, _) => self.primitive(SelfHostPrimitiveType::UnitType)
           SelfHostHirExpr::ArrayExpr(_, _) => {
             let element = self.solver.fresh_variable()
             match self.collected.lookup_type("Array") {

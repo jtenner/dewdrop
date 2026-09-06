@@ -1469,6 +1469,7 @@ impl SelfHostBodyNameResolver {
       SelfHostHirExpr::BoolExpr(_, _) => {}
       SelfHostHirExpr::StringExpr(_, _) => {}
       SelfHostHirExpr::BytesExpr(_, _) => {}
+      SelfHostHirExpr::TypeBindingExpr(_, _) => {}
       SelfHostHirExpr::LambdaExpr(lambda, _) => self.snapshot_lambda_environment(
         lambda,
       )

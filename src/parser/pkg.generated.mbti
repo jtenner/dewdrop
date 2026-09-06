@@ -64,6 +64,7 @@ pub struct Block {
 pub fn Block::tail_expression(Self) -> Expr?
 
 pub enum BlockItem {
+  TypeBindingItem(String, TypeExpr, UInt64)
   LetItem(Bool, String, UInt64, Expr, UInt64)
   AssignmentItem(Expr, Expr, UInt64)
   IndexSetItem(Expr, Expr, UInt64)

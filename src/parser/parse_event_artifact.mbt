@@ -1394,6 +1394,12 @@ fn parse_write_block_item(
   value : BlockItem,
 ) -> Unit {
   match value {
+    TypeBindingItem(name, type_, offset) => {
+      writer.write_byte(5)
+      writer.write_string(name)
+      parse_write_type(writer, type_)
+      parse_write_offset(writer, offset)
+    }
     LetItem(mutable_, name, name_offset, expression, offset) => {
       writer.write_byte(0)
       writer.write_bool(mutable_)
@@ -1429,6 +1435,12 @@ fn parse_read_block_item(
   depth : Int,
 ) -> BlockItem {
   match reader.read_byte(field + ".tag") {
+    5 =>
+      TypeBindingItem(
+        reader.read_string(parse_event_maximum_text, field + ".name"),
+        parse_read_type(reader, field + ".type", depth + 1),
+        parse_read_offset(reader, field + ".offset"),
+      )
     0 =>
       LetItem(
         reader.read_bool(field + ".mutable"),

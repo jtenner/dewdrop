@@ -12,6 +12,18 @@ test "parse-event artifact round-trips complete declarations and diagnostics" {
 }
 
 ///|
+test "parse-event artifact preserves local computed type bindings" {
+  let events = parse_bytes(
+    b"fn main() -> Unit {\n type Item = field_type<Box<I64>>(\"item\")\n}\n",
+  ).to_array()
+  for event in events {
+    assert_false(event is Diagnostic(_))
+  }
+  let encoded = serialize_parse_events(events).unwrap()
+  assert_eq(deserialize_parse_events(encoded).unwrap(), events)
+}
+
+///|
 test "parse-event artifact preserves non-finite F32 payload bits" {
   let before = Float::reinterpret_from_uint(0x7fc00001U)
   let events : Array[ParseEvent] = [

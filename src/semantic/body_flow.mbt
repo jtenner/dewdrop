@@ -933,6 +933,7 @@ fn BodyFlowAnalyzer::analyze_expressions(self : BodyFlowAnalyzer) -> Unit {
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
     let summary = match self.collected.expressions[expression] {
+      HirTypeBindingExpr(_, _) => { outcomes: flow_falls_through, }
       HirI8Expr(_, _)
       | HirI16Expr(_, _)
       | HirI32Expr(_, _)

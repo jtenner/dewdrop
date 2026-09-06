@@ -21,7 +21,7 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 19
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compilers pass the 32 shared execution checks.
+physical-boundary checks. Both compilers pass the 33 shared execution checks.
 Deferred type checking and layout work below still prevent full completion.
 
 - [ ] Add real type-valued expressions for `field_type` and
@@ -34,7 +34,9 @@ Deferred type checking and layout work below still prevent full completion.
     `field_type<Box<T>>("item")` works; `field_type<T>("item")` reports CT-035.
   - [x] Port inline computed member syntax and local/imported generic member
     resolution to the self-host parser and resolver; test exact source errors.
-  - [ ] Add local compile-time type bindings.
+  - [x] Add local compile-time type bindings. `type Item = ...` has block scope,
+    works in lambda signatures and generic arguments, and emits no runtime value.
+    Unused invalid bindings still report type errors.
 - [x] Add `field_names` and `variant_names`. Preserve declaration identity and
   source order, including imported and generic types.
   - [x] Native folding and fresh string-array constants, with Wasm execution tests.

@@ -1709,6 +1709,7 @@ fn BasicBodyInferencer::initialize_expression_types(
       HirBoolExpr(_, _) => self.primitive(BoolType)
       HirStringExpr(_, _) => self.primitive(StringType)
       HirBytesExpr(_, _) => self.primitive(BytesType)
+      HirTypeBindingExpr(_, _) => self.primitive(UnitType)
       HirProductExpr(fields, _) => {
         let types : Array[BodyTypeId] = []
         for index in 0..<fields.length {
@@ -2752,7 +2753,8 @@ fn BasicBodyInferencer::constrain_expressions(
       | HirBytesExpr(_, _)
       | HirNameExpr(_, _)
       | HirImportAliasExpr(_, _)
-      | HirProductExpr(_, _) => ()
+      | HirProductExpr(_, _)
+      | HirTypeBindingExpr(_, _) => ()
       HirArrayExpr(elements, offset) => {
         let expression_type = self.solver.representative_type(
           self.expression_type(expression),

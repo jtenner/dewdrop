@@ -130,6 +130,7 @@ fn CollectionBuilder::record_lambda(
   self.lambda_offsets.push(offset)
   self.lambda_parents.push(self.current_lambda)
   self.lambda_root_bodies.push(self.current_root_body)
+  self.lambda_type_bindings.push(self.local_type_bindings)
   id
 }
 
@@ -475,12 +476,15 @@ fn CollectionBuilder::visit_block_source(
   source_index : Int,
 ) -> Unit {
   let source = self.body_block_sources[source_index]
+  self.local_type_scopes.push(self.local_type_bindings)
   let expr_start = self.body_expr_results.length()
   self.push_body_task(body_finish_block, source_index, expr_start, 0)
   let mut index = source.items.length()
   while index > 0 {
     index -= 1
     match source.items[index] {
+      @parser.TypeBindingItem(_, _, _) =>
+        self.push_body_task(8, source_index, index, 0)
       @parser.LetItem(_, _, _, value, _) => self.schedule_expr(value)
       @parser.AssignmentItem(target, value, _) => {
         self.schedule_expr(value)
@@ -511,6 +515,12 @@ fn CollectionBuilder::finish_block_source(
   let mut result_index = expr_start
   for item in source.items {
     match item {
+      @parser.TypeBindingItem(_, _, offset) => {
+        self.block_items.push(
+          HirExpressionItem(self.body_expr_results[result_index], offset),
+        )
+        result_index += 1
+      }
       @parser.LetItem(mutable_, name, name_offset, _, offset) => {
         self.block_items.push(
           HirLetItem(
@@ -563,6 +573,7 @@ fn CollectionBuilder::finish_block_source(
   })
   self.block_files.push(self.current_file)
   self.body_block_results.push(id)
+  self.local_type_bindings = self.local_type_scopes.pop().unwrap()
 }
 
 ///|
@@ -762,6 +773,17 @@ fn CollectionBuilder::run_body_tasks(self : CollectionBuilder) -> Unit {
       5 => self.finish_pattern_source(source, first_start)
       6 => self.visit_arm_source(source)
       7 => self.finish_arm_source(source, first_start, second_start)
+      8 =>
+        match self.body_block_sources[source].items[first_start] {
+          @parser.TypeBindingItem(name, target, offset) => {
+            let syntax = self.lower_type(target)
+            // Existing scope maps and lambda snapshots are immutable.
+            self.local_type_bindings = self.local_type_bindings.copy()
+            self.local_type_bindings[name] = syntax
+            ignore(self.emit_expr(HirTypeBindingExpr(syntax, offset)))
+          }
+          _ => abort("INV-001 local type binding task has the wrong source")
+        }
       _ => abort("invalid body lowering task")
     }
   }
@@ -769,6 +791,8 @@ fn CollectionBuilder::run_body_tasks(self : CollectionBuilder) -> Unit {
 
 ///|
 fn CollectionBuilder::reset_body_scratch(self : CollectionBuilder) -> Unit {
+  self.local_type_bindings = Map([])
+  self.local_type_scopes.clear()
   self.body_task_kinds.clear()
   self.body_task_sources.clear()
   self.body_task_first_starts.clear()
@@ -869,6 +893,7 @@ fn CollectionBuilder::lower_pending_lambda_bodies(
     let pattern_field_start = self.pattern_fields.length()
     self.current_lambda = lambda
     self.current_root_body = self.lambda_root_bodies[lambda]
+    self.local_type_bindings = self.lambda_type_bindings[lambda]
     self.schedule_block(self.lambda_sources[lambda])
     self.run_body_tasks()
     guard self.body_block_results.length() == 1 else {

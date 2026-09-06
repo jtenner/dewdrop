@@ -1424,6 +1424,9 @@ impl SelfHostTypeResolver {
     let _ = while 0u32 {
       offset => if offset < expressions.length {
         let expression = expressions.start + offset
+        if self.collected.expressions[expression] is SelfHostHirExpr::TypeBindingExpr(syntax, _) {
+          let _ = self.resolve_syntax(owner, syntax, false)
+        }
         if expression < self.collected.explicit_call_type_argument_spans.length() {
           let span = self.collected.explicit_call_type_argument_spans[expression]
           self_host_assert_array_span(span.start, span.length, self.collected.explicit_call_type_arguments.length(), "ARN-104 explicit type arguments")

@@ -1012,6 +1012,7 @@ fn plan_expression_kind(
         | NoNameReference => PlannedConsumedExpression
       }
     HirImportAliasExpr(_, _) => PlannedConsumedExpression
+    HirTypeBindingExpr(_, _) => PlannedProductNew({ start: 0, length: 0, })
     HirProductExpr(elements, _) => PlannedProductNew(elements)
     HirProductFieldExpr(base, index, arity, _) =>
       PlannedProductField(base, index, arity)

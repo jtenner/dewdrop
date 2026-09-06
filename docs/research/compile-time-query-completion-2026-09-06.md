@@ -36,7 +36,7 @@ are performance defects, not hidden passes under the timing policy.
 
 ## Still active
 
-- Deferred member types and local compile-time type bindings.
+- Deferred member types with unconstrained generic owners.
 - Guarded type checking and refreshing flow after branch selection.
 - Early pruning of physical dependencies and unused storage.
 - Full native/self-host execution parity and bootstrap comparison.
@@ -127,3 +127,37 @@ The full integration lane passes (51.675 s, a timing defect).
 The routine native lane passes in 23.394 s. A lambda that would require changed
 signature/capture storage now reports CT-038 before emission; it must not reuse
 the old physical signature. This guard remains until those layouts are rebuilt.
+
+## Local compile-time type bindings
+
+Both parsers and compilers now accept ordered, block-scoped type bindings:
+
+```dew
+type Item = field_type<Box<I64>>("item")
+let read = fn(value: Item) -> Item {
+  type Inner = Item
+  identity::<Inner>(value)
+}
+```
+
+These are real type aliases, not runtime `Type` objects or strings. The right-hand
+side sees preceding bindings. An inner binding can shadow an outer one without
+changing it. Lambdas retain the type scope at their declaration. Bindings do not
+leak into later functions or module signatures. Local generic alias parameter
+lists are not part of this syntax; a binding can use its owning function's type
+parameters. Unconstrained member projections still report CT-035.
+
+A type-binding HIR expression keeps the type syntax reachable to signature
+checking even when unused. Its logical result is Unit and it emits no value.
+Native parse-event codec V1 uses block-item tag 5; round-trip tests cover computed
+targets. Native scope maps are immutable snapshots and copy only when a new
+binding is added. Self-host scopes use an arena stack with captured lambda
+snapshots and checked restoration.
+
+The initial two native tests failed on the missing syntax, then passed after the
+implementation. The full parser suite passes 289 tests (1.714 s), focused semantic
+tests pass (7.709 s), and both engines pass 33 shared execution checks. Native
+execution took 0.024 s. Self-host hardening passes 186 tests and all record and
+execution probes. Its cold build run took 108.284 s; the routine native lane took
+62.728 s. These remain visible timing defects. Scoped API refresh passed in
+3.467 s.

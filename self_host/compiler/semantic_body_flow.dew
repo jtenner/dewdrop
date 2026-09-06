@@ -934,6 +934,7 @@ impl SelfHostBodyFlowAnalyzer {
           SelfHostHirExpr::NameExpr(_, _) => terminal
           SelfHostHirExpr::ImportAliasExpr(_, _) => terminal
           SelfHostHirExpr::LambdaExpr(_, _) => terminal
+          SelfHostHirExpr::TypeBindingExpr(_, _) => terminal
           SelfHostHirExpr::ProductExpr(children, _) => self_host_flow_sequence(
             self.sequence_children(children),
             terminal,

@@ -1,5 +1,6 @@
 ///|
 pub enum BlockItem {
+  TypeBindingItem(String, TypeExpr, UInt64)
   LetItem(Bool, String, UInt64, Expr, UInt64)
   AssignmentItem(Expr, Expr, UInt64)
   IndexSetItem(Expr, Expr, UInt64)
@@ -9,7 +10,8 @@ pub enum BlockItem {
 ///|
 pub fn BlockItem::offset(self : BlockItem) -> UInt64 {
   match self {
-    LetItem(_, _, _, _, offset)
+    TypeBindingItem(_, _, offset)
+    | LetItem(_, _, _, _, offset)
     | AssignmentItem(_, _, offset)
     | IndexSetItem(_, _, offset)
     | ExpressionItem(_, offset) => offset
@@ -327,6 +329,29 @@ fn Parser::parse_block_after_left_brace(
           }
           defer_transform_block_item(items, value, cleanups, 0)
         }
+        self.skip_newlines()
+        continue
+      }
+      @tokenizer.Keyword(@tokenizer.Type) => {
+        self.consume_lookahead()
+        let (name, _) = match self.parse_identifier(TypeAliasName) {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+        match self.peek_token() {
+          Some(equal) if equal.kind() == @tokenizer.Symbol(@tokenizer.Equal) =>
+            self.consume_lookahead()
+          _ => return Err(self.declaration_error(Equal))
+        }
+        let target = match self.parse_type() {
+          Ok(value) => value
+          Err(error) => return Err(error)
+        }
+        match self.finish_block_item_line(open_offset) {
+          Ok(_) => ()
+          Err(error) => return Err(error)
+        }
+        items.push(TypeBindingItem(name, target, offset))
         self.skip_newlines()
         continue
       }

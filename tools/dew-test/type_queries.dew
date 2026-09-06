@@ -84,6 +84,21 @@ fn query_lambda<t>() -> U32 {
   read()
 }
 
+fn query_local_types() -> I64 {
+  type Item = field_type<QueryBox<I64>>("item")
+  let read = fn(value: Item) -> Item {
+    type Inner = Item
+    query_identity::<Inner>(value)
+  }
+  if true {
+    type Item = I32
+    query_identity::<Item>(1i32)
+  } else {
+    0i32
+  }
+  read(query_identity::<Item>(2i64))
+}
+
 pub fn main(case: U32) -> Bool {
   if case == 0u32 {
     is_unit::<Nothing>()
@@ -157,6 +172,8 @@ pub fn main(case: U32) -> Bool {
     true
   } else if case == 30u32 {
     query_lambda::<Unit>() == 3u32 && query_lambda::<I32>() == 4u32
+  } else if case == 31u32 {
+    query_local_types() == 2i64
   } else {
     false
   }

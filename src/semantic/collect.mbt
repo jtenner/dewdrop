@@ -49,6 +49,9 @@ priv struct CollectionBuilder {
   lambda_offsets : Array[UInt64]
   lambda_parents : Array[LambdaId]
   lambda_root_bodies : Array[BodyId]
+  lambda_type_bindings : Array[Map[String, HirTypeId]]
+  mut local_type_bindings : Map[String, HirTypeId]
+  local_type_scopes : Array[Map[String, HirTypeId]]
   mut current_lambda : LambdaId
   mut current_root_body : BodyId
   bodies : Array[HirBody]
@@ -149,6 +152,9 @@ fn CollectionBuilder::new(module_id : ModuleId) -> CollectionBuilder {
     lambda_offsets: [],
     lambda_parents: [],
     lambda_root_bodies: [],
+    lambda_type_bindings: [],
+    local_type_bindings: Map([]),
+    local_type_scopes: [],
     current_lambda: -1,
     current_root_body: 0UL,
     bodies: [],

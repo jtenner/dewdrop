@@ -714,6 +714,26 @@ fn self_host_parse_block_after_left(
         )
         self_host_parser_skip_newlines(parser)
         continue 0u32
+      } else if self_host_token_is_keyword(token, 10u32) {
+        parser.index = parser.index + 1u32
+        let pair = match self_host_parser_identifier(parser, SelfHostDeclarationExpectation::TypeAliasName) {
+          Option::Some(value) => value
+          Option::None => break Option::None
+        }
+        let (name, _) = pair
+        if !self_host_parser_expect_symbol(parser, 15u32, SelfHostDeclarationExpectation::Equal) {
+          break Option::None
+        }
+        let target = match self_host_parse_type(parser) {
+          Option::Some(value) => value
+          Option::None => break Option::None
+        }
+        if !self_host_parser_finish_line(parser) {
+          break Option::None
+        }
+        items.push(self_host_type_binding_block_item(name, target, token.offset))
+        self_host_parser_skip_newlines(parser)
+        continue 0u32
       } else if self_host_token_is_keyword(token, 11u32) {
         parser.index = parser.index + 1u32
         if !self_host_parse_block_let(parser, items, token.offset) {

@@ -1044,6 +1044,7 @@ pub enum HirExpr {
   HirNameExpr(Int, UInt64)
   HirImportAliasExpr(Int, UInt64)
   HirProductExpr(HirSpan, UInt64)
+  HirTypeBindingExpr(Int, UInt64)
   HirArrayExpr(HirSpan, UInt64)
   HirLambdaExpr(Int, UInt64)
   HirObjectExpr(HirSpan, UInt64)

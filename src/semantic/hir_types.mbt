@@ -60,6 +60,13 @@ fn CollectionBuilder::lower_type(
     if state == 0 {
       match source {
         @parser.NamedType(name, offset) => {
+          match self.local_type_bindings.get(name) {
+            Some(type_) => {
+              results.push(type_)
+              continue
+            }
+            None => ()
+          }
           let id = self.type_syntax.length()
           self.type_syntax.push(NamedTypeSyntax(self.intern(name), offset))
           self.type_syntax_files.push(self.current_file)

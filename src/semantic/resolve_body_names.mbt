@@ -1127,6 +1127,7 @@ fn BodyNameResolver::schedule_expression_children(
   expectation : Int,
 ) -> Unit {
   match self.collected.expressions[expression] {
+    HirTypeBindingExpr(_, _) => ()
     HirI8Expr(_, _)
     | HirI16Expr(_, _)
     | HirI32Expr(_, _)

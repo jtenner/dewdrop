@@ -486,6 +486,7 @@ fn self_host_lowering_expression_kind(
     }
     SelfHostHirExpr::ImportAliasExpr(_, _) => SelfHostPlannedExpressionKind::PlannedPoisonExpression
     SelfHostHirExpr::ProductExpr(children, _) => SelfHostPlannedExpressionKind::PlannedProductNew(children)
+    SelfHostHirExpr::TypeBindingExpr(_, _) => SelfHostPlannedExpressionKind::PlannedUnitConst
     SelfHostHirExpr::ArrayExpr(children, _) => SelfHostPlannedExpressionKind::PlannedArrayLiteral(children)
     SelfHostHirExpr::LambdaExpr(lambda, _) => SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda)
     SelfHostHirExpr::ObjectExpr(fields, _) => SelfHostPlannedExpressionKind::PlannedObjectNew(fields)

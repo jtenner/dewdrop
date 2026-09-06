@@ -1123,6 +1123,9 @@ fn TypeResolver::resolve_signatures(self : TypeResolver) -> Unit {
     for
       expression in body.expressions.start..<(body.expressions.start +
       body.expressions.length) {
+      if self.collected.expressions[expression] is HirTypeBindingExpr(syntax, _) {
+        ignore(self.resolve_syntax(body.declaration, syntax, any_type_name))
+      }
       if expression >= self.collected.explicit_call_type_argument_spans.length() {
         continue
       }
@@ -1141,6 +1144,9 @@ fn TypeResolver::resolve_signatures(self : TypeResolver) -> Unit {
     for
       expression in lambda.body.expressions.start..<(lambda.body.expressions.start +
       lambda.body.expressions.length) {
+      if self.collected.expressions[expression] is HirTypeBindingExpr(syntax, _) {
+        ignore(self.resolve_syntax(owner, syntax, any_type_name))
+      }
       if expression >= self.collected.explicit_call_type_argument_spans.length() {
         continue
       }
