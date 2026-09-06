@@ -29,6 +29,28 @@ fn self_host_compile_time_instance_map() -> Map<U32, SelfHostCompileTimeInstance
   Map::empty()
 }
 
+// Request indices belong to one specialization run. Frozen source facts may be
+// shared, but selected bodies and diagnostics must not change an earlier plan.
+fn self_host_compile_time_planning_lowering(lowering: SelfHostPlannedProgramLowering) -> SelfHostPlannedProgramLowering {
+  let source = lowering.compile_time
+  let diagnostics = source.diagnostics.copy()
+  let context = SelfHostCompileTimeProgramContext::{
+    frozen: source.frozen
+    targets: source.targets
+    sensitive: source.sensitive
+    instances: self_host_compile_time_instance_map()
+    diagnostics: diagnostics
+  }
+  SelfHostPlannedProgramLowering::{
+    collected: lowering.collected
+    modules: lowering.modules
+    index: lowering.index
+    graph: lowering.graph
+    elided_trait_wrappers: lowering.elided_trait_wrappers
+    compile_time: context
+  }
+}
+
 fn self_host_empty_compile_time_owners() -> Array<U64> {
   []
 }

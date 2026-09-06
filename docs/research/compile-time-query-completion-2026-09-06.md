@@ -296,3 +296,12 @@ earlier demand boundary; this checkpoint does not claim to finish that work.
 Final checkpoint hardening passes 193 tests, 29 exact invariant records, and
 51 shared execution checks in 41.005 s. The added local-elision test passes;
 the elapsed time remains over the performance budget.
+
+## Independent specialization runs
+
+Each self-host specialization run now owns its request-indexed query instances
+and a copy of its diagnostic list. Immutable source facts remain shared. A later
+plan cannot reuse an earlier plan's request numbers or invalidate its selected
+bodies. The new test failed on the shared context and passes with private state;
+it also mutates the second context to verify the first remains intact. Hardening
+passes 194 tests, 29 invariant records, and 51 execution checks in 29.524 s.

@@ -217,7 +217,7 @@ test "compile-time branches use private instances and erase dead call records" {
     b"builtin query<t>() -> Bool = \"types.is_unit\"\nfn choose<t>() -> I32 {\n if query::<t>() {\n 11i32\n } else {\n 22i32\n }\n}\npub fn run() -> I32 {\n choose::<Unit>() + choose::<I32>()\n}\n",
   )
   let plan = self_host_plan_program_specialization(lowering, false)
-  for diagnostic in lowering.compile_time.diagnostics {
+  for diagnostic in plan.lowering.compile_time.diagnostics {
     assert(false, diagnostic)
   }
   let mut original = false
@@ -230,7 +230,7 @@ test "compile-time branches use private instances and erase dead call records" {
   let mut instances = 0u32
   let mut request_index = 0u32
   for request in plan.requests {
-    match lowering.compile_time.instances.get(request_index) {
+    match plan.lowering.compile_time.instances.get(request_index) {
       Option::Some(instance) => {
         let module_ = instance.module_
         instances = instances + 1u32
@@ -259,6 +259,22 @@ test "compile-time branches use private instances and erase dead call records" {
     request_index = request_index + 1u32
   }
   assert(instances == 2u32, "Unit and I32 have separate selected bodies")
+}
+
+test "compile-time planning owns its request-indexed state" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin query<t>() -> Bool = \"types.is_unit\"\nfn choose<t>() -> Bool {\n query::<t>()\n}\npub fn run() -> Bool {\n choose::<Unit>()\n}\n",
+  )
+  let first = self_host_plan_program_specialization(lowering, false)
+  assert(first.lowering.compile_time.instances.length() == 1u32, "first selected instance")
+  assert(lowering.compile_time.instances.length() == 0u32, "source context is immutable")
+  let second = self_host_plan_program_specialization(first.lowering, true)
+  assert(second.lowering.compile_time.instances.length() == 1u32, "replanning makes its own instances")
+  second.lowering.compile_time.instances.clear()
+  second.lowering.compile_time.diagnostics.push("test-only context mutation")
+  assert(first.lowering.compile_time.instances.length() == 1u32, "later request indices cannot invalidate an earlier plan")
+  assert(first.lowering.compile_time.diagnostics.length() == 0u32, "later diagnostics cannot invalidate an earlier plan")
+  assert(lowering.compile_time.diagnostics.length() == 0u32, "source diagnostics remain intact")
 }
 
 test "compile-time implements substitutes generic prerequisites" {

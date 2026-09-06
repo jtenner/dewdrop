@@ -2060,6 +2060,7 @@ fn self_host_plan_program_specialization(
   lowering: SelfHostPlannedProgramLowering,
   emit_tests: Bool,
 ) -> SelfHostProgramSpecializationPlan {
+  let lowering = self_host_compile_time_planning_lowering(lowering)
   let reachable = []
   let reachable_seen = self_host_program_specialization_seen()
   let declaration_work = []
