@@ -2465,7 +2465,7 @@ fn self_host_body_seed_expression(
         Option::None => {}
       }
     }
-    SelfHostPlannedExpressionKind::PlannedIndexGet(base, _, target) => {
+    SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, target) => {
       match target {
         SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
           call_function_index = self_host_body_call_function(
@@ -2479,58 +2479,8 @@ fn self_host_body_seed_expression(
         }
         _ => {}
       }
-      match self_host_linked_expression_container_element_shape(
-        link,
-        module_,
-        body,
-        base,
-      ) {
-        Option::Some(shape) => {
-          carrier = self_host_body_carrier_from_shape(shape)
-        }
-        Option::None => {}
-      }
-      let inferred_element_owner = self_host_linked_expression_container_element_nominal_declaration(
-        link,
-        module_,
-        body,
-        base,
-      )
-      let element_owner = if !self_host_u64_equal(
-        inferred_element_owner,
-        0u64,
-      ) {
-        inferred_element_owner
-      } else if base < module_.expressions.length() {
-        let container_type = self_host_planned_expression_identity(
-          module_.expressions[base],
-        ).type_
-        let container_owner = self_host_linked_type_nominal_declaration(
-          module_,
-          container_type,
-        )
-        self_host_body_type_argument_nominal_owner(
-          module_,
-          container_type,
-          if self_host_linked_declaration_name(
-            link,
-            container_owner,
-          ).ends_with(b"Map") {
-            1u32
-          } else {
-            0u32
-          },
-        )
-      } else {
-        0u64
-      }
-      if !self_host_u64_equal(element_owner, 0u64) {
-        nominal_owner = element_owner
-        physical_heap_type = self_host_body_physical_heap_type(
-          indexes,
-          element_owner,
-        )
-      }
+      // IndexedGet is an ordinary selected call. Its resolved result type and
+      // linked signature provide evidence; receiver type arguments do not.
     }
     SelfHostPlannedExpressionKind::PlannedProductField(base, field, _) => match self_host_linked_product_field_shape(
       link,

@@ -37,6 +37,17 @@ struct MemberWrapper {
   inner: MemberCell
 }
 
+struct RoadMap<key, value> {
+  key: key
+  value: value
+}
+
+impl<key, value> IndexedGet<key, value> for RoadMap<key, value> {
+  fn indexed_get(self, index: key) -> value {
+    self.value
+  }
+}
+
 enum MemberPayload<t> {
   Empty
   Value(t)
@@ -67,6 +78,11 @@ pub fn main(value: I32, expected: I32) -> I32 {
   let receiver_effects = cell.value == 2i32
   let (tuple_left, tuple_right) = member_extract(MemberPayload::Value((7i32, 11i64)), (0i32, 0i64))
   let tuple_binding = tuple_left == 7i32 && tuple_right == 11i64
+  let road = RoadMap::{
+    key: 1u32
+    value: 19i64
+  }
+  let indexed_result = road[1u32] == 19i64
   cell.value = 0i32
   let wrapper = MemberWrapper::{
     inner: cell
@@ -82,7 +98,7 @@ pub fn main(value: I32, expected: I32) -> I32 {
   }
   slot[0u32] = wrapper
   slot[0u32].inner.value = value
-  if tuple_binding && receiver_effects && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
+  if indexed_result && tuple_binding && receiver_effects && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
     slot[0u32].inner.read()
   } else {
     -1i32
