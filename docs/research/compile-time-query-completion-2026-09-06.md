@@ -109,3 +109,21 @@ tests, and all execution/semantic probes. Warm runs took about 20 s. The final
 run took 107.909 s due to a cold native C build; this remains a performance defect.
 Native shared execution passed 32 checks in 0.039 s; its cold build took 88.106 s.
 Native logical lambda entry work is a separate follow-up commit.
+
+## Native logical lambda entries
+
+Query sensitivity now includes expressions inside lambdas, by their owning body
+ID. Each selected query instance has its own live lambda function entries, with
+the owner's full logical key. Function-reference lookup checks that exact key;
+it does not select the first lambda declaration in the link table. Calls inside
+lambda bodies are scanned with the root function's substitutions. Emission uses
+the selected module and lambda-entry table. The generic source template remains
+unchanged. This does not yet rebuild generic capture/parameter storage layouts;
+those remain part of the physical-storage task.
+
+All 27 focused native query tests pass (13.500 s), including a new IR and link
+test with distinct Unit/I32 lambda results. The 32 shared execution checks pass.
+The full integration lane passes (51.675 s, a timing defect).
+The routine native lane passes in 23.394 s. A lambda that would require changed
+signature/capture storage now reports CT-038 before emission; it must not reuse
+the old physical signature. This guard remains until those layouts are rebuilt.

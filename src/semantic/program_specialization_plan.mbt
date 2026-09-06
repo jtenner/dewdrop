@@ -1463,6 +1463,12 @@ fn materialize_program_generic_specialization(
     specialization_evidence,
     specialization_abi_key,
   })
+  materialize_compile_time_lambdas(
+    lowering,
+    owner_index,
+    module_,
+    module_.functions[module_.functions.length() - 1],
+  )
   modules[owner_index] = {
     ..module_,
     signature_type_count: module_.signature_type_count + 1,
@@ -3222,9 +3228,7 @@ fn plan_program_wasmgc_fragments_for_root(
       if generic_bodies.contains(body.body) {
         continue
       }
-      for
-        expression in body.expressions.start..<(body.expressions.start +
-        body.expressions.length) {
+      for expression in compile_time_owned_expressions(module_, body) {
         materialize_program_expression_call(
           analyzed,
           lowering,
@@ -3263,7 +3267,11 @@ fn plan_program_wasmgc_fragments_for_root(
           PlannedWasmDefinedFunction(body) => body
           _ => continue
         }
-        let owner = lowering.modules[owner_index]
+        let owner = program_function_lowering(
+          lowering,
+          owner_index,
+          function_.specialization_abi_key,
+        )
         let callable = match
           owner.functions.callable_of(function_.declaration) {
           Some(value) => value
@@ -3278,9 +3286,7 @@ fn plan_program_wasmgc_fragments_for_root(
           analyzed, lowering, modules, specialization_module_lookup, owner_index,
           function_, body,
         )
-        for
-          expression in body.expressions.start..<(body.expressions.start +
-          body.expressions.length) {
+        for expression in compile_time_owned_expressions(owner, body) {
           materialize_program_expression_call(
             analyzed,
             lowering,

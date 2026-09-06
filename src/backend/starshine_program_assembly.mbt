@@ -469,9 +469,14 @@ fn emit_starshine_program_function_body(
   helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
   let module_lowering = @semantic.program_function_lowering(
-    lowering, function_.module_index, function_.specialization_abi_key,
+    lowering,
+    function_.module_index,
+    function_.specialization_abi_key,
   )
-  let module_fragments = planned.modules[function_.module_index]
+  let module_fragments = @semantic.program_function_fragments(
+    planned.modules[function_.module_index],
+    function_.specialization_abi_key,
+  )
   let body_index = @semantic.semantic_id_local(body_id)
   if body_index < 0 || body_index >= module_lowering.bodies.length() {
     return Err(MissingBody(body_id))
@@ -1067,8 +1072,15 @@ fn emit_starshine_program_code_section(
         if !function_.elided {
           match
             emit_starshine_lambda_body(
-              lowering.modules[function_.module_index],
-              planned.modules[function_.module_index],
+              @semantic.program_function_lowering(
+                lowering,
+                function_.module_index,
+                function_.specialization_abi_key,
+              ),
+              @semantic.program_function_fragments(
+                planned.modules[function_.module_index],
+                function_.specialization_abi_key,
+              ),
               Some(planned),
               function_.module_index,
               lambda,
@@ -1186,26 +1198,11 @@ fn starshine_program_function_reference_element_section(
   }
   for function_ in planned.functions {
     match function_.kind {
-      @semantic.PlannedWasmTraitAdapterFunction(_, _) if function_.function_index >=
-        0 => referenced[function_.function_index] = true
+      @semantic.PlannedWasmTraitAdapterFunction(_, _)
+      | @semantic.PlannedWasmDefinedLambdaFunction(_) if !function_.elided &&
+        function_.function_index >= 0 =>
+        referenced[function_.function_index] = true
       _ => ()
-    }
-  }
-  for module_index, module_ in lowering.modules {
-    for expression in module_.expressions {
-      match expression.kind {
-        @semantic.PlannedFunctionReference(_, _) => ()
-        @semantic.PlannedLambdaClosure(lambda, _) => {
-          let module_fragments = planned.modules[module_index]
-          let fragment = module_fragments.functions[module_fragments.lambda_function_indices[lambda]]
-          match planned.function_of(fragment.declaration) {
-            Some(function_) if function_.function_index >= 0 =>
-              referenced[function_.function_index] = true
-            _ => ()
-          }
-        }
-        _ => ()
-      }
     }
   }
   if referenced.length() == 0 {

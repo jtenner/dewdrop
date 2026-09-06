@@ -5244,11 +5244,16 @@ fn starshine_lambda_function_index(
   let fragment_index = planned.lambda_function_indices[lambda]
   let fragment = planned.functions[fragment_index]
   match program {
-    Some(link) =>
-      match link.function_of(fragment.declaration) {
-        Some(function_) => function_.function_index
-        None => -1
+    Some(link) => {
+      for function_ in link.functions {
+        if !function_.elided &&
+          function_.declaration == fragment.declaration &&
+          function_.specialization_abi_key == fragment.specialization_abi_key {
+          return function_.function_index
+        }
       }
+      -1
+    }
     None => fragment.function_index
   }
 }
@@ -11723,6 +11728,22 @@ fn emit_starshine_lambda_body(
   lambda : @semantic.LambdaId,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
   let body = starshine_lambda_body(lowering, lambda)
+  let fragment = planned.functions[planned.lambda_function_indices[lambda]]
+  let generic_specialization = if fragment.specialization_shapes.length > 0 {
+    let owner = lowering.bodies[@semantic.semantic_id_local(
+        lowering.lambdas[lambda].root_body,
+      )]
+    let callable = lowering.functions.callable_of(owner.declaration).unwrap()
+    Some({
+      generic_parameters: starshine_callable_generic_parameters(callable),
+      shapes: planned.specialization_shapes,
+      specialization_shapes: fragment.specialization_shapes,
+      specialization_evidence: fragment.specialization_evidence,
+      specialization_abi_key: fragment.specialization_abi_key,
+    })
+  } else {
+    None
+  }
   let (
     local_indices,
     body_local_types,
@@ -11745,7 +11766,7 @@ fn emit_starshine_lambda_body(
     lowering,
     planned,
     program,
-    None,
+    generic_specialization,
     body,
     starshine_lambda_leading_parameter_count(lowering, planned, lambda),
   )
@@ -11789,7 +11810,7 @@ fn emit_starshine_lambda_body(
       control_state_local_indices,
       control_result_local_indices,
       constructor_local_indices,
-      None,
+      generic_specialization,
     ) {
     Ok(instructions) => {
       let prefixed = match

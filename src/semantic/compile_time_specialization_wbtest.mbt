@@ -149,3 +149,53 @@ test "compile time discarded lambdas are not emitted" {
   assert_eq(lowering.modules[0].lambdas.length(), 1)
   assert_true(lowering.modules[0].lambdas[0].elided)
 }
+
+///|
+test "compile time generic lambda entries retain their owner logical key" {
+  let program = collect_program_manifest(
+    24022UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open dew.std.types\nfn choose<t>() -> Bool {\n let read = fn() -> Bool {\n is_unit::<t>()\n }\n read()\n}\npub fn main() -> Bool {\n choose::<Unit>() && !choose::<I32>()\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  for module_ in analyzed.modules {
+    assert_eq(module_.inferred.diagnostics, [])
+  }
+  let lowering = plan_unoptimized_program_lowering(program, analyzed)
+  let fragments = plan_program_wasmgc_fragments(analyzed, lowering)
+  let link = link_program_wasmgc_fragments(fragments, lowering, 0)
+  assert_eq(link.diagnostics, [])
+  let values : Array[Bool] = []
+  for function_ in link.functions {
+    if function_.elided {
+      continue
+    }
+    match function_.kind {
+      PlannedWasmDefinedLambdaFunction(lambda) => {
+        assert_true(function_.specialization_abi_key != "")
+        let instance = program_function_lowering(
+          lowering,
+          function_.module_index,
+          function_.specialization_abi_key,
+        )
+        let body = instance.lambda_body(lambda).unwrap()
+        for offset in 0..<body.expressions.length {
+          match instance.expressions[body.expressions.start + offset].kind {
+            PlannedBoolConst(value) => values.push(value)
+            PlannedDirectCall(_, _, _, _) =>
+              fail("query call survives in lambda")
+            _ => ()
+          }
+        }
+      }
+      _ => ()
+    }
+  }
+  assert_eq(values.length(), 2)
+  assert_true(values.contains(true) && values.contains(false))
+}

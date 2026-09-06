@@ -15,6 +15,32 @@ struct CompileTimeProgramContext {
 }
 
 ///|
+fn compile_time_owned_expressions(
+  module_ : PlannedModuleLowering,
+  body : PlannedBodyLowering,
+) -> Array[ExprId] {
+  let result = []
+  let spans = [body.expressions]
+  for lambda in module_.lambdas {
+    if lambda.root_body == body.body {
+      spans.push(lambda.expressions)
+    }
+  }
+  for span in spans {
+    guard program_specialization_span_is_valid(
+      span,
+      module_.expressions.length(),
+    ) else {
+      abort("ARN-101 compile-time expression owner span is outside its arena")
+    }
+    for index in 0..<span.length {
+      result.push(span.start + index)
+    }
+  }
+  result
+}
+
+///|
 fn compile_time_expression_owner(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -23,6 +49,17 @@ fn compile_time_expression_owner(
     if expression >= body.expressions.start &&
       expression - body.expressions.start < body.expressions.length {
       return Some(body.declaration)
+    }
+  }
+  for lambda in module_.lambdas {
+    if expression >= lambda.expressions.start &&
+      expression - lambda.expressions.start < lambda.expressions.length {
+      for body in module_.bodies {
+        if body.body == lambda.root_body {
+          return Some(body.declaration)
+        }
+      }
+      abort("ARN-106 compile-time lambda has no owning body")
     }
   }
   None

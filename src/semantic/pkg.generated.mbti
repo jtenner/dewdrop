@@ -125,6 +125,8 @@ pub fn planned_reference_shape() -> PlannedValueShape
 
 pub fn planned_value_shape_from_resolved_types(Array[ResolvedType], Array[Int], Int) -> PlannedValueShape
 
+pub fn program_function_fragments(PlannedModuleWasmGCFragments, String) -> PlannedModuleWasmGCFragments
+
 pub fn program_function_lowering(PlannedProgramLowering, Int, String) -> PlannedModuleLowering
 
 pub fn program_resolved_trait_evidence_identity(PlannedModuleLowering, PlannedModuleWasmGCFragments, HirSpan, HirSpan, Int) -> (UInt64, String)?
