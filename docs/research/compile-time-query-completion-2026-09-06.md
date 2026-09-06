@@ -1,7 +1,45 @@
 # Compile-time query completion work
 
-This continues the September 5 work. Unchecked tasks remain unchecked until both
-compiler paths and their execution tests pass.
+## Final signoff
+
+The compile-time query feature checklist is complete in both compilers. The
+[current guide](../compile-time-types.md) defines all 20 builtins, real returned
+types, branch-local checks, and layout limits. The wider stdlib migration,
+compiler audit, and performance work remain separate tasks in
+[`agent-todo.md`](../../agent-todo.md).
+
+| Final check | Result | Time |
+| --- | --- | --- |
+| Routine native lane | 913 passed, zero failed | 105.393 s |
+| Native integration, refreshed provider | 266 passed, zero failed | 53.576 s |
+| Stdlib execution | 319 tests plus 3,186 extra checks, including 96 query cases | 18.517 s |
+| Self-host hardening, refreshed provider | 220 tests, 29 numeric records, 96 query cases, emission/semantic probes passed | 56.681 s |
+| Generated sources, policy checks, CLI fixtures | Passed | 25.886 s |
+| Compiler stress lane | 15 passed, zero failed | 0.117 s |
+| Full pinned Starshine native lane | 10,982 passed, zero failed | 305.361 s |
+| Scoped semantic/backend API refresh | Passed, no API changes | 3.640 s |
+| Clean fast B/C bootstrap | Core and linked bytes identical; validation and B semantic probes passed | 190.424 s |
+
+The bootstrap uses Starshine `7a58886305102c0575949cefc790a3678c0be292` and
+the regenerated FFI metadata/fingerprint. Both raw and linked B/C Wasm hashes are:
+
+```text
+6fed6f87a256d554c5b9a770bca7313f67981bb029c86eb2258ad172feae081c
+```
+
+Over-30-second runs remain performance bugs, not waived limits. Bootstrap A
+build takes 46.345 s, A→B 48.344 s, first output link 31.111 s, and B→C
+51.880 s. Hardening test generation takes 32.418 s. Correctness gates pass;
+body-local instance overlays and shared query maps are follow-up speed work.
+Existing Starshine spec runtime skips are not claimed as runtime conformance.
+The guide's examples also compile together to 918 bytes of Wasm (9.174 s)
+and execute with the expected I64 result of 42 (0.020 s).
+
+## Historical investigation notes
+
+The entries below record earlier checkpoints, failures, and fixes. References
+to pending work describe those checkpoints; use the final signoff above for
+current status. No failed run below is counted as a successful validation.
 
 ## Full Starshine test build stack
 

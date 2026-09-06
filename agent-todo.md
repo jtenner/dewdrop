@@ -15,127 +15,44 @@ restart them from scratch. Raw Unit array storage now passes both compilers.
 
 ### Compile-time type queries and branch removal
 
-Native work is in progress. See
-[`docs/research/compile-time-types-2026-09-05.md`](docs/research/compile-time-types-2026-09-05.md)
-for the exact tested scope and the remaining work. September 6 progress is in
-[`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
-The native path now has 20
-query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compiler paths pass 96 shared execution checks.
-The September 6 compiler-B/C bootstrap now reaches a byte-identical fixed point.
-Deferred type checking and layout work below still prevent full completion.
+Implementation is complete in both compilers. The shared corpus now has 96
+execution checks. Read the [query guide](docs/compile-time-types.md) for the
+20 builtins, examples, and layout limits. The full history and measured checks
+are in the [completion log](docs/research/compile-time-query-completion-2026-09-06.md).
 
-- [ ] Add real type-valued expressions for `field_type` and
-  `variant_payload_types`. The user confirmed that the results must work in
-  declarations and generic arguments; names and metadata are not enough.
-  - [x] Native inline type positions: preserve local/imported member identity,
-    generic owner arguments, aliases, and variant payload order. Test real Wasm
-    scalar and tuple calls, parser recovery, cycles, and metatype storage errors.
-  - [ ] Defer queries on an unconstrained generic owner until specialization.
-    Generic aliases and pure queries now retain a structural member projection
-    and reduce it with exact logical arguments. Native call inference now
-    substitutes projected parameter/result types, including imported types,
-    forwarding, and an owner supplied by a later argument. Native physical
-    instances now materialize projected signatures, values, and captures in
-    private type arenas. The self-host path now does the same, including deferred
-    owner equations, imports, rollback, and exact capture emission. Projection
-    equations now wait for later owner bindings inside tuple/function types.
-    Function references solve the whole signature in one transaction. Both paths
-    also resolve impl `Self`, compound generic guards, and separate owner/method
-    type arguments. The shared corpus has 76 checks. General guarded checks remain.
-  - [x] Port inline computed member syntax and local/imported generic member
-    resolution to the self-host parser and resolver; test exact source errors.
-  - [x] Add local compile-time type bindings. `type Item = ...` has block scope,
-    works in lambda signatures and generic arguments, and emits no runtime value.
-    Unused invalid bindings still report type errors.
-- [x] Add `field_names` and `variant_names`. Preserve declaration identity and
-  source order, including imported and generic types.
-  - [x] Native folding and fresh string-array constants, with Wasm execution tests.
-  - [x] Self-host folding and shared execution fixtures.
-- [x] Define valid layout-query types for `size_of`, `align_of`, and
-  `field_offset`. WasmGC object byte layouts are not exposed; never invent them.
-  - [x] Native scalar `size_of`/`align_of`; GC objects and unsupported layouts
-    produce errors. Unit has size 0/alignment 1; Never has no layout.
-  - [x] Self-host scalar queries, checked with the same native fixtures.
-  - [x] Define the raw ordered-tuple encoding, with natural field alignment and
-    tail padding. `field_offset<T>(index)` uses a constant U32 index. Check Unit
-    fields, nested tuples, invalid indices, unsupported GC fields, and overflow.
-    This is not a byte layout for runtime GC tuples or nominal records.
-- [x] Port the existing query, trait search, assertion, and logical instance handling to
-  the self-host compiler. Check both compilers with the same execution fixtures.
-  - [x] Match the native compile-time `Type` identity and reject runtime storage,
-    including aliases, nested generic arguments, tuples, and function signatures.
-    Keep numeric records for invalid internal type indices and spans.
-  - [x] Add the self-host pure scalar evaluator and structural logical types.
-    Test pending/error separation, nested type identity, lanes, and scalar layout.
-  - [x] Connect the evaluator to specialization and emission. Shared source tests
-    cover generic forwarding, lambdas, names, assertions, and scalar layouts.
-  - [x] Preserve imported operator evidence for query metadata. Standard package
-    IDs agree with native IDs, and unvisited library bodies are not linked.
-  - [x] Run a complete B/C bootstrap and compare the generated Wasm bytes.
-    The outputs match; A build and both self-host runs still exceed 30 seconds.
-- [x] Add native `is_unit::<t>()` as a pure compiler builtin with no Wasm call.
-  Test the logical type: Unit is true, other known types are false, and unknown
-  types stay pending. Never is not Unit. Resolve the query by identity, not by
-  matching the name of an ordinary user function.
-- [ ] Replace the query with a Boolean constant in each specialized body, then
-  replace the `if` with its selected branch. Keep the shared generic body intact.
-  This must run in debug builds too, before physical storage and call planning.
-  - [x] Private selected bodies now fold in both paths.
-  - [x] Local allocation consumes the frozen body plan without changing carriers.
-    Both arms of `Result<Bool, String>` retain their own payload types.
-  - [x] Give generic lambdas exact signatures and capture layouts, including
-    erased Unit slots and scalar mutable cells. Indirect call signatures use
-    the caller specialization. Test both compilers and native plan round trips.
-  - [x] Finish the earlier physical storage boundary for discarded code.
-    Dead locals now have an explicit elision flag, with unchanged logical types.
-    Live patterns retain their literal expressions; dead pattern bindings are
-    elided. Native nominal-demand scans and dead lambda signature roots honor
-    pruning. Self-host nominal tables now follow selected bodies, live lambda
-    captures, ABI roots, and transitive fields with a visited work queue.
-    Native generic lambda templates now have no physical signature or capture
-    layout; exact live instances create them directly. Native nominal roots now
-    follow selected logical instances before fragment planning. A visited work
-    queue follows transitive nominal fields; query-only owner types add no
-    runtime record. Positive and negative storage-demand tests pass.
-- [ ] Keep type-dependent checks inside their branch until the type is known.
-  Check the selected branch with its known type facts. Both branches need valid
-  syntax; unrelated source errors must not disappear.
-  Native `implements` guards now permit trait methods without hard bounds.
-  Exact retained calls keep generic implementation prerequisites. Scope tests
-  and 62 shared execution checks pass. Both paths cover imported guards,
-  captured proofs, and generic implementation prerequisites. Both paths now
-  refine reads and return/join checks under `is_unit`, `is_never`, and
-  `type_equal`, including transitive equalities and negated branches. The shared
-  fixture has 68 checks. Guarded calls to ordinary bounded functions now keep
-  explicit proof nodes, resolve unique implementation trees, and retain exact
-  logical keys through self-host helper calls. General deferred branch checks
-  still need completion. Both paths now retain explicit deferred field and
-  operator selections and recheck the selected source body with exact types.
-  Dead source slots use a separate reachability mask. Calls, branch-result
-  equations, and numeric query guards now pass in both paths (84 shared checks).
-  Concrete bad argument/tuple siblings still fail immediately. Unused projected
-  bindings are now checked after selection, including binding-only generic
-  functions. Selected-source masks now follow block and operand prefixes,
-  short-circuit removal, and exact lambda parameter types (90 shared checks).
-  Method-generic bounds now have local/imported checks in both paths, with full
-  owner/method argument sequences. Local/imported overload selection now waits
-  for exact types without hiding concrete bad operands (93 shared checks).
-  Immutable local and captured query values now retain their source owner and
-  fold before selected-source checks (96 shared checks). Final validation remains.
-- [ ] Make later passes visit only reachable code in that specialized body.
-  Removed branches must not add calls, trait requests, locals, or storage types.
-  Refresh flow and effect facts, keep source IDs for errors, and ensure distinct
-  query results cannot share one specialized body by an ABI-key collision.
-  - [x] Refresh expression, block, arm, body, and lambda flow after selection.
-    A non-returning operand keeps its ordered evaluation prefix, removes the
-    call and later operands, and removes later block statements. Test IR,
-    repeated planning, and both compiler execution paths.
-- [ ] Test the rewrite in native and self-host compilers. Cover Unit, scalar,
-  reference, alias, Never, pending/error types, nested branches, separate
-  specializations, branch-local type checks, and side effects. Check the IR and
-  emitted Wasm, not only the returned value. No query or discarded branch may
-  reach emission.
+- [x] Pure query/assertion builtins in `dew.std.types`. Use logical type identity;
+  keep unknown types pending and errors diagnostic. Emit no runtime query calls.
+- [x] Real `field_type` and `variant_payload_types` results in declarations,
+  lambda signatures, and generic arguments. Support imported/generic owners,
+  deferred member projections, aliases, `Self`, and block-local type bindings.
+- [x] Ordered `field_names` and `variant_names`, with fresh string arrays.
+- [x] Scalar and ordered-tuple raw layout queries. Reject unsupported GC layouts;
+  never invent object offsets or turn missing layout evidence into a reference.
+- [x] Private specialized IR bodies and exact logical keys. Fold query guards,
+  local aliases, captured scalar query values, and short circuits before planning.
+- [x] Branch-local `implements` proofs and type facts. Recheck selected fields,
+  operators, calls, overloads, results, and generic method bounds, including imports.
+  Preserve concrete source errors and trait cycles/limits.
+- [x] Remove dead calls, locals, captures, lambdas, and storage demand. Keep source
+  IDs, argument effects, Never prefixes, and the exact selected emitter input.
+- [x] Native/self-host positive and negative tests, numeric invariant records,
+  shared Wasm execution, and checks that no query reaches physical emission.
+- [x] Complete the final full-lane run and fresh byte-identical B/C bootstrap.
+  Native 913 tests, integration 266 tests, stdlib execution, hardening 220 tests
+  and 29 records, generated checks, 15 stress tests, and all 10,982 pinned
+  Starshine tests pass. The refreshed provider passes hardening and integration.
+  Compiler B/C core and linked Wasm bytes match in the clean bootstrap run.
+
+### Performance follow-up
+
+Correctness comes first. Keep these timing defects visible after query completion.
+
+- [ ] Reduce full-module query instance copies to body-local overlays. Keep exact
+  logical keys, immutable source templates, and one selected emitter input.
+- [ ] Profile and share repeated query source/evidence maps where safe. Keep local
+  and capture IDs tied to their owning body; do not reintroduce ID guessing.
+- [ ] Reduce compiler builds, test lanes, and bootstrap stages that exceed
+  30 seconds. Record both cold and warm timings; do not hide or skip slow tests.
 
 ### Finish the standard-library migration
 

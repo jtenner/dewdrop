@@ -25,10 +25,15 @@ python3 tools/generate_std_tests.py --check
 
 Optional function arguments are not yet supported and remain a documented future improvement.
 
+For `dew.std.types`, see the [compile-time query guide](../docs/compile-time-types.md).
+It covers all 20 queries and assertions, real returned types, guarded trait calls,
+and the limits of raw layout queries. Queries are resolved before physical planning.
+
 Text, collection, byte, and Wasm APIs are split into focused `dew.std` modules:
 
 ```text
 dew.std.preamble        ambient primitives, operators, Into, Hash, and Debug
+dew.std.types           pure compile-time type queries and assertions
 dew.std.iter            eager consuming iterator combinators over Iter<t>
 dew.std.math            explicit checked/wrapping integer and IEEE float math
 dew.std.io              portable byte Reader/Writer contracts and in-memory streams

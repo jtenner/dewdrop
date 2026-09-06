@@ -1,5 +1,9 @@
 # Compile-time types
 
+This is the historical September 5 checkpoint, not the current task list.
+See the [current contract](../compile-time-types.md) and the
+[September 6 completion log](compile-time-query-completion-2026-09-06.md).
+
 ## Contract
 
 `dew.std.types` contains pure compiler builtins. Their answers use logical types,
@@ -148,7 +152,7 @@ parameters/results, and an ordinary function named `field_type`. The
 first cold release-generator rebuild took 100.836 seconds before reporting a Dew
 syntax error, since fixed. That cold build remains a performance bug.
 
-## Work still required
+## Work that remained at this checkpoint
 
 This is not the completed feature set.
 

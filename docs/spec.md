@@ -2,6 +2,10 @@
 
 > Status: early design draft. Syntax and semantics marked **Proposed** are not yet settled. Implementation priorities and deferred work are tracked in `docs/roadmap.md`.
 
+The implemented `dew.std.types` contract is specified in
+[Compile-time type queries](compile-time-types.md). It includes real computed
+types, branch-local type checks, trait queries, and raw layout limits.
+
 ## 1. Purpose
 
 Dew is a statically typed programming language implemented in MoonBit. It intentionally resembles MoonBit while introducing a distinct trait, implementation, method, and sum-type model. Dew uses Starshine as its backend and targets WebAssembly GC directly.
