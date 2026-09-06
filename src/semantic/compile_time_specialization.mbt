@@ -92,7 +92,25 @@ fn compile_time_program_context(
   let callers : Map[DeclId, Array[DeclId]] = Map([])
   let work : Array[DeclId] = []
   for module_ in lowering.modules {
+    let has_projections = module_.resolved_types.any(type_ => {
+        type_ is MemberTypeProjection(_, _, _)
+      }) ||
+      module_.types.any(type_ => type_ is BodyMemberTypeProjection(_, _, _))
+    for callable in module_.functions.callables {
+      if compile_time_projected_signature(module_, callable) {
+        sensitive[callable.declaration] = true
+        work.push(callable.declaration)
+      }
+    }
     for index, expression in module_.expressions {
+      if has_projections &&
+        compile_time_has_projection(module_, expression.type_) {
+        if compile_time_expression_owner(module_, index) is Some(caller) &&
+          !sensitive.contains(caller) {
+          sensitive[caller] = true
+          work.push(caller)
+        }
+      }
       let (target, _) = match
         program_evidence_target_and_arguments(expression) {
         Some(value) => value
@@ -214,6 +232,14 @@ fn compile_time_specialization_key(
     diagnostics: [],
     lambdas: owner.lambdas.copy(),
     captures: owner.captures.copy(),
+    resolved_types: owner.resolved_types.copy(),
+    resolved_type_arguments: owner.resolved_type_arguments.copy(),
+    types: owner.types.copy(),
+    functions: {
+      ..owner.functions,
+      callables: owner.functions.callables.copy(),
+      parameters: owner.functions.parameters.copy(),
+    },
   }
   fold_module_compile_time_queries(
     context,
@@ -221,6 +247,9 @@ fn compile_time_specialization_key(
     instance,
     bindings,
     Some(declaration),
+  )
+  materialize_compile_time_instance_types(
+    context, owner, instance, bindings, declaration,
   )
   context.instances[key] = {
     module_: instance,

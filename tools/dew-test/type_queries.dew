@@ -35,6 +35,24 @@ fn query_identity<t>(value: t) -> t {
   value
 }
 
+fn query_member_keep<t>(value: field_type<t>("item")) -> field_type<t>("item") {
+  value
+}
+
+fn query_member_forward<t>(value: field_type<t>("item")) -> field_type<t>("item") {
+  query_member_keep::<t>(value)
+}
+
+fn query_payload_keep<t>(value: variant_payload_types<t>("Value")) -> variant_payload_types<t>("Value") {
+  value
+}
+
+fn query_member_reader<t>(value: field_type<t>("item")) -> fn() -> field_type<t>("item") {
+  fn() -> field_type<t>("item") {
+    value
+  }
+}
+
 fn query_deferred<t>() -> Bool {
   type_equal::<field_type<t>("item"), I64>()
 }
@@ -348,6 +366,21 @@ pub fn main(case: U32) -> Bool {
     query_pattern::<Unit>(1i32) == 11i32 && query_pattern::<I64>(2i32) == 2i32
   } else if case == 50u32 {
     query_discarded_lambda::<Unit>()
+  } else if case == 51u32 {
+    query_member_keep::<QueryBox<I64>>(51i64) == 51i64 && query_member_keep::<QueryBox<I32>>(52i32) == 52i32
+  } else if case == 52u32 {
+    query_member_forward::<QueryBox<I64>>(53i64) == 53i64
+  } else if case == 53u32 {
+    query_member_keep::<QueryBox<Unit>>(())
+    true
+  } else if case == 54u32 {
+    let (left, right) = query_payload_keep::<QueryMessage<I32>>((54i32, 55i64))
+    left == 54i32 && right == 55i64
+  } else if case == 55u32 {
+    let read_unit = query_member_reader::<QueryBox<Unit>>(())
+    let read_scalar = query_member_reader::<QueryBox<I64>>(56i64)
+    read_unit()
+    read_scalar() == 56i64
   } else {
     false
   }

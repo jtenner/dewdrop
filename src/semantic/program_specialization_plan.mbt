@@ -1240,8 +1240,10 @@ fn materialize_program_generic_specialization(
     PlannedWasmInlineBuiltinFunction(name) if name == b"unsafe.bitcast" => ()
     _ => return None
   }
-  let callable = match
-    lowering.modules[owner_index].functions.callable_of(declaration) {
+  let selected = program_function_lowering(
+    lowering, owner_index, specialization_abi_key,
+  )
+  let callable = match selected.functions.callable_of(declaration) {
     Some(callable) => callable
     None => return None
   }
@@ -1294,11 +1296,46 @@ fn materialize_program_generic_specialization(
     start: evidence_root_start,
     length: evidence.roots.length(),
   }
-  let resolved = analyzed.frozen.interfaces[owner_index].resolved_types
+  let resolved = {
+    ..analyzed.frozen.interfaces[owner_index].resolved_types,
+    types: selected.resolved_types,
+    type_arguments: selected.resolved_type_arguments,
+  }
+  let base = if compile_time_projected_signature(
+      lowering.modules[owner_index],
+      lowering.modules[owner_index].functions.callable_of(declaration).unwrap(),
+    ) {
+    let job = wasmgc_plan_function_job(
+      resolved,
+      selected.functions,
+      callable,
+      module_.type_index_by_declaration,
+      module_.function_type_by_resolved,
+      true,
+    )
+    let start = module_.function_value_types.length()
+    for value in job.parameters {
+      module_.function_value_types.push(value)
+    }
+    let result_start = module_.function_value_types.length()
+    for value in job.results {
+      module_.function_value_types.push(value)
+    }
+    {
+      ..base,
+      parameters: { start, length: result_start - start, },
+      results: {
+        start: result_start,
+        length: module_.function_value_types.length() - result_start,
+      },
+    }
+  } else {
+    base
+  }
   let parameter_start = module_.function_value_types.length()
   let mut base_parameter_index = 0
   for index in 0..<callable.parameters.length {
-    let parameter = lowering.modules[owner_index].functions.parameters[callable.parameters.start +
+    let parameter = selected.functions.parameters[callable.parameters.start +
       index]
     let generic_parameters = program_callable_generic_parameters(callable)
     let base_parameter_width = program_specialization_shape_width(

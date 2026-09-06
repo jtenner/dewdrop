@@ -2536,9 +2536,10 @@ fn wasmgc_plan_function_job(
   type_index_by_declaration : Array[Int],
   function_type_by_resolved : Array[Int],
   closure_abi : Bool,
+  deferred? : Bool = false,
 ) -> WasmFunctionFragmentJob {
   let parameters : Array[PlannedWasmValueType] = []
-  for index in 0..<callable.parameters.length {
+  for index in 0..<(if deferred { 0 } else { callable.parameters.length }) {
     let parameter = functions.parameters[callable.parameters.start + index]
     match parameter.shape {
       ProductPlannedValueShape(_) =>
@@ -2561,24 +2562,26 @@ fn wasmgc_plan_function_job(
     }
   }
   let results : Array[PlannedWasmValueType] = []
-  match callable.result_shape {
-    ProductPlannedValueShape(_) =>
-      wasmgc_append_shape_value_types(results, callable.result_shape)
-    I32PlannedValueShape => results.push(WasmI32Value)
-    I64PlannedValueShape => results.push(WasmI64Value)
-    _ =>
-      match
-        wasmgc_value_type(
-          resolved,
-          callable.result_type,
-          callable.self_type,
-          type_index_by_declaration,
-          function_type_by_resolved,
-          closure_abi,
-        ) {
-        Some(value) => results.push(value)
-        None => ()
-      }
+  if !deferred {
+    match callable.result_shape {
+      ProductPlannedValueShape(_) =>
+        wasmgc_append_shape_value_types(results, callable.result_shape)
+      I32PlannedValueShape => results.push(WasmI32Value)
+      I64PlannedValueShape => results.push(WasmI64Value)
+      _ =>
+        match
+          wasmgc_value_type(
+            resolved,
+            callable.result_type,
+            callable.self_type,
+            type_index_by_declaration,
+            function_type_by_resolved,
+            closure_abi,
+          ) {
+          Some(value) => results.push(value)
+          None => ()
+        }
+    }
   }
   let kind = match callable.kind {
     PlannedBuiltinCallable(name) =>
@@ -3630,18 +3633,21 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     }
   }
   for callable_index, callable in functions.callables {
+    if compile_time_projected_signature(lowering, callable) {
+      continue
+    }
     if local_function_value_roots.contains(callable.declaration) ||
       program_function_value_roots.contains(callable.declaration) {
       function_type_work.push(resolved.callable_function_types[callable_index])
     }
-  }
-  for type_ in resolved.parameter_types {
-    match resolved.types[type_] {
-      FunctionType(_, _) => function_type_work.push(type_)
-      _ => ()
+    for offset in 0..<callable.parameters.length {
+      let type_ = functions.parameters[callable.parameters.start + offset].type_
+      match resolved.types[type_] {
+        FunctionType(_, _) => function_type_work.push(type_)
+        _ => ()
+      }
     }
-  }
-  for type_ in resolved.callable_return_types {
+    let type_ = callable.result_type
     match resolved.types[type_] {
       FunctionType(_, _) => function_type_work.push(type_)
       _ => ()
@@ -3882,6 +3888,10 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         type_index_by_declaration,
         function_type_by_resolved,
         closure_abi,
+        deferred=compile_time_projected_signature(
+          lowering,
+          functions.callables[callable_index],
+        ),
       ),
     )
   }
@@ -3911,9 +3921,10 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
   let elided_functions = Array::make(functions.callables.length(), false)
   for callable_index, callable in functions.callables {
     let direct_builtin = direct_builtins[callable_index]
-    elided_functions[callable_index] = (
-        direct_builtin.length() > 0 && callable.visibility == ModuleVisible
+    elided_functions[callable_index] = compile_time_projected_signature(
+        lowering, callable,
       ) ||
+      (direct_builtin.length() > 0 && callable.visibility == ModuleVisible) ||
       (match function_jobs[callable_index].unwrap().kind {
         PlannedWasmImportedFunction(_)
         | PlannedWasmDefinedFunction(_)

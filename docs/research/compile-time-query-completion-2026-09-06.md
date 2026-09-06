@@ -364,6 +364,25 @@ resolution loop. Speculative solver transactions cannot append these persistent
 equations. A final unresolved equation is a visible failure, not an erased check.
 This does not yet defer errors under compile-time branch guards.
 
+### Native runtime member projection ABI
+
+Projected callable signatures now make a function query-sensitive even when its
+body has no value query call. Generic signature templates allocate no physical
+signature. Exact instances materialize the retained member types in private
+resolved arenas and refresh their parameter, result, local, pattern, capture,
+and expression shapes. Frozen source interfaces and generic bodies stay intact.
+Closure entry maps grow to cover the private arena instead of indexing past the
+original type table. Existing non-projected representation refinements remain
+unchanged.
+
+The initial physical signature regression trapped at SPC-301 (9.839 s). The
+focused native query suite passes 46 tests (19.863 s). Native Wasm generation
+and execution pass 57 checks (9.144 s and 0.028 s), including distinct I32/I64
+members, Unit erasure, generic forwarding, ordered enum payloads, and escaping
+projected captures. The capture test first exposed an out-of-range closure
+lookup; it now runs successfully. Self-host parity for the new runtime member
+cases is still pending, as are guarded inference and exact native nominal demand.
+
 Projection owners survive zonking, body/lambda/module-value copying, compaction,
 logical query reads, signature pooling, and frozen module values. V1 body codecs
 use type tag 6 and diagnostic tag 2. New graph checks reject invalid operations

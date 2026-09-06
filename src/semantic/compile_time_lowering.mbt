@@ -117,12 +117,12 @@ fn fold_program_compile_time_queries(
   lowering : PlannedProgramLowering,
 ) -> PlannedProgramLowering {
   let targets = compile_time_builtin_targets(lowering)
-  if targets.length() == 0 {
-    return lowering
-  }
   let context = compile_time_program_context(
     program, analyzed, lowering, targets,
   )
+  if targets.length() == 0 && context.sensitive.is_empty() {
+    return lowering
+  }
   for index, module_ in lowering.modules {
     fold_module_compile_time_queries(context, index, module_, {}, None)
   }

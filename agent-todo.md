@@ -35,8 +35,11 @@ Deferred type checking and layout work below still prevent full completion.
     Generic aliases and pure queries now retain a structural member projection
     and reduce it with exact logical arguments. Native call inference now
     substitutes projected parameter/result types, including imported types,
-    forwarding, and an owner supplied by a later argument. Exact physical
-    instance types, the self-host inference port, and guarded checks remain.
+    forwarding, and an owner supplied by a later argument. Native physical
+    instances now materialize projected signatures, values, and captures in
+    private type arenas. The self-host inference/physical port and guarded checks
+    remain. Native execution now covers 57 checks; the shared additions are
+    also the regression targets for that self-host port.
   - [x] Port inline computed member syntax and local/imported generic member
     resolution to the self-host parser and resolver; test exact source errors.
   - [x] Add local compile-time type bindings. `type Item = ...` has block scope,

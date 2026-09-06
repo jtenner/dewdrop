@@ -200,6 +200,9 @@ pub fn program_function_fragments(
   let indices = fragments.lambda_function_indices.copy()
   let entries = fragments.lambda_entry_signature_indices.copy()
   let closure_entries = fragments.closure_entry_type_by_resolved.copy()
+  while closure_entries.length() < module_.resolved_types.length() {
+    closure_entries.push(-1)
+  }
   let selected = Array::make(indices.length(), false)
   for index, function_ in fragments.functions {
     if function_.lambda >= 0 &&

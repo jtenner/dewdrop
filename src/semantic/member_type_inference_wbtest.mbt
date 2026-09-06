@@ -16,11 +16,61 @@ test "compile time member projection can infer an owner from a later argument" {
 
 ///|
 test "compile time member projection instantiates runtime call signatures" {
-  let (program, _) = compile_time_evidence_test(
+  let (program, lowering) = compile_time_evidence_test(
     b"open dew.std.types\nstruct Box<t> {\n  item: t\n}\nfn keep<t>(value: field_type<t>(\"item\")) -> field_type<t>(\"item\") {\n  value\n}\npub fn main() -> I64 {\n  keep::<Box<I64>>(42i64)\n}\n",
   )
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.modules[0].inferred.diagnostics, [])
+  let fragments = plan_program_wasmgc_fragments(analyzed, lowering)
+  let keep = program.modules[0].lookup_value("keep").unwrap()
+  assert_eq(
+    lowering.modules[0].functions.callable_of(keep).unwrap().result_shape,
+    GenericPlannedValueShape,
+  )
+  let mut count = 0
+  for function_ in fragments.modules[0].functions {
+    if function_.declaration == keep &&
+      !function_.elided &&
+      function_.specialization_shapes.length > 0 {
+      assert_eq(function_.parameters.length, 1)
+      assert_eq(function_.results.length, 1)
+      assert_eq(
+        fragments.modules[0].function_value_types[function_.parameters.start],
+        WasmI64Value,
+      )
+      assert_eq(
+        fragments.modules[0].function_value_types[function_.results.start],
+        WasmI64Value,
+      )
+      count += 1
+      let instance = program_function_lowering(
+        lowering,
+        0,
+        function_.specialization_abi_key,
+      )
+      assert_eq(
+        instance.functions.callable_of(keep).unwrap().result_shape,
+        I64PlannedValueShape,
+      )
+      assert_eq(instance.diagnostics, [])
+      let selected = program_function_fragments(
+        instance,
+        fragments.modules[0],
+        function_.specialization_abi_key,
+      )
+      assert_eq(
+        selected.closure_entry_type_by_resolved.length(),
+        instance.resolved_types.length(),
+      )
+    }
+  }
+  assert_eq(count, 1)
+  assert_eq(
+    lowering.modules[0].functions.callable_of(keep).unwrap().result_shape,
+    GenericPlannedValueShape,
+  )
+  let second = plan_program_wasmgc_fragments(analyzed, lowering)
+  assert_eq(second.modules[0].functions, fragments.modules[0].functions)
 }
 
 ///|
