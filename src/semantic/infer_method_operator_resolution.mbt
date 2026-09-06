@@ -844,6 +844,7 @@ fn BasicBodyInferencer::select_declared_bound_operator(
     self.expression_type(left),
     Some(trait_declaration),
     method_name,
+    expression~,
   )
   if evidence.length() == 0 {
     return false
@@ -896,11 +897,18 @@ fn BasicBodyInferencer::select_declared_bound_operator(
   for type_ in self.call_scratch.candidate_type_arguments {
     self.call_type_arguments.push(type_)
   }
-  self.operator_targets[self.expression_index(expression)] = SelectedBoundInferredCallTarget(
-    declaration,
-    selected.evidence_index,
-    { start, length: self.call_scratch.candidate_type_arguments.length(), },
-  )
+  self.operator_targets[self.expression_index(expression)] = if selected.evidence_index <
+    0 {
+    SelectedInferredCallTarget(declaration, {
+      start,
+      length: self.call_scratch.candidate_type_arguments.length(),
+    })
+  } else {
+    SelectedBoundInferredCallTarget(declaration, selected.evidence_index, {
+      start,
+      length: self.call_scratch.candidate_type_arguments.length(),
+    })
+  }
   true
 }
 
@@ -1146,6 +1154,7 @@ fn BasicBodyInferencer::select_declared_bound_method(
     self.expression_type(receiver),
     None,
     name,
+    expression~,
   )
   if evidence.length() == 0 {
     return false
@@ -1215,11 +1224,17 @@ fn BasicBodyInferencer::select_declared_bound_method(
   for type_ in self.call_scratch.candidate_type_arguments {
     self.call_type_arguments.push(type_)
   }
-  self.call_targets[call_slot] = SelectedBoundInferredCallTarget(
-    declaration,
-    selected.evidence_index,
-    { start, length: self.call_scratch.candidate_type_arguments.length(), },
-  )
+  self.call_targets[call_slot] = if selected.evidence_index < 0 {
+    SelectedInferredCallTarget(declaration, {
+      start,
+      length: self.call_scratch.candidate_type_arguments.length(),
+    })
+  } else {
+    SelectedBoundInferredCallTarget(declaration, selected.evidence_index, {
+      start,
+      length: self.call_scratch.candidate_type_arguments.length(),
+    })
+  }
   true
 }
 

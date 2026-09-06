@@ -98,6 +98,9 @@ Deferred type checking and layout work below still prevent full completion.
 - [ ] Keep type-dependent checks inside their branch until the type is known.
   Check the selected branch with its known type facts. Both branches need valid
   syntax; unrelated source errors must not disappear.
+  Native `implements` guards now permit trait methods without hard bounds.
+  Exact retained calls keep generic implementation prerequisites. Scope tests
+  and 59 native execution checks pass; self-host parity remains in progress.
 - [ ] Make later passes visit only reachable code in that specialized body.
   Removed branches must not add calls, trait requests, locals, or storage types.
   Refresh flow and effect facts, keep source IDs for errors, and ensure distinct

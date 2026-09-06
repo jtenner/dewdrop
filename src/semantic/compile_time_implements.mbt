@@ -59,6 +59,13 @@ struct CompileTimeEvidenceSearch {
 }
 
 ///|
+struct CompileTimeTraitWitness {
+  implementation : IndexedImpl
+  bindings : Map[GenericParameterId, CompileTimeType]
+  prerequisites : Array[CompileTimeTraitWitness]
+}
+
+///|
 fn CompileTimeEvidenceSearch::read(
   self : CompileTimeEvidenceSearch,
   type_ : ResolvedTypeId,
@@ -78,7 +85,7 @@ fn CompileTimeEvidenceSearch::prerequisites(
   self : CompileTimeEvidenceSearch,
   declaration : DeclId,
   bindings : Map[GenericParameterId, CompileTimeType],
-) -> Result[Bool, String] {
+) -> Result[Array[CompileTimeTraitWitness]?, String] {
   let obligations : Array[(GenericParameterId, ResolvedTypeId)] = []
   if semantic_id_module(declaration) == self.collected.module_id {
     let generics = self.collected.generic_parameters_of(declaration)
@@ -135,6 +142,7 @@ fn CompileTimeEvidenceSearch::prerequisites(
       }
     }
   }
+  let witnesses = []
   for obligation in obligations {
     let (parameter, bound) = obligation
     let target = match bindings.get(parameter) {
@@ -145,12 +153,13 @@ fn CompileTimeEvidenceSearch::prerequisites(
       Ok(value) => value
       Err(error) => return Err(error)
     }
-    match self.search(target, trait_) {
-      Ok(true) => ()
-      other => return other
+    match self.witness(target, trait_) {
+      Ok(Some(value)) => witnesses.push(value)
+      Ok(None) => return Ok(None)
+      Err(error) => return Err(error)
     }
   }
-  Ok(true)
+  Ok(Some(witnesses))
 }
 
 ///|
@@ -159,6 +168,18 @@ fn CompileTimeEvidenceSearch::search(
   target : CompileTimeType,
   trait_ : CompileTimeType,
 ) -> Result[Bool, String] {
+  match self.witness(target, trait_) {
+    Ok(value) => Ok(value is Some(_))
+    Err(error) => Err(error)
+  }
+}
+
+///|
+fn CompileTimeEvidenceSearch::witness(
+  self : CompileTimeEvidenceSearch,
+  target : CompileTimeType,
+  trait_ : CompileTimeType,
+) -> Result[CompileTimeTraitWitness?, String] {
   self.steps += 1
   if self.steps > 65536 || self.active.length() >= 256 {
     return Err("CT-012 trait evidence search limit exceeded")
@@ -189,10 +210,11 @@ fn CompileTimeEvidenceSearch::search_candidates(
   target : CompileTimeType,
   trait_ : CompileTimeType,
   trait_declaration : DeclId,
-) -> Result[Bool, String] {
-  let mut matches = 0
+) -> Result[CompileTimeTraitWitness?, String] {
+  let mut selected : CompileTimeTraitWitness? = None
   for implementation in self.index.implementations {
-    if !self.include_test_impls && self.collected.declaration_is_test_only(implementation.declaration) {
+    if !self.include_test_impls &&
+      self.collected.declaration_is_test_only(implementation.declaration) {
       continue
     }
     if implementation.kind != TraitIndexedImpl(trait_declaration) {
@@ -218,15 +240,17 @@ fn CompileTimeEvidenceSearch::search_candidates(
       return Err("CT-015 invalid or ambiguous trait implementation")
     }
     match self.prerequisites(implementation.declaration, bindings) {
-      Ok(true) => matches += 1
-      Ok(false) => ()
+      Ok(Some(prerequisites)) => {
+        if selected is Some(_) {
+          return Err("CT-015 multiple compatible trait implementations")
+        }
+        selected = Some({ implementation, bindings, prerequisites, })
+      }
+      Ok(None) => ()
       Err(error) => return Err(error)
     }
-    if matches > 1 {
-      return Err("CT-015 multiple compatible trait implementations")
-    }
   }
-  Ok(matches == 1)
+  Ok(selected)
 }
 
 ///|

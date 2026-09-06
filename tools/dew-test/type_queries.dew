@@ -17,6 +17,30 @@ struct QueryRight {
 trait QueryMark {
 }
 
+trait QueryRead {
+  fn query_read(self) -> I32
+}
+
+impl QueryRead for I32 {
+  fn query_read(self) -> I32 {
+    self
+  }
+}
+
+impl<t: QueryRead> QueryRead for QueryBox<t> {
+  fn query_read(self) -> I32 {
+    self.item.query_read()
+  }
+}
+
+fn query_guarded_read<t>(value: t) -> I32 {
+  if implements::<t, QueryRead>() {
+    value.query_read()
+  } else {
+    0i32
+  }
+}
+
 impl QueryMark for QueryLeft {
 }
 
@@ -381,6 +405,16 @@ pub fn main(case: U32) -> Bool {
     let read_scalar = query_member_reader::<QueryBox<I64>>(56i64)
     read_unit()
     read_scalar() == 56i64
+  } else if case == 56u32 {
+    query_guarded_read::<I32>(57i32) == 57i32 && query_guarded_read::<I64>(9i64) == 0i32
+  } else if case == 57u32 {
+    let yes = QueryBox::{
+      item: 58i32
+    }
+    let no = QueryBox::{
+      item: 9i64
+    }
+    query_guarded_read::<QueryBox<I32>>(yes) == 58i32 && query_guarded_read::<QueryBox<I64>>(no) == 0i32
   } else {
     false
   }

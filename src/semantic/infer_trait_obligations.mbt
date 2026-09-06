@@ -114,6 +114,7 @@ fn BasicBodyInferencer::declared_body_trait_evidence(
   target_type : BodyTypeId,
   trait_filter : DeclId?,
   method_name : NameId,
+  expression? : ExprId = -1,
 ) -> Array[DeclaredBodyTraitEvidence] {
   let parameter = match self.direct_body_generic_parameter(target_type) {
     Some(value) => value
@@ -156,6 +157,17 @@ fn BasicBodyInferencer::declared_body_trait_evidence(
     }
     span = method_parameters
     phase += 1
+  }
+  for
+    guarded in self.guarded_trait_evidence(
+      expression, parameter, trait_filter, method_name,
+    ) {
+    if !evidence.any(value => {
+        value.bound_type == guarded.bound_type &&
+        value.requirement == guarded.requirement
+      }) {
+      evidence.push(guarded)
+    }
   }
   evidence
 }

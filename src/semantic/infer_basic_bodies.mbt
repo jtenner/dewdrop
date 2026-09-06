@@ -682,6 +682,8 @@ priv struct BasicBodyInferencer {
   field_spans : Array[HirSpan]
   solver : LocalTypeSolver
   pending_member_equations : Array[PendingBodyMemberEquation]
+  guarded_trait_scopes : Map[ExprId, Array[(ResolvedTypeId, ResolvedTypeId)]]
+  mut guarded_trait_scopes_ready : Bool
   expression_types : Array[BodyTypeId]
   mut local_types : Array[BodyTypeId]
   block_types : Array[BodyTypeId]
@@ -782,6 +784,8 @@ fn BasicBodyInferencer::new(
     field_spans,
     solver,
     pending_member_equations: [],
+    guarded_trait_scopes: {},
+    guarded_trait_scopes_ready: false,
     expression_types: Array::make(body.expressions.length, 0),
     local_types: Array::make(name_info.locals.length, 0),
     block_types: Array::make(body.blocks.length, 0),

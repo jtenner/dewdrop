@@ -9,6 +9,7 @@ struct CompileTimeSpecializedBody {
 struct CompileTimeProgramContext {
   program : CollectedProgram
   analyzed : AnalyzedProgramSemantics
+  modules : Array[PlannedModuleLowering]
   targets : Map[DeclId, Bytes]
   sensitive : Map[DeclId, Bool]
   instances : Map[String, CompileTimeSpecializedBody]
@@ -143,7 +144,14 @@ fn compile_time_program_context(
       None => ()
     }
   }
-  { program, analyzed, targets, sensitive, instances: {}, }
+  {
+    program,
+    analyzed,
+    modules: lowering.modules,
+    targets,
+    sensitive,
+    instances: {},
+  }
 }
 
 ///|
@@ -235,6 +243,9 @@ fn compile_time_specialization_key(
     resolved_types: owner.resolved_types.copy(),
     resolved_type_arguments: owner.resolved_type_arguments.copy(),
     types: owner.types.copy(),
+    trait_evidence: owner.trait_evidence.copy(),
+    trait_evidence_children: owner.trait_evidence_children.copy(),
+    trait_evidence_arguments: owner.trait_evidence_arguments.copy(),
     functions: {
       ..owner.functions,
       callables: owner.functions.callables.copy(),

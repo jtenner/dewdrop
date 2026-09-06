@@ -3,6 +3,22 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Native guarded trait calls
+
+`implements<T, Trait>()` supplies branch-local proof of the exact trait
+requirement. It does not add a hard bound or a runtime dictionary parameter.
+Positive conjunctions, negation, and short-circuit scopes preserve the proof;
+the false branch cannot use it. After branch removal, the selected instance
+resolves a unique implementation by declaration identity. The same trait search
+returns its prerequisite tree, which is kept for generic implementation calls.
+Private type and evidence arenas leave the shared template unchanged.
+
+All 53 focused native query tests pass in 23.848 s. Native Wasm passes 59 shared
+checks, including scalar implementation selection, ordinary absence, and a
+generic implementation with a trait prerequisite. The earlier full fixture
+build took 9.296 s; the warm prerequisite fixture took less than one second.
+The self-host guard port and general branch-local type checks remain in progress.
+
 ## Native member names and scalar layout
 
 `field_names<T>()` and `variant_names<T>()` select a declaration by its logical
