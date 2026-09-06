@@ -315,7 +315,7 @@ fn self_host_materialize_query_instance_types(lowering: SelfHostPlannedProgramLo
       if body.declaration == declaration {
         for id in self_host_compile_time_owned_expressions(instance, body) {
           let expression = instance.expressions[id]
-          if !(expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression) {
+          if !(expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedDeadExpression) {
             let type_ = context.materialize(expression.type_, expression.offset)
             if type_ != expression.type_ {
               instance.expressions[id] = self_host_query_expression_type(expression, instance, type_)

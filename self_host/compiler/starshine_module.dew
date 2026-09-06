@@ -20084,6 +20084,9 @@ fn self_host_emit_linked_i32_expression(
             SelfHostPlannedExpressionKind::PlannedDeferredExpression => {
               return Option::Some("CT-041 deferred source check reached emission")
             }
+            SelfHostPlannedExpressionKind::PlannedDeadExpression => {
+              return Option::Some("BOD-610 dead expression reached emission")
+            }
             SelfHostPlannedExpressionKind::PlannedPoisonExpression => {
               // A self-hosted inference pass can lose the selection record for
               // a qualified unit variant such as Option::None. The preserved

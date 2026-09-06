@@ -64,6 +64,8 @@ pub enum SelfHostPlannedExpressionKind {
   PlannedCaptureSet(U32, U32)
   PlannedFieldSet(U64, U32, U32)
   PlannedIndexSet(U32, U32, U32, SelfHostBasicCallTarget)
+  // Proven unreachable by branch/flow pruning; never a missing value.
+  PlannedDeadExpression
 }
 
 pub struct SelfHostLoweringBuiltinRecipe {

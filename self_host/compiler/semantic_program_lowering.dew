@@ -648,6 +648,13 @@ fn self_host_program_lowering_expression_error(
   message.append_u64(module_.module_id)
   message.append(" declaration=")
   message.append_u64(body.declaration)
+  match self_host_program_specialization_callable(module_, body.declaration) {
+    Option::Some(callable) => {
+      message.append(" callable=")
+      message.append(bytes_to_string(callable.name))
+    }
+    Option::None => {}
+  }
   message.append(" body=")
   message.append_u64(body.body)
   message.append(" expression=")

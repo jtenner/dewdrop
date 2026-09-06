@@ -50,7 +50,7 @@ fn self_host_compile_time_replace_kind(source: SelfHostPlannedExpression, kind: 
     flow: source.flow
     kind: kind
     selection: source.selection
-    reference: if kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression {
+    reference: if kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression || kind is SelfHostPlannedExpressionKind::PlannedDeadExpression {
       SelfHostBodyNameReference::NoNameReference
     } else {
       source.reference
@@ -119,6 +119,7 @@ fn self_host_compile_time_push_expression(module_: SelfHostPlannedModuleLowering
   match kind {
     SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => self_host_compile_time_push_children(module_, children, work)
     SelfHostPlannedExpressionKind::PlannedPoisonExpression => {}
+    SelfHostPlannedExpressionKind::PlannedDeadExpression => assert(false, "BOD-610 dead expression reached compile-time traversal")
     SelfHostPlannedExpressionKind::PlannedDeferredExpression => {}
     SelfHostPlannedExpressionKind::PlannedConsumedExpression => {}
     SelfHostPlannedExpressionKind::PlannedUnitConst => {}
@@ -329,7 +330,7 @@ fn self_host_prune_compile_time_body_pass(module_: SelfHostPlannedModuleLowering
   }
   for index in self_host_compile_time_owned_expressions(module_, body) {
       if !live[index] {
-        module_.expressions[index] = self_host_compile_time_replace_kind(module_.expressions[index], SelfHostPlannedExpressionKind::PlannedPoisonExpression)
+        module_.expressions[index] = self_host_compile_time_replace_kind(module_.expressions[index], SelfHostPlannedExpressionKind::PlannedDeadExpression)
       }
   }
   self_host_refresh_compile_time_body_flow(module_, body)

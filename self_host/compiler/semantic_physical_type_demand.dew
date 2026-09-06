@@ -165,7 +165,7 @@ fn self_host_physical_type_demand_body(scope: SelfHostPhysicalTypeDemandScope, e
   let _ = while 0u32 {
     offset => if offset < expressions.length {
       let expression = module_.expressions[expressions.start + offset]
-      if !(expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression) {
+      if !(expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedDeadExpression) {
         scope.work.push(expression.type_)
       }
       continue offset + 1u32

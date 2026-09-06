@@ -69,6 +69,7 @@ fn self_host_refresh_compile_time_expression_flow(module_: SelfHostPlannedModule
   }
   let flow = match source.kind {
     SelfHostPlannedExpressionKind::PlannedPoisonExpression => return
+    SelfHostPlannedExpressionKind::PlannedDeadExpression => return
     SelfHostPlannedExpressionKind::PlannedConsumedExpression => return
     SelfHostPlannedExpressionKind::PlannedLambdaClosure(_) => self_host_flow_falls_through()
     SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => module_.blocks[block].flow

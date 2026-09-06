@@ -408,7 +408,7 @@ fn self_host_program_specialization_call_recipe(
   expression: SelfHostPlannedExpression,
 ) -> Option<SelfHostProgramCallRecipe> {
   // A selected name consumed by a direct call is not a separate reference.
-  if expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression || expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression {
+  if expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression || expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression || expression.kind is SelfHostPlannedExpressionKind::PlannedDeadExpression {
     return Option::None
   }
   // A variant constructor has a physical type, not a physical function.

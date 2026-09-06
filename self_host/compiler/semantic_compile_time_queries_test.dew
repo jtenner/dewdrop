@@ -2,6 +2,44 @@ open dew.std.testing
 open dew.std.string
 open dew.std.string_builder
 
+test "dead typed query branches are distinct from invalid live values" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn main() -> Token {\n  if unit::<Unit>() {\n    Token::{\n      value: 1u32\n    }\n  } else {\n    Token::{\n      value: 2u32\n    }\n  }\n}\n",
+    b"pub builtin unit<T>() -> Bool = \"types.is_unit\"\npub struct Token {\n  value: U32\n}\n",
+  )
+  assert(fixture.frozen.collected.modules.at(0u32).diagnostic_count() == 0u32, "typed branch source must parse")
+  assert(fixture.frozen.collected.modules.at(1u32).diagnostic_count() == 0u32, "typed branch library must parse")
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "typed branch imports must resolve")
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  match self_host_validate_program_inference(lowering) {
+    Option::Some(error) => assert(false, error)
+    Option::None => {}
+  }
+  match self_host_validate_program_lowering(lowering) {
+    Option::Some(error) => assert(false, error)
+    Option::None => {}
+  }
+  let mut changed = false
+  for module_ in lowering.modules {
+    while 0u32 {
+      index if index < module_.expressions.length() => {
+        let expression = module_.expressions[index]
+        if !changed && expression.kind is SelfHostPlannedExpressionKind::PlannedConstruct(_, _, _) && expression.nominal != 0u64 {
+          module_.expressions[index] = self_host_compile_time_replace_kind(expression, SelfHostPlannedExpressionKind::PlannedPoisonExpression)
+          changed = true
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+  }
+  assert(changed, "the selected branch has a typed constructor to mutate")
+  match self_host_validate_program_lowering(lowering) {
+    Option::Some(error) => assert(error.starts_with("program lowering has a typed poison value"), "the live poison diagnostic remains exact")
+    Option::None => assert(false, "live typed poison must still fail validation")
+  }
+}
+
 test "local numeric query guards retain source dependence" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\nfn read<T>(value: T) -> I64 {\n  let width = bit_width::<T>()\n  if width == 64u32 {\n    accept(value)\n  } else {\n    0i64\n  }\n}\n",

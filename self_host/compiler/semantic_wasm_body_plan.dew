@@ -6871,6 +6871,7 @@ fn self_host_body_expression_kind_name(
 ) -> String {
   match kind {
     SelfHostPlannedExpressionKind::PlannedPoisonExpression => "poison"
+    SelfHostPlannedExpressionKind::PlannedDeadExpression => "dead"
     SelfHostPlannedExpressionKind::PlannedDeferredExpression => "deferred"
     SelfHostPlannedExpressionKind::PlannedConsumedExpression => "consumed"
     SelfHostPlannedExpressionKind::PlannedI8Const(_) => "i8.const"
