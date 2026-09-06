@@ -49,6 +49,7 @@ pub enum SelfHostPrimitiveType {
   StringViewType
   StringBuilderType
   BytesBuilderType
+  CompileTimeTypeType
 }
 
 impl SelfHostPrimitiveType {
@@ -95,6 +96,7 @@ impl SelfHostPrimitiveType {
       SelfHostPrimitiveType::StringViewType => 38u32
       SelfHostPrimitiveType::StringBuilderType => 39u32
       SelfHostPrimitiveType::BytesBuilderType => 40u32
+      SelfHostPrimitiveType::CompileTimeTypeType => 41u32
     }
   }
 }
@@ -144,6 +146,7 @@ fn self_host_primitive_type_from_name(
     "StringView" => Option::Some(SelfHostPrimitiveType::StringViewType)
     "StringBuilder" => Option::Some(SelfHostPrimitiveType::StringBuilderType)
     "BytesBuilder" => Option::Some(SelfHostPrimitiveType::BytesBuilderType)
+    "Type" => Option::Some(SelfHostPrimitiveType::CompileTimeTypeType)
     _ => Option::None
   }
 }
@@ -172,6 +175,7 @@ pub enum SelfHostTypeDiagnostic {
   SelfOutsideContext(U64, U32)
   AliasCycle(SelfHostHirSpan, U32)
   AliasExpansionLimit(U64, U32, U32)
+  ComputedTypeFailure(U64, String, U32)
 }
 
 impl SelfHostTypeDiagnostic {
@@ -188,6 +192,7 @@ impl SelfHostTypeDiagnostic {
       SelfHostTypeDiagnostic::SelfOutsideContext(_, offset) => offset
       SelfHostTypeDiagnostic::AliasCycle(_, offset) => offset
       SelfHostTypeDiagnostic::AliasExpansionLimit(_, _, offset) => offset
+      SelfHostTypeDiagnostic::ComputedTypeFailure(_, _, offset) => offset
     }
   }
 
@@ -204,6 +209,7 @@ impl SelfHostTypeDiagnostic {
       SelfHostTypeDiagnostic::SelfOutsideContext(_, _) => 8u32
       SelfHostTypeDiagnostic::AliasCycle(_, _) => 9u32
       SelfHostTypeDiagnostic::AliasExpansionLimit(_, _, _) => 10u32
+      SelfHostTypeDiagnostic::ComputedTypeFailure(_, _, _) => 11u32
     }
   }
 }
@@ -360,6 +366,7 @@ impl SelfHostResolvedTypeInterner {
       SelfHostPrimitiveType::StringViewType,
       SelfHostPrimitiveType::StringBuilderType,
       SelfHostPrimitiveType::BytesBuilderType,
+      SelfHostPrimitiveType::CompileTimeTypeType,
     ]
     for primitive in primitives {
       interner.primitive_types.push(

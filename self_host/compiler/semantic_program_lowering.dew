@@ -609,6 +609,13 @@ fn self_host_program_type_diagnostic_text(
       message.append(" offset=")
       message.append_u32(offset)
     }
+    SelfHostTypeDiagnostic::ComputedTypeFailure(owner, detail, offset) => {
+      message.append(detail)
+      message.append(" owner=")
+      message.append_u64(owner)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
   }
   message.finish()
 }

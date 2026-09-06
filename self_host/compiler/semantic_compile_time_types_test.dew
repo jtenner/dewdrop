@@ -1,0 +1,68 @@
+open dew.std.testing
+
+test "ARN-104 compile-time storage requires prior child types" expect_trap "unreachable" {
+  self_host_compile_time_storage_flag([false], 1u32, 24702u64)
+}
+
+test "ARN-101 compile-time storage rejects invalid spans" expect_trap "unreachable" {
+  self_host_compile_time_storage_span(
+    SelfHostHirSpan::{
+      start: 2u32
+      length: 1u32
+    }, 1u32, 24702u64,
+  )
+}
+
+test "compile-time Type has the native identity and no runtime shape" {
+  let collected = self_host_collect_bytes(
+    24700u64,
+    b"builtin member<t>(name: String) -> Type = \"types.field_type\"\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostic_count() == 0u32, "type-returning builtin signature")
+  let result = resolved.callable_return_types[0u32]
+  match resolved.types[result] {
+    SelfHostResolvedType::PrimitiveType(primitive) => {
+      assert(primitive.rank() == 41u32, "native metatype rank")
+      assert(self_host_impl_primitive_key(primitive) == 41u32, "metatype impl key")
+    }
+    _ => assert(false, "expected the compile-time primitive")
+  }
+  assert(
+    self_host_planned_resolved_value_shape(resolved, result) is SelfHostPlannedValueShape::ErrorPlannedValueShape,
+    "Type must not acquire reference storage",
+  )
+  assert(self_host_bootstrap_primitive_probe() == 0u32, "complete primitive table")
+}
+
+test "compile-time Type storage errors retain their code and source context" {
+  for source in [
+    b"struct Invalid {\n  value: Type\n}\n",
+    b"type Meta = Type\nfn invalid(value: Meta) -> Unit {}\n",
+    b"fn invalid() -> Type {}\n",
+    b"enum Invalid {\n  Payload(Type)\n}\n",
+    b"struct Box<t> {}\nfn invalid(value: Box<Type>) -> Unit {}\n",
+    b"fn invalid(value: fn(I32) -> Type) -> Unit {}\n",
+    b"fn invalid(value: (I32, Type)) -> Unit {}\n",
+    b"fn invalid() -> Unit {\n  let value = fn(item: Type) -> Unit {}\n}\n",
+    b"fn invalid() -> Unit {\n  let value = fn() -> Type {}\n}\n",
+    b"fn field_type<t>(name: String) -> Type {}\n",
+  ] {
+    let collected = self_host_collect_bytes(24701u64, source)
+    assert(collected.diagnostics.length() == 0u32, "valid storage test syntax")
+    let resolved = self_host_resolve_module_types(collected)
+    let mut found = false
+    for diagnostic in resolved.diagnostics {
+      match diagnostic {
+        SelfHostTypeDiagnostic::ComputedTypeFailure(owner, message, offset) => {
+          assert(owner != 0u64, "storage error owner")
+          assert(offset > 0u32, "storage error source offset")
+          assert(message == "CT-037 Type is compile-time-only and has no runtime storage", "stable storage error code")
+          found = true
+        }
+        _ => assert(false, "unexpected storage diagnostic")
+      }
+    }
+    assert(found, "missing CT-037")
+  }
+}

@@ -1470,6 +1470,7 @@ impl SelfHostTypeResolver {
   }
 
   fn finish(self) -> SelfHostResolvedModuleTypes {
+    self.validate_compile_time_storage()
     self.sort_diagnostics()
     SelfHostResolvedModuleTypes::{
       module_id: self.collected.module_id

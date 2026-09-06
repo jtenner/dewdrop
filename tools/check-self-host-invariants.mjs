@@ -10,6 +10,14 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "ARN-104 compile-time storage requires prior child types",
+    expected: [104, 2, 24702n, 0n, 0n, 4294967295, 1n, 1n, 0n],
+  },
+  {
+    name: "ARN-101 compile-time storage rejects invalid spans",
+    expected: [101, 2, 24702n, 0n, 0n, 4294967295, 1n, 2n, 1n],
+  },
   ...["generic", "parameter"].map((kind, field) => ({
     name: `ARN-106 imported ${kind} spans cannot alias a local declaration`,
     expected: [106, 1, 5700n, 5701n << 32n, 0n, 4294967295, 5700n, 5701n, BigInt(field)],

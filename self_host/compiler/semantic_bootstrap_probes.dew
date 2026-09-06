@@ -4,7 +4,7 @@
 pub fn self_host_bootstrap_primitive_probe() -> U32 {
   let interner = SelfHostResolvedTypeInterner::new()
   let mut failures = 0u32
-  if interner.primitive_types.length() != 41u32 {
+  if interner.primitive_types.length() != 42u32 {
     failures = failures + 128u32
   }
   let _ = while 0u32 {

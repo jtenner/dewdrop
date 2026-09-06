@@ -36,6 +36,9 @@ physical-boundary checks. This is not yet self-host parity or the full feature.
   `field_offset`. WasmGC object byte layouts are not exposed; never invent them.
 - [ ] Port all query, trait search, assertion, and logical instance handling to
   the self-host compiler. Check both compilers with the same execution fixtures.
+  - [x] Match the native compile-time `Type` identity and reject runtime storage,
+    including aliases, nested generic arguments, tuples, and function signatures.
+    Keep numeric records for invalid internal type indices and spans.
 - [x] Add native `is_unit::<t>()` as a pure compiler builtin with no Wasm call.
   Test the logical type: Unit is true, other known types are false, and unknown
   types stay pending. Never is not Unit. Resolve the query by identity, not by

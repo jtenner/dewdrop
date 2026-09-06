@@ -123,13 +123,39 @@ Local compile-time bindings and self-host support are still pending.
   bugs. This checks the existing self-host compiler plus the alias fix, not query
   parity: the new query evaluator has not been ported.
 
+## Self-host Type identity and storage boundary
+
+The self-host primitive table now includes compile-time `Type` at rank 41, matching
+the native compiler without changing the older primitive ranks. It has an error
+physical shape, never a reference carrier. The bootstrap primitive probe checks
+all 42 entries.
+
+After alias normalization, a single pass over interned types computes whether a
+type contains `Type`. Structural children must precede their parents. Parameters,
+ordinary results, fields, variant payloads, and lambda signatures then use those
+flags to reject runtime storage with `CT-037` and retain owner/source context.
+Type-returning builtin metadata permits a compile-time return; ordinary function
+names cannot grant that permission. This is not a self-host query evaluator.
+
+Invalid internal spans and type indices store numeric `ARN-101`/`ARN-104` failure
+records with phase, module, expected arena length, actual index/start, and span
+length before trapping. The host tests check the full record, not just the trap.
+
+The warm hardening run passed 166 tests, 29 invariant records, and all existing
+semantic/emission probes in 20.282 seconds (test generation 2.918 seconds). Storage
+cases include aliases, nested generic arguments, tuple/function types, lambda
+parameters/results, and an ordinary function named `field_type`. The
+first cold release-generator rebuild took 100.836 seconds before reporting a Dew
+syntax error, since fixed. That cold build remains a performance bug.
+
 ## Work still required
 
 This is not the completed feature set.
 
 1. Implement and run the matching self-host query, logical specialization, branch,
-   evidence, assertion, and physical-boundary paths. Only alias normalization has
-   been changed in the self-host compiler so far.
+   evidence, assertion, and physical-boundary paths. Alias normalization and the
+   compile-time Type identity/storage boundary are present; query evaluation and
+   computed member syntax are not yet ported.
 2. Add guarded inference obligations. The current `implements` query does not yet
    make an otherwise invalid generic trait call legal inside its true branch.
    Both branches still undergo ordinary source type checking before lowering.

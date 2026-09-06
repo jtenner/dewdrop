@@ -238,6 +238,7 @@ fn self_host_impl_primitive_key(primitive: SelfHostPrimitiveType) -> U32 {
     SelfHostPrimitiveType::StringViewType => 38u32
     SelfHostPrimitiveType::StringBuilderType => 39u32
     SelfHostPrimitiveType::BytesBuilderType => 40u32
+    SelfHostPrimitiveType::CompileTimeTypeType => 41u32
   }
 }
 

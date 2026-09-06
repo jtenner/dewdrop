@@ -86,6 +86,7 @@ fn self_host_primitive_value_shape(
     SelfHostPrimitiveType::StringBuilderType => SelfHostPlannedValueShape::RefPlannedValueShape
     SelfHostPrimitiveType::BytesBuilderType => SelfHostPlannedValueShape::RefPlannedValueShape
     SelfHostPrimitiveType::NeverType => SelfHostPlannedValueShape::NeverPlannedValueShape
+    SelfHostPrimitiveType::CompileTimeTypeType => SelfHostPlannedValueShape::ErrorPlannedValueShape
   }
 }
 
