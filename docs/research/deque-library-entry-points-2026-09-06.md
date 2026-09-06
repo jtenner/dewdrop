@@ -17,3 +17,7 @@ The next circular-buffer commit must replace that storage and pass both suites.
 The two source-policy tests pass (0.042 seconds). The focused native deque lane
 passes (33.421 seconds); its run time remains a performance bug. API files are
 regenerated. Full runtime success is not claimed at this intermediate commit.
+
+Follow-up: the [Dew ring storage migration](circular-buffer-library-storage-2026-09-06.md)
+removes that generic emitter path. Deque now passes full native stdlib execution
+and the shared native/self-host ring corpus, including product values.

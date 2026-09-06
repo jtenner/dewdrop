@@ -30,25 +30,7 @@
       "slot": 36,
       "path": "dew.std.collections.circular_buffer",
       "type": 0,
-      "methods": {},
-      "operations": {
-        "CircularBufferBounded": [2],
-        "CircularBufferGrowable": [3],
-        "CircularBufferLength": [4],
-        "CircularBufferCapacity": [5],
-        "CircularBufferIsEmpty": [6],
-        "CircularBufferIsFull": [7],
-        "CircularBufferPushBack": [8],
-        "CircularBufferPopFront": [9],
-        "CircularBufferPeekFront": [10],
-        "CircularBufferClear": [11],
-        "CircularBufferIter": [12],
-        "CircularBufferIterHasNext": [13],
-        "CircularBufferIterNext": [14],
-        "CircularBufferPushFront": [15],
-        "CircularBufferPopBack": [16],
-        "CircularBufferPeekBack": [17]
-      }
+      "operations": {}
     },
     "deque": {
       "slot": 37,

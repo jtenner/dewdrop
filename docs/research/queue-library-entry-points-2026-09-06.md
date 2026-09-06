@@ -28,3 +28,7 @@ reference values.
   accepted as a passing execution test. The next storage migration must fix it.
 
 The integration run above 30 seconds remains a performance bug.
+
+Follow-up: the [Dew ring storage migration](circular-buffer-library-storage-2026-09-06.md)
+removes that generic emitter path. Queue now passes full native stdlib execution
+and the shared native/self-host ring corpus, including Unit values and Iter.

@@ -46,7 +46,10 @@ Runs above 30 seconds remain performance bugs. No slow check was skipped.
 
 ## Remaining Array work
 
-Literal construction and shared runtime producers still use the old wrapper
-recipe. They must use declared fields and exact planned targets. This cleanup
+Literal construction still uses the old wrapper recipe. It must use declared
+fields and exact planned targets. The subsequent
+[circular-buffer migration](circular-buffer-library-storage-2026-09-06.md) removes
+all shared ring producers, including the temporarily restored constructors.
+This cleanup
 does not claim that the Array layout migration or the wider compiler audit is
 complete.

@@ -5,11 +5,10 @@ test "removed array emitter operations report an exact diagnostic" {
   )
   assert_eq(stages.diagnostic_count(), 0)
   let planned = stages.link.modules[stages.link.root_module_index]
-  for
-    operation in [
-      1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-      49,
-    ] {
+  for operation in 0..<50 {
+    if operation == 48 {
+      continue
+    }
     assert_eq(
       starshine_finish_array(
         planned,
@@ -29,29 +28,14 @@ test "removed array emitter operations report an exact diagnostic" {
 }
 
 ///|
-test "array cleanup retains both circular buffer capacity constructors" {
+test "circular buffers emit without an Array literal or legacy wrapper" {
   let stages = backend_test_single_module_stages(
-    28116UL, b"open dew.std.array\npub fn run() -> I64 {\n  let values = [7i64]\n  values[0u32]\n}\n",
+    28116UL, b"open dew.std.collections.circular_buffer\npub fn run() -> I64 {\n  let fixed = circular_buffer_bounded(2u32)\n  let grown = circular_buffer_growable(2u32)\n  circular_buffer_push_back(fixed, 7i64)\n  circular_buffer_push_back(grown, 9i64)\n  match circular_buffer_pop_front(grown) {\n    Option::Some(value) => value\n    Option::None => 0i64\n  }\n}\n",
   )
   assert_eq(stages.diagnostic_count(), 0)
-  let planned = stages.link.modules[stages.link.root_module_index]
-  for operation in [20, 21] {
-    match
-      starshine_finish_array(
-        planned,
-        Some(stages.link),
-        0UL,
-        operation,
-        Some(@semantic.planned_i32_shape()),
-        [[@lib.Instruction::i32_const(@lib.I32::new(2))]],
-        0,
-        1,
-        2,
-        -1,
-      ) {
-      Ok(instructions) => assert_eq(instructions.length(), 7)
-      Err(error) => fail(@debug.to_string(error))
-    }
+  match emit_starshine_program_module(stages.lowering, stages.link) {
+    Ok(_) => ()
+    Err(error) => fail(@debug.to_string(error))
   }
 }
 

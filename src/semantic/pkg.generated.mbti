@@ -181,8 +181,6 @@ pub fn standard_array_key_iterator_type_declaration() -> UInt64
 
 pub fn standard_array_type_declaration() -> UInt64
 
-pub fn standard_circular_buffer_method_declaration(String) -> UInt64
-
 pub fn standard_circular_buffer_type_declaration() -> UInt64
 
 pub fn standard_deque_type_declaration() -> UInt64
@@ -1729,27 +1727,6 @@ pub enum PlannedExpressionKind {
   PlannedFixedArrayLength(Int, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(Int, Int, PlannedValueShape)
   PlannedFixedArraySetUnchecked(Int, Int, Int, PlannedValueShape)
-  PlannedCircularBufferLength(Int)
-  PlannedStackIsEmpty(Int)
-  PlannedStackPeek(Int, PlannedValueShape)
-  PlannedQueueDequeue(Int, PlannedValueShape)
-  PlannedQueuePeek(Int, PlannedValueShape)
-  PlannedCircularBufferNew(Int, PlannedValueShape, Bool)
-  PlannedCircularBufferNewZero(PlannedValueShape)
-  PlannedQueueRingEnqueue(Int, Int, PlannedValueShape)
-  PlannedDequeRingPushFront(Int, Int, PlannedValueShape)
-  PlannedCircularBufferCapacity(Int, PlannedValueShape)
-  PlannedCircularBufferIsFull(Int, PlannedValueShape)
-  PlannedCircularBufferPushBack(Int, Int, PlannedValueShape)
-  PlannedCircularBufferPopFront(Int, PlannedValueShape)
-  PlannedCircularBufferPeekFront(Int, PlannedValueShape)
-  PlannedCircularBufferClear(Int, PlannedValueShape)
-  PlannedCircularBufferIter(Int, PlannedValueShape)
-  PlannedCircularBufferIterHasNext(Int)
-  PlannedCircularBufferIterNext(Int, PlannedValueShape)
-  PlannedCircularBufferPushFront(Int, Int, PlannedValueShape)
-  PlannedCircularBufferPopBack(Int, PlannedValueShape)
-  PlannedCircularBufferPeekBack(Int, PlannedValueShape)
   PlannedMapSingleton(Int, Int, PlannedValueShape, PlannedValueShape, UInt64, UInt64)
   PlannedMapEmpty(PlannedValueShape, PlannedValueShape, UInt64, UInt64)
   PlannedMapLength(Int)

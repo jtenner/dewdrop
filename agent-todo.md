@@ -79,16 +79,16 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Remove the old Array wrapper layout and literal shortcuts. Use declared
   fields and exact construction recipes, not a guessed three-field layout.
   Unused native Array operation nodes and emitters are now removed; literal
-  construction and shared ring producers remain. See the
+  construction remains; shared ring producers are now removed. See the
   [cleanup log](docs/research/array-legacy-ir-cleanup-2026-09-06.md).
 - [ ] Move Map and Set hashing, buckets, growth, lookup, and iteration into Dew.
   Keep their values and bounds correct before tuning them.
-- [ ] Move Queue, circular-buffer, and deque storage algorithms into Dew.
-  Commit each library family separately with order and boundary tests.
-  Queue and deque entry points now use ordinary Dew calls; the shared circular-buffer
-  storage migration remains. See the
-  [Queue log](docs/research/queue-library-entry-points-2026-09-06.md) and
-  [deque log](docs/research/deque-library-entry-points-2026-09-06.md).
+- [x] Move Queue, circular-buffer, and deque storage algorithms into Dew.
+  Each family has a separate commit. Declared typed storage replaces the shared
+  Array layout, and unused native ring code is removed. Twenty shared checks
+  pass in both compilers, including Unit, tuples, references, bounds, growth,
+  clearing, floats, and Iter. See the
+  [storage log](docs/research/circular-buffer-library-storage-2026-09-06.md).
 - [ ] Move Text, Bytes, views, and builders out of compiler-owned algorithms.
   Keep encoding, bounds, and lifetime checks in ordinary library code.
 - [ ] Convert remaining host-operation builtins into foreign declarations.

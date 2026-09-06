@@ -1,21 +1,205 @@
-open dew.std.array
+open dew.std.wasm.intrinsics
 
-pub type CircularBuffer<t> = Array<t>
-pub type CircularBufferIter<t> = ArrayIter<t>
+pub struct CircularBuffer<t> {
+  mut backing: WasmArray<t>
+  mut head: U32
+  mut count: U32
+  mut limit: U32
+  growable: Bool
+}
 
-pub builtin circular_buffer_bounded<t>(capacity: U32) -> CircularBuffer<t> = "dew_circular_buffer_bounded"
-pub builtin circular_buffer_growable<t>(capacity: U32) -> CircularBuffer<t> = "dew_circular_buffer_growable"
-pub builtin circular_buffer_length<t>(buffer: CircularBuffer<t>) -> U32 = "dew_circular_buffer_length"
-pub builtin circular_buffer_capacity<t>(buffer: CircularBuffer<t>) -> U32 = "dew_circular_buffer_capacity"
-pub builtin circular_buffer_is_empty<t>(buffer: CircularBuffer<t>) -> Bool = "dew_circular_buffer_is_empty"
-pub builtin circular_buffer_is_full<t>(buffer: CircularBuffer<t>) -> Bool = "dew_circular_buffer_is_full"
-pub builtin circular_buffer_push_back<t>(buffer: CircularBuffer<t>, value: t) -> Bool = "dew_circular_buffer_push_back"
-pub builtin circular_buffer_pop_front<t>(buffer: CircularBuffer<t>) -> Option<t> = "dew_circular_buffer_pop_front"
-pub builtin circular_buffer_peek_front<t>(buffer: CircularBuffer<t>) -> Option<t> = "dew_circular_buffer_peek_front"
-pub builtin circular_buffer_clear<t>(buffer: CircularBuffer<t>) -> Unit = "dew_circular_buffer_clear"
-pub builtin circular_buffer_iter<t>(buffer: CircularBuffer<t>) -> CircularBufferIter<t> = "dew_circular_buffer_iter"
-pub builtin circular_buffer_iter_has_next<t>(iter: CircularBufferIter<t>) -> Bool = "dew_circular_buffer_iter_has_next"
-pub builtin circular_buffer_iter_next<t>(iter: CircularBufferIter<t>) -> t = "dew_circular_buffer_iter_next"
-pub builtin circular_buffer_push_front<t>(buffer: CircularBuffer<t>, value: t) -> Bool = "dew_circular_buffer_push_front"
-pub builtin circular_buffer_pop_back<t>(buffer: CircularBuffer<t>) -> Option<t> = "dew_circular_buffer_pop_back"
-pub builtin circular_buffer_peek_back<t>(buffer: CircularBuffer<t>) -> Option<t> = "dew_circular_buffer_peek_back"
+pub struct CircularBufferIter<t> {
+  owner: CircularBuffer<t>
+  mut cursor: U32
+}
+
+pub fn circular_buffer_bounded<t>(capacity: U32) -> CircularBuffer<t> {
+  circular_buffer_create(capacity, false)
+}
+pub fn circular_buffer_growable<t>(capacity: U32) -> CircularBuffer<t> {
+  circular_buffer_create(capacity, true)
+}
+pub fn circular_buffer_length<t>(buffer: CircularBuffer<t>) -> U32 {
+  buffer.count
+}
+pub fn circular_buffer_capacity<t>(buffer: CircularBuffer<t>) -> U32 {
+  buffer.limit
+}
+pub fn circular_buffer_is_empty<t>(buffer: CircularBuffer<t>) -> Bool {
+  buffer.count == 0u32
+}
+pub fn circular_buffer_is_full<t>(buffer: CircularBuffer<t>) -> Bool {
+  buffer.count == buffer.limit
+}
+pub fn circular_buffer_push_back<t>(buffer: CircularBuffer<t>, value: t) -> Bool {
+  if circular_buffer_make_room(buffer) {
+    let index = circular_buffer_index(buffer, buffer.count)
+    wasm_array_set(buffer.backing, index, value)
+    buffer.count = buffer.count + 1u32
+    true
+  } else {
+    false
+  }
+}
+pub fn circular_buffer_push_front<t>(buffer: CircularBuffer<t>, value: t) -> Bool {
+  if circular_buffer_make_room(buffer) {
+    let index = if buffer.head == 0u32 {
+      buffer.limit - 1u32
+    } else {
+      buffer.head - 1u32
+    }
+    wasm_array_set(buffer.backing, index, value)
+    buffer.head = index
+    buffer.count = buffer.count + 1u32
+    true
+  } else {
+    false
+  }
+}
+pub fn circular_buffer_pop_front<t>(buffer: CircularBuffer<t>) -> Option<t> {
+  if buffer.count == 0u32 {
+    Option::None
+  } else {
+    let index = circular_buffer_index(buffer, 0u32)
+    let value = wasm_array_get(buffer.backing, index)
+    circular_buffer_clear_slot(buffer, index)
+    buffer.count = buffer.count - 1u32
+    buffer.head = if buffer.count == 0u32 || index + 1u32 == buffer.limit {
+      0u32
+    } else {
+      index + 1u32
+    }
+    Option::Some(value)
+  }
+}
+pub fn circular_buffer_pop_back<t>(buffer: CircularBuffer<t>) -> Option<t> {
+  if buffer.count == 0u32 {
+    Option::None
+  } else {
+    let index = circular_buffer_index(buffer, buffer.count - 1u32)
+    let value = wasm_array_get(buffer.backing, index)
+    circular_buffer_clear_slot(buffer, index)
+    buffer.count = buffer.count - 1u32
+    if buffer.count == 0u32 {
+      buffer.head = 0u32
+    }
+    Option::Some(value)
+  }
+}
+pub fn circular_buffer_peek_front<t>(buffer: CircularBuffer<t>) -> Option<t> {
+  if buffer.count == 0u32 {
+    Option::None
+  } else {
+    Option::Some(wasm_array_get(buffer.backing, circular_buffer_index(buffer, 0u32)))
+  }
+}
+pub fn circular_buffer_peek_back<t>(buffer: CircularBuffer<t>) -> Option<t> {
+  if buffer.count == 0u32 {
+    Option::None
+  } else {
+    Option::Some(wasm_array_get(buffer.backing, circular_buffer_index(buffer, buffer.count - 1u32)))
+  }
+}
+pub fn circular_buffer_clear<t>(buffer: CircularBuffer<t>) -> Unit {
+  while 0u32 {
+    offset if offset < buffer.count => {
+      circular_buffer_clear_slot(buffer, circular_buffer_index(buffer, offset))
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
+  buffer.head = 0u32
+  buffer.count = 0u32
+}
+pub fn circular_buffer_iter<t>(buffer: CircularBuffer<t>) -> CircularBufferIter<t> {
+  CircularBufferIter::{
+    owner: buffer
+    cursor: 0u32
+  }
+}
+pub fn circular_buffer_iter_has_next<t>(iter: CircularBufferIter<t>) -> Bool {
+  iter.cursor < iter.owner.count
+}
+pub fn circular_buffer_iter_next<t>(iter: CircularBufferIter<t>) -> t {
+  if !circular_buffer_iter_has_next(iter) {
+    unreachable()
+  } else {
+    let value = wasm_array_get(iter.owner.backing, circular_buffer_index(iter.owner, iter.cursor))
+    iter.cursor = iter.cursor + 1u32
+    value
+  }
+}
+
+impl<t> Iter<t> for CircularBufferIter<t> {
+  fn next(self) -> Option<t> {
+    if circular_buffer_iter_has_next(self) {
+      Option::Some(circular_buffer_iter_next(self))
+    } else {
+      Option::None
+    }
+  }
+}
+
+fn circular_buffer_create<t>(capacity: U32, growable: Bool) -> CircularBuffer<t> {
+  if capacity == 4294967295u32 {
+    unreachable()
+  } else {
+    CircularBuffer::{
+      // The final slot remains default-initialized. Copying it clears removed
+      // references and products without allocating a new object on each pop.
+      backing: wasm_array_new_default(capacity + 1u32)
+      head: 0u32
+      count: 0u32
+      limit: capacity
+      growable: growable
+    }
+  }
+}
+
+fn circular_buffer_index<t>(buffer: CircularBuffer<t>, offset: U32) -> U32 {
+  if buffer.head >= buffer.limit || offset >= buffer.limit {
+    unreachable()
+  } else {
+    let suffix = buffer.limit - buffer.head
+    if offset < suffix {
+      buffer.head + offset
+    } else {
+      offset - suffix
+    }
+  }
+}
+
+fn circular_buffer_clear_slot<t>(buffer: CircularBuffer<t>, index: U32) -> Unit {
+  wasm_array_copy(buffer.backing, index, buffer.backing, buffer.limit, 1u32)
+}
+
+fn circular_buffer_make_room<t>(buffer: CircularBuffer<t>) -> Bool {
+  if buffer.count < buffer.limit {
+    true
+  } else if !buffer.growable {
+    false
+  } else if buffer.count != buffer.limit || buffer.limit == 4294967294u32 {
+    unreachable()
+  } else {
+    let capacity = if buffer.limit == 0u32 {
+      4u32
+    } else if buffer.limit > 2147483647u32 {
+      4294967294u32
+    } else {
+      buffer.limit * 2u32
+    }
+    let backing = wasm_array_new_default(capacity + 1u32)
+    let suffix = buffer.limit - buffer.head
+    let first = if buffer.count < suffix {
+      buffer.count
+    } else {
+      suffix
+    }
+    wasm_array_copy(backing, 0u32, buffer.backing, buffer.head, first)
+    wasm_array_copy(backing, first, buffer.backing, 0u32, buffer.count - first)
+    buffer.backing = backing
+    buffer.limit = capacity
+    buffer.head = 0u32
+    true
+  }
+}

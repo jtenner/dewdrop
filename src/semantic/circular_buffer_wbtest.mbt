@@ -1,5 +1,5 @@
 ///|
-test "circular buffer standard module has stable identities and lowering" {
+test "circular buffer functions use declared storage and ordinary lowering" {
   let program = collect_program_manifest(
     2632UL,
     ProgramManifest::new([
@@ -15,19 +15,14 @@ test "circular buffer standard module has stable identities and lowering" {
     .module_index("dew.std.collections.circular_buffer")
     .unwrap()]
   assert_eq(buffer.diagnostics, [])
-  assert_eq(semantic_id_local(buffer.lookup_type("CircularBuffer").unwrap()), 0)
-  assert_eq(
-    semantic_id_local(buffer.lookup_value("circular_buffer_bounded").unwrap()),
-    2,
-  )
-  assert_eq(
-    standard_circular_buffer_operation(
-      buffer.lookup_value("circular_buffer_push_back").unwrap(),
-    ),
-    CircularBufferPushBack,
-  )
+  for callable in buffer.callables {
+    assert_true(buffer.body_of(callable.declaration) is Some(_))
+  }
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.frozen.import_diagnostics, [])
+  for interface_ in analyzed.frozen.interfaces {
+    assert_eq(interface_.resolved_types.diagnostics, [])
+  }
   for module_ in analyzed.modules {
     assert_eq(module_.names.diagnostics, [])
     assert_eq(module_.inferred.diagnostics, [])

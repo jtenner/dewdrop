@@ -17,6 +17,11 @@ self_host_measure 'hardening real-library request' \
     "$work/array.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-array-probe.wasm \
     app.array_probes tools/dew-test/array_operations.dew
+self_host_measure 'hardening ring-library request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/ring.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-ring-probe.wasm \
+    app.ring_probes tools/dew-test/ring_operations.dew
 self_host_measure 'hardening raw GC storage request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/raw-gc.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \

@@ -1,0 +1,190 @@
+open dew.std.collections.circular_buffer
+open dew.std.collections.deque
+open dew.std.queue
+open dew.std.option
+open dew.std.wasm.intrinsics
+
+struct RingCell {
+  mut value: I32
+}
+
+fn ring_effect(cell: RingCell) -> Unit {
+  cell.value = cell.value + 1i32
+}
+
+fn ring_result(value: Bool) -> I32 {
+  if value {
+    1i32
+  } else {
+    0i32
+  }
+}
+
+pub fn main(case: U32) -> I32 {
+  if case == 0u32 {
+    let buffer = circular_buffer_bounded(0u32)
+    let rejected = !circular_buffer_push_back(buffer, 7i64)
+    ring_result(rejected && circular_buffer_is_full(buffer) && circular_buffer_is_empty(buffer) && circular_buffer_pop_front(buffer) is Option::None)
+  } else if case == 1u32 {
+    let buffer = circular_buffer_growable(2u32)
+    circular_buffer_push_back(buffer, 11i64)
+    circular_buffer_push_back(buffer, 22i64)
+    let first = circular_buffer_pop_front(buffer) is Option::Some(11i64)
+    circular_buffer_push_back(buffer, 33i64)
+    circular_buffer_push_back(buffer, 44i64)
+    let iter = circular_buffer_iter(buffer)
+    ring_result(first && circular_buffer_capacity(buffer) == 4u32 && circular_buffer_iter_next(iter) == 22i64 && circular_buffer_iter_next(iter) == 33i64 && circular_buffer_iter_next(iter) == 44i64 && !circular_buffer_iter_has_next(iter))
+  } else if case == 2u32 {
+    let buffer = circular_buffer_bounded(2u32)
+    circular_buffer_push_front(buffer, 2i32)
+    circular_buffer_push_front(buffer, 1i32)
+    let rejected = !circular_buffer_push_back(buffer, 3i32)
+    let first = circular_buffer_pop_back(buffer) is Option::Some(2i32)
+    circular_buffer_push_back(buffer, 4i32)
+    ring_result(rejected && first && circular_buffer_pop_front(buffer) is Option::Some(1i32) && circular_buffer_pop_back(buffer) is Option::Some(4i32) && circular_buffer_pop_back(buffer) is Option::None)
+  } else if case == 3u32 {
+    let cell = RingCell::{
+      value: 0i32
+    }
+    let buffer = circular_buffer_bounded(1u32)
+    let accepted = circular_buffer_push_back(buffer, ring_effect(cell))
+    let rejected = !circular_buffer_push_front(buffer, ring_effect(cell))
+    let present = circular_buffer_pop_back(buffer) is Option::Some(_)
+    ring_result(accepted && rejected && present && cell.value == 2i32 && circular_buffer_pop_front(buffer) is Option::None)
+  } else if case == 4u32 {
+    let buffer = circular_buffer_growable(1u32)
+    circular_buffer_push_back(buffer, (2i32, 3i64))
+    circular_buffer_push_front(buffer, (5i32, 7i64))
+    let first = match circular_buffer_pop_front(buffer) {
+      Option::Some(value) => {
+        let (left, right) = value
+        left == 5i32 && right == 7i64
+      }
+      Option::None => false
+    }
+    let last = match circular_buffer_pop_back(buffer) {
+      Option::Some(value) => {
+        let (left, right) = value
+        left == 2i32 && right == 3i64
+      }
+      Option::None => false
+    }
+    ring_result(first && last)
+  } else if case == 5u32 {
+    let cell = RingCell::{
+      value: 4i32
+    }
+    let buffer = circular_buffer_growable(1u32)
+    circular_buffer_push_back(buffer, cell)
+    circular_buffer_push_front(buffer, cell)
+    cell.value = 9i32
+    let alias = buffer
+    let same = match circular_buffer_peek_back(alias) {
+      Option::Some(value) => value.value == 9i32
+      Option::None => false
+    }
+    circular_buffer_clear(alias)
+    ring_result(same && circular_buffer_is_empty(buffer) && circular_buffer_capacity(buffer) == 2u32)
+  } else if case == 6u32 {
+    let buffer = circular_buffer_bounded(1u32)
+    circular_buffer_push_back(buffer, RingCell::{
+      value: 7i32
+    })
+    let backing = buffer.backing
+    circular_buffer_pop_front(buffer)
+    wasm_array_get(backing, 0u32).value
+  } else if case == 7u32 {
+    let buffer = circular_buffer_bounded(2u32)
+    circular_buffer_push_front(buffer, RingCell::{
+      value: 7i32
+    })
+    let backing = buffer.backing
+    circular_buffer_clear(buffer)
+    wasm_array_get(backing, 1u32).value
+  } else if case == 8u32 {
+    let queue = queue_new()
+    queue_enqueue(queue, 2i64)
+    queue_enqueue(queue, 3i64)
+    ring_result(queue_dequeue(queue) is Option::Some(2i64) && queue_peek(queue) is Option::Some(3i64) && queue_length(queue) == 1u32)
+  } else if case == 9u32 {
+    let cell = RingCell::{
+      value: 0i32
+    }
+    let queue = queue_new()
+    queue_enqueue(queue, ring_effect(cell))
+    queue_enqueue(queue, ring_effect(cell))
+    let iter = queue_iter(queue)
+    queue_iter_next(iter)
+    queue_iter_next(iter)
+    ring_result(cell.value == 2i32 && !queue_iter_has_next(iter) && queue_dequeue(queue) is Option::Some(_))
+  } else if case == 10u32 {
+    let deque = deque_with_capacity(1u32)
+    deque_push_front(deque, (2i32, 3i64))
+    deque_push_back(deque, (5i32, 7i64))
+    let iter = deque_iter(deque)
+    let (a, b) = deque_iter_next(iter)
+    let (c, d) = deque_iter_next(iter)
+    ring_result(a == 2i32 && b == 3i64 && c == 5i32 && d == 7i64 && !deque_iter_has_next(iter))
+  } else if case == 11u32 {
+    let buffer = circular_buffer_bounded(1u32)
+    circular_buffer_push_back(buffer, ())
+    let iter = circular_buffer_iter(buffer)
+    circular_buffer_iter_next(iter)
+    circular_buffer_iter_next(iter)
+    0i32
+  } else if case == 12u32 {
+    let buffer = circular_buffer_bounded(4294967295u32)
+    circular_buffer_push_back(buffer, 1i32)
+    0i32
+  } else if case == 13u32 {
+    let buffer = circular_buffer_growable(0u32)
+    circular_buffer_push_front(buffer, 8i64)
+    ring_result(circular_buffer_capacity(buffer) == 4u32 && circular_buffer_pop_back(buffer) is Option::Some(8i64) && buffer.head == 0u32)
+  } else if case == 14u32 {
+    let buffer = circular_buffer_growable(2u32)
+    while 0u32 {
+      index if index < 128u32 => {
+        circular_buffer_push_back(buffer, index)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let mut valid = true
+    while 0u32 {
+      index if index < 128u32 => {
+        let correct = match circular_buffer_pop_front(buffer) {
+          Option::Some(value) => value == index
+          Option::None => false
+        }
+        valid = valid && correct
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    ring_result(valid && circular_buffer_is_empty(buffer))
+  } else if case == 15u32 {
+    let buffer = circular_buffer_bounded(1u32)
+    circular_buffer_push_back(buffer, 7i32)
+    circular_buffer_pop_back(buffer)
+    ring_result(wasm_array_get(buffer.backing, 0u32) == 0i32 && wasm_array_get(buffer.backing, 1u32) == 0i32)
+  } else if case == 16u32 {
+    let queue = queue_new()
+    queue_enqueue(queue, ())
+    let iter = queue_iter(queue)
+    ring_result(iter.next() is Option::Some(_) && iter.next() is Option::None)
+  } else if case == 17u32 {
+    let buffer = circular_buffer_growable(1u32)
+    circular_buffer_push_back(buffer, 1.5f64)
+    circular_buffer_push_front(buffer, 2.5f64)
+    let iter = circular_buffer_iter(buffer)
+    ring_result(circular_buffer_iter_next(iter) == 2.5f64 && circular_buffer_iter_next(iter) == 1.5f64)
+  } else if case == 18u32 {
+    let buffer = circular_buffer_growable(1u32)
+    circular_buffer_push_back(buffer, 1.5f32)
+    circular_buffer_push_front(buffer, 2.5f32)
+    let iter = circular_buffer_iter(buffer)
+    ring_result(circular_buffer_iter_next(iter) == 2.5f32 && circular_buffer_iter_next(iter) == 1.5f32)
+  } else {
+    unreachable()
+  }
+}
