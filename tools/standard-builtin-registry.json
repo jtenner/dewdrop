@@ -18,24 +18,7 @@
       "type": 0,
       "iterator_type": 1,
       "opaque_types": {"entry": 51, "key_iterator": 52, "entry_iterator": 53},
-      "methods": {"new": 17, "with_capacity": 18, "length": 19, "capacity": 20, "push": 22, "pop": 23, "get": 24, "get_unchecked": 25, "set": 26, "set_unchecked": 27, "clear": 28, "iter": 29},
-      "index": 31,
-      "index_set": 33,
-      "operations": {
-        "ArrayNew": [2, 17],
-        "ArrayWithCapacity": [3, 18],
-        "ArrayGetUnchecked": [7, 25, 31],
-        "ArraySetUnchecked": [9, 27, 33],
-        "ArrayPush": [10, 22],
-        "ArrayPop": [11, 23],
-        "ArrayClear": [12, 28],
-        "ArrayIter": [13, 29],
-        "ArrayIterHasNext": [14],
-        "ArrayIterNext": [15],
-        "ArrayReserve": [37],
-        "ArrayShrinkToFit": [38],
-        "ArrayTruncate": [39]
-      }
+      "operations": {}
     },
     "queue": {
       "slot": 15,

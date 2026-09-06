@@ -12514,6 +12514,8 @@ fn self_host_linked_body_primitive_rank(
 fn self_host_linked_map_key_equality_function_for_arguments(
   link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  specialization: U32,
   arguments: SelfHostHirSpan,
   key_offset: U32,
 ) -> I32 {
@@ -12525,13 +12527,22 @@ fn self_host_linked_map_key_equality_function_for_arguments(
     return -1i32
   }
   let expression = module_.expression_children[child]
-  if expression >= module_.expressions.length() || !self_host_u32_equal(
-    self_host_linked_body_primitive_rank(
-      module_,
-      self_host_planned_expression_at(module_.expressions, expression).type_,
-    ),
-    9u32,
-  ) {
+  if expression >= module_.expressions.length() {
+    return -1i32
+  }
+  let bindings = self_host_compile_time_caller_bindings(
+    self_host_program_specialization_callable(module_, body.declaration),
+    specialization,
+    link.fragments.specialization.requests,
+  )
+  let key_type = match self_host_read_compile_time_type(module_, module_.expressions[expression].type_, bindings, 0u32) {
+    Result::Ok(type_) => type_
+    Result::Err(message) => {
+      self_host_assert_compiler_invariant(false, message)
+      return -2i32
+    }
+  }
+  if !(key_type is SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::StringType)) {
     return -1i32
   }
   let equality = self_host_linked_runtime_function_index(
@@ -14727,6 +14738,14 @@ fn self_host_linked_map_declared_argument_shape(
   receiver: U32,
   argument: U32,
 ) -> Option<SelfHostPlannedValueShape> {
+  let specialization = match canonical {
+    Option::Some(plan) => plan.specialization
+    Option::None => 4294967295u32
+  }
+  match self_host_body_expression_type_argument_shape(link, module_, specialization, receiver, argument) {
+    Option::Some(shape) => return Option::Some(shape)
+    Option::None => {}
+  }
   let canonical_shape = self_host_linked_canonical_container_argument_shape(
     canonical,
     link,
@@ -16110,32 +16129,9 @@ fn self_host_emit_linked_i32_expression(
               let mut result_shape = if discarded_unit_if {
                 SelfHostPlannedValueShape::UnitPlannedValueShape
               } else {
-                self_host_linked_if_result_shape(
-                  link,
-                  module_,
-                  body,
-                  caller_specialization,
-                  expected_result_shape,
-                  expression,
-                  planned,
-                  then_block,
-                  else_expression,
-                )
-              }
-              if result_shape is SelfHostPlannedValueShape::UnitPlannedValueShape && !discarded_unit_if {
-                let semantic_if_shape = self_host_planned_merged_body_value_shape(
-                  module_.resolved_types,
-                  module_.inferred,
-                  planned.type_,
-                )
-                if !(semantic_if_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                  semantic_if_shape is SelfHostPlannedValueShape::UnitPlannedValueShape
-                ) && !(semantic_if_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) {
-                  result_shape = semantic_if_shape
-                } else if !(planned.shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                  planned.shape is SelfHostPlannedValueShape::UnitPlannedValueShape
-                ) && !(planned.shape is SelfHostPlannedValueShape::NeverPlannedValueShape) {
-                  result_shape = planned.shape
+                match self_host_linked_canonical_expression_shape(canonical_body_plan, expression) {
+                  Option::Some(shape) => shape
+                  Option::None => return Option::Some("BOD-610 if expression has no frozen result type")
                 }
               }
               let then_tail = self_host_body_block_tail_expression(
@@ -18010,7 +18006,8 @@ fn self_host_emit_linked_i32_expression(
                     Option::None => {}
                   }
                 }
-                if self_host_linked_call_has_erased_specialization(canonical_body_plan, link, expression) {
+                if self_host_linked_builtin_name(link, declaration) is Option::None ||
+                  self_host_linked_call_has_erased_specialization(canonical_body_plan, link, expression) {
                   match self_host_linked_schedule_frozen_call(canonical_body_plan, link, module_, body, caller_specialization, expression, function_index, arguments, destination, tasks, expression_depths, depth) {
                     Option::Some(error) => return Option::Some(error)
                     Option::None => {}
@@ -18183,6 +18180,8 @@ fn self_host_emit_linked_i32_expression(
                       self_host_linked_map_key_equality_function_for_arguments(
                         link,
                         module_,
+                        body,
+                        caller_specialization,
                         arguments,
                         direct_map_argument_offset,
                       ),
@@ -18249,6 +18248,8 @@ fn self_host_emit_linked_i32_expression(
                       self_host_linked_map_key_equality_function_for_arguments(
                         link,
                         module_,
+                        body,
+                        caller_specialization,
                         arguments,
                         direct_map_argument_offset,
                       ),
@@ -20871,6 +20872,8 @@ fn self_host_emit_linked_i32_expression(
                   self_host_linked_map_key_equality_function_for_arguments(
                     link,
                     module_,
+                    body,
+                    caller_specialization,
                     arguments,
                     1u32,
                   ),
@@ -21077,6 +21080,22 @@ fn self_host_emit_linked_i32_expression(
               arguments,
               _,
             ) => {
+              match planned.call_target {
+                SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => if self_host_linked_builtin_name(link, declaration) is Option::None && self_host_linked_variant_type_index(link, declaration) is Option::None && !(
+                  planned.selection is SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _)
+                ) {
+                  let function_index = match self_host_linked_canonical_call_index(canonical_body_plan, link, body, caller_specialization, expression, declaration) {
+                    Option::Some(value) => value
+                    Option::None => return Option::Some("BOD-607 selected library call has no frozen target")
+                  }
+                  match self_host_linked_schedule_frozen_call(canonical_body_plan, link, module_, body, caller_specialization, expression, function_index, arguments, destination, tasks, expression_depths, depth) {
+                    Option::Some(error) => return Option::Some(error)
+                    Option::None => {}
+                  }
+                  continue tasks.length()
+                }
+                _ => {}
+              }
               if target >= module_.expressions.length() {
                 return Option::Some("linked function-value target is outside its arena")
               }
@@ -22053,6 +22072,8 @@ fn self_host_emit_linked_i32_expression(
                       self_host_linked_map_key_equality_function_for_arguments(
                         link,
                         module_,
+                        body,
+                        caller_specialization,
                         arguments,
                         0u32,
                       ),
@@ -22691,6 +22712,8 @@ fn self_host_emit_linked_i32_expression(
                       self_host_linked_map_key_equality_function_for_arguments(
                         link,
                         module_,
+                        body,
+                        caller_specialization,
                         arguments,
                         0u32,
                       ),
@@ -22806,6 +22829,8 @@ fn self_host_emit_linked_i32_expression(
                           self_host_linked_map_key_equality_function_for_arguments(
                             link,
                             module_,
+                            body,
+                            caller_specialization,
                             arguments,
                             0u32,
                           ),
@@ -23574,6 +23599,8 @@ fn self_host_emit_linked_i32_expression(
                             self_host_linked_map_key_equality_function_for_arguments(
                               link,
                               module_,
+                              body,
+                              caller_specialization,
                               arguments,
                               0u32,
                             ),
@@ -24571,7 +24598,11 @@ fn self_host_emit_linked_i32_expression(
               value,
               target,
             ) => {
-              if self_host_linked_call_has_erased_specialization(canonical_body_plan, link, expression) ||
+              let ordinary_call = match target {
+                SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => self_host_linked_builtin_name(link, declaration) is Option::None
+                _ => false
+              }
+              if ordinary_call || self_host_linked_call_has_erased_specialization(canonical_body_plan, link, expression) ||
                 !self_host_linked_i32_planned_call_emits(canonical_body_plan, expression) {
                 let function_index = match target {
                   SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => match self_host_linked_canonical_call_index(canonical_body_plan, link, body, caller_specialization, expression, declaration) {
@@ -25651,6 +25682,18 @@ fn self_host_emit_linked_i32_expression(
               payload_hint
             } else {
               exact_subject_payload_hint
+            }
+          }
+          let payload_argument = match link.runtime_variant_adapters.get(self_host_pattern_constructor_declaration(module_, pattern)) {
+            Option::Some(SelfHostRuntimeVariantAdapter::RuntimeOptionSome) => 0u32
+            _ => 4294967295u32
+          }
+          if payload_argument != 4294967295u32 {
+            match self_host_body_expression_type_argument_shape(link, module_, caller_specialization, subject, payload_argument) {
+              Option::Some(shape) => {
+                canonical_payload_hint = shape
+              }
+              Option::None => {}
             }
           }
           let mut direct_binding_result = false

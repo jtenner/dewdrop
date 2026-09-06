@@ -63,16 +63,8 @@ def rendered_source() -> str:
     ):
         module = modules[module_name]
         prefix = f"standard_{module_name}"
-        if "methods" not in module:
-            # Type-only entries must not generate method or index dispatch.
-            lines.extend([
-                "///|",
-                f"pub fn {prefix}_type_declaration() -> DeclId {{",
-                f"  make_semantic_id(standard_library_module_id({module.get('type_slot', module['slot'])}), {module['type']})",
-                "}",
-                "",
-            ])
-            continue
+        # Type identities may still be used by literal/runtime producers after
+        # all operations have moved to ordinary library calls.
         lines.extend(
             [
                 "///|",
@@ -80,26 +72,29 @@ def rendered_source() -> str:
                 f"  make_semantic_id(standard_library_module_id({module.get('type_slot', module['slot'])}), {module['type']})",
                 "}",
                 "",
+            ]
+        )
+        if "methods" in module:
+            lines.extend([
                 "///|",
                 f"pub fn {prefix}_method_declaration(name : String) -> DeclId {{",
                 "  let local_id = match name {",
-            ]
-        )
-        for name, ordinal in module["methods"].items():
-            lines.append(f'    "{name}" => {ordinal}')
-        lines.extend(
-            [
-                "    _ => -1",
-                "  }",
-                "  if local_id < 0 {",
-                "    0UL",
-                "  } else {",
-                f"    make_semantic_id(standard_library_module_id({module['slot']}), local_id)",
-                "  }",
-                "}",
-                "",
-            ]
-        )
+            ])
+            for name, ordinal in module["methods"].items():
+                lines.append(f'    "{name}" => {ordinal}')
+            lines.extend(
+                [
+                    "    _ => -1",
+                    "  }",
+                    "  if local_id < 0 {",
+                    "    0UL",
+                    "  } else {",
+                    f"    make_semantic_id(standard_library_module_id({module['slot']}), local_id)",
+                    "  }",
+                    "}",
+                    "",
+                ]
+            )
         if "iterator_type" in module:
             lines.extend(
                 [
@@ -135,6 +130,8 @@ def rendered_source() -> str:
                     "",
                 ]
             )
+        if not module.get("operations"):
+            continue
         operation_signature = if_multiline_operation_signature(prefix)
         lines.extend(
             [

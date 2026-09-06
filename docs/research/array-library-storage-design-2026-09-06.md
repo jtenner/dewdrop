@@ -1,8 +1,8 @@
 # Array library storage design
 
-Status: raw contracts and Array's declared fields/size accessors are implemented.
-Allocation, growth, mutation, iteration, and literal migration remain proposed
-work. FixedArray regression work is recorded separately.
+Status: raw contracts, declared fields, and all Array functions are implemented
+in Dew. See the [algorithm migration](array-library-algorithms-2026-09-06.md)
+for validation. Literal/runtime construction migration remains separate work.
 
 ## Raw operations and identity
 
@@ -23,22 +23,17 @@ same rules for user modules and standard modules.
 
 The library now declares its backing storage, logical length, and logical
 capacity; see the [accessor change](array-library-accessors-2026-09-06.md).
-The iterator still needs to declare its owner Array and cursor. Generic field
-planning must use these declarations, not a three-field wrapper assumption.
+The iterator also declares its owner Array and cursor. Generic field planning
+uses these declarations, not an iterator layout override.
 
-One possible clearing scheme reserves one default-valued backing slot beyond
-capacity. It is never a logical element. `array.copy` can copy this slot to clear
-removed elements without constructing an invalid T, adding an opaque compiler
-operation, or boxing scalar elements. Copies can double the cleared interval
-for a bulk clear. This costs one raw slot per non-Unit Array. Validate the
-capacity bound before adding that slot. Check the final scheme against existing
-capacity, mutation, and iteration semantics before implementing it.
+Clearing uses an existing unused default-valued slot, or one temporary default
+slot when the array is full. `array.copy` then doubles the cleared interval.
+This does not construct an invalid logical T or box scalar elements. The earlier
+extra-sentinel proposal was not adopted: existing literal, Map, and runtime
+producers may allocate exactly capacity raw slots.
 
-Existing literal, Map, and runtime producers may allocate exactly capacity raw
-slots. A sentinel scheme cannot be enabled until those producers use the same
-declared construction recipe. Do not infer an extra slot from an old wrapper.
-
-Unit arrays can keep length and capacity without per-element storage. Use
+As a later optimization, Unit arrays can keep length and capacity without
+per-element storage. The current implementation retains marker slots. Use
 `is_unit<T>()` in ordinary Dew branches. Every argument still evaluates once in
 source order; the selected branch removes only its storage work. Never is not
 Unit and must not be converted into a usable operand.

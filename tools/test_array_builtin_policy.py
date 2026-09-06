@@ -11,9 +11,21 @@ ROOT = Path(__file__).resolve().parents[1]
 BULK_OPERATIONS = ("make", "copy", "copy_within", "fill", "slice", "extend")
 CHECKED_OPERATIONS = ("get", "set", "iter_next_option")
 SIZE_OPERATIONS = ("length", "capacity")
+CORE_OPERATIONS = (
+    "new", "with_capacity", "get_unchecked", "set_unchecked", "push", "pop",
+    "clear", "iter", "iter_has_next", "iter_next", "reserve", "shrink_to_fit", "truncate",
+)
 
 
 class ArrayBuiltinPolicyTests(unittest.TestCase):
+    def test_array_has_no_compiler_owned_algorithms(self):
+        source = (ROOT / "std/array.dew").read_text()
+        self.assertNotRegex(source, r"\bbuiltin\b")
+        registry = json.loads((ROOT / "tools/standard-builtin-registry.json").read_text())
+        self.assertEqual(registry["modules"]["array"]["operations"], {})
+        for dispatch in ("methods", "index", "index_set"):
+            self.assertNotIn(dispatch, registry["modules"]["array"])
+
     def test_raw_array_intrinsics_use_wasm_instruction_names(self):
         source = (ROOT / "std/wasm/intrinsics.dew").read_text()
         for operation in ("new", "len", "get", "set", "new_default", "copy"):
@@ -50,8 +62,8 @@ class ArrayBuiltinPolicyTests(unittest.TestCase):
             with self.subTest(operation=operation):
                 self.assertRegex(source, rf"(?m)^(?:pub )?fn array_{operation}<t>\(")
 
-    def test_no_std_module_reintroduces_bulk_builtin_aliases(self):
-        forbidden = {f"dew_array_{operation}" for operation in BULK_OPERATIONS + CHECKED_OPERATIONS + SIZE_OPERATIONS}
+    def test_no_std_module_reintroduces_array_builtin_aliases(self):
+        forbidden = {f"dew_array_{operation}" for operation in BULK_OPERATIONS + CHECKED_OPERATIONS + SIZE_OPERATIONS + CORE_OPERATIONS}
         declarations = re.compile(r'(?m)^.*\bbuiltin\b[^\n]*=\s*"([^"]+)"')
         for path in sorted((ROOT / "std").rglob("*.dew")):
             for match in declarations.finditer(path.read_text()):

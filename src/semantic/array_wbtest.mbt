@@ -71,7 +71,7 @@ test "array standard source has stable compiler-owned identities" {
   assert_eq(semantic_id_local(collected.lookup_type("Array").unwrap()), 0)
   assert_eq(semantic_id_local(collected.lookup_type("ArrayIter").unwrap()), 1)
   assert_eq(semantic_id_local(collected.lookup_value("array_new").unwrap()), 2)
-  assert_eq(collected.callables.length(), 144)
+  assert_eq(collected.callables.length(), 146)
   assert_eq(semantic_id_local(collected.callables[0].declaration), 2)
   assert_eq(semantic_id_local(collected.callables[13].declaration), 15)
   assert_eq(semantic_id_local(collected.callables[14].declaration), 17)
@@ -133,30 +133,18 @@ test "array operations infer and lower through generic implementations" {
   assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
   let lowering = plan_program_lowering(program, analyzed)
   assert_eq(lowering.modules[0].diagnostics.length(), 0)
-  let mut saw_new = false
-  let mut saw_push = false
-  let mut saw_set = false
-  let mut saw_iter = false
-  let mut saw_next = false
-  let mut saw_pop = false
   for module in lowering.modules {
     for expression in module.expressions {
       match expression.kind {
-        PlannedArrayNew(_, _) => saw_new = true
-        PlannedArrayPush(_, _, _) => saw_push = true
-        PlannedArraySetUnchecked(_, _, _, _) => saw_set = true
-        PlannedArrayIter(_, _, _) => saw_iter = true
-        PlannedArrayIterNext(_, _) | PlannedArrayIterNextOption(_, _, _) =>
-          saw_next = true
-        PlannedArrayPop(_, _, _) => saw_pop = true
+        PlannedArrayNew(_, _)
+        | PlannedArrayPush(_, _, _)
+        | PlannedArraySetUnchecked(_, _, _, _)
+        | PlannedArrayIter(_, _, _)
+        | PlannedArrayIterNext(_, _)
+        | PlannedArrayIterNextOption(_, _, _)
+        | PlannedArrayPop(_, _, _) => abort("Array algorithms must run in Dew")
         _ => ()
       }
     }
   }
-  assert_true(saw_new)
-  assert_true(saw_push)
-  assert_true(saw_set)
-  assert_true(saw_iter)
-  assert_true(saw_next)
-  assert_true(saw_pop)
 }

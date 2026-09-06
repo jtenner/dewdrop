@@ -5,10 +5,21 @@ pub struct Array<t> {
   mut count: U32
   mut limit: U32
 }
-pub struct ArrayIter<t> {}
+pub struct ArrayIter<t> {
+  owner: Array<t>
+  mut cursor: U32
+}
 
-pub builtin array_new<t>() -> Array<t> = "dew_array_new"
-pub builtin array_with_capacity<t>(capacity: U32) -> Array<t> = "dew_array_with_capacity"
+pub fn array_new<t>() -> Array<t> {
+  array_with_capacity(0u32)
+}
+pub fn array_with_capacity<t>(capacity: U32) -> Array<t> {
+  Array::{
+    backing: wasm_array_new_default(capacity)
+    count: 0u32
+    limit: capacity
+  }
+}
 pub fn array_length<t>(value: Array<t>) -> U32 {
   value.count
 }
@@ -22,7 +33,13 @@ pub fn array_get<t>(value: Array<t>, index: U32) -> Option<t> {
     Option::None
   }
 }
-pub builtin array_get_unchecked<t>(value: Array<t>, index: U32) -> t = "dew_array_get_unchecked"
+pub fn array_get_unchecked<t>(value: Array<t>, index: U32) -> t {
+  if index >= value.count {
+    unreachable()
+  } else {
+    wasm_array_get(value.backing, index)
+  }
+}
 pub fn array_set<t>(value: Array<t>, index: U32, item: t) -> Bool {
   if index < array_length(value) {
     array_set_unchecked(value, index, item)
@@ -31,13 +48,45 @@ pub fn array_set<t>(value: Array<t>, index: U32, item: t) -> Bool {
     false
   }
 }
-pub builtin array_set_unchecked<t>(value: Array<t>, index: U32, item: t) -> Unit = "dew_array_set_unchecked"
-pub builtin array_push<t>(value: Array<t>, item: t) -> Unit = "dew_array_push"
-pub builtin array_pop<t>(value: Array<t>) -> Option<t> = "dew_array_pop"
-pub builtin array_clear<t>(value: Array<t>) -> Unit = "dew_array_clear"
-pub builtin array_iter<t>(value: Array<t>) -> ArrayIter<t> = "dew_array_iter"
-pub builtin array_iter_has_next<t>(value: ArrayIter<t>) -> Bool = "dew_array_iter_has_next"
-pub builtin array_iter_next<t>(value: ArrayIter<t>) -> t = "dew_array_iter_next"
+pub fn array_set_unchecked<t>(value: Array<t>, index: U32, item: t) -> Unit {
+  if index >= value.count {
+    unreachable()
+  } else {
+    wasm_array_set(value.backing, index, item)
+  }
+}
+pub fn array_push<t>(value: Array<t>, item: t) -> Unit {
+  array_reserve_raw(value, 1u32)
+  wasm_array_set(value.backing, value.count, item)
+  value.count = value.count + 1u32
+}
+pub fn array_pop<t>(value: Array<t>) -> Option<t> {
+  if value.count == 0u32 {
+    Option::None
+  } else {
+    let index = value.count - 1u32
+    let item = wasm_array_get(value.backing, index)
+    array_truncate_raw(value, index)
+    Option::Some(item)
+  }
+}
+pub fn array_clear<t>(value: Array<t>) -> Unit {
+  array_truncate_raw(value, 0u32)
+}
+pub fn array_iter<t>(value: Array<t>) -> ArrayIter<t> {
+  ArrayIter::{
+    owner: value
+    cursor: 0u32
+  }
+}
+pub fn array_iter_has_next<t>(value: ArrayIter<t>) -> Bool {
+  value.cursor < value.owner.count
+}
+pub fn array_iter_next<t>(value: ArrayIter<t>) -> t {
+  let item = array_get_unchecked(value.owner, value.cursor)
+  value.cursor = value.cursor + 1u32
+  item
+}
 
 impl<t> Array<t> {
   fn new() -> Array<t> {
@@ -111,9 +160,41 @@ fn array_make_raw<t>(length: U32, value: t) -> Array<t> {
   output
 }
 
-builtin array_reserve_raw<t>(value: Array<t>, additional: U32) -> Unit = "dew_array_reserve"
-builtin array_shrink_to_fit_raw<t>(value: Array<t>) -> Unit = "dew_array_shrink_to_fit"
-builtin array_truncate_raw<t>(value: Array<t>, length: U32) -> Unit = "dew_array_truncate"
+fn array_reserve_raw<t>(value: Array<t>, additional: U32) -> Unit {
+  if additional > 4294967295u32 - value.count {
+    unreachable()
+  } else {
+    let required = value.count + additional
+    if required > value.limit {
+      let doubled = if value.limit > 2147483647u32 {
+        required
+      } else if value.limit < 2u32 {
+        4u32
+      } else {
+        value.limit * 2u32
+      }
+      let capacity = if doubled < required {
+        required
+      } else {
+        doubled
+      }
+      array_replace_backing(value, capacity)
+    }
+  }
+}
+fn array_shrink_to_fit_raw<t>(value: Array<t>) -> Unit {
+  if value.count != value.limit {
+    array_replace_backing(value, value.count)
+  }
+}
+fn array_truncate_raw<t>(value: Array<t>, length: U32) -> Unit {
+  if length > value.count {
+    unreachable()
+  } else if length < value.count {
+    array_clear_suffix(value, length)
+    value.count = length
+  }
+}
 
 fn array_copy_raw<t>(value: Array<t>) -> Array<t> {
   array_slice_raw(value, 0u32, array_length(value))
@@ -1331,5 +1412,32 @@ fn array_iter_next_option<t>(value: ArrayIter<t>) -> Option<t> {
     Option::Some(array_iter_next(value))
   } else {
     Option::None
+  }
+}
+
+fn array_replace_backing<t>(value: Array<t>, capacity: U32) -> Unit {
+  let backing = wasm_array_new_default::<t>(capacity)
+  wasm_array_copy(backing, 0u32, value.backing, 0u32, value.count)
+  value.backing = backing
+  value.limit = capacity
+}
+
+fn array_clear_suffix<t>(value: Array<t>, start: U32) -> Unit {
+  // Unused slots are default-valued. A full array needs one temporary blank
+  // slot; this also works for exact-sized literal and Map-produced storage.
+  if value.count < value.limit {
+    wasm_array_copy(value.backing, start, value.backing, value.limit - 1u32, 1u32)
+  } else {
+    let blank = wasm_array_new_default::<t>(1u32)
+    wasm_array_copy(value.backing, start, blank, 0u32, 1u32)
+  }
+  let count = value.count - start
+  while 1u32 {
+    cleared if cleared < count => {
+      let amount = array_min(cleared, count - cleared)
+      wasm_array_copy(value.backing, start + cleared, value.backing, start, amount)
+      continue cleared + amount
+    }
+    _ => break array_unit()
   }
 }

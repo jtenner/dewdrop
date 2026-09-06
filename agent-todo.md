@@ -71,10 +71,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   ordinary library calls. Remove the native layout override and self-host size
   method shortcuts. Tests check actual field identities and changed method
   bodies. See the [accessor log](docs/research/array-library-accessors-2026-09-06.md).
-- [ ] Move Array allocation, growth, mutation, and iteration into
-  Dew. Thirteen legacy Array builtins remain. Keep typed raw backing arrays;
-  do not box every scalar to bypass a compiler defect. Nine checked/bulk
-  algorithms already run in Dew.
+- [x] Move Array allocation, growth, mutation, and iteration into Dew. All 13
+  remaining builtins now have Dew bodies, with typed raw backing storage.
+  Both compilers pass 28 shared Array checks and the clean B/C fixed point.
+  Native method/operation ordinal dispatch and the iterator layout override are
+  removed. See the [algorithm log](docs/research/array-library-algorithms-2026-09-06.md).
 - [ ] Remove the old Array wrapper layout and literal shortcuts. Use declared
   fields and exact construction recipes, not a guessed three-field layout.
 - [ ] Move Map and Set hashing, buckets, growth, lookup, and iteration into Dew.
@@ -183,6 +184,9 @@ self-host timing bugs or the correctness work listed above.
 - [ ] Extend aligned-pack phase-cache admission measurements beyond the implemented 100-module startup benchmark to larger external-package and heavy-inference workloads before changing the default body-cache policy.
 - [ ] Establish reviewed cross-engine regression thresholds for hot workloads; Array growth now has reproducible scalar-loop versus WasmGC `array.copy` measurements.
 - [ ] Benchmark Array growth, large reference copying, write barriers, and GC behavior on each supported WasmGC runtime.
+- [ ] Measure full-array pop allocation and Unit marker storage. The Dew clear
+  path uses one temporary default slot only when storage is full. Remove that
+  cost only with a checked storage design that also works for literal producers.
 - [ ] Add representative heap, ordered-tree, queue, JSON, and generated typed-decoder performance suites.
 - [ ] Use runtime allocation evidence to evaluate proof-driven constructor/store forwarding, physical nominal propagation, and private `Result` forwarding.
 - [ ] Benchmark thresholded exact-`Set` JSON duplicate tracking only for substantially wider objects.

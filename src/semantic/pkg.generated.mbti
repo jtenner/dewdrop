@@ -175,15 +175,9 @@ pub fn standard_array_entry_iterator_type_declaration() -> UInt64
 
 pub fn standard_array_entry_type_declaration() -> UInt64
 
-pub fn standard_array_index_declaration() -> UInt64
-
-pub fn standard_array_index_set_declaration() -> UInt64
-
 pub fn standard_array_iterator_type_declaration() -> UInt64
 
 pub fn standard_array_key_iterator_type_declaration() -> UInt64
-
-pub fn standard_array_method_declaration(String) -> UInt64
 
 pub fn standard_array_type_declaration() -> UInt64
 

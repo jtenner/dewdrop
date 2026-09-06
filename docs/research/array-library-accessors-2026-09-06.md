@@ -17,8 +17,9 @@ Regression checks include ordinary-call lowering, changed declaration layouts,
 and a self-host library whose size methods return 42 and 43. The latter must
 return 85, not an empty Array's physical length or capacity.
 
-The 13 remaining Array builtins, iterator representation, raw backing checks,
-literal construction, and other collection producers still need migration.
+At this step, 13 Array builtins and iterator representation still needed
+migration; the [algorithm follow-up](array-library-algorithms-2026-09-06.md)
+now covers them. Literal construction and other collection producers remain.
 No sentinel slot or new backing allocation assumption is introduced here.
 
 ## Validation

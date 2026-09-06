@@ -40,6 +40,36 @@ test "dead typed query branches are distinct from invalid live values" {
   }
 }
 
+test "runtime logical keys do not turn callers into compile-time queries" {
+  let lowering = self_host_physical_test_lowering(
+    b"struct Map<K, V> {}\nbuiltin raw<K, V>(values: Map<K, V>, key: K) -> V = \"dew_map_get_unchecked\"\nfn inner<K, V>(values: Map<K, V>, key: K) -> V {\n  raw(values, key)\n}\nfn outer<K, V>(values: Map<K, V>, key: K) -> V {\n  inner(values, key)\n}\npub fn run(left: Map<String, I32>, right: Map<Bytes, I32>) -> I32 {\n  outer(left, \"key\") + outer(right, b\"key\")\n}\n",
+  )
+  let mut inner = 0u64
+  let mut outer = 0u64
+  for callable in lowering.modules[0u32].functions.callables {
+    if callable.name == b"inner" {
+      inner = callable.declaration
+    }
+    if callable.name == b"outer" {
+      outer = callable.declaration
+    }
+  }
+  assert(inner != 0u64 && outer != 0u64, "runtime forwarding declarations exist")
+  assert(lowering.compile_time.logical_arguments.contains_key(inner), "direct runtime caller keeps logical arguments")
+  assert(lowering.compile_time.logical_arguments.contains_key(outer), "transitive runtime caller keeps logical arguments")
+  assert(!lowering.compile_time.sensitive.contains_key(inner) && !lowering.compile_time.sensitive.contains_key(outer), "runtime arguments do not authorize query folding")
+  let plan = self_host_plan_program_specialization(lowering, false)
+  let mut count = 0u32
+  for request in plan.requests {
+    if request.declaration == inner {
+      assert(request.evidence_types.length() == 2u32, "runtime key and value keep exact types")
+      count = count + 1u32
+    }
+  }
+  assert(count == 2u32, "String and Bytes remain distinct despite equal physical carriers")
+  assert(plan.lowering.compile_time.instances.length() == 0u32, "runtime-only logical keys create no query instances")
+}
+
 test "local numeric query guards retain source dependence" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\nfn read<T>(value: T) -> I64 {\n  let width = bit_width::<T>()\n  if width == 64u32 {\n    accept(value)\n  } else {\n    0i64\n  }\n}\n",

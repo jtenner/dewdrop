@@ -1784,20 +1784,7 @@ fn wasmgc_append_physical_type_fields(
   let start = target.length()
   match source.kind {
     PlannedWasmStructType(declaration) =>
-      if declaration == standard_array_iterator_type_declaration() {
-        wasmgc_append_field(
-          target,
-          WasmStructField(declaration),
-          WasmNullableEqRefStorage,
-          source.offset,
-        )
-        wasmgc_append_mutable_field(
-          target,
-          WasmStructField(declaration),
-          WasmI32Storage,
-          source.offset,
-        )
-      } else if declaration == standard_map_key_iterator_type_declaration() ||
+      if declaration == standard_map_key_iterator_type_declaration() ||
         declaration == standard_map_value_iterator_type_declaration() ||
         declaration == standard_map_entry_iterator_type_declaration() ||
         declaration == standard_set_iterator_type_declaration() {

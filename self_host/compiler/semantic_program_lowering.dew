@@ -1799,19 +1799,26 @@ fn self_host_plan_program_lowering(
   result
 }
 
-// These compiler-only intrinsics read the physical Wasm Array length.
-builtin self_host_u32_array_backing_length(
+fn self_host_u32_array_backing_length(
   value: Array<U32>,
-) -> U32 = "dew_array_backing_length_i32"
+) -> U32 {
+  wasm_array_len(value.backing)
+}
 
-builtin self_host_declaration_array_backing_length(
+fn self_host_declaration_array_backing_length(
   value: Array<SelfHostCollectedDeclaration>,
-) -> U32 = "dew_array_backing_length_ref"
+) -> U32 {
+  wasm_array_len(value.backing)
+}
 
-builtin self_host_method_array_backing_length(
+fn self_host_method_array_backing_length(
   value: Array<SelfHostCollectedMethod>,
-) -> U32 = "dew_array_backing_length_ref"
+) -> U32 {
+  wasm_array_len(value.backing)
+}
 
-builtin self_host_callable_array_backing_length(
+fn self_host_callable_array_backing_length(
   value: Array<SelfHostPlannedCallable>,
-) -> U32 = "dew_array_backing_length_ref"
+) -> U32 {
+  wasm_array_len(value.backing)
+}

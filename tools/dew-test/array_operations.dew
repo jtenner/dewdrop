@@ -1,5 +1,6 @@
 open dew.std.array
 open dew.std.option
+open dew.std.wasm.intrinsics
 
 fn bulk_values() -> Array<I64> {
   let values = Array::new()
@@ -26,6 +27,11 @@ impl<t> IndexedGet<U32, t> for BulkIndexCell<t> {
 
 fn bulk_effect(cell: BulkCell) -> Unit {
   cell.value = cell.value + 1i32
+}
+
+fn bulk_local_identity<t>(value: t) -> t {
+  let result = value
+  result
 }
 
 pub fn main(case: U32) -> I32 {
@@ -158,6 +164,102 @@ pub fn main(case: U32) -> I32 {
         0i32
       }
       Option::None => 0i32
+    }
+  } else if case == 16u32 {
+    let values = Array::with_capacity(2u32)
+    values.push(10i64)
+    values.push(20i64)
+    values.push(30i64)
+    values.reserve(10u32)
+    let reserved = values.capacity() >= 13u32 && values.length() == 3u32
+    values.shrink_to_fit()
+    let popped = values.pop() is Option::Some(30i64)
+    if reserved && popped && values.capacity() == 3u32 && values.length() == 2u32 && wasm_array_get(values.backing, 2u32) == 0i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 17u32 {
+    let values = bulk_values()
+    let capacity = values.capacity()
+    values.truncate(4u32)
+    values.truncate(1u32)
+    let cleared = wasm_array_get(values.backing, 1u32) == 0i64 && wasm_array_get(values.backing, 3u32) == 0i64
+    values.clear()
+    values.clear()
+    if cleared && values.length() == 0u32 && values.capacity() == capacity && wasm_array_get(values.backing, 0u32) == 0i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 18u32 {
+    bulk_values().truncate(5u32)
+    0i32
+  } else if case == 19u32 {
+    bulk_values().reserve(4294967295u32)
+    0i32
+  } else if case == 20u32 {
+    let values = Array::with_capacity(8u32)
+    values.push(1i64)
+    values.get_unchecked(1u32)
+    0i32
+  } else if case == 21u32 {
+    let values = Array::with_capacity(8u32)
+    values.push(1i64)
+    values.set_unchecked(1u32, 2i64)
+    0i32
+  } else if case == 22u32 {
+    let values = Array::make(1u32, 1i64)
+    let iterator = values.iter()
+    array_iter_next(iterator)
+    array_iter_next(iterator)
+    0i32
+  } else if case == 23u32 {
+    let values = Array::make(1u32, 10i64)
+    let iterator = values.iter()
+    let first = array_iter_next(iterator)
+    values.push(20i64)
+    let second = array_iter_next(iterator)
+    values.truncate(1u32)
+    if first == 10i64 && second == 20i64 && !array_iter_has_next(iterator) {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 24u32 {
+    let cell = BulkCell::{
+      value: 3i32
+    }
+    let values = [cell, cell]
+    values.truncate(1u32)
+    // Deliberately inspect removed raw storage. Dereferencing its cleared
+    // reference must trap; omitting the clear would return the old value.
+    wasm_array_get(values.backing, 1u32).value
+  } else if case == 25u32 {
+    let cell = BulkCell::{
+      value: 0i32
+    }
+    bulk_local_identity(bulk_effect(cell))
+    let values = Array::make(2u32, bulk_effect(cell))
+    values.reserve(8u32)
+    values.truncate(1u32)
+    values.shrink_to_fit()
+    if cell.value == 2i32 && values.length() == 1u32 && values.capacity() == 1u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 26u32 {
+    let cell = BulkCell::{
+      value: 3i32
+    }
+    let values = [cell, cell]
+    values.truncate(1u32)
+    cell.value = 8i32
+    if values[0u32].value == 8i32 {
+      1i32
+    } else {
+      0i32
     }
   } else if case == 9u32 {
     let cell = BulkCell::{

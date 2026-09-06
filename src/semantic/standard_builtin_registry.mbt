@@ -6,19 +6,6 @@ enum StandardBuiltinOperation {
   WasmRefNull
   WasmRefIsNull
   WasmRefAsNonNull
-  ArrayNew
-  ArrayWithCapacity
-  ArrayGetUnchecked
-  ArraySetUnchecked
-  ArrayPush
-  ArrayPop
-  ArrayClear
-  ArrayIter
-  ArrayIterHasNext
-  ArrayIterNext
-  ArrayReserve
-  ArrayShrinkToFit
-  ArrayTruncate
   QueueNew
   QueueWithCapacity
   QueueLength
@@ -114,30 +101,6 @@ pub fn standard_array_type_declaration() -> DeclId {
 }
 
 ///|
-pub fn standard_array_method_declaration(name : String) -> DeclId {
-  let local_id = match name {
-    "new" => 17
-    "with_capacity" => 18
-    "length" => 19
-    "capacity" => 20
-    "push" => 22
-    "pop" => 23
-    "get" => 24
-    "get_unchecked" => 25
-    "set" => 26
-    "set_unchecked" => 27
-    "clear" => 28
-    "iter" => 29
-    _ => -1
-  }
-  if local_id < 0 {
-    0UL
-  } else {
-    make_semantic_id(standard_library_module_id(13), local_id)
-  }
-}
-
-///|
 pub fn standard_array_iterator_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(13), 1)
 }
@@ -155,39 +118,6 @@ pub fn standard_array_key_iterator_type_declaration() -> DeclId {
 ///|
 pub fn standard_array_entry_iterator_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(13), 53)
-}
-
-///|
-pub fn standard_array_index_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(13), 31)
-}
-
-///|
-pub fn standard_array_index_set_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(13), 33)
-}
-
-///|
-fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
-  if semantic_id_module(declaration) != standard_library_module_id(13) {
-    return NoStandardBuiltinOperation
-  }
-  match semantic_id_local(declaration) {
-    2 | 17 => ArrayNew
-    3 | 18 => ArrayWithCapacity
-    7 | 25 | 31 => ArrayGetUnchecked
-    9 | 27 | 33 => ArraySetUnchecked
-    10 | 22 => ArrayPush
-    11 | 23 => ArrayPop
-    12 | 28 => ArrayClear
-    13 | 29 => ArrayIter
-    14 => ArrayIterHasNext
-    15 => ArrayIterNext
-    37 => ArrayReserve
-    38 => ArrayShrinkToFit
-    39 => ArrayTruncate
-    _ => NoStandardBuiltinOperation
-  }
 }
 
 ///|

@@ -14,6 +14,17 @@ export function checkArrayOperations(main) {
   for (const test of [12, 13, 14, 15]) {
     assert.equal(main(test), 1, `checked array operation ${test}`);
   }
+  for (const test of [16, 17, 23, 25, 26]) {
+    assert.equal(main(test), 1, `Dew array storage and iterator case ${test}`);
+  }
+  assert.throws(() => main(24), error =>
+    error instanceof WebAssembly.RuntimeError && /illegal cast|null/.test(error.message),
+  "removed reference storage is cleared");
+  for (const test of [18, 19, 20, 21, 22]) {
+    assert.throws(() => main(test), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `Dew array checked bound or overflow case ${test}`);
+  }
   assert.throws(() => main(4294967295), WebAssembly.RuntimeError, "unknown array case is not a passing case");
-  return 17;
+  return 28;
 }

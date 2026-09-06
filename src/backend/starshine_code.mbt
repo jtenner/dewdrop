@@ -1150,6 +1150,11 @@ fn starshine_program_argument_needs_nominal_cast(
     | @semantic.PlannedFixedArrayGetUnchecked(_, _, _)
     | @semantic.PlannedArrayGet(_, _, _, _)
     | @semantic.PlannedArrayGetUnchecked(_, _, _)
+    | @semantic.PlannedDirectCall(_, _, _, _)
+    | @semantic.PlannedTailCall(_, _, _, _)
+    | @semantic.PlannedOperatorCall(_, _, _, _, _)
+    | @semantic.PlannedFunctionValueCall(_, _, _)
+    | @semantic.PlannedDirectLambdaCall(_, _, _)
     | @semantic.PlannedIndexCall(_, _, _, _) => true
     _ => false
   }
@@ -8809,7 +8814,12 @@ fn starshine_emit_body_instructions(
                 local_id < local_indices.length() &&
                 local_indices[local_id] < 0 {
                 let local_info = lowering.locals[body.locals.start + local_id]
-                match local_info.shape {
+                match starshine_specialized_shape(
+                  lowering,
+                  generic_specialization,
+                  local_info.type_,
+                  local_info.shape,
+                ) {
                   @semantic.UnitPlannedValueShape => continue
                   _ => ()
                 }
