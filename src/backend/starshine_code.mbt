@@ -3979,6 +3979,15 @@ fn starshine_body_locals(
           body_local_types.push(@lib.ValType::i32())
         }
       }
+      @semantic.PlannedStringArrayConst(values) =>
+        if values.length() > 0 {
+          map_key_local_indices[expression - body.expressions.start] = parameter_count +
+            body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+          map_value_local_indices[expression - body.expressions.start] = parameter_count +
+            body_local_types.length()
+          body_local_types.push(@lib.ValType::eqref_null())
+        }
       @semantic.PlannedArrayLiteral(_, _, _)
       | @semantic.PlannedArrayWithCapacity(_, _, _)
       | @semantic.PlannedArrayGet(_, _, _, _)
@@ -5988,6 +5997,32 @@ fn starshine_emit_body_instructions(
                 planned, program, value, true,
               ),
             )
+          @semantic.PlannedStringArrayConst(values) => {
+            guard source.shape is @semantic.RefPlannedValueShape else {
+              return Err(UnsupportedExpression(body.body, expression))
+            }
+            let fragments = values.map(value => {
+              starshine_text_constant_instructions(
+                planned, program, value, true,
+              )
+            })
+            match
+              starshine_finish_array(
+                planned,
+                program,
+                body.body,
+                48,
+                Some(source.shape),
+                fragments,
+                -1,
+                map_key_local_indices[expression - body.expressions.start],
+                -1,
+                map_value_local_indices[expression - body.expressions.start],
+              ) {
+              Ok(instructions) => results.push(instructions)
+              Err(error) => return Err(error)
+            }
+          }
           @semantic.PlannedBytesConst(value) =>
             results.push(
               starshine_text_constant_instructions(

@@ -242,6 +242,7 @@ fn selected_standard_modules(
               }
               "fixed_array" => fixed_array = true
               "array" => array = true
+              "types" => array = true
               "map" => map = true
               "set" => set = true
               "show" => {

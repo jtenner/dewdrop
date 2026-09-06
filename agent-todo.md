@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Current handoff updated September 5, 2026. The older deferred backlog below
+> Current handoff updated September 6, 2026. The older deferred backlog below
 > comes from [`docs/roadmap.md`](docs/roadmap.md); it is not a claim that the whole
 > roadmap was re-audited today. Use small commits with tests, docs, and measured
 > compiler runs. Fix correctness before speed. Do not push without a new request.
@@ -17,7 +17,9 @@ restart them from scratch. Raw Unit array storage now passes both compilers.
 
 Native work is in progress. See
 [`docs/research/compile-time-types-2026-09-05.md`](docs/research/compile-time-types-2026-09-05.md)
-for the exact tested scope and the remaining work. The native path now has 15
+for the exact tested scope and the remaining work. September 6 progress is in
+[`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
+The native path now has 19
 query/assertion declarations, logical generic keys, selected IR bodies, and
 physical-boundary checks. This is not yet self-host parity or the full feature.
 
@@ -32,8 +34,14 @@ physical-boundary checks. This is not yet self-host parity or the full feature.
   - [ ] Add local compile-time type bindings and self-host parser/resolver parity.
 - [ ] Add `field_names` and `variant_names`. Preserve declaration identity and
   source order, including imported and generic types.
+  - [x] Native folding and fresh string-array constants, with Wasm execution tests.
+  - [ ] Self-host folding and shared execution fixtures.
 - [ ] Define valid layout-query types for `size_of`, `align_of`, and
   `field_offset`. WasmGC object byte layouts are not exposed; never invent them.
+  - [x] Native scalar `size_of`/`align_of`; GC objects and unsupported layouts
+    produce errors. Unit has size 0/alignment 1; Never has no layout.
+  - [ ] Self-host scalar queries and an explicit aggregate layout contract for
+    `field_offset` (GC field indices are not byte offsets).
 - [ ] Port all query, trait search, assertion, and logical instance handling to
   the self-host compiler. Check both compilers with the same execution fixtures.
   - [x] Match the native compile-time `Type` identity and reject runtime storage,

@@ -1,4 +1,6 @@
 open dew.std.types
+open dew.std.array
+open dew.std.string
 
 type Nothing = Unit
 
@@ -34,6 +36,12 @@ fn query_identity<t>(value: t) -> t {
 fn query_item(value: QueryItem<I64>) -> field_type<QueryBox<I64>>("item") {
   query_identity::<QueryItem<I64>>(value)
 }
+
+fn query_fields<t>() -> Array<String> {
+  field_names::<t>()
+}
+
+struct QueryEmpty {}
 
 fn query_signed<t>() -> Bool {
   is_signed_integer::<t>()
@@ -116,6 +124,23 @@ pub fn main(case: U32) -> Bool {
     left == 7i32 && right == 4294967297i64
   } else if case == 22u32 {
     tuple_length::<variant_payload_types<QueryMessage<I32>>("Empty")>() == 0u32
+  } else if case == 23u32 {
+    let names = query_fields::<QueryBox<I32>>()
+    names.length() == 1u32 && names[0u32] == "item"
+  } else if case == 24u32 {
+    let names = variant_names::<QueryMessage<I64>>()
+    names.length() == 2u32 && names[0u32] == "Empty" && names[1u32] == "Value"
+  } else if case == 25u32 {
+    let first = query_fields::<QueryBox<I32>>()
+    first[0u32] = "changed"
+    let second = query_fields::<QueryBox<I32>>()
+    second[0u32] == "item"
+  } else if case == 26u32 {
+    query_fields::<QueryEmpty>().length() == 0u32
+  } else if case == 27u32 {
+    size_of::<I8>() == 1u32 && align_of::<I64>() == 8u32
+  } else if case == 28u32 {
+    size_of::<Unit>() == 0u32 && align_of::<Unit>() == 1u32 && size_of::<V128>() == 16u32
   } else {
     false
   }

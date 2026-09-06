@@ -19,6 +19,7 @@ fn compile_time_builtin_targets(
 
 ///|
 fn compile_time_fold_call(
+  context : CompileTimeProgramContext,
   module_ : PlannedModuleLowering,
   source : PlannedExpression,
   name : Bytes,
@@ -39,7 +40,10 @@ fn compile_time_fold_call(
     Ok(types) => types
     Err(error) => return Err("CT-002 " + @debug.to_string(error))
   }
-  let evaluated = if name == b"types.implements" {
+  let evaluated = if name == b"types.field_names" ||
+    name == b"types.variant_names" {
+    evaluate_compile_time_names(context, name, types)
+  } else if name == b"types.implements" {
     match evidence {
       Some(search) => evaluate_compile_time_implements(search, types)
       None => Err("CT-010 missing trait evidence context")
@@ -63,6 +67,10 @@ fn compile_time_fold_call(
   let expected = match result {
     CtBool(_) => CtPrimitive(BoolType)
     CtU32(_) => CtPrimitive(U32Type)
+    CtStringArray(_) =>
+      CtApplied(CtNominal(standard_array_type_declaration()), [
+        CtPrimitive(StringType),
+      ])
   }
   if declared_result != expected {
     return Err("CT-003 query declaration has the wrong result type")
@@ -70,6 +78,7 @@ fn compile_time_fold_call(
   let kind = match result {
     CtBool(value) => PlannedBoolConst(value)
     CtU32(value) => PlannedU32Const(value.reinterpret_as_uint().to_uint64())
+    CtStringArray(values) => PlannedStringArrayConst(values)
   }
   Ok(Some({ ..source, kind, }))
 }
@@ -158,8 +167,8 @@ fn fold_module_compile_time_queries(
         }
         match
           compile_time_fold_call(
-            module_, source, name, receiver, arguments, type_arguments, bindings,
-            evidence,
+            context, module_, source, name, receiver, arguments, type_arguments,
+            bindings, evidence,
           ) {
           Ok(Some(replacement)) => module_.expressions[index] = replacement
           Ok(None) =>

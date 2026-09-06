@@ -1306,7 +1306,7 @@ pub fn collect_program_manifest_with_standard_sources(
     )
   }
   if selected_types {
-    let module_id = standard_library_module_id(70)
+    let module_id = standard_library_module_id(79)
     first_module["dew.std.types"] = modules.length()
     module_paths.push("dew.std.types")
     modules.push(collect_program_files_with_frozen_standard_imports(

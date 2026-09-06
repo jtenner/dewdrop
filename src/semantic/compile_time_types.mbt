@@ -17,6 +17,7 @@ enum CompileTimeType {
 enum CompileTimeConstant {
   CtBool(Bool)
   CtU32(Int)
+  CtStringArray(Array[Bytes])
 } derive(Eq, Debug)
 
 ///|
@@ -41,7 +42,11 @@ fn compile_time_type_query_arity(name : Bytes) -> Int? {
     | b"types.bit_width"
     | b"types.lane_count"
     | b"types.lane_bit_width"
-    | b"types.tuple_length" => Some(1)
+    | b"types.tuple_length"
+    | b"types.field_names"
+    | b"types.variant_names"
+    | b"types.size_of"
+    | b"types.align_of" => Some(1)
     _ => None
   }
 }
@@ -193,6 +198,24 @@ fn evaluate_compile_time_type_query(
     Ok(true) => ()
   }
   let first = arguments[0]
+  if name == b"types.field_names" || name == b"types.variant_names" {
+    return Err(CtEvidenceContextRequired)
+  }
+  if name == b"types.size_of" || name == b"types.align_of" {
+    let size = match first {
+      CtPrimitive(UnitType) => 0
+      CtPrimitive(BoolType) => 4
+      CtPrimitive(primitive) =>
+        match compile_time_bit_width(primitive) {
+          Some(bits) => bits / 8
+          None => return Err(CtWrongTypeCategory(name))
+        }
+      _ => return Err(CtWrongTypeCategory(name))
+    }
+    return Ok(
+      Some(CtU32(if name == b"types.align_of" && size == 0 { 1 } else { size })),
+    )
+  }
   if name == b"types.implements" {
     return Err(CtEvidenceContextRequired)
   }

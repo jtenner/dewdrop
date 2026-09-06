@@ -1,3 +1,5 @@
+import dew.std.array as @array
+
 // Pure compiler queries. These declarations never make runtime calls.
 // Type identity is logical identity, not Wasm carrier equality.
 pub builtin type_equal<a, b>() -> Bool = "types.type_equal"
@@ -17,3 +19,9 @@ pub builtin static_assert(condition: Bool, message: String) -> Unit = "types.sta
 // These return real types. Use them in type aliases, signatures, or type arguments.
 pub builtin field_type<t>(name: String) -> Type = "types.field_type"
 pub builtin variant_payload_types<t>(name: String) -> Type = "types.variant_payload_types"
+// Ordered names are compile-time constants; each use produces a fresh array.
+pub builtin field_names<t>() -> @array.Array<String> = "types.field_names"
+pub builtin variant_names<t>() -> @array.Array<String> = "types.variant_names"
+// Raw scalar memory layout only. GC objects have no exposed byte layout.
+pub builtin size_of<t>() -> U32 = "types.size_of"
+pub builtin align_of<t>() -> U32 = "types.align_of"

@@ -37,6 +37,7 @@ pub enum PlannedExpressionKind {
   PlannedF64Const(Double)
   PlannedBoolConst(Bool)
   PlannedStringConst(Bytes)
+  PlannedStringArrayConst(Array[Bytes])
   PlannedBytesConst(Bytes)
   PlannedLocalGet(LocalId)
   PlannedLocalSet(LocalId, ExprId)
