@@ -1463,7 +1463,7 @@ fn materialize_program_generic_specialization(
     specialization_evidence,
     specialization_abi_key,
   })
-  materialize_compile_time_lambdas(
+  let lambda_signatures = materialize_compile_time_lambdas(
     lowering,
     owner_index,
     module_,
@@ -1471,7 +1471,7 @@ fn materialize_program_generic_specialization(
   )
   modules[owner_index] = {
     ..module_,
-    signature_type_count: module_.signature_type_count + 1,
+    signature_type_count: module_.signature_type_count + 1 + lambda_signatures,
   }
   Some(specialization_abi_key)
 }

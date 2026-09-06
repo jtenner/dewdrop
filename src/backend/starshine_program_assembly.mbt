@@ -474,6 +474,7 @@ fn emit_starshine_program_function_body(
     function_.specialization_abi_key,
   )
   let module_fragments = @semantic.program_function_fragments(
+    module_lowering,
     planned.modules[function_.module_index],
     function_.specialization_abi_key,
   )
@@ -1078,6 +1079,11 @@ fn emit_starshine_program_code_section(
                 function_.specialization_abi_key,
               ),
               @semantic.program_function_fragments(
+                @semantic.program_function_lowering(
+                  lowering,
+                  function_.module_index,
+                  function_.specialization_abi_key,
+                ),
                 planned.modules[function_.module_index],
                 function_.specialization_abi_key,
               ),

@@ -125,7 +125,7 @@ pub fn planned_reference_shape() -> PlannedValueShape
 
 pub fn planned_value_shape_from_resolved_types(Array[ResolvedType], Array[Int], Int) -> PlannedValueShape
 
-pub fn program_function_fragments(PlannedModuleWasmGCFragments, String) -> PlannedModuleWasmGCFragments
+pub fn program_function_fragments(PlannedModuleLowering, PlannedModuleWasmGCFragments, String) -> PlannedModuleWasmGCFragments
 
 pub fn program_function_lowering(PlannedProgramLowering, Int, String) -> PlannedModuleLowering
 
@@ -809,6 +809,12 @@ pub enum CollectionDiagnostic {
 type CompileTimeConstant derive(Eq, @debug.Debug)
 
 type CompileTimeEvidenceSearch
+
+pub struct CompileTimeLambdaLayout {
+  closure_types : Array[Int]
+  capture_fields : Array[Int]
+  capture_parameters : Array[Int]
+} derive(Eq, @debug.Debug)
 
 type CompileTimeProgramContext
 
@@ -1954,6 +1960,7 @@ pub struct PlannedModuleWasmGCFragments {
   erased_closure_entry_type_by_resolved : Array[Int]
   lambda_entry_signature_indices : Array[Int]
   lambda_capture_parameter_indices : Array[Int]
+  specialized_lambda_layouts : Map[String, CompileTimeLambdaLayout]
   trait_layouts : Array[PlannedWasmTraitLayout]
   trait_layout_methods : Array[UInt64]
   trait_method_signature_indices : Array[Int]

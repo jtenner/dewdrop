@@ -213,6 +213,7 @@ fn compile_time_specialization_key(
     ..instances[0],
     diagnostics: [],
     lambdas: owner.lambdas.copy(),
+    captures: owner.captures.copy(),
   }
   fold_module_compile_time_queries(
     context,

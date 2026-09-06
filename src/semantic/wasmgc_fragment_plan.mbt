@@ -310,6 +310,7 @@ pub struct PlannedModuleWasmGCFragments {
   erased_closure_entry_type_by_resolved : Array[Int]
   lambda_entry_signature_indices : Array[Int]
   lambda_capture_parameter_indices : Array[Int]
+  specialized_lambda_layouts : Map[String, CompileTimeLambdaLayout]
   trait_layouts : Array[PlannedWasmTraitLayout]
   trait_layout_methods : Array[DeclId]
   trait_method_signature_indices : Array[Int]
@@ -4763,6 +4764,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     specialization_trait_evidence: [],
     specialization_evidence_children: [],
     specialization_evidence_arguments: [],
+    specialized_lambda_layouts: {},
     signature_type_count: next_signature_type - physical_types.length(),
     imported_function_count,
     defined_function_count,

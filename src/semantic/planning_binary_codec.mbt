@@ -920,6 +920,7 @@ pub fn validate_cached_module_wasmgc_fragments(
     return Err("cached WasmGC fragment planning mode mismatch")
   }
   if value.specialization_shapes.length() != 0 ||
+    value.specialized_lambda_layouts.length() != 0 ||
     value.specialization_evidence_roots.length() != 0 ||
     value.specialization_trait_evidence.length() != 0 ||
     value.specialization_evidence_children.length() != 0 ||
@@ -1002,6 +1003,19 @@ pub fn serialize_planned_module_wasmgc_fragments(
   pb_write_int_array(writer, value.erased_closure_entry_type_by_resolved)
   pb_write_int_array(writer, value.lambda_entry_signature_indices)
   pb_write_int_array(writer, value.lambda_capture_parameter_indices)
+  let layout_keys = []
+  for key, _ in value.specialized_lambda_layouts {
+    layout_keys.push(key)
+  }
+  layout_keys.sort()
+  writer.write_var_u64(layout_keys.length().to_uint64())
+  for key in layout_keys {
+    let layout = value.specialized_lambda_layouts[key]
+    writer.write_string(key)
+    pb_write_int_array(writer, layout.closure_types)
+    pb_write_int_array(writer, layout.capture_fields)
+    pb_write_int_array(writer, layout.capture_parameters)
+  }
   writer.write_var_u64(value.trait_layouts.length().to_uint64())
   for layout in value.trait_layouts {
     ib_write_id(writer, layout.trait_declaration)
@@ -1201,6 +1215,25 @@ pub fn deserialize_planned_module_wasmgc_fragments(
   let lambda_capture_parameter_indices = pb_read_int_array(
     reader, "lambda_capture_parameter_indices",
   )
+  let layout_count = reader.read_count(
+    planning_binary_maximum_items, "specialized_lambda_layouts",
+  )
+  let specialized_lambda_layouts : Map[String, CompileTimeLambdaLayout] = {}
+  for _ in 0..<layout_count {
+    let key = reader.read_string(
+      planning_binary_maximum_text, "lambda_layout.key",
+    )
+    if specialized_lambda_layouts.contains(key) {
+      reader.fail("lambda_layout.key", "duplicate logical instance")
+    }
+    specialized_lambda_layouts[key] = {
+      closure_types: pb_read_int_array(reader, "lambda_layout.closure_types"),
+      capture_fields: pb_read_int_array(reader, "lambda_layout.capture_fields"),
+      capture_parameters: pb_read_int_array(
+        reader, "lambda_layout.capture_parameters",
+      ),
+    }
+  }
   let trait_layout_count = reader.read_count(
     planning_binary_maximum_items, "trait_layouts",
   )
@@ -1379,6 +1412,7 @@ pub fn deserialize_planned_module_wasmgc_fragments(
     erased_closure_entry_type_by_resolved,
     lambda_entry_signature_indices,
     lambda_capture_parameter_indices,
+    specialized_lambda_layouts,
     trait_layouts,
     trait_layout_methods,
     trait_method_signature_indices,

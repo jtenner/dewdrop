@@ -417,6 +417,36 @@ pub fn validate_module_wasmgc_arenas(
       return Err("WasmGC lambda capture parameter index is invalid")
     }
   }
+  for key, layout in module_.specialized_lambda_layouts {
+    if key == "" ||
+      layout.closure_types.length() !=
+      module_.lambda_closure_type_indices.length() ||
+      layout.capture_fields.length() !=
+      module_.lambda_capture_field_indices.length() ||
+      layout.capture_parameters.length() !=
+      module_.lambda_capture_parameter_indices.length() {
+      return Err(
+        "WasmGC specialized lambda lookup arenas have different lengths",
+      )
+    }
+    for lambda, type_ in layout.closure_types {
+      if type_ < -1 || type_ >= physical_count {
+        return Err("WasmGC specialized closure type is outside its arena")
+      }
+      if type_ >= 0 &&
+        module_.physical_types[type_].kind !=
+        PlannedWasmLambdaClosureType(lambda) {
+        return Err("WasmGC specialized closure has the wrong lambda identity")
+      }
+    }
+    for table in [layout.capture_fields, layout.capture_parameters] {
+      for index in table {
+        if index < -1 {
+          return Err("WasmGC specialized capture has an invalid index")
+        }
+      }
+    }
+  }
   if module_.trait_layout_methods.length() !=
     module_.trait_method_signature_indices.length() {
     return Err("WasmGC trait layout arenas have different lengths")

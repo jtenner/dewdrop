@@ -1,0 +1,312 @@
+open dew.std.array
+open dew.std.option
+
+fn self_host_linked_append_specialized_signature_type(module_: SelfHostPlannedModuleLowering, request: Option<SelfHostProgramSpecializationRequest>, shapes: Array<SelfHostPlannedValueShape>, type_: I32, values: StarshineValueTypes) -> Unit {
+  let shape = self_host_lambda_request_shape(module_, request, shapes, type_, self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, type_))
+  self_host_assert_compiler_invariant(self_host_specialization_shape_error(shape) == 0u32, "SPC-301 indirect signature requires concrete type evidence")
+  self_host_linked_append_shape_value_types(values, shape)
+}
+
+struct SelfHostFunctionSignatureScope {
+  module_index: U32
+  specialization: U32
+  expressions: SelfHostHirSpan
+}
+
+fn self_host_function_signature_scope_array() -> Array<SelfHostFunctionSignatureScope> {
+  []
+}
+
+fn self_host_function_signature_scopes(link: SelfHostPlannedProgramWasmGCLink) -> Array<SelfHostFunctionSignatureScope> {
+  let scopes = self_host_function_signature_scope_array()
+  for function_ in link.functions {
+    let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, function_.module_index, function_.specialization)
+    let fragment = link.fragments.modules[function_.module_index].functions[function_.fragment_index]
+    let body = match fragment.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(id) => self_host_linked_i32_body(module_, id)
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(id) => self_host_linked_lambda_body(module_, id)
+      _ => Option::None
+    }
+    match body {
+      Option::Some(value) => scopes.push(SelfHostFunctionSignatureScope::{
+        module_index: function_.module_index
+        specialization: function_.specialization
+        expressions: value.expressions
+      })
+      Option::None => {}
+    }
+  }
+  for initializer in link.initializers {
+    let module_ = self_host_linked_lowering_module_at(link, initializer.module_index)
+    match self_host_linked_i32_body(module_, initializer.body) {
+      Option::Some(value) => scopes.push(SelfHostFunctionSignatureScope::{
+        module_index: initializer.module_index
+        specialization: 4294967295u32
+        expressions: value.expressions
+      })
+      Option::None => {
+        let _ = self_host_assert_compiler_invariant(false, "BOD-610 initializer signature scope has no body")
+      }
+    }
+  }
+  scopes
+}
+
+fn self_host_linked_append_function_value_signatures(link: SelfHostPlannedProgramWasmGCLink, rec_types: StarshineRecTypes, signatures: Array<SelfHostLinkedFunctionValueSignature>) -> Option<String> {
+  let shapes = link.fragments.specialization.shapes
+  for scope in self_host_function_signature_scopes(link) {
+    let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, scope.module_index, scope.specialization)
+    let request = if scope.specialization < link.fragments.specialization.requests.length() {
+      Option::Some(link.fragments.specialization.requests[scope.specialization])
+    } else {
+      Option::None
+    }
+    self_host_assert_array_span(scope.expressions.start, scope.expressions.length, module_.expressions.length(), "ARN-101 function-value signature scope")
+    let _ = while 0u32 {
+      relative => if relative < scope.expressions.length {
+        let expression_id = scope.expressions.start + relative
+        let expression = module_.expressions[expression_id]
+        match expression.kind {
+          SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, arguments, _) => if self_host_linked_function_value_signature(signatures, module_.module_id, scope.specialization, expression_id) is Option::None {
+            let direct_parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
+            let entry_parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
+            let direct_results = StarshineFfi.ffi_ffi_bridge_val_types_new()
+            let entry_results = StarshineFfi.ffi_ffi_bridge_val_types_new()
+            StarshineFfi.ffi_ffi_bridge_val_types_push(entry_parameters, self_host_linked_eqref_value_type())
+            let target_signature = target < module_.expressions.length() && self_host_linked_append_body_function_signature(
+              module_, request, shapes, module_.expressions[target].type_, direct_parameters, entry_parameters, direct_results, entry_results,
+            )
+            let result_shape = self_host_lambda_request_shape(module_, request, shapes, expression.type_, self_host_linked_function_value_result_shape(link, module_, expression_id))
+            if !target_signature {
+              self_host_assert_array_span(arguments.start, arguments.length, module_.expression_children.length(), "ARN-101 indirect call arguments")
+              let _ = while 0u32 {
+                index => if index < arguments.length {
+                  let child = module_.expression_children[arguments.start + index]
+                  self_host_assert_array_index(child, module_.expressions.length(), "ARN-104 indirect call operand")
+                  let shape = self_host_lambda_request_shape(module_, request, shapes, module_.expressions[child].type_, self_host_linked_function_value_argument_shape(link, module_, child))
+                  if self_host_specialization_shape_error(shape) != 0u32 {
+                    return Option::Some("ABI-704 unresolved indirect call operand")
+                  }
+                  self_host_linked_append_shape_value_types(direct_parameters, shape)
+                  self_host_linked_append_shape_value_types(entry_parameters, shape)
+                  continue index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+              self_host_linked_append_shape_value_types(direct_results, result_shape)
+              self_host_linked_append_shape_value_types(entry_results, result_shape)
+            }
+            let direct_type = self_host_linked_text_runtime_base(link) + 77u32 + signatures.length() * 2u32
+            self_host_linked_append_function_value_type(rec_types, direct_parameters, direct_results)
+            self_host_linked_append_function_value_type(rec_types, entry_parameters, entry_results)
+            signatures.push(SelfHostLinkedFunctionValueSignature::{
+              module_id: module_.module_id
+              specialization: scope.specialization
+              expression: expression_id
+              direct_type_index: direct_type
+              entry_type_index: direct_type + 1u32
+              result_shape: result_shape
+            })
+          }
+          _ => {}
+        }
+        continue relative + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_function_value_signature(
+  signatures: Array<SelfHostLinkedFunctionValueSignature>,
+  module_id: U64,
+  specialization: U32,
+  expression: U32,
+) -> Option<SelfHostLinkedFunctionValueSignature> {
+  for signature in signatures {
+    if self_host_u64_equal(signature.module_id, module_id) &&
+      self_host_u32_equal(signature.specialization, specialization) &&
+      self_host_u32_equal(signature.expression, expression) {
+      return Option::Some(signature)
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_append_resolved_function_signature(
+  module_: SelfHostPlannedModuleLowering,
+  request: Option<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  resolved_type: U32,
+  direct_parameters: StarshineValueTypes,
+  entry_parameters: StarshineValueTypes,
+  direct_results: StarshineValueTypes,
+  entry_results: StarshineValueTypes,
+) -> Bool {
+  if resolved_type >= self_host_linked_resolved_type_count(module_) {
+    return false
+  }
+  match module_.resolved_types.type_at(resolved_type) {
+    SelfHostResolvedType::FunctionType(parameter_types, result_type) => {
+      let mut parameter = 0u32
+      let _ = while parameter {
+        current => if current < parameter_types.length {
+          let argument_index = self_host_u32_add(
+            parameter_types.start,
+            current,
+          )
+          if argument_index >= self_host_linked_resolved_type_argument_count(module_) {
+            return false
+          }
+          let argument_type = self_host_linked_resolved_type_argument_at(
+            module_,
+            argument_index,
+          )
+          self_host_linked_append_specialized_signature_type(
+            module_,
+            request,
+            shapes,
+            -self_host_u32_to_i32(argument_type) - 2i32,
+            direct_parameters,
+          )
+          self_host_linked_append_specialized_signature_type(
+            module_,
+            request,
+            shapes,
+            -self_host_u32_to_i32(argument_type) - 2i32,
+            entry_parameters,
+          )
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      self_host_linked_append_specialized_signature_type(
+        module_,
+        request,
+        shapes,
+        -self_host_u32_to_i32(result_type) - 2i32,
+        direct_results,
+      )
+      self_host_linked_append_specialized_signature_type(
+        module_,
+        request,
+        shapes,
+        -self_host_u32_to_i32(result_type) - 2i32,
+        entry_results,
+      )
+      true
+    }
+    _ => false
+  }
+}
+
+fn self_host_linked_append_body_function_signature(
+  module_: SelfHostPlannedModuleLowering,
+  request: Option<SelfHostProgramSpecializationRequest>,
+  shapes: Array<SelfHostPlannedValueShape>,
+  body_type: I32,
+  direct_parameters: StarshineValueTypes,
+  entry_parameters: StarshineValueTypes,
+  direct_results: StarshineValueTypes,
+  entry_results: StarshineValueTypes,
+) -> Bool {
+  if body_type < -1i32 {
+    return self_host_linked_append_resolved_function_signature(
+      module_,
+      request,
+      shapes,
+      self_host_i32_to_u32(-body_type - 2i32),
+      direct_parameters,
+      entry_parameters,
+      direct_results,
+      entry_results,
+    )
+  }
+  if body_type < 0i32 {
+    return false
+  }
+  let type_index = self_host_i32_to_u32(body_type)
+  if type_index >= module_.inferred.types.length() {
+    return false
+  }
+  match module_.inferred.types[type_index] {
+    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => self_host_linked_append_resolved_function_signature(
+      module_,
+      request,
+      shapes,
+      resolved_type,
+      direct_parameters,
+      entry_parameters,
+      direct_results,
+      entry_results,
+    )
+    SelfHostBodyTypeTerm::BodyFunctionType(parameter_types, result_type) => {
+      let mut parameter = 0u32
+      let _ = while parameter {
+        current => if current < parameter_types.length {
+          let argument_index = self_host_u32_add(
+            parameter_types.start,
+            current,
+          )
+          if argument_index >= module_.inferred.type_arguments.length() {
+            return false
+          }
+          let argument_type = module_.inferred.type_arguments[argument_index]
+          self_host_linked_append_specialized_signature_type(
+            module_,
+            request,
+            shapes,
+            argument_type,
+            direct_parameters,
+          )
+          self_host_linked_append_specialized_signature_type(
+            module_,
+            request,
+            shapes,
+            argument_type,
+            entry_parameters,
+          )
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      self_host_linked_append_specialized_signature_type(
+        module_,
+        request,
+        shapes,
+        result_type,
+        direct_results,
+      )
+      self_host_linked_append_specialized_signature_type(
+        module_,
+        request,
+        shapes,
+        result_type,
+        entry_results,
+      )
+      true
+    }
+    _ => false
+  }
+}
+
+fn self_host_linked_append_function_value_type(
+  rec_types: StarshineRecTypes,
+  parameters: StarshineValueTypes,
+  results: StarshineValueTypes,
+) -> Unit {
+  StarshineFfi.ffi_ffi_bridge_rec_types_push(
+    rec_types,
+    StarshineFfi.ffi_lib_RecType_new(
+      StarshineFfi.ffi_lib_SubType_comp_type(
+        StarshineFfi.ffi_lib_CompType_func(parameters, results),
+        wasm_ref_null(),
+      ),
+    ),
+  )
+}

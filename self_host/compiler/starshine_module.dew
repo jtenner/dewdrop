@@ -200,9 +200,11 @@ struct SelfHostLinkedI32LoopLink {
 
 struct SelfHostLinkedFunctionValueSignature {
   module_id: U64
+  specialization: U32
   expression: U32
   direct_type_index: U32
   entry_type_index: U32
+  result_shape: SelfHostPlannedValueShape
 }
 
 enum SelfHostLinkedI32EmitTask {
@@ -21986,6 +21988,7 @@ fn self_host_emit_linked_i32_expression(
               let signature = match self_host_linked_function_value_signature(
                 function_value_signatures,
                 module_.module_id,
+                caller_specialization,
                 expression,
               ) {
                 Option::Some(value) => value
@@ -22042,13 +22045,7 @@ fn self_host_emit_linked_i32_expression(
                 signature.direct_type_index,
                 signature.entry_type_index,
                 arguments,
-                self_host_linked_backend_expression_shape(
-                  link,
-                  module_,
-                  body,
-                  caller_specialization,
-                  expression,
-                ),
+                signature.result_shape,
                 depth,
                 destination,
               ))
@@ -31683,196 +31680,6 @@ fn self_host_linked_append_shape_value_types(
   }
 }
 
-fn self_host_linked_append_resolved_value_type(
-  resolved: SelfHostResolvedModuleTypes,
-  type_: U32,
-  values: StarshineValueTypes,
-) -> Unit {
-  self_host_linked_append_shape_value_types(
-    values,
-    self_host_planned_resolved_value_shape(resolved, type_),
-  )
-}
-
-fn self_host_linked_function_value_signature(
-  signatures: Array<SelfHostLinkedFunctionValueSignature>,
-  module_id: U64,
-  expression: U32,
-) -> Option<SelfHostLinkedFunctionValueSignature> {
-  for signature in signatures {
-    if self_host_u64_equal(signature.module_id, module_id) &&
-      self_host_u32_equal(signature.expression, expression) {
-      return Option::Some(signature)
-    }
-  }
-  Option::None
-}
-
-fn self_host_linked_append_body_value_type(
-  module_: SelfHostPlannedModuleLowering,
-  type_: I32,
-  values: StarshineValueTypes,
-) -> Unit {
-  self_host_linked_append_shape_value_types(
-    values,
-    self_host_planned_merged_body_value_shape(
-      module_.resolved_types,
-      module_.inferred,
-      type_,
-    ),
-  )
-}
-
-fn self_host_linked_append_resolved_function_signature(
-  module_: SelfHostPlannedModuleLowering,
-  resolved_type: U32,
-  direct_parameters: StarshineValueTypes,
-  entry_parameters: StarshineValueTypes,
-  direct_results: StarshineValueTypes,
-  entry_results: StarshineValueTypes,
-) -> Bool {
-  if resolved_type >= self_host_linked_resolved_type_count(module_) {
-    return false
-  }
-  match module_.resolved_types.type_at(resolved_type) {
-    SelfHostResolvedType::FunctionType(parameter_types, result_type) => {
-      let mut parameter = 0u32
-      let _ = while parameter {
-        current => if current < parameter_types.length {
-          let argument_index = self_host_u32_add(
-            parameter_types.start,
-            current,
-          )
-          if argument_index >= self_host_linked_resolved_type_argument_count(module_) {
-            return false
-          }
-          let argument_type = self_host_linked_resolved_type_argument_at(
-            module_,
-            argument_index,
-          )
-          self_host_linked_append_resolved_value_type(
-            module_.resolved_types,
-            argument_type,
-            direct_parameters,
-          )
-          self_host_linked_append_resolved_value_type(
-            module_.resolved_types,
-            argument_type,
-            entry_parameters,
-          )
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      self_host_linked_append_resolved_value_type(
-        module_.resolved_types,
-        result_type,
-        direct_results,
-      )
-      self_host_linked_append_resolved_value_type(
-        module_.resolved_types,
-        result_type,
-        entry_results,
-      )
-      true
-    }
-    _ => false
-  }
-}
-
-fn self_host_linked_append_body_function_signature(
-  module_: SelfHostPlannedModuleLowering,
-  body_type: I32,
-  direct_parameters: StarshineValueTypes,
-  entry_parameters: StarshineValueTypes,
-  direct_results: StarshineValueTypes,
-  entry_results: StarshineValueTypes,
-) -> Bool {
-  if body_type < -1i32 {
-    return self_host_linked_append_resolved_function_signature(
-      module_,
-      self_host_i32_to_u32(-body_type - 2i32),
-      direct_parameters,
-      entry_parameters,
-      direct_results,
-      entry_results,
-    )
-  }
-  if body_type < 0i32 {
-    return false
-  }
-  let type_index = self_host_i32_to_u32(body_type)
-  if type_index >= module_.inferred.types.length() {
-    return false
-  }
-  match module_.inferred.types[type_index] {
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => self_host_linked_append_resolved_function_signature(
-      module_,
-      resolved_type,
-      direct_parameters,
-      entry_parameters,
-      direct_results,
-      entry_results,
-    )
-    SelfHostBodyTypeTerm::BodyFunctionType(parameter_types, result_type) => {
-      let mut parameter = 0u32
-      let _ = while parameter {
-        current => if current < parameter_types.length {
-          let argument_index = self_host_u32_add(
-            parameter_types.start,
-            current,
-          )
-          if argument_index >= module_.inferred.type_arguments.length() {
-            return false
-          }
-          let argument_type = module_.inferred.type_arguments[argument_index]
-          self_host_linked_append_body_value_type(
-            module_,
-            argument_type,
-            direct_parameters,
-          )
-          self_host_linked_append_body_value_type(
-            module_,
-            argument_type,
-            entry_parameters,
-          )
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      self_host_linked_append_body_value_type(
-        module_,
-        result_type,
-        direct_results,
-      )
-      self_host_linked_append_body_value_type(
-        module_,
-        result_type,
-        entry_results,
-      )
-      true
-    }
-    _ => false
-  }
-}
-
-fn self_host_linked_append_function_value_type(
-  rec_types: StarshineRecTypes,
-  parameters: StarshineValueTypes,
-  results: StarshineValueTypes,
-) -> Unit {
-  StarshineFfi.ffi_ffi_bridge_rec_types_push(
-    rec_types,
-    StarshineFfi.ffi_lib_RecType_new(
-      StarshineFfi.ffi_lib_SubType_comp_type(
-        StarshineFfi.ffi_lib_CompType_func(parameters, results),
-        wasm_ref_null(),
-      ),
-    ),
-  )
-}
 
 fn self_host_linked_function_value_argument_shape(
   link: SelfHostPlannedProgramWasmGCLink,
@@ -32221,130 +32028,6 @@ fn self_host_linked_function_value_result_shape(
     module_.inferred,
     planned.type_,
   )
-}
-
-fn self_host_linked_append_function_value_signatures(
-  link: SelfHostPlannedProgramWasmGCLink,
-  rec_types: StarshineRecTypes,
-  signatures: Array<SelfHostLinkedFunctionValueSignature>,
-) -> Option<String> {
-  let mut next_type = self_host_linked_text_runtime_base(link) + 77u32
-  let mut module_index = 0u32
-  let _ = while module_index {
-    current_module => if current_module < self_host_linked_lowering_module_count(link) {
-      let module_ = self_host_linked_lowering_module_at(link, current_module)
-      let mut expression_index = 0u32
-      let _ = while expression_index {
-        current_expression => if current_expression < self_host_linked_expression_count(module_) {
-          let expression = self_host_linked_expression_at(
-            module_,
-            current_expression,
-          )
-          match expression.kind {
-            SelfHostPlannedExpressionKind::PlannedFunctionValueCall(
-              target,
-              arguments,
-              _,
-            ) => if self_host_linked_function_value_signature(
-              signatures,
-              module_.module_id,
-              current_expression,
-            ) is Option::None {
-              let direct_parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
-              let entry_parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
-              let direct_results = StarshineFfi.ffi_ffi_bridge_val_types_new()
-              let entry_results = StarshineFfi.ffi_ffi_bridge_val_types_new()
-              StarshineFfi.ffi_ffi_bridge_val_types_push(
-                entry_parameters,
-                self_host_linked_eqref_value_type(),
-              )
-              let target_signature = target < self_host_linked_expression_count(module_) &&
-                self_host_linked_append_body_function_signature(
-                  module_,
-                  self_host_linked_expression_at(module_, target).type_,
-                  direct_parameters,
-                  entry_parameters,
-                  direct_results,
-                  entry_results,
-                )
-              if !target_signature {
-                let mut argument = 0u32
-                let _ = while argument {
-                  current => if current < arguments.length {
-                    let child_index = self_host_u32_add(arguments.start, current)
-                    if child_index >= module_.expression_children.length() {
-                      return Option::Some("linked function-value argument is outside its arena")
-                    }
-                    let child = module_.expression_children[child_index]
-                    if child >= self_host_linked_expression_count(module_) {
-                      return Option::Some("linked function-value argument expression is outside its arena")
-                    }
-                    let child_shape = self_host_linked_function_value_argument_shape(
-                      link,
-                      module_,
-                      child,
-                    )
-                    self_host_linked_append_shape_value_types(
-                      direct_parameters,
-                      child_shape,
-                    )
-                    self_host_linked_append_shape_value_types(
-                      entry_parameters,
-                      child_shape,
-                    )
-                    continue current + 1u32
-                  } else {
-                    break self_host_semantic_unit()
-                  }
-                }
-                let result_shape = self_host_linked_function_value_result_shape(
-                  link,
-                  module_,
-                  current_expression,
-                )
-                self_host_linked_append_shape_value_types(
-                  direct_results,
-                  result_shape,
-                )
-                self_host_linked_append_shape_value_types(
-                  entry_results,
-                  result_shape,
-                )
-              }
-              let direct_type = next_type
-              self_host_linked_append_function_value_type(
-                rec_types,
-                direct_parameters,
-                direct_results,
-              )
-              next_type = next_type + 1u32
-              let entry_type = next_type
-              self_host_linked_append_function_value_type(
-                rec_types,
-                entry_parameters,
-                entry_results,
-              )
-              next_type = next_type + 1u32
-              signatures.push(SelfHostLinkedFunctionValueSignature::{
-                module_id: module_.module_id
-                expression: current_expression
-                direct_type_index: direct_type
-                entry_type_index: entry_type
-              })
-            }
-            _ => {}
-          }
-          continue current_expression + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      continue current_module + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  Option::None
 }
 
 fn self_host_linked_i32_body(

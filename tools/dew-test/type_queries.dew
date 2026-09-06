@@ -86,6 +86,14 @@ fn query_lambda<t>() -> U32 {
   read()
 }
 
+fn query_typed_lambda<t>(value: t) -> t {
+  let read = fn(item: t) -> t {
+    let _ = is_unit::<t>()
+    item
+  }
+  read(value)
+}
+
 fn query_local_types() -> I64 {
   type Item = field_type<QueryBox<I64>>("item")
   let read = fn(value: Item) -> Item {
@@ -99,6 +107,30 @@ fn query_local_types() -> I64 {
     0i32
   }
   read(query_identity::<Item>(2i64))
+}
+
+fn query_capture<t>(value: t) -> t {
+  let read = fn() -> t {
+    let _ = is_unit::<t>()
+    value
+  }
+  read()
+}
+
+fn query_escape<t>(value: t) -> fn() -> t {
+  fn() -> t {
+    let _ = is_unit::<t>()
+    value
+  }
+}
+
+fn query_mutable<t>(value: t) -> fn(t) -> t {
+  let mut stored = value
+  fn(next: t) -> t {
+    let _ = is_unit::<t>()
+    stored = next
+    stored
+  }
 }
 
 fn query_result(ok: Bool) -> Result<Bool, String> {
@@ -215,6 +247,22 @@ pub fn main(case: U32) -> Bool {
     query_builtin_name(b"types.field_type") && query_builtin_name(b"types.variant_payload_types")
   } else if case == 39u32 {
     !query_builtin_name(b"types.field") && !query_builtin_name(b"types.field_type_extra")
+  } else if case == 40u32 {
+    query_typed_lambda::<Unit>(())
+    query_typed_lambda::<I64>(42i64) == 42i64
+  } else if case == 41u32 {
+    query_capture::<Unit>(())
+    query_capture::<I64>(43i64) == 43i64
+  } else if case == 42u32 {
+    let read_unit = query_escape::<Unit>(())
+    let read_scalar = query_escape::<I64>(44i64)
+    read_unit()
+    read_scalar() == 44i64
+  } else if case == 43u32 {
+    let write_unit = query_mutable::<Unit>(())
+    let write_scalar = query_mutable::<I64>(1i64)
+    write_unit(())
+    write_scalar(45i64) == 45i64 && write_scalar(46i64) == 46i64
   } else {
     false
   }
