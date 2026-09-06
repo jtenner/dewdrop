@@ -21,7 +21,7 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 20
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compiler paths pass 47 shared execution checks.
+physical-boundary checks. Both compiler paths pass 49 shared execution checks.
 The September 6 compiler-B/C bootstrap now reaches a byte-identical fixed point.
 Deferred type checking and layout work below still prevent full completion.
 
@@ -87,6 +87,10 @@ Deferred type checking and layout work below still prevent full completion.
   Removed branches must not add calls, trait requests, locals, or storage types.
   Refresh flow and effect facts, keep source IDs for errors, and ensure distinct
   query results cannot share one specialized body by an ABI-key collision.
+  - [x] Refresh expression, block, arm, body, and lambda flow after selection.
+    A non-returning operand keeps its ordered evaluation prefix, removes the
+    call and later operands, and removes later block statements. Test IR,
+    repeated planning, and both compiler execution paths.
 - [ ] Test the rewrite in native and self-host compilers. Cover Unit, scalar,
   reference, alias, Never, pending/error types, nested branches, separate
   specializations, branch-local type checks, and side effects. Check the IR and

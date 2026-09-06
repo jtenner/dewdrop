@@ -3,6 +3,7 @@ enum CompileTimeReachTask {
   CtReachExpression(ExprId)
   CtReachBlock(BlockId)
   CtFinishExpression(ExprId)
+  CtFinishBlock(BlockId)
 }
 
 ///|
@@ -255,6 +256,17 @@ fn prune_compile_time_branches(
   module_ : PlannedModuleLowering,
   active : DeclId?,
 ) -> Unit {
+  // Postorder refresh first removes non-returning evaluation suffixes. A second
+  // reachability walk then removes precisely the edges cut by that refresh.
+  prune_compile_time_branches_pass(module_, active)
+  prune_compile_time_branches_pass(module_, active)
+}
+
+///|
+fn prune_compile_time_branches_pass(
+  module_ : PlannedModuleLowering,
+  active : DeclId?,
+) -> Unit {
   let reached = Array::make(module_.expressions.length(), false)
   let blocks = Array::make(module_.blocks.length(), false)
   let work : Array[CompileTimeReachTask] = []
@@ -277,6 +289,7 @@ fn prune_compile_time_branches(
           continue
         }
         blocks[block] = true
+        work.push(CtFinishBlock(block))
         let items = module_.blocks[block].items
         guard program_specialization_span_is_valid(
           items,
@@ -343,7 +356,9 @@ fn prune_compile_time_branches(
             }
           _ => ()
         }
+        refresh_compile_time_expression_flow(module_, expression)
       }
+      CtFinishBlock(block) => refresh_compile_time_block_flow(module_, block)
     }
   }
   for index, source in module_.expressions {
@@ -362,6 +377,22 @@ fn prune_compile_time_branches(
     }
     if !live {
       module_.lambdas[index] = { ..lambda, elided: true, }
+    } else {
+      let summary = match lambda.root {
+        ExpressionBodyRoot(expression) => module_.expressions[expression].flow
+        BlockBodyRoot(block) => module_.blocks[block].flow
+      }
+      module_.lambdas[index] = { ..lambda, flow: summary, }
     }
+  }
+  for index, body in module_.bodies {
+    if active is Some(declaration) && body.declaration != declaration {
+      continue
+    }
+    let summary = match body.root {
+      ExpressionBodyRoot(expression) => module_.expressions[expression].flow
+      BlockBodyRoot(block) => module_.blocks[block].flow
+    }
+    module_.bodies[index] = { ..body, flow: summary, }
   }
 }

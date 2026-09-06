@@ -1,0 +1,257 @@
+open dew.std.array
+
+fn self_host_compile_time_with_flow(source: SelfHostPlannedExpression, flow: SelfHostBodyFlowSummary) -> SelfHostPlannedExpression {
+  SelfHostPlannedExpression::{
+    type_: source.type_
+    shape: source.shape
+    nominal: source.nominal
+    flow: flow
+    kind: source.kind
+    selection: source.selection
+    reference: source.reference
+    call_target: source.call_target
+    call_type_arguments: source.call_type_arguments
+    source_name: source.source_name
+    member_base: source.member_base
+    offset: source.offset
+  }
+}
+
+fn self_host_refresh_compile_time_block_flow(module_: SelfHostPlannedModuleLowering, block: U32) -> Unit {
+  let source = module_.blocks[block]
+  let mut flow = self_host_flow_falls_through()
+  let mut length = 0u32
+  let _ = while length {
+    index => if index < source.items.length && flow.falls_through {
+      let value = match module_.block_items[source.items.start + index].kind {
+        SelfHostPlannedBlockItemKind::PlannedLetItem(_, _, value) => value
+        SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => value
+      }
+      flow = self_host_flow_sequence(flow, module_.expressions[value].flow)
+      length = index + 1u32
+      continue length
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  module_.blocks[block] = SelfHostPlannedBlock::{
+    items: SelfHostHirSpan::{
+      start: source.items.start
+      length: length
+    }
+    flow: flow
+    offset: source.offset
+  }
+}
+
+fn self_host_refresh_compile_time_expression_flow(module_: SelfHostPlannedModuleLowering, expression: U32) -> Unit {
+  let source = module_.expressions[expression]
+  let control_input = match source.kind {
+    SelfHostPlannedExpressionKind::PlannedIfExpression(input, _, _) => input
+    SelfHostPlannedExpressionKind::PlannedMatchExpression(input, _) => input
+    SelfHostPlannedExpressionKind::PlannedWhileExpression(_, input, _) => input
+    SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, input, _) => if operator is SelfHostHirBinaryOperator::LogicalAnd || operator is SelfHostHirBinaryOperator::LogicalOr {
+      input
+    } else {
+      4294967295u32
+    }
+    _ => 4294967295u32
+  }
+  if control_input != 4294967295u32 && !module_.expressions[control_input].flow.falls_through {
+    let start = module_.expression_children.length()
+    module_.expression_children.push(control_input)
+    let replacement = self_host_compile_time_replace_kind(source, SelfHostPlannedExpressionKind::PlannedEvaluationSequence(SelfHostHirSpan::{
+      start: start
+      length: 1u32
+    }))
+    module_.expressions[expression] = self_host_compile_time_with_flow(replacement, module_.expressions[control_input].flow)
+    return
+  }
+  let flow = match source.kind {
+    SelfHostPlannedExpressionKind::PlannedPoisonExpression => return
+    SelfHostPlannedExpressionKind::PlannedConsumedExpression => return
+    SelfHostPlannedExpressionKind::PlannedLambdaClosure(_) => self_host_flow_falls_through()
+    SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => module_.blocks[block].flow
+    SelfHostPlannedExpressionKind::PlannedIfExpression(condition, block, alternative) => self_host_flow_sequence(
+      module_.expressions[condition].flow,
+      self_host_flow_union(module_.blocks[block].flow, if alternative == 4294967295u32 {
+        self_host_flow_falls_through()
+      } else {
+        module_.expressions[alternative].flow
+      }),
+    )
+    SelfHostPlannedExpressionKind::PlannedMatchExpression(initial, arms) => self_host_refresh_compile_time_arm_flow(module_, initial, arms, false)
+    SelfHostPlannedExpressionKind::PlannedWhileExpression(_, initial, arms) => self_host_refresh_compile_time_arm_flow(module_, initial, arms, true)
+    SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right) => if operator is SelfHostHirBinaryOperator::LogicalAnd || operator is SelfHostHirBinaryOperator::LogicalOr {
+      self_host_flow_sequence(module_.expressions[left].flow, self_host_flow_union(self_host_flow_falls_through(), module_.expressions[right].flow))
+    } else {
+      self_host_refresh_compile_time_strict_flow(module_, expression)
+      return
+    }
+    _ => {
+      self_host_refresh_compile_time_strict_flow(module_, expression)
+      return
+    }
+  }
+  module_.expressions[expression] = self_host_compile_time_with_flow(source, flow)
+}
+
+fn self_host_refresh_compile_time_strict_flow(module_: SelfHostPlannedModuleLowering, expression: U32) -> Unit {
+  let source = module_.expressions[expression]
+  let edges = [SelfHostCompileTimeReachTask::BlockCompileTimeReach(0u32)]
+  edges.clear()
+  self_host_compile_time_push_expression(module_, source.kind, edges)
+  let values = self_host_u32_slots(0u32, 0u32)
+  let mut flow = self_host_flow_falls_through()
+  for edge in edges {
+    match edge {
+      SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(input) => if input != 4294967295u32 && flow.falls_through {
+        let mut child = input
+        let mut runtime = true
+        match module_.expressions[child].kind {
+          SelfHostPlannedExpressionKind::PlannedConsumedExpression => {
+            child = module_.expressions[child].member_base
+            runtime = child != 4294967295u32
+          }
+          SelfHostPlannedExpressionKind::PlannedFunctionReference(_) => {
+            runtime = false
+          }
+          _ => {}
+        }
+        if runtime {
+          values.push(child)
+          flow = self_host_flow_sequence(flow, module_.expressions[child].flow)
+        }
+      }
+      _ => {}
+    }
+  }
+  if !flow.falls_through {
+    if source.kind is SelfHostPlannedExpressionKind::PlannedEvaluationSequence(_) {
+      module_.expressions[expression] = self_host_compile_time_with_flow(source, flow)
+      return
+    }
+    let start = module_.expression_children.length()
+    for value in values {
+      module_.expression_children.push(value)
+    }
+    let replacement = self_host_compile_time_replace_kind(source, SelfHostPlannedExpressionKind::PlannedEvaluationSequence(SelfHostHirSpan::{
+      start: start
+      length: values.length()
+    }))
+    module_.expressions[expression] = self_host_compile_time_with_flow(replacement, flow)
+    return
+  }
+  let terminal = match source.kind {
+    SelfHostPlannedExpressionKind::PlannedReturnExpression(_) => self_host_flow_returns()
+    SelfHostPlannedExpressionKind::PlannedBreakExpression(_, _) => self_host_flow_breaks()
+    SelfHostPlannedExpressionKind::PlannedContinueExpression(_, _) => self_host_flow_continues()
+    _ => if source.shape is SelfHostPlannedValueShape::NeverPlannedValueShape {
+      self_host_flow_diverges()
+    } else {
+      self_host_flow_falls_through()
+    }
+  }
+  module_.expressions[expression] = self_host_compile_time_with_flow(source, self_host_flow_sequence(flow, terminal))
+}
+
+fn self_host_refresh_compile_time_arm_flow(module_: SelfHostPlannedModuleLowering, initial: U32, arms: SelfHostHirSpan, loop_: Bool) -> SelfHostBodyFlowSummary {
+  let mut branches = SelfHostBodyFlowSummary::{
+    falls_through: false
+    returns: false
+    breaks: false
+    continues: false
+    diverges: false
+  }
+  self_host_assert_array_span(arms.start, arms.length, module_.arm_children.length(), "ARN-101 refreshed flow arms")
+  let _ = while 0u32 {
+    index => if index < arms.length {
+      let id = module_.arm_children[arms.start + index]
+      let arm = module_.pattern_arms[id]
+      let guard = if arm.guard_condition == 4294967295u32 {
+        self_host_flow_falls_through()
+      } else {
+        module_.expressions[arm.guard_condition].flow
+      }
+      let flow = self_host_flow_sequence(guard, module_.expressions[arm.body].flow)
+      module_.pattern_arms[id] = SelfHostPlannedPatternArm::{
+        pattern: arm.pattern
+        guard_condition: arm.guard_condition
+        body: arm.body
+        flow: flow
+        offset: arm.offset
+      }
+      branches = self_host_flow_union(branches, flow)
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  if loop_ {
+    branches = SelfHostBodyFlowSummary::{
+      falls_through: branches.breaks
+      returns: branches.returns
+      breaks: false
+      continues: false
+      diverges: branches.diverges || branches.continues || branches.falls_through || (!branches.breaks && !branches.returns)
+    }
+  }
+  self_host_flow_sequence(module_.expressions[initial].flow, branches)
+}
+
+fn self_host_compile_time_root_flow(module_: SelfHostPlannedModuleLowering, root: SelfHostHirBodyRoot) -> SelfHostBodyFlowSummary {
+  match root {
+    SelfHostHirBodyRoot::ExpressionBodyRoot(value) => module_.expressions[value].flow
+    SelfHostHirBodyRoot::BlockBodyRoot(block) => module_.blocks[block].flow
+  }
+}
+
+fn self_host_refresh_compile_time_body_flow(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Unit {
+  let index = self_host_semantic_id_local(body.body)
+  self_host_assert_array_index(index, module_.bodies.length(), "ARN-104 refreshed body flow")
+  module_.bodies[index] = SelfHostPlannedBodyLowering::{
+    body: body.body
+    declaration: body.declaration
+    kind: body.kind
+    root: body.root
+    root_type: body.root_type
+    root_shape: body.root_shape
+    result_shape: body.result_shape
+    flow: self_host_compile_time_root_flow(module_, body.root)
+    locals: body.locals
+    local_initializers: body.local_initializers
+    local_assignments: body.local_assignments
+    expressions: body.expressions
+    blocks: body.blocks
+    patterns: body.patterns
+    pattern_arms: body.pattern_arms
+  }
+  let _ = while 0u32 {
+    index => if index < module_.lambdas.length() {
+      let lambda = module_.lambdas[index]
+      if lambda.root_body == body.body && self_host_compile_time_lambda_is_live(module_, lambda.lambda) {
+        module_.lambdas[index] = SelfHostPlannedLambdaLowering::{
+          lambda: lambda.lambda
+          root_body: lambda.root_body
+          parameter_count: lambda.parameter_count
+          root: lambda.root
+          root_type: lambda.root_type
+          root_shape: lambda.root_shape
+          result_shape: lambda.result_shape
+          flow: self_host_compile_time_root_flow(module_, lambda.root)
+          locals: lambda.locals
+          local_initializers: lambda.local_initializers
+          local_assignments: lambda.local_assignments
+          captures: lambda.captures
+          expressions: lambda.expressions
+          blocks: lambda.blocks
+          patterns: lambda.patterns
+          pattern_arms: lambda.pattern_arms
+        }
+      }
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}

@@ -35,6 +35,8 @@ pub enum SelfHostPlannedExpressionKind {
   PlannedModuleValueGet(U64)
   PlannedFunctionReference(U64)
   PlannedProductNew(SelfHostHirSpan)
+  // Ordered evaluations whose final expression cannot fall through.
+  PlannedEvaluationSequence(SelfHostHirSpan)
   PlannedArrayLiteral(SelfHostHirSpan)
   PlannedLambdaClosure(U32)
   PlannedObjectNew(SelfHostHirSpan)

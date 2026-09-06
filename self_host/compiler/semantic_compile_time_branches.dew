@@ -3,6 +3,8 @@ open dew.std.array
 enum SelfHostCompileTimeReachTask {
   ExpressionCompileTimeReach(U32)
   BlockCompileTimeReach(U32)
+  FinishExpressionCompileTimeReach(U32)
+  FinishBlockCompileTimeReach(U32)
 }
 
 fn self_host_compile_time_owned_expressions(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Array<U32> {
@@ -101,6 +103,7 @@ fn self_host_compile_time_push_root(root: SelfHostHirBodyRoot, work: Array<SelfH
 // Exhaustive evaluation edges. A new IR node must declare its children here.
 fn self_host_compile_time_push_expression(module_: SelfHostPlannedModuleLowering, kind: SelfHostPlannedExpressionKind, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
   match kind {
+    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => self_host_compile_time_push_children(module_, children, work)
     SelfHostPlannedExpressionKind::PlannedPoisonExpression => {}
     SelfHostPlannedExpressionKind::PlannedConsumedExpression => {}
     SelfHostPlannedExpressionKind::PlannedUnitConst => {}
@@ -213,6 +216,11 @@ fn self_host_compile_time_push_expression(module_: SelfHostPlannedModuleLowering
 }
 
 fn self_host_prune_compile_time_body(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Array<Bool> {
+  let _ = self_host_prune_compile_time_body_pass(module_, body)
+  self_host_prune_compile_time_body_pass(module_, body)
+}
+
+fn self_host_prune_compile_time_body_pass(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Array<Bool> {
   let live = self_host_bool_slots(module_.expressions.length(), false)
   let blocks = self_host_bool_slots(module_.blocks.length(), false)
   let work = [SelfHostCompileTimeReachTask::BlockCompileTimeReach(0u32)]
@@ -227,6 +235,7 @@ fn self_host_prune_compile_time_body(module_: SelfHostPlannedModuleLowering, bod
           self_host_assert_array_index(index, live.length(), "ARN-104 compile-time reached expression")
           if !live[index] {
             live[index] = true
+            work.push(SelfHostCompileTimeReachTask::FinishExpressionCompileTimeReach(index))
             let source = module_.expressions[index]
             // Directization consumes a method's field-selection node, not its
             // runtime receiver. That evaluation edge is retained in metadata.
@@ -281,6 +290,7 @@ fn self_host_prune_compile_time_body(module_: SelfHostPlannedModuleLowering, bod
           self_host_assert_array_index(index, blocks.length(), "ARN-104 compile-time reached block")
           if !blocks[index] {
             blocks[index] = true
+            work.push(SelfHostCompileTimeReachTask::FinishBlockCompileTimeReach(index))
             let span = module_.blocks[index].items
             self_host_assert_array_span(span.start, span.length, module_.block_items.length(), "ARN-101 compile-time block items")
             let _ = while 0u32 {
@@ -296,6 +306,8 @@ fn self_host_prune_compile_time_body(module_: SelfHostPlannedModuleLowering, bod
             }
           }
         }
+        SelfHostCompileTimeReachTask::FinishExpressionCompileTimeReach(index) => self_host_refresh_compile_time_expression_flow(module_, index)
+        SelfHostCompileTimeReachTask::FinishBlockCompileTimeReach(index) => self_host_refresh_compile_time_block_flow(module_, index)
       }
       continue work.length()
     } else {
@@ -307,5 +319,6 @@ fn self_host_prune_compile_time_body(module_: SelfHostPlannedModuleLowering, bod
         module_.expressions[index] = self_host_compile_time_replace_kind(module_.expressions[index], SelfHostPlannedExpressionKind::PlannedPoisonExpression)
       }
   }
+  self_host_refresh_compile_time_body_flow(module_, body)
   live
 }

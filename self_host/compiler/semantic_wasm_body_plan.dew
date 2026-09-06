@@ -4970,6 +4970,13 @@ fn self_host_body_build_work_graph(
             owner_item,
             children,
           )
+          SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => self_host_body_link_expression_span_work(
+            graph,
+            module_,
+            body,
+            owner_item,
+            children,
+          )
           SelfHostPlannedExpressionKind::PlannedArrayLiteral(children) => self_host_body_link_expression_span_work(
             graph,
             module_,
@@ -6894,6 +6901,7 @@ fn self_host_body_expression_kind_name(
     SelfHostPlannedExpressionKind::PlannedModuleValueGet(_) => "module.get"
     SelfHostPlannedExpressionKind::PlannedFunctionReference(_) => "function.reference"
     SelfHostPlannedExpressionKind::PlannedProductNew(_) => "product.new"
+    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(_) => "evaluation.sequence"
     SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => "array.literal"
     SelfHostPlannedExpressionKind::PlannedLambdaClosure(_) => "lambda.closure"
     SelfHostPlannedExpressionKind::PlannedObjectNew(_) => "object.new"

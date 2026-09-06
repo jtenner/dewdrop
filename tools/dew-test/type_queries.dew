@@ -39,6 +39,34 @@ fn query_deferred<t>() -> Bool {
   type_equal::<field_type<t>("item"), I64>()
 }
 
+fn query_tick(trace: Array<I32>) -> I32 {
+  trace[0u32] = trace[0u32] + 1i32
+  trace[0u32]
+}
+
+fn query_consume(left: I32, middle: I32, right: I32) -> I32 {
+  right
+}
+
+fn query_sequence<t>() -> I32 {
+  let _ = is_unit::<t>()
+  let trace = [0i32]
+  query_consume(query_tick(trace), if true {
+    return trace[0u32]
+  } else {
+    return 99i32
+  }, query_tick(trace))
+}
+
+fn query_return<t>() -> I32 {
+  if is_unit::<t>() {
+    return 7i32
+  } else {
+    ()
+  }
+  8i32
+}
+
 fn query_item(value: QueryItem<I64>) -> field_type<QueryBox<I64>>("item") {
   query_identity::<QueryItem<I64>>(value)
 }
@@ -273,6 +301,10 @@ pub fn main(case: U32) -> Bool {
     type_equal::<DeferredQueryItem<QueryBox<I64>>, I64>()
   } else if case == 45u32 {
     query_deferred::<QueryBox<I64>>() && !query_deferred::<QueryBox<I32>>()
+  } else if case == 46u32 {
+    query_sequence::<Unit>() == 1i32 && query_sequence::<I64>() == 1i32
+  } else if case == 47u32 {
+    query_return::<Unit>() == 7i32 && query_return::<I64>() == 8i32
   } else {
     false
   }

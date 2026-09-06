@@ -230,6 +230,7 @@ enum SelfHostLinkedI32EmitTask {
   EmitLinkedArrayNew(U32, StarshineInstructions)
   EmitLinkedArrayLen(StarshineInstructions)
   EmitLinkedArrayEmpty(U32, StarshineInstructions)
+  EmitLinkedArrayLiteral(U32, U32, U32, StarshineInstructions)
   EmitLinkedMapEmpty(U32, StarshineInstructions)
   EmitLinkedArrayIterNext(U32, I32, U32, StarshineInstructions)
   EmitLinkedArrayPop(U32, I32, U32, StarshineInstructions)
@@ -16085,6 +16086,15 @@ fn self_host_emit_linked_i32_expression(
         SelfHostLinkedI32EmitTask::ClearLinkedI32Discard(expression) => if expression < discarded_expressions.length() {
           discarded_expressions[expression] = false
         }
+        SelfHostLinkedI32EmitTask::EmitLinkedArrayLiteral(array_type, wrapper_type, length, destination) => {
+          StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_array_new_fixed(
+            StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(array_type)),
+            StarshineFfi.ffi_lib_U32_new(self_host_u32_to_i32(length)),
+          ))
+          StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(self_host_u32_to_i32(length))))
+          StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(self_host_u32_to_i32(length))))
+          StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_struct_new(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type))))
+        }
         SelfHostLinkedI32EmitTask::VisitLinkedI32Expression(
           expression,
           destination,
@@ -20704,6 +20714,24 @@ fn self_host_emit_linked_i32_expression(
                 }
               }
             }
+            SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => {
+              self_host_assert_array_span(children.start, children.length, module_.expression_children.length(), "ARN-101 evaluation sequence")
+              self_host_assert_compiler_invariant(!planned.flow.falls_through && children.length > 0u32, "BOD-611 evaluation sequence must not fall through")
+              let _ = while children.length {
+                remaining => if remaining > 0u32 {
+                  let offset = remaining - 1u32
+                  let child = module_.expression_children[children.start + offset]
+                  if remaining == children.length {
+                    self_host_linked_i32_schedule_expression(tasks, expression_depths, child, destination, depth)
+                  } else {
+                    self_host_linked_i32_schedule_discarded_expression(tasks, expression_depths, child, destination, depth)
+                  }
+                  continue offset
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
             SelfHostPlannedExpressionKind::PlannedProductNew(children) => {
               let materialized_product_type = self_host_linked_canonical_materialized_local_type(
                 canonical_body_plan,
@@ -20837,13 +20865,6 @@ fn self_host_emit_linked_i32_expression(
               }
             }
             SelfHostPlannedExpressionKind::PlannedArrayLiteral(children) => {
-              let scratch = self_host_linked_i32_scratch_slot(
-                  canonical_body_plan,
-                  link,
-                module_,
-                body,
-                expression,
-              )
               let mut carrier = 5i32
               if self_host_u32_greater(children.length, 0u32) {
                 let first_index = children.start
@@ -20886,57 +20907,10 @@ fn self_host_emit_linked_i32_expression(
                   }
                 }
               }
-              let push_function = self_host_linked_runtime_function_index_for_carrier(
-                link,
-                b"dew_array_push",
-                carrier,
-              )
-              if push_function < 0i32 && self_host_u32_greater(
+              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayLiteral(
+                self_host_linked_array_runtime_base(link) + self_host_i32_to_u32(carrier),
+                self_host_linked_array_wrapper_type(link),
                 children.length,
-                0u32,
-              ) {
-                return Option::Some("linked array literal has no push function")
-              }
-              StarshineFfi.ffi_ffi_bridge_instructions_push(
-                destination,
-                StarshineFfi.ffi_lib_Instruction_ref_null(
-                  StarshineFfi.ffi_lib_HeapType_abs(
-                    StarshineFfi.ffi_lib_AbsHeapType_eq(),
-                  ),
-                ),
-              )
-              StarshineFfi.ffi_ffi_bridge_instructions_push(
-                destination,
-                StarshineFfi.ffi_lib_Instruction_i32_const(
-                  StarshineFfi.ffi_lib_I32_new(0i32),
-                ),
-              )
-              StarshineFfi.ffi_ffi_bridge_instructions_push(
-                destination,
-                StarshineFfi.ffi_lib_Instruction_i32_const(
-                  StarshineFfi.ffi_lib_I32_new(
-                    self_host_u32_to_i32(children.length),
-                  ),
-                ),
-              )
-              StarshineFfi.ffi_ffi_bridge_instructions_push(
-                destination,
-                StarshineFfi.ffi_lib_Instruction_struct_new(
-                  StarshineFfi.ffi_lib_TypeIdx_new(
-                    self_host_u32_to_i32(
-                      self_host_linked_array_wrapper_type(link),
-                    ),
-                  ),
-                ),
-              )
-              StarshineFfi.ffi_ffi_bridge_instructions_push(
-                destination,
-                StarshineFfi.ffi_lib_Instruction_local_set(
-                  StarshineFfi.ffi_lib_LocalIdx_new(scratch.into()),
-                ),
-              )
-              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedLocalGet(
-                scratch,
                 destination,
               ))
               let mut child = children.length
@@ -20947,10 +20921,6 @@ fn self_host_emit_linked_i32_expression(
                   if child_index >= module_.expression_children.length() {
                     return Option::Some("linked array literal child is outside its arena")
                   }
-                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
-                    self_host_i32_to_u32(push_function),
-                    destination,
-                  ))
                   match self_host_linked_canonical_expression_shape(canonical_body_plan, module_.expression_children[child_index]) {
                     Option::Some(shape) => if shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
                       // Only storage receives this marker. Evaluate the Unit
@@ -20966,10 +20936,6 @@ fn self_host_emit_linked_i32_expression(
                     destination,
                     depth,
                   )
-                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedLocalGet(
-                    scratch,
-                    destination,
-                  ))
                   continue previous
                 } else {
                   break self_host_semantic_unit()

@@ -238,3 +238,35 @@ native integration run passed in 51.851 s.
 This does not yet finish runtime generic projection signatures or guarded body
 inference. Those remain explicit tasks, along with early storage pruning and
 post-selection flow/effect refresh.
+
+## Ordered non-returning evaluations and refreshed flow
+
+The query rewrite now refreshes flow in postorder, then walks the reduced graph
+again to remove cut edges. Strict argument lists stop at the first expression
+that cannot fall through. The parent call is replaced with an explicit ordered
+evaluation prefix: native parameter-select IR or self-host evaluation-sequence
+IR. Earlier values are discarded after evaluation; the final transfer keeps its
+own source expression and control target. Later arguments and statements do not
+reach specialization. Blocks, arms, bodies, and lambda roots get refreshed flow.
+Repeating the rewrite does not grow the expression-child arena.
+
+The execution fixture exposed an independent array-literal dependency defect:
+a nonempty literal required an otherwise unreferenced runtime push function.
+Self-host literals now evaluate their elements in source order and use one
+`array.new_fixed`, followed by the existing wrapper constructor. Unit elements
+retain their effects and receive only a storage marker. This removes the hidden
+push target and repeated growth calls; the broader Array layout migration is
+still separate work.
+
+Native query tests pass 35 cases in 15.471 s. Both paths pass 49 shared execution
+checks, including a side effect before a non-returning argument and selected
+generic returns. Hardening passes 192 tests and 29 exact invariant records,
+plus all execution/semantic probes (38.063 s). The routine native suite passes
+848 tests in 80.255 s. Its semantic (30.891 s) and backend (34.593 s) lanes exceed
+the 30 s budget and remain performance defects. Storage pruning and guarded
+type inference are not yet complete.
+
+The full A/B/C bootstrap also passes after these changes. Compiler B and C are
+byte-identical in raw, core, and linked form. A builds in 35.931 s; A-to-B takes
+45.321 s and B-to-C 47.857 s. The full check takes 148.050 s. These long build
+times remain performance defects; the fixed-point and semantic checks pass.
