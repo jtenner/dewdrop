@@ -119,6 +119,7 @@ fn self_host_compile_time_push_expression(module_: SelfHostPlannedModuleLowering
   match kind {
     SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => self_host_compile_time_push_children(module_, children, work)
     SelfHostPlannedExpressionKind::PlannedPoisonExpression => {}
+    SelfHostPlannedExpressionKind::PlannedDeferredExpression => {}
     SelfHostPlannedExpressionKind::PlannedConsumedExpression => {}
     SelfHostPlannedExpressionKind::PlannedUnitConst => {}
     SelfHostPlannedExpressionKind::PlannedI8Const(_) => {}

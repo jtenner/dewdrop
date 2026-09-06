@@ -145,6 +145,7 @@ enum SelfHostModuleValueImportTask {
 pub enum SelfHostBasicExpressionSelection {
   NoBasicExpressionSelection
   ErrorBasicExpressionSelection
+  DeferredBasicExpressionSelection
   FieldBasicExpressionSelection(U64, Bool, U64)
   StructConstructionBasicExpressionSelection(U64, SelfHostHirSpan)
   VariantConstructionBasicExpressionSelection(U64, U32, SelfHostHirSpan)
@@ -504,6 +505,9 @@ struct SelfHostBasicBodyInferencer {
   pending_fields: Array<U32>
   pending_member_equations: Array<SelfHostPendingMemberEquation>
   guarded_trait_scopes: Map<U32, Array<SelfHostCompileTimeGuardFact>>
+  deferred_guard_scopes: Map<U32, Bool>
+  deferred_types: Array<I32>
+  mut reachability: Option<SelfHostInferenceReachability>
   mut guarded_trait_scopes_ready: Bool
   pending_guarded_joins: Array<U32>
   mut guard_builtin_cache: Option<Map<U64, Bytes>>
@@ -610,6 +614,9 @@ impl SelfHostBasicBodyInferencer {
       pending_fields: []
       pending_member_equations: []
       guarded_trait_scopes: self_host_empty_guard_scopes()
+      deferred_guard_scopes: self_host_empty_u32_bool_map()
+      deferred_types: []
+      reachability: Option::None
       guarded_trait_scopes_ready: false
       pending_guarded_joins: []
       guard_builtin_cache: Option::None
@@ -749,6 +756,9 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn expression_type(self, expression: U32) -> I32 {
+    if !self.live_expression(expression) {
+      return self.solver.error_type()
+    }
     self.guard_refined_type(self.expression_types[self.expression_index(expression)], expression)
   }
 
@@ -763,6 +773,9 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn block_type(self, block: U32) -> I32 {
+    if !self.live_block(block) {
+      return self.solver.error_type()
+    }
     self.block_types[self.block_index(block)]
   }
 
@@ -1908,7 +1921,8 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn body_signature_type(self, type_: U32) -> I32 {
+  fn body_signature_type(self, source_type: U32) -> I32 {
+    let type_ = self.source_resolved_type(source_type)
     match self.resolved.types[type_] {
       SelfHostResolvedType::SelfType(owner) => {
         let mut implementation_index = 0u32
@@ -1934,6 +1948,10 @@ impl SelfHostBasicBodyInferencer {
     let mut local = 0u32
     let _ = while local {
       current => if current < self.name_info.locals.length {
+        if !self.live_local(current) {
+          self.local_types[current] = self.solver.error_type()
+          continue current + 1u32
+        }
         let info = self_host_body_local_identity(
           self.names.locals[self.name_info.locals.start + current],
         )
@@ -2056,6 +2074,9 @@ impl SelfHostBasicBodyInferencer {
     let end = self.body.expressions.start + self.body.expressions.length
     let _ = while expression {
       current => if current < end {
+        if !self.live_expression(current) {
+          continue current + 1u32
+        }
         match self.collected.expressions[current] {
           SelfHostHirExpr::PrefixExpr(SelfHostHirPrefixOperator::Negative, operand, _) => {
             if operand >= self.body.expressions.start && operand < end {
@@ -2376,6 +2397,9 @@ impl SelfHostBasicBodyInferencer {
     let end = self.body.expressions.start + self.body.expressions.length
     let _ = while expression {
       current => if current < end {
+        if !self.live_expression(current) {
+          continue current + 1u32
+        }
         let type_ = match self.collected.expressions[current] {
           SelfHostHirExpr::I8Expr(value, offset) => if value <= 127u64 || (value == 128u64 && negated[self.expression_index(current)]) {
             self.primitive(SelfHostPrimitiveType::I8Type)
@@ -2536,6 +2560,9 @@ impl SelfHostBasicBodyInferencer {
     let end = self.body.blocks.start + self.body.blocks.length
     let _ = while block {
       current => if current < end {
+        if !self.live_block(current) {
+          continue current + 1u32
+        }
         let data = self.collected.blocks[current]
         let type_ = if self_host_u32_equal(data.items.length, 0u32) {
           unit
@@ -2561,6 +2588,9 @@ impl SelfHostBasicBodyInferencer {
     let expression_end = self.body.expressions.start + self.body.expressions.length
     let _ = while expression {
       current => if current < expression_end {
+        if !self.live_expression(current) {
+          continue current + 1u32
+        }
         match self.collected.expressions[current] {
           SelfHostHirExpr::BlockExpr(block_id, offset) => {
             // Parent blocks already hold this expression's initial type cell.
@@ -2585,6 +2615,9 @@ impl SelfHostBasicBodyInferencer {
     let end = self.body.patterns.start + self.body.patterns.length
     let _ = while pattern {
       current => if current < end {
+        if !self.live_pattern(current) {
+          continue current + 1u32
+        }
         let type_ = match self.collected.patterns[current] {
           SelfHostHirPattern::BindingPattern(_, _) => match self.names.pattern_references[current] {
             SelfHostBodyPatternReference::PatternBindingReference(local) => self.local_types[local]
@@ -3428,6 +3461,9 @@ impl SelfHostBasicBodyInferencer {
     let end = self_host_u32_add(self.body.patterns.start, self.body.patterns.length)
     let _ = while pattern {
       current => if current < end {
+        if !self.live_pattern(current) {
+          continue current + 1u32
+        }
         match self.collected.patterns[current] {
           SelfHostHirPattern::TuplePattern(base, _, _) => if !self_host_u32_equal(
             base,
@@ -3448,6 +3484,9 @@ impl SelfHostBasicBodyInferencer {
     pattern = self.body.patterns.start
     let _ = while pattern {
       current => if current < end {
+        if !self.live_pattern(current) {
+          continue current + 1u32
+        }
         match self.collected.patterns[current] {
           SelfHostHirPattern::TuplePattern(base, children, offset) => if !self_host_u32_equal(
             base,
@@ -3503,6 +3542,9 @@ impl SelfHostBasicBodyInferencer {
     let end = self.body.patterns.start + self.body.patterns.length
     let _ = while pattern {
       current => if current < end {
+        if !self.live_pattern(current) {
+          continue current + 1u32
+        }
         match self.collected.patterns[current] {
           SelfHostHirPattern::AlternativePattern(_, children, offset) => {
             let mut index = 0u32
@@ -3542,6 +3584,9 @@ impl SelfHostBasicBodyInferencer {
     let _ = while item {
       current => if current < end {
         let source = self.collected.block_items[current]
+        if !self.live_expression(source.value) {
+          continue current + 1u32
+        }
         if self_host_hir_block_item_is_let(source) {
           let local = self.names.block_item_locals[current]
           if local != 4294967295u32 && local < self.local_types.length() {
@@ -3732,7 +3777,7 @@ impl SelfHostBasicBodyInferencer {
     let mut index = 0u32
     let _ = while index {
       current => if current < candidate_count {
-        let resolved = self.resolved.explicit_call_type_arguments[explicit.start + current]
+        let resolved = self.source_resolved_type(self.resolved.explicit_call_type_arguments[explicit.start + current])
         let matches = self.solver.unify(
           self.candidate_type_arguments[candidate_start + current],
           self.solver.resolved_type(resolved),
@@ -6225,7 +6270,7 @@ impl SelfHostBasicBodyInferencer {
     let representative = self.solver.representative_type(base_type)
     match self.solver.type_term(representative) {
       SelfHostBodyTypeTerm::BodyVariableType(_) => {
-        return false
+        return self.defer_expression_check(expression, [base_type])
       }
       SelfHostBodyTypeTerm::BodyErrorType => {
         self_host_store_basic_expression_selection(
@@ -6241,6 +6286,9 @@ impl SelfHostBasicBodyInferencer {
     let declaration = match self.inspect_nominal_type(base_type) {
       Option::Some(value) => value
       Option::None => {
+        if self.defer_expression_check(expression, [base_type]) {
+          return true
+        }
         self.diagnostics.push(
           SelfHostBodyInferenceDiagnostic::FieldAccessRequiresNominal(
             expression,
@@ -6646,6 +6694,9 @@ impl SelfHostBasicBodyInferencer {
     right: U32,
     offset: U32,
   ) -> Unit {
+    if !(operator is SelfHostHirBinaryOperator::LogicalOr) && !(operator is SelfHostHirBinaryOperator::LogicalAnd) && self.defer_expression_check(expression, [self.expression_type(left), self.expression_type(right)]) {
+      return
+    }
     let trait_name = self.binary_operator_trait_name(operator)
     let method_name = self.binary_operator_method_name(operator)
     match trait_name {
@@ -6835,6 +6886,9 @@ impl SelfHostBasicBodyInferencer {
       _ => {
         return
       }
+    }
+    if self.defer_expression_check(expression, [self.expression_type(left), self.expression_type(right)]) {
+      return
     }
     let trait_declaration = match self.binary_operator_trait_name(operator) {
       Option::Some(spelling) => match self.local_trait_named(spelling) {
@@ -7507,6 +7561,9 @@ impl SelfHostBasicBodyInferencer {
     let end = self.body.expressions.start + self.body.expressions.length
     let _ = while expression {
       current => if current < end {
+        if !self.live_expression(current) {
+          continue current + 1u32
+        }
         let offset = self_host_basic_expression_offset(
           self.collected.expressions[current],
         )
@@ -7677,6 +7734,9 @@ impl SelfHostBasicBodyInferencer {
     let end = self.body.expressions.start + self.body.expressions.length
     let _ = while expression {
       current => if current < end {
+        if !self.live_expression(current) {
+          continue current + 1u32
+        }
         match self.collected.expressions[current] {
           SelfHostHirExpr::BreakExpr(_, _) => {
             let control = self.names.transfer_targets[current]
@@ -7818,6 +7878,9 @@ impl SelfHostBasicBodyInferencer {
     let _ = while index {
       current => if current < self.expression_types.length() {
         let expression = self.body.expressions.start + current
+        if !self.live_expression(expression) {
+          continue current + 1u32
+        }
         if self.unsupported_expressions[current] {
           self.diagnostics.push(
             SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(
@@ -7827,7 +7890,7 @@ impl SelfHostBasicBodyInferencer {
               ),
             ),
           )
-        } else if self.solver.has_unresolved_variable(self.expression_types[current]) && !self.is_selected_direct_call_target(expression) && !self.consumed_member_roots[current] {
+        } else if !self.has_deferred_type(self.expression_types[current]) && self.solver.has_unresolved_variable(self.expression_types[current]) && !self.is_selected_direct_call_target(expression) && !self.consumed_member_roots[current] {
           self.diagnostics.push(
             SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(
               expression,
@@ -7845,7 +7908,7 @@ impl SelfHostBasicBodyInferencer {
     index = 0u32
     let _ = while index {
       current => if current < self.local_types.length() {
-        if self.solver.has_unresolved_variable(self.local_types[current]) {
+        if self.live_local(current) && !self.has_deferred_type(self.local_types[current]) && self.solver.has_unresolved_variable(self.local_types[current]) {
           let info = self_host_body_local_identity(
             self.names.locals[self.name_info.locals.start + current],
           )
@@ -7933,6 +7996,9 @@ impl SelfHostBasicBodyInferencer {
   fn validate_field_assignments(self) -> Unit {
     let _ = while self.body.expressions.start {
       expression => if expression - self.body.expressions.start < self.body.expressions.length {
+        if !self.live_expression(expression) {
+          continue expression + 1u32
+        }
         match self.collected.expressions[expression] {
           SelfHostHirExpr::AssignmentExpr(target, _, offset) => if self.collected.expressions[target] is SelfHostHirExpr::FieldExpr(_, _, _) {
             match self.expression_selections[self.expression_index(target)] {
@@ -8025,22 +8091,25 @@ fn self_host_infer_basic_module_bodies_with_inputs(
   names: SelfHostResolvedModuleNames,
   imported: SelfHostBasicImportedInputs,
 ) -> SelfHostBasicInferredModuleBodies {
+  self_host_infer_basic_module_bodies_with_reachability(collected, resolved, names, imported, Option::None)
+}
+
+fn self_host_infer_basic_module_bodies_with_reachability(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  names: SelfHostResolvedModuleNames,
+  imported: SelfHostBasicImportedInputs,
+  reachability: Option<SelfHostInferenceReachability>,
+) -> SelfHostBasicInferredModuleBodies {
   let bodies = []
   let mut index = 0u32
   let _ = while index {
     current => if current < collected.bodies.length() {
       let body = collected.bodies[current]
       let name_info = names.bodies[current]
-      bodies.push(
-        SelfHostBasicBodyInferencer::new(
-          collected,
-          resolved,
-          names,
-          imported,
-          body,
-          name_info,
-        ).run(),
-      )
+      let inferencer = SelfHostBasicBodyInferencer::new(collected, resolved, names, imported, body, name_info)
+      inferencer.reachability = reachability
+      bodies.push(inferencer.run())
       continue current + 1u32
     } else {
       break self_host_semantic_unit()
@@ -8116,6 +8185,7 @@ fn self_host_infer_basic_module_bodies_with_inputs(
           break self_host_semantic_unit()
         }
       }
+      inferencer.reachability = reachability
       let inferred = inferencer.run()
       lambdas.push(SelfHostBasicInferredLambda::{
         lambda: lambda.id
@@ -8191,6 +8261,26 @@ fn self_host_infer_basic_module_bodies_with_imports(
   type_generic_spans: Map<U64, SelfHostHirSpan>,
   module_value_types: Map<U64, U32>,
 ) -> SelfHostBasicInferredModuleBodies {
+  self_host_infer_basic_module_bodies_with_inputs(collected, resolved, names, self_host_basic_imported_inputs(collected, resolved, names, scope, callables, generic_parameter_ids, parameter_types, parameter_receivers, implementations, fields, variants, variant_payload_types, type_declaration_types, type_generic_spans, module_value_types))
+}
+
+fn self_host_basic_imported_inputs(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  names: SelfHostResolvedModuleNames,
+  scope: SelfHostModuleImportScope,
+  callables: Array<SelfHostResolvedImportedCallable>,
+  generic_parameter_ids: Array<U64>,
+  parameter_types: Array<U32>,
+  parameter_receivers: Array<Bool>,
+  implementations: Array<SelfHostResolvedImportedImplementation>,
+  fields: Array<SelfHostResolvedImportedField>,
+  variants: Array<SelfHostResolvedImportedVariant>,
+  variant_payload_types: Array<U32>,
+  type_declaration_types: Map<U64, U32>,
+  type_generic_spans: Map<U64, SelfHostHirSpan>,
+  module_value_types: Map<U64, U32>,
+) -> SelfHostBasicImportedInputs {
   let values = self_host_infer_module_values_with_imports(
     collected,
     resolved,
@@ -8217,11 +8307,7 @@ fn self_host_infer_basic_module_bodies_with_imports(
       break self_host_semantic_unit()
     }
   }
-  self_host_infer_basic_module_bodies_with_inputs(
-    collected,
-    resolved,
-    names,
-    SelfHostBasicImportedInputs::{
+  SelfHostBasicImportedInputs::{
       scope: Option::Some(scope)
       callables: callables
       generic_parameter_ids: generic_parameter_ids
@@ -8238,6 +8324,5 @@ fn self_host_infer_basic_module_bodies_with_imports(
       local_module_value_terms: values.types
       local_module_value_arguments: values.type_arguments
       local_module_value_types_are_solver_local: false
-    },
-  )
+  }
 }

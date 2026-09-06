@@ -14,6 +14,7 @@ fn self_host_lowering_u32_set(
 
 pub enum SelfHostPlannedExpressionKind {
   PlannedPoisonExpression
+  PlannedDeferredExpression
   PlannedConsumedExpression
   PlannedUnitConst
   PlannedI8Const(U64)
@@ -457,6 +458,9 @@ fn self_host_lowering_expression_kind(
   let selection = inferred.expression_selections[
     self_host_u32_add(job.expression_selections.start, relative)
   ]
+  if selection is SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection {
+    return SelfHostPlannedExpressionKind::PlannedDeferredExpression
+  }
   let operator_target = inferred.operator_targets[
     self_host_u32_add(job.operator_targets.start, relative)
   ]
@@ -678,11 +682,18 @@ fn self_host_lowering_plan_expressions(
   source: SelfHostHirSpan,
   flows: Array<U32>,
   output: Array<SelfHostPlannedExpression>,
+  reachability: Option<SelfHostInferenceReachability>,
 ) -> Unit {
   let mut relative = 0u32
   let _ = while relative {
     current => if current < source.length {
       let expression = self_host_u32_add(source.start, current)
+      match reachability {
+        Option::Some(live) => if !live.expressions[expression] {
+          continue current + 1u32
+        }
+        Option::None => {}
+      }
       let type_ = inferred.expression_types[
         self_host_u32_add(job.expression_types.start, current)
       ]
@@ -1065,6 +1076,22 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
   evidence: SelfHostBasicModuleEvidence,
   flows: SelfHostAnalyzedModuleFlows,
 ) -> SelfHostPlannedModuleLowering {
+  self_host_plan_module_lowering_with_reachability(collected, resolved, type_layouts, initialization, functions, names, builtin_recipes, inferred, evidence, flows, Option::None)
+}
+
+fn self_host_plan_module_lowering_with_reachability(
+  collected: SelfHostCollectedModule,
+  resolved: SelfHostResolvedModuleTypes,
+  type_layouts: SelfHostPlannedModuleTypeLayouts,
+  initialization: SelfHostPlannedModuleInitialization,
+  functions: SelfHostPlannedModuleFunctions,
+  names: SelfHostResolvedModuleNames,
+  builtin_recipes: Array<SelfHostLoweringBuiltinRecipe>,
+  inferred: SelfHostMergedModuleInference,
+  evidence: SelfHostBasicModuleEvidence,
+  flows: SelfHostAnalyzedModuleFlows,
+  reachability: Option<SelfHostInferenceReachability>,
+) -> SelfHostPlannedModuleLowering {
   let expressions = self_host_lowering_expression_slots(
     collected.expressions.length(),
   )
@@ -1100,6 +1127,7 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
         source.expressions,
         flow.expression_flows,
         expressions,
+        reachability,
       )
       self_host_lowering_plan_job_structures(
         collected,
@@ -1190,6 +1218,7 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
         source.body.expressions,
         flow.expression_flows,
         expressions,
+        reachability,
       )
       self_host_lowering_plan_job_structures(
         collected,

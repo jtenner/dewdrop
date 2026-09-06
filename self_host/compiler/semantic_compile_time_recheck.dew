@@ -1,0 +1,91 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+open dew.std.string_builder
+
+fn self_host_compile_time_body_needs_recheck(module_: SelfHostPlannedModuleLowering, declaration: U64) -> Bool {
+  for body in module_.bodies {
+    if body.declaration == declaration {
+      for expression in self_host_compile_time_owned_expressions(module_, body) {
+        if module_.expressions[expression].selection is SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection {
+          return true
+        }
+      }
+    }
+  }
+  false
+}
+
+fn self_host_recheck_compile_time_body(lowering: SelfHostPlannedProgramLowering, owner: U32, declaration: U64, specialization: U32, bindings: Map<U64, SelfHostCompileTimeType>, conditions: Map<U32, Bool>, previous: SelfHostPlannedModuleLowering) -> SelfHostPlannedModuleLowering {
+  let frozen = lowering.compile_time.frozen
+  let original = lowering.modules[owner]
+  let collected = lowering.collected.modules.at(owner)
+  let imports = self_host_resolve_module_imports(frozen.interfaces.at(owner).resolved_types, frozen.import_scopes.at(owner))
+  let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
+  let selected_source = self_host_selected_inference_source(collected, names, declaration, conditions)
+  let source = selected_source.source
+  let live = selected_source.live
+  let arena = self_host_clone_compile_time_module(original)
+  for type_ in self_host_compile_time_inference_types(original, arena, bindings) {
+    live.type_substitutions.push(type_)
+  }
+  let resolved = arena.resolved_types
+  let inputs = self_host_basic_imported_inputs(
+    source, resolved, names, imports.scope, imports.callables,
+    imports.generic_parameter_ids, imports.parameter_types, imports.parameter_receivers,
+    imports.implementations, imports.fields, imports.variants, imports.variant_payload_types,
+    imports.type_declaration_types, imports.type_generic_spans, imports.module_value_types,
+  )
+  let basic = self_host_infer_basic_module_bodies_with_reachability(source, resolved, names, inputs, Option::Some(live))
+  let inferred = self_host_merge_module_inference(basic)
+  if inferred.diagnostics.length() > 0u32 {
+    for diagnostic in inferred.diagnostics {
+      let message = StringBuilder::new()
+      message.append("CT-041 selected body check failed: ")
+      message.append(self_host_inference_diagnostic_name(diagnostic))
+      message.append(" module=")
+      message.append_u64(original.module_id)
+      message.append(" declaration=")
+      message.append_u64(declaration)
+      message.append(" specialization=")
+      message.append_u32(specialization)
+      message.append(" offset=")
+      message.append_u32(diagnostic.offset())
+      match self_host_inference_diagnostic_expression(diagnostic) {
+        Option::Some(expression) => {
+          message.append(" expression=")
+          message.append_u32(expression)
+        }
+        Option::None => {}
+      }
+      lowering.compile_time.diagnostics.push(message.finish())
+    }
+    return previous
+  }
+  let selected = self_host_plan_module_lowering_with_reachability(
+    source, resolved, original.type_layouts, original.initialization,
+    self_host_clone_query_functions(original.functions), names,
+    self_host_lowering_imported_builtin_recipes(source, imports), inferred,
+    self_host_publish_merged_module_evidence(source, inferred, self_host_index_module_implementations_with_imports(source, imports)),
+    self_host_analyze_basic_module_flows_with_imports(source, resolved, basic, imports.variants),
+    Option::Some(live),
+  )
+  match lowering.compile_time.instances.get(specialization) {
+    Option::Some(instance) => lowering.compile_time.instances.set(specialization, SelfHostCompileTimeInstance::{
+      declaration: instance.declaration
+      evidence_types: instance.evidence_types
+      module_: selected
+      guarded_evidence: self_host_empty_guarded_evidence()
+    })
+    Option::None => {
+      self_host_assert_compiler_invariant(false, "SPC-303 selected recheck instance is missing")
+      unreachable()
+    }
+  }
+  for body in selected.bodies {
+    if body.declaration == declaration {
+      self_host_fold_compile_time_body(lowering, selected, body, specialization, bindings)
+    }
+  }
+  selected
+}

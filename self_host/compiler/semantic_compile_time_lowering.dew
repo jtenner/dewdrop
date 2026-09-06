@@ -308,6 +308,10 @@ fn self_host_compile_time_bool_binary(module_: SelfHostPlannedModuleLowering, op
 }
 
 fn self_host_fold_compile_time_body(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: Map<U64, SelfHostCompileTimeType>) -> Unit {
+  self_host_fold_compile_time_body_with_conditions(lowering, module_, body, specialization, bindings, Option::None)
+}
+
+fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: Map<U64, SelfHostCompileTimeType>, conditions: Option<Map<U32, Bool>>) -> Unit {
   let errors = self_host_compile_time_error_map()
   let owned = self_host_compile_time_owned_expressions(module_, body)
   let _ = while 0u32 {
@@ -379,6 +383,18 @@ fn self_host_fold_compile_time_body(lowering: SelfHostPlannedProgramLowering, mo
     } else {
       break self_host_semantic_unit()
     }
+  }
+  match conditions {
+    Option::Some(selected) => for index in owned {
+      match module_.expressions[index].kind {
+        SelfHostPlannedExpressionKind::PlannedIfExpression(condition, _, _) => match module_.expressions[condition].kind {
+          SelfHostPlannedExpressionKind::PlannedBoolConst(value) => selected.set(index, value)
+          _ => {}
+        }
+        _ => {}
+      }
+    }
+    Option::None => {}
   }
   let live = self_host_prune_compile_time_body(module_, body)
   self_host_resolve_guarded_calls(lowering, module_, body, specialization, bindings, owned, live)

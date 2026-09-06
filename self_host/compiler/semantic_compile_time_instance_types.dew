@@ -84,6 +84,41 @@ fn self_host_query_projected_signature(module_: SelfHostPlannedModuleLowering, c
 }
 
 fn self_host_query_append_resolved(module_: SelfHostPlannedModuleLowering, value: SelfHostCompileTimeType) -> U32 {
+  // Reuse canonical leaves. Solver identity is stronger than ABI equality.
+  match value {
+    SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive) => return module_.resolved_types.primitive(primitive)
+    SelfHostCompileTimeType::NominalCompileTimeType(declaration) => {
+      let _ = while 0u32 {
+        index => if index < module_.resolved_types.types.length() {
+          match module_.resolved_types.types[index] {
+            SelfHostResolvedType::NominalType(candidate) => if candidate == declaration {
+              return index
+            }
+            _ => {}
+          }
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    SelfHostCompileTimeType::TraitCompileTimeType(declaration) => {
+      let _ = while 0u32 {
+        index => if index < module_.resolved_types.types.length() {
+          match module_.resolved_types.types[index] {
+            SelfHostResolvedType::TraitType(candidate) => if candidate == declaration {
+              return index
+            }
+            _ => {}
+          }
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    _ => {}
+  }
   let node = match value {
     SelfHostCompileTimeType::PrimitiveCompileTimeType(value) => SelfHostResolvedType::PrimitiveType(value)
     SelfHostCompileTimeType::NominalCompileTimeType(value) => SelfHostResolvedType::NominalType(value)

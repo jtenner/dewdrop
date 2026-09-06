@@ -2,6 +2,70 @@ open dew.std.testing
 open dew.std.string
 open dew.std.string_builder
 
+test "deferred field checks use the selected owner in private instances" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nstruct Record {\n  value: I32\n}\nfn read<t>(value: t) -> I32 {\n  if is_unit::<t>() {\n    0i32\n  } else {\n    value.value\n  }\n}\npub fn run() -> I32 {\n  read(()) + read(Record::{\n    value: 42i32\n  })\n}\n",
+  )
+  let lowering = fragments.specialization.lowering
+  for diagnostic in lowering.compile_time.diagnostics {
+    assert(false, diagnostic)
+  }
+  assert(lowering.modules[0u32].inferred.diagnostics.length() == 0u32, "generic field check is deferred, not rejected")
+  let mut deferred = 0u32
+  for expression in lowering.modules[0u32].expressions {
+    if expression.kind is SelfHostPlannedExpressionKind::PlannedDeferredExpression {
+      deferred = deferred + 1u32
+    }
+  }
+  assert(deferred == 1u32, "shared generic source keeps one deferred field")
+  let _ = while 0u32 {
+    index => if index < fragments.specialization.requests.length() {
+      match lowering.compile_time.instances.get(index) {
+        Option::Some(instance) => for body in instance.module_.bodies {
+          if body.declaration == instance.declaration {
+            for expression in self_host_compile_time_owned_expressions(instance.module_, body) {
+              assert(!(instance.module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedDeferredExpression), "selected field check is complete")
+            }
+          }
+        }
+        Option::None => {}
+      }
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+test "a missing selected field keeps its source diagnostic" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nfn read<t>(value: t) -> I32 {\n  if is_unit::<t>() {\n    0i32\n  } else {\n    value.value\n  }\n}\npub fn run() -> I32 {\n  read(42i64)\n}\n",
+  )
+  let errors = fragments.specialization.lowering.compile_time.diagnostics
+  assert(errors.length() > 0u32, "invalid selected owner must report a failure")
+  let mut found = false
+  for error in errors {
+    if error.starts_with("CT-041") {
+      found = true
+    }
+  }
+  assert(found, "selected source failure uses CT-041")
+}
+
+test "independent operator errors do not become deferred checks" {
+  let collected = self_host_collect_bytes(24723u64,
+    b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nfn unused<t>(value: t) -> I32 {\n  if is_unit::<t>() {\n    0i32\n  } else {\n    1i32 + false\n  }\n}\n",
+  )
+  let resolved = self_host_resolve_module_types(collected)
+  let names = self_host_resolve_module_names(collected)
+  let basic = self_host_infer_basic_module_bodies(collected, resolved, names)
+  let merged = self_host_merge_module_inference(basic)
+  assert(merged.diagnostics.length() > 0u32, "independent bad operand remains an error")
+  for selection in merged.expression_selections {
+    assert(!(selection is SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection), "concrete bad operands cannot be deferred")
+  }
+}
+
 test "guarded trait proof cannot enter the false branch" {
   let fragments = self_host_physical_test_fragments(
     b"builtin implements<t, trait_>() -> Bool = \"types.implements\"\ntrait Read {\n  fn read(self) -> I32\n}\nfn read_or_zero<t>(value: t) -> I32 {\n  if implements::<t, Read>() {\n    0i32\n  } else {\n    value.read()\n  }\n}\npub fn run() -> I32 {\n  0i32\n}\n",

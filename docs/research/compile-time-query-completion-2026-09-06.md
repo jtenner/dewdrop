@@ -3,7 +3,7 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
-## Selected-body type checks (native, in progress)
+## Selected-body field and operator checks (both compilers)
 
 Native inference now has an explicit deferred expression selection. A field or
 operator that depends on an unknown parameter inside a query branch can retain
@@ -31,8 +31,18 @@ error in an unused generic branch. Deferred selections also round-trip through
 the inferred-body codec. A separate mask test checks that dead fields, calls,
 and locals are excluded without changing the original source arena.
 
-Self-host parity, broader deferred call/join checks, and final validation remain
-open. The last passing self-host fixture has 77 checks, not the new 79.
+The self-host path now retains the same explicit deferred selection, copies
+selected source arenas, and checks exact source types before physical planning.
+Its checked work queues preserve body, local, pattern, and expression ownership.
+Canonical primitive and nominal leaves are reused during type substitution.
+Dead slots are excluded from inference and lowering; the emitter rejects any
+remaining deferred expression with CT-041.
+
+Hardening passes 207 tests, 29 numeric invariant records, and all 79 shared
+execution checks. New tests cover separate Unit/record instances, a missing
+selected field, and an independent bad operand in an unused generic branch.
+The measured lane takes 32.130 s, still above the 30 s performance budget.
+Broader deferred call/join checks and final validation remain open.
 
 The complete routine native lane passes 887 tests (104.549 s); semantic takes
 52.653 s and backend 33.103 s, both over budget. The scoped API check passes.

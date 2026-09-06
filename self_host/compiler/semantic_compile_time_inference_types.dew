@@ -1,0 +1,181 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+struct SelfHostInferenceTypeVisit {
+  id: U32
+  finish: Bool
+}
+
+struct SelfHostInferenceTypeSubstitution {
+  source: SelfHostResolvedModuleTypes
+  instance: SelfHostPlannedModuleLowering
+  mapping: Array<U32>
+  marks: Array<U32>
+  work: Array<SelfHostInferenceTypeVisit>
+}
+
+impl SelfHostInferenceTypeSubstitution {
+  fn visit(self, id: U32) -> Unit {
+    self_host_assert_array_index(id, self.mapping.length(), "ARN-104 source type substitution")
+    self.work.push(SelfHostInferenceTypeVisit::{
+      id: id
+      finish: false
+    })
+  }
+
+  fn visit_arguments(self, span: SelfHostHirSpan) -> Unit {
+    self_host_assert_array_span(span.start, span.length, self.source.type_arguments.length(), "ARN-101 source type arguments")
+    let _ = while 0u32 {
+      index => if index < span.length {
+        self.visit(self.source.type_arguments[span.start + index])
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn mapped_arguments(self, span: SelfHostHirSpan) -> SelfHostHirSpan {
+    let mut changed = false
+    let _ = while 0u32 {
+      index => if index < span.length {
+        let child = self.source.type_arguments[span.start + index]
+        if self.mapping[child] != child {
+          changed = true
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if !changed {
+      return span
+    }
+    let start = self.instance.resolved_types.type_arguments.length()
+    let _ = while 0u32 {
+      index => if index < span.length {
+        let child = self.mapping[self.source.type_arguments[span.start + index]]
+        self_host_assert_compiler_invariant(child != 4294967295u32, "BOD-604 source type arguments are not closed")
+        self.instance.resolved_types.type_arguments.push(child)
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    SelfHostHirSpan::{
+      start: start
+      length: span.length
+    }
+  }
+
+  fn run(self, bindings: Map<U64, SelfHostCompileTimeType>) -> Unit {
+    let _ = while 0u32 {
+      root => if root < self.mapping.length() {
+        self.visit(root)
+        let _ = while self.work.length() {
+          count => if count > 0u32 {
+            let item = self.work[count - 1u32]
+            self.work.truncate(count - 1u32)
+            let id = item.id
+            if self.marks[id] == 2u32 {
+              continue self.work.length()
+            }
+            let original = self.source.types[id]
+            if !item.finish {
+              self_host_assert_compiler_invariant(self.marks[id] == 0u32, "ARN-104 source type substitution cycle")
+              self.marks[id] = 1u32
+              self.work.push(SelfHostInferenceTypeVisit::{
+                id: id
+                finish: true
+              })
+              match original {
+                SelfHostResolvedType::ProductType(span) => self.visit_arguments(span)
+                SelfHostResolvedType::AppliedType(base, span) => {
+                  self.visit(base)
+                  self.visit_arguments(span)
+                }
+                SelfHostResolvedType::FunctionType(span, result) => {
+                  self.visit(result)
+                  self.visit_arguments(span)
+                }
+                SelfHostResolvedType::MemberTypeProjection(owner, _, _) => self.visit(owner)
+                _ => {}
+              }
+              continue self.work.length()
+            }
+            let mut changed = false
+            let replacement = match original {
+              SelfHostResolvedType::GenericParameterType(parameter) => {
+                match bindings.get(parameter) {
+                  Option::Some(value) => {
+                    self.mapping[id] = self_host_query_append_resolved(self.instance, value)
+                  }
+                  Option::None => {}
+                }
+                original
+              }
+              SelfHostResolvedType::SelfType(parameter) => {
+                match bindings.get(parameter) {
+                  Option::Some(value) => {
+                    self.mapping[id] = self_host_query_append_resolved(self.instance, value)
+                  }
+                  Option::None => {}
+                }
+                original
+              }
+              SelfHostResolvedType::ProductType(span) => {
+                let mapped = self.mapped_arguments(span)
+                changed = mapped.start != span.start
+                SelfHostResolvedType::ProductType(mapped)
+              }
+              SelfHostResolvedType::AppliedType(base, span) => {
+                let mapped = self.mapped_arguments(span)
+                changed = mapped.start != span.start || self.mapping[base] != base
+                SelfHostResolvedType::AppliedType(self.mapping[base], mapped)
+              }
+              SelfHostResolvedType::FunctionType(span, result) => {
+                let mapped = self.mapped_arguments(span)
+                changed = mapped.start != span.start || self.mapping[result] != result
+                SelfHostResolvedType::FunctionType(mapped, self.mapping[result])
+              }
+              SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => {
+                changed = self.mapping[owner] != owner
+                SelfHostResolvedType::MemberTypeProjection(self.mapping[owner], operation, selector)
+              }
+              _ => original
+            }
+            if self.mapping[id] == 4294967295u32 {
+              if changed {
+                self.mapping[id] = self.instance.resolved_types.types.length()
+                self.instance.resolved_types.types.push(replacement)
+              } else {
+                self.mapping[id] = id
+              }
+            }
+            self.marks[id] = 2u32
+            continue self.work.length()
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        continue root + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+}
+
+fn self_host_compile_time_inference_types(source: SelfHostPlannedModuleLowering, instance: SelfHostPlannedModuleLowering, bindings: Map<U64, SelfHostCompileTimeType>) -> Array<U32> {
+  let mapping = self_host_u32_slots(source.resolved_types.types.length(), 4294967295u32)
+  let substitution = SelfHostInferenceTypeSubstitution::{
+    source: source.resolved_types
+    instance: instance
+    mapping: mapping
+    marks: self_host_u32_slots(mapping.length(), 0u32)
+    work: []
+  }
+  substitution.run(bindings)
+  mapping
+}

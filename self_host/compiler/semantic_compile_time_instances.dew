@@ -73,7 +73,7 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
       unreachable()
     }
   }
-  let module_ = self_host_clone_compile_time_module(lowering.modules[owner])
+  let mut module_ = self_host_clone_compile_time_module(lowering.modules[owner])
   let caller = self_host_program_specialization_callable(module_, request.declaration)
   let bindings = self_host_compile_time_caller_bindings(caller, specialization, requests)
   match caller {
@@ -119,10 +119,17 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
     module_: module_
     guarded_evidence: self_host_empty_guarded_evidence()
   })
+  let needs_recheck = self_host_compile_time_body_needs_recheck(module_, request.declaration)
+  let conditions = self_host_empty_u32_bool_map()
   for body in module_.bodies {
     if body.declaration == request.declaration {
-      self_host_fold_compile_time_body(lowering, module_, body, specialization, bindings)
+      self_host_fold_compile_time_body_with_conditions(lowering, module_, body, specialization, bindings, Option::Some(conditions))
     }
   }
-  self_host_materialize_query_instance_types(lowering, lowering.modules[owner], module_, bindings, request.declaration, specialization)
+  if needs_recheck {
+    module_ = self_host_recheck_compile_time_body(lowering, owner, request.declaration, specialization, bindings, conditions, module_)
+    self_host_materialize_query_instance_types(lowering, module_, module_, bindings, request.declaration, specialization)
+  } else {
+    self_host_materialize_query_instance_types(lowering, lowering.modules[owner], module_, bindings, request.declaration, specialization)
+  }
 }

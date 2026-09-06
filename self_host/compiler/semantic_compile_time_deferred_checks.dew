@@ -1,0 +1,223 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+struct SelfHostInferenceReachability {
+  declaration: U64
+  expressions: Array<Bool>
+  blocks: Array<Bool>
+  patterns: Array<Bool>
+  locals: Array<Bool>
+  type_substitutions: Array<U32>
+}
+
+impl SelfHostBasicBodyInferencer {
+
+  fn live_expression(self, id: U32) -> Bool {
+    match self.reachability {
+      Option::None => true
+      Option::Some(live) => {
+        self_host_assert_array_index(id, live.expressions.length(), "ARN-104 selected inference expression")
+        live.expressions[id]
+      }
+    }
+  }
+
+  fn live_block(self, id: U32) -> Bool {
+    match self.reachability {
+      Option::None => true
+      Option::Some(live) => {
+        self_host_assert_array_index(id, live.blocks.length(), "ARN-104 selected inference block")
+        live.blocks[id]
+      }
+    }
+  }
+
+  fn live_pattern(self, id: U32) -> Bool {
+    match self.reachability {
+      Option::None => true
+      Option::Some(live) => {
+        self_host_assert_array_index(id, live.patterns.length(), "ARN-104 selected inference pattern")
+        live.patterns[id]
+      }
+    }
+  }
+
+  fn live_local(self, local: U32) -> Bool {
+    match self.reachability {
+      Option::None => true
+      Option::Some(live) => {
+        self_host_assert_array_index(local, self.name_info.locals.length, "ARN-102 selected inference local")
+        let global = self.name_info.locals.start + local
+        self_host_assert_array_index(global, live.locals.length(), "ARN-104 selected inference local")
+        live.locals[global]
+      }
+    }
+  }
+
+  fn source_resolved_type(self, type_: U32) -> U32 {
+    match self.reachability {
+      Option::Some(live) => if live.declaration == self.body.declaration && live.type_substitutions.length() > 0u32 {
+        self_host_assert_array_index(type_, live.type_substitutions.length(), "ARN-104 selected source type")
+        return live.type_substitutions[type_]
+      }
+      Option::None => {}
+    }
+    type_
+  }
+  fn guard_condition_dependent(self, root: U32, targets: Map<U64, Bytes>) -> Bool {
+    let work = [root]
+    let seen = self_host_empty_u32_bool_map()
+    let _ = while work.length() {
+      count => if count > 0u32 {
+        let expression = work[count - 1u32]
+        work.truncate(count - 1u32)
+        if expression != 4294967295u32 && !seen.contains_key(expression) {
+          self_host_assert_array_index(expression, self.collected.expressions.length(), "ARN-104 deferred guard expression")
+          seen.set(expression, true)
+          match self.collected.expressions[expression] {
+            SelfHostHirExpr::PrefixExpr(_, value, _) => work.push(value)
+            SelfHostHirExpr::BinaryExpr(_, left, right, _) => {
+              work.push(left)
+              work.push(right)
+            }
+            SelfHostHirExpr::CallExpr(target, _, _) => {
+              let declaration = match self.names.expression_references[target] {
+                SelfHostBodyNameReference::ModuleValueNameReference(name) => match self.unique_local_callable_index(name) {
+                  Option::Some(index) => self.collected.callables[index].declaration
+                  Option::None => 18446744073709551615u64
+                }
+                SelfHostBodyNameReference::ImportedModuleValueNameReference(declaration) => declaration
+                _ => 18446744073709551615u64
+              }
+              if targets.contains_key(declaration) {
+                let span = self.collected.explicit_call_type_argument_spans[expression]
+                self_host_assert_array_span(span.start, span.length, self.resolved.explicit_call_type_arguments.length(), "ARN-101 deferred guard type arguments")
+                let _ = while 0u32 {
+                  index => if index < span.length {
+                    if self.guard_type_has_generic(self.resolved.explicit_call_type_arguments[span.start + index]) {
+                      return true
+                    }
+                    continue index + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+            }
+            _ => {}
+          }
+        }
+        continue work.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    false
+  }
+
+  fn has_deferred_type(self, type_: I32) -> Bool {
+    let representative = self.solver.representative_type(type_)
+    if self.solver.type_term(representative) is SelfHostBodyTypeTerm::BodyVariableType(_) {
+      for deferred in self.deferred_types {
+        if self.solver.representative_type(deferred) == representative {
+          return true
+        }
+      }
+    }
+    false
+  }
+
+  fn type_depends_on_parameter(self, root: I32) -> Bool {
+    let work = [root]
+    let seen = self_host_empty_query_type_cache()
+    let _ = while work.length() {
+      count => if count > 0u32 {
+        let type_ = self.solver.representative_type(work[count - 1u32])
+        work.truncate(count - 1u32)
+        if seen.contains_key(type_) {
+          continue work.length()
+        }
+        seen.set(type_, type_)
+        match self.solver.type_term(type_) {
+          SelfHostBodyTypeTerm::BodyResolvedType(id) => if self.guard_type_has_generic(id) {
+            return true
+          }
+          SelfHostBodyTypeTerm::BodyProductType(arguments) => {
+            self_host_assert_array_span(arguments.start, arguments.length, self.solver.type_arguments.length(), "ARN-101 deferred operand type arguments")
+            let _ = while 0u32 {
+              index => if index < arguments.length {
+                work.push(self.solver.type_arguments[arguments.start + index])
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+            work.push(base)
+            self_host_assert_array_span(arguments.start, arguments.length, self.solver.type_arguments.length(), "ARN-101 deferred operand type arguments")
+            let _ = while 0u32 {
+              index => if index < arguments.length {
+                work.push(self.solver.type_arguments[arguments.start + index])
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          SelfHostBodyTypeTerm::BodyFunctionType(arguments, result) => {
+            work.push(result)
+            self_host_assert_array_span(arguments.start, arguments.length, self.solver.type_arguments.length(), "ARN-101 deferred operand type arguments")
+            let _ = while 0u32 {
+              index => if index < arguments.length {
+                work.push(self.solver.type_arguments[arguments.start + index])
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => work.push(owner)
+          _ => {}
+        }
+        continue work.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    false
+  }
+
+  fn defer_expression_check(self, expression: U32, inputs: Array<I32>) -> Bool {
+    match self.reachability {
+      Option::Some(live) => if live.declaration == self.body.declaration {
+        return false
+      }
+      Option::None => {}
+    }
+    let mut dependent = false
+    for type_ in inputs {
+      if self.has_deferred_type(type_) {
+        dependent = true
+      }
+    }
+    if !dependent {
+      self.prepare_guard_scopes()
+      if !self.deferred_guard_scopes.contains_key(expression) {
+        return false
+      }
+      for type_ in inputs {
+        if self.type_depends_on_parameter(type_) {
+          dependent = true
+        }
+      }
+      if !dependent {
+        return false
+      }
+    }
+    self_host_store_basic_expression_selection(self.expression_selections, self.expression_index(expression), SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection)
+    self.deferred_types.push(self.expression_type(expression))
+    true
+  }
+}

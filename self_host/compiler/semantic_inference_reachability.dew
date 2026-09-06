@@ -2,146 +2,95 @@ open dew.std.array
 open dew.std.map
 open dew.std.option
 
-fn self_host_guard_builtin(name: Bytes) -> Bool {
-  name == b"types.implements" || name == b"types.type_equal" || name == b"types.is_unit" || name == b"types.is_never" || name == b"types.is_integer" || name == b"types.is_signed_integer" || name == b"types.is_float"
+// Copy source storage, but keep every semantic ID and the frozen name arena.
+fn self_host_clone_selected_source(source: SelfHostCollectedModule) -> SelfHostCollectedModule {
+  SelfHostCollectedModule::{
+    module_id: source.module_id
+    files: source.files
+    file_paths: source.file_paths
+    file_sources: source.file_sources
+    test_files: source.test_files
+    declaration_files: source.declaration_files
+    body_files: source.body_files
+    names: source.names
+    declarations: source.declarations
+    methods: source.methods
+    declaration_locations: source.declaration_locations
+    fields: source.fields
+    variants: source.variants
+    generic_parameters: source.generic_parameters
+    parameters: source.parameters
+    generic_parameter_spans: source.generic_parameter_spans
+    generic_bounds: source.generic_bounds
+    parameter_spans: source.parameter_spans
+    callables: source.callables
+    tests: source.tests
+    imports: source.imports
+    builtins: source.builtins
+    lets: source.lets
+    aliases: source.aliases
+    derives: source.derives
+    impls: source.impls
+    foreign_types: source.foreign_types
+    foreign_libraries: source.foreign_libraries
+    foreign_functions: source.foreign_functions
+    type_syntax: source.type_syntax
+    type_syntax_files: source.type_syntax_files
+    type_arguments: source.type_arguments
+    lambda_parameters: source.lambda_parameters
+    lambda_parameter_files: source.lambda_parameter_files
+    lambdas: source.lambdas
+    bodies: source.bodies
+    body_by_declaration: source.body_by_declaration
+    expressions: source.expressions.copy()
+    expression_files: source.expression_files
+    expression_children: source.expression_children
+    explicit_call_type_argument_spans: source.explicit_call_type_argument_spans
+    explicit_call_type_arguments: source.explicit_call_type_arguments
+    blocks: source.blocks.copy()
+    block_files: source.block_files
+    block_items: source.block_items
+    block_item_files: source.block_item_files
+    object_fields: source.object_fields
+    object_field_files: source.object_field_files
+    patterns: source.patterns
+    pattern_files: source.pattern_files
+    pattern_children: source.pattern_children
+    pattern_fields: source.pattern_fields
+    pattern_field_files: source.pattern_field_files
+    pattern_arms: source.pattern_arms
+    pattern_arm_files: source.pattern_arm_files
+    arm_children: source.arm_children
+    diagnostics: source.diagnostics
+    name_lookup: source.name_lookup
+    type_bindings: source.type_bindings
+    trait_bindings: source.trait_bindings
+    value_bindings: source.value_bindings
+    value_binding_candidates: source.value_binding_candidates
+    foreign_library_by_alias: source.foreign_library_by_alias
+  }
 }
 
-struct SelfHostCompileTimeGuardFact {
-  is_trait: Bool
-  target: U32
-  bound: U32
-}
-
-enum SelfHostCompileTimeGuardWalk {
-  GuardExpression(U32)
-  GuardBlock(U32)
-  GuardPattern(U32)
-}
-
-struct SelfHostCompileTimeGuardCondition {
-  expression: U32
-  truth: Bool
-}
-
-fn self_host_empty_guard_scopes() -> Map<U32, Array<SelfHostCompileTimeGuardFact>> {
-  Map::empty()
-}
-
-fn self_host_empty_guard_facts() -> Array<SelfHostCompileTimeGuardFact> {
-  []
-}
-
-fn self_host_guard_add_fact(facts: Array<SelfHostCompileTimeGuardFact>, fact: SelfHostCompileTimeGuardFact) -> Unit {
-  for previous in facts {
-    if previous.is_trait == fact.is_trait && previous.target == fact.target && previous.bound == fact.bound {
-      return
+fn self_host_clear_inference_span(span: SelfHostHirSpan, arena: Array<Bool>) -> Unit {
+  self_host_assert_array_span(span.start, span.length, arena.length(), "ARN-101 selected inference owner")
+  let _ = while 0u32 {
+    index => if index < span.length {
+      arena[span.start + index] = false
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
   }
-  facts.push(fact)
 }
 
-impl SelfHostBasicBodyInferencer {
-  fn guard_builtin_targets(self) -> Map<U64, Bytes> {
-    match self.guard_builtin_cache {
-      Option::Some(targets) => return targets
-      Option::None => {}
-    }
-    let targets = self_host_compile_time_target_map()
-    for entry in self.collected.builtins {
-      if self_host_guard_builtin(entry.builtin_name) {
-        targets.set(entry.declaration, entry.builtin_name)
-      }
-    }
-    for callable in self.imported.callables {
-      match callable.kind {
-        SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(name) => if self_host_guard_builtin(name) {
-          targets.set(callable.declaration, name)
-        }
-        _ => {}
-      }
-    }
-    self.guard_builtin_cache = Option::Some(targets)
-    targets
-  }
+struct SelfHostSelectedInferenceSource {
+  collected: SelfHostCollectedModule
+  source: SelfHostCollectedModule
+  live: SelfHostInferenceReachability
+  conditions: Map<U32, Bool>
+}
 
-  fn guard_condition_facts(self, expression: U32, truth: Bool, targets: Map<U64, Bytes>) -> Array<SelfHostCompileTimeGuardFact> {
-    let facts = self_host_empty_guard_facts()
-    let work = [SelfHostCompileTimeGuardCondition::{
-      expression: expression
-      truth: truth
-    }]
-    let _ = while work.length() {
-      count => if count > 0u32 {
-        let item = work[count - 1u32]
-        work.truncate(count - 1u32)
-        if item.expression != 4294967295u32 {
-          self_host_assert_array_index(item.expression, self.collected.expressions.length(), "ARN-104 guarded condition")
-          match self.collected.expressions[item.expression] {
-            SelfHostHirExpr::PrefixExpr(SelfHostHirPrefixOperator::LogicalNot, value, _) => work.push(SelfHostCompileTimeGuardCondition::{
-              expression: value
-              truth: !item.truth
-            })
-            SelfHostHirExpr::BinaryExpr(operator, left, right, _) => if (operator is SelfHostHirBinaryOperator::LogicalAnd && item.truth) || (operator is SelfHostHirBinaryOperator::LogicalOr && !item.truth) {
-              work.push(SelfHostCompileTimeGuardCondition::{
-                expression: left
-                truth: item.truth
-              })
-              work.push(SelfHostCompileTimeGuardCondition::{
-                expression: right
-                truth: item.truth
-              })
-            }
-            SelfHostHirExpr::CallExpr(target, arguments, _) => if item.truth && arguments.length == 0u32 {
-              let declaration = match self.names.expression_references[target] {
-                SelfHostBodyNameReference::ModuleValueNameReference(name) => match self.unique_local_callable_index(name) {
-                  Option::Some(index) => self.collected.callables[index].declaration
-                  Option::None => 18446744073709551615u64
-                }
-                SelfHostBodyNameReference::ImportedModuleValueNameReference(declaration) => declaration
-                _ => 18446744073709551615u64
-              }
-              if targets.contains_key(declaration) {
-                let name = match targets.get(declaration) {
-                  Option::Some(value) => value
-                  Option::None => unreachable()
-                }
-                if name == b"types.is_integer" || name == b"types.is_signed_integer" || name == b"types.is_float" {
-                  continue work.length()
-                }
-                let arity = if name == b"types.is_unit" || name == b"types.is_never" {
-                  1u32
-                } else {
-                  2u32
-                }
-                let span = self_host_hir_span_at(self.collected.explicit_call_type_argument_spans, item.expression)
-                if span.length == arity {
-                  self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.resolved.explicit_call_type_arguments.length()), "ARN-101 guarded type arguments")
-                  let other = if arity == 2u32 {
-                    self.resolved.explicit_call_type_arguments[span.start + 1u32]
-                  } else if name == b"types.is_unit" {
-                    self.resolved.primitive(SelfHostPrimitiveType::UnitType)
-                  } else {
-                    self.resolved.primitive(SelfHostPrimitiveType::NeverType)
-                  }
-                  self_host_guard_add_fact(facts, SelfHostCompileTimeGuardFact::{
-                    is_trait: name == b"types.implements"
-                    target: self.resolved.explicit_call_type_arguments[span.start]
-                    bound: other
-                  })
-                }
-              }
-            }
-            _ => {}
-          }
-        }
-        continue work.length()
-      } else {
-        break self_host_semantic_unit()
-      }
-    }
-    facts
-  }
-
+impl SelfHostSelectedInferenceSource {
   fn guard_expression_children(self, span: SelfHostHirSpan, work: Array<SelfHostCompileTimeGuardWalk>) -> Unit {
     self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.expression_children.length()), "ARN-101 guarded expression children")
     let _ = while 0u32 {
@@ -166,12 +115,8 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn mark_guard_scope(self, root: SelfHostCompileTimeGuardWalk, facts: Array<SelfHostCompileTimeGuardFact>, dependent: Bool) -> Unit {
-    if facts.length() == 0u32 && !dependent {
-      return
-    }
+  fn walk(self, root: SelfHostCompileTimeGuardWalk) -> Unit {
     let work = [root]
-    let seen = self_host_empty_u32_bool_map()
     let _ = while work.length() {
       count => if count > 0u32 {
         let item = work[count - 1u32]
@@ -179,6 +124,10 @@ impl SelfHostBasicBodyInferencer {
         match item {
           SelfHostCompileTimeGuardWalk::GuardBlock(block) => {
             self_host_assert_array_index(block, self.collected.blocks.length(), "ARN-104 guarded block")
+            if self.live.blocks[block] {
+              continue work.length()
+            }
+            self.live.blocks[block] = true
             let span = self.collected.blocks[block].items
             self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.block_items.length()), "ARN-101 guarded block items")
             let _ = while 0u32 {
@@ -192,6 +141,10 @@ impl SelfHostBasicBodyInferencer {
           }
           SelfHostCompileTimeGuardWalk::GuardPattern(pattern) => if pattern != 4294967295u32 {
             self_host_assert_array_index(pattern, self.collected.patterns.length(), "ARN-104 guarded pattern")
+            if self.live.patterns[pattern] {
+              continue work.length()
+            }
+            self.live.patterns[pattern] = true
             match self.collected.patterns[pattern] {
               SelfHostHirPattern::LiteralPattern(value, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
               SelfHostHirPattern::QualifiedPattern(root, _, _) => work.push(SelfHostCompileTimeGuardWalk::GuardPattern(root))
@@ -234,24 +187,34 @@ impl SelfHostBasicBodyInferencer {
               _ => {}
             }
           }
-          SelfHostCompileTimeGuardWalk::GuardExpression(expression) => if expression != 4294967295u32 && !seen.contains_key(expression) {
-            seen.set(expression, true)
-            if dependent {
-              self.deferred_guard_scopes.set(expression, true)
+          SelfHostCompileTimeGuardWalk::GuardExpression(expression) => if expression != 4294967295u32 {
+            self_host_assert_array_index(expression, self.live.expressions.length(), "ARN-104 selected inference expression")
+            if self.live.expressions[expression] {
+              continue work.length()
             }
-            self_host_assert_array_index(expression, self.collected.expressions.length(), "ARN-104 guarded expression")
-            let existing = match self.guarded_trait_scopes.get(expression) {
-              Option::Some(value) => value
-              Option::None => {
-                let value = self_host_empty_guard_facts()
-                self.guarded_trait_scopes.set(expression, value)
-                value
+            self.live.expressions[expression] = true
+            let mut original = expression
+            let _ = while 0u32 {
+              hops => {
+                self_host_assert_compiler_invariant(hops <= self.collected.expressions.length(), "ARN-104 selected alternative cycle")
+                match self.collected.expressions[original] {
+                  SelfHostHirExpr::IfExpr(_, block, alternative, offset) => match self.conditions.get(original) {
+                    Option::Some(selected) => if selected {
+                      self.source.expressions[expression] = SelfHostHirExpr::BlockExpr(block, offset)
+                      break self_host_semantic_unit()
+                    } else {
+                      self_host_assert_array_index(alternative, self.collected.expressions.length(), "ARN-104 selected alternative")
+                      original = alternative
+                      self.source.expressions[expression] = self.collected.expressions[original]
+                      continue hops + 1u32
+                    }
+                    Option::None => break self_host_semantic_unit()
+                  }
+                  _ => break self_host_semantic_unit()
+                }
               }
             }
-            for fact in facts {
-              self_host_guard_add_fact(existing, fact)
-            }
-            match self.collected.expressions[expression] {
+            match self.source.expressions[expression] {
               SelfHostHirExpr::ProductExpr(span, _) => self.guard_expression_children(span, work)
               SelfHostHirExpr::ArrayExpr(span, _) => self.guard_expression_children(span, work)
               SelfHostHirExpr::ObjectExpr(span, _) => self.guard_object_fields(span, work)
@@ -339,89 +302,86 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn prepare_guard_scopes(self) -> Unit {
-    if !self.guarded_trait_scopes_ready {
-      self.guarded_trait_scopes_ready = true
-      let targets = self.guard_builtin_targets()
-      if targets.length() > 0u32 {
-        for source in self.collected.expressions {
-          match source {
-            SelfHostHirExpr::IfExpr(condition, block, alternative, _) => {
-              let dependent = self.guard_condition_dependent(condition, targets)
-              self.mark_guard_scope(SelfHostCompileTimeGuardWalk::GuardBlock(block), self.guard_condition_facts(condition, true, targets), dependent)
-              self.mark_guard_scope(SelfHostCompileTimeGuardWalk::GuardExpression(alternative), self.guard_condition_facts(condition, false, targets), dependent)
-            }
-            SelfHostHirExpr::BinaryExpr(SelfHostHirBinaryOperator::LogicalAnd, left, right, _) => self.mark_guard_scope(SelfHostCompileTimeGuardWalk::GuardExpression(right), self.guard_condition_facts(left, true, targets), self.guard_condition_dependent(left, targets))
-            SelfHostHirExpr::BinaryExpr(SelfHostHirBinaryOperator::LogicalOr, left, right, _) => self.mark_guard_scope(SelfHostCompileTimeGuardWalk::GuardExpression(right), self.guard_condition_facts(left, false, targets), self.guard_condition_dependent(left, targets))
-            _ => {}
-          }
-        }
-      }
-    }
-  }
+}
 
-  fn guard_type_has_generic(self, root: U32) -> Bool {
-    let work = [root]
-    let seen = self_host_empty_u32_bool_map()
-    let _ = while work.length() {
-      length => if length > 0u32 {
-        let id = work[length - 1u32]
-        work.truncate(length - 1u32)
-        if seen.contains_key(id) {
-          continue work.length()
-        }
-        seen.set(id, true)
-        self_host_assert_array_index(id, self.resolved.types.length(), "ARN-104 guarded target type")
-        let span = match self.resolved.types[id] {
-          SelfHostResolvedType::GenericParameterType(_) => return true
-          SelfHostResolvedType::ProductType(span) => span
-          SelfHostResolvedType::AppliedType(base, span) => {
-            work.push(base)
-            span
-          }
-          SelfHostResolvedType::FunctionType(span, result) => {
-            work.push(result)
-            span
-          }
-          SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
-            work.push(owner)
-            continue work.length()
-          }
-          _ => continue work.length()
-        }
-        self_host_assert_array_span(span.start, span.length, self.resolved.type_arguments.length(), "ARN-101 guarded target type arguments")
-        let _ = while 0u32 {
-          index => if index < span.length {
-            work.push(self.resolved.type_arguments[span.start + index])
-            continue index + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-        continue work.length()
+fn self_host_selected_inference_source(collected: SelfHostCollectedModule, names: SelfHostResolvedModuleNames, declaration: U64, conditions: Map<U32, Bool>) -> SelfHostSelectedInferenceSource {
+  let live = SelfHostInferenceReachability::{
+    declaration: declaration
+    expressions: self_host_inference_bool_slots(collected.expressions.length())
+    blocks: self_host_inference_bool_slots(collected.blocks.length())
+    patterns: self_host_inference_bool_slots(collected.patterns.length())
+    locals: self_host_inference_bool_slots(names.locals.length())
+    type_substitutions: self_host_empty_semantic_ids()
+  }
+  for arena in [live.expressions, live.blocks, live.patterns, live.locals] {
+    let _ = while 0u32 {
+      index => if index < arena.length() {
+        arena[index] = true
+        continue index + 1u32
       } else {
         break self_host_semantic_unit()
       }
     }
-    false
   }
-
-  fn guarded_trait_bounds(self, expression: U32, target_type: I32) -> Array<U32> {
-    self.prepare_guard_scopes()
-    let result = self_host_empty_semantic_ids()
-    match self.guarded_trait_scopes.get(expression) {
-      Option::Some(facts) => for fact in facts {
-        if fact.is_trait && self.guard_type_has_generic(fact.target) {
-          let snapshot = self.solver.snapshot()
-          let matches = self.solver.unify(target_type, self.solver.resolved_type(fact.target), self_host_expression_type_origin(expression, self.collected.expressions[expression].offset()))
-          self.solver.rollback(snapshot)
-          if matches {
-            result.push(fact.bound)
+  let mut body_index = 4294967295u32
+  let _ = while 0u32 {
+    index => if index < collected.bodies.length() {
+      if collected.bodies[index].declaration == declaration {
+        body_index = index
+        break self_host_semantic_unit()
+      }
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_assert_array_index(body_index, collected.bodies.length(), "BOD-612 selected source body")
+  let root = collected.bodies[body_index]
+  self_host_clear_inference_span(root.expressions, live.expressions)
+  self_host_clear_inference_span(root.blocks, live.blocks)
+  self_host_clear_inference_span(root.patterns, live.patterns)
+  self_host_clear_inference_span(names.bodies[body_index].locals, live.locals)
+  for lambda in collected.lambdas {
+    if lambda.root_body == root.id {
+      self_host_clear_inference_span(lambda.body.expressions, live.expressions)
+      self_host_clear_inference_span(lambda.body.blocks, live.blocks)
+      self_host_clear_inference_span(lambda.body.patterns, live.patterns)
+      self_host_assert_array_index(lambda.id, names.lambdas.length(), "ARN-106 selected lambda")
+      self_host_clear_inference_span(names.lambdas[lambda.id].locals, live.locals)
+    }
+  }
+  let selected = SelfHostSelectedInferenceSource::{
+    collected: collected
+    source: self_host_clone_selected_source(collected)
+    live: live
+    conditions: conditions
+  }
+  match root.root {
+    SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => selected.walk(SelfHostCompileTimeGuardWalk::GuardExpression(expression))
+    SelfHostHirBodyRoot::BlockBodyRoot(block) => selected.walk(SelfHostCompileTimeGuardWalk::GuardBlock(block))
+  }
+  let _ = while 0u32 {
+    index => if index < names.locals.length() {
+      if !live.locals[index] {
+        let local = names.locals[index]
+        live.locals[index] = match local.kind {
+          SelfHostBodyLocalKind::ParameterLocal => true
+          SelfHostBodyLocalKind::LetLocal => {
+            self_host_assert_array_index(local.source, collected.block_items.length(), "ARN-104 selected let local")
+            let value = collected.block_items[local.source].value
+            self_host_assert_array_index(value, live.expressions.length(), "ARN-104 selected let value")
+            live.expressions[value]
+          }
+          SelfHostBodyLocalKind::PatternLocal => {
+            self_host_assert_array_index(local.source, live.patterns.length(), "ARN-104 selected pattern local")
+            live.patterns[local.source]
           }
         }
       }
-      Option::None => {}
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
     }
-    result
   }
+  selected
 }
