@@ -682,8 +682,10 @@ priv struct BasicBodyInferencer {
   field_spans : Array[HirSpan]
   solver : LocalTypeSolver
   pending_member_equations : Array[PendingBodyMemberEquation]
-  guarded_trait_scopes : Map[ExprId, Array[(ResolvedTypeId, ResolvedTypeId)]]
+  guarded_trait_scopes : Map[ExprId, Array[CompileTimeGuardFact]]
   mut guarded_trait_scopes_ready : Bool
+  pending_guarded_joins : Array[ExprId]
+  mut guard_builtin_cache : Map[DeclId, Bytes]?
   expression_types : Array[BodyTypeId]
   mut local_types : Array[BodyTypeId]
   block_types : Array[BodyTypeId]
@@ -786,6 +788,8 @@ fn BasicBodyInferencer::new(
     pending_member_equations: [],
     guarded_trait_scopes: {},
     guarded_trait_scopes_ready: false,
+    pending_guarded_joins: [],
+    guard_builtin_cache: None,
     expression_types: Array::make(body.expressions.length, 0),
     local_types: Array::make(name_info.locals.length, 0),
     block_types: Array::make(body.blocks.length, 0),
@@ -947,7 +951,7 @@ fn BasicBodyInferencer::expression_type(
   self : BasicBodyInferencer,
   expression : ExprId,
 ) -> BodyTypeId {
-  self.expression_types[self.expression_index(expression)]
+  self.guard_refined_type(self.expression_types[self.expression_index(expression)], expression)
 }
 
 ///|
@@ -1165,6 +1169,7 @@ fn BasicBodyInferencer::constrain_expression_assignable(
   origin : TypeConstraintOrigin,
 ) -> Unit {
   let actual = self.expression_type(expression)
+  let expected = self.guard_refined_type(expected, expression)
   if self.is_never_type(actual) {
     return
   }
@@ -2487,6 +2492,8 @@ fn BasicBodyInferencer::constrain_if_expression(
       self.primitive(NeverType),
       expression_type_origin(expression, offset),
     )
+  } else if self.guard_has_condition_facts(condition) {
+    self.pending_guarded_joins.push(expression)
   } else {
     self.constrain_assignable(
       then_type,
@@ -3109,6 +3116,7 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   }
   self.constrain_root()
   self.constrain_calls()
+  self.constrain_guarded_joins()
   self.constrain_members(false)
   // A member can depend on indexing, while a method/operator can depend on
   // that member. Finish the shared constraint queue before reporting missing

@@ -6,25 +6,43 @@ priv enum CompileTimeGuardWalk {
 }
 
 ///|
+priv enum CompileTimeGuardFact {
+  TraitGuardFact(ResolvedTypeId, ResolvedTypeId)
+  EqualGuardFact(ResolvedTypeId, ResolvedTypeId)
+} derive(Eq)
+
+///|
+fn compile_time_guard_builtin(name : Bytes) -> Bool {
+  name == b"types.implements" ||
+  name == b"types.type_equal" ||
+  name == b"types.is_unit" ||
+  name == b"types.is_never"
+}
+
+///|
 fn BasicBodyInferencer::guard_builtin_targets(
   self : BasicBodyInferencer,
-) -> Map[DeclId, Bool] {
+) -> Map[DeclId, Bytes] {
+  if self.guard_builtin_cache is Some(targets) {
+    return targets
+  }
   let targets = {}
   for builtin in self.collected.builtins {
-    if builtin.builtin_name == b"types.implements" {
-      targets[builtin.declaration] = true
+    if compile_time_guard_builtin(builtin.builtin_name) {
+      targets[builtin.declaration] = builtin.builtin_name
     }
   }
   if self.imports is Some(imports) {
     for index in imports.scope.imported_interfaces {
       for callable in imports.scope.interfaces[index].unwrap().callables {
         if callable.kind is FrozenBuiltinCallable(name) &&
-          name == b"types.implements" {
-          targets[callable.declaration] = true
+          compile_time_guard_builtin(name) {
+          targets[callable.declaration] = name
         }
       }
     }
   }
+  self.guard_builtin_cache = Some(targets)
   targets
 }
 
@@ -33,8 +51,8 @@ fn BasicBodyInferencer::guard_condition_facts(
   self : BasicBodyInferencer,
   expression : ExprId,
   truth : Bool,
-  targets : Map[DeclId, Bool],
-) -> Array[(ResolvedTypeId, ResolvedTypeId)] {
+  targets : Map[DeclId, Bytes],
+) -> Array[CompileTimeGuardFact] {
   let facts = []
   let work = [(expression, truth)]
   while work.length() > 0 {
@@ -71,11 +89,17 @@ fn BasicBodyInferencer::guard_condition_facts(
           }
           _ => continue
         }
-        if !targets.contains(declaration) {
-          continue
+        let name = match targets.get(declaration) {
+          Some(value) => value
+          None => continue
         }
         let arguments = self.explicit_call_type_arguments(expression)
-        if arguments.length != 2 {
+        let count = if name == b"types.is_unit" || name == b"types.is_never" {
+          1
+        } else {
+          2
+        }
+        if arguments.length != count {
           continue
         }
         guard program_specialization_span_is_valid(
@@ -84,11 +108,20 @@ fn BasicBodyInferencer::guard_condition_facts(
         ) else {
           abort("ARN-101 guarded trait query type arguments")
         }
+        let left = self.resolved.explicit_call_type_arguments[arguments.start]
+        let right = if count == 2 {
+          self.resolved.explicit_call_type_arguments[arguments.start + 1]
+        } else if name == b"types.is_unit" {
+          self.resolved.primitive(UnitType)
+        } else {
+          self.resolved.primitive(NeverType)
+        }
         facts.push(
-          (
-            self.resolved.explicit_call_type_arguments[arguments.start],
-            self.resolved.explicit_call_type_arguments[arguments.start + 1],
-          ),
+          if name == b"types.implements" {
+            TraitGuardFact(left, right)
+          } else {
+            EqualGuardFact(left, right)
+          },
         )
       }
       _ => ()
@@ -101,7 +134,7 @@ fn BasicBodyInferencer::guard_condition_facts(
 fn BasicBodyInferencer::mark_guard_scope(
   self : BasicBodyInferencer,
   root : CompileTimeGuardWalk,
-  facts : Array[(ResolvedTypeId, ResolvedTypeId)],
+  facts : Array[CompileTimeGuardFact],
 ) -> Unit {
   if facts.is_empty() {
     return
@@ -245,21 +278,14 @@ fn BasicBodyInferencer::mark_guard_scope(
 }
 
 ///|
-fn BasicBodyInferencer::guarded_trait_evidence(
+fn BasicBodyInferencer::prepare_guard_scopes(
   self : BasicBodyInferencer,
-  expression : ExprId,
-  parameter : GenericParameterId,
-  trait_filter : DeclId?,
-  method_name : NameId,
-) -> Array[DeclaredBodyTraitEvidence] {
-  if expression < 0 {
-    return []
-  }
+) -> Unit {
   if !self.guarded_trait_scopes_ready {
     self.guarded_trait_scopes_ready = true
     let targets = self.guard_builtin_targets()
     if targets.is_empty() {
-      return []
+      return
     }
     // Include enclosing lambda scopes. Facts are indexed by semantic source
     // expression ID, so a sibling body cannot borrow another body's evidence.
@@ -289,9 +315,26 @@ fn BasicBodyInferencer::guarded_trait_evidence(
       }
     }
   }
+}
+
+///|
+fn BasicBodyInferencer::guarded_trait_evidence(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+  parameter : GenericParameterId,
+  trait_filter : DeclId?,
+  method_name : NameId,
+) -> Array[DeclaredBodyTraitEvidence] {
+  if expression < 0 {
+    return []
+  }
+  self.prepare_guard_scopes()
   let result = []
   for fact in self.guarded_trait_scopes.get(expression).unwrap_or([]) {
-    let (target, bound_type) = fact
+    let (target, bound_type) = match fact {
+      TraitGuardFact(target, bound_type) => (target, bound_type)
+      _ => continue
+    }
     if self.resolved.types[target] != GenericParameterType(parameter) {
       continue
     }

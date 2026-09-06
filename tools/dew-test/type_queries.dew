@@ -33,6 +33,30 @@ impl<t: QueryRead> QueryRead for QueryBox<t> {
   }
 }
 
+fn query_unit_join<t>(fallback: t) -> t {
+  if is_unit::<t>() {
+    ()
+  } else {
+    fallback
+  }
+}
+
+fn query_negated_unit_join<t>(fallback: t) -> t {
+  if !is_unit::<t>() {
+    fallback
+  } else {
+    ()
+  }
+}
+
+fn query_equal_aliases<a, b>(value: a) -> I32 {
+  if type_equal::<a, b>() && type_equal::<b, I32>() && type_equal::<b, a>() {
+    value + 1i32
+  } else {
+    0i32
+  }
+}
+
 fn query_guarded_read<t>(value: t) -> I32 {
   if implements::<t, QueryRead>() {
     value.query_read()
@@ -44,6 +68,34 @@ fn query_guarded_read<t>(value: t) -> I32 {
 fn query_guarded_into<t>(value: t) -> I64 {
   if implements::<t, Into<I64>>() {
     value.into()
+  } else {
+    0i64
+  }
+}
+
+fn query_accept_unit(value: Unit) -> I32 {
+  62i32
+}
+
+fn query_unit_argument<t>(value: t) -> I32 {
+  if is_unit::<t>() {
+    query_accept_unit(value)
+  } else {
+    0i32
+  }
+}
+
+fn query_equal_increment<t>(value: t) -> t {
+  if type_equal::<t, I32>() {
+    return value + 1i32
+  } else {
+    return value
+  }
+}
+
+fn query_equal_field<t>(value: t) -> I64 {
+  if type_equal::<t, QueryBox<I64>>() {
+    value.item
   } else {
     0i64
   }
@@ -447,6 +499,21 @@ pub fn main(case: U32) -> Bool {
     }
     let read = query_guarded_reader::<QueryBox<I32>>(box)
     read() == 61i32
+  } else if case == 61u32 {
+    query_unit_argument::<Unit>(()) == 62i32 && query_unit_argument::<I64>(9i64) == 0i32
+  } else if case == 62u32 {
+    query_equal_increment::<I32>(62i32) == 63i32 && query_equal_increment::<I64>(64i64) == 64i64
+  } else if case == 63u32 {
+    let box = QueryBox::{
+      item: 65i64
+    }
+    query_equal_field::<QueryBox<I64>>(box) == 65i64 && query_equal_field::<Unit>(()) == 0i64
+  } else if case == 64u32 {
+    query_unit_join::<Unit>(())
+    query_negated_unit_join::<Unit>(())
+    query_unit_join::<I64>(66i64) == 66i64 && query_negated_unit_join::<I64>(67i64) == 67i64
+  } else if case == 65u32 {
+    query_equal_aliases::<I32, I32>(67i32) == 68i32 && query_equal_aliases::<Unit, I64>(()) == 0i32
   } else {
     false
   }

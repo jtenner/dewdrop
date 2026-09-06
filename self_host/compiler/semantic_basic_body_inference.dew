@@ -505,6 +505,8 @@ struct SelfHostBasicBodyInferencer {
   pending_member_equations: Array<SelfHostPendingMemberEquation>
   guarded_trait_scopes: Map<U32, Array<SelfHostCompileTimeGuardFact>>
   mut guarded_trait_scopes_ready: Bool
+  pending_guarded_joins: Array<U32>
+  mut guard_builtin_cache: Option<Map<U64, Bytes>>
   module_value_import_tasks: Array<SelfHostModuleValueImportTask>
   module_value_import_results: Array<I32>
   module_value_import_cache: Array<I32>
@@ -609,6 +611,8 @@ impl SelfHostBasicBodyInferencer {
       pending_member_equations: []
       guarded_trait_scopes: self_host_empty_guard_scopes()
       guarded_trait_scopes_ready: false
+      pending_guarded_joins: []
+      guard_builtin_cache: Option::None
       module_value_import_tasks: []
       module_value_import_results: []
       module_value_import_cache: []
@@ -745,7 +749,7 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn expression_type(self, expression: U32) -> I32 {
-    self.expression_types[self.expression_index(expression)]
+    self.guard_refined_type(self.expression_types[self.expression_index(expression)], expression)
   }
 
   fn store_call_target(
@@ -7544,7 +7548,7 @@ impl SelfHostBasicBodyInferencer {
           } else {
             self.constrain_assignable(
               self.expression_type(value),
-              self.declared_return_type,
+              self.guard_refined_type(self.declared_return_type, value),
               self_host_return_type_origin(value, offset),
             )
           }
@@ -7556,6 +7560,8 @@ impl SelfHostBasicBodyInferencer {
               // No branch completes with a value. Skipping both Never inputs
               // would leave an unconstrained result variable behind.
               self.constrain(self.expression_type(current), self.primitive(SelfHostPrimitiveType::NeverType), self_host_expression_type_origin(current, offset))
+            } else if self.guard_has_condition_facts(condition) {
+              self.pending_guarded_joins.push(current)
             } else {
               self.constrain_assignable(self.block_type(block), self.expression_type(current), self_host_expression_type_origin(current, offset))
               self.constrain_assignable(self.expression_type(alternative), self.expression_type(current), self_host_expression_type_origin(current, offset))
@@ -7900,6 +7906,7 @@ impl SelfHostBasicBodyInferencer {
     self.constrain_control_results()
     self.constrain_root()
     self.constrain_pending_direct_calls()
+    self.constrain_guarded_joins()
     self.constrain_pending_variant_calls()
     self.constrain_pending_variant_values()
     self.constrain_pending_constructions()

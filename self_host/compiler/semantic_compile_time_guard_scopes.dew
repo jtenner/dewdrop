@@ -2,7 +2,12 @@ open dew.std.array
 open dew.std.map
 open dew.std.option
 
+fn self_host_guard_builtin(name: Bytes) -> Bool {
+  name == b"types.implements" || name == b"types.type_equal" || name == b"types.is_unit" || name == b"types.is_never"
+}
+
 struct SelfHostCompileTimeGuardFact {
+  is_trait: Bool
   target: U32
   bound: U32
 }
@@ -28,7 +33,7 @@ fn self_host_empty_guard_facts() -> Array<SelfHostCompileTimeGuardFact> {
 
 fn self_host_guard_add_fact(facts: Array<SelfHostCompileTimeGuardFact>, fact: SelfHostCompileTimeGuardFact) -> Unit {
   for previous in facts {
-    if previous.target == fact.target && previous.bound == fact.bound {
+    if previous.is_trait == fact.is_trait && previous.target == fact.target && previous.bound == fact.bound {
       return
     }
   }
@@ -36,25 +41,30 @@ fn self_host_guard_add_fact(facts: Array<SelfHostCompileTimeGuardFact>, fact: Se
 }
 
 impl SelfHostBasicBodyInferencer {
-  fn guard_builtin_targets(self) -> Map<U64, Bool> {
-    let targets = self_host_empty_u64_bool_map()
+  fn guard_builtin_targets(self) -> Map<U64, Bytes> {
+    match self.guard_builtin_cache {
+      Option::Some(targets) => return targets
+      Option::None => {}
+    }
+    let targets = self_host_compile_time_target_map()
     for entry in self.collected.builtins {
-      if entry.builtin_name == b"types.implements" {
-        targets.set(entry.declaration, true)
+      if self_host_guard_builtin(entry.builtin_name) {
+        targets.set(entry.declaration, entry.builtin_name)
       }
     }
     for callable in self.imported.callables {
       match callable.kind {
-        SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(name) => if name == b"types.implements" {
-          targets.set(callable.declaration, true)
+        SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(name) => if self_host_guard_builtin(name) {
+          targets.set(callable.declaration, name)
         }
         _ => {}
       }
     }
+    self.guard_builtin_cache = Option::Some(targets)
     targets
   }
 
-  fn guard_condition_facts(self, expression: U32, truth: Bool, targets: Map<U64, Bool>) -> Array<SelfHostCompileTimeGuardFact> {
+  fn guard_condition_facts(self, expression: U32, truth: Bool, targets: Map<U64, Bytes>) -> Array<SelfHostCompileTimeGuardFact> {
     let facts = self_host_empty_guard_facts()
     let work = [SelfHostCompileTimeGuardCondition::{
       expression: expression
@@ -91,12 +101,29 @@ impl SelfHostBasicBodyInferencer {
                 _ => 18446744073709551615u64
               }
               if targets.contains_key(declaration) {
+                let name = match targets.get(declaration) {
+                  Option::Some(value) => value
+                  Option::None => unreachable()
+                }
+                let arity = if name == b"types.is_unit" || name == b"types.is_never" {
+                  1u32
+                } else {
+                  2u32
+                }
                 let span = self_host_hir_span_at(self.collected.explicit_call_type_argument_spans, item.expression)
-                if span.length == 2u32 {
+                if span.length == arity {
                   self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.resolved.explicit_call_type_arguments.length()), "ARN-101 guarded type arguments")
+                  let other = if arity == 2u32 {
+                    self.resolved.explicit_call_type_arguments[span.start + 1u32]
+                  } else if name == b"types.is_unit" {
+                    self.resolved.primitive(SelfHostPrimitiveType::UnitType)
+                  } else {
+                    self.resolved.primitive(SelfHostPrimitiveType::NeverType)
+                  }
                   self_host_guard_add_fact(facts, SelfHostCompileTimeGuardFact::{
+                    is_trait: name == b"types.implements"
                     target: self.resolved.explicit_call_type_arguments[span.start]
-                    bound: self.resolved.explicit_call_type_arguments[span.start + 1u32]
+                    bound: other
                   })
                 }
               }
@@ -306,7 +333,7 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn guarded_trait_bounds(self, expression: U32, parameter: U64) -> Array<U32> {
+  fn prepare_guard_scopes(self) -> Unit {
     if !self.guarded_trait_scopes_ready {
       self.guarded_trait_scopes_ready = true
       let targets = self.guard_builtin_targets()
@@ -324,11 +351,15 @@ impl SelfHostBasicBodyInferencer {
         }
       }
     }
+  }
+
+  fn guarded_trait_bounds(self, expression: U32, parameter: U64) -> Array<U32> {
+    self.prepare_guard_scopes()
     let result = self_host_empty_semantic_ids()
     match self.guarded_trait_scopes.get(expression) {
       Option::Some(facts) => for fact in facts {
         match self.resolved.types[fact.target] {
-          SelfHostResolvedType::GenericParameterType(id) => if id == parameter {
+          SelfHostResolvedType::GenericParameterType(id) => if fact.is_trait && id == parameter {
             result.push(fact.bound)
           }
           _ => {}

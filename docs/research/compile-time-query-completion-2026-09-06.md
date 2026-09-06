@@ -48,6 +48,22 @@ bootstrap with identical raw and linked bytes:
 The 157.305 s total, 37.336 s A build, and 51.952 s B-to-C run remain performance
 bugs. Final bootstrap must run again after the remaining query changes.
 
+## Branch-local type equality
+
+Both inferencers now refine reads under positive `is_unit`, `is_never`, and
+`type_equal` facts without rebinding a shared generic parameter or local slot.
+Transitive equalities use bounded representative walks. Expected return types
+are checked under the same facts. Guarded `if` joins wait for surrounding return,
+local, and call contracts; each arm then checks the result in its own scope.
+Two non-returning arms still establish Never before the outer return check.
+Builtin identity tables are cached per body instead of rebuilt for every read.
+
+The shared fixture passes 67 execution checks in both compilers: native build
+9.406 s, execution 0.030 s; self-host hardening 40.829 s with 203 tests and 29
+invariant records. The native query suite has 61 passing tests and one new red
+test for passing an `implements` proof to an ordinary bounded function. That
+case is the next unit of work. General deferred branch checking is not complete.
+
 ## Native guarded trait calls
 
 `implements<T, Trait>()` supplies branch-local proof of the exact trait
