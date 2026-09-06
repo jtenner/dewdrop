@@ -1323,7 +1323,7 @@ fn runtime_trait_evidence_is_concrete(
     return false
   }
   match module_.trait_evidence[evidence].kind {
-    BoundInferredTraitEvidence(_) => false
+    BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) => false
     ConcreteInferredTraitEvidence(_, arguments) => {
       for index in 0..<arguments.length {
         match module_.trait_evidence_arguments[arguments.start + index] {
@@ -1463,7 +1463,8 @@ fn runtime_trait_direct_call_candidate(
     module_.trait_evidence[evidence].kind {
     ConcreteInferredTraitEvidence(implementation, arguments) =>
       (implementation, arguments)
-    BoundInferredTraitEvidence(_) => return None
+    BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) =>
+      return None
   }
   if runtime_trait_owner_type_arguments(
       module_,
@@ -1708,7 +1709,7 @@ fn runtime_trait_directize_candidate(
   }
   let owner_arguments = match module_.trait_evidence[candidate.evidence].kind {
     ConcreteInferredTraitEvidence(_, arguments) => arguments
-    BoundInferredTraitEvidence(_) => return
+    BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) => return
   }
   let concrete_type_arguments = match
     runtime_trait_owner_type_arguments(

@@ -12,6 +12,51 @@ priv enum CompileTimeGuardFact {
 } derive(Eq)
 
 ///|
+fn BasicBodyInferencer::guarded_trait_obligation(
+  self : BasicBodyInferencer,
+  target : BodyTypeId,
+  bound : BodyTypeId,
+  trait_declaration : DeclId,
+  origin : TypeConstraintOrigin,
+) -> (ResolvedTypeId, ResolvedTypeId)? {
+  match origin.kind {
+    CallTypeConstraint | OperatorTypeConstraint | ExpressionTypeConstraint => ()
+    _ => return None
+  }
+  let expression = origin.source
+  self.prepare_guard_scopes()
+  let facts = match self.guarded_trait_scopes.get(expression) {
+    Some(facts) => facts
+    None => return None
+  }
+  for fact in facts {
+    let (source_target, source_bound) = match fact {
+      TraitGuardFact(target, bound) => (target, bound)
+      _ => continue
+    }
+    if self.resolved_bound_trait(source_bound) != Some(trait_declaration) {
+      continue
+    }
+    let refined_target = self.guard_refined_type(
+      self.solver.resolved_type(source_target),
+      expression,
+    )
+    let refined_bound = self.guard_refined_type(
+      self.solver.resolved_type(source_bound),
+      expression,
+    )
+    let snapshot = self.solver.snapshot()
+    let viable = self.solver.unify(target, refined_target, origin) &&
+      self.solver.unify(bound, refined_bound, origin)
+    self.solver.rollback(snapshot)
+    if viable {
+      return Some((source_target, source_bound))
+    }
+  }
+  None
+}
+
+///|
 fn compile_time_guard_builtin(name : Bytes) -> Bool {
   name == b"types.implements" ||
   name == b"types.type_equal" ||

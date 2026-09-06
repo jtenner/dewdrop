@@ -1894,6 +1894,11 @@ fn ib_write_evidence(
       writer.write_byte(1)
       ib_write_int(writer, i)
     }
+    GuardedInferredTraitEvidence(target, bound) => {
+      writer.write_byte(2)
+      ib_write_int(writer, target)
+      ib_write_int(writer, bound)
+    }
   }
   ib_write_span(writer, value.prerequisites)
 }
@@ -1910,6 +1915,11 @@ fn ib_read_evidence(
         ib_read_span(reader, field),
       )
     1 => BoundInferredTraitEvidence(ib_read_int(reader, field))
+    2 =>
+      GuardedInferredTraitEvidence(
+        ib_read_int(reader, field),
+        ib_read_int(reader, field),
+      )
     _ => {
       reader.fail(field, "unknown evidence-kind discriminant")
       BoundInferredTraitEvidence(0)

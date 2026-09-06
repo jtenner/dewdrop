@@ -833,6 +833,8 @@ type CompileTimeReachTask
 
 type CompileTimeSpecializedBody
 
+type CompileTimeTraitWitness
+
 type CompileTimeType derive(Eq, @debug.Debug)
 
 type CompileTimeTypeError derive(Eq, @debug.Debug)
@@ -1402,6 +1404,7 @@ pub enum InferredTraitEvidenceArgument {
 pub enum InferredTraitEvidenceKind {
   ConcreteInferredTraitEvidence(UInt64, HirSpan)
   BoundInferredTraitEvidence(Int)
+  GuardedInferredTraitEvidence(Int, Int)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub enum InferredTraitObjectCoercion {

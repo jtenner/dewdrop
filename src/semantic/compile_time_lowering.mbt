@@ -209,7 +209,12 @@ fn fold_module_compile_time_queries(
   fold_program_constants([module_])
   prune_compile_time_branches(module_, active)
   if evidence is Some(search) {
-    resolve_compile_time_guarded_calls(context, module_, bindings, active, search)
+    resolve_compile_time_guarded_evidence(
+      context, module_, bindings, active, search,
+    )
+    resolve_compile_time_guarded_calls(
+      context, module_, bindings, active, search,
+    )
   }
   for expression, source in module_.expressions {
     if !compile_time_in_body(module_, expression, active) ||

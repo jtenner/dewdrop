@@ -145,7 +145,8 @@ fn program_reachable_callable_roots(
     for evidence in module_.trait_evidence {
       let implementation = match evidence.kind {
         ConcreteInferredTraitEvidence(implementation, _) => implementation
-        BoundInferredTraitEvidence(_) => continue
+        BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) =>
+          continue
       }
       let owner_index = match
         module_lookup.get(semantic_id_module(implementation)) {
@@ -932,6 +933,14 @@ fn resolve_program_lowering_evidence_node_with_specialization(
   }
   let source = lowering.trait_evidence[source_node]
   match source.kind {
+    GuardedInferredTraitEvidence(_, _) => {
+      if has_specialization {
+        abort(
+          "CT-041 branch evidence reached physical specialization unresolved",
+        )
+      }
+      -1
+    }
     BoundInferredTraitEvidence(slot) => {
       if !has_specialization ||
         slot < 0 ||
@@ -1154,7 +1163,8 @@ pub fn program_runtime_trait_evidence_parameter(
   }
   let slot = match lowering.trait_evidence[source_node].kind {
     BoundInferredTraitEvidence(value) => value
-    ConcreteInferredTraitEvidence(_, _) => return None
+    ConcreteInferredTraitEvidence(_, _) | GuardedInferredTraitEvidence(_, _) =>
+      return None
   }
   program_runtime_trait_evidence_slot_parameter(
     fragments, specialization_evidence, slot,
@@ -2054,7 +2064,8 @@ fn materialize_program_trait_dictionary_methods(
       }
       let arguments = match owner.trait_evidence[dictionary.evidence].kind {
         ConcreteInferredTraitEvidence(_, arguments) => arguments
-        BoundInferredTraitEvidence(_) => continue
+        BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) =>
+          continue
       }
       if arguments.length == 0 {
         continue
@@ -2500,6 +2511,7 @@ fn program_collect_external_runtime_trait_uses(
       SelectedInferredTraitObjectCoercion(trait_, evidence) =>
         if evidence >= 0 && evidence < module_.trait_evidence.length() {
           match module_.trait_evidence[evidence].kind {
+            GuardedInferredTraitEvidence(_, _) => ()
             BoundInferredTraitEvidence(_) =>
               program_append_external_runtime_trait(
                 traits_by_module, seen_traits, module_index, trait_,
@@ -2597,6 +2609,7 @@ fn program_external_runtime_evidence_class(
   }
   let node = lowering.trait_evidence[evidence]
   match node.kind {
+    GuardedInferredTraitEvidence(_, _) => None
     BoundInferredTraitEvidence(slot) => {
       if slot < 0 ||
         slot >= parameter_classes.length() ||
@@ -2704,7 +2717,7 @@ fn program_collect_external_runtime_evidence_implementation_uses(
           }
         }
       }
-    BoundInferredTraitEvidence(_) => ()
+    BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) => ()
   }
   if node.prerequisites.start < 0 ||
     node.prerequisites.start + node.prerequisites.length >
@@ -2879,6 +2892,7 @@ fn program_runtime_trait_evidence_is_forwardable(
     return false
   }
   match node.kind {
+    GuardedInferredTraitEvidence(_, _) => false
     BoundInferredTraitEvidence(_) => node.prerequisites.length == 0
     ConcreteInferredTraitEvidence(_, _) => {
       for index in 0..<node.prerequisites.length {
@@ -2954,6 +2968,7 @@ fn program_runtime_trait_fallback_evidence(
           return None
         }
         match module_.trait_evidence[evidence].kind {
+          GuardedInferredTraitEvidence(_, _) => return None
           BoundInferredTraitEvidence(slot) =>
             match used_traits.get(slot) {
               Some(existing) if existing != trait_ => return None

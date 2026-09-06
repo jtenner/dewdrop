@@ -951,7 +951,10 @@ fn BasicBodyInferencer::expression_type(
   self : BasicBodyInferencer,
   expression : ExprId,
 ) -> BodyTypeId {
-  self.guard_refined_type(self.expression_types[self.expression_index(expression)], expression)
+  self.guard_refined_type(
+    self.expression_types[self.expression_index(expression)],
+    expression,
+  )
 }
 
 ///|
@@ -3353,6 +3356,8 @@ fn merge_job_trait_evidence(
           length: arguments.length,
         })
       BoundInferredTraitEvidence(slot) => BoundInferredTraitEvidence(slot)
+      GuardedInferredTraitEvidence(target, bound) =>
+        GuardedInferredTraitEvidence(target, bound)
     }
     trait_evidence.push({
       kind,

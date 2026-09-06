@@ -544,6 +544,10 @@ fn BasicBodyInferencer::trait_obligation_satisfied_at_depth(
     ) {
     return true
   }
+  if self.guarded_trait_obligation(target, bound, trait_declaration, origin)
+    is Some(_) {
+    return true
+  }
   let head = match self.body_impl_target_head(target) {
     Some(value) => value
     None => return false
@@ -735,6 +739,15 @@ fn BasicBodyInferencer::select_trait_obligation_evidence_at_depth(
       return Some(node)
     }
     None => ()
+  }
+  if self.guarded_trait_obligation(target, bound, trait_declaration, origin)
+    is Some((source_target, source_bound)) {
+    let node = self.trait_evidence.length()
+    self.trait_evidence.push({
+      kind: GuardedInferredTraitEvidence(source_target, source_bound),
+      prerequisites: { start: 0, length: 0, },
+    })
+    return Some(node)
   }
   let head = match self.body_impl_target_head(target) {
     Some(value) => value

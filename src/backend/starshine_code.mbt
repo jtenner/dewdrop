@@ -5763,6 +5763,8 @@ fn starshine_finish_trait_object_coercion(
       let implementation = if evidence >= 0 &&
         evidence < lowering.trait_evidence.length() {
         match lowering.trait_evidence[evidence].kind {
+          @semantic.GuardedInferredTraitEvidence(_, _) =>
+            abort("CT-041 branch evidence reached emission unresolved")
           @semantic.ConcreteInferredTraitEvidence(value, _) => value
           @semantic.BoundInferredTraitEvidence(_) => 0UL
         }

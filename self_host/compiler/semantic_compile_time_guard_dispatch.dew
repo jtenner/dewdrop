@@ -253,7 +253,12 @@ fn self_host_resolve_guarded_calls(lowering: SelfHostPlannedProgramLowering, mod
                   Option::None => unreachable()
                 }
               }
-              _ => {}
+              _ => if callable.owner_generic_parameters.length > 0u32 || callable.generic_parameters.length > 0u32 {
+                // A retained generic helper can contain bound calls even when
+                // it has no query of its own. Keep the caller's logical types
+                // through that edge so its selected body can resolve them.
+                lowering.compile_time.sensitive.set(requirement, true)
+              }
             }
             Option::None => {}
           }

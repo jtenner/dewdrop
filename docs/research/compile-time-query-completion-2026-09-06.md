@@ -64,6 +64,25 @@ invariant records. The native query suite has 61 passing tests and one new red
 test for passing an `implements` proof to an ordinary bounded function. That
 case is the next unit of work. General deferred branch checking is not complete.
 
+## Guarded ordinary function bounds
+
+Native inference retains a distinct guarded evidence node containing the source
+target and trait type IDs. It is not a fake dictionary slot. A selected live
+instance resolves it to the same unique implementation/prerequisite witness
+used by `implements`. Cache codecs round-trip the new node (version 1, evidence
+tag 2). Runtime forwarding and physical emission cannot treat it as concrete
+evidence. A sibling branch still reports an unsatisfied trait obligation.
+
+Self-host selected bodies now keep exact logical keys through retained generic
+helper calls too. The new fixture first exposed missing bound-method targets in
+`query_bounded_read`; preserving that call edge lets its selected body resolve
+both scalar and generic-record implementations. Both compilers now pass 68
+shared checks, including an erased false branch and a nested prerequisite.
+Self-host hardening passes 203 tests and 29 invariant records in 40.047 s.
+The two native proof/cache/scope tests pass; the complete native lane passes
+873 tests in 65.231 s. Semantic tests take 35.866 s; that and the aggregate runs
+remain performance bugs. General deferred branch checking is still open.
+
 ## Native guarded trait calls
 
 `implements<T, Trait>()` supplies branch-local proof of the exact trait

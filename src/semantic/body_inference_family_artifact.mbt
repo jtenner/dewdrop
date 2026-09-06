@@ -602,6 +602,10 @@ fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool 
           return false
         }
       BoundInferredTraitEvidence(_) => ()
+      GuardedInferredTraitEvidence(target, bound) =>
+        if target < 0 || bound < 0 || evidence.prerequisites.length != 0 {
+          return false
+        }
     }
   }
   for coercion in job.trait_object_coercions {

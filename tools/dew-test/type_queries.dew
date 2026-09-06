@@ -57,6 +57,18 @@ fn query_equal_aliases<a, b>(value: a) -> I32 {
   }
 }
 
+fn query_bounded_read<t: QueryRead>(value: t) -> I32 {
+  value.query_read()
+}
+
+fn query_guarded_bounded_read<t>(value: t) -> I32 {
+  if implements::<t, QueryRead>() {
+    query_bounded_read(value)
+  } else {
+    0i32
+  }
+}
+
 fn query_guarded_read<t>(value: t) -> I32 {
   if implements::<t, QueryRead>() {
     value.query_read()
@@ -514,6 +526,11 @@ pub fn main(case: U32) -> Bool {
     query_unit_join::<I64>(66i64) == 66i64 && query_negated_unit_join::<I64>(67i64) == 67i64
   } else if case == 65u32 {
     query_equal_aliases::<I32, I32>(67i32) == 68i32 && query_equal_aliases::<Unit, I64>(()) == 0i32
+  } else if case == 66u32 {
+    let box = QueryBox::{
+      item: 69i32
+    }
+    query_guarded_bounded_read::<I32>(68i32) == 68i32 && query_guarded_bounded_read::<Unit>(()) == 0i32 && query_guarded_bounded_read::<QueryBox<I32>>(box) == 69i32
   } else {
     false
   }

@@ -2966,6 +2966,8 @@ fn append_wasmgc_trait_evidence_key(
     return
   }
   match lowering.trait_evidence[evidence].kind {
+    GuardedInferredTraitEvidence(target, bound) =>
+      output.write_string_utf8("g\{target}:\{bound}")
     BoundInferredTraitEvidence(slot) => {
       output.write_string_utf8("b")
       output.write_string_utf8(slot.to_string())
@@ -3032,7 +3034,8 @@ fn wasmgc_trait_evidence_runtime_materialized(
   }
   let node = lowering.trait_evidence[evidence]
   match node.kind {
-    BoundInferredTraitEvidence(_) => return false
+    BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) =>
+      return false
     ConcreteInferredTraitEvidence(_, arguments) =>
       for index in 0..<arguments.length {
         match lowering.trait_evidence_arguments[arguments.start + index] {
@@ -3068,7 +3071,7 @@ fn wasmgc_trait_evidence_implementation(
   }
   match lowering.trait_evidence[evidence].kind {
     ConcreteInferredTraitEvidence(implementation, _) => Some(implementation)
-    BoundInferredTraitEvidence(_) => None
+    BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) => None
   }
 }
 

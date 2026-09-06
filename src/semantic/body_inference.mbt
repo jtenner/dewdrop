@@ -187,6 +187,9 @@ pub enum InferredTraitObjectCoercion {
 pub enum InferredTraitEvidenceKind {
   ConcreteInferredTraitEvidence(DeclId, HirSpan)
   BoundInferredTraitEvidence(Int)
+  // Source type identities, not a dictionary slot. Resolve only in a live
+  // selected body with exact logical arguments.
+  GuardedInferredTraitEvidence(ResolvedTypeId, ResolvedTypeId)
 } derive(Eq, Debug, ToJson, FromJson)
 
 ///|
