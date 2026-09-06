@@ -79,6 +79,7 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
     declaration: request.declaration
     evidence_types: request.evidence_types.copy()
     module_: module_
+    guarded_evidence: self_host_empty_guarded_evidence()
   })
   for body in module_.bodies {
     if body.declaration == request.declaration {

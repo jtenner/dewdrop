@@ -7,6 +7,11 @@ pub struct SelfHostCompileTimeInstance {
   declaration: U64
   evidence_types: Array<SelfHostSpecializationEvidenceType>
   module_: SelfHostPlannedModuleLowering
+  guarded_evidence: Map<U32, Array<SelfHostCompileTimeTraitWitness>>
+}
+
+fn self_host_empty_guarded_evidence() -> Map<U32, Array<SelfHostCompileTimeTraitWitness>> {
+  Map::empty()
 }
 
 pub struct SelfHostCompileTimeProgramContext {

@@ -41,6 +41,26 @@ fn query_guarded_read<t>(value: t) -> I32 {
   }
 }
 
+fn query_guarded_into<t>(value: t) -> I64 {
+  if implements::<t, Into<I64>>() {
+    value.into()
+  } else {
+    0i64
+  }
+}
+
+fn query_guarded_reader<t>(value: t) -> fn() -> I32 {
+  if implements::<t, QueryRead>() {
+    fn() -> I32 {
+      value.query_read()
+    }
+  } else {
+    fn() -> I32 {
+      0i32
+    }
+  }
+}
+
 impl QueryMark for QueryLeft {
 }
 
@@ -415,6 +435,18 @@ pub fn main(case: U32) -> Bool {
       item: 9i64
     }
     query_guarded_read::<QueryBox<I32>>(yes) == 58i32 && query_guarded_read::<QueryBox<I64>>(no) == 0i32
+  } else if case == 58u32 {
+    query_guarded_into::<I32>(59i32) == 59i64 && query_guarded_into::<Unit>(()) == 0i64
+  } else if case == 59u32 {
+    let read = query_guarded_reader::<I32>(60i32)
+    let absent = query_guarded_reader::<Unit>(())
+    read() == 60i32 && absent() == 0i32
+  } else if case == 60u32 {
+    let box = QueryBox::{
+      item: 61i32
+    }
+    let read = query_guarded_reader::<QueryBox<I32>>(box)
+    read() == 61i32
   } else {
     false
   }

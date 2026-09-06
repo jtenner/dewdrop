@@ -3,6 +3,32 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Imported and captured guard proofs
+
+Both paths now pass 62 shared execution checks. The additions cover an imported
+`Into<I64>` requirement, a captured scalar proof, an erased capture on the false
+branch, and a captured generic implementation with a prerequisite. Imported
+implementation indexes now retain their exact requirement declaration IDs.
+Name lookup happens within that trait's source contract, not during physical
+call selection. The self-host inferencer instantiates imported owner and method
+generic parameters from the consumer's imported arenas.
+
+The native final call checker now visits emitted functions and their selected
+bodies. It no longer reports a generic trait request from a discarded template.
+Call-map checks include the caller specialization identity. The self-host plan
+keeps captured proof trees by global expression ID in the selected instance;
+lambda IDs cannot index the root body's relative evidence table.
+
+Native generation passed in 9.217 s and execution in 0.029 s. Hardening passed
+203 tests, 29 invariant records, and 62 query checks in 30.545 s. The aggregate
+time remains a performance bug. General branch-local type checking remains open.
+The routine native lane passes 866 tests in 86.879 s. Semantic tests (39.693 s)
+and backend tests (35.262 s) are still over the per-run budget.
+During this work, a direct struct-field assignment from an `if` expression also
+exposed a native heap-type narrowing gap. Assigning each branch's known span
+directly avoids that gap here; the broader reference-boundary audit must still
+cover conditional field writes.
+
 ## Native guarded trait calls
 
 `implements<T, Trait>()` supplies branch-local proof of the exact trait

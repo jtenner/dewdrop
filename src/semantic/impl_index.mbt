@@ -1795,9 +1795,23 @@ pub fn build_module_impl_index_with_imports(
   )
   let local_implementation_count = index.implementations.length()
   let imported_impl_callables : Map[DeclId, Array[FrozenInterfaceCallable]] = Map::default()
+  let requirements : Map[(DeclId, String), DeclId] = {}
+  for method in collected.methods {
+    if method.kind == TraitMethodDecl {
+      requirements[(method.parent, collected.name(method.name))] = method.id
+    }
+  }
   for interface_index in imports.scope.imported_interfaces {
     let interface_ = imports.scope.interfaces[interface_index].unwrap()
     for callable in interface_.callables {
+      if callable.kind is FrozenTraitCallable(owner) {
+        let key = (owner, callable.name)
+        guard requirements.get(key) is None ||
+          requirements.get(key) == Some(callable.declaration) else {
+          abort("EVD-212 duplicate imported trait requirement identity")
+        }
+        requirements[key] = callable.declaration
+      }
       let owner = match callable.kind {
         FrozenImplCallable(owner) => owner
         _ => continue
@@ -1841,7 +1855,11 @@ pub fn build_module_impl_index_with_imports(
           let method_index = index.methods.length()
           index.methods.push({
             declaration: callable.declaration,
-            requirement: None,
+            requirement: match kind {
+              TraitIndexedImpl(trait_) =>
+                requirements.get((trait_, callable.name))
+              InherentIndexedImpl => None
+            },
             instance,
           })
           let name = match collected.find_name(callable.name) {

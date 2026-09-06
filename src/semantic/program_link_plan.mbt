@@ -691,8 +691,34 @@ fn program_link_validate_calls(
   evidence_function_references : Array[PlannedProgramEvidenceFunctionReference],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Unit {
-  for module_ in lowering.modules {
-    for expression_index, expression in module_.expressions {
+  for caller in functions {
+    if caller.elided {
+      continue
+    }
+    let module_ = program_function_lowering(
+      lowering,
+      caller.module_index,
+      caller.specialization_abi_key,
+    )
+    let body = match caller.kind {
+      PlannedWasmDefinedFunction(body) =>
+        module_.bodies[semantic_id_local(body)]
+      PlannedWasmDefinedLambdaFunction(lambda) =>
+        match module_.lambda_body(lambda) {
+          Some(body) => body
+          None => abort("BOD-610 call verification lambda body is missing")
+        }
+      _ => continue
+    }
+    guard program_specialization_span_is_valid(
+      body.expressions,
+      module_.expressions.length(),
+    ) else {
+      abort("ARN-101 call verification body expressions")
+    }
+    for relative in 0..<body.expressions.length {
+      let expression_index = body.expressions.start + relative
+      let expression = module_.expressions[expression_index]
       let (target, type_arguments, function_reference) = match expression.kind {
         PlannedDirectCall(declaration, _, _, type_arguments)
         | PlannedTailCall(declaration, _, _, type_arguments)
@@ -775,7 +801,9 @@ fn program_link_validate_calls(
             }
             let mut specialized = false
             for call in specialized_calls {
-              if semantic_id_module(call.caller_body) == module_.module_id &&
+              if call.caller_body == body.body &&
+                call.caller_specialization_abi_key ==
+                caller.specialization_abi_key &&
                 call.expression == expression_index &&
                 call.target == target {
                 specialized = true

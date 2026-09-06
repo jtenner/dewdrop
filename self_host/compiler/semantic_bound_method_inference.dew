@@ -3,14 +3,52 @@ open dew.std.option
 impl SelfHostBasicBodyInferencer {
   fn begin_bound_method(self, trait_: U64, bound: U32, method: U64, receiver: I32) -> Unit {
     self.imported_instantiation_generics.clear()
-    self.instantiation_generics = self.collected.generic_parameters_of(trait_)
-    self.instantiation_method_generics = self.collected.generic_parameters_of(method)
+    let local = self_host_semantic_id_module(trait_) == self.collected.module_id
+    if local {
+      self.instantiation_generics = self.collected.generic_parameters_of(trait_)
+      self.instantiation_method_generics = self.collected.generic_parameters_of(method)
+    } else {
+      self.instantiation_generics = self_host_empty_hir_span(0u32)
+      self.instantiation_method_generics = self_host_empty_hir_span(0u32)
+    }
+    let owner_generics = if local {
+      self.instantiation_generics
+    } else {
+      match self.imported.type_generic_spans.get(trait_) {
+        Option::Some(span) => span
+        Option::None => self_host_empty_hir_span(0u32)
+      }
+    }
+    let method_generics = if local {
+      self.instantiation_method_generics
+    } else {
+      match self.imported_callable(method) {
+        Option::Some(callable) => callable.generic_parameters
+        Option::None => {
+          self_host_assert_compiler_invariant(false, "LNK-504 imported bound requirement is missing")
+          unreachable()
+        }
+      }
+    }
+    if !local {
+      for span in [owner_generics, method_generics] {
+        self_host_assert_array_span(span.start, span.length, self.imported.generic_parameter_ids.length(), "ARN-101 imported bound generic parameters")
+        let _ = while 0u32 {
+          index => if index < span.length {
+            self.imported_instantiation_generics.push(self.imported.generic_parameter_ids[span.start + index])
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+    }
     self.candidate_type_arguments.clear()
     let arguments = match self.resolved.types[bound] {
       SelfHostResolvedType::AppliedType(_, arguments) => arguments
       _ => self_host_empty_hir_span(0u32)
     }
-    let _ = self_host_assert_compiler_invariant(arguments.length == self.instantiation_generics.length, "declared trait bound argument count")
+    let _ = self_host_assert_compiler_invariant(arguments.length == owner_generics.length, "declared trait bound argument count")
     let _ = while 0u32 {
       index => if index < arguments.length {
         self.candidate_type_arguments.push(self.solver.resolved_type(self.resolved.type_arguments[arguments.start + index]))
@@ -20,7 +58,7 @@ impl SelfHostBasicBodyInferencer {
       }
     }
     let _ = while 0u32 {
-      index => if index < self.instantiation_method_generics.length {
+      index => if index < method_generics.length {
         self.candidate_type_arguments.push(self.solver.fresh_variable())
         continue index + 1u32
       } else {
@@ -31,24 +69,67 @@ impl SelfHostBasicBodyInferencer {
     self.instantiation_self_type = receiver
   }
 
-  fn bound_method_signature(self, expression: U32, receiver: U32, arguments: SelfHostHirSpan, offset: U32, trait_: U64, bound: U32, callable: U32) -> Bool {
-    let declaration = self.collected.callables[callable].declaration
-    let parameters = self.collected.parameters_of(declaration)
-    if self_host_u32_equal(parameters.length, 0u32) || !self_host_u32_equal(self_host_u32_subtract(parameters.length, 1u32), arguments.length) || !(self.collected.parameters[parameters.start].kind is SelfHostCollectedParameterKind::ReceiverParameterDecl) {
+  fn bound_parameter_type(self, local: Bool, index: U32) -> U32 {
+    if local {
+      self.resolved.parameter_types[index]
+    } else {
+      self.imported.parameter_types[index]
+    }
+  }
+
+  fn bound_method_signature(self, expression: U32, receiver: U32, arguments: SelfHostHirSpan, offset: U32, trait_: U64, bound: U32, declaration: U64) -> Bool {
+    let local = self_host_semantic_id_module(declaration) == self.collected.module_id
+    let imported = self.imported_callable(declaration)
+    let parameters = if local {
+      self.collected.parameters_of(declaration)
+    } else {
+      match imported {
+        Option::Some(callable) => callable.parameters
+        Option::None => return false
+      }
+    }
+    if parameters.length == 0u32 || parameters.length - 1u32 != arguments.length {
       return false
     }
+    let is_receiver = if local {
+      self.collected.parameters[parameters.start].kind is SelfHostCollectedParameterKind::ReceiverParameterDecl
+    } else {
+      self.imported.parameter_receivers[parameters.start]
+    }
+    if !is_receiver {
+      return false
+    }
+    let method_count = if local {
+      self.collected.generic_parameters_of(declaration).length
+    } else {
+      match imported {
+        Option::Some(callable) => callable.generic_parameters.length
+        Option::None => return false
+      }
+    }
+    let result_type = if local {
+      match self.local_callable_index_of_declaration(declaration) {
+        Option::Some(callable) => self.resolved.callable_return_types[callable]
+        Option::None => return false
+      }
+    } else {
+      match imported {
+        Option::Some(callable) => callable.result_type
+        Option::None => return false
+      }
+    }
     self.begin_bound_method(trait_, bound, declaration, self.expression_type(receiver))
-    if !self.apply_explicit_call_types(expression, self.instantiation_generics.length, self.instantiation_method_generics.length, offset) {
+    if !self.apply_explicit_call_types(expression, self.candidate_type_arguments.length() - method_count, method_count, offset) {
       return false
     }
     let origin = self_host_call_type_origin(expression, offset)
-    if !self.solver.unify(self.expression_type(receiver), self.instantiate_signature_type(self.resolved.parameter_types[parameters.start]), origin) {
+    if !self.solver.unify(self.expression_type(receiver), self.instantiate_signature_type(self.bound_parameter_type(local, parameters.start)), origin) {
       return false
     }
     let _ = while 0u32 {
       index => if index < arguments.length {
         let actual = self.expression_type(self.collected.expression_children[arguments.start + index])
-        let expected = self.instantiate_signature_type(self.resolved.parameter_types[self_host_u32_add(parameters.start, index + 1u32)])
+        let expected = self.instantiate_signature_type(self.bound_parameter_type(local, parameters.start + index + 1u32))
         if !self.is_primitive(actual, SelfHostPrimitiveType::NeverType) && !self.solver.unify(actual, expected, origin) {
           return false
         }
@@ -57,7 +138,7 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
-    self.solver.unify(self.expression_type(expression), self.instantiate_signature_type(self.resolved.callable_return_types[callable]), origin)
+    self.solver.unify(self.expression_type(expression), self.instantiate_signature_type(result_type), origin)
   }
 
   fn constrain_declared_bound_method(self, expression: U32, target: U32, receiver: U32, name: U32, arguments: SelfHostHirSpan, offset: U32) -> Bool {
@@ -93,7 +174,6 @@ impl SelfHostBasicBodyInferencer {
         candidates.push(bound)
       }
     }
-    let mut selected = 4294967295u32
     let mut selected_trait = 0u64
     let mut selected_bound = 0u32
     let mut first = 0u64
@@ -116,14 +196,13 @@ impl SelfHostBasicBodyInferencer {
                 match self.local_callable_index_of_declaration(method.id) {
                   Option::Some(callable) => {
                     let snapshot = self.solver.snapshot()
-                    let viable = self.bound_method_signature(expression, receiver, arguments, offset, trait_, bound, callable)
+                    let viable = self.bound_method_signature(expression, receiver, arguments, offset, trait_, bound, method.id)
                     self.solver.rollback(snapshot)
                     if viable && self.local_generics_require_evidence(method.id) {
                       needs_evidence = true
                     } else if viable {
                       if count == 0u32 {
                         first = method.id
-                        selected = callable
                         selected_trait = trait_
                         selected_bound = bound
                         guarded = index >= bounds.length
@@ -134,6 +213,31 @@ impl SelfHostBasicBodyInferencer {
                     }
                   }
                   Option::None => {}
+                }
+              }
+            }
+          } else {
+            for method in self.imported.callables {
+              let belongs = match method.kind {
+                SelfHostFrozenInterfaceCallableKind::FrozenTraitCallable(owner) => owner == trait_
+                _ => false
+              }
+              if belongs && method.name == self.collected.name(name) {
+                let snapshot = self.solver.snapshot()
+                let viable = self.bound_method_signature(expression, receiver, arguments, offset, trait_, bound, method.declaration)
+                self.solver.rollback(snapshot)
+                if viable && method.requires_evidence {
+                  needs_evidence = true
+                } else if viable {
+                  if count == 0u32 {
+                    first = method.declaration
+                    selected_trait = trait_
+                    selected_bound = bound
+                    guarded = index >= bounds.length
+                  } else if count == 1u32 {
+                    second = method.declaration
+                  }
+                  count = count + 1u32
                 }
               }
             }
@@ -155,7 +259,7 @@ impl SelfHostBasicBodyInferencer {
       return false
     }
     if count == 1u32 {
-      let valid = self.bound_method_signature(expression, receiver, arguments, offset, selected_trait, selected_bound, selected)
+      let valid = self.bound_method_signature(expression, receiver, arguments, offset, selected_trait, selected_bound, first)
       let _ = self_host_assert_compiler_invariant(valid, "selected declared bound signature changed after rollback")
       let start = self.call_type_arguments.length()
       self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)

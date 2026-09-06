@@ -45,7 +45,25 @@ fn self_host_guard_witness_node(evidence: SelfHostBasicBodyEvidence, witness: Se
   }
 }
 
-fn self_host_guard_store_evidence(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, witnesses: Array<SelfHostCompileTimeTraitWitness>) -> Unit {
+fn self_host_guard_store_evidence(lowering: SelfHostPlannedProgramLowering, specialization: U32, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, witnesses: Array<SelfHostCompileTimeTraitWitness>) -> Unit {
+  match lowering.compile_time.instances.get(specialization) {
+    Option::Some(instance) => instance.guarded_evidence.set(expression, witnesses)
+    Option::None => {
+      self_host_assert_compiler_invariant(false, "SPC-303 guarded proof has no selected instance")
+      unreachable()
+    }
+  }
+  if expression < body.expressions.start || expression - body.expressions.start >= body.expressions.length {
+    // Lambda expression IDs belong to their own span, not the root body's
+    // body-relative legacy evidence table. The selected instance owns the proof.
+    for lambda in module_.lambdas {
+      if lambda.root_body == body.body && expression >= lambda.expressions.start && expression - lambda.expressions.start < lambda.expressions.length {
+        return
+      }
+    }
+    self_host_assert_compiler_invariant(false, "ARN-102 guarded proof belongs to another body")
+    unreachable()
+  }
   match module_.evidence.evidence_body(body.declaration) {
     Option::Some(evidence) => {
       let roots = []
@@ -68,7 +86,7 @@ fn self_host_guard_store_evidence(module_: SelfHostPlannedModuleLowering, body: 
   }
 }
 
-fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, source: SelfHostPlannedExpression, callable: SelfHostPlannedCallable, trait_: U64, bindings: Map<U64, SelfHostCompileTimeType>, search: SelfHostCompileTimeEvidenceSearch) -> Result<SelfHostPlannedExpression, String> {
+fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, expression: U32, source: SelfHostPlannedExpression, callable: SelfHostPlannedCallable, trait_: U64, bindings: Map<U64, SelfHostCompileTimeType>, search: SelfHostCompileTimeEvidenceSearch) -> Result<SelfHostPlannedExpression, String> {
   let receiver = match source.kind {
     SelfHostPlannedExpressionKind::PlannedDirectCall(_, callee, _, _) => {
       if callee >= module_.expressions.length() {
@@ -177,7 +195,7 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
   }
   // Self-host body evidence roots describe the selected implementation itself;
   // its bound proofs are children, not alternate call-target roots.
-  self_host_guard_store_evidence(module_, body, expression, [witness])
+  self_host_guard_store_evidence(lowering, specialization, module_, body, expression, [witness])
   let kind = match source.kind {
     SelfHostPlannedExpressionKind::PlannedDirectCall(_, receiver, arguments, _) => SelfHostPlannedExpressionKind::PlannedDirectCall(method, receiver, arguments, span)
     SelfHostPlannedExpressionKind::PlannedOperatorCall(_, operator, left, right, _) => SelfHostPlannedExpressionKind::PlannedOperatorCall(method, operator, left, right, span)
@@ -226,7 +244,7 @@ fn self_host_resolve_guarded_calls(lowering: SelfHostPlannedProgramLowering, mod
                   })
                 }
                 match search {
-                  Option::Some(evidence) => match self_host_resolve_guarded_call(lowering, module_, body, expression, source, callable, trait_, bindings, evidence) {
+                  Option::Some(evidence) => match self_host_resolve_guarded_call(lowering, module_, body, specialization, expression, source, callable, trait_, bindings, evidence) {
                     Result::Ok(replacement) => {
                       module_.expressions[expression] = replacement
                     }
