@@ -286,7 +286,14 @@ fn self_host_collect_program_manifest(
           break self_host_semantic_unit()
         }
       }
-      let module_id = module_id_base + u32_into_u64(current_module)
+      let standard_id = self_host_standard_module_id(module_.path)
+      let module_id = if standard_id != 0u64 {
+        standard_id
+      } else {
+        let id = module_id_base + u32_into_u64(current_module)
+        let _ = self_host_assert_compiler_invariant(id < 4294901760u64, "manifest module identity overlaps the standard package")
+        id
+      }
       let files = self_host_program_files_for_manifest_module(module_id, module_)
       let collected = self_host_collect_files(module_id, files)
       module_paths.push(module_.path)

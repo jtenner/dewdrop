@@ -1,0 +1,67 @@
+open dew.std.testing
+open dew.std.option
+
+fn self_host_package_identity_fixture(reverse: Bool) -> SelfHostFrozenSignatureProgram {
+  let traits = SelfHostManifestModule::{
+    path: "dew.std.preamble"
+    files: [SelfHostManifestFile::{
+      path: "preamble.dew"
+      source: b"pub trait Eq {\n  fn eq(self, other: Self) -> Bool\n}\n"
+      test_only: false
+    }]
+  }
+  let values = SelfHostManifestModule::{
+    path: "dew.std.bytes"
+    files: [SelfHostManifestFile::{
+      path: "bytes.dew"
+      source: b"open dew.std.preamble\nimpl Eq for Bytes {\n  fn eq(self, other: Bytes) -> Bool {\n    true\n  }\n}\nfn dead() -> I64 {\n  7i64\n}\n"
+      test_only: false
+    }]
+  }
+  let modules = if reverse {
+    [values, traits]
+  } else {
+    [traits, values]
+  }
+  let collected = self_host_collect_program_manifest(6100u64, SelfHostProgramManifest::{
+    modules: modules
+  })
+  assert(collected.diagnostics.length() == 0u32, "valid package manifest")
+  self_host_freeze_program_signature_interfaces(collected)
+}
+
+test "standard package identities do not depend on manifest order" {
+  let forward = self_host_package_identity_fixture(false)
+  let reverse = self_host_package_identity_fixture(true)
+  assert(forward.collected.modules.at(0u32).module_id == 4294901760u64, "preamble identity")
+  assert(forward.collected.modules.at(1u32).module_id == 4294901766u64, "bytes identity")
+  assert(reverse.collected.modules.at(0u32).module_id == 4294901766u64, "reordered bytes identity")
+  assert(reverse.collected.modules.at(1u32).module_id == 4294901760u64, "reordered preamble identity")
+  assert(forward.interfaces.at(1u32).implementation_count() == 1u32, "primitive implementation is package owned")
+  assert(reverse.interfaces.at(0u32).implementation_count() == 1u32, "reordering keeps primitive evidence")
+  assert(self_host_standard_module_id("app.bytes") == 0u64, "ordinary package has no reserved identity")
+}
+
+test "physical fragments use specialization reachability" {
+  let lowering = self_host_plan_program_lowering(self_host_package_identity_fixture(false))
+  let specialization = self_host_plan_program_specialization(lowering, false)
+  let fragments = self_host_plan_program_wasmgc_fragments(specialization)
+  let module_ = fragments.modules[1u32]
+  let functions = lowering.modules[1u32].functions.callables
+  let mut checked = 0u32
+  for function_ in module_.functions {
+    for callable in functions {
+      if callable.declaration == function_.declaration {
+        if callable.name == b"dead" {
+          assert(function_.elided, "unvisited private body cannot reach emission")
+          checked = checked + 1u32
+        }
+        if callable.name == b"eq" {
+          assert(!function_.elided, "reachable implementation body must remain")
+          checked = checked + 1u32
+        }
+      }
+    }
+  }
+  assert(checked == 2u32, "both reachability cases checked")
+}

@@ -1,0 +1,186 @@
+open dew.std.array
+open dew.std.option
+open dew.std.string
+
+impl SelfHostBasicBodyInferencer {
+  fn imported_operator_trait(self, operator: SelfHostHirBinaryOperator) -> Option<U64> {
+    match self.binary_operator_trait_name(operator) {
+      Option::Some(name) => match self.imported.scope {
+        Option::Some(scope) => match scope.lookup_trait(name) {
+          Option::Some(binding) => Option::Some(binding.declaration)
+          Option::None => Option::None
+        }
+        Option::None => Option::None
+      }
+      Option::None => Option::None
+    }
+  }
+
+  // Only scalar primitive operations have a direct Wasm fallback. Reference
+  // carrier equality is not value equality for Bytes, String, or user records.
+  fn binary_has_scalar_fallback(self, left: U32) -> Bool {
+    let type_ = self.solver.representative_type(self.expression_type(left))
+    match self.solver.type_term(type_) {
+      SelfHostBodyTypeTerm::BodyResolvedType(resolved) => match self.resolved.types[resolved] {
+        SelfHostResolvedType::PrimitiveType(primitive) => {
+          let rank = primitive.rank()
+          rank != 0u32 && rank != 8u32 && rank != 9u32 && rank != 14u32 && rank != 41u32
+        }
+        _ => false
+      }
+      _ => false
+    }
+  }
+
+  fn constrain_imported_binary_operator(self, expression: U32, operator: SelfHostHirBinaryOperator, left: U32, offset: U32) -> Unit {
+    if self.binary_has_scalar_fallback(left) {
+      return
+    }
+    // A generic template does not supply a concrete receiver yet. Its existing
+    // specialization/evidence path must decide the operator, not this search.
+    let receiver = self.solver.representative_type(self.expression_type(left))
+    match self.solver.type_term(receiver) {
+      SelfHostBodyTypeTerm::BodyResolvedType(type_) => match self.resolved.types[type_] {
+        SelfHostResolvedType::GenericParameterType(_) => return
+        SelfHostResolvedType::SelfType(_) => return
+        _ => {}
+      }
+      SelfHostBodyTypeTerm::BodyVariableType(_) => return
+      _ => {}
+    }
+    let trait_ = match self.imported_operator_trait(operator) {
+      Option::Some(value) => value
+      Option::None => return
+    }
+    let method = match self.binary_operator_method_name(operator) {
+      Option::Some(value) => value
+      Option::None => return
+    }
+    let mut selected = 4294967295u32
+    let mut selected_local_impl = 4294967295u32
+    let mut selected_local_callable = 4294967295u32
+    let mut selected_declaration = 0u64
+    let mut second_declaration = 0u64
+    let mut count = 0u32
+    let mut needs_evidence = false
+    let right = match self.collected.expressions[expression] {
+      SelfHostHirExpr::BinaryExpr(_, _, value, _) => value
+      _ => return
+    }
+    // Local implementations of an imported trait participate in the same
+    // candidate set as imported implementations. Neither wins by scan order.
+    let _ = while 0u32 {
+      index => if index < self.collected.impls.length() {
+        match self.resolved.impl_trait_types[index] {
+          Option::Some(trait_type) => match self.resolved_trait_head(trait_type) {
+            Option::Some(candidate) => if candidate == trait_ {
+              let owner = self.collected.impls[index].declaration
+              for local_method in self.collected.methods {
+                if local_method.parent == owner && self_host_basic_string_equal(self.collected.name(local_method.name), method) {
+                  match self.local_callable_index_of_declaration(local_method.id) {
+                    Option::Some(callable) => if self.binary_operator_candidate_viable(expression, left, right, offset, index, callable) {
+                      count = count + 1u32
+                      if count == 1u32 {
+                        selected_local_impl = index
+                        selected_local_callable = callable
+                        selected_declaration = local_method.id
+                      } else if count == 2u32 {
+                        second_declaration = local_method.id
+                      }
+                    }
+                    Option::None => {}
+                  }
+                }
+              }
+            }
+            Option::None => {}
+          }
+          Option::None => {}
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let _ = while 0u32 {
+      index => if index < self.imported.callables.length() {
+        let callable = self_host_resolved_imported_callable_at(self.imported.callables, index)
+        if self_host_basic_string_equal(callable.name, method) {
+          match callable.kind {
+            SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(owner) => match self.imported_implementation(owner) {
+              Option::Some(implementation) => match implementation.trait_type {
+                Option::Some(trait_type) => match self.resolved_trait_head(trait_type) {
+                  Option::Some(candidate) => if candidate == trait_ {
+                    let snapshot = self.solver.snapshot()
+                    let viable = self.constrain_imported_operator_signature(expression, implementation, callable)
+                    self.solver.rollback(snapshot)
+                    if viable {
+                      if implementation.requires_evidence || callable.requires_evidence {
+                        needs_evidence = true
+                      } else {
+                        count = count + 1u32
+                        if count == 1u32 {
+                          selected = index
+                          selected_declaration = callable.declaration
+                        } else if count == 2u32 {
+                          second_declaration = callable.declaration
+                        }
+                      }
+                    }
+                  }
+                  Option::None => {}
+                }
+                Option::None => {}
+              }
+              Option::None => {}
+            }
+            _ => {}
+          }
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if needs_evidence {
+      self.mark_unsupported(expression)
+      self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), SelfHostBasicCallTarget::ErrorBasicCallTarget)
+      return
+    }
+    if count == 1u32 {
+      if selected == 4294967295u32 {
+        self.select_binary_operator_candidate(expression, left, right, offset, selected_local_impl, selected_local_callable)
+        return
+      }
+      let callable = self_host_resolved_imported_callable_at(self.imported.callables, selected)
+      match callable.kind {
+        SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(owner) => match self.imported_implementation(owner) {
+          Option::Some(implementation) => {
+            let valid = self.constrain_imported_operator_signature(expression, implementation, callable)
+            let _ = self_host_assert_compiler_invariant(valid, "selected imported binary signature changed after its probe")
+            let start = self.call_type_arguments.length()
+            self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)
+            self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), SelfHostBasicCallTarget::SelectedBasicCallTarget(callable.declaration, SelfHostHirSpan::{
+              start: start
+              length: self.candidate_type_arguments.length()
+            }))
+          }
+          Option::None => {
+            let _ = self_host_assert_compiler_invariant(false, "selected imported binary implementation is missing")
+          }
+        }
+        _ => {
+          let _ = self_host_assert_compiler_invariant(false, "selected imported binary target is not an implementation")
+        }
+      }
+      return
+    }
+    self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), SelfHostBasicCallTarget::ErrorBasicCallTarget)
+    self.solver.poison_type(self.expression_type(expression))
+    if count == 0u32 {
+      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::NoMatchingOperator(expression, offset))
+    } else {
+      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::AmbiguousOperator(expression, selected_declaration, second_declaration, count, offset))
+    }
+  }
+}

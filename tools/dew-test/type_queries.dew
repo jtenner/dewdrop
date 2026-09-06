@@ -1,6 +1,7 @@
 open dew.std.types
 open dew.std.array
 open dew.std.string
+open dew.std.bytes
 open dew.std.result
 
 type Nothing = Unit
@@ -119,6 +120,10 @@ fn query_raw_layout<t>() -> Bool {
   size_of::<t>() == 24u32 && align_of::<t>() == 8u32 && field_offset::<t>(2u32) == 8u32
 }
 
+fn query_builtin_name(name: Bytes) -> Bool {
+  name == b"types.field_type" || name == b"types.variant_payload_types"
+}
+
 pub fn main(case: U32) -> Bool {
   if case == 0u32 {
     is_unit::<Nothing>()
@@ -206,6 +211,10 @@ pub fn main(case: U32) -> Bool {
     field_offset::<(U8, Unit, I64, (U16, U8))>(3u32) == 16u32
   } else if case == 37u32 {
     size_of::<(Unit, Unit)>() == 0u32 && align_of::<(Unit, Unit)>() == 1u32
+  } else if case == 38u32 {
+    query_builtin_name(b"types.field_type") && query_builtin_name(b"types.variant_payload_types")
+  } else if case == 39u32 {
+    !query_builtin_name(b"types.field") && !query_builtin_name(b"types.field_type_extra")
   } else {
     false
   }

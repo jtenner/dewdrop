@@ -583,6 +583,7 @@ fn self_host_wasmgc_append_function(
   module_: SelfHostPlannedModuleLowering,
   callable: SelfHostPlannedCallable,
   direct_builtin: Bytes,
+  reachable: Bool,
   request: Option<SelfHostProgramSpecializationRequest>,
   request_index: U32,
   shapes: Array<SelfHostPlannedValueShape>,
@@ -644,7 +645,7 @@ fn self_host_wasmgc_append_function(
       length: value_types.length() - result_start
     }
     specialization: request_index
-    elided: request is Option::None && self_host_u32_greater(
+    elided: !reachable || request is Option::None && self_host_u32_greater(
       self_host_program_specialization_callable_generics(callable).length,
       0u32,
     )
@@ -827,6 +828,10 @@ fn self_host_plan_program_wasmgc_fragments(
   specialization: SelfHostProgramSpecializationPlan,
 ) -> SelfHostPlannedProgramWasmGCFragments {
   let modules = []
+  let reachable = self_host_program_specialization_seen()
+  for declaration in specialization.reachable_declarations {
+    reachable.set(declaration, true)
+  }
   let mut module_index = 0u32
   let _ = while module_index {
     current => if current < specialization.lowering.modules.length() {
@@ -874,6 +879,7 @@ fn self_host_plan_program_wasmgc_fragments(
           source,
           callable,
           direct_builtin,
+          reachable.contains_key(callable.declaration),
           Option::None,
           4294967295u32,
           specialization.shapes,
@@ -912,6 +918,7 @@ fn self_host_plan_program_wasmgc_fragments(
                 source,
                 callable,
                 b"",
+                true,
                 Option::Some(selected),
                 request,
                 specialization.shapes,

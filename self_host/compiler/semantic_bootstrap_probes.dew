@@ -26,6 +26,35 @@ pub fn self_host_bootstrap_primitive_probe() -> U32 {
   failures
 }
 
+pub fn self_host_bootstrap_type_query_probe() -> U32 {
+  let collected = self_host_collect_bytes(81u64, b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nbuiltin payload<t>(name: String) -> Type = \"types.variant_payload_types\"\n")
+  let resolved = self_host_resolve_module_types(collected)
+  let invalid = self_host_collect_bytes(82u64, b"fn member<t>(name: String) -> Type {}\n")
+  let rejected = self_host_resolve_module_types(invalid)
+  let mut failures = resolved.diagnostic_count() * 16u32
+  if collected.builtins.length() != 2u32 {
+    failures = failures + 4u32
+  }
+  for entry in collected.builtins {
+    if !self_host_computed_type_builtin(entry.builtin_name) {
+      failures = failures + 2u32
+    }
+  }
+  if collected.builtins.length() == 2u32 && collected.callables.length() == 2u32 {
+    if collected.builtins[0u32].declaration != collected.callables[0u32].declaration || collected.builtins[1u32].declaration != collected.callables[1u32].declaration {
+      failures = failures + 64u32
+    }
+  }
+  if !self_host_computed_type_builtin(b"types.field_type") || !self_host_computed_type_builtin(b"types.variant_payload_types") {
+    failures = failures + 128u32
+  }
+  failures + if rejected.diagnostic_count() == 0u32 {
+    1u32
+  } else {
+    0u32
+  }
+}
+
 pub fn self_host_bootstrap_solver_probe() -> U32 {
   let collected = self_host_collect_bytes(80u64, b"fn accept(value: I32) -> U32 {\n  0u32\n}\n")
   let resolved = self_host_resolve_module_types(collected)

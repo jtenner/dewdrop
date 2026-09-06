@@ -427,16 +427,19 @@ pub fn main() -> U32 {
       } else {
         if arguments.get_unchecked(1u32) == "--check-semantic-probes" {
           let primitives = self_host_bootstrap_primitive_probe()
+          let type_queries = self_host_bootstrap_type_query_probe()
           let solver = self_host_bootstrap_solver_probe()
           let import_check = self_host_bootstrap_import_check()
           let imports = import_check.failures
           let bodies = self_host_bootstrap_body_probe()
-          if primitives == 0u32 && solver == 0u32 && imports == 0u32 && bodies == 0u32 {
+          if primitives == 0u32 && type_queries == 0u32 && solver == 0u32 && imports == 0u32 && bodies == 0u32 {
             return 0u32
           }
           let report = StringBuilder::new()
           report.append("bootstrap semantic probes: primitive=")
           report.append_u32(primitives)
+          report.append(" type_queries=")
+          report.append_u32(type_queries)
           report.append(" solver=")
           report.append_u32(solver)
           report.append(" imports=")

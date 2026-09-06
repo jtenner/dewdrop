@@ -7,6 +7,46 @@ pub struct SelfHostImportedSemanticsFixture {
   imports: SelfHostResolvedModuleImports
 }
 
+test "concrete imported binary operators select declaration evidence" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run(left: Item, right: Item) -> Bool {\n  left == right\n}\n",
+    b"pub trait Eq {\n  fn eq(self, other: Self) -> Bool\n}\npub struct Item {}\nimpl Eq for Item {\n  fn eq(self, other: Item) -> Bool {\n    true\n  }\n}\n",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  assert(self_host_validate_program_lowering(lowering) is Option::None, "valid imported operator lowering")
+  let mut selected = 0u32
+  for expression in lowering.modules[0u32].expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, _, _, _, _) => {
+        assert(self_host_semantic_id_module(declaration) == 2601u64, "operator belongs to imported library")
+        selected = selected + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(selected == 1u32, "one selected operator, not reference identity")
+}
+
+test "local implementations of imported binary traits participate" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\nstruct Item {}\nimpl Eq for Item {\n  fn eq(self, other: Item) -> Bool {\n    true\n  }\n}\npub fn run(left: Item, right: Item) -> Bool {\n  left == right\n}\n",
+    b"pub trait Eq {\n  fn eq(self, other: Self) -> Bool\n}\n",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  assert(self_host_validate_program_lowering(lowering) is Option::None, "valid local operator lowering")
+  let mut selected = 0u32
+  for expression in lowering.modules[0u32].expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, _, _, _, _) => {
+        assert(self_host_semantic_id_module(declaration) == 2600u64, "operator belongs to local implementation")
+        selected = selected + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(selected == 1u32, "local imported-trait implementation is selected")
+}
+
 test "explicit call aliases retain logical Unit and integer types" {
   let fixture = self_host_imported_semantics_fixture(
     b"open app.library\ntype Nothing = Unit\ntype Signed = I8\ntype Unsigned = U8\npub fn run() -> Unit {\n  identity::<Nothing, Signed, Unsigned>()\n}\n",

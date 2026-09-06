@@ -6623,6 +6623,9 @@ impl SelfHostBasicBodyInferencer {
       }
       Option::None => {}
     }
+    if self.imported_operator_trait(operator) is Option::Some(_) {
+      self.pending_operators.push(expression)
+    }
     let origin = self_host_operator_type_origin(expression, offset)
     match operator {
       SelfHostHirBinaryOperator::LogicalOr => {
@@ -6794,6 +6797,7 @@ impl SelfHostBasicBodyInferencer {
       Option::Some(spelling) => match self.local_trait_named(spelling) {
         Option::Some(value) => value
         Option::None => {
+          self.constrain_imported_binary_operator(expression, operator, left, offset)
           return
         }
       }
@@ -6952,13 +6956,14 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
-  fn constrain_imported_index_signature(
+  fn constrain_imported_operator_signature(
     self,
     expression: U32,
     implementation: SelfHostResolvedImportedImplementation,
     callable: SelfHostResolvedImportedCallable,
   ) -> Bool {
     let operands = match self.collected.expressions[expression] {
+      SelfHostHirExpr::BinaryExpr(_, left, right, _) => [left, right]
       SelfHostHirExpr::IndexExpr(base, index, _) => [base, index]
       SelfHostHirExpr::IndexSetExpr(base, index, value, _) => [base, index, value]
       _ => return false
@@ -7266,7 +7271,7 @@ impl SelfHostBasicBodyInferencer {
                 Option::Some(trait_type) => match self.resolved_trait_head(trait_type) {
                   Option::Some(candidate_trait) => if self_host_u64_equal(candidate_trait, trait_declaration) {
                     let snapshot = self.solver.snapshot()
-                    let viable = self.constrain_imported_index_signature(expression, implementation, callable)
+                    let viable = self.constrain_imported_operator_signature(expression, implementation, callable)
                     self.solver.rollback(snapshot)
                     if viable {
                       if implementation.requires_evidence || callable.requires_evidence {
@@ -7306,7 +7311,7 @@ impl SelfHostBasicBodyInferencer {
       match callable.kind {
         SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(owner) => match self.imported_implementation(owner) {
           Option::Some(implementation) => {
-            let valid = self.constrain_imported_index_signature(expression, implementation, callable)
+            let valid = self.constrain_imported_operator_signature(expression, implementation, callable)
             let _ = self_host_assert_compiler_invariant(valid, "selected imported index signature changed after its probe")
             let start = self.call_type_arguments.length()
             self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)

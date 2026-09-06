@@ -14,7 +14,7 @@ for (const entry of WebAssembly.Module.imports(module)) {
 const instance = await WebAssembly.instantiate(module, imports);
 instance.exports.__dew_init?.();
 let failures = 0;
-for (const name of ["self_host_bootstrap_primitive_probe", "self_host_bootstrap_solver_probe", "self_host_bootstrap_import_probe", "self_host_bootstrap_body_probe"]) {
+for (const name of ["self_host_bootstrap_primitive_probe", "self_host_bootstrap_type_query_probe", "self_host_bootstrap_solver_probe", "self_host_bootstrap_import_probe", "self_host_bootstrap_body_probe"]) {
   const start = performance.now();
   try {
     assert.equal(typeof instance.exports[name], "function", `missing semantic probe ${name}`);

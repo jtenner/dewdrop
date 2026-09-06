@@ -126,8 +126,7 @@ impl SelfHostTypeResolver {
       let mut type_query = false
       for entry in self.collected.builtins {
         if entry.declaration == callable.declaration &&
-          (entry.builtin_name == b"types.field_type" ||
-            entry.builtin_name == b"types.variant_payload_types") {
+          self_host_computed_type_builtin(entry.builtin_name) {
           type_query = true
         }
       }

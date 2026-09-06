@@ -21,7 +21,8 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 20
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compiler paths pass 39 shared execution checks.
+physical-boundary checks. Both compiler paths pass 41 shared execution checks.
+The September 6 compiler-B/C bootstrap now reaches a byte-identical fixed point.
 Deferred type checking and layout work below still prevent full completion.
 
 - [ ] Add real type-valued expressions for `field_type` and
@@ -59,6 +60,10 @@ Deferred type checking and layout work below still prevent full completion.
     Test pending/error separation, nested type identity, lanes, and scalar layout.
   - [x] Connect the evaluator to specialization and emission. Shared source tests
     cover generic forwarding, lambdas, names, assertions, and scalar layouts.
+  - [x] Preserve imported operator evidence for query metadata. Standard package
+    IDs agree with native IDs, and unvisited library bodies are not linked.
+  - [x] Run a complete B/C bootstrap and compare the generated Wasm bytes.
+    The outputs match; A build and both self-host runs still exceed 30 seconds.
 - [x] Add native `is_unit::<t>()` as a pure compiler builtin with no Wasm call.
   Test the logical type: Unit is true, other known types are false, and unknown
   types stay pending. Never is not Unit. Resolve the query by identity, not by
