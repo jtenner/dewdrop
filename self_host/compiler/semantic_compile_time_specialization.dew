@@ -66,7 +66,12 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
   let callers = self_host_compile_time_caller_map()
   let work = self_host_empty_compile_time_owners()
   for module_ in modules {
+    let projections = self_host_query_module_has_projections(module_)
     for callable in module_.functions.callables {
+      if projections && self_host_query_projected_signature(module_, callable) && !sensitive.contains_key(callable.declaration) {
+        sensitive.set(callable.declaration, true)
+        work.push(callable.declaration)
+      }
       match callable.kind {
         SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if self_host_is_compile_time_builtin(name) {
           targets.set(callable.declaration, name)
@@ -75,13 +80,18 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
       }
     }
   }
-  if targets.length() > 0u32 {
+  if targets.length() > 0u32 || sensitive.length() > 0u32 {
     for module_ in modules {
+      let projections = self_host_query_module_has_projections(module_)
       for body in module_.bodies {
         let owned = self_host_compile_time_owned_expressions(module_, body)
         let _ = while 0u32 {
           offset => if offset < owned.length() {
             let expression = module_.expressions[owned[offset]]
+            if projections && self_host_query_has_projection(module_, expression.type_) && !sensitive.contains_key(body.declaration) {
+              sensitive.set(body.declaration, true)
+              work.push(body.declaration)
+            }
             match self_host_program_specialization_call_recipe(expression) {
               Option::Some(recipe) => {
                 if targets.contains_key(recipe.target) && !sensitive.contains_key(body.declaration) {

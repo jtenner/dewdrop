@@ -383,6 +383,29 @@ projected captures. The capture test first exposed an out-of-range closure
 lookup; it now runs successfully. Self-host parity for the new runtime member
 cases is still pending, as are guarded inference and exact native nominal demand.
 
+### Self-host runtime member projection parity
+
+The self-host solver now retains a structural inferred member projection,
+substitutes owner arguments, and reduces member recipes from local and imported
+declarations. Pending equations wait for owner inference; rollback and occurs
+checks retain the owner edge. Invalid owners produce a dedicated diagnostic with
+the call origin. Compaction, body/lambda import, merge, shape reading, and query
+reading preserve the projection rather than changing it to Ref.
+
+Selected instances own their projected physical types, signatures, values, and
+captures. Generic templates have no projected signature. Capture lookup and
+emission now use the selected instance, including erased Unit captures; the
+original source lookup had caused a missing-field failure for the new test.
+Modules with no member projections bypass instance type materialization.
+
+The hardening lane passes 200 tests, 29 invariant records, and the same 57 query
+execution checks as native (29.684 s total; query execution 1.048 s). The four
+new internal tests cover forwarding, later-owner inference, occurs/rollback,
+and exact invalid-owner origins. Guarded inference and native selected-instance
+nominal demand remain open. A fresh B/C bootstrap will run after those changes.
+The final checkpoint also passes (30.060 s); its total is 0.060 s over the
+30 s budget and remains a performance issue, not a skipped test.
+
 Projection owners survive zonking, body/lambda/module-value copying, compaction,
 logical query reads, signature pooling, and frozen module values. V1 body codecs
 use type tag 6 and diagnostic tag 2. New graph checks reject invalid operations

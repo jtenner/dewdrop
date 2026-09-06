@@ -1,5 +1,7 @@
 open dew.std.array
 open dew.std.option
+open dew.std.map
+open dew.std.result
 
 fn self_host_local_i32_at(values: Array<I32>, index: U32) -> I32 {
   array_get_unchecked(values, index)
@@ -52,6 +54,7 @@ fn self_host_inference_snapshot_equal(
 
 pub struct SelfHostLocalTypeSolver {
   resolved: SelfHostResolvedModuleTypes
+  mut member_types: Option<SelfHostBodyMemberTypeContext>
   types: Array<SelfHostBodyTypeTerm>
   type_arguments: Array<I32>
   variable_parents: Array<U32>
@@ -84,6 +87,7 @@ impl SelfHostLocalTypeSolver {
   fn new(resolved: SelfHostResolvedModuleTypes) -> SelfHostLocalTypeSolver {
     SelfHostLocalTypeSolver::{
       resolved: resolved
+      member_types: Option::None
       types: [SelfHostBodyTypeTerm::BodyErrorType]
       type_arguments: self_host_local_empty_i32()
       variable_parents: self_host_local_empty_u32()
@@ -613,6 +617,7 @@ impl SelfHostLocalTypeSolver {
                 self.push_local_span_reverse(arguments, self.occurs_stack)
                 self.occurs_stack.push(base)
               }
+              SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => self.occurs_stack.push(owner)
               SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => {
                 self.occurs_stack.push(result)
                 self.push_local_span_reverse(parameters, self.occurs_stack)
@@ -968,10 +973,35 @@ impl SelfHostLocalTypeSolver {
           right_index,
         )
         self.unify_right.truncate(right_index)
-        let left_type = self.representative_type(left_original)
-        let right_type = self.representative_type(right_original)
+        let left_type = match self.reduce_member_type(left_original, 0u32) {
+          Result::Ok(value) => value
+          Result::Err(message) => {
+            self.diagnostics.push(SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(left_original, message, origin))
+            return false
+          }
+        }
+        let right_type = match self.reduce_member_type(right_original, 0u32) {
+          Result::Ok(value) => value
+          Result::Err(message) => {
+            self.diagnostics.push(SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(right_original, message, origin))
+            return false
+          }
+        }
         if left_type == right_type {
           continue self.unify_left.length()
+        }
+        match self.member_projection(left_type) {
+          Option::Some(left_projection) => match self.member_projection(right_type) {
+            Option::Some(right_projection) => {
+              let (left_owner, left_operation, left_selector) = left_projection
+              let (right_owner, right_operation, right_selector) = right_projection
+              if self.representative_type(left_owner) == self.representative_type(right_owner) && left_operation == right_operation && left_selector == right_selector {
+                continue self.unify_left.length()
+              }
+            }
+            Option::None => {}
+          }
+          Option::None => {}
         }
         match self.type_term(left_type) {
           SelfHostBodyTypeTerm::BodyVariableType(variable) => {
@@ -1296,7 +1326,7 @@ impl SelfHostLocalTypeSolver {
       self.snapshots.length() == 0u32,
       206u32, 0u32, self.snapshots.length(), 1u32,
     )
-    let representative = self.representative_type(root)
+    let representative = self.zonk_member_type(root)
     if representative <= 0i32 {
       return representative
     }
@@ -1304,6 +1334,7 @@ impl SelfHostLocalTypeSolver {
       SelfHostBodyTypeTerm::BodyProductType(_) => {}
       SelfHostBodyTypeTerm::BodyAppliedType(_, _) => {}
       SelfHostBodyTypeTerm::BodyFunctionType(_, _) => {}
+      SelfHostBodyTypeTerm::BodyMemberTypeProjection(_, _, _) => {}
       _ => {
         return representative
       }
@@ -1338,7 +1369,11 @@ impl SelfHostLocalTypeSolver {
           start_index,
         )
         self.zonk_result_starts.truncate(start_index)
-        let current = self.representative_type(source)
+        let current = if state == 0u32 {
+          self.zonk_member_type(source)
+        } else {
+          self.representative_type(source)
+        }
         if state == 0u32 {
           if current < 0i32 {
             self.zonk_results.push(current)
@@ -1374,6 +1409,10 @@ impl SelfHostLocalTypeSolver {
                   self.push_zonk_task(result, 0u32, 0u32)
                   self.push_zonk_span(parameters)
                 }
+                SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => {
+                  self.push_zonk_task(current, 4u32, self.zonk_results.length())
+                  self.push_zonk_task(owner, 0u32, 0u32)
+                }
                 _ => {
                   self.zonk_marks[local] = self.zonk_generation
                   self.zonk_values[local] = current
@@ -1386,6 +1425,24 @@ impl SelfHostLocalTypeSolver {
           self.finish_zonk_application(current, result_start)
         } else if state == 2u32 {
           self.finish_zonk_function(current, result_start)
+        } else if state == 4u32 {
+          match self.type_term(current) {
+            SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => {
+              let reduced_owner = self.zonk_results[result_start]
+              let result = if owner == reduced_owner {
+                current
+              } else {
+                self.member_projection_type(reduced_owner, operation, selector)
+              }
+              self.zonk_results.truncate(result_start)
+              let value = self.zonk_member_type(result)
+              let local = self_host_body_i32_to_u32(current)
+              self.zonk_marks[local] = self.zonk_generation
+              self.zonk_values[local] = value
+              self.zonk_results.push(value)
+            }
+            _ => self.assert_solver_invariant(false, 206u32, 4u32, state, 0u32)
+          }
         } else {
           self.finish_zonk_product(current, result_start)
         }
@@ -1559,6 +1616,7 @@ impl SelfHostLocalTypeSolver {
       SelfHostBodyTypeTerm::BodyVariableType(_) => {
         return true
       }
+      SelfHostBodyTypeTerm::BodyMemberTypeProjection(_, _, _) => {}
       SelfHostBodyTypeTerm::BodyProductType(_) => {}
       SelfHostBodyTypeTerm::BodyAppliedType(_, _) => {}
       SelfHostBodyTypeTerm::BodyFunctionType(_, _) => {}
@@ -1590,6 +1648,7 @@ impl SelfHostLocalTypeSolver {
               SelfHostBodyTypeTerm::BodyVariableType(_) => {
                 return true
               }
+              SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => self.occurs_stack.push(owner)
               SelfHostBodyTypeTerm::BodyProductType(fields) => self.push_local_span_reverse(
                 fields,
                 self.occurs_stack,

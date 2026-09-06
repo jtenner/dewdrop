@@ -95,6 +95,7 @@ fn self_host_infer_module_values_with_inputs(
   let let_types = self_host_inference_i32_slots(collected.lets.length(), 0i32)
   let slots = self_host_module_value_type_slots()
   let solver = SelfHostLocalTypeSolver::new(resolved)
+  solver.member_types = self_host_body_member_type_context(collected, resolved, imported)
   let diagnostics = []
   let mut declaration_index = 0u32
   let _ = while declaration_index {

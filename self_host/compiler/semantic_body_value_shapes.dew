@@ -58,6 +58,7 @@ fn self_host_planned_merged_body_value_shape(
               SelfHostBodyTypeTerm::BodyVariableType(_) => results.push(
                 SelfHostPlannedValueShape::ErrorPlannedValueShape,
               )
+              SelfHostBodyTypeTerm::BodyMemberTypeProjection(_, _, _) => results.push(SelfHostPlannedValueShape::GenericPlannedValueShape)
               SelfHostBodyTypeTerm::BodyFunctionType(_, _) => results.push(
                 SelfHostPlannedValueShape::RefPlannedValueShape,
               )

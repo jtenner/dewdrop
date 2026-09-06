@@ -91,6 +91,10 @@ fn self_host_read_compile_time_type(
   }
   let type_ = module_.inferred.types[self_host_body_i32_to_u32(index)]
   let span = match type_ {
+    SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_type(module_, owner, bindings, depth + 1u32) {
+      Result::Ok(owner) => Result::Ok(SelfHostCompileTimeType::MemberProjectionCompileTimeType(owner, operation, selector))
+      Result::Err(error) => Result::Err(error)
+    }
     SelfHostBodyTypeTerm::BodyErrorType => return Result::Err("CT-002 erroneous type query argument")
     SelfHostBodyTypeTerm::BodyVariableType(_) => return Result::Ok(SelfHostCompileTimeType::UnknownCompileTimeType)
     SelfHostBodyTypeTerm::BodyResolvedType(resolved) => return self_host_read_compile_time_resolved_type(module_, resolved, bindings, depth + 1u32)

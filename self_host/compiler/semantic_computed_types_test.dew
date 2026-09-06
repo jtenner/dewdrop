@@ -1,5 +1,56 @@
 open dew.std.testing
 
+test "deferred member call inference preserves exact generic owners" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nstruct Box<t> {\n item: t\n}\nfn keep<t>(value: member<t>(\"item\")) -> member<t>(\"item\") {\n value\n}\nfn forward<t>(value: member<t>(\"item\")) -> member<t>(\"item\") {\n keep::<t>(value)\n}\npub fn main() -> I64 {\n forward::<Box<I64>>(42i64)\n}\n",
+  )
+  for module_ in lowering.modules {
+    assert(module_.inferred.diagnostics.length() == 0u32, "projected calls and generic forwarding infer without errors")
+  }
+}
+
+test "deferred member owner may come from a later argument" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nstruct Box<t> {\n item: t\n}\nfn keep<t>(value: member<t>(\"item\"), owner: t) -> member<t>(\"item\") {\n value\n}\npub fn main() -> I64 {\n keep(42i64, Box::{\n item: 0i64\n })\n}\n",
+  )
+  for module_ in lowering.modules {
+    assert(module_.inferred.diagnostics.length() == 0u32, "member equations wait for the owner argument")
+  }
+}
+
+test "member projection cannot infer an owner or hide rollback" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let owner = solver.fresh_variable()
+  let projection = solver.member_projection_type(owner, b"types.field_type", "item")
+  let origin = self_host_call_type_origin(17u32, 91u32)
+  let snapshot = solver.snapshot()
+  assert(!solver.unify(owner, projection, origin), "projection owner cycles must fail")
+  assert(solver.diagnostics[0u32] is SelfHostLocalInferenceDiagnostic::InfiniteLocalType(_, _, _), "exact occurs-check diagnostic")
+  solver.rollback(snapshot)
+  assert(solver.diagnostics.length() == 0u32, "rollback restores diagnostics")
+  assert(solver.has_unresolved_variable(projection), "rollback restores the unknown owner")
+  assert(solver.zonk_type(projection) == projection, "unknown projection remains structural")
+  assert(!solver.unify(projection, solver.resolved_type(fixture.resolved.primitive(SelfHostPrimitiveType::I64Type)), origin), "member projection is not injective")
+  assert(solver.representative_type(owner) == owner, "output type cannot choose its owner")
+}
+
+test "invalid member owner keeps the exact constraint origin" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let scalar = solver.resolved_type(fixture.resolved.primitive(SelfHostPrimitiveType::I64Type))
+  let projection = solver.member_projection_type(scalar, b"types.field_type", "item")
+  let origin = self_host_call_type_origin(11u32, 73u32)
+  assert(!solver.unify(projection, scalar, origin), "scalar member owner is invalid")
+  match solver.diagnostics[0u32] {
+    SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(type_, message, actual_origin) => {
+      assert(type_ == projection && message == "CT-032 member type query requires a struct or enum", "exact member diagnostic")
+      assert(self_host_type_origin_equal(origin, actual_origin), "exact call origin")
+    }
+    _ => assert(false, "expected member diagnostic")
+  }
+}
+
 test "local computed type bindings keep block and lambda scope" {
   let lowering = self_host_physical_test_lowering(
     b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nstruct Box<t> {\n item: t\n}\nfn identity<t>(value: t) -> t {\n value\n}\npub fn main() -> I64 {\n type Item = member<Box<I64>>(\"item\")\n let read = fn(value: Item) -> Item {\n type Inner = Item\n identity::<Inner>(value)\n }\n if true {\n type Item = I32\n identity::<Item>(1i32)\n } else {\n 0i32\n }\n read(identity::<Item>(2i64))\n}\n",

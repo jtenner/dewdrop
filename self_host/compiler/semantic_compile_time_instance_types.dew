@@ -1,0 +1,331 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+open dew.std.result
+open dew.std.string_builder
+
+fn self_host_query_module_has_projections(module_: SelfHostPlannedModuleLowering) -> Bool {
+  for type_ in module_.resolved_types.types {
+    if type_ is SelfHostResolvedType::MemberTypeProjection(_, _, _) {
+      return true
+    }
+  }
+  for type_ in module_.inferred.types {
+    if type_ is SelfHostBodyTypeTerm::BodyMemberTypeProjection(_, _, _) {
+      return true
+    }
+  }
+  false
+}
+
+fn self_host_compile_time_has_member_type(value: SelfHostCompileTimeType) -> Bool {
+  match value {
+    SelfHostCompileTimeType::MemberProjectionCompileTimeType(_, _, _) => true
+    SelfHostCompileTimeType::ProductCompileTimeType(fields) => {
+      for field in fields {
+        if self_host_compile_time_has_member_type(field) {
+          return true
+        }
+      }
+      false
+    }
+    SelfHostCompileTimeType::AppliedCompileTimeType(base, fields) => {
+      if self_host_compile_time_has_member_type(base) {
+        return true
+      }
+      for field in fields {
+        if self_host_compile_time_has_member_type(field) {
+          return true
+        }
+      }
+      false
+    }
+    SelfHostCompileTimeType::FunctionCompileTimeType(fields, result) => {
+      if self_host_compile_time_has_member_type(result) {
+        return true
+      }
+      for field in fields {
+        if self_host_compile_time_has_member_type(field) {
+          return true
+        }
+      }
+      false
+    }
+    _ => false
+  }
+}
+
+fn self_host_query_has_projection(module_: SelfHostPlannedModuleLowering, root: I32) -> Bool {
+  match self_host_read_compile_time_type(module_, root, self_host_empty_compile_time_bindings(), 0u32) {
+    Result::Ok(type_) => self_host_compile_time_has_member_type(type_)
+    Result::Err(_) => false
+  }
+}
+
+fn self_host_query_projected_signature(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable) -> Bool {
+  if self_host_program_specialization_callable_generics(callable).length == 0u32 {
+    return false
+  }
+  if self_host_query_has_projection(module_, -self_host_body_u32_to_i32(callable.result_type) - 2i32) {
+    return true
+  }
+  let _ = while 0u32 {
+    index => if index < callable.parameters.length {
+      let parameter = module_.functions.parameters[callable.parameters.start + index]
+      if self_host_query_has_projection(module_, -self_host_body_u32_to_i32(parameter.type_) - 2i32) {
+        return true
+      }
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  false
+}
+
+fn self_host_query_append_resolved(module_: SelfHostPlannedModuleLowering, value: SelfHostCompileTimeType) -> U32 {
+  let node = match value {
+    SelfHostCompileTimeType::PrimitiveCompileTimeType(value) => SelfHostResolvedType::PrimitiveType(value)
+    SelfHostCompileTimeType::NominalCompileTimeType(value) => SelfHostResolvedType::NominalType(value)
+    SelfHostCompileTimeType::TraitCompileTimeType(value) => SelfHostResolvedType::TraitType(value)
+    value => {
+      let fields = match value {
+        SelfHostCompileTimeType::ProductCompileTimeType(fields) => fields
+        SelfHostCompileTimeType::AppliedCompileTimeType(_, fields) => fields
+        SelfHostCompileTimeType::FunctionCompileTimeType(fields, _) => fields
+        _ => {
+          self_host_assert_compiler_invariant(false, "SPC-301 instance member type is not concrete")
+          unreachable()
+        }
+      }
+      let children = self_host_u32_slots(0u32, 0u32)
+      for field in fields {
+        children.push(self_host_query_append_resolved(module_, field))
+      }
+      let base = match value {
+        SelfHostCompileTimeType::AppliedCompileTimeType(base, _) => self_host_query_append_resolved(module_, base)
+        SelfHostCompileTimeType::FunctionCompileTimeType(_, result) => self_host_query_append_resolved(module_, result)
+        _ => 0u32
+      }
+      let start = module_.resolved_types.type_arguments.length()
+      for child in children {
+        module_.resolved_types.type_arguments.push(child)
+      }
+      let span = SelfHostHirSpan::{
+        start: start
+        length: children.length()
+      }
+      match value {
+        SelfHostCompileTimeType::ProductCompileTimeType(_) => SelfHostResolvedType::ProductType(span)
+        SelfHostCompileTimeType::AppliedCompileTimeType(_, _) => SelfHostResolvedType::AppliedType(base, span)
+        _ => SelfHostResolvedType::FunctionType(span, base)
+      }
+    }
+  }
+  let id = module_.resolved_types.types.length()
+  self_host_assert_compiler_invariant(id <= 2147483646u32, "SOL-207 instance type encoding overflow")
+  module_.resolved_types.types.push(node)
+  id
+}
+
+struct SelfHostQueryInstanceTypeContext {
+  lowering: SelfHostPlannedProgramLowering
+  source: SelfHostPlannedModuleLowering
+  instance: SelfHostPlannedModuleLowering
+  bindings: Map<U64, SelfHostCompileTimeType>
+  cache: Map<I32, I32>
+  declaration: U64
+  specialization: U32
+}
+
+fn self_host_empty_query_type_cache() -> Map<I32, I32> {
+  Map::empty()
+}
+
+impl SelfHostQueryInstanceTypeContext {
+  fn diagnose(self, message: String, offset: U32) -> Unit {
+    let text = StringBuilder::new()
+    text.append(message)
+    text.append(" module=")
+    text.append_u64(self.source.module_id)
+    text.append(" declaration=")
+    text.append_u64(self.declaration)
+    text.append(" specialization=")
+    text.append_u32(self.specialization)
+    text.append(" offset=")
+    text.append_u32(offset)
+    self.lowering.compile_time.diagnostics.push(text.finish())
+  }
+
+  fn materialize(self, root: I32, offset: U32) -> I32 {
+    match self.cache.get(root) {
+      Option::Some(value) => return value
+      Option::None => {}
+    }
+    if !self_host_query_has_projection(self.source, root) {
+      self.cache.set(root, root)
+      return root
+    }
+    let logical = match self_host_read_compile_time_type(self.source, root, self.bindings, 0u32) {
+      Result::Ok(value) => value
+      Result::Err(error) => {
+        self.diagnose(error, offset)
+        return root
+      }
+    }
+    let concrete = match self_host_reduce_compile_time_projection(self.lowering, logical, 0u32) {
+      Result::Ok(value) => value
+      Result::Err(error) => {
+        self.diagnose(error, offset)
+        return root
+      }
+    }
+    match self_host_compile_time_types_concrete([concrete]) {
+      Result::Ok(true) => {}
+      _ => {
+        self.diagnose("CT-033 unresolved instance member type", offset)
+        return root
+      }
+    }
+    let id = self_host_query_append_resolved(self.instance, concrete)
+    let type_ = -self_host_body_u32_to_i32(id) - 2i32
+    self.cache.set(root, type_)
+    type_
+  }
+
+  fn locals(self, span: SelfHostHirSpan) -> Unit {
+    self_host_assert_array_span(span.start, span.length, self.instance.locals.length(), "ARN-101 selected member locals")
+    let _ = while 0u32 {
+      index => if index < span.length {
+        let id = span.start + index
+        let local = self.instance.locals[id]
+        if !local.elided {
+          let type_ = self.materialize(local.type_, local.offset)
+          if type_ != local.type_ {
+            self.instance.locals[id] = self_host_query_local_type(local, self.instance, type_)
+          }
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn patterns(self, span: SelfHostHirSpan) -> Unit {
+    self_host_assert_array_span(span.start, span.length, self.instance.patterns.length(), "ARN-101 selected member patterns")
+    let _ = while 0u32 {
+      index => if index < span.length {
+        let id = span.start + index
+        let pattern = self.instance.patterns[id]
+        if !pattern.elided {
+          let type_ = self.materialize(pattern.type_, pattern.offset)
+          if type_ != pattern.type_ {
+            self.instance.patterns[id] = self_host_query_pattern_type(pattern, self.instance, type_)
+          }
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+}
+
+fn self_host_materialize_query_instance_types(lowering: SelfHostPlannedProgramLowering, source: SelfHostPlannedModuleLowering, instance: SelfHostPlannedModuleLowering, bindings: Map<U64, SelfHostCompileTimeType>, declaration: U64, specialization: U32) -> Unit {
+  if !self_host_query_module_has_projections(source) {
+    return
+  }
+  let context = SelfHostQueryInstanceTypeContext::{
+    lowering: lowering
+    source: source
+    instance: instance
+    bindings: bindings
+    cache: self_host_empty_query_type_cache()
+    declaration: declaration
+    specialization: specialization
+  }
+  let _ = while 0u32 {
+    index => if index < instance.functions.callables.length() {
+      let callable = instance.functions.callables[index]
+      if callable.declaration == declaration {
+        let _ = while 0u32 {
+          parameter_index => if parameter_index < callable.parameters.length {
+            let id = callable.parameters.start + parameter_index
+            let parameter = instance.functions.parameters[id]
+            let type_ = context.materialize(-self_host_body_u32_to_i32(parameter.type_) - 2i32, parameter.offset)
+            let resolved = self_host_body_i32_to_u32(-(type_ + 2i32))
+            if resolved != parameter.type_ {
+              instance.functions.parameters[id] = self_host_query_parameter_type(parameter, resolved, self_host_planned_resolved_value_shape(instance.resolved_types, resolved))
+            }
+            continue parameter_index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        let type_ = context.materialize(-self_host_body_u32_to_i32(callable.result_type) - 2i32, callable.offset)
+        let resolved = self_host_body_i32_to_u32(-(type_ + 2i32))
+        if resolved != callable.result_type {
+          instance.functions.callables[index] = self_host_query_callable_type(callable, resolved, self_host_planned_resolved_value_shape(instance.resolved_types, resolved))
+        }
+      }
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let _ = while 0u32 {
+    index => if index < instance.bodies.length() {
+      let body = instance.bodies[index]
+      if body.declaration == declaration {
+        for id in self_host_compile_time_owned_expressions(instance, body) {
+          let expression = instance.expressions[id]
+          if !(expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression) {
+            let type_ = context.materialize(expression.type_, expression.offset)
+            if type_ != expression.type_ {
+              instance.expressions[id] = self_host_query_expression_type(expression, instance, type_)
+            }
+          }
+        }
+        context.locals(body.locals)
+        context.patterns(body.patterns)
+        let type_ = context.materialize(body.root_type, 0u32)
+        if type_ != body.root_type {
+          instance.bodies[index] = self_host_query_body_type(body, type_, self_host_planned_resolved_value_shape(instance.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32))))
+        }
+        let _ = while 0u32 {
+          lambda_index => if lambda_index < instance.lambdas.length() {
+            let lambda = instance.lambdas[lambda_index]
+            if lambda.root_body == body.body && self_host_compile_time_lambda_is_live(instance, lambda.lambda) {
+              context.locals(lambda.locals)
+              context.patterns(lambda.patterns)
+              let type_ = context.materialize(lambda.root_type, 0u32)
+              if type_ != lambda.root_type {
+                instance.lambdas[lambda_index] = self_host_query_lambda_type(lambda, type_, self_host_planned_resolved_value_shape(instance.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32))))
+              }
+              let _ = while 0u32 {
+                capture_index => if capture_index < lambda.captures.length {
+                  let id = lambda.captures.start + capture_index
+                  let capture = instance.captures[id]
+                  let type_ = context.materialize(capture.type_, capture.offset)
+                  if type_ != capture.type_ {
+                    instance.captures[id] = self_host_query_capture_type(capture, instance, type_)
+                  }
+                  continue capture_index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+            continue lambda_index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}

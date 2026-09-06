@@ -57,7 +57,7 @@ fn self_host_emit_capture_parameters(link: SelfHostPlannedProgramWasmGCLink, pla
 }
 
 fn self_host_capture_write_type(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32) -> Option<U32> {
-  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
   for capture in module_.captures {
     if self_host_u32_equal(capture.lambda, plan.lambda) && self_host_u32_equal(capture.capture, capture_id) && capture.mutable_ {
       match self_host_capture_source_local(module_, capture.source) {
@@ -70,7 +70,7 @@ fn self_host_capture_write_type(link: SelfHostPlannedProgramWasmGCLink, plan: Se
 }
 
 fn self_host_capture_write_is_erased(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32) -> Bool {
-  let module_ = self_host_linked_lowering_module_at(link, plan.module_index)
+  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
   for capture in module_.captures {
     if self_host_u32_equal(capture.lambda, plan.lambda) && self_host_u32_equal(capture.capture, capture_id) && capture.mutable_ {
       return !self_host_capture_has_value(self_host_body_specialization_shape_for_type(link, module_, plan.specialization, capture.type_, capture.shape))
@@ -136,7 +136,7 @@ fn self_host_linked_capture_cell_slot(canonical: Option<SelfHostPlannedPhysicalB
 }
 
 fn self_host_linked_capture_field(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32) -> Option<SelfHostLinkedWasmFieldLink> {
-  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
   let position = match self_host_linked_lambda_position(module_, plan.lambda) {
     Option::Some(value) => value
     Option::None => return Option::None
@@ -180,7 +180,7 @@ fn self_host_linked_capture_field(link: SelfHostPlannedProgramWasmGCLink, plan: 
 }
 
 fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32, dereference: Bool, destination: StarshineInstructions) -> Option<String> {
-  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
   let position = match self_host_linked_lambda_position(module_, plan.lambda) {
     Option::Some(value) => value
     Option::None => return Option::Some("capture read has no owning lambda")
@@ -226,7 +226,7 @@ fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: Self
 }
 
 fn self_host_emit_closure_capture(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, body: SelfHostPlannedBodyLowering, capture: SelfHostPlannedCapture, destination: StarshineInstructions) -> Option<String> {
-  let module_ = self_host_linked_lowering_module_at(link, plan.module_index)
+  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
   if !self_host_capture_has_value(self_host_body_specialization_shape_for_type(link, module_, plan.specialization, capture.type_, capture.shape)) {
     return Option::None
   }

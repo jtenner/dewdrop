@@ -605,9 +605,15 @@ fn self_host_wasmgc_append_function(
   value_types: Array<SelfHostPlannedWasmValueType>,
 ) -> Unit {
   let parameter_start = value_types.length()
+  let deferred = request is Option::None && self_host_query_projected_signature(module_, callable)
+  let parameter_count = if deferred {
+    0u32
+  } else {
+    callable.parameters.length
+  }
   let mut parameter = 0u32
   let _ = while parameter {
-    current => if current < callable.parameters.length {
+    current => if current < parameter_count {
       let source = module_.functions.parameters[
         self_host_u32_add(callable.parameters.start, current)
       ]
@@ -635,6 +641,7 @@ fn self_host_wasmgc_append_function(
     }
   }
   let result_start = value_types.length()
+  if !deferred {
   self_host_wasmgc_append_shape(
     value_types,
     self_host_wasmgc_specialized_shape(
@@ -646,6 +653,7 @@ fn self_host_wasmgc_append_function(
       callable.result_shape,
     ),
   )
+  }
   functions.push(SelfHostPlannedWasmFunctionFragment::{
     declaration: callable.declaration
     kind: self_host_wasmgc_function_kind(callable)
@@ -925,12 +933,13 @@ fn self_host_plan_program_wasmgc_fragments(
         request => if request < specialization.requests.length() {
           let selected = specialization.requests[request]
           if self_host_semantic_id_module(selected.declaration) == source.module_id {
+            let instance = self_host_program_function_lowering(specialization.lowering, current, request)
             match self_host_program_specialization_callable(
-              source,
+              instance,
               selected.declaration,
             ) {
               Option::Some(callable) => self_host_wasmgc_append_function(
-                source,
+                instance,
                 callable,
                 b"",
                 true,

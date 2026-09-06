@@ -3,14 +3,25 @@ open dew.std.map
 open dew.std.option
 
 fn self_host_clone_compile_time_module(source: SelfHostPlannedModuleLowering) -> SelfHostPlannedModuleLowering {
+  let projections = self_host_query_module_has_projections(source)
+  let resolved = if projections {
+    self_host_clone_query_resolved(source.resolved_types)
+  } else {
+    source.resolved_types
+  }
+  let functions = if projections {
+    self_host_clone_query_functions(source.functions)
+  } else {
+    source.functions
+  }
   SelfHostPlannedModuleLowering::{
     module_id: source.module_id
     names: source.names.copy()
     name_diagnostics: source.name_diagnostics.copy()
-    resolved_types: source.resolved_types
+    resolved_types: resolved
     type_layouts: source.type_layouts
     initialization: source.initialization
-    functions: source.functions
+    functions: functions
     bodies: source.bodies.copy()
     lambdas: source.lambdas.copy()
     locals: source.locals.copy()
@@ -78,4 +89,5 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
       self_host_fold_compile_time_body(lowering, module_, body, specialization, bindings)
     }
   }
+  self_host_materialize_query_instance_types(lowering, lowering.modules[owner], module_, bindings, request.declaration, specialization)
 }

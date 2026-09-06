@@ -5,6 +5,7 @@ pub enum SelfHostBodyTypeTerm {
   BodyProductType(SelfHostHirSpan)
   BodyAppliedType(I32, SelfHostHirSpan)
   BodyFunctionType(SelfHostHirSpan, I32)
+  BodyMemberTypeProjection(I32, Bytes, String)
 }
 
 pub enum SelfHostTypeConstraintOriginKind {
@@ -26,6 +27,7 @@ pub struct SelfHostTypeConstraintOrigin {
 pub enum SelfHostLocalInferenceDiagnostic {
   LocalTypeMismatch(I32, I32, SelfHostTypeConstraintOrigin)
   InfiniteLocalType(U32, I32, SelfHostTypeConstraintOrigin)
+  InvalidLocalMemberProjection(I32, String, SelfHostTypeConstraintOrigin)
 }
 
 impl SelfHostLocalInferenceDiagnostic {
@@ -33,6 +35,7 @@ impl SelfHostLocalInferenceDiagnostic {
     match self {
       SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(_, _, origin) => origin.offset
       SelfHostLocalInferenceDiagnostic::InfiniteLocalType(_, _, origin) => origin.offset
+      SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(_, _, origin) => origin.offset
     }
   }
 }

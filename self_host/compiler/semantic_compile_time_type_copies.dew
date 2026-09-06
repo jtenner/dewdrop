@@ -1,0 +1,181 @@
+open dew.std.array
+
+// Private instance copies. Shared interfaces and unrelated plan fields stay intact.
+
+fn self_host_clone_query_resolved(source: SelfHostResolvedModuleTypes) -> SelfHostResolvedModuleTypes {
+  SelfHostResolvedModuleTypes::{
+    module_id: source.module_id
+    types: source.types.copy()
+    type_arguments: source.type_arguments.copy()
+    syntax_types: source.syntax_types
+    declaration_types: source.declaration_types
+    generic_parameter_types: source.generic_parameter_types
+    generic_bound_types: source.generic_bound_types
+    parameter_types: source.parameter_types
+    callable_return_types: source.callable_return_types
+    callable_function_types: source.callable_function_types
+    lambda_parameter_types: source.lambda_parameter_types
+    lambda_return_types: source.lambda_return_types
+    lambda_function_types: source.lambda_function_types
+    explicit_call_type_arguments: source.explicit_call_type_arguments
+    field_types: source.field_types
+    variant_payloads: source.variant_payloads
+    signature_type_lists: source.signature_type_lists
+    alias_target_types: source.alias_target_types
+    impl_trait_types: source.impl_trait_types
+    impl_target_types: source.impl_target_types
+    alias_dependencies: source.alias_dependencies
+    alias_dependency_declarations: source.alias_dependency_declarations
+    alias_is_cyclic: source.alias_is_cyclic
+    alias_cycles: source.alias_cycles
+    alias_cycle_declarations: source.alias_cycle_declarations
+    alias_expansion_work: source.alias_expansion_work
+    alias_expansion_limit: source.alias_expansion_limit
+    diagnostics: source.diagnostics
+    error_type: source.error_type
+    primitive_types: source.primitive_types
+  }
+}
+
+fn self_host_clone_query_functions(source: SelfHostPlannedModuleFunctions) -> SelfHostPlannedModuleFunctions {
+  SelfHostPlannedModuleFunctions::{
+    module_id: source.module_id
+    callables: source.callables.copy()
+    callable_by_declaration: source.callable_by_declaration
+    parameters: source.parameters.copy()
+  }
+}
+
+fn self_host_query_expression_type(source: SelfHostPlannedExpression, module_: SelfHostPlannedModuleLowering, type_: I32) -> SelfHostPlannedExpression {
+  SelfHostPlannedExpression::{
+    type_: type_
+    shape: self_host_planned_resolved_value_shape(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
+    nominal: self_host_lowering_resolved_nominal(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
+    flow: source.flow
+    kind: source.kind
+    selection: source.selection
+    reference: source.reference
+    call_target: source.call_target
+    call_type_arguments: source.call_type_arguments
+    source_name: source.source_name
+    member_base: source.member_base
+    offset: source.offset
+  }
+}
+
+fn self_host_query_local_type(source: SelfHostPlannedLocal, module_: SelfHostPlannedModuleLowering, type_: I32) -> SelfHostPlannedLocal {
+  SelfHostPlannedLocal::{
+    body: source.body
+    lambda: source.lambda
+    local_id: source.local_id
+    elided: source.elided
+    kind: source.kind
+    mutable_: source.mutable_
+    type_: type_
+    shape: self_host_planned_resolved_value_shape(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
+    nominal: self_host_lowering_resolved_nominal(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
+    offset: source.offset
+  }
+}
+
+fn self_host_query_capture_type(source: SelfHostPlannedCapture, module_: SelfHostPlannedModuleLowering, type_: I32) -> SelfHostPlannedCapture {
+  SelfHostPlannedCapture::{
+    lambda: source.lambda
+    capture: source.capture
+    source: source.source
+    mutable_: source.mutable_
+    type_: type_
+    shape: self_host_planned_resolved_value_shape(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
+    nominal: self_host_lowering_resolved_nominal(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
+    offset: source.offset
+  }
+}
+
+fn self_host_query_pattern_type(source: SelfHostPlannedPattern, module_: SelfHostPlannedModuleLowering, type_: I32) -> SelfHostPlannedPattern {
+  SelfHostPlannedPattern::{
+    elided: source.elided
+    type_: type_
+    shape: self_host_planned_resolved_value_shape(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
+    source: source.source
+    reference: source.reference
+    selected_constructor: source.selected_constructor
+    offset: source.offset
+  }
+}
+
+fn self_host_query_body_type(source: SelfHostPlannedBodyLowering, type_: I32, shape: SelfHostPlannedValueShape) -> SelfHostPlannedBodyLowering {
+  SelfHostPlannedBodyLowering::{
+    body: source.body
+    declaration: source.declaration
+    kind: source.kind
+    root: source.root
+    root_type: type_
+    root_shape: shape
+    result_shape: shape
+    flow: source.flow
+    locals: source.locals
+    local_initializers: source.local_initializers
+    local_assignments: source.local_assignments
+    expressions: source.expressions
+    blocks: source.blocks
+    patterns: source.patterns
+    pattern_arms: source.pattern_arms
+  }
+}
+
+fn self_host_query_lambda_type(source: SelfHostPlannedLambdaLowering, type_: I32, shape: SelfHostPlannedValueShape) -> SelfHostPlannedLambdaLowering {
+  SelfHostPlannedLambdaLowering::{
+    lambda: source.lambda
+    root_body: source.root_body
+    parameter_count: source.parameter_count
+    root: source.root
+    root_type: type_
+    root_shape: shape
+    result_shape: shape
+    flow: source.flow
+    locals: source.locals
+    local_initializers: source.local_initializers
+    local_assignments: source.local_assignments
+    captures: source.captures
+    expressions: source.expressions
+    blocks: source.blocks
+    patterns: source.patterns
+    pattern_arms: source.pattern_arms
+  }
+}
+
+fn self_host_query_parameter_type(source: SelfHostPlannedParameter, type_: U32, shape: SelfHostPlannedValueShape) -> SelfHostPlannedParameter {
+  SelfHostPlannedParameter::{
+    parameter: source.parameter
+    declaration: source.declaration
+    index: source.index
+    receiver: source.receiver
+    type_: type_
+    shape: shape
+    offset: source.offset
+  }
+}
+
+fn self_host_query_callable_type(source: SelfHostPlannedCallable, type_: U32, shape: SelfHostPlannedValueShape) -> SelfHostPlannedCallable {
+  SelfHostPlannedCallable::{
+    declaration: source.declaration
+    name: source.name
+    visibility: source.visibility
+    compiler_owned: source.compiler_owned
+    is_main: source.is_main
+    main_code: source.main_code
+    is_test: source.is_test
+    is_test_entry: source.is_test_entry
+    test_name: source.test_name
+    kind: source.kind
+    owner_generic_parameters: source.owner_generic_parameters
+    generic_parameters: source.generic_parameters
+    parameters: source.parameters
+    has_receiver: source.has_receiver
+    self_type: source.self_type
+    self_shape: source.self_shape
+    result_type: type_
+    result_shape: shape
+    offset: source.offset
+  }
+}

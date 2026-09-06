@@ -88,6 +88,7 @@ fn self_host_merge_type_term(
   argument_base: U32,
 ) -> SelfHostBodyTypeTerm {
   match term {
+    SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => SelfHostBodyTypeTerm::BodyMemberTypeProjection(self_host_merge_type(owner, type_base), operation, selector)
     SelfHostBodyTypeTerm::BodyErrorType => SelfHostBodyTypeTerm::BodyErrorType
     SelfHostBodyTypeTerm::BodyResolvedType(type_) => SelfHostBodyTypeTerm::BodyResolvedType(type_)
     SelfHostBodyTypeTerm::BodyVariableType(variable) => SelfHostBodyTypeTerm::BodyVariableType(
@@ -176,6 +177,7 @@ fn self_host_merge_local_diagnostic(
   type_base: U32,
 ) -> SelfHostLocalInferenceDiagnostic {
   match diagnostic {
+    SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(type_, message, origin) => SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(self_host_merge_type(type_, type_base), message, origin)
     SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(left, right, origin) => {
       SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(
         self_host_merge_type(left, type_base),

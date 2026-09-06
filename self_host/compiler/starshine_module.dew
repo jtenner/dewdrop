@@ -20357,6 +20357,10 @@ fn self_host_emit_linked_i32_expression(
                                           if inferred_index < exact_inferred.types.length() {
                                             message.append(":inferred_term=")
                                             match exact_inferred.types[inferred_index] {
+                                              SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => {
+                                                message.append("member-projection:")
+                                                message.append_i32(owner)
+                                              }
                                               SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
                                                 message.append("applied:")
                                                 message.append_i32(base)
@@ -39583,6 +39587,10 @@ fn self_host_certify_one_physical_method_call_error(
                                         if type_index < module_.inferred.types.length() {
                                           message.append(" local_type_term=")
                                           match module_.inferred.types[type_index] {
+                                            SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => {
+                                              message.append("member-projection:")
+                                              message.append_i32(owner)
+                                            }
                                             SelfHostBodyTypeTerm::BodyErrorType => message.append("error")
                                             SelfHostBodyTypeTerm::BodyResolvedType(resolved) => {
                                               message.append("resolved:")

@@ -45,6 +45,7 @@ fn self_host_inference_diagnostic_expression(diagnostic: SelfHostBodyInferenceDi
       let origin = match constraint {
         SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(_, _, origin) => origin
         SelfHostLocalInferenceDiagnostic::InfiniteLocalType(_, _, origin) => origin
+        SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(_, _, origin) => origin
       }
       match origin.kind {
         SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint => Option::Some(origin.source)

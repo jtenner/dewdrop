@@ -131,6 +131,7 @@ enum SelfHostSignatureInstantiationTask {
   FinishSignatureProduct(U32, U32)
   FinishSignatureApplication(U32, U32)
   FinishSignatureFunction(U32, U32)
+  FinishSignatureProjection(Bytes, String, U32)
 }
 
 enum SelfHostModuleValueImportTask {
@@ -138,6 +139,7 @@ enum SelfHostModuleValueImportTask {
   FinishModuleValueProduct(U32, U32)
   FinishModuleValueApplication(U32, U32)
   FinishModuleValueFunction(U32, U32)
+  FinishModuleValueProjection(U32, Bytes, String, U32)
 }
 
 pub enum SelfHostBasicExpressionSelection {
@@ -500,6 +502,7 @@ struct SelfHostBasicBodyInferencer {
   pending_operators: Array<U32>
   pending_constructions: Array<U32>
   pending_fields: Array<U32>
+  pending_member_equations: Array<SelfHostPendingMemberEquation>
   module_value_import_tasks: Array<SelfHostModuleValueImportTask>
   module_value_import_results: Array<I32>
   module_value_import_cache: Array<I32>
@@ -544,6 +547,9 @@ impl SelfHostBasicBodyInferencer {
     name_info: SelfHostResolvedBodyNames,
     solver: SelfHostLocalTypeSolver,
   ) -> SelfHostBasicBodyInferencer {
+    if solver.member_types is Option::None {
+      solver.member_types = self_host_body_member_type_context(collected, resolved, imported)
+    }
     let mut callable_index = 4294967295u32
     let mut index = 0u32
     let _ = while index {
@@ -598,6 +604,7 @@ impl SelfHostBasicBodyInferencer {
       pending_operators: []
       pending_constructions: []
       pending_fields: []
+      pending_member_equations: []
       module_value_import_tasks: []
       module_value_import_results: []
       module_value_import_cache: []
@@ -765,6 +772,14 @@ impl SelfHostBasicBodyInferencer {
     right: I32,
     origin: SelfHostTypeConstraintOrigin,
   ) -> Unit {
+    if self.solver.member_types is Option::Some(_) && self.solver.snapshots.length() == 0u32 && (self.solver.has_pending_member_projection(left) || self.solver.has_pending_member_projection(right)) {
+      self.pending_member_equations.push(SelfHostPendingMemberEquation::{
+        left: left
+        right: right
+        origin: origin
+      })
+      return
+    }
     let _ = self.solver.unify(left, right, origin)
   }
 
@@ -1344,6 +1359,10 @@ impl SelfHostBasicBodyInferencer {
         }
         match task {
           SelfHostSignatureInstantiationTask::VisitSignatureType(source) => match self.resolved.types[source] {
+            SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => {
+              self.instantiation_tasks.push(SelfHostSignatureInstantiationTask::FinishSignatureProjection(operation, selector, self.instantiation_results.length()))
+              self.instantiation_tasks.push(SelfHostSignatureInstantiationTask::VisitSignatureType(owner))
+            }
             SelfHostResolvedType::GenericParameterType(parameter) => {
               let mut imported_index = 4294967295u32
               let mut search = 0u32
@@ -1464,6 +1483,10 @@ impl SelfHostBasicBodyInferencer {
           }
           SelfHostSignatureInstantiationTask::FinishSignatureProduct(source, start) => {
             let result = self.finish_signature_product(source, start)
+            self.collapse_instantiation_results(start, result)
+          }
+          SelfHostSignatureInstantiationTask::FinishSignatureProjection(operation, selector, start) => {
+            let result = self.solver.member_projection_type(self.instantiation_results[start], operation, selector)
             self.collapse_instantiation_results(start, result)
           }
           SelfHostSignatureInstantiationTask::FinishSignatureApplication(source, start) => {
@@ -2086,6 +2109,10 @@ impl SelfHostBasicBodyInferencer {
               )
             } else {
               match source_terms[local] {
+                SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => {
+                  self.module_value_import_tasks.push(SelfHostModuleValueImportTask::FinishModuleValueProjection(local, operation, selector, self.module_value_import_results.length()))
+                  self.module_value_import_tasks.push(SelfHostModuleValueImportTask::VisitModuleValueType(owner))
+                }
                 SelfHostBodyTypeTerm::BodyErrorType => {
                   self.module_value_import_results.push(self.solver.error_type())
                 }
@@ -2194,6 +2221,13 @@ impl SelfHostBasicBodyInferencer {
               }
             }
             let imported = self.solver.product_type(values)
+            self.module_value_import_results.truncate(start)
+            self.module_value_import_results.push(imported)
+            self.module_value_import_cache[local] = imported
+            self.module_value_import_cache_present[local] = true
+          }
+          SelfHostModuleValueImportTask::FinishModuleValueProjection(local, operation, selector, start) => {
+            let imported = self.solver.member_projection_type(self.module_value_import_results[start], operation, selector)
             self.module_value_import_results.truncate(start)
             self.module_value_import_results.push(imported)
             self.module_value_import_cache[local] = imported
@@ -5120,6 +5154,7 @@ impl SelfHostBasicBodyInferencer {
         if method == 4294967295u32 && operator == 4294967295u32 && field == 4294967295u32 {
           break self_host_semantic_unit()
         }
+        let _ = self.constrain_pending_member_equations(false)
         if field < method && field < operator {
           self.constrain_ready_field(field)
           field_cursor = field_cursor + 1u32
@@ -7864,6 +7899,7 @@ impl SelfHostBasicBodyInferencer {
     self.constrain_pending_variant_calls()
     self.constrain_pending_variant_values()
     self.constrain_pending_constructions()
+    let _ = self.constrain_pending_member_equations(false)
     // Declared fields on already known receivers supply the enum context for
     // short pattern names. Unready fields remain queued for the later pass.
     for expression in self.pending_fields {
@@ -7874,6 +7910,7 @@ impl SelfHostBasicBodyInferencer {
     self.constrain_variant_patterns()
     self.constrain_pending_method_calls()
     self.constrain_pending_fields()
+    let _ = self.constrain_pending_member_equations(true)
   }
 
   fn run(self) -> SelfHostBasicInferredBody {

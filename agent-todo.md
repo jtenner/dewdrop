@@ -21,7 +21,7 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 20
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compiler paths pass 52 shared execution checks.
+physical-boundary checks. Both compiler paths pass 57 shared execution checks.
 The September 6 compiler-B/C bootstrap now reaches a byte-identical fixed point.
 Deferred type checking and layout work below still prevent full completion.
 
@@ -37,9 +37,9 @@ Deferred type checking and layout work below still prevent full completion.
     substitutes projected parameter/result types, including imported types,
     forwarding, and an owner supplied by a later argument. Native physical
     instances now materialize projected signatures, values, and captures in
-    private type arenas. The self-host inference/physical port and guarded checks
-    remain. Native execution now covers 57 checks; the shared additions are
-    also the regression targets for that self-host port.
+    private type arenas. The self-host path now does the same, including deferred
+    owner equations, imports, rollback, and exact capture emission. Both paths
+    pass the 57 shared checks. Guarded checks still remain.
   - [x] Port inline computed member syntax and local/imported generic member
     resolution to the self-host parser and resolver; test exact source errors.
   - [x] Add local compile-time type bindings. `type Item = ...` has block scope,

@@ -40,6 +40,7 @@ impl SelfHostBasicCompaction {
           if index < self.marks.length() && !self.marks[index] {
             self.marks[index] = true
             match self.source_types[index] {
+              SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => self.stack.push(owner)
               SelfHostBodyTypeTerm::BodyProductType(fields) => {
                 let mut field = fields.length
                 let _ = while field {
@@ -132,6 +133,7 @@ impl SelfHostBasicCompaction {
           let new_id = self_host_body_u32_to_i32(self.types.length())
           self.mapping[current] = new_id
           match self.source_types[current] {
+            SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => self.types.push(SelfHostBodyTypeTerm::BodyMemberTypeProjection(self.remap(owner), operation, selector))
             SelfHostBodyTypeTerm::BodyErrorType => {
               self.mapping[current] = 0i32
             }
