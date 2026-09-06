@@ -191,3 +191,19 @@ A/B/C fixed point is not yet established. A built in 31.195 s and emitted B in
 The expanded fixture also exposes a native backend `UnsupportedExpression`
 (root declaration 11, expression 63). The previous 33 native cases passed;
 the 35-case native run is not green and remains a required follow-up.
+
+## Native constructor reachability correction
+
+The expanded fixture exposed the wrong constructor operand span in the native
+query reachability visitor. `PlannedVariantTupleNew` stores type arguments second
+and runtime arguments third. Struct and named-variant constructors use that same
+ordering. The visitor had read the second span as values, removed live payloads,
+and sometimes visited unrelated expression IDs. All three cases now visit the
+third span in its correct arena.
+
+The native fixture builds and passes all 39 current checks, including both mixed
+Result arms and the new raw-layout cases. The build took 8.890 s in the debug
+native tool, execution 0.025 s, and 32 focused semantic tests passed in 14.822 s.
+Release C rebuilds took about 89 s and remain performance defects. The test
+generator now reports module, declaration, body, expression, source offset, and
+IR kind when an expression cannot be emitted.

@@ -76,7 +76,7 @@ fn compile_time_push_expression(
         compile_time_push_children(module_, arguments, work)
       }
     }
-    PlannedStructNew(_, fields, _) | PlannedVariantStructNew(_, fields, _) => {
+    PlannedStructNew(_, _, fields) | PlannedVariantStructNew(_, _, fields) => {
       guard program_specialization_span_is_valid(
         fields,
         module_.object_fields.length(),
@@ -177,7 +177,7 @@ fn compile_time_push_expression(
     | PlannedProductField(value0, _, _) => work.push(CtReachExpression(value0))
     PlannedProductNew(arguments)
     | PlannedArrayLiteral(arguments, _, _)
-    | PlannedVariantTupleNew(_, arguments, _)
+    | PlannedVariantTupleNew(_, _, arguments)
     | PlannedParameterSelect(arguments, _) =>
       compile_time_push_children(module_, arguments, work)
     PlannedBinaryExpression(_, value0, value1)

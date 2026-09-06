@@ -203,6 +203,25 @@ fn main {
   let binary = match compiled.emit_binary() {
     Ok(binary) => binary
     Err(error) => {
+      match error {
+        @backend.StarshineProgramCodeError(
+          @backend.UnsupportedExpression(body_id, expression)
+        ) =>
+          for module_ in compiled.lowering.modules {
+            for body in module_.bodies {
+              if body.body == body_id &&
+                expression >= 0 &&
+                expression < module_.expressions.length() {
+                let source = module_.expressions[expression]
+                println(
+                  "unsupported emission module=\{module_.module_id} declaration=\{body.declaration} body=\{body_id} expression=\{expression} offset=\{source.offset} kind=" +
+                  @debug.to_string(source.kind),
+                )
+              }
+            }
+          }
+        _ => ()
+      }
       dew_test_fail(@debug.to_string(error))
       b""
     }
