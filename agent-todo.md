@@ -67,8 +67,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   cases cover multiple generic parameters, Unit effects, and storage bounds.
   Missing types fail at the storage boundary. Clean bootstrap passes. See the
   [contract log](docs/research/raw-array-contracts-2026-09-06.md).
-- [ ] Move Array fields, length, capacity, growth, mutation, and iteration into
-  Dew. Fifteen legacy Array builtins remain. Keep typed raw backing arrays;
+- [x] Declare Array storage fields in Dew and compile length/capacity through
+  ordinary library calls. Remove the native layout override and self-host size
+  method shortcuts. Tests check actual field identities and changed method
+  bodies. See the [accessor log](docs/research/array-library-accessors-2026-09-06.md).
+- [ ] Move Array allocation, growth, mutation, and iteration into
+  Dew. Thirteen legacy Array builtins remain. Keep typed raw backing arrays;
   do not box every scalar to bypass a compiler defect. Nine checked/bulk
   algorithms already run in Dew.
 - [ ] Remove the old Array wrapper layout and literal shortcuts. Use declared

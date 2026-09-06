@@ -1,4 +1,55 @@
 ///|
+test "array module type layouts use declared fields rather than an ordinal recipe" {
+  let (resolved, lowering) = wasmgc_test_inputs(
+    standard_library_module_id(13),
+    b"struct DeclaredStorage {\n  first: I64\n  mut second: I32\n}\n",
+  )
+  let planned = plan_module_wasmgc_fragments(resolved, lowering)
+  assert_eq(planned.physical_types.length(), 1)
+  let span = planned.physical_types[0].fields
+  assert_eq(span.length, 2)
+  assert_eq(planned.fields[span.start].storage, WasmI64Storage)
+  assert_eq(planned.fields[span.start].mutable_, false)
+  assert_eq(planned.fields[span.start + 1].storage, WasmI32Storage)
+  assert_eq(planned.fields[span.start + 1].mutable_, true)
+  for index in 0..<span.length {
+    assert_eq(
+      planned.fields[span.start + index].role,
+      WasmStructField(lowering.type_layouts.fields[index].field),
+    )
+  }
+}
+
+///|
+test "array size accessors lower to ordinary library calls" {
+  let program = collect_program_manifest(
+    2631UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open dew.std.array\npub fn run(value: Array<I64>) -> U32 {\n  array_length(value) + array_capacity(value) + value.length() + value.capacity()\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  for module_ in analyzed.modules {
+    assert_eq(module_.inferred.diagnostics, [])
+  }
+  let lowering = plan_unoptimized_program_lowering(program, analyzed)
+  let mut calls = 0
+  for expression in lowering.modules[0].expressions {
+    match expression.kind {
+      PlannedDirectCall(_, _, _, _) => calls += 1
+      PlannedArrayLength(_) =>
+        abort("Array size accessors must execute their Dew bodies")
+      _ => ()
+    }
+  }
+  assert_eq(calls, 4)
+}
+
+///|
 test "array standard source has stable compiler-owned identities" {
   let module_id = standard_library_module_id(13)
   let collected = collect_program_files_with_frozen_standard_imports(

@@ -1784,26 +1784,7 @@ fn wasmgc_append_physical_type_fields(
   let start = target.length()
   match source.kind {
     PlannedWasmStructType(declaration) =>
-      if declaration == standard_array_type_declaration() {
-        wasmgc_append_mutable_field(
-          target,
-          WasmStructField(declaration),
-          WasmNullableEqRefStorage,
-          source.offset,
-        )
-        wasmgc_append_mutable_field(
-          target,
-          WasmStructField(declaration),
-          WasmI32Storage,
-          source.offset,
-        )
-        wasmgc_append_mutable_field(
-          target,
-          WasmStructField(declaration),
-          WasmI32Storage,
-          source.offset,
-        )
-      } else if declaration == standard_array_iterator_type_declaration() {
+      if declaration == standard_array_iterator_type_declaration() {
         wasmgc_append_field(
           target,
           WasmStructField(declaration),

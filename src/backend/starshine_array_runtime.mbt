@@ -1414,13 +1414,13 @@ fn starshine_finish_array(
     )
     return Ok(output)
   }
-  if operation == 3 || operation == 4 {
+  if operation == 3 {
     append_starshine_instructions(output, fragments[0])
     output.push(starshine_match_cast(wrapper_type))
     output.push(
       @lib.Instruction::struct_get(
         @lib.TypeIdx::new(wrapper_type.reinterpret_as_uint()),
-        @lib.U32::new(if operation == 3 { 1U } else { 2U }),
+        @lib.U32::new(1U),
       ),
     )
     return Ok(output)

@@ -8,8 +8,6 @@ enum StandardBuiltinOperation {
   WasmRefAsNonNull
   ArrayNew
   ArrayWithCapacity
-  ArrayLength
-  ArrayCapacity
   ArrayGetUnchecked
   ArraySetUnchecked
   ArrayPush
@@ -177,8 +175,6 @@ fn standard_array_operation(declaration : DeclId) -> StandardBuiltinOperation {
   match semantic_id_local(declaration) {
     2 | 17 => ArrayNew
     3 | 18 => ArrayWithCapacity
-    4 | 19 => ArrayLength
-    5 | 20 => ArrayCapacity
     7 | 25 | 31 => ArrayGetUnchecked
     9 | 27 | 33 => ArraySetUnchecked
     10 | 22 => ArrayPush

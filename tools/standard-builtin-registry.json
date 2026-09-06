@@ -24,8 +24,6 @@
       "operations": {
         "ArrayNew": [2, 17],
         "ArrayWithCapacity": [3, 18],
-        "ArrayLength": [4, 19],
-        "ArrayCapacity": [5, 20],
         "ArrayGetUnchecked": [7, 25, 31],
         "ArraySetUnchecked": [9, 27, 33],
         "ArrayPush": [10, 22],

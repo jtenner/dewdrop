@@ -1,10 +1,20 @@
-pub struct Array<t> {}
+open dew.std.wasm.intrinsics
+
+pub struct Array<t> {
+  mut backing: WasmArray<t>
+  mut count: U32
+  mut limit: U32
+}
 pub struct ArrayIter<t> {}
 
 pub builtin array_new<t>() -> Array<t> = "dew_array_new"
 pub builtin array_with_capacity<t>(capacity: U32) -> Array<t> = "dew_array_with_capacity"
-pub builtin array_length<t>(value: Array<t>) -> U32 = "dew_array_length"
-pub builtin array_capacity<t>(value: Array<t>) -> U32 = "dew_array_capacity"
+pub fn array_length<t>(value: Array<t>) -> U32 {
+  value.count
+}
+pub fn array_capacity<t>(value: Array<t>) -> U32 {
+  value.limit
+}
 pub fn array_get<t>(value: Array<t>, index: U32) -> Option<t> {
   if index < array_length(value) {
     Option::Some(array_get_unchecked(value, index))

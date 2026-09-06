@@ -175,6 +175,7 @@ for (const [name, expected] of [
   ["self_host_emit_bound_dispatch_probe", 10],
   ["self_host_emit_fixed_array_field_probe", 7],
   ["self_host_emit_fixed_array_method_body_probe", 42],
+  ["self_host_emit_array_size_method_body_probe", 85],
   ["self_host_emit_scalar_iterator_probe", 6],
   ["self_host_emit_erased_field_probe", 42n],
   ["self_host_emit_string_map_probe", 26],

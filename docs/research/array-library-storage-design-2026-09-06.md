@@ -1,7 +1,8 @@
 # Array library storage design
 
-Status: proposed implementation for the next migration step, not a completed
-feature. FixedArray regression work is recorded separately.
+Status: raw contracts and Array's declared fields/size accessors are implemented.
+Allocation, growth, mutation, iteration, and literal migration remain proposed
+work. FixedArray regression work is recorded separately.
 
 ## Raw operations and identity
 
@@ -20,9 +21,10 @@ same rules for user modules and standard modules.
 
 ## Ordinary Array fields
 
-The library declares its backing storage, logical length, and logical capacity.
-The iterator declares its owner Array and cursor. Generic field planning must
-use these declarations, not a three-field wrapper assumption.
+The library now declares its backing storage, logical length, and logical
+capacity; see the [accessor change](array-library-accessors-2026-09-06.md).
+The iterator still needs to declare its owner Array and cursor. Generic field
+planning must use these declarations, not a three-field wrapper assumption.
 
 One possible clearing scheme reserves one default-valued backing slot beyond
 capacity. It is never a logical element. `array.copy` can copy this slot to clear

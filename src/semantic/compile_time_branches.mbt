@@ -132,7 +132,6 @@ fn compile_time_push_expression(
     | PlannedRawArrayNewDefault(value0, _, _)
     | PlannedArrayWithCapacity(value0, _, _)
     | PlannedArrayLength(value0)
-    | PlannedArrayCapacity(value0)
     | PlannedArrayPop(value0, _, _)
     | PlannedArrayClear(value0, _, _)
     | PlannedArrayIter(value0, _, _)

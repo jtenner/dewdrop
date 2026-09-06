@@ -7061,20 +7061,6 @@ fn starshine_emit_body_instructions(
             )
             tasks.push(EmitStarshineExpression(base))
           }
-          @semantic.PlannedArrayCapacity(base) => {
-            tasks.push(
-              FinishStarshineArray(
-                4,
-                None,
-                1,
-                fixed_array_ref_scratch_index,
-                map_ref_scratch_index,
-                fixed_array_i32_scratch_index,
-                -1,
-              ),
-            )
-            tasks.push(EmitStarshineExpression(base))
-          }
           @semantic.PlannedArrayGet(base, index, element_type, shape) => {
             let element_shape = starshine_specialized_shape(
               lowering, generic_specialization, element_type, shape,

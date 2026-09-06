@@ -1041,10 +1041,6 @@ fn self_host_linked_exact_emitted_expression_carrier(
               Option::None => 4294967295u32
             }
             let array_base = self_host_linked_array_runtime_base(link)
-            let receiver_is_array = self_host_u32_equal(
-              receiver_type,
-              self_host_linked_array_wrapper_type(link),
-            )
             let receiver_is_fixed_array = receiver_type >= array_base && receiver_type < self_host_u32_add(
               array_base,
               6u32,
@@ -1059,15 +1055,15 @@ fn self_host_linked_exact_emitted_expression_carrier(
                 receiver_type,
               )
             }
-            if self_host_u32_equal(arguments.length, 0u32) && ((method_name == "length" && (
-              receiver_is_array || receiver_is_fixed_array ||
+            if self_host_u32_equal(arguments.length, 0u32) && method_name == "length" && (
+              receiver_is_fixed_array ||
                 self_host_linked_expression_is_map_value(
                   link,
                   module_,
                   body,
                   receiver,
                 )
-            )) || (method_name == "capacity" && receiver_is_array)) {
+            ) {
               return SelfHostWasmBodyCarrier::I32BodyCarrier
             }
           }
@@ -10484,12 +10480,7 @@ fn self_host_linked_exact_expression_shape(
             name < self_host_linked_module_name_count(module_) {
             let method_name = self_host_linked_module_name_at(module_, name)
             if (method_name == "length" && (
-              self_host_linked_expression_is_array_value(
-                link,
-                module_,
-                body,
-                receiver,
-              ) || self_host_linked_expression_is_fixed_array_value(
+              self_host_linked_expression_is_fixed_array_value(
                 link,
                 module_,
                 body,
@@ -10500,11 +10491,6 @@ fn self_host_linked_exact_expression_shape(
                 body,
                 receiver,
               )
-            )) || (method_name == "capacity" && self_host_linked_expression_is_array_value(
-              link,
-              module_,
-              body,
-              receiver,
             )) {
               return Option::Some(SelfHostPlannedValueShape::U32PlannedValueShape)
             }
@@ -21685,44 +21671,6 @@ fn self_host_emit_linked_i32_expression(
                     body,
                     receiver_base,
                   )
-                  let canonical_receiver_is_array = match canonical_receiver_type {
-                    Option::Some(type_index) => self_host_u32_equal(
-                      type_index,
-                      self_host_linked_array_wrapper_type(link),
-                    )
-                    Option::None => false
-                  }
-                  if (method_name == "length" || method_name == "capacity") &&
-                    self_host_u32_equal(arguments.length, 0u32) && (
-                      canonical_receiver_is_array ||
-                        selected_receiver_name.equals(b"Array") ||
-                        self_host_linked_expression_is_array_value(
-                          link,
-                          module_,
-                          body,
-                          receiver_base,
-                        )
-                    ) {
-                    let runtime_name = if method_name == "length" {
-                      b"dew_array_length"
-                    } else {
-                      b"dew_array_capacity"
-                    }
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayBuiltin(
-                      runtime_name,
-                      self_host_linked_array_wrapper_type(link),
-                      0u32,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      receiver_base,
-                      destination,
-                      depth,
-                    )
-                    continue tasks.length()
-                  }
                   let direct_receiver_owner = self_host_linked_type_owner_module_id(
                     link,
                     module_,
@@ -22783,33 +22731,6 @@ fn self_host_emit_linked_i32_expression(
                   ) {
                     Option::Some(function_index) => {
                       let mut raw_physical_call = false
-                      if (method_name == "length" || method_name == "capacity") &&
-                        canonical_receiver_is_array {
-                        let message = StringBuilder::new()
-                        message.append("linked Array receiver selected a raw call module=")
-                        message.append_u64(module_.module_id)
-                        message.append(" declaration=")
-                        message.append_u64(body.declaration)
-                        message.append(" name=")
-                        message.append(bytes_to_string(self_host_linked_declaration_name(
-                          link,
-                          body.declaration,
-                        )))
-                        message.append(" specialization=")
-                        message.append_u32(caller_specialization)
-                        message.append(" expression=")
-                        message.append_u32(expression)
-                        message.append(" receiver=")
-                        message.append_u32(receiver_base)
-                        message.append(" function=")
-                        message.append_u32(function_index)
-                        message.append(":")
-                        message.append(bytes_to_string(self_host_linked_physical_function_name(
-                          link,
-                          function_index,
-                        )))
-                        return Option::Some(message.finish())
-                      }
                       if method_name == "get" && self_host_u64_equal(
                         self_host_linked_physical_function_module_id(
                           link,
@@ -23584,37 +23505,6 @@ fn self_host_emit_linked_i32_expression(
                               body,
                               expression,
                             ),
-                            destination,
-                          ))
-                          self_host_linked_i32_schedule_expression(
-                            tasks,
-                            expression_depths,
-                            receiver_base,
-                            destination,
-                            depth,
-                          )
-                        } else if (method_name == "length" || method_name == "capacity") && (
-                          canonical_receiver_is_array ||
-                            selected_receiver_name.equals(b"Array") ||
-                            self_host_linked_expression_is_array_value(
-                              link,
-                              module_,
-                              body,
-                              receiver_base,
-                            )
-                        ) {
-                          if !self_host_u32_equal(arguments.length, 0u32) {
-                            return Option::Some("linked Array field method has explicit arguments")
-                          }
-                          let runtime_name = if method_name == "length" {
-                            b"dew_array_length"
-                          } else {
-                            b"dew_array_capacity"
-                          }
-                          tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayBuiltin(
-                            runtime_name,
-                            self_host_linked_array_wrapper_type(link),
-                            0u32,
                             destination,
                           ))
                           self_host_linked_i32_schedule_expression(

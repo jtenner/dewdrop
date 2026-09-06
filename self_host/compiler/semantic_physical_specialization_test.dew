@@ -1501,6 +1501,22 @@ pub fn self_host_emit_fixed_array_method_body_probe() -> Bytes {
   }
 }
 
+pub fn self_host_emit_array_size_method_body_probe() -> Bytes {
+  let link = self_host_physical_test_named_import_link(
+    "dew.std.array",
+    b"pub struct Array<t> {}\npub builtin array_new<t>() -> Array<t> = \"dew_array_new\"\nimpl<t> Array<t> {\n  fn new() -> Array<t> {\n    array_new()\n  }\n  fn length(self) -> U32 {\n    42u32\n  }\n  fn capacity(self) -> U32 {\n    43u32\n  }\n}\n",
+    b"open dew.std.array\nfn values() -> Array<I32> {\n  Array::new()\n}\npub fn main() -> I32 {\n  let items = values()\n  if items.length() == 42u32 && items.capacity() == 43u32 {\n    85i32\n  } else {\n    0i32\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_root_i32_module(link, 1u32) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
 pub fn self_host_emit_scalar_iterator_probe() -> Bytes {
   let link = self_host_physical_test_manifest_link(SelfHostProgramManifest::{
     modules: [

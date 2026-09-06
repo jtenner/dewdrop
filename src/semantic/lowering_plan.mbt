@@ -95,7 +95,6 @@ pub enum PlannedExpressionKind {
   PlannedArrayNew(BodyTypeId, PlannedValueShape)
   PlannedArrayWithCapacity(ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayLength(ExprId)
-  PlannedArrayCapacity(ExprId)
   PlannedArrayGet(ExprId, ExprId, BodyTypeId, PlannedValueShape)
   PlannedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
   PlannedArraySet(ExprId, ExprId, ExprId, PlannedValueShape)
@@ -1290,8 +1289,6 @@ fn plan_expression_kind(
                       PlannedArrayWithCapacity(
                         base, element_type, element_shape,
                       )
-                    ArrayLength => PlannedArrayLength(base)
-                    ArrayCapacity => PlannedArrayCapacity(base)
                     ArrayGetUnchecked =>
                       PlannedArrayGetUnchecked(
                         base,

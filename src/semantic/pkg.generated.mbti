@@ -1742,7 +1742,6 @@ pub enum PlannedExpressionKind {
   PlannedArrayNew(Int, PlannedValueShape)
   PlannedArrayWithCapacity(Int, Int, PlannedValueShape)
   PlannedArrayLength(Int)
-  PlannedArrayCapacity(Int)
   PlannedArrayGet(Int, Int, Int, PlannedValueShape)
   PlannedArrayGetUnchecked(Int, Int, PlannedValueShape)
   PlannedArraySet(Int, Int, Int, PlannedValueShape)
