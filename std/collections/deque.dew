@@ -3,18 +3,52 @@ open dew.std.collections.circular_buffer
 pub type Deque<t> = CircularBuffer<t>
 pub type DequeIter<t> = CircularBufferIter<t>
 
-pub builtin deque_new<t>() -> Deque<t> = "dew_deque_new"
-pub builtin deque_with_capacity<t>(capacity: U32) -> Deque<t> = "dew_deque_with_capacity"
-pub builtin deque_length<t>(deque: Deque<t>) -> U32 = "dew_deque_length"
-pub builtin deque_capacity<t>(deque: Deque<t>) -> U32 = "dew_deque_capacity"
-pub builtin deque_is_empty<t>(deque: Deque<t>) -> Bool = "dew_deque_is_empty"
-pub builtin deque_push_front<t>(deque: Deque<t>, value: t) -> Unit = "dew_deque_push_front"
-pub builtin deque_push_back<t>(deque: Deque<t>, value: t) -> Unit = "dew_deque_push_back"
-pub builtin deque_pop_front<t>(deque: Deque<t>) -> Option<t> = "dew_deque_pop_front"
-pub builtin deque_pop_back<t>(deque: Deque<t>) -> Option<t> = "dew_deque_pop_back"
-pub builtin deque_peek_front<t>(deque: Deque<t>) -> Option<t> = "dew_deque_peek_front"
-pub builtin deque_peek_back<t>(deque: Deque<t>) -> Option<t> = "dew_deque_peek_back"
-pub builtin deque_clear<t>(deque: Deque<t>) -> Unit = "dew_deque_clear"
-pub builtin deque_iter<t>(deque: Deque<t>) -> DequeIter<t> = "dew_deque_iter"
-pub builtin deque_iter_has_next<t>(iter: DequeIter<t>) -> Bool = "dew_deque_iter_has_next"
-pub builtin deque_iter_next<t>(iter: DequeIter<t>) -> t = "dew_deque_iter_next"
+pub fn deque_new<t>() -> Deque<t> {
+  circular_buffer_growable(0u32)
+}
+pub fn deque_with_capacity<t>(capacity: U32) -> Deque<t> {
+  circular_buffer_growable(capacity)
+}
+pub fn deque_length<t>(deque: Deque<t>) -> U32 {
+  circular_buffer_length(deque)
+}
+pub fn deque_capacity<t>(deque: Deque<t>) -> U32 {
+  circular_buffer_capacity(deque)
+}
+pub fn deque_is_empty<t>(deque: Deque<t>) -> Bool {
+  circular_buffer_is_empty(deque)
+}
+pub fn deque_push_front<t>(deque: Deque<t>, value: t) -> Unit {
+  if !circular_buffer_push_front(deque, value) {
+    unreachable()
+  }
+}
+pub fn deque_push_back<t>(deque: Deque<t>, value: t) -> Unit {
+  if !circular_buffer_push_back(deque, value) {
+    unreachable()
+  }
+}
+pub fn deque_pop_front<t>(deque: Deque<t>) -> Option<t> {
+  circular_buffer_pop_front(deque)
+}
+pub fn deque_pop_back<t>(deque: Deque<t>) -> Option<t> {
+  circular_buffer_pop_back(deque)
+}
+pub fn deque_peek_front<t>(deque: Deque<t>) -> Option<t> {
+  circular_buffer_peek_front(deque)
+}
+pub fn deque_peek_back<t>(deque: Deque<t>) -> Option<t> {
+  circular_buffer_peek_back(deque)
+}
+pub fn deque_clear<t>(deque: Deque<t>) -> Unit {
+  circular_buffer_clear(deque)
+}
+pub fn deque_iter<t>(deque: Deque<t>) -> DequeIter<t> {
+  circular_buffer_iter(deque)
+}
+pub fn deque_iter_has_next<t>(iter: DequeIter<t>) -> Bool {
+  circular_buffer_iter_has_next(iter)
+}
+pub fn deque_iter_next<t>(iter: DequeIter<t>) -> t {
+  circular_buffer_iter_next(iter)
+}

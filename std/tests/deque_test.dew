@@ -1,0 +1,44 @@
+open dew.std.collections.deque
+
+test "deque keeps both ends in order across wrap and growth" {
+  let deque = deque_with_capacity(2u32)
+  deque_push_back(deque, 2i64)
+  deque_push_front(deque, 1i64)
+  assert(deque_pop_back(deque) is Option::Some(2i64), "deque back pop")
+  deque_push_front(deque, 0i64)
+  deque_push_back(deque, 3i64)
+  assert(deque_length(deque) == 3u32, "deque grown length")
+  assert(deque_peek_front(deque) is Option::Some(0i64), "deque front peek")
+  assert(deque_peek_back(deque) is Option::Some(3i64), "deque back peek")
+  assert(deque_pop_front(deque) is Option::Some(0i64), "deque wrapped front")
+  assert(deque_pop_back(deque) is Option::Some(3i64), "deque grown back")
+  assert(deque_pop_front(deque) is Option::Some(1i64), "deque last item")
+  assert(deque_is_empty(deque), "deque empty")
+  assert(deque_pop_front(deque) is Option::None, "deque empty front pop")
+  assert(deque_pop_back(deque) is Option::None, "deque empty back pop")
+}
+
+test "deque clear preserves capacity and aliases" {
+  let deque = deque_with_capacity(3u32)
+  let alias = deque
+  deque_push_front(deque, 4i64)
+  deque_clear(alias)
+  assert(deque_capacity(deque) == 3u32, "deque clear capacity")
+  assert(deque_peek_front(deque) is Option::None, "deque cleared front")
+  assert(deque_peek_back(deque) is Option::None, "deque cleared back")
+  deque_push_back(alias, 5i64)
+  assert(deque_pop_front(deque) is Option::Some(5i64), "deque reused alias")
+}
+
+test "deque iterator reads front to back without removing items" {
+  let deque = deque_new()
+  deque_push_front(deque, 2i64)
+  deque_push_front(deque, 1i64)
+  deque_push_back(deque, 3i64)
+  let iter = deque_iter(deque)
+  assert(deque_iter_next(iter) == 1i64, "deque iterator first")
+  assert(deque_iter_next(iter) == 2i64, "deque iterator middle")
+  assert(deque_iter_next(iter) == 3i64, "deque iterator last")
+  assert(!deque_iter_has_next(iter), "deque iterator exhausted")
+  assert(deque_length(deque) == 3u32, "deque iterator changed length")
+}

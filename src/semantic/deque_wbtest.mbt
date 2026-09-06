@@ -1,5 +1,5 @@
 ///|
-test "deque standard module has stable identities and lowering" {
+test "deque functions use ordinary library bodies and lowering" {
   let program = collect_program_manifest(
     2633UL,
     ProgramManifest::new([
@@ -15,13 +15,14 @@ test "deque standard module has stable identities and lowering" {
     .module_index("dew.std.collections.deque")
     .unwrap()]
   assert_eq(deque.diagnostics, [])
-  assert_eq(semantic_id_local(deque.lookup_type("Deque").unwrap()), 0)
-  assert_eq(
-    standard_deque_operation(deque.lookup_value("deque_push_front").unwrap()),
-    DequePushFront,
-  )
+  for callable in deque.callables {
+    assert_true(deque.body_of(callable.declaration) is Some(_))
+  }
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.frozen.import_diagnostics, [])
+  for interface_ in analyzed.frozen.interfaces {
+    assert_eq(interface_.resolved_types.diagnostics, [])
+  }
   for module_ in analyzed.modules {
     assert_eq(module_.names.diagnostics, [])
     assert_eq(module_.inferred.diagnostics, [])

@@ -1134,46 +1134,7 @@ fn plan_expression_kind(
           } else {
             ErrorPlannedValueShape
           }
-          let ring_operation = match standard_deque_operation(declaration) {
-            DequeNew => DequeNew
-            DequeWithCapacity => CircularBufferGrowable
-            DequeLength => CircularBufferLength
-            DequeCapacity => CircularBufferCapacity
-            DequeIsEmpty => CircularBufferIsEmpty
-            DequePushFront => DequePushFront
-            DequePushBack => DequePushBack
-            DequePopFront => CircularBufferPopFront
-            DequePopBack => CircularBufferPopBack
-            DequePeekFront => CircularBufferPeekFront
-            DequePeekBack => CircularBufferPeekBack
-            DequeClear => CircularBufferClear
-            DequeIter => CircularBufferIter
-            DequeIterHasNext => CircularBufferIterHasNext
-            DequeIterNext => CircularBufferIterNext
-            _ => standard_circular_buffer_operation(declaration)
-          }
-          match ring_operation {
-            DequeNew => PlannedCircularBufferNewZero(element_shape)
-            DequePushBack =>
-              PlannedQueueRingEnqueue(
-                base,
-                key,
-                planned_value_shape(
-                  resolved,
-                  inferred,
-                  inferred.expression_types[key],
-                ),
-              )
-            DequePushFront =>
-              PlannedDequeRingPushFront(
-                base,
-                key,
-                planned_value_shape(
-                  resolved,
-                  inferred,
-                  inferred.expression_types[key],
-                ),
-              )
+          match standard_circular_buffer_operation(declaration) {
             CircularBufferBounded =>
               PlannedCircularBufferNew(base, element_shape, false)
             CircularBufferGrowable =>

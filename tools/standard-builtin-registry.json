@@ -54,24 +54,7 @@
       "slot": 37,
       "path": "dew.std.collections.deque",
       "type": 0,
-      "methods": {},
-      "operations": {
-        "DequeNew": [2],
-        "DequeWithCapacity": [3],
-        "DequeLength": [4],
-        "DequeCapacity": [5],
-        "DequeIsEmpty": [6],
-        "DequePushFront": [7],
-        "DequePushBack": [8],
-        "DequePopFront": [9],
-        "DequePopBack": [10],
-        "DequePeekFront": [11],
-        "DequePeekBack": [12],
-        "DequeClear": [13],
-        "DequeIter": [14],
-        "DequeIterHasNext": [15],
-        "DequeIterNext": [16]
-      }
+      "operations": {}
     },
     "map": {
       "slot": 11,

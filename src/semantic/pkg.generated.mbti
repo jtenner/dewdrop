@@ -185,8 +185,6 @@ pub fn standard_circular_buffer_method_declaration(String) -> UInt64
 
 pub fn standard_circular_buffer_type_declaration() -> UInt64
 
-pub fn standard_deque_method_declaration(String) -> UInt64
-
 pub fn standard_deque_type_declaration() -> UInt64
 
 pub fn standard_library_source_paths() -> Array[String]
