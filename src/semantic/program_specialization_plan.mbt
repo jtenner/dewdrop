@@ -3186,13 +3186,6 @@ fn plan_program_wasmgc_fragments_for_root(
         lowering, module_, selected_demand,
       ) {
       match expression.kind {
-        PlannedArrayIter(_, _, _)
-        | PlannedArrayIterHasNext(_)
-        | PlannedArrayIterNext(_, _)
-        | PlannedArrayIterNextOption(_, _, _) => {
-          program_roots[standard_array_type_declaration()] = true
-          program_roots[standard_array_iterator_type_declaration()] = true
-        }
         PlannedMapKeys(_, _, _)
         | PlannedMapKeyIterNext(_, _, _)
         | PlannedMapKeyIterNextOption(_, _, _) => {

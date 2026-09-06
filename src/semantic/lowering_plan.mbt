@@ -92,43 +92,7 @@ pub enum PlannedExpressionKind {
   PlannedFixedArrayLength(ExprId, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
-  PlannedArrayNew(BodyTypeId, PlannedValueShape)
-  PlannedArrayWithCapacity(ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayLength(ExprId)
-  PlannedArrayGet(ExprId, ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
-  PlannedArraySet(ExprId, ExprId, ExprId, PlannedValueShape)
-  PlannedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
-  PlannedArrayPush(ExprId, ExprId, PlannedValueShape)
-  PlannedArrayPop(ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayClear(ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayIter(ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayIterHasNext(ExprId)
-  PlannedArrayIterNext(ExprId, PlannedValueShape)
-  PlannedArrayIterNextOption(ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayMake(ExprId, ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayReserve(ExprId, ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayShrinkToFit(ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayTruncate(ExprId, ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayCopy(ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayCopyWithin(
-    ExprId,
-    ExprId,
-    ExprId,
-    ExprId,
-    BodyTypeId,
-    PlannedValueShape
-  )
-  PlannedArrayFill(
-    ExprId,
-    ExprId,
-    ExprId,
-    ExprId,
-    BodyTypeId,
-    PlannedValueShape
-  )
-  PlannedArraySlice(ExprId, ExprId, ExprId, BodyTypeId, PlannedValueShape)
-  PlannedArrayExtend(ExprId, ExprId, BodyTypeId, PlannedValueShape)
+  PlannedCircularBufferLength(ExprId)
   PlannedStackIsEmpty(ExprId)
   PlannedStackPeek(ExprId, PlannedValueShape)
   PlannedQueueDequeue(ExprId, PlannedValueShape)
@@ -1229,7 +1193,7 @@ fn plan_expression_kind(
               PlannedCircularBufferNew(base, element_shape, false)
             CircularBufferGrowable =>
               PlannedCircularBufferNew(base, element_shape, true)
-            CircularBufferLength => PlannedArrayLength(base)
+            CircularBufferLength => PlannedCircularBufferLength(base)
             CircularBufferCapacity =>
               PlannedCircularBufferCapacity(base, element_shape)
             CircularBufferIsEmpty => PlannedStackIsEmpty(base)

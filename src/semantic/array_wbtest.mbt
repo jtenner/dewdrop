@@ -41,8 +41,6 @@ test "array size accessors lower to ordinary library calls" {
   for expression in lowering.modules[0].expressions {
     match expression.kind {
       PlannedDirectCall(_, _, _, _) => calls += 1
-      PlannedArrayLength(_) =>
-        abort("Array size accessors must execute their Dew bodies")
       _ => ()
     }
   }
@@ -133,18 +131,17 @@ test "array operations infer and lower through generic implementations" {
   assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
   let lowering = plan_program_lowering(program, analyzed)
   assert_eq(lowering.modules[0].diagnostics.length(), 0)
+  let mut calls = 0
+  let mut indexed_writes = 0
   for module in lowering.modules {
     for expression in module.expressions {
       match expression.kind {
-        PlannedArrayNew(_, _)
-        | PlannedArrayPush(_, _, _)
-        | PlannedArraySetUnchecked(_, _, _, _)
-        | PlannedArrayIter(_, _, _)
-        | PlannedArrayIterNext(_, _)
-        | PlannedArrayIterNextOption(_, _, _)
-        | PlannedArrayPop(_, _, _) => abort("Array algorithms must run in Dew")
+        PlannedDirectCall(_, _, _, _) => calls += 1
+        PlannedIndexSetCall(_, _, _, _, _) => indexed_writes += 1
         _ => ()
       }
     }
   }
+  assert_true(calls >= 6)
+  assert_true(indexed_writes >= 1)
 }

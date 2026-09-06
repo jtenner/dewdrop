@@ -18,6 +18,11 @@ CORE_OPERATIONS = (
 
 
 class ArrayBuiltinPolicyTests(unittest.TestCase):
+    def test_native_array_algorithms_have_no_legacy_ir(self):
+        source = (ROOT / "src/semantic/lowering_plan.mbt").read_text()
+        legacy = re.findall(r"\bPlannedArray[A-Za-z]+", source)
+        self.assertEqual(set(legacy), {"PlannedArrayLiteral"})
+
     def test_array_has_no_compiler_owned_algorithms(self):
         source = (ROOT / "std/array.dew").read_text()
         self.assertNotRegex(source, r"\bbuiltin\b")

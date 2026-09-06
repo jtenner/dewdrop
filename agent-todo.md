@@ -78,6 +78,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   removed. See the [algorithm log](docs/research/array-library-algorithms-2026-09-06.md).
 - [ ] Remove the old Array wrapper layout and literal shortcuts. Use declared
   fields and exact construction recipes, not a guessed three-field layout.
+  Unused native Array operation nodes and emitters are now removed; literal
+  construction and shared ring producers remain. See the
+  [cleanup log](docs/research/array-legacy-ir-cleanup-2026-09-06.md).
 - [ ] Move Map and Set hashing, buckets, growth, lookup, and iteration into Dew.
   Keep their values and bounds correct before tuning them.
 - [ ] Move Queue, circular-buffer, and deque storage algorithms into Dew.

@@ -1151,34 +1151,8 @@ fn wasmgc_required_nominal_declarations(
               break
             }
           }
-        PlannedArrayLiteral(_, _, _)
-        | PlannedArrayNew(_, _)
-        | PlannedArrayWithCapacity(_, _, _)
-        | PlannedArrayGet(_, _, _, _)
-        | PlannedArrayGetUnchecked(_, _, _)
-        | PlannedArraySet(_, _, _, _)
-        | PlannedArraySetUnchecked(_, _, _, _)
-        | PlannedArrayPush(_, _, _)
-        | PlannedArrayPop(_, _, _)
-        | PlannedArrayMake(_, _, _, _)
-        | PlannedArrayReserve(_, _, _, _)
-        | PlannedArrayShrinkToFit(_, _, _)
-        | PlannedArrayTruncate(_, _, _, _)
-        | PlannedArrayCopy(_, _, _)
-        | PlannedArrayCopyWithin(_, _, _, _, _, _)
-        | PlannedArrayFill(_, _, _, _, _, _)
-        | PlannedArraySlice(_, _, _, _, _)
-        | PlannedArrayExtend(_, _, _, _)
-        | PlannedArrayClear(_, _, _) =>
+        PlannedArrayLiteral(_, _, _) =>
           required[standard_array_type_declaration()] = true
-        PlannedArrayIter(_, _, _) => {
-          required[standard_array_type_declaration()] = true
-          required[standard_array_iterator_type_declaration()] = true
-        }
-        PlannedArrayIterHasNext(_)
-        | PlannedArrayIterNext(_, _)
-        | PlannedArrayIterNextOption(_, _, _) =>
-          required[standard_array_iterator_type_declaration()] = true
         _ => ()
       }
     }
@@ -4492,23 +4466,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         | PlannedRawArrayCopy(_, _, _, _, _, _, _)
         | PlannedFixedArrayLength(_, _)
         | PlannedArrayLiteral(_, _, _)
-        | PlannedArrayNew(_, _)
-        | PlannedArrayWithCapacity(_, _, _)
-        | PlannedArrayGet(_, _, _, _)
-        | PlannedArrayGetUnchecked(_, _, _)
-        | PlannedArraySet(_, _, _, _)
-        | PlannedArraySetUnchecked(_, _, _, _)
-        | PlannedArrayPush(_, _, _)
-        | PlannedArrayPop(_, _, _)
-        | PlannedArrayMake(_, _, _, _)
-        | PlannedArrayReserve(_, _, _, _)
-        | PlannedArrayShrinkToFit(_, _, _)
-        | PlannedArrayTruncate(_, _, _, _)
-        | PlannedArrayCopy(_, _, _)
-        | PlannedArrayCopyWithin(_, _, _, _, _, _)
-        | PlannedArrayFill(_, _, _, _, _, _)
-        | PlannedArraySlice(_, _, _, _, _)
-        | PlannedArrayExtend(_, _, _, _)
         | PlannedStackIsEmpty(_)
         | PlannedStackPeek(_, _)
         | PlannedQueueDequeue(_, _)
@@ -4529,9 +4486,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         | PlannedCircularBufferPushFront(_, _, _)
         | PlannedCircularBufferPopBack(_, _)
         | PlannedCircularBufferPeekBack(_, _)
-        | PlannedArrayClear(_, _, _)
-        | PlannedArrayIterNext(_, _)
-        | PlannedArrayIterNextOption(_, _, _)
         | PlannedFixedArrayGetUnchecked(_, _, _)
         | PlannedFixedArraySetUnchecked(_, _, _, _) => {
           uses_fixed_array_runtime = true
