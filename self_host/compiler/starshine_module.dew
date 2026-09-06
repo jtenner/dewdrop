@@ -26818,10 +26818,10 @@ fn self_host_emit_linked_i32_expression(
             }
             _ => {}
           }
-          if (direct_binding_result || self_host_linked_match_returns_special_binding(
-            module_,
-            arms,
-          )) && !(result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
+          // A different arm returning its payload does not constrain this
+          // arm's payload. In particular Result<Bool, String>::Err is still
+          // a reference when Ok returns the match's Boolean result.
+          if canonical_body_plan is Option::None && direct_binding_result && !(result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
             result_shape is SelfHostPlannedValueShape::UnitPlannedValueShape
           ) && !(result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) && !(
             self_host_specialization_canonical_scalar(
@@ -27283,9 +27283,10 @@ fn self_host_emit_linked_i32_expression(
                               local,
                             ) {
                               Option::Some(slot) => {
-                                if self_host_linked_match_returns_special_binding(
+                                if self_host_linked_expression_wraps_local(
                                   module_,
-                                  arms,
+                                  arm.body,
+                                  local,
                                 ) {
                                   match self_host_linked_physical_field_shape(
                                         link,
@@ -37127,6 +37128,21 @@ fn self_host_linked_scalar_locals(
           continue current + 1u32
         }
         if !(planned_local.kind is SelfHostBodyLocalKind::ParameterLocal) {
+          // A verified body plan is frozen. Local allocation consumes its
+          // carrier; legacy recovery must not rewrite it after verification.
+          match canonical_body_plan {
+            Option::Some(canonical) => {
+              if current >= canonical.local_values.length() {
+                return Result::Err("BOD-605 frozen body plan has no local value")
+              }
+              let shape = self_host_body_carrier_shape(canonical.local_values[current].carrier)
+              if !self_host_linked_scalar_append_local_type(locals, shape) {
+                return Result::Err("BOD-605 frozen body local has no physical carrier")
+              }
+              continue current + 1u32
+            }
+            Option::None => {}
+          }
           let product_field_shape = match self_host_linked_local_initializer_expression(
             module_,
             body,
@@ -40510,8 +40526,7 @@ fn build_self_host_linked_i32_module(
               fragment_module,
               fragment,
             )
-            // Local selection can refine the canonical body plan. Finish it
-            // before instruction emission reads any local carrier.
+            // Allocate locals from the frozen plan before emitting instructions.
             let locals = match self_host_linked_scalar_locals(
               link,
               canonical_body_plan,

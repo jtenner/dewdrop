@@ -21,7 +21,7 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 19
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compilers pass the 33 shared execution checks.
+physical-boundary checks. The self-host corpus now has 35 shared execution checks.
 Deferred type checking and layout work below still prevent full completion.
 
 - [ ] Add real type-valued expressions for `field_type` and
@@ -65,6 +65,8 @@ Deferred type checking and layout work below still prevent full completion.
   replace the `if` with its selected branch. Keep the shared generic body intact.
   This must run in debug builds too, before physical storage and call planning.
   - [x] Private selected bodies now fold in both paths.
+  - [x] Local allocation consumes the frozen body plan without changing carriers.
+    Both arms of `Result<Bool, String>` retain their own payload types.
   - [ ] Finish the earlier physical storage boundary and generic lambda layouts.
 - [ ] Keep type-dependent checks inside their branch until the type is known.
   Check the selected branch with its known type facts. Both branches need valid

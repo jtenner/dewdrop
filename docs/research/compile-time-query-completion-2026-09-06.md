@@ -161,3 +161,33 @@ execution took 0.024 s. Self-host hardening passes 186 tests and all record and
 execution probes. Its cold build run took 108.284 s; the routine native lane took
 62.728 s. These remain visible timing defects. Scoped API refresh passed in
 3.467 s.
+
+## Bootstrap regression: mixed Result payloads
+
+The first clean bootstrap after the query work failed while compiler A emitted
+compiler B. `self_host_specialization_evidence_type_equal` matched a
+`Result<Bool, String>`. An emitter heuristic saw that the Ok arm returned its
+Boolean payload and incorrectly used that carrier for the Err arm's String too.
+The final validator reported a String call argument as i32.
+
+A small shared fixture reproduces this without rebuilding the whole compiler:
+one arm returns the Bool payload, the other compares the String error message.
+Both the Ok and Err executions must return true. The unpatched self-host compiler
+fails Wasm validation on this fixture. The correction restricts legacy fallback
+inference to the current arm and never lets it override a frozen body plan.
+The payload/result assertion also checks the current arm, not any sibling arm.
+Tracing the plan exposed a second defect: local allocation changed its verified
+reference carrier to the inferred scalar. Local allocation now consumes the
+frozen carrier directly; the legacy recovery path is only for calls without a
+body plan. No name or sibling arm can rewrite a planned local during allocation.
+
+The hardening suite passes 186 tests, 29 exact invariant records, both host record
+tests, all execution/semantic probes, and the expanded 35 shared query checks in
+20.421 s. The clean bootstrap now builds and validates compiler B, which passes
+the semantic probes. B then rejects the two type-producing builtin signatures
+with CT-037 when compiling C. This is a separate storage-permission defect; the
+A/B/C fixed point is not yet established. A built in 31.195 s and emitted B in
+44.624 s; both exceed the performance budget. The whole failed run took 92.237 s.
+The expanded fixture also exposes a native backend `UnsupportedExpression`
+(root declaration 11, expression 63). The previous 33 native cases passed;
+the 35-case native run is not green and remains a required follow-up.
