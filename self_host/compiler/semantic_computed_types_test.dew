@@ -1,0 +1,88 @@
+open dew.std.testing
+
+test "computed field types substitute each owner without leaking scratch state" {
+  let collected = self_host_collect_bytes(
+    24710u64,
+    b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nstruct Box<t> {\n item: t\n}\ntype First = member<Box<I32>>(\"item\")\ntype Second = member::<Box<I64>>(\"item\")\nfn use(a: First, b: Second) -> Unit {}\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "computed field syntax")
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostic_count() == 0u32, "computed field resolution")
+  assert(resolved.parameter_types[1u32] == resolved.primitive(SelfHostPrimitiveType::I32Type), "first member type")
+  assert(resolved.parameter_types[2u32] == resolved.primitive(SelfHostPrimitiveType::I64Type), "second member type")
+}
+
+test "computed variant payloads preserve order and the empty product" {
+  let collected = self_host_collect_bytes(
+    24711u64,
+    b"builtin payload<t>(name: String) -> Type = \"types.variant_payload_types\"\nenum Choice<t> {\n Empty\n Pair(t, I32)\n Named {\n first: I64\n second: t\n }\n}\nfn use(a: payload<Choice<I64>>(\"Pair\"), b: payload<Choice<I32>>(\"Named\"), c: payload<Choice<I32>>(\"Empty\")) -> Unit {}\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "computed payload syntax")
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostic_count() == 0u32, "computed payload resolution")
+  assert(resolved.parameter_types[1u32] == resolved.parameter_types[2u32], "tuple and named source order")
+  match resolved.types[resolved.parameter_types[1u32]] {
+    SelfHostResolvedType::ProductType(span) => {
+      assert(span.length == 2u32, "two payloads")
+      assert(resolved.type_arguments[span.start] == resolved.primitive(SelfHostPrimitiveType::I64Type), "first payload")
+      assert(resolved.type_arguments[span.start + 1u32] == resolved.primitive(SelfHostPrimitiveType::I32Type), "second payload")
+    }
+    _ => assert(false, "payload must be a product")
+  }
+  match resolved.types[resolved.parameter_types[3u32]] {
+    SelfHostResolvedType::ProductType(span) => assert(span.length == 0u32, "unit variant has no payload")
+    _ => assert(false, "empty payload must remain a product")
+  }
+}
+
+test "computed imported members preserve generic identity" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\nfn use(a: @lib.member<@lib.Box<I64>>(\"item\")) -> I64 {\n a\n}\n",
+    b"pub builtin member<t>(name: String) -> Type = \"types.field_type\"\npub struct Box<t> {\n item: t\n}\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "member imports")
+  let resolved = fixture.frozen.interfaces.at(0u32).resolved_types
+  assert(resolved.diagnostic_count() == 0u32, "imported member resolution")
+  assert(resolved.parameter_types[0u32] == resolved.primitive(SelfHostPrimitiveType::I64Type), "imported generic member")
+}
+
+test "computed types report missing members and cycles at source" {
+  for entry in [
+    (b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nstruct Box {\n item: I32\n}\ntype Missing = member<Box>(\"other\")\n", "CT-032 no such member: other"),
+    (b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nstruct Box {\n item: member<Box>(\"item\")\n}\n", "CT-033 cyclic computed type"),
+    (b"fn member<t>(name: String) -> I32 {\n 0\n}\nstruct Box {}\ntype Invalid = member<Box>(\"item\")\n", "CT-030 ordinary functions cannot be used as types"),
+    (b"builtin member<t>(name: I32) -> Type = \"types.field_type\"\nstruct Box {}\ntype Invalid = member<Box>(\"item\")\n", "CT-031 type queries require a String selector and return Type"),
+  ] {
+    let (source, expected) = entry
+    let collected = self_host_collect_bytes(24712u64, source)
+    assert(collected.diagnostics.length() == 0u32, "negative computed type syntax")
+    let resolved = self_host_resolve_module_types(collected)
+    let mut found = false
+    for diagnostic in resolved.diagnostics {
+      match diagnostic {
+        SelfHostTypeDiagnostic::ComputedTypeFailure(owner, message, offset) => {
+          assert(owner != 0u64 && offset > 0u32, "computed error context")
+          if message == expected {
+            found = true
+          }
+        }
+        _ => self_host_semantic_unit()
+      }
+    }
+    assert(found, "computed error must remain visible")
+  }
+}
+
+test "computed parser keeps split generic closers and rejects non-string selectors" {
+  let collected = self_host_collect_bytes(
+    24713u64,
+    b"struct Box<t> {}\nfn identity<t>(value: t) -> t {\n value\n}\nfn use(value: Box<I64>) -> Box<I64> {\n identity::<Box<I64>>(value)\n}\n",
+  )
+  assert(collected.diagnostics.length() == 0u32, "ordinary nested generic call syntax")
+  let resolved = self_host_resolve_module_types(collected)
+  assert(resolved.diagnostic_count() == 0u32, "ordinary nested generic call types")
+  match self_host_parse_type_source(b"member<I64>(1)") {
+    Result::Err(_) => {}
+    Result::Ok(_) => assert(false, "non-string selector must be a parse error")
+  }
+}

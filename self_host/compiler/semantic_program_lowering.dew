@@ -888,6 +888,10 @@ fn self_host_validate_program_lowering(
                             message.append(":function:")
                             message.append_u32(parameters.length)
                           }
+                          SelfHostHirTypeSyntax::ComputedTypeSyntax(target, _, _) => {
+                            message.append(":computed:")
+                            message.append_u32(target)
+                          }
                         }
                       }
                       break self_host_semantic_unit()

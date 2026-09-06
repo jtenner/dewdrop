@@ -37,8 +37,27 @@ are performance defects, not hidden passes under the timing policy.
 ## Still active
 
 - Self-host evaluation and structural logical instances, including name queries.
-- Self-host computed member syntax and resolution.
 - Deferred member types and local compile-time type bindings.
 - Guarded type checking and refreshing flow after branch selection.
 - Early pruning of physical dependencies and unused storage.
 - Full native/self-host execution parity and bootstrap comparison.
+
+## Self-host member types and evaluator foundations
+
+The self-host parser now accepts computed member types, including module aliases
+and explicit `::<...>` syntax. A pending split `>>` cannot consume an ordinary
+call's argument list. Member resolution selects declaration identities, preserves
+generic arguments and payload order, and returns real resolved types. Nested
+queries preserve their caller's traversal scratch. Cycles, missing members,
+ordinary-function impostors, invalid signatures, and invalid selectors stay
+source errors. Imported query overloads are rejected, not chosen by order.
+
+The pure self-host evaluator now has structural logical types and scalar query
+rules. It keeps pending types separate from erroneous types; identical physical
+carriers do not establish type equality. Work stacks and explicit resource errors
+bound traversal. This is a foundation, not yet self-host source-call folding.
+
+The hardening suite passes 175 tests, 29 exact numeric trap records, both host
+record tests, and all emission/semantic probes in 19.264 s. The initial cold C
+build took 90.092 s and is a visible performance defect. Intermediate parser and
+typing failures were corrected before the passing run.

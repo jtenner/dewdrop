@@ -719,6 +719,14 @@ impl SelfHostCollectionBuilder {
                 }
               }
             }
+            SelfHostTypeExpr::ComputedType(target, _, _) => {
+              sources.push(source)
+              states.push(1u32)
+              starts.push(results.length())
+              sources.push(target)
+              states.push(0u32)
+              starts.push(0u32)
+            }
             SelfHostTypeExpr::AppliedType(base, arguments, _) => {
               sources.push(source)
               states.push(1u32)
@@ -756,6 +764,15 @@ impl SelfHostCollectionBuilder {
           }
         } else {
           match source {
+            SelfHostTypeExpr::ComputedType(_, selector, offset) => {
+              let id = self.type_syntax.length()
+              self.type_syntax.push(SelfHostHirTypeSyntax::ComputedTypeSyntax(
+                results[result_start], selector, offset,
+              ))
+              self.type_syntax_files.push(self.state.current_file)
+              results.truncate(result_start)
+              results.push(id)
+            }
             SelfHostTypeExpr::ProductType(fields, offset) => {
               let argument_start = self.type_arguments.length()
               let _ = while 0u32 {

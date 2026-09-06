@@ -38,6 +38,7 @@ pub enum SelfHostHirTypeSyntax {
   ProductTypeSyntax(SelfHostHirSpan, U32)
   AppliedTypeSyntax(U32, SelfHostHirSpan, U32)
   FunctionTypeSyntax(SelfHostHirSpan, U32, U32)
+  ComputedTypeSyntax(U32, Bytes, U32)
 }
 
 impl SelfHostHirTypeSyntax {
@@ -48,6 +49,7 @@ impl SelfHostHirTypeSyntax {
       SelfHostHirTypeSyntax::ProductTypeSyntax(_, offset) => offset
       SelfHostHirTypeSyntax::AppliedTypeSyntax(_, _, offset) => offset
       SelfHostHirTypeSyntax::FunctionTypeSyntax(_, _, offset) => offset
+      SelfHostHirTypeSyntax::ComputedTypeSyntax(_, _, offset) => offset
     }
   }
 }

@@ -316,6 +316,9 @@ fn self_host_derived_type_mentions_parameter(
           break true
         }
         SelfHostTypeExpr::QualifiedType(_, _, _, _) => {}
+        SelfHostTypeExpr::ComputedType(target, _, _) => {
+          stack.push(target)
+        }
         SelfHostTypeExpr::ProductType(fields, _) => {
           let mut field_index = 0u32
           let _ = while field_index {

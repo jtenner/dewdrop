@@ -31,7 +31,9 @@ physical-boundary checks. This is not yet self-host parity or the full feature.
     scalar and tuple calls, parser recovery, cycles, and metatype storage errors.
   - [ ] Defer queries on an unconstrained generic owner until specialization.
     `field_type<Box<T>>("item")` works; `field_type<T>("item")` reports CT-035.
-  - [ ] Add local compile-time type bindings and self-host parser/resolver parity.
+  - [x] Port inline computed member syntax and local/imported generic member
+    resolution to the self-host parser and resolver; test exact source errors.
+  - [ ] Add local compile-time type bindings.
 - [ ] Add `field_names` and `variant_names`. Preserve declaration identity and
   source order, including imported and generic types.
   - [x] Native folding and fresh string-array constants, with Wasm execution tests.
@@ -47,6 +49,10 @@ physical-boundary checks. This is not yet self-host parity or the full feature.
   - [x] Match the native compile-time `Type` identity and reject runtime storage,
     including aliases, nested generic arguments, tuples, and function signatures.
     Keep numeric records for invalid internal type indices and spans.
+  - [x] Add the self-host pure scalar evaluator and structural logical types.
+    Test pending/error separation, nested type identity, lanes, and scalar layout.
+  - [ ] Connect the evaluator to specialization and emission; standalone evaluator
+    tests do not prove that self-host source calls are folded.
 - [x] Add native `is_unit::<t>()` as a pure compiler builtin with no Wasm call.
   Test the logical type: Unit is true, other known types are false, and unknown
   types stay pending. Never is not Unit. Resolve the query by identity, not by

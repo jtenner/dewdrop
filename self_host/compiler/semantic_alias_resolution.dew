@@ -675,26 +675,23 @@ impl SelfHostTypeResolver {
     self.substitution_results[0u32]
   }
 
-  fn imported_alias_parameter_argument(
+  fn declared_parameter_argument(
     self,
-    binding: SelfHostImportedDeclarationBinding,
+    declaration: U64,
+    parameters: SelfHostHirSpan,
     parameter: U64,
     arguments: Array<U32>,
   ) -> Option<U32> {
     if self_host_semantic_id_module(parameter) != self_host_semantic_id_module(
-      binding.declaration,
+      declaration,
     ) {
       Option::None
     } else {
       let local = self_host_semantic_id_local(parameter)
-      let end = self_host_u32_add(
-        binding.generic_parameters.start,
-        binding.generic_parameters.length,
-      )
-      if local < binding.generic_parameters.start || local >= end {
+      if local < parameters.start || local - parameters.start >= parameters.length {
         Option::None
       } else {
-        Option::Some(arguments[local - binding.generic_parameters.start])
+        Option::Some(arguments[local - parameters.start])
       }
     }
   }
@@ -705,6 +702,31 @@ impl SelfHostTypeResolver {
     target: U32,
     arguments: Array<U32>,
   ) -> U32 {
+    self.substitute_declared_type(binding.declaration, binding.generic_parameters, target, arguments)
+  }
+
+  fn substitute_declared_type(
+    self,
+    declaration: U64,
+    parameters: SelfHostHirSpan,
+    target: U32,
+    arguments: Array<U32>,
+  ) -> U32 {
+    self_host_assert_compiler_invariant_with_failure(
+      parameters.length == arguments.length(),
+      SelfHostInvariantFailure::{
+        code: 301u32
+        phase: 2u32
+        module_id: self.collected.module_id
+        declaration: declaration
+        body: 0u64
+        expression: 4294967295u32
+        expected: u32_into_u64(parameters.length)
+        actual: u32_into_u64(arguments.length())
+        detail: u32_into_u64(target)
+      },
+      "SPC-301 declared type substitution arity mismatch",
+    )
     self.substitution_types.clear()
     self.substitution_states.clear()
     self.substitution_starts.clear()
@@ -727,8 +749,8 @@ impl SelfHostTypeResolver {
         if state == 0u32 {
           match self.interner.types[current] {
             SelfHostResolvedType::GenericParameterType(parameter) => {
-              let result = match self.imported_alias_parameter_argument(
-                binding,
+              let result = match self.declared_parameter_argument(
+                declaration, parameters,
                 parameter,
                 arguments,
               ) {

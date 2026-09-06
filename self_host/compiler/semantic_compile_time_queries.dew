@@ -1,0 +1,366 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.option
+open dew.std.result
+
+// Logical identity is independent of the physical Wasm carrier.
+pub enum SelfHostCompileTimeType {
+  ErrorCompileTimeType
+  UnknownCompileTimeType
+  PrimitiveCompileTimeType(SelfHostPrimitiveType)
+  ParameterCompileTimeType(U64)
+  NominalCompileTimeType(U64)
+  TraitCompileTimeType(U64)
+  ProductCompileTimeType(Array<SelfHostCompileTimeType>)
+  AppliedCompileTimeType(SelfHostCompileTimeType, Array<SelfHostCompileTimeType>)
+  FunctionCompileTimeType(Array<SelfHostCompileTimeType>, SelfHostCompileTimeType)
+}
+
+pub enum SelfHostCompileTimeConstant {
+  BoolCompileTimeConstant(Bool)
+  U32CompileTimeConstant(U32)
+  NamesCompileTimeConstant(Array<Bytes>)
+}
+
+struct SelfHostCompileTimeTypePair {
+  left: SelfHostCompileTimeType
+  right: SelfHostCompileTimeType
+}
+
+fn self_host_empty_compile_time_types() -> Array<SelfHostCompileTimeType> {
+  []
+}
+
+fn self_host_compile_time_type_query_arity(name: Bytes) -> Option<U32> {
+  if name == b"types.type_equal" || name == b"types.can_bitcast" || name == b"types.implements" {
+    return Option::Some(2u32)
+  }
+  for unary in [b"types.is_unit", b"types.is_never", b"types.is_integer", b"types.is_signed_integer", b"types.is_float", b"types.bit_width", b"types.lane_count", b"types.lane_bit_width", b"types.tuple_length", b"types.field_names", b"types.variant_names", b"types.size_of", b"types.align_of"] {
+    if name == unary {
+      return Option::Some(1u32)
+    }
+  }
+  Option::None
+}
+
+// Iterative traversal avoids using the host call stack for nested type trees.
+fn self_host_compile_time_types_concrete(types: Array<SelfHostCompileTimeType>) -> Result<Bool, String> {
+  let work = types.copy()
+  let mut concrete = true
+  let mut steps = 0u32
+  while work.length() {
+    length => if length > 0u32 {
+      if steps >= 65536u32 {
+        return Result::Err("CT-002 type query traversal limit exceeded")
+      }
+      steps = steps + 1u32
+      let value = work[length - 1u32]
+      work.truncate(length - 1u32)
+      match value {
+        SelfHostCompileTimeType::ErrorCompileTimeType => return Result::Err("CT-002 erroneous type query argument")
+        SelfHostCompileTimeType::UnknownCompileTimeType => {
+          concrete = false
+        }
+        SelfHostCompileTimeType::ParameterCompileTimeType(_) => {
+          concrete = false
+        }
+        SelfHostCompileTimeType::ProductCompileTimeType(fields) => {
+          for field in fields {
+            work.push(field)
+          }
+        }
+        SelfHostCompileTimeType::AppliedCompileTimeType(base, arguments) => {
+          work.push(base)
+          for argument in arguments {
+            work.push(argument)
+          }
+        }
+        SelfHostCompileTimeType::FunctionCompileTimeType(arguments, result) => {
+          work.push(result)
+          for argument in arguments {
+            work.push(argument)
+          }
+        }
+        _ => {}
+      }
+      continue work.length()
+    } else {
+      break Result::Ok(concrete)
+    }
+  }
+}
+
+fn self_host_compile_time_types_equal(left: SelfHostCompileTimeType, right: SelfHostCompileTimeType) -> Result<Bool, String> {
+  let work = [SelfHostCompileTimeTypePair::{
+    left: left
+    right: right
+  }]
+  let mut steps = 0u32
+  while work.length() {
+    length => if length > 0u32 {
+      if steps >= 65536u32 {
+        return Result::Err("CT-002 type equality traversal limit exceeded")
+      }
+      steps = steps + 1u32
+      let pair = work[length - 1u32]
+      work.truncate(length - 1u32)
+      let fields = self_host_empty_compile_time_types()
+      let others = self_host_empty_compile_time_types()
+      let same = match pair.left {
+        SelfHostCompileTimeType::ErrorCompileTimeType => return Result::Err("CT-002 erroneous type equality argument")
+        SelfHostCompileTimeType::UnknownCompileTimeType => pair.right is SelfHostCompileTimeType::UnknownCompileTimeType
+        SelfHostCompileTimeType::ParameterCompileTimeType(id) => match pair.right {
+          SelfHostCompileTimeType::ParameterCompileTimeType(other) => id == other
+          _ => false
+        }
+        SelfHostCompileTimeType::NominalCompileTimeType(id) => match pair.right {
+          SelfHostCompileTimeType::NominalCompileTimeType(other) => id == other
+          _ => false
+        }
+        SelfHostCompileTimeType::TraitCompileTimeType(id) => match pair.right {
+          SelfHostCompileTimeType::TraitCompileTimeType(other) => id == other
+          _ => false
+        }
+        SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive) => match pair.right {
+          SelfHostCompileTimeType::PrimitiveCompileTimeType(other) => primitive.rank() == other.rank()
+          _ => false
+        }
+        SelfHostCompileTimeType::ProductCompileTimeType(values) => match pair.right {
+          SelfHostCompileTimeType::ProductCompileTimeType(candidates) => {
+            for value in values {
+              fields.push(value)
+            }
+            for value in candidates {
+              others.push(value)
+            }
+            true
+          }
+          _ => false
+        }
+        SelfHostCompileTimeType::AppliedCompileTimeType(base, values) => match pair.right {
+          SelfHostCompileTimeType::AppliedCompileTimeType(other, candidates) => {
+            fields.push(base)
+            others.push(other)
+            for value in values {
+              fields.push(value)
+            }
+            for value in candidates {
+              others.push(value)
+            }
+            true
+          }
+          _ => false
+        }
+        SelfHostCompileTimeType::FunctionCompileTimeType(values, result) => match pair.right {
+          SelfHostCompileTimeType::FunctionCompileTimeType(candidates, other) => {
+            fields.push(result)
+            others.push(other)
+            for value in values {
+              fields.push(value)
+            }
+            for value in candidates {
+              others.push(value)
+            }
+            true
+          }
+          _ => false
+        }
+      }
+      if !same || fields.length() != others.length() {
+        return Result::Ok(false)
+      }
+      let _ = while 0u32 {
+        index => if index < fields.length() {
+          work.push(SelfHostCompileTimeTypePair::{
+            left: fields[index]
+            right: others[index]
+          })
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue work.length()
+    } else {
+      break Result::Ok(true)
+    }
+  }
+}
+
+fn self_host_compile_time_lanes(primitive: SelfHostPrimitiveType) -> Option<(U32, U32)> {
+  match primitive {
+    SelfHostPrimitiveType::I8x4Type => Option::Some((4u32, 8u32))
+    SelfHostPrimitiveType::U8x4Type => Option::Some((4u32, 8u32))
+    SelfHostPrimitiveType::I16x2Type => Option::Some((2u32, 16u32))
+    SelfHostPrimitiveType::U16x2Type => Option::Some((2u32, 16u32))
+    SelfHostPrimitiveType::I8x8Type => Option::Some((8u32, 8u32))
+    SelfHostPrimitiveType::U8x8Type => Option::Some((8u32, 8u32))
+    SelfHostPrimitiveType::I16x4Type => Option::Some((4u32, 16u32))
+    SelfHostPrimitiveType::U16x4Type => Option::Some((4u32, 16u32))
+    SelfHostPrimitiveType::I32x2Type => Option::Some((2u32, 32u32))
+    SelfHostPrimitiveType::U32x2Type => Option::Some((2u32, 32u32))
+    SelfHostPrimitiveType::I8x16Type => Option::Some((16u32, 8u32))
+    SelfHostPrimitiveType::U8x16Type => Option::Some((16u32, 8u32))
+    SelfHostPrimitiveType::I16x8Type => Option::Some((8u32, 16u32))
+    SelfHostPrimitiveType::U16x8Type => Option::Some((8u32, 16u32))
+    SelfHostPrimitiveType::I32x4Type => Option::Some((4u32, 32u32))
+    SelfHostPrimitiveType::U32x4Type => Option::Some((4u32, 32u32))
+    SelfHostPrimitiveType::F32x4Type => Option::Some((4u32, 32u32))
+    SelfHostPrimitiveType::I64x2Type => Option::Some((2u32, 64u32))
+    SelfHostPrimitiveType::U64x2Type => Option::Some((2u32, 64u32))
+    SelfHostPrimitiveType::F64x2Type => Option::Some((2u32, 64u32))
+    _ => Option::None
+  }
+}
+
+fn self_host_compile_time_bits(primitive: SelfHostPrimitiveType) -> Option<U32> {
+  match primitive {
+    SelfHostPrimitiveType::I8Type => Option::Some(8u32)
+    SelfHostPrimitiveType::U8Type => Option::Some(8u32)
+    SelfHostPrimitiveType::I16Type => Option::Some(16u32)
+    SelfHostPrimitiveType::U16Type => Option::Some(16u32)
+    SelfHostPrimitiveType::I32Type => Option::Some(32u32)
+    SelfHostPrimitiveType::U32Type => Option::Some(32u32)
+    SelfHostPrimitiveType::F32Type => Option::Some(32u32)
+    SelfHostPrimitiveType::Swar32Type => Option::Some(32u32)
+    SelfHostPrimitiveType::I64Type => Option::Some(64u32)
+    SelfHostPrimitiveType::U64Type => Option::Some(64u32)
+    SelfHostPrimitiveType::F64Type => Option::Some(64u32)
+    SelfHostPrimitiveType::Swar64Type => Option::Some(64u32)
+    SelfHostPrimitiveType::V128Type => Option::Some(128u32)
+    _ => match self_host_compile_time_lanes(primitive) {
+      Option::Some(pair) => {
+        let (lanes, bits) = pair
+        Option::Some(lanes * bits)
+      }
+      Option::None => Option::None
+    }
+  }
+}
+
+fn self_host_compile_time_bitcast_carrier(type_: SelfHostCompileTimeType) -> Option<U32> {
+  match type_ {
+    SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive) => {
+      let rank = primitive.rank()
+      if rank == 1u32 || rank == 2u32 || rank == 3u32 || (rank >= 10u32 && rank <= 13u32) || rank == 16u32 || (rank >= 18u32 && rank <= 21u32) {
+        return Option::Some(0u32)
+      }
+      if rank == 4u32 || rank == 5u32 || rank == 17u32 || (rank >= 22u32 && rank <= 27u32) {
+        return Option::Some(1u32)
+      }
+      if rank == 6u32 {
+        return Option::Some(2u32)
+      }
+      if rank == 7u32 {
+        return Option::Some(3u32)
+      }
+      if rank == 15u32 || (rank >= 28u32 && rank <= 37u32) {
+        return Option::Some(4u32)
+      }
+      Option::None
+    }
+    _ => Option::None
+  }
+}
+
+fn self_host_evaluate_compile_time_query(name: Bytes, arguments: Array<SelfHostCompileTimeType>) -> Result<Option<SelfHostCompileTimeConstant>, String> {
+  let arity = match self_host_compile_time_type_query_arity(name) {
+    Option::Some(value) => value
+    Option::None => return Result::Err("CT-002 unknown type-query builtin")
+  }
+  if arity != arguments.length() {
+    return Result::Err("CT-002 wrong type-query arity")
+  }
+  match self_host_compile_time_types_concrete(arguments) {
+    Result::Err(error) => return Result::Err(error)
+    Result::Ok(concrete) => if !concrete {
+      return Result::Ok(Option::None)
+    }
+  }
+  let first = arguments[0u32]
+  if name == b"types.type_equal" {
+    return match self_host_compile_time_types_equal(first, arguments[1u32]) {
+      Result::Ok(value) => Result::Ok(Option::Some(SelfHostCompileTimeConstant::BoolCompileTimeConstant(value)))
+      Result::Err(error) => Result::Err(error)
+    }
+  }
+  if name == b"types.can_bitcast" {
+    let value = match self_host_compile_time_bitcast_carrier(first) {
+      Option::Some(left) => match self_host_compile_time_bitcast_carrier(arguments[1u32]) {
+        Option::Some(right) => left == right
+        Option::None => false
+      }
+      Option::None => false
+    }
+    return Result::Ok(Option::Some(SelfHostCompileTimeConstant::BoolCompileTimeConstant(value)))
+  }
+  let rank = match first {
+    SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive) => primitive.rank()
+    _ => 4294967295u32
+  }
+  let predicate = if name == b"types.is_unit" {
+    Option::Some(rank == 0u32)
+  } else if name == b"types.is_never" {
+    Option::Some(rank == 9u32)
+  } else if name == b"types.is_integer" {
+    Option::Some((rank >= 2u32 && rank <= 5u32) || (rank >= 10u32 && rank <= 13u32))
+  } else if name == b"types.is_signed_integer" {
+    Option::Some(rank == 2u32 || rank == 4u32 || rank == 10u32 || rank == 11u32)
+  } else if name == b"types.is_float" {
+    Option::Some(rank == 6u32 || rank == 7u32)
+  } else {
+    Option::None
+  }
+  match predicate {
+    Option::Some(value) => return Result::Ok(Option::Some(SelfHostCompileTimeConstant::BoolCompileTimeConstant(value)))
+    Option::None => {}
+  }
+  if name == b"types.implements" || name == b"types.field_names" || name == b"types.variant_names" {
+    return Result::Err("CT-010 missing type-query program context")
+  }
+  if name == b"types.tuple_length" {
+    return match first {
+      SelfHostCompileTimeType::ProductCompileTimeType(fields) => Result::Ok(Option::Some(SelfHostCompileTimeConstant::U32CompileTimeConstant(fields.length())))
+      _ => Result::Err("CT-002 tuple_length requires a product type")
+    }
+  }
+  let primitive = match first {
+    SelfHostCompileTimeType::PrimitiveCompileTimeType(value) => value
+    _ => return Result::Err("CT-002 unsupported type-query category")
+  }
+  let value = if name == b"types.size_of" || name == b"types.align_of" {
+    let size = if rank == 0u32 {
+      0u32
+    } else if rank == 1u32 {
+      4u32
+    } else {
+      match self_host_compile_time_bits(primitive) {
+        Option::Some(bits) => bits / 8u32
+        Option::None => return Result::Err("CT-002 type has no supported byte layout")
+      }
+    }
+    if name == b"types.align_of" && size == 0u32 {
+      1u32
+    } else {
+      size
+    }
+  } else if name == b"types.bit_width" {
+    match self_host_compile_time_bits(primitive) {
+      Option::Some(bits) => bits
+      Option::None => return Result::Err("CT-002 type has no bit width")
+    }
+  } else {
+    match self_host_compile_time_lanes(primitive) {
+      Option::Some(pair) => {
+        let (lanes, bits) = pair
+        if name == b"types.lane_count" {
+          lanes
+        } else {
+          bits
+        }
+      }
+      Option::None => return Result::Err("CT-002 type has no lanes")
+    }
+  }
+  Result::Ok(Option::Some(SelfHostCompileTimeConstant::U32CompileTimeConstant(value)))
+}

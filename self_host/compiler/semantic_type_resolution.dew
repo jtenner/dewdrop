@@ -162,6 +162,8 @@ struct SelfHostTypeResolver {
   expectation_tasks: Array<Bool>
   constructor_tasks: Array<Bool>
   application_scratch: Array<U32>
+  computed_active: Array<Bool>
+  mut computed_depth: U32
   import_memos: SelfHostImportedTypeMemoList
   import_task_interfaces: Array<U32>
   import_task_types: Array<U32>
@@ -297,6 +299,8 @@ impl SelfHostTypeResolver {
       expectation_tasks: []
       constructor_tasks: []
       application_scratch: []
+      computed_active: self_host_bool_slots(collected.type_syntax.length(), false)
+      computed_depth: 0u32
       import_memos: import_memos
       import_task_interfaces: []
       import_task_types: []
@@ -1117,6 +1121,20 @@ impl SelfHostTypeResolver {
     syntax: U32,
     expect_trait: Bool,
   ) -> U32 {
+    self_host_assert_array_index(syntax, self.syntax_types.length(), "ARN-104 computed type syntax")
+    if self.computed_active[syntax] || self.computed_depth >= 256u32 {
+      self.diagnose(SelfHostTypeDiagnostic::ComputedTypeFailure(
+        owner,
+        if self.computed_active[syntax] {
+          "CT-033 cyclic computed type"
+        } else {
+          "CT-034 computed type nesting limit exceeded"
+        },
+        self.collected.type_syntax[syntax].offset(),
+      ))
+      return self.interner.error_type
+    }
+    self.computed_active[syntax] = true
     let self_owner = self.self_context(owner)
     self.syntax_tasks.clear()
     self.state_tasks.clear()
@@ -1128,7 +1146,8 @@ impl SelfHostTypeResolver {
         if self.state_tasks.length() == 0u32 ||
           self.expectation_tasks.length() == 0u32 ||
           self.constructor_tasks.length() == 0u32 {
-          return self.interner.error_type
+          self_host_assert_compiler_invariant(false, "ARN-103 type resolution work arrays are not parallel")
+          unreachable()
         }
         let current_index = length - 1u32
         let current = self_host_type_resolution_u32_at(
@@ -1155,6 +1174,9 @@ impl SelfHostTypeResolver {
         )
         self.constructor_tasks.truncate(constructor_index)
         match self.collected.type_syntax[current] {
+          SelfHostHirTypeSyntax::ComputedTypeSyntax(target, selector, offset) => {
+            self.syntax_types[current] = self.resolve_computed_type(owner, target, selector, offset)
+          }
           SelfHostHirTypeSyntax::NamedTypeSyntax(name, offset) => {
             self.syntax_types[current] = self.resolve_named_type(
               owner,
@@ -1302,6 +1324,7 @@ impl SelfHostTypeResolver {
         break self_host_semantic_unit()
       }
     }
+    self.computed_active[syntax] = false
     self.syntax_types[syntax]
   }
 

@@ -1,0 +1,383 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.map
+open dew.std.option
+open dew.std.result
+open dew.std.string_builder
+
+fn self_host_computed_type_builtin(name: Bytes) -> Bool {
+  name == b"types.field_type" || name == b"types.variant_payload_types"
+}
+
+impl SelfHostTypeResolver {
+  // Nested dependencies keep the same interner and substitution generation.
+  // Save traversal stacks so a later field or alias cannot erase its caller.
+  fn computed_dependency(self, owner: U64, syntax: U32) -> U32 {
+    self_host_assert_array_index(syntax, self.syntax_types.length(), "ARN-104 computed dependency")
+    if self.syntax_types[syntax] != 4294967295u32 {
+      return self.syntax_types[syntax]
+    }
+    let syntax_tasks = self.syntax_tasks.copy()
+    let state_tasks = self.state_tasks.copy()
+    let expectations = self.expectation_tasks.copy()
+    let constructors = self.constructor_tasks.copy()
+    let scratch = self.application_scratch.copy()
+    self.computed_depth = self.computed_depth + 1u32
+    let result = self.resolve_syntax(owner, syntax, false)
+    self.computed_depth = self.computed_depth - 1u32
+    self.syntax_tasks.clear()
+    self.state_tasks.clear()
+    self.expectation_tasks.clear()
+    self.constructor_tasks.clear()
+    self.application_scratch.clear()
+    for value in syntax_tasks {
+      self.syntax_tasks.push(value)
+    }
+    for value in state_tasks {
+      self.state_tasks.push(value)
+    }
+    for value in expectations {
+      self.expectation_tasks.push(value)
+    }
+    for value in constructors {
+      self.constructor_tasks.push(value)
+    }
+    for value in scratch {
+      self.application_scratch.push(value)
+    }
+    result
+  }
+
+  fn computed_builtin_recipe(self, syntax: U32) -> Result<Bytes, String> {
+    let declaration = match self.collected.type_syntax[syntax] {
+      SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => {
+        let spelling = self.collected.name(name)
+        match self.collected.value_binding(name) {
+          Option::Some(binding) => {
+            if binding.head != binding.tail {
+              return Result::Err("CT-030 ambiguous type-query builtin")
+            }
+            self.collected.value_binding_candidates[binding.head].declaration
+          }
+          Option::None => match self.imports {
+            Option::Some(scope) => match scope.lookup_opened_value(spelling) {
+              Option::Some(value) => value
+              Option::None => return Result::Err("CT-030 missing or ambiguous type-query builtin")
+            }
+            Option::None => return Result::Err("CT-030 unknown type-query builtin")
+          }
+        }
+      }
+      SelfHostHirTypeSyntax::QualifiedTypeSyntax(alias, name, _, _) => {
+        let scope = match self.imports {
+          Option::Some(value) => value
+          Option::None => return Result::Err("CT-030 unknown type-query module")
+        }
+        let interface_index = match scope.lookup_alias(self.collected.name(alias)) {
+          Option::Some(value) => value
+          Option::None => return Result::Err("CT-030 unknown type-query module alias")
+        }
+        let mut candidates = 0u32
+        for entry in scope.interfaces.at(interface_index).declarations {
+          if entry.name == self.collected.name(name) && entry.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration {
+            candidates = candidates + 1u32
+          }
+        }
+        if candidates != 1u32 {
+          return Result::Err("CT-030 missing or ambiguous qualified type query")
+        }
+        match scope.lookup_module_value(interface_index, self.collected.name(name)) {
+          Option::Some(binding) => binding.declaration
+          Option::None => return Result::Err("CT-030 missing or ambiguous qualified type query")
+        }
+      }
+      _ => return Result::Err("CT-030 invalid type-query target")
+    }
+    if self_host_semantic_id_module(declaration) == self.collected.module_id {
+      for entry in self.collected.builtins {
+        if entry.declaration == declaration {
+          if !self_host_computed_type_builtin(entry.builtin_name) {
+            return Result::Err("CT-030 a type position requires a type-returning builtin")
+          }
+          let generics = self.collected.generic_parameters_of(declaration)
+          let parameters = self.collected.parameters_of(declaration)
+          if generics.length != 1u32 || parameters.length != 1u32 {
+            return Result::Err("CT-031 invalid type-query declaration signature")
+          }
+          let input = self.computed_dependency(declaration, self.collected.parameters[parameters.start].type_)
+          let mut output = self.interner.error_type
+          for callable in self.collected.callables {
+            if callable.declaration == declaration {
+              output = self.computed_dependency(declaration, callable.return_type)
+            }
+          }
+          if !(self.interner.types[input] is SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::StringType)) ||
+            !(self.interner.types[output] is SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::CompileTimeTypeType)) {
+            return Result::Err("CT-031 type queries require a String selector and return Type")
+          }
+          return Result::Ok(entry.builtin_name)
+        }
+      }
+      return Result::Err("CT-030 ordinary functions cannot be used as types")
+    }
+    let scope = match self.imports {
+      Option::Some(value) => value
+      Option::None => return Result::Err("CT-030 missing imported type query")
+    }
+    let binding = match scope.binding_for_declaration(declaration) {
+      Option::Some(value) => value
+      Option::None => return Result::Err("CT-030 missing imported type-query declaration")
+    }
+    let interface_ = scope.interfaces.at(binding.interface_index)
+    for callable in interface_.callables {
+      if callable.declaration == declaration {
+        let name = match callable.kind {
+          SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(name) => name
+          _ => return Result::Err("CT-030 a type position requires a type-returning builtin")
+        }
+        if !self_host_computed_type_builtin(name) {
+          return Result::Err("CT-030 a type position requires a type-returning builtin")
+        }
+        if callable.generic_parameters.length != 1u32 || callable.parameters.length != 1u32 {
+          return Result::Err("CT-031 invalid type-query declaration signature")
+        }
+        let input = interface_.parameters[callable.parameters.start].type_
+        if !(interface_.resolved_types.types[input] is SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::StringType)) ||
+          !(interface_.resolved_types.types[callable.result_type] is SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::CompileTimeTypeType)) {
+          return Result::Err("CT-031 type queries require a String selector and return Type")
+        }
+        return Result::Ok(name)
+      }
+    }
+    Result::Err("CT-030 missing imported type-query callable")
+  }
+
+  fn computed_nominal(self, input: U32) -> Result<(U64, Array<U32>), String> {
+    let visited = self_host_empty_u64_bool_map()
+    let result = while input {
+      current => {
+        if visited.get(u32_into_u64(current)) is Option::Some(_) {
+          break Result::Err("CT-033 cyclic computed type alias")
+        }
+        if visited.length() >= 1024u32 {
+          break Result::Err("CT-034 computed type alias limit exceeded")
+        }
+        visited.set(u32_into_u64(current), true)
+        let arguments = self_host_u32_slots(0u32, 0u32)
+        let base = match self.interner.types[current] {
+          SelfHostResolvedType::AppliedType(base, span) => {
+            self_host_compile_time_storage_span(span, self.interner.arguments.length(), self.collected.module_id)
+            let _ = while 0u32 {
+              index => if index < span.length {
+                arguments.push(self.interner.arguments[span.start + index])
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            base
+          }
+          _ => current
+        }
+        let declaration = match self.interner.types[base] {
+          SelfHostResolvedType::NominalType(value) => value
+          SelfHostResolvedType::GenericParameterType(_) => return Result::Err("CT-035 member type query requires a known nominal type")
+          SelfHostResolvedType::SelfType(_) => return Result::Err("CT-035 member type query requires a known nominal type")
+          _ => return Result::Err("CT-032 member type query requires a struct or enum")
+        }
+        match self.alias_indices.get(declaration) {
+          Option::Some(index) => {
+            let alias = self.collected.aliases[index]
+            let target = self.computed_dependency(declaration, alias.target)
+            if target == self.interner.error_type {
+              break Result::Err("CT-033 invalid computed type dependency")
+            }
+            let generics = self.collected.generic_parameters_of(declaration)
+            if generics.length != arguments.length() {
+              break Result::Err("CT-031 member owner has the wrong generic arity")
+            }
+            continue self.substitute_declared_type(declaration, generics, target, arguments)
+          }
+          Option::None => break Result::Ok((declaration, arguments))
+        }
+      }
+    }
+    result
+  }
+
+  fn resolve_computed_type(self, owner: U64, target: U32, selector: Bytes, offset: U32) -> U32 {
+    match self.evaluate_computed_type(owner, target, selector) {
+      Result::Ok(type_) => type_
+      Result::Err(message) => {
+        self.diagnose(SelfHostTypeDiagnostic::ComputedTypeFailure(owner, message, offset))
+        self.interner.error_type
+      }
+    }
+  }
+
+  fn computed_member_type(self, operation: Bytes, declaration: U64, arguments: Array<U32>, selector: String) -> Result<U32, String> {
+    let field_query = operation == b"types.field_type"
+    let values = self_host_u32_slots(0u32, 0u32)
+    let mut generics = SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    let mut found = false
+    if self_host_semantic_id_module(declaration) == self.collected.module_id {
+      generics = self.collected.generic_parameters_of(declaration)
+      let mut valid_owner = false
+      for entry in self.collected.declarations {
+        if entry.id == declaration {
+          valid_owner = if field_query {
+            entry.kind is SelfHostCollectedDeclKind::StructDecl
+          } else {
+            entry.kind is SelfHostCollectedDeclKind::EnumDecl
+          }
+        }
+      }
+      if !valid_owner {
+        return Result::Err("CT-032 field_type requires a struct; variant_payload_types requires an enum")
+      }
+      if field_query {
+        for field in self.collected.fields {
+          if field.declaration == declaration && field.variant is Option::None && self.collected.name(field.name) == selector {
+            values.push(self.computed_dependency(declaration, field.type_))
+            found = true
+          }
+        }
+      } else {
+        for variant in self.collected.variants {
+          if variant.declaration == declaration && self.collected.name(variant.name) == selector {
+            found = true
+            if variant.kind is SelfHostCollectedVariantKind::StructVariantDecl {
+              for field in self.collected.fields {
+                if match field.variant {
+                  Option::Some(owner) => owner == variant.id
+                  Option::None => false
+                } {
+                  values.push(self.computed_dependency(declaration, field.type_))
+                }
+              }
+            } else {
+              self_host_assert_array_span(variant.payload_types.start, variant.payload_types.length, self.collected.type_arguments.length(), "ARN-104 computed variant payload")
+              let _ = while 0u32 {
+                index => if index < variant.payload_types.length {
+                  values.push(self.computed_dependency(declaration, self.collected.type_arguments[variant.payload_types.start + index]))
+                  continue index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+          }
+        }
+      }
+    } else {
+      let scope = match self.imports {
+        Option::Some(value) => value
+        Option::None => return Result::Err("CT-032 missing imported member type owner")
+      }
+      let binding = match scope.binding_for_declaration(declaration) {
+        Option::Some(value) => value
+        Option::None => return Result::Err("CT-032 missing imported type declaration")
+      }
+      let valid_owner = if field_query {
+        binding.source_kind is SelfHostCollectedDeclKind::StructDecl
+      } else {
+        binding.source_kind is SelfHostCollectedDeclKind::EnumDecl
+      }
+      if !valid_owner {
+        return Result::Err("CT-032 field_type requires a struct; variant_payload_types requires an enum")
+      }
+      generics = binding.generic_parameters
+      let interface_ = scope.interfaces.at(binding.interface_index)
+      if field_query {
+        for field in interface_.fields {
+          if field.declaration == declaration && field.variant is Option::None && field.name == selector {
+            values.push(self.import_interface_type(binding.interface_index, field.type_))
+            found = true
+          }
+        }
+      } else {
+        for variant in interface_.variants {
+          if variant.declaration == declaration && variant.name == selector {
+            found = true
+            if variant.kind is SelfHostCollectedVariantKind::StructVariantDecl {
+              for field in interface_.fields {
+                if match field.variant {
+                  Option::Some(owner) => owner == variant.variant
+                  Option::None => false
+                } {
+                  values.push(self.import_interface_type(binding.interface_index, field.type_))
+                }
+              }
+            } else {
+              self_host_assert_array_span(variant.payload_types.start, variant.payload_types.length, interface_.variant_payload_types.length(), "ARN-104 imported computed variant payload")
+              let _ = while 0u32 {
+                index => if index < variant.payload_types.length {
+                  values.push(self.import_interface_type(binding.interface_index, interface_.variant_payload_types[variant.payload_types.start + index]))
+                  continue index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    if !found {
+      let message = StringBuilder::new()
+      message.append("CT-032 no such member: ")
+      message.append(selector)
+      return Result::Err(message.finish())
+    }
+    if generics.length != arguments.length() {
+      return Result::Err("CT-031 member owner has the wrong generic arity")
+    }
+    let mut invalid = false
+    let _ = while 0u32 {
+      index => if index < values.length() {
+        if values[index] == self.interner.error_type {
+          invalid = true
+        }
+        values[index] = self.substitute_declared_type(declaration, generics, values[index], arguments)
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if invalid {
+      return Result::Err("CT-033 invalid member type dependency")
+    }
+    if field_query {
+      self_host_assert_compiler_invariant(values.length() == 1u32, "INV-001 computed field selection must be unique")
+      Result::Ok(values[0u32])
+    } else {
+      Result::Ok(self.interner.intern_product(values))
+    }
+  }
+
+  fn evaluate_computed_type(self, owner: U64, target: U32, selector: Bytes) -> Result<U32, String> {
+    let (callee, arguments) = match self.collected.type_syntax[target] {
+      SelfHostHirTypeSyntax::AppliedTypeSyntax(callee, arguments, _) if arguments.length == 1u32 => (callee, arguments)
+      _ => return Result::Err("CT-031 member type queries require one type argument")
+    }
+    let operation = match self.computed_builtin_recipe(callee) {
+      Result::Ok(value) => value
+      Result::Err(error) => return Result::Err(error)
+    }
+    let input = self.computed_dependency(owner, self.collected.type_arguments[arguments.start])
+    if input == self.interner.error_type {
+      return Result::Err("CT-033 invalid queried type")
+    }
+    let (declaration, types) = match self.computed_nominal(input) {
+      Result::Ok(value) => value
+      Result::Err(error) => return Result::Err(error)
+    }
+    if !selector.is_valid_utf8() {
+      return Result::Err("CT-032 member selector must be valid UTF-8")
+    }
+    self.computed_member_type(operation, declaration, types, bytes_to_string(selector))
+  }
+}

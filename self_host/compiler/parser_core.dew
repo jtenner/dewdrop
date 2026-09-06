@@ -542,24 +542,59 @@ fn self_host_parse_type_with_depth(
   }
   let result = while 0u32 {
     _ => match current {
-      Option::Some(value) => if self_host_parser_consume_symbol(parser, 29u32) {
-        let arguments = self_host_empty_types()
-        self_host_parser_skip_newlines(parser)
-        let parsed_arguments = self_host_parse_applied_type_arguments(
-          parser,
-          depth,
-          arguments,
-        )
-        if !parsed_arguments {
-          break Option::None
-        } else {
-          current = Option::Some(
-            SelfHostTypeExpr::AppliedType(value, arguments, value.offset()),
-          )
-          continue 0u32
+      Option::Some(value) => {
+        // A pending half of >> belongs to the surrounding type, not a selector.
+        if parser.pending_type_closers > 0u32 {
+          break Option::Some(value)
         }
-      } else {
-        break Option::Some(value)
+        let explicit = self_host_parser_consume_symbol(parser, 14u32)
+        if self_host_parser_consume_symbol(parser, 29u32) {
+          let arguments = self_host_empty_types()
+          self_host_parser_skip_newlines(parser)
+          let parsed_arguments = self_host_parse_applied_type_arguments(
+            parser,
+            depth,
+            arguments,
+          )
+          if !parsed_arguments {
+            break Option::None
+          } else {
+            current = Option::Some(
+              SelfHostTypeExpr::AppliedType(value, arguments, value.offset()),
+            )
+            continue 0u32
+          }
+        } else {
+          if explicit {
+            self_host_parser_fail_expected(parser, SelfHostDeclarationExpectation::Type)
+            break Option::None
+          }
+          if self_host_parser_consume_symbol(parser, 0u32) {
+            self_host_parser_skip_newlines(parser)
+            let selector = match self_host_parser_peek(parser) {
+              Option::Some(token) => match token.kind {
+                SelfHostTokenKind::StringLiteral(bytes) => {
+                  parser.index = parser.index + 1u32
+                  bytes
+                }
+                _ => {
+                  self_host_parser_fail_expected(parser, SelfHostDeclarationExpectation::Type)
+                  return Option::None
+                }
+              }
+              Option::None => {
+                self_host_parser_fail_expected(parser, SelfHostDeclarationExpectation::Type)
+                return Option::None
+              }
+            }
+            self_host_parser_skip_newlines(parser)
+            if !self_host_parser_expect_symbol(parser, 1u32, SelfHostDeclarationExpectation::Type) {
+              break Option::None
+            }
+            break Option::Some(SelfHostTypeExpr::ComputedType(value, selector, value.offset()))
+          }
+          break Option::Some(value)
+        }
       }
       Option::None => break Option::None
     }
