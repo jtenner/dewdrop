@@ -69,13 +69,19 @@ fn member_unit_receiver(cell: MemberCell) -> MemberSlot<Unit> {
   }
 }
 
+fn member_unit_value(cell: MemberCell) -> Unit {
+  cell.value = member_add(cell.value, 1i32)
+}
+
 pub fn main(value: I32, expected: I32) -> I32 {
   let cell = MemberCell::{
     value: 0i32
   }
   member_unit_receiver(cell).item
   member_unit_receiver(cell)[0u32]
-  let receiver_effects = cell.value == 2i32
+  member_unit_receiver(cell).item = member_unit_value(cell)
+  member_unit_receiver(cell)[0u32] = member_unit_value(cell)
+  let receiver_effects = cell.value == 6i32
   let (tuple_left, tuple_right) = member_extract(MemberPayload::Value((7i32, 11i64)), (0i32, 0i64))
   let tuple_binding = tuple_left == 7i32 && tuple_right == 11i64
   let road = RoadMap::{

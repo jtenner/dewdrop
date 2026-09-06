@@ -17940,6 +17940,12 @@ fn self_host_emit_linked_i32_expression(
                   destination,
                 ))
                 let value_carrier = self_host_linked_exact_emitted_expression_carrier(canonical_body_plan, link, module_, body, caller_specialization, value)
+                if value_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+                  if !self_host_linked_physical_erased_unit_field(link, field, field_link) {
+                    return Option::Some("linked Unit field write has no declared erased storage certificate")
+                  }
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
+                }
                 match self_host_linked_erased_field_box_type(link, field, value_carrier) {
                   Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(type_, destination))
                   Option::None => {}
