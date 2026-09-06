@@ -1134,29 +1134,14 @@ fn plan_expression_kind(
           } else {
             ErrorPlannedValueShape
           }
-          let queue_or_circular_operation = match
-            standard_queue_operation(declaration) {
-            QueueNew => QueueNew
-            QueueWithCapacity => CircularBufferGrowable
-            QueueLength => CircularBufferLength
-            QueueIsEmpty => CircularBufferIsEmpty
-            QueueEnqueue => QueueEnqueue
-            QueueDequeue => CircularBufferPopFront
-            QueuePeek => CircularBufferPeekFront
-            QueueClear => CircularBufferClear
-            QueueIter => CircularBufferIter
-            QueueIterHasNext => CircularBufferIterHasNext
-            QueueIterNext => CircularBufferIterNext
-            _ => standard_circular_buffer_operation(declaration)
-          }
           let ring_operation = match standard_deque_operation(declaration) {
-            DequeNew => QueueNew
+            DequeNew => DequeNew
             DequeWithCapacity => CircularBufferGrowable
             DequeLength => CircularBufferLength
             DequeCapacity => CircularBufferCapacity
             DequeIsEmpty => CircularBufferIsEmpty
             DequePushFront => DequePushFront
-            DequePushBack => QueueEnqueue
+            DequePushBack => DequePushBack
             DequePopFront => CircularBufferPopFront
             DequePopBack => CircularBufferPopBack
             DequePeekFront => CircularBufferPeekFront
@@ -1165,11 +1150,11 @@ fn plan_expression_kind(
             DequeIter => CircularBufferIter
             DequeIterHasNext => CircularBufferIterHasNext
             DequeIterNext => CircularBufferIterNext
-            _ => queue_or_circular_operation
+            _ => standard_circular_buffer_operation(declaration)
           }
           match ring_operation {
-            QueueNew => PlannedCircularBufferNewZero(element_shape)
-            QueueEnqueue =>
+            DequeNew => PlannedCircularBufferNewZero(element_shape)
+            DequePushBack =>
               PlannedQueueRingEnqueue(
                 base,
                 key,

@@ -1,0 +1,49 @@
+open dew.std.queue
+
+fn queue_test_pop(queue: Queue<I64>) -> I64 {
+  match queue_dequeue(queue) {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+}
+
+test "queue grows after wrap and keeps FIFO order" {
+  let queue = queue_with_capacity(2u32)
+  queue_enqueue(queue, 11i64)
+  queue_enqueue(queue, 22i64)
+  assert(queue_test_pop(queue) == 11i64, "queue first item")
+  queue_enqueue(queue, 33i64)
+  queue_enqueue(queue, 44i64)
+  assert(queue_length(queue) == 3u32, "queue growth length")
+  assert(queue_test_pop(queue) == 22i64, "queue wrapped head")
+  assert(queue_test_pop(queue) == 33i64, "queue wrapped tail")
+  assert(queue_test_pop(queue) == 44i64, "queue new tail")
+  assert(queue_is_empty(queue), "queue drained")
+  assert(queue_dequeue(queue) is Option::None, "queue empty dequeue")
+}
+
+test "queue clear keeps aliases and can be reused" {
+  let queue = queue_new()
+  let alias = queue
+  queue_enqueue(queue, 7i64)
+  assert(queue_peek(queue) is Option::Some(7i64), "queue peek")
+  assert(queue_length(queue) == 1u32, "peek must not pop")
+  queue_clear(alias)
+  assert(queue_peek(queue) is Option::None, "queue cleared peek")
+  queue_enqueue(alias, 9i64)
+  assert(queue_test_pop(queue) == 9i64, "queue alias reused")
+}
+
+test "queue iterator follows logical order after wrap" {
+  let queue = queue_with_capacity(2u32)
+  queue_enqueue(queue, 1i64)
+  queue_enqueue(queue, 2i64)
+  queue_test_pop(queue)
+  queue_enqueue(queue, 3i64)
+  let iter = queue_iter(queue)
+  assert(queue_iter_has_next(iter), "queue iterator starts")
+  assert(queue_iter_next(iter) == 2i64, "queue iterator head")
+  assert(queue_iter_next(iter) == 3i64, "queue iterator tail")
+  assert(!queue_iter_has_next(iter), "queue iterator ends")
+  assert(queue_length(queue) == 2u32, "iteration must not pop")
+}

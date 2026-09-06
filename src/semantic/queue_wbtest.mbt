@@ -1,6 +1,6 @@
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "queue standard module has stable identities and lowering" {
+test "queue functions use ordinary library bodies and lowering" {
   let program = collect_program_manifest(
     2631UL,
     ProgramManifest::new([
@@ -14,14 +14,14 @@ test "queue standard module has stable identities and lowering" {
   assert_eq(program.diagnostics, [])
   let queue = program.modules[program.module_index("dew.std.queue").unwrap()]
   assert_eq(queue.diagnostics, [])
-  assert_eq(semantic_id_local(queue.lookup_type("Queue").unwrap()), 0)
-  assert_eq(semantic_id_local(queue.lookup_value("queue_new").unwrap()), 2)
-  assert_eq(
-    standard_queue_operation(queue.lookup_value("queue_dequeue").unwrap()),
-    QueueDequeue,
-  )
+  for callable in queue.callables {
+    assert_true(queue.body_of(callable.declaration) is Some(_))
+  }
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.frozen.import_diagnostics, [])
+  for interface_ in analyzed.frozen.interfaces {
+    assert_eq(interface_.resolved_types.diagnostics, [])
+  }
   for module_ in analyzed.modules {
     assert_eq(module_.names.diagnostics, [])
     assert_eq(module_.inferred.diagnostics, [])

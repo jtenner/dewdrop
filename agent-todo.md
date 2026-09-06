@@ -85,6 +85,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   Keep their values and bounds correct before tuning them.
 - [ ] Move Queue, circular-buffer, and deque storage algorithms into Dew.
   Commit each library family separately with order and boundary tests.
+  Queue entry points now use ordinary Dew calls; the shared circular-buffer
+  storage migration remains. See the
+  [Queue log](docs/research/queue-library-entry-points-2026-09-06.md).
 - [ ] Move Text, Bytes, views, and builders out of compiler-owned algorithms.
   Keep encoding, bounds, and lifetime checks in ordinary library code.
 - [ ] Convert remaining host-operation builtins into foreign declarations.

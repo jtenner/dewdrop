@@ -4,7 +4,7 @@ Date: 2026-08-11
 
 ## Public API
 
-`dew.std.queue` provides mutable `Queue<t>` and `QueueIter<t>` aliases over the carrier-specialized Array runtime. The public operations are `queue_new`, `queue_with_capacity`, `queue_length`, `queue_is_empty`, `queue_enqueue`, optional `queue_dequeue`, optional non-mutating `queue_peek`, `queue_clear`, `queue_iter`, `queue_iter_has_next`, and `queue_iter_next`.
+`dew.std.queue` provides mutable `Queue<t>` and `QueueIter<t>` aliases over `CircularBuffer<t>` and `CircularBufferIter<t>`. The public operations are `queue_new`, `queue_with_capacity`, `queue_length`, `queue_is_empty`, `queue_enqueue`, optional `queue_dequeue`, optional non-mutating `queue_peek`, `queue_clear`, `queue_iter`, `queue_iter_has_next`, and `queue_iter_next`.
 
 FIFO order is deterministic. Empty dequeue and peek return `Option::None`; aliases observe all mutations; iteration traverses front-to-back.
 
@@ -12,7 +12,10 @@ FIFO order is deterministic. Empty dequeue and peek return `Option::None`; alias
 
 Queue now uses the growable circular-buffer runtime. Enqueue appends at the logical tail, dequeue advances the wrapped head, and peek reads the logical front. Growth normalizes the live ring into a doubled backing array. All three primary operations are O(1) amortized while preserving carrier-specialized storage and reference-slot clearing.
 
-Queue retains its independent public API and standard module slot 15, while semantic lowering maps its operations to circular-buffer plans. This keeps the representation replaceable without source changes.
+As of September 6, Queue retains its public API but uses normal Dew calls to the
+circular-buffer library. Queue-specific semantic operation dispatch is removed.
+See the [migration log](queue-library-entry-points-2026-09-06.md). The measurements
+below describe the older compiler-owned ring implementation.
 
 ## Measurement
 

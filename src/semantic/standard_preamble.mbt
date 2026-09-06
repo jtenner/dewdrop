@@ -318,7 +318,7 @@ fn selected_standard_modules(
                 lane_mask = lane_mask | 2048
                 collection_mask = collection_mask | 461379600
               }
-              "queue" => collection_mask = collection_mask | 2
+              "queue" => collection_mask = collection_mask | 6
               "ordering" => collection_mask = collection_mask | 16
               "iter" => collection_mask = collection_mask | 1024
               "i8x4" => lane_mask = lane_mask | 1

@@ -105,14 +105,9 @@ test "generated standard builtin registry matches collected bootstrap declaratio
   let queue = program.modules[program.module_index("dew.std.queue").unwrap()]
   assert_eq(queue.module_id, standard_library_module_id(15))
   assert_standard_registry_declaration(queue, 0, "Queue")
-  assert_eq(
-    standard_queue_operation(make_semantic_id(queue.module_id, 2)),
-    QueueNew,
-  )
-  assert_eq(
-    standard_queue_operation(make_semantic_id(queue.module_id, 12)),
-    QueueIterNext,
-  )
+  for callable in queue.callables {
+    assert_true(queue.body_of(callable.declaration) is Some(_))
+  }
 
   let map = program.modules[program.module_index("dew.std.map").unwrap()]
   assert_eq(map.module_id, standard_library_module_id(11))

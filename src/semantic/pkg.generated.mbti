@@ -213,8 +213,6 @@ pub fn standard_option_none_variant() -> UInt64
 
 pub fn standard_option_some_variant() -> UInt64
 
-pub fn standard_queue_method_declaration(String) -> UInt64
-
 pub fn standard_queue_type_declaration() -> UInt64
 
 pub fn standard_set_iterator_type_declaration() -> UInt64

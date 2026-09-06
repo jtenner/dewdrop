@@ -6,17 +6,6 @@ enum StandardBuiltinOperation {
   WasmRefNull
   WasmRefIsNull
   WasmRefAsNonNull
-  QueueNew
-  QueueWithCapacity
-  QueueLength
-  QueueIsEmpty
-  QueueEnqueue
-  QueueDequeue
-  QueuePeek
-  QueueClear
-  QueueIter
-  QueueIterHasNext
-  QueueIterNext
   CircularBufferBounded
   CircularBufferGrowable
   CircularBufferLength
@@ -123,39 +112,6 @@ pub fn standard_array_entry_iterator_type_declaration() -> DeclId {
 ///|
 pub fn standard_queue_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(15), 0)
-}
-
-///|
-pub fn standard_queue_method_declaration(name : String) -> DeclId {
-  let local_id = match name {
-    _ => -1
-  }
-  if local_id < 0 {
-    0UL
-  } else {
-    make_semantic_id(standard_library_module_id(15), local_id)
-  }
-}
-
-///|
-fn standard_queue_operation(declaration : DeclId) -> StandardBuiltinOperation {
-  if semantic_id_module(declaration) != standard_library_module_id(15) {
-    return NoStandardBuiltinOperation
-  }
-  match semantic_id_local(declaration) {
-    2 => QueueNew
-    3 => QueueWithCapacity
-    4 => QueueLength
-    5 => QueueIsEmpty
-    6 => QueueEnqueue
-    7 => QueueDequeue
-    8 => QueuePeek
-    9 => QueueClear
-    10 => QueueIter
-    11 => QueueIterHasNext
-    12 => QueueIterNext
-    _ => NoStandardBuiltinOperation
-  }
 }
 
 ///|

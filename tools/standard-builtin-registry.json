@@ -24,20 +24,7 @@
       "slot": 15,
       "path": "dew.std.queue",
       "type": 0,
-      "methods": {},
-      "operations": {
-        "QueueNew": [2],
-        "QueueWithCapacity": [3],
-        "QueueLength": [4],
-        "QueueIsEmpty": [5],
-        "QueueEnqueue": [6],
-        "QueueDequeue": [7],
-        "QueuePeek": [8],
-        "QueueClear": [9],
-        "QueueIter": [10],
-        "QueueIterHasNext": [11],
-        "QueueIterNext": [12]
-      }
+      "operations": {}
     },
     "circular_buffer": {
       "slot": 36,
