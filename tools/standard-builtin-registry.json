@@ -21,16 +21,7 @@
       "path": "dew.std.fixed_array",
       "type": 0,
       "type_slot": 9,
-      "methods": {"make": 2, "length": 3, "get": 4, "get_unchecked": 5, "set": 6, "set_unchecked": 7},
-      "index": 9,
-      "index_set": 11,
-      "operations": {
-        "FixedArrayMake": [2],
-        "FixedArrayLength": [3],
-        "FixedArrayGet": [4],
-        "FixedArrayGetUnchecked": [5, 9],
-        "FixedArraySet": [6, 7, 11]
-      }
+      "operations": {}
     },
     "array": {
       "slot": 13,

@@ -10,11 +10,6 @@ enum StandardBuiltinOperation {
   WasmRefNull
   WasmRefIsNull
   WasmRefAsNonNull
-  FixedArrayMake
-  FixedArrayLength
-  FixedArrayGet
-  FixedArrayGetUnchecked
-  FixedArraySet
   ArrayNew
   ArrayWithCapacity
   ArrayLength
@@ -122,51 +117,6 @@ fn standard_indexed_trait_kind(declaration : DeclId) -> Int {
 ///|
 pub fn standard_fixed_array_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(9), 0)
-}
-
-///|
-pub fn standard_fixed_array_method_declaration(name : String) -> DeclId {
-  let local_id = match name {
-    "make" => 2
-    "length" => 3
-    "get" => 4
-    "get_unchecked" => 5
-    "set" => 6
-    "set_unchecked" => 7
-    _ => -1
-  }
-  if local_id < 0 {
-    0UL
-  } else {
-    make_semantic_id(standard_library_module_id(10), local_id)
-  }
-}
-
-///|
-pub fn standard_fixed_array_index_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 9)
-}
-
-///|
-pub fn standard_fixed_array_index_set_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(10), 11)
-}
-
-///|
-fn standard_fixed_array_operation(
-  declaration : DeclId,
-) -> StandardBuiltinOperation {
-  if semantic_id_module(declaration) != standard_library_module_id(10) {
-    return NoStandardBuiltinOperation
-  }
-  match semantic_id_local(declaration) {
-    2 => FixedArrayMake
-    3 => FixedArrayLength
-    4 => FixedArrayGet
-    5 | 9 => FixedArrayGetUnchecked
-    6 | 7 | 11 => FixedArraySet
-    _ => NoStandardBuiltinOperation
-  }
 }
 
 ///|

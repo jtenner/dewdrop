@@ -480,31 +480,6 @@ fn BasicBodyInferencer::select_index_candidate(
 }
 
 ///|
-fn BasicBodyInferencer::fixed_array_element_type(
-  self : BasicBodyInferencer,
-  type_ : BodyTypeId,
-) -> BodyTypeId? {
-  let representative = self.solver.representative_type(type_)
-  match self.solver.type_term(representative) {
-    BodyAppliedType(base, arguments) if arguments.length == 1 =>
-      match self.solver.type_term(self.solver.representative_type(base)) {
-        BodyResolvedType(resolved_base) =>
-          match self.resolved.types[resolved_base] {
-            NominalType(declaration) =>
-              if declaration == standard_fixed_array_type_declaration() {
-                Some(self.solver.type_arguments[arguments.start])
-              } else {
-                None
-              }
-            _ => None
-          }
-        _ => None
-      }
-    _ => None
-  }
-}
-
-///|
 fn BasicBodyInferencer::map_key_value_types(
   self : BasicBodyInferencer,
   type_ : BodyTypeId,
@@ -749,41 +724,6 @@ fn BasicBodyInferencer::select_map_evidence(
     2,
     self.primitive(BoolType),
     offset,
-  )
-}
-
-///|
-fn BasicBodyInferencer::select_fixed_array_index(
-  self : BasicBodyInferencer,
-  expression : ExprId,
-  index : ExprId,
-  value : ExprId,
-  element : BodyTypeId,
-  offset : UInt64,
-) -> Unit {
-  let origin = operator_type_origin(expression, offset)
-  self.constrain_assignable(
-    self.expression_type(index),
-    self.primitive(U32Type),
-    origin,
-  )
-  let declaration = if value >= 0 {
-    self.constrain_assignable(self.expression_type(value), element, origin)
-    self.constrain(
-      self.expression_type(expression),
-      self.primitive(UnitType),
-      origin,
-    )
-    standard_fixed_array_index_set_declaration()
-  } else {
-    self.constrain(element, self.expression_type(expression), origin)
-    standard_fixed_array_index_declaration()
-  }
-  let start = self.call_type_arguments.length()
-  self.call_type_arguments.push(element)
-  self.operator_targets[self.expression_index(expression)] = SelectedInferredCallTarget(
-    declaration,
-    { start, length: 1, },
   )
 }
 
@@ -1268,14 +1208,7 @@ fn BasicBodyInferencer::try_resolve_operator(
     _ => (-1, -1)
   }
   match source {
-    HirIndexExpr(base, index, offset) => {
-      match self.fixed_array_element_type(self.expression_type(base)) {
-        Some(element) => {
-          self.select_fixed_array_index(expression, index, -1, element, offset)
-          return true
-        }
-        None => ()
-      }
+    HirIndexExpr(base, index, offset) =>
       match self.map_key_value_types(self.expression_type(base)) {
         Some((key_type, value_type)) => {
           self.select_map_index(
@@ -1285,17 +1218,7 @@ fn BasicBodyInferencer::try_resolve_operator(
         }
         None => ()
       }
-    }
-    HirIndexSetExpr(base, index, value, offset) => {
-      match self.fixed_array_element_type(self.expression_type(base)) {
-        Some(element) => {
-          self.select_fixed_array_index(
-            expression, index, value, element, offset,
-          )
-          return true
-        }
-        None => ()
-      }
+    HirIndexSetExpr(base, index, value, offset) =>
       match self.map_key_value_types(self.expression_type(base)) {
         Some((key_type, value_type)) => {
           self.select_map_index(
@@ -1305,7 +1228,6 @@ fn BasicBodyInferencer::try_resolve_operator(
         }
         None => ()
       }
-    }
     _ => ()
   }
   let trait_declaration = self.trait_declaration_named(trait_name).unwrap()
@@ -1670,36 +1592,7 @@ fn BasicBodyInferencer::resolve_type_qualified_method_call(
 ) -> Bool {
   match target_head {
     NominalImplTargetHead(declaration) =>
-      if declaration == standard_fixed_array_type_declaration() &&
-        self.collected.name(name) == "make" &&
-        arguments.length == 2 {
-        let length = self.collected.expression_children[arguments.start]
-        let value = self.collected.expression_children[arguments.start + 1]
-        let element = self.expression_type(value)
-        let origin = call_type_origin(expression, offset)
-        self.constrain_assignable(
-          self.expression_type(length),
-          self.primitive(U32Type),
-          origin,
-        )
-        let base = match self.body_nominal_type(declaration) {
-          Some(value) => value
-          None => return false
-        }
-        let result = self.solver.applied_type(base, [element])
-        self.constrain_assignable(
-          result,
-          self.expression_type(expression),
-          origin,
-        )
-        let start = self.call_type_arguments.length()
-        self.call_type_arguments.push(element)
-        self.call_targets[call_slot] = SelectedInferredCallTarget(
-          standard_fixed_array_method_declaration("make"),
-          { start, length: 1, },
-        )
-        return true
-      } else if declaration == standard_map_type_declaration() &&
+      if declaration == standard_map_type_declaration() &&
         self.collected.name(name) == "singleton" &&
         arguments.length == 2 {
         let key = self.collected.expression_children[arguments.start]
@@ -1895,80 +1788,6 @@ fn BasicBodyInferencer::body_nominal_type(
 }
 
 ///|
-fn BasicBodyInferencer::try_fixed_array_method_call(
-  self : BasicBodyInferencer,
-  call_slot : Int,
-  expression : ExprId,
-  receiver : ExprId,
-  name : NameId,
-  arguments : HirSpan,
-  offset : UInt64,
-) -> Bool {
-  let element = match
-    self.fixed_array_element_type(self.expression_type(receiver)) {
-    Some(value) => value
-    None => return false
-  }
-  let method_name = self.collected.name(name)
-  let declaration = standard_fixed_array_method_declaration(method_name)
-  if declaration == 0UL || method_name == "make" {
-    return false
-  }
-  let expected_arguments = match method_name {
-    "length" => 0
-    "get" | "get_unchecked" => 1
-    "set" | "set_unchecked" => 2
-    _ => return false
-  }
-  if arguments.length != expected_arguments {
-    return false
-  }
-  let origin = call_type_origin(expression, offset)
-  if expected_arguments > 0 {
-    self.constrain_assignable(
-      self.expression_type(self.collected.expression_children[arguments.start]),
-      self.primitive(U32Type),
-      origin,
-    )
-  }
-  if expected_arguments > 1 {
-    self.constrain_assignable(
-      self.expression_type(
-        self.collected.expression_children[arguments.start + 1],
-      ),
-      element,
-      origin,
-    )
-  }
-  let result = match method_name {
-    "length" => self.primitive(U32Type)
-    "get_unchecked" => element
-    "set" | "set_unchecked" => self.primitive(UnitType)
-    "get" => {
-      let option_base = match
-        self.body_nominal_type(standard_option_type_declaration()) {
-        Some(value) => value
-        None => {
-          self.call_targets[call_slot] = ErrorInferredCallTarget
-          self.poison_expression(expression)
-          return true
-        }
-      }
-      self.solver.applied_type(option_base, [element])
-    }
-    _ => self.solver.error_type()
-  }
-  self.constrain_assignable(result, self.expression_type(expression), origin)
-  let start = self.call_type_arguments.length()
-  self.call_type_arguments.push(element)
-  self.call_targets[call_slot] = SelectedInferredCallTarget(declaration, {
-    start,
-    length: 1,
-  })
-  true
-}
-
-///|
 fn BasicBodyInferencer::try_map_method_call(
   self : BasicBodyInferencer,
   call_slot : Int,
@@ -2113,11 +1932,6 @@ fn BasicBodyInferencer::try_resolve_method_call(
   let (receiver, name) = match self.collected.expressions[target] {
     HirFieldExpr(receiver, name, _) => (receiver, name)
     _ => abort("method call target is not a field expression")
-  }
-  if self.try_fixed_array_method_call(
-      call_slot, expression, receiver, name, arguments, offset,
-    ) {
-    return true
   }
   if self.try_map_method_call(
       call_slot, expression, receiver, name, arguments, offset,

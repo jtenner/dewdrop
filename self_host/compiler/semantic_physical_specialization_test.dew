@@ -1442,6 +1442,22 @@ pub fn self_host_emit_fixed_array_field_probe() -> Bytes {
   }
 }
 
+pub fn self_host_emit_fixed_array_method_body_probe() -> Bytes {
+  let link = self_host_physical_test_named_import_link(
+    "dew.std.fixed_array",
+    b"pub struct WasmArray<t> {}\npub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = \"array_new\"\npub type FixedArray<t> = WasmArray<t>\nimpl<t> FixedArray<t> {\n  fn make(length: U32, value: t) -> FixedArray<t> {\n    wasm_array_new(length, value)\n  }\n  fn length(self) -> U32 {\n    42u32\n  }\n}\n",
+    b"open dew.std.fixed_array\npub fn main() -> I32 {\n  if FixedArray::make(2u32, 7i32).length() == 42u32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_root_i32_module(link, 1u32) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      b""
+    }
+  }
+}
+
 pub fn self_host_emit_scalar_iterator_probe() -> Bytes {
   let link = self_host_physical_test_manifest_link(SelfHostProgramManifest::{
     modules: [

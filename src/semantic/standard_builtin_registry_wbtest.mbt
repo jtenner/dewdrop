@@ -49,14 +49,6 @@ test "generated standard builtin registry matches collected bootstrap declaratio
     .unwrap()]
   assert_eq(fixed.module_id, standard_library_module_id(10))
   assert_standard_registry_declaration(fixed, 0, "FixedArray")
-  assert_eq(
-    standard_fixed_array_method_declaration("make"),
-    make_semantic_id(fixed.module_id, 2),
-  )
-  assert_eq(
-    standard_fixed_array_method_declaration("set_unchecked"),
-    make_semantic_id(fixed.module_id, 7),
-  )
   let wasm_intrinsics = program.modules[program
     .module_index("dew.std.wasm.intrinsics")
     .unwrap()]

@@ -88,7 +88,6 @@ pub struct SelfHostPlannedProgramWasmGCLink {
   imported_function_count: U32
   defined_function_count: U32
   global_count: U32
-  fixed_array_module_id: U64
   array_module_id: U64
   map_module_id: U64
   runtime_variant_adapters: Map<U64, SelfHostRuntimeVariantAdapter>
@@ -1100,10 +1099,6 @@ fn self_host_plan_program_wasmgc_link(
   )
   let diagnostics = []
   let specialized_calls = []
-  let fixed_array_module_id = self_host_program_link_module_id_by_path(
-    fragments,
-    "dew.std.fixed_array",
-  )
   let array_module_id = self_host_program_link_runtime_builtin_module_id(
     fragments,
     b"dew_array_new",
@@ -1181,7 +1176,6 @@ fn self_host_plan_program_wasmgc_link(
     imported_function_count: imported_count
     defined_function_count: defined_count
     global_count: initializers.length()
-    fixed_array_module_id: fixed_array_module_id
     array_module_id: array_module_id
     map_module_id: map_module_id
     runtime_variant_adapters: self_host_plan_runtime_variant_adapters(fragments)

@@ -9,13 +9,10 @@ fn program_canonical_specialization_scalar(
   shape : PlannedValueShape,
 ) -> PlannedValueShape {
   match shape {
-    I8PlannedValueShape
-    | U8PlannedValueShape
-    | I16PlannedValueShape
-    | U16PlannedValueShape
-    | I32PlannedValueShape
-    | U32PlannedValueShape
-    | Swar32PlannedValueShape => I32PlannedValueShape
+    // Packed array storage and signed reads distinguish narrow shapes even
+    // though all four use i32 at a function boundary.
+    I32PlannedValueShape | U32PlannedValueShape | Swar32PlannedValueShape =>
+      I32PlannedValueShape
     I64PlannedValueShape | U64PlannedValueShape | Swar64PlannedValueShape =>
       I64PlannedValueShape
     _ => shape
@@ -91,6 +88,10 @@ fn program_specialization_shape_name(root : PlannedValueShape) -> String {
               match shape {
                 UnitPlannedValueShape => "unit"
                 NeverPlannedValueShape => "never"
+                I8PlannedValueShape => "i8"
+                U8PlannedValueShape => "u8"
+                I16PlannedValueShape => "i16"
+                U16PlannedValueShape => "u16"
                 I32PlannedValueShape => "i32"
                 I64PlannedValueShape => "i64"
                 F32PlannedValueShape => "f32"

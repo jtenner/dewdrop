@@ -1,0 +1,137 @@
+open dew.std.fixed_array
+open dew.std.option
+
+struct FixedArrayCounter {
+  mut value: U32
+}
+
+struct FixedArrayCell {
+  value: I64
+}
+
+fn fixed_array_effect(counter: FixedArrayCounter, digit: U32) -> Unit {
+  counter.value = counter.value * 10u32 + digit
+}
+
+fn fixed_array_length_effect(counter: FixedArrayCounter) -> U32 {
+  fixed_array_effect(counter, 1u32)
+  2u32
+}
+
+fn fixed_array_index_effect(counter: FixedArrayCounter) -> U32 {
+  fixed_array_effect(counter, 3u32)
+  0u32
+}
+
+fn fixed_array_packed_bytes() -> FixedArray<U8> {
+  FixedArray::make(1u32, 255u8)
+}
+
+pub fn main(case: U32) -> I32 {
+  if case == 0u32 {
+    let values = FixedArray::make(2u32, 7i64)
+    values[1u32] = 4294967297i64
+    if values[1u32] == 4294967297i64 && values.length() == 2u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 1u32 {
+    let values = FixedArray::make(2u32, 7i64)
+    match values.get(2u32) {
+      Option::None => 1i32
+      Option::Some(_) => 0i32
+    }
+  } else if case == 2u32 {
+    let values = FixedArray::make(2u32, 4294967297i64)
+    match values.get(1u32) {
+      Option::Some(value) => if value == 4294967297i64 {
+        1i32
+      } else {
+        0i32
+      }
+      Option::None => 0i32
+    }
+  } else if case == 3u32 {
+    let counter = FixedArrayCounter::{
+      value: 0u32
+    }
+    let values = FixedArray::make(
+      fixed_array_length_effect(counter),
+      fixed_array_effect(counter, 2u32),
+    )
+    values[fixed_array_index_effect(counter)] = fixed_array_effect(counter, 4u32)
+    values.get_unchecked(0u32)
+    if counter.value == 1234u32 && values.length() == 2u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 4u32 {
+    let values = FixedArray::make(1u32, FixedArrayCell::{
+      value: 7i64
+    })
+    values.set(0u32, FixedArrayCell::{
+      value: 4294967297i64
+    })
+    if values.get_unchecked(0u32).value == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 5u32 {
+    let values = FixedArray::make(1u32, (7i32, 4294967297i64))
+    let (left, right) = values[0u32]
+    if left == 7i32 && right == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 6u32 {
+    let values = FixedArray::make(1u32, ())
+    values.get_unchecked(1u32)
+    0i32
+  } else if case == 7u32 {
+    let values = FixedArray::make(1u32, ())
+    values.set_unchecked(1u32, ())
+    0i32
+  } else if case == 8u32 {
+    let values = FixedArray::make(1u32, (7i32, 8i64))
+    values[0u32] = (9i32, 4294967297i64)
+    let (left, right) = values[0u32]
+    if left == 9i32 && right == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 9u32 {
+    let values = FixedArray::make(1u32, ())
+    match values.get(0u32) {
+      Option::Some(_) => 1i32
+      Option::None => 0i32
+    }
+  } else if case == 10u32 {
+    let values = FixedArray::make(1u32, 255u8)
+    if values[0u32] == 255u8 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 11u32 {
+    let values = FixedArray::make(1u32, 65535u16)
+    if values[0u32] == 65535u16 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 12u32 {
+    let values = fixed_array_packed_bytes()
+    if values[0u32] == 255u8 {
+      1i32
+    } else {
+      0i32
+    }
+  } else {
+    0i32
+  }
+}

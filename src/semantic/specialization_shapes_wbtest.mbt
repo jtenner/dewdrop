@@ -41,7 +41,7 @@ test "specialization product normalization preserves structure and evidence" {
   assert_eq(
     normalized,
     ProductPlannedValueShape([
-      I32PlannedValueShape,
+      U8PlannedValueShape,
       ProductPlannedValueShape([
         I64PlannedValueShape,
         GenericPlannedValueShape,
@@ -83,7 +83,7 @@ test "specialization ABI keys distinguish nested product shapes" {
       11UL,
       [
         ProductPlannedValueShape([
-          U8PlannedValueShape,
+          U32PlannedValueShape,
           ProductPlannedValueShape([U64PlannedValueShape]),
         ]),
       ],
@@ -91,6 +91,28 @@ test "specialization ABI keys distinguish nested product shapes" {
       evidence,
     ),
   )
+}
+
+///|
+test "specialization keys preserve packed storage width and signed reads" {
+  let evidence = empty_program_trait_evidence_request()
+  let span = { start: 0, length: 1, }
+  let shapes = [
+    I8PlannedValueShape,
+    U8PlannedValueShape,
+    I16PlannedValueShape,
+    U16PlannedValueShape,
+    I32PlannedValueShape,
+  ]
+  for index, shape in shapes {
+    assert_eq(program_canonical_specialization_shape(shape), shape)
+    for other in 0..<index {
+      assert_false(
+        program_specialization_abi_key(11UL, [shape], span, evidence) ==
+        program_specialization_abi_key(11UL, [shapes[other]], span, evidence),
+      )
+    }
+  }
 }
 
 ///|

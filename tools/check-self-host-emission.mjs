@@ -13,6 +13,7 @@ import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs"
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { checkRawGcStorage } from "./raw-gc-storage-cases.mjs";
 import { checkRawGcUnit } from "./raw-gc-unit-cases.mjs";
+import { checkFixedArrayOperations } from "./fixed-array-operations-cases.mjs";
 import { checkTypeQueries } from "./type-query-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
@@ -172,6 +173,7 @@ for (const [name, expected] of [
   ["self_host_emit_solver_control_probe", 1],
   ["self_host_emit_bound_dispatch_probe", 10],
   ["self_host_emit_fixed_array_field_probe", 7],
+  ["self_host_emit_fixed_array_method_body_probe", 42],
   ["self_host_emit_scalar_iterator_probe", 6],
   ["self_host_emit_erased_field_probe", 42n],
   ["self_host_emit_string_map_probe", 26],
@@ -531,6 +533,17 @@ pub fn main() -> I32 {
   } catch (error) {
     failures++;
     console.error("self-host raw Unit array probe failed", error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const request = await readFile(new URL("../.tmp/self-host-hardening/fixed-array.request.bin", import.meta.url));
+    const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+    console.log(`self-host FixedArray checks passed: ${checkFixedArrayOperations(exports.main)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+  } catch (error) {
+    failures++;
+    console.error("self-host FixedArray probe failed", error);
   }
 }
 if (failures) throw new Error(`${failures} self-host emission probe(s) failed`);

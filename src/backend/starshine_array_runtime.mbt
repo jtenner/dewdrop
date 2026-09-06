@@ -41,7 +41,8 @@ fn starshine_array_storage_value_type(
   shape : @semantic.PlannedValueShape,
 ) -> @lib.ValType? {
   match shape {
-    @semantic.UnitPlannedValueShape => Some(@lib.ValType::eqref_null())
+    @semantic.UnitPlannedValueShape | @semantic.ProductPlannedValueShape(_) =>
+      Some(@lib.ValType::eqref_null())
     _ => starshine_shape_value_type(shape)
   }
 }

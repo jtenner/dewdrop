@@ -63,6 +63,16 @@ def rendered_source() -> str:
     ):
         module = modules[module_name]
         prefix = f"standard_{module_name}"
+        if "methods" not in module:
+            # Type-only entries must not generate method or index dispatch.
+            lines.extend([
+                "///|",
+                f"pub fn {prefix}_type_declaration() -> DeclId {{",
+                f"  make_semantic_id(standard_library_module_id({module.get('type_slot', module['slot'])}), {module['type']})",
+                "}",
+                "",
+            ])
+            continue
         lines.extend(
             [
                 "///|",

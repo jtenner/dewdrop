@@ -319,32 +319,29 @@ test "cross module scalar call emits one valid linked module" {
   assert_eq(link.imported_function_count, 0)
   assert_eq(link.defined_function_count, 2)
   let helper_plan = starshine_program_adapter_helper_plan(lowering, link)
-  assert_eq(
-    emit_starshine_program_type_section(link, helper_plan),
-    @lib.TypeSec::new([
-      // Concrete preamble cast certificates precede the two user signatures.
-      @lib.RecType::new(
-        @lib.SubType::comp_type(
-          @lib.CompType::func([@lib.ValType::i32()], [@lib.ValType::i32()]),
-        ),
-      ),
-      @lib.RecType::new(
-        @lib.SubType::comp_type(
-          @lib.CompType::func([@lib.ValType::i64()], [@lib.ValType::i64()]),
-        ),
-      ),
-      @lib.RecType::new(
-        @lib.SubType::comp_type(
-          @lib.CompType::func([@lib.ValType::i32()], [@lib.ValType::i32()]),
-        ),
-      ),
-      @lib.RecType::new(
-        @lib.SubType::comp_type(
-          @lib.CompType::func([@lib.ValType::i32()], [@lib.ValType::i32()]),
-        ),
-      ),
-    ]),
+  let type_section = emit_starshine_program_type_section(link, helper_plan)
+  let scalar_signature = @lib.RecType::new(
+    @lib.SubType::comp_type(
+      @lib.CompType::func([@lib.ValType::i32()], [@lib.ValType::i32()]),
+    ),
   )
+  // Check the linked user signatures, not the number of preamble certificates.
+  let mut checked = 0
+  for function_ in link.functions {
+    if function_.kind is @semantic.PlannedWasmDefinedFunction(_) &&
+      !function_.elided {
+      assert_true(
+        function_.signature_type_index >= 0 &&
+        function_.signature_type_index < type_section.0.length(),
+      )
+      assert_eq(
+        type_section.0[function_.signature_type_index],
+        scalar_signature,
+      )
+      checked += 1
+    }
+  }
+  assert_eq(checked, 2)
   let module_ = match emit_starshine_program_module(lowering, link) {
     Ok(module_) => module_
     Err(_) => fail("failed to emit linked Starshine module")

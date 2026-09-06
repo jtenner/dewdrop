@@ -27,6 +27,11 @@ self_host_measure 'hardening raw Unit array request' \
     "$work/raw-gc-unit.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-raw-gc-unit-probe.wasm \
     app.raw_gc_unit tools/dew-test/raw_gc_unit.dew
+self_host_measure 'hardening FixedArray request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/fixed-array.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-fixed-array-probe.wasm \
+    app.fixed_array_probes tools/dew-test/fixed_array_operations.dew
 self_host_measure 'hardening type-query request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/type-queries.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \

@@ -13,6 +13,19 @@ CHECKED_OPERATIONS = ("get", "set", "iter_next_option")
 
 
 class ArrayBuiltinPolicyTests(unittest.TestCase):
+    def test_fixed_array_methods_have_no_declaration_ordinal_dispatch(self):
+        registry = json.loads((ROOT / "tools/standard-builtin-registry.json").read_text())
+        module = registry["modules"]["fixed_array"]
+        self.assertEqual(module["operations"], {})
+        for key in ("methods", "index", "index_set"):
+            self.assertNotIn(key, module)
+
+    def test_fixed_array_has_only_library_functions(self):
+        source = (ROOT / "std/fixed_array.dew").read_text()
+        self.assertNotRegex(source, r"\bbuiltin\b")
+        for method in ("make", "length", "get", "get_unchecked", "set", "set_unchecked", "indexed_get", "indexed_set"):
+            self.assertRegex(source, rf"\bfn {method}\(")
+
     def test_bulk_algorithms_have_no_declaration_ordinal_dispatch(self):
         registry = json.loads((ROOT / "tools/standard-builtin-registry.json").read_text())
         operations = registry["modules"]["array"]["operations"]

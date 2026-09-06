@@ -132,8 +132,12 @@ test "program linker rebases imported aggregate signatures" {
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
   let item = program.modules[1].lookup_type("Item").unwrap()
-  // The preamble's concrete i32/i64 cast signatures occupy indices 0 and 1.
-  assert_eq(link.type_lookup.get(item), Some(2))
+  let owner = link.module_lookup.get(semantic_id_module(item)).unwrap()
+  let local_type = link.modules[owner].type_index_of(item).unwrap()
+  assert_eq(
+    link.type_lookup.get(item),
+    Some(link.physical_type_index(owner, local_type)),
+  )
   let run = link
     .function_of(program.modules[0].lookup_value("run").unwrap())
     .unwrap()
@@ -530,7 +534,7 @@ test "program linker plans structural callback erased adapters" {
 
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "program linker coalesces generic specializations by physical carrier" {
+test "program linker keeps packed storage specializations distinct" {
   let program = collect_program_manifest(
     2245UL,
     ProgramManifest::new([
@@ -547,17 +551,18 @@ test "program linker coalesces generic specializations by physical carrier" {
   assert_eq(link.diagnostics.length(), 0)
   let choose = program.modules[0].lookup_value("choose").unwrap()
   let mut specializations = 0
-  let mut abi_key = ""
+  let abi_keys : Array[String] = []
   for function_ in link.functions {
     if function_.declaration == choose &&
       function_.specialization_shapes.length > 0 {
       specializations += 1
-      abi_key = function_.specialization_abi_key
+      abi_keys.push(function_.specialization_abi_key)
     }
   }
-  assert_eq(specializations, 1)
-  assert_eq(link.materialized_specialization_count(), 1)
-  assert_eq(abi_key, "\{choose}:i32")
+  assert_eq(specializations, 2)
+  assert_eq(link.materialized_specialization_count(), 2)
+  assert_true(abi_keys.contains("\{choose}:i8"))
+  assert_true(abi_keys.contains("\{choose}:i32"))
 }
 
 ///|

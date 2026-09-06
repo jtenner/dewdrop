@@ -656,7 +656,11 @@ fn self_host_linked_exact_emitted_expression_carrier(
   match canonical {
     Option::Some(plan) => match self_host_body_plan_expression(plan, expression) {
       Option::Some(planned) => if link.erased_fields.get(planned.selected_field) is Option::Some(true) ||
-        module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, _) {
+        module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, _) ||
+        planned.value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier ||
+        planned.value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+        // Erasure and non-returning flow are fixed facts. Array storage and
+        // name-based recovery cannot turn them into reference operands.
         return planned.value.carrier
       }
       Option::None => {}
@@ -3124,15 +3128,17 @@ fn self_host_linked_schedule_variant_arguments(
         if child >= module_.expressions.length() {
           return Option::Some("linked variant constructor expression is outside its arena")
         }
-        if !self_host_linked_expression_emits_nominal_value(module_, child) &&
-          self_host_linked_canonical_call_result_is_unit(
+        // Runtime variant adapters store a null marker for logical Unit.
+        // Inline intrinsics have no function result table entry, so use the
+        // frozen expression carrier for calls, locals, and raw reads alike.
+        if self_host_linked_exact_emitted_expression_carrier(
             canonical,
             link,
             module_,
             body,
             caller_specialization,
             child,
-          ) {
+          ) is SelfHostWasmBodyCarrier::UnitBodyCarrier {
           tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
         }
         self_host_linked_i32_schedule_expression(
@@ -3166,18 +3172,14 @@ fn self_host_linked_schedule_variant_arguments(
       if child >= module_.expressions.length() {
         return Option::Some("linked variant constructor expression is outside its arena")
       }
-      let source_emits_nominal_value = self_host_linked_expression_emits_nominal_value(
-        module_,
-        child,
-      )
-      let source_is_unit = !source_emits_nominal_value && self_host_linked_canonical_call_result_is_unit(
+      let source_is_unit = self_host_linked_exact_emitted_expression_carrier(
         canonical,
         link,
         module_,
         body,
         caller_specialization,
         child,
-      )
+      ) is SelfHostWasmBodyCarrier::UnitBodyCarrier
       let mut physical_field_index = 4294967295u32
       let mut physical_position = 0u32
       let _ = while physical_position {
@@ -18260,10 +18262,6 @@ fn self_host_emit_linked_i32_expression(
                   link,
                   declaration,
                 )
-                let direct_qualified_owner_name = self_host_linked_qualified_owner_name(
-                  module_,
-                  target,
-                )
                 // A module-qualified call has no run-time receiver. The owner name is
                 // syntax used to select the declaration, even when the selected
                 // physical function has a first parameter.
@@ -18280,224 +18278,6 @@ fn self_host_emit_linked_i32_expression(
                   module_.expression_children[arguments.start]
                 } else {
                   4294967295u32
-                }
-                let direct_call_is_fixed_array = !self_host_u64_equal(
-                  link.fixed_array_module_id,
-                  0u64,
-                ) && self_host_u64_equal(
-                  self_host_semantic_id_module(declaration),
-                  link.fixed_array_module_id,
-                )
-                let direct_fixed_array_type = if direct_map_has_receiver &&
-                  direct_map_receiver_expression < module_.expressions.length() {
-                  let array_base = self_host_linked_array_runtime_base(link)
-                  let canonical_type = self_host_linked_canonical_expression_heap_type(
-                    canonical_body_plan,
-                    module_,
-                    body,
-                    direct_map_receiver_expression,
-                  )
-                  match canonical_type {
-                    Option::Some(type_index) => if type_index >= array_base &&
-                      type_index < array_base + 6u32 && (
-                        direct_call_is_fixed_array || self_host_linked_expression_is_fixed_array_value(
-                          link,
-                          module_,
-                          body,
-                          direct_map_receiver_expression,
-                        )
-                      ) {
-                      Option::Some(type_index)
-                    } else if self_host_u32_equal(
-                      type_index,
-                      self_host_linked_array_wrapper_type(link),
-                    ) {
-                      Option::None
-                    } else if direct_call_is_fixed_array || self_host_linked_expression_is_fixed_array_value(
-                      link,
-                      module_,
-                      body,
-                      direct_map_receiver_expression,
-                    ) {
-                      let element_shape = match self_host_linked_expression_container_argument_shape(
-                        link,
-                        module_,
-                        body,
-                        direct_map_receiver_expression,
-                        0u32,
-                      ) {
-                        Option::Some(shape) => shape
-                        Option::None => SelfHostPlannedValueShape::I32PlannedValueShape
-                      }
-                      Option::Some(array_base + self_host_i32_to_u32(
-                        self_host_linked_array_carrier_from_shape(element_shape),
-                      ))
-                    } else {
-                      Option::None
-                    }
-                    Option::None => if direct_call_is_fixed_array || self_host_linked_expression_is_fixed_array_value(
-                      link,
-                      module_,
-                      body,
-                      direct_map_receiver_expression,
-                    ) {
-                      let element_shape = match self_host_linked_expression_container_argument_shape(
-                        link,
-                        module_,
-                        body,
-                        direct_map_receiver_expression,
-                        0u32,
-                      ) {
-                        Option::Some(shape) => shape
-                        Option::None => SelfHostPlannedValueShape::I32PlannedValueShape
-                      }
-                      Option::Some(array_base + self_host_i32_to_u32(
-                        self_host_linked_array_carrier_from_shape(element_shape),
-                      ))
-                    } else {
-                      Option::None
-                    }
-                  }
-                } else {
-                  Option::None
-                }
-                match direct_fixed_array_type {
-                  Option::Some(array_type) => if declaration_name.equals(b"length") &&
-                    self_host_u32_equal(arguments.length, 0u32) {
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayLen(
-                      destination,
-                    ))
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefCast(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      direct_map_receiver_expression,
-                      destination,
-                      depth,
-                    )
-                    continue tasks.length()
-                  } else if (declaration_name.equals(b"get") || declaration_name.equals(
-                    b"get_unchecked",
-                  )) && self_host_u32_equal(arguments.length, 1u32) &&
-                    arguments.start < module_.expression_children.length() {
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGet(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      module_.expression_children[arguments.start],
-                      destination,
-                      depth,
-                    )
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGetPrefix(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      direct_map_receiver_expression,
-                      destination,
-                      depth,
-                    )
-                    continue tasks.length()
-                  } else if (declaration_name.equals(b"set") || declaration_name.equals(
-                    b"set_unchecked",
-                  )) && self_host_u32_equal(arguments.length, 2u32) {
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArraySet(
-                      array_type,
-                      destination,
-                    ))
-                    match self_host_linked_i32_push_arguments(
-                      module_,
-                      arguments,
-                      destination,
-                      tasks,
-                      expression_depths,
-                      depth,
-                    ) {
-                      Option::Some(error) => return Option::Some(error)
-                      Option::None => {}
-                    }
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGetPrefix(
-                      array_type,
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      direct_map_receiver_expression,
-                      destination,
-                      depth,
-                    )
-                    continue tasks.length()
-                  }
-                  Option::None => {}
-                }
-                let direct_receiver_is_array = direct_map_receiver_expression < module_.expressions.length() && (
-                  self_host_u64_equal(
-                    self_host_linked_expression_container_owner_module_id(
-                      link,
-                      module_,
-                      body,
-                      direct_map_receiver_expression,
-                    ),
-                    link.array_module_id,
-                  ) || self_host_linked_expression_is_array_value(
-                    link,
-                    module_,
-                    body,
-                    direct_map_receiver_expression,
-                  ) || match self_host_linked_canonical_expression_heap_type(
-                    canonical_body_plan,
-                    module_,
-                    body,
-                    direct_map_receiver_expression,
-                  ) {
-                    Option::Some(type_index) => self_host_u32_equal(
-                      type_index,
-                      self_host_linked_array_wrapper_type(link),
-                    )
-                    Option::None => false
-                  }
-                )
-                let direct_physical_name = self_host_linked_physical_function_name(
-                  link,
-                  function_index,
-                )
-                if direct_receiver_is_array && ((self_host_u32_equal(
-                  arguments.length,
-                  0u32,
-                ) && (declaration_name.equals(b"length") || declaration_name.equals(
-                  b"capacity",
-                ))) || (self_host_u32_equal(arguments.length, 1u32) && (
-                  direct_physical_name.equals(b"wasm_array_len") || direct_physical_name.equals(
-                    b"dew_array_length",
-                  )
-                ))) {
-                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayBuiltin(
-                    if declaration_name.equals(b"capacity") {
-                      b"dew_array_capacity"
-                    } else {
-                      b"dew_array_length"
-                    },
-                    self_host_linked_array_wrapper_type(link),
-                    0u32,
-                    destination,
-                  ))
-                  self_host_linked_i32_schedule_expression(
-                    tasks,
-                    expression_depths,
-                    direct_map_receiver_expression,
-                    destination,
-                    depth,
-                  )
-                  continue tasks.length()
                 }
                 let direct_map_argument_offset = if direct_map_has_receiver {
                   0u32
@@ -21341,57 +21121,21 @@ fn self_host_emit_linked_i32_expression(
                 if second_index >= module_.expression_children.length() {
                   return Option::Some("linked fixed-array get arguments are outside their arena")
                 }
-                let contextual_element_shape = self_host_linked_expression_expected_shape(
+                // The raw read returns its declared, specialized element type.
+                // Its enclosing expression (for example Option<T>) is not
+                // evidence for the storage type of T.
+                let element_shape = self_host_body_specialization_shape_for_type(
                   link,
                   module_,
-                  body,
                   caller_specialization,
-                  expression,
+                  planned.type_,
+                  planned.shape,
                 )
-                let body_result_expression = match body.root {
-                  SelfHostHirBodyRoot::ExpressionBodyRoot(root) => root
-                  SelfHostHirBodyRoot::BlockBodyRoot(block) => self_host_body_block_tail_expression(
-                    module_,
-                    block,
-                  )
-                }
-                let exact_contextual_element_shape = if !self_host_u32_equal(
-                  body_result_expression,
-                  4294967295u32,
-                ) && self_host_linked_expression_wraps_expression(
-                  module_,
-                  body_result_expression,
+                let _ = self_host_linked_refine_canonical_expression_shape(
+                  canonical_body_plan,
                   expression,
-                ) && !(
-                  self_host_specialization_canonical_scalar(expected_result_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
-                ) {
-                  expected_result_shape
-                } else {
-                  contextual_element_shape
-                }
-                let element_shape = if !(
-                  exact_contextual_element_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                ) && !(
-                  exact_contextual_element_shape is SelfHostPlannedValueShape::NeverPlannedValueShape
-                ) && !(
-                  exact_contextual_element_shape is SelfHostPlannedValueShape::UnitPlannedValueShape
-                ) {
-                  exact_contextual_element_shape
-                } else {
-                  match self_host_linked_call_first_type_argument_shape(
-                    module_,
-                    planned,
-                  ) {
-                    Option::Some(shape) => shape
-                    Option::None => match self_host_linked_call_base_element_shape(
-                      module_,
-                      arguments,
-                    ) {
-                      Option::Some(shape) => shape
-                      Option::None => planned.shape
-                    }
-                  }
-                }
+                  element_shape,
+                )
                 let array_type = self_host_u32_add(
                   self_host_linked_array_runtime_base(link),
                   self_host_i32_to_u32(
@@ -22206,15 +21950,6 @@ fn self_host_emit_linked_i32_expression(
                     )
                     Option::None => false
                   }
-                  let canonical_receiver_is_fixed_array = match canonical_receiver_type {
-                    Option::Some(type_index) => type_index >= self_host_linked_array_runtime_base(
-                      link,
-                    ) && type_index < self_host_u32_add(
-                      self_host_linked_array_runtime_base(link),
-                      6u32,
-                    )
-                    Option::None => false
-                  }
                   if (method_name == "length" || method_name == "capacity") &&
                     self_host_u32_equal(arguments.length, 0u32) && (
                       canonical_receiver_is_array ||
@@ -22245,79 +21980,6 @@ fn self_host_emit_linked_i32_expression(
                       depth,
                     )
                     continue tasks.length()
-                  }
-                  let early_pattern_receiver_owner = self_host_linked_canonical_pattern_local_container_owner_module_id(
-                    canonical_body_plan,
-                    link,
-                    module_,
-                    body,
-                    receiver_base,
-                  )
-                  if !self_host_u64_equal(early_pattern_receiver_owner, link.array_module_id) &&
-                    self_host_linked_expression_is_fixed_array_value(
-                    link,
-                    module_,
-                    body,
-                    receiver_base,
-                  ) {
-                    let element_shape = match self_host_linked_type_first_argument_shape(
-                      module_,
-                      self_host_planned_expression_at(module_.expressions, receiver_base).type_,
-                    ) {
-                      Option::Some(shape) => shape
-                      Option::None => SelfHostPlannedValueShape::I32PlannedValueShape
-                    }
-                    let array_type = self_host_linked_array_runtime_base(link) +
-                      self_host_i32_to_u32(
-                        self_host_linked_array_carrier_from_shape(element_shape),
-                      )
-                    if method_name == "length" && self_host_u32_equal(
-                      arguments.length,
-                      0u32,
-                    ) {
-                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayLen(
-                        destination,
-                      ))
-                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefCast(
-                        array_type,
-                        destination,
-                      ))
-                      self_host_linked_i32_schedule_expression(
-                        tasks,
-                        expression_depths,
-                        receiver_base,
-                        destination,
-                        depth,
-                      )
-                      continue tasks.length()
-                    }
-                    if (method_name == "get" || method_name == "get_unchecked") &&
-                      self_host_u32_equal(arguments.length, 1u32) &&
-                      arguments.start < module_.expression_children.length() {
-                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGet(
-                        array_type,
-                        destination,
-                      ))
-                      self_host_linked_i32_schedule_expression(
-                        tasks,
-                        expression_depths,
-                        module_.expression_children[arguments.start],
-                        destination,
-                        depth,
-                      )
-                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGetPrefix(
-                        array_type,
-                        destination,
-                      ))
-                      self_host_linked_i32_schedule_expression(
-                        tasks,
-                        expression_depths,
-                        receiver_base,
-                        destination,
-                        depth,
-                      )
-                      continue tasks.length()
-                    }
                   }
                   let direct_receiver_owner = self_host_linked_type_owner_module_id(
                     link,
@@ -24189,30 +23851,6 @@ fn self_host_emit_linked_i32_expression(
                             destination,
                             depth,
                           )
-                        } else if method_name == "length" && (
-                          canonical_receiver_is_fixed_array ||
-                            selected_receiver_name.equals(b"FixedArray") ||
-                            selected_receiver_name.equals(b"WasmArray") ||
-                            self_host_linked_expression_is_fixed_array_value(
-                              link,
-                              module_,
-                              body,
-                              receiver_base,
-                            )
-                        ) {
-                          if !self_host_u32_equal(arguments.length, 0u32) {
-                            return Option::Some("linked FixedArray length has explicit arguments")
-                          }
-                          tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayLen(
-                            destination,
-                          ))
-                          self_host_linked_i32_schedule_expression(
-                            tasks,
-                            expression_depths,
-                            receiver_base,
-                            destination,
-                            depth,
-                          )
                         } else if (method_name == "length" || method_name == "capacity") && (
                           canonical_receiver_is_array ||
                             selected_receiver_name.equals(b"Array") ||
@@ -25438,243 +25076,38 @@ fn self_host_emit_linked_i32_expression(
               }
             }
             SelfHostPlannedExpressionKind::PlannedIndexGet(
-              base,
-              index,
+              _,
+              _,
               target,
             ) => {
-              let container_owner = self_host_linked_expression_container_owner_module_id(
+              let declaration = match target {
+                SelfHostBasicCallTarget::SelectedBasicCallTarget(value, _) => value
+                _ => return Option::Some("BOD-607 index read has no selected declaration")
+              }
+              let function_index = match self_host_linked_canonical_call_index(
+                canonical_body_plan,
                 link,
-                module_,
                 body,
-                base,
-              )
-              let selected_index_function = match target {
-                SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => self_host_linked_canonical_call_index(
-                  canonical_body_plan,
-                  link,
-                  body,
-                  caller_specialization,
-                  expression,
-                  declaration,
-                )
-                _ => Option::None
-              }
-              let frozen_index_shape = self_host_linked_canonical_expression_shape(canonical_body_plan, expression)
-              let erased_index = match frozen_index_shape {
-                Option::Some(shape) => shape is SelfHostPlannedValueShape::UnitPlannedValueShape ||
-                  shape is SelfHostPlannedValueShape::NeverPlannedValueShape
-                Option::None => false
-              }
-              if erased_index || !self_host_linked_i32_planned_call_emits(canonical_body_plan, expression) {
-                let function_index = match selected_index_function {
-                  Option::Some(value) => value
-                  Option::None => return Option::Some("BOD-607 erased index has no frozen target")
-                }
-                // Index operands already have a frozen evaluation/operand
-                // recipe. There is no HIR direct-call argument span here.
-                let arguments = SelfHostHirSpan::{
-                  start: 0u32
-                  length: 0u32
-                }
-                match self_host_linked_schedule_frozen_call(canonical_body_plan, link, module_, body, caller_specialization, expression, function_index, arguments, destination, tasks, expression_depths, depth) {
-                  Option::Some(error) => return Option::Some(error)
-                  Option::None => {}
-                }
-                continue tasks.length()
-              }
-              // Emission consumes the frozen carrier. It must not reconstruct
-              // an index result from generic source or local-usage heuristics.
-              let specialized_element_shape = match frozen_index_shape {
-                Option::Some(shape) => match shape {
-                  SelfHostPlannedValueShape::ErrorPlannedValueShape =>
-                    return Option::Some("BOD-610 index result has no frozen carrier")
-                  SelfHostPlannedValueShape::GenericPlannedValueShape =>
-                    return Option::Some("BOD-610 index result is still generic")
-                  SelfHostPlannedValueShape::NeverPlannedValueShape =>
-                    return Option::Some("BOD-611 non-returning index reached value emission")
-                  _ => shape
-                }
-                Option::None => return Option::Some("BOD-610 index expression is absent from the frozen plan")
-              }
-              let element_shape = specialized_element_shape
-              let declared_target_is_array_get = match target {
-                SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => self_host_linked_declaration_name(
-                  link,
-                  declaration,
-                ).ends_with(b"get_unchecked")
-                _ => false
-              }
-              let target_is_array_get = declared_target_is_array_get || match selected_index_function {
-                Option::Some(function_index) => self_host_linked_physical_function_name(
-                  link,
-                  function_index,
-                ).ends_with(b"get_unchecked") || self_host_u64_equal(
-                  self_host_linked_physical_function_module_id(
-                    link,
-                    function_index,
-                  ),
-                  link.array_module_id,
-                ) || self_host_linked_physical_function_returns_array_element_by_index(
-                  link,
-                  function_index,
-                )
-                Option::None => false
-              }
-              if (self_host_u64_equal(container_owner, link.array_module_id) ||
-                target_is_array_get || self_host_linked_expression_is_array_value(
-                  link,
-                  module_,
-                  body,
-                  base,
-              )) && !(
-                specialized_element_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
+                caller_specialization,
+                expression,
+                declaration,
               ) {
-                match self_host_linked_assert_array_get_carrier(
-                  canonical_body_plan,
-                  link,
-                  module_,
-                  body,
-                  caller_specialization,
-                  expression,
-                  specialized_element_shape,
-                ) {
-                  Option::Some(error) => return Option::Some(error)
-                  Option::None => {}
-                }
-                let runtime_base = self_host_linked_array_runtime_base(link)
-                let array_type = self_host_u32_add(
-                  runtime_base,
-                  self_host_i32_to_u32(
-                    self_host_linked_array_carrier_from_shape(specialized_element_shape),
-                  ),
-                )
-                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGet(
-                  array_type,
-                  destination,
-                ))
-                self_host_linked_i32_schedule_expression(
-                  tasks,
-                  expression_depths,
-                  index,
-                  destination,
-                  depth,
-                )
-                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArraySetPrefix(
-                  self_host_u32_add(runtime_base, 6u32),
-                  array_type,
-                  destination,
-                ))
-                self_host_linked_i32_schedule_expression(
-                  tasks,
-                  expression_depths,
-                  base,
-                  destination,
-                  depth,
-                )
-              } else {
-                match target {
-                  SelfHostBasicCallTarget::SelectedBasicCallTarget(
-                    declaration,
-                    _,
-                  ) => match self_host_linked_canonical_call_index(
-                    canonical_body_plan,
-                    link,
-                    body,
-                    caller_specialization,
-                    expression,
-                    declaration,
-                  ) {
-                    Option::Some(function_index) => {
-                      let physical_result_shape = self_host_linked_physical_function_result_shape(
-                        link,
-                        function_index,
-                      )
-                      if !(specialized_element_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                        physical_result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                      ) && self_host_linked_array_carrier_from_shape(specialized_element_shape) !=
-                        self_host_linked_array_carrier_from_shape(physical_result_shape) {
-                        let message = StringBuilder::new()
-                        message.append("linked index lowering escape invariant failed module=")
-                        message.append_u64(module_.module_id)
-                        message.append(" declaration=")
-                        message.append_u64(body.declaration)
-                        message.append(" name=")
-                        message.append(bytes_to_string(self_host_linked_declaration_name(link, body.declaration)))
-                        message.append(" body=")
-                        message.append_u64(body.body)
-                        message.append(" specialization=")
-                        message.append_u32(caller_specialization)
-                        message.append(" expression=")
-                        message.append_u32(expression)
-                        message.append(" base=")
-                        message.append_u32(base)
-                        message.append(" index=")
-                        message.append_u32(index)
-                        message.append(" function=")
-                        message.append_u32(function_index)
-                        message.append(":")
-                        message.append(bytes_to_string(self_host_linked_physical_function_name(
-                          link,
-                          function_index,
-                        )))
-                        message.append(" expected=")
-                        message.append(self_host_linked_shape_name(specialized_element_shape))
-                        message.append(" actual=")
-                        message.append(self_host_linked_shape_name(physical_result_shape))
-                        return Option::Some(message.finish())
-                      }
-                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
-                        function_index,
-                        destination,
-                      ))
-                      self_host_linked_i32_schedule_expression(
-                        tasks,
-                        expression_depths,
-                        index,
-                        destination,
-                        depth,
-                      )
-                      self_host_linked_i32_schedule_expression(
-                        tasks,
-                        expression_depths,
-                        base,
-                        destination,
-                        depth,
-                      )
-                    }
-                    Option::None => {
-                      return Option::Some("linked index read has no physical function")
-                    }
-                  }
-                  _ => {
-                    let function_index = self_host_linked_runtime_function_index_for_carrier(
-                      link,
-                      b"dew_array_get_unchecked",
-                      self_host_linked_array_carrier_from_shape(element_shape),
-                    )
-                    if function_index < 0i32 {
-                      return Option::Some("linked index read target is unresolved")
-                    }
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
-                      self_host_i32_to_u32(function_index),
-                      destination,
-                    ))
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      index,
-                      destination,
-                      depth,
-                    )
-                    self_host_linked_i32_schedule_expression(
-                      tasks,
-                      expression_depths,
-                      base,
-                      destination,
-                      depth,
-                    )
-                  }
-                }
+                Option::Some(value) => value
+                Option::None => return Option::Some("BOD-607 index read has no frozen target")
+              }
+              // The frozen recipe contains the receiver and index, in source
+              // order. An indexed trait method is an ordinary call.
+              let arguments = SelfHostHirSpan::{
+                start: 0u32
+                length: 0u32
+              }
+              match self_host_linked_schedule_frozen_call(
+                canonical_body_plan, link, module_, body, caller_specialization,
+                expression, function_index, arguments, destination, tasks,
+                expression_depths, depth,
+              ) {
+                Option::Some(error) => return Option::Some(error)
+                Option::None => {}
               }
             }
             SelfHostPlannedExpressionKind::PlannedLocalSet(_, _) => {

@@ -195,12 +195,6 @@ pub fn standard_deque_method_declaration(String) -> UInt64
 
 pub fn standard_deque_type_declaration() -> UInt64
 
-pub fn standard_fixed_array_index_declaration() -> UInt64
-
-pub fn standard_fixed_array_index_set_declaration() -> UInt64
-
-pub fn standard_fixed_array_method_declaration(String) -> UInt64
-
 pub fn standard_fixed_array_type_declaration() -> UInt64
 
 pub fn standard_library_source_paths() -> Array[String]
@@ -1742,7 +1736,6 @@ pub enum PlannedExpressionKind {
   PlannedWasmRefAsNonNull(Int)
   PlannedFixedArrayMake(Int, Int, PlannedValueShape)
   PlannedFixedArrayLength(Int, PlannedValueShape)
-  PlannedFixedArrayGet(Int, Int, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(Int, Int, PlannedValueShape)
   PlannedFixedArraySetUnchecked(Int, Int, Int, PlannedValueShape)
   PlannedArrayNew(Int, PlannedValueShape)

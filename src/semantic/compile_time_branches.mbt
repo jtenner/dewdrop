@@ -189,7 +189,6 @@ fn compile_time_push_expression(
     | PlannedBoundOperatorCall(_, _, _, value0, value1, _)
     | PlannedIndexCall(_, value0, value1, _)
     | PlannedFixedArrayMake(value0, value1, _)
-    | PlannedFixedArrayGet(value0, value1, _)
     | PlannedFixedArrayGetUnchecked(value0, value1, _)
     | PlannedArrayGet(value0, value1, _, _)
     | PlannedArrayGetUnchecked(value0, value1, _)
