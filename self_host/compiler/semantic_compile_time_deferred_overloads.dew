@@ -1,0 +1,123 @@
+open dew.std.option
+
+impl SelfHostBasicBodyInferencer {
+  fn deferred_overload_equation(self, actual: I32, expected: I32, origin: SelfHostTypeConstraintOrigin) -> Bool {
+    let snapshot = self.solver.snapshot()
+    if self.solver.unify(actual, expected, origin) {
+      self.solver.commit(snapshot)
+      true
+    } else {
+      self.solver.rollback(snapshot)
+      self.deferred_constraint_has_no_independent_mismatch(actual, expected, origin)
+    }
+  }
+
+  fn try_deferred_overload_candidate(self, expression: U32, arguments: SelfHostHirSpan, declaration: U64, offset: U32) -> Bool {
+    let local = self_host_semantic_id_module(declaration) == self.collected.module_id
+    let parameters = if local {
+      self.collected.parameters_of(declaration)
+    } else {
+      match self.imported_callable(declaration) {
+        Option::Some(callable) => callable.parameters
+        Option::None => return false
+      }
+    }
+    if parameters.length != arguments.length {
+      return false
+    }
+    let result = if local {
+      match self.local_callable_index_of_declaration(declaration) {
+        Option::Some(callable) => self.resolved.callable_return_types[callable]
+        Option::None => return false
+      }
+    } else {
+      match self.imported_callable(declaration) {
+        Option::Some(callable) => callable.result_type
+        Option::None => return false
+      }
+    }
+    let snapshot = self.solver.snapshot()
+    if local {
+      self.begin_signature_instantiation(declaration)
+    } else {
+      match self.imported_callable(declaration) {
+        Option::Some(callable) => self.begin_imported_signature_instantiation(callable)
+        Option::None => {
+          self_host_assert_compiler_invariant(false, "LNK-504 deferred overload declaration disappeared")
+          unreachable()
+        }
+      }
+    }
+    let origin = self_host_call_type_origin(expression, offset)
+    let mut viable = self.apply_explicit_call_types(expression, 0u32, self.candidate_type_arguments.length(), offset)
+    let _ = while 0u32 {
+      index => if viable && index < parameters.length {
+        let source = if local {
+          self.resolved.parameter_types[parameters.start + index]
+        } else {
+          self.imported.parameter_types[parameters.start + index]
+        }
+        let expected = self.instantiate_signature_type(source)
+        let actual = self.expression_type(self.collected.expression_children[arguments.start + index])
+        viable = self.deferred_overload_equation(actual, expected, origin)
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if viable {
+      viable = self.deferred_overload_equation(self.instantiate_signature_type(result), self.expression_type(expression), origin)
+    }
+    self.solver.rollback(snapshot)
+    viable
+  }
+
+  fn defer_overload_candidates(self, expression: U32, target: U32, arguments: SelfHostHirSpan, offset: U32, candidates: Array<U64>) -> Bool {
+    if candidates.length() < 2u32 {
+      return false
+    }
+    let inputs = [self.expression_type(expression)]
+    self_host_assert_array_span(arguments.start, arguments.length, self.collected.expression_children.length(), "ARN-101 deferred overload arguments")
+    let _ = while 0u32 {
+      index => if index < arguments.length {
+        inputs.push(self.expression_type(self.collected.expression_children[arguments.start + index]))
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    if !self.can_defer_expression_check(expression, inputs) {
+      return false
+    }
+    for candidate in candidates {
+      if self.try_deferred_overload_candidate(expression, arguments, candidate, offset) {
+        let deferred = self.defer_expression_check(expression, inputs)
+        self_host_assert_compiler_invariant(deferred, "INV-001 deferred overload eligibility changed")
+        self.consumed_member_roots[self.expression_index(target)] = true
+        self.solver.poison_type(self.expression_type(target))
+        return true
+      }
+    }
+    false
+  }
+
+  fn defer_local_overload(self, expression: U32, target: U32, arguments: SelfHostHirSpan, offset: U32, binding: SelfHostValueBinding) -> Bool {
+    let candidates = self_host_empty_compile_time_owners()
+    let mut steps = 0u32
+    let _ = while binding.head {
+      index => {
+        self_host_assert_compiler_invariant(steps < self.collected.value_binding_candidates.length(), "ARN-104 overload candidate cycle")
+        steps = steps + 1u32
+        let candidate = self.collected.value_binding_candidates[index]
+        if self.local_callable_index_of_declaration(candidate.declaration) is Option::Some(_) {
+          candidates.push(candidate.declaration)
+        }
+        match candidate.next {
+          Option::Some(next) => continue next
+          Option::None => break self_host_semantic_unit()
+        }
+      }
+    }
+    self.defer_overload_candidates(expression, target, arguments, offset, candidates)
+  }
+}

@@ -65,6 +65,7 @@ test "imported selection resolves non-generic calls" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
@@ -124,6 +125,7 @@ test "qualified imported foreign calls stay direct" {
     imports.type_declaration_types,
     imports.type_generic_spans,
     imports.module_value_types,
+    imports,
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
@@ -196,6 +198,7 @@ test "imported selection resolves overloads" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
@@ -278,6 +281,7 @@ test "imported selection resolves generic calls" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
@@ -362,6 +366,7 @@ test "imported selection resolves generic inherent methods" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
@@ -423,6 +428,7 @@ test "imported generic methods constrain ordinary arguments" {
     imports.type_declaration_types,
     imports.type_generic_spans,
     imports.module_value_types,
+    imports,
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
@@ -497,6 +503,7 @@ test "imported selection resolves generic tuple and unit variants" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   assert(inferred.bodies.length() == 2u32, "imported variant bodies")
   let some_hir = collected.bodies[0u32]
@@ -605,6 +612,7 @@ test "imported selection resolves tuple and unit variant patterns" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
@@ -677,6 +685,7 @@ test "imported selection resolves struct and struct-variant construction" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   assert(inferred.bodies.length() == 2u32, "imported construction bodies")
   let mut body_index = 0u32
@@ -771,6 +780,7 @@ test "imported selection resolves struct and struct-variant patterns" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   assert(inferred.bodies.length() == 2u32, "imported struct pattern bodies")
   let mut body_index = 0u32
@@ -852,6 +862,7 @@ test "imported selection resolves generic fields" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
@@ -931,6 +942,7 @@ test "imported selection diagnoses non-generic call arity" {
     type_declaration_types,
     type_generic_spans,
     module_value_types,
+    imports,
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
@@ -995,6 +1007,7 @@ test "module values use imported calls before function inference" {
     imports.type_declaration_types,
     imports.type_generic_spans,
     imports.module_value_types,
+    imports,
   )
   self_host_assert_imported_module_value_body(
     inferred.bodies[1u32],

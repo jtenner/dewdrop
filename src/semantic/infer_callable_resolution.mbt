@@ -1132,7 +1132,9 @@ fn BasicBodyInferencer::constrain_pending_calls(
       }
       let reference = self.names.expression_references[target]
       self.trial_overload(expression, reference, arguments, offset)
-      if self.call_scratch.trial_viable_count == 1 {
+      if self.defer_overload_selection(expression, arguments, offset) {
+        progress = true
+      } else if self.call_scratch.trial_viable_count == 1 {
         self.select_call_candidate(
           call_slot,
           expression,
@@ -1162,7 +1164,8 @@ fn BasicBodyInferencer::constrain_pending_calls(
     }
     let name = match self.collected.expressions[target] {
       HirNameExpr(name, _) => name
-      _ => abort("pending overload target is not a name")
+      HirQualifiedExpr(_, name, _) => name
+      _ => abort("pending overload target is not a callable name")
     }
     let reference = self.names.expression_references[target]
     self.call_targets[call_slot] = ErrorInferredCallTarget

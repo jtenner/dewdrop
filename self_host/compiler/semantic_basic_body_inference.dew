@@ -449,6 +449,7 @@ fn self_host_basic_empty_local_module_value_map() -> Map<U64, I32> {
 }
 
 struct SelfHostBasicImportedInputs {
+  resolved_imports: Option<SelfHostResolvedModuleImports>
   scope: Option<SelfHostModuleImportScope>
   callables: Array<SelfHostResolvedImportedCallable>
   generic_parameter_ids: Array<U64>
@@ -3994,6 +3995,9 @@ impl SelfHostBasicBodyInferencer {
         return
       }
     }
+    if self.defer_local_overload(expression, target, arguments, offset, binding) {
+      return
+    }
     let mut candidate_index = binding.head
     let mut selected_callable = 4294967295u32
     let mut selected_declaration = 18446744073709551615u64
@@ -4218,6 +4222,7 @@ impl SelfHostBasicBodyInferencer {
       }
     }
     let mut candidate_count = 0u32
+    let deferred_candidates = self_host_empty_compile_time_owners()
     let mut candidate_index = 0u32
     let _ = while candidate_index {
       current => if current < self.imported.callables.length() {
@@ -4241,6 +4246,7 @@ impl SelfHostBasicBodyInferencer {
           reference_name,
         ) {
           candidate_count = candidate_count + 1u32
+          deferred_candidates.push(callable.declaration)
         }
         continue current + 1u32
       } else {
@@ -4255,6 +4261,9 @@ impl SelfHostBasicBodyInferencer {
         offset,
         reference,
       )
+    }
+    if self.defer_overload_candidates(expression, target, arguments, offset, deferred_candidates) {
+      return true
     }
     let mut selected = 4294967295u32
     let mut first_declaration = 18446744073709551615u64
@@ -8237,6 +8246,7 @@ fn self_host_infer_basic_module_bodies(
     resolved,
     names,
     SelfHostBasicImportedInputs::{
+      resolved_imports: Option::None
       scope: Option::None
       callables: []
       generic_parameter_ids: []
@@ -8273,8 +8283,9 @@ fn self_host_infer_basic_module_bodies_with_imports(
   type_declaration_types: Map<U64, U32>,
   type_generic_spans: Map<U64, SelfHostHirSpan>,
   module_value_types: Map<U64, U32>,
+  resolved_imports: SelfHostResolvedModuleImports,
 ) -> SelfHostBasicInferredModuleBodies {
-  self_host_infer_basic_module_bodies_with_inputs(collected, resolved, names, self_host_basic_imported_inputs(collected, resolved, names, scope, callables, generic_parameter_ids, parameter_types, parameter_receivers, implementations, fields, variants, variant_payload_types, type_declaration_types, type_generic_spans, module_value_types))
+  self_host_infer_basic_module_bodies_with_inputs(collected, resolved, names, self_host_basic_imported_inputs(collected, resolved, names, scope, callables, generic_parameter_ids, parameter_types, parameter_receivers, implementations, fields, variants, variant_payload_types, type_declaration_types, type_generic_spans, module_value_types, resolved_imports))
 }
 
 fn self_host_basic_imported_inputs(
@@ -8293,6 +8304,7 @@ fn self_host_basic_imported_inputs(
   type_declaration_types: Map<U64, U32>,
   type_generic_spans: Map<U64, SelfHostHirSpan>,
   module_value_types: Map<U64, U32>,
+  resolved_imports: SelfHostResolvedModuleImports,
 ) -> SelfHostBasicImportedInputs {
   let values = self_host_infer_module_values_with_imports(
     collected,
@@ -8321,6 +8333,7 @@ fn self_host_basic_imported_inputs(
     }
   }
   SelfHostBasicImportedInputs::{
+      resolved_imports: Option::Some(resolved_imports)
       scope: Option::Some(scope)
       callables: callables
       generic_parameter_ids: generic_parameter_ids

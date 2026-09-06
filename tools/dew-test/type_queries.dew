@@ -754,6 +754,9 @@ pub fn main(case: U32) -> Bool {
     query_method_guard(7i64) == 42i32 && query_method_guard(()) == 0i32
   } else if case == 90u32 {
     query_method_numeric_guard(7i64) == 42i32 && query_method_numeric_guard(()) == 0i32
+  } else if case == 91u32 {
+    query_overloaded_select(())
+    query_overloaded_select(7i32) == 14i32 && query_overloaded_select(8i64) == 16i64
   } else {
     false
   }
@@ -827,6 +830,16 @@ fn query_selected_never<T>(value: T, flag: Bool) -> I32 {
 
 fn query_selected_accept(left: I32, right: I32) -> I32 {
   right
+}
+
+builtin query_overloaded_add(value: I32, right: I32) -> I32 = "i32.add"
+builtin query_overloaded_add(value: I64, right: I64) -> I64 = "i64.add"
+fn query_overloaded_select<T>(value: T) -> T {
+  if is_integer::<T>() {
+    query_overloaded_add(value, value)
+  } else {
+    value
+  }
 }
 
 trait QueryMethodMark<X> {

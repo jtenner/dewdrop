@@ -11,10 +11,13 @@ impl SelfHostBasicBodyInferencer {
       Option::Some(scope) => scope
       Option::None => self_host_build_module_import_scope(self.collected, 0u32, [], SelfHostFrozenInterfaceList::new())
     }
-    let imports = self_host_resolve_module_imports(self.resolved, scope)
+    let imports = match self.imported.resolved_imports {
+      Option::Some(imports) => imports
+      Option::None => self_host_resolve_module_imports(self.resolved, scope)
+    }
     let search = SelfHostCompileTimeEvidenceSearch::{
       collected: self.collected
-      resolved: imports.resolved
+      resolved: self.resolved
       imports: imports
       index: self_host_index_module_implementations_with_imports(self.collected, imports)
       active: []

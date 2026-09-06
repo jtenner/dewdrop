@@ -290,6 +290,7 @@ test "body flow recognizes imported enum exhaustiveness" {
     imports.type_declaration_types,
     imports.type_generic_spans,
     imports.module_value_types,
+    imports,
   )
   let flows = self_host_analyze_basic_module_flows_with_imports(
     collected,

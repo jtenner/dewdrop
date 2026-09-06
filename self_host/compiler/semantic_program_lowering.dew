@@ -481,6 +481,7 @@ fn self_host_infer_program_module_bodies(
     imports.type_declaration_types,
     imports.type_generic_spans,
     imports.module_value_types,
+    imports,
   )
 }
 

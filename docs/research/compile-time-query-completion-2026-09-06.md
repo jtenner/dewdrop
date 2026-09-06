@@ -3,6 +3,25 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Deferred overload selection
+
+Both compilers can defer local and imported overload selection inside a query
+branch. A nested solver transaction keeps each valid concrete equation while
+probing a candidate, then rolls the complete probe back. A structural check
+rejects independent concrete mismatches. No relaxed probe supplies a call target
+or physical type; the selected source instance reruns normal overload selection.
+The self-host import scope now accepts overloaded builtin declarations as well
+as functions. Qualified native overload failures retain a source diagnostic,
+and self-host direct-call diagnostics retain the call expression, not the name ID.
+
+The original positive test failed before the change; its concrete bad-operand
+negative form already failed as required. Twenty focused native overload tests
+pass (9.353 s), and both compilers execute 93 shared checks (native generation
+2.770 s, execution 0.023 s). Hardening passes 219 tests and 29 records in 32.274 s.
+The full routine native suite passes 910 tests in 108.343 s. Both aggregate lanes
+remain performance defects. Final integration and bootstrap checks remain, and
+a follow-up test exposed missing query-dependence tracking through local values.
+
 ## Generic method obligations
 
 Native declared/guarded method calls now validate their method bounds. The full
@@ -20,8 +39,14 @@ body. Selected local and imported impl methods use the same bound check.
 Positive and negative tests cover local/imported requirements and bounds that
 refer to an owner type parameter. All 44 focused native bound tests pass in
 14.696 s. Both compilers execute 92 shared checks (native generation 2.325 s,
-execution 0.022 s). Hardening passes 215 tests and 29 records in 31.874 s; the
-aggregate lane remains over budget. Deferred overload selection and final full
+execution 0.022 s). The 31.874 s hardening run passed 214 tests but failed the
+new imported negative test; the first report incorrectly called that run clean.
+The fixture put an import after a declaration and did not check collection.
+It now puts imports first and checks source and import diagnostics. The complete
+rerun passes 215 tests, 29 records, and 92 execution checks in 32.005 s.
+Bound checking now also retains the original resolved import recipes instead of
+resolving imports again inside an inference job. The aggregate lane remains
+over budget. Deferred overload selection and final full
 validation remain. This does not claim that the older non-query implementation
 prerequisite fallback has been removed from every self-host operation.
 

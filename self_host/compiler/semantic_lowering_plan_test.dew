@@ -474,6 +474,7 @@ fn self_host_lowering_imported_test_plan(
     imports.type_declaration_types,
     imports.type_generic_spans,
     imports.module_value_types,
+    imports,
   )
   self_host_plan_module_lowering_with_imports(
     collected,

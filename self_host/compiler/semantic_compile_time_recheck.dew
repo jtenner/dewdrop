@@ -35,6 +35,7 @@ fn self_host_recheck_compile_time_body(lowering: SelfHostPlannedProgramLowering,
     imports.generic_parameter_ids, imports.parameter_types, imports.parameter_receivers,
     imports.implementations, imports.fields, imports.variants, imports.variant_payload_types,
     imports.type_declaration_types, imports.type_generic_spans, imports.module_value_types,
+    imports,
   )
   let basic = self_host_infer_basic_module_bodies_with_reachability(source, resolved, names, inputs, Option::Some(live))
   let inferred = self_host_merge_module_inference(basic)
