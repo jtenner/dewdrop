@@ -32,16 +32,35 @@ fn compile_time_fold_call(
   if computed_type_builtin(name) {
     return Err("CT-036 a type-producing query must be used in a type position")
   }
-  if receiver >= 0 || arguments.length != 0 {
-    return Err("CT-001 type query requires zero runtime operands")
+  let field_offset = name == b"types.field_offset"
+  if receiver >= 0 || arguments.length != (if field_offset { 1 } else { 0 }) {
+    return Err("CT-001 wrong type-query operand count")
   }
   let types = match
     compile_time_read_arguments(module_, type_arguments, bindings) {
     Ok(types) => types
     Err(error) => return Err("CT-002 " + @debug.to_string(error))
   }
-  let evaluated = if name == b"types.field_names" ||
-    name == b"types.variant_names" {
+  let evaluated = if field_offset {
+    guard program_specialization_span_is_valid(
+      arguments,
+      module_.expression_children.length(),
+    ) else {
+      abort("ARN-101 field_offset operand span")
+    }
+    let operand = module_.expression_children[arguments.start]
+    guard operand >= 0 && operand < module_.expressions.length() else {
+      abort("ARN-104 field_offset operand expression")
+    }
+    let index = match module_.expressions[operand].kind {
+      PlannedU32Const(value) if value <= 4294967295UL => value.to_uint()
+      _ => return Err("CT-020 field_offset requires a constant U32 field index")
+    }
+    match evaluate_compile_time_field_offset(types, index) {
+      Ok(value) => Ok(value)
+      Err(error) => Err("CT-002 " + @debug.to_string(error))
+    }
+  } else if name == b"types.field_names" || name == b"types.variant_names" {
     evaluate_compile_time_names(context, name, types)
   } else if name == b"types.implements" {
     match evidence {

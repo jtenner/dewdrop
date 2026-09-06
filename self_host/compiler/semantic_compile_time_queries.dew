@@ -35,7 +35,7 @@ fn self_host_compile_time_type_query_arity(name: Bytes) -> Option<U32> {
   if name == b"types.type_equal" || name == b"types.can_bitcast" || name == b"types.implements" {
     return Option::Some(2u32)
   }
-  for unary in [b"types.is_unit", b"types.is_never", b"types.is_integer", b"types.is_signed_integer", b"types.is_float", b"types.bit_width", b"types.lane_count", b"types.lane_bit_width", b"types.tuple_length", b"types.field_names", b"types.variant_names", b"types.size_of", b"types.align_of"] {
+  for unary in [b"types.is_unit", b"types.is_never", b"types.is_integer", b"types.is_signed_integer", b"types.is_float", b"types.bit_width", b"types.lane_count", b"types.lane_bit_width", b"types.tuple_length", b"types.field_names", b"types.variant_names", b"types.size_of", b"types.align_of", b"types.field_offset"] {
     if name == unary {
       return Option::Some(1u32)
     }
@@ -315,7 +315,7 @@ fn self_host_evaluate_compile_time_query(name: Bytes, arguments: Array<SelfHostC
     Option::Some(value) => return Result::Ok(Option::Some(SelfHostCompileTimeConstant::BoolCompileTimeConstant(value)))
     Option::None => {}
   }
-  if name == b"types.implements" || name == b"types.field_names" || name == b"types.variant_names" {
+  if name == b"types.implements" || name == b"types.field_names" || name == b"types.variant_names" || name == b"types.field_offset" {
     return Result::Err("CT-010 missing type-query program context")
   }
   if name == b"types.tuple_length" {
@@ -324,27 +324,23 @@ fn self_host_evaluate_compile_time_query(name: Bytes, arguments: Array<SelfHostC
       _ => Result::Err("CT-002 tuple_length requires a product type")
     }
   }
+  if name == b"types.size_of" || name == b"types.align_of" {
+    let layout = match self_host_compile_time_raw_layout(first, 0u32) {
+      Result::Ok(value) => value
+      Result::Err(error) => return Result::Err(error)
+    }
+    let value = if name == b"types.align_of" {
+      layout.alignment
+    } else {
+      layout.size
+    }
+    return Result::Ok(Option::Some(SelfHostCompileTimeConstant::U32CompileTimeConstant(value)))
+  }
   let primitive = match first {
     SelfHostCompileTimeType::PrimitiveCompileTimeType(value) => value
     _ => return Result::Err("CT-002 unsupported type-query category")
   }
-  let value = if name == b"types.size_of" || name == b"types.align_of" {
-    let size = if rank == 0u32 {
-      0u32
-    } else if rank == 1u32 {
-      4u32
-    } else {
-      match self_host_compile_time_bits(primitive) {
-        Option::Some(bits) => bits / 8u32
-        Option::None => return Result::Err("CT-002 type has no supported byte layout")
-      }
-    }
-    if name == b"types.align_of" && size == 0u32 {
-      1u32
-    } else {
-      size
-    }
-  } else if name == b"types.bit_width" {
+  let value = if name == b"types.bit_width" {
     match self_host_compile_time_bits(primitive) {
       Option::Some(bits) => bits
       Option::None => return Result::Err("CT-002 type has no bit width")

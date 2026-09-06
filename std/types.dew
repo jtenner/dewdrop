@@ -22,6 +22,9 @@ pub builtin variant_payload_types<t>(name: String) -> Type = "types.variant_payl
 // Ordered names are compile-time constants; each use produces a fresh array.
 pub builtin field_names<t>() -> @array.Array<String> = "types.field_names"
 pub builtin variant_names<t>() -> @array.Array<String> = "types.variant_names"
-// Raw scalar memory layout only. GC objects have no exposed byte layout.
+// Raw linear-memory encoding of scalars and ordered tuples, not GC allocation.
+// Tuple fields have natural alignment; total size includes tail padding.
 pub builtin size_of<t>() -> U32 = "types.size_of"
 pub builtin align_of<t>() -> U32 = "types.align_of"
+// Zero-based tuple field index. Unit fields have an offset but occupy no bytes.
+pub builtin field_offset<t>(index: U32) -> U32 = "types.field_offset"

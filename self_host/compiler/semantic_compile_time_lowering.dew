@@ -168,14 +168,34 @@ fn self_host_fold_compile_time_call(lowering: SelfHostPlannedProgramLowering, mo
     }
     _ => return Result::Err("CT-001 invalid type-query call kind")
   }
-  if operands.length != 0u32 {
-    return Result::Err("CT-001 type query requires zero runtime operands")
+  let field_offset = name == b"types.field_offset"
+  let operand_count = if field_offset {
+    1u32
+  } else {
+    0u32
+  }
+  if operands.length != operand_count {
+    return Result::Err("CT-001 wrong type-query operand count")
   }
   let types = match self_host_read_compile_time_arguments(module_, source.call_type_arguments, bindings) {
     Result::Ok(types) => types
     Result::Err(error) => return Result::Err(error)
   }
-  let evaluated = if name == b"types.field_names" || name == b"types.variant_names" {
+  let evaluated = if field_offset {
+    self_host_assert_array_span(operands.start, operands.length, module_.expression_children.length(), "ARN-101 field_offset operand span")
+    let operand = module_.expression_children[operands.start]
+    self_host_assert_array_index(operand, module_.expressions.length(), "ARN-104 field_offset operand expression")
+    let index = match module_.expressions[operand].kind {
+      SelfHostPlannedExpressionKind::PlannedU32Const(value) => {
+        if value > 4294967295u64 {
+          return Result::Err("CT-020 field_offset requires a constant U32 field index")
+        }
+        value.into()
+      }
+      _ => return Result::Err("CT-020 field_offset requires a constant U32 field index")
+    }
+    self_host_evaluate_compile_time_field_offset(types, index)
+  } else if name == b"types.field_names" || name == b"types.variant_names" {
     self_host_compile_time_name_query(lowering, name, types)
   } else if name == b"types.implements" {
     self_host_evaluate_compile_time_implements(lowering, module_, types, caller)

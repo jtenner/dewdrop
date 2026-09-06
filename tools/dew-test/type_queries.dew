@@ -115,6 +115,10 @@ fn query_result_match(ok: Bool) -> Bool {
   }
 }
 
+fn query_raw_layout<t>() -> Bool {
+  size_of::<t>() == 24u32 && align_of::<t>() == 8u32 && field_offset::<t>(2u32) == 8u32
+}
+
 pub fn main(case: U32) -> Bool {
   if case == 0u32 {
     is_unit::<Nothing>()
@@ -194,6 +198,14 @@ pub fn main(case: U32) -> Bool {
     query_result_match(true)
   } else if case == 33u32 {
     query_result_match(false)
+  } else if case == 34u32 {
+    query_raw_layout::<(U8, Unit, I64, (U16, U8))>()
+  } else if case == 35u32 {
+    field_offset::<(U8, Unit, I64)>(1u32) == 1u32
+  } else if case == 36u32 {
+    field_offset::<(U8, Unit, I64, (U16, U8))>(3u32) == 16u32
+  } else if case == 37u32 {
+    size_of::<(Unit, Unit)>() == 0u32 && align_of::<(Unit, Unit)>() == 1u32
   } else {
     false
   }

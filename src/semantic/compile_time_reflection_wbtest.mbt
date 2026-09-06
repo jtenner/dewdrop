@@ -39,7 +39,7 @@ test "compile time layouts describe scalars not GC objects" {
       CtNominal(42UL),
       CtPrimitive(StringType),
       CtPrimitive(NeverType),
-      CtProduct([CtPrimitive(I32Type)]),
+      CtProduct([CtPrimitive(StringType)]),
     ] {
     assert_eq(
       evaluate_compile_time_type_query(b"types.size_of", [type_]),

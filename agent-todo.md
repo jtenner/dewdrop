@@ -19,9 +19,9 @@ Native work is in progress. See
 [`docs/research/compile-time-types-2026-09-05.md`](docs/research/compile-time-types-2026-09-05.md)
 for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
-The native path now has 19
+The native path now has 20
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. The self-host corpus now has 35 shared execution checks.
+physical-boundary checks. Both compiler paths pass 39 shared execution checks.
 Deferred type checking and layout work below still prevent full completion.
 
 - [ ] Add real type-valued expressions for `field_type` and
@@ -41,13 +41,15 @@ Deferred type checking and layout work below still prevent full completion.
   source order, including imported and generic types.
   - [x] Native folding and fresh string-array constants, with Wasm execution tests.
   - [x] Self-host folding and shared execution fixtures.
-- [ ] Define valid layout-query types for `size_of`, `align_of`, and
+- [x] Define valid layout-query types for `size_of`, `align_of`, and
   `field_offset`. WasmGC object byte layouts are not exposed; never invent them.
   - [x] Native scalar `size_of`/`align_of`; GC objects and unsupported layouts
     produce errors. Unit has size 0/alignment 1; Never has no layout.
   - [x] Self-host scalar queries, checked with the same native fixtures.
-  - [ ] An explicit aggregate layout contract for `field_offset` (GC field
-    indices are not byte offsets).
+  - [x] Define the raw ordered-tuple encoding, with natural field alignment and
+    tail padding. `field_offset<T>(index)` uses a constant U32 index. Check Unit
+    fields, nested tuples, invalid indices, unsupported GC fields, and overflow.
+    This is not a byte layout for runtime GC tuples or nominal records.
 - [x] Port the existing query, trait search, assertion, and logical instance handling to
   the self-host compiler. Check both compilers with the same execution fixtures.
   - [x] Match the native compile-time `Type` identity and reject runtime storage,

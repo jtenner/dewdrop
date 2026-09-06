@@ -20,6 +20,8 @@ references, tuples, and nominal GC objects do not have a supported byte layout.
 
 No GC field offsets can be reported. `field_offset` still needs an explicit
 linear-memory aggregate layout contract; the GC field index is not a byte offset.
+The later [raw tuple layout work](raw-type-layout-2026-09-06.md) supplies that
+contract for ordered tuples; nominal GC records remain unsupported.
 
 The new module dependency on Array is declared in `std/types.dew` and included by
 source discovery. This work found a pre-existing identity collision between

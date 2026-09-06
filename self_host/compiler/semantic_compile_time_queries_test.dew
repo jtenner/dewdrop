@@ -83,6 +83,41 @@ test "compile-time scalar layouts and lanes agree with native contracts" {
   }
 }
 
+test "compile-time raw tuple layouts include padding and retain erased offsets" {
+  let type_ = SelfHostCompileTimeType::ProductCompileTimeType([
+    SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::U8Type),
+    SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::UnitType),
+    SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I64Type),
+    SelfHostCompileTimeType::ProductCompileTimeType([
+      SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::U16Type),
+      SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::U8Type),
+    ]),
+  ])
+  match self_host_compile_time_raw_layout(type_, 0u32) {
+    Result::Ok(layout) => {
+      assert(layout.size == 24u32, "tail padding")
+      assert(layout.alignment == 8u32, "maximum field alignment")
+      assert(layout.offsets[0u32] == 0u32, "first field")
+      assert(layout.offsets[1u32] == 1u32, "Unit field keeps its position")
+      assert(layout.offsets[2u32] == 8u32, "interior padding")
+      assert(layout.offsets[3u32] == 16u32, "nested tuple")
+    }
+    Result::Err(error) => assert(false, error)
+  }
+  match self_host_evaluate_compile_time_field_offset([type_], 2u32) {
+    Result::Ok(result) => match result {
+      Option::Some(value) => match value {
+        SelfHostCompileTimeConstant::U32CompileTimeConstant(offset) => assert(offset == 8u32, "constant byte offset")
+        _ => assert(false, "offset must be U32")
+      }
+      Option::None => assert(false, "concrete layout must not be pending")
+    }
+    Result::Err(error) => assert(false, error)
+  }
+  assert(self_host_evaluate_compile_time_field_offset([type_], 4u32) is Result::Err(_), "invalid field remains an error")
+  assert(self_host_compile_time_raw_align(4294967295u32, 8u32) is Option::None, "layout arithmetic cannot wrap")
+}
+
 test "compile-time logical keys retain nested types through generic callers" {
   let lowering = self_host_physical_test_lowering(
     b"builtin query<t>() -> Bool = \"types.is_unit\"\nstruct Box<t> {}\nfn inner<t>() -> Bool {\n query::<t>()\n}\nfn outer<t>() -> Bool {\n inner::<Box<t>>()\n}\npub fn run() -> Bool {\n outer::<I8>() || outer::<U8>()\n}\n",
