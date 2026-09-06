@@ -21,7 +21,7 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 20
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compiler paths pass 45 shared execution checks.
+physical-boundary checks. Both compiler paths pass 47 shared execution checks.
 The September 6 compiler-B/C bootstrap now reaches a byte-identical fixed point.
 Deferred type checking and layout work below still prevent full completion.
 
@@ -32,7 +32,9 @@ Deferred type checking and layout work below still prevent full completion.
     generic owner arguments, aliases, and variant payload order. Test real Wasm
     scalar and tuple calls, parser recovery, cycles, and metatype storage errors.
   - [ ] Defer queries on an unconstrained generic owner until specialization.
-    `field_type<Box<T>>("item")` works; `field_type<T>("item")` reports CT-035.
+    Generic aliases and pure queries now retain a structural member projection
+    and reduce it with exact logical arguments. Runtime generic member
+    signatures and branch-local type checking still need that reduction.
   - [x] Port inline computed member syntax and local/imported generic member
     resolution to the self-host parser and resolver; test exact source errors.
   - [x] Add local compile-time type bindings. `type Item = ...` has block scope,

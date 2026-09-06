@@ -29,6 +29,9 @@ let substitute_finish_function = 2
 let substitute_finish_product = 3
 
 ///|
+let substitute_finish_projection = 4
+
+///|
 fn TypeResolver::ensure_normalization_slots(self : TypeResolver) -> Unit {
   while self.normalizations.length() < self.interner.types.length() {
     self.normalizations.push(-1)
@@ -89,152 +92,18 @@ fn TypeResolver::alias_index_for_constructor(
 }
 
 ///|
-fn TypeResolver::alias_parameter_argument(
-  self : TypeResolver,
-  alias_index : Int,
-  parameter : GenericParameterId,
-  arguments : Array[ResolvedTypeId],
-) -> ResolvedTypeId? {
-  let declaration = self.collected.aliases[alias_index].declaration
-  guard semantic_id_module(parameter) == self.collected.module_id else {
-    return None
-  }
-  let parameters = self.collected.generic_parameters_of(declaration)
-  let local_index = semantic_id_local(parameter)
-  if local_index < parameters.start ||
-    local_index >= parameters.start + parameters.length {
-    None
-  } else {
-    Some(arguments[local_index - parameters.start])
-  }
-}
-
-///|
 fn TypeResolver::substitute_alias_target(
   self : TypeResolver,
   alias_index : Int,
   arguments : Array[ResolvedTypeId],
 ) -> ResolvedTypeId {
-  self.substitution_generation = next_traversal_generation(
-    self.substitution_marks,
-    self.substitution_generation,
-  )
-  self.ensure_substitution_slots()
-  self.substitution_task_types.clear()
-  self.substitution_task_states.clear()
-  self.substitution_result_starts.clear()
-  self.substitution_results.clear()
-  self.push_substitution_task(
+  let declaration = self.collected.aliases[alias_index].declaration
+  self.substitute_declared_type(
+    declaration,
+    self.collected.generic_parameters_of(declaration),
     self.alias_target_types[alias_index],
-    substitute_visit,
-    0,
+    arguments,
   )
-  while self.substitution_task_types.length() > 0 {
-    let current = self.substitution_task_types.pop().unwrap()
-    let state = self.substitution_task_states.pop().unwrap()
-    let result_start = self.substitution_result_starts.pop().unwrap()
-    if state == substitute_visit {
-      if self.substitution_marks[current] == self.substitution_generation {
-        self.substitution_results.push(self.substitution_values[current])
-        continue
-      }
-      match self.interner.types[current] {
-        GenericParameterType(parameter) => {
-          let result = self
-            .alias_parameter_argument(alias_index, parameter, arguments)
-            .unwrap_or(current)
-          self.substitution_marks[current] = self.substitution_generation
-          self.substitution_values[current] = result
-          self.substitution_results.push(result)
-        }
-        ProductType(fields) => {
-          self.push_substitution_task(
-            current,
-            substitute_finish_product,
-            self.substitution_results.length(),
-          )
-          let mut index = fields.length
-          while index > 0 {
-            index -= 1
-            self.push_substitution_task(
-              self.interner.arguments[fields.start + index],
-              substitute_visit,
-              0,
-            )
-          }
-        }
-        AppliedType(base, span) => {
-          self.push_substitution_task(
-            current,
-            substitute_finish_application,
-            self.substitution_results.length(),
-          )
-          let mut index = span.length
-          while index > 0 {
-            index -= 1
-            self.push_substitution_task(
-              self.interner.arguments[span.start + index],
-              substitute_visit,
-              0,
-            )
-          }
-          self.push_substitution_task(base, substitute_visit, 0)
-        }
-        FunctionType(parameters, result) => {
-          self.push_substitution_task(
-            current,
-            substitute_finish_function,
-            self.substitution_results.length(),
-          )
-          self.push_substitution_task(result, substitute_visit, 0)
-          let mut index = parameters.length
-          while index > 0 {
-            index -= 1
-            self.push_substitution_task(
-              self.interner.arguments[parameters.start + index],
-              substitute_visit,
-              0,
-            )
-          }
-        }
-        _ => {
-          self.substitution_marks[current] = self.substitution_generation
-          self.substitution_values[current] = current
-          self.substitution_results.push(current)
-        }
-      }
-    } else if state == substitute_finish_application {
-      let base = self.substitution_results[result_start]
-      self.substitution_application_scratch.clear()
-      append_int_result_range(
-        self.substitution_results,
-        result_start + 1,
-        self.substitution_results.length(),
-        self.substitution_application_scratch,
-      )
-      let result = self.interner.intern_applied(
-        base,
-        self.substitution_application_scratch,
-      )
-      self.ensure_substitution_slots()
-      self.substitution_marks[current] = self.substitution_generation
-      self.substitution_values[current] = result
-      self.substitution_results.truncate(result_start)
-      self.substitution_results.push(result)
-    } else if state == substitute_finish_function {
-      let parameter_count = match self.interner.types[current] {
-        FunctionType(parameters, _) => parameters.length
-        _ => abort("function substitution task expected a function type")
-      }
-      self.finish_substituted_function(current, result_start, parameter_count)
-    } else {
-      self.finish_substituted_product(current, result_start)
-    }
-  }
-  guard self.substitution_results.length() == 1 else {
-    abort("invalid alias substitution result")
-  }
-  self.substitution_results[0]
 }
 
 ///|
@@ -303,6 +172,14 @@ fn TypeResolver::substitute_declared_type(
         continue
       }
       match self.interner.types[current] {
+        MemberTypeProjection(owner, _, _) => {
+          self.push_substitution_task(
+            current,
+            substitute_finish_projection,
+            self.substitution_results.length(),
+          )
+          self.push_substitution_task(owner, substitute_visit, 0)
+        }
         GenericParameterType(parameter) => {
           let result = imported_alias_parameter_argument(
             declaration, parameters, parameter, arguments,
@@ -367,6 +244,33 @@ fn TypeResolver::substitute_declared_type(
           self.substitution_results.push(current)
         }
       }
+    } else if state == substitute_finish_projection {
+      let owner = self.substitution_results[result_start]
+      let (operation, selector) = match self.interner.types[current] {
+        MemberTypeProjection(_, operation, selector) => (operation, selector)
+        _ => abort("INV-001 projection substitution task has the wrong type")
+      }
+      let result = match
+        self
+        .computed_child()
+        .computed_projection_type(operation, owner, selector) {
+        Ok(type_) => type_
+        Err(message) => {
+          self.diagnose(
+            ComputedTypeFailure(
+              declaration,
+              message,
+              impl_declaration_offset(self.collected, declaration),
+            ),
+          )
+          self.interner.error_type
+        }
+      }
+      self.ensure_substitution_slots()
+      self.substitution_marks[current] = self.substitution_generation
+      self.substitution_values[current] = result
+      self.substitution_results.truncate(result_start)
+      self.substitution_results.push(result)
     } else if state == substitute_finish_application {
       let base = self.substitution_results[result_start]
       self.substitution_application_scratch.clear()
@@ -636,6 +540,7 @@ fn TypeResolver::normalize_type(
         | PrimitiveType(_)
         | GenericParameterType(_)
         | TraitType(_)
+        | MemberTypeProjection(_, _, _)
         | SelfType(_) => {
           self.normalizations[current] = current
           self.normalization_results.push(current)
@@ -755,6 +660,10 @@ fn TypeResolver::normalize_type(
 
 ///|
 fn TypeResolver::normalize_signature_tables(self : TypeResolver) -> Unit {
+  // An unused alias is still a declaration that must have a valid target.
+  for target in self.alias_target_types {
+    ignore(self.normalize_type(target))
+  }
   for index in 0..<self.explicit_call_type_arguments.length() {
     if self.explicit_call_type_arguments[index] >= 0 {
       self.explicit_call_type_arguments[index] = self.normalize_type(

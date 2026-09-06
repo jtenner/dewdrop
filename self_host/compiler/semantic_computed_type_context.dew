@@ -1,0 +1,71 @@
+impl SelfHostTypeResolver {
+  // Share canonical facts and cycle guards, never mutable traversal stacks.
+  fn computed_child(self) -> SelfHostTypeResolver {
+    let visit_marks = self.visit_marks.copy()
+    let alias_visit_marks = self.alias_visit_marks.copy()
+    SelfHostTypeResolver::{
+      collected: self.collected
+      imports: self.imports
+      interner: self.interner
+      syntax_types: self.syntax_types
+      declaration_types: self.declaration_types
+      generic_parameter_types: self.generic_parameter_types
+      generic_bound_types: self.generic_bound_types
+      parameter_types: self.parameter_types
+      callable_return_types: self.callable_return_types
+      callable_function_types: self.callable_function_types
+      lambda_parameter_types: self.lambda_parameter_types
+      lambda_return_types: self.lambda_return_types
+      lambda_function_types: self.lambda_function_types
+      explicit_call_type_arguments: self.explicit_call_type_arguments
+      field_types: self.field_types
+      variant_payloads: self.variant_payloads
+      signature_type_lists: self.signature_type_lists
+      alias_target_types: self.alias_target_types
+      impl_trait_types: self.impl_trait_types
+      impl_target_types: self.impl_target_types
+      alias_dependencies: self.alias_dependencies
+      alias_dependency_declarations: self.alias_dependency_declarations
+      alias_is_cyclic: self.alias_is_cyclic
+      alias_cycles: self.alias_cycles
+      alias_cycle_declarations: self.alias_cycle_declarations
+      diagnostics: self.diagnostics
+      alias_indices: self.alias_indices
+      syntax_tasks: []
+      state_tasks: []
+      expectation_tasks: []
+      constructor_tasks: []
+      application_scratch: []
+      computed_active: self.computed_active
+      computed_depth: self.computed_depth + 1u32
+      import_memos: self.import_memos
+      import_task_interfaces: []
+      import_task_types: []
+      import_task_states: []
+      import_task_starts: []
+      import_results: []
+      import_scratch: []
+      visit_stack: []
+      visit_marks: visit_marks
+      alias_visit_marks: alias_visit_marks
+      dependency_scratch: []
+      normalization_types: []
+      normalization_states: []
+      normalization_starts: []
+      normalization_results: []
+      normalizations: self.normalizations
+      substitution_types: []
+      substitution_states: []
+      substitution_starts: []
+      substitution_results: []
+      substitution_marks: []
+      substitution_values: []
+      alias_expansion_limited: self.alias_expansion_limited
+      visit_generation: self.visit_generation
+      substitution_generation: 0u32
+      alias_expansion_work: self.alias_expansion_work
+      alias_expansion_limit: self.alias_expansion_limit
+    }
+  }
+}
+

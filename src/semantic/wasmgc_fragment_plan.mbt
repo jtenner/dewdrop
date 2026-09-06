@@ -1249,6 +1249,8 @@ fn wasmgc_storage_type(
   while true {
     match resolved.types[current] {
       ErrorType => return Some(WasmNullableEqRefStorage)
+      MemberTypeProjection(_, _, _) =>
+        abort("SPC-301 unresolved member projection reached physical storage")
       PrimitiveType(UnitType | NeverType | CompileTimeTypeType) => return None
       PrimitiveType(I8Type) => return Some(WasmI8SignedStorage)
       PrimitiveType(U8Type) => return Some(WasmI8UnsignedStorage)
@@ -2071,6 +2073,7 @@ pub fn wasmgc_fixed_array_carrier_for_resolved_type(
   }
   match types[root] {
     PrimitiveType(CompileTimeTypeType) => -1
+    MemberTypeProjection(_, _, _) => -1
     PrimitiveType(I8Type | U8Type) => 6
     PrimitiveType(I16Type | U16Type) => 7
     PrimitiveType(
@@ -2228,6 +2231,10 @@ fn wasmgc_value_type(
         }
         return Some(WasmNullableEqRefValue)
       }
+      MemberTypeProjection(_, _, _) =>
+        abort(
+          "SPC-301 unresolved member projection reached a physical signature",
+        )
       GenericParameterType(_) | TraitType(_) | ProductType(_) =>
         return Some(WasmNullableEqRefValue)
       SelfType(_) =>

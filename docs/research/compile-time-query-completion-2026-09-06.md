@@ -147,7 +147,8 @@ side sees preceding bindings. An inner binding can shadow an outer one without
 changing it. Lambdas retain the type scope at their declaration. Bindings do not
 leak into later functions or module signatures. Local generic alias parameter
 lists are not part of this syntax; a binding can use its owning function's type
-parameters. Unconstrained member projections still report CT-035.
+parameters. At this checkpoint unconstrained member projections still reported
+CT-035; the deferred projection work below replaces that restriction.
 
 A type-binding HIR expression keeps the type syntax reachable to signature
 checking even when unused. Its logical result is Unit and it emits no value.
@@ -209,3 +210,31 @@ native tool, execution 0.025 s, and 32 focused semantic tests passed in 14.822 s
 Release C rebuilds took about 89 s and remain performance defects. The test
 generator now reports module, declaration, body, expression, source offset, and
 IR kind when an expression cannot be emitted.
+
+## Deferred member aliases and logical query operands
+
+Both compilers now retain `field_type<T>("item")` and
+`variant_payload_types<T>("Value")` as structural type projections when `T`
+is not yet known. Alias substitution reduces a projection with concrete owner
+arguments. Pure queries reduce it again under the caller's exact logical
+bindings. Nested and imported aliases preserve declaration identity; no pending
+projection becomes Ref or a physical signature certificate.
+
+Projection identity includes the owner type, validated builtin operation, and
+selector. Native interface codec V1 preserves these fields and rejects invalid
+owner indices or operations. Recursive resolution uses fresh traversal stacks;
+canonical type arenas and cycle guards remain shared. Alias dependency walks
+include projection owners and product members. Invalid concrete aliases are
+checked even when unused.
+
+Eight native computed-type tests pass (11.672 s), including nested imported
+aliases and frozen interface round trips. Both compiler paths pass 47 shared
+query executions. Native fixture execution took 0.025 s. The hardening run
+passed 191 tests, 29 invariant records, and all execution/semantic probes in
+39.540 s; this total exceeds the 30 s performance budget. The final hardening
+run also covers unused-alias validation and passes in 37.869 s. The preceding
+native integration run passed in 51.851 s.
+
+This does not yet finish runtime generic projection signatures or guarded body
+inference. Those remain explicit tasks, along with early storage pruning and
+post-selection flow/effect refresh.

@@ -41,6 +41,12 @@ fn compile_time_fold_call(
     Ok(types) => types
     Err(error) => return Err("CT-002 " + @debug.to_string(error))
   }
+  for index, type_ in types {
+    match reduce_compile_time_projections(context, module_, type_, 0) {
+      Ok(value) => types[index] = value
+      Err(error) => return Err(error)
+    }
+  }
   let evaluated = if field_offset {
     guard program_specialization_span_is_valid(
       arguments,

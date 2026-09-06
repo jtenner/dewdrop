@@ -519,8 +519,11 @@ fn BodyFlowAnalyzer::coverage_domain(
         let mut resolved_current = resolved_type
         while true {
           match self.resolved.types[resolved_current] {
-            ErrorType | GenericParameterType(_) | TraitType(_) | SelfType(_) =>
-              return ErrorCoverageDomain
+            ErrorType
+            | GenericParameterType(_)
+            | TraitType(_)
+            | SelfType(_)
+            | MemberTypeProjection(_, _, _) => return ErrorCoverageDomain
             ProductType(_) => return OpenCoverageDomain
             PrimitiveType(BoolType) => return BoolCoverageDomain
             PrimitiveType(_) => return OpenCoverageDomain

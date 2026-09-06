@@ -372,6 +372,7 @@ fn resolved_impl_target_head(
       | TraitType(_)
       | SelfType(_)
       | ProductType(_)
+      | MemberTypeProjection(_, _, _)
       | FunctionType(_, _) => return (ErrorImplTargetHead, false)
     }
   }
@@ -394,6 +395,7 @@ fn resolved_impl_trait_head(
       | NominalType(_)
       | SelfType(_)
       | ProductType(_)
+      | MemberTypeProjection(_, _, _)
       | FunctionType(_, _) => return (None, false)
     }
   }
@@ -1040,6 +1042,7 @@ fn ImplPatternScratch::import_pattern(
         | NominalType(_)
         | TraitType(_)
         | SelfType(_)
+        | MemberTypeProjection(_, _, _)
         | FunctionType(_, _) => {
           let result = self.solver.resolved_type(source)
           self.marks[source] = self.generation
@@ -1103,6 +1106,7 @@ fn impl_type_contains_generic(
     visited[type_] = true
     match resolved.types[type_] {
       GenericParameterType(_) => return true
+      MemberTypeProjection(owner, _, _) => work.push(owner)
       ProductType(fields) =>
         for index in 0..<fields.length {
           work.push(resolved.type_arguments[fields.start + index])

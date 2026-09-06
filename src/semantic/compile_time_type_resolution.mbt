@@ -5,6 +5,7 @@ enum CompileTimeTypeReadTask {
   CtBuildProduct(Int)
   CtBuildApplied(Int)
   CtBuildFunction(Int)
+  CtBuildMemberProjection(Bytes, String)
 }
 
 ///|
@@ -70,6 +71,10 @@ fn compile_time_read_type(
         }
         match module_.resolved_types[index] {
           ErrorType => return Err(CtInvalidType)
+          MemberTypeProjection(owner, operation, selector) => {
+            work.push(CtBuildMemberProjection(operation, selector))
+            work.push(CtReadResolved(owner))
+          }
           PrimitiveType(primitive) => results.push(CtPrimitive(primitive))
           GenericParameterType(parameter) | SelfType(parameter) =>
             results.push(
@@ -107,6 +112,14 @@ fn compile_time_read_type(
             }
           }
         }
+      }
+      CtBuildMemberProjection(operation, selector) => {
+        if results.length() == 0 {
+          return Err(CtInvalidType)
+        }
+        results.push(
+          CtMemberProjection(results.pop().unwrap(), operation, selector),
+        )
       }
       CtBuildProduct(count) => {
         if results.length() < count {

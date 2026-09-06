@@ -181,6 +181,10 @@ fn self_host_fold_compile_time_call(lowering: SelfHostPlannedProgramLowering, mo
     Result::Ok(types) => types
     Result::Err(error) => return Result::Err(error)
   }
+  let types = match self_host_reduce_compile_time_projection_list(lowering, types, 0u32) {
+    Result::Ok(values) => values
+    Result::Err(error) => return Result::Err(error)
+  }
   let evaluated = if field_offset {
     self_host_assert_array_span(operands.start, operands.length, module_.expression_children.length(), "ARN-101 field_offset operand span")
     let operand = module_.expression_children[operands.start]

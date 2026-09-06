@@ -107,6 +107,7 @@ fn self_host_planned_resolved_value_shape(
           SelfHostResolvedType::ErrorType => results.push(SelfHostPlannedValueShape::ErrorPlannedValueShape)
           SelfHostResolvedType::PrimitiveType(primitive) => results.push(self_host_primitive_value_shape(primitive))
           SelfHostResolvedType::GenericParameterType(_) => results.push(SelfHostPlannedValueShape::GenericPlannedValueShape)
+          SelfHostResolvedType::MemberTypeProjection(_, _, _) => results.push(SelfHostPlannedValueShape::GenericPlannedValueShape)
           SelfHostResolvedType::SelfType(_) => results.push(SelfHostPlannedValueShape::GenericPlannedValueShape)
           SelfHostResolvedType::NominalType(_) => results.push(SelfHostPlannedValueShape::RefPlannedValueShape)
           SelfHostResolvedType::TraitType(_) => results.push(SelfHostPlannedValueShape::RefPlannedValueShape)

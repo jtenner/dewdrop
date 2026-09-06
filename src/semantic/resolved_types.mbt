@@ -155,6 +155,7 @@ pub enum ResolvedType {
   ProductType(HirSpan)
   AppliedType(ResolvedTypeId, HirSpan)
   FunctionType(HirSpan, ResolvedTypeId)
+  MemberTypeProjection(ResolvedTypeId, Bytes, String)
 } derive(Eq, Debug)
 
 ///|
@@ -404,6 +405,20 @@ fn ResolvedTypeInterner::intern_generic(
     GenericParameterType(parameter),
     type_hash_mix(0x310001, parameter.hash()),
   )
+}
+
+///|
+fn ResolvedTypeInterner::intern_member_projection(
+  self : ResolvedTypeInterner,
+  owner : ResolvedTypeId,
+  operation : Bytes,
+  selector : String,
+) -> ResolvedTypeId {
+  let hash = type_hash_mix(
+    type_hash_mix(type_hash_mix(0x740001, self.hashes[owner]), operation.hash()),
+    selector.hash(),
+  )
+  self.intern_simple(MemberTypeProjection(owner, operation, selector), hash)
 }
 
 ///|

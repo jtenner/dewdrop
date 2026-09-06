@@ -244,6 +244,15 @@ fn TypeResolver::import_interface_type(
     let source = self.imports.unwrap().interfaces[source_interface].unwrap().resolved_types
     if state == 0 {
       match source.types[source_type] {
+        MemberTypeProjection(owner, _, _) => {
+          self.push_import_type_task(
+            source_interface,
+            source_type,
+            4,
+            self.import_results.length(),
+          )
+          self.push_import_type_task(source_interface, owner, 0, 0)
+        }
         ErrorType => {
           self.import_type_memos[source_interface][source_type] = self.interner.error_type
           self.import_results.push(self.interner.error_type)
@@ -330,6 +339,19 @@ fn TypeResolver::import_interface_type(
           }
         }
       }
+    } else if state == 4 {
+      let (operation, selector) = match source.types[source_type] {
+        MemberTypeProjection(_, operation, selector) => (operation, selector)
+        _ => abort("INV-001 imported projection task has the wrong type")
+      }
+      let imported = self.interner.intern_member_projection(
+        self.import_results[result_start],
+        operation,
+        selector,
+      )
+      self.import_type_memos[source_interface][source_type] = imported
+      self.import_results.truncate(result_start)
+      self.import_results.push(imported)
     } else if state == 1 {
       let arguments = match source.types[source_type] {
         AppliedType(_, arguments) => arguments
@@ -481,6 +503,7 @@ fn TypeResolver::constructor_arity(
     | SelfType(_)
     | ProductType(_)
     | AppliedType(_, _)
+    | MemberTypeProjection(_, _, _)
     | FunctionType(_, _) => None
   }
 }
@@ -1226,6 +1249,13 @@ fn TypeResolver::collect_alias_dependencies(self : TypeResolver) -> Unit {
       }
       self.type_visit_marks[type_] = self.visit_generation
       match self.interner.types[type_] {
+        MemberTypeProjection(owner, _, _) => self.type_visit_stack.push(owner)
+        ProductType(fields) =>
+          for offset in 0..<fields.length {
+            self.type_visit_stack.push(
+              self.interner.arguments[fields.start + offset],
+            )
+          }
         NominalType(declaration) =>
           match self.alias_indices.get(declaration) {
             Some(dependency) =>

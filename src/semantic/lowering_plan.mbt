@@ -545,7 +545,8 @@ pub fn planned_value_shape_from_resolved_types(
       }
       NominalType(_) | TraitType(_) | FunctionType(_, _) =>
         return RefPlannedValueShape
-      GenericParameterType(_) | SelfType(_) => return GenericPlannedValueShape
+      GenericParameterType(_) | SelfType(_) | MemberTypeProjection(_, _, _) =>
+        return GenericPlannedValueShape
       AppliedType(base, _) => current = base
     }
   }

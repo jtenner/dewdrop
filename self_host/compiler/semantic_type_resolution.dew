@@ -489,6 +489,10 @@ impl SelfHostTypeResolver {
         }
         if state == 0u32 {
           match source.types[source_type] {
+            SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
+              self.push_import_task(source_interface, source_type, 4u32, self.import_results.length())
+              self.push_import_task(source_interface, owner, 0u32, 0u32)
+            }
             SelfHostResolvedType::ErrorType => {
               source_memo.set(source_type, self.interner.error_type)
               self.import_results.push(self.interner.error_type)
@@ -591,6 +595,19 @@ impl SelfHostTypeResolver {
             }
           }
           continue self.import_task_types.length()
+        }
+        if state == 4u32 {
+          let (operation, selector) = match source.types[source_type] {
+            SelfHostResolvedType::MemberTypeProjection(_, operation, selector) => (operation, selector)
+            _ => {
+              let _ = self_host_assert_compiler_invariant(false, "INV-001 import task requires a projection")
+              unreachable()
+            }
+          }
+          let imported = self.interner.intern_member_projection(self.import_results[result_start], operation, selector)
+          source_memo.set(source_type, imported)
+          self.import_results.truncate(result_start)
+          self.import_results.push(imported)
         }
         if state == 1u32 {
           let base = self.import_results[result_start]

@@ -27,7 +27,8 @@ test "computed type errors remain source diagnostics" {
         "AliasCycle",
       ),
       (
-        b"open dew.std.types\ntype Item<t> = field_type<t>(\"item\")\n", "CT-035",
+        b"open dew.std.types\ntype Item<t> = field_type<t>(\"item\")\ntype Bad = Item<I32>\n",
+        "CT-032",
       ),
       (
         b"open dew.std.types\nstruct Record {\n  item: field_type<Record>(\"item\")\n}\n",
@@ -61,7 +62,17 @@ test "computed type errors remain source diagnostics" {
         found = true
       }
     }
-    assert_true(found, msg="missing computed type diagnostic " + code)
+    assert_true(
+      found,
+      msg="missing computed type diagnostic " +
+        code +
+        ": " +
+        @debug.to_string(
+          analyzed.frozen.interfaces[0].resolved_types.diagnostics,
+        ) +
+        " source=" +
+        @debug.to_string(source),
+    )
   }
 }
 

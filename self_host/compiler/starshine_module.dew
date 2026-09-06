@@ -20447,6 +20447,7 @@ fn self_host_emit_linked_i32_expression(
                                                               }
                                                               SelfHostResolvedType::PrimitiveType(_) => message.append(":primitive")
                                                               SelfHostResolvedType::ErrorType => message.append(":error")
+                                                              SelfHostResolvedType::MemberTypeProjection(_, _, _) => message.append(":member-projection")
                                                               SelfHostResolvedType::TraitType(_) => message.append(":trait")
                                                               SelfHostResolvedType::SelfType(_) => message.append(":self")
                                                               SelfHostResolvedType::ProductType(_) => message.append(":product")
@@ -39705,6 +39706,7 @@ fn self_host_certify_one_physical_method_call_error(
                                                   parameter.type_,
                                                 ) {
                                                   SelfHostResolvedType::ErrorType => message.append("error")
+                                                  SelfHostResolvedType::MemberTypeProjection(_, _, _) => message.append("member-projection")
                                                   SelfHostResolvedType::NominalType(owner) => {
                                                     message.append("nominal:")
                                                     message.append_u64(owner)

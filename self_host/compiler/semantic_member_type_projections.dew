@@ -1,0 +1,42 @@
+open dew.std.array
+open dew.std.bytes
+open dew.std.option
+open dew.std.result
+
+impl SelfHostResolvedTypeInterner {
+  fn intern_member_projection(self, owner: U32, operation: Bytes, selector: String) -> U32 {
+    let mut hash = self_host_type_hash_mix(10u64, self.hashes[owner])
+    hash = self_host_type_hash_mix(hash, operation.hash())
+    hash = self_host_type_hash_mix(hash, selector.as_bytes().hash())
+    self.intern_simple(SelfHostResolvedType::MemberTypeProjection(owner, operation, selector), hash)
+  }
+}
+
+impl SelfHostTypeResolver {
+  fn finish_substituted_projection(self, current: U32, result_start: U32, declaration: U64) -> Unit {
+    let owner = self.substitution_results[result_start]
+    let (operation, selector) = match self.interner.types[current] {
+      SelfHostResolvedType::MemberTypeProjection(_, operation, selector) => (operation, selector)
+      _ => {
+        let _ = self_host_assert_compiler_invariant(false, "INV-001 substitution task requires a projection")
+        unreachable()
+      }
+    }
+    let result = match self.computed_child().computed_projection_type(operation, owner, selector) {
+      Result::Ok(type_) => type_
+      Result::Err(message) => {
+        let offset = match self.alias_indices.get(declaration) {
+          Option::Some(index) => self.alias_offset(index)
+          Option::None => 0u32
+        }
+        self.diagnose(SelfHostTypeDiagnostic::ComputedTypeFailure(declaration, message, offset))
+        self.interner.error_type
+      }
+    }
+    self.ensure_substitution_slots()
+    self.substitution_marks[current] = self.substitution_generation
+    self.substitution_values[current] = result
+    self.substitution_results.truncate(result_start)
+    self.substitution_results.push(result)
+  }
+}

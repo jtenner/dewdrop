@@ -649,6 +649,7 @@ fn program_link_type_is_symbolic(
     }
     match module_.resolved_types[current] {
       GenericParameterType(_) => return true
+      MemberTypeProjection(_, _, _) => return true
       ProductType(fields) =>
         for index in 0..<fields.length {
           resolved_pending.push(

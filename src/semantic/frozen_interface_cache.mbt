@@ -149,6 +149,12 @@ fn cache_write_resolved_type(
 ) -> Unit {
   match value {
     ErrorType => cache_write_int(output, 0)
+    MemberTypeProjection(owner, operation, selector) => {
+      cache_write_int(output, 9)
+      cache_write_int(output, owner)
+      cache_write_bytes(output, operation)
+      cache_write_string(output, selector)
+    }
     PrimitiveType(primitive) => {
       cache_write_int(output, 1)
       cache_write_primitive(output, primitive)
@@ -668,6 +674,12 @@ fn FrozenInterfaceCacheReader::read_resolved_type(
     6 => AppliedType(self.read_int(), self.read_span())
     7 => FunctionType(self.read_span(), self.read_int())
     8 => ProductType(self.read_span())
+    9 =>
+      MemberTypeProjection(
+        self.read_int(),
+        self.read_bytes(),
+        self.read_string(),
+      )
     _ => {
       self.fail("unknown resolved type in frozen-interface cache")
       ErrorType
@@ -684,6 +696,13 @@ fn FrozenInterfaceCacheReader::read_resolved_types(
   let types : Array[ResolvedType] = []
   for _ in 0..<type_count {
     types.push(self.read_resolved_type())
+  }
+  for type_ in types {
+    if type_ is MemberTypeProjection(owner, operation, _) {
+      if owner < 0 || owner >= type_count || !computed_type_builtin(operation) {
+        self.fail("invalid member projection in frozen-interface cache")
+      }
+    }
   }
   {
     module_id,

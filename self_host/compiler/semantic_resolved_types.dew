@@ -161,6 +161,7 @@ pub enum SelfHostResolvedType {
   ProductType(SelfHostHirSpan)
   AppliedType(U32, SelfHostHirSpan)
   FunctionType(SelfHostHirSpan, U32)
+  MemberTypeProjection(U32, Bytes, String)
 }
 
 pub enum SelfHostTypeDiagnostic {
@@ -421,6 +422,10 @@ impl SelfHostResolvedTypeInterner {
       }
       SelfHostResolvedType::SelfType(value) => match right {
         SelfHostResolvedType::SelfType(other) => value == other
+        _ => false
+      }
+      SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => match right {
+        SelfHostResolvedType::MemberTypeProjection(other, other_operation, other_selector) => owner == other && operation == other_operation && selector == other_selector
         _ => false
       }
       _ => false

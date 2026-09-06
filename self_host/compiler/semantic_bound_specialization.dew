@@ -94,7 +94,14 @@ fn self_host_program_specialization_call_evidence_types(lowering: SelfHostPlanne
     let bindings = self_host_compile_time_caller_bindings(caller, specialization, requests)
     match self_host_read_compile_time_arguments(module_, arguments, bindings) {
       Result::Ok(types) => {
-        for type_ in types {
+        let reduced = match self_host_reduce_compile_time_projection_list(lowering, types, 0u32) {
+          Result::Ok(values) => values
+          Result::Err(message) => {
+            lowering.compile_time.diagnostics.push(message)
+            return result
+          }
+        }
+        for type_ in reduced {
           result.push(self_host_compile_time_to_evidence_type(type_))
         }
       }

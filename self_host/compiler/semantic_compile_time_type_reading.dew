@@ -22,6 +22,10 @@ fn self_host_read_compile_time_resolved_type(
   let type_ = module_.resolved_types.types[index]
   let span = match type_ {
     SelfHostResolvedType::ErrorType => return Result::Err("CT-002 erroneous type query argument")
+    SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_resolved_type(module_, owner, bindings, depth + 1u32) {
+      Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::MemberProjectionCompileTimeType(value, operation, selector))
+      Result::Err(error) => Result::Err(error)
+    }
     SelfHostResolvedType::PrimitiveType(primitive) => return Result::Ok(SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive))
     SelfHostResolvedType::NominalType(id) => return Result::Ok(SelfHostCompileTimeType::NominalCompileTimeType(id))
     SelfHostResolvedType::TraitType(id) => return Result::Ok(SelfHostCompileTimeType::TraitCompileTimeType(id))

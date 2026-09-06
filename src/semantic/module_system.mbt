@@ -1309,10 +1309,14 @@ pub fn collect_program_manifest_with_standard_sources(
     let module_id = standard_library_module_id(79)
     first_module["dew.std.types"] = modules.length()
     module_paths.push("dew.std.types")
-    modules.push(collect_program_files_with_frozen_standard_imports(
-      module_id,
-      standard_library_program_files(module_id, "std/types.dew", standard_sources, false, false),
-    ))
+    modules.push(
+      collect_program_files_with_frozen_standard_imports(
+        module_id,
+        standard_library_program_files(
+          module_id, "std/types.dew", standard_sources, false, false,
+        ),
+      ),
+    )
   }
   {
     module_id_base,
@@ -1854,6 +1858,15 @@ fn callable_abi_write_type(
     }
     match resolved.types[current] {
       ErrorType => callable_abi_write_int(output, 0)
+      MemberTypeProjection(owner, operation, selector) => {
+        callable_abi_write_int(output, 9)
+        callable_abi_write_int(output, operation.length())
+        output.write_bytes(operation)
+        let bytes = @utf8.encode(selector)
+        callable_abi_write_int(output, bytes.length())
+        output.write_bytes(bytes)
+        types.push(owner)
+      }
       PrimitiveType(primitive) => {
         callable_abi_write_int(output, 1)
         callable_abi_write_int(output, primitive.rank())
@@ -2746,6 +2759,7 @@ fn frozen_impl_type_is_visible(
       NominalType(declaration) | TraitType(declaration) =>
         return semantic_id_module(declaration) != resolved.module_id ||
           exported.contains(declaration)
+      MemberTypeProjection(owner, _, _) => current = owner
       ProductType(fields) => {
         for index in 0..<fields.length {
           if !frozen_impl_type_is_visible(

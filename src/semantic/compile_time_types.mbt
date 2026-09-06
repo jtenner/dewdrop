@@ -11,6 +11,7 @@ enum CompileTimeType {
   CtProduct(Array[CompileTimeType])
   CtApplied(CompileTimeType, Array[CompileTimeType])
   CtFunction(Array[CompileTimeType], CompileTimeType)
+  CtMemberProjection(CompileTimeType, Bytes, String)
 } derive(Eq, Debug)
 
 ///|
@@ -71,6 +72,10 @@ fn compile_time_types_are_concrete(
     match type_ {
       CtError => return Err(CtInvalidType)
       CtUnknown | CtParameter(_) => concrete = false
+      CtMemberProjection(owner, _, _) => {
+        concrete = false
+        work.push((owner, depth + 1))
+      }
       CtApplied(base, arguments) => {
         work.push((base, depth + 1))
         for argument in arguments {

@@ -4,6 +4,12 @@ fn computed_type_builtin(name : Bytes) -> Bool {
 }
 
 ///|
+enum ComputedNominalOwner {
+  KnownComputedOwner(DeclId, Array[ResolvedTypeId])
+  DeferredComputedOwner(ResolvedTypeId)
+}
+
+///|
 // Dependency resolution shares type arenas and cycle marks, but never clears
 // the caller's traversal stack. A query can refer to a later field or alias.
 fn TypeResolver::computed_dependency(
@@ -17,13 +23,33 @@ fn TypeResolver::computed_dependency(
   if self.syntax_types[syntax] >= 0 {
     return self.syntax_types[syntax]
   }
-  let child = {
+  self.computed_child().resolve_syntax(owner, syntax, any_type_name)
+}
+
+///|
+fn TypeResolver::computed_child(self : TypeResolver) -> TypeResolver {
+  {
     ..self,
     task_syntax: [],
     task_states: [],
     task_expectations: [],
     task_constructor_positions: [],
     application_scratch: [],
+    import_task_interfaces: [],
+    import_task_types: [],
+    import_task_states: [],
+    import_result_starts: [],
+    import_results: [],
+    import_application_scratch: [],
+    type_visit_stack: [],
+    type_visit_marks: self.type_visit_marks.copy(),
+    alias_visit_marks: self.alias_visit_marks.copy(),
+    alias_dependency_scratch: [],
+    normalization_task_types: [],
+    normalization_task_states: [],
+    normalization_result_starts: [],
+    normalization_results: [],
+    normalization_application_scratch: [],
     substitution_task_types: [],
     substitution_task_states: [],
     substitution_result_starts: [],
@@ -34,7 +60,6 @@ fn TypeResolver::computed_dependency(
     substitution_generation: 0,
     computed_depth: self.computed_depth + 1,
   }
-  child.resolve_syntax(owner, syntax, any_type_name)
 }
 
 ///|
@@ -145,7 +170,7 @@ fn TypeResolver::computed_builtin_recipe(
 fn TypeResolver::computed_nominal(
   self : TypeResolver,
   input : ResolvedTypeId,
-) -> Result[(DeclId, Array[ResolvedTypeId]), String] {
+) -> Result[ComputedNominalOwner, String] {
   let mut current = input
   let visited : Map[ResolvedTypeId, Bool] = Map([])
   while true {
@@ -174,8 +199,8 @@ fn TypeResolver::computed_nominal(
     }
     let declaration = match self.interner.types[base] {
       NominalType(declaration) => declaration
-      GenericParameterType(_) | SelfType(_) =>
-        return Err("CT-035 member type query requires a known nominal type")
+      GenericParameterType(_) | SelfType(_) | MemberTypeProjection(_, _, _) =>
+        return Ok(DeferredComputedOwner(current))
       _ => return Err("CT-032 member type query requires a struct or enum")
     }
     match self.alias_indices.get(declaration) {
@@ -192,7 +217,7 @@ fn TypeResolver::computed_nominal(
           arguments,
         )
       }
-      None => return Ok((declaration, arguments))
+      None => return Ok(KnownComputedOwner(declaration, arguments))
     }
   } nobreak {
     abort("INV-001 computed nominal traversal fell through")
@@ -375,12 +400,24 @@ fn TypeResolver::evaluate_computed_type(
   if input == self.interner.error_type {
     return Err("CT-033 invalid queried type")
   }
-  let (declaration, types) = match self.computed_nominal(input) {
-    Ok(value) => value
-    Err(error) => return Err(error)
-  }
   let selector = @utf8.decode(selector) catch {
     _ => return Err("CT-032 member selector must be valid UTF-8")
   }
-  self.computed_member_type(operation, declaration, types, selector)
+  self.computed_projection_type(operation, input, selector)
+}
+
+///|
+fn TypeResolver::computed_projection_type(
+  self : TypeResolver,
+  operation : Bytes,
+  input : ResolvedTypeId,
+  selector : String,
+) -> Result[ResolvedTypeId, String] {
+  match self.computed_nominal(input) {
+    Ok(KnownComputedOwner(declaration, arguments)) =>
+      self.computed_member_type(operation, declaration, arguments, selector)
+    Ok(DeferredComputedOwner(owner)) =>
+      Ok(self.interner.intern_member_projection(owner, operation, selector))
+    Err(error) => Err(error)
+  }
 }

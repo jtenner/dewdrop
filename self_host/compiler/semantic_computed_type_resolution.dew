@@ -9,6 +9,11 @@ fn self_host_computed_type_builtin(name: Bytes) -> Bool {
   name == b"types.field_type" || name == b"types.variant_payload_types"
 }
 
+enum SelfHostComputedNominalOwner {
+  KnownComputedOwner(U64, Array<U32>)
+  DeferredComputedOwner(U32)
+}
+
 impl SelfHostTypeResolver {
   // Nested dependencies keep the same interner and substitution generation.
   // Save traversal stacks so a later field or alias cannot erase its caller.
@@ -152,7 +157,7 @@ impl SelfHostTypeResolver {
     Result::Err("CT-030 missing imported type-query callable")
   }
 
-  fn computed_nominal(self, input: U32) -> Result<(U64, Array<U32>), String> {
+  fn computed_nominal(self, input: U32) -> Result<SelfHostComputedNominalOwner, String> {
     let visited = self_host_empty_u64_bool_map()
     let result = while input {
       current => {
@@ -181,8 +186,9 @@ impl SelfHostTypeResolver {
         }
         let declaration = match self.interner.types[base] {
           SelfHostResolvedType::NominalType(value) => value
-          SelfHostResolvedType::GenericParameterType(_) => return Result::Err("CT-035 member type query requires a known nominal type")
-          SelfHostResolvedType::SelfType(_) => return Result::Err("CT-035 member type query requires a known nominal type")
+          SelfHostResolvedType::GenericParameterType(_) => return Result::Ok(SelfHostComputedNominalOwner::DeferredComputedOwner(current))
+          SelfHostResolvedType::SelfType(_) => return Result::Ok(SelfHostComputedNominalOwner::DeferredComputedOwner(current))
+          SelfHostResolvedType::MemberTypeProjection(_, _, _) => return Result::Ok(SelfHostComputedNominalOwner::DeferredComputedOwner(current))
           _ => return Result::Err("CT-032 member type query requires a struct or enum")
         }
         match self.alias_indices.get(declaration) {
@@ -198,7 +204,7 @@ impl SelfHostTypeResolver {
             }
             continue self.substitute_declared_type(declaration, generics, target, arguments)
           }
-          Option::None => break Result::Ok((declaration, arguments))
+          Option::None => break Result::Ok(SelfHostComputedNominalOwner::KnownComputedOwner(declaration, arguments))
         }
       }
     }
@@ -371,13 +377,19 @@ impl SelfHostTypeResolver {
     if input == self.interner.error_type {
       return Result::Err("CT-033 invalid queried type")
     }
-    let (declaration, types) = match self.computed_nominal(input) {
-      Result::Ok(value) => value
-      Result::Err(error) => return Result::Err(error)
-    }
     if !selector.is_valid_utf8() {
       return Result::Err("CT-032 member selector must be valid UTF-8")
     }
-    self.computed_member_type(operation, declaration, types, bytes_to_string(selector))
+    self.computed_projection_type(operation, input, bytes_to_string(selector))
+  }
+
+  fn computed_projection_type(self, operation: Bytes, input: U32, selector: String) -> Result<U32, String> {
+    match self.computed_nominal(input) {
+      Result::Ok(owner) => match owner {
+        SelfHostComputedNominalOwner::KnownComputedOwner(declaration, arguments) => self.computed_member_type(operation, declaration, arguments, selector)
+        SelfHostComputedNominalOwner::DeferredComputedOwner(type_) => Result::Ok(self.interner.intern_member_projection(type_, operation, selector))
+      }
+      Result::Err(error) => Result::Err(error)
+    }
   }
 }

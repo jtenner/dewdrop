@@ -14,6 +14,7 @@ pub enum SelfHostCompileTimeType {
   ProductCompileTimeType(Array<SelfHostCompileTimeType>)
   AppliedCompileTimeType(SelfHostCompileTimeType, Array<SelfHostCompileTimeType>)
   FunctionCompileTimeType(Array<SelfHostCompileTimeType>, SelfHostCompileTimeType)
+  MemberProjectionCompileTimeType(SelfHostCompileTimeType, Bytes, String)
 }
 
 pub enum SelfHostCompileTimeConstant {
@@ -64,6 +65,10 @@ fn self_host_compile_time_types_concrete(types: Array<SelfHostCompileTimeType>) 
         SelfHostCompileTimeType::ParameterCompileTimeType(_) => {
           concrete = false
         }
+        SelfHostCompileTimeType::MemberProjectionCompileTimeType(owner, _, _) => {
+          concrete = false
+          work.push(owner)
+        }
         SelfHostCompileTimeType::ProductCompileTimeType(fields) => {
           for field in fields {
             work.push(field)
@@ -107,6 +112,16 @@ fn self_host_compile_time_types_equal(left: SelfHostCompileTimeType, right: Self
       let fields = self_host_empty_compile_time_types()
       let others = self_host_empty_compile_time_types()
       let same = match pair.left {
+        SelfHostCompileTimeType::MemberProjectionCompileTimeType(owner, operation, selector) => match pair.right {
+          SelfHostCompileTimeType::MemberProjectionCompileTimeType(other, other_operation, other_selector) => {
+            work.push(SelfHostCompileTimeTypePair::{
+              left: owner
+              right: other
+            })
+            operation == other_operation && selector == other_selector
+          }
+          _ => false
+        }
         SelfHostCompileTimeType::ErrorCompileTimeType => return Result::Err("CT-002 erroneous type equality argument")
         SelfHostCompileTimeType::UnknownCompileTimeType => pair.right is SelfHostCompileTimeType::UnknownCompileTimeType
         SelfHostCompileTimeType::ParameterCompileTimeType(id) => match pair.right {

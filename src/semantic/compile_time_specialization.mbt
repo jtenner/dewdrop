@@ -144,7 +144,7 @@ fn compile_time_type_key(type_ : CompileTimeType) -> String {
       compile_time_types_key(parameters) +
       "]" +
       compile_time_type_key(result)
-    CtUnknown | CtParameter(_) | CtError =>
+    CtUnknown | CtParameter(_) | CtError | CtMemberProjection(_, _, _) =>
       abort("SPC-301 unresolved logical specialization key")
   }
 }
@@ -283,7 +283,15 @@ fn compile_time_call_arguments(
   for index in 0..<arguments.length {
     match
       compile_time_read_type(owner, arena[arguments.start + index], bindings) {
-      Ok(type_) => types.push(type_)
+      Ok(type_) =>
+        match lowering.compile_time {
+          Some(context) =>
+            match reduce_compile_time_projections(context, owner, type_, 0) {
+              Ok(value) => types.push(value)
+              Err(_) => types.push(CtError)
+            }
+          None => types.push(type_)
+        }
       Err(_) => types.push(CtError)
     }
   }

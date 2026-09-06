@@ -109,6 +109,9 @@ impl SelfHostTypeResolver {
                   }
                 }
               }
+              SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
+                self.visit_stack.push(owner)
+              }
               SelfHostResolvedType::AppliedType(base, arguments) => {
                 self.visit_stack.push(base)
                 let mut index = 0u32
@@ -482,6 +485,7 @@ impl SelfHostTypeResolver {
     alias_index: U32,
     arguments: Array<U32>,
   ) -> U32 {
+    let declaration = self.alias_declaration(alias_index)
     self.substitution_generation = self.substitution_generation + 1u32
     if self.substitution_generation == 0u32 {
       let mut index = 0u32
@@ -520,6 +524,10 @@ impl SelfHostTypeResolver {
             self.substitution_results.push(self.substitution_values[current])
           } else {
             match self.interner.types[current] {
+              SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
+                self.push_substitution_task(current, 4u32, self.substitution_results.length())
+                self.push_substitution_task(owner, 0u32, 0u32)
+              }
               SelfHostResolvedType::GenericParameterType(parameter) => {
                 let result = match self.alias_parameter_argument(
                   alias_index,
@@ -605,6 +613,8 @@ impl SelfHostTypeResolver {
               }
             }
           }
+        } else if state == 4u32 {
+          self.finish_substituted_projection(current, result_start, declaration)
         } else if state == 1u32 {
           let base = self.substitution_results[result_start]
           self.application_scratch.clear()
@@ -748,6 +758,10 @@ impl SelfHostTypeResolver {
         }
         if state == 0u32 {
           match self.interner.types[current] {
+            SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
+              self.push_substitution_task(current, 4u32, self.substitution_results.length())
+              self.push_substitution_task(owner, 0u32, 0u32)
+            }
             SelfHostResolvedType::GenericParameterType(parameter) => {
               let result = match self.declared_parameter_argument(
                 declaration, parameters,
@@ -826,6 +840,8 @@ impl SelfHostTypeResolver {
             }
             _ => self.substitution_results.push(current)
           }
+        } else if state == 4u32 {
+          self.finish_substituted_projection(current, result_start, declaration)
         } else if state == 1u32 {
           let base = self.substitution_results[result_start]
           self.application_scratch.clear()
@@ -1132,6 +1148,10 @@ impl SelfHostTypeResolver {
                 self.normalizations[current] = current
                 self.normalization_results.push(current)
               }
+              SelfHostResolvedType::MemberTypeProjection(_, _, _) => {
+                self.normalizations[current] = current
+                self.normalization_results.push(current)
+              }
               SelfHostResolvedType::TraitType(_) => {
                 self.normalizations[current] = current
                 self.normalization_results.push(current)
@@ -1289,6 +1309,10 @@ impl SelfHostTypeResolver {
   }
 
   fn normalize_signature_tables(self) -> Unit {
+    // Unused aliases must report invalid concrete member queries too.
+    for target in self.alias_target_types {
+      let _ = self.normalize_type(target)
+    }
     let mut index = 0u32
     let _ = while index {
       current => if current < self.explicit_call_type_arguments.length() {

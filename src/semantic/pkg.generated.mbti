@@ -849,6 +849,8 @@ pub struct CompilerSourceDiagnostic {
   rank : Int
 } derive(Eq, @debug.Debug)
 
+type ComputedNominalOwner
+
 pub struct DuplicateNameDiagnostic {
   space : BindingSpace
   name : Int
@@ -2685,6 +2687,7 @@ pub enum ResolvedType {
   ProductType(HirSpan)
   AppliedType(Int, HirSpan)
   FunctionType(HirSpan, Int)
+  MemberTypeProjection(Int, Bytes, String)
 } derive(Eq, @debug.Debug)
 
 pub struct ResolvedTypeView {
