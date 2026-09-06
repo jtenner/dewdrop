@@ -100,7 +100,9 @@ Deferred type checking and layout work below still prevent full completion.
   syntax; unrelated source errors must not disappear.
   Native `implements` guards now permit trait methods without hard bounds.
   Exact retained calls keep generic implementation prerequisites. Scope tests
-  and 59 native execution checks pass; self-host parity remains in progress.
+  and 59 shared execution checks pass. Local self-host guarded requirements and
+  their generic prerequisites now work. Imported guards, captured proofs, and
+  general branch-local type checks still need completion.
 - [ ] Make later passes visit only reachable code in that specialized body.
   Removed branches must not add calls, trait requests, locals, or storage types.
   Refresh flow and effect facts, keep source IDs for errors, and ensure distinct

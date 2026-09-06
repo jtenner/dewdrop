@@ -4,11 +4,7 @@ open dew.std.option
 
 fn self_host_clone_compile_time_module(source: SelfHostPlannedModuleLowering) -> SelfHostPlannedModuleLowering {
   let projections = self_host_query_module_has_projections(source)
-  let resolved = if projections {
-    self_host_clone_query_resolved(source.resolved_types)
-  } else {
-    source.resolved_types
-  }
+  let resolved = self_host_clone_query_resolved(source.resolved_types)
   let functions = if projections {
     self_host_clone_query_functions(source.functions)
   } else {
@@ -38,8 +34,8 @@ fn self_host_clone_compile_time_module(source: SelfHostPlannedModuleLowering) ->
     expression_children: source.expression_children.copy()
     pattern_children: source.pattern_children.copy()
     arm_children: source.arm_children.copy()
-    inferred: source.inferred
-    evidence: source.evidence
+    inferred: self_host_clone_query_inferred(source.inferred)
+    evidence: self_host_clone_query_evidence(source.evidence)
     flow_diagnostics: source.flow_diagnostics.copy()
   }
 }

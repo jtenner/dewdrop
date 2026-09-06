@@ -17,7 +17,19 @@ All 53 focused native query tests pass in 23.848 s. Native Wasm passes 59 shared
 checks, including scalar implementation selection, ordinary absence, and a
 generic implementation with a trait prerequisite. The earlier full fixture
 build took 9.296 s; the warm prerequisite fixture took less than one second.
-The self-host guard port and general branch-local type checks remain in progress.
+The self-host guard port now passes the same 59 execution checks. It retains
+branch-local proof, resolves exact receiver types, and keeps the implementation
+as the evidence root with its prerequisites as children. Selected generic
+implementation bodies use logical keys too; their bound calls no longer use
+the old first-generic-candidate stop. Planning runs own their sensitivity maps,
+type arguments, and evidence arrays.
+
+The larger fixture also exposed a self-host branch-walker bug: constructor spans
+index object fields, not the expression-child arena. The fixed walker retains
+live field values and removes dead ones. Hardening passes 203 tests, 29 invariant
+records, and all 59 query checks in 30.397 s. The aggregate run is still a
+performance defect. Imported guarded requirements, capture scope coverage, and
+general branch-local type checks remain in progress.
 
 ## Native member names and scalar layout
 

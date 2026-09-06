@@ -73,6 +73,26 @@ impl SelfHostBasicBodyInferencer {
     }
     let parameter = self.collected.generic_parameter_at(self_host_semantic_id_local(parameter_id))
     let bounds = parameter.bounds
+    let candidates = self_host_empty_semantic_ids()
+    let _ = while 0u32 {
+      index => if index < bounds.length {
+        candidates.push(self.resolved.generic_bound_types[bounds.start + index])
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    for bound in self.guarded_trait_bounds(expression, parameter_id) {
+      let mut present = false
+      for previous in candidates {
+        if previous == bound {
+          present = true
+        }
+      }
+      if !present {
+        candidates.push(bound)
+      }
+    }
     let mut selected = 4294967295u32
     let mut selected_trait = 0u64
     let mut selected_bound = 0u32
@@ -80,9 +100,10 @@ impl SelfHostBasicBodyInferencer {
     let mut second = 0u64
     let mut count = 0u32
     let mut needs_evidence = false
+    let mut guarded = false
     let _ = while 0u32 {
-      index => if index < bounds.length {
-        let bound = self.resolved.generic_bound_types[self_host_u32_add(bounds.start, index)]
+      index => if index < candidates.length() {
+        let bound = candidates[index]
         let trait_type = match self.resolved.types[bound] {
           SelfHostResolvedType::AppliedType(base, _) => base
           _ => bound
@@ -105,6 +126,7 @@ impl SelfHostBasicBodyInferencer {
                         selected = callable
                         selected_trait = trait_
                         selected_bound = bound
+                        guarded = index >= bounds.length
                       } else if count == 1u32 {
                         second = method.id
                       }
@@ -137,10 +159,16 @@ impl SelfHostBasicBodyInferencer {
       let _ = self_host_assert_compiler_invariant(valid, "selected declared bound signature changed after rollback")
       let start = self.call_type_arguments.length()
       self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)
-      self.store_call_target(expression, SelfHostBasicCallTarget::BoundTraitBasicCallTarget(first, parameter_id, selected_bound, SelfHostHirSpan::{
+      let arguments = SelfHostHirSpan::{
         start: start
         length: self.candidate_type_arguments.length()
-      }), 2u32)
+      }
+      let target = if guarded {
+        SelfHostBasicCallTarget::SelectedBasicCallTarget(first, arguments)
+      } else {
+        SelfHostBasicCallTarget::BoundTraitBasicCallTarget(first, parameter_id, selected_bound, arguments)
+      }
+      self.store_call_target(expression, target, 2u32)
     } else {
       self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
       self.solver.poison_type(self.expression_type(expression))

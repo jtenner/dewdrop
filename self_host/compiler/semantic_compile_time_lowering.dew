@@ -381,6 +381,7 @@ fn self_host_fold_compile_time_body(lowering: SelfHostPlannedProgramLowering, mo
     }
   }
   let live = self_host_prune_compile_time_body(module_, body)
+  self_host_resolve_guarded_calls(lowering, module_, body, specialization, bindings, owned, live)
   let _ = while 0u32 {
     offset => if offset < owned.length() {
       let index = owned[offset]

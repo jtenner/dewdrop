@@ -1,5 +1,48 @@
 open dew.std.array
 
+fn self_host_clone_query_evidence(source: SelfHostBasicModuleEvidence) -> SelfHostBasicModuleEvidence {
+  let bodies = []
+  for body in source.bodies {
+    bodies.push(SelfHostBasicBodyEvidence::{
+      body: body.body
+      expression_evidence: body.expression_evidence.copy()
+      evidence: body.evidence.copy()
+      prerequisite_indices: body.prerequisite_indices.copy()
+    })
+  }
+  SelfHostBasicModuleEvidence::{
+    module_id: source.module_id
+    bodies: bodies
+  }
+}
+
+fn self_host_clone_query_inferred(source: SelfHostMergedModuleInference) -> SelfHostMergedModuleInference {
+  SelfHostMergedModuleInference::{
+    module_id: source.module_id
+    jobs: source.jobs
+    types: source.types
+    type_arguments: source.type_arguments
+    expression_types: source.expression_types
+    local_types: source.local_types
+    capture_types: source.capture_types
+    block_types: source.block_types
+    pattern_types: source.pattern_types
+    control_state_types: source.control_state_types
+    control_result_types: source.control_result_types
+    call_targets: source.call_targets
+    operator_targets: source.operator_targets
+    expression_selections: source.expression_selections
+    object_field_targets: source.object_field_targets
+    pattern_constructors: source.pattern_constructors
+    call_type_arguments: source.call_type_arguments.copy()
+    expression_type_arguments: source.expression_type_arguments
+    pattern_type_arguments: source.pattern_type_arguments
+    unsupported_expressions: source.unsupported_expressions
+    diagnostics: source.diagnostics
+  }
+}
+
+
 // Private instance copies. Shared interfaces and unrelated plan fields stay intact.
 
 fn self_host_clone_query_resolved(source: SelfHostResolvedModuleTypes) -> SelfHostResolvedModuleTypes {

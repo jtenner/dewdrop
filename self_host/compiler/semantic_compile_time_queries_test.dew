@@ -2,6 +2,71 @@ open dew.std.testing
 open dew.std.string
 open dew.std.string_builder
 
+test "guarded trait proof cannot enter the false branch" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin implements<t, trait_>() -> Bool = \"types.implements\"\ntrait Read {\n  fn read(self) -> I32\n}\nfn read_or_zero<t>(value: t) -> I32 {\n  if implements::<t, Read>() {\n    0i32\n  } else {\n    value.read()\n  }\n}\npub fn run() -> I32 {\n  0i32\n}\n",
+  )
+  let diagnostics = fragments.specialization.lowering.modules[0u32].inferred.diagnostics
+  assert(diagnostics.length() == 1u32, "one missing method must remain visible")
+  assert(diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _), "false branch has no trait proof")
+}
+
+test "query branch removal preserves constructor field evaluations" {
+  let module_ = self_host_test_query_flow_module(
+    b"struct Box {\n  item: I64\n}\npub fn main() -> Box {\n  if true {\n    Box::{\n      item: 58i64\n    }\n  } else {\n    Box::{\n      item: 9i64\n    }\n  }\n}\n",
+  )
+  let _ = self_host_prune_compile_time_body(module_, module_.bodies[0u32])
+  let mut live = 0u32
+  for expression in module_.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedI64Const(value) => {
+        assert(value == 58u64, "only the selected constructor field remains")
+        live = live + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(live == 1u32, "selected constructor keeps its field value")
+}
+
+test "guarded trait calls select concrete methods in exact bodies" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin implements<t, trait_>() -> Bool = \"types.implements\"\ntrait Read {\n  fn read(self) -> I32\n}\nimpl Read for I32 {\n  fn read(self) -> I32 {\n    self\n  }\n}\nfn read_or_zero<t>(value: t) -> I32 {\n  if implements::<t, Read>() {\n    value.read()\n  } else {\n    0i32\n  }\n}\npub fn run() -> I32 {\n  read_or_zero::<I32>(42i32)\n}\n",
+  )
+  let lowering = fragments.specialization.lowering
+  for diagnostic in lowering.compile_time.diagnostics {
+    assert(false, diagnostic)
+  }
+  self_host_physical_test_assert_clean_inference(self_host_plan_program_wasmgc_link(fragments, false))
+  let mut count = 0u32
+  let _ = while 0u32 {
+    index => if index < fragments.specialization.requests.length() {
+      match lowering.compile_time.instances.get(index) {
+        Option::Some(instance) => for expression in instance.module_.expressions {
+          match expression.call_target {
+            SelfHostBasicCallTarget::SelectedBasicCallTarget(target, _) => match self_host_program_specialization_callable(instance.module_, target) {
+              Option::Some(callable) => match callable.kind {
+                SelfHostPlannedCallableKind::PlannedTraitMethodCallable(_) => assert(false, "guarded trait requirement must be replaced")
+                SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, _) => {
+                  count = count + 1u32
+                }
+                _ => {}
+              }
+              Option::None => {}
+            }
+            _ => {}
+          }
+        }
+        Option::None => {}
+      }
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(count > 0u32, "selected instance contains the implementation")
+}
+
 fn self_host_test_query_flow_module(source: Bytes) -> SelfHostPlannedModuleLowering {
   let collected = self_host_collect_bytes(24722u64, source)
   assert(collected.diagnostics.length() == 0u32, "flow fixture syntax")

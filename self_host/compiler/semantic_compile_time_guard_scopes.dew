@@ -1,0 +1,341 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+struct SelfHostCompileTimeGuardFact {
+  target: U32
+  bound: U32
+}
+
+enum SelfHostCompileTimeGuardWalk {
+  GuardExpression(U32)
+  GuardBlock(U32)
+  GuardPattern(U32)
+}
+
+struct SelfHostCompileTimeGuardCondition {
+  expression: U32
+  truth: Bool
+}
+
+fn self_host_empty_guard_scopes() -> Map<U32, Array<SelfHostCompileTimeGuardFact>> {
+  Map::empty()
+}
+
+fn self_host_empty_guard_facts() -> Array<SelfHostCompileTimeGuardFact> {
+  []
+}
+
+fn self_host_guard_add_fact(facts: Array<SelfHostCompileTimeGuardFact>, fact: SelfHostCompileTimeGuardFact) -> Unit {
+  for previous in facts {
+    if previous.target == fact.target && previous.bound == fact.bound {
+      return
+    }
+  }
+  facts.push(fact)
+}
+
+impl SelfHostBasicBodyInferencer {
+  fn guard_builtin_targets(self) -> Map<U64, Bool> {
+    let targets = self_host_empty_u64_bool_map()
+    for entry in self.collected.builtins {
+      if entry.builtin_name == b"types.implements" {
+        targets.set(entry.declaration, true)
+      }
+    }
+    for callable in self.imported.callables {
+      match callable.kind {
+        SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(name) => if name == b"types.implements" {
+          targets.set(callable.declaration, true)
+        }
+        _ => {}
+      }
+    }
+    targets
+  }
+
+  fn guard_condition_facts(self, expression: U32, truth: Bool, targets: Map<U64, Bool>) -> Array<SelfHostCompileTimeGuardFact> {
+    let facts = self_host_empty_guard_facts()
+    let work = [SelfHostCompileTimeGuardCondition::{
+      expression: expression
+      truth: truth
+    }]
+    let _ = while work.length() {
+      count => if count > 0u32 {
+        let item = work[count - 1u32]
+        work.truncate(count - 1u32)
+        if item.expression != 4294967295u32 {
+          self_host_assert_array_index(item.expression, self.collected.expressions.length(), "ARN-104 guarded condition")
+          match self.collected.expressions[item.expression] {
+            SelfHostHirExpr::PrefixExpr(SelfHostHirPrefixOperator::LogicalNot, value, _) => work.push(SelfHostCompileTimeGuardCondition::{
+              expression: value
+              truth: !item.truth
+            })
+            SelfHostHirExpr::BinaryExpr(operator, left, right, _) => if (operator is SelfHostHirBinaryOperator::LogicalAnd && item.truth) || (operator is SelfHostHirBinaryOperator::LogicalOr && !item.truth) {
+              work.push(SelfHostCompileTimeGuardCondition::{
+                expression: left
+                truth: item.truth
+              })
+              work.push(SelfHostCompileTimeGuardCondition::{
+                expression: right
+                truth: item.truth
+              })
+            }
+            SelfHostHirExpr::CallExpr(target, arguments, _) => if item.truth && arguments.length == 0u32 {
+              let declaration = match self.names.expression_references[target] {
+                SelfHostBodyNameReference::ModuleValueNameReference(name) => match self.unique_local_callable_index(name) {
+                  Option::Some(index) => self.collected.callables[index].declaration
+                  Option::None => 18446744073709551615u64
+                }
+                SelfHostBodyNameReference::ImportedModuleValueNameReference(declaration) => declaration
+                _ => 18446744073709551615u64
+              }
+              if targets.contains_key(declaration) {
+                let span = self_host_hir_span_at(self.collected.explicit_call_type_argument_spans, item.expression)
+                if span.length == 2u32 {
+                  self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.resolved.explicit_call_type_arguments.length()), "ARN-101 guarded type arguments")
+                  self_host_guard_add_fact(facts, SelfHostCompileTimeGuardFact::{
+                    target: self.resolved.explicit_call_type_arguments[span.start]
+                    bound: self.resolved.explicit_call_type_arguments[span.start + 1u32]
+                  })
+                }
+              }
+            }
+            _ => {}
+          }
+        }
+        continue work.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    facts
+  }
+
+  fn guard_expression_children(self, span: SelfHostHirSpan, work: Array<SelfHostCompileTimeGuardWalk>) -> Unit {
+    self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.expression_children.length()), "ARN-101 guarded expression children")
+    let _ = while 0u32 {
+      index => if index < span.length {
+        work.push(SelfHostCompileTimeGuardWalk::GuardExpression(self.collected.expression_children[span.start + index]))
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn guard_object_fields(self, span: SelfHostHirSpan, work: Array<SelfHostCompileTimeGuardWalk>) -> Unit {
+    self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.object_fields.length()), "ARN-101 guarded object fields")
+    let _ = while 0u32 {
+      index => if index < span.length {
+        work.push(SelfHostCompileTimeGuardWalk::GuardExpression(self.collected.object_fields[span.start + index].value))
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn mark_guard_scope(self, root: SelfHostCompileTimeGuardWalk, facts: Array<SelfHostCompileTimeGuardFact>) -> Unit {
+    if facts.length() == 0u32 {
+      return
+    }
+    let work = [root]
+    let seen = self_host_empty_u32_bool_map()
+    let _ = while work.length() {
+      count => if count > 0u32 {
+        let item = work[count - 1u32]
+        work.truncate(count - 1u32)
+        match item {
+          SelfHostCompileTimeGuardWalk::GuardBlock(block) => {
+            self_host_assert_array_index(block, self.collected.blocks.length(), "ARN-104 guarded block")
+            let span = self.collected.blocks[block].items
+            self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.block_items.length()), "ARN-101 guarded block items")
+            let _ = while 0u32 {
+              index => if index < span.length {
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(self.collected.block_items[span.start + index].value))
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          SelfHostCompileTimeGuardWalk::GuardPattern(pattern) => if pattern != 4294967295u32 {
+            self_host_assert_array_index(pattern, self.collected.patterns.length(), "ARN-104 guarded pattern")
+            match self.collected.patterns[pattern] {
+              SelfHostHirPattern::LiteralPattern(value, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+              SelfHostHirPattern::QualifiedPattern(root, _, _) => work.push(SelfHostCompileTimeGuardWalk::GuardPattern(root))
+              SelfHostHirPattern::TuplePattern(root, span, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardPattern(root))
+                self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.pattern_children.length()), "ARN-101 guarded pattern children")
+                let _ = while 0u32 {
+                  index => if index < span.length {
+                    work.push(SelfHostCompileTimeGuardWalk::GuardPattern(self.collected.pattern_children[span.start + index]))
+                    continue index + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostHirPattern::AlternativePattern(root, span, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardPattern(root))
+                self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.pattern_children.length()), "ARN-101 guarded pattern children")
+                let _ = while 0u32 {
+                  index => if index < span.length {
+                    work.push(SelfHostCompileTimeGuardWalk::GuardPattern(self.collected.pattern_children[span.start + index]))
+                    continue index + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostHirPattern::StructPattern(root, span, _, _, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardPattern(root))
+                self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.pattern_fields.length()), "ARN-101 guarded pattern fields")
+                let _ = while 0u32 {
+                  index => if index < span.length {
+                    work.push(SelfHostCompileTimeGuardWalk::GuardPattern(self.collected.pattern_fields[span.start + index].pattern))
+                    continue index + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              _ => {}
+            }
+          }
+          SelfHostCompileTimeGuardWalk::GuardExpression(expression) => if expression != 4294967295u32 && !seen.contains_key(expression) {
+            seen.set(expression, true)
+            self_host_assert_array_index(expression, self.collected.expressions.length(), "ARN-104 guarded expression")
+            let existing = match self.guarded_trait_scopes.get(expression) {
+              Option::Some(value) => value
+              Option::None => {
+                let value = self_host_empty_guard_facts()
+                self.guarded_trait_scopes.set(expression, value)
+                value
+              }
+            }
+            for fact in facts {
+              self_host_guard_add_fact(existing, fact)
+            }
+            match self.collected.expressions[expression] {
+              SelfHostHirExpr::ProductExpr(span, _) => self.guard_expression_children(span, work)
+              SelfHostHirExpr::ArrayExpr(span, _) => self.guard_expression_children(span, work)
+              SelfHostHirExpr::ObjectExpr(span, _) => self.guard_object_fields(span, work)
+              SelfHostHirExpr::ConstructExpr(target, span, _) => {
+                self.guard_object_fields(span, work)
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(target))
+              }
+              SelfHostHirExpr::BlockExpr(block, _) => work.push(SelfHostCompileTimeGuardWalk::GuardBlock(block))
+              SelfHostHirExpr::IfExpr(condition, block, alternative, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(condition))
+                work.push(SelfHostCompileTimeGuardWalk::GuardBlock(block))
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(alternative))
+              }
+              SelfHostHirExpr::MatchExpr(value, arms, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+                self_host_assert_compiler_invariant(self_host_array_span_is_valid(arms.start, arms.length, self.collected.arm_children.length()), "ARN-101 guarded arms")
+                let _ = while 0u32 {
+                  index => if index < arms.length {
+                    let id = self.collected.arm_children[arms.start + index]
+                    self_host_assert_array_index(id, self.collected.pattern_arms.length(), "ARN-104 guarded arm")
+                    let arm = self.collected.pattern_arms[id]
+                    work.push(SelfHostCompileTimeGuardWalk::GuardPattern(arm.pattern))
+                    work.push(SelfHostCompileTimeGuardWalk::GuardExpression(arm.guard_condition))
+                    work.push(SelfHostCompileTimeGuardWalk::GuardExpression(arm.body))
+                    continue index + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostHirExpr::WhileExpr(value, arms, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+                self_host_assert_compiler_invariant(self_host_array_span_is_valid(arms.start, arms.length, self.collected.arm_children.length()), "ARN-101 guarded arms")
+                let _ = while 0u32 {
+                  index => if index < arms.length {
+                    let id = self.collected.arm_children[arms.start + index]
+                    self_host_assert_array_index(id, self.collected.pattern_arms.length(), "ARN-104 guarded arm")
+                    let arm = self.collected.pattern_arms[id]
+                    work.push(SelfHostCompileTimeGuardWalk::GuardPattern(arm.pattern))
+                    work.push(SelfHostCompileTimeGuardWalk::GuardExpression(arm.guard_condition))
+                    work.push(SelfHostCompileTimeGuardWalk::GuardExpression(arm.body))
+                    continue index + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostHirExpr::LambdaExpr(lambda, _) => work.push(SelfHostCompileTimeGuardWalk::GuardBlock(self.collected.lambdas[lambda].body.root))
+              SelfHostHirExpr::ReturnExpr(value, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+              SelfHostHirExpr::BreakExpr(value, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+              SelfHostHirExpr::ContinueExpr(value, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+              SelfHostHirExpr::PrefixExpr(_, value, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+              SelfHostHirExpr::FieldExpr(value, _, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+              SelfHostHirExpr::QualifiedExpr(value, _, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+              SelfHostHirExpr::ProductFieldExpr(value, _, _, _) => work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+              SelfHostHirExpr::BinaryExpr(_, left, right, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(left))
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(right))
+              }
+              SelfHostHirExpr::IndexExpr(left, right, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(left))
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(right))
+              }
+              SelfHostHirExpr::AssignmentExpr(left, right, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(left))
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(right))
+              }
+              SelfHostHirExpr::CallExpr(target, arguments, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(target))
+                self.guard_expression_children(arguments, work)
+              }
+              SelfHostHirExpr::IndexSetExpr(target, index, value, _) => {
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(target))
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(index))
+                work.push(SelfHostCompileTimeGuardWalk::GuardExpression(value))
+              }
+              _ => {}
+            }
+          }
+        }
+        continue work.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
+  fn guarded_trait_bounds(self, expression: U32, parameter: U64) -> Array<U32> {
+    if !self.guarded_trait_scopes_ready {
+      self.guarded_trait_scopes_ready = true
+      let targets = self.guard_builtin_targets()
+      if targets.length() > 0u32 {
+        for source in self.collected.expressions {
+          match source {
+            SelfHostHirExpr::IfExpr(condition, block, alternative, _) => {
+              self.mark_guard_scope(SelfHostCompileTimeGuardWalk::GuardBlock(block), self.guard_condition_facts(condition, true, targets))
+              self.mark_guard_scope(SelfHostCompileTimeGuardWalk::GuardExpression(alternative), self.guard_condition_facts(condition, false, targets))
+            }
+            SelfHostHirExpr::BinaryExpr(SelfHostHirBinaryOperator::LogicalAnd, left, right, _) => self.mark_guard_scope(SelfHostCompileTimeGuardWalk::GuardExpression(right), self.guard_condition_facts(left, true, targets))
+            SelfHostHirExpr::BinaryExpr(SelfHostHirBinaryOperator::LogicalOr, left, right, _) => self.mark_guard_scope(SelfHostCompileTimeGuardWalk::GuardExpression(right), self.guard_condition_facts(left, false, targets))
+            _ => {}
+          }
+        }
+      }
+    }
+    let result = self_host_empty_semantic_ids()
+    match self.guarded_trait_scopes.get(expression) {
+      Option::Some(facts) => for fact in facts {
+        match self.resolved.types[fact.target] {
+          SelfHostResolvedType::GenericParameterType(id) => if id == parameter {
+            result.push(fact.bound)
+          }
+          _ => {}
+        }
+      }
+      Option::None => {}
+    }
+    result
+  }
+}

@@ -103,6 +103,18 @@ fn self_host_compile_time_push_root(root: SelfHostHirBodyRoot, work: Array<SelfH
 }
 
 // Exhaustive evaluation edges. A new IR node must declare its children here.
+fn self_host_compile_time_push_fields(module_: SelfHostPlannedModuleLowering, fields: SelfHostHirSpan, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
+  self_host_assert_array_span(fields.start, fields.length, module_.object_fields.length(), "ARN-101 compile-time object fields")
+  let _ = while 0u32 {
+    index => if index < fields.length {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(module_.object_fields[fields.start + index].value))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
 fn self_host_compile_time_push_expression(module_: SelfHostPlannedModuleLowering, kind: SelfHostPlannedExpressionKind, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
   match kind {
     SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => self_host_compile_time_push_children(module_, children, work)
@@ -135,21 +147,11 @@ fn self_host_compile_time_push_expression(module_: SelfHostPlannedModuleLowering
     }
     SelfHostPlannedExpressionKind::PlannedProductNew(children) => self_host_compile_time_push_children(module_, children, work)
     SelfHostPlannedExpressionKind::PlannedArrayLiteral(children) => self_host_compile_time_push_children(module_, children, work)
-    SelfHostPlannedExpressionKind::PlannedConstruct(receiver, arguments, _) => {
+    SelfHostPlannedExpressionKind::PlannedConstruct(receiver, fields, _) => {
       work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(receiver))
-      self_host_compile_time_push_children(module_, arguments, work)
+      self_host_compile_time_push_fields(module_, fields, work)
     }
-    SelfHostPlannedExpressionKind::PlannedObjectNew(fields) => {
-      self_host_assert_array_span(fields.start, fields.length, module_.object_fields.length(), "ARN-101 compile-time object fields")
-      let _ = while 0u32 {
-        index => if index < fields.length {
-          work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(module_.object_fields[fields.start + index].value))
-          continue index + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-    }
+    SelfHostPlannedExpressionKind::PlannedObjectNew(fields) => self_host_compile_time_push_fields(module_, fields, work)
     SelfHostPlannedExpressionKind::PlannedMatchExpression(value, arms) => {
       work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
       self_host_compile_time_push_arms(module_, arms, work)

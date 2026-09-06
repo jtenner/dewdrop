@@ -503,6 +503,8 @@ struct SelfHostBasicBodyInferencer {
   pending_constructions: Array<U32>
   pending_fields: Array<U32>
   pending_member_equations: Array<SelfHostPendingMemberEquation>
+  guarded_trait_scopes: Map<U32, Array<SelfHostCompileTimeGuardFact>>
+  mut guarded_trait_scopes_ready: Bool
   module_value_import_tasks: Array<SelfHostModuleValueImportTask>
   module_value_import_results: Array<I32>
   module_value_import_cache: Array<I32>
@@ -605,6 +607,8 @@ impl SelfHostBasicBodyInferencer {
       pending_constructions: []
       pending_fields: []
       pending_member_equations: []
+      guarded_trait_scopes: self_host_empty_guard_scopes()
+      guarded_trait_scopes_ready: false
       module_value_import_tasks: []
       module_value_import_results: []
       module_value_import_cache: []

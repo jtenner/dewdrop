@@ -34,10 +34,18 @@ fn self_host_compile_time_instance_map() -> Map<U32, SelfHostCompileTimeInstance
 fn self_host_compile_time_planning_lowering(lowering: SelfHostPlannedProgramLowering) -> SelfHostPlannedProgramLowering {
   let source = lowering.compile_time
   let diagnostics = source.diagnostics.copy()
+  let sensitive = self_host_empty_u64_bool_map()
+  for module_ in lowering.modules {
+    for callable in module_.functions.callables {
+      if source.sensitive.contains_key(callable.declaration) {
+        sensitive.set(callable.declaration, true)
+      }
+    }
+  }
   let context = SelfHostCompileTimeProgramContext::{
     frozen: source.frozen
     targets: source.targets
-    sensitive: source.sensitive
+    sensitive: sensitive
     instances: self_host_compile_time_instance_map()
     diagnostics: diagnostics
   }
