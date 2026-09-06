@@ -1,6 +1,7 @@
 // This is a user module. Neither the type name nor declaration positions are
 // part of the raw instruction contract.
 open dew.std.types
+open dew.std.option
 
 struct UnrelatedRecord {
   value: I64
@@ -46,6 +47,15 @@ struct Trace {
 
 struct ReferenceOwner {
   mut value: Trace
+}
+
+struct PayloadOwner<key, value> {
+  key: key
+  value: value
+}
+
+fn optional_payload<key, value>(owner: PayloadOwner<key, value>) -> Option<value> {
+  Option::Some(owner.value)
 }
 
 fn traced_storage<t>(trace: Trace, step: U32, value: LocalStorage<t>) -> LocalStorage<t> {
@@ -174,6 +184,16 @@ pub fn main(case: U32) -> I32 {
     })
     owner.value = local_get(values, 0u32)
     if owner.value.value == 2u32 && first.value == 1u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 15u32 {
+    let owner = PayloadOwner::{
+      key: 1i32
+      value: 29i64
+    }
+    if optional_payload(owner) is Option::Some(29i64) {
       1i32
     } else {
       0i32
