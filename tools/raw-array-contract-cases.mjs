@@ -20,10 +20,11 @@ export function checkRawArrayContracts(main) {
     [11, "zero-length boundary copy"],
     [12, "standard Wasm opcode spelling"],
     [13, "Unit copy evaluates every operand once in source order"],
+    [14, "reference field write restores the declared heap type"],
   ]) {
     assert.equal(main(index), 1, `raw array ${label}`);
   }
   assert.throws(() => main(10), (error) => error instanceof WebAssembly.RuntimeError &&
     /array element access out of bounds/.test(error.message), "raw Unit array copy bounds");
-  return 14;
+  return 15;
 }

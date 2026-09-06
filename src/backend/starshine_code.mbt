@@ -343,7 +343,7 @@ priv enum StarshineEmitTask {
     Int,
     @semantic.PlannedValueShape
   )
-  FinishStarshineFieldSet(Int, Int)
+  FinishStarshineFieldSet(Int, Int, Array[@lib.Instruction])
   FinishStarshineUnitFieldGet
   FinishStarshineUnitFieldSet
   FinishStarshineMatch(@semantic.ExprId, @semantic.HirSpan, Int)
@@ -1611,7 +1611,7 @@ fn starshine_field_location(
   planned : @semantic.PlannedModuleWasmGCFragments,
   field : @semantic.FieldId,
   shape : @semantic.PlannedValueShape,
-) -> (Int, Int, @semantic.PlannedWasmStorageType)? {
+) -> (@semantic.PlannedWasmPhysicalType, Int, @semantic.PlannedWasmStorageType)? {
   for type_ in planned.physical_types {
     for index in 0..<type_.fields.length {
       let planned_field = planned.fields[type_.fields.start + index]
@@ -1620,11 +1620,7 @@ fn starshine_field_location(
         | @semantic.WasmStructPayloadField(candidate) if candidate == field &&
           starshine_shape_matches_storage(shape, planned_field.storage) =>
           return Some(
-            (
-              type_.type_index,
-              planned_field.physical_index,
-              planned_field.storage,
-            ),
+            (type_, planned_field.physical_index, planned_field.storage),
           )
         _ => ()
       }
@@ -7701,17 +7697,25 @@ fn starshine_emit_body_instructions(
               tasks.push(EmitStarshineExpression(value))
               tasks.push(EmitStarshineExpression(base))
             } else {
-              let (local_type_index, physical_index, _) = match
+              let (physical, physical_index, storage) = match
                 starshine_field_location(field_plan, field, field_shape) {
                 Some(location) => location
                 None => return Err(UnsupportedExpression(body.body, expression))
               }
               let type_index = match program {
                 Some(link) =>
-                  link.physical_type_index(owner_module, local_type_index)
-                None => local_type_index
+                  link.physical_type_index(owner_module, physical.type_index)
+                None => physical.type_index
               }
-              tasks.push(FinishStarshineFieldSet(type_index, physical_index))
+              let storage_cast : Array[@lib.Instruction] = []
+              starshine_append_storage_cast(
+                storage_cast, program, owner_module, field_plan, physical, storage,
+              )
+              tasks.push(
+                FinishStarshineFieldSet(
+                  type_index, physical_index, storage_cast,
+                ),
+              )
               if field_shape is @semantic.ProductPlannedValueShape(_) {
                 tasks.push(
                   FinishStarshineProductBox(
@@ -9969,11 +9973,12 @@ fn starshine_emit_body_instructions(
         append_starshine_instructions(output, fallback)
         results.push(output)
       }
-      FinishStarshineFieldSet(type_index, field_index) => {
+      FinishStarshineFieldSet(type_index, field_index, storage_cast) => {
         let value = results.pop().unwrap()
         let output = results.pop().unwrap()
         output.push(starshine_match_cast(type_index))
         append_starshine_instructions(output, value)
+        append_starshine_instructions(output, storage_cast)
         output.push(
           @lib.Instruction::struct_set(
             @lib.TypeIdx::new(type_index.reinterpret_as_uint()),

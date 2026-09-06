@@ -44,6 +44,10 @@ struct Trace {
   mut value: U32
 }
 
+struct ReferenceOwner {
+  mut value: Trace
+}
+
 fn traced_storage<t>(trace: Trace, step: U32, value: LocalStorage<t>) -> LocalStorage<t> {
   trace.value = trace.value * 10u32 + step
   value
@@ -154,6 +158,22 @@ pub fn main(case: U32) -> I32 {
     let values = local_default::<Unit>(2u32)
     local_copy(traced_storage(trace, 1u32, values), traced_index(trace, 2u32, 1u32), traced_storage(trace, 3u32, values), traced_index(trace, 4u32, 0u32), traced_index(trace, 5u32, 1u32))
     if trace.value == 12345u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 14u32 {
+    let first = Trace::{
+      value: 1u32
+    }
+    let owner = ReferenceOwner::{
+      value: first
+    }
+    let values = local_new::<I32, Trace>(1u32, Trace::{
+      value: 2u32
+    })
+    owner.value = local_get(values, 0u32)
+    if owner.value.value == 2u32 && first.value == 1u32 {
       1i32
     } else {
       0i32
