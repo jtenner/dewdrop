@@ -3,6 +3,27 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Full Starshine test build stack
+
+The final full pinned Starshine lane failed before test execution: MoonBit
+v0.10.11 hit a native debug `link-core` stack overflow in its pass and fuzz test
+modules with the host's 8192 KiB stack. The failed run took 52.377 s. Retrying
+with a 65536 KiB soft stack passed the build and reached test execution. The
+dedicated test lane now raises only a smaller finite soft limit. It preserves
+larger or unlimited caller limits and does not change the parent shell or system
+limits. Test and limit-setting errors still fail the lane.
+
+That retry finished in 289.049 s with 10,979/10,981 tests passing. Both failures
+came from the vendored catchless legacy try fixture, not from query generation.
+The fixture intentionally has no handler; the compiler had not lost one. The
+old exact mismatch allowance also stopped matching contextual validator text.
+Starshine commit `7a5888630` implements the text form as an explicit outer
+delegate, preserves body/branch identity, and retires the allowance. It does
+not weaken core validation or expand skips. The new positive test failed first
+(4.539 s); all nine focused legacy tests pass after the fix (4.516 s).
+The parent workspace now pins that commit. The full lane is being rerun.
+Shell checks verify 8192→65536 KiB and preserve 131072 KiB/unlimited limits.
+
 ## Local and captured query values
 
 Both compilers now follow immutable local initializers when finding dependent
