@@ -150,7 +150,9 @@ fn fold_module_compile_time_queries(
   active : DeclId?,
   selected_conditions? : Map[ExprId, Bool]? = None,
 ) -> Unit {
-  let mut has_queries = false
+  let mut has_queries = context.program.modules[module_index].expressions.any(source => {
+    source is HirTypeBindingExpr(_, _)
+  })
   for source in module_.expressions {
     if source.kind is PlannedDirectCall(target, _, _, _) &&
       context.targets.contains(target) {
@@ -247,6 +249,12 @@ fn fold_module_compile_time_queries(
     // A failed query in a discarded arm is not evaluated.
     if source.kind is PlannedPoisonExpression {
       continue
+    }
+    if validate_compile_time_binding(
+        context, module_index, module_, expression, bindings,
+      )
+      is Some(message) {
+      errors[expression] = message
     }
     let error = match errors.get(expression) {
       Some(message) => Some(message)

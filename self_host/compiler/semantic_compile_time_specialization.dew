@@ -78,8 +78,23 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
   let sensitive = self_host_empty_u64_bool_map()
   let callers = self_host_compile_time_caller_map()
   let work = self_host_empty_compile_time_owners()
+  let mut module_index = 0u32
   for module_ in modules {
     let projections = self_host_query_module_has_projections(module_)
+    if projections {
+      let collected = frozen.collected.modules.at(module_index)
+      for body in module_.bodies {
+        for expression in self_host_compile_time_owned_expressions(module_, body) {
+          match self_host_query_binding_type(collected, module_, expression) {
+            Option::Some(type_) => if self_host_query_has_projection(module_, -self_host_body_u32_to_i32(type_) - 2i32) && !sensitive.contains_key(body.declaration) {
+              sensitive.set(body.declaration, true)
+              work.push(body.declaration)
+            }
+            Option::None => {}
+          }
+        }
+      }
+    }
     for callable in module_.functions.callables {
       if projections && self_host_query_projected_signature(module_, callable) && !sensitive.contains_key(callable.declaration) {
         sensitive.set(callable.declaration, true)
@@ -92,6 +107,7 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
         _ => {}
       }
     }
+    module_index = module_index + 1u32
   }
   if targets.length() > 0u32 || sensitive.length() > 0u32 {
     for module_ in modules {

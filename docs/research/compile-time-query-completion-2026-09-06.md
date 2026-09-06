@@ -3,6 +3,20 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Unused projected type bindings
+
+Both compilers now make a function query-sensitive when an unused local type
+binding contains a member projection. After branch removal, each retained
+binding must reduce to a concrete type. Missing fields or variants report
+CT-043 with the binding's expression and source offset. A removed binding adds
+no member or layout demand. This also works when the function contains no
+runtime query call at all.
+
+Two negative native tests failed before this change. All three binding tests
+now pass (36.221 s for the measured native lane). Hardening passes 211 tests,
+29 records, and 86 shared execution checks (32.453 s). Native generation and
+execution take 10.997 s and 0.024 s. The two aggregate lanes remain over budget.
+
 ## Selected calls, result contracts, and compound query conditions
 
 Both compilers now defer generic-dependent method selection and failed call or
@@ -27,7 +41,7 @@ All 79 focused native query tests pass (45.241 s for the lane); hardening passes
 performance defects. Native generation/execution take 1.762 s/0.024 s; API
 checking takes 3.454 s.
 
-Method-generic bound verification, unused projected type bindings, complete
+Method-generic bound verification, complete
 selected-source flow masks, and final bootstrap checks remain open.
 
 ## Selected-body field and operator checks (both compilers)

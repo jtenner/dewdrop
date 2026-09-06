@@ -92,7 +92,7 @@ fn compile_time_program_context(
   let sensitive : Map[DeclId, Bool] = Map([])
   let callers : Map[DeclId, Array[DeclId]] = Map([])
   let work : Array[DeclId] = []
-  for module_ in lowering.modules {
+  for module_index, module_ in lowering.modules {
     let has_projections = module_.resolved_types.any(type_ => {
         type_ is MemberTypeProjection(_, _, _)
       }) ||
@@ -104,6 +104,16 @@ fn compile_time_program_context(
       }
     }
     for index, expression in module_.expressions {
+      if has_projections &&
+        compile_time_binding_type(program, analyzed, module_index, index)
+        is Some(type_) &&
+        compile_time_has_projection(module_, -type_ - 2) {
+        if compile_time_expression_owner(module_, index) is Some(caller) &&
+          !sensitive.contains(caller) {
+          sensitive[caller] = true
+          work.push(caller)
+        }
+      }
       if has_projections &&
         compile_time_has_projection(module_, expression.type_) {
         if compile_time_expression_owner(module_, index) is Some(caller) &&

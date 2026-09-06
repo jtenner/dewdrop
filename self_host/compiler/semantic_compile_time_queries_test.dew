@@ -2,6 +2,28 @@ open dew.std.testing
 open dew.std.string
 open dew.std.string_builder
 
+test "unused projected bindings reject missing selected members" {
+  let fragments = self_host_physical_test_fragments(b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nfn check<t>() -> I32 {\n  type Item = member<t>(\"value\")\n  42i32\n}\npub fn run() -> I32 {\n  check::<I64>()\n}\n")
+  let errors = fragments.specialization.lowering.compile_time.diagnostics
+  assert(errors.length() > 0u32, "selected invalid binding must be checked")
+  assert(errors[0u32].starts_with("CT-043"), "selected binding failure keeps its code and source context")
+}
+
+test "unused projected payload bindings reject missing selected variants" {
+  let fragments = self_host_physical_test_fragments(b"builtin payload<t>(name: String) -> Type = \"types.variant_payload_types\"\nenum Choice {\n  Yes(I32)\n}\nfn check<t>() -> I32 {\n  type Payload = payload<t>(\"Missing\")\n  42i32\n}\npub fn run() -> I32 {\n  check::<Choice>()\n}\n")
+  let errors = fragments.specialization.lowering.compile_time.diagnostics
+  assert(errors.length() > 0u32, "selected invalid binding must be checked")
+  assert(errors[0u32].starts_with("CT-043"), "selected binding failure keeps its code and source context")
+}
+
+test "unused projected bindings in discarded branches need no member" {
+  let fragments = self_host_physical_test_fragments(b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nbuiltin is_unit<t>() -> Bool = \"types.is_unit\"\nstruct Record {\n  value: I32\n}\nfn check<t>() -> I32 {\n  if is_unit::<t>() {\n    0i32\n  } else {\n    type Item = member<t>(\"value\")\n    42i32\n  }\n}\npub fn run() -> I32 {\n  check::<Unit>() + check::<Record>()\n}\n")
+  let errors = fragments.specialization.lowering.compile_time.diagnostics
+  for error in errors {
+    assert(false, error)
+  }
+}
+
 test "deferred calls cannot hide concrete tuple operand errors" {
   let collected = self_host_collect_bytes(24724u64,
     b"builtin is_integer<t>() -> Bool = \"types.is_integer\"\nfn accept(value: (I64, Bool)) -> I32 {\n  1i32\n}\nfn unused<t>(value: t) -> I32 {\n  if is_integer::<t>() {\n    accept((value, 1i32))\n  } else {\n    0i32\n  }\n}\n",

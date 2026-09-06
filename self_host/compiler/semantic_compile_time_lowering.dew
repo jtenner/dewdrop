@@ -398,11 +398,23 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
   }
   let live = self_host_prune_compile_time_body(module_, body)
   self_host_resolve_guarded_calls(lowering, module_, body, specialization, bindings, owned, live)
+  let owner = match lowering.index.declaration_owner(body.declaration) {
+    Option::Some(owner) => owner
+    Option::None => {
+      self_host_assert_compiler_invariant(false, "LNK-504 type binding body owner")
+      unreachable()
+    }
+  }
+  let collected = lowering.collected.modules.at(owner)
   let _ = while 0u32 {
     offset => if offset < owned.length() {
       let index = owned[offset]
       if live[index] {
         let source = module_.expressions[index]
+        match self_host_validate_query_binding(lowering, collected, module_, index, bindings) {
+          Option::Some(message) => errors.set(index, message)
+          Option::None => {}
+        }
         match errors.get(index) {
           Option::Some(error) => self_host_compile_time_diagnose(lowering, module_, body, specialization, index, error)
           Option::None => match self_host_program_specialization_call_recipe(source) {
@@ -431,7 +443,7 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
 }
 
 fn self_host_fold_program_compile_time_queries(lowering: SelfHostPlannedProgramLowering) -> Unit {
-  if lowering.compile_time.targets.length() == 0u32 {
+  if lowering.compile_time.targets.length() == 0u32 && lowering.compile_time.sensitive.length() == 0u32 {
     return
   }
   for module_ in lowering.modules {

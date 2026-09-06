@@ -111,6 +111,20 @@ fn query_deferred_bound<t>(value: t) -> I32 {
   }
 }
 
+fn query_binding_only<t>() -> I32 {
+  type Item = field_type<t>("value")
+  42i32
+}
+
+fn query_guarded_binding<t>() -> I32 {
+  if is_unit::<t>() {
+    0i32
+  } else {
+    type Item = field_type<t>("value")
+    42i32
+  }
+}
+
 fn query_negated_unit_join<t>(fallback: t) -> t {
   if !is_unit::<t>() {
     fallback
@@ -722,6 +736,10 @@ pub fn main(case: U32) -> Bool {
     query_width_call(7i32) == 0i64 && query_width_call(81i64) == 81i64
   } else if case == 82u32 {
     query_deferred_bound(()) == 0i32 && query_deferred_bound(82i32) == 82i32
+  } else if case == 83u32 {
+    query_binding_only::<QueryLeft>() == 42i32
+  } else if case == 84u32 {
+    query_guarded_binding::<Unit>() == 0i32 && query_guarded_binding::<QueryRight>() == 42i32
   } else {
     false
   }
