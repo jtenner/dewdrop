@@ -21,7 +21,7 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 20
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compiler paths pass 51 shared execution checks.
+physical-boundary checks. Both compiler paths pass 52 shared execution checks.
 The September 6 compiler-B/C bootstrap now reaches a byte-identical fixed point.
 Deferred type checking and layout work below still prevent full completion.
 
@@ -85,7 +85,9 @@ Deferred type checking and layout work below still prevent full completion.
     elided. Native nominal-demand scans and dead lambda signature roots honor
     pruning. Self-host nominal tables now follow selected bodies, live lambda
     captures, ABI roots, and transitive fields with a visited work queue.
-    Native generic template storage still needs work.
+    Native generic lambda templates now have no physical signature or capture
+    layout; exact live instances create them directly. Native nominal roots
+    still need exact-instance demand instead of generic-template scans.
 - [ ] Keep type-dependent checks inside their branch until the type is known.
   Check the selected branch with its known type facts. Both branches need valid
   syntax; unrelated source errors must not disappear.

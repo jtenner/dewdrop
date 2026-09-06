@@ -1,4 +1,54 @@
 ///|
+// Generic query bodies are logical templates. Module-level fragment planning
+// must not allocate their lambda types before selecting an exact instance.
+// This private view is never used for specialization or instruction emission.
+fn compile_time_fragment_template(
+  lowering : PlannedProgramLowering,
+  source : PlannedModuleLowering,
+) -> PlannedModuleLowering {
+  let context = match lowering.compile_time {
+    Some(value) => value
+    None => return source
+  }
+  let deferred : Map[BodyId, Bool] = {}
+  for body in source.bodies {
+    if !context.sensitive.contains(body.declaration) {
+      continue
+    }
+    let callable = source.functions.callable_of(body.declaration).unwrap()
+    if program_callable_generic_parameters(callable).length > 0 {
+      deferred[body.body] = true
+    }
+  }
+  if deferred.is_empty() {
+    return source
+  }
+  let lambdas = source.lambdas.copy()
+  let expressions = source.expressions.copy()
+  for index, lambda in lambdas {
+    if deferred.contains(lambda.root_body) {
+      lambdas[index] = { ..lambda, elided: true, }
+    }
+  }
+  for body in source.bodies {
+    if deferred.contains(body.body) {
+      for id in compile_time_owned_expressions(source, body) {
+        // The common closure ABI is independent of a lambda's parameter and
+        // capture types. Keep that capability visible without rooting its
+        // deferred signature or the template's function-value calls.
+        if !(expressions[id].kind is PlannedLambdaClosure(_, _)) {
+          expressions[id] = {
+            ..expressions[id],
+            kind: PlannedPoisonExpression,
+          }
+        }
+      }
+    }
+  }
+  { ..source, lambdas, expressions, }
+}
+
+///|
 // A lambda belongs to its root function's logical instance. A carrier-only
 // function key cannot distinguish two closures with different query results.
 fn materialize_compile_time_lambdas(
@@ -32,11 +82,10 @@ fn materialize_compile_time_lambdas(
       continue
     }
     let base_index = fragments.lambda_function_indices[index]
-    if base_index < 0 {
-      continue
+    if base_index >= 0 {
+      let base = fragments.functions[base_index]
+      fragments.functions[base_index] = { ..base, elided: true, }
     }
-    let base = fragments.functions[base_index]
-    fragments.functions[base_index] = { ..base, elided: true, }
     if lambda.elided {
       continue
     }
@@ -107,7 +156,15 @@ fn materialize_compile_time_lambdas(
       results,
     })
     fragments.functions.push({
-      ..base,
+      declaration: wasmgc_lambda_declaration(instance.module_id, index),
+      lambda: index,
+      name: b"",
+      visibility: ModuleVisible,
+      is_test: false,
+      is_test_entry: false,
+      test_name: b"",
+      kind: PlannedWasmDefinedLambdaFunction(index),
+      direct_builtin: b"",
       elided: false,
       signature_type_index,
       parameters,
@@ -116,6 +173,11 @@ fn materialize_compile_time_lambdas(
       specialization_shapes: owner.specialization_shapes,
       specialization_evidence: owner.specialization_evidence,
       specialization_abi_key: owner.specialization_abi_key,
+      offset: match lambda.root {
+        BlockBodyRoot(block) => instance.blocks[block].offset
+        ExpressionBodyRoot(expression) =>
+          instance.expressions[expression].offset
+      },
     })
   }
   guard instance.module_id == lowering.modules[module_index].module_id else {
@@ -152,8 +214,19 @@ pub fn program_function_fragments(
       if !module_.lambdas[function_.lambda].directized {
         let original = fragments.lambda_entry_signature_indices[function_.lambda]
         for resolved, signature in fragments.closure_entry_type_by_resolved {
-          if signature == original {
+          if original >= 0 && signature == original {
             closure_entries[resolved] = function_.signature_type_index
+          }
+        }
+        // Deferred templates have no entry signature to match. Keep the
+        // resolved function-type mapping of each selected closure expression.
+        for expression in module_.expressions {
+          if expression.kind is PlannedLambdaClosure(lambda, _) &&
+            lambda == function_.lambda {
+            let resolved = program_body_resolved_type(module_, expression.type_)
+            if resolved >= 0 {
+              closure_entries[resolved] = function_.signature_type_index
+            }
           }
         }
       }

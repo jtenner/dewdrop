@@ -198,7 +198,7 @@ fn prepare_compile_time_lambda_layouts(
           None => layout.capture_parameters[global] = -1
         }
       }
-    } else if changed {
+    } else if changed || layout.closure_types[index] < 0 {
       let start = fragments.fields.length()
       fragments.fields.push({
         role: WasmClosureEntryField,

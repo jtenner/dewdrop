@@ -1,4 +1,22 @@
 ///|
+test "compile time discarded generic lambda has no template signature" {
+  let (program, lowering) = compile_time_evidence_test(
+    b"open dew.std.types\nfn ignore<t>(value: t) -> I32 {\n  8i32\n}\nfn choose<t>() -> I32 {\n  if is_unit::<t>() {\n    7i32\n  } else {\n    let unused = fn(value: field_type<t>(\"item\")) -> I32 {\n      8i32\n    }\n    ignore(unused)\n  }\n}\npub fn main() -> I32 {\n  choose::<Unit>()\n}\n",
+  )
+  let analyzed = analyze_program_semantics(program)
+  assert_false(lowering.modules[0].lambdas[0].elided)
+  let plan = plan_program_wasmgc_fragments(analyzed, lowering)
+  assert_eq(validate_module_wasmgc_arenas(plan.modules[0]), Ok(()))
+  for function_ in plan.modules[0].functions {
+    assert_false(function_.kind is PlannedWasmDefinedLambdaFunction(_))
+  }
+  for type_ in plan.modules[0].physical_types {
+    assert_false(type_.kind is PlannedWasmLambdaClosureType(_))
+    assert_false(type_.kind is PlannedWasmCaptureCellType(_))
+  }
+}
+
+///|
 test "compile time lambda layouts preserve exact scalar and erased captures" {
   let program = collect_program_manifest(
     24910UL,

@@ -3158,7 +3158,10 @@ fn plan_program_wasmgc_fragments_for_root(
         None => {
           let fresh = plan_module_wasmgc_fragments_with_options_and_roots(
             analyzed.frozen.interfaces[module_index].resolved_types,
-            lowering.modules[module_index],
+            compile_time_fragment_template(
+              lowering,
+              lowering.modules[module_index],
+            ),
             Some(analyzed.modules[module_index].imports),
             options,
             program_roots,

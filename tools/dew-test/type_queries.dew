@@ -67,6 +67,21 @@ fn query_return<t>() -> I32 {
   8i32
 }
 
+fn query_ignore_lambda<t>(value: t) -> Bool {
+  true
+}
+
+fn query_discarded_lambda<t>() -> Bool {
+  if is_unit::<t>() {
+    true
+  } else {
+    let unused = fn(value: field_type<t>("item")) -> Bool {
+      false
+    }
+    query_ignore_lambda(unused)
+  }
+}
+
 fn query_local_storage<t>() -> I32 {
   if is_unit::<t>() {
     let live = 7i32
@@ -331,6 +346,8 @@ pub fn main(case: U32) -> Bool {
     query_local_storage::<Unit>() == 7i32 && query_local_storage::<I32>() == 8i32
   } else if case == 49u32 {
     query_pattern::<Unit>(1i32) == 11i32 && query_pattern::<I64>(2i32) == 2i32
+  } else if case == 50u32 {
+    query_discarded_lambda::<Unit>()
   } else {
     false
   }

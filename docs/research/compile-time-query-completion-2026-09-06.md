@@ -325,3 +325,24 @@ passes and B/C outputs are byte-identical (146.757 s total). An earlier comparis
 used different request sources because a helper was reformatted during the run;
 the two request files confirm that change. The repeated run used unchanged Dew
 source. Full bootstrap time remains a performance defect.
+
+## Generic lambda templates have no physical signatures
+
+Native fragment planning now uses a private view that excludes query-sensitive
+generic lambda bodies and their typed storage. The logical source template stays
+intact. Each live exact instance creates its own lambda function, signature, and
+capture layout directly; it no longer needs a placeholder generic signature.
+The common closure ABI remains visible separately. Selected function-type maps
+use exact lambda expression identities even when no template entry exists.
+
+The regression first trapped with `SPC-301 unresolved member projection reached
+a physical signature`. Its discarded branch passes a lambda containing
+`field_type<T>("item")` to a generic function. The fixed path emits neither the
+lambda function nor its closure/capture types. All 38 focused native query tests
+pass in 17.233 s. Both compilers pass 52 shared execution checks; hardening passes
+196 tests and 29 invariant records in 29.534 s. Native nominal root discovery
+still scans generic source bodies, and guarded inference/runtime projection
+types remain separate unfinished work.
+
+The full native integration lane also passes in 51.474 s; that elapsed time is
+still over budget. The scoped generated-API refresh passes in 3.503 s.
