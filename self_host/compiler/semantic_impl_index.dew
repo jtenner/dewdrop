@@ -1501,6 +1501,14 @@ fn self_host_index_module_implementations_context(
             let requirement = match implementation.kind {
               SelfHostIndexedImplKind::TraitIndexedImpl(trait_declaration) => {
                 let mut found = Option::None
+                if self_host_semantic_id_module(trait_declaration) != collected.module_id {
+                  match imports {
+                    Option::Some(imported) => {
+                      found = self_host_imported_requirement_identity(imported, trait_declaration, collected.name(method.name))
+                    }
+                    Option::None => {}
+                  }
+                }
                 let mut candidate_index = 0u32
                 let _ = while candidate_index {
                   current_candidate => if current_candidate < collected.methods.length() {

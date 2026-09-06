@@ -3,6 +3,20 @@
 This continues the September 5 work. Unchecked tasks remain unchecked until both
 compiler paths and their execution tests pass.
 
+## Local implementations of imported traits
+
+The self-host local implementation index now resolves a requirement through the
+imported trait interface when that trait belongs to another module. The stored
+requirement ID is then used by guarded call selection and physical linking.
+The new local `Into<I64>` implementation failed before the fix at BOD-607; it
+now executes in both compilers. Native passes 77 checks (10.488 s generation,
+0.029 s execution). Self-host passes 204 tests, 29 invariant records, and 77
+query checks (32.959 s, still over budget).
+
+The preceding query-owner checkpoint also passes the complete integration lane
+(46.618 s, over budget). General deferred field/operator checks now have two
+explicit failing tests; they remain open rather than being marked complete.
+
 ## Query owner and projection edge cases
 
 Both paths now pass 76 shared execution checks. Generic and concrete impl `Self`

@@ -21,7 +21,7 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 20
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. Both compiler paths pass 76 shared execution checks.
+physical-boundary checks. Both compiler paths pass 77 shared execution checks.
 The September 6 compiler-B/C bootstrap now reaches a byte-identical fixed point.
 Deferred type checking and layout work below still prevent full completion.
 
