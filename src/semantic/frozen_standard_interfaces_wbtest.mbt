@@ -12,7 +12,12 @@ test "frozen standard runtime calls remain reachable" {
   )
   let analyzed = analyze_program_semantics(program)
   let lowering = plan_program_lowering(program, analyzed)
-  let roots = program_reachable_callable_roots(analyzed, lowering, false)
+  let roots = program_reachable_callable_roots(
+    analyzed,
+    lowering,
+    false,
+    compile_time_demand_instances(lowering),
+  )
   let fragments = plan_program_wasmgc_fragments(analyzed, lowering)
   let runtime_index = program.module_index("dew.std.text_runtime").unwrap()
   let declaration = make_semantic_id(0xffff0001UL, 1)

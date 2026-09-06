@@ -3,20 +3,38 @@ fn program_mark_resolved_nominal_roots(
   resolved : ResolvedModuleTypes,
   root : ResolvedTypeId,
   reachable : Map[DeclId, Bool],
+  discovered? : Array[DeclId] = [],
 ) -> Bool {
   let mut changed = false
   let work : Array[ResolvedTypeId] = [root]
+  let visited : Map[ResolvedTypeId, Bool] = {}
   while work.length() > 0 {
     let type_ = work.pop().unwrap()
     if type_ < 0 || type_ >= resolved.types.length() {
       continue
     }
+    if visited.contains(type_) {
+      continue
+    }
+    visited[type_] = true
     match resolved.types[type_] {
       NominalType(declaration) =>
         if !reachable.contains(declaration) {
           reachable[declaration] = true
+          discovered.push(declaration)
           changed = true
         }
+      ProductType(arguments) => {
+        guard program_specialization_span_is_valid(
+          arguments,
+          resolved.type_arguments.length(),
+        ) else {
+          abort("ARN-101 nominal demand tuple fields")
+        }
+        for offset in 0..<arguments.length {
+          work.push(resolved.type_arguments[arguments.start + offset])
+        }
+      }
       AppliedType(base, arguments) => {
         work.push(base)
         for index in 0..<arguments.length {
@@ -104,6 +122,7 @@ fn program_reachable_callable_roots(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   emit_tests : Bool,
+  selected : Map[DeclId, Array[PlannedModuleLowering]],
 ) -> Map[DeclId, Bool] {
   let module_lookup = lowering.index.module_lookup
   let reachable : Map[DeclId, Bool] = Map::default()
@@ -188,66 +207,71 @@ fn program_reachable_callable_roots(
       None => continue
     }
     let module_ = lowering.modules[module_index]
-    let callable = match module_.functions.callable_of(declaration) {
-      Some(value) => value
-      None => continue
-    }
-    let body_id = match callable.kind {
-      PlannedFunctionCallable(body)
-      | PlannedImplMethodCallable(_, Some(body)) => body
-      _ => continue
-    }
-    let body_index = semantic_id_local(body_id)
-    if body_index < 0 || body_index >= module_.bodies.length() {
-      continue
-    }
-    let body = module_.bodies[body_index]
-    if program_body_uses_string_literal_pattern(module_, body) {
-      needs_string_pattern_equals = true
-    }
     for
-      expression in body.expressions.start..<(body.expressions.start +
-      body.expressions.length) {
-      let (first_target, second_target) = match
-        module_.expressions[expression].kind {
-        PlannedDirectCall(target, _, _, _)
-        | PlannedTailCall(target, _, _, _)
-        | PlannedOperatorCall(target, _, _, _, _)
-        | PlannedIndexCall(target, _, _, _)
-        | PlannedIndexSetCall(target, _, _, _, _) => (target, 0UL)
-        PlannedMapSingleton(_, _, _, _, hash, eq)
-        | PlannedMapEmpty(_, _, hash, eq)
-        | PlannedMapGet(_, _, _, _, hash, eq)
-        | PlannedMapGetUnchecked(_, _, _, _, hash, eq) => (hash, eq)
-        PlannedMapInsert(_, _, _, _, _, hash, eq)
-        | PlannedMapSet(_, _, _, _, _, hash, eq) => (hash, eq)
-        PlannedMapContainsKey(_, _, _, hash, eq)
-        | PlannedMapRemove(_, _, _, hash, eq) => (hash, eq)
-        PlannedSetEmpty(_, hash, eq)
-        | PlannedSetSingleton(_, _, hash, eq)
-        | PlannedSetContains(_, _, _, hash, eq)
-        | PlannedSetInsert(_, _, _, hash, eq)
-        | PlannedSetRemove(_, _, _, hash, eq) => (hash, eq)
+      module_ in compile_time_demand_modules(
+        lowering, module_, declaration, selected,
+      ) {
+      let callable = match module_.functions.callable_of(declaration) {
+        Some(value) => value
+        None => continue
+      }
+      let body_id = match callable.kind {
+        PlannedFunctionCallable(body)
+        | PlannedImplMethodCallable(_, Some(body)) => body
         _ => continue
       }
-      for target in [first_target, second_target] {
-        if target == 0UL || reachable.contains(target) {
-          continue
+      let body_index = semantic_id_local(body_id)
+      if body_index < 0 || body_index >= module_.bodies.length() {
+        continue
+      }
+      let body = module_.bodies[body_index]
+      if program_body_uses_string_literal_pattern(module_, body) {
+        needs_string_pattern_equals = true
+      }
+      for
+        expression in body.expressions.start..<(body.expressions.start +
+        body.expressions.length) {
+        let (first_target, second_target) = match
+          module_.expressions[expression].kind {
+          PlannedDirectCall(target, _, _, _)
+          | PlannedTailCall(target, _, _, _)
+          | PlannedOperatorCall(target, _, _, _, _)
+          | PlannedIndexCall(target, _, _, _)
+          | PlannedIndexSetCall(target, _, _, _, _) => (target, 0UL)
+          PlannedMapSingleton(_, _, _, _, hash, eq)
+          | PlannedMapEmpty(_, _, hash, eq)
+          | PlannedMapGet(_, _, _, _, hash, eq)
+          | PlannedMapGetUnchecked(_, _, _, _, hash, eq) => (hash, eq)
+          PlannedMapInsert(_, _, _, _, _, hash, eq)
+          | PlannedMapSet(_, _, _, _, _, hash, eq) => (hash, eq)
+          PlannedMapContainsKey(_, _, _, hash, eq)
+          | PlannedMapRemove(_, _, _, hash, eq) => (hash, eq)
+          PlannedSetEmpty(_, hash, eq)
+          | PlannedSetSingleton(_, _, hash, eq)
+          | PlannedSetContains(_, _, _, hash, eq)
+          | PlannedSetInsert(_, _, _, hash, eq)
+          | PlannedSetRemove(_, _, _, hash, eq) => (hash, eq)
+          _ => continue
         }
-        let owner = match module_lookup.get(semantic_id_module(target)) {
-          Some(value) => value
-          None => continue
+        for target in [first_target, second_target] {
+          if target == 0UL || reachable.contains(target) {
+            continue
+          }
+          let owner = match module_lookup.get(semantic_id_module(target)) {
+            Some(value) => value
+            None => continue
+          }
+          let target_callable = match
+            lowering.modules[owner].functions.callable_of(target) {
+            Some(value) => value
+            None => continue
+          }
+          if target_callable.is_test && !emit_tests {
+            continue
+          }
+          reachable[target] = true
+          work.push(target)
         }
-        let target_callable = match
-          lowering.modules[owner].functions.callable_of(target) {
-          Some(value) => value
-          None => continue
-        }
-        if target_callable.is_test && !emit_tests {
-          continue
-        }
-        reachable[target] = true
-        work.push(target)
       }
     }
   }
@@ -302,174 +326,204 @@ fn program_reachable_callable_roots(
     }
   }
   for module_index, module_ in lowering.modules {
-    let resolved = analyzed.frozen.interfaces[module_index].resolved_types
     for callable in module_.functions.callables {
       if !reachable.contains(callable.declaration) {
         continue
       }
-      for index in 0..<callable.parameters.length {
-        let parameter = module_.functions.parameters[callable.parameters.start +
-          index]
-        if parameter.shape is RefPlannedValueShape {
+      for
+        module_ in compile_time_demand_modules(
+          lowering,
+          module_,
+          callable.declaration,
+          selected,
+        ) {
+        let callable = module_.functions
+          .callable_of(callable.declaration)
+          .unwrap()
+        let resolved = {
+          ..analyzed.frozen.interfaces[module_index].resolved_types,
+          types: module_.resolved_types,
+          type_arguments: module_.resolved_type_arguments,
+        }
+        for index in 0..<callable.parameters.length {
+          let parameter = module_.functions.parameters[callable.parameters.start +
+            index]
+          if compile_time_shape_has_reference(parameter.shape) {
+            ignore(
+              program_mark_resolved_nominal_roots(
+                resolved,
+                parameter.type_,
+                reachable,
+              ),
+            )
+          }
+        }
+        if compile_time_shape_has_reference(callable.result_shape) {
           ignore(
             program_mark_resolved_nominal_roots(
               resolved,
-              parameter.type_,
+              callable.result_type,
               reachable,
             ),
           )
         }
-      }
-      if callable.result_shape is RefPlannedValueShape {
-        ignore(
-          program_mark_resolved_nominal_roots(
-            resolved,
-            callable.result_type,
-            reachable,
-          ),
-        )
-      }
-      if callable.has_receiver {
-        ignore(
-          program_mark_resolved_nominal_roots(
-            resolved,
-            callable.self_type,
-            reachable,
-          ),
-        )
-      }
-      let body_id = match callable.kind {
-        PlannedFunctionCallable(body)
-        | PlannedImplMethodCallable(_, Some(body)) => body
-        _ => continue
-      }
-      let body_index = semantic_id_local(body_id)
-      if body_index < 0 || body_index >= module_.bodies.length() {
-        continue
-      }
-      let body = module_.bodies[body_index]
-      for
-        expression in body.expressions.start..<(body.expressions.start +
-        body.expressions.length) {
-        match module_.expressions[expression].kind {
-          PlannedStructNew(declaration, _, _) => reachable[declaration] = true
-          PlannedArrayLiteral(_, _, _) =>
-            reachable[standard_array_type_declaration()] = true
-          PlannedFixedArrayMake(_, _, _)
-          | PlannedFixedArrayLength(_, _)
-          | PlannedFixedArrayGet(_, _, _)
-          | PlannedFixedArrayGetUnchecked(_, _, _)
-          | PlannedFixedArraySetUnchecked(_, _, _, _) =>
-            reachable[standard_fixed_array_type_declaration()] = true
-          PlannedMapSingleton(_, _, _, _, _, _)
-          | PlannedMapEmpty(_, _, _, _)
-          | PlannedMapLength(_)
-          | PlannedMapGet(_, _, _, _, _, _)
-          | PlannedMapGetUnchecked(_, _, _, _, _, _)
-          | PlannedMapInsert(_, _, _, _, _, _, _)
-          | PlannedMapSet(_, _, _, _, _, _, _)
-          | PlannedMapContainsKey(_, _, _, _, _)
-          | PlannedMapRemove(_, _, _, _, _)
-          | PlannedMapClear(_) =>
-            reachable[standard_map_type_declaration()] = true
-          PlannedSetEmpty(_, _, _)
-          | PlannedSetSingleton(_, _, _, _)
-          | PlannedSetLength(_)
-          | PlannedSetIsEmpty(_)
-          | PlannedSetContains(_, _, _, _, _)
-          | PlannedSetInsert(_, _, _, _, _)
-          | PlannedSetRemove(_, _, _, _, _)
-          | PlannedSetClear(_) =>
-            reachable[standard_set_type_declaration()] = true
-          PlannedUnitVariant(variant, _)
-          | PlannedVariantTupleNew(variant, _, _)
-          | PlannedVariantStructNew(variant, _, _) => {
-            if module_.expressions[expression].shape is I32PlannedValueShape ||
-              module_.expressions[expression].shape is I64PlannedValueShape {
-              continue
-            }
-            match
-              program_variant_declaration(lowering, module_lookup, variant) {
-              Some(declaration) => reachable[declaration] = true
-              None => ()
-            }
-          }
-          _ => ()
+        if callable.has_receiver {
+          ignore(
+            program_mark_resolved_nominal_roots(
+              resolved,
+              callable.self_type,
+              reachable,
+            ),
+          )
         }
-      }
-      for
-        pattern in body.patterns.start..<(body.patterns.start +
-        body.patterns.length) {
-        if module_.patterns[pattern].elided {
+        let body_id = match callable.kind {
+          PlannedFunctionCallable(body)
+          | PlannedImplMethodCallable(_, Some(body)) => body
+          _ => continue
+        }
+        let body_index = semantic_id_local(body_id)
+        if body_index < 0 || body_index >= module_.bodies.length() {
           continue
         }
-        match module_.patterns[pattern].selected_constructor {
-          StructInferredPatternConstructor(declaration, _) =>
-            reachable[declaration] = true
-          VariantInferredPatternConstructor(variant, _) => {
-            if module_.patterns[pattern].shape is I32PlannedValueShape ||
-              module_.patterns[pattern].shape is I64PlannedValueShape {
-              continue
-            }
-            match
-              program_variant_declaration(lowering, module_lookup, variant) {
-              Some(declaration) => reachable[declaration] = true
-              None => ()
+        let body = module_.bodies[body_index]
+        for expression in compile_time_owned_expressions(module_, body) {
+          let value = module_.expressions[expression]
+          if !(value.kind is PlannedPoisonExpression ||
+            value.kind is PlannedConsumedExpression) &&
+            compile_time_shape_has_reference(value.shape) {
+            let root = program_body_resolved_type(module_, value.type_)
+            if root >= 0 {
+              ignore(
+                program_mark_resolved_nominal_roots(resolved, root, reachable),
+              )
             }
           }
-          _ => ()
+          match module_.expressions[expression].kind {
+            PlannedStructNew(declaration, _, _) => reachable[declaration] = true
+            PlannedArrayLiteral(_, _, _) =>
+              reachable[standard_array_type_declaration()] = true
+            PlannedFixedArrayMake(_, _, _)
+            | PlannedFixedArrayLength(_, _)
+            | PlannedFixedArrayGet(_, _, _)
+            | PlannedFixedArrayGetUnchecked(_, _, _)
+            | PlannedFixedArraySetUnchecked(_, _, _, _) =>
+              reachable[standard_fixed_array_type_declaration()] = true
+            PlannedMapSingleton(_, _, _, _, _, _)
+            | PlannedMapEmpty(_, _, _, _)
+            | PlannedMapLength(_)
+            | PlannedMapGet(_, _, _, _, _, _)
+            | PlannedMapGetUnchecked(_, _, _, _, _, _)
+            | PlannedMapInsert(_, _, _, _, _, _, _)
+            | PlannedMapSet(_, _, _, _, _, _, _)
+            | PlannedMapContainsKey(_, _, _, _, _)
+            | PlannedMapRemove(_, _, _, _, _)
+            | PlannedMapClear(_) =>
+              reachable[standard_map_type_declaration()] = true
+            PlannedSetEmpty(_, _, _)
+            | PlannedSetSingleton(_, _, _, _)
+            | PlannedSetLength(_)
+            | PlannedSetIsEmpty(_)
+            | PlannedSetContains(_, _, _, _, _)
+            | PlannedSetInsert(_, _, _, _, _)
+            | PlannedSetRemove(_, _, _, _, _)
+            | PlannedSetClear(_) =>
+              reachable[standard_set_type_declaration()] = true
+            PlannedUnitVariant(variant, _)
+            | PlannedVariantTupleNew(variant, _, _)
+            | PlannedVariantStructNew(variant, _, _) => {
+              if module_.expressions[expression].shape is I32PlannedValueShape ||
+                module_.expressions[expression].shape is I64PlannedValueShape {
+                continue
+              }
+              match
+                program_variant_declaration(lowering, module_lookup, variant) {
+                Some(declaration) => reachable[declaration] = true
+                None => ()
+              }
+            }
+            _ => ()
+          }
+        }
+        for
+          pattern in body.patterns.start..<(body.patterns.start +
+          body.patterns.length) {
+          if module_.patterns[pattern].elided {
+            continue
+          }
+          match module_.patterns[pattern].selected_constructor {
+            StructInferredPatternConstructor(declaration, _) =>
+              reachable[declaration] = true
+            VariantInferredPatternConstructor(variant, _) => {
+              if module_.patterns[pattern].shape is I32PlannedValueShape ||
+                module_.patterns[pattern].shape is I64PlannedValueShape {
+                continue
+              }
+              match
+                program_variant_declaration(lowering, module_lookup, variant) {
+                Some(declaration) => reachable[declaration] = true
+                None => ()
+              }
+            }
+            _ => ()
+          }
         }
       }
     }
   }
-  let mut type_changed = true
-  while type_changed {
-    type_changed = false
-    for module_index, module_ in lowering.modules {
-      let resolved = analyzed.frozen.interfaces[module_index].resolved_types
-      for layout in module_.type_layouts.layouts {
-        if !reachable.contains(layout.declaration) {
-          continue
-        }
-        match layout.kind {
-          PlannedStructLayout(fields) =>
-            for index in 0..<fields.length {
-              type_changed = program_mark_resolved_nominal_roots(
-                  resolved,
-                  module_.type_layouts.fields[fields.start + index].type_,
-                  reachable,
-                ) ||
-                type_changed
-            }
-          PlannedEnumLayout(variants) =>
-            for index in 0..<variants.length {
-              match
-                module_.type_layouts.variants[variants.start + index].payload {
-                PlannedUnitVariantLayout => ()
-                PlannedTupleVariantLayout(types) =>
-                  for payload_index in 0..<types.length {
-                    type_changed = program_mark_resolved_nominal_roots(
-                        resolved,
-                        module_.type_layouts.payload_types[types.start +
-                        payload_index],
-                        reachable,
-                      ) ||
-                      type_changed
-                  }
-                PlannedStructVariantLayout(fields) =>
-                  for field_index in 0..<fields.length {
-                    type_changed = program_mark_resolved_nominal_roots(
-                        resolved,
-                        module_.type_layouts.fields[fields.start + field_index].type_,
-                        reachable,
-                      ) ||
-                      type_changed
-                  }
-              }
-            }
-          PlannedForeignTypeLayout => ()
-        }
+  let nominal_work : Array[DeclId] = []
+  let nominal_seen : Map[DeclId, Bool] = {}
+  for module_ in lowering.modules {
+    for layout in module_.type_layouts.layouts {
+      if reachable.contains(layout.declaration) {
+        nominal_work.push(layout.declaration)
       }
+    }
+  }
+  while nominal_work.length() > 0 {
+    let declaration = nominal_work.pop().unwrap()
+    if nominal_seen.contains(declaration) {
+      continue
+    }
+    nominal_seen[declaration] = true
+    let owner = lowering.index.declaration_owner(declaration).unwrap()
+    let module_ = lowering.modules[owner]
+    let resolved = analyzed.frozen.interfaces[owner].resolved_types
+    let layout = module_.type_layouts.layout_of(declaration).unwrap()
+    let roots : Array[ResolvedTypeId] = []
+    match layout.kind {
+      PlannedStructLayout(fields) =>
+        for offset in 0..<fields.length {
+          roots.push(module_.type_layouts.fields[fields.start + offset].type_)
+        }
+      PlannedEnumLayout(variants) =>
+        for offset in 0..<variants.length {
+          match module_.type_layouts.variants[variants.start + offset].payload {
+            PlannedUnitVariantLayout => ()
+            PlannedTupleVariantLayout(types) =>
+              for offset in 0..<types.length {
+                roots.push(
+                  module_.type_layouts.payload_types[types.start + offset],
+                )
+              }
+            PlannedStructVariantLayout(fields) =>
+              for offset in 0..<fields.length {
+                roots.push(
+                  module_.type_layouts.fields[fields.start + offset].type_,
+                )
+              }
+          }
+        }
+      PlannedForeignTypeLayout => ()
+    }
+    for root in roots {
+      ignore(
+        program_mark_resolved_nominal_roots(
+          resolved,
+          root,
+          reachable,
+          discovered=nominal_work,
+        ),
+      )
     }
   }
   reachable
@@ -3111,13 +3165,18 @@ fn plan_program_wasmgc_fragments_for_root(
       }
     }
   }
+  let selected_demand = compile_time_demand_instances(lowering)
   let program_roots = program_reachable_callable_roots(
     analyzed,
     lowering,
     options.emit_tests,
+    selected_demand,
   )
   for module_ in lowering.modules {
-    for expression in module_.expressions {
+    for
+      expression in compile_time_demand_expressions(
+        lowering, module_, selected_demand,
+      ) {
       match expression.kind {
         PlannedArrayIter(_, _, _)
         | PlannedArrayIterHasNext(_)
@@ -3170,7 +3229,10 @@ fn plan_program_wasmgc_fragments_for_root(
   )
   let program_function_value_roots : Map[DeclId, Bool] = Map::default()
   for module_ in lowering.modules {
-    for expression in module_.expressions {
+    for
+      expression in compile_time_demand_expressions(
+        lowering, module_, selected_demand,
+      ) {
       match expression.kind {
         PlannedFunctionReference(declaration, _) =>
           program_function_value_roots[declaration] = true
@@ -3205,6 +3267,10 @@ fn plan_program_wasmgc_fragments_for_root(
             program_function_value_roots,
             extra_runtime_traits_by_module[module_index],
             generic_enum_instantiations,
+            deferred_callables=compile_time_deferred_declarations(
+              lowering,
+              lowering.modules[module_index],
+            ),
           )
           if !specialized_generic_enums {
             store_fresh(module_index, fresh)

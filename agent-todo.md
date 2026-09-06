@@ -84,15 +84,17 @@ Deferred type checking and layout work below still prevent full completion.
   - [x] Give generic lambdas exact signatures and capture layouts, including
     erased Unit slots and scalar mutable cells. Indirect call signatures use
     the caller specialization. Test both compilers and native plan round trips.
-  - [ ] Finish the earlier physical storage boundary for discarded code.
+  - [x] Finish the earlier physical storage boundary for discarded code.
     Dead locals now have an explicit elision flag, with unchanged logical types.
     Live patterns retain their literal expressions; dead pattern bindings are
     elided. Native nominal-demand scans and dead lambda signature roots honor
     pruning. Self-host nominal tables now follow selected bodies, live lambda
     captures, ABI roots, and transitive fields with a visited work queue.
     Native generic lambda templates now have no physical signature or capture
-    layout; exact live instances create them directly. Native nominal roots
-    still need exact-instance demand instead of generic-template scans.
+    layout; exact live instances create them directly. Native nominal roots now
+    follow selected logical instances before fragment planning. A visited work
+    queue follows transitive nominal fields; query-only owner types add no
+    runtime record. Positive and negative storage-demand tests pass.
 - [ ] Keep type-dependent checks inside their branch until the type is known.
   Check the selected branch with its known type facts. Both branches need valid
   syntax; unrelated source errors must not disappear.

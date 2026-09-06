@@ -1081,6 +1081,7 @@ fn wasmgc_required_nominal_declarations(
   functions : PlannedModuleFunctions,
   reachable : Array[Bool],
   program_roots : Map[DeclId, Bool],
+  deferred_callables : Map[DeclId, Bool],
 ) -> Map[DeclId, Bool] {
   let required : Map[DeclId, Bool] = Map::default()
   if program_roots.length() == 0 {
@@ -1093,7 +1094,8 @@ fn wasmgc_required_nominal_declarations(
     }
   }
   for callable_index, callable in functions.callables {
-    if !reachable[callable_index] {
+    if !reachable[callable_index] ||
+      deferred_callables.contains(callable.declaration) {
       continue
     }
     for index in 0..<callable.parameters.length {
@@ -3287,6 +3289,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
   program_function_value_roots : Map[DeclId, Bool],
   extra_runtime_traits : Array[DeclId],
   generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
+  deferred_callables? : Map[DeclId, Bool] = {},
 ) -> PlannedModuleWasmGCFragments {
   if resolved.module_id != lowering.module_id {
     abort("WasmGC fragment inputs belong to different modules")
@@ -3318,7 +3321,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     program_roots,
   )
   let required_declarations = wasmgc_required_nominal_declarations(
-    resolved, lowering, functions, reachable_functions, program_roots,
+    resolved, lowering, functions, reachable_functions, program_roots, deferred_callables,
   )
   let (sources, entity_by_declaration, source_by_variant) = wasmgc_build_physical_sources(
     layouts,
@@ -4837,6 +4840,7 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
   program_function_value_roots : Map[DeclId, Bool],
   extra_runtime_traits : Array[DeclId],
   generic_enum_instantiations : Map[DeclId, Array[Array[Int]]],
+  deferred_callables? : Map[DeclId, Bool] = {},
 ) -> PlannedModuleWasmGCFragments {
   let type_order : Array[Int] = []
   for
@@ -4852,8 +4856,17 @@ fn plan_module_wasmgc_fragments_with_options_and_roots(
     function_order.push(index)
   }
   plan_module_wasmgc_fragments_in_orders_with_instantiations(
-    resolved, lowering, imports, options, type_order, function_order, program_roots,
-    program_function_value_roots, extra_runtime_traits, generic_enum_instantiations,
+    resolved,
+    lowering,
+    imports,
+    options,
+    type_order,
+    function_order,
+    program_roots,
+    program_function_value_roots,
+    extra_runtime_traits,
+    generic_enum_instantiations,
+    deferred_callables~,
   )
 }
 

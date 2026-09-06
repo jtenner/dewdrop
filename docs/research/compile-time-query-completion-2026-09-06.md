@@ -406,6 +406,24 @@ nominal demand remain open. A fresh B/C bootstrap will run after those changes.
 The final checkpoint also passes (30.060 s); its total is 0.060 s over the
 30 s budget and remains a performance issue, not a skipped test.
 
+### Native selected-instance nominal demand
+
+Native planning now selects logical query bodies before it asks for nominal
+layouts. This preliminary work creates no physical signatures or targets and
+removes its temporary instance keys after the scan. Callable, constructor,
+pattern, iterator, and function-reference roots follow the selected bodies;
+module fragment planning does not scan generic query templates for nominal roots.
+Transitive nominal fields use a visited work queue. Ordered tuple roots retain
+their reference fields; scalarized values do not create unnecessary GC records.
+
+The negative constructor regression failed before the change (8.272 s). Positive
+and negative cases now cover selected/discarded generic constructors, recursive
+nominal fields, and query-only member owners. The complete routine native lane
+passes 863 tests (85.060 s); semantic and backend totals are 37.604 s and 35.495 s,
+still above the performance budget. Shared native Wasm generation and 57
+execution checks pass (9.239 s and 0.023 s). Guarded type checking remains the
+main unfinished query feature; final integration and B/C checks follow it.
+
 Projection owners survive zonking, body/lambda/module-value copying, compaction,
 logical query reads, signature pooling, and frozen module values. V1 body codecs
 use type tag 6 and diagnostic tag 2. New graph checks reject invalid operations
