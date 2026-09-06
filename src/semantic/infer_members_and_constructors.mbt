@@ -283,13 +283,19 @@ fn BasicBodyInferencer::infer_construct_expression(
   self.consume_member_root(target)
   match self.names.expression_references[target] {
     VariantNameReference(name) => {
-      match self.select_value_variant(
-        name, self.expression_type(expression), expression, offset,
-      ) {
+      match
+        self.select_value_variant(
+          name,
+          self.expression_type(expression),
+          expression,
+          offset,
+        ) {
         SelectedLocalValueVariant(index) =>
           self.select_variant_construction(expression, fields, index, offset)
         SelectedImportedValueVariant(variant) =>
-          self.select_imported_variant_construction(expression, fields, variant, offset)
+          self.select_imported_variant_construction(
+            expression, fields, variant, offset,
+          )
         NoSelectedValueVariant => self.fail_expression_selection(expression)
       }
       return
@@ -524,6 +530,9 @@ fn BasicBodyInferencer::try_infer_field_expression(
     return true
   }
   if !self.inspect_nominal_type(base_type) {
+    if self.defer_expression_check(expression, [base_type]) {
+      return true
+    }
     if self.type_is_variable(base_type) {
       return false
     }
@@ -611,6 +620,9 @@ fn BasicBodyInferencer::constrain_members(
     self.body.expressions.length
   while expression > self.body.expressions.start {
     expression -= 1
+    if !self.live_expression(expression) {
+      continue
+    }
     if self.expression_selections[self.expression_index(expression)] ==
       NoExpressionSelection {
       match self.collected.expressions[expression] {
@@ -623,6 +635,9 @@ fn BasicBodyInferencer::constrain_members(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     match self.collected.expressions[expression] {
       HirNameExpr(name, offset) =>
         if self.expression_selections[self.expression_index(expression)] ==
@@ -663,6 +678,9 @@ fn BasicBodyInferencer::constrain_members(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     if self.expression_selections[self.expression_index(expression)] ==
       NoExpressionSelection &&
       !self.consumed_member_roots[self.expression_index(expression)] {
@@ -676,6 +694,9 @@ fn BasicBodyInferencer::constrain_members(
   expression = self.body.expressions.start + self.body.expressions.length
   while expression > self.body.expressions.start {
     expression -= 1
+    if !self.live_expression(expression) {
+      continue
+    }
     if self.expression_selections[self.expression_index(expression)] ==
       NoExpressionSelection &&
       !self.consumed_member_roots[self.expression_index(expression)] {

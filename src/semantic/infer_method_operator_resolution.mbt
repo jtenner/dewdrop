@@ -1310,12 +1310,31 @@ fn BasicBodyInferencer::try_resolve_operator(
     return true
   }
   if self.body_impl_target_head(self.expression_type(target_expression)) is None {
+    if self.defer_expression_check(expression, [
+        self.expression_type(target_expression),
+      ]) {
+      return true
+    }
     return false
   }
   if self.type_is_error(self.expression_type(target_expression)) ||
     (right >= 0 && self.type_is_error(self.expression_type(right))) {
     self.operator_targets[self.expression_index(expression)] = ErrorInferredCallTarget
     self.poison_expression(expression)
+    return true
+  }
+  let deferred_inputs = match source {
+    HirBinaryExpr(_, left, right, _) | HirIndexExpr(left, right, _) =>
+      [self.expression_type(left), self.expression_type(right)]
+    HirIndexSetExpr(target, index, value, _) =>
+      [
+        self.expression_type(target),
+        self.expression_type(index),
+        self.expression_type(value),
+      ]
+    _ => []
+  }
+  if self.defer_expression_check(expression, deferred_inputs) {
     return true
   }
   self.collect_operator_candidates(trait_declaration, method_name)
@@ -1422,6 +1441,20 @@ fn BasicBodyInferencer::constrain_operator_calls(
     return
   }
   for expression in self.call_scratch.pending_operators {
+    let inputs = match self.collected.expressions[expression] {
+      HirBinaryExpr(_, left, right, _) | HirIndexExpr(left, right, _) =>
+        [self.expression_type(left), self.expression_type(right)]
+      HirIndexSetExpr(target, index, value, _) =>
+        [
+          self.expression_type(target),
+          self.expression_type(index),
+          self.expression_type(value),
+        ]
+      _ => []
+    }
+    if self.defer_expression_check(expression, inputs) {
+      continue
+    }
     let method_name_string = match self.collected.expressions[expression] {
       HirBinaryExpr(operator, _, _, _) =>
         binary_operator_trait(operator).unwrap().1

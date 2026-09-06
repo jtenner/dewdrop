@@ -9,6 +9,7 @@ priv enum CompileTimeGuardWalk {
 priv enum CompileTimeGuardFact {
   TraitGuardFact(ResolvedTypeId, ResolvedTypeId)
   EqualGuardFact(ResolvedTypeId, ResolvedTypeId)
+  ConditionalGuardFact(ExprId, Bool)
 } derive(Eq)
 
 ///|
@@ -58,6 +59,9 @@ fn BasicBodyInferencer::guarded_trait_obligation(
 
 ///|
 fn compile_time_guard_builtin(name : Bytes) -> Bool {
+  name == b"types.is_integer" ||
+  name == b"types.is_signed_integer" ||
+  name == b"types.is_float" ||
   name == b"types.implements" ||
   name == b"types.type_equal" ||
   name == b"types.is_unit" ||
@@ -115,7 +119,7 @@ fn BasicBodyInferencer::guard_condition_facts(
         work.push((left, false))
         work.push((right, false))
       }
-      HirCallExpr(target, arguments, _) if truth && arguments.length == 0 => {
+      HirCallExpr(target, arguments, _) if arguments.length == 0 => {
         let declaration = match self.names.expression_references[target] {
           ModuleValueNameReference(name) => {
             let binding = self.collected.value_bindings[name]
@@ -139,10 +143,11 @@ fn BasicBodyInferencer::guard_condition_facts(
           None => continue
         }
         let arguments = self.explicit_call_type_arguments(expression)
-        let count = if name == b"types.is_unit" || name == b"types.is_never" {
-          1
-        } else {
+        let count = if name == b"types.implements" ||
+          name == b"types.type_equal" {
           2
+        } else {
+          1
         }
         if arguments.length != count {
           continue
@@ -154,6 +159,23 @@ fn BasicBodyInferencer::guard_condition_facts(
           abort("ARN-101 guarded trait query type arguments")
         }
         let left = self.resolved.explicit_call_type_arguments[arguments.start]
+        let dependent = impl_type_contains_generic(self.resolved, left) ||
+          (
+            count == 2 &&
+            impl_type_contains_generic(
+              self.resolved,
+              self.resolved.explicit_call_type_arguments[arguments.start + 1],
+            )
+          )
+        if dependent {
+          facts.push(ConditionalGuardFact(expression, truth))
+        }
+        if !truth ||
+          name == b"types.is_integer" ||
+          name == b"types.is_signed_integer" ||
+          name == b"types.is_float" {
+          continue
+        }
         let right = if count == 2 {
           self.resolved.explicit_call_type_arguments[arguments.start + 1]
         } else if name == b"types.is_unit" {

@@ -270,7 +270,9 @@ fn BasicBodyInferencer::apply_explicit_call_type_arguments(
   }
   for index in 0..<candidate_count {
     self.call_scratch.candidate_type_arguments[candidate_start + index] = self.solver.resolved_type(
-      self.resolved.explicit_call_type_arguments[explicit.start + index],
+      self.source_resolved_type(
+        self.resolved.explicit_call_type_arguments[explicit.start + index],
+      ),
     )
   }
   true
@@ -1236,6 +1238,9 @@ fn BasicBodyInferencer::constrain_calls(self : BasicBodyInferencer) -> Unit {
   while call_slot > 0 {
     call_slot -= 1
     let expression = self.call_expressions[call_slot]
+    if !self.live_expression(expression) {
+      continue
+    }
     match self.collected.expressions[expression] {
       HirCallExpr(target, arguments, offset) =>
         self.prepare_call(call_slot, expression, target, arguments, offset)

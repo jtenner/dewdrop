@@ -47,6 +47,22 @@ fn query_unit_join<t>(fallback: t) -> t {
   }
 }
 
+fn query_deferred_field<t>(value: t) -> I32 {
+  if is_unit::<t>() {
+    0i32
+  } else {
+    value.value
+  }
+}
+
+fn query_integer_twice<t>(value: t) -> t {
+  if is_integer::<t>() {
+    value + value
+  } else {
+    value
+  }
+}
+
 fn query_negated_unit_join<t>(fallback: t) -> t {
   if !is_unit::<t>() {
     fallback
@@ -640,6 +656,13 @@ pub fn main(case: U32) -> Bool {
     query_guarded_into(QueryLeft::{
       value: 76i32
     }) == 76i64
+  } else if case == 76u32 {
+    query_deferred_field(()) == 0i32 && query_deferred_field(QueryLeft::{
+      value: 77i32
+    }) == 77i32
+  } else if case == 77u32 {
+    query_integer_twice(())
+    query_integer_twice(39i64) == 78i64 && query_integer_twice(21u32) == 42u32 && query_integer_twice(3.5f32) == 3.5f32
   } else {
     false
   }

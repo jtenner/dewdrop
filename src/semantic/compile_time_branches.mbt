@@ -93,6 +93,7 @@ fn compile_time_push_expression(
       }
     }
     PlannedPoisonExpression
+    | PlannedDeferredExpression
     | PlannedConsumedExpression
     | PlannedI8Const(_)
     | PlannedI16Const(_)

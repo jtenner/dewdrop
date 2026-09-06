@@ -1576,6 +1576,7 @@ fn ib_write_selection(
   match value {
     NoExpressionSelection => writer.write_byte(0)
     ErrorExpressionSelection => writer.write_byte(1)
+    DeferredExpressionSelection => writer.write_byte(8)
     StructConstructionSelection(d, s) => {
       writer.write_byte(2)
       ib_write_id(writer, d)
@@ -1616,6 +1617,7 @@ fn ib_read_selection(
   match reader.read_byte(field) {
     0 => NoExpressionSelection
     1 => ErrorExpressionSelection
+    8 => DeferredExpressionSelection
     2 =>
       StructConstructionSelection(
         ib_read_id(reader, field),

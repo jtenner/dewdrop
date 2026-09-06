@@ -1292,6 +1292,8 @@ pub struct IndexedTraitMethodDispatch {
   method_index : Int
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
+type InferenceReachability
+
 pub struct InferenceSnapshot {
   undo_start : Int
   variable_count : Int
@@ -1320,6 +1322,7 @@ pub enum InferredCallTarget {
 pub enum InferredExpressionSelection {
   NoExpressionSelection
   ErrorExpressionSelection
+  DeferredExpressionSelection
   StructConstructionSelection(UInt64, HirSpan)
   VariantConstructionSelection(UInt64, HirSpan)
   UnitVariantValueSelection(UInt64, HirSpan)
@@ -1690,6 +1693,7 @@ pub struct PlannedExpression {
 
 pub enum PlannedExpressionKind {
   PlannedPoisonExpression
+  PlannedDeferredExpression
   PlannedConsumedExpression
   PlannedI8Const(UInt64)
   PlannedI16Const(UInt64)

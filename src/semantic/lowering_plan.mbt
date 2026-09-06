@@ -24,6 +24,7 @@ pub enum PlannedValueShape {
 ///|
 pub enum PlannedExpressionKind {
   PlannedPoisonExpression
+  PlannedDeferredExpression
   PlannedConsumedExpression
   PlannedI8Const(UInt64)
   PlannedI16Const(UInt64)
@@ -923,6 +924,7 @@ fn plan_expression_kind(
   }
   match inferred.expression_selections[expression] {
     ErrorExpressionSelection => return PlannedPoisonExpression
+    DeferredExpressionSelection => return PlannedDeferredExpression
     StructConstructionSelection(declaration, type_arguments) =>
       match collected.expressions[expression] {
         HirObjectExpr(fields, _) | HirConstructExpr(_, fields, _) =>
@@ -1670,6 +1672,7 @@ fn plan_body_lowering_job(
   flows : AnalyzedModuleFlows,
   body : HirBody,
   lambda : LambdaId,
+  reachability? : InferenceReachability? = None,
 ) -> BodyLoweringPlanJob {
   let diagnostics : Array[LoweringPlanDiagnostic] = []
   let consumed = Array::make(body.expressions.length, false)
@@ -1681,6 +1684,9 @@ fn plan_body_lowering_job(
   while expression > body.expressions.start {
     expression -= 1
     let local_index = expression - body.expressions.start
+    if reachability is Some(live) && !live.expressions[expression] {
+      continue
+    }
     expressions[local_index] = {
       type_: inferred.expression_types[expression],
       shape: planned_value_shape(
@@ -2167,6 +2173,7 @@ fn plan_module_lowering_in_order(
   inferred : InferredModuleBodies,
   flows : AnalyzedModuleFlows,
   order : Array[Int],
+  reachability? : InferenceReachability? = None,
 ) -> PlannedModuleLowering {
   if collected.module_id != resolved.module_id ||
     collected.module_id != type_layouts.module_id ||
@@ -2203,6 +2210,7 @@ fn plan_module_lowering_in_order(
         flows,
         collected.bodies[body_index],
         -1,
+        reachability~,
       ),
     )
   }
@@ -2221,6 +2229,7 @@ fn plan_module_lowering_in_order(
         flows,
         lowering_lambda_body(collected, lambda),
         lambda.id,
+        reachability~,
       ),
     )
   }

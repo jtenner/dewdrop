@@ -8573,6 +8573,7 @@ fn starshine_emit_body_instructions(
               None => return Err(UnsupportedExpression(body.body, expression))
             }
           @semantic.PlannedPoisonExpression
+          | @semantic.PlannedDeferredExpression
           | @semantic.PlannedConsumedExpression =>
             return Err(UnsupportedExpression(body.body, expression))
         }

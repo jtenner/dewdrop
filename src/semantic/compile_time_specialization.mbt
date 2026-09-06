@@ -260,7 +260,7 @@ fn compile_time_specialization_key(
   }
   let instances = [owner]
   prepare_program_optimization_mutation(instances)
-  let instance = {
+  let mut instance = {
     ..instances[0],
     diagnostics: [],
     lambdas: owner.lambdas.copy(),
@@ -277,15 +277,33 @@ fn compile_time_specialization_key(
       parameters: owner.functions.parameters.copy(),
     },
   }
+  let needs_recheck = compile_time_body_needs_recheck(
+    context, owner_index, declaration,
+  )
+  let conditions = if needs_recheck { Some(Map([])) } else { None }
   fold_module_compile_time_queries(
     context,
     owner_index,
     instance,
     bindings,
     Some(declaration),
+    selected_conditions=conditions,
   )
+  if conditions is Some(conditions) {
+    instance = recheck_compile_time_body(
+      context, owner_index, declaration, bindings, conditions, instance,
+    )
+  }
   materialize_compile_time_instance_types(
-    context, owner, instance, bindings, declaration,
+    context,
+    if needs_recheck {
+      instance
+    } else {
+      owner
+    },
+    instance,
+    bindings,
+    declaration,
   )
   context.instances[key] = {
     module_: instance,

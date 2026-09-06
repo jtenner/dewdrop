@@ -1108,6 +1108,9 @@ fn BasicBodyInferencer::infer_pattern(
   while self.call_scratch.pattern_tasks.length() > 0 {
     let pattern = self.call_scratch.pattern_tasks.pop().unwrap()
     let expected = self.call_scratch.pattern_task_types.pop().unwrap()
+    if !self.live_pattern(pattern) {
+      continue
+    }
     self.pattern_types[pattern - self.body.patterns.start] = expected
     match self.collected.patterns[pattern] {
       HirWildcardPattern(_) => ()

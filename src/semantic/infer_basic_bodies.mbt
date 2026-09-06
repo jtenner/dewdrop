@@ -683,6 +683,8 @@ priv struct BasicBodyInferencer {
   solver : LocalTypeSolver
   pending_member_equations : Array[PendingBodyMemberEquation]
   guarded_trait_scopes : Map[ExprId, Array[CompileTimeGuardFact]]
+  reachability : InferenceReachability?
+  deferred_types : Array[BodyTypeId]
   mut guarded_trait_scopes_ready : Bool
   pending_guarded_joins : Array[ExprId]
   mut guard_builtin_cache : Map[DeclId, Bytes]?
@@ -767,6 +769,7 @@ fn BasicBodyInferencer::new(
   solver : LocalTypeSolver,
   call_scratch : CallInferenceScratch,
   module_values : ModuleValueInferenceContext?,
+  reachability? : InferenceReachability? = None,
 ) -> BasicBodyInferencer {
   let name_info = names.body(body.id).unwrap()
   {
@@ -787,6 +790,8 @@ fn BasicBodyInferencer::new(
     solver,
     pending_member_equations: [],
     guarded_trait_scopes: {},
+    reachability,
+    deferred_types: [],
     guarded_trait_scopes_ready: false,
     pending_guarded_joins: [],
     guard_builtin_cache: None,
@@ -877,6 +882,7 @@ fn BasicBodyInferencer::new_lambda(
   solver : LocalTypeSolver,
   call_scratch : CallInferenceScratch,
   module_values : ModuleValueInferenceContext?,
+  reachability? : InferenceReachability? = None,
 ) -> BasicBodyInferencer {
   let root_body = collected.bodies[semantic_id_local(lambda.root_body)]
   let body : HirBody = {
@@ -911,6 +917,7 @@ fn BasicBodyInferencer::new_lambda(
     solver,
     call_scratch,
     module_values,
+    reachability~,
   )
   inferencer.lambda = lambda.id
   inferencer.local_span = name_info.locals
@@ -951,6 +958,9 @@ fn BasicBodyInferencer::expression_type(
   self : BasicBodyInferencer,
   expression : ExprId,
 ) -> BodyTypeId {
+  if !self.live_expression(expression) {
+    return self.solver.error_type()
+  }
   self.guard_refined_type(
     self.expression_types[self.expression_index(expression)],
     expression,
@@ -962,6 +972,9 @@ fn BasicBodyInferencer::block_type(
   self : BasicBodyInferencer,
   block : BlockId,
 ) -> BodyTypeId {
+  if !self.live_block(block) {
+    return self.solver.error_type()
+  }
   self.block_types[self.block_index(block)]
 }
 
@@ -1591,6 +1604,9 @@ fn BasicBodyInferencer::constrain_function_references(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     if self.is_function_reference(expression) {
       continue
     }
@@ -1689,6 +1705,9 @@ fn BasicBodyInferencer::initialize_expression_types(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     match self.collected.expressions[expression] {
       HirPrefixExpr(HirNegative, operand, _) =>
         negated_boundary_literals[operand] = true
@@ -1698,6 +1717,9 @@ fn BasicBodyInferencer::initialize_expression_types(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     let type_ = match self.collected.expressions[expression] {
       HirI8Expr(value, offset) =>
         if value <= 0x7FUL ||
@@ -1862,6 +1884,7 @@ fn BasicBodyInferencer::body_signature_type(
   self : BasicBodyInferencer,
   root : ResolvedTypeId,
 ) -> BodyTypeId {
+  let root = self.source_resolved_type(root)
   if self.body.kind != ImplMethodBody {
     return self.solver.resolved_type(root)
   }
@@ -1895,6 +1918,10 @@ fn BasicBodyInferencer::initialize_local_types(
   self : BasicBodyInferencer,
 ) -> Unit {
   for local_id in 0..<self.local_span.length {
+    if !self.live_local(local_id) {
+      self.local_types[local_id] = self.solver.error_type()
+      continue
+    }
     let local_info = self.names.locals[self.local_span.start + local_id]
     self.local_types[local_id] = match local_info.kind {
       ParameterLocal =>
@@ -1918,6 +1945,10 @@ fn BasicBodyInferencer::initialize_block_types(
   for
     block in self.body.blocks.start..<(self.body.blocks.start +
     self.body.blocks.length) {
+    if !self.live_block(block) {
+      self.block_types[self.block_index(block)] = self.solver.error_type()
+      continue
+    }
     let block_data = self.collected.blocks[block]
     let type_ = if block_data.items.length == 0 {
       unit
@@ -1941,6 +1972,9 @@ fn BasicBodyInferencer::constrain_block_expression_types(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     match self.collected.expressions[expression] {
       HirBlockExpr(block, offset) =>
         // Products can already hold the expression's original type variable.
@@ -2383,6 +2417,9 @@ fn BasicBodyInferencer::constrain_name_expressions(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     match self.collected.expressions[expression] {
       HirNameExpr(_, _) =>
         match self.names.expression_references[expression] {
@@ -2424,6 +2461,9 @@ fn BasicBodyInferencer::constrain_block_items(
     self.body.block_items.length) {
     match self.collected.block_items[item] {
       HirLetItem(_, _, name_offset, value, _) => {
+        if !self.live_expression(value) {
+          continue
+        }
         let local_id = self.names.block_item_locals[item]
         self.constrain(
           self.local_types[local_id],
@@ -2737,6 +2777,9 @@ fn BasicBodyInferencer::constrain_control_results(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     match self.collected.expressions[expression] {
       HirBreakExpr(_, _) => {
         let control = self.names.transfer_targets[expression]
@@ -2795,6 +2838,9 @@ fn BasicBodyInferencer::constrain_expressions(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     match self.collected.expressions[expression] {
       HirI8Expr(_, _)
       | HirI16Expr(_, _)
@@ -3054,6 +3100,9 @@ fn BasicBodyInferencer::validate_field_assignments(
   for
     expression in self.body.expressions.start..<(self.body.expressions.start +
     self.body.expressions.length) {
+    if !self.live_expression(expression) {
+      continue
+    }
     match self.collected.expressions[expression] {
       HirAssignmentExpr(target, _, offset) =>
         match self.collected.expressions[target] {
@@ -3861,6 +3910,7 @@ fn merge_body_inference_jobs(
               length: arguments.length,
             })
           NoExpressionSelection => NoExpressionSelection
+          DeferredExpressionSelection => DeferredExpressionSelection
           ErrorExpressionSelection => ErrorExpressionSelection
         }
       }
@@ -4097,6 +4147,7 @@ fn merge_body_inference_jobs(
               length: arguments.length,
             })
           NoExpressionSelection => NoExpressionSelection
+          DeferredExpressionSelection => DeferredExpressionSelection
           ErrorExpressionSelection => ErrorExpressionSelection
         }
       }
@@ -4268,6 +4319,7 @@ fn infer_module_bodies_with_imports_in_order_and_family_cache(
   names : ResolvedModuleNames,
   order : Array[Int],
   cached_families : Array[BodyInferenceFamilyArtifact?],
+  reachability? : InferenceReachability? = None,
 ) -> Result[BodyInferenceFamilyAnalysis, String] {
   guard collected.module_id == resolved.module_id &&
     collected.module_id == names.module_id else {
@@ -4378,6 +4430,7 @@ fn infer_module_bodies_with_imports_in_order_and_family_cache(
         solver,
         call_scratch,
         module_values,
+        reachability~,
       ).run(),
     )
   }
@@ -4414,8 +4467,20 @@ fn infer_module_bodies_with_imports_in_order_and_family_cache(
     }
     lambda_jobs[lambda_index] = Some(
       BasicBodyInferencer::new_lambda(
-        collected, resolved, imports, impl_index, names, lambda, capture_types, callable_indices,
-        variant_spans, field_spans, solver, call_scratch, module_values,
+        collected,
+        resolved,
+        imports,
+        impl_index,
+        names,
+        lambda,
+        capture_types,
+        callable_indices,
+        variant_spans,
+        field_spans,
+        solver,
+        call_scratch,
+        module_values,
+        reachability~,
       ).run(),
     )
   }

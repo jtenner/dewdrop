@@ -158,6 +158,7 @@ pub enum InferredObjectFieldTarget {
 pub enum InferredExpressionSelection {
   NoExpressionSelection
   ErrorExpressionSelection
+  DeferredExpressionSelection
   StructConstructionSelection(DeclId, HirSpan)
   VariantConstructionSelection(VariantId, HirSpan)
   UnitVariantValueSelection(VariantId, HirSpan)

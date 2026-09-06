@@ -148,6 +148,7 @@ fn fold_module_compile_time_queries(
   module_ : PlannedModuleLowering,
   bindings : Map[GenericParameterId, CompileTimeType],
   active : DeclId?,
+  selected_conditions? : Map[ExprId, Bool]? = None,
 ) -> Unit {
   let mut has_queries = false
   for source in module_.expressions {
@@ -219,6 +220,16 @@ fn fold_module_compile_time_queries(
     }
   }
   fold_program_constants([module_])
+  if selected_conditions is Some(conditions) {
+    for expression, source in context.program.modules[module_index].expressions {
+      if compile_time_in_body(module_, expression, active) &&
+        source is HirIfExpr(condition, _, _, _) {
+        if module_.expressions[condition].kind is PlannedBoolConst(value) {
+          conditions[expression] = value
+        }
+      }
+    }
+  }
   prune_compile_time_branches(module_, active)
   if evidence is Some(search) {
     resolve_compile_time_guarded_evidence(

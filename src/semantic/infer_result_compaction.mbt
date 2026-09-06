@@ -130,6 +130,7 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
         }
       NoExpressionSelection
       | ErrorExpressionSelection
+      | DeferredExpressionSelection
       | FieldAccessSelection(_, _)
       | ImportedModuleValueSelection(_)
       | FunctionReferenceSelection(_, _) => ()
@@ -172,7 +173,8 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
         self.consumed_member_roots.length() == 0 ||
         !self.consumed_member_roots[index]
       ) &&
-      self.solver.has_unresolved_variable(frozen) {
+      self.solver.has_unresolved_variable(frozen) &&
+      !self.has_deferred_type(frozen) {
       self.diagnose(
         UnresolvedExpressionType(
           expression,
@@ -190,7 +192,8 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
       ),
     )
     self.local_types[local_id] = frozen
-    if self.solver.has_unresolved_variable(frozen) {
+    if self.solver.has_unresolved_variable(frozen) &&
+      !self.has_deferred_type(frozen) {
       let local_info = self.names.locals[self.local_span.start + local_id]
       self.diagnose(
         if self.lambda >= 0 {
