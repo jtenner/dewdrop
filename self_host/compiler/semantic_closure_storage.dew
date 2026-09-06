@@ -16,7 +16,7 @@ fn self_host_capture_has_value(shape: SelfHostPlannedValueShape) -> Bool {
 
 fn self_host_local_has_capture(module_: SelfHostPlannedModuleLowering, local: SelfHostPlannedLocal) -> Bool {
   for capture in module_.captures {
-    if self_host_capture_source_is_local(capture.source, local) {
+    if self_host_capture_source_is_local(capture.source, local) && self_host_compile_time_lambda_is_live(module_, capture.lambda) {
       return true
     }
   }

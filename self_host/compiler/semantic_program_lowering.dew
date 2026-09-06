@@ -719,6 +719,9 @@ fn self_host_program_lowering_expression_error(
 fn self_host_validate_program_lowering(
   lowering: SelfHostPlannedProgramLowering,
 ) -> Option<String> {
+  if lowering.compile_time.diagnostics.length() > 0u32 {
+    return Option::Some(lowering.compile_time.diagnostics[0u32])
+  }
   match self_host_validate_collected_program_storage(lowering.collected) {
     Option::Some(error) => {
       let message = StringBuilder::new()
@@ -1768,7 +1771,7 @@ fn self_host_plan_program_lowering(
       break self_host_semantic_unit()
     }
   }
-  SelfHostPlannedProgramLowering::{
+  let result = SelfHostPlannedProgramLowering::{
     collected: frozen.collected
     modules: modules
     index: SelfHostProgramLoweringIndex::{
@@ -1778,6 +1781,8 @@ fn self_host_plan_program_lowering(
     elided_trait_wrappers: []
     compile_time: self_host_compile_time_program_context(frozen, modules)
   }
+  self_host_fold_program_compile_time_queries(result)
+  result
 }
 
 // These compiler-only intrinsics read the physical Wasm Array length.

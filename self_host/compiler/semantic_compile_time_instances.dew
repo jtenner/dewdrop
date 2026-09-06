@@ -1,0 +1,81 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+fn self_host_clone_compile_time_module(source: SelfHostPlannedModuleLowering) -> SelfHostPlannedModuleLowering {
+  SelfHostPlannedModuleLowering::{
+    module_id: source.module_id
+    names: source.names.copy()
+    name_diagnostics: source.name_diagnostics.copy()
+    resolved_types: source.resolved_types
+    type_layouts: source.type_layouts
+    initialization: source.initialization
+    functions: source.functions
+    bodies: source.bodies.copy()
+    lambdas: source.lambdas.copy()
+    locals: source.locals.copy()
+    captures: source.captures.copy()
+    expressions: source.expressions.copy()
+    blocks: source.blocks.copy()
+    block_items: source.block_items.copy()
+    object_fields: source.object_fields.copy()
+    named_fields: source.named_fields.copy()
+    named_variants: source.named_variants.copy()
+    patterns: source.patterns.copy()
+    pattern_fields: source.pattern_fields.copy()
+    pattern_arms: source.pattern_arms.copy()
+    expression_children: source.expression_children.copy()
+    pattern_children: source.pattern_children.copy()
+    arm_children: source.arm_children.copy()
+    inferred: source.inferred
+    evidence: source.evidence
+    flow_diagnostics: source.flow_diagnostics.copy()
+  }
+}
+
+fn self_host_program_function_lowering(lowering: SelfHostPlannedProgramLowering, owner: U32, specialization: U32) -> SelfHostPlannedModuleLowering {
+  self_host_assert_array_index(owner, lowering.modules.length(), "ARN-104 selected module owner")
+  match lowering.compile_time.instances.get(specialization) {
+    Option::Some(instance) => {
+      let module_ = instance.module_
+      self_host_assert_compiler_invariant(module_.module_id == lowering.modules[owner].module_id, "LNK-504 selected query instance has the wrong owner")
+      module_
+    }
+    Option::None => lowering.modules[owner]
+  }
+}
+
+fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLowering, specialization: U32, requests: Array<SelfHostProgramSpecializationRequest>) -> Unit {
+  self_host_assert_array_index(specialization, requests.length(), "SPC-301 query instance request")
+  let request = requests[specialization]
+  if !lowering.compile_time.sensitive.contains_key(request.declaration) {
+    return
+  }
+  match lowering.compile_time.instances.get(specialization) {
+    Option::Some(instance) => {
+      self_host_assert_compiler_invariant(instance.declaration == request.declaration && self_host_specialization_evidence_types_equal(instance.evidence_types, request.evidence_types), "SPC-302 query instance request identity changed")
+      return
+    }
+    Option::None => {}
+  }
+  let owner = match lowering.index.declaration_owner(request.declaration) {
+    Option::Some(owner) => owner
+    Option::None => {
+      self_host_assert_compiler_invariant(false, "LNK-504 query instance has no module owner")
+      unreachable()
+    }
+  }
+  let module_ = self_host_clone_compile_time_module(lowering.modules[owner])
+  let caller = self_host_program_specialization_callable(module_, request.declaration)
+  let bindings = self_host_compile_time_caller_bindings(caller, specialization, requests)
+  lowering.compile_time.instances.set(specialization, SelfHostCompileTimeInstance::{
+    declaration: request.declaration
+    evidence_types: request.evidence_types.copy()
+    module_: module_
+  })
+  for body in module_.bodies {
+    if body.declaration == request.declaration {
+      self_host_fold_compile_time_body(lowering, module_, body, specialization, bindings)
+    }
+  }
+}

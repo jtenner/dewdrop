@@ -1419,6 +1419,31 @@ impl SelfHostTypeResolver {
     }
   }
 
+  fn resolve_expression_type_arguments(self, owner: U64, expressions: SelfHostHirSpan) -> Unit {
+    self_host_assert_array_span(expressions.start, expressions.length, self.collected.expressions.length(), "ARN-104 explicit type argument expressions")
+    let _ = while 0u32 {
+      offset => if offset < expressions.length {
+        let expression = expressions.start + offset
+        if expression < self.collected.explicit_call_type_argument_spans.length() {
+          let span = self.collected.explicit_call_type_argument_spans[expression]
+          self_host_assert_array_span(span.start, span.length, self.collected.explicit_call_type_arguments.length(), "ARN-104 explicit type arguments")
+          let _ = while 0u32 {
+            argument => if argument < span.length {
+              let index = span.start + argument
+              self.explicit_call_type_arguments[index] = self.resolve_syntax(owner, self.collected.explicit_call_type_arguments[index], false)
+              continue argument + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+        continue offset + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+
   fn resolve_signatures(self) -> Unit {
     self.resolve_reserved_names()
     let mut generic_parameter_index = 0u32
@@ -1495,6 +1520,7 @@ impl SelfHostTypeResolver {
           false,
         )
         self.lambda_return_types[current_lambda] = resolved_return
+        self.resolve_expression_type_arguments(body.declaration, lambda.body.expressions)
         continue current_lambda + 1u32
       } else {
         break self_host_semantic_unit()
@@ -1504,37 +1530,7 @@ impl SelfHostTypeResolver {
     let _ = while body_index {
       current_body => if current_body < self.collected.bodies.length() {
         let body = self.collected.bodies[current_body]
-        let mut expression = body.expressions.start
-        let _ = while expression {
-          current => if current < self_host_u32_add(
-            body.expressions.start,
-            body.expressions.length,
-          ) {
-            if current < self.collected.explicit_call_type_argument_spans.length() {
-              let span = self.collected.explicit_call_type_argument_spans[current]
-              let mut argument = span.start
-              let _ = while argument {
-                argument_index => if argument_index < self_host_u32_add(
-                  span.start,
-                  span.length,
-                ) {
-                  let resolved = self.resolve_syntax(
-                    body.declaration,
-                    self.collected.explicit_call_type_arguments[argument_index],
-                    false,
-                  )
-                  self.explicit_call_type_arguments[argument_index] = resolved
-                  continue argument_index + 1u32
-                } else {
-                  break self_host_semantic_unit()
-                }
-              }
-            }
-            continue current + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
+        self.resolve_expression_type_arguments(body.declaration, body.expressions)
         continue current_body + 1u32
       } else {
         break self_host_semantic_unit()

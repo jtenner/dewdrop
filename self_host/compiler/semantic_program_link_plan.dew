@@ -1001,6 +1001,10 @@ fn self_host_validate_program_representation(
 fn self_host_validate_program_wasmgc_link(
   link: SelfHostPlannedProgramWasmGCLink,
 ) -> Option<String> {
+  let queries = link.fragments.specialization.lowering.compile_time.diagnostics
+  if queries.length() > 0u32 {
+    return Option::Some(queries[0u32])
+  }
   if self_host_u32_equal(link.diagnostics.length(), 0u32) {
     Option::None
   } else {

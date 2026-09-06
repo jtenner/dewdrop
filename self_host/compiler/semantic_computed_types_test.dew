@@ -86,3 +86,46 @@ test "computed parser keeps split generic closers and rejects non-string selecto
     Result::Ok(_) => assert(false, "non-string selector must be a parse error")
   }
 }
+
+test "computed generic aliases normalize explicit call arguments" {
+  let collected = self_host_collect_bytes(
+    24714u64,
+    b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nstruct Box<t> {\n item: t\n}\ntype Item<t> = member<Box<t>>(\"item\")\nfn identity<t>(value: t) -> t {\n value\n}\nfn use(value: Item<I64>) -> member<Box<I64>>(\"item\") {\n identity::<Item<I64>>(value)\n}\n",
+  )
+  assert(collected.diagnostic_count() == 0u32, "generic projection alias syntax")
+  let resolved = self_host_resolve_module_types(collected)
+  for diagnostic in resolved.diagnostics {
+    match diagnostic {
+      SelfHostTypeDiagnostic::ComputedTypeFailure(_, message, _) => assert(false, message)
+      _ => assert(false, "unexpected generic projection diagnostic")
+    }
+  }
+  assert(resolved.explicit_call_type_arguments.length() == 1u32, "one explicit logical argument")
+  assert(resolved.explicit_call_type_arguments[0u32] == resolved.primitive(SelfHostPrimitiveType::I64Type), "generic projection alias must normalize to I64")
+}
+
+test "imported computed builtins normalize generic aliases in calls" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\nstruct Box<t> {\n item: t\n}\ntype Item<t> = member<Box<t>>(\"item\")\nfn identity<t>(value: t) -> t {\n value\n}\nfn use(value: Item<I64>) -> member<Box<I64>>(\"item\") {\n identity::<Item<I64>>(value)\n}\n",
+    b"pub builtin member<t>(name: String) -> Type = \"types.field_type\"\n",
+  )
+  let resolved = fixture.frozen.interfaces.at(0u32).resolved_types
+  for diagnostic in resolved.diagnostics {
+    match diagnostic {
+      SelfHostTypeDiagnostic::ComputedTypeFailure(_, message, _) => assert(false, message)
+      _ => assert(false, "unexpected imported generic projection diagnostic")
+    }
+  }
+  assert(resolved.explicit_call_type_arguments.length() == 1u32, "one imported query call type argument")
+  assert(resolved.explicit_call_type_arguments[0u32] == resolved.primitive(SelfHostPrimitiveType::I64Type), "imported generic projection alias must normalize to I64")
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  for diagnostic in lowering.modules[0u32].inferred.diagnostics {
+    assert(false, self_host_inference_diagnostic_name(diagnostic))
+  }
+  for type_ in lowering.modules[0u32].inferred.call_type_arguments {
+    match self_host_read_compile_time_type(lowering.modules[0u32], type_, self_host_empty_compile_time_bindings(), 0u32) {
+      Result::Ok(value) => self_host_test_query_bool(b"types.type_equal", [value, SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I64Type)], true)
+      Result::Err(error) => assert(false, error)
+    }
+  }
+}

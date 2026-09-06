@@ -99,6 +99,12 @@ fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering
               report.append(" owner=")
               report.append_u64(owner)
             }
+            SelfHostTypeDiagnostic::ComputedTypeFailure(owner, message, _) => {
+              report.append(" owner=")
+              report.append_u64(owner)
+              report.append(" message=")
+              report.append(message)
+            }
             _ => {}
           }
           signature_shown = signature_shown + 1u32

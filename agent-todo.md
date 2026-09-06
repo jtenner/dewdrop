@@ -21,7 +21,8 @@ for the exact tested scope and the remaining work. September 6 progress is in
 [`docs/research/compile-time-query-completion-2026-09-06.md`](docs/research/compile-time-query-completion-2026-09-06.md).
 The native path now has 19
 query/assertion declarations, logical generic keys, selected IR bodies, and
-physical-boundary checks. This is not yet self-host parity or the full feature.
+physical-boundary checks. Both compilers pass the 32 shared execution checks.
+Deferred type checking and layout work below still prevent full completion.
 
 - [ ] Add real type-valued expressions for `field_type` and
   `variant_payload_types`. The user confirmed that the results must work in
@@ -34,25 +35,26 @@ physical-boundary checks. This is not yet self-host parity or the full feature.
   - [x] Port inline computed member syntax and local/imported generic member
     resolution to the self-host parser and resolver; test exact source errors.
   - [ ] Add local compile-time type bindings.
-- [ ] Add `field_names` and `variant_names`. Preserve declaration identity and
+- [x] Add `field_names` and `variant_names`. Preserve declaration identity and
   source order, including imported and generic types.
   - [x] Native folding and fresh string-array constants, with Wasm execution tests.
-  - [ ] Self-host folding and shared execution fixtures.
+  - [x] Self-host folding and shared execution fixtures.
 - [ ] Define valid layout-query types for `size_of`, `align_of`, and
   `field_offset`. WasmGC object byte layouts are not exposed; never invent them.
   - [x] Native scalar `size_of`/`align_of`; GC objects and unsupported layouts
     produce errors. Unit has size 0/alignment 1; Never has no layout.
-  - [ ] Self-host scalar queries and an explicit aggregate layout contract for
-    `field_offset` (GC field indices are not byte offsets).
-- [ ] Port all query, trait search, assertion, and logical instance handling to
+  - [x] Self-host scalar queries, checked with the same native fixtures.
+  - [ ] An explicit aggregate layout contract for `field_offset` (GC field
+    indices are not byte offsets).
+- [x] Port the existing query, trait search, assertion, and logical instance handling to
   the self-host compiler. Check both compilers with the same execution fixtures.
   - [x] Match the native compile-time `Type` identity and reject runtime storage,
     including aliases, nested generic arguments, tuples, and function signatures.
     Keep numeric records for invalid internal type indices and spans.
   - [x] Add the self-host pure scalar evaluator and structural logical types.
     Test pending/error separation, nested type identity, lanes, and scalar layout.
-  - [ ] Connect the evaluator to specialization and emission; standalone evaluator
-    tests do not prove that self-host source calls are folded.
+  - [x] Connect the evaluator to specialization and emission. Shared source tests
+    cover generic forwarding, lambdas, names, assertions, and scalar layouts.
 - [x] Add native `is_unit::<t>()` as a pure compiler builtin with no Wasm call.
   Test the logical type: Unit is true, other known types are false, and unknown
   types stay pending. Never is not Unit. Resolve the query by identity, not by
@@ -60,6 +62,8 @@ physical-boundary checks. This is not yet self-host parity or the full feature.
 - [ ] Replace the query with a Boolean constant in each specialized body, then
   replace the `if` with its selected branch. Keep the shared generic body intact.
   This must run in debug builds too, before physical storage and call planning.
+  - [x] Private selected bodies now fold in both paths.
+  - [ ] Finish the earlier physical storage boundary and generic lambda layouts.
 - [ ] Keep type-dependent checks inside their branch until the type is known.
   Check the selected branch with its known type facts. Both branches need valid
   syntax; unrelated source errors must not disappear.

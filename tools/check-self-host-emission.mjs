@@ -13,6 +13,7 @@ import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs"
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { checkRawGcStorage } from "./raw-gc-storage-cases.mjs";
 import { checkRawGcUnit } from "./raw-gc-unit-cases.mjs";
+import { checkTypeQueries } from "./type-query-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
@@ -139,6 +140,25 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const request = await readFile(".tmp/self-host-hardening/type-queries.request.bin");
+  const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+  console.log(`self-host type-query checks passed: ${checkTypeQueries(exports.main)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host type-query corpus failed", error);
+}
+try {
+  const start = performance.now();
+  const source = await readFile("tools/dew-test/type_query_branches.dew", "utf8");
+  const main = await compileSource(source);
+  assert.equal(main(), 13234, "selected compile-time generic branches");
+  console.log(`self-host type-query branch checks passed (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host type-query branch probe failed", error);
+}
 for (const [name, expected] of [
   ["self_host_emit_raw_bitcast_probe", -1],
   ["self_host_emit_raw_opcode_probe", 42],

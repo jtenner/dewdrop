@@ -20607,6 +20607,22 @@ fn self_host_emit_linked_i32_expression(
               true,
               destination,
             )
+            SelfHostPlannedExpressionKind::PlannedUnitConst => {}
+            SelfHostPlannedExpressionKind::PlannedStringArrayConst(values) => {
+              for value in values {
+                self_host_emit_linked_text_constant(link, value, true, destination)
+              }
+              StarshineFfi.ffi_ffi_bridge_instructions_push(
+                destination,
+                StarshineFfi.ffi_lib_Instruction_array_new_fixed(
+                  StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(self_host_linked_array_runtime_base(link) + 5u32)),
+                  StarshineFfi.ffi_lib_U32_new(self_host_u32_to_i32(values.length())),
+                ),
+              )
+              StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(self_host_u32_to_i32(values.length()))))
+              StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(self_host_u32_to_i32(values.length()))))
+              StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_struct_new(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(self_host_linked_array_wrapper_type(link)))))
+            }
             SelfHostPlannedExpressionKind::PlannedBytesConst(value) => self_host_emit_linked_text_constant(
               link,
               value,
@@ -31455,9 +31471,7 @@ fn self_host_linked_function_name(
   link: SelfHostPlannedProgramWasmGCLink,
   linked_function: SelfHostPlannedProgramWasmFunction,
 ) -> Bytes {
-  let module_ = link.fragments.specialization.lowering.modules[
-    linked_function.module_index
-  ]
+  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, linked_function.module_index, linked_function.specialization)
   match self_host_program_specialization_callable(
     module_,
     linked_function.declaration,
@@ -31478,9 +31492,7 @@ fn self_host_linked_function_returns_array_element(
       return false
     }
   }
-  let module_ = link.fragments.specialization.lowering.modules[
-    linked_function.module_index
-  ]
+  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, linked_function.module_index, linked_function.specialization)
   let body = match self_host_linked_i32_body(module_, body_id) {
     Option::Some(value) => value
     Option::None => {
@@ -39455,9 +39467,7 @@ fn self_host_certify_one_physical_method_call_error(
 ) -> Option<String> {
   for plan in body_plan.bodies {
     if plan.module_index < link.fragments.specialization.lowering.modules.length() {
-      let module_ = link.fragments.specialization.lowering.modules[
-        plan.module_index
-      ]
+      let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
       match self_host_body_lookup_for_plan(module_, plan) {
         Option::Some(body) => for expression_plan in plan.expressions {
           if self_host_u32_equal(
@@ -40123,9 +40133,7 @@ fn self_host_validate_emitted_local_carriers(
 ) -> Option<String> {
   for plan in body_plan.bodies {
     if plan.module_index < link.fragments.specialization.lowering.modules.length() {
-      let module_ = link.fragments.specialization.lowering.modules[
-        plan.module_index
-      ]
+      let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
       match self_host_body_lookup_for_plan(module_, plan) {
         Option::Some(body) => {
           for expression_plan in plan.expressions {
@@ -40489,9 +40497,7 @@ fn build_self_host_linked_i32_module(
         )
         match fragment.kind {
           SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(body_id) => {
-            let lowering_module = link.fragments.specialization.lowering.modules[
-              linked_function.module_index
-            ]
+            let lowering_module = self_host_program_function_lowering(link.fragments.specialization.lowering, linked_function.module_index, linked_function.specialization)
             let body = match self_host_linked_i32_body(lowering_module, body_id) {
               Option::Some(value) => value
               Option::None => {
@@ -40572,9 +40578,7 @@ fn build_self_host_linked_i32_module(
           SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(
             lambda_id,
           ) => {
-            let lowering_module = link.fragments.specialization.lowering.modules[
-              linked_function.module_index
-            ]
+            let lowering_module = self_host_program_function_lowering(link.fragments.specialization.lowering, linked_function.module_index, linked_function.specialization)
             let body = match self_host_linked_lambda_body(
               lowering_module,
               lambda_id,

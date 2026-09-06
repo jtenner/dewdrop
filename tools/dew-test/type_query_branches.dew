@@ -1,0 +1,30 @@
+// Shared native/self-host source fixture. Metadata, not these local names,
+// selects the compile-time operations.
+builtin unit_query<t>() -> Bool = "types.is_unit"
+builtin same_query<a, b>() -> Bool = "types.type_equal"
+builtin require_query(condition: Bool, message: String) -> Unit = "types.static_assert"
+
+fn choose<t>() -> I32 {
+  if unit_query::<t>() {
+    require_query(true, "selected Unit branch")
+    11i32
+  } else {
+    22i32
+  }
+}
+
+fn forward<t>() -> I32 {
+  choose::<t>()
+}
+
+fn signed<t>() -> I32 {
+  if same_query::<t, I8>() {
+    3i32
+  } else {
+    4i32
+  }
+}
+
+pub fn main() -> I32 {
+  forward::<Unit>() * 1000i32 + forward::<I32>() * 100i32 + signed::<I8>() * 10i32 + signed::<U8>()
+}

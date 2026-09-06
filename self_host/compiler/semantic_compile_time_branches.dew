@@ -1,0 +1,311 @@
+open dew.std.array
+
+enum SelfHostCompileTimeReachTask {
+  ExpressionCompileTimeReach(U32)
+  BlockCompileTimeReach(U32)
+}
+
+fn self_host_compile_time_owned_expressions(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Array<U32> {
+  let spans = [body.expressions]
+  for lambda in module_.lambdas {
+    if lambda.root_body == body.body {
+      spans.push(lambda.expressions)
+    }
+  }
+  let result = self_host_u32_slots(0u32, 0u32)
+  for span in spans {
+    self_host_assert_array_span(span.start, span.length, module_.expressions.length(), "ARN-101 compile-time owned expressions")
+    let _ = while 0u32 {
+      offset => if offset < span.length {
+        result.push(span.start + offset)
+        continue offset + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+  result
+}
+
+fn self_host_compile_time_lambda_is_live(module_: SelfHostPlannedModuleLowering, lambda: U32) -> Bool {
+  for expression in module_.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedLambdaClosure(target) => if target == lambda {
+        return true
+      }
+      _ => {}
+    }
+  }
+  false
+}
+
+fn self_host_compile_time_replace_kind(source: SelfHostPlannedExpression, kind: SelfHostPlannedExpressionKind) -> SelfHostPlannedExpression {
+  SelfHostPlannedExpression::{
+    type_: source.type_
+    shape: source.shape
+    nominal: source.nominal
+    flow: source.flow
+    kind: kind
+    selection: source.selection
+    reference: if kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression {
+      SelfHostBodyNameReference::NoNameReference
+    } else {
+      source.reference
+    }
+    call_target: SelfHostBasicCallTarget::NoBasicCallTarget
+    call_type_arguments: SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    source_name: source.source_name
+    member_base: source.member_base
+    offset: source.offset
+  }
+}
+
+fn self_host_compile_time_push_children(module_: SelfHostPlannedModuleLowering, span: SelfHostHirSpan, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
+  self_host_assert_array_span(span.start, span.length, module_.expression_children.length(), "ARN-101 compile-time expression children")
+  let _ = while 0u32 {
+    index => if index < span.length {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(module_.expression_children[span.start + index]))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_compile_time_push_arms(module_: SelfHostPlannedModuleLowering, span: SelfHostHirSpan, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
+  self_host_assert_array_span(span.start, span.length, module_.arm_children.length(), "ARN-101 compile-time arms")
+  let _ = while 0u32 {
+    index => if index < span.length {
+      let arm_id = module_.arm_children[span.start + index]
+      self_host_assert_array_index(arm_id, module_.pattern_arms.length(), "ARN-104 compile-time arm")
+      let arm = module_.pattern_arms[arm_id]
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(arm.guard_condition))
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(arm.body))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_compile_time_push_root(root: SelfHostHirBodyRoot, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
+  match root {
+    SelfHostHirBodyRoot::ExpressionBodyRoot(value) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostHirBodyRoot::BlockBodyRoot(block) => work.push(SelfHostCompileTimeReachTask::BlockCompileTimeReach(block))
+  }
+}
+
+// Exhaustive evaluation edges. A new IR node must declare its children here.
+fn self_host_compile_time_push_expression(module_: SelfHostPlannedModuleLowering, kind: SelfHostPlannedExpressionKind, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
+  match kind {
+    SelfHostPlannedExpressionKind::PlannedPoisonExpression => {}
+    SelfHostPlannedExpressionKind::PlannedConsumedExpression => {}
+    SelfHostPlannedExpressionKind::PlannedUnitConst => {}
+    SelfHostPlannedExpressionKind::PlannedI8Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedI16Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedI32Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedI64Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedU8Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedU16Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedU32Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedU64Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedF32Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedF64Const(_) => {}
+    SelfHostPlannedExpressionKind::PlannedBoolConst(_) => {}
+    SelfHostPlannedExpressionKind::PlannedStringConst(_) => {}
+    SelfHostPlannedExpressionKind::PlannedStringArrayConst(_) => {}
+    SelfHostPlannedExpressionKind::PlannedBytesConst(_) => {}
+    SelfHostPlannedExpressionKind::PlannedLocalGet(_) => {}
+    SelfHostPlannedExpressionKind::PlannedCaptureGet(_) => {}
+    SelfHostPlannedExpressionKind::PlannedModuleValueGet(_) => {}
+    SelfHostPlannedExpressionKind::PlannedFunctionReference(_) => {}
+    SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => work.push(SelfHostCompileTimeReachTask::BlockCompileTimeReach(block))
+    SelfHostPlannedExpressionKind::PlannedIfExpression(condition, block, alternative) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(condition))
+      work.push(SelfHostCompileTimeReachTask::BlockCompileTimeReach(block))
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(alternative))
+    }
+    SelfHostPlannedExpressionKind::PlannedProductNew(children) => self_host_compile_time_push_children(module_, children, work)
+    SelfHostPlannedExpressionKind::PlannedArrayLiteral(children) => self_host_compile_time_push_children(module_, children, work)
+    SelfHostPlannedExpressionKind::PlannedConstruct(receiver, arguments, _) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(receiver))
+      self_host_compile_time_push_children(module_, arguments, work)
+    }
+    SelfHostPlannedExpressionKind::PlannedObjectNew(fields) => {
+      self_host_assert_array_span(fields.start, fields.length, module_.object_fields.length(), "ARN-101 compile-time object fields")
+      let _ = while 0u32 {
+        index => if index < fields.length {
+          work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(module_.object_fields[fields.start + index].value))
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    SelfHostPlannedExpressionKind::PlannedMatchExpression(value, arms) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+      self_host_compile_time_push_arms(module_, arms, work)
+    }
+    SelfHostPlannedExpressionKind::PlannedWhileExpression(_, value, arms) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+      self_host_compile_time_push_arms(module_, arms, work)
+    }
+    SelfHostPlannedExpressionKind::PlannedReturnExpression(value) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostPlannedExpressionKind::PlannedBreakExpression(_, value) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostPlannedExpressionKind::PlannedContinueExpression(_, value) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostPlannedExpressionKind::PlannedPrefixExpression(_, value) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostPlannedExpressionKind::PlannedFieldGet(_, value, _) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostPlannedExpressionKind::PlannedUnresolvedField(value, _) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostPlannedExpressionKind::PlannedProductField(value, _, _) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostPlannedExpressionKind::PlannedLocalSet(_, value) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostPlannedExpressionKind::PlannedCaptureSet(_, value) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    SelfHostPlannedExpressionKind::PlannedBinaryExpression(_, left, right) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(left))
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(right))
+    }
+    SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, left, right, _) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(left))
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(right))
+    }
+    SelfHostPlannedExpressionKind::PlannedIndexGet(left, right, _) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(left))
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(right))
+    }
+    SelfHostPlannedExpressionKind::PlannedFieldSet(_, left, right) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(left))
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(right))
+    }
+    SelfHostPlannedExpressionKind::PlannedIndexSet(receiver, index, value, _) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(receiver))
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(index))
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+    }
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, receiver, arguments, _) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(receiver))
+      self_host_compile_time_push_children(module_, arguments, work)
+    }
+    SelfHostPlannedExpressionKind::PlannedDirectCall(_, receiver, arguments, _) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(receiver))
+      self_host_compile_time_push_children(module_, arguments, work)
+    }
+    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(receiver, arguments, _) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(receiver))
+      self_host_compile_time_push_children(module_, arguments, work)
+    }
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(receiver, arguments) => {
+      work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(receiver))
+      self_host_compile_time_push_children(module_, arguments, work)
+    }
+    SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda) => {
+      let mut found = false
+      for value in module_.lambdas {
+        if value.lambda == lambda {
+          found = true
+          self_host_compile_time_push_root(value.root, work)
+        }
+      }
+      let _ = self_host_assert_compiler_invariant(found, "ARN-104 compile-time closure target")
+    }
+  }
+}
+
+fn self_host_prune_compile_time_body(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Array<Bool> {
+  let live = self_host_bool_slots(module_.expressions.length(), false)
+  let blocks = self_host_bool_slots(module_.blocks.length(), false)
+  let work = [SelfHostCompileTimeReachTask::BlockCompileTimeReach(0u32)]
+  work.clear()
+  self_host_compile_time_push_root(body.root, work)
+  let _ = while work.length() {
+    length => if length > 0u32 {
+      let task = work[length - 1u32]
+      work.truncate(length - 1u32)
+      match task {
+        SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(index) => if index != 4294967295u32 {
+          self_host_assert_array_index(index, live.length(), "ARN-104 compile-time reached expression")
+          if !live[index] {
+            live[index] = true
+            let source = module_.expressions[index]
+            // Directization consumes a method's field-selection node, not its
+            // runtime receiver. That evaluation edge is retained in metadata.
+            if source.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression && source.member_base != 4294967295u32 {
+              work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(source.member_base))
+            }
+            match source.kind {
+              SelfHostPlannedExpressionKind::PlannedIfExpression(condition, block, alternative) => {
+                self_host_assert_array_index(condition, module_.expressions.length(), "ARN-104 compile-time condition")
+                match module_.expressions[condition].kind {
+                  SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
+                    self_host_assert_array_index(block, module_.blocks.length(), "ARN-104 compile-time selected block")
+                    if !value {
+                      // Keep the alternative's own coercion boundary and ID.
+                      let selected = module_.blocks[block]
+                      let start = module_.block_items.length()
+                      let present = alternative != 4294967295u32
+                      if present {
+                        module_.block_items.push(SelfHostPlannedBlockItem::{
+                          kind: SelfHostPlannedBlockItemKind::PlannedExpressionItem(alternative)
+                          offset: source.offset
+                        })
+                      }
+                      module_.blocks[block] = SelfHostPlannedBlock::{
+                        items: SelfHostHirSpan::{
+                          start: start
+                          length: if present {
+                            1u32
+                          } else {
+                            0u32
+                          }
+                        }
+                        flow: if present {
+                          module_.expressions[alternative].flow
+                        } else {
+                          self_host_flow_falls_through()
+                        }
+                        offset: selected.offset
+                      }
+                    }
+                    module_.expressions[index] = self_host_compile_time_replace_kind(source, SelfHostPlannedExpressionKind::PlannedBlockExpression(block))
+                  }
+                  _ => {}
+                }
+              }
+              _ => {}
+            }
+            self_host_compile_time_push_expression(module_, module_.expressions[index].kind, work)
+          }
+        }
+        SelfHostCompileTimeReachTask::BlockCompileTimeReach(index) => {
+          self_host_assert_array_index(index, blocks.length(), "ARN-104 compile-time reached block")
+          if !blocks[index] {
+            blocks[index] = true
+            let span = module_.blocks[index].items
+            self_host_assert_array_span(span.start, span.length, module_.block_items.length(), "ARN-101 compile-time block items")
+            let _ = while 0u32 {
+              offset => if offset < span.length {
+                match module_.block_items[span.start + offset].kind {
+                  SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+                  SelfHostPlannedBlockItemKind::PlannedLetItem(_, _, value) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
+                }
+                continue offset + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+        }
+      }
+      continue work.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  for index in self_host_compile_time_owned_expressions(module_, body) {
+      if !live[index] {
+        module_.expressions[index] = self_host_compile_time_replace_kind(module_.expressions[index], SelfHostPlannedExpressionKind::PlannedPoisonExpression)
+      }
+  }
+  live
+}

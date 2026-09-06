@@ -1,0 +1,326 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+open dew.std.result
+
+fn self_host_compile_time_match(pattern: SelfHostCompileTimeType, actual: SelfHostCompileTimeType, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<Bool, String> {
+  let work = [SelfHostCompileTimeTypePair::{
+    left: pattern
+    right: actual
+  }]
+  let mut steps = 0u32
+  while work.length() {
+    length => if length > 0u32 {
+      if steps >= 65536u32 {
+        return Result::Err("CT-012 trait pattern traversal limit exceeded")
+      }
+      steps = steps + 1u32
+      let pair = work[length - 1u32]
+      work.truncate(length - 1u32)
+      let left = self_host_empty_compile_time_types()
+      let right = self_host_empty_compile_time_types()
+      match pair.left {
+        SelfHostCompileTimeType::ParameterCompileTimeType(parameter) => match bindings.get(parameter) {
+          Option::Some(previous) => match self_host_compile_time_types_equal(previous, pair.right) {
+            Result::Ok(equal) => if !equal {
+              return Result::Ok(false)
+            }
+            Result::Err(error) => return Result::Err(error)
+          }
+          Option::None => bindings.set(parameter, pair.right)
+        }
+        SelfHostCompileTimeType::ProductCompileTimeType(fields) => match pair.right {
+          SelfHostCompileTimeType::ProductCompileTimeType(others) => {
+            for value in fields {
+              left.push(value)
+            }
+            for value in others {
+              right.push(value)
+            }
+          }
+          _ => return Result::Ok(false)
+        }
+        SelfHostCompileTimeType::AppliedCompileTimeType(base, fields) => match pair.right {
+          SelfHostCompileTimeType::AppliedCompileTimeType(other, others) => {
+            left.push(base)
+            right.push(other)
+            for value in fields {
+              left.push(value)
+            }
+            for value in others {
+              right.push(value)
+            }
+          }
+          _ => return Result::Ok(false)
+        }
+        SelfHostCompileTimeType::FunctionCompileTimeType(fields, result) => match pair.right {
+          SelfHostCompileTimeType::FunctionCompileTimeType(others, other) => {
+            left.push(result)
+            right.push(other)
+            for value in fields {
+              left.push(value)
+            }
+            for value in others {
+              right.push(value)
+            }
+          }
+          _ => return Result::Ok(false)
+        }
+        _ => match self_host_compile_time_types_equal(pair.left, pair.right) {
+          Result::Ok(equal) => if !equal {
+            return Result::Ok(false)
+          }
+          Result::Err(error) => return Result::Err(error)
+        }
+      }
+      if left.length() != right.length() {
+        return Result::Ok(false)
+      }
+      let _ = while 0u32 {
+        index => if index < left.length() {
+          work.push(SelfHostCompileTimeTypePair::{
+            left: left[index]
+            right: right[index]
+          })
+          continue index + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue work.length()
+    } else {
+      break Result::Ok(true)
+    }
+  }
+}
+
+struct SelfHostCompileTimeEvidenceSearch {
+  collected: SelfHostCollectedModule
+  module_: SelfHostPlannedModuleLowering
+  imports: SelfHostResolvedModuleImports
+  index: SelfHostModuleImplIndex
+  active: Array<SelfHostCompileTimeTypePair>
+  mut steps: U32
+  include_test_impls: Bool
+}
+
+struct SelfHostCompileTimePrerequisite {
+  parameter: U64
+  type_: U32
+}
+
+fn self_host_empty_compile_time_prerequisites() -> Array<SelfHostCompileTimePrerequisite> {
+  []
+}
+
+impl SelfHostCompileTimeEvidenceSearch {
+  fn read(self, type_: U32, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<SelfHostCompileTimeType, String> {
+    self_host_read_compile_time_resolved_type(self.module_, type_, bindings, 0u32)
+  }
+
+  fn prerequisites(self, declaration: U64, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<Bool, String> {
+    let obligations = self_host_empty_compile_time_prerequisites()
+    if self_host_semantic_id_module(declaration) == self.collected.module_id {
+      let generics = self.collected.generic_parameters_of(declaration)
+      let _ = while 0u32 {
+        offset => if offset < generics.length {
+          let generic = self.collected.generic_parameters[generics.start + offset]
+          let span = generic.bounds
+          if !self_host_array_span_is_valid(span.start, span.length, self.imports.resolved.generic_bound_types.length()) {
+            return Result::Err("CT-010 invalid local trait prerequisite span")
+          }
+          let _ = while 0u32 {
+            bound => if bound < span.length {
+              obligations.push(SelfHostCompileTimePrerequisite::{
+                parameter: generic.id
+                type_: self.imports.resolved.generic_bound_types[span.start + bound]
+              })
+              continue bound + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          continue offset + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    } else {
+      let imported = match self.imports.implementation(declaration) {
+        Option::Some(value) => value
+        Option::None => return Result::Err("CT-010 missing imported implementation identity")
+      }
+      let generics = imported.generic_bounds
+      if generics.length != imported.generic_parameters.length ||
+        !self_host_array_span_is_valid(generics.start, generics.length, self.imports.generic_parameter_ids.length()) ||
+        !self_host_array_span_is_valid(generics.start, generics.length, self.imports.generic_parameter_bounds.length()) {
+        return Result::Err("CT-010 invalid imported generic parameter spans")
+      }
+      let _ = while 0u32 {
+        offset => if offset < generics.length {
+          let parameter = self.imports.generic_parameter_ids[generics.start + offset]
+          let span = self.imports.generic_parameter_bounds[generics.start + offset]
+          if !self_host_array_span_is_valid(span.start, span.length, self.imports.generic_bound_types.length()) {
+            return Result::Err("CT-010 invalid imported trait prerequisite span")
+          }
+          let _ = while 0u32 {
+            bound => if bound < span.length {
+              obligations.push(SelfHostCompileTimePrerequisite::{
+                parameter: parameter
+                type_: self.imports.generic_bound_types[span.start + bound]
+              })
+              continue bound + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+          continue offset + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    for obligation in obligations {
+      let target = match bindings.get(obligation.parameter) {
+        Option::Some(value) => value
+        Option::None => return Result::Err("CT-011 unresolved implementation type argument")
+      }
+      let trait_ = match self.read(obligation.type_, bindings) {
+        Result::Ok(value) => value
+        Result::Err(error) => return Result::Err(error)
+      }
+      match self.search(target, trait_) {
+        Result::Ok(value) => if !value {
+          return Result::Ok(false)
+        }
+        Result::Err(error) => return Result::Err(error)
+      }
+    }
+    Result::Ok(true)
+  }
+
+  fn search(self, target: SelfHostCompileTimeType, trait_: SelfHostCompileTimeType) -> Result<Bool, String> {
+    if self.steps >= 65536u32 || self.active.length() >= 256u32 {
+      return Result::Err("CT-012 trait evidence search limit exceeded")
+    }
+    self.steps = self.steps + 1u32
+    for active in self.active {
+      match self_host_compile_time_types_equal(active.left, target) {
+        Result::Ok(equal) => if equal {
+          match self_host_compile_time_types_equal(active.right, trait_) {
+            Result::Ok(same) => if same {
+              return Result::Err("CT-013 cyclic trait prerequisite")
+            }
+            Result::Err(error) => return Result::Err(error)
+          }
+        }
+        Result::Err(error) => return Result::Err(error)
+      }
+    }
+    let base = match trait_ {
+      SelfHostCompileTimeType::AppliedCompileTimeType(base, _) => base
+      value => value
+    }
+    let declaration = match base {
+      SelfHostCompileTimeType::TraitCompileTimeType(declaration) => declaration
+      _ => return Result::Err("CT-014 implements requires a trait as its second argument")
+    }
+    match self_host_compile_time_types_concrete([target, trait_]) {
+      Result::Ok(concrete) => if !concrete {
+        return Result::Err("CT-011 unresolved trait prerequisite")
+      }
+      Result::Err(error) => return Result::Err(error)
+    }
+    let depth = self.active.length()
+    self.active.push(SelfHostCompileTimeTypePair::{
+      left: target
+      right: trait_
+    })
+    let result = self.search_candidates(target, trait_, declaration)
+    self_host_assert_compiler_invariant(self.active.length() == depth + 1u32, "INV-001 trait search active obligations must be LIFO")
+    self.active.truncate(depth)
+    result
+  }
+
+  fn search_candidates(self, target: SelfHostCompileTimeType, trait_: SelfHostCompileTimeType, declaration: U64) -> Result<Bool, String> {
+    let mut matches = 0u32
+    for implementation in self.index.implementations {
+      let relevant = match implementation.kind {
+        SelfHostIndexedImplKind::TraitIndexedImpl(owner) => owner == declaration
+        _ => false
+      }
+      if relevant && (self.include_test_impls || !self.collected.declaration_is_test_only(implementation.declaration)) {
+        let bindings = self_host_empty_compile_time_bindings()
+        let candidate = match self.read(implementation.target_type, bindings) {
+          Result::Ok(value) => value
+          Result::Err(error) => return Result::Err(error)
+        }
+        let compatible = match self_host_compile_time_match(candidate, target, bindings) {
+          Result::Ok(value) => value
+          Result::Err(error) => return Result::Err(error)
+        }
+        if compatible {
+          let trait_type = match implementation.trait_type {
+            Option::Some(type_) => type_
+            Option::None => return Result::Err("CT-010 trait implementation has no trait type")
+          }
+          let candidate_trait = match self.read(trait_type, bindings) {
+            Result::Ok(value) => value
+            Result::Err(error) => return Result::Err(error)
+          }
+          let compatible_trait = match self_host_compile_time_match(candidate_trait, trait_, bindings) {
+            Result::Ok(value) => value
+            Result::Err(error) => return Result::Err(error)
+          }
+          if compatible_trait {
+            if !implementation.valid || !implementation.coherent {
+              return Result::Err("CT-015 invalid or ambiguous trait implementation")
+            }
+            match self.prerequisites(implementation.declaration, bindings) {
+              Result::Ok(value) => if value {
+                matches = matches + 1u32
+              }
+              Result::Err(error) => return Result::Err(error)
+            }
+            if matches > 1u32 {
+              return Result::Err("CT-015 multiple compatible trait implementations")
+            }
+          }
+        }
+      }
+    }
+    Result::Ok(matches == 1u32)
+  }
+}
+
+fn self_host_evaluate_compile_time_implements(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, types: Array<SelfHostCompileTimeType>, declaration: U64) -> Result<Option<SelfHostCompileTimeConstant>, String> {
+  if types.length() != 2u32 {
+    return Result::Err("CT-001 implements requires two type arguments")
+  }
+  match self_host_compile_time_types_concrete(types) {
+    Result::Ok(concrete) => if !concrete {
+      return Result::Ok(Option::None)
+    }
+    Result::Err(error) => return Result::Err(error)
+  }
+  let owner = match lowering.index.declaration_owner(declaration) {
+    Option::Some(owner) => owner
+    Option::None => return Result::Err("CT-010 trait query has no caller module")
+  }
+  let context = lowering.compile_time
+  let collected = lowering.collected.modules.at(owner)
+  let imports = self_host_resolve_module_imports(context.frozen.interfaces.at(owner).resolved_types, context.frozen.import_scopes.at(owner))
+  let search = SelfHostCompileTimeEvidenceSearch::{
+    collected: collected
+    module_: module_
+    imports: imports
+    index: self_host_index_module_implementations_with_imports(collected, imports)
+    active: []
+    steps: 0u32
+    include_test_impls: collected.declaration_is_test_only(declaration)
+  }
+  match search.search(types[0u32], types[1u32]) {
+    Result::Ok(value) => Result::Ok(Option::Some(SelfHostCompileTimeConstant::BoolCompileTimeConstant(value)))
+    Result::Err(error) => Result::Err(error)
+  }
+}

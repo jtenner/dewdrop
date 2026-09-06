@@ -61,6 +61,7 @@ fn bootstrap_module_required(name : String) -> Bool {
     | "dew.std.string_builder"
     | "dew.std.testing"
     | "dew.std.text_runtime"
+    | "dew.std.types"
     | "dew.std.wasm.intrinsics" => true
     _ => false
   }

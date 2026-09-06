@@ -73,6 +73,17 @@ fn query_marked<t>() -> Bool {
   implements::<t, QueryMark>()
 }
 
+fn query_lambda<t>() -> U32 {
+  let read = fn() -> U32 {
+    if is_unit::<t>() {
+      3u32
+    } else {
+      4u32
+    }
+  }
+  read()
+}
+
 pub fn main(case: U32) -> Bool {
   if case == 0u32 {
     is_unit::<Nothing>()
@@ -141,6 +152,11 @@ pub fn main(case: U32) -> Bool {
     size_of::<I8>() == 1u32 && align_of::<I64>() == 8u32
   } else if case == 28u32 {
     size_of::<Unit>() == 0u32 && align_of::<Unit>() == 1u32 && size_of::<V128>() == 16u32
+  } else if case == 29u32 {
+    static_assert(bit_width::<I16>() == 16u32, "logical width")
+    true
+  } else if case == 30u32 {
+    query_lambda::<Unit>() == 3u32 && query_lambda::<I32>() == 4u32
   } else {
     false
   }

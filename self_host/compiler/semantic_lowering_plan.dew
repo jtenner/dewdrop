@@ -15,6 +15,7 @@ fn self_host_lowering_u32_set(
 pub enum SelfHostPlannedExpressionKind {
   PlannedPoisonExpression
   PlannedConsumedExpression
+  PlannedUnitConst
   PlannedI8Const(U64)
   PlannedI16Const(U64)
   PlannedI32Const(U64)
@@ -27,6 +28,7 @@ pub enum SelfHostPlannedExpressionKind {
   PlannedF64Const(F64)
   PlannedBoolConst(Bool)
   PlannedStringConst(Bytes)
+  PlannedStringArrayConst(Array<Bytes>)
   PlannedBytesConst(Bytes)
   PlannedLocalGet(U32)
   PlannedCaptureGet(U32)

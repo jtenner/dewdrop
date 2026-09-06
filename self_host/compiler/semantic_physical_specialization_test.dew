@@ -902,9 +902,25 @@ pub fn self_host_emission_probe_compile_request(source: BytesBuilder) -> Bytes {
       unreachable()
     }
   }
-  let link = self_host_physical_test_manifest_link(
-    self_host_manifest_with_default_preamble(request.manifest, request.default_preamble),
-  )
+  let manifest = self_host_manifest_with_default_preamble(request.manifest, request.default_preamble)
+  let collected = self_host_collect_program_manifest(5500u64, manifest)
+  assert(collected.diagnostics.length() == 0u32, "request manifest collection")
+  let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
+  match self_host_validate_program_inference(lowering) {
+    Option::Some(error) => {
+      assert(false, error)
+      unreachable()
+    }
+    Option::None => {}
+  }
+  match self_host_validate_program_lowering(lowering) {
+    Option::Some(error) => {
+      assert(false, error)
+      unreachable()
+    }
+    Option::None => {}
+  }
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(lowering, false)), false)
   self_host_physical_test_assert_clean_inference(link)
   let root = match request.root_module_index() {
     Option::Some(value) => value

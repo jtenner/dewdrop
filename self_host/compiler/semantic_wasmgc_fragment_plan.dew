@@ -564,7 +564,11 @@ fn self_host_wasmgc_function_kind(
   callable: SelfHostPlannedCallable,
 ) -> SelfHostPlannedWasmFunctionKind {
   match callable.kind {
-    SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name)
+    SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if self_host_is_compile_time_builtin(name) {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction
+    } else {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name)
+    }
     SelfHostPlannedCallableKind::PlannedForeignCallable(library, field) => SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(library, field)
     SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(body)
     SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, body) => match body {
@@ -808,7 +812,7 @@ fn self_host_wasmgc_plan_closures(
   let _ = while lambda_index {
     current => if current < module_.lambdas.length() {
       let lambda = module_.lambdas[current]
-      if !self_host_lambda_owner_is_generic(module_, lambda.root_body) {
+      if !self_host_lambda_owner_is_generic(module_, lambda.root_body) && self_host_compile_time_lambda_is_live(module_, lambda.lambda) {
         lambda_type_indices[current] = self_host_wasmgc_append_lambda_closure(module_, lambda, Option::None, 4294967295u32, [], physical_types, fields)
       }
       continue current + 1u32
@@ -881,7 +885,7 @@ fn self_host_plan_program_wasmgc_fragments(
       let mut lambda_index = 0u32
       let _ = while lambda_index {
         lambda => if lambda < source.lambdas.length() {
-          if !self_host_lambda_owner_is_generic(source, source.lambdas[lambda].root_body) {
+          if !self_host_lambda_owner_is_generic(source, source.lambdas[lambda].root_body) && self_host_compile_time_lambda_is_live(source, source.lambdas[lambda].lambda) {
             lambda_function_indices[lambda] = functions.length()
             self_host_wasmgc_append_lambda_function(
               source,
@@ -916,7 +920,7 @@ fn self_host_plan_program_wasmgc_fragments(
               )
               Option::None => {}
             }
-            self_host_wasmgc_append_specialized_lambdas(source, selected, request, specialization.shapes, physical_types, fields, functions, value_types)
+            self_host_wasmgc_append_specialized_lambdas(self_host_program_function_lowering(specialization.lowering, current, request), selected, request, specialization.shapes, physical_types, fields, functions, value_types)
           }
           continue request + 1u32
         } else {

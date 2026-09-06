@@ -180,7 +180,7 @@ fn self_host_wasmgc_append_specialized_lambdas(module_: SelfHostPlannedModuleLow
   }
   for lambda in module_.lambdas {
     match self_host_lambda_owner_callable(module_, lambda.root_body) {
-      Option::Some(owner) => if self_host_u64_equal(owner.declaration, request.declaration) {
+      Option::Some(owner) => if self_host_u64_equal(owner.declaration, request.declaration) && self_host_compile_time_lambda_is_live(module_, lambda.lambda) {
         let _ = self_host_wasmgc_append_lambda_closure(module_, lambda, Option::Some(request), request_index, shapes, physical_types, fields)
         self_host_wasmgc_append_lambda_function_for_request(module_, lambda, Option::Some(request), request_index, shapes, functions, value_types)
       }

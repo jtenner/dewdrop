@@ -36,7 +36,6 @@ are performance defects, not hidden passes under the timing policy.
 
 ## Still active
 
-- Self-host evaluation and structural logical instances, including name queries.
 - Deferred member types and local compile-time type bindings.
 - Guarded type checking and refreshing flow after branch selection.
 - Early pruning of physical dependencies and unused storage.
@@ -75,3 +74,38 @@ A source test forwards `I8` and `U8` through `outer<T>` into `inner<Box<T>>` and
 checks that both logical requests survive. The hardening suite passes 176 tests
 and the existing record and execution probes. Folding into per-request bodies
 and using those bodies at every emission boundary remains the next step.
+
+## Self-host source-call folding and physical closure
+
+The evaluator now folds source calls in private per-request module arenas. Call
+scanning, fragment planning, body planning, verification, and emission select the
+same instance. Its request record retains the exact declaration and structural
+evidence; reuse with a different identity is an invariant failure. Receiver
+normalization preserves that evidence instead of making an ABI-only request.
+
+Queries and dead expressions lose their call targets. Branch selection preserves
+the selected expression's own identity and conversion boundary. Consumed method
+callees still visit their runtime receiver. The reachable graph includes nested
+lambdas; discarded lambdas add no function, closure, or mutable capture-cell
+fragment. Generic templates are not rewritten. Full local/type dependency pruning
+and post-selection flow refresh are still open.
+
+`implements` uses the checked implementation index and structural substitutions.
+Imported generic prerequisites keep their original IDs and spans. Absence is
+false; ambiguity, cycles, and search limits are distinct diagnostics. A 65-level
+valid prerequisite chain is tested. Query errors include the module, declaration,
+body, specialization request, expression, and source offset. Static assertions
+run only in retained branches and report CT-021/CT-022, not anonymous traps.
+
+The bootstrap fixture now includes `dew.std.types`; omitting it had produced
+misleading downstream specialization failures. Its emission probe validates
+source phases before linking. The shared corpus has 32 checks and a separate
+generic branch test returning 13234. It runs against both compilers. The self-host
+resolver also now resolves explicit generic call arguments inside lambda spans;
+the previous omission sent the missing sentinel into SOL-207.
+
+Self-host hardening passes 184 tests, 29 exact invariant records, both host record
+tests, and all execution/semantic probes. Warm runs took about 20 s. The final
+run took 107.909 s due to a cold native C build; this remains a performance defect.
+Native shared execution passed 32 checks in 0.039 s; its cold build took 88.106 s.
+Native logical lambda entry work is a separate follow-up commit.

@@ -408,7 +408,7 @@ fn self_host_program_specialization_call_recipe(
   expression: SelfHostPlannedExpression,
 ) -> Option<SelfHostProgramCallRecipe> {
   // A selected name consumed by a direct call is not a separate reference.
-  if expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression {
+  if expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression || expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression {
     return Option::None
   }
   // A variant constructor has a physical type, not a physical function.
@@ -1245,11 +1245,11 @@ fn self_host_program_specialization_scan_body(
   calls: Array<SelfHostProgramSpecializedCall>,
 ) -> Unit {
   self_host_program_specialization_scan_one_body(lowering, module_index, body, caller, caller_specialization, caller_shapes, reachable, reachable_seen, requests, shapes, request_head_by_declaration, request_next, calls)
-  let module_ = self_host_planned_module_lowering_identity(lowering.modules[module_index])
+  let module_ = self_host_program_function_lowering(lowering, module_index, caller_specialization)
   // Lambda expression spans are separate from the root function's span. Scan
   // each nested body once in the same owning specialization context.
   for lambda in module_.lambdas {
-    if self_host_u64_equal(lambda.root_body, body.body) {
+    if self_host_u64_equal(lambda.root_body, body.body) && self_host_compile_time_lambda_is_live(module_, lambda.lambda) {
       match self_host_body_lambda_lookup(module_, lambda.lambda) {
         Option::Some(lambda_body) => self_host_program_specialization_scan_one_body(lowering, module_index, lambda_body, caller, caller_specialization, caller_shapes, reachable, reachable_seen, requests, shapes, request_head_by_declaration, request_next, calls)
         Option::None => {
@@ -1285,7 +1285,7 @@ fn self_host_program_specialization_scan_one_body(
   request_next: Array<U32>,
   calls: Array<SelfHostProgramSpecializedCall>,
 ) -> Unit {
-  let module_ = lowering.modules[module_index]
+  let module_ = self_host_program_function_lowering(lowering, module_index, caller_specialization)
   let mut expression_offset = 0u32
   let _ = while expression_offset {
     current => if current < body.expressions.length {
@@ -1825,7 +1825,11 @@ fn self_host_program_specialization_normalize_receiver_calls(
             let mut normalized = false
             let _ = while module_index {
               candidate_module => if candidate_module < lowering.modules.length() {
-                let module_ = lowering.modules[candidate_module]
+                let module_ = if lowering.modules[candidate_module].module_id == self_host_semantic_id_module(call.caller_body) {
+                  self_host_program_function_lowering(lowering, candidate_module, call.caller_specialization)
+                } else {
+                  lowering.modules[candidate_module]
+                }
                 match self_host_program_specialization_body(
                   module_,
                   call.caller_body,
@@ -1868,7 +1872,11 @@ fn self_host_program_specialization_normalize_receiver_calls(
                         request_next,
                         call.target,
                         candidates,
-                        [], call.caller_body, call.expression,
+                        if call.target_specialization < requests.length() {
+                          requests[call.target_specialization].evidence_types
+                        } else {
+                          []
+                        }, call.caller_body, call.expression,
                       )
                       calls[current] = SelfHostProgramSpecializedCall::{
                         caller_body: call.caller_body
@@ -1991,6 +1999,7 @@ fn self_host_program_specialization_scan_request(
     "compiler specialization request is outside the request arena",
   )
   let request = requests[request_index]
+  self_host_prepare_compile_time_instance(lowering, request_index, requests)
   match lowering.index.declaration_owner(request.declaration) {
     Option::Some(owner) => {
       self_host_assert_array_index(
@@ -1998,7 +2007,7 @@ fn self_host_program_specialization_scan_request(
         lowering.modules.length(),
         "compiler specialization request owner is outside the module arena",
       )
-      let module_ = lowering.modules[owner]
+      let module_ = self_host_program_function_lowering(lowering, owner, request_index)
       match self_host_program_specialization_callable(
         module_,
         request.declaration,

@@ -3,11 +3,17 @@ open dew.std.bytes
 open dew.std.map
 open dew.std.option
 
+pub struct SelfHostCompileTimeInstance {
+  declaration: U64
+  evidence_types: Array<SelfHostSpecializationEvidenceType>
+  module_: SelfHostPlannedModuleLowering
+}
+
 pub struct SelfHostCompileTimeProgramContext {
   frozen: SelfHostFrozenSignatureProgram
   targets: Map<U64, Bytes>
   sensitive: Map<U64, Bool>
-  instances: Map<U32, SelfHostPlannedModuleLowering>
+  instances: Map<U32, SelfHostCompileTimeInstance>
   diagnostics: Array<String>
 }
 
@@ -19,7 +25,7 @@ fn self_host_compile_time_caller_map() -> Map<U64, Array<U64>> {
   Map::empty()
 }
 
-fn self_host_compile_time_instance_map() -> Map<U32, SelfHostPlannedModuleLowering> {
+fn self_host_compile_time_instance_map() -> Map<U32, SelfHostCompileTimeInstance> {
   Map::empty()
 }
 
@@ -50,10 +56,10 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
   if targets.length() > 0u32 {
     for module_ in modules {
       for body in module_.bodies {
-        self_host_assert_array_span(body.expressions.start, body.expressions.length, module_.expressions.length(), "ARN-101 query owner expressions")
+        let owned = self_host_compile_time_owned_expressions(module_, body)
         let _ = while 0u32 {
-          offset => if offset < body.expressions.length {
-            let expression = module_.expressions[body.expressions.start + offset]
+          offset => if offset < owned.length() {
+            let expression = module_.expressions[owned[offset]]
             match self_host_program_specialization_call_recipe(expression) {
               Option::Some(recipe) => {
                 if targets.contains_key(recipe.target) && !sensitive.contains_key(body.declaration) {

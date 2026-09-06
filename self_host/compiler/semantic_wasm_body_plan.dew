@@ -2157,6 +2157,13 @@ fn self_host_body_seed_expression(
     SelfHostPlannedExpressionKind::PlannedStringConst(_) => {
       carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
     }
+    SelfHostPlannedExpressionKind::PlannedUnitConst => {
+      carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
+    }
+    SelfHostPlannedExpressionKind::PlannedStringArrayConst(_) => {
+      carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+      physical_heap_type = self_host_linked_array_wrapper_type(link)
+    }
     SelfHostPlannedExpressionKind::PlannedBytesConst(_) => {
       carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
     }
@@ -5254,9 +5261,7 @@ fn self_host_plan_one_physical_body(
   body: SelfHostPlannedBodyLowering,
   lambda: U32,
 ) -> SelfHostPlannedPhysicalBodyCarrierPlan {
-  let module_ = link.fragments.specialization.lowering.modules[
-    linked_function.module_index
-  ]
+  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, linked_function.module_index, linked_function.specialization)
   let embedded_targets = self_host_body_embedded_targets(module_, body)
   let local_by_initializer = self_host_body_local_by_initializer(module_, body)
   let fragment_module = self_host_body_fragment_module(
@@ -6881,6 +6886,8 @@ fn self_host_body_expression_kind_name(
     SelfHostPlannedExpressionKind::PlannedF64Const(_) => "f64.const"
     SelfHostPlannedExpressionKind::PlannedBoolConst(_) => "bool.const"
     SelfHostPlannedExpressionKind::PlannedStringConst(_) => "string.const"
+    SelfHostPlannedExpressionKind::PlannedUnitConst => "unit.const"
+    SelfHostPlannedExpressionKind::PlannedStringArrayConst(_) => "string-array.const"
     SelfHostPlannedExpressionKind::PlannedBytesConst(_) => "bytes.const"
     SelfHostPlannedExpressionKind::PlannedLocalGet(_) => "local.get"
     SelfHostPlannedExpressionKind::PlannedCaptureGet(_) => "capture.get"
@@ -7916,7 +7923,7 @@ fn self_host_verify_one_physical_body(
     },
     "physical local slots must remain parallel to logical local values",
   )
-  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
   let body = match self_host_body_lookup_for_plan(module_, plan) {
     Option::Some(value) => value
     Option::None => {
@@ -8354,9 +8361,7 @@ pub fn self_host_plan_program_wasm_bodies(
       fragment_module,
       function_.fragment_index,
     )
-    let module_ = link.fragments.specialization.lowering.modules[
-      function_.module_index
-    ]
+    let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, function_.module_index, function_.specialization)
     let (body, lambda) = match fragment.kind {
       SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(body_id) => match self_host_body_lookup(
         module_,

@@ -1,4 +1,6 @@
 open dew.std.testing
+open dew.std.string
+open dew.std.string_builder
 
 fn self_host_test_query_bool(name: Bytes, arguments: Array<SelfHostCompileTimeType>, expected: Bool) -> Unit {
   match self_host_evaluate_compile_time_query(name, arguments) {
@@ -111,4 +113,157 @@ test "compile-time logical keys retain nested types through generic callers" {
   }
   assert(count == 2u32, "same ABI must keep two nested logical instances")
   self_host_test_query_bool(b"types.type_equal", identities, false)
+}
+
+test "compile-time branches use private instances and erase dead call records" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin query<t>() -> Bool = \"types.is_unit\"\nfn choose<t>() -> I32 {\n if query::<t>() {\n 11i32\n } else {\n 22i32\n }\n}\npub fn run() -> I32 {\n choose::<Unit>() + choose::<I32>()\n}\n",
+  )
+  let plan = self_host_plan_program_specialization(lowering, false)
+  for diagnostic in lowering.compile_time.diagnostics {
+    assert(false, diagnostic)
+  }
+  let mut original = false
+  for expression in lowering.modules[0u32].expressions {
+    if expression.kind is SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _) {
+      original = true
+    }
+  }
+  assert(original, "generic template must remain intact")
+  let mut instances = 0u32
+  let mut request_index = 0u32
+  for request in plan.requests {
+    match lowering.compile_time.instances.get(request_index) {
+      Option::Some(instance) => {
+        let module_ = instance.module_
+        instances = instances + 1u32
+        for body in module_.bodies {
+          if body.declaration == request.declaration {
+            let mut values = 0u32
+            let _ = while 0u32 {
+              offset => if offset < body.expressions.length {
+                let source = module_.expressions[body.expressions.start + offset]
+                assert(!(source.kind is SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _)), "constant if must be replaced")
+                assert(self_host_program_specialization_call_recipe(source) is Option::None, "folded and dead nodes must not retain call targets")
+                if source.kind is SelfHostPlannedExpressionKind::PlannedI32Const(_) {
+                  values = values + 1u32
+                }
+                continue offset + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+            assert(values == 1u32, "only the selected branch value survives")
+          }
+        }
+      }
+      Option::None => {}
+    }
+    request_index = request_index + 1u32
+  }
+  assert(instances == 2u32, "Unit and I32 have separate selected bodies")
+}
+
+test "compile-time implements substitutes generic prerequisites" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin query<a, b>() -> Bool = \"types.implements\"\ntrait Mark {}\nstruct Box<t> {}\nimpl Mark for I32 {}\nimpl<t: Mark> Mark for Box<t> {}\npub fn yes() -> Bool {\n query::<Box<I32>, Mark>()\n}\npub fn no() -> Bool {\n query::<Box<I64>, Mark>()\n}\n",
+  )
+  for message in lowering.compile_time.diagnostics {
+    assert(false, message)
+  }
+  let values = [false]
+  values.clear()
+  for expression in lowering.modules[0u32].expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedBoolConst(value) => values.push(value)
+      _ => {}
+    }
+  }
+  assert(values.length() == 2u32 && values[0u32] && !values[1u32], "a missing prerequisite must make implements false")
+}
+
+test "compile-time query errors remain source diagnostics" {
+  for entry in [
+    (b"builtin query<a, b>() -> Bool = \"types.implements\"\npub fn main() -> Bool {\n query::<I32, I64>()\n}\n", "CT-014 implements requires a trait as its second argument"),
+    (b"builtin query<a, b>() -> Bool = \"types.implements\"\nstruct Node {}\ntrait Loop<t> {}\nimpl<t: Loop<Node>> Loop<t> for Node {}\npub fn main() -> Bool {\n query::<Node, Loop<Node>>()\n}\n", "CT-013 cyclic trait prerequisite"),
+    (b"builtin ensure(condition: Bool, message: String) -> Unit = \"types.static_assert\"\npub fn main() -> Unit {\n ensure(false, \"clear failure\")\n}\n", "CT-021 static assertion failed: clear failure"),
+  ] {
+    let (source, expected) = entry
+    let lowering = self_host_physical_test_lowering(source)
+    assert(lowering.compile_time.diagnostics.length() == 1u32, "one source query diagnostic")
+    assert(lowering.compile_time.diagnostics[0u32].starts_with(expected), "exact query error code and message")
+    assert(self_host_validate_program_lowering(lowering) is Option::Some(_), "query errors stop the next phase")
+  }
+}
+
+test "compile-time implements follows imported generic prerequisites" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn main() -> Bool {\n query::<Box<I32>, Mark>() && !query::<Box<I64>, Mark>()\n}\n",
+    b"pub builtin query<a, b>() -> Bool = \"types.implements\"\npub trait Mark {}\npub struct Box<t> {\n value: t\n}\nimpl Mark for I32 {}\nimpl<t: Mark> Mark for Box<t> {}\n",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  for diagnostic in lowering.compile_time.diagnostics {
+    assert(false, diagnostic)
+  }
+  let mut found = false
+  for expression in lowering.modules[0u32].expressions {
+    if expression.kind is SelfHostPlannedExpressionKind::PlannedBoolConst(true) {
+      found = true
+    }
+  }
+  assert(found, "imported positive and absent prerequisite queries must fold")
+}
+
+test "compile-time implements does not treat depth 65 as absence" {
+  let text = StringBuilder::new()
+  text.append("builtin query<a, b>() -> Bool = \"types.implements\"\ntrait Mark {}\nstruct Box<t> {\n value: t\n}\nimpl Mark for I32 {}\nimpl<t: Mark> Mark for Box<t> {}\npub fn main() -> Bool {\n query::<")
+  let _ = while 0u32 {
+    depth => if depth < 65u32 {
+      text.append("Box<")
+      continue depth + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  text.append("I32")
+  let _ = while 0u32 {
+    depth => if depth < 65u32 {
+      text.append(">")
+      continue depth + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  text.append(", Mark>()\n}\n")
+  let lowering = self_host_physical_test_lowering(text.finish().as_bytes())
+  for diagnostic in lowering.compile_time.diagnostics {
+    assert(false, diagnostic)
+  }
+  let mut found = false
+  for expression in lowering.modules[0u32].expressions {
+    if expression.kind is SelfHostPlannedExpressionKind::PlannedBoolConst(true) {
+      found = true
+    }
+  }
+  assert(found, "a valid long prerequisite chain must be proved true")
+}
+
+test "compile-time discarded lambdas create no function or capture storage" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin query<t>() -> Bool = \"types.is_unit\"\nbuiltin ensure(condition: Bool, message: String) -> Unit = \"types.static_assert\"\nfn choose<t>() -> I32 {\n let mut captured = 5i32\n if query::<t>() {\n 1i32\n } else {\n let read = fn() -> I32 {\n ensure(false, \"discarded lambda\")\n captured = 7i32\n captured\n }\n read()\n }\n}\npub fn main() -> I32 {\n choose::<Unit>()\n}\n",
+  )
+  let plan = self_host_plan_program_specialization(lowering, false)
+  for diagnostic in lowering.compile_time.diagnostics {
+    assert(false, diagnostic)
+  }
+  let fragments = self_host_plan_program_wasmgc_fragments(plan)
+  for module_ in fragments.modules {
+    for function_ in module_.functions {
+      assert(!(function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_)), "discarded lambda function must not be planned")
+    }
+    for type_ in module_.physical_types {
+      assert(!(type_.kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(_, _)), "discarded closure type must not be planned")
+      assert(!(type_.kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(_, _)), "discarded mutable capture must not need a cell")
+    }
+  }
 }
