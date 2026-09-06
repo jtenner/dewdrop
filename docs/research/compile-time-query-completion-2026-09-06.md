@@ -21,8 +21,22 @@ Starshine commit `7a5888630` implements the text form as an explicit outer
 delegate, preserves body/branch identity, and retires the allowance. It does
 not weaken core validation or expand skips. The new positive test failed first
 (4.539 s); all nine focused legacy tests pass after the fix (4.516 s).
-The parent workspace now pins that commit. The full lane is being rerun.
+The parent workspace now pins that commit. The full rerun passes all 10,982
+tests in 305.361 s. This aggregate time remains a performance defect; existing
+spec runtime skips are not claimed as runtime conformance.
 Shell checks verify 8192→65536 KiB and preserve 131072 KiB/unlimited limits.
+
+## Pinned provider and generated fingerprint
+
+The first final bootstrap attempt stopped at the required stale-FFI gate
+(19.375 s), before building compiler A. The new Starshine pin rebuilt the
+provider, so its raw heap indices, provider hash, and compiler fingerprint
+changed. Regeneration takes 3.935 s and preserves all 467 typed Dew binding
+declarations; only the provider hash comment changes in `ffi.dew`. The manifest
+and fingerprint now describe provider SHA-256
+`3f4879ffd673222b37f0f0c7570bfc9b6f312c8e8355c63f5bb1343ef46e1ebb` and
+Starshine `7a58886305102c0575949cefc790a3678c0be292`. Hardening, integration, and
+the clean bootstrap are rerunning against these exact generated artifacts.
 
 ## Local and captured query values
 
