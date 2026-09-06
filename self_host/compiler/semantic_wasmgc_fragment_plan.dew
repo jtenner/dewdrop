@@ -1,4 +1,5 @@
 open dew.std.option
+open dew.std.map
 
 pub enum SelfHostPlannedWasmValueType {
   WasmI32Value
@@ -280,177 +281,190 @@ fn self_host_wasmgc_payload_exact_nominal(
 
 fn self_host_wasmgc_plan_types(
   module_: SelfHostPlannedModuleLowering,
+  required: Map<U64, Bool>,
   physical_types: Array<SelfHostPlannedWasmPhysicalType>,
   fields: Array<SelfHostPlannedWasmField>,
   type_lookup: Array<U32>,
 ) -> Unit {
   for layout in module_.type_layouts.layouts {
-    let type_index = physical_types.length()
-    type_lookup[self_host_semantic_id_local(layout.declaration)] = type_index
-    match layout.kind {
-      SelfHostPlannedNominalLayoutKind::PlannedStructLayout(field_span) => {
-        let start = fields.length()
-        let mut field = 0u32
-        let _ = while field {
-          current => if current < field_span.length {
-            let source = self_host_planned_field_layout_at(
-              module_.type_layouts.fields,
-              self_host_u32_add(field_span.start, current),
-            )
-            fields.push(SelfHostPlannedWasmField::{
-              role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
-              declaration: source.field
-              physical_index: current
-              storage: match self_host_specialization_canonical_scalar(
-                self_host_planned_resolved_value_shape(
-                  module_.resolved_types,
-                  source.type_,
-                ),
-              ) {
-                SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI32Storage
-                SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI64Storage
-                SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF32Storage
-                SelfHostPlannedValueShape::F64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF64Storage
-                SelfHostPlannedValueShape::V128PlannedValueShape => SelfHostPlannedWasmStorageType::WasmV128Storage
-                _ => SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
-              }
-              mutable_: source.mutable_
-              exact_nominal: false
-              offset: source.offset
-            })
-            continue current + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
+    if required.contains_key(layout.declaration) {
+      self_host_wasmgc_plan_type(module_, layout, physical_types, fields, type_lookup)
+    }
+  }
+}
+
+fn self_host_wasmgc_plan_type(
+  module_: SelfHostPlannedModuleLowering,
+  layout: SelfHostPlannedNominalLayout,
+  physical_types: Array<SelfHostPlannedWasmPhysicalType>,
+  fields: Array<SelfHostPlannedWasmField>,
+  type_lookup: Array<U32>,
+) -> Unit {
+  let type_index = physical_types.length()
+  type_lookup[self_host_semantic_id_local(layout.declaration)] = type_index
+  match layout.kind {
+    SelfHostPlannedNominalLayoutKind::PlannedStructLayout(field_span) => {
+      let start = fields.length()
+      let mut field = 0u32
+      let _ = while field {
+        current => if current < field_span.length {
+          let source = self_host_planned_field_layout_at(
+            module_.type_layouts.fields,
+            self_host_u32_add(field_span.start, current),
+          )
+          fields.push(SelfHostPlannedWasmField::{
+            role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
+            declaration: source.field
+            physical_index: current
+            storage: match self_host_specialization_canonical_scalar(
+              self_host_planned_resolved_value_shape(
+                module_.resolved_types,
+                source.type_,
+              ),
+            ) {
+              SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI32Storage
+              SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI64Storage
+              SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF32Storage
+              SelfHostPlannedValueShape::F64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF64Storage
+              SelfHostPlannedValueShape::V128PlannedValueShape => SelfHostPlannedWasmStorageType::WasmV128Storage
+              _ => SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+            }
+            mutable_: source.mutable_
+            exact_nominal: false
+            offset: source.offset
+          })
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
         }
-        physical_types.push(SelfHostPlannedWasmPhysicalType::{
-          kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(layout.declaration)
-          type_index: type_index
-          fields: SelfHostHirSpan::{
-            start: start
-            length: fields.length() - start
-          }
-          offset: layout.offset
-        })
       }
-      SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout => physical_types.push(
-        SelfHostPlannedWasmPhysicalType::{
-          kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmForeignMarkerType(layout.declaration)
-          type_index: type_index
-          fields: SelfHostHirSpan::{
-            start: fields.length()
-            length: 0u32
-          }
-          offset: layout.offset
-        },
-      )
-      SelfHostPlannedNominalLayoutKind::PlannedEnumLayout(variants) => {
-        physical_types.push(SelfHostPlannedWasmPhysicalType::{
-          kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(layout.declaration)
-          type_index: type_index
-          fields: SelfHostHirSpan::{
-            start: fields.length()
-            length: 0u32
-          }
-          offset: layout.offset
-        })
-        let mut marker_super = type_index
-        let mut variant = 0u32
-        let _ = while variant {
-          current => if current < variants.length {
-            let source = module_.type_layouts.variants[
-              self_host_u32_add(variants.start, current)
-            ]
-            let field_start = fields.length()
-            match source.payload {
-              SelfHostPlannedVariantPayloadLayout::PlannedUnitVariantLayout => {}
-              SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(payload) => {
-                let mut item = 0u32
-                let _ = while item {
-                  payload_index => if payload_index < payload.length {
-                    fields.push(SelfHostPlannedWasmField::{
-                      role: SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(
-                        source.variant,
-                        payload_index,
-                      )
-                      declaration: source.variant
-                      physical_index: payload_index
-                      storage: self_host_wasmgc_payload_storage_type(
-                        module_,
-                        payload,
-                        payload_index,
-                      )
-                      mutable_: false
-                      exact_nominal: self_host_wasmgc_payload_exact_nominal(
-                        module_,
-                        payload,
-                        payload_index,
-                      )
-                      offset: source.offset
-                    })
-                    continue payload_index + 1u32
-                  } else {
-                    break self_host_semantic_unit()
-                  }
-                }
-              }
-              SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(payload) => {
-                let mut item = 0u32
-                let _ = while item {
-                  payload_index => if payload_index < payload.length {
-                    let field = self_host_planned_field_layout_at(
-                      module_.type_layouts.fields,
-                      self_host_u32_add(payload.start, payload_index),
+      physical_types.push(SelfHostPlannedWasmPhysicalType::{
+        kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(layout.declaration)
+        type_index: type_index
+        fields: SelfHostHirSpan::{
+          start: start
+          length: fields.length() - start
+        }
+        offset: layout.offset
+      })
+    }
+    SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout => physical_types.push(
+      SelfHostPlannedWasmPhysicalType::{
+        kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmForeignMarkerType(layout.declaration)
+        type_index: type_index
+        fields: SelfHostHirSpan::{
+          start: fields.length()
+          length: 0u32
+        }
+        offset: layout.offset
+      },
+    )
+    SelfHostPlannedNominalLayoutKind::PlannedEnumLayout(variants) => {
+      physical_types.push(SelfHostPlannedWasmPhysicalType::{
+        kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(layout.declaration)
+        type_index: type_index
+        fields: SelfHostHirSpan::{
+          start: fields.length()
+          length: 0u32
+        }
+        offset: layout.offset
+      })
+      let mut marker_super = type_index
+      let mut variant = 0u32
+      let _ = while variant {
+        current => if current < variants.length {
+          let source = module_.type_layouts.variants[
+            self_host_u32_add(variants.start, current)
+          ]
+          let field_start = fields.length()
+          match source.payload {
+            SelfHostPlannedVariantPayloadLayout::PlannedUnitVariantLayout => {}
+            SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(payload) => {
+              let mut item = 0u32
+              let _ = while item {
+                payload_index => if payload_index < payload.length {
+                  fields.push(SelfHostPlannedWasmField::{
+                    role: SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(
+                      source.variant,
+                      payload_index,
                     )
-                    fields.push(SelfHostPlannedWasmField::{
-                      role: SelfHostPlannedWasmFieldRole::WasmStructField(field.field)
-                      declaration: field.field
-                      physical_index: payload_index
-                      storage: self_host_wasmgc_field_storage_type(module_, field)
-                      mutable_: field.mutable_
-                      exact_nominal: false
-                      offset: field.offset
-                    })
-                    continue payload_index + 1u32
-                  } else {
-                    break self_host_semantic_unit()
-                  }
+                    declaration: source.variant
+                    physical_index: payload_index
+                    storage: self_host_wasmgc_payload_storage_type(
+                      module_,
+                      payload,
+                      payload_index,
+                    )
+                    mutable_: false
+                    exact_nominal: self_host_wasmgc_payload_exact_nominal(
+                      module_,
+                      payload,
+                      payload_index,
+                    )
+                    offset: source.offset
+                  })
+                  continue payload_index + 1u32
+                } else {
+                  break self_host_semantic_unit()
                 }
               }
             }
-            let marker_index = physical_types.length()
-            physical_types.push(SelfHostPlannedWasmPhysicalType::{
-              kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(
-                layout.declaration,
-                source.variant,
-                source.tag,
-                marker_super,
-              )
-              type_index: marker_index
-              fields: SelfHostHirSpan::{
-                start: field_start
-                length: 0u32
+            SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(payload) => {
+              let mut item = 0u32
+              let _ = while item {
+                payload_index => if payload_index < payload.length {
+                  let field = self_host_planned_field_layout_at(
+                    module_.type_layouts.fields,
+                    self_host_u32_add(payload.start, payload_index),
+                  )
+                  fields.push(SelfHostPlannedWasmField::{
+                    role: SelfHostPlannedWasmFieldRole::WasmStructField(field.field)
+                    declaration: field.field
+                    physical_index: payload_index
+                    storage: self_host_wasmgc_field_storage_type(module_, field)
+                    mutable_: field.mutable_
+                    exact_nominal: false
+                    offset: field.offset
+                  })
+                  continue payload_index + 1u32
+                } else {
+                  break self_host_semantic_unit()
+                }
               }
-              offset: source.offset
-            })
-            marker_super = marker_index
-            physical_types.push(SelfHostPlannedWasmPhysicalType::{
-              kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
-                layout.declaration,
-                source.variant,
-                source.tag,
-              )
-              type_index: physical_types.length()
-              fields: SelfHostHirSpan::{
-                start: field_start
-                length: fields.length() - field_start
-              }
-              offset: source.offset
-            })
-            continue current + 1u32
-          } else {
-            break self_host_semantic_unit()
+            }
           }
+          let marker_index = physical_types.length()
+          physical_types.push(SelfHostPlannedWasmPhysicalType::{
+            kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(
+              layout.declaration,
+              source.variant,
+              source.tag,
+              marker_super,
+            )
+            type_index: marker_index
+            fields: SelfHostHirSpan::{
+              start: field_start
+              length: 0u32
+            }
+            offset: source.offset
+          })
+          marker_super = marker_index
+          physical_types.push(SelfHostPlannedWasmPhysicalType::{
+            kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
+              layout.declaration,
+              source.variant,
+              source.tag,
+            )
+            type_index: physical_types.length()
+            fields: SelfHostHirSpan::{
+              start: field_start
+              length: fields.length() - field_start
+            }
+            offset: source.offset
+          })
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
         }
       }
     }
@@ -832,6 +846,7 @@ fn self_host_plan_program_wasmgc_fragments(
   for declaration in specialization.reachable_declarations {
     reachable.set(declaration, true)
   }
+  let required_types = self_host_program_physical_type_demand(specialization, reachable)
   let mut module_index = 0u32
   let _ = while module_index {
     current => if current < specialization.lowering.modules.length() {
@@ -855,7 +870,7 @@ fn self_host_plan_program_wasmgc_fragments(
       let lambda_function_indices = self_host_wasmgc_u32_slots(
         source.lambdas.length(),
       )
-      self_host_wasmgc_plan_types(source, physical_types, fields, type_lookup)
+      self_host_wasmgc_plan_types(source, required_types, physical_types, fields, type_lookup)
       let closure_type_index = self_host_wasmgc_plan_closures(
         source,
         physical_types,

@@ -1,0 +1,22 @@
+open dew.std.testing
+
+fn self_host_type_demand_test_plan(source: Bytes) -> SelfHostPlannedProgramWasmGCFragments {
+  self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(self_host_physical_test_lowering(source), false))
+}
+
+test "WasmGC type demand excludes discarded generic branches" {
+  let plan = self_host_type_demand_test_plan(
+    b"builtin query<t>() -> Bool = \"types.is_unit\"\nenum Dead {\n Value(I64)\n}\nstruct Unused {}\nfn choose<t>() -> I32 {\n if query::<t>() {\n 7i32\n } else {\n let value = Dead::Value(9i64)\n match value {\n Dead::Value(_) => 8i32\n }\n }\n}\npub fn run() -> I32 {\n choose::<Unit>()\n}\n",
+  )
+  for type_ in plan.modules[0u32].physical_types {
+    assert(type_.kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmClosureType, "discarded constructors and patterns must not demand nominal storage")
+  }
+}
+
+test "WasmGC type demand retains transitive fields and terminates on cycles" {
+  let plan = self_host_type_demand_test_plan(
+    b"struct Leaf {\n value: I64\n}\nstruct Node {\n leaf: Leaf\n next: Node\n}\nstruct Unused {}\npub fn keep(value: Node) -> Node {\n value\n}\n",
+  )
+  assert(plan.modules[0u32].physical_types.length() == 3u32, "public ABI roots retain two transitive records plus the common closure type")
+  assert(plan.modules[0u32].fields.length() == 4u32, "three live record fields plus the common closure entry")
+}

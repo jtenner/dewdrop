@@ -1,0 +1,351 @@
+open dew.std.array
+open dew.std.map
+open dew.std.option
+
+// Nominal storage is a demand closure over selected code, not over templates.
+// Each declaration and each type-arena cell is visited once per logical scope.
+struct SelfHostPhysicalTypeDemand {
+  required: Map<U64, Bool>
+  work: Array<U64>
+}
+
+struct SelfHostPhysicalTypeDemandScope {
+  module_: SelfHostPlannedModuleLowering
+  bindings: Map<U64, SelfHostCompileTimeType>
+  seen: Map<I32, Bool>
+  work: Array<I32>
+}
+
+fn self_host_physical_type_demand_seen() -> Map<I32, Bool> {
+  Map::empty()
+}
+
+fn self_host_physical_type_demand_scope(module_: SelfHostPlannedModuleLowering, bindings: Map<U64, SelfHostCompileTimeType>) -> SelfHostPhysicalTypeDemandScope {
+  SelfHostPhysicalTypeDemandScope::{
+    module_: module_
+    bindings: bindings
+    seen: self_host_physical_type_demand_seen()
+    work: []
+  }
+}
+
+fn self_host_physical_type_demand_add(demand: SelfHostPhysicalTypeDemand, declaration: U64) -> Unit {
+  if !demand.required.contains_key(declaration) {
+    demand.required.set(declaration, true)
+    demand.work.push(declaration)
+  }
+}
+
+fn self_host_physical_type_demand_logical(demand: SelfHostPhysicalTypeDemand, root: SelfHostCompileTimeType) -> Unit {
+  let work = [root]
+  let _ = while work.length() {
+    length => if length > 0u32 {
+      let value = work[length - 1u32]
+      work.truncate(length - 1u32)
+      match value {
+        SelfHostCompileTimeType::NominalCompileTimeType(declaration) => self_host_physical_type_demand_add(demand, declaration)
+        SelfHostCompileTimeType::AppliedCompileTimeType(base, arguments) => {
+          work.push(base)
+          for argument in arguments {
+            work.push(argument)
+          }
+        }
+        SelfHostCompileTimeType::ProductCompileTimeType(fields) => for field in fields {
+          work.push(field)
+        }
+        SelfHostCompileTimeType::FunctionCompileTimeType(parameters, result) => {
+          work.push(result)
+          for parameter in parameters {
+            work.push(parameter)
+          }
+        }
+        // Pending projections are checked at the physical type boundary. Their
+        // owner is logical input, not proof that the owner itself needs storage.
+        _ => {}
+      }
+      continue work.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_physical_type_demand_resolved(scope: SelfHostPhysicalTypeDemandScope, type_: U32) -> Unit {
+  self_host_assert_compiler_invariant(type_ < 2147483647u32, "SOL-207 physical type demand encoding")
+  scope.work.push(-self_host_body_u32_to_i32(type_) - 2i32)
+}
+
+fn self_host_physical_type_demand_drain(demand: SelfHostPhysicalTypeDemand, scope: SelfHostPhysicalTypeDemandScope) -> Unit {
+  let module_ = scope.module_
+  let _ = while scope.work.length() {
+    length => if length > 0u32 {
+      let type_ = scope.work[length - 1u32]
+      scope.work.truncate(length - 1u32)
+      if !scope.seen.contains_key(type_) {
+        scope.seen.set(type_, true)
+        if type_ < -1i32 {
+          let index = self_host_body_i32_to_u32(-(type_ + 2i32))
+          self_host_assert_array_index(index, module_.resolved_types.types.length(), "ARN-104 physical resolved type demand")
+          let value = module_.resolved_types.types[index]
+          match value {
+            SelfHostResolvedType::NominalType(declaration) => self_host_physical_type_demand_add(demand, declaration)
+            SelfHostResolvedType::GenericParameterType(parameter) => match scope.bindings.get(parameter) {
+              Option::Some(value) => self_host_physical_type_demand_logical(demand, value)
+              Option::None => {}
+            }
+            SelfHostResolvedType::SelfType(parameter) => match scope.bindings.get(parameter) {
+              Option::Some(value) => self_host_physical_type_demand_logical(demand, value)
+              Option::None => {}
+            }
+            SelfHostResolvedType::AppliedType(base, _) => self_host_physical_type_demand_resolved(scope, base)
+            SelfHostResolvedType::FunctionType(_, result) => self_host_physical_type_demand_resolved(scope, result)
+            _ => {}
+          }
+          let span = match value {
+            SelfHostResolvedType::ProductType(fields) => fields
+            SelfHostResolvedType::AppliedType(_, arguments) => arguments
+            SelfHostResolvedType::FunctionType(parameters, _) => parameters
+            _ => SelfHostHirSpan::{
+              start: 0u32
+              length: 0u32
+            }
+          }
+          self_host_assert_array_span(span.start, span.length, module_.resolved_types.type_arguments.length(), "ARN-101 physical resolved type arguments")
+          let _ = while 0u32 {
+            offset => if offset < span.length {
+              self_host_physical_type_demand_resolved(scope, module_.resolved_types.type_arguments[span.start + offset])
+              continue offset + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        } else {
+          self_host_assert_compiler_invariant(type_ >= 0i32, "ARN-105 missing physical body type")
+          let index = self_host_body_i32_to_u32(type_)
+          self_host_assert_array_index(index, module_.inferred.types.length(), "ARN-104 physical body type demand")
+          let value = module_.inferred.types[index]
+          match value {
+            SelfHostBodyTypeTerm::BodyResolvedType(resolved) => self_host_physical_type_demand_resolved(scope, resolved)
+            SelfHostBodyTypeTerm::BodyAppliedType(base, _) => scope.work.push(base)
+            SelfHostBodyTypeTerm::BodyFunctionType(_, result) => scope.work.push(result)
+            _ => {}
+          }
+          let span = match value {
+            SelfHostBodyTypeTerm::BodyProductType(fields) => fields
+            SelfHostBodyTypeTerm::BodyAppliedType(_, arguments) => arguments
+            SelfHostBodyTypeTerm::BodyFunctionType(parameters, _) => parameters
+            _ => SelfHostHirSpan::{
+              start: 0u32
+              length: 0u32
+            }
+          }
+          self_host_assert_array_span(span.start, span.length, module_.inferred.type_arguments.length(), "ARN-101 physical body type arguments")
+          let _ = while 0u32 {
+            offset => if offset < span.length {
+              scope.work.push(module_.inferred.type_arguments[span.start + offset])
+              continue offset + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+      }
+      continue scope.work.length()
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_physical_type_demand_body(scope: SelfHostPhysicalTypeDemandScope, expressions: SelfHostHirSpan, locals: SelfHostHirSpan, patterns: SelfHostHirSpan) -> Unit {
+  let module_ = scope.module_
+  self_host_assert_array_span(expressions.start, expressions.length, module_.expressions.length(), "ARN-101 physical expression demand")
+  self_host_assert_array_span(locals.start, locals.length, module_.locals.length(), "ARN-101 physical local demand")
+  self_host_assert_array_span(patterns.start, patterns.length, module_.patterns.length(), "ARN-101 physical pattern demand")
+  let _ = while 0u32 {
+    offset => if offset < expressions.length {
+      let expression = module_.expressions[expressions.start + offset]
+      if !(expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression) {
+        scope.work.push(expression.type_)
+      }
+      continue offset + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let _ = while 0u32 {
+    offset => if offset < locals.length {
+      let local = module_.locals[locals.start + offset]
+      if !local.elided {
+        scope.work.push(local.type_)
+      }
+      continue offset + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let _ = while 0u32 {
+    offset => if offset < patterns.length {
+      let pattern = module_.patterns[patterns.start + offset]
+      if !pattern.elided {
+        scope.work.push(pattern.type_)
+      }
+      continue offset + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_physical_type_demand_callable(scope: SelfHostPhysicalTypeDemandScope, callable: SelfHostPlannedCallable) -> Unit {
+  let module_ = scope.module_
+  self_host_physical_type_demand_resolved(scope, callable.result_type)
+  if callable.has_receiver {
+    self_host_physical_type_demand_resolved(scope, callable.self_type)
+  }
+  self_host_assert_array_span(callable.parameters.start, callable.parameters.length, module_.functions.parameters.length(), "ARN-101 physical parameter demand")
+  let _ = while 0u32 {
+    offset => if offset < callable.parameters.length {
+      self_host_physical_type_demand_resolved(scope, module_.functions.parameters[callable.parameters.start + offset].type_)
+      continue offset + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let body_id = match callable.kind {
+    SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => body
+    SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, body) => match body {
+      Option::Some(value) => value
+      Option::None => return
+    }
+    _ => return
+  }
+  let index = self_host_semantic_id_local(body_id)
+  self_host_assert_array_index(index, module_.bodies.length(), "ARN-104 physical body demand")
+  let body = module_.bodies[index]
+  self_host_assert_compiler_invariant(body.declaration == callable.declaration, "ARN-106 physical body demand identity")
+  self_host_physical_type_demand_body(scope, body.expressions, body.locals, body.patterns)
+  for lambda in module_.lambdas {
+    if lambda.root_body == body_id && self_host_compile_time_lambda_is_live(module_, lambda.lambda) {
+      self_host_physical_type_demand_body(scope, lambda.expressions, lambda.locals, lambda.patterns)
+      self_host_assert_array_span(lambda.captures.start, lambda.captures.length, module_.captures.length(), "ARN-101 physical capture demand")
+      let _ = while 0u32 {
+        offset => if offset < lambda.captures.length {
+          scope.work.push(module_.captures[lambda.captures.start + offset].type_)
+          continue offset + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+  }
+}
+
+fn self_host_physical_type_demand_fields(scope: SelfHostPhysicalTypeDemandScope, fields: SelfHostHirSpan) -> Unit {
+  self_host_assert_array_span(fields.start, fields.length, scope.module_.type_layouts.fields.length(), "ARN-101 physical field demand")
+  let _ = while 0u32 {
+    offset => if offset < fields.length {
+      self_host_physical_type_demand_resolved(scope, scope.module_.type_layouts.fields[fields.start + offset].type_)
+      continue offset + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_program_physical_type_demand(plan: SelfHostProgramSpecializationPlan, reachable: Map<U64, Bool>) -> Map<U64, Bool> {
+  let demand = SelfHostPhysicalTypeDemand::{
+    required: self_host_empty_u64_bool_map()
+    work: []
+  }
+  let scopes = []
+  for module_ in plan.lowering.modules {
+    let scope = self_host_physical_type_demand_scope(module_, self_host_empty_compile_time_bindings())
+    scopes.push(scope)
+    for callable in module_.functions.callables {
+      if reachable.contains_key(callable.declaration) && self_host_program_specialization_callable_generics(callable).length == 0u32 {
+        self_host_physical_type_demand_callable(scope, callable)
+      }
+    }
+    self_host_physical_type_demand_drain(demand, scope)
+  }
+  let _ = while 0u32 {
+    index => if index < plan.requests.length() {
+      let request = plan.requests[index]
+      let owner = match plan.lowering.index.declaration_owner(request.declaration) {
+        Option::Some(value) => value
+        Option::None => {
+          self_host_assert_compiler_invariant(false, "LNK-504 requested type demand owner")
+          unreachable()
+        }
+      }
+      let module_ = self_host_program_function_lowering(plan.lowering, owner, index)
+      let callable = self_host_program_specialization_callable(module_, request.declaration)
+      let scope = self_host_physical_type_demand_scope(module_, self_host_compile_time_caller_bindings(callable, index, plan.requests))
+      match callable {
+        Option::Some(value) => self_host_physical_type_demand_callable(scope, value)
+        Option::None => {
+          let _ = self_host_assert_compiler_invariant(false, "LNK-504 requested type demand callable")
+        }
+      }
+      self_host_physical_type_demand_drain(demand, scope)
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  let _ = while 0u32 {
+    cursor => if cursor < demand.work.length() {
+      let declaration = demand.work[cursor]
+      let owner = match plan.lowering.index.declaration_owner(declaration) {
+        Option::Some(value) => value
+        Option::None => {
+          self_host_assert_compiler_invariant(false, "LNK-504 nominal type demand owner")
+          unreachable()
+        }
+      }
+      let scope = scopes[owner]
+      let layouts = scope.module_.type_layouts
+      let local = self_host_semantic_id_local(declaration)
+      self_host_assert_array_index(local, layouts.layout_by_declaration.length(), "ARN-104 nominal demand lookup")
+      let index = layouts.layout_by_declaration[local]
+      self_host_assert_array_index(index, layouts.layouts.length(), "ARN-105 nominal demand layout")
+      let layout = layouts.layouts[index]
+      self_host_assert_compiler_invariant(layout.declaration == declaration, "ARN-106 nominal demand identity")
+      match layout.kind {
+        SelfHostPlannedNominalLayoutKind::PlannedStructLayout(fields) => self_host_physical_type_demand_fields(scope, fields)
+        SelfHostPlannedNominalLayoutKind::PlannedEnumLayout(variants) => {
+          self_host_assert_array_span(variants.start, variants.length, layouts.variants.length(), "ARN-101 physical variant demand")
+          let _ = while 0u32 {
+            offset => if offset < variants.length {
+              match layouts.variants[variants.start + offset].payload {
+                SelfHostPlannedVariantPayloadLayout::PlannedUnitVariantLayout => {}
+                SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(fields) => self_host_physical_type_demand_fields(scope, fields)
+                SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(types) => {
+                  self_host_assert_array_span(types.start, types.length, layouts.payload_types.length(), "ARN-101 physical payload demand")
+                  let _ = while 0u32 {
+                    field => if field < types.length {
+                      self_host_physical_type_demand_resolved(scope, layouts.payload_types[types.start + field])
+                      continue field + 1u32
+                    } else {
+                      break self_host_semantic_unit()
+                    }
+                  }
+                }
+              }
+              continue offset + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+        SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout => {}
+      }
+      self_host_physical_type_demand_drain(demand, scope)
+      continue cursor + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  demand.required
+}

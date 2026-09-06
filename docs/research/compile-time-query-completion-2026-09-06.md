@@ -305,3 +305,23 @@ plan cannot reuse an earlier plan's request numbers or invalidate its selected
 bodies. The new test failed on the shared context and passes with private state;
 it also mutates the second context to verify the first remains intact. Hardening
 passes 194 tests, 29 invariant records, and 51 execution checks in 29.524 s.
+
+## Self-host nominal storage demand
+
+Physical nominal tables now follow reachable non-generic functions and exact
+selected requests. Live expressions, locals, patterns, lambda captures, and
+callable signatures seed a type-arena work queue. Generic substitutions retain
+logical nominal identities. Required declarations then enqueue their declared
+fields and variant payloads, including imported and recursive dependencies.
+Sparse visited sets bound each scope's traversal; a declaration enters the
+global queue only once. Lookup spans and identities are checked before access.
+Discarded generic bodies are not scanned as physical templates. The common
+closure runtime type remains separate from nominal demand.
+
+Hardening passes 196 tests, 29 invariant records, and 51 shared query checks in
+29.463 s. The new tests cover a discarded generic enum constructor/match and a
+recursive record with a transitive field type. The stable-source A/B/C bootstrap
+passes and B/C outputs are byte-identical (146.757 s total). An earlier comparison
+used different request sources because a helper was reformatted during the run;
+the two request files confirm that change. The repeated run used unchanged Dew
+source. Full bootstrap time remains a performance defect.

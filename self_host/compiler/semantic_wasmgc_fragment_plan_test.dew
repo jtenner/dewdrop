@@ -76,11 +76,11 @@ test "WasmGC fragments materialize specialized scalar signatures" {
 
 test "WasmGC fragments plan nominal struct and enum families" {
   let plan = self_host_wasmgc_test_plan(
-    b"struct Point {\n  x: I32\n  y: I64\n}\nenum State {\n  Idle\n  Ready(I32)\n}\npub fn run() -> I32 {\n  1\n}\n",
+    b"struct Point {\n  x: I32\n  y: I64\n}\nenum State {\n  Idle\n  Ready(I32)\n}\npub fn run(point: Point, state: State) -> I32 {\n  1\n}\n",
   )
   let module_ = plan.modules[0u32]
-  assert(self_host_u32_equal(self_host_wasmgc_physical_type_count(module_), 6u32), "struct enum base markers and variants")
-  assert(self_host_u32_equal(self_host_wasmgc_field_count(module_), 3u32), "struct and variant fields")
+  assert(self_host_u32_equal(self_host_wasmgc_physical_type_count(module_), 7u32), "struct enum family and common closure")
+  assert(self_host_u32_equal(self_host_wasmgc_field_count(module_), 4u32), "struct variant and common closure fields")
   let struct_type = self_host_wasmgc_physical_type_at(module_, 0u32)
   match struct_type.kind {
     SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(_) => {}

@@ -83,8 +83,9 @@ Deferred type checking and layout work below still prevent full completion.
     Dead locals now have an explicit elision flag, with unchanged logical types.
     Live patterns retain their literal expressions; dead pattern bindings are
     elided. Native nominal-demand scans and dead lambda signature roots honor
-    pruning. Self-host nominal type-table pruning and generic template storage
-    still need work.
+    pruning. Self-host nominal tables now follow selected bodies, live lambda
+    captures, ABI roots, and transitive fields with a visited work queue.
+    Native generic template storage still needs work.
 - [ ] Keep type-dependent checks inside their branch until the type is known.
   Check the selected branch with its known type facts. Both branches need valid
   syntax; unrelated source errors must not disappear.
