@@ -18,3 +18,5 @@ search limits and cycle handling remain separate work.
 The hardening lane passes 281 self-host tests, 61 exact failure records, and all
 shared execution probes in 59.094 seconds. An initial test-fixture parse error
 was corrected before this run. No speed changes are included.
+
+The full routine native lane also passes: 961 tests in 122.234 seconds.

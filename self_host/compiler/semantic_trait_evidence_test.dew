@@ -1,4 +1,16 @@
 open dew.std.testing
+open dew.std.result
+open dew.std.string_builder
+
+fn self_host_test_evidence_tree(result: Result<SelfHostTraitEvidenceTree, String>) -> SelfHostTraitEvidenceTree {
+  match result {
+    Result::Ok(tree) => tree
+    Result::Err(error) => {
+      assert(false, error)
+      unreachable()
+    }
+  }
+}
 
 test "trait evidence selects imported concrete implementation" {
   let fixture = self_host_imported_semantics_fixture(
@@ -22,17 +34,17 @@ test "trait evidence selects imported concrete implementation" {
     trait_type,
     implementation.target_type,
   ) {
-    SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(
-      declaration,
-      specificity,
-    ) => {
-      assert(
-        self_host_u64_equal(declaration, implementation.declaration),
-        "selected implementation",
-      )
-      assert(self_host_u32_equal(specificity, 0u32), "specificity")
+    Result::Ok(selected) => match selected {
+      Option::Some(witness) => {
+        assert(
+          self_host_u64_equal(witness.implementation.declaration, implementation.declaration),
+          "selected implementation",
+        )
+        assert(self_host_u32_equal(witness.implementation.specificity, 0u32), "specificity")
+      }
+      Option::None => assert(false, "expected selected evidence")
     }
-    _ => assert(false, "expected selected evidence")
+    Result::Err(error) => assert(false, error)
   }
 }
 
@@ -57,7 +69,7 @@ test "trait evidence validates recursive implementation prerequisites" {
       index,
       good_bound,
       good_target,
-    ) is SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(_, _),
+    ) is Result::Ok(Option::Some(_)),
     "satisfied prerequisite",
   )
   assert(
@@ -67,7 +79,7 @@ test "trait evidence validates recursive implementation prerequisites" {
       index,
       bad_bound,
       bad_target,
-    ) is SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection,
+    ) is Result::Ok(Option::None),
     "missing prerequisite",
   )
 }
@@ -97,7 +109,7 @@ test "trait evidence rejects a nonmatching target" {
       index,
       trait_type,
       i32_type,
-    ) is SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection,
+    ) is Result::Ok(Option::None),
     "nonmatching target",
   )
 }
@@ -114,13 +126,13 @@ test "trait evidence tree publishes recursive prerequisites" {
   )
   let bound = fixture.imports.resolved.generic_bound_types[0u32]
   let target = fixture.imports.resolved.parameter_types[0u32]
-  let tree = self_host_select_trait_evidence_tree(
+  let tree = self_host_test_evidence_tree(self_host_select_trait_evidence_tree(
     collected,
     fixture.imports,
     index,
     bound,
     target,
-  )
+  ))
   match tree.root {
     Option::Some(root) => {
       assert(self_host_u32_equal(root, 1u32), "postorder root")
@@ -135,14 +147,92 @@ test "trait evidence tree publishes recursive prerequisites" {
         "prerequisite child",
       )
       assert(self_host_u32_equal(root_node.arguments.length, 1u32), "generic argument")
-      match tree.arguments[root_node.arguments.start] {
-        SelfHostTraitEvidenceArgument::ShapeTraitEvidenceArgument(shape) => assert(
-          shape is SelfHostPlannedValueShape::RefPlannedValueShape,
-          "Leaf argument shape",
-        )
-      }
+      assert(tree.arguments[root_node.arguments.start] is SelfHostCompileTimeType::NominalCompileTimeType(_), "Leaf keeps logical type identity")
     }
     Option::None => assert(false, "expected evidence tree")
+  }
+}
+
+test "trait evidence depth 65 retains only direct prerequisite children" {
+  let source = StringBuilder::new()
+  source.append("open app.library\npub fn run<u: Mark>(value: ")
+  let _ = while 0u32 {
+    depth => if depth < 65u32 {
+      source.append("Box<")
+      continue depth + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  source.append("Leaf")
+  let _ = while 0u32 {
+    depth => if depth < 65u32 {
+      source.append(">")
+      continue depth + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  source.append(") -> Unit {}\n")
+  let fixture = self_host_imported_semantics_fixture(source.finish().as_bytes(),
+    b"pub trait Mark {}\npub struct Leaf {}\npub struct Box<t> {}\nimpl Mark for Leaf {}\nimpl<t: Mark> Mark for Box<t> {}\n")
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let index = self_host_index_module_implementations_with_imports(collected, fixture.imports)
+  assert(index.diagnostic_count() == 0u32, "valid recursive implementation index")
+  let bound = fixture.imports.resolved.generic_bound_types[0u32]
+  let target = fixture.imports.resolved.parameter_types[0u32]
+  assert(self_host_select_trait_evidence(collected, fixture.imports, index, bound, target) is Result::Ok(Option::Some(_)), "depth 65 is not missing evidence")
+  let tree = self_host_test_evidence_tree(self_host_select_trait_evidence_tree(collected, fixture.imports, index, bound, target))
+  assert(tree.nodes.length() == 66u32, "all prerequisite nodes")
+  assert(tree.children.length() == 65u32, "exact direct edges")
+  assert(tree.nodes[0u32].prerequisites.length == 0u32, "leaf has no child")
+  let _ = while 1u32 {
+    node => if node < tree.nodes.length() {
+      let span = tree.nodes[node].prerequisites
+      assert(span.length == 1u32, "grandchildren do not leak into parent spans")
+      assert(tree.children[span.start] == node - 1u32, "exact direct child")
+      continue node + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+test "trait evidence reports cycles instead of absence" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\npub fn run<u: Mark<Leaf>>(value: Leaf) -> Unit {}\n",
+    b"pub trait Mark<t> {}\npub struct Leaf {}\nimpl<t: Mark<t>> Mark<t> for Leaf {}\n",
+  )
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let index = self_host_index_module_implementations_with_imports(collected, fixture.imports)
+  assert(index.diagnostic_count() == 0u32, "cycle is an obligation, not malformed index")
+  let bound = fixture.imports.resolved.generic_bound_types[0u32]
+  let target = fixture.imports.resolved.parameter_types[0u32]
+  let search = self_host_trait_evidence_search(collected, fixture.imports, index)
+  match self_host_select_trait_evidence_with_search(search, bound, target) {
+    Result::Err(error) => assert(error.equals("CT-013 cyclic trait prerequisite"), "exact cycle diagnostic")
+    Result::Ok(_) => assert(false, "cycle cannot become ordinary absence")
+  }
+  assert(search.active.length() == 0u32, "active obligations unwind after failure")
+  match self_host_select_trait_evidence_tree(collected, fixture.imports, index, bound, target) {
+    Result::Err(error) => assert(error.equals("CT-013 cyclic trait prerequisite"), "tree preserves cycle")
+    Result::Ok(_) => assert(false, "cycle cannot become an empty tree")
+  }
+}
+
+test "trait evidence reports resource limits as a separate result" {
+  let fixture = self_host_imported_semantics_fixture(b"open app.library\npub fn run<u: Mark>(value: Leaf) -> Unit {}\n",
+    b"pub trait Mark {}\npub struct Leaf {}\nimpl Mark for Leaf {}\n")
+  let collected = fixture.frozen.collected.modules.at(0u32)
+  let index = self_host_index_module_implementations_with_imports(collected, fixture.imports)
+  let bound = fixture.imports.resolved.generic_bound_types[0u32]
+  let target = fixture.imports.resolved.parameter_types[0u32]
+  let search = self_host_trait_evidence_search(collected, fixture.imports, index)
+  assert(self_host_select_trait_evidence_with_search(search, bound, target) is Result::Ok(Option::Some(_)), "valid search")
+  search.budget.steps = 65536u32
+  match self_host_select_trait_evidence_with_search(search, bound, target) {
+    Result::Err(error) => assert(error.equals("CT-012 trait evidence search limit exceeded"), "exact resource limit")
+    Result::Ok(_) => assert(false, "limit cannot become ordinary absence")
   }
 }
 
@@ -156,13 +246,13 @@ test "trait evidence tree rolls back missing prerequisites" {
     collected,
     fixture.imports,
   )
-  let tree = self_host_select_trait_evidence_tree(
+  let tree = self_host_test_evidence_tree(self_host_select_trait_evidence_tree(
     collected,
     fixture.imports,
     index,
     fixture.imports.resolved.generic_bound_types[0u32],
     fixture.imports.resolved.parameter_types[0u32],
-  )
+  ))
   assert(tree.root is Option::None, "missing root")
   assert(tree.nodes.length() == 0u32, "rolled back nodes")
   assert(tree.children.length() == 0u32, "rolled back children")

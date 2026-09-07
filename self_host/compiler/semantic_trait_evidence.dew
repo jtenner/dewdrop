@@ -1,238 +1,45 @@
 open dew.std.option
+open dew.std.result
+open dew.std.map
 
-pub enum SelfHostTraitEvidenceSelection {
-  NoTraitEvidenceSelection
-  AmbiguousTraitEvidenceSelection(U64, U64, U32)
-  SelectedTraitEvidenceSelection(U64, U32)
-}
-
-fn self_host_trait_evidence_resolved_body_type(
-  solver: SelfHostLocalTypeSolver,
-  type_: I32,
-) -> Option<U32> {
-  match solver.type_term(solver.representative_type(type_)) {
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved) => Option::Some(resolved)
-    SelfHostBodyTypeTerm::BodyErrorType => Option::Some(0u32)
-    _ => Option::None
-  }
-}
-
-fn self_host_trait_evidence_candidate_bounds(
+// Use the same checked logical search as inference and compile-time queries.
+// There is no separate solver-based fallback or physical-shape search here.
+fn self_host_trait_evidence_search(
   collected: SelfHostCollectedModule,
   imports: SelfHostResolvedModuleImports,
   index: SelfHostModuleImplIndex,
-  implementation: SelfHostIndexedImpl,
-  importer: SelfHostImplPatternImporter,
-  depth: U32,
-) -> Bool {
-  let local = self_host_u64_equal(
-    self_host_semantic_id_module(implementation.declaration),
-    collected.module_id,
-  )
-  let generic_count = importer.generic_types.length()
-  let mut generic_index = 0u32
-  let _ = while generic_index {
-    current => if current < generic_count {
-      let bounds = if local {
-        let generics = collected.generic_parameters_of(
-          implementation.declaration,
-        )
-        collected.generic_parameters[
-          self_host_u32_add(generics.start, current)
-        ].bounds
-      } else {
-        match imports.implementation(implementation.declaration) {
-          Option::Some(imported) => imports.generic_parameter_bounds[
-            self_host_u32_add(imported.generic_bounds.start, current)
-          ]
-          Option::None => self_host_empty_hir_span(0u32)
-        }
-      }
-      let mut bound_index = 0u32
-      let _ = while bound_index {
-        bound => if bound < bounds.length {
-          let source = if local {
-            imports.resolved.generic_bound_types[
-              self_host_u32_add(bounds.start, bound)
-            ]
-          } else {
-            imports.generic_bound_types[
-              self_host_u32_add(bounds.start, bound)
-            ]
-          }
-          let instantiated_bound = importer.import_type(source)
-          let target_resolved = self_host_trait_evidence_resolved_body_type(
-            importer.solver,
-            importer.generic_types[current],
-          )
-          let bound_resolved = self_host_trait_evidence_resolved_body_type(
-            importer.solver,
-            instantiated_bound,
-          )
-          match target_resolved {
-            Option::Some(target_type) => match bound_resolved {
-              Option::Some(bound_type) => match self_host_select_trait_evidence_at_depth(
-                collected,
-                imports,
-                index,
-                bound_type,
-                target_type,
-                depth + 1u32,
-              ) {
-                SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(_, _) => {}
-                _ => {
-                  return false
-                }
-              }
-              Option::None => {
-                return false
-              }
-            }
-            Option::None => {
-              return false
-            }
-          }
-          continue bound + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
+) -> SelfHostCompileTimeEvidenceSearch {
+  SelfHostCompileTimeEvidenceSearch::{
+    lowering: Option::None
+    collected: collected
+    resolved: imports.resolved
+    imports: imports
+    index: index
+    active: []
+    budget: SelfHostCompileTimeEvidenceBudget::{
+      steps: 0u32
     }
+    associated_scopes: Map::empty()
+    associated_only: false
+    include_test_impls: false
   }
-  true
 }
 
-fn self_host_trait_evidence_candidate_matches(
-  collected: SelfHostCollectedModule,
-  imports: SelfHostResolvedModuleImports,
-  index: SelfHostModuleImplIndex,
-  implementation: SelfHostIndexedImpl,
+fn self_host_select_trait_evidence_with_search(
+  search: SelfHostCompileTimeEvidenceSearch,
   trait_type: U32,
   target_type: U32,
-  depth: U32,
-) -> Bool {
-  let importer = SelfHostImplPatternImporter::new(imports.resolved)
-  self_host_impl_add_any_generics(
-    importer,
-    collected,
-    imports,
-    implementation.declaration,
-  )
-  let candidate_trait = match implementation.trait_type {
-    Option::Some(type_) => importer.import_type(type_)
-    Option::None => importer.solver.error_type()
+) -> Result<Option<SelfHostCompileTimeTraitWitness>, String> {
+  let bindings = self_host_empty_compile_time_bindings()
+  let trait_ = match search.read(trait_type, bindings) {
+    Result::Ok(value) => value
+    Result::Err(error) => return Result::Err(error)
   }
-  let candidate_target = importer.import_type(implementation.target_type)
-  let origin = SelfHostTypeConstraintOrigin::{
-    kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
-    source: 0u32
-    offset: 0u32
+  let target = match search.read(target_type, bindings) {
+    Result::Ok(value) => value
+    Result::Err(error) => return Result::Err(error)
   }
-  if !importer.solver.unify(
-    candidate_trait,
-    importer.solver.resolved_type(trait_type),
-    origin,
-  ) || !importer.solver.unify(
-    candidate_target,
-    importer.solver.resolved_type(target_type),
-    origin,
-  ) {
-    false
-  } else {
-    self_host_trait_evidence_candidate_bounds(
-      collected,
-      imports,
-      index,
-      implementation,
-      importer,
-      depth,
-    )
-  }
-}
-
-fn self_host_select_trait_evidence_at_depth(
-  collected: SelfHostCollectedModule,
-  imports: SelfHostResolvedModuleImports,
-  index: SelfHostModuleImplIndex,
-  trait_type: U32,
-  target_type: U32,
-  depth: U32,
-) -> SelfHostTraitEvidenceSelection {
-  if depth >= 64u32 {
-    return SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection
-  }
-  let trait_declaration = match self_host_impl_trait_head(
-    imports.resolved,
-    trait_type,
-  ) {
-    Option::Some(value) => value
-    Option::None => {
-      return SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection
-    }
-  }
-  let target_head = self_host_impl_target_head(imports.resolved, target_type)
-  let mut selected_declaration = 18446744073709551615u64
-  let mut second_declaration = 18446744073709551615u64
-  let mut selected_specificity = 0u32
-  let mut viable = 0u32
-  for implementation in index.implementations {
-    if implementation.valid && implementation.coherent && self_host_impl_heads_equal(
-      implementation.target_head,
-      target_head,
-    ) {
-      let matching_trait = match implementation.kind {
-        SelfHostIndexedImplKind::TraitIndexedImpl(candidate) => self_host_u64_equal(
-          candidate,
-          trait_declaration,
-        )
-        SelfHostIndexedImplKind::InherentIndexedImpl => false
-      }
-      if matching_trait && self_host_trait_evidence_candidate_matches(
-        collected,
-        imports,
-        index,
-        implementation,
-        trait_type,
-        target_type,
-        depth,
-      ) {
-        if self_host_u32_greater(
-          implementation.specificity,
-          selected_specificity,
-        ) || self_host_u32_equal(viable, 0u32) {
-          selected_declaration = implementation.declaration
-          second_declaration = 18446744073709551615u64
-          selected_specificity = implementation.specificity
-          viable = 1u32
-        } else if self_host_u32_equal(
-          implementation.specificity,
-          selected_specificity,
-        ) {
-          if self_host_u32_equal(viable, 1u32) {
-            second_declaration = implementation.declaration
-          }
-          viable = self_host_u32_add(viable, 1u32)
-        }
-      }
-    }
-  }
-  if self_host_u32_equal(viable, 0u32) {
-    SelfHostTraitEvidenceSelection::NoTraitEvidenceSelection
-  } else if self_host_u32_equal(viable, 1u32) {
-    SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(
-      selected_declaration,
-      selected_specificity,
-    )
-  } else {
-    SelfHostTraitEvidenceSelection::AmbiguousTraitEvidenceSelection(
-      selected_declaration,
-      second_declaration,
-      viable,
-    )
-  }
+  search.witness(target, trait_)
 }
 
 fn self_host_select_trait_evidence(
@@ -241,19 +48,12 @@ fn self_host_select_trait_evidence(
   index: SelfHostModuleImplIndex,
   trait_type: U32,
   target_type: U32,
-) -> SelfHostTraitEvidenceSelection {
-  self_host_select_trait_evidence_at_depth(
-    collected,
-    imports,
-    index,
+) -> Result<Option<SelfHostCompileTimeTraitWitness>, String> {
+  self_host_select_trait_evidence_with_search(
+    self_host_trait_evidence_search(collected, imports, index),
     trait_type,
     target_type,
-    0u32,
   )
-}
-
-pub enum SelfHostTraitEvidenceArgument {
-  ShapeTraitEvidenceArgument(SelfHostPlannedValueShape)
 }
 
 pub struct SelfHostTraitEvidenceNode {
@@ -266,222 +66,75 @@ pub struct SelfHostTraitEvidenceTree {
   root: Option<U32>
   nodes: Array<SelfHostTraitEvidenceNode>
   children: Array<U32>
-  arguments: Array<SelfHostTraitEvidenceArgument>
+  arguments: Array<SelfHostCompileTimeType>
 }
 
-fn self_host_trait_evidence_argument_for_type(
-  resolved: SelfHostResolvedModuleTypes,
-  solver: SelfHostLocalTypeSolver,
-  type_: I32,
-) -> Option<SelfHostTraitEvidenceArgument> {
-  match self_host_trait_evidence_resolved_body_type(solver, type_) {
-    Option::Some(resolved_type) => Option::Some(
-      SelfHostTraitEvidenceArgument::ShapeTraitEvidenceArgument(
-        self_host_planned_resolved_value_shape(resolved, resolved_type),
-      ),
-    )
-    Option::None => Option::None
-  }
-}
-
-fn self_host_build_selected_trait_evidence_node(
-  collected: SelfHostCollectedModule,
-  imports: SelfHostResolvedModuleImports,
-  index: SelfHostModuleImplIndex,
-  implementation_declaration: U64,
-  trait_type: U32,
-  target_type: U32,
+fn self_host_append_trait_evidence_node(
+  search: SelfHostCompileTimeEvidenceSearch,
+  witness: SelfHostCompileTimeTraitWitness,
   nodes: Array<SelfHostTraitEvidenceNode>,
   children: Array<U32>,
-  arguments: Array<SelfHostTraitEvidenceArgument>,
-  depth: U32,
-) -> Option<U32> {
-  if depth >= 64u32 {
-    return Option::None
-  }
-  let implementation = match index.implementation(implementation_declaration) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+  arguments: Array<SelfHostCompileTimeType>,
+) -> Result<U32, String> {
+  let declaration = witness.implementation.declaration
+  let local = self_host_semantic_id_module(declaration) == search.collected.module_id
+  let generics = if local {
+    search.collected.generic_parameters_of(declaration)
+  } else {
+    match search.imports.implementation(declaration) {
+      Option::Some(imported) => imported.generic_bounds
+      Option::None => return Result::Err("CT-010 missing imported implementation identity")
     }
   }
-  let node_start = nodes.length()
-  let child_start = children.length()
   let argument_start = arguments.length()
-  let importer = SelfHostImplPatternImporter::new(imports.resolved)
-  self_host_impl_add_any_generics(
-    importer,
-    collected,
-    imports,
-    implementation.declaration,
-  )
-  let candidate_trait = match implementation.trait_type {
-    Option::Some(type_) => importer.import_type(type_)
-    Option::None => importer.solver.error_type()
+  let arena_length = if local {
+    search.collected.generic_parameters.length()
+  } else {
+    search.imports.generic_parameter_ids.length()
   }
-  let candidate_target = importer.import_type(implementation.target_type)
-  let origin = SelfHostTypeConstraintOrigin::{
-    kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
-    source: 0u32
-    offset: 0u32
+  if !self_host_array_span_is_valid(generics.start, generics.length, arena_length) {
+    return Result::Err("CT-010 invalid trait evidence generic parameter span")
   }
-  if !importer.solver.unify(
-    candidate_trait,
-    importer.solver.resolved_type(trait_type),
-    origin,
-  ) || !importer.solver.unify(
-    candidate_target,
-    importer.solver.resolved_type(target_type),
-    origin,
-  ) {
-    return Option::None
-  }
-  for generic in importer.generic_types {
-    match self_host_trait_evidence_argument_for_type(
-      imports.resolved,
-      importer.solver,
-      generic,
-    ) {
-      Option::Some(argument) => arguments.push(argument)
-      Option::None => {
-        nodes.truncate(node_start)
-        children.truncate(child_start)
-        arguments.truncate(argument_start)
-        return Option::None
-      }
-    }
-  }
-  let local = self_host_u64_equal(
-    self_host_semantic_id_module(implementation.declaration),
-    collected.module_id,
-  )
-  let generic_count = importer.generic_types.length()
-  let mut generic_index = 0u32
-  let _ = while generic_index {
-    current => if current < generic_count {
-      let bounds = if local {
-        let generics = collected.generic_parameters_of(
-          implementation.declaration,
-        )
-        collected.generic_parameters[
-          self_host_u32_add(generics.start, current)
-        ].bounds
+  let _ = while 0u32 {
+    offset => if offset < generics.length {
+      let parameter = if local {
+        search.collected.generic_parameters[generics.start + offset].id
       } else {
-        match imports.implementation(implementation.declaration) {
-          Option::Some(imported) => imports.generic_parameter_bounds[
-            self_host_u32_add(imported.generic_bounds.start, current)
-          ]
-          Option::None => self_host_empty_hir_span(0u32)
-        }
+        search.imports.generic_parameter_ids[generics.start + offset]
       }
-      let mut bound_index = 0u32
-      let _ = while bound_index {
-        bound => if bound < bounds.length {
-          let source = if local {
-            imports.resolved.generic_bound_types[
-              self_host_u32_add(bounds.start, bound)
-            ]
-          } else {
-            imports.generic_bound_types[
-              self_host_u32_add(bounds.start, bound)
-            ]
-          }
-          let instantiated_bound = importer.import_type(source)
-          let target_resolved = self_host_trait_evidence_resolved_body_type(
-            importer.solver,
-            importer.generic_types[current],
-          )
-          let bound_resolved = self_host_trait_evidence_resolved_body_type(
-            importer.solver,
-            instantiated_bound,
-          )
-          let child = match target_resolved {
-            Option::Some(target) => match bound_resolved {
-              Option::Some(bound_type) => self_host_build_trait_evidence_node(
-                collected,
-                imports,
-                index,
-                bound_type,
-                target,
-                nodes,
-                children,
-                arguments,
-                depth + 1u32,
-              )
-              Option::None => Option::None
-            }
-            Option::None => Option::None
-          }
-          match child {
-            Option::Some(value) => children.push(value)
-            Option::None => {
-              nodes.truncate(node_start)
-              children.truncate(child_start)
-              arguments.truncate(argument_start)
-              return Option::None
-            }
-          }
-          continue bound + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
+      match witness.bindings.parameters.get(parameter) {
+        Option::Some(type_) => arguments.push(type_)
+        Option::None => return Result::Err("CT-011 unresolved implementation type argument")
       }
-      continue current + 1u32
+      continue offset + 1u32
     } else {
       break self_host_semantic_unit()
     }
   }
+  let direct_children = self_host_empty_semantic_ids()
+  for child in witness.prerequisites {
+    match self_host_append_trait_evidence_node(search, child, nodes, children, arguments) {
+      Result::Ok(node) => direct_children.push(node)
+      Result::Err(error) => return Result::Err(error)
+    }
+  }
+  let prerequisite_start = children.length()
+  for child in direct_children {
+    children.push(child)
+  }
   let node = nodes.length()
   nodes.push(SelfHostTraitEvidenceNode::{
-    implementation: implementation.declaration
+    implementation: declaration
     arguments: SelfHostHirSpan::{
       start: argument_start
-      length: importer.generic_types.length()
+      length: generics.length
     }
     prerequisites: SelfHostHirSpan::{
-      start: child_start
-      length: children.length() - child_start
+      start: prerequisite_start
+      length: direct_children.length()
     }
   })
-  Option::Some(node)
-}
-
-fn self_host_build_trait_evidence_node(
-  collected: SelfHostCollectedModule,
-  imports: SelfHostResolvedModuleImports,
-  index: SelfHostModuleImplIndex,
-  trait_type: U32,
-  target_type: U32,
-  nodes: Array<SelfHostTraitEvidenceNode>,
-  children: Array<U32>,
-  arguments: Array<SelfHostTraitEvidenceArgument>,
-  depth: U32,
-) -> Option<U32> {
-  match self_host_select_trait_evidence_at_depth(
-    collected,
-    imports,
-    index,
-    trait_type,
-    target_type,
-    depth,
-  ) {
-    SelfHostTraitEvidenceSelection::SelectedTraitEvidenceSelection(
-      implementation,
-      _,
-    ) => self_host_build_selected_trait_evidence_node(
-      collected,
-      imports,
-      index,
-      implementation,
-      trait_type,
-      target_type,
-      nodes,
-      children,
-      arguments,
-      depth,
-    )
-    _ => Option::None
-  }
+  Result::Ok(node)
 }
 
 fn self_host_select_trait_evidence_tree(
@@ -490,25 +143,26 @@ fn self_host_select_trait_evidence_tree(
   index: SelfHostModuleImplIndex,
   trait_type: U32,
   target_type: U32,
-) -> SelfHostTraitEvidenceTree {
+) -> Result<SelfHostTraitEvidenceTree, String> {
+  let search = self_host_trait_evidence_search(collected, imports, index)
+  let selected = match self_host_select_trait_evidence_with_search(search, trait_type, target_type) {
+    Result::Ok(value) => value
+    Result::Err(error) => return Result::Err(error)
+  }
   let nodes = []
-  let children = []
-  let arguments = []
-  let root = self_host_build_trait_evidence_node(
-    collected,
-    imports,
-    index,
-    trait_type,
-    target_type,
-    nodes,
-    children,
-    arguments,
-    0u32,
-  )
-  SelfHostTraitEvidenceTree::{
+  let children = self_host_empty_semantic_ids()
+  let arguments = self_host_empty_compile_time_types()
+  let root = match selected {
+    Option::Some(witness) => match self_host_append_trait_evidence_node(search, witness, nodes, children, arguments) {
+      Result::Ok(node) => Option::Some(node)
+      Result::Err(error) => return Result::Err(error)
+    }
+    Option::None => Option::None
+  }
+  Result::Ok(SelfHostTraitEvidenceTree::{
     root: root
     nodes: nodes
     children: children
     arguments: arguments
-  }
+  })
 }

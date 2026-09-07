@@ -220,6 +220,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Native trait signatures now compare substituted tuple fields; an Error field
   cannot hide a later mismatch. Both compiler regressions are in the
   [tuple signature log](docs/research/trait-tuple-signatures-2026-09-07.md).
+  The self-host standalone evidence API now shares the checked logical search
+  used by inference and type queries. Trees retain logical arguments and exact
+  direct-child spans. See the
+  [shared search log](docs/research/shared-trait-evidence-2026-09-07.md).
 - [ ] Complete stable numeric failure records and the negative invariant tests.
   Start with a valid state, change one field, and check the exact code and source
   context. Missing data or an unexpected trap must never count as a pass.
