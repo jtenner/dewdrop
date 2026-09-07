@@ -42,6 +42,11 @@ self_host_measure 'hardening StringView-library request' \
     "$work/string-view.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-string-view-probe.wasm \
     app.string_view_probes tools/dew-test/string_view_operations.dew
+self_host_measure 'hardening String-library request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/string.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-string-probe.wasm \
+    app.string_probes tools/dew-test/string_operations.dew
 self_host_measure 'hardening raw GC storage request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/raw-gc.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \

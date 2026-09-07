@@ -1309,20 +1309,6 @@ pub fn self_host_emit_erased_field_probe() -> Bytes {
 }
 
 
-pub fn self_host_emit_string_equality_probe() -> Bytes {
-  let fragments = self_host_physical_test_fragments(
-    b"builtin concat(left: String, right: String) -> String = \"dew_string_concat\"\nbuiltin equals(left: String, right: String) -> Bool = \"dew_string_equals\"\nstruct Label {\n  name: String\n}\nfn same(left: String, right: String) -> Bool {\n  left == right\n}\nfn different(left: String, right: String) -> Bool {\n  left != right\n}\nfn field_same(left: Label, right: String) -> Bool {\n  left.name == right\n}\npub fn main() -> I32 {\n  let left = concat(\"Op\", \"tion\")\n  let right = concat(\"Opt\", \"ion\")\n  if equals(left, right) && same(left, right) && !different(left, right) && field_same(Label::{\n    name: left\n  }, right) {\n    1i32\n  } else {\n    0i32\n  }\n}\n",
-  )
-  let link = self_host_plan_program_wasmgc_link(fragments, false)
-  self_host_physical_test_assert_clean_inference(link)
-  match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
-      assert(false, error)
-      b""
-    }
-  }
-}
 
 pub fn self_host_emit_short_constructor_probe() -> Bytes {
   let fragments = self_host_physical_test_fragments(

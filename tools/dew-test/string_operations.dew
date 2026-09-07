@@ -1,0 +1,80 @@
+open dew.std.preamble
+open dew.std.string
+open dew.std.bytes
+open dew.std.option
+
+struct StringLabel {
+  name: String
+}
+
+fn strings_same(left: String, right: String) -> Bool {
+  left == right
+}
+
+fn strings_different(left: String, right: String) -> Bool {
+  left != right
+}
+
+fn string_field_same(left: StringLabel, right: String) -> Bool {
+  left.name == right
+}
+
+fn string_result(value: Bool) -> I32 {
+  if value {
+    1i32
+  } else {
+    0i32
+  }
+}
+
+pub fn main(case: U32) -> I32 {
+  if case == 0u32 {
+    string_result("".utf16_length() == 0u32 && "".hash() == b"".hash() && "abc".starts_with("") && "abc".ends_with("") && "abc".find("") is Option::Some(0u32) && "".find("a") is Option::None && !"a".starts_with("ab") && !"a".ends_with("ba"))
+  } else if case == 1u32 {
+    let value = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaab"
+    string_result(value.find("aaaab") is Option::Some(29u32) && value.find_view("!ab?".view(1u32, 2u32)) is Option::Some(32u32) && !value.contains("ac") && value.contains_view("!aaaab?".view(1u32, 5u32)))
+  } else if case == 2u32 {
+    let value = "0123456789abcdef0123456789abcdef0123456789abcdef"
+    let needle = "!456789abcdef0123456789abcdef0123456789abcdef?".view(1u32, 44u32)
+    string_result(value.find_view(needle) is Option::Some(4u32) && value.find("456789abcdef0123456789abcdef0123456789abcdeg") is Option::None && value.find(value) is Option::Some(0u32) && value.hash() == value.as_bytes().hash())
+  } else if case == 3u32 {
+    let value = "λ0123456789abcdef🌍"
+    string_result(value.starts_with("λ012") && value.starts_with_view("!λ012?".view(1u32, 5u32)) && value.ends_with("def🌍") && value.ends_with_view("!def🌍?".view(1u32, 7u32)) && !value.starts_with("λ013") && !value.ends_with("deg🌍"))
+  } else if case == 4u32 {
+    let source = "0123456789abcdef0123456789abcdefλ🌍€"
+    while 0u32 {
+      offset if offset <= 32u32 => {
+        let value = source.view(offset, source.byte_length() - offset).to_string()
+        if value.utf16_length() != 36u32 - offset || value.hash() != value.as_bytes().hash() {
+          return 0i32
+        }
+        continue offset + 1u32
+      }
+      _ => break ()
+    }
+    1i32
+  } else if case == 5u32 {
+    let value = "🌍🌍🌍🌍🌍🌍🌍🌍λ€"
+    string_result(value.utf16_length() == 18u32 && value.find("λ€") is Option::Some(32u32) && value.hash() == value.as_bytes().hash() && "hello".hash() == 11831194018420276491u64)
+  } else if case == 6u32 {
+    let left = "!λ0123456789abcdef?".view(1u32, 18u32).to_string()
+    let right = "!🌍tail?".view(1u32, 8u32)
+    let combined = left.concat_view(right)
+    string_result(combined == "λ0123456789abcdef🌍tail" && left.concat(right.to_string()) == combined && "".concat(combined) == combined && combined.concat("") == combined && left == "λ0123456789abcdef" && right.to_string() == "🌍tail")
+  } else if case == 7u32 {
+    let value = "!λ?".view(1u32, 2u32).to_string()
+    match value {
+      "x" => 0i32
+      "λ" => 1i32
+      _ => 0i32
+    }
+  } else if case == 8u32 {
+    let left = "Op".concat("tion")
+    let right = "Opt".concat("ion")
+    string_result(left.equals(right) && strings_same(left, right) && !strings_different(left, right) && string_field_same(StringLabel::{
+      name: left
+    }, right))
+  } else {
+    unreachable()
+  }
+}

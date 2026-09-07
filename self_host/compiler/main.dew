@@ -10,14 +10,18 @@ open dew.std.string
 open dew.std.string_builder
 open dew.std.wasm.intrinsics
 
-builtin self_host_main_string_concat(
+fn self_host_main_string_concat(
   left: String,
   right: String,
-) -> String = "dew_string_concat"
+) -> String {
+  left.concat(right)
+}
 
-builtin self_host_main_string_as_bytes(
+fn self_host_main_string_as_bytes(
   value: String,
-) -> Bytes = "dew_string_as_bytes"
+) -> Bytes {
+  value.as_bytes()
+}
 
 builtin self_host_main_string_equals(
   left: String,

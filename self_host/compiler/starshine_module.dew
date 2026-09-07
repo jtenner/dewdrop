@@ -12177,10 +12177,6 @@ fn self_host_linked_unqualified_runtime_name(name: String) -> Bytes {
     b"dew_string_builder_with_capacity"
   } else if name == "bytes_builder_with_capacity_raw" {
     b"dew_bytes_builder_with_capacity"
-  } else if name == "string_find_raw" {
-    b"dew_string_find"
-  } else if name == "string_find_view_raw" {
-    b"dew_string_find_view"
   } else if name.starts_with("string_") || name.starts_with("bytes_") ||
     name.starts_with("array_") ||
     name.starts_with("debug_") {

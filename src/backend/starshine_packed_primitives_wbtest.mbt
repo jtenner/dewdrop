@@ -297,10 +297,7 @@ test "unchecked Bytes to String is one reference cast without allocation" {
 }
 
 ///|
-test "StringView to Bytes is one reference cast without allocation" {
-  let actual = emit_starshine_text_runtime_function(
-    b"dew_string_view_as_bytes", 17, -1, -1,
-  ).unwrap()
+test "String and StringView to Bytes are one reference cast without allocation" {
   let expected = @lib.Func::new(
     @lib.Locals::empty(),
     @lib.Expr::new([
@@ -311,7 +308,10 @@ test "StringView to Bytes is one reference cast without allocation" {
       ),
     ]),
   )
-  assert_eq(actual, expected)
+  for name in [b"dew_string_as_bytes", b"dew_string_view_as_bytes"] {
+    let actual = emit_starshine_text_runtime_function(name, 17, -1, -1).unwrap()
+    assert_eq(actual, expected)
+  }
 }
 
 ///|

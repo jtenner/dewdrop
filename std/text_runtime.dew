@@ -1,20 +1,10 @@
 open dew.std.wasm.intrinsics
 
 builtin string_byte_length(value: String) -> U32 = "dew_string_byte_length"
-builtin string_as_bytes(value: String) -> Bytes = "dew_string_as_bytes"
-builtin string_utf16_length(value: String) -> U32 = "dew_string_utf16_length"
+builtin string_as_bytes_unchecked(value: String) -> Bytes = "dew_string_as_bytes"
 builtin string_equals(left: String, right: String) -> Bool = "dew_string_equals"
-builtin string_hash(value: String) -> U64 = "dew_string_hash"
 builtin string_byte_at(value: String, index: U32) -> U8 = "dew_string_byte_at"
 builtin string_view(value: String, start: U32, length: U32) -> StringView = "dew_string_view"
-builtin string_concat(left: String, right: String) -> String = "dew_string_concat"
-builtin string_concat_view(left: String, right: StringView) -> String = "dew_string_concat_view"
-builtin string_find_raw(value: String, needle: String) -> U32 = "dew_string_find"
-builtin string_find_view_raw(value: String, needle: StringView) -> U32 = "dew_string_find_view"
-builtin string_starts_with(value: String, prefix: String) -> Bool = "dew_string_starts_with"
-builtin string_starts_with_view(value: String, prefix: StringView) -> Bool = "dew_string_starts_with_view"
-builtin string_ends_with(value: String, suffix: String) -> Bool = "dew_string_ends_with"
-builtin string_ends_with_view(value: String, suffix: StringView) -> Bool = "dew_string_ends_with_view"
 builtin string_view_byte_length(value: StringView) -> U32 = "dew_string_view_byte_length"
 builtin string_view_byte_at(value: StringView, index: U32) -> U8 = "dew_string_view_byte_at"
 builtin string_view_to_string(value: StringView) -> String = "dew_string_view_to_string"
@@ -39,6 +29,51 @@ builtin bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string
 builtin bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
 builtin bytes_view(value: Bytes, start: U32, length: U32) -> Bytes = "dew_bytes_view"
 builtin bytes_concat(left: Bytes, right: Bytes) -> Bytes = "dew_bytes_concat"
+
+fn string_as_bytes(value: String) -> Bytes {
+  string_as_bytes_unchecked(value)
+}
+
+fn string_utf16_length(value: String) -> U32 {
+  text_utf16_length(string_as_bytes(value))
+}
+
+fn string_hash(value: String) -> U64 {
+  bytes_hash(string_as_bytes(value))
+}
+
+fn string_find_raw(value: String, needle: String) -> U32 {
+  bytes_find_raw(string_as_bytes(value), string_as_bytes(needle))
+}
+
+fn string_find_view_raw(value: String, needle: StringView) -> U32 {
+  bytes_find_raw(string_as_bytes(value), string_view_as_bytes(needle))
+}
+
+fn string_starts_with(value: String, prefix: String) -> Bool {
+  bytes_starts_with(string_as_bytes(value), string_as_bytes(prefix))
+}
+
+fn string_starts_with_view(value: String, prefix: StringView) -> Bool {
+  bytes_starts_with(string_as_bytes(value), string_view_as_bytes(prefix))
+}
+
+fn string_ends_with(value: String, suffix: String) -> Bool {
+  bytes_ends_with(string_as_bytes(value), string_as_bytes(suffix))
+}
+
+fn string_ends_with_view(value: String, suffix: StringView) -> Bool {
+  bytes_ends_with(string_as_bytes(value), string_view_as_bytes(suffix))
+}
+
+fn string_concat(left: String, right: String) -> String {
+  // Concatenating two valid UTF-8 ranges preserves validity.
+  bytes_to_string_unchecked(bytes_concat(string_as_bytes(left), string_as_bytes(right)))
+}
+
+fn string_concat_view(left: String, right: StringView) -> String {
+  bytes_to_string_unchecked(bytes_concat(string_as_bytes(left), string_view_as_bytes(right)))
+}
 
 fn string_view_as_bytes(value: StringView) -> Bytes {
   string_view_as_bytes_unchecked(value)
