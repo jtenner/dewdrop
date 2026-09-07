@@ -121,8 +121,6 @@ fn self_host_program_link_is_imported(
 fn self_host_program_link_is_runtime_builtin(name: Bytes) -> Bool {
   name.starts_with(b"dew_string_") ||
   name.starts_with(b"dew_bytes_") ||
-  name.equals(b"dew_debug_f32") ||
-  name.equals(b"dew_debug_f64") ||
   name.equals(b"dew_debug_string") ||
   name.equals(b"dew_debug_bytes") ||
   name.equals(b"dew_debug_v128") ||

@@ -184,6 +184,11 @@ def standard_builtin_declarations() -> list[IntrinsicDeclaration]:
         text = path.read_text(encoding="utf-8")
         relative = path.relative_to(ROOT).as_posix()
         for match in BUILTIN_PATTERN.finditer(text):
+            # Double-underscore library helpers are internal implementation
+            # names, not additions to the public Wasm alias surface. Their
+            # opcodes must still have public declarations for coverage below.
+            if match.group("name").startswith("__"):
+                continue
             declarations.append(
                 IntrinsicDeclaration(
                     source=relative,

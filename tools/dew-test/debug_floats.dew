@@ -1,0 +1,38 @@
+open dew.std.wasm.intrinsics
+
+fn debug_f32_bits(bits: U32) -> Unit {
+  debug(wasm_f32_from_bits(bits))
+}
+
+fn debug_f64_bits(bits: U64) -> Unit {
+  debug(wasm_f64_from_bits(bits))
+}
+
+fn debug_float_generic<t: Debug>(value: t) -> Unit {
+  debug(value)
+}
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => debug_f32_bits(0u32)
+    1u32 => debug_f32_bits(2147483648u32)
+    2u32 => debug_f32_bits(1065353216u32)
+    3u32 => debug_f32_bits(2139095040u32)
+    4u32 => debug_f32_bits(4286578688u32)
+    5u32 => debug_f32_bits(2143363909u32)
+    6u32 => debug_f32_bits(1u32)
+    7u32 => debug_f32_bits(2139095039u32)
+    8u32 => debug_f64_bits(0u64)
+    9u32 => debug_f64_bits(9223372036854775808u64)
+    10u32 => debug_f64_bits(4607182418800017408u64)
+    11u32 => debug_f64_bits(9218868437227405312u64)
+    12u32 => debug_f64_bits(18442240474082181120u64)
+    13u32 => debug_f64_bits(9221140253039434428u64)
+    14u32 => debug_f64_bits(1u64)
+    15u32 => debug_f64_bits(9218868437227405311u64)
+    16u32 => debug_float_generic(wasm_f32_from_bits(4290847557u32))
+    17u32 => debug_float_generic(wasm_f64_from_bits(18444512289894210236u64))
+    _ => unreachable()
+  }
+  0i32
+}

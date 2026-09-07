@@ -68,6 +68,7 @@ def main() -> None:
         ("member_calls", "app.member_probes"),
         ("debug_dispatch", "app.debug_probes"),
         ("debug_integers", "app.debug_integers"),
+        ("debug_floats", "app.debug_floats"),
         ("wasi_bytes", "app.wasi_bytes"),
         ("product_patterns", "app.product_patterns"),
         ("constructor_evaluations", "app.constructor_probes"),

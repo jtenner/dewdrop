@@ -15,6 +15,7 @@ python3 tools/test_memory_builtin_policy.py
 python3 tools/test_wasi_foreign_policy.py
 python3 tools/test_debug_dispatch_policy.py
 python3 tools/test_debug_integer_policy.py
+python3 tools/test_debug_float_policy.py
 python3 tools/test_arithmetic_builtin_policy.py
 python3 tools/test_math_builtin_policy.py
 python3 tools/test_array_builtin_policy.py
