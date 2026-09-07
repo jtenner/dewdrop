@@ -93,6 +93,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   Old runtime call synthesis and empty/clear/iterator-next builders are also
   removed; missing selected functions remain errors. See the
   [call synthesis log](docs/research/array-call-synthesis-removal-2026-09-07.md).
+  Remaining push/pop/read/write emitter builders now use selected calls too;
+  only literal construction and planning heuristics remain in this cleanup.
+  See the [method emission log](docs/research/array-method-emission-removal-2026-09-07.md).
 - [x] Move Map hashing, buckets, growth, lookup, and iteration into Dew. Typed
   entries preserve aliases, cached hashes avoid repeated user calls during
   growth, and all 12 shared native/self-host checks pass. Native Map IR and

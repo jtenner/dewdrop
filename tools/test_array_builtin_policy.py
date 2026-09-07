@@ -29,10 +29,20 @@ class ArrayBuiltinPolicyTests(unittest.TestCase):
 
     def test_emission_cannot_synthesize_old_array_calls(self):
         source = (ROOT / "self_host/compiler/starshine_module.dew").read_text()
-        for name in ("EmitLinkedArrayBuiltin", "EmitLinkedArrayEmpty", "EmitLinkedArrayIterNext"):
+        for name in ("EmitLinkedArrayBuiltin", "EmitLinkedArrayEmpty", "EmitLinkedArrayIterNext",
+                     "EmitLinkedArrayPush", "EmitLinkedArrayPop", "EmitLinkedArraySetPrefix"):
             self.assertFalse(name in source, f"obsolete Array emission task: {name}")
         source = (ROOT / "self_host/compiler/starshine_runtime_emit.dew").read_text()
         self.assertFalse("dew_array_" in source, "removed Array runtime builder")
+
+    def test_array_methods_do_not_bypass_selected_calls(self):
+        source = (ROOT / "self_host/compiler/starshine_module.dew").read_text()
+        start = source.index("fn self_host_emit_linked_i32_expression(")
+        end = source.index("\nfn ", start + 3)
+        emitter = source[start:end]
+        for name in ("push", "pop", "get_unchecked", "set_unchecked"):
+            self.assertFalse(f'method_name == "{name}"' in emitter,
+                             f"Array method must use its selected call: {name}")
 
     def test_array_specialization_has_no_runtime_lookup_or_erased_adapter(self):
         source = (ROOT / "self_host/compiler/semantic_program_specialization.dew").read_text()
