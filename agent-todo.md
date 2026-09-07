@@ -157,8 +157,9 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Run `tools/test-native.sh`, `tools/test-integration-native.sh`,
   `tools/dew-test/run.sh`, `tools/test-self-host-hardening.sh`, and
   `tools/check-generated.sh` after the remaining implementation batches.
-- [ ] Run `tools/test-stress-native.sh` and `tools/test-starshine-native.sh`.
-  These full lanes have not yet been run for this migration tranche.
+- [x] Run `tools/test-stress-native.sh` and `tools/test-starshine-native.sh`.
+  After the Set migration, all 15 stress tests and 10,982 pinned Starshine tests
+  pass. Run them again after the remaining compiler changes.
 - [ ] Run `tools/check-self-host-bootstrap.sh --clean --fast` after compiler
   changes. Require successful A/B/C builds and identical B/C output; the lane
   already exists and has passed, so extend it rather than creating it again.

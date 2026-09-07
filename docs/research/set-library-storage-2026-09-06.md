@@ -34,11 +34,14 @@ separate compiler commit, not by changing Set's type or adding an exception.
 | Self-host real Set compilation/execution | 8 passed | 1.375 |
 | Generated source, API, and policy checks | passed | 14.955 |
 | Clean A/B/C bootstrap | identical B/C bytes | 159.120 |
+| Full compiler stress lane | 15 passed | 0.119 |
+| Full pinned Starshine lane | 10,982 passed | 256.979 |
 
 The native, integration, hardening, and bootstrap runs exceed 30 seconds and
 remain performance bugs. Native semantic tests took 78.813 seconds and backend
 tests 36.625. Bootstrap A build took 38.512 seconds, A compilation 42.475, and B
-compilation 54.752. Correctness remains the first task.
+compilation 54.752. The full pinned Starshine lane also exceeds the 30-second
+budget. Correctness remains the first task.
 
 B/C SHA-256:
 `3fefd2b01aee879f8db1ee13db2d3bef9d047307fd908faa3dec62a0fbb8d0c9`.
