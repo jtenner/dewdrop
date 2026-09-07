@@ -167,7 +167,7 @@ struct SelfHostQueryInstanceTypeContext {
   lowering: SelfHostPlannedProgramLowering
   source: SelfHostPlannedModuleLowering
   instance: SelfHostPlannedModuleLowering
-  bindings: Map<U64, SelfHostCompileTimeType>
+  bindings: SelfHostCompileTimeBindings
   cache: Map<I32, I32>
   declaration: U64
   specialization: U32
@@ -267,7 +267,7 @@ impl SelfHostQueryInstanceTypeContext {
   }
 }
 
-fn self_host_materialize_query_instance_types(lowering: SelfHostPlannedProgramLowering, source: SelfHostPlannedModuleLowering, instance: SelfHostPlannedModuleLowering, bindings: Map<U64, SelfHostCompileTimeType>, declaration: U64, specialization: U32) -> Unit {
+fn self_host_materialize_query_instance_types(lowering: SelfHostPlannedProgramLowering, source: SelfHostPlannedModuleLowering, instance: SelfHostPlannedModuleLowering, bindings: SelfHostCompileTimeBindings, declaration: U64, specialization: U32) -> Unit {
   if !self_host_query_module_has_projections(source) {
     return
   }

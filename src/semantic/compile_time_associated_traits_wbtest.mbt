@@ -80,8 +80,10 @@ test "Self and generic parameters have separate signature binding identities" {
     compile_time_read_type(
       module_,
       -product - 2,
-      { 42UL: CtPrimitive(I32Type) },
-      self_binding=Some((42UL, CtPrimitive(I64Type))),
+      Map([
+        (CtGenericBinding(42UL), CtPrimitive(I32Type)),
+        (CtSelfBinding(42UL), CtPrimitive(I64Type)),
+      ]),
     ),
     Ok(CtProduct([CtPrimitive(I64Type), CtPrimitive(I32Type)])),
   )

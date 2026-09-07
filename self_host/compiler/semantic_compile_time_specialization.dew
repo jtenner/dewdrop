@@ -204,7 +204,7 @@ fn self_host_compile_time_to_evidence_type(value: SelfHostCompileTimeType) -> Se
   }
 }
 
-fn self_host_compile_time_caller_bindings(caller: Option<SelfHostPlannedCallable>, specialization: U32, requests: Array<SelfHostProgramSpecializationRequest>) -> Map<U64, SelfHostCompileTimeType> {
+fn self_host_compile_time_caller_bindings(caller: Option<SelfHostPlannedCallable>, specialization: U32, requests: Array<SelfHostProgramSpecializationRequest>) -> SelfHostCompileTimeBindings {
   let bindings = self_host_empty_compile_time_bindings()
   if specialization < requests.length() {
     let request = requests[specialization]
@@ -213,7 +213,7 @@ fn self_host_compile_time_caller_bindings(caller: Option<SelfHostPlannedCallable
         let parameters = self_host_program_specialization_callable_generics(callable)
         let _ = while 0u32 {
           offset => if offset < parameters.length && offset < request.evidence_types.length() {
-            bindings.set(self_host_make_semantic_id(parameters.module_id, parameters.local(offset)), self_host_compile_time_evidence_type(request.evidence_types[offset]))
+            bindings.parameters.set(self_host_make_semantic_id(parameters.module_id, parameters.local(offset)), self_host_compile_time_evidence_type(request.evidence_types[offset]))
             continue offset + 1u32
           } else {
             break self_host_semantic_unit()

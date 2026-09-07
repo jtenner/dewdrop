@@ -1,4 +1,11 @@
 ///|
+// Declaration and generic-parameter IDs belong to separate arenas.
+enum CompileTimeBindingKey {
+  CtGenericBinding(GenericParameterId)
+  CtSelfBinding(DeclId)
+} derive(Eq, Hash, Debug)
+
+///|
 // Logical types, before ABI canonicalization. Nominal IDs remain nominal even
 // when two declarations happen to have the same physical representation.
 enum CompileTimeType {

@@ -62,7 +62,7 @@ fn self_host_reduce_compile_time_projection(lowering: SelfHostPlannedProgramLowe
       let bindings = self_host_empty_compile_time_bindings()
       let _ = while 0u32 {
         index => if index < generics.length {
-          bindings.set(collected.generic_parameter_at(generics.start + index).id, arguments[index])
+          bindings.parameters.set(collected.generic_parameter_at(generics.start + index).id, arguments[index])
           continue index + 1u32
         } else {
           break self_host_semantic_unit()

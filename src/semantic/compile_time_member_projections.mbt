@@ -42,9 +42,11 @@ fn reduce_compile_time_projections(
         if generics.length != arguments.length() {
           return Err("CT-031 member owner has the wrong generic arity")
         }
-        let bindings : Map[GenericParameterId, CompileTimeType] = {}
+        let bindings : Map[CompileTimeBindingKey, CompileTimeType] = {}
         for offset in 0..<generics.length {
-          bindings[collected.generic_parameters[generics.start + offset].id] = arguments[offset]
+          bindings[CtGenericBinding(
+            collected.generic_parameters[generics.start + offset].id,
+          )] = arguments[offset]
         }
         let field_query = operation == b"types.field_type"
         let kind = match collected.declaration(declaration) {

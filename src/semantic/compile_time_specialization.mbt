@@ -2,7 +2,7 @@
 struct CompileTimeSpecializedBody {
   module_ : PlannedModuleLowering
   types : Array[CompileTimeType]
-  bindings : Map[GenericParameterId, CompileTimeType]
+  bindings : Map[CompileTimeBindingKey, CompileTimeType]
 }
 
 ///|
@@ -243,9 +243,11 @@ fn compile_time_specialization_key(
     ) else {
     abort("ARN-101 logical specialization parameters are outside their arena")
   }
-  let bindings : Map[GenericParameterId, CompileTimeType] = Map([])
+  let bindings : Map[CompileTimeBindingKey, CompileTimeType] = Map([])
   for index in 0..<parameters.length {
-    bindings[collected.generic_parameters[parameters.source_index(index)].id] = logical_types[index]
+    bindings[CtGenericBinding(
+      collected.generic_parameters[parameters.source_index(index)].id,
+    )] = logical_types[index]
   }
   if callable.kind is PlannedImplMethodCallable(implementation, _) {
     let resolved = context.analyzed.frozen.interfaces[owner_index].resolved_types
@@ -266,7 +268,7 @@ fn compile_time_specialization_key(
     guard compile_time_types_are_concrete([self_type]) == Ok(true) else {
       abort("SPC-301 implementation Self type is not concrete")
     }
-    bindings[implementation] = self_type
+    bindings[CtSelfBinding(implementation)] = self_type
   }
   let instances = [owner]
   prepare_program_optimization_mutation(instances)
@@ -355,7 +357,7 @@ fn compile_time_call_arguments(
   arguments : HirSpan,
   reference : Bool,
 ) -> Array[CompileTimeType] {
-  let bindings : Map[GenericParameterId, CompileTimeType] = match
+  let bindings : Map[CompileTimeBindingKey, CompileTimeType] = match
     lowering.compile_time {
     Some(context) =>
       match context.instances.get(caller_key) {

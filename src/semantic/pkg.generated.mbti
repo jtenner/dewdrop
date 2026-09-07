@@ -789,6 +789,8 @@ pub enum CollectionDiagnostic {
   InvalidUtf8ForeignExportName(UInt64, UInt64)
 } derive(Eq, @debug.Debug)
 
+type CompileTimeBindingKey derive(Eq, Hash, @debug.Debug)
+
 type CompileTimeConstant derive(Eq, @debug.Debug)
 
 type CompileTimeEvidenceBudget

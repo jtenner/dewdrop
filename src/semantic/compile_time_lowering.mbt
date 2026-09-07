@@ -26,7 +26,7 @@ fn compile_time_fold_call(
   receiver : ExprId,
   arguments : HirSpan,
   type_arguments : HirSpan,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
   evidence : CompileTimeEvidenceSearch?,
 ) -> Result[PlannedExpression?, String] {
   if computed_type_builtin(name) {
@@ -131,7 +131,7 @@ fn fold_program_compile_time_queries(
         match
           compile_time_read_type(module_, -callable.self_type - 2, bindings) {
           Ok(type_) if compile_time_types_are_concrete([type_]) == Ok(true) =>
-            bindings[implementation] = type_
+            bindings[CtSelfBinding(implementation)] = type_
           _ => abort("SPC-301 concrete implementation has no logical Self type")
         }
       }
@@ -146,7 +146,7 @@ fn fold_module_compile_time_queries(
   context : CompileTimeProgramContext,
   module_index : Int,
   module_ : PlannedModuleLowering,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
   active : DeclId?,
   selected_conditions? : Map[ExprId, Bool]? = None,
 ) -> Unit {
@@ -194,7 +194,7 @@ fn fold_module_compile_time_queries(
                 collected, resolved, imports,
               ),
               active: [],
-              budget: { steps: 0 },
+              budget: { steps: 0, },
               associated_indexes: {},
               associated_only: false,
               include_test_impls: false,
@@ -234,11 +234,17 @@ fn fold_module_compile_time_queries(
     match source.kind {
       PlannedBinaryExpression(HirLogicalOr, left, _) =>
         if module_.expressions[left].kind is PlannedBoolConst(true) {
-          module_.expressions[index] = { ..source, kind: PlannedBoolConst(true), }
+          module_.expressions[index] = {
+            ..source,
+            kind: PlannedBoolConst(true),
+          }
         }
       PlannedBinaryExpression(HirLogicalAnd, left, _) =>
         if module_.expressions[left].kind is PlannedBoolConst(false) {
-          module_.expressions[index] = { ..source, kind: PlannedBoolConst(false), }
+          module_.expressions[index] = {
+            ..source,
+            kind: PlannedBoolConst(false),
+          }
         }
       _ => ()
     }

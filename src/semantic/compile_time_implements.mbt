@@ -2,17 +2,17 @@
 fn compile_time_match_type(
   pattern : CompileTimeType,
   actual : CompileTimeType,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
 ) -> Bool {
   let work = [(pattern, actual)]
   while work.length() > 0 {
     let (pattern, actual) = work.pop().unwrap()
     match (pattern, actual) {
       (CtParameter(parameter), value) =>
-        match bindings.get(parameter) {
+        match bindings.get(CtGenericBinding(parameter)) {
           Some(previous) if previous != value => return false
           Some(_) => ()
-          None => bindings[parameter] = value
+          None => bindings[CtGenericBinding(parameter)] = value
         }
       (CtProduct(left), CtProduct(right)) => {
         if left.length() != right.length() {
@@ -70,7 +70,7 @@ struct CompileTimeEvidenceBudget {
 struct CompileTimeTraitWitness {
   implementation : IndexedImpl
   index : ModuleImplIndex
-  bindings : Map[GenericParameterId, CompileTimeType]
+  bindings : Map[CompileTimeBindingKey, CompileTimeType]
   prerequisites : Array[CompileTimeTraitWitness]
 }
 
@@ -78,7 +78,7 @@ struct CompileTimeTraitWitness {
 fn CompileTimeEvidenceSearch::read(
   self : CompileTimeEvidenceSearch,
   type_ : ResolvedTypeId,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
 ) -> Result[CompileTimeType, String] {
   if type_ < 0 || type_ > 2147483646 {
     return Err("CT-010 invalid trait type index")
@@ -93,7 +93,7 @@ fn CompileTimeEvidenceSearch::read(
 fn CompileTimeEvidenceSearch::prerequisites(
   self : CompileTimeEvidenceSearch,
   declaration : DeclId,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
 ) -> Result[Array[CompileTimeTraitWitness]?, String] {
   let obligations : Array[(GenericParameterId, ResolvedTypeId)] = []
   if semantic_id_module(declaration) == self.collected.module_id {
@@ -154,7 +154,7 @@ fn CompileTimeEvidenceSearch::prerequisites(
   let witnesses = []
   for obligation in obligations {
     let (parameter, bound) = obligation
-    let target = match bindings.get(parameter) {
+    let target = match bindings.get(CtGenericBinding(parameter)) {
       Some(value) => value
       None => return Err("CT-011 unresolved implementation type argument")
     }
@@ -221,7 +221,12 @@ fn CompileTimeEvidenceSearch::search_candidates(
   trait_declaration : DeclId,
 ) -> Result[CompileTimeTraitWitness?, String] {
   let mut selected = match
-    self.search_scope_candidates(target, trait_, trait_declaration, self.associated_only) {
+    self.search_scope_candidates(
+      target,
+      trait_,
+      trait_declaration,
+      self.associated_only,
+    ) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
@@ -323,7 +328,7 @@ fn CompileTimeEvidenceSearch::search_scope_candidates(
     if implementation.kind != TraitIndexedImpl(trait_declaration) {
       continue
     }
-    let bindings : Map[GenericParameterId, CompileTimeType] = Map([])
+    let bindings : Map[CompileTimeBindingKey, CompileTimeType] = Map([])
     let candidate_target = match
       self.read(implementation.target_type, bindings) {
       Ok(value) => value

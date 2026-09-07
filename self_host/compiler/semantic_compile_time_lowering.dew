@@ -149,7 +149,7 @@ fn self_host_compile_time_result_type(lowering: SelfHostPlannedProgramLowering, 
   }
 }
 
-fn self_host_fold_compile_time_call(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, source: SelfHostPlannedExpression, name: Bytes, bindings: Map<U64, SelfHostCompileTimeType>, caller: U64) -> Result<Option<SelfHostPlannedExpression>, String> {
+fn self_host_fold_compile_time_call(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, source: SelfHostPlannedExpression, name: Bytes, bindings: SelfHostCompileTimeBindings, caller: U64) -> Result<Option<SelfHostPlannedExpression>, String> {
   if self_host_computed_type_builtin(name) {
     return Result::Err("CT-036 a type-producing query must be used in a type position")
   }
@@ -235,7 +235,7 @@ fn self_host_fold_compile_time_call(lowering: SelfHostPlannedProgramLowering, mo
   Result::Ok(Option::Some(self_host_compile_time_replace_kind(source, kind)))
 }
 
-fn self_host_fold_compile_time_assertion(module_: SelfHostPlannedModuleLowering, source: SelfHostPlannedExpression, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<SelfHostPlannedExpression, String> {
+fn self_host_fold_compile_time_assertion(module_: SelfHostPlannedModuleLowering, source: SelfHostPlannedExpression, bindings: SelfHostCompileTimeBindings) -> Result<SelfHostPlannedExpression, String> {
   let operands = match source.kind {
     SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, target, receiver, arguments, _) => {
       if !self_host_compile_time_static_callee(module_, receiver, target) {
@@ -315,11 +315,11 @@ fn self_host_compile_time_bool_binary(module_: SelfHostPlannedModuleLowering, op
   }
 }
 
-fn self_host_fold_compile_time_body(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: Map<U64, SelfHostCompileTimeType>) -> Unit {
+fn self_host_fold_compile_time_body(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: SelfHostCompileTimeBindings) -> Unit {
   self_host_fold_compile_time_body_with_conditions(lowering, module_, body, specialization, bindings, Option::None)
 }
 
-fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: Map<U64, SelfHostCompileTimeType>, conditions: Option<Map<U32, Bool>>) -> Unit {
+fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: SelfHostCompileTimeBindings, conditions: Option<Map<U32, Bool>>) -> Unit {
   let errors = self_host_compile_time_error_map()
   let owned = self_host_compile_time_owned_expressions(module_, body)
   let _ = while 0u32 {
@@ -476,7 +476,7 @@ fn self_host_fold_program_compile_time_queries(lowering: SelfHostPlannedProgramL
                       Result::Err(_) => false
                     }
                     self_host_assert_compiler_invariant(concrete, "SPC-301 concrete implementation Self type is unresolved")
-                    bindings.set(implementation, self_type)
+                    bindings.selves.set(implementation, self_type)
                   }
                   Result::Err(_) => {
                     self_host_assert_compiler_invariant(false, "SPC-301 concrete implementation Self type could not be read")

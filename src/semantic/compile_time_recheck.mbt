@@ -24,7 +24,7 @@ fn recheck_compile_time_body(
   context : CompileTimeProgramContext,
   owner_index : Int,
   declaration : DeclId,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
   conditions : Map[ExprId, Bool],
   previous : PlannedModuleLowering,
 ) -> PlannedModuleLowering {

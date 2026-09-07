@@ -5,7 +5,7 @@
 fn compile_time_inference_types(
   template : PlannedModuleLowering,
   resolved : ResolvedModuleTypes,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
 ) -> (ResolvedModuleTypes, Array[ResolvedTypeId]) {
   let arena = {
     ..template,
@@ -135,7 +135,12 @@ fn compile_time_inference_types(
       }
       let replacement = match original {
         GenericParameterType(parameter) | SelfType(parameter) => {
-          if bindings.get(parameter) is Some(type_) {
+          let key = if original is SelfType(_) {
+            CtSelfBinding(parameter)
+          } else {
+            CtGenericBinding(parameter)
+          }
+          if bindings.get(key) is Some(type_) {
             mapping[id] = concrete(type_)
           }
           original

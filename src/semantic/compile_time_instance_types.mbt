@@ -117,7 +117,7 @@ fn compile_time_instance_type(
   context : CompileTimeProgramContext,
   source : PlannedModuleLowering,
   instance : PlannedModuleLowering,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
   root : BodyTypeId,
   cache : Map[BodyTypeId, ResolvedTypeId],
   offset : UInt64,
@@ -165,7 +165,7 @@ fn materialize_compile_time_instance_types(
   context : CompileTimeProgramContext,
   source : PlannedModuleLowering,
   instance : PlannedModuleLowering,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
   declaration : DeclId,
 ) -> Unit {
   let cache : Map[BodyTypeId, ResolvedTypeId] = {}

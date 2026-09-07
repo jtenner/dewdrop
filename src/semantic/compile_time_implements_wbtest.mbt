@@ -131,7 +131,7 @@ test "compile time branch removal deletes discarded call requests from IR" {
 
 ///|
 test "compile time structural matching enforces repeated generic arguments" {
-  let bindings : Map[GenericParameterId, CompileTimeType] = Map([])
+  let bindings : Map[CompileTimeBindingKey, CompileTimeType] = Map([])
   assert_false(
     compile_time_match_type(
       CtProduct([CtParameter(5UL), CtParameter(5UL)]),

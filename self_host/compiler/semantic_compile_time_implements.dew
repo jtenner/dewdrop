@@ -3,7 +3,7 @@ open dew.std.map
 open dew.std.option
 open dew.std.result
 
-fn self_host_compile_time_match(pattern: SelfHostCompileTimeType, actual: SelfHostCompileTimeType, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<Bool, String> {
+fn self_host_compile_time_match(pattern: SelfHostCompileTimeType, actual: SelfHostCompileTimeType, bindings: SelfHostCompileTimeBindings) -> Result<Bool, String> {
   let work = [SelfHostCompileTimeTypePair::{
     left: pattern
     right: actual
@@ -20,14 +20,14 @@ fn self_host_compile_time_match(pattern: SelfHostCompileTimeType, actual: SelfHo
       let left = self_host_empty_compile_time_types()
       let right = self_host_empty_compile_time_types()
       match pair.left {
-        SelfHostCompileTimeType::ParameterCompileTimeType(parameter) => match bindings.get(parameter) {
+        SelfHostCompileTimeType::ParameterCompileTimeType(parameter) => match bindings.parameters.get(parameter) {
           Option::Some(previous) => match self_host_compile_time_types_equal(previous, pair.right) {
             Result::Ok(equal) => if !equal {
               return Result::Ok(false)
             }
             Result::Err(error) => return Result::Err(error)
           }
-          Option::None => bindings.set(parameter, pair.right)
+          Option::None => bindings.parameters.set(parameter, pair.right)
         }
         SelfHostCompileTimeType::ProductCompileTimeType(fields) => match pair.right {
           SelfHostCompileTimeType::ProductCompileTimeType(others) => {
@@ -126,7 +126,7 @@ struct SelfHostCompileTimePrerequisite {
 struct SelfHostCompileTimeTraitWitness {
   implementation: SelfHostIndexedImpl
   index: SelfHostModuleImplIndex
-  bindings: Map<U64, SelfHostCompileTimeType>
+  bindings: SelfHostCompileTimeBindings
   prerequisites: Array<SelfHostCompileTimeTraitWitness>
 }
 
@@ -139,11 +139,11 @@ fn self_host_empty_compile_time_prerequisites() -> Array<SelfHostCompileTimePrer
 }
 
 impl SelfHostCompileTimeEvidenceSearch {
-  fn read(self, type_: U32, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<SelfHostCompileTimeType, String> {
+  fn read(self, type_: U32, bindings: SelfHostCompileTimeBindings) -> Result<SelfHostCompileTimeType, String> {
     self_host_read_compile_time_resolved_arena(self.resolved, type_, bindings, 0u32)
   }
 
-  fn prerequisites(self, declaration: U64, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<Option<Array<SelfHostCompileTimeTraitWitness>>, String> {
+  fn prerequisites(self, declaration: U64, bindings: SelfHostCompileTimeBindings) -> Result<Option<Array<SelfHostCompileTimeTraitWitness>>, String> {
     let obligations = self_host_empty_compile_time_prerequisites()
     if self_host_semantic_id_module(declaration) == self.collected.module_id {
       let generics = self.collected.generic_parameters_of(declaration)
@@ -207,7 +207,7 @@ impl SelfHostCompileTimeEvidenceSearch {
     }
     let witnesses = self_host_empty_compile_time_witnesses()
     for obligation in obligations {
-      let target = match bindings.get(obligation.parameter) {
+      let target = match bindings.parameters.get(obligation.parameter) {
         Option::Some(value) => value
         Option::None => return Result::Err("CT-011 unresolved implementation type argument")
       }

@@ -2,7 +2,7 @@
 fn resolve_compile_time_guarded_evidence(
   context : CompileTimeProgramContext,
   module_ : PlannedModuleLowering,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
   active : DeclId?,
   search : CompileTimeEvidenceSearch,
 ) -> Unit {

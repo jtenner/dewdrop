@@ -12,7 +12,7 @@ enum CompileTimeTypeReadTask {
 fn compile_time_read_type(
   module_ : PlannedModuleLowering,
   type_ : BodyTypeId,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
   self_binding? : (DeclId, CompileTimeType)? = None,
 ) -> Result[CompileTimeType, CompileTimeTypeError] {
   let work = [CtReadBody(type_)]
@@ -83,14 +83,19 @@ fn compile_time_read_type(
           PrimitiveType(primitive) => results.push(CtPrimitive(primitive))
           GenericParameterType(parameter) =>
             results.push(
-              bindings.get(parameter).unwrap_or(CtParameter(parameter)),
+              bindings
+              .get(CtGenericBinding(parameter))
+              .unwrap_or(CtParameter(parameter)),
             )
           SelfType(owner) =>
             results.push(
               match self_binding {
                 Some((expected_owner, type_)) if owner == expected_owner =>
                   type_
-                _ => bindings.get(owner).unwrap_or(CtParameter(owner))
+                _ =>
+                  bindings
+                  .get(CtSelfBinding(owner))
+                  .unwrap_or(CtParameter(owner))
               },
             )
           NominalType(declaration) => results.push(CtNominal(declaration))
@@ -170,7 +175,7 @@ fn compile_time_read_type(
 fn compile_time_read_arguments(
   module_ : PlannedModuleLowering,
   arguments : HirSpan,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
 ) -> Result[Array[CompileTimeType], CompileTimeTypeError] {
   if !program_specialization_span_is_valid(
       arguments,

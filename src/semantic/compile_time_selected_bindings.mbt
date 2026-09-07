@@ -23,7 +23,7 @@ fn validate_compile_time_binding(
   module_index : Int,
   module_ : PlannedModuleLowering,
   expression : ExprId,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
 ) -> String? {
   let id = match
     compile_time_binding_type(

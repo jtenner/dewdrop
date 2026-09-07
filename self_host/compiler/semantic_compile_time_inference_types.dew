@@ -69,7 +69,7 @@ impl SelfHostInferenceTypeSubstitution {
     }
   }
 
-  fn run(self, bindings: Map<U64, SelfHostCompileTimeType>) -> Unit {
+  fn run(self, bindings: SelfHostCompileTimeBindings) -> Unit {
     let _ = while 0u32 {
       root => if root < self.mapping.length() {
         self.visit(root)
@@ -107,7 +107,7 @@ impl SelfHostInferenceTypeSubstitution {
             let mut changed = false
             let replacement = match original {
               SelfHostResolvedType::GenericParameterType(parameter) => {
-                match bindings.get(parameter) {
+                match bindings.parameters.get(parameter) {
                   Option::Some(value) => {
                     self.mapping[id] = self_host_query_append_resolved(self.instance, value)
                   }
@@ -116,7 +116,7 @@ impl SelfHostInferenceTypeSubstitution {
                 original
               }
               SelfHostResolvedType::SelfType(parameter) => {
-                match bindings.get(parameter) {
+                match bindings.selves.get(parameter) {
                   Option::Some(value) => {
                     self.mapping[id] = self_host_query_append_resolved(self.instance, value)
                   }
@@ -167,7 +167,7 @@ impl SelfHostInferenceTypeSubstitution {
   }
 }
 
-fn self_host_compile_time_inference_types(source: SelfHostPlannedModuleLowering, instance: SelfHostPlannedModuleLowering, bindings: Map<U64, SelfHostCompileTimeType>) -> Array<U32> {
+fn self_host_compile_time_inference_types(source: SelfHostPlannedModuleLowering, instance: SelfHostPlannedModuleLowering, bindings: SelfHostCompileTimeBindings) -> Array<U32> {
   let mapping = self_host_u32_slots(source.resolved_types.types.length(), 4294967295u32)
   let substitution = SelfHostInferenceTypeSubstitution::{
     source: source.resolved_types

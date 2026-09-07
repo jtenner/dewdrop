@@ -158,7 +158,7 @@ impl SelfHostBasicBodyInferencer {
 fn self_host_read_compile_time_solver_type(
   solver: SelfHostLocalTypeSolver,
   index: I32,
-  bindings: Map<U64, SelfHostCompileTimeType>,
+  bindings: SelfHostCompileTimeBindings,
   depth: U32,
 ) -> Result<SelfHostCompileTimeType, String> {
   if depth >= 256u32 {

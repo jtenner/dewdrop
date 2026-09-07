@@ -11,7 +11,7 @@ struct SelfHostPhysicalTypeDemand {
 
 struct SelfHostPhysicalTypeDemandScope {
   module_: SelfHostPlannedModuleLowering
-  bindings: Map<U64, SelfHostCompileTimeType>
+  bindings: SelfHostCompileTimeBindings
   seen: Map<I32, Bool>
   work: Array<I32>
 }
@@ -20,7 +20,7 @@ fn self_host_physical_type_demand_seen() -> Map<I32, Bool> {
   Map::empty()
 }
 
-fn self_host_physical_type_demand_scope(module_: SelfHostPlannedModuleLowering, bindings: Map<U64, SelfHostCompileTimeType>) -> SelfHostPhysicalTypeDemandScope {
+fn self_host_physical_type_demand_scope(module_: SelfHostPlannedModuleLowering, bindings: SelfHostCompileTimeBindings) -> SelfHostPhysicalTypeDemandScope {
   SelfHostPhysicalTypeDemandScope::{
     module_: module_
     bindings: bindings
@@ -89,11 +89,11 @@ fn self_host_physical_type_demand_drain(demand: SelfHostPhysicalTypeDemand, scop
           let value = module_.resolved_types.types[index]
           match value {
             SelfHostResolvedType::NominalType(declaration) => self_host_physical_type_demand_add(demand, declaration)
-            SelfHostResolvedType::GenericParameterType(parameter) => match scope.bindings.get(parameter) {
+            SelfHostResolvedType::GenericParameterType(parameter) => match scope.bindings.parameters.get(parameter) {
               Option::Some(value) => self_host_physical_type_demand_logical(demand, value)
               Option::None => {}
             }
-            SelfHostResolvedType::SelfType(parameter) => match scope.bindings.get(parameter) {
+            SelfHostResolvedType::SelfType(parameter) => match scope.bindings.selves.get(parameter) {
               Option::Some(value) => self_host_physical_type_demand_logical(demand, value)
               Option::None => {}
             }

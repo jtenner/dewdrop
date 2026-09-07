@@ -16,7 +16,7 @@ fn self_host_compile_time_body_needs_recheck(module_: SelfHostPlannedModuleLower
   false
 }
 
-fn self_host_recheck_compile_time_body(lowering: SelfHostPlannedProgramLowering, owner: U32, declaration: U64, specialization: U32, bindings: Map<U64, SelfHostCompileTimeType>, conditions: Map<U32, Bool>, previous: SelfHostPlannedModuleLowering) -> SelfHostPlannedModuleLowering {
+fn self_host_recheck_compile_time_body(lowering: SelfHostPlannedProgramLowering, owner: U32, declaration: U64, specialization: U32, bindings: SelfHostCompileTimeBindings, conditions: Map<U32, Bool>, previous: SelfHostPlannedModuleLowering) -> SelfHostPlannedModuleLowering {
   let frozen = lowering.compile_time.frozen
   let original = lowering.modules[owner]
   let collected = lowering.collected.modules.at(owner)

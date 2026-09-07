@@ -41,7 +41,7 @@ fn compile_time_witness_node(
   let arguments = module_.trait_evidence_arguments.length()
   for offset in 0..<generics.length {
     let parameter = collected.generic_parameters[generics.start + offset].id
-    let type_ = witness.bindings.get(parameter).unwrap()
+    let type_ = witness.bindings.get(CtGenericBinding(parameter)).unwrap()
     let id = compile_time_append_resolved(module_, type_)
     module_.trait_evidence_arguments.push(
       ShapeInferredTraitEvidenceArgument(
@@ -77,7 +77,7 @@ fn compile_time_witness_node(
 fn resolve_compile_time_guarded_calls(
   context : CompileTimeProgramContext,
   module_ : PlannedModuleLowering,
-  bindings : Map[GenericParameterId, CompileTimeType],
+  bindings : Map[CompileTimeBindingKey, CompileTimeType],
   active : DeclId?,
   search : CompileTimeEvidenceSearch,
 ) -> Unit {
@@ -175,21 +175,27 @@ fn resolve_compile_time_guarded_calls(
         callable.generic_parameters.length {
         return Err("CT-040 guarded implementation signature mismatch")
       }
-      let expected_bindings : Map[GenericParameterId, CompileTimeType] = {}
+      let expected_bindings : Map[CompileTimeBindingKey, CompileTimeType] = {}
       let required_collected = context.program.modules[context.declaration_module(
           requirement,
         )]
       for offset in 0..<trait_count {
-        expected_bindings[required_collected.generic_parameters[callable.owner_generic_parameters.start +
-        offset].id] = arguments[offset]
+        expected_bindings[CtGenericBinding(
+          required_collected.generic_parameters[callable.owner_generic_parameters.start +
+          offset].id,
+        )] = arguments[offset]
       }
       let collected = context.program.modules[context.declaration_module(method)]
       let actual_bindings = witness.bindings.copy()
       for offset in 0..<callable.generic_parameters.length {
-        expected_bindings[required_collected.generic_parameters[callable.generic_parameters.start +
-        offset].id] = arguments[trait_count + offset]
-        actual_bindings[collected.generic_parameters[implementation_callable.generic_parameters.start +
-        offset].id] = arguments[trait_count + offset]
+        expected_bindings[CtGenericBinding(
+          required_collected.generic_parameters[callable.generic_parameters.start +
+          offset].id,
+        )] = arguments[trait_count + offset]
+        actual_bindings[CtGenericBinding(
+          collected.generic_parameters[implementation_callable.generic_parameters.start +
+          offset].id,
+        )] = arguments[trait_count + offset]
       }
       for offset in 0..<(callable.parameters.length + 1) {
         let expected_type = if offset == callable.parameters.length {
@@ -236,7 +242,7 @@ fn resolve_compile_time_guarded_calls(
       for offset in 0..<owner_generics.length {
         let parameter = collected.generic_parameters[owner_generics.start +
           offset].id
-        let type_ = match witness.bindings.get(parameter) {
+        let type_ = match witness.bindings.get(CtGenericBinding(parameter)) {
           Some(value) => value
           None =>
             return Err("CT-011 unresolved guarded implementation parameter")

@@ -102,7 +102,7 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
               Result::Err(_) => false
             }
             self_host_assert_compiler_invariant(concrete, "SPC-301 implementation Self type is not concrete")
-            bindings.set(implementation, self_type)
+            bindings.selves.set(implementation, self_type)
           }
           Result::Err(_) => {
             self_host_assert_compiler_invariant(false, "SPC-301 implementation Self type could not be resolved")

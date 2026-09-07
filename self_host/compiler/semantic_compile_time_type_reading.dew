@@ -3,14 +3,22 @@ open dew.std.map
 open dew.std.option
 open dew.std.result
 
-fn self_host_empty_compile_time_bindings() -> Map<U64, SelfHostCompileTimeType> {
-  Map::empty()
+pub struct SelfHostCompileTimeBindings {
+  parameters: Map<U64, SelfHostCompileTimeType>
+  selves: Map<U64, SelfHostCompileTimeType>
+}
+
+fn self_host_empty_compile_time_bindings() -> SelfHostCompileTimeBindings {
+  SelfHostCompileTimeBindings::{
+    parameters: Map::empty()
+    selves: Map::empty()
+  }
 }
 
 fn self_host_read_compile_time_resolved_type(
   module_: SelfHostPlannedModuleLowering,
   index: U32,
-  bindings: Map<U64, SelfHostCompileTimeType>,
+  bindings: SelfHostCompileTimeBindings,
   depth: U32,
 ) -> Result<SelfHostCompileTimeType, String> {
   self_host_read_compile_time_resolved_arena(module_.resolved_types, index, bindings, depth)
@@ -19,7 +27,7 @@ fn self_host_read_compile_time_resolved_type(
 fn self_host_read_compile_time_resolved_arena(
   resolved: SelfHostResolvedModuleTypes,
   index: U32,
-  bindings: Map<U64, SelfHostCompileTimeType>,
+  bindings: SelfHostCompileTimeBindings,
   depth: U32,
 ) -> Result<SelfHostCompileTimeType, String> {
   self_host_read_compile_time_resolved_arena_with_self(resolved, index, bindings, depth, 18446744073709551615u64, Option::None)
@@ -28,7 +36,7 @@ fn self_host_read_compile_time_resolved_arena(
 fn self_host_read_compile_time_resolved_arena_with_self(
   resolved: SelfHostResolvedModuleTypes,
   index: U32,
-  bindings: Map<U64, SelfHostCompileTimeType>,
+  bindings: SelfHostCompileTimeBindings,
   depth: U32,
   self_owner: U64,
   self_type: Option<SelfHostCompileTimeType>,
@@ -49,14 +57,14 @@ fn self_host_read_compile_time_resolved_arena_with_self(
     SelfHostResolvedType::PrimitiveType(primitive) => return Result::Ok(SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive))
     SelfHostResolvedType::NominalType(id) => return Result::Ok(SelfHostCompileTimeType::NominalCompileTimeType(id))
     SelfHostResolvedType::TraitType(id) => return Result::Ok(SelfHostCompileTimeType::TraitCompileTimeType(id))
-    SelfHostResolvedType::GenericParameterType(id) => return Result::Ok(match bindings.get(id) {
+    SelfHostResolvedType::GenericParameterType(id) => return Result::Ok(match bindings.parameters.get(id) {
       Option::Some(value) => value
       Option::None => SelfHostCompileTimeType::ParameterCompileTimeType(id)
     })
     SelfHostResolvedType::SelfType(id) => return Result::Ok(match if id == self_owner {
       self_type
     } else {
-      bindings.get(id)
+      bindings.selves.get(id)
     } {
       Option::Some(value) => value
       Option::None => SelfHostCompileTimeType::ParameterCompileTimeType(id)
@@ -100,7 +108,7 @@ fn self_host_read_compile_time_resolved_arena_with_self(
 fn self_host_read_compile_time_type(
   module_: SelfHostPlannedModuleLowering,
   index: I32,
-  bindings: Map<U64, SelfHostCompileTimeType>,
+  bindings: SelfHostCompileTimeBindings,
   depth: U32,
 ) -> Result<SelfHostCompileTimeType, String> {
   if depth >= 256u32 {
@@ -158,7 +166,7 @@ fn self_host_read_compile_time_type(
   }
 }
 
-fn self_host_read_compile_time_arguments(module_: SelfHostPlannedModuleLowering, span: SelfHostHirSpan, bindings: Map<U64, SelfHostCompileTimeType>) -> Result<Array<SelfHostCompileTimeType>, String> {
+fn self_host_read_compile_time_arguments(module_: SelfHostPlannedModuleLowering, span: SelfHostHirSpan, bindings: SelfHostCompileTimeBindings) -> Result<Array<SelfHostCompileTimeType>, String> {
   if !self_host_array_span_is_valid(span.start, span.length, module_.inferred.call_type_arguments.length()) {
     return Result::Err("CT-002 query call arguments are outside their arena")
   }

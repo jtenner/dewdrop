@@ -22,7 +22,7 @@ fn self_host_query_binding_type(collected: SelfHostCollectedModule, module_: Sel
   }
 }
 
-fn self_host_validate_query_binding(lowering: SelfHostPlannedProgramLowering, collected: SelfHostCollectedModule, module_: SelfHostPlannedModuleLowering, expression: U32, bindings: Map<U64, SelfHostCompileTimeType>) -> Option<String> {
+fn self_host_validate_query_binding(lowering: SelfHostPlannedProgramLowering, collected: SelfHostCollectedModule, module_: SelfHostPlannedModuleLowering, expression: U32, bindings: SelfHostCompileTimeBindings) -> Option<String> {
   let type_ = match self_host_query_binding_type(collected, module_, expression) {
     Option::Some(type_) => type_
     Option::None => return Option::None

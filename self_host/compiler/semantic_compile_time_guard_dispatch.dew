@@ -86,7 +86,7 @@ fn self_host_guard_store_evidence(lowering: SelfHostPlannedProgramLowering, spec
   }
 }
 
-fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, expression: U32, source: SelfHostPlannedExpression, callable: SelfHostPlannedCallable, trait_: U64, bindings: Map<U64, SelfHostCompileTimeType>, search: SelfHostCompileTimeEvidenceSearch) -> Result<SelfHostPlannedExpression, String> {
+fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, expression: U32, source: SelfHostPlannedExpression, callable: SelfHostPlannedCallable, trait_: U64, bindings: SelfHostCompileTimeBindings, search: SelfHostCompileTimeEvidenceSearch) -> Result<SelfHostPlannedExpression, String> {
   let receiver = match source.kind {
     SelfHostPlannedExpressionKind::PlannedDirectCall(_, callee, _, _) => {
       if callee >= module_.expressions.length() {
@@ -180,20 +180,20 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
   let requirement_module = lowering.modules[required_owner]
   let expected_bindings = self_host_empty_compile_time_bindings()
   let actual_bindings = self_host_empty_compile_time_bindings()
-  for entry in witness.bindings {
-    actual_bindings.set(entry.key(), entry.value())
+  for entry in witness.bindings.parameters {
+    actual_bindings.parameters.set(entry.key(), entry.value())
   }
   while 0u32 {
     offset if offset < trait_count => {
-      expected_bindings.set(required_collected.generic_parameters[callable.owner_generic_parameters.start + offset].id, arguments[offset])
+      expected_bindings.parameters.set(required_collected.generic_parameters[callable.owner_generic_parameters.start + offset].id, arguments[offset])
       continue offset + 1u32
     }
     _ => break ()
   }
   while 0u32 {
     offset if offset < callable.generic_parameters.length => {
-      expected_bindings.set(required_collected.generic_parameters[callable.generic_parameters.start + offset].id, arguments[trait_count + offset])
-      actual_bindings.set(collected.generic_parameters[implementation_callable.generic_parameters.start + offset].id, arguments[trait_count + offset])
+      expected_bindings.parameters.set(required_collected.generic_parameters[callable.generic_parameters.start + offset].id, arguments[trait_count + offset])
+      actual_bindings.parameters.set(collected.generic_parameters[implementation_callable.generic_parameters.start + offset].id, arguments[trait_count + offset])
       continue offset + 1u32
     }
     _ => break ()
@@ -259,7 +259,7 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
   let _ = while 0u32 {
     index => if index < generics.length {
       let parameter = collected.generic_parameters[generics.start + index].id
-      match witness.bindings.get(parameter) {
+      match witness.bindings.parameters.get(parameter) {
         Option::Some(type_) => self_host_guard_append_argument(module_, type_)
         Option::None => return Result::Err("CT-011 unresolved guarded implementation parameter")
       }
@@ -294,7 +294,7 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
   Result::Ok(self_host_guard_call_expression(source, kind, method, span))
 }
 
-fn self_host_resolve_guarded_calls(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: Map<U64, SelfHostCompileTimeType>, owned: Array<U32>, live: Array<Bool>) -> Unit {
+fn self_host_resolve_guarded_calls(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: SelfHostCompileTimeBindings, owned: Array<U32>, live: Array<Bool>) -> Unit {
   let mut search = Option::None
   for expression in owned {
     if live[expression] {
