@@ -183,6 +183,23 @@ fn self_host_array_span_is_valid(
   }
 }
 
+fn self_host_checked_relative_index(
+  index: U32,
+  span: SelfHostHirSpan,
+  arena_length: U32,
+) -> Option<U32> {
+  if !self_host_array_span_is_valid(span.start, span.length, arena_length) ||
+    index < span.start {
+    return Option::None
+  }
+  let relative = index - span.start
+  if relative < span.length {
+    Option::Some(relative)
+  } else {
+    Option::None
+  }
+}
+
 fn self_host_assert_array_span(
   start: U32,
   count: U32,

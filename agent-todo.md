@@ -188,6 +188,10 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete solver transaction and arena checks. Require LIFO snapshots,
   parallel undo arrays, valid undo entries, bounded parent walks, and exact
   rollback contents. Check span ownership before relative-index subtraction.
+  Physical body entry now checks all five owned spans, and body-relative
+  expression lookup reports ARN-102 before subtraction. Boundary and exact
+  failure-record tests pass; other phase consumers remain to be audited. See
+  [checked index notes](docs/research/checked-body-indices-2026-09-07.md).
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
   order must hold, and stored identities, physical indices, and import offsets
   must agree. Missing bases or bodies must produce a diagnostic.

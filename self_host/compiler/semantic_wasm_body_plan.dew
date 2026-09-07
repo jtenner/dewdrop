@@ -1723,7 +1723,54 @@ fn self_host_body_expression_slot(
   body: SelfHostPlannedBodyLowering,
   expression: U32,
 ) -> U32 {
-  expression - body.expressions.start
+  // The body arena itself is checked at the planning boundary. Check ownership
+  // here before subtraction, including the missing global-expression sentinel.
+  match self_host_checked_relative_index(expression, body.expressions, 4294967295u32) {
+    Option::Some(relative) => relative
+    Option::None => {
+      let _ = self_host_assert_compiler_invariant_with_failure(
+        false,
+        SelfHostInvariantFailure::{
+          code: 102u32
+          phase: 6u32
+          module_id: self_host_semantic_id_module(body.body)
+          declaration: body.declaration
+          body: body.body
+          expression: expression
+          expected: u32_into_u64(body.expressions.start)
+          actual: u32_into_u64(expression)
+          detail: u32_into_u64(body.expressions.length)
+        },
+        "expression does not belong to its physical body",
+      )
+      unreachable()
+    }
+  }
+}
+
+fn self_host_assert_physical_body_span(
+  body: SelfHostPlannedBodyLowering,
+  span: SelfHostHirSpan,
+  arena_length: U32,
+  arena_kind: U32,
+) -> Unit {
+  if !self_host_array_span_is_valid(span.start, span.length, arena_length) {
+    let _ = self_host_assert_compiler_invariant_with_failure(
+      false,
+      SelfHostInvariantFailure::{
+        code: 101u32
+        phase: 6u32
+        module_id: self_host_semantic_id_module(body.body)
+        declaration: body.declaration
+        body: body.body
+        expression: 4294967295u32
+        expected: u32_into_u64(arena_length)
+        actual: u32_into_u64(span.length)
+        detail: (u32_into_u64(arena_kind) << 32u64) | u32_into_u64(span.start)
+      },
+      "physical body span is outside its arena",
+    )
+  }
 }
 
 fn self_host_body_local_slot(
@@ -5217,6 +5264,11 @@ fn self_host_plan_one_physical_body(
   lambda: U32,
 ) -> SelfHostPlannedPhysicalBodyCarrierPlan {
   let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, linked_function.module_index, linked_function.specialization)
+  self_host_assert_physical_body_span(body, body.expressions, module_.expressions.length(), 1u32)
+  self_host_assert_physical_body_span(body, body.locals, module_.locals.length(), 2u32)
+  self_host_assert_physical_body_span(body, body.blocks, module_.blocks.length(), 3u32)
+  self_host_assert_physical_body_span(body, body.patterns, module_.patterns.length(), 4u32)
+  self_host_assert_physical_body_span(body, body.pattern_arms, module_.pattern_arms.length(), 5u32)
   let embedded_targets = self_host_body_embedded_targets(module_, body)
   let local_by_initializer = self_host_body_local_by_initializer(module_, body)
   let fragment_module = self_host_body_fragment_module(

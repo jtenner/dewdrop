@@ -75,6 +75,59 @@ test "specialized call index retains exact caller keys" {
   assert(index.keys.length() == 2u32, "an identical duplicate adds no entry")
 }
 
+test "checked relative indices reject overflow and foreign ownership" {
+  let span = SelfHostHirSpan::{
+    start: 5u32
+    length: 3u32
+  }
+  assert(self_host_checked_relative_index(5u32, span, 8u32) is Option::Some(0u32), "first slot")
+  assert(self_host_checked_relative_index(7u32, span, 8u32) is Option::Some(2u32), "last slot")
+  assert(self_host_checked_relative_index(4u32, span, 8u32) is Option::None, "below span")
+  assert(self_host_checked_relative_index(8u32, span, 8u32) is Option::None, "past span")
+  assert(self_host_checked_relative_index(5u32, span, 7u32) is Option::None, "span exceeds arena")
+  assert(self_host_checked_relative_index(4294967294u32, SelfHostHirSpan::{
+    start: 4294967294u32
+    length: 2u32
+  }, 4294967295u32) is Option::None, "span end must not overflow")
+  assert(self_host_checked_relative_index(4294967294u32, SelfHostHirSpan::{
+    start: 4294967294u32
+    length: 1u32
+  }, 4294967295u32) is Option::Some(0u32), "last representable arena slot")
+  assert(self_host_checked_relative_index(5u32, SelfHostHirSpan::{
+    start: 5u32
+    length: 0u32
+  }, 8u32) is Option::None, "empty span has no members")
+}
+
+fn self_host_relative_body_fixture() -> SelfHostPlannedBodyLowering {
+  let fragments = self_host_physical_test_fragments(
+    b"pub fn first() -> I32 {\n  1i32\n}\npub fn second() -> I32 {\n  2i32\n}\n",
+  )
+  let body = fragments.specialization.lowering.modules[0u32].bodies[1u32]
+  assert(body.expressions.start == 1u32 && body.expressions.length == 1u32, "owned body span")
+  assert(self_host_body_expression_slot(body, 1u32) == 0u32, "valid relative slot")
+  body
+}
+
+test "ARN-102 physical expression cannot precede its body" expect_trap "unreachable" {
+  let _ = self_host_body_expression_slot(self_host_relative_body_fixture(), 0u32)
+}
+
+test "ARN-102 physical expression cannot follow its body" expect_trap "unreachable" {
+  let _ = self_host_body_expression_slot(self_host_relative_body_fixture(), 2u32)
+}
+
+test "ARN-102 missing expression cannot become a body slot" expect_trap "unreachable" {
+  let _ = self_host_body_expression_slot(self_host_relative_body_fixture(), 4294967295u32)
+}
+
+test "ARN-101 physical body span must fit its arena" expect_trap "unreachable" {
+  self_host_assert_physical_body_span(self_host_relative_body_fixture(), SelfHostHirSpan::{
+    start: 2u32
+    length: 1u32
+  }, 2u32, 1u32)
+}
+
 test "SPC-303 one call key cannot select two targets" expect_trap "unreachable" {
   let _ = self_host_build_linked_call_index([], [
     SelfHostPlannedProgramSpecializedCallLink::{

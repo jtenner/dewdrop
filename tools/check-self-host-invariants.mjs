@@ -10,6 +10,18 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "ARN-101 physical body span must fit its arena",
+    expected: [101, 6, 5100n, (5100n << 32n) + 1n, (5100n << 32n) + 1n, 4294967295, 2n, 1n, (1n << 32n) + 2n],
+  },
+  ...[
+    ["physical expression cannot precede its body", 0],
+    ["physical expression cannot follow its body", 2],
+    ["missing expression cannot become a body slot", 4294967295],
+  ].map(([name, expression]) => ({
+    name: `ARN-102 ${name}`,
+    expected: [102, 6, 5100n, (5100n << 32n) + 1n, (5100n << 32n) + 1n, expression, 1n, BigInt(expression), 1n],
+  })),
   ...[
     ["repeated SCC module is rejected", 0, 4294967295, 0, 6],
     ["missing SCC module is rejected", 4294967295, 3, 2, 1],
