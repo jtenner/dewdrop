@@ -18,6 +18,29 @@ sched_yield random_get sock_accept sock_recv sock_send sock_shutdown
 
 
 class WasiForeignPolicyTests(unittest.TestCase):
+    def test_bytes_adapter_is_library_code(self):
+        source = (ROOT / "std/wasi.dew").read_text()
+        self.assertNotRegex(source, r"\bbuiltin\b")
+        self.assertIn('import dew.std.wasm.wasi as @wasi', source)
+        self.assertIn('pub fn wasi_fd_write(fd: U32, value: Bytes) -> U32 {', source)
+        self.assertIn('pub fn wasi_fd_read(fd: U32, limit: U32) -> Bytes {', source)
+        self.assertIn('@wasi.fd_write(fd, 0u32, 1u32, 8u32)', source)
+        self.assertIn('@wasi.fd_read(fd, 0u32, 1u32, 8u32)', source)
+
+    def test_removed_read_runtime(self):
+        for directory, suffix in [("src", "*.mbt"), ("self_host/compiler", "*.dew")]:
+            for path in (ROOT / directory).rglob(suffix):
+                with self.subTest(path=path.relative_to(ROOT)):
+                    source = path.read_text()
+                    self.assertNotIn('"dew_wasi_fd_read"', source)
+                    self.assertNotIn('starshine_wasi_fd_read_body', source)
+        for path in ("starshine-mb/src/ffi_bridge/wasi_runtime.mbt",
+                     "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+            with self.subTest(path=path):
+                source = (ROOT / path).read_text()
+                self.assertNotIn('"dew_wasi_fd_read"', source)
+                self.assertNotIn('starshine_wasi_fd_read_body', source)
+
     def test_complete_foreign_surface(self):
         source = (ROOT / "std/wasm/wasi.dew").read_text()
         self.assertNotRegex(source, r"\bbuiltin\b")

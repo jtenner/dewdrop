@@ -11,6 +11,7 @@ import { checkSpecializationCallbacks } from "./specialization-callback-cases.mj
 import { checkMemberCalls } from "./member-call-cases.mjs";
 import { wasiForeignProbe } from "./wasi-foreign-cases.mjs";
 import { debugDispatchProbe } from "./debug-dispatch-cases.mjs";
+import { wasiBytesProbe } from "./wasi-bytes-cases.mjs";
 import { checkProductPatterns } from "./product-pattern-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
 import { checkArrayOperations } from "./array-operation-cases.mjs";
@@ -155,6 +156,16 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const request = await readFile(".tmp/self-host-hardening/wasi-bytes.request.bin");
+  const probe = wasiBytesProbe();
+  const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request", probe.imports);
+  console.log(`self-host WASI Bytes checks passed: ${probe.check(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host WASI Bytes corpus failed", error);
+}
 try {
   const start = performance.now();
   const request = await readFile(".tmp/self-host-hardening/product-patterns.request.bin");

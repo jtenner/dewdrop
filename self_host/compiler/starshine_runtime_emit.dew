@@ -796,7 +796,6 @@ fn self_host_linked_append_runtime_function(
     self_host_u32_to_i32(self_host_linked_text_runtime_base(link)),
     -1i32,
     6i32,
-    7i32,
     carrier,
     second_carrier,
     self_host_linked_option_none_type_index(link),

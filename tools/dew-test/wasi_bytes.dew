@@ -1,0 +1,41 @@
+open dew.std.wasi
+open dew.std.bytes
+open dew.std.bytes_builder
+
+fn write_bytes(length: U32) -> U32 {
+  let builder = BytesBuilder::with_capacity(length + 2u32)
+  builder.append_byte(99u8)
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte((index & 255u32).into())
+      continue index + 1u32
+    }
+    _ => break builder.append_byte(98u8)
+  }
+  wasi_fd_write(7u32, builder.finish().view(1u32, length))
+}
+
+fn read_bytes(limit: U32) -> U32 {
+  let value = wasi_fd_read(9u32, limit)
+  let mut hash = 0u32
+  while 0u32 {
+    index if index < value.byte_length() => {
+      let byte = wasi_probe_widen(value.byte_at(index))
+      hash = hash * 31u32 + byte
+      continue index + 1u32
+    }
+    _ => break hash + value.byte_length()
+  }
+}
+
+fn wasi_probe_widen(byte: U8) -> U32 {
+  byte.into()
+}
+
+pub fn main(operation: U32, length: U32) -> U32 {
+  if operation == 0u32 {
+    write_bytes(length)
+  } else {
+    read_bytes(length)
+  }
+}

@@ -324,11 +324,6 @@ fn program_reachable_callable_roots(
                   lowering, b"wasi_snapshot_preview1.fd_write", reachable,
                 ) ||
                 runtime_changed
-            } else if name == b"dew_wasi_fd_read" {
-              runtime_changed = program_add_named_callable_root(
-                  lowering, b"wasi_snapshot_preview1.fd_read", reachable,
-                ) ||
-                runtime_changed
             }
           _ => ()
         }

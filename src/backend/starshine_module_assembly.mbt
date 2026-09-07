@@ -48,9 +48,6 @@ pub fn emit_starshine_code_section(
                 planned.imported_function_index(
                   b"wasi_snapshot_preview1.fd_write",
                 ),
-                planned.imported_function_index(
-                  b"wasi_snapshot_preview1.fd_read",
-                ),
               ) {
               Some(function_body) => functions.push(function_body)
               None => return Err(UnsupportedBuiltin(name))
@@ -75,13 +72,12 @@ fn starshine_module_uses_wasi(
     }
     match function_.kind {
       @semantic.PlannedWasmRuntimeFunction(name) =>
-        if name == b"dew_wasi_fd_write" ||
-          name == b"dew_wasi_fd_read" ||
-          name == b"dew_test_assert" {
+        if name == b"dew_wasi_fd_write" || name == b"dew_test_assert" {
           return true
         }
       @semantic.PlannedWasmImportedFunction(identity) =>
-        if identity.kind is @semantic.WasiWasmImport || identity.kind is @semantic.ForeignHostWasmImport {
+        if identity.kind is @semantic.WasiWasmImport ||
+          identity.kind is @semantic.ForeignHostWasmImport {
           return true
         }
       _ => ()

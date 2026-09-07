@@ -282,7 +282,7 @@ test "checked Bytes to String links the ordinary Dew UTF8 validator" {
 ///|
 test "unchecked Bytes to String is one reference cast without allocation" {
   let actual = emit_starshine_text_runtime_function(
-    b"dew_bytes_to_string_unchecked", 17, -1, -1,
+    b"dew_bytes_to_string_unchecked", 17, -1,
   ).unwrap()
   let expected = @lib.Func::new(
     @lib.Locals::empty(),
@@ -310,14 +310,14 @@ test "String and StringView to Bytes are one reference cast without allocation" 
     ]),
   )
   for name in [b"dew_string_as_bytes", b"dew_string_view_as_bytes"] {
-    let actual = emit_starshine_text_runtime_function(name, 17, -1, -1).unwrap()
+    let actual = emit_starshine_text_runtime_function(name, 17, -1).unwrap()
     assert_eq(actual, expected)
   }
 }
 
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "WASI Bytes marshalling freezes imports memory and runtime bodies" {
+test "WASI Bytes library calls freeze foreign imports and memory" {
   let (lowering, fragments, diagnostics) = backend_packed_primitive_pipeline(
     b"open dew.std.bytes\nopen dew.std.wasi\npub fn write(fd: U32) -> U32 {\n  wasi_fd_write(fd, b\"xxpayloadyy\".view(2u32, 7u32))\n}\npub fn read(fd: U32, limit: U32) -> Bytes {\n  wasi_fd_read(fd, limit)\n}\n",
   )

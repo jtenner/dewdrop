@@ -1,5 +1,94 @@
-builtin wasi_fd_write_import(fd: U32, iovs: U32, iovs_length: U32, written: U32) -> U32 = "wasi_snapshot_preview1.fd_write"
-builtin wasi_fd_read_import(fd: U32, iovs: U32, iovs_length: U32, read: U32) -> U32 = "wasi_snapshot_preview1.fd_read"
+import dew.std.wasm.wasi as @wasi
+open dew.std.bytes
+open dew.std.bytes_builder
 
-builtin wasi_fd_write(fd: U32, value: Bytes) -> U32 = "dew_wasi_fd_write"
-builtin wasi_fd_read(fd: U32, limit: U32) -> Bytes = "dew_wasi_fd_read"
+// Preview 1 calls are synchronous. The shared scratch page belongs to the
+// adapter until the host call returns; host callbacks must not re-enter it.
+// 0..8 is one iovec, 8..12 is the result, and 16..65536 is byte storage.
+fn wasi_bytes_unit() -> Unit {}
+
+pub fn wasi_fd_write(fd: U32, value: Bytes) -> U32 {
+  let length = value.byte_length()
+  while 0u32 {
+    total if total < length => {
+      let remaining = length - total
+      let chunk = if remaining > 65520u32 {
+        65520u32
+      } else {
+        remaining
+      }
+      while 0u32 {
+        index if index < chunk => {
+          u8_store(16u32 + index, value.byte_at(total + index))
+          continue index + 1u32
+        }
+        _ => break wasi_bytes_unit()
+      }
+      while 0u32 {
+        written if written < chunk => {
+          let request = chunk - written
+          u32_store(0u32, 16u32 + written)
+          u32_store(4u32, request)
+          u32_store(8u32, 0u32)
+          if @wasi.fd_write(fd, 0u32, 1u32, 8u32) != 0u32 {
+            unreachable()
+          } else {
+            let count = u32_load(8u32)
+            if count == 0u32 || count > request {
+              unreachable()
+            } else {
+              continue written + count
+            }
+          }
+        }
+        _ => break wasi_bytes_unit()
+      }
+      continue total + chunk
+    }
+    _ => break length
+  }
+}
+
+pub fn wasi_fd_read(fd: U32, limit: U32) -> Bytes {
+  let initial = if limit > 65520u32 {
+    65520u32
+  } else {
+    limit
+  }
+  let builder = BytesBuilder::with_capacity(initial)
+  while 0u32 {
+    total if total < limit => {
+      let remaining = limit - total
+      let request = if remaining > 65520u32 {
+        65520u32
+      } else {
+        remaining
+      }
+      u32_store(0u32, 16u32)
+      u32_store(4u32, request)
+      u32_store(8u32, 0u32)
+      if @wasi.fd_read(fd, 0u32, 1u32, 8u32) != 0u32 {
+        unreachable()
+      } else {
+        let count = u32_load(8u32)
+        if count > request {
+          unreachable()
+        } else {
+          while 0u32 {
+            index if index < count => {
+              builder.append_byte(u8_load(16u32 + index))
+              continue index + 1u32
+            }
+            _ => break wasi_bytes_unit()
+          }
+          if count < request {
+            break builder.finish()
+          } else {
+            continue total + count
+          }
+        }
+      }
+    }
+    _ => break builder.finish()
+  }
+}

@@ -16,6 +16,7 @@ node tools/check-specialization-callbacks.mjs tools/dew-test/specialization_call
 node tools/check-member-calls.mjs tools/dew-test/member_calls.wasm
 node tools/check-wasi-foreign.mjs tools/dew-test/wasi_foreign.wasm
 node tools/check-debug-dispatch.mjs tools/dew-test/debug_dispatch.wasm
+node tools/check-wasi-bytes.mjs tools/dew-test/wasi_bytes.wasm
 node tools/check-product-patterns.mjs tools/dew-test/product_patterns.wasm
 node tools/check-constructor-evaluations.mjs tools/dew-test/constructor_evaluations.wasm
 node tools/check-raw-gc-storage.mjs tools/dew-test/raw_gc_storage.wasm

@@ -147,11 +147,15 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Convert remaining host-operation builtins into foreign declarations.
   Keep generated Dew types, provider metadata, and emitted signatures in sync.
   The 46 raw Preview 1 functions now use public `foreign import` declarations.
-  Higher-level Bytes I/O and diagnostics remain. See the
+  Diagnostics remain. See the
   [WASI log](docs/research/wasi-foreign-imports-2026-09-07.md).
   Debug dispatch and result discard now use ordinary Dew functions; primitive
-  output has an explicit private foreign import. Formatting and Bytes I/O
+  output has an explicit private foreign import. Formatting and its transport
   remain. See the [Debug log](docs/research/debug-library-dispatch-2026-09-07.md).
+  High-level WASI Bytes reads and writes now use ordinary Dew loops and raw
+  foreign calls. Shared tests cover partial/empty/multi-window operations and
+  invalid host results. The obsolete read runtime is removed; Debug's old write
+  transport remains. See the [Bytes I/O log](docs/research/wasi-bytes-library-2026-09-07.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
