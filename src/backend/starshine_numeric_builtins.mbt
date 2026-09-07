@@ -137,6 +137,8 @@ fn starshine_numeric_builtin_instructions(
     Some([@lib.Instruction::f64_div()])
   } else if name == b"i32.ctz" {
     Some([@lib.Instruction::i32_ctz()])
+  } else if name == b"i32.popcnt" {
+    Some([@lib.Instruction::i32_popcnt()])
   } else if name == b"i32.reinterpret_f32" {
     Some([@lib.Instruction::i32_reinterpret_f32()])
   } else if name == b"f32.reinterpret_i32" {

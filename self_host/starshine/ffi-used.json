@@ -76,6 +76,7 @@
     "Instruction::v128_or",
     "Instruction::v128_xor",
     "Instruction::i32_ctz",
+    "Instruction::i32_popcnt",
     "Instruction::i32_extend8s",
     "Instruction::i32_extend16s",
     "Instruction::i32_reinterpret_f32",

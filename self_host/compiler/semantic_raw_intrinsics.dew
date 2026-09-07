@@ -95,7 +95,7 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
       result: SelfHostWasmBodyCarrier::F64BodyCarrier
     })
   }
-  if name.equals(b"i32.ctz") {
+  if name.equals(b"i32.ctz") || name.equals(b"i32.popcnt") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
       inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier]
       result: SelfHostWasmBodyCarrier::I32BodyCarrier

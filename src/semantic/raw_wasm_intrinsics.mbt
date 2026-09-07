@@ -51,7 +51,8 @@ pub fn raw_wasm_builtin_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
     | b"f64.trunc"
     | b"f64.nearest" =>
       Some({ inputs: [WasmF64Value], result: Some(WasmF64Value), })
-    b"i32.ctz" => Some({ inputs: [WasmI32Value], result: Some(WasmI32Value), })
+    b"i32.ctz" | b"i32.popcnt" =>
+      Some({ inputs: [WasmI32Value], result: Some(WasmI32Value), })
     b"i32.add"
     | b"i32.sub"
     | b"i32.le_s"
@@ -170,7 +171,8 @@ fn raw_wasm_builtin_is_inline(name : Bytes) -> Bool {
   }
   // A malformed Wasm opcode is not a host import. Keep it on the intrinsic
   // path so emission reports UnsupportedBuiltin before producing a module.
-  if name.length() < 4 || (name[0] != b'i' && name[0] != b'f' && name[0] != b'v') {
+  if name.length() < 4 ||
+    (name[0] != b'i' && name[0] != b'f' && name[0] != b'v') {
     return false
   }
   for

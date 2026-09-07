@@ -18,6 +18,7 @@ test "raw math instructions validate inputs and results" {
     ("f64.trunc", "F64", "F64"),
     ("f64.nearest", "F64", "F64"),
     ("i32.ctz", "I32", "I32"),
+    ("i32.popcnt", "U32", "U32"),
   ]
   let source = Buffer(size_hint=4096)
   for index, case_ in cases {
@@ -66,5 +67,5 @@ test "raw math instructions validate inputs and results" {
       }
     }
   }
-  assert_eq(checked, 17)
+  assert_eq(checked, cases.length())
 }

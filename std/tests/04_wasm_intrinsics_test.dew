@@ -1,5 +1,13 @@
 import dew.std.wasm.intrinsics as @wasm
 
+test "U32 popcnt counts all 32 bits" {
+  assert(@wasm.wasm_u32_popcnt(0u32) == 0u32, "zero has no set bits")
+  assert(@wasm.wasm_u32_popcnt(4294967295u32) == 32u32, "all bits are set")
+  assert(@wasm.wasm_u32_popcnt(2147483648u32) == 1u32, "the high bit counts once")
+  assert(@wasm.wasm_u32_popcnt(2147483649u32) == 2u32, "both edge bits count")
+  assert(@wasm.wasm_u32_popcnt(2863311530u32) == 16u32, "alternating bits count")
+}
+
 test "generated scalar Wasm intrinsics execute directly" {
   assert(@wasm.wasm_i32_add(19i32, 23i32) == 42i32, "i32 add intrinsic failed")
   assert(@wasm.wasm_u32_ctz(0u32) == 32u32, "u32 ctz zero failed")

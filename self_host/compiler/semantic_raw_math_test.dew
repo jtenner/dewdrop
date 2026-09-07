@@ -111,4 +111,10 @@ test "raw math rejects incorrect input and result carriers" {
   self_host_assert_invalid_raw_math(
     b"builtin operation(value: I32) -> I64 = \"i32.ctz\"\npub fn main(value: I32) -> I64 {\n  operation(value)\n}\n",
   )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I64) -> I32 = \"i32.popcnt\"\npub fn main(value: I64) -> I32 {\n  operation(value)\n}\n",
+  )
+  self_host_assert_invalid_raw_math(
+    b"builtin operation(value: I32) -> I64 = \"i32.popcnt\"\npub fn main(value: I32) -> I64 {\n  operation(value)\n}\n",
+  )
 }

@@ -477,6 +477,11 @@ fn self_host_emit_linked_builtin(
       destination,
       StarshineFfi.ffi_lib_Instruction_i32_ctz(),
     )
+  } else if name.equals(b"i32.popcnt") {
+    StarshineFfi.ffi_ffi_bridge_instructions_push(
+      destination,
+      StarshineFfi.ffi_lib_Instruction_i32_popcnt(),
+    )
   } else if name.equals(b"i32.reinterpret_f32") {
     StarshineFfi.ffi_ffi_bridge_instructions_push(
       destination,

@@ -143,6 +143,14 @@ EXTRA_DECLARATIONS = [
         target="i32.ctz",
     ),
     IntrinsicDeclaration(
+        source="Core bit operations",
+        name="u32_popcnt",
+        alias="wasm_u32_popcnt",
+        generics="",
+        signature="(value: U32) -> U32",
+        target="i32.popcnt",
+    ),
+    IntrinsicDeclaration(
         source="WasmGC text representation bridges",
         name="bytes_load_u8x16",
         alias="wasm_bytes_load_u8x16",

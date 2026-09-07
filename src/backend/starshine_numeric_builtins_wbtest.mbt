@@ -20,4 +20,8 @@ test "scalar math builtins map to deterministic Wasm instructions" {
     starshine_numeric_builtin_instructions(b"i32.ctz"),
     Some([@lib.Instruction::i32_ctz()]),
   )
+  assert_eq(
+    starshine_numeric_builtin_instructions(b"i32.popcnt"),
+    Some([@lib.Instruction::i32_popcnt()]),
+  )
 }
