@@ -90,6 +90,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   The obsolete specialization search, Unit-to-reference runtime adapter, and
   native inline wrapper lookup are removed. See the
   [adapter removal log](docs/research/array-adapter-removal-2026-09-07.md).
+  Old runtime call synthesis and empty/clear/iterator-next builders are also
+  removed; missing selected functions remain errors. See the
+  [call synthesis log](docs/research/array-call-synthesis-removal-2026-09-07.md).
 - [x] Move Map hashing, buckets, growth, lookup, and iteration into Dew. Typed
   entries preserve aliases, cached hashes avoid repeated user calls during
   growth, and all 12 shared native/self-host checks pass. Native Map IR and

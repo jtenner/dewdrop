@@ -120,7 +120,6 @@ fn self_host_program_link_is_imported(
 fn self_host_program_link_is_runtime_builtin(name: Bytes) -> Bool {
   name.starts_with(b"dew_string_") ||
   name.starts_with(b"dew_bytes_") ||
-  name.starts_with(b"dew_array_") ||
   (name.starts_with(b"dew_debug_") &&
     !name.equals(b"dew_debug_ignore") &&
     !name.equals(b"dew_debug_dispatch")) ||
@@ -185,22 +184,12 @@ fn self_host_program_link_module_id_by_path(
   0u64
 }
 
-fn self_host_program_link_is_carrier_independent_runtime_builtin(
-  name: Bytes,
-) -> Bool {
-  // Array capacity changes allocation policy. It does not read or store an element carrier.
-  name.equals(b"dew_array_with_capacity")
-}
-
 fn self_host_program_link_is_emitted(
   function_: SelfHostPlannedWasmFunctionFragment,
 ) -> Bool {
   match function_.kind {
-    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if function_.elided {
-      self_host_program_link_is_carrier_independent_runtime_builtin(name)
-    } else {
-      self_host_program_link_is_runtime_builtin(name)
-    }
+    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) =>
+      !function_.elided && self_host_program_link_is_runtime_builtin(name)
     SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction => false
     _ => !function_.elided
   }

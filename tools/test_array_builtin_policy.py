@@ -18,6 +18,13 @@ CORE_OPERATIONS = (
 
 
 class ArrayBuiltinPolicyTests(unittest.TestCase):
+    def test_emission_cannot_synthesize_old_array_calls(self):
+        source = (ROOT / "self_host/compiler/starshine_module.dew").read_text()
+        for name in ("EmitLinkedArrayBuiltin", "EmitLinkedArrayEmpty", "EmitLinkedArrayIterNext"):
+            self.assertFalse(name in source, f"obsolete Array emission task: {name}")
+        source = (ROOT / "self_host/compiler/starshine_runtime_emit.dew").read_text()
+        self.assertFalse("dew_array_" in source, "removed Array runtime builder")
+
     def test_array_specialization_has_no_runtime_lookup_or_erased_adapter(self):
         source = (ROOT / "self_host/compiler/semantic_program_specialization.dew").read_text()
         self.assertFalse("dew_array_" in source,

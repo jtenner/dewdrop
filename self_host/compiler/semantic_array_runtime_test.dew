@@ -1,0 +1,14 @@
+test "Array runtime aliases are not emitted library functions" {
+  for name in [b"dew_array_new", b"dew_array_clear", b"dew_array_iter_has_next"] {
+    assert(!self_host_program_link_is_runtime_builtin(name), "removed Array runtime target was selected")
+  }
+  let fragments = self_host_physical_test_fragments(
+    b"builtin old_clear(value: I32) -> Unit = \"dew_array_clear\"\npub fn main() -> Unit {\n  old_clear(1i32)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(_) => assert(false, "removed Array runtime target was emitted")
+    Result::Err(error) => assert(error == "dew_array_clear", error)
+  }
+}
