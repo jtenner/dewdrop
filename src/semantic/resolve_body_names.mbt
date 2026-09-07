@@ -115,6 +115,30 @@ fn BodyNameResolver::new_with_context(
   outer_environment : LambdaLexicalEnvironment,
   variant_names : Map[NameId, Bool],
 ) -> BodyNameResolver {
+  assert_body_owned_spans(collected, body, 1)
+  let parameter_count = if lambda < 0 {
+    collected.parameters.length()
+  } else {
+    collected.lambda_parameters.length()
+  }
+  if !program_specialization_span_is_valid(parameter_span, parameter_count) {
+    abort(
+      "body parameter arena invariant: " +
+      @debug.to_string(
+        body_arena_failure(
+          collected,
+          body,
+          1,
+          101,
+          -1,
+          parameter_count,
+          parameter_span.start,
+          10,
+          parameter_span.length,
+        ),
+      ),
+    )
+  }
   {
     collected,
     imports,
@@ -250,7 +274,7 @@ fn BodyNameResolver::expression_index(
   self : BodyNameResolver,
   expression : ExprId,
 ) -> Int {
-  expression - self.body.expressions.start
+  body_relative_index(self.collected, self.body, BodyExpressions, expression, 1)
 }
 
 ///|
@@ -258,7 +282,7 @@ fn BodyNameResolver::pattern_index(
   self : BodyNameResolver,
   pattern : PatternId,
 ) -> Int {
-  pattern - self.body.patterns.start
+  body_relative_index(self.collected, self.body, BodyPatterns, pattern, 1)
 }
 
 ///|
@@ -266,7 +290,7 @@ fn BodyNameResolver::block_item_index(
   self : BodyNameResolver,
   item : Int,
 ) -> Int {
-  item - self.body.block_items.start
+  body_relative_index(self.collected, self.body, BodyBlockItems, item, 1)
 }
 
 ///|
@@ -874,7 +898,9 @@ fn BodyNameResolver::collect_pattern_alternative(
         let mut index = arguments.length
         while index > 0 {
           index -= 1
-          self.pattern_stack.push(self.collected.pattern_children[arguments.start + index])
+          self.pattern_stack.push(
+            self.collected.pattern_children[arguments.start + index],
+          )
           self.pattern_contexts.push(true)
         }
       }

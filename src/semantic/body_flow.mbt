@@ -216,6 +216,7 @@ fn BodyFlowAnalyzer::new(
   variant_spans : Array[HirSpan],
   pattern_tasks : Array[PatternId],
 ) -> BodyFlowAnalyzer {
+  assert_body_owned_spans(collected, body, 3)
   pattern_tasks.clear()
   {
     collected,
@@ -266,11 +267,43 @@ fn BodyFlowAnalyzer::new(
 }
 
 ///|
+fn BodyFlowAnalyzer::expression_index(
+  self : BodyFlowAnalyzer,
+  expression : ExprId,
+) -> Int {
+  body_relative_index(self.collected, self.body, BodyExpressions, expression, 3)
+}
+
+///|
+fn BodyFlowAnalyzer::pattern_index(
+  self : BodyFlowAnalyzer,
+  pattern : PatternId,
+) -> Int {
+  body_relative_index(self.collected, self.body, BodyPatterns, pattern, 3)
+}
+
+///|
+fn BodyFlowAnalyzer::block_index(
+  self : BodyFlowAnalyzer,
+  block : BlockId,
+) -> Int {
+  body_relative_index(self.collected, self.body, BodyBlocks, block, 3)
+}
+
+///|
+fn BodyFlowAnalyzer::arm_index(
+  self : BodyFlowAnalyzer,
+  arm : PatternArmId,
+) -> Int {
+  body_relative_index(self.collected, self.body, BodyPatternArms, arm, 3)
+}
+
+///|
 fn BodyFlowAnalyzer::expression_flow(
   self : BodyFlowAnalyzer,
   expression : ExprId,
 ) -> BodyFlowSummary {
-  self.expression_flows[expression - self.body.expressions.start]
+  self.expression_flows[self.expression_index(expression)]
 }
 
 ///|
@@ -279,7 +312,7 @@ fn BodyFlowAnalyzer::set_expression_flow(
   expression : ExprId,
   summary : BodyFlowSummary,
 ) -> Unit {
-  self.expression_flows[expression - self.body.expressions.start] = summary
+  self.expression_flows[self.expression_index(expression)] = summary
 }
 
 ///|
@@ -287,7 +320,7 @@ fn BodyFlowAnalyzer::pattern_is_irrefutable(
   self : BodyFlowAnalyzer,
   pattern : PatternId,
 ) -> Bool {
-  self.pattern_irrefutable[pattern - self.body.patterns.start]
+  self.pattern_irrefutable[self.pattern_index(pattern)]
 }
 
 ///|
@@ -295,7 +328,7 @@ fn BodyFlowAnalyzer::pattern_payload_is_irrefutable(
   self : BodyFlowAnalyzer,
   pattern : PatternId,
 ) -> Bool {
-  self.pattern_payload_irrefutable[pattern - self.body.patterns.start]
+  self.pattern_payload_irrefutable[self.pattern_index(pattern)]
 }
 
 ///|
@@ -404,7 +437,7 @@ fn BodyFlowAnalyzer::initialize_pattern_irrefutability(
           | UnresolvedPatternTypeArgument(pattern, _, _) =>
             if pattern >= self.body.patterns.start &&
               pattern < self.body.patterns.start + self.body.patterns.length {
-              self.pattern_has_error[pattern - self.body.patterns.start] = true
+              self.pattern_has_error[self.pattern_index(pattern)] = true
             }
           _ => ()
         }
@@ -414,7 +447,7 @@ fn BodyFlowAnalyzer::initialize_pattern_irrefutability(
   for
     pattern in self.body.patterns.start..<(self.body.patterns.start +
     self.body.patterns.length) {
-    let pattern_slot = pattern - self.body.patterns.start
+    let pattern_slot = self.pattern_index(pattern)
     let selected = self.inferred.pattern_constructors[pattern]
     let payload_irrefutable = match self.collected.patterns[pattern] {
       HirWildcardPattern(_) | HirBindingPattern(_, _) | HirRestPattern(_) =>
@@ -498,7 +531,8 @@ fn BodyFlowAnalyzer::initialize_pattern_irrefutability(
         match self.collected.patterns[pattern] {
           HirWildcardPattern(_) | HirBindingPattern(_, _) | HirRestPattern(_) =>
             true
-          HirAlternativePattern(_, _, _) | HirProductPattern(_, _) => valid_payload
+          HirAlternativePattern(_, _, _) | HirProductPattern(_, _) =>
+            valid_payload
           _ => false
         }
     }
@@ -573,7 +607,7 @@ fn BodyFlowAnalyzer::coverage_atom(
   self : BodyFlowAnalyzer,
   pattern : PatternId,
 ) -> CoverageAtom {
-  if self.pattern_has_error[pattern - self.body.patterns.start] {
+  if self.pattern_has_error[self.pattern_index(pattern)] {
     return ErrorCoverageAtom
   }
   match self.inferred.pattern_constructors[pattern] {
@@ -593,7 +627,8 @@ fn BodyFlowAnalyzer::coverage_atom(
     NoInferredPatternConstructor =>
       match self.collected.patterns[pattern] {
         HirWildcardPattern(_) | HirBindingPattern(_, _) => CatchAllCoverageAtom
-        HirProductPattern(_, _) if self.pattern_is_irrefutable(pattern) => CatchAllCoverageAtom
+        HirProductPattern(_, _) if self.pattern_is_irrefutable(pattern) =>
+          CatchAllCoverageAtom
         HirLiteralPattern(expression, _) =>
           match self.collected.expressions[expression] {
             HirBoolExpr(value, _) => BoolCoverageAtom(value)
@@ -824,7 +859,7 @@ fn BodyFlowAnalyzer::block_flow(
   self : BodyFlowAnalyzer,
   block : BlockId,
 ) -> BodyFlowSummary {
-  let block_slot = block - self.body.blocks.start
+  let block_slot = self.block_index(block)
   if self.block_done[block_slot] {
     return self.block_flows[block_slot]
   }
@@ -861,7 +896,7 @@ fn BodyFlowAnalyzer::arm_flow(
   } else {
     flow_sequence(self.expression_flow(arm.guard_condition), body)
   }
-  self.arm_flows[arm_id - self.body.pattern_arms.start] = result
+  self.arm_flows[self.arm_index(arm_id)] = result
   result
 }
 

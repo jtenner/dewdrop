@@ -563,6 +563,7 @@ impl SelfHostBasicBodyInferencer {
     name_info: SelfHostResolvedBodyNames,
     solver: SelfHostLocalTypeSolver,
   ) -> SelfHostBasicBodyInferencer {
+    self_host_assert_body_owned_spans(collected, body, 2u32)
     if solver.member_types is Option::None {
       solver.member_types = self_host_body_member_type_context(collected, resolved, imported)
     }
@@ -719,7 +720,7 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn expression_index(self, expression: U32) -> U32 {
-    expression - self.body.expressions.start
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyExpressions, expression, 2u32)
   }
 
   fn capture_index(self, capture: U32, expression: U32) -> U32 {
@@ -760,11 +761,15 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn block_index(self, block: U32) -> U32 {
-    block - self.body.blocks.start
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyBlocks, block, 2u32)
   }
 
   fn pattern_index(self, pattern: U32) -> U32 {
-    pattern - self.body.patterns.start
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyPatterns, pattern, 2u32)
+  }
+
+  fn object_field_index(self, field: U32) -> U32 {
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyObjectFields, field, 2u32)
   }
 
   fn expression_type(self, expression: U32) -> I32 {
@@ -5870,7 +5875,7 @@ impl SelfHostBasicBodyInferencer {
         }
         if self_host_u32_equal(selected, 4294967295u32) {
           failed = true
-          self.object_field_targets[object_field_index - self.body.object_fields.start] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
+          self.object_field_targets[self.object_field_index(object_field_index)] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
           self.diagnostics.push(
             SelfHostBodyInferenceDiagnostic::UnknownConstructionField(
               expression,
@@ -5881,7 +5886,7 @@ impl SelfHostBasicBodyInferencer {
           )
         } else if matched[selected] {
           failed = true
-          self.object_field_targets[object_field_index - self.body.object_fields.start] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
+          self.object_field_targets[self.object_field_index(object_field_index)] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
           self.diagnostics.push(
             SelfHostBodyInferenceDiagnostic::DuplicateConstructionField(
               expression,
@@ -5892,7 +5897,7 @@ impl SelfHostBasicBodyInferencer {
         } else {
           matched[selected] = true
           let field = self.imported.fields[selected]
-          self.object_field_targets[object_field_index - self.body.object_fields.start] = SelfHostBasicObjectFieldTarget::SelectedBasicObjectFieldTarget(
+          self.object_field_targets[self.object_field_index(object_field_index)] = SelfHostBasicObjectFieldTarget::SelectedBasicObjectFieldTarget(
             field.field,
           )
           self.constrain_assignable(
@@ -6010,7 +6015,7 @@ impl SelfHostBasicBodyInferencer {
         }
         if self_host_u32_equal(selected, 4294967295u32) {
           failed = true
-          self.object_field_targets[object_field_index - self.body.object_fields.start] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
+          self.object_field_targets[self.object_field_index(object_field_index)] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
           self.diagnostics.push(
             SelfHostBodyInferenceDiagnostic::UnknownConstructionField(
               expression,
@@ -6021,7 +6026,7 @@ impl SelfHostBasicBodyInferencer {
           )
         } else if matched[selected] {
           failed = true
-          self.object_field_targets[object_field_index - self.body.object_fields.start] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
+          self.object_field_targets[self.object_field_index(object_field_index)] = SelfHostBasicObjectFieldTarget::ErrorBasicObjectFieldTarget
           self.diagnostics.push(
             SelfHostBodyInferenceDiagnostic::DuplicateConstructionField(
               expression,
@@ -6032,7 +6037,7 @@ impl SelfHostBasicBodyInferencer {
         } else {
           matched[selected] = true
           let field = self.collected.fields[selected]
-          self.object_field_targets[object_field_index - self.body.object_fields.start] = SelfHostBasicObjectFieldTarget::SelectedBasicObjectFieldTarget(
+          self.object_field_targets[self.object_field_index(object_field_index)] = SelfHostBasicObjectFieldTarget::SelectedBasicObjectFieldTarget(
             field.id,
           )
           let signature_type = self.resolved.field_types[selected]

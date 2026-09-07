@@ -116,6 +116,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_capture_inference_test.dew \
   self_host/compiler/semantic_lambda_fragments_test.dew \
   self_host/compiler/semantic_local_unification_test.dew \
+  self_host/compiler/semantic_body_arena_contracts_test.dew \
   self_host/compiler/semantic_impl_index_test.dew \
   self_host/compiler/semantic_impl_type_walk_test.dew \
   self_host/compiler/semantic_trait_evidence_test.dew \

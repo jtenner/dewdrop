@@ -311,6 +311,7 @@ impl SelfHostBodyFlowAnalyzer {
     inferred: SelfHostBasicInferredBody,
     imported_variants: Array<SelfHostResolvedImportedVariant>,
   ) -> SelfHostBodyFlowAnalyzer {
+    self_host_assert_body_owned_spans(collected, body, 3u32)
     SelfHostBodyFlowAnalyzer::{
       collected: collected
       resolved: resolved
@@ -326,12 +327,28 @@ impl SelfHostBodyFlowAnalyzer {
     }
   }
 
+  fn expression_index(self, expression: U32) -> U32 {
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyExpressions, expression, 3u32)
+  }
+
+  fn pattern_index(self, pattern: U32) -> U32 {
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyPatterns, pattern, 3u32)
+  }
+
+  fn block_index(self, block: U32) -> U32 {
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyBlocks, block, 3u32)
+  }
+
+  fn arm_index(self, arm: U32) -> U32 {
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyPatternArms, arm, 3u32)
+  }
+
   fn expression_flow(self, expression: U32) -> SelfHostBodyFlowSummary {
     if self_host_u32_equal(expression, 4294967295u32) {
       self_host_flow_falls_through()
     } else {
       self_host_flow_decode(
-        self.expression_flows[expression - self.body.expressions.start],
+        self.expression_flows[self.expression_index(expression)],
       )
     }
   }
@@ -362,7 +379,7 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn block_flow(self, block: U32) -> SelfHostBodyFlowSummary {
-    let slot = block - self.body.blocks.start
+    let slot = self.block_index(block)
     if self.block_done[slot] {
       return self_host_flow_decode(self.block_flows[slot])
     }
@@ -404,7 +421,7 @@ impl SelfHostBodyFlowAnalyzer {
         self.expression_flow(info.body),
       )
     }
-    self.arm_flows[arm - self.body.pattern_arms.start] = self_host_flow_encode(
+    self.arm_flows[self.arm_index(arm)] = self_host_flow_encode(
       result,
     )
     result
@@ -431,7 +448,7 @@ impl SelfHostBodyFlowAnalyzer {
   }
 
   fn coverage_domain(self, expression: U32) -> SelfHostFlowCoverageDomain {
-    let tasks = [self.inferred.expression_types[expression - self.body.expressions.start]]
+    let tasks = [self.inferred.expression_types[self.expression_index(expression)]]
     while tasks.length() {
       length => if self_host_u32_greater(length, 0u32) {
         let type_ = self_host_flow_i32_at(tasks, length - 1u32)
@@ -491,7 +508,7 @@ impl SelfHostBodyFlowAnalyzer {
     ) {
       return Option::None
     }
-    match self.inferred.pattern_constructors[pattern - self.body.patterns.start] {
+    match self.inferred.pattern_constructors[self.pattern_index(pattern)] {
       SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
         declaration,
         _,
@@ -1074,7 +1091,7 @@ impl SelfHostBodyFlowAnalyzer {
           }
           SelfHostHirExpr::CallExpr(target, arguments, _) => {
             let target_flow = match self.inferred.call_targets[
-              current - self.body.expressions.start
+              self.expression_index(current)
             ] {
               // A selected direct target is compile-time proof, not a value.
               SelfHostBasicCallTarget::SelectedBasicCallTarget(_, _) => {
@@ -1124,7 +1141,7 @@ impl SelfHostBodyFlowAnalyzer {
           }
         }
         self.expression_flows[
-          current - self.body.expressions.start
+          self.expression_index(current)
         ] = self_host_flow_encode(flow)
         continue current + 1u32
       } else {

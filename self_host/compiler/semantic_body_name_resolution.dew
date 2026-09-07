@@ -269,6 +269,17 @@ impl SelfHostBodyNameResolver {
     outer_environment: SelfHostLambdaLexicalEnvironment,
     variant_names: Map<U32, Bool>,
   ) -> SelfHostBodyNameResolver {
+    self_host_assert_body_owned_spans(collected, body, 1u32)
+    let parameter_count = if lambda == 4294967295u32 {
+      collected.parameters.length()
+    } else {
+      collected.lambda_parameters.length()
+    }
+    self_host_assert_compiler_invariant_with_failure(
+      self_host_array_span_is_valid(parameter_span.start, parameter_span.length, parameter_count),
+      self_host_body_arena_failure(collected, body, 1u32, 101u32, 4294967295u32, parameter_count, parameter_span.start, 10u32, parameter_span.length),
+      "body parameter span is invalid",
+    )
     SelfHostBodyNameResolver::{
       collected: collected
       imports: imports
@@ -380,15 +391,15 @@ impl SelfHostBodyNameResolver {
   }
 
   fn expression_index(self, expression: U32) -> U32 {
-    expression - self.body.expressions.start
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyExpressions, expression, 1u32)
   }
 
   fn pattern_index(self, pattern: U32) -> U32 {
-    pattern - self.body.patterns.start
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyPatterns, pattern, 1u32)
   }
 
   fn block_item_index(self, item: U32) -> U32 {
-    item - self.body.block_items.start
+    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyBlockItems, item, 1u32)
   }
 
   fn diagnose(self, diagnostic: SelfHostBodyResolutionDiagnostic) -> Unit {

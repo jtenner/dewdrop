@@ -56,7 +56,7 @@ fn BasicBodyInferencer::record_pattern_constructor(
     start,
     length: self.call_scratch.candidate_type_arguments.length(),
   }
-  self.pattern_constructors[pattern - self.body.patterns.start] = if variant {
+  self.pattern_constructors[self.pattern_index(pattern)] = if variant {
     VariantInferredPatternConstructor(constructor_id, arguments)
   } else {
     StructInferredPatternConstructor(constructor_id, arguments)
@@ -201,7 +201,7 @@ fn BasicBodyInferencer::object_field_index(
   self : BasicBodyInferencer,
   field : Int,
 ) -> Int {
-  field - self.body.object_fields.start
+  body_relative_index(self.collected, self.body, BodyObjectFields, field, 2)
 }
 
 ///|
@@ -695,7 +695,7 @@ fn BasicBodyInferencer::select_variant_base(
   owner_pattern : PatternId,
   offset : UInt64,
 ) -> VariantId? {
-  self.pattern_types[base - self.body.patterns.start] = expected
+  self.pattern_types[self.pattern_index(base)] = expected
   match self.collected.patterns[base] {
     HirBindingPattern(name, _) =>
       match self.names.pattern_references[base] {
@@ -707,7 +707,7 @@ fn BasicBodyInferencer::select_variant_base(
         }
       }
     HirQualifiedPattern(root, property, _) => {
-      self.pattern_types[root - self.body.patterns.start] = expected
+      self.pattern_types[self.pattern_index(root)] = expected
       match self.names.pattern_references[root] {
         PatternTypeReference(declaration) =>
           if semantic_id_module(declaration) == self.collected.module_id {
@@ -774,7 +774,11 @@ fn BasicBodyInferencer::infer_product_pattern(
     abort("ARN-101 product pattern children")
   }
   if arguments.length == 0 {
-    self.constrain(expected, self.primitive(UnitType), pattern_type_origin(pattern, offset))
+    self.constrain(
+      expected,
+      self.primitive(UnitType),
+      pattern_type_origin(pattern, offset),
+    )
     return
   }
   let mut rest_index = -1
@@ -799,22 +803,31 @@ fn BasicBodyInferencer::infer_product_pattern(
         fields.push(self.solver.type_arguments[span.start + index])
       }
     }
-    BodyResolvedType(type_) => match self.resolved.types[type_] {
-      ProductType(span) => {
-        guard arena_span_is_valid(span, self.resolved.type_arguments.length()) else {
-          abort("ARN-101 product pattern resolved fields")
+    BodyResolvedType(type_) =>
+      match self.resolved.types[type_] {
+        ProductType(span) => {
+          guard arena_span_is_valid(span, self.resolved.type_arguments.length()) else {
+            abort("ARN-101 product pattern resolved fields")
+          }
+          for index in 0..<span.length {
+            fields.push(
+              self.solver.resolved_type(
+                self.resolved.type_arguments[span.start + index],
+              ),
+            )
+          }
         }
-        for index in 0..<span.length {
-          fields.push(self.solver.resolved_type(self.resolved.type_arguments[span.start + index]))
-        }
+        _ => valid = false
       }
-      _ => valid = false
-    }
     BodyVariableType(_) if rest_index < 0 => {
       for _ in 0..<explicit_count {
         fields.push(self.solver.fresh_variable())
       }
-      self.constrain(expected, self.solver.product_type(fields), pattern_type_origin(pattern, offset))
+      self.constrain(
+        expected,
+        self.solver.product_type(fields),
+        pattern_type_origin(pattern, offset),
+      )
     }
     BodyErrorType => valid = false
     _ => valid = false
@@ -823,11 +836,18 @@ fn BasicBodyInferencer::infer_product_pattern(
     if !(term is BodyErrorType) {
       self.diagnose(InvalidPatternConstructor(pattern, offset))
     }
-    self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+    self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
   } else if (rest_index < 0 && explicit_count != fields.length()) ||
     (rest_index >= 0 && explicit_count > fields.length()) {
-    self.diagnose(PatternPayloadArityMismatch(pattern, fields.length(), explicit_count, offset))
-    self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+    self.diagnose(
+      PatternPayloadArityMismatch(
+        pattern,
+        fields.length(),
+        explicit_count,
+        offset,
+      ),
+    )
+    self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
     valid = false
   }
   let mut before = 0
@@ -835,7 +855,7 @@ fn BasicBodyInferencer::infer_product_pattern(
   for index in 0..<arguments.length {
     let child = self.collected.pattern_children[arguments.start + index]
     if self.collected.patterns[child] is HirRestPattern(_) {
-      self.pattern_types[child - self.body.patterns.start] = self.solver.error_type()
+      self.pattern_types[self.pattern_index(child)] = self.solver.error_type()
     } else {
       let field = if rest_index < 0 || index < rest_index {
         let result = before
@@ -846,11 +866,14 @@ fn BasicBodyInferencer::infer_product_pattern(
         after += 1
         result
       }
-      self.push_pattern_task(child, if valid && field >= 0 && field < fields.length() {
-        fields[field]
-      } else {
-        self.solver.error_type()
-      })
+      self.push_pattern_task(
+        child,
+        if valid && field >= 0 && field < fields.length() {
+          fields[field]
+        } else {
+          self.solver.error_type()
+        },
+      )
     }
   }
 }
@@ -868,13 +891,13 @@ fn BasicBodyInferencer::infer_tuple_variant_pattern(
     self.select_variant_base(base, expected, pattern, offset) {
     Some(variant) => variant
     None => {
-      self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+      self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
       return
     }
   }
   if self.variant_kind(variant) != Some(TupleVariantDecl) {
     self.diagnose(PatternPayloadKindMismatch(pattern, variant, offset))
-    self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+    self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
     return
   }
   let declaration = self.variant_declaration(variant).unwrap()
@@ -904,7 +927,7 @@ fn BasicBodyInferencer::infer_tuple_variant_pattern(
     let child = self.collected.pattern_children[arguments.start + index]
     match self.collected.patterns[child] {
       HirRestPattern(_) =>
-        self.pattern_types[child - self.body.patterns.start] = self.solver.error_type()
+        self.pattern_types[self.pattern_index(child)] = self.solver.error_type()
       _ => {
         let payload_index = if rest_index < 0 || index < rest_index {
           let result = before
@@ -954,7 +977,7 @@ fn BasicBodyInferencer::infer_imported_struct_payload_pattern(
   let imports = match self.imports {
     Some(imports) => imports
     None => {
-      self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+      self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
       return
     }
   }
@@ -1098,12 +1121,12 @@ fn BasicBodyInferencer::infer_struct_pattern(
   expected : BodyTypeId,
   offset : UInt64,
 ) -> Unit {
-  self.pattern_types[base - self.body.patterns.start] = expected
+  self.pattern_types[self.pattern_index(base)] = expected
   match self.names.pattern_references[base] {
     PatternTypeReference(declaration) => {
       if declaration == standard_nullable_ref_type_declaration() {
         self.diagnose(InvalidPatternConstructor(pattern, offset))
-        self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+        self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
         return
       }
       let is_struct = if semantic_id_module(declaration) ==
@@ -1130,7 +1153,7 @@ fn BasicBodyInferencer::infer_struct_pattern(
         )
       } else {
         self.diagnose(InvalidPatternConstructor(pattern, offset))
-        self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+        self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
       }
     }
     _ => {
@@ -1138,13 +1161,13 @@ fn BasicBodyInferencer::infer_struct_pattern(
         self.select_variant_base(base, expected, pattern, offset) {
         Some(variant) => variant
         None => {
-          self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+          self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
           return
         }
       }
       if self.variant_kind(variant) != Some(StructVariantDecl) {
         self.diagnose(PatternPayloadKindMismatch(pattern, variant, offset))
-        self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+        self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
         return
       }
       self.infer_struct_payload_pattern(
@@ -1171,13 +1194,13 @@ fn BasicBodyInferencer::infer_unit_constructor_pattern(
     self.select_variant_base(pattern, expected, pattern, offset) {
     Some(variant) => variant
     None => {
-      self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+      self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
       return
     }
   }
   if self.variant_kind(variant) != Some(UnitVariantDecl) {
     self.diagnose(PatternPayloadKindMismatch(pattern, variant, offset))
-    self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+    self.pattern_constructors[self.pattern_index(pattern)] = ErrorInferredPatternConstructor
     return
   }
   self.begin_pattern_instantiation(
@@ -1204,11 +1227,11 @@ fn BasicBodyInferencer::infer_pattern(
     if !self.live_pattern(pattern) {
       continue
     }
-    self.pattern_types[pattern - self.body.patterns.start] = expected
+    self.pattern_types[self.pattern_index(pattern)] = expected
     match self.collected.patterns[pattern] {
       HirWildcardPattern(_) => ()
       HirRestPattern(_) | HirImportAliasPattern(_, _) =>
-        self.pattern_types[pattern - self.body.patterns.start] = self.solver.error_type()
+        self.pattern_types[self.pattern_index(pattern)] = self.solver.error_type()
       HirBindingPattern(_, offset) =>
         match self.names.pattern_references[pattern] {
           PatternBindingReference(local_id) =>
@@ -1220,7 +1243,7 @@ fn BasicBodyInferencer::infer_pattern(
           PatternVariantReference(_) =>
             self.infer_unit_constructor_pattern(pattern, expected, offset)
           ErrorPatternReference =>
-            self.pattern_types[pattern - self.body.patterns.start] = self.solver.error_type()
+            self.pattern_types[self.pattern_index(pattern)] = self.solver.error_type()
           _ => self.diagnose(InvalidPatternConstructor(pattern, offset))
         }
       HirLiteralPattern(expression, offset) =>

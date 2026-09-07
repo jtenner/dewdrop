@@ -224,7 +224,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   graphs. Missing solver IDs cannot become Error, and Error siblings cannot
   hide structural cycles or bad spans. See the
   [type graph log](docs/research/solver-type-graphs-2026-09-07.md).
-  Complete child ownership checks at other phase consumers remain open.
+  Name resolution, inference, and flow now check all ten HIR body spans before
+  allocation and check membership before relative lookup. Exact owner/phase
+  records cover cross-body and machine-boundary mutations. See the
+  [front-end arena log](docs/research/body-arena-contracts-2026-09-07.md).
+  Complete child-list, stored-identity, parallel-array, and later-consumer checks
+  remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
   order must hold, and stored identities, physical indices, and import offsets
   must agree. Missing bases or bodies must produce a diagnostic.

@@ -138,6 +138,14 @@ const probes = [
   solverProbe("ARN-104 solver type reads cannot hide a missing sentinel", 104, 1, 4294967295, 0),
   solverProbe("ARN-104 unification cannot hide a missing sentinel", 104, 2, 4294967295, 0),
   solverProbe("SOL-201 representative checks the stored variable identity", 201, 0, 0, 4),
+  {
+    name: "ARN-102 name resolution checks body ownership before subtraction",
+    expected: [102, 1, 6044n, (6044n << 32n) | 1n, (6044n << 32n) | 1n, 0, 1n, 0n, 1n],
+  },
+  {
+    name: "ARN-101 name resolution checks spans before allocating work arrays",
+    expected: [101, 1, 6045n, 6045n << 32n, 6045n << 32n, 4294967295, 1n, 4294967295n, 1n],
+  },
   solverProbe("ARN-101 unification checks owned spans before identity", 101, 1, 1, 1),
   solverProbe("SOL-205 undo index must be in its arena", 205, 1, 1, 2),
   solverProbe("SOL-205 undo size must be positive", 205, 1, 0, 0),

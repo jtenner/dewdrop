@@ -770,6 +770,7 @@ fn BasicBodyInferencer::new(
   module_values : ModuleValueInferenceContext?,
   reachability? : InferenceReachability? = None,
 ) -> BasicBodyInferencer {
+  assert_body_owned_spans(collected, body, 2)
   let name_info = names.body(body.id).unwrap()
   {
     collected,
@@ -941,7 +942,7 @@ fn BasicBodyInferencer::expression_index(
   self : BasicBodyInferencer,
   expression : ExprId,
 ) -> Int {
-  expression - self.body.expressions.start
+  body_relative_index(self.collected, self.body, BodyExpressions, expression, 2)
 }
 
 ///|
@@ -949,7 +950,15 @@ fn BasicBodyInferencer::block_index(
   self : BasicBodyInferencer,
   block : BlockId,
 ) -> Int {
-  block - self.body.blocks.start
+  body_relative_index(self.collected, self.body, BodyBlocks, block, 2)
+}
+
+///|
+fn BasicBodyInferencer::pattern_index(
+  self : BasicBodyInferencer,
+  pattern : PatternId,
+) -> Int {
+  body_relative_index(self.collected, self.body, BodyPatterns, pattern, 2)
 }
 
 ///|
