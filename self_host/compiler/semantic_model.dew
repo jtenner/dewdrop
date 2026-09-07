@@ -312,6 +312,7 @@ pub struct SelfHostCollectedForeignType {
 }
 
 pub struct SelfHostCollectedForeignLibrary {
+  host_import: Bool
   declaration: U64
   logical_name: Bytes
   logical_name_offset: U32
@@ -367,6 +368,7 @@ pub enum SelfHostCollectionDiagnostic {
   UnknownDerivedTrait(String, U64, U32)
   DuplicateDerivedTrait(String, U64, U32, U32)
   EmptyForeignLogicalName(U64, U32)
+  ReservedForeignHostNamespace(U64, U32)
   EmptyForeignExportName(U64, U32)
 }
 

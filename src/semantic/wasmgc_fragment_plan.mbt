@@ -152,6 +152,7 @@ pub enum WasmImportKind {
   HostWasmImport
   StaticLinkWasmImport
   WasiWasmImport
+  ForeignHostWasmImport
 } derive(Eq, Debug)
 
 ///|
@@ -186,7 +187,7 @@ pub fn WasmImportIdentity::static_link(
 pub fn WasmImportIdentity::lookup_name(self : WasmImportIdentity) -> Bytes {
   match self.kind {
     HostWasmImport => self.field
-    WasiWasmImport | StaticLinkWasmImport => {
+    WasiWasmImport | StaticLinkWasmImport | ForeignHostWasmImport => {
       let output = Buffer(
         size_hint=self.module_name.length() + 1 + self.field.length(),
       )
@@ -2484,9 +2485,13 @@ fn wasmgc_plan_function_job(
       } else {
         PlannedWasmImportedFunction(wasmgc_builtin_import_identity(name))
       }
-    PlannedForeignCallable(logical_name, export_name) =>
+    PlannedForeignCallable(logical_name, export_name, host_import) =>
       PlannedWasmImportedFunction(
-        WasmImportIdentity::static_link(logical_name, export_name),
+        if host_import {
+          { module_name: logical_name, field: export_name, kind: ForeignHostWasmImport }
+        } else {
+          WasmImportIdentity::static_link(logical_name, export_name)
+        },
       )
     PlannedFunctionCallable(body) => PlannedWasmDefinedFunction(body)
     PlannedTraitMethodCallable(_) => PlannedWasmSignatureOnlyFunction
@@ -2557,7 +2562,7 @@ fn wasmgc_direct_builtin_of(
     PlannedFunctionCallable(body) => body
     PlannedImplMethodCallable(_, Some(body)) => body
     PlannedBuiltinCallable(_)
-    | PlannedForeignCallable(_, _)
+    | PlannedForeignCallable(_, _, _)
     | PlannedTraitMethodCallable(_)
     | PlannedImplMethodCallable(_, None) => return b""
   }

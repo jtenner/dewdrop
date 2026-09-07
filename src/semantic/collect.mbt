@@ -924,6 +924,8 @@ fn CollectionBuilder::collect_foreign_library(
     self.diagnostics.push(
       EmptyForeignLogicalName(self.current_file, value.logical_name_offset),
     )
+  } else if value.host_import && value.logical_name.has_prefix(b"link:") {
+    self.diagnostics.push(ReservedForeignHostNamespace(self.current_file, value.logical_name_offset))
   } else if !semantic_utf8_is_valid(value.logical_name) {
     self.diagnostics.push(
       InvalidUtf8ForeignLogicalName(
@@ -982,6 +984,7 @@ fn CollectionBuilder::collect_foreign_library(
     })
   }
   self.foreign_libraries.push({
+    host_import: value.host_import,
     declaration: declaration.id,
     logical_name: value.logical_name,
     logical_name_offset: value.logical_name_offset,

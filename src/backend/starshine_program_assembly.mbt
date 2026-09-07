@@ -391,7 +391,7 @@ fn starshine_program_uses_wasi(
           return true
         }
       @semantic.PlannedWasmImportedFunction(identity) =>
-        if identity.kind is @semantic.WasiWasmImport {
+        if identity.kind is @semantic.WasiWasmImport || identity.kind is @semantic.ForeignHostWasmImport {
           return true
         }
       _ => ()

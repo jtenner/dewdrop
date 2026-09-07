@@ -480,6 +480,7 @@ pub struct SelfHostForeignLibraryMember {
 }
 
 pub struct SelfHostForeignLibraryDeclaration {
+  host_import: Bool
   logical_name: Bytes
   logical_name_offset: U32
   namespace_alias: String

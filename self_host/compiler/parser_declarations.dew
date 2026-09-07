@@ -477,6 +477,7 @@ fn self_host_parse_foreign_type(
 fn self_host_parse_foreign_library(
   parser: SelfHostParser,
   declaration_offset: U32,
+  host_import: Bool,
 ) -> Option<SelfHostDeclaration> {
   let logical_token = match self_host_parser_peek(parser) {
     Option::Some(value) => value
@@ -680,6 +681,7 @@ fn self_host_parse_foreign_library(
     Option::Some(
       SelfHostDeclaration::ForeignLibrary(
         SelfHostForeignLibraryDeclaration::{
+          host_import: host_import
           logical_name: logical_name
           logical_name_offset: logical_token.offset
           namespace_alias: namespace_alias
@@ -863,7 +865,15 @@ fn self_host_parse_declaration(
     }
     4u32 => {
       parser.index = parser.index + 1u32
-      if self_host_parser_consume_keyword(parser, 10u32) {
+      if self_host_parser_consume_keyword(parser, 30u32) {
+        if visibility is SelfHostDeclarationVisibility::Public {
+          self_host_parser_fail(parser, SelfHostParseError::PublicForeignLibraryNotAllowed(declaration_offset))
+          Option::None
+        } else {
+          parser.last_declaration_kind = 8u32
+          self_host_parse_foreign_library(parser, declaration_offset, true)
+        }
+      } else if self_host_parser_consume_keyword(parser, 10u32) {
         parser.last_declaration_kind = 7u32
         self_host_parse_foreign_type(
           parser,
@@ -886,7 +896,7 @@ fn self_host_parse_declaration(
               Option::None
             } else {
               parser.last_declaration_kind = 8u32
-              self_host_parse_foreign_library(parser, declaration_offset)
+              self_host_parse_foreign_library(parser, declaration_offset, false)
             }
             _ => if visibility is SelfHostDeclarationVisibility::Public {
               self_host_parser_fail(
@@ -1065,7 +1075,7 @@ fn self_host_next_declaration_kind(parser: SelfHostParser) -> U32 {
     )
     if foreign_kind == 10u32 {
       7u32
-    } else if foreign_kind == 5u32 && self_host_declaration_string_at(
+    } else if (foreign_kind == 5u32 || foreign_kind == 30u32) && self_host_declaration_string_at(
       parser,
       keyword_index + 2u32,
     ) {

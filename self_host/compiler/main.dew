@@ -213,6 +213,12 @@ fn self_host_compile_request_root_diagnostic(
       message.append(" offset=")
       message.append_u32(offset)
     }
+    SelfHostCollectionDiagnostic::ReservedForeignHostNamespace(file, offset) => {
+      message.append(" kind=reserved_foreign_host_namespace file=")
+      message.append_u64(file)
+      message.append(" offset=")
+      message.append_u32(offset)
+    }
   }
   message.finish()
 }

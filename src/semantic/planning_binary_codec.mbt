@@ -729,6 +729,7 @@ fn pb_write_import_identity(
       HostWasmImport => 0
       StaticLinkWasmImport => 1
       WasiWasmImport => 2
+      ForeignHostWasmImport => 3
     },
   )
 }
@@ -744,6 +745,7 @@ fn pb_read_import_identity(
     0 => HostWasmImport
     1 => StaticLinkWasmImport
     2 => WasiWasmImport
+    3 => ForeignHostWasmImport
     _ => {
       reader.fail(field, "unknown Wasm import-kind discriminant")
       HostWasmImport

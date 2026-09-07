@@ -33776,15 +33776,7 @@ fn build_self_host_linked_i32_module(
             let builder = StarshineFfi.ffi_ffi_bridge_import_builder_new(
               self_host_u32_to_i32(function_type_index),
             )
-            if library.equals(b"starshine") {
-              self_host_linked_append_import_name(
-                builder,
-                b"link:starshine",
-                true,
-              )
-            } else {
-              self_host_linked_append_import_name(builder, library, true)
-            }
+            self_host_linked_append_import_name(builder, library, true)
             self_host_linked_append_import_name(builder, field, false)
             StarshineFfi.ffi_ffi_bridge_imports_push_builder(
               imports,

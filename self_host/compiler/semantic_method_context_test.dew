@@ -1,3 +1,32 @@
+test "foreign host imports keep namespace metadata through physical planning" {
+  let invalid = self_host_collect_bytes(5502u64,
+    b"foreign import \"link:provider\" as Host {\n  fn call() -> Unit = \"call\"\n}\n",
+  )
+  assert(invalid.diagnostics.length() == 1u32, "reserved host namespace must be diagnostic")
+  assert(invalid.diagnostics[0u32] is SelfHostCollectionDiagnostic::ReservedForeignHostNamespace(_, _), "host imports must not become linked providers")
+  let link = self_host_physical_test_named_import_link("app.host",
+    b"foreign import \"custom.host\" as Host {\n  fn host_send(value: I64) -> I32 = \"send\"\n}\npub fn send(value: I64) -> I32 {\n  Host.host_send(value)\n}\n",
+    b"open app.host\npub fn run() -> I32 {\n  send(7i64)\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+  let mut found = false
+  for module_ in link.fragments.modules {
+    for function_ in module_.functions {
+      match function_.kind {
+        SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(namespace, field) => {
+          assert(namespace.equals(b"custom.host"), "host import namespace must be exact")
+          assert(field.equals(b"send"), "host import field must be exact")
+          found = true
+        }
+        _ => {}
+      }
+    }
+  }
+  assert(found, "host import must reach the physical plan")
+}
+
 test "imported method candidates accept Never and reject wrong scalar arguments" {
   let runtime = b"impl Unit {\n  fn consume(self, value: I64) -> I64 {\n    value\n  }\n}\n"
   let link = self_host_physical_test_named_import_link("app.methods", runtime,

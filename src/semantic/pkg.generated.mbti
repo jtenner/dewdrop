@@ -570,6 +570,7 @@ pub struct CollectedForeignFunction {
 } derive(Eq, @debug.Debug)
 
 pub struct CollectedForeignLibrary {
+  host_import : Bool
   declaration : UInt64
   logical_name : Bytes
   logical_name_offset : UInt64
@@ -778,6 +779,7 @@ pub enum CollectionDiagnostic {
   UnknownDerivedTrait(String, UInt64, UInt64)
   DuplicateDerivedTrait(String, UInt64, UInt64, UInt64)
   EmptyForeignLogicalName(UInt64, UInt64)
+  ReservedForeignHostNamespace(UInt64, UInt64)
   InvalidUtf8ForeignLogicalName(UInt64, UInt64)
   EmptyForeignExportName(UInt64, UInt64)
   InvalidUtf8ForeignExportName(UInt64, UInt64)
@@ -1257,6 +1259,7 @@ pub struct IndexedTraitMethodDispatch {
 type InferenceReachability
 
 pub struct InferenceSnapshot {
+  token : UInt64
   undo_start : Int
   variable_count : Int
   type_count : Int
@@ -1416,6 +1419,7 @@ pub struct LocalTypeSolver {
   variable_types : Array[Int]
   diagnostics : Array[LocalInferenceDiagnostic]
   snapshots : Array[InferenceSnapshot]
+  mut next_snapshot_token : UInt64
   undo_kinds : Array[Int]
   undo_indices : Array[Int]
   undo_values : Array[Int]
@@ -1625,7 +1629,7 @@ pub fn PlannedCallable::all_generic_parameters(Self) -> CallableGenericParameter
 
 pub enum PlannedCallableKind {
   PlannedBuiltinCallable(Bytes)
-  PlannedForeignCallable(Bytes, Bytes)
+  PlannedForeignCallable(Bytes, Bytes, Bool)
   PlannedFunctionCallable(UInt64)
   PlannedTraitMethodCallable(UInt64)
   PlannedImplMethodCallable(UInt64, UInt64?)
@@ -2412,6 +2416,8 @@ pub fn ProgramFile::line_column(Self, UInt64) -> SourceLineColumn
 pub fn ProgramFile::named(UInt64, String, Bytes) -> Self
 pub fn ProgramFile::new(UInt64, Bytes) -> Self
 
+type ProgramFunctionIndexFailure derive(Eq, @debug.Debug)
+
 pub struct ProgramIndex {
   module_lookup : Map[UInt64, Int]
 }
@@ -2717,6 +2723,7 @@ pub enum WasmImportKind {
   HostWasmImport
   StaticLinkWasmImport
   WasiWasmImport
+  ForeignHostWasmImport
 } derive(Eq, @debug.Debug)
 
 // Type aliases

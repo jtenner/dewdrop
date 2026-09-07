@@ -4,7 +4,7 @@ open dew.std.string
 
 pub enum SelfHostPlannedCallableKind {
   PlannedBuiltinCallable(Bytes)
-  PlannedForeignCallable(Bytes, Bytes)
+  PlannedForeignCallable(Bytes, Bytes, Bool)
   PlannedFunctionCallable(U64)
   PlannedTraitMethodCallable(U64)
   PlannedImplMethodCallable(U64, Option<U64>)
@@ -187,7 +187,7 @@ fn self_host_function_plan_impl_target(
 fn self_host_function_plan_foreign_identity(
   collected: SelfHostCollectedModule,
   declaration: U64,
-) -> (Bytes, Bytes) {
+) -> (Bytes, Bytes, Bool) {
   let function_limit = array_length(collected.foreign_functions)
   let mut function_index = 0u32
   while function_index {
@@ -206,7 +206,7 @@ fn self_host_function_plan_foreign_identity(
               current_library,
             )
             if self_host_u64_equal(library.declaration, function_.library) {
-              return (library.logical_name, function_.export_name)
+              return (library.logical_name, function_.export_name, library.host_import)
             }
             continue current_library + 1u32
           } else {
@@ -219,7 +219,7 @@ fn self_host_function_plan_foreign_identity(
       break self_host_semantic_unit()
     }
   }
-  (b"", b"")
+  (b"", b"", false)
 }
 
 fn self_host_function_plan_representation_type(
@@ -495,7 +495,7 @@ fn self_host_plan_method_callable(
       let owner_generics = collected.generic_parameters_of(value.parent)
       match value.kind {
         SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => {
-          let (library, export_name) = self_host_function_plan_foreign_identity(
+          let (library, export_name, host_import) = self_host_function_plan_foreign_identity(
             collected,
             declaration,
           )
@@ -505,6 +505,7 @@ fn self_host_plan_method_callable(
             SelfHostPlannedCallableKind::PlannedForeignCallable(
               library,
               export_name,
+              host_import,
             ),
             value.parent, owner_generics, resolved.error_type, value.offset,
           )

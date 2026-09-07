@@ -20,6 +20,7 @@ pub struct ForeignLibraryMember {
 
 ///|
 pub struct ForeignLibraryDeclaration {
+  host_import : Bool
   logical_name : Bytes
   logical_name_offset : UInt64
   namespace_alias : String
@@ -227,6 +228,7 @@ fn Parser::parse_foreign_library_body(
 fn Parser::parse_foreign_library_after_impl(
   self : Parser,
   declaration_offset : UInt64,
+  host_import? : Bool = false,
 ) -> Result[Declaration, RecoveryFailure] {
   let (logical_name, logical_name_offset) = match self.peek_token() {
     Some(token) =>
@@ -260,6 +262,7 @@ fn Parser::parse_foreign_library_after_impl(
     Ok(_) =>
       Ok(
         ForeignLibrary({
+          host_import,
           logical_name,
           logical_name_offset,
           namespace_alias,

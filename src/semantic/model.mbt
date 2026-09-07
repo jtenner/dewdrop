@@ -171,6 +171,7 @@ pub struct CollectedForeignType {
 
 ///|
 pub struct CollectedForeignLibrary {
+  host_import : Bool
   declaration : DeclId
   logical_name : Bytes
   logical_name_offset : UInt64
@@ -231,6 +232,7 @@ pub enum CollectionDiagnostic {
   UnknownDerivedTrait(String, FileId, UInt64)
   DuplicateDerivedTrait(String, FileId, UInt64, UInt64)
   EmptyForeignLogicalName(FileId, UInt64)
+  ReservedForeignHostNamespace(FileId, UInt64)
   InvalidUtf8ForeignLogicalName(FileId, UInt64)
   EmptyForeignExportName(FileId, UInt64)
   InvalidUtf8ForeignExportName(FileId, UInt64)

@@ -270,6 +270,34 @@ test "WasmGC function slots separate imports definitions and signatures" {
 }
 
 ///|
+test "foreign host imports preserve arbitrary namespaces and scalar signatures" {
+  let (resolved, lowering) = wasmgc_test_inputs(
+    9751UL, b"foreign import \"custom.host\" as Host {\n  fn send(value: I64) -> I32 = \"send\"\n}\npub fn run(value: I64) -> I32 {\n  Host.send(value)\n}\n",
+  )
+  assert_eq(lowering.diagnostics.length(), 0)
+  let planned = plan_module_wasmgc_fragments(resolved, lowering)
+  let encoded = serialize_planned_module_wasmgc_fragments(planned).unwrap()
+  let restored = deserialize_planned_module_wasmgc_fragments(encoded).unwrap()
+  assert_eq(restored, planned)
+  assert_eq(serialize_planned_module_wasmgc_fragments(restored).unwrap(), encoded)
+  let mut found = false
+  for function_ in planned.functions {
+    if function_.kind is PlannedWasmImportedFunction(identity) {
+      assert_eq(identity.module_name, b"custom.host")
+      assert_eq(identity.field, b"send")
+      assert_eq(identity.kind, ForeignHostWasmImport)
+      assert_eq(identity.lookup_name(), b"custom.host.send")
+      assert_eq(function_.parameters.length, 1)
+      assert_eq(planned.function_value_types[function_.parameters.start], WasmI64Value)
+      assert_eq(function_.results.length, 1)
+      assert_eq(planned.function_value_types[function_.results.start], WasmI32Value)
+      found = true
+    }
+  }
+  assert_true(found)
+}
+
+///|
 test "foreign libraries plan link imports with nominal marker signatures" {
   let (resolved, lowering) = wasmgc_test_inputs(
     9750UL, b"foreign type StarshineModule\nforeign impl \"starshine\" as Starshine {\n  fn module_new() -> StarshineModule = \"module_new\"\n}\npub fn make() -> StarshineModule {\n  Starshine.module_new()\n}\n",

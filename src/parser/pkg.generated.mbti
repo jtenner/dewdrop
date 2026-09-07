@@ -315,6 +315,7 @@ pub struct FnParameter {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 
 pub struct ForeignLibraryDeclaration {
+  host_import : Bool
   logical_name : Bytes
   logical_name_offset : UInt64
   namespace_alias : String

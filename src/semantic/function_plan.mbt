@@ -1,7 +1,7 @@
 ///|
 pub enum PlannedCallableKind {
   PlannedBuiltinCallable(Bytes)
-  PlannedForeignCallable(Bytes, Bytes)
+  PlannedForeignCallable(Bytes, Bytes, Bool)
   PlannedFunctionCallable(BodyId)
   PlannedTraitMethodCallable(DeclId)
   PlannedImplMethodCallable(DeclId, BodyId?)
@@ -85,10 +85,10 @@ fn planned_builtin_name(
 fn planned_foreign_callable_identity(
   collected : CollectedModule,
   declaration : DeclId,
-) -> (Bytes, Bytes) {
+) -> (Bytes, Bytes, Bool) {
   let foreign_function = collected.foreign_function(declaration).unwrap()
   let library = collected.foreign_library(foreign_function.library).unwrap()
-  (library.logical_name, foreign_function.export_name)
+  (library.logical_name, foreign_function.export_name, library.host_import)
 }
 
 ///|
@@ -177,7 +177,7 @@ fn planned_callable_metadata(
             collected, declaration,
           )
           (
-            PlannedForeignCallable(identity.0, identity.1),
+            PlannedForeignCallable(identity.0, identity.1, identity.2),
             value.parent,
             { start: 0, length: 0, },
             -1,

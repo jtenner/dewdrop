@@ -56,7 +56,7 @@ fn parse_event_cache_key_digest(
   source_digest : FixedArray[Byte],
 ) -> FixedArray[Byte] {
   let output = Buffer()
-  output.write_bytes(b"DEW_PARSE_EVENT_KEY_V1_ALIAS_NAMESPACES\x00")
+  output.write_bytes(b"DEW_PARSE_EVENT_KEY_V1_FOREIGN_HOST_IMPORTS\x00")
   parse_event_cache_write_string(output, owner_path)
   parse_event_cache_write_string(output, file.path)
   for byte in source_digest {

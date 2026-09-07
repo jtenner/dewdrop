@@ -2986,7 +2986,7 @@ fn freeze_module_interface(
     }
     let kind = match callable.kind {
       PlannedBuiltinCallable(name) => FrozenBuiltinCallable(name)
-      PlannedForeignCallable(_, _) => FrozenFunctionCallable
+      PlannedForeignCallable(_, _, _) => FrozenFunctionCallable
       PlannedFunctionCallable(_) => FrozenFunctionCallable
       PlannedTraitMethodCallable(trait_) => FrozenTraitCallable(trait_)
       PlannedImplMethodCallable(implementation, _) =>

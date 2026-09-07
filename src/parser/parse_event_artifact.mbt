@@ -2071,6 +2071,7 @@ fn parse_write_declaration(
     }
     ForeignLibrary(value) => {
       writer.write_byte(11)
+      writer.write_bool(value.host_import)
       writer.write_bytes(value.logical_name)
       parse_write_offset(writer, value.logical_name_offset)
       writer.write_string(value.namespace_alias)
@@ -2298,6 +2299,7 @@ fn parse_read_declaration(
         offset: parse_read_offset(reader, field + ".offset"),
       })
     11 => {
+      let host_import = reader.read_bool(field + ".host_import")
       let logical_name = reader.read_bytes(
         parse_event_maximum_bytes,
         field + ".logical_name",
@@ -2326,6 +2328,7 @@ fn parse_read_declaration(
         )
       }
       ForeignLibrary({
+        host_import,
         logical_name,
         logical_name_offset,
         namespace_alias,

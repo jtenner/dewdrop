@@ -1,4 +1,23 @@
 ///|
+test "foreign host imports preserve their explicit mode through parse caching" {
+  let source = b"foreign import \"custom.host\" as Host {\n  fn send(value: I64) -> I32 = \"send\"\n}\n"
+  match Parser::from_bytes(source).parse_declaration() {
+    Ok(ForeignLibrary(value)) => {
+      assert_true(value.host_import)
+      assert_eq(value.logical_name, b"custom.host")
+      assert_eq(value.members[0].export_name, b"send")
+    }
+    _ => fail("expected a host import declaration")
+  }
+  let events = parse_bytes(source).to_array()
+  assert_eq(deserialize_parse_events(serialize_parse_events(events).unwrap()).unwrap(), events)
+  match Parser::from_bytes(b"foreign impl \"custom.host\" as Linked {\n  fn send(value: I64) -> I32 = \"send\"\n}\n").parse_declaration() {
+    Ok(ForeignLibrary(value)) => assert_false(value.host_import)
+    _ => fail("expected a linked library declaration")
+  }
+}
+
+///|
 test "foreign types and linked namespaces parse" {
   match
     Parser::from_bytes(b"foreign type StarshineModule\n").parse_declaration() {

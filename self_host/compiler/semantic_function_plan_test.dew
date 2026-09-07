@@ -83,7 +83,7 @@ test "function plans retain foreign and test metadata" {
     current => if current < functions.callables.length() {
       let callable = functions.callables[current]
       match callable.kind {
-        SelfHostPlannedCallableKind::PlannedForeignCallable(library, export_name) => {
+        SelfHostPlannedCallableKind::PlannedForeignCallable(library, export_name, _) => {
           assert(self_host_bytes_equal(library, b"host"), "library")
           assert(self_host_bytes_equal(export_name, b"read"), "export")
           foreign_index = current

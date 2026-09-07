@@ -1534,6 +1534,10 @@ impl SelfHostCollectionBuilder {
           value.logical_name_offset,
         ),
       )
+    } else if value.host_import && value.logical_name.starts_with(b"link:") {
+      self.state.diagnostics.push(SelfHostCollectionDiagnostic::ReservedForeignHostNamespace(
+        self.state.current_file, value.logical_name_offset,
+      ))
     }
     let member_start = self.foreign_functions.length()
     let mut member_index = 0u32
@@ -1597,6 +1601,7 @@ impl SelfHostCollectionBuilder {
     }
     self.foreign_libraries.push(
       SelfHostCollectedForeignLibrary::{
+        host_import: value.host_import
         declaration: declaration.id
         logical_name: value.logical_name
         logical_name_offset: value.logical_name_offset

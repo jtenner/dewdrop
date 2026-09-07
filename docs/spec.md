@@ -295,6 +295,22 @@ the guest export's concrete GC signature, replace every marker reference, and
 remove the marker group. Existing `foreign impl Trait for Type` syntax retains
 its implementation-evidence meaning and is parsed separately.
 
+Host-supplied functions use `foreign import` instead of `foreign impl`:
+
+```dew
+foreign import "custom.host" as Host {
+  fn send(value: I64) -> I32 = "send"
+}
+```
+
+This emits the exact host import module `custom.host` and field `send`, without
+the `link:` prefix or a linked provider. The host supplies the declared ABI.
+The host-import flag is retained through collection, planning, and caching.
+Namespaces starting with `link:` are reserved and cannot be host imports.
+Foreign host calls retain exported linear memory for pointer-based interfaces.
+Member signature and visibility rules are the same for both declaration forms.
+See [foreign host imports](foreign-imports.md) for library wrapper examples.
+
 #### 3.3.3 Let declarations
 
 Let declarations have the grammar:

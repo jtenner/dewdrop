@@ -1407,6 +1407,13 @@ fn Parser::parse_declaration_recoverable(
           match self.peek_token() {
             Some(next) =>
               match next.kind() {
+                @tokenizer.Keyword(@tokenizer.Import) => {
+                  self.consume_lookahead()
+                  if visibility == Public {
+                    return Err(declaration_failure(PublicForeignLibraryNotAllowed(declaration_offset)))
+                  }
+                  self.parse_foreign_library_after_impl(declaration_offset, host_import=true)
+                }
                 @tokenizer.Keyword(@tokenizer.Type) => {
                   self.consume_lookahead()
                   self.parse_foreign_type_after_keyword(

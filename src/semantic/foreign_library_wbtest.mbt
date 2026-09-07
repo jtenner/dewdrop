@@ -1,4 +1,11 @@
 ///|
+test "foreign host imports cannot use the static-link namespace prefix" {
+  let collected = collect_bytes(9752UL, b"foreign import \"link:provider\" as Host {\n  fn call() -> Unit = \"call\"\n}\n")
+  assert_eq(collected.diagnostics.length(), 1)
+  assert_true(collected.diagnostics[0] is ReservedForeignHostNamespace(_, _))
+}
+
+///|
 test "foreign namespace calls infer without a receiver value" {
   let collected = collect_bytes(
     9751UL, b"foreign type StarshineModule\nforeign impl \"starshine\" as Starshine {\n  fn module_new() -> StarshineModule = \"module_new\"\n}\npub fn make() -> StarshineModule {\n  Starshine.module_new()\n}\n",

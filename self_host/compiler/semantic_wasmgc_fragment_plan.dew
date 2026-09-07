@@ -1,5 +1,6 @@
 open dew.std.option
 open dew.std.map
+open dew.std.bytes_builder
 
 pub enum SelfHostPlannedWasmValueType {
   WasmI32Value
@@ -584,7 +585,17 @@ fn self_host_wasmgc_function_kind(
     } else {
       SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name)
     }
-    SelfHostPlannedCallableKind::PlannedForeignCallable(library, field) => SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(library, field)
+    SelfHostPlannedCallableKind::PlannedForeignCallable(library, field, host_import) => {
+      let namespace = if host_import {
+        library
+      } else {
+        let name = BytesBuilder::new()
+        name.append(b"link:")
+        name.append(library)
+        name.finish()
+      }
+      SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(namespace, field)
+    }
     SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(body)
     SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, body) => match body {
       Option::Some(value) => SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(value)

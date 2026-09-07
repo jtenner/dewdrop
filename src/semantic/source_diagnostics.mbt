@@ -240,6 +240,7 @@ fn CollectionDiagnostic::source_parts(
     | TestDeclarationOutsideTestFile(file, offset)
     | UnknownDerivedTrait(_, file, offset)
     | EmptyForeignLogicalName(file, offset)
+    | ReservedForeignHostNamespace(file, offset)
     | InvalidUtf8ForeignLogicalName(file, offset)
     | EmptyForeignExportName(file, offset)
     | InvalidUtf8ForeignExportName(file, offset) =>
