@@ -53,6 +53,8 @@ pub fn deserialize_planned_module_type_layouts(Bytes) -> Result[PlannedModuleTyp
 
 pub fn deserialize_planned_module_wasmgc_fragments(Bytes) -> Result[PlannedModuleWasmGCFragments, String]
 
+pub fn direct_standard_library_source_paths(ProgramManifest, Bool) -> Array[String]
+
 pub fn freeze_program_interfaces(CollectedProgram) -> FrozenProgramInterfaces
 
 pub fn freeze_program_interfaces_with_cache_hooks(CollectedProgram, Array[FrozenModuleInterface?], (Int, Array[FrozenModuleInterface?]) -> FrozenModuleInterface?, (Int, FrozenModuleInterface) -> Unit, (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit, (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit) -> FrozenProgramInterfaces
@@ -141,7 +143,7 @@ pub fn raw_wasm_shuffle_immediates(Bytes) -> Array[Int]?
 
 pub fn render_compiler_source_diagnostic(CollectedProgram, CompilerSourceDiagnostic) -> String
 
-pub fn required_standard_library_source_paths(ProgramManifest, Bool) -> Array[String]
+pub fn required_standard_library_source_paths(ProgramManifest, Bool, sources? : StandardLibrarySources?) -> Array[String]
 
 pub fn resolve_module_imports(ResolvedModuleTypes, ModuleImportScope) -> ResolvedModuleImports
 

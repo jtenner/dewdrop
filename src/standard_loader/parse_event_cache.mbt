@@ -363,7 +363,9 @@ pub fn prepare_program_parse_event_cache(
   }
   let prepared_manifest = @semantic.ProgramManifest::new(modules)
   let required = @semantic.required_standard_library_source_paths(
-    prepared_manifest, default_preamble,
+    prepared_manifest,
+    default_preamble,
+    sources=Some(loaded.sources),
   )
   let required_lookup : Map[String, Bool] = Map::default()
   for path in required {

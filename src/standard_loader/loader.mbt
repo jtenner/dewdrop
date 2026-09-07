@@ -75,10 +75,7 @@ fn load_paths_with_fingerprint(
   root : String,
   paths : Array[String],
 ) -> Result[StandardLibraryLoad, String] {
-  let files : Array[@semantic.ManifestFile] = []
-  let fingerprint = Buffer()
-  fingerprint.write_bytes(b"DEW_STD_FROZEN_INTERFACE_KEY_V1_MUTABLE_FIELDS\x00")
-  for logical in paths {
+  load_standard_source_closure(paths, fn(logical) {
     let physical = join_standard_path(root, logical)
     let source = @fs.read_file_to_bytes(physical) catch {
       error =>
@@ -86,9 +83,48 @@ fn load_paths_with_fingerprint(
           "cannot read standard source \{physical}: \{standard_loader_fs_error_message(error)}",
         )
     }
-    files.push(@semantic.ManifestFile::new(logical, source))
+    Ok(source)
+  })
+}
+
+///|
+fn load_standard_source_closure(
+  paths : Array[String],
+  read : (String) -> Result[Bytes, String],
+) -> Result[StandardLibraryLoad, String] {
+  let files : Array[@semantic.ManifestFile] = []
+  let fingerprint = Buffer()
+  fingerprint.write_bytes(b"DEW_STD_FROZEN_INTERFACE_KEY_V1_MUTABLE_FIELDS\x00")
+  let work : Array[String] = []
+  let seen : Map[String, Bool] = Map([])
+  for path in paths {
+    if !seen.contains(path) {
+      seen[path] = true
+      work.push(path)
+    }
+  }
+  let mut cursor = 0
+  while cursor < work.length() {
+    let logical = work[cursor]
+    cursor += 1
+    let source = match read(logical) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
+    let file = @semantic.ManifestFile::new(logical, source)
+    files.push(file)
     fingerprint_write_string(fingerprint, logical)
     fingerprint_write_bytes(fingerprint, source)
+    let dependency = @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("dependency", [file]),
+    ])
+    for
+      child in @semantic.direct_standard_library_source_paths(dependency, false) {
+      if !seen.contains(child) {
+        seen[child] = true
+        work.push(child)
+      }
+    }
   }
   Ok({
     sources: @semantic.StandardLibrarySources::new(files),
@@ -130,7 +166,7 @@ pub fn load_for_manifest(
 ) -> Result[@semantic.StandardLibrarySources, String] {
   load_paths(
     root,
-    @semantic.required_standard_library_source_paths(manifest, default_preamble),
+    @semantic.direct_standard_library_source_paths(manifest, default_preamble),
   )
 }
 
@@ -142,7 +178,7 @@ pub fn load_for_manifest_with_fingerprint(
 ) -> Result[StandardLibraryLoad, String] {
   load_paths_with_fingerprint(
     root,
-    @semantic.required_standard_library_source_paths(manifest, default_preamble),
+    @semantic.direct_standard_library_source_paths(manifest, default_preamble),
   )
 }
 

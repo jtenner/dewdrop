@@ -188,9 +188,9 @@ pub fn standard_library_source_paths() -> Array[String] {
 }
 
 ///|
-/// Computes the exact ordered source subset needed by one program. Selection
-/// consumes only each file's leading import preamble and never enumerates disk.
-pub fn required_standard_library_source_paths(
+/// Seeds source selection from leading imports and implicit preamble policy.
+/// The loader follows the selected files' imports to close this set.
+pub fn direct_standard_library_source_paths(
   manifest : ProgramManifest,
   default_preamble : Bool,
 ) -> Array[String] {
@@ -202,9 +202,9 @@ pub fn required_standard_library_source_paths(
   for module_ in manifest.modules {
     for file in module_.files {
       files.push(
-        ProgramFile::new(
+        ProgramFile::from_manifest(
           next_file.reinterpret_as_uint().to_uint64(),
-          file.source,
+          file,
         ),
       )
       next_file += 1
@@ -514,22 +514,31 @@ pub fn collect_program_manifest_with_standard_sources(
   let module_paths : Array[String] = []
   let diagnostics : Array[ManifestDiagnostic] = []
   let first_module : Map[String, Int] = Map::default()
-  let mut selected_text_mask = 0
-  let mut selected_show = false
-  let mut selected_disposable = false
-  let mut selected_math = false
-  let mut selected_io = false
-  let mut selected_testing = false
-  let mut selected_wasi = false
-  let mut selected_wasm_intrinsics = false
-  let mut selected_fixed_array = false
-  let mut selected_array = false
-  let mut selected_map = false
-  let mut selected_set = false
-  let mut selected_collection_mask = 0
-  let mut selected_facet_mask = 0
-  let mut selected_lane_mask = 0
-  let mut selected_types = false
+  let selection_files = standard_dependency_selection_files(
+    manifest, standard_sources, default_preamble,
+  )
+  let (
+    selected_text_mask,
+    selected_show,
+    selected_disposable,
+    selected_math,
+    selected_io,
+    selected_testing,
+    selected_wasi,
+    requested_wasm_intrinsics,
+    requested_fixed_array,
+    requested_array,
+    selected_map,
+    selected_set,
+    selected_collection_mask,
+    selected_facet_mask,
+    selected_lane_mask,
+  ) = selected_standard_modules(selection_files)
+  let selected_types = standard_types_requested(selection_files) || selected_map
+  let selected_array = requested_array || selected_collection_mask != 0
+  let selected_fixed_array = requested_fixed_array || selected_array
+  let selected_wasm_intrinsics = requested_wasm_intrinsics ||
+    selected_fixed_array
   for module_index, module_ in manifest.modules {
     if module_.path.length() == 0 {
       diagnostics.push(EmptyModulePath(module_index))
@@ -561,54 +570,12 @@ pub fn collect_program_manifest_with_standard_sources(
         ),
       )
     }
-    let (
-      text_mask,
-      include_show,
-      include_disposable,
-      include_math,
-      include_io,
-      include_testing,
-      include_wasi,
-      include_wasm_intrinsics,
-      include_fixed_array,
-      include_array,
-      include_map,
-      include_set,
-      collection_mask,
-      facet_mask,
-      lane_mask,
-    ) = selected_standard_modules(files)
-    selected_types = selected_types ||
-      standard_types_requested(files) ||
-      include_map
-    selected_text_mask = selected_text_mask | text_mask
-    selected_show = selected_show || include_show
-    selected_disposable = selected_disposable || include_disposable
-    selected_math = selected_math || include_math
-    selected_io = selected_io || include_io
-    selected_testing = selected_testing || include_testing
-    selected_wasi = selected_wasi || include_wasi
-    selected_wasm_intrinsics = selected_wasm_intrinsics ||
-      include_wasm_intrinsics
-    selected_fixed_array = selected_fixed_array ||
-      include_fixed_array ||
-      include_array ||
-      collection_mask != 0
-    selected_array = selected_array || include_array || collection_mask != 0
-    selected_map = selected_map || include_map
-    selected_set = selected_set || include_set
-    selected_collection_mask = selected_collection_mask | collection_mask
-    selected_facet_mask = selected_facet_mask | facet_mask
-    selected_lane_mask = selected_lane_mask | lane_mask
     modules.push(
       collect_program_files_with_frozen_standard_imports(
         manifest_module_id(module_id_base, module_index),
         files,
       ),
     )
-  }
-  if selected_fixed_array {
-    selected_wasm_intrinsics = true
   }
   let preamble_module_id = standard_library_module_id(0)
   let preamble_module_index = modules.length()
