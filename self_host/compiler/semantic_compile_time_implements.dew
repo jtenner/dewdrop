@@ -95,13 +95,27 @@ fn self_host_compile_time_match(pattern: SelfHostCompileTimeType, actual: SelfHo
 }
 
 struct SelfHostCompileTimeEvidenceSearch {
+  lowering: Option<SelfHostPlannedProgramLowering>
   collected: SelfHostCollectedModule
   resolved: SelfHostResolvedModuleTypes
   imports: SelfHostResolvedModuleImports
   index: SelfHostModuleImplIndex
   active: Array<SelfHostCompileTimeTypePair>
-  mut steps: U32
+  budget: SelfHostCompileTimeEvidenceBudget
+  associated_scopes: Map<U64, SelfHostCompileTimeEvidenceScope>
+  associated_only: Bool
   include_test_impls: Bool
+}
+
+struct SelfHostCompileTimeEvidenceBudget {
+  mut steps: U32
+}
+
+struct SelfHostCompileTimeEvidenceScope {
+  collected: SelfHostCollectedModule
+  resolved: SelfHostResolvedModuleTypes
+  imports: SelfHostResolvedModuleImports
+  index: SelfHostModuleImplIndex
 }
 
 struct SelfHostCompileTimePrerequisite {
@@ -111,6 +125,7 @@ struct SelfHostCompileTimePrerequisite {
 
 struct SelfHostCompileTimeTraitWitness {
   implementation: SelfHostIndexedImpl
+  index: SelfHostModuleImplIndex
   bindings: Map<U64, SelfHostCompileTimeType>
   prerequisites: Array<SelfHostCompileTimeTraitWitness>
 }
@@ -219,10 +234,10 @@ impl SelfHostCompileTimeEvidenceSearch {
   }
 
   fn witness(self, target: SelfHostCompileTimeType, trait_: SelfHostCompileTimeType) -> Result<Option<SelfHostCompileTimeTraitWitness>, String> {
-    if self.steps >= 65536u32 || self.active.length() >= 256u32 {
+    if self.budget.steps >= 65536u32 || self.active.length() >= 256u32 {
       return Result::Err("CT-012 trait evidence search limit exceeded")
     }
-    self.steps = self.steps + 1u32
+    self.budget.steps = self.budget.steps + 1u32
     for active in self.active {
       match self_host_compile_time_types_equal(active.left, target) {
         Result::Ok(equal) => if equal {
@@ -262,13 +277,101 @@ impl SelfHostCompileTimeEvidenceSearch {
   }
 
   fn search_candidates(self, target: SelfHostCompileTimeType, trait_: SelfHostCompileTimeType, declaration: U64) -> Result<Option<SelfHostCompileTimeTraitWitness>, String> {
+    let mut selected = match self.search_scope_candidates(target, trait_, declaration) {
+      Result::Ok(value) => value
+      Result::Err(error) => return Result::Err(error)
+    }
+    let lowering = match self.lowering {
+      Option::Some(lowering) => lowering
+      Option::None => return Result::Ok(selected)
+    }
+    let owners = [declaration]
+    let head = while target {
+      SelfHostCompileTimeType::AppliedCompileTimeType(base, _) => continue base
+      value => break value
+    }
+    match head {
+      SelfHostCompileTimeType::NominalCompileTimeType(owner) => {
+        if self_host_semantic_id_module(owner) != self_host_semantic_id_module(declaration) {
+          owners.push(owner)
+        }
+      }
+      _ => {}
+    }
+    for owner in owners {
+      let module_id = self_host_semantic_id_module(owner)
+      if module_id != self.collected.module_id {
+        let scope = match self.associated_scopes.get(module_id) {
+          Option::Some(scope) => scope
+          Option::None => {
+            let owner_index = match lowering.index.declaration_owner(owner) {
+              Option::Some(index) => index
+              Option::None => return Result::Err("CT-010 associated trait owner is missing")
+            }
+            let collected = lowering.collected.modules.at(owner_index)
+            let frozen = lowering.compile_time.frozen
+            let imports = self_host_resolve_module_imports(frozen.interfaces.at(owner_index).resolved_types, frozen.import_scopes.at(owner_index))
+            let scope = SelfHostCompileTimeEvidenceScope::{
+              collected: collected
+              resolved: imports.resolved
+              imports: imports
+              index: self_host_index_module_implementations_with_imports(collected, imports)
+            }
+            self.associated_scopes.set(module_id, scope)
+            scope
+          }
+        }
+        let search = SelfHostCompileTimeEvidenceSearch::{
+          lowering: self.lowering
+          collected: scope.collected
+          resolved: scope.resolved
+          imports: scope.imports
+          index: scope.index
+          active: self.active
+          budget: self.budget
+          associated_scopes: self.associated_scopes
+          associated_only: true
+          include_test_impls: false
+        }
+        match search.search_scope_candidates(target, trait_, declaration) {
+          Result::Ok(value) => match value {
+            Option::Some(witness) => match selected {
+              Option::Some(previous) => {
+                if previous.implementation.declaration != witness.implementation.declaration {
+                  return Result::Err("CT-015 multiple compatible trait implementations")
+                }
+              }
+              Option::None => {
+                selected = Option::Some(witness)
+              }
+            }
+            Option::None => {}
+          }
+          Result::Err(error) => return Result::Err(error)
+        }
+      }
+    }
+    Result::Ok(selected)
+  }
+
+  fn search_scope_candidates(self, target: SelfHostCompileTimeType, trait_: SelfHostCompileTimeType, declaration: U64) -> Result<Option<SelfHostCompileTimeTraitWitness>, String> {
     let mut selected = Option::None
     for implementation in self.index.implementations {
+      let mut visible = !self.associated_only
+      if self.associated_only {
+        for candidate in self.collected.impls {
+          let source = self_host_collected_impl_identity(candidate)
+          if source.declaration == implementation.declaration && !source.foreign_ &&
+            !self.collected.declaration_is_test_only(source.declaration) {
+            visible = true
+          }
+        }
+      }
       let relevant = match implementation.kind {
         SelfHostIndexedImplKind::TraitIndexedImpl(owner) => owner == declaration
         _ => false
       }
-      if relevant && (self.include_test_impls || !self.collected.declaration_is_test_only(implementation.declaration)) {
+      if visible && relevant && (self.include_test_impls || !self.collected.declaration_is_test_only(implementation.declaration)) {
         let bindings = self_host_empty_compile_time_bindings()
         let candidate = match self.read(implementation.target_type, bindings) {
           Result::Ok(value) => value
@@ -303,6 +406,7 @@ impl SelfHostCompileTimeEvidenceSearch {
                   }
                   selected = Option::Some(SelfHostCompileTimeTraitWitness::{
                     implementation: implementation
+                    index: self.index
                     bindings: bindings
                     prerequisites: prerequisites
                   })
@@ -337,12 +441,17 @@ fn self_host_evaluate_compile_time_implements(lowering: SelfHostPlannedProgramLo
   let collected = lowering.collected.modules.at(owner)
   let imports = self_host_resolve_module_imports(context.frozen.interfaces.at(owner).resolved_types, context.frozen.import_scopes.at(owner))
   let search = SelfHostCompileTimeEvidenceSearch::{
+    lowering: Option::Some(lowering)
     collected: collected
     resolved: module_.resolved_types
     imports: imports
     index: self_host_index_module_implementations_with_imports(collected, imports)
     active: []
-    steps: 0u32
+    budget: SelfHostCompileTimeEvidenceBudget::{
+      steps: 0u32
+    }
+    associated_scopes: Map::empty()
+    associated_only: false
     include_test_impls: collected.declaration_is_test_only(declaration)
   }
   match search.search(types[0u32], types[1u32]) {

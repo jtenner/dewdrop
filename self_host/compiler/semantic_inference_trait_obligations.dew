@@ -16,12 +16,17 @@ impl SelfHostBasicBodyInferencer {
       Option::None => self_host_resolve_module_imports(self.resolved, scope)
     }
     let search = SelfHostCompileTimeEvidenceSearch::{
+      lowering: Option::None
       collected: self.collected
       resolved: self.resolved
       imports: imports
       index: self_host_index_module_implementations_with_imports(self.collected, imports)
       active: []
-      steps: 0u32
+      budget: SelfHostCompileTimeEvidenceBudget::{
+        steps: 0u32
+      }
+      associated_scopes: Map::empty()
+      associated_only: false
       include_test_impls: self.collected.declaration_is_test_only(self.body.declaration)
     }
     self.trait_obligation_search = Option::Some(search)
@@ -77,7 +82,7 @@ impl SelfHostBasicBodyInferencer {
     }
     let search = self.obligation_search()
     self_host_assert_compiler_invariant(search.active.length() == 0u32, "INV-001 completed inference trait search")
-    search.steps = 0u32
+    search.budget.steps = 0u32
     search.search(actual, expected)
   }
 

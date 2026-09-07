@@ -135,7 +135,7 @@ fn resolve_compile_time_guarded_calls(
       } else {
         CtApplied(CtTrait(trait_declaration), trait_arguments)
       }
-      search.steps = 0
+      search.budget.steps = 0
       let witness = match search.witness(target, trait_) {
         Ok(Some(value)) => value
         Ok(None) =>
@@ -145,13 +145,13 @@ fn resolve_compile_time_guarded_calls(
       let methods = witness.implementation.methods
       guard program_specialization_span_is_valid(
         methods,
-        search.index.methods.length(),
+        witness.index.methods.length(),
       ) else {
         abort("ARN-101 guarded implementation methods")
       }
       let mut selected : DeclId? = None
       for index in 0..<methods.length {
-        let method = search.index.methods[methods.start + index]
+        let method = witness.index.methods[methods.start + index]
         if method.requirement == Some(requirement) {
           if selected is Some(_) {
             return Err("CT-015 ambiguous guarded implementation method")

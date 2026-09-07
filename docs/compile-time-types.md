@@ -14,7 +14,7 @@ type, not its Wasm storage type. No query call reaches runtime emission.
 | `can_bitcast<A, B>()` | `Bool`: whether the explicit unsafe bitcast is valid. |
 | `lane_count<T>()`, `lane_bit_width<T>()` | `U32`: packed numeric lane shape. |
 | `tuple_length<T>()` | `U32`: number of tuple fields. |
-| `implements<T, Trait>()` | `Bool`: whether a valid trait implementation exists. |
+| `implements<T, Trait>()` | `Bool`: whether a valid visible or associated trait implementation exists. |
 | `static_assert(condition, message)` | Compile error if the constant condition is false. |
 | `field_type<T>("name")` | A real type for the named field. |
 | `variant_payload_types<T>("Variant")` | A tuple type, in payload source order. |
@@ -90,6 +90,12 @@ fn keep(value: Item<I64>) -> field_type<Box<I64>>("item") {
 
 Computed types also work as generic arguments and in lambda signatures. Queries
 on an unknown owner stay as type projections until that owner is known. Local
+An `implements` query also checks non-foreign implementations defined with its
+nominal type or trait. This lets generic library code use a caller's type. It
+does not import unrelated, foreign, or test-only implementations. Required
+traits use the same rule. Primitive implementations must be in the query's
+normal import scope.
+
 `type` bindings have block scope and make no runtime value. `Type` itself cannot
 be stored in a runtime variable, field, parameter, or result.
 

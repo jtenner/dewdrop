@@ -66,7 +66,7 @@ fn resolve_compile_time_guarded_evidence(
               Ok(value) => value
               Err(_) => return Err("CT-040 invalid guarded obligation bound")
             }
-            search.steps = 0
+            search.budget.steps = 0
             match search.witness(target, bound) {
               Ok(Some(witness)) => Ok(witness)
               Ok(None) =>

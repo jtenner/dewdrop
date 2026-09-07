@@ -48,19 +48,28 @@ fn compile_time_match_type(
 
 ///|
 struct CompileTimeEvidenceSearch {
+  context : CompileTimeProgramContext
   collected : CollectedModule
   resolved : ResolvedModuleTypes
   module_ : PlannedModuleLowering
   imports : ResolvedModuleImports
   index : ModuleImplIndex
   active : Array[(CompileTimeType, CompileTimeType)]
-  mut steps : Int
+  budget : CompileTimeEvidenceBudget
+  associated_indexes : Map[ModuleId, ModuleImplIndex]
+  associated_only : Bool
   mut include_test_impls : Bool
+}
+
+///|
+struct CompileTimeEvidenceBudget {
+  mut steps : Int
 }
 
 ///|
 struct CompileTimeTraitWitness {
   implementation : IndexedImpl
+  index : ModuleImplIndex
   bindings : Map[GenericParameterId, CompileTimeType]
   prerequisites : Array[CompileTimeTraitWitness]
 }
@@ -180,8 +189,8 @@ fn CompileTimeEvidenceSearch::witness(
   target : CompileTimeType,
   trait_ : CompileTimeType,
 ) -> Result[CompileTimeTraitWitness?, String] {
-  self.steps += 1
-  if self.steps > 65536 || self.active.length() >= 256 {
+  self.budget.steps += 1
+  if self.budget.steps > 65536 || self.active.length() >= 256 {
     return Err("CT-012 trait evidence search limit exceeded")
   }
   let obligation = (target, trait_)
@@ -211,8 +220,102 @@ fn CompileTimeEvidenceSearch::search_candidates(
   trait_ : CompileTimeType,
   trait_declaration : DeclId,
 ) -> Result[CompileTimeTraitWitness?, String] {
+  let mut selected = match
+    self.search_scope_candidates(target, trait_, trait_declaration, self.associated_only) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let owners = [semantic_id_module(trait_declaration)]
+  let mut head = target
+  while head is CtApplied(base, _) {
+    head = base
+  }
+  if head is CtNominal(declaration) {
+    let owner = semantic_id_module(declaration)
+    if !owners.contains(owner) {
+      owners.push(owner)
+    }
+  }
+  for owner in owners {
+    if owner == self.collected.module_id {
+      continue
+    }
+    let mut owner_index = -1
+    for index, module_ in self.context.modules {
+      if module_.module_id == owner {
+        owner_index = index
+        break
+      }
+    }
+    if owner_index < 0 {
+      return Err("CT-010 associated trait owner is missing")
+    }
+    let collected = self.context.program.modules[owner_index]
+    let resolved = self.context.analyzed.frozen.interfaces[owner_index].resolved_types
+    let imports = self.context.analyzed.modules[owner_index].imports
+    let index = match self.associated_indexes.get(owner) {
+      Some(index) => index
+      None => {
+        let index = build_module_impl_index_with_imports(
+          collected, resolved, imports,
+        )
+        self.associated_indexes[owner] = index
+        index
+      }
+    }
+    let scope = {
+      ..self,
+      collected,
+      resolved,
+      imports,
+      index,
+      module_: self.context.modules[owner_index],
+      associated_only: true,
+      include_test_impls: false,
+    }
+    match
+      scope.search_scope_candidates(target, trait_, trait_declaration, true) {
+      Ok(Some(witness)) =>
+        match selected {
+          Some(previous) if previous.implementation.declaration !=
+            witness.implementation.declaration =>
+            return Err("CT-015 multiple compatible trait implementations")
+          Some(_) => ()
+          None => selected = Some(witness)
+        }
+      Ok(None) => ()
+      Err(error) => return Err(error)
+    }
+  }
+  Ok(selected)
+}
+
+///|
+fn CompileTimeEvidenceSearch::search_scope_candidates(
+  self : CompileTimeEvidenceSearch,
+  target : CompileTimeType,
+  trait_ : CompileTimeType,
+  trait_declaration : DeclId,
+  associated_only : Bool,
+) -> Result[CompileTimeTraitWitness?, String] {
   let mut selected : CompileTimeTraitWitness? = None
   for implementation in self.index.implementations {
+    if associated_only {
+      // A concrete type carries its defining implementation identity, not the
+      // defining module's ambient foreign extensions or test-only evidence.
+      let mut associated = false
+      for source in self.collected.impls {
+        if source.declaration == implementation.declaration &&
+          !source.foreign_ &&
+          !self.collected.declaration_is_test_only(source.declaration) {
+          associated = true
+          break
+        }
+      }
+      if !associated {
+        continue
+      }
+    }
     if !self.include_test_impls &&
       self.collected.declaration_is_test_only(implementation.declaration) {
       continue
@@ -244,7 +347,12 @@ fn CompileTimeEvidenceSearch::search_candidates(
         if selected is Some(_) {
           return Err("CT-015 multiple compatible trait implementations")
         }
-        selected = Some({ implementation, bindings, prerequisites, })
+        selected = Some({
+          implementation,
+          index: self.index,
+          bindings,
+          prerequisites,
+        })
       }
       Ok(None) => ()
       Err(error) => return Err(error)
@@ -266,7 +374,7 @@ fn evaluate_compile_time_implements(
     Err(error) => return Err("CT-002 " + @debug.to_string(error))
     Ok(true) => ()
   }
-  search.steps = 0
+  search.budget.steps = 0
   match search.search(types[0], types[1]) {
     Ok(value) => Ok(Some(CtBool(value)))
     Err(error) => Err(error)

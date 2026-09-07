@@ -731,6 +731,63 @@ test "compile-time implements follows imported generic prerequisites" {
   assert(found, "imported positive and absent prerequisite queries must fold")
 }
 
+fn self_host_test_associated_trait_query(source: Bytes, expected: Bool) -> Unit {
+  let fixture = self_host_imported_semantics_fixture(
+    source,
+    b"pub builtin query<t, trait_>() -> Bool = \"types.implements\"\npub trait Mark {}\npub trait Read {}\npub fn has<t>() -> Bool {\n  query::<t, Read>()\n}\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "associated query imports")
+  let plan = self_host_plan_program_specialization(self_host_plan_program_lowering(fixture.frozen), false)
+  for diagnostic in plan.lowering.compile_time.diagnostics {
+    assert(false, diagnostic)
+  }
+  let mut count = 0u32
+  let _ = while 0u32 {
+    index => if index < plan.requests.length() {
+      match plan.lowering.compile_time.instances.get(index) {
+        Option::Some(instance) => {
+          for body in instance.module_.bodies {
+            if body.declaration == instance.declaration {
+              for expression in self_host_compile_time_owned_expressions(instance.module_, body) {
+                match instance.module_.expressions[expression].kind {
+                  SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
+                    assert(value == expected, "associated query must preserve evidence scope")
+                    count = count + 1u32
+                  }
+                  _ => {}
+                }
+              }
+            }
+          }
+        }
+        Option::None => {}
+      }
+      continue index + 1u32
+    } else {
+      break ()
+    }
+  }
+  assert(count == 1u32, "associated query has one concrete result")
+}
+
+test "associated query finds a module-visible nominal implementation" {
+  self_host_test_associated_trait_query(
+    b"open app.library\nstruct Key {}\nimpl Read for Key {}\npub fn main() -> Bool {\n  has::<Key>()\n}\n", true,
+  )
+}
+
+test "associated query excludes defining-module foreign implementations" {
+  self_host_test_associated_trait_query(
+    b"open app.library\nstruct Key {}\nforeign impl Read for Key {}\npub fn main() -> Bool {\n  has::<Key>()\n}\n", false,
+  )
+}
+
+test "associated prerequisite search excludes foreign implementations" {
+  self_host_test_associated_trait_query(
+    b"open app.library\nstruct Box<t> {\n  value: t\n}\nforeign impl Mark for I32 {}\nimpl<t: Mark> Read for Box<t> {}\npub fn main() -> Bool {\n  has::<Box<I32>>()\n}\n", false,
+  )
+}
+
 test "compile-time implements does not treat depth 65 as absence" {
   let text = StringBuilder::new()
   text.append("builtin query<a, b>() -> Bool = \"types.implements\"\ntrait Mark {}\nstruct Box<t> {\n value: t\n}\nimpl Mark for I32 {}\nimpl<t: Mark> Mark for Box<t> {}\npub fn main() -> Bool {\n query::<")

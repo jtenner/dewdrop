@@ -126,7 +126,7 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
   } else {
     SelfHostCompileTimeType::AppliedCompileTimeType(SelfHostCompileTimeType::TraitCompileTimeType(trait_), trait_arguments)
   }
-  search.steps = 0u32
+  search.budget.steps = 0u32
   let witness = match search.witness(target, trait_type) {
     Result::Ok(value) => match value {
       Option::Some(witness) => witness
@@ -135,11 +135,11 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
     Result::Err(error) => return Result::Err(error)
   }
   let methods = witness.implementation.methods
-  self_host_assert_compiler_invariant(self_host_array_span_is_valid(methods.start, methods.length, search.index.methods.length()), "ARN-101 guarded implementation methods")
+  self_host_assert_compiler_invariant(self_host_array_span_is_valid(methods.start, methods.length, witness.index.methods.length()), "ARN-101 guarded implementation methods")
   let mut method = 18446744073709551615u64
   let _ = while 0u32 {
     index => if index < methods.length {
-      let candidate = search.index.methods[methods.start + index]
+      let candidate = witness.index.methods[methods.start + index]
       match candidate.requirement {
         Option::Some(requirement) => if requirement == callable.declaration {
           if method != 18446744073709551615u64 {
@@ -234,12 +234,17 @@ fn self_host_resolve_guarded_calls(lowering: SelfHostPlannedProgramLowering, mod
                   let context = lowering.compile_time
                   let imports = self_host_resolve_module_imports(context.frozen.interfaces.at(caller_owner).resolved_types, context.frozen.import_scopes.at(caller_owner))
                   search = Option::Some(SelfHostCompileTimeEvidenceSearch::{
+                    lowering: Option::Some(lowering)
                     collected: collected
                     resolved: module_.resolved_types
                     imports: imports
                     index: self_host_index_module_implementations_with_imports(collected, imports)
                     active: []
-                    steps: 0u32
+                    budget: SelfHostCompileTimeEvidenceBudget::{
+                      steps: 0u32
+                    }
+                    associated_scopes: Map::empty()
+                    associated_only: false
                     include_test_impls: collected.declaration_is_test_only(body.declaration)
                   })
                 }

@@ -185,6 +185,7 @@ fn fold_module_compile_time_queries(
             let resolved = context.analyzed.frozen.interfaces[module_index].resolved_types
             let imports = context.analyzed.modules[module_index].imports
             evidence = Some({
+              context,
               collected,
               resolved,
               module_,
@@ -193,7 +194,9 @@ fn fold_module_compile_time_queries(
                 collected, resolved, imports,
               ),
               active: [],
-              steps: 0,
+              budget: { steps: 0 },
+              associated_indexes: {},
+              associated_only: false,
               include_test_impls: false,
             })
           }
