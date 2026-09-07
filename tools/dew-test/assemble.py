@@ -92,6 +92,17 @@ def main() -> None:
             check=True,
         )
 
+    subprocess.run(
+        [
+            "moon", "run", "--target", "native", "src/dew_test_gen", "--",
+            "tools/dew-test/wasi_foreign.wasm", "app.wasi_probes",
+            "app.wasi_probes", "wasi-preview1-runtime.dew",
+            "tests/module-snapshots/wasm/wasi-preview1-runtime.dew",
+        ],
+        cwd=ROOT,
+        check=True,
+    )
+
 
 if __name__ == "__main__":
     main()

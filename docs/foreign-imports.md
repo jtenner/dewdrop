@@ -29,3 +29,6 @@ namespace is private to the declaring module. A `pub` member exports the callabl
 through normal module imports. A library can also use ordinary public Dew
 wrappers when it needs argument checks or other work. Give those wrappers and
 their foreign members distinct Dew names.
+
+All 46 functions in `dew.std.wasm.wasi` are public host-import members. Their
+public names, argument order, scalar types, and results are unchanged.

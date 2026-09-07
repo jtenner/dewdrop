@@ -77,6 +77,11 @@ self_host_measure 'hardening type-query request' \
     "$work/type-queries.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-type-query-probe.wasm \
     app.type_queries tools/dew-test/type_queries.dew
+self_host_measure 'hardening WASI foreign request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/wasi-foreign.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-wasi-foreign.wasm \
+    app.wasi_probes tests/module-snapshots/wasm/wasi-preview1-runtime.dew
 mapfile -t compiler_sources < <(
   find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' ! -name main.dew | sort
 )

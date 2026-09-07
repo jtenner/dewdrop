@@ -9,6 +9,7 @@ import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
 import { checkMathOperations } from "./math-operation-cases.mjs";
 import { checkSpecializationCallbacks } from "./specialization-callback-cases.mjs";
 import { checkMemberCalls } from "./member-call-cases.mjs";
+import { wasiForeignProbe } from "./wasi-foreign-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { checkRingOperations } from "./ring-operation-cases.mjs";
@@ -123,7 +124,7 @@ async function compileSourceExports(fixture) {
   return compileProbeBytes(new TextEncoder().encode(fixture), "self_host_emission_probe_compile_source");
 }
 
-async function compileProbeBytes(input, entry) {
+async function compileProbeBytes(input, entry, imports = unusedImports) {
   const builder = compiler.exports.self_host_emission_probe_source_new();
   for (const byte of input) {
     compiler.exports.self_host_emission_probe_source_append(builder, byte);
@@ -141,7 +142,7 @@ async function compileProbeBytes(input, entry) {
     bytes[index] = compiler.exports.self_host_emission_probe_byte_at(output, index);
   }
   const module = await WebAssembly.compile(bytes);
-  const instance = await WebAssembly.instantiate(module, unusedImports(module));
+  const instance = await WebAssembly.instantiate(module, imports(module));
   instance.exports.__dew_init?.();
   assert.equal(typeof instance.exports.main, "function", "source probe main export is missing");
   return instance.exports;
@@ -152,6 +153,16 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const request = await readFile(".tmp/self-host-hardening/wasi-foreign.request.bin");
+  const probe = wasiForeignProbe();
+  const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request", probe.imports);
+  console.log(`self-host WASI foreign checks passed: ${probe.check(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host WASI foreign corpus failed", error);
+}
 try {
   const start = performance.now();
   const request = await readFile(".tmp/self-host-hardening/type-queries.request.bin");

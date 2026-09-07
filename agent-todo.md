@@ -146,6 +146,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   custom equality, nested patterns, evaluation order, and optimizer effects.
 - [ ] Convert remaining host-operation builtins into foreign declarations.
   Keep generated Dew types, provider metadata, and emitted signatures in sync.
+  The 46 raw Preview 1 functions now use public `foreign import` declarations.
+  Higher-level Bytes I/O and diagnostics remain. See the
+  [WASI log](docs/research/wasi-foreign-imports-2026-09-07.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
