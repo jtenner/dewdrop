@@ -586,7 +586,18 @@ fn impl_signature_types_equal(
       continue
     }
     match (resolved.types[left], resolved.types[right]) {
-      (ErrorType, _) | (_, ErrorType) => return true
+      (ErrorType, _) | (_, ErrorType) => continue
+      (ProductType(left_fields), ProductType(right_fields)) => {
+        if left_fields.length != right_fields.length {
+          return false
+        }
+        let mut index = left_fields.length
+        while index > 0 {
+          index -= 1
+          left_stack.push(resolved.type_arguments[left_fields.start + index])
+          right_stack.push(resolved.type_arguments[right_fields.start + index])
+        }
+      }
       (
         AppliedType(left_base, left_arguments),
         AppliedType(right_base, right_arguments),

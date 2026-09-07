@@ -213,6 +213,57 @@ test "trait method signatures substitute trait generics and Self" {
 }
 
 ///|
+test "trait method signatures compare substituted tuple fields" {
+  let (_, _, valid) = impl_test_module(
+    626UL, b"trait Convert<t> {\n  fn convert(self, value: (t, I64)) -> (t, I64)\n}\nstruct Item {}\nimpl Convert<I32> for Item {\n  fn convert(self, value: (I32, I64)) -> (I32, I64) {\n    value\n  }\n}\n",
+  )
+  assert_eq(valid.diagnostics.length(), 0)
+  let (_, _, invalid) = impl_test_module(
+    627UL, b"trait Convert<t> {\n  fn convert(self, value: (t, I64)) -> (t, I64)\n}\nstruct Item {}\nimpl Convert<I32> for Item {\n  fn convert(self, value: (I32, Bool)) -> (I32, Bool) {\n    value\n  }\n}\n",
+  )
+  let mut parameters = 0
+  let mut results = 0
+  for diagnostic in invalid.diagnostics {
+    match diagnostic {
+      TraitMethodParameterTypeMismatch(_, _, _, _) => parameters += 1
+      TraitMethodReturnTypeMismatch(_, _, _) => results += 1
+      _ => fail("unexpected tuple signature diagnostic")
+    }
+  }
+  assert_eq(parameters, 1)
+  assert_eq(results, 1)
+}
+
+///|
+test "an erroneous tuple field does not hide a later signature mismatch" {
+  let (_, resolved, _) = impl_test_module(628UL, b"")
+  let start = resolved.type_arguments.length()
+  resolved.type_arguments.push(resolved.error_type)
+  resolved.type_arguments.push(resolved.primitive(I32Type))
+  resolved.type_arguments.push(resolved.primitive(I32Type))
+  resolved.type_arguments.push(resolved.primitive(BoolType))
+  let left = resolved.types.length()
+  resolved.types.push(ProductType({ start, length: 2, }))
+  let right = resolved.types.length()
+  resolved.types.push(ProductType({ start: start + 2, length: 2, }))
+  let context : ImplTypeContext = {
+    generic_parameters: { start: 0, length: 0, },
+    generic_arguments: { start: 0, length: 0, },
+    method_parameters: { start: 0, length: 0, },
+    method_arguments: { start: 0, length: 0, },
+    self_owner: 0UL,
+    self_type: resolved.error_type,
+  }
+  assert_false(
+    impl_signature_types_equal(resolved, left, context, right, context),
+  )
+  resolved.type_arguments[start + 3] = resolved.primitive(I32Type)
+  assert_true(
+    impl_signature_types_equal(resolved, left, context, right, context),
+  )
+}
+
+///|
 test "trait impl coherence distinguishes disjoint and strict specialization" {
   let (_, _, disjoint) = impl_test_module(
     611UL, b"trait Read {\n  fn read(self) -> I32\n}\nstruct Box<t> {}\nimpl Read for Box<I32> {\n  fn read(self) -> I32 {\n    1\n  }\n}\nimpl Read for Box<Bool> {\n  fn read(self) -> I32 {\n    2\n  }\n}\n",

@@ -6,6 +6,31 @@ fn self_host_impl_index_source(source: Bytes) -> SelfHostModuleImplIndex {
   self_host_index_module_implementations(collected, resolved)
 }
 
+test "trait method signatures compare substituted tuple fields" {
+  let valid = self_host_impl_index_source(
+    b"trait Convert<t> {\n  fn convert(self, value: (t, I64)) -> (t, I64)\n}\nstruct Item {}\nimpl Convert<I32> for Item {\n  fn convert(self, value: (I32, I64)) -> (I32, I64) {\n    value\n  }\n}\n",
+  )
+  assert(valid.diagnostic_count() == 0u32, "substituted tuple signature")
+  let invalid = self_host_impl_index_source(
+    b"trait Convert<t> {\n  fn convert(self, value: (t, I64)) -> (t, I64)\n}\nstruct Item {}\nimpl Convert<I32> for Item {\n  fn convert(self, value: (I32, Bool)) -> (I32, Bool) {\n    value\n  }\n}\n",
+  )
+  let mut parameters = 0u32
+  let mut results = 0u32
+  for diagnostic in invalid.diagnostics {
+    match diagnostic {
+      SelfHostImplIndexDiagnostic::TraitMethodParameterTypeMismatch(_, _, _, _) => {
+        parameters = parameters + 1u32
+      }
+      SelfHostImplIndexDiagnostic::TraitMethodReturnTypeMismatch(_, _, _) => {
+        results = results + 1u32
+      }
+      _ => assert(false, "unexpected tuple signature diagnostic")
+    }
+  }
+  assert(parameters == 1u32, "exact parameter mismatch")
+  assert(results == 1u32, "exact result mismatch")
+}
+
 test "implementation index accepts distinct concrete heads" {
   let index = self_host_impl_index_source(
     b"pub trait Mark {}\npub struct Box<t> {}\nimpl Mark for Box<I32> {}\nimpl Mark for Box<I64> {}\n",

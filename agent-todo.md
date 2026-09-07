@@ -217,6 +217,9 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.
+  Native trait signatures now compare substituted tuple fields; an Error field
+  cannot hide a later mismatch. Both compiler regressions are in the
+  [tuple signature log](docs/research/trait-tuple-signatures-2026-09-07.md).
 - [ ] Complete stable numeric failure records and the negative invariant tests.
   Start with a valid state, change one field, and check the exact code and source
   context. Missing data or an unexpected trap must never count as a pass.
