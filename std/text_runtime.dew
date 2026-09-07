@@ -22,7 +22,24 @@ builtin bytes_byte_length(value: Bytes) -> U32 = "dew_bytes_byte_length"
 builtin bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string_unchecked"
 builtin bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
 builtin bytes_view(value: Bytes, start: U32, length: U32) -> Bytes = "dew_bytes_view"
-builtin bytes_concat(left: Bytes, right: Bytes) -> Bytes = "dew_bytes_concat"
+
+fn bytes_concat(left: Bytes, right: Bytes) -> Bytes {
+  let left_length = bytes_byte_length(left)
+  let right_length = bytes_byte_length(right)
+  if left_length == 0u32 {
+    return right
+  }
+  if right_length == 0u32 {
+    return left
+  }
+  if right_length > 4294967295u32 - left_length {
+    unreachable()
+  }
+  let builder = bytes_builder_with_capacity_raw(left_length + right_length)
+  bytes_builder_append(builder, left)
+  bytes_builder_append(builder, right)
+  bytes_builder_finish(builder)
+}
 
 fn string_as_bytes(value: String) -> Bytes {
   string_as_bytes_unchecked(value)

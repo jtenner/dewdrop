@@ -106,6 +106,8 @@ Correctness comes first. Keep these timing defects visible after query completio
   conversion now run in Dew. Bytes storage operations and the SIMD storage
   bridge still need migration. See the
   [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
+  Bytes concatenation also uses a checked Dew body and the shared builder path.
+  See the [concatenation log](docs/research/bytes-concatenation-library-2026-09-07.md).
   StringView scans also run in Dew, with shared native/self-host tests and a
   fix for reference-identity equality. View storage remains.
   See the [StringView log](docs/research/string-view-library-algorithms-2026-09-06.md).

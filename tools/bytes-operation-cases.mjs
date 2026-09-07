@@ -21,5 +21,9 @@ export function checkBytesOperations(main) {
       error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
     `Bytes checked conversion rejects invalid UTF-8: ${index}`);
   }
-  return cases.length + 2;
+  for (const [index, label] of [[12, "concatenation preserves raw bytes and inputs"],
+    [13, "concatenation preserves each source alignment"]]) {
+    assert.equal(main(index), 1, `Bytes ${label}`);
+  }
+  return cases.length + 4;
 }

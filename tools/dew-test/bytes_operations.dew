@@ -78,6 +78,26 @@ pub fn main(case: U32) -> I32 {
   } else if case == 11u32 {
     b"!\xf0\x90\x80\x80?".view(1u32, 3u32).to_string()
     0i32
+  } else if case == 12u32 {
+    let left = b"!\x00\xff0123456789abcdef?".view(1u32, 18u32)
+    let right = b"!!\xfe\x80tail??".view(2u32, 6u32)
+    let joined = left.concat(right)
+    bytes_result(joined == b"\x00\xff0123456789abcdef\xfe\x80tail" && joined.byte_length() == 24u32 && left == b"\x00\xff0123456789abcdef" && right == b"\xfe\x80tail" && b"".concat(left) == left && right.concat(b"") == right && b"".concat(b"") == b"")
+  } else if case == 13u32 {
+    let source = b"0123456789abcdef0123456789abcdef0123456789abcdef"
+    while 0u32 {
+      offset if offset < 16u32 => {
+        let left = source.view(offset, 17u32)
+        let right = source.view(31u32 - offset, 17u32)
+        let joined = left.concat(right)
+        if joined.byte_length() != 34u32 || joined.view(0u32, 17u32) != left || joined.view(17u32, 17u32) != right {
+          return 0i32
+        }
+        continue offset + 1u32
+      }
+      _ => break ()
+    }
+    1i32
   } else {
     unreachable()
   }
