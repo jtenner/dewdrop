@@ -333,7 +333,6 @@ pub struct PlannedModuleWasmGCFragments {
   runtime_function_indices : Map[Bytes, Int]
   uses_text_runtime : Bool
   uses_fixed_array_runtime : Bool
-  uses_map_runtime : Bool
   uses_linear_memory : Bool
 } derive(Eq, Debug)
 
@@ -1758,68 +1757,40 @@ fn wasmgc_append_physical_type_fields(
   let start = target.length()
   match source.kind {
     PlannedWasmStructType(declaration) =>
-      if declaration == standard_set_iterator_type_declaration() {
-        wasmgc_append_mutable_field(
-          target,
-          WasmStructField(declaration),
-          WasmNullableEqRefStorage,
-          source.offset,
-        )
-        wasmgc_append_mutable_field(
-          target,
-          WasmStructField(declaration),
-          WasmI32Storage,
-          source.offset,
-        )
-      } else if declaration == standard_set_type_declaration() {
-        wasmgc_append_mutable_field(
-          target,
-          WasmStructField(declaration),
-          WasmNullableEqRefStorage,
-          source.offset,
-        )
-        wasmgc_append_mutable_field(
-          target,
-          WasmStructField(declaration),
-          WasmI32Storage,
-          source.offset,
-        )
-      } else {
-        match layouts.layout_of(declaration).unwrap().kind {
-          PlannedStructLayout(fields) =>
-            for index in 0..<fields.length {
-              let field = layouts.fields[fields.start + index]
-              if wasmgc_is_erased_generic_storage(resolved, field.type_) {
-                wasmgc_append_erased_generic_fields(
-                  target,
-                  WasmStructField(field.field),
-                  field.mutable_,
-                  field.offset,
-                )
-              } else {
-                match
-                  wasmgc_storage_type(
-                    resolved,
-                    field.type_,
-                    type_index_by_declaration,
-                    current_group,
-                    group_index_by_type,
-                    group_first_type_indices,
-                  ) {
-                  Some(storage) =>
-                    wasmgc_append_field_with_mutability(
-                      target,
-                      WasmStructField(field.field),
-                      storage,
-                      field.mutable_,
-                      field.offset,
-                    )
-                  None => ()
-                }
+      match layouts.layout_of(declaration).unwrap().kind {
+        PlannedStructLayout(fields) =>
+          for index in 0..<fields.length {
+            let field = layouts.fields[fields.start + index]
+            if wasmgc_is_erased_generic_storage(resolved, field.type_) {
+              wasmgc_append_erased_generic_fields(
+                target,
+                WasmStructField(field.field),
+                field.mutable_,
+                field.offset,
+              )
+            } else {
+              match
+                wasmgc_storage_type(
+                  resolved,
+                  field.type_,
+                  type_index_by_declaration,
+                  current_group,
+                  group_index_by_type,
+                  group_first_type_indices,
+                ) {
+                Some(storage) =>
+                  wasmgc_append_field_with_mutability(
+                    target,
+                    WasmStructField(field.field),
+                    storage,
+                    field.mutable_,
+                    field.offset,
+                  )
+                None => ()
               }
             }
-          _ => abort("struct physical source has a non-struct layout")
-        }
+          }
+        _ => abort("struct physical source has a non-struct layout")
       }
     PlannedWasmForeignMarkerType(_) => ()
     PlannedWasmEnumBaseType(_) =>
@@ -4533,46 +4504,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       }
     }
   }
-  let mut uses_map_runtime = false
-  for callable_index, reachable in reachable_functions {
-    if !reachable || elided_functions[callable_index] {
-      continue
-    }
-    let body_id = match planned_functions[callable_index].kind {
-      PlannedWasmDefinedFunction(body) => body
-      _ => continue
-    }
-    let body_index = semantic_id_local(body_id)
-    if body_index < 0 || body_index >= lowering.bodies.length() {
-      continue
-    }
-    let body = lowering.bodies[body_index]
-    for
-      expression in body.expressions.start..<(body.expressions.start +
-      body.expressions.length) {
-      match lowering.expressions[expression].kind {
-        PlannedSetEmpty(_, _, _)
-        | PlannedSetSingleton(_, _, _, _)
-        | PlannedSetLength(_)
-        | PlannedSetIsEmpty(_)
-        | PlannedSetContains(_, _, _, _, _)
-        | PlannedSetInsert(_, _, _, _, _)
-        | PlannedSetRemove(_, _, _, _, _)
-        | PlannedSetClear(_)
-        | PlannedSetIter(_, _)
-        | PlannedSetIterHasNext(_, _)
-        | PlannedSetIterNext(_, _)
-        | PlannedSetIterNextOption(_, _) => {
-          uses_map_runtime = true
-          break
-        }
-        _ => ()
-      }
-    }
-    if uses_map_runtime {
-      break
-    }
-  }
   let mut uses_linear_memory = false
   for callable_index, reachable in reachable_functions {
     if !reachable {
@@ -4700,7 +4631,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     runtime_function_indices,
     uses_text_runtime,
     uses_fixed_array_runtime,
-    uses_map_runtime,
     uses_linear_memory,
   }
 }

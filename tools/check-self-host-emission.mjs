@@ -13,6 +13,7 @@ import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs"
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { checkRingOperations } from "./ring-operation-cases.mjs";
 import { checkMapOperations } from "./map-operation-cases.mjs";
+import { checkSetOperations } from "./set-operation-cases.mjs";
 import { checkRawGcStorage } from "./raw-gc-storage-cases.mjs";
 import { checkRawGcUnit } from "./raw-gc-unit-cases.mjs";
 import { checkFixedArrayOperations } from "./fixed-array-operations-cases.mjs";
@@ -526,6 +527,17 @@ pub fn main() -> I32 {
   } catch (error) {
     failures++;
     console.error("self-host real-library Map probe failed", error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const request = await readFile(new URL("../.tmp/self-host-hardening/set.request.bin", import.meta.url));
+    const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+    console.log(`self-host real-library Set checks passed: ${checkSetOperations(exports.main)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+  } catch (error) {
+    failures++;
+    console.error("self-host real-library Set probe failed", error);
   }
 }
 {

@@ -74,6 +74,7 @@ def main() -> None:
         ("array_operations", "app.array_probes"),
         ("ring_operations", "app.ring_probes"),
         ("map_operations", "app.map_probes"),
+        ("set_operations", "app.set_probes"),
         ("type_queries", "app.type_queries"),
     ]:
         subprocess.run(

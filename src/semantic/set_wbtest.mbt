@@ -1,6 +1,6 @@
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "set standard source has stable compiler-owned identities" {
+test "Set declares storage and ordinary Dew functions" {
   let module_id = standard_library_module_id(12)
   let collected = collect_program_files_with_frozen_standard_imports(
     module_id,
@@ -18,20 +18,17 @@ test "set standard source has stable compiler-owned identities" {
     ),
   )
   assert_eq(collected.diagnostics.length(), 0)
-  assert_eq(semantic_id_local(collected.lookup_type("Set").unwrap()), 0)
-  assert_eq(semantic_id_local(collected.lookup_value("set_empty").unwrap()), 1)
-  assert_eq(collected.callables.length(), 22)
-  assert_eq(semantic_id_local(collected.callables[8].declaration), 10)
-  assert_eq(semantic_id_local(collected.callables[15].declaration), 17)
-  assert_eq(semantic_id_local(collected.callables[16].declaration), 19)
-  assert_eq(semantic_id_local(collected.callables[18].declaration), 21)
-  assert_eq(semantic_id_local(collected.callables[19].declaration), 23)
-  assert_eq(semantic_id_local(collected.callables[21].declaration), 26)
+  assert_true(collected.lookup_type("Set") is Some(_))
+  assert_true(collected.lookup_type("SetIter") is Some(_))
+  assert_true(collected.callables.length() > 0)
+  for callable in collected.callables {
+    assert_true(collected.body_of(callable.declaration) is Some(_))
+  }
 }
 
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "compiler-owned Set selects Hash evidence" {
+test "Set calls use ordinary method lowering" {
   let program = collect_program_manifest(
     2614UL,
     ProgramManifest::new([
@@ -44,22 +41,10 @@ test "compiler-owned Set selects Hash evidence" {
   )
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
-  let mut selected_hash = false
-  let mut selected_equality = false
-  for target in analyzed.modules[0].inferred.map_hash_targets {
-    match target {
-      SelectedInferredCallTarget(_, _) => selected_hash = true
-      _ => ()
-    }
-  }
-  for target in analyzed.modules[0].inferred.map_eq_targets {
-    match target {
-      SelectedInferredCallTarget(_, _) => selected_equality = true
-      _ => ()
-    }
-  }
-  assert_true(selected_hash)
-  assert_true(selected_equality)
+  let lowering = plan_program_lowering(program, analyzed)
+  assert_eq(lowering.modules[0].diagnostics, [])
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics, [])
 }
 
 ///|
@@ -95,5 +80,21 @@ test "Set rejects keys without Hash evidence" {
     ]),
   )
   let analyzed = analyze_program_semantics(program)
-  assert_true(analyzed.modules[0].inferred.diagnostics.length() > 0)
+  assert_eq(analyzed.modules[0].inferred.diagnostics, [])
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_true(link.diagnostics.length() > 0)
+  for diagnostic in link.diagnostics {
+    assert_true(
+      diagnostic
+      is ProgramCompileTimeFailure(
+        _,
+        _,
+        _,
+        _,
+        "CT-021 static assertion failed: Map keys must implement Hash",
+        _
+      ),
+    )
+  }
 }

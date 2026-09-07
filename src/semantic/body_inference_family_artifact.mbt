@@ -347,14 +347,6 @@ fn rebase_body_inference_job(
   for target in job.operator_targets {
     operator_targets.push(rebase_family_call_target(target, expression_delta))
   }
-  let map_hash_targets : Array[InferredCallTarget] = []
-  for target in job.map_hash_targets {
-    map_hash_targets.push(rebase_family_call_target(target, expression_delta))
-  }
-  let map_eq_targets : Array[InferredCallTarget] = []
-  for target in job.map_eq_targets {
-    map_eq_targets.push(rebase_family_call_target(target, expression_delta))
-  }
   let diagnostics : Array[BodyInferenceDiagnostic] = []
   for diagnostic in job.diagnostics {
     diagnostics.push(
@@ -363,15 +355,7 @@ fn rebase_body_inference_job(
       ),
     )
   }
-  {
-    ..job,
-    call_expressions,
-    call_targets,
-    operator_targets,
-    map_hash_targets,
-    map_eq_targets,
-    diagnostics,
-  }
+  { ..job, call_expressions, call_targets, operator_targets, diagnostics, }
 }
 
 ///|
@@ -395,8 +379,6 @@ fn body_inference_job_has_compatible_shape(
   job.control_result_types.length() == control_length &&
   job.object_field_targets.length() == object_field_length &&
   job.operator_targets.length() == expression_length &&
-  job.map_hash_targets.length() == expression_length &&
-  job.map_eq_targets.length() == expression_length &&
   (
     job.expression_selections.length() == 0 ||
     job.expression_selections.length() == expression_length
@@ -550,13 +532,7 @@ fn body_inference_job_type_graph_is_valid(job : BodyInferenceJobResult) -> Bool 
       None => ()
     }
   }
-  for
-    targets in [
-      job.call_targets,
-      job.operator_targets,
-      job.map_hash_targets,
-      job.map_eq_targets,
-    ] {
+  for targets in [job.call_targets, job.operator_targets] {
     for target in targets {
       let span = match target {
         SelectedInferredCallTarget(_, arguments)
@@ -633,13 +609,7 @@ fn body_inference_job_local_ids_are_valid(
       return false
     }
   }
-  for
-    targets in [
-      job.call_targets,
-      job.operator_targets,
-      job.map_hash_targets,
-      job.map_eq_targets,
-    ] {
+  for targets in [job.call_targets, job.operator_targets] {
     for target in targets {
       match target {
         SelectedFunctionValueCallTarget(expression) if expression < 0 ||

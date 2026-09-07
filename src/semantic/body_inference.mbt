@@ -247,8 +247,6 @@ pub struct InferredModuleBodies {
   trait_object_coercions : Array[InferredTraitObjectCoercion]
   call_targets : Array[InferredCallTarget]
   operator_targets : Array[InferredCallTarget]
-  map_hash_targets : Array[InferredCallTarget]
-  map_eq_targets : Array[InferredCallTarget]
   expression_evidence : Array[HirSpan]
   trait_evidence_roots : Array[Int]
   trait_evidence : Array[InferredTraitEvidence]

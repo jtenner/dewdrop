@@ -46,23 +46,7 @@
     "set": {
       "slot": 12,
       "path": "dew.std.set",
-      "type": 0,
-      "methods": {"empty": 10, "singleton": 11, "length": 12, "is_empty": 13, "contains": 14, "insert": 15, "remove": 16, "clear": 17, "iter": 23},
-      "opaque_types": {"iterator": 18},
-      "operations": {
-        "SetEmpty": [1, 10],
-        "SetSingleton": [2, 11],
-        "SetLength": [3, 12],
-        "SetIsEmpty": [4, 13],
-        "SetContains": [5, 14],
-        "SetInsert": [6, 15],
-        "SetRemove": [7, 16],
-        "SetClear": [8, 17],
-        "SetIter": [19, 23],
-        "SetIterHasNext": [20],
-        "SetIterNext": [21],
-        "SetIterNextOption": [25, 26]
-      }
+      "operations": {}
     }
   },
   "lanes": [

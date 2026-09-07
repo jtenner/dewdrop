@@ -319,50 +319,8 @@ fn starshine_fixed_array_runtime_base(
 }
 
 ///|
-fn starshine_map_runtime_types() -> Array[@lib.RecType] {
-  let bucket_type = @lib.RecType::new(
-    @lib.SubType::comp_type(
-      @lib.CompType::array(
-        @lib.FieldType::new(
-          @lib.StorageType::val_type(@lib.ValType::eqref_null()),
-          @lib.Mut::var_(),
-        ),
-      ),
-    ),
-  )
-  let fields : Array[@lib.FieldType] = []
-  let storages = [
-    @lib.StorageType::val_type(@lib.ValType::eqref_null()),
-    @lib.StorageType::val_type(@lib.ValType::i64()),
-    @lib.StorageType::val_type(@lib.ValType::i32()),
-    @lib.StorageType::val_type(@lib.ValType::i64()),
-    @lib.StorageType::val_type(@lib.ValType::f32()),
-    @lib.StorageType::val_type(@lib.ValType::f64()),
-    @lib.StorageType::val_type(@lib.ValType::v128()),
-    @lib.StorageType::val_type(@lib.ValType::eqref_null()),
-    @lib.StorageType::val_type(@lib.ValType::i32()),
-    @lib.StorageType::val_type(@lib.ValType::i64()),
-    @lib.StorageType::val_type(@lib.ValType::f32()),
-    @lib.StorageType::val_type(@lib.ValType::f64()),
-    @lib.StorageType::val_type(@lib.ValType::v128()),
-    @lib.StorageType::val_type(@lib.ValType::eqref_null()),
-  ]
-  for storage in storages {
-    fields.push(@lib.FieldType::new(storage, @lib.Mut::var_()))
-  }
-  [
-    bucket_type,
-    @lib.RecType::new(@lib.SubType::comp_type(@lib.CompType::struct_(fields))),
-  ]
-}
 
 ///|
-fn starshine_map_runtime_base(
-  planned : @semantic.PlannedModuleWasmGCFragments,
-) -> Int {
-  starshine_fixed_array_runtime_base(planned) +
-  (if planned.uses_fixed_array_runtime { 8 } else { 0 })
-}
 
 ///| Produces the exact Starshine type section described by the frozen Dew
 
@@ -420,11 +378,6 @@ pub fn emit_starshine_type_section(
   }
   if planned.uses_fixed_array_runtime {
     for runtime_type in starshine_fixed_array_runtime_types() {
-      rec_types.push(runtime_type)
-    }
-  }
-  if planned.uses_map_runtime {
-    for runtime_type in starshine_map_runtime_types() {
       rec_types.push(runtime_type)
     }
   }

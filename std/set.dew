@@ -1,13 +1,44 @@
-pub struct Set<key> {}
+open dew.std.map
+open dew.std.option
 
-builtin set_empty<key>() -> Set<key> = "dew_set_empty"
-builtin set_singleton<key>(key: key) -> Set<key> = "dew_set_singleton"
-builtin set_length<key>(set: Set<key>) -> U32 = "dew_set_length"
-builtin set_is_empty<key>(set: Set<key>) -> Bool = "dew_set_is_empty"
-builtin set_contains<key>(set: Set<key>, key: key) -> Bool = "dew_set_contains"
-builtin set_insert<key>(set: Set<key>, key: key) -> Bool = "dew_set_insert"
-builtin set_remove<key>(set: Set<key>, key: key) -> Bool = "dew_set_remove"
-builtin set_clear<key>(set: Set<key>) -> Unit = "dew_set_clear"
+pub struct Set<key> {
+  values: Map<key, Unit>
+}
+
+pub struct SetIter<key> {
+  inner: MapKeyIter<key, Unit>
+}
+
+fn set_empty<key>() -> Set<key> {
+  Set::{
+    values: Map::empty()
+  }
+}
+fn set_singleton<key>(key: key) -> Set<key> {
+  Set::{
+    values: Map::singleton(key, ())
+  }
+}
+fn set_length<key>(set: Set<key>) -> U32 {
+  set.values.length()
+}
+fn set_is_empty<key>(set: Set<key>) -> Bool {
+  set.values.length() == 0u32
+}
+fn set_contains<key>(set: Set<key>, key: key) -> Bool {
+  set.values.contains_key(key)
+}
+fn set_insert<key>(set: Set<key>, key: key) -> Bool {
+  let before = set.values.length()
+  set.values.insert(key, ())
+  set.values.length() != before
+}
+fn set_remove<key>(set: Set<key>, key: key) -> Bool {
+  set.values.remove(key)
+}
+fn set_clear<key>(set: Set<key>) -> Unit {
+  set.values.clear()
+}
 
 impl<key> Set<key> {
   fn empty() -> Set<key> {
@@ -36,11 +67,20 @@ impl<key> Set<key> {
   }
 }
 
-pub struct SetIter<key> {}
-
-builtin set_iter<key>(set: Set<key>) -> SetIter<key> = "dew_set_iter"
-builtin set_iter_has_next<key>(iter: SetIter<key>) -> Bool = "dew_set_iter_has_next"
-builtin set_iter_next<key>(iter: SetIter<key>) -> key = "dew_set_iter_next"
+fn set_iter<key>(set: Set<key>) -> SetIter<key> {
+  SetIter::{
+    inner: set.values.keys()
+  }
+}
+fn set_iter_has_next<key>(iter: SetIter<key>) -> Bool {
+  iter.inner.has_next()
+}
+fn set_iter_next<key>(iter: SetIter<key>) -> key {
+  match iter.inner.next() {
+    Option::Some(key) => key
+    Option::None => unreachable()
+  }
+}
 
 impl<key> Set<key> {
   fn iter(self) -> SetIter<key> {
@@ -54,4 +94,12 @@ impl<key> Iter<key> for SetIter<key> {
   }
 }
 
-builtin set_iter_next_option<key>(iter: SetIter<key>) -> Option<key> = "dew_set_iter_next_option"
+impl<key> SetIter<key> {
+  fn has_next(self) -> Bool {
+    set_iter_has_next(self)
+  }
+}
+
+fn set_iter_next_option<key>(iter: SetIter<key>) -> Option<key> {
+  iter.inner.next()
+}

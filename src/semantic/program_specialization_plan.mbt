@@ -232,39 +232,31 @@ fn program_reachable_callable_roots(
       for
         expression in body.expressions.start..<(body.expressions.start +
         body.expressions.length) {
-        let (first_target, second_target) = match
-          module_.expressions[expression].kind {
+        let target = match module_.expressions[expression].kind {
           PlannedDirectCall(target, _, _, _)
           | PlannedTailCall(target, _, _, _)
           | PlannedOperatorCall(target, _, _, _, _)
           | PlannedIndexCall(target, _, _, _)
-          | PlannedIndexSetCall(target, _, _, _, _) => (target, 0UL)
-          PlannedSetEmpty(_, hash, eq)
-          | PlannedSetSingleton(_, _, hash, eq)
-          | PlannedSetContains(_, _, _, hash, eq)
-          | PlannedSetInsert(_, _, _, hash, eq)
-          | PlannedSetRemove(_, _, _, hash, eq) => (hash, eq)
+          | PlannedIndexSetCall(target, _, _, _, _) => target
           _ => continue
         }
-        for target in [first_target, second_target] {
-          if target == 0UL || reachable.contains(target) {
-            continue
-          }
-          let owner = match module_lookup.get(semantic_id_module(target)) {
-            Some(value) => value
-            None => continue
-          }
-          let target_callable = match
-            lowering.modules[owner].functions.callable_of(target) {
-            Some(value) => value
-            None => continue
-          }
-          if target_callable.is_test && !emit_tests {
-            continue
-          }
-          reachable[target] = true
-          work.push(target)
+        if target == 0UL || reachable.contains(target) {
+          continue
         }
+        let owner = match module_lookup.get(semantic_id_module(target)) {
+          Some(value) => value
+          None => continue
+        }
+        let target_callable = match
+          lowering.modules[owner].functions.callable_of(target) {
+          Some(value) => value
+          None => continue
+        }
+        if target_callable.is_test && !emit_tests {
+          continue
+        }
+        reachable[target] = true
+        work.push(target)
       }
     }
   }
@@ -396,15 +388,6 @@ fn program_reachable_callable_roots(
             PlannedStructNew(declaration, _, _) => reachable[declaration] = true
             PlannedArrayLiteral(_, _, _) =>
               reachable[standard_array_type_declaration()] = true
-            PlannedSetEmpty(_, _, _)
-            | PlannedSetSingleton(_, _, _, _)
-            | PlannedSetLength(_)
-            | PlannedSetIsEmpty(_)
-            | PlannedSetContains(_, _, _, _, _)
-            | PlannedSetInsert(_, _, _, _, _)
-            | PlannedSetRemove(_, _, _, _, _)
-            | PlannedSetClear(_) =>
-              reachable[standard_set_type_declaration()] = true
             PlannedUnitVariant(variant, _)
             | PlannedVariantTupleNew(variant, _, _)
             | PlannedVariantStructNew(variant, _, _) => {
@@ -3161,23 +3144,6 @@ fn plan_program_wasmgc_fragments_for_root(
     options.emit_tests,
     selected_demand,
   )
-  for module_ in lowering.modules {
-    for
-      expression in compile_time_demand_expressions(
-        lowering, module_, selected_demand,
-      ) {
-      match expression.kind {
-        PlannedSetIter(_, _)
-        | PlannedSetIterHasNext(_, _)
-        | PlannedSetIterNext(_, _)
-        | PlannedSetIterNextOption(_, _) => {
-          program_roots[standard_set_type_declaration()] = true
-          program_roots[standard_set_iterator_type_declaration()] = true
-        }
-        _ => ()
-      }
-    }
-  }
   let generic_enum_instantiations = program_generic_enum_instantiations(
     analyzed, lowering,
   )

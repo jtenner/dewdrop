@@ -98,18 +98,6 @@ fn emit_starshine_program_type_section(
       rec_types.push(runtime_type)
     }
   }
-  let mut uses_map = false
-  for module_ in planned.modules {
-    if module_.uses_map_runtime {
-      uses_map = true
-      break
-    }
-  }
-  if uses_map {
-    for runtime_type in starshine_map_runtime_types() {
-      rec_types.push(runtime_type)
-    }
-  }
   for helper_index in 0..<helper_plan.helpers.length() {
     let helper = helper_plan.helpers[helper_index]
     let mut signature_type_index = -1
@@ -506,12 +494,6 @@ fn emit_starshine_program_function_body(
     fixed_array_i32_scratch_index,
     map_key_local_indices,
     map_value_local_indices,
-    map_ref_scratch_index,
-    map_bucket_scratch_index,
-    map_hash_scratch_index,
-    map_entry_scratch_index,
-    map_previous_scratch_index,
-    map_growth_index_scratch_index,
     control_state_local_indices,
     control_result_local_indices,
     constructor_local_indices,
@@ -576,12 +558,6 @@ fn emit_starshine_program_function_body(
       fixed_array_i32_scratch_index,
       map_key_local_indices,
       map_value_local_indices,
-      map_ref_scratch_index,
-      map_bucket_scratch_index,
-      map_hash_scratch_index,
-      map_entry_scratch_index,
-      map_previous_scratch_index,
-      map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
       constructor_local_indices,
@@ -861,12 +837,6 @@ fn emit_starshine_program_initializer_body(
     fixed_array_i32_scratch_index,
     map_key_local_indices,
     map_value_local_indices,
-    map_ref_scratch_index,
-    map_bucket_scratch_index,
-    map_hash_scratch_index,
-    map_entry_scratch_index,
-    map_previous_scratch_index,
-    map_growth_index_scratch_index,
     control_state_local_indices,
     control_result_local_indices,
     constructor_local_indices,
@@ -913,12 +883,6 @@ fn emit_starshine_program_initializer_body(
       fixed_array_i32_scratch_index,
       map_key_local_indices,
       map_value_local_indices,
-      map_ref_scratch_index,
-      map_bucket_scratch_index,
-      map_hash_scratch_index,
-      map_entry_scratch_index,
-      map_previous_scratch_index,
-      map_growth_index_scratch_index,
       control_state_local_indices,
       control_result_local_indices,
       constructor_local_indices,

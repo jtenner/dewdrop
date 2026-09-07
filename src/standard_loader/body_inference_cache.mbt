@@ -429,8 +429,6 @@ fn validate_cached_inferred_module(
     inferred.trait_object_coercions.length() != collected.expressions.length() ||
     inferred.call_targets.length() != collected.expressions.length() ||
     inferred.operator_targets.length() != collected.expressions.length() ||
-    inferred.map_hash_targets.length() != collected.expressions.length() ||
-    inferred.map_eq_targets.length() != collected.expressions.length() ||
     (
       inferred.expression_evidence.length() != 0 &&
       inferred.expression_evidence.length() != collected.expressions.length()

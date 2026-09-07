@@ -195,12 +195,6 @@ pub fn standard_option_some_variant() -> UInt64
 
 pub fn standard_queue_type_declaration() -> UInt64
 
-pub fn standard_set_iterator_type_declaration() -> UInt64
-
-pub fn standard_set_method_declaration(String) -> UInt64
-
-pub fn standard_set_type_declaration() -> UInt64
-
 pub fn synthetic_type_origin(Int, UInt64) -> TypeConstraintOrigin
 
 pub fn validate_cached_module_wasmgc_fragments(PlannedModuleWasmGCFragments, UInt64, WasmGCPlanningOptions) -> Result[Unit, String]
@@ -413,8 +407,6 @@ pub struct BodyInferenceJobResult {
   call_expressions : Array[Int]
   call_targets : Array[InferredCallTarget]
   operator_targets : Array[InferredCallTarget]
-  map_hash_targets : Array[InferredCallTarget]
-  map_eq_targets : Array[InferredCallTarget]
   expression_evidence : Array[HirSpan]
   trait_evidence_roots : Array[Int]
   trait_evidence : Array[InferredTraitEvidence]
@@ -1330,8 +1322,6 @@ pub struct InferredModuleBodies {
   trait_object_coercions : Array[InferredTraitObjectCoercion]
   call_targets : Array[InferredCallTarget]
   operator_targets : Array[InferredCallTarget]
-  map_hash_targets : Array[InferredCallTarget]
-  map_eq_targets : Array[InferredCallTarget]
   expression_evidence : Array[HirSpan]
   trait_evidence_roots : Array[Int]
   trait_evidence : Array[InferredTraitEvidence]
@@ -1715,18 +1705,6 @@ pub enum PlannedExpressionKind {
   PlannedFixedArrayLength(Int, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(Int, Int, PlannedValueShape)
   PlannedFixedArraySetUnchecked(Int, Int, Int, PlannedValueShape)
-  PlannedSetEmpty(PlannedValueShape, UInt64, UInt64)
-  PlannedSetSingleton(Int, PlannedValueShape, UInt64, UInt64)
-  PlannedSetLength(Int)
-  PlannedSetIsEmpty(Int)
-  PlannedSetContains(Int, Int, PlannedValueShape, UInt64, UInt64)
-  PlannedSetInsert(Int, Int, PlannedValueShape, UInt64, UInt64)
-  PlannedSetRemove(Int, Int, PlannedValueShape, UInt64, UInt64)
-  PlannedSetClear(Int)
-  PlannedSetIter(Int, PlannedValueShape)
-  PlannedSetIterHasNext(Int, PlannedValueShape)
-  PlannedSetIterNext(Int, PlannedValueShape)
-  PlannedSetIterNextOption(Int, PlannedValueShape)
   PlannedDirectCall(UInt64, Int, HirSpan, HirSpan)
   PlannedTailCall(UInt64, Int, HirSpan, HirSpan)
   PlannedBoundDirectCall(UInt64, Int, Int, HirSpan, HirSpan)
@@ -1922,7 +1900,6 @@ pub struct PlannedModuleWasmGCFragments {
   runtime_function_indices : Map[Bytes, Int]
   uses_text_runtime : Bool
   uses_fixed_array_runtime : Bool
-  uses_map_runtime : Bool
   uses_linear_memory : Bool
 } derive(Eq, @debug.Debug)
 pub fn PlannedModuleWasmGCFragments::field_name_of(Self, UInt64) -> String?

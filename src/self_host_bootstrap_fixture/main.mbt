@@ -60,6 +60,7 @@ fn bootstrap_module_required(name : String) -> Bool {
     | "dew.std.process"
     | "dew.std.queue"
     | "dew.std.result"
+    | "dew.std.set"
     | "dew.std.string"
     | "dew.std.string_builder"
     | "dew.std.testing"

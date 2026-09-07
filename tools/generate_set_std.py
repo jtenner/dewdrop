@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Embed std/set.dew as the compiler-owned bootstrap source."""
+"""Embed the ordinary Dew Set library for compiler source loading."""
 
 import argparse
 from pathlib import Path

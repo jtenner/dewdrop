@@ -34,7 +34,7 @@ test "linear immutable locals reuse compatible physical slots" {
   let generic_body = module_lowering.bodies[@semantic.semantic_id_local(
       program.modules[0].body_of(generic).unwrap().id,
     )]
-  let (_, scalar_types, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
+  let (_, scalar_types, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
     module_lowering,
     fragments,
     Some(link),
@@ -42,7 +42,7 @@ test "linear immutable locals reuse compatible physical slots" {
     scalar_body,
     0,
   )
-  let (_, overlap_types, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
+  let (_, overlap_types, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
     module_lowering,
     fragments,
     Some(link),
@@ -50,7 +50,7 @@ test "linear immutable locals reuse compatible physical slots" {
     overlap_body,
     0,
   )
-  let (_, reference_types, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
+  let (_, reference_types, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
     module_lowering,
     fragments,
     Some(link),
@@ -58,7 +58,7 @@ test "linear immutable locals reuse compatible physical slots" {
     reference_body,
     0,
   )
-  let (_, generic_types, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
+  let (_, generic_types, _, _, _, _, _, _, _, _, _) = starshine_body_locals(
     module_lowering,
     fragments,
     Some(link),

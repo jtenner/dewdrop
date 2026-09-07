@@ -2137,8 +2137,6 @@ fn ib_write_module_bodies(
   ib_write_coercions(writer, value.trait_object_coercions)
   ib_write_call_targets(writer, value.call_targets)
   ib_write_call_targets(writer, value.operator_targets)
-  ib_write_call_targets(writer, value.map_hash_targets)
-  ib_write_call_targets(writer, value.map_eq_targets)
   ib_write_span_array(writer, value.expression_evidence)
   ib_write_int_array(writer, value.trait_evidence_roots)
   ib_write_evidence_array(writer, value.trait_evidence)
@@ -2176,8 +2174,6 @@ fn ib_read_module_bodies(
     trait_object_coercions: ib_read_coercions(reader, field),
     call_targets: ib_read_call_targets(reader, field),
     operator_targets: ib_read_call_targets(reader, field),
-    map_hash_targets: ib_read_call_targets(reader, field),
-    map_eq_targets: ib_read_call_targets(reader, field),
     expression_evidence: ib_read_span_array(reader, field),
     trait_evidence_roots: ib_read_int_array(reader, field),
     trait_evidence: ib_read_evidence_array(reader, field),
@@ -2390,8 +2386,6 @@ fn ib_write_job(
   ib_write_int_array(writer, value.call_expressions)
   ib_write_call_targets(writer, value.call_targets)
   ib_write_call_targets(writer, value.operator_targets)
-  ib_write_call_targets(writer, value.map_hash_targets)
-  ib_write_call_targets(writer, value.map_eq_targets)
   ib_write_span_array(writer, value.expression_evidence)
   ib_write_int_array(writer, value.trait_evidence_roots)
   ib_write_evidence_array(writer, value.trait_evidence)
@@ -2426,8 +2420,6 @@ fn ib_read_job(
     call_expressions: ib_read_int_array(reader, field),
     call_targets: ib_read_call_targets(reader, field),
     operator_targets: ib_read_call_targets(reader, field),
-    map_hash_targets: ib_read_call_targets(reader, field),
-    map_eq_targets: ib_read_call_targets(reader, field),
     expression_evidence: ib_read_span_array(reader, field),
     trait_evidence_roots: ib_read_int_array(reader, field),
     trait_evidence: ib_read_evidence_array(reader, field),

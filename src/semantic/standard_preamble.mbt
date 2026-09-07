@@ -351,6 +351,9 @@ fn selected_standard_modules(
   }
   // Map's Dew implementation imports types and raw storage. The types module
   // declares Array-valued name queries, so retain that source dependency too.
+  if set {
+    map = true
+  }
   if map {
     array = true
     fixed_array = true

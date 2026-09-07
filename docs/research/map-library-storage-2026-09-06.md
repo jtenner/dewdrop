@@ -22,7 +22,8 @@ lowering, and runtime emitters are removed. Self-host Map emission tasks,
 runtime builders, scratch-local rules, and name-based call replacement are also
 removed. Remaining generic carrier-recovery heuristics in the self-host emitter
 are part of the separate compiler audit; this migration does not certify them.
-Set still uses the legacy shared hash-table helpers until its own migration.
+Set's later migration removes the remaining shared hash-table helpers; see
+[the Set log](set-library-storage-2026-09-06.md).
 
 The shared 12-case corpus runs the real Map module in both compilers. It covers
 collisions and growth, head/middle/tail removal, replacement, missing keys,

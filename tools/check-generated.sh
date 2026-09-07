@@ -19,6 +19,7 @@ python3 tools/test_queue_builtin_policy.py
 python3 tools/test_deque_builtin_policy.py
 python3 tools/test_circular_buffer_builtin_policy.py
 python3 tools/test_map_builtin_policy.py
+python3 tools/test_set_builtin_policy.py
 python3 tools/generate_self_host_numeric_builtins.py --check
 python3 tools/generate_string_std.py --check
 python3 tools/generate_wasi_std.py --check

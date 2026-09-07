@@ -16,13 +16,10 @@ test "sets emit collision-safe insert remove and clear" {
   let lowering = @semantic.plan_program_lowering(program, analyzed)
   assert_eq(lowering.modules[0].diagnostics.length(), 0)
   let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
-  assert_eq(link.diagnostics.length(), 0)
-  assert_true(
-    link.type_lookup.get(@semantic.standard_set_type_declaration()) is Some(_),
-  )
+  assert_eq(link.diagnostics, [])
   match emit_starshine_program_module(lowering, link) {
     Ok(module_) => assert_eq(@validate.validate_module(module_), Ok(()))
-    Err(error) => assert_eq(error, UnsupportedBuiltin(b"expected-debug"))
+    Err(error) => fail(@debug.to_string(error))
   }
 }
 
@@ -44,9 +41,9 @@ test "set growth emits a valid body and clear" {
   let lowering = @semantic.plan_program_lowering(program, analyzed)
   assert_eq(lowering.modules[0].diagnostics.length(), 0)
   let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
-  assert_eq(link.diagnostics.length(), 0)
+  assert_eq(link.diagnostics, [])
   match emit_starshine_program_module(lowering, link) {
     Ok(module_) => assert_eq(@validate.validate_module(module_), Ok(()))
-    Err(error) => assert_eq(error, UnsupportedBuiltin(b"expected-debug"))
+    Err(error) => fail(@debug.to_string(error))
   }
 }

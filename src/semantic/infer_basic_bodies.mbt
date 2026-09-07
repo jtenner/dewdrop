@@ -64,8 +64,6 @@ pub struct BodyInferenceJobResult {
   call_expressions : Array[ExprId]
   call_targets : Array[InferredCallTarget]
   operator_targets : Array[InferredCallTarget]
-  map_hash_targets : Array[InferredCallTarget]
-  map_eq_targets : Array[InferredCallTarget]
   expression_evidence : Array[HirSpan]
   trait_evidence_roots : Array[Int]
   trait_evidence : Array[InferredTraitEvidence]
@@ -713,8 +711,6 @@ priv struct BasicBodyInferencer {
   call_expressions : Array[ExprId]
   call_targets : Array[InferredCallTarget]
   operator_targets : Array[InferredCallTarget]
-  map_hash_targets : Array[InferredCallTarget]
-  map_eq_targets : Array[InferredCallTarget]
   mut expression_evidence : Array[HirSpan]
   trait_evidence_roots : Array[Int]
   trait_evidence : Array[InferredTraitEvidence]
@@ -845,8 +841,6 @@ fn BasicBodyInferencer::new(
     call_expressions: [],
     call_targets: [],
     operator_targets: Array::make(body.expressions.length, NoInferredCallTarget),
-    map_hash_targets: Array::make(body.expressions.length, NoInferredCallTarget),
-    map_eq_targets: Array::make(body.expressions.length, NoInferredCallTarget),
     expression_evidence: empty_hir_span_array,
     trait_evidence_roots: [],
     trait_evidence: [],
@@ -3244,8 +3238,6 @@ fn BasicBodyInferencer::finish(
     call_expressions: self.call_expressions,
     call_targets: self.call_targets,
     operator_targets: self.operator_targets,
-    map_hash_targets: self.map_hash_targets,
-    map_eq_targets: self.map_eq_targets,
     expression_evidence: self.expression_evidence,
     trait_evidence_roots: self.trait_evidence_roots,
     trait_evidence: self.trait_evidence,
@@ -3786,14 +3778,6 @@ fn merge_body_inference_jobs(
     collected.expressions.length(),
     NoInferredCallTarget,
   )
-  let map_hash_targets = Array::make(
-    collected.expressions.length(),
-    NoInferredCallTarget,
-  )
-  let map_eq_targets = Array::make(
-    collected.expressions.length(),
-    NoInferredCallTarget,
-  )
   let mut expression_evidence = empty_hir_span_array
   let trait_evidence_roots : Array[Int] = []
   let trait_evidence : Array[InferredTraitEvidence] = []
@@ -3965,14 +3949,6 @@ fn merge_body_inference_jobs(
       let expression = body.expressions.start + index
       operator_targets[expression] = remap_job_call_target(
         job.operator_targets[index],
-        call_argument_start,
-      )
-      map_hash_targets[expression] = remap_job_call_target(
-        job.map_hash_targets[index],
-        call_argument_start,
-      )
-      map_eq_targets[expression] = remap_job_call_target(
-        job.map_eq_targets[index],
         call_argument_start,
       )
     }
@@ -4204,14 +4180,6 @@ fn merge_body_inference_jobs(
         job.operator_targets[index],
         call_argument_start,
       )
-      map_hash_targets[expression] = remap_job_call_target(
-        job.map_hash_targets[index],
-        call_argument_start,
-      )
-      map_eq_targets[expression] = remap_job_call_target(
-        job.map_eq_targets[index],
-        call_argument_start,
-      )
     }
     let name_info = names.lambda(lambda.id).unwrap()
     for index in 0..<name_info.locals.length {
@@ -4304,8 +4272,6 @@ fn merge_body_inference_jobs(
     trait_object_coercions,
     call_targets,
     operator_targets,
-    map_hash_targets,
-    map_eq_targets,
     expression_evidence,
     trait_evidence_roots,
     trait_evidence,

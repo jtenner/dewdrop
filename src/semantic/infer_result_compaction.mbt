@@ -79,33 +79,6 @@ fn BasicBodyInferencer::finalize_types(self : BasicBodyInferencer) -> Unit {
       | SelectedFunctionValueCallTarget(_) => ()
     }
   }
-  for targets in [self.map_hash_targets, self.map_eq_targets] {
-    for expression_index in 0..<targets.length() {
-      match targets[expression_index] {
-        SelectedInferredCallTarget(_, arguments)
-        | SelectedBoundInferredCallTarget(_, _, arguments)
-        | SelectedDynamicTraitCallTarget(_, _, _, arguments) =>
-          for argument_index in 0..<arguments.length {
-            let slot = arguments.start + argument_index
-            let frozen = self.solver.zonk_type(self.call_type_arguments[slot])
-            self.call_type_arguments[slot] = frozen
-            if self.solver.has_unresolved_variable(frozen) {
-              let expression = self.body.expressions.start + expression_index
-              self.diagnose(
-                UnresolvedCallTypeArgument(
-                  expression,
-                  argument_index,
-                  self.collected.expressions[expression].offset(),
-                ),
-              )
-            }
-          }
-        NoInferredCallTarget
-        | ErrorInferredCallTarget
-        | SelectedFunctionValueCallTarget(_) => ()
-      }
-    }
-  }
   for expression_index in 0..<self.expression_selections.length() {
     match self.expression_selections[expression_index] {
       StructConstructionSelection(_, arguments)

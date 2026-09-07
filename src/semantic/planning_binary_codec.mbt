@@ -1093,7 +1093,6 @@ pub fn serialize_planned_module_wasmgc_fragments(
   ib_write_int(writer, value.defined_function_count)
   writer.write_bool(value.uses_text_runtime)
   writer.write_bool(value.uses_fixed_array_runtime)
-  writer.write_bool(value.uses_map_runtime)
   writer.write_bool(value.uses_linear_memory)
   Ok(writer.to_bytes())
 }
@@ -1378,7 +1377,6 @@ pub fn deserialize_planned_module_wasmgc_fragments(
   let defined_function_count = ib_read_int(reader, "defined_function_count")
   let uses_text_runtime = reader.read_bool("uses_text_runtime")
   let uses_fixed_array_runtime = reader.read_bool("uses_fixed_array_runtime")
-  let uses_map_runtime = reader.read_bool("uses_map_runtime")
   let uses_linear_memory = reader.read_bool("uses_linear_memory")
   match reader.finish() {
     Err(error) => return Err(error)
@@ -1435,7 +1433,6 @@ pub fn deserialize_planned_module_wasmgc_fragments(
     runtime_function_indices,
     uses_text_runtime,
     uses_fixed_array_runtime,
-    uses_map_runtime,
     uses_linear_memory,
   }
   match validate_module_wasmgc_arenas(value) {

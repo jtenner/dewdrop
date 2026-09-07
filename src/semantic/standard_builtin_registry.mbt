@@ -6,18 +6,6 @@ enum StandardBuiltinOperation {
   WasmRefNull
   WasmRefIsNull
   WasmRefAsNonNull
-  SetEmpty
-  SetSingleton
-  SetLength
-  SetIsEmpty
-  SetContains
-  SetInsert
-  SetRemove
-  SetClear
-  SetIter
-  SetIterHasNext
-  SetIterNext
-  SetIterNextOption
 } derive(Eq, Debug)
 
 ///|
@@ -67,59 +55,6 @@ pub fn standard_circular_buffer_type_declaration() -> DeclId {
 ///|
 pub fn standard_deque_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(37), 0)
-}
-
-///|
-pub fn standard_set_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(12), 0)
-}
-
-///|
-pub fn standard_set_method_declaration(name : String) -> DeclId {
-  let local_id = match name {
-    "empty" => 10
-    "singleton" => 11
-    "length" => 12
-    "is_empty" => 13
-    "contains" => 14
-    "insert" => 15
-    "remove" => 16
-    "clear" => 17
-    "iter" => 23
-    _ => -1
-  }
-  if local_id < 0 {
-    0UL
-  } else {
-    make_semantic_id(standard_library_module_id(12), local_id)
-  }
-}
-
-///|
-pub fn standard_set_iterator_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(12), 18)
-}
-
-///|
-fn standard_set_operation(declaration : DeclId) -> StandardBuiltinOperation {
-  if semantic_id_module(declaration) != standard_library_module_id(12) {
-    return NoStandardBuiltinOperation
-  }
-  match semantic_id_local(declaration) {
-    1 | 10 => SetEmpty
-    2 | 11 => SetSingleton
-    3 | 12 => SetLength
-    4 | 13 => SetIsEmpty
-    5 | 14 => SetContains
-    6 | 15 => SetInsert
-    7 | 16 => SetRemove
-    8 | 17 => SetClear
-    19 | 23 => SetIter
-    20 => SetIterHasNext
-    21 => SetIterNext
-    25 | 26 => SetIterNextOption
-    _ => NoStandardBuiltinOperation
-  }
 }
 
 ///|

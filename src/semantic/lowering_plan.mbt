@@ -92,18 +92,6 @@ pub enum PlannedExpressionKind {
   PlannedFixedArrayLength(ExprId, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
-  PlannedSetEmpty(PlannedValueShape, DeclId, DeclId)
-  PlannedSetSingleton(ExprId, PlannedValueShape, DeclId, DeclId)
-  PlannedSetLength(ExprId)
-  PlannedSetIsEmpty(ExprId)
-  PlannedSetContains(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
-  PlannedSetInsert(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
-  PlannedSetRemove(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
-  PlannedSetClear(ExprId)
-  PlannedSetIter(ExprId, PlannedValueShape)
-  PlannedSetIterHasNext(ExprId, PlannedValueShape)
-  PlannedSetIterNext(ExprId, PlannedValueShape)
-  PlannedSetIterNextOption(ExprId, PlannedValueShape)
   PlannedDirectCall(DeclId, ExprId, HirSpan, HirSpan)
   PlannedTailCall(DeclId, ExprId, HirSpan, HirSpan)
   PlannedBoundDirectCall(DeclId, Int, ExprId, HirSpan, HirSpan)
@@ -1002,74 +990,14 @@ fn plan_expression_kind(
           } else {
             -1
           }
-          let key_offset = if receiver >= 0 { 0 } else { 1 }
-          let key = if arguments.length > key_offset {
-            collected.expression_children[arguments.start + key_offset]
-          } else {
-            -1
-          }
-          let value_offset = if receiver >= 0 { 1 } else { 2 }
-          let value = if arguments.length > value_offset {
-            collected.expression_children[arguments.start + value_offset]
-          } else {
-            -1
-          }
-          let hash_declaration = match inferred.map_hash_targets[expression] {
-            SelectedInferredCallTarget(selected, _) => selected
-            _ => 0UL
-          }
-          let eq_declaration = match inferred.map_eq_targets[expression] {
-            SelectedInferredCallTarget(selected, _) => selected
-            _ => 0UL
-          }
-          let key_shape = if type_arguments.length > 0 {
-            planned_value_shape(
-              resolved,
-              inferred,
-              inferred.call_type_arguments[type_arguments.start],
-            )
-          } else {
-            ErrorPlannedValueShape
-          }
           match standard_wasm_intrinsics_operation(declaration) {
             WasmRefNull => PlannedWasmRefNull
             WasmRefIsNull => PlannedWasmRefIsNull(base)
             WasmRefAsNonNull => PlannedWasmRefAsNonNull(base)
             _ =>
-              match standard_set_operation(declaration) {
-                SetEmpty =>
-                  PlannedSetEmpty(key_shape, hash_declaration, eq_declaration)
-                SetSingleton =>
-                  PlannedSetSingleton(
-                    collected.expression_children[arguments.start],
-                    key_shape,
-                    hash_declaration,
-                    eq_declaration,
-                  )
-                SetLength => PlannedSetLength(base)
-                SetIsEmpty => PlannedSetIsEmpty(base)
-                SetContains =>
-                  PlannedSetContains(
-                    base, key, key_shape, hash_declaration, eq_declaration,
-                  )
-                SetInsert =>
-                  PlannedSetInsert(
-                    base, key, key_shape, hash_declaration, eq_declaration,
-                  )
-                SetRemove =>
-                  PlannedSetRemove(
-                    base, key, key_shape, hash_declaration, eq_declaration,
-                  )
-                SetClear => PlannedSetClear(base)
-                SetIter => PlannedSetIter(base, key_shape)
-                SetIterHasNext => PlannedSetIterHasNext(base, key_shape)
-                SetIterNext => PlannedSetIterNext(base, key_shape)
-                SetIterNextOption => PlannedSetIterNextOption(base, key_shape)
-                _ =>
-                  PlannedDirectCall(
-                    declaration, receiver, arguments, type_arguments,
-                  )
-              }
+              PlannedDirectCall(
+                declaration, receiver, arguments, type_arguments,
+              )
           }
         }
         SelectedBoundInferredCallTarget(requirement, evidence, type_arguments) =>

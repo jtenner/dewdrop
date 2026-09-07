@@ -119,18 +119,9 @@ test "generated standard builtin registry matches collected bootstrap declaratio
   let set = program.modules[program.module_index("dew.std.set").unwrap()]
   assert_eq(set.module_id, standard_library_module_id(12))
   assert_standard_registry_declaration(set, 0, "Set")
-  assert_eq(
-    standard_set_method_declaration("empty"),
-    make_semantic_id(set.module_id, 10),
-  )
-  assert_eq(
-    standard_set_method_declaration("clear"),
-    make_semantic_id(set.module_id, 17),
-  )
-  assert_eq(
-    standard_set_operation(make_semantic_id(set.module_id, 10)),
-    SetEmpty,
-  )
+  for callable in set.callables {
+    assert_true(set.body_of(callable.declaration) is Some(_))
+  }
 
   let option = program.modules[program.module_index("dew.std.option").unwrap()]
   assert_eq(option.module_id, standard_library_module_id(2))

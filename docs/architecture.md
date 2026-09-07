@@ -273,10 +273,11 @@ those dependencies is tracked in `agent-todo.md`. Ordinary library functions
 must use the same semantic and emission rules as user functions.
 
 `tools/standard-builtin-registry.json` is the canonical compiler identity table
-for remaining Option, Array-literal, Set, and intrinsic identities and source
-module slots. Map has no declaration ordinal, method, index, or layout rule in
+for remaining Option, Array-literal, and intrinsic identities and source
+module slots. Map and Set have no declaration ordinal, method, index, or layout rule in
 that registry. Its buckets, linked entries, growth, hashing, lookup, mutation,
-and iterators are declared and implemented in Dew. Queue and Deque use the
+and iterators are declared and implemented in Dew. Set wraps `Map<K, Unit>` and
+its key iterator through ordinary fields and methods. Queue and Deque use the
 ordinary Dew circular-buffer implementation. Scalar `dew.std.math` builtins are ordinary inline builtin
 names: exact float bit reinterpretation and Core unary math operations are
 mapped in `src/backend/starshine_numeric_builtins.mbt`, while the integer and

@@ -40,22 +40,6 @@ test "Map calls use ordinary method and index lowering" {
   )
   let analyzed = analyze_program_semantics(program)
   assert_eq(analyzed.modules[0].inferred.diagnostics.length(), 0)
-  let mut selected_hash = false
-  let mut selected_eq = false
-  for target in analyzed.modules[0].inferred.map_hash_targets {
-    match target {
-      SelectedInferredCallTarget(_, _) => selected_hash = true
-      _ => ()
-    }
-  }
-  for target in analyzed.modules[0].inferred.map_eq_targets {
-    match target {
-      SelectedInferredCallTarget(_, _) => selected_eq = true
-      _ => ()
-    }
-  }
-  assert_false(selected_hash)
-  assert_false(selected_eq)
   let lowering = plan_program_lowering(program, analyzed)
   assert_eq(lowering.modules[0].diagnostics, [])
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)

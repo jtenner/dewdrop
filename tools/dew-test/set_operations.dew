@@ -1,0 +1,152 @@
+open dew.std.preamble
+open dew.std.set
+open dew.std.option
+open dew.std.string
+open dew.std.bytes
+
+struct CollisionKey {
+  value: U32
+}
+
+impl Hash for CollisionKey {
+  fn hash(self) -> U64 {
+    0u64
+  }
+  fn hash_eq(self, right: CollisionKey) -> Bool {
+    self.value == right.value
+  }
+}
+
+struct Counts {
+  mut hashes: U32
+  mut comparisons: U32
+}
+
+struct CountedKey {
+  value: U32
+  counts: Counts
+}
+
+impl Hash for CountedKey {
+  fn hash(self) -> U64 {
+    self.counts.hashes = self.counts.hashes + 1u32
+    self.value.into()
+  }
+  fn hash_eq(self, right: CountedKey) -> Bool {
+    self.counts.comparisons = self.counts.comparisons + 1u32
+    self.value == right.value
+  }
+}
+
+fn result(value: Bool) -> I32 {
+  if value {
+    1i32
+  } else {
+    0i32
+  }
+}
+
+pub fn main(case: U32) -> I32 {
+  if case == 0u32 {
+    let set = Set::empty()
+    let empty = set.is_empty()
+    let first = set.insert(7u32)
+    let duplicate = set.insert(7u32)
+    result(empty && first && !duplicate && set.length() == 1u32 && set.contains(7u32) && !set.contains(8u32))
+  } else if case == 1u32 {
+    let set = Set::empty()
+    while 0u32 {
+      index if index < 129u32 => {
+        set.insert(CollisionKey::{
+          value: index
+        })
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let first = set.remove(CollisionKey::{
+      value: 0u32
+    })
+    let middle = set.remove(CollisionKey::{
+      value: 64u32
+    })
+    let last = set.remove(CollisionKey::{
+      value: 128u32
+    })
+    result(first && middle && last && set.length() == 126u32 && set.contains(CollisionKey::{
+      value: 65u32
+    }) && !set.remove(CollisionKey::{
+      value: 200u32
+    }))
+  } else if case == 2u32 {
+    let set = Set::singleton(1u32)
+    let alias = set
+    alias.clear()
+    let empty = set.is_empty()
+    set.insert(2u32)
+    result(empty && alias.length() == 1u32 && alias.contains(2u32) && !alias.contains(1u32))
+  } else if case == 3u32 {
+    let set = Set::singleton(9u32)
+    let iter = set.iter()
+    let ready = iter.has_next() && iter.has_next()
+    let item = iter.next() is Option::Some(9u32)
+    result(ready && item && !iter.has_next() && iter.next() is Option::None && iter.next() is Option::None)
+  } else if case == 4u32 {
+    let set = Set::empty()
+    while 0u32 {
+      index if index < 65u32 => {
+        set.insert(index)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let mut count = 0u32
+    let mut sum = 0u32
+    for value in set {
+      count = count + 1u32
+      sum = sum + value
+    }
+    result(count == 65u32 && sum == 2080u32)
+  } else if case == 5u32 {
+    let strings = Set::singleton("Option")
+    let bytes = Set::singleton(b"Option")
+    result(!strings.insert("Op".concat("tion")) && strings.length() == 1u32 && bytes.contains(b"Option") && !bytes.contains(b"Other"))
+  } else if case == 6u32 {
+    let set = Set::singleton(4294967297i64)
+    set.insert(-4294967297i64)
+    let mut sum = 0i64
+    for value in set {
+      sum = sum + value
+    }
+    result(sum == 0i64 && set.length() == 2u32 && set.contains(4294967297i64))
+  } else if case == 7u32 {
+    let counts = Counts::{
+      hashes: 0u32
+      comparisons: 0u32
+    }
+    let set = Set::empty()
+    while 0u32 {
+      index if index < 17u32 => {
+        set.insert(CountedKey::{
+          value: index
+          counts: counts
+        })
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let growth = counts.hashes == 17u32 && counts.comparisons == 0u32
+    let duplicate = set.insert(CountedKey::{
+      value: 3u32
+      counts: counts
+    })
+    let once = counts.hashes == 18u32 && counts.comparisons == 1u32
+    let removed = set.remove(CountedKey::{
+      value: 3u32
+      counts: counts
+    })
+    result(growth && !duplicate && once && removed && counts.hashes == 19u32 && counts.comparisons == 2u32)
+  } else {
+    unreachable()
+  }
+}

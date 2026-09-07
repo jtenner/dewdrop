@@ -86,9 +86,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   growth, and all 12 shared native/self-host checks pass. Native Map IR and
   self-host Map runtime emitters are removed. The clean B/C fixed point passes.
   See the [Map log](docs/research/map-library-storage-2026-09-06.md).
-- [ ] Move Set storage and iteration into Dew using Map with Unit values.
-  Keep insert-result, collision, bounds, and alias behavior correct. Remove the
-  remaining shared native hash-table runtime after this migration.
+- [x] Move Set storage and iteration into Dew using Map with Unit values.
+  Eight shared checks pass in both compilers. Special Set inference/layout/IR,
+  the remaining native hash-table runtime, and its extra target arrays are gone.
+  The clean B/C fixed point passes. See the
+  [Set log](docs/research/set-library-storage-2026-09-06.md).
 - [x] Move Queue, circular-buffer, and deque storage algorithms into Dew.
   Each family has a separate commit. Declared typed storage replaces the shared
   Array layout, and unused native ring code is removed. Twenty shared checks
