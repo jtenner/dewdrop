@@ -202,6 +202,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Solver work stacks and undo values now have numeric checks. Native snapshots
   have unique tokens, including across reset. Nested rollback tests check saved
   contents. See [solver notes](docs/research/solver-work-stack-contracts-2026-09-07.md).
+  Native parent walks now check their arenas and bounds. Both compilers also
+  reject type-binding cycles even when the parent forest is valid. Native
+  binding IDs and stored variable identities are checked before use. See the
+  [root walk log](docs/research/solver-root-walks-2026-09-07.md).
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
   order must hold, and stored identities, physical indices, and import offsets
   must agree. Missing bases or bodies must produce a diagnostic.

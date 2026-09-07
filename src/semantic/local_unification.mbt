@@ -251,18 +251,11 @@ fn LocalTypeSolver::find_variable_root(
   self : LocalTypeSolver,
   variable : TypeVariableId,
 ) -> TypeVariableId {
-  let mut root = variable
-  while self.variable_parents[root] != root {
-    root = self.variable_parents[root]
+  let root = match self.check_variable_root(variable) {
+    Ok(root) => root
+    Err(failure) => abort("solver root invariant: " + @debug.to_string(failure))
   }
-  if self.snapshots.length() == 0 {
-    let mut current = variable
-    while self.variable_parents[current] != current {
-      let next = self.variable_parents[current]
-      self.variable_parents[current] = root
-      current = next
-    }
-  }
+  self.compress_checked_variable_path(variable, root)
   root
 }
 
@@ -271,21 +264,10 @@ pub fn LocalTypeSolver::representative_type(
   self : LocalTypeSolver,
   type_ : BodyTypeId,
 ) -> BodyTypeId {
-  let mut current = type_
-  while true {
-    match self.type_term(current) {
-      BodyVariableType(variable) => {
-        let root = self.find_variable_root(variable)
-        let binding = self.variable_bindings[root]
-        if binding == -1 {
-          return self.variable_types[root]
-        }
-        current = binding
-      }
-      _ => return current
-    }
+  match self.check_representative_type(type_) {
+    Ok(type_) => type_
+    Err(failure) => abort("solver root invariant: " + @debug.to_string(failure))
   }
-  abort("unreachable type representative")
 }
 
 ///|

@@ -448,10 +448,16 @@ impl SelfHostLocalTypeSolver {
 
   fn representative_type(self, type_: I32) -> I32 {
     let mut current = type_
+    let mut hops = 0u32
     while current {
       type_id => match self.type_term(type_id) {
         SelfHostBodyTypeTerm::BodyVariableType(variable) => {
           let root = self.find_variable_root(variable)
+          self.assert_solver_invariant(
+            hops < self.variable_parents.length(), 202u32,
+            self.variable_parents.length(), hops, self_host_body_i32_to_u32(type_),
+          )
+          hops = hops + 1u32
           let binding = self.variable_bindings[root]
           if binding == -1i32 {
             break self.variable_types[root]

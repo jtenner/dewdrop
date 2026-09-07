@@ -144,6 +144,7 @@ const probes = [
   solverProbe("SOL-201 variable arrays must remain parallel", 201, 1, 0, 1),
   solverProbe("SOL-202 parent cycles have a bounded walk", 202, 2, 2, 0),
   solverProbe("SOL-202 parents must stay in the variable arena", 202, 1, 1, 0),
+  solverProbe("SOL-202 type binding cycles have a bounded walk", 202, 2, 2, 1),
   solverProbe("SOL-203 union size cannot overflow", 203, 4294967294, 4294967295, 0),
   solverProbe("SOL-207 resolved type encoding cannot overflow", 207, 2147483646, 2147483647, 0),
 ];

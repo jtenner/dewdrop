@@ -91,6 +91,16 @@ test "SOL-202 parents must stay in the variable arena" expect_trap "unreachable"
   let _ = solver.find_variable_root(0u32)
 }
 
+test "SOL-202 type binding cycles have a bounded walk" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let first = solver.fresh_variable()
+  let second = solver.fresh_variable()
+  solver.variable_bindings[0u32] = second
+  assert(solver.representative_type(first) == second, "valid binding chain before one-field mutation")
+  solver.variable_bindings[1u32] = first
+  let _ = solver.representative_type(first)
+}
+
 test "SOL-203 union size cannot overflow" expect_trap "unreachable" {
   let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
   let _ = solver.fresh_variable()
