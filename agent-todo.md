@@ -212,9 +212,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   in both parsers and downstream pattern handling. Current fixtures use a named
   payload followed by tuple destructuring. Extend imported/unqualified enum
   ambiguity and construction coverage while removing name-based backend rules.
-- [ ] Keep readable, typed Starshine FFI names through regeneration. Audit any
+- [x] Keep readable, typed Starshine FFI names through regeneration. Audit any
   remaining numbered references; test identity and signature agreement rather
   than merely renaming incompatible reference types.
+  Regeneration verifies all 472 selected signatures and keeps named carriers.
+  Constructor aliases preserve nullability. Invalid identity proofs and numbered
+  Dew references fail with diagnostics. The real linked FFI smoke runs in the
+  hardening lane. See [FFI notes](docs/research/ffi-carrier-identity-2026-09-07.md).
 
 ### Final checks for this work
 

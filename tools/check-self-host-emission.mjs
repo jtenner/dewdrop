@@ -116,6 +116,9 @@ if (compilerImports.wasi_snapshot_preview1?.fd_write) {
 }
 compiler = await WebAssembly.instantiate(module, compilerImports);
 compiler.exports.__dew_init?.();
+assert.equal(typeof compiler.exports.starshine_i32_const_smoke, "function", "typed FFI smoke export is missing");
+assert.notEqual(compiler.exports.starshine_i32_const_smoke(), null, "I32 instruction must return a non-null named carrier");
+console.log("typed Starshine FFI consumer smoke passed");
 async function compileSourceExports(fixture) {
   return compileProbeBytes(new TextEncoder().encode(fixture), "self_host_emission_probe_compile_source");
 }

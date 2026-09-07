@@ -6,6 +6,55 @@ import generate_starshine_ffi_consumer as generator
 
 
 class StarshineFfiConsumerTests(unittest.TestCase):
+    def test_constructor_alias_keeps_result_nullability(self) -> None:
+        rendered = generator.render_dew([self.binding(
+            "CodeSec::new", "() -> (ref null 176)",
+            results=(["ref", "null", "176"],),
+        )], "digest", {"StarshineFunctions": 176, "StarshineCodeSec": 176})
+        self.assertIn('-> NullableRef<StarshineCodeSec> = "CodeSec::new"', rendered)
+        self.assertNotIn('-> StarshineCodeSec = "CodeSec::new"', rendered)
+
+    def test_constructor_alias_cannot_change_physical_identity(self) -> None:
+        with self.assertRaisesRegex(ValueError, "constructor carrier mismatch for CodeSec::new"):
+            generator.render_dew([self.binding(
+                "CodeSec::new", "() -> (ref 177)", results=(["ref", "177"],),
+            )], "digest", {"StarshineFunctions": 177, "StarshineCodeSec": 176})
+
+    def test_carrier_probe_rejects_negative_indices(self) -> None:
+        assertion = generator.CarrierAssertion("StarshineValue", (
+            generator.CarrierProbe("new", "result", -1),
+        ))
+        with self.assertRaisesRegex(ValueError, "has no result -1 on new"):
+            generator.validate_carrier_assertions([
+                self.binding("new", "reference", results=(["ref", "12"],)),
+            ], (assertion,))
+
+    def test_empty_carrier_proof_is_a_clear_error(self) -> None:
+        with self.assertRaisesRegex(ValueError, "no probes for StarshineValue"):
+            generator.validate_carrier_assertions([], (
+                generator.CarrierAssertion("StarshineValue", ()),
+            ))
+
+    def test_alias_cannot_replace_an_earlier_physical_identity(self) -> None:
+        bindings = [self.binding("first", "reference", results=(["ref", "12"],)),
+                    self.binding("second", "reference", results=(["ref", "13"],))]
+        assertions = tuple(generator.CarrierAssertion("StarshineValue", (
+            generator.CarrierProbe(name, "result", 0),
+        )) for name in ("first", "second"))
+        with self.assertRaisesRegex(ValueError, "conflicting carrier alias StarshineValue: 12 versus 13"):
+            generator.validate_carrier_assertions(bindings, assertions)
+
+    def test_duplicate_export_proofs_are_not_silently_replaced(self) -> None:
+        bindings = [self.binding("new", "reference", results=(["ref", str(index)],))
+                    for index in (12, 13)]
+        with self.assertRaisesRegex(ValueError, "duplicate carrier export new"):
+            generator.validate_carrier_assertions(bindings, ())
+
+    def test_typed_reference_indices_must_fit_u32(self) -> None:
+        for index in ("-1", "4294967296"):
+            with self.subTest(index=index), self.assertRaisesRegex(ValueError, "outside U32"):
+                generator.reference_index(["ref", index])
+
     def test_public_signatures_use_stable_carrier_names(self) -> None:
         bindings = [self.binding(
             "CodeSec::new", "((ref 176)) -> (ref 176)",
@@ -69,6 +118,12 @@ class StarshineFfiConsumerTests(unittest.TestCase):
         generator.validate_source_bindings(selected, [("probe.dew", "StarshineFfi.ffi_present()")])
         with self.assertRaisesRegex(ValueError, r"probe.dew:2:.*ffi_missing.*ffi-used.json"):
             generator.validate_source_bindings(selected, [("probe.dew", "\nStarshineFfi.ffi_missing()")])
+
+    def test_numbered_carrier_reports_its_source_location(self) -> None:
+        with self.assertRaisesRegex(ValueError, r"smoke.dew:2: numbered FFI carrier StarshineRef176"):
+            generator.validate_source_bindings([], [
+                ("smoke.dew", "\npub fn probe() -> StarshineRef176 {}"),
+            ])
 
     def test_fingerprint_prefix_changes_with_signature(self) -> None:
         first = generator.fingerprint_prefix(

@@ -80,7 +80,9 @@ self_host_measure 'hardening type-query request' \
 mapfile -t compiler_sources < <(
   find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' ! -name main.dew | sort
 )
-test_args=("$work/tests.raw.wasm" self_host.compiler self_host.compiler ffi.dew self_host/starshine/ffi.dew)
+test_args=("$work/tests.raw.wasm" self_host.compiler
+  self_host.compiler ffi.dew self_host/starshine/ffi.dew
+  self_host.compiler ffi_smoke.dew self_host/starshine/smoke.dew)
 for source in "${compiler_sources[@]}" \
   self_host/compiler/compiler_runtime_assertions_test.dew \
   self_host/compiler/semantic_wasm_body_plan_test.dew \

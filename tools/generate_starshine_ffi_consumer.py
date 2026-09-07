@@ -325,12 +325,15 @@ def reference_index(value: SExpr) -> int:
         and isinstance(value[1], str)
     ):
         try:
-            return int(value[1])
+            index = int(value[1])
         except ValueError as error:
             raise ValueError(
                 f"compile-time carrier assertion found a non-numeric reference: "
                 f"{render_wat_type(value)}"
             ) from error
+        if not 0 <= index <= 0xFFFFFFFF:
+            raise ValueError(f"typed reference index outside U32: {index}")
+        return index
     raise ValueError(
         "compile-time carrier assertion requires one typed reference, got "
         + render_wat_type(value)
@@ -341,9 +344,15 @@ def validate_carrier_assertions(
     bindings: list[ExportBinding],
     assertions: tuple[CarrierAssertion, ...] = CARRIER_ASSERTIONS,
 ) -> dict[str, int]:
-    by_name = {binding.export_name: binding for binding in bindings}
+    by_name: dict[str, ExportBinding] = {}
+    for binding in bindings:
+        if binding.export_name in by_name:
+            raise ValueError(f"duplicate carrier export {binding.export_name}")
+        by_name[binding.export_name] = binding
     aliases: dict[str, int] = {}
     for assertion in assertions:
+        if not assertion.probes:
+            raise ValueError(f"no probes for {assertion.alias}")
         observed: list[tuple[CarrierProbe, int]] = []
         for probe in assertion.probes:
             binding = by_name.get(probe.export_name)
@@ -355,7 +364,7 @@ def validate_carrier_assertions(
             values = (
                 binding.parameters if probe.location == "parameter" else binding.results
             )
-            if probe.location not in ("parameter", "result") or probe.index >= len(values):
+            if probe.location not in ("parameter", "result") or not 0 <= probe.index < len(values):
                 raise ValueError(
                     "compile-time carrier assertion has no "
                     f"{probe.location} {probe.index} on {probe.export_name}"
@@ -369,6 +378,11 @@ def validate_carrier_assertions(
                 "compile-time carrier assertion failed for "
                 f"{assertion.alias}: expected ref {expected}, but "
                 f"{probe.export_name} {probe.location} {probe.index} uses ref {actual}"
+            )
+        if assertion.alias in aliases and aliases[assertion.alias] != expected:
+            raise ValueError(
+                f"conflicting carrier alias {assertion.alias}: "
+                f"{aliases[assertion.alias]} versus {expected}"
             )
         aliases[assertion.alias] = expected
     return aliases
@@ -478,6 +492,13 @@ def validate_source_bindings(selected: list[ExportBinding], sources: list[tuple[
     """Catch a missing compiler FFI declaration before the native compiler build."""
     declared = {binding.internal_name for binding in selected}
     for path, source in sources:
+        numbered = re.search(r"\bStarshineRef[0-9]+\b", source)
+        if numbered is not None:
+            line = source.count("\n", 0, numbered.start()) + 1
+            raise ValueError(
+                f"{path}:{line}: numbered FFI carrier {numbered[0]} is not allowed; "
+                "use a signature-checked named carrier"
+            )
         for match in re.finditer(r"\bStarshineFfi\.(ffi_[A-Za-z0-9_]+)\b", source):
             if match[1] not in declared:
                 line = source.count("\n", 0, match.start()) + 1
@@ -596,7 +617,8 @@ def render_dew(
             if member == "new" and alias in carrier_aliases:
                 if reference_index(binding.results[0]) != carrier_aliases[alias]:
                     raise ValueError(f"constructor carrier mismatch for {binding.export_name}")
-                result = alias
+                value = binding.results[0]
+                result = f"NullableRef<{alias}>" if value[1] == "null" else alias
         prefix = f"  fn {binding.internal_name}("
         suffix = f') -> {result} = "{binding.export_name}"'
         one_line = prefix + ", ".join(parameters) + suffix
@@ -691,7 +713,10 @@ def main() -> None:
         selected = select_bindings(available, used_data["exports"])
         validate_source_bindings(selected, [
             (path.relative_to(ROOT).as_posix(), path.read_text())
-            for path in sorted((ROOT / "self_host/compiler").glob("*.dew"))
+            for path in sorted([
+                *(ROOT / "self_host/compiler").glob("*.dew"),
+                *(ROOT / "self_host/starshine").glob("*.dew"),
+            ])
         ])
     except ValueError as error:
         raise SystemExit(str(error)) from error
