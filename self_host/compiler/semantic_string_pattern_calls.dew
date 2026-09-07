@@ -1,0 +1,276 @@
+// String pattern comparisons use cached subjects, not a second evaluation of
+// the match expression. Keep their Bool result separate from the literal value.
+struct SelfHostStringPatternCallFailure {
+  context: String
+  entity: U64
+  expected: SelfHostWasmBodyCarrier
+  actual: SelfHostWasmBodyCarrier
+}
+
+fn self_host_string_pattern_call_failure(
+  context: String,
+  entity: U64,
+  expected: SelfHostWasmBodyCarrier,
+  actual: SelfHostWasmBodyCarrier,
+) -> Option<SelfHostStringPatternCallFailure> {
+  Option::Some(SelfHostStringPatternCallFailure::{
+    context: context
+    entity: entity
+    expected: expected
+    actual: actual
+  })
+}
+
+fn self_host_string_pattern_expression_is_owned(body: SelfHostPlannedBodyLowering, expression: U32) -> Bool {
+  expression >= body.expressions.start && expression - body.expressions.start < body.expressions.length
+}
+
+fn self_host_assert_string_pattern_call_span(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, span: SelfHostHirSpan, length: U32, arena: U32) -> Unit {
+  let _ = self_host_assert_compiler_invariant_with_failure(self_host_array_span_is_valid(span.start, span.length, length), SelfHostInvariantFailure::{
+    code: 101u32
+    phase: 6u32
+    module_id: module_.module_id
+    declaration: body.declaration
+    body: body.body
+    expression: 4294967295u32
+    expected: u32_into_u64(length)
+    actual: u32_into_u64(span.start)
+    // High word: span length. Low word: 1 = expressions, 2 = patterns.
+    detail: u32_into_u64(span.length) * 4294967296u64 + u32_into_u64(arena)
+  }, "String pattern call owner spans must be valid")
+}
+
+fn self_host_assert_string_pattern_call_spans(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Unit {
+  self_host_assert_string_pattern_call_span(module_, body, body.expressions, module_.expressions.length(), 1u32)
+  self_host_assert_string_pattern_call_span(module_, body, body.patterns, module_.patterns.length(), 2u32)
+}
+
+fn self_host_assert_string_pattern_expression(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32) -> Unit {
+  let _ = self_host_assert_compiler_invariant_with_failure(self_host_string_pattern_expression_is_owned(body, expression), SelfHostInvariantFailure::{
+    code: 102u32
+    phase: 6u32
+    module_id: module_.module_id
+    declaration: body.declaration
+    body: body.body
+    expression: expression
+    expected: u32_into_u64(body.expressions.start)
+    actual: u32_into_u64(expression)
+    detail: u32_into_u64(body.expressions.length)
+  }, "String pattern literal must belong to its body")
+}
+
+fn self_host_body_build_string_pattern_calls(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  specialization: U32,
+  calls: Array<SelfHostPhysicalCallPlan>,
+  evaluations: Array<U32>,
+  operands: Array<SelfHostPhysicalOperandSource>,
+) -> Unit {
+  self_host_assert_string_pattern_call_spans(module_, body)
+  let _ = while 0u32 {
+    offset => if offset < body.patterns.length {
+      let pattern_id = body.patterns.start + offset
+      let pattern = self_host_planned_pattern_identity(module_.patterns[pattern_id])
+      if !pattern.elided {
+        match pattern.source {
+          SelfHostHirPattern::LiteralPattern(expression, _) => {
+            self_host_assert_string_pattern_expression(module_, body, expression)
+            let literal = self_host_planned_expression_at(module_.expressions, expression)
+            if literal.kind is SelfHostPlannedExpressionKind::PlannedStringConst(_) {
+              match literal.call_target {
+                SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+                  // An exact call map wins. A non-generic call may use its plain
+                  // function. Never select the first specialization or a name.
+                  let logical = match self_host_linked_call_index_get(link.call_index, body.body, specialization, expression) {
+                    Option::Some(value) => value
+                    Option::None => if arguments.length == 0u32 {
+                      match link.call_index.plain_functions.get(declaration) {
+                        Option::Some(value) => value
+                        Option::None => 4294967295u32
+                      }
+                    } else {
+                      4294967295u32
+                    }
+                  }
+                  let (target_specialization, physical_function) = if logical < link.functions.length() {
+                    let target = self_host_planned_program_wasm_function_identity(link.functions[logical])
+                    if target.function_index == logical {
+                      (target.specialization, self_host_linked_physical_function_index(logical))
+                    } else {
+                      (4294967295u32, 4294967295u32)
+                    }
+                  } else {
+                    // Retain the missing target in the recipe for BOD-607.
+                    (4294967295u32, 4294967295u32)
+                  }
+                  let evaluation_start = evaluations.length()
+                  let operand_start = operands.length()
+                  evaluations.push(expression)
+                  operands.push(SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(pattern_id))
+                  operands.push(SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(expression))
+                  calls.push(SelfHostPhysicalCallPlan::{
+                    expression: expression
+                    declaration: declaration
+                    specialization: target_specialization
+                    physical_function: physical_function
+                    emits_call: true
+                    evaluations: SelfHostHirSpan::{
+                      start: evaluation_start
+                      length: 1u32
+                    }
+                    operands: SelfHostHirSpan::{
+                      start: operand_start
+                      length: 2u32
+                    }
+                  })
+                }
+                _ => {}
+              }
+            }
+          }
+          _ => {}
+        }
+      }
+      continue offset + 1u32
+    } else {
+      break ()
+    }
+  }
+}
+
+fn self_host_check_string_pattern_call(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  pattern_id: U32,
+  expression: U32,
+  call: SelfHostPhysicalCallPlan,
+) -> Option<SelfHostStringPatternCallFailure> {
+  let unknown = SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
+  let reference = SelfHostWasmBodyCarrier::EqRefBodyCarrier
+  let body = match self_host_body_lookup_for_plan(module_, plan) {
+    Option::Some(value) => value
+    Option::None => return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+  }
+  if !self_host_array_span_is_valid(body.patterns.start, body.patterns.length, module_.patterns.length()) ||
+    !self_host_array_span_is_valid(body.expressions.start, body.expressions.length, module_.expressions.length()) {
+    return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+  }
+  if pattern_id < body.patterns.start || pattern_id - body.patterns.start >= body.patterns.length || !self_host_string_pattern_expression_is_owned(body, expression) {
+    return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+  }
+  match module_.patterns[pattern_id].source {
+    SelfHostHirPattern::LiteralPattern(value, _) => if value != expression {
+      return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+    }
+    _ => return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+  }
+  let target = match self_host_linked_physical_function(link, call.physical_function) {
+    Option::Some(value) => value
+    Option::None => return self_host_string_pattern_call_failure("call target is missing", call.declaration, unknown, unknown)
+  }
+  let declaration = match module_.expressions[expression].call_target {
+    SelfHostBasicCallTarget::SelectedBasicCallTarget(value, _) => value
+    _ => 0u64
+  }
+  if call.expression != expression || call.declaration != declaration || target.declaration != declaration || target.specialization != call.specialization {
+    return self_host_string_pattern_call_failure("planned and emitted call target differ", call.declaration, unknown, unknown)
+  }
+  if !call.emits_call {
+    return self_host_string_pattern_call_failure("erased call value became an operand", call.declaration, reference, unknown)
+  }
+  if call.evaluations.length != 1u32 || call.evaluations.start >= plan.call_evaluations.length() {
+    return self_host_string_pattern_call_failure("call evaluation schedule mismatch", call.declaration, unknown, unknown)
+  }
+  if plan.call_evaluations[call.evaluations.start] != expression {
+    return self_host_string_pattern_call_failure("call evaluation schedule mismatch", call.declaration, unknown, unknown)
+  }
+  let parameter_count = self_host_linked_physical_function_parameter_count(link, call.physical_function)
+  if call.operands.length != 2u32 || parameter_count != 2u32 {
+    return self_host_string_pattern_call_failure("call argument count mismatch", u32_into_u64(parameter_count), unknown, unknown)
+  }
+  if call.operands.start > plan.call_operands.length() || call.operands.length > plan.call_operands.length() - call.operands.start {
+    return self_host_string_pattern_call_failure("call argument has no physical value plan", call.declaration, unknown, unknown)
+  }
+  match plan.call_operands[call.operands.start] {
+    SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(value) => if value != pattern_id {
+      return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+    }
+    _ => return self_host_string_pattern_call_failure("call receiver count mismatch", 0u64, reference, unknown)
+  }
+  match plan.call_operands[call.operands.start + 1u32] {
+    SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(value) => if value != expression {
+      return self_host_string_pattern_call_failure("call argument has no physical value plan", 1u64, reference, unknown)
+    }
+    _ => return self_host_string_pattern_call_failure("call argument has no physical value plan", 1u64, reference, unknown)
+  }
+  if !self_host_linked_declaration_has_receiver(link, declaration) {
+    return self_host_string_pattern_call_failure("call receiver count mismatch", call.declaration, reference, unknown)
+  }
+  let literal = match self_host_body_plan_expression(plan, expression) {
+    Option::Some(value) => value.carrier
+    Option::None => unknown
+  }
+  let subject = self_host_body_carrier_from_shape(module_.patterns[pattern_id].shape)
+  let _ = while 0u32 {
+    index => if index < 2u32 {
+      let expected = self_host_body_carrier_from_shape(self_host_linked_physical_function_parameter_shape(link, call.physical_function, index))
+      let actual = if index == 0u32 {
+        subject
+      } else {
+        literal
+      }
+      if !(actual is SelfHostWasmBodyCarrier::EqRefBodyCarrier) || !self_host_body_carrier_equal(expected, actual) {
+        return self_host_string_pattern_call_failure("call argument carrier mismatch", u32_into_u64(index), expected, actual)
+      }
+      continue index + 1u32
+    } else {
+      break ()
+    }
+  }
+  let result = self_host_body_function_result_carrier(link, target.function_index)
+  if self_host_linked_physical_function_result_count(link, call.physical_function) != 1u32 || !(result is SelfHostWasmBodyCarrier::I32BodyCarrier) {
+    return self_host_string_pattern_call_failure("call result", call.declaration, SelfHostWasmBodyCarrier::I32BodyCarrier, result)
+  }
+  Option::None
+}
+
+fn self_host_verify_body_string_pattern_calls(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+) -> Unit {
+  self_host_assert_string_pattern_call_spans(module_, body)
+  let _ = while 0u32 {
+    offset => if offset < body.patterns.length {
+      let pattern_id = body.patterns.start + offset
+      let pattern = self_host_planned_pattern_identity(module_.patterns[pattern_id])
+      if !pattern.elided {
+        match pattern.source {
+          SelfHostHirPattern::LiteralPattern(expression, _) => {
+            self_host_assert_string_pattern_expression(module_, body, expression)
+            let literal = self_host_planned_expression_at(module_.expressions, expression)
+            if literal.kind is SelfHostPlannedExpressionKind::PlannedStringConst(_) && literal.call_target is SelfHostBasicCallTarget::SelectedBasicCallTarget(_, _) {
+              let failure = match self_host_body_call_plan(plan, expression) {
+                Option::Some(call) => self_host_check_string_pattern_call(link, plan, module_, pattern_id, expression, call)
+                Option::None => self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, SelfHostWasmBodyCarrier::EqRefBodyCarrier, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+              }
+              match failure {
+                Option::Some(value) => self_host_body_add_diagnostic(diagnostics, plan, module_, expression, value.entity, value.context, value.expected, value.actual)
+                Option::None => {}
+              }
+            }
+          }
+          _ => {}
+        }
+      }
+      continue offset + 1u32
+    } else {
+      break ()
+    }
+  }
+}

@@ -72,6 +72,117 @@ test "String literal patterns retain imported Eq and their String value type" {
     }
   }
   assert(literals == 1u32, "one String literal")
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 0u32, "String pattern physical plan must be valid")
+  let mut recipes = 0u32
+  for body in physical.bodies {
+    if body.module_id == module_.module_id {
+      for call in body.calls {
+        if module_.expressions[call.expression].kind is SelfHostPlannedExpressionKind::PlannedStringConst(_) {
+          assert(call.operands.length == 2u32, "pattern equality has a subject and literal operand")
+          assert(call.evaluations.length == 1u32, "the cached subject must not be evaluated again")
+          assert(body.call_evaluations[call.evaluations.start] == call.expression, "only the literal is evaluated at the pattern")
+          let pattern_id = match body.call_operands[call.operands.start] {
+            SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(value) => value
+            _ => {
+              assert(false, "first operand must be the cached pattern subject")
+              4294967295u32
+            }
+          }
+          self_host_test_string_pattern_call_mutations(link, body, module_, pattern_id, call)
+          recipes = recipes + 1u32
+        }
+      }
+    }
+  }
+  assert(recipes == 1u32, "String pattern must have one physical call recipe")
+}
+
+fn self_host_test_string_pattern_call_error(
+  link: SelfHostPlannedProgramWasmGCLink,
+  body: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  pattern: U32,
+  call: SelfHostPhysicalCallPlan,
+  code: U32,
+) -> Unit {
+  match self_host_check_string_pattern_call(link, body, module_, pattern, call.expression, call) {
+    Option::Some(failure) => assert(self_host_body_diagnostic_code(failure.context) == code, failure.context)
+    Option::None => assert(false, "a one-field pattern recipe mutation must fail")
+  }
+}
+
+fn self_host_test_string_pattern_call_mutations(
+  link: SelfHostPlannedProgramWasmGCLink,
+  body: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  pattern: U32,
+  call: SelfHostPhysicalCallPlan,
+) -> Unit {
+  let missing = SelfHostPhysicalCallPlan::{
+    expression: call.expression
+    declaration: call.declaration
+    specialization: call.specialization
+    physical_function: 4294967295u32
+    emits_call: call.emits_call
+    evaluations: call.evaluations
+    operands: call.operands
+  }
+  self_host_test_string_pattern_call_error(link, body, module_, pattern, missing, 607u32)
+  let wrong_target = SelfHostPhysicalCallPlan::{
+    expression: call.expression
+    declaration: 0u64
+    specialization: call.specialization
+    physical_function: call.physical_function
+    emits_call: call.emits_call
+    evaluations: call.evaluations
+    operands: call.operands
+  }
+  self_host_test_string_pattern_call_error(link, body, module_, pattern, wrong_target, 701u32)
+  let short_recipe = SelfHostPhysicalCallPlan::{
+    expression: call.expression
+    declaration: call.declaration
+    specialization: call.specialization
+    physical_function: call.physical_function
+    emits_call: call.emits_call
+    evaluations: call.evaluations
+    operands: SelfHostHirSpan::{
+      start: call.operands.start
+      length: 1u32
+    }
+  }
+  self_host_test_string_pattern_call_error(link, body, module_, pattern, short_recipe, 703u32)
+
+  let evaluation = body.call_evaluations[call.evaluations.start]
+  body.call_evaluations[call.evaluations.start] = 4294967295u32
+  self_host_test_string_pattern_call_error(link, body, module_, pattern, call, 702u32)
+  body.call_evaluations[call.evaluations.start] = evaluation
+
+  let subject = body.call_operands[call.operands.start]
+  body.call_operands[call.operands.start] = SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(4294967295u32)
+  self_host_test_string_pattern_call_error(link, body, module_, pattern, call, 704u32)
+  body.call_operands[call.operands.start] = subject
+
+  let target = match self_host_linked_physical_function(link, call.physical_function) {
+    Option::Some(value) => value
+    Option::None => {
+      assert(false, "valid pattern target must be present")
+      return
+    }
+  }
+  let fragment_module = self_host_body_fragment_module(link, target.module_index)
+  let fragment = self_host_body_function_fragment(fragment_module, target.fragment_index)
+  let parameter = fragment_module.function_value_types[fragment.parameters.start]
+  fragment_module.function_value_types[fragment.parameters.start] = SelfHostPlannedWasmValueType::WasmI32Value
+  self_host_test_string_pattern_call_error(link, body, module_, pattern, call, 705u32)
+  fragment_module.function_value_types[fragment.parameters.start] = parameter
+
+  let result = fragment_module.function_value_types[fragment.results.start]
+  fragment_module.function_value_types[fragment.results.start] = SelfHostPlannedWasmValueType::WasmNullableEqRefValue
+  self_host_test_string_pattern_call_error(link, body, module_, pattern, call, 709u32)
+  fragment_module.function_value_types[fragment.results.start] = result
+
+  assert(self_host_check_string_pattern_call(link, body, module_, pattern, call.expression, call) is Option::None, "restoring each mutation must restore the valid recipe")
 }
 
 test "String literal patterns report a missing imported Eq implementation" {

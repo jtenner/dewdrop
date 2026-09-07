@@ -54,6 +54,7 @@ pub struct SelfHostPlannedPhysicalScratchCarrier {
 pub enum SelfHostPhysicalOperandSource {
   ExplicitArgumentPhysicalOperand(U32)
   ReceiverPhysicalOperand(U32)
+  PatternSubjectPhysicalOperand(U32)
   TraitEvidencePhysicalOperand(U32)
   ClosureEnvironmentPhysicalOperand(U32)
   RuntimeContextPhysicalOperand(U32)
@@ -106,6 +107,9 @@ fn self_host_body_diagnostic_code(context: String) -> U32 {
   }
   if context == "planned and emitted call target differ" {
     return 701u32
+  }
+  if context == "call evaluation schedule mismatch" {
+    return 702u32
   }
   if context == "call argument count mismatch" {
     return 703u32
@@ -4481,6 +4485,8 @@ fn self_host_body_call_operand_expression(
   match source {
     SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(value) => value
     SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(value) => value
+    // A cached pattern subject is not a source expression to evaluate again.
+    SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(_) => 4294967295u32
     SelfHostPhysicalOperandSource::TraitEvidencePhysicalOperand(value) => value
     SelfHostPhysicalOperandSource::ClosureEnvironmentPhysicalOperand(value) => value
     SelfHostPhysicalOperandSource::RuntimeContextPhysicalOperand(value) => value
@@ -6672,6 +6678,10 @@ fn self_host_plan_one_physical_body(
     call_evaluations,
     call_operands,
   )
+  self_host_body_build_string_pattern_calls(
+    link, module_, body, linked_function.specialization,
+    calls, call_evaluations, call_operands,
+  )
   let scratches = self_host_body_empty_scratches()
   let mut scratch_plan_index = 0u32
   while scratch_plan_index {
@@ -7915,6 +7925,7 @@ fn self_host_verify_one_physical_body(
     body,
     diagnostics,
   )
+  self_host_verify_body_string_pattern_calls(link, plan, module_, body, diagnostics)
   let mut local_offset = 0u32
   let _ = while local_offset {
     current => if current < body.locals.length {

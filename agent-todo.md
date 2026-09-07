@@ -114,8 +114,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   can be removed. See the [String log](docs/research/string-library-algorithms-2026-09-06.md).
   String pattern inference now selects the ordinary Eq method and keeps the
   literal's String type. Lowering and specialization retain that evidence.
-  Physical call recipes and emission still need it. See the
+  Self-host physical call recipes now retain the cached subject and literal and
+  verify target identity, operand types, and result. Both emitters still need to
+  consume the exact target. See the
   [pattern log](docs/research/string-pattern-equality-2026-09-06.md).
+  See also the [recipe checks](docs/research/string-pattern-call-recipes-2026-09-07.md).
 - [ ] Convert remaining host-operation builtins into foreign declarations.
   Keep generated Dew types, provider metadata, and emitted signatures in sync.
 - [ ] Remove all remaining standard-module path, declaration-number, and name
