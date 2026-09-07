@@ -18,6 +18,19 @@ CORE_OPERATIONS = (
 
 
 class ArrayBuiltinPolicyTests(unittest.TestCase):
+    def test_array_specialization_has_no_runtime_lookup_or_erased_adapter(self):
+        source = (ROOT / "self_host/compiler/semantic_program_specialization.dew").read_text()
+        self.assertFalse("dew_array_" in source,
+                         "Array specialization must use selected library declarations")
+        source = (ROOT / "self_host/compiler/starshine_runtime_emit.dew").read_text()
+        self.assertFalse("unit_array_adapter" in source or "erased_array_adapter" in source,
+                         "Unit storage must use the checked raw-array contract")
+
+    def test_native_inline_builtins_do_not_inspect_array_wrappers(self):
+        source = (ROOT / "src/backend/starshine_code.mbt").read_text()
+        self.assertFalse("dew_array_" in source,
+                         "Native inline instructions must not inspect Array fields")
+
     def test_array_probes_use_declared_library_bodies(self):
         for path in ("self_host/compiler/semantic_physical_specialization_test.dew",
                      "self_host/compiler/semantic_program_link_plan_test.dew"):

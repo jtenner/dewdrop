@@ -796,8 +796,6 @@ fn starshine_signed_i16_constant(value : UInt64) -> Int {
 fn starshine_inline_builtin_instructions(
   name : Bytes,
   test_assert_function_index : Int,
-  array_runtime_base : Int,
-  array_wrapper_type : Int,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   match starshine_conversion_builtin_instructions(name) {
     Some(instructions) => return Ok(instructions)
@@ -837,22 +835,6 @@ fn starshine_inline_builtin_instructions(
     Ok([@lib.Instruction::unreachable_()])
   } else if name == b"dew_debug_ignore" {
     Ok([@lib.Instruction::drop()])
-  } else if name == b"dew_array_backing_length_i32" ||
-    name == b"dew_array_backing_length_ref" {
-    if array_runtime_base < 0 || array_wrapper_type < 0 {
-      return Err(UnsupportedBuiltin(name))
-    }
-    let carrier = if name == b"dew_array_backing_length_i32" { 0 } else { 5 }
-    let array_type = array_runtime_base + carrier
-    Ok([
-      starshine_match_cast(array_wrapper_type),
-      @lib.Instruction::struct_get(
-        @lib.TypeIdx::new(array_wrapper_type.reinterpret_as_uint()),
-        @lib.U32::new(0U),
-      ),
-      starshine_match_cast(array_type),
-      @lib.Instruction::array_len(),
-    ])
   } else if name == b"unsafe.bitcast" {
     Ok([])
   } else if name == b"ref_null" {
@@ -913,15 +895,6 @@ fn starshine_finish_call(
   let test_assert_function_index = planned.runtime_function_index(
     b"dew_test_assert",
   )
-  let array_wrapper_type = match
-    starshine_emitted_type_index(
-      planned,
-      None,
-      @semantic.standard_array_type_declaration(),
-    ) {
-    Some(value) => value
-    None => -1
-  }
   let function_ = match planned.function_of(declaration) {
     Some(function_) => function_
     None => return Err(MissingFunction(declaration))
@@ -942,8 +915,6 @@ fn starshine_finish_call(
       starshine_inline_builtin_instructions(
         function_.direct_builtin,
         test_assert_function_index,
-        starshine_fixed_array_runtime_base(planned),
-        array_wrapper_type,
       ) {
       Ok(instructions) => append_starshine_instructions(output, instructions)
       Err(error) => return Err(error)
@@ -955,8 +926,6 @@ fn starshine_finish_call(
           starshine_inline_builtin_instructions(
             name,
             test_assert_function_index,
-            starshine_fixed_array_runtime_base(planned),
-            array_wrapper_type,
           ) {
           Ok(instructions) =>
             append_starshine_instructions(output, instructions)
@@ -1184,15 +1153,6 @@ fn starshine_finish_program_call(
   let test_assert_function_index = planned.module_runtime_function_index(
     caller_module_index, b"dew_test_assert",
   )
-  let array_wrapper_type = match
-    starshine_emitted_type_index(
-      caller,
-      Some(planned),
-      @semantic.standard_array_type_declaration(),
-    ) {
-    Some(value) => value
-    None => -1
-  }
   let caller_specialization_abi_key = match generic_specialization {
     Some(value) => value.specialization_abi_key
     None => ""
@@ -1330,8 +1290,6 @@ fn starshine_finish_program_call(
       starshine_inline_builtin_instructions(
         function_.direct_builtin,
         test_assert_function_index,
-        planned.fixed_array_type_base,
-        array_wrapper_type,
       ) {
       Ok(instructions) => append_starshine_instructions(output, instructions)
       Err(error) => return Err(error)
@@ -1343,8 +1301,6 @@ fn starshine_finish_program_call(
           starshine_inline_builtin_instructions(
             name,
             test_assert_function_index,
-            planned.fixed_array_type_base,
-            array_wrapper_type,
           ) {
           Ok(instructions) =>
             append_starshine_instructions(output, instructions)

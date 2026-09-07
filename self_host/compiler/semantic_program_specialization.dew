@@ -1637,153 +1637,7 @@ fn self_host_program_specialization_scan_one_body(
                 }
               }
             }
-            let unresolved_array_call = if resolved_nominal_call {
-              false
-            } else if unresolved_name == "make" {
-              self_host_u32_greater(arguments.length, 1u32)
-            } else if unresolved_name == "set_unchecked" {
-              self_host_u32_greater(arguments.length, 1u32)
-            } else {
-              false
-            }
-            let unresolved_array_capacity = if resolved_nominal_call {
-              false
-            } else if unresolved_name == "with_capacity" {
-              self_host_u32_greater(arguments.length, 0u32)
-            } else {
-              false
-            }
-            let unresolved_array_iter = if resolved_nominal_call {
-              false
-            } else if unresolved_name == "iter" {
-              self_host_u32_equal(arguments.length, 0u32)
-            } else {
-              false
-            }
-            let unresolved_array_operation = if unresolved_array_call {
-              true
-            } else if unresolved_array_capacity {
-              true
-            } else {
-              unresolved_array_iter
-            }
-            if unresolved_array_operation {
-              let mut array_search_module_index = 0u32
-              let _ = while array_search_module_index {
-                current_module => if current_module < lowering.modules.length() {
-                  let candidate_module = self_host_planned_module_lowering_identity(
-                    lowering.modules[current_module],
-                  )
-                  let functions = self_host_planned_module_functions_identity(
-                    candidate_module.functions,
-                  )
-                  let mut array_module = false
-                  let mut array_callable_index = 0u32
-                  let _ = while array_callable_index {
-                    current => if current < functions.callables.length() {
-                      let candidate_callable = self_host_planned_callable_identity(
-                        functions.callables[current],
-                      )
-                      match candidate_callable.kind {
-                        SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if name.equals(
-                          b"dew_array_iter",
-                        ) {
-                          array_module = true
-                        }
-                        _ => {}
-                      }
-                      continue current + 1u32
-                    } else {
-                      break self_host_semantic_unit()
-                    }
-                  }
-                  if array_module {
-                  let mut callable_index = 0u32
-                  let _ = while callable_index {
-                    candidate => if candidate < self_host_program_specialization_callable_count(
-                      candidate_module,
-                    ) {
-                      let callable = self_host_program_specialization_callable_at(
-                        candidate_module,
-                        candidate,
-                      )
-                      let candidate_name = if unresolved_array_capacity {
-                        "array_with_capacity"
-                      } else {
-                        unresolved_name
-                      }
-                      if callable.name.equals(candidate_name.as_bytes()) {
-                        let mut candidate_shape = SelfHostPlannedValueShape::GenericPlannedValueShape
-                        if unresolved_array_capacity || unresolved_array_iter {
-                          match self_host_program_specialization_receiver_type_argument_shape(
-                            module_,
-                            caller,
-                            expression,
-                            0u32,
-                          ) {
-                            Option::Some(shape) => {
-                              candidate_shape = shape
-                            }
-                            Option::None => {
-                              if self_host_u32_greater(
-                                caller_shapes.length,
-                                0u32,
-                              ) {
-                                candidate_shape = shapes[caller_shapes.start]
-                              }
-                            }
-                          }
-                        } else {
-                          let argument_index = module_.expression_children[
-                            self_host_u32_add(arguments.start, 1u32)
-                          ]
-                          let argument_expression = module_.expressions[
-                            argument_index
-                          ]
-                          candidate_shape = self_host_program_specialization_argument_shape(
-                            module_,
-                            caller,
-                            caller_shapes,
-                            shapes,
-                            argument_expression.type_,
-                          )
-                        }
-                        let request = self_host_program_specialization_add_request_at_call(
-                          requests,
-                          shapes,
-                          request_head_by_declaration,
-                          request_next,
-                          callable.declaration,
-                          [candidate_shape],
-                          [], body.body, expression_index,
-                        )
-                        self_host_program_specialization_add_reachable(
-                          reachable,
-                          reachable_seen,
-                          callable.declaration,
-                        )
-                        self_host_program_specialization_record_call(
-                          calls,
-                          body.body,
-                          caller_specialization,
-                          expression_index,
-                          callable.declaration,
-                          request,
-                        )
-                        break self_host_semantic_unit()
-                      }
-                      continue candidate + 1u32
-                    } else {
-                      break self_host_semantic_unit()
-                    }
-                  }
-                }
-                                continue current_module + 1u32
-                } else {
-                  break self_host_semantic_unit()
-                }
-              }
-            }
+
           }
           _ => {}
         }
@@ -1972,16 +1826,6 @@ fn self_host_program_specialization_scan_reachable_declaration(
   }
 }
 
-// Transitional storage adapters for the remaining legacy runtime ABI. These
-// are builtin target contracts, never source declaration names. Unit remains
-// erased in the public signature; a separate Ref request owns the storage ABI.
-fn self_host_legacy_array_unit_adapter(name: Bytes) -> Bool {
-  name.equals(b"dew_array_push") ||
-  name.equals(b"dew_array_set_unchecked") ||
-  name.equals(b"dew_array_get_unchecked") ||
-  name.equals(b"dew_array_iter_next")
-}
-
 fn self_host_program_specialization_scan_request(
   lowering: SelfHostPlannedProgramLowering,
   request_index: U32,
@@ -2013,18 +1857,6 @@ fn self_host_program_specialization_scan_request(
         request.declaration,
       ) {
         Option::Some(callable) => {
-          match callable.kind {
-            SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if
-              self_host_legacy_array_unit_adapter(name) &&
-              request.shapes.length == 1u32 &&
-              shapes[request.shapes.start] is SelfHostPlannedValueShape::UnitPlannedValueShape {
-              let _ = self_host_program_specialization_add_request(
-                requests, shapes, request_head_by_declaration, request_next,
-                request.declaration, [SelfHostPlannedValueShape::RefPlannedValueShape],
-              )
-            }
-            _ => {}
-          }
           match self_host_program_specialization_callable_body(callable) {
             Option::Some(body_id) => match self_host_program_specialization_body(
               module_, body_id,

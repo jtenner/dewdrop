@@ -1,7 +1,7 @@
 ///|
 test "raw unreachable emits one Wasm instruction" {
   assert_eq(
-    starshine_inline_builtin_instructions(b"unreachable", -1, -1, -1),
+    starshine_inline_builtin_instructions(b"unreachable", -1),
     Ok([@lib.Instruction::unreachable_()]),
   )
   let stages = backend_test_single_module_stages(

@@ -1,4 +1,14 @@
 ///|
+test "removed Array backing builtins report their exact target" {
+  for name in [b"dew_array_backing_length_i32", b"dew_array_backing_length_ref"] {
+    assert_eq(
+      starshine_inline_builtin_instructions(name, -1),
+      Err(UnsupportedBuiltin(name)),
+    )
+  }
+}
+
+///|
 test "Array literal storage rejects unresolved physical evidence" {
   let stages = backend_test_single_module_stages(
     28113UL, b"open dew.std.array\npub fn run() -> I32 {\n  let values = [1, 2]\n  values[0u32]\n}\n",

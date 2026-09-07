@@ -36820,9 +36820,7 @@ fn build_self_host_linked_i32_module(
               fragment_module,
               fragment,
             )
-            if !self_host_linked_append_unit_array_adapter(
-              link, functions, linked_function, fragment, name,
-            ) && !self_host_linked_append_runtime_function(
+            if !self_host_linked_append_runtime_function(
               link,
               functions,
               name,
