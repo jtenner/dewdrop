@@ -2,9 +2,11 @@
 """StringView algorithms use Dew bodies rather than compiler runtimes."""
 from pathlib import Path
 import unittest
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {"utf16_length": "utf16_length", "equals": "equals", "hash": "hash",
+NAMES = {"byte_length": "byte_length", "byte_at": "byte_at", "to_string": "to_string",
+         "utf16_length": "utf16_length", "equals": "equals", "hash": "hash",
          "find_raw": "find", "find_string_raw": "find_string",
          "starts_with": "starts_with", "starts_with_string": "starts_with_string",
          "ends_with": "ends_with", "ends_with_string": "ends_with_string"}
@@ -15,8 +17,8 @@ class StringViewAlgorithmPolicyTests(unittest.TestCase):
         source = (ROOT / "std/text_runtime.dew").read_text()
         for name in NAMES:
             with self.subTest(name=name):
-                self.assertNotRegex(source, rf"\bbuiltin\s+string_view_{name}\(")
-                self.assertRegex(source, rf"\bfn\s+string_view_{name}\(")
+                self.assertIsNone(re.search(rf"\bbuiltin\s+string_view_{name}\(", source), f"string_view_{name} must not be a builtin")
+                self.assertIsNotNone(re.search(rf"\bfn\s+string_view_{name}\(", source), f"string_view_{name} must have a Dew body")
 
     def test_compiler_dispatch_is_removed(self):
         for path in ("src/backend/starshine_text_runtime.mbt",
@@ -24,7 +26,15 @@ class StringViewAlgorithmPolicyTests(unittest.TestCase):
             source = (ROOT / path).read_text()
             for name in NAMES.values():
                 with self.subTest(path=path, name=name):
-                    self.assertNotIn(f'"dew_string_view_{name}"', source)
+                    self.assertFalse(f'"dew_string_view_{name}"' in source, f"{path}: obsolete StringView {name} dispatch")
+
+    def test_access_helpers_use_library_calls(self):
+        for path in ("std/ordering.dew", "std/text.dew",
+                     "self_host/compiler/semantic_physical_specialization_test.dew"):
+            source = (ROOT / path).read_text()
+            for name in ("byte_length", "byte_at", "to_string"):
+                with self.subTest(path=path, name=name):
+                    self.assertFalse(f"dew_string_view_{name}" in source, f"{path}: obsolete StringView access builtin")
 
 
 if __name__ == "__main__":

@@ -68,6 +68,19 @@ pub fn main(case: U32) -> I32 {
   } else if case == 7u32 {
     let nested = "!!λhello🌍??".view(2u32, 11u32).view(2u32, 9u32)
     view_result(nested.to_string() == "hello🌍" && nested.utf16_length() == 7u32 && nested.find_string("🌍") is Option::Some(5u32) && nested.starts_with_string("hello") && nested.ends_with_string("🌍"))
+  } else if case == 8u32 {
+    let view = "!!λ0123456789abcdef🌍??".view(2u32, 22u32).view(2u32, 20u32)
+    let text = view.to_string()
+    view_result(view.byte_length() == 20u32 && view.byte_at(0u32) == 48u8 && view.byte_at(15u32) == 102u8 && view.byte_at(16u32) == 240u8 && view.byte_at(19u32) == 141u8 && text == "0123456789abcdef🌍" && text.byte_length() == view.byte_length() && "".view(0u32, 0u32).to_string() == "")
+  } else if case == 9u32 {
+    "!x?".view(1u32, 1u32).byte_at(1u32)
+    0i32
+  } else if case == 10u32 {
+    "!x?".view(1u32, 1u32).byte_at(4294967295u32)
+    0i32
+  } else if case == 11u32 {
+    "!x?".view(1u32, 0u32).byte_at(0u32)
+    0i32
   } else {
     unreachable()
   }

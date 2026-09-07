@@ -413,14 +413,14 @@ test "primitive inherent methods preserve their logical receiver" {
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
 }
 
-test "string view builtin results keep their reference carrier" {
+test "string view library results keep their reference carrier" {
   let fragments = self_host_physical_test_fragments(
-    b"builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin string_view_byte_length(value: StringView) -> U32 = \"dew_string_view_byte_length\"\nimpl StringView {\n  fn byte_length(self) -> U32 {\n    string_view_byte_length(self)\n  }\n}\npub fn run(value: String) -> U32 {\n  let view = string_view(value, 0u32, 3u32)\n  view.byte_length()\n}\n",
+    b"builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin view_as_bytes(value: StringView) -> Bytes = \"dew_string_view_as_bytes\"\nbuiltin bytes_length(value: Bytes) -> U32 = \"dew_bytes_byte_length\"\npub fn string_view_byte_length(value: StringView) -> U32 {\n  bytes_length(view_as_bytes(value))\n}\nimpl StringView {\n  fn byte_length(self) -> U32 {\n    string_view_byte_length(self)\n  }\n}\npub fn run(value: String) -> U32 {\n  let view = string_view(value, 0u32, 3u32)\n  view.byte_length()\n}\n",
   )
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   let plan = self_host_plan_program_wasm_bodies(link)
-  assert(plan.bodies.length() == 2u32, "the string view method and caller must be planned")
+  assert(plan.bodies.length() == 3u32, "the StringView library helper, method, and caller must be planned")
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
 }
 
@@ -438,23 +438,23 @@ test "a static parameter cannot become a method receiver" {
 
 test "string slice retains a view across calls" {
   let fragments = self_host_physical_test_fragments(
-    b"builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin string_view_byte_length(value: StringView) -> U32 = \"dew_string_view_byte_length\"\nbuiltin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = \"dew_string_builder_with_capacity\"\nbuiltin string_builder_append_view(builder: StringBuilder, view: StringView) -> Unit = \"dew_string_builder_append_view\"\nbuiltin string_builder_finish(builder: StringBuilder) -> String = \"dew_string_builder_finish\"\nimpl StringView {\n  fn byte_length(self) -> U32 {\n    string_view_byte_length(self)\n  }\n}\nimpl String {\n  fn slice(self, start: U32, end: U32) -> String {\n    let view = string_view(self, start, end - start)\n    let builder = string_builder_with_capacity_raw(view.byte_length())\n    string_builder_append_view(builder, view)\n    string_builder_finish(builder)\n  }\n}\n",
+    b"builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin view_as_bytes(value: StringView) -> Bytes = \"dew_string_view_as_bytes\"\nbuiltin bytes_length(value: Bytes) -> U32 = \"dew_bytes_byte_length\"\npub fn string_view_byte_length(value: StringView) -> U32 {\n  bytes_length(view_as_bytes(value))\n}\nbuiltin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = \"dew_string_builder_with_capacity\"\nbuiltin string_builder_append_view(builder: StringBuilder, view: StringView) -> Unit = \"dew_string_builder_append_view\"\nbuiltin string_builder_finish(builder: StringBuilder) -> String = \"dew_string_builder_finish\"\nimpl StringView {\n  fn byte_length(self) -> U32 {\n    string_view_byte_length(self)\n  }\n}\nimpl String {\n  fn slice(self, start: U32, end: U32) -> String {\n    let view = string_view(self, start, end - start)\n    let builder = string_builder_with_capacity_raw(view.byte_length())\n    string_builder_append_view(builder, view)\n    string_builder_finish(builder)\n  }\n}\n",
   )
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   let plan = self_host_plan_program_wasm_bodies(link)
-  assert(plan.bodies.length() == 2u32, "both methods must be planned")
+  assert(plan.bodies.length() == 3u32, "both methods and the StringView library helper must be planned")
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
 }
 
 test "string slice retains an imported builtin view across calls" {
   let link = self_host_physical_test_import_link(
-    b"pub builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\npub builtin string_view_byte_length(value: StringView) -> U32 = \"dew_string_view_byte_length\"\npub builtin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = \"dew_string_builder_with_capacity\"\npub builtin string_builder_append_view(builder: StringBuilder, view: StringView) -> Unit = \"dew_string_builder_append_view\"\npub builtin string_builder_finish(builder: StringBuilder) -> String = \"dew_string_builder_finish\"\n",
+    b"pub builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin view_as_bytes(value: StringView) -> Bytes = \"dew_string_view_as_bytes\"\nbuiltin bytes_length(value: Bytes) -> U32 = \"dew_bytes_byte_length\"\npub fn string_view_byte_length(value: StringView) -> U32 {\n  bytes_length(view_as_bytes(value))\n}\npub builtin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = \"dew_string_builder_with_capacity\"\npub builtin string_builder_append_view(builder: StringBuilder, view: StringView) -> Unit = \"dew_string_builder_append_view\"\npub builtin string_builder_finish(builder: StringBuilder) -> String = \"dew_string_builder_finish\"\n",
     b"open app.runtime\nimpl StringView {\n  fn byte_length(self) -> U32 {\n    string_view_byte_length(self)\n  }\n}\nimpl String {\n  fn slice(self, start: U32, end: U32) -> String {\n    let view = string_view(self, start, end - start)\n    let builder = string_builder_with_capacity_raw(view.byte_length())\n    string_builder_append_view(builder, view)\n    string_builder_finish(builder)\n  }\n}\n",
   )
   self_host_physical_test_assert_clean_inference(link)
   let plan = self_host_plan_program_wasm_bodies(link)
-  assert(plan.bodies.length() == 2u32, "both imported-runtime caller methods must be planned")
+  assert(plan.bodies.length() == 3u32, "both imported-runtime caller methods and their library helper must be planned")
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
 }
 
@@ -469,15 +469,15 @@ test "into calls retain the selected logical result" {
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
 }
 
-test "standard runtime helpers cross the frozen interface" {
+test "standard library helpers cross the frozen interface" {
   let link = self_host_physical_test_named_import_link(
     "dew.std.text_runtime",
-    b"builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin string_view_byte_length(value: StringView) -> U32 = \"dew_string_view_byte_length\"\n",
+    b"builtin string_view(value: String, start: U32, length: U32) -> StringView = \"dew_string_view\"\nbuiltin view_as_bytes(value: StringView) -> Bytes = \"dew_string_view_as_bytes\"\nbuiltin bytes_length(value: Bytes) -> U32 = \"dew_bytes_byte_length\"\npub fn string_view_byte_length(value: StringView) -> U32 {\n  bytes_length(view_as_bytes(value))\n}\n",
     b"open dew.std.text_runtime\npub fn run(value: String) -> U32 {\n  let view = string_view(value, 0u32, 3u32)\n  string_view_byte_length(view)\n}\n",
   )
   self_host_physical_test_assert_clean_inference(link)
   let plan = self_host_plan_program_wasm_bodies(link)
-  assert(plan.bodies.length() == 1u32, "the standard runtime caller must be planned")
+  assert(plan.bodies.length() == 2u32, "the standard library helper and its caller must be planned")
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
 }
 

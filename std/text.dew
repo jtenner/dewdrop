@@ -17,8 +17,12 @@ fn text_code_points_string_byte_length(value: String) -> U32 {
 fn text_code_points_string_byte_at(value: String, index: U32) -> U8 {
   value.byte_at(index)
 }
-builtin text_code_points_string_view_byte_length(value: StringView) -> U32 = "dew_string_view_byte_length"
-builtin text_code_points_string_view_byte_at(value: StringView, index: U32) -> U8 = "dew_string_view_byte_at"
+fn text_code_points_string_view_byte_length(value: StringView) -> U32 {
+  value.byte_length()
+}
+fn text_code_points_string_view_byte_at(value: StringView, index: U32) -> U8 {
+  value.byte_at(index)
+}
 
 fn code_point_continuation(byte: U8) -> Bool {
   byte >= 128u8 && byte <= 191u8

@@ -6,8 +6,12 @@ fn ordering_string_byte_length(value: String) -> U32 {
 fn ordering_string_byte_at(value: String, index: U32) -> U8 {
   value.byte_at(index)
 }
-builtin ordering_string_view_byte_length(value: StringView) -> U32 = "dew_string_view_byte_length"
-builtin ordering_string_view_byte_at(value: StringView, index: U32) -> U8 = "dew_string_view_byte_at"
+fn ordering_string_view_byte_length(value: StringView) -> U32 {
+  value.byte_length()
+}
+fn ordering_string_view_byte_at(value: StringView, index: U32) -> U8 {
+  value.byte_at(index)
+}
 builtin ordering_bytes_byte_length(value: Bytes) -> U32 = "dew_bytes_byte_length"
 builtin ordering_bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
 

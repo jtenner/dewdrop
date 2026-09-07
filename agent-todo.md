@@ -109,6 +109,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   StringView scans also run in Dew, with shared native/self-host tests and a
   fix for reference-identity equality. View storage remains.
   See the [StringView log](docs/research/string-view-library-algorithms-2026-09-06.md).
+  StringView byte access and conversion also use Dew calls; the old wrapper-copy
+  builder is removed. See the
+  [StringView access log](docs/research/string-view-byte-access-2026-09-07.md).
   String scans, equality, and concatenation use the Bytes library path. The
   String equality runtime builder and runtime-name lookup are removed.
   String byte access, ordering, and text iteration use the Bytes path. The

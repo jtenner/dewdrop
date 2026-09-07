@@ -4,9 +4,14 @@ export function checkStringViewOperations(main) {
   const labels = ["empty values and bounds", "unaligned equality and hash",
     "short search candidates", "long search and final candidate",
     "mixed String/view affixes", "UTF-16 count at each vector alignment",
-    "full Unicode vectors", "nested Unicode views"];
+    "full Unicode vectors", "nested Unicode views", "byte access and conversion preserve the nested range"];
   for (const [index, label] of labels.entries()) {
     assert.equal(main(index), 1, `StringView ${label}`);
   }
-  return labels.length;
+  for (const index of [9, 10, 11]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `StringView byte access rejects an out-of-range index: ${index}`);
+  }
+  return labels.length + 3;
 }

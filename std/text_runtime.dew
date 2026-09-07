@@ -2,9 +2,6 @@ open dew.std.wasm.intrinsics
 
 builtin string_as_bytes_unchecked(value: String) -> Bytes = "dew_string_as_bytes"
 builtin string_view(value: String, start: U32, length: U32) -> StringView = "dew_string_view"
-builtin string_view_byte_length(value: StringView) -> U32 = "dew_string_view_byte_length"
-builtin string_view_byte_at(value: StringView, index: U32) -> U8 = "dew_string_view_byte_at"
-builtin string_view_to_string(value: StringView) -> String = "dew_string_view_to_string"
 builtin string_view_as_bytes_unchecked(value: StringView) -> Bytes = "dew_string_view_as_bytes"
 builtin string_view_view(value: StringView, start: U32, length: U32) -> StringView = "dew_string_view_view"
 builtin string_builder_new() -> StringBuilder = "dew_string_builder_new"
@@ -86,6 +83,19 @@ fn string_concat_view(left: String, right: StringView) -> String {
 
 fn string_view_as_bytes(value: StringView) -> Bytes {
   string_view_as_bytes_unchecked(value)
+}
+
+fn string_view_byte_length(value: StringView) -> U32 {
+  bytes_byte_length(string_view_as_bytes(value))
+}
+
+fn string_view_byte_at(value: StringView, index: U32) -> U8 {
+  bytes_byte_at(string_view_as_bytes(value), index)
+}
+
+fn string_view_to_string(value: StringView) -> String {
+  // A StringView is already a checked UTF-8 range. No copy is needed.
+  bytes_to_string_unchecked(string_view_as_bytes(value))
 }
 
 // The caller supplies known-valid UTF-8 from a String or StringView.
