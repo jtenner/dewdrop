@@ -18,6 +18,13 @@ CORE_OPERATIONS = (
 
 
 class ArrayBuiltinPolicyTests(unittest.TestCase):
+    def test_array_probes_use_declared_library_bodies(self):
+        for path in ("self_host/compiler/semantic_physical_specialization_test.dew",
+                     "self_host/compiler/semantic_program_link_plan_test.dew"):
+            with self.subTest(path=path):
+                self.assertFalse("dew_array_" in (ROOT / path).read_text(),
+                                 f"{path}: obsolete Array runtime fixture")
+
     def test_native_array_algorithms_have_no_legacy_ir(self):
         source = (ROOT / "src/semantic/lowering_plan.mbt").read_text()
         legacy = re.findall(r"\bPlannedArray[A-Za-z]+", source)

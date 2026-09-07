@@ -283,46 +283,25 @@ test "emitted local validation rejects a field carrier change" {
   }
 }
 
-test "program link emits carrier-independent Array capacity runtime" {
+test "program link emits Array capacity as ordinary Dew construction" {
   let link = self_host_link_test_plan(
-    b"struct Array<t> {}\nbuiltin array_with_capacity<t>(capacity: U32) -> Array<t> = \"dew_array_with_capacity\"\npub fn run() -> U32 {\n  0u32\n}\n",
+    b"pub struct Array<t> {\n  capacity: U32\n}\nfn array_with_capacity<t>(capacity: U32) -> Array<t> {\n  Array::{\n    capacity: capacity\n  }\n}\npub fn run() -> U32 {\n  let values = array_with_capacity::<I64>(7u32)\n  values.capacity\n}\n",
   )
+  assert(link.diagnostics.length() == 0u32, "ordinary capacity link diagnostics")
   let mut found = false
   for function_ in link.functions {
-    let fragment_module = link.fragments.modules[function_.module_index]
-    let fragment = self_host_program_link_fragment_function(
-      fragment_module,
-      function_.fragment_index,
-    )
+    let module_ = link.fragments.modules[function_.module_index]
+    let fragment = self_host_program_link_fragment_function(module_, function_.fragment_index)
     match fragment.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if name.equals(
-        b"dew_array_with_capacity",
-      ) {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(_) => if function_.specialization != 4294967295u32 {
         found = true
-        assert(
-          function_.specialization == 4294967295u32,
-          "canonical capacity specialization",
-        )
-        let indexes = self_host_build_physical_body_indexes(link)
-        let physical_function = self_host_linked_physical_function_index(
-          function_.function_index,
-        )
-        assert(
-          physical_function < indexes.call_site_result_by_function.length(),
-          "inline builtin policy index",
-        )
-        assert(
-          self_host_body_bool_at(
-            indexes.call_site_result_by_function,
-            physical_function,
-          ),
-          "inline builtin call-site result policy",
-        )
       }
       _ => {}
     }
   }
-  assert(found, "capacity runtime function")
+  assert(found, "capacity helper has an ordinary specialized body")
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_plan_error_report(plan))
 }
 
 test "program link does not treat a variant constructor as a call" {

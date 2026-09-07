@@ -84,6 +84,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   Literal storage now rejects unresolved evidence and preserves packed integer
   widths; all 29 shared checks pass. The unused opcode switch/helpers are gone.
   See the [literal storage log](docs/research/array-literal-storage-2026-09-06.md).
+  The stack, iterator, accessor, and link fixtures now use declared Dew bodies,
+  not removed runtime builtins. See the
+  [fixture log](docs/research/array-library-fixtures-2026-09-07.md).
 - [x] Move Map hashing, buckets, growth, lookup, and iteration into Dew. Typed
   entries preserve aliases, cached hashes avoid repeated user calls during
   growth, and all 12 shared native/self-host checks pass. Native Map IR and

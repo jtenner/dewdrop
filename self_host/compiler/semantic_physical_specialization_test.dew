@@ -694,7 +694,7 @@ test "empty array literals select imported scalar push" {
 test "imported index results constrain later array operands" {
   let link = self_host_physical_test_named_import_link(
     "dew.std.array",
-    b"pub struct Array<t> {}\npub trait IndexedGet<i, t> {\n  fn indexed_get(self, index: i) -> t\n}\npub builtin array_get_unchecked<t>(value: Array<t>, index: U32) -> t = \"dew_array_get_unchecked\"\nimpl<t> IndexedGet<U32, t> for Array<t> {\n  fn indexed_get(self, index: U32) -> t {\n    array_get_unchecked(self, index)\n  }\n}\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {}\n}\n",
+    b"pub struct Array<t> {\n  item: t\n}\npub trait IndexedGet<i, t> {\n  fn indexed_get(self, index: i) -> t\n}\nimpl<t> IndexedGet<U32, t> for Array<t> {\n  fn indexed_get(self, index: U32) -> t {\n    self.item\n  }\n}\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {}\n}\n",
     b"open dew.std.array\npub fn run(source: Array<I64>) -> Unit {\n  let values = []\n  values.push(source[0u32])\n}\n",
   )
   self_host_physical_test_assert_clean_inference(link)
@@ -1370,6 +1370,10 @@ pub fn self_host_emit_nested_literal_probe() -> Bytes {
   }
 }
 
+fn self_host_physical_array_library_fixture() -> Bytes {
+  b"open dew.std.option\nbuiltin unreachable() -> Never = \"unreachable\"\npub struct Slots<t> {}\npub builtin slots_new<t>(length: U32) -> Slots<t> = \"array.new_default\"\npub builtin slots_get<t>(slots: Slots<t>, index: U32) -> t = \"array.get\"\npub builtin slots_set<t>(slots: Slots<t>, index: U32, value: t) -> Unit = \"array.set\"\npub builtin slots_copy<t>(target: Slots<t>, target_index: U32, source: Slots<t>, source_index: U32, length: U32) -> Unit = \"array.copy\"\npub struct Array<t> {\n  mut storage: Slots<t>\n  mut count: U32\n  mut reserved: U32\n}\npub struct ArrayIter<t> {\n  values: Array<t>\n  mut position: U32\n}\npub trait Iter<t> {\n  fn next(self) -> Option<t>\n}\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {\n    if self.count == self.reserved {\n      let capacity = if self.reserved == 0u32 {\n        1u32\n      } else {\n        self.reserved * 2u32\n      }\n      let storage = slots_new(capacity)\n      slots_copy(storage, 0u32, self.storage, 0u32, self.count)\n      self.storage = storage\n      self.reserved = capacity\n    }\n    slots_set(self.storage, self.count, value)\n    self.count = self.count + 1u32\n  }\n  fn length(self) -> U32 {\n    self.count\n  }\n  fn get_unchecked(self, index: U32) -> t {\n    slots_get(self.storage, index)\n  }\n  fn truncate(self, length: U32) -> Unit {\n    if length > self.count {\n      unreachable()\n    }\n    self.count = length\n  }\n  fn iter(self) -> ArrayIter<t> {\n    ArrayIter::{\n      values: self\n      position: 0u32\n    }\n  }\n}\nimpl<t> Iter<t> for ArrayIter<t> {\n  fn next(self) -> Option<t> {\n    if self.position < self.values.length() {\n      let value = self.values.get_unchecked(self.position)\n      self.position = self.position + 1u32\n      Option::Some(value)\n    } else {\n      Option::None\n    }\n  }\n}\n"
+}
+
 pub fn self_host_emit_type_stack_probe() -> Bytes {
   let link = self_host_physical_test_manifest_link(SelfHostProgramManifest::{
     modules: [
@@ -1385,7 +1389,7 @@ pub fn self_host_emit_type_stack_probe() -> Bytes {
         path: "dew.std.array"
         files: [SelfHostManifestFile::{
           path: "array.dew"
-          source: b"pub struct Array<t> {}\npub builtin array_new<t>() -> Array<t> = \"dew_array_new\"\npub builtin array_push<t>(array: Array<t>, value: t) -> Unit = \"dew_array_push\"\npub builtin array_length<t>(array: Array<t>) -> U32 = \"dew_array_length\"\npub builtin array_get<t>(array: Array<t>, index: U32) -> t = \"dew_array_get_unchecked\"\npub builtin array_truncate<t>(array: Array<t>, length: U32) -> Unit = \"dew_array_truncate\"\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {\n    array_push(self, value)\n  }\n  fn length(self) -> U32 {\n    array_length(self)\n  }\n  fn get_unchecked(self, index: U32) -> t {\n    array_get(self, index)\n  }\n  fn truncate(self, length: U32) -> Unit {\n    array_truncate(self, length)\n  }\n}\n"
+          source: self_host_physical_array_library_fixture()
           test_only: false
         }]
       },
@@ -1451,7 +1455,7 @@ pub fn self_host_emit_fixed_array_method_body_probe() -> Bytes {
 pub fn self_host_emit_array_size_method_body_probe() -> Bytes {
   let link = self_host_physical_test_named_import_link(
     "dew.std.array",
-    b"pub struct Array<t> {}\npub builtin array_new<t>() -> Array<t> = \"dew_array_new\"\nimpl<t> Array<t> {\n  fn new() -> Array<t> {\n    array_new()\n  }\n  fn length(self) -> U32 {\n    42u32\n  }\n  fn capacity(self) -> U32 {\n    43u32\n  }\n}\n",
+    b"pub struct Array<t> {}\nimpl<t> Array<t> {\n  fn new() -> Array<t> {\n    Array::{}\n  }\n  fn length(self) -> U32 {\n    42u32\n  }\n  fn capacity(self) -> U32 {\n    43u32\n  }\n}\n",
     b"open dew.std.array\nfn values() -> Array<I32> {\n  Array::new()\n}\npub fn main() -> I32 {\n  let items = values()\n  if items.length() == 42u32 && items.capacity() == 43u32 {\n    85i32\n  } else {\n    0i32\n  }\n}\n",
   )
   self_host_physical_test_assert_clean_inference(link)
@@ -1479,7 +1483,7 @@ pub fn self_host_emit_scalar_iterator_probe() -> Bytes {
         path: "dew.std.array"
         files: [SelfHostManifestFile::{
           path: "array.dew"
-          source: b"open dew.std.option\npub struct Array<t> {}\npub struct ArrayIter<t> {}\npub builtin array_new<t>() -> Array<t> = \"dew_array_new\"\npub builtin array_push<t>(array: Array<t>, value: t) -> Unit = \"dew_array_push\"\npub builtin array_iter<t>(value: Array<t>) -> ArrayIter<t> = \"dew_array_iter\"\npub builtin array_iter_next_option<t>(value: ArrayIter<t>) -> Option<t> = \"dew_array_iter_next_option\"\npub trait Iter<t> {\n  fn next(self) -> Option<t>\n}\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {\n    array_push(self, value)\n  }\n  fn iter(self) -> ArrayIter<t> {\n    array_iter(self)\n  }\n}\nimpl<t> Iter<t> for ArrayIter<t> {\n  fn next(self) -> Option<t> {\n    array_iter_next_option(self)\n  }\n}\n"
+          source: self_host_physical_array_library_fixture()
           test_only: false
         }]
       },
