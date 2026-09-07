@@ -45,8 +45,8 @@ fn main {
     }
   }
   @fs.write_bytes_to_file(args[1], encoded) catch {
-    error => {
-      println("cannot write compile request: \{error}")
+    @fs.IOError(message) => {
+      println("cannot write compile request: " + message)
       @sys.exit(2)
     }
   }
