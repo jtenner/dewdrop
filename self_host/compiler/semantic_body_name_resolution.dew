@@ -1177,6 +1177,19 @@ impl SelfHostBodyNameResolver {
             self.pattern_stack.push(base)
             self.pattern_contexts.push(false)
           }
+          SelfHostHirPattern::ProductPattern(arguments, _) => {
+            self_host_assert_array_span(arguments.start, arguments.length, self.collected.pattern_children.length(), "ARN-101 product pattern children")
+            let _ = while arguments.length {
+              index => if index > 0u32 {
+                let next = index - 1u32
+                self.pattern_stack.push(self.collected.pattern_children[arguments.start + next])
+                self.pattern_contexts.push(true)
+                continue next
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
           SelfHostHirPattern::StructPattern(base, fields, _, _, _) => {
             let mut index = fields.length
             while index {

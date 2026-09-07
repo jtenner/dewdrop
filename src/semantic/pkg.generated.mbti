@@ -1106,6 +1106,7 @@ pub enum HirPattern {
   HirLiteralPattern(Int, UInt64)
   HirQualifiedPattern(Int, Int, UInt64)
   HirTuplePattern(Int, HirSpan, UInt64)
+  HirProductPattern(HirSpan, UInt64)
   HirStructPattern(Int, HirSpan, Bool, UInt64, UInt64)
   HirAlternativePattern(Int, HirSpan, UInt64)
 } derive(Eq, @debug.Debug)

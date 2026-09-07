@@ -90,6 +90,38 @@ fn self_host_parse_pattern_base(
       parser.index = parser.index + 1u32
       Option::Some(self_host_pattern_binding(name, token.offset))
     }
+    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 0u32 => {
+      parser.index = parser.index + 1u32
+      match self_host_parse_tuple_pattern_arguments(parser, token.offset, true) {
+        Option::Some(parsed) => {
+          let (arguments, has_comma) = parsed
+          if arguments.length() == 1u32 && !has_comma {
+            match arguments[0u32] {
+              SelfHostPattern::RestPattern(offset) => if !allow_rest {
+                self_host_parser_fail(parser, SelfHostParseError::RestPatternNotAllowed(offset))
+                return Option::None
+              }
+              _ => {}
+            }
+            Option::Some(arguments[0u32])
+          } else {
+            let mut explicit_count = 0u32
+            for argument in arguments {
+              if !(argument is SelfHostPattern::RestPattern(_)) {
+                explicit_count = explicit_count + 1u32
+              }
+            }
+            let has_rest = explicit_count != arguments.length()
+            if (!has_rest && explicit_count == 1u32) || explicit_count > 32u32 {
+              self_host_parser_fail(parser, SelfHostParseError::InvalidProductArity(explicit_count, token.offset))
+              return Option::None
+            }
+            Option::Some(SelfHostPattern::ProductPattern(arguments, token.offset))
+          }
+        }
+        Option::None => Option::None
+      }
+    }
     SelfHostTokenKind::AtIdentifier(name, _, _) => {
       parser.index = parser.index + 1u32
       Option::Some(SelfHostPattern::ImportAliasPattern(name, token.offset))
@@ -188,11 +220,16 @@ fn self_host_parse_pattern_base(
 fn self_host_parse_tuple_pattern_arguments(
   parser: SelfHostParser,
   open_offset: U32,
-) -> Option<Array<SelfHostPattern>> {
+  allow_empty: Bool,
+) -> Option<(Array<SelfHostPattern>, Bool)> {
   let arguments = self_host_empty_patterns()
   let mut has_rest = false
+  let mut has_comma = false
   self_host_parser_skip_newlines(parser)
   if self_host_parser_consume_symbol(parser, 1u32) {
+    if allow_empty {
+      return Option::Some((arguments, false))
+    }
     self_host_parser_fail(
       parser,
       SelfHostParseError::EmptyTuplePattern(open_offset),
@@ -218,17 +255,18 @@ fn self_host_parse_tuple_pattern_arguments(
         arguments.push(pattern)
         self_host_parser_skip_newlines(parser)
         if self_host_parser_consume_symbol(parser, 1u32) {
-          break Option::Some(arguments)
+          break Option::Some((arguments, has_comma))
         } else if self_host_parser_consume_symbol(
           parser,
           25u32,
         ) {
+          has_comma = true
           self_host_parser_skip_newlines(parser)
           if self_host_parser_consume_symbol(
             parser,
             1u32,
           ) {
-            break Option::Some(arguments)
+            break Option::Some((arguments, has_comma))
           } else {
             continue 0u32
           }
@@ -430,8 +468,10 @@ fn self_host_parse_pattern_context(
           match self_host_parse_tuple_pattern_arguments(
             parser,
             exact_token.offset,
+            false,
           ) {
-            Option::Some(arguments) => {
+            Option::Some(parsed) => {
+              let (arguments, _) = parsed
               pattern = SelfHostPattern::TuplePattern(
                 pattern,
                 arguments,

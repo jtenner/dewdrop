@@ -763,6 +763,99 @@ fn BasicBodyInferencer::push_pattern_task(
 }
 
 ///|
+fn BasicBodyInferencer::infer_product_pattern(
+  self : BasicBodyInferencer,
+  pattern : PatternId,
+  arguments : HirSpan,
+  expected : BodyTypeId,
+  offset : UInt64,
+) -> Unit {
+  guard arena_span_is_valid(arguments, self.collected.pattern_children.length()) else {
+    abort("ARN-101 product pattern children")
+  }
+  if arguments.length == 0 {
+    self.constrain(expected, self.primitive(UnitType), pattern_type_origin(pattern, offset))
+    return
+  }
+  let mut rest_index = -1
+  let mut explicit_count = 0
+  for index in 0..<arguments.length {
+    let child = self.collected.pattern_children[arguments.start + index]
+    if self.collected.patterns[child] is HirRestPattern(_) {
+      rest_index = index
+    } else {
+      explicit_count += 1
+    }
+  }
+  let fields : Array[BodyTypeId] = []
+  let term = self.solver.type_term(self.solver.representative_type(expected))
+  let mut valid = true
+  match term {
+    BodyProductType(span) => {
+      guard arena_span_is_valid(span, self.solver.type_arguments.length()) else {
+        abort("ARN-101 product pattern body fields")
+      }
+      for index in 0..<span.length {
+        fields.push(self.solver.type_arguments[span.start + index])
+      }
+    }
+    BodyResolvedType(type_) => match self.resolved.types[type_] {
+      ProductType(span) => {
+        guard arena_span_is_valid(span, self.resolved.type_arguments.length()) else {
+          abort("ARN-101 product pattern resolved fields")
+        }
+        for index in 0..<span.length {
+          fields.push(self.solver.resolved_type(self.resolved.type_arguments[span.start + index]))
+        }
+      }
+      _ => valid = false
+    }
+    BodyVariableType(_) if rest_index < 0 => {
+      for _ in 0..<explicit_count {
+        fields.push(self.solver.fresh_variable())
+      }
+      self.constrain(expected, self.solver.product_type(fields), pattern_type_origin(pattern, offset))
+    }
+    BodyErrorType => valid = false
+    _ => valid = false
+  }
+  if !valid {
+    if !(term is BodyErrorType) {
+      self.diagnose(InvalidPatternConstructor(pattern, offset))
+    }
+    self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+  } else if (rest_index < 0 && explicit_count != fields.length()) ||
+    (rest_index >= 0 && explicit_count > fields.length()) {
+    self.diagnose(PatternPayloadArityMismatch(pattern, fields.length(), explicit_count, offset))
+    self.pattern_constructors[pattern - self.body.patterns.start] = ErrorInferredPatternConstructor
+    valid = false
+  }
+  let mut before = 0
+  let mut after = 0
+  for index in 0..<arguments.length {
+    let child = self.collected.pattern_children[arguments.start + index]
+    if self.collected.patterns[child] is HirRestPattern(_) {
+      self.pattern_types[child - self.body.patterns.start] = self.solver.error_type()
+    } else {
+      let field = if rest_index < 0 || index < rest_index {
+        let result = before
+        before += 1
+        result
+      } else {
+        let result = fields.length() - (explicit_count - before) + after
+        after += 1
+        result
+      }
+      self.push_pattern_task(child, if valid && field >= 0 && field < fields.length() {
+        fields[field]
+      } else {
+        self.solver.error_type()
+      })
+    }
+  }
+}
+
+///|
 fn BasicBodyInferencer::infer_tuple_variant_pattern(
   self : BasicBodyInferencer,
   pattern : PatternId,
@@ -1142,6 +1235,8 @@ fn BasicBodyInferencer::infer_pattern(
         self.infer_tuple_variant_pattern(
           pattern, base, arguments, expected, offset,
         )
+      HirProductPattern(arguments, offset) =>
+        self.infer_product_pattern(pattern, arguments, expected, offset)
       HirStructPattern(base, fields, has_rest, _, offset) =>
         self.infer_struct_pattern(
           pattern, base, fields, has_rest, expected, offset,

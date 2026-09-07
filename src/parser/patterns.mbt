@@ -14,6 +14,7 @@ pub enum Pattern {
   LiteralPattern(Expr, UInt64)
   QualifiedPattern(Pattern, String, UInt64)
   TuplePattern(Pattern, Array[Pattern], UInt64)
+  ProductPattern(Array[Pattern], UInt64)
   StructPattern(Pattern, Array[PatternField], UInt64?, UInt64)
   AlternativePattern(Pattern, Array[Pattern], UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
@@ -28,6 +29,7 @@ pub fn Pattern::offset(self : Pattern) -> UInt64 {
     | LiteralPattern(_, offset)
     | QualifiedPattern(_, _, offset)
     | TuplePattern(_, _, offset)
+    | ProductPattern(_, offset)
     | StructPattern(_, _, _, offset)
     | AlternativePattern(_, _, offset) => offset
   }
@@ -55,6 +57,7 @@ pub enum PatternError {
   UnclosedTuplePattern(UInt64)
   UnclosedStructPattern(UInt64)
   EmptyTuplePattern(UInt64)
+  InvalidProductPatternArity(Int, UInt64)
   PatternLexicalError(@tokenizer.LexError, UInt64)
 } derive(Eq, Debug, ToJson, FromJson)
 
@@ -84,6 +87,7 @@ pub fn PatternError::offset(self : PatternError) -> UInt64 {
     | UnclosedTuplePattern(offset)
     | UnclosedStructPattern(offset)
     | EmptyTuplePattern(offset)
+    | InvalidProductPatternArity(_, offset)
     | PatternLexicalError(_, offset) => offset
   }
 }
@@ -107,11 +111,16 @@ fn Parser::consume_pattern_right_paren(self : Parser) -> Bool {
 fn Parser::parse_tuple_pattern_arguments(
   self : Parser,
   open_offset : UInt64,
-) -> Result[Array[Pattern], RecoveryFailure] {
+  allow_empty? : Bool = false,
+) -> Result[(Array[Pattern], Bool), RecoveryFailure] {
   let arguments : Array[Pattern] = []
   let mut has_rest = false
+  let mut has_comma = false
   self.skip_newlines()
   if self.consume_pattern_right_paren() {
+    if allow_empty {
+      return Ok((arguments, false))
+    }
     return Err(pattern_failure(EmptyTuplePattern(open_offset)))
   }
   while true {
@@ -136,13 +145,14 @@ fn Parser::parse_tuple_pattern_arguments(
         match token.kind() {
           @tokenizer.Symbol(@tokenizer.RightParen) => {
             self.consume_lookahead()
-            return Ok(arguments)
+            return Ok((arguments, has_comma))
           }
           @tokenizer.Symbol(@tokenizer.Comma) => {
+            has_comma = true
             self.consume_lookahead()
             self.skip_newlines()
             if self.consume_pattern_right_paren() {
-              return Ok(arguments)
+              return Ok((arguments, has_comma))
             }
           }
           @tokenizer.Symbol(@tokenizer.RightBrace) =>
@@ -292,6 +302,27 @@ fn Parser::parse_pattern_base(
     Some(token) => {
       let offset = token.offset()
       match token.kind() {
+        @tokenizer.Symbol(@tokenizer.LeftParen) => {
+          self.consume_lookahead()
+          let (arguments, has_comma) = match
+            self.parse_tuple_pattern_arguments(offset, allow_empty=true) {
+            Ok(value) => value
+            Err(error) => return Err(error.inside_parenthesis())
+          }
+          if arguments.length() == 1 && !has_comma {
+            if !allow_rest && arguments[0] is RestPattern(rest_offset) {
+              return Err(pattern_failure(RestPatternNotAllowed(rest_offset)))
+            }
+            Ok(arguments[0])
+          } else {
+            let explicit_count = arguments.filter(fn(p) { !(p is RestPattern(_)) }).length()
+            let has_rest = explicit_count != arguments.length()
+            if (!has_rest && explicit_count == 1) || explicit_count > 32 {
+              return Err(pattern_failure(InvalidProductPatternArity(explicit_count, offset)))
+            }
+            Ok(ProductPattern(arguments, offset))
+          }
+        }
         @tokenizer.Identifier(name) => {
           self.consume_lookahead()
           Ok(binding_pattern(name, offset))
@@ -447,7 +478,7 @@ fn Parser::parse_pattern_context_with_stop(
           @tokenizer.Symbol(@tokenizer.LeftParen) => {
             let open_offset = token.offset()
             self.consume_lookahead()
-            let arguments = match
+            let (arguments, _) = match
               self.parse_tuple_pattern_arguments(open_offset) {
               Ok(value) => value
               Err(error) => return Err(error.inside_parenthesis())

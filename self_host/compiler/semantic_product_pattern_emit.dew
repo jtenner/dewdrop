@@ -1,0 +1,110 @@
+open dew.std.array
+
+fn self_host_specialized_pattern(link: SelfHostPlannedProgramWasmGCLink, canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, pattern: SelfHostPlannedPattern) -> SelfHostPlannedPattern {
+  let specialization = match canonical {
+    Option::Some(plan) => plan.specialization
+    Option::None => 4294967295u32
+  }
+  SelfHostPlannedPattern::{
+    elided: pattern.elided
+    type_: pattern.type_
+    shape: self_host_body_specialization_shape_for_type(link, module_, specialization, pattern.type_, pattern.shape)
+    source: pattern.source
+    reference: pattern.reference
+    selected_constructor: pattern.selected_constructor
+    offset: pattern.offset
+  }
+}
+
+// Products use typed, right-nested pairs. Derive each step from the checked
+// logical field shape, never from a constructor name or a nearby scalar use.
+fn self_host_product_pattern_pair_type(link: SelfHostPlannedProgramWasmGCLink, fields: Array<SelfHostPlannedValueShape>, start: U32) -> U32 {
+  self_host_assert_compiler_invariant(fields.length() >= 2u32 && start < fields.length() - 1u32, "FRG-403 product pattern pair")
+  let left = self_host_linked_array_carrier_from_shape(fields[start])
+  let right = if start + 2u32 == fields.length() {
+    self_host_linked_array_carrier_from_shape(fields[start + 1u32])
+  } else {
+    5i32
+  }
+  self_host_linked_array_runtime_base(link) + 30u32 + self_host_i32_to_u32(left * 6i32 + right)
+}
+
+fn self_host_product_pattern_type(link: SelfHostPlannedProgramWasmGCLink, pattern: SelfHostPlannedPattern) -> Option<U32> {
+  match pattern.shape {
+    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => if fields.length() >= 2u32 {
+      Option::Some(self_host_product_pattern_pair_type(link, fields, 0u32))
+    } else {
+      Option::None
+    }
+    _ => Option::None
+  }
+}
+
+fn self_host_pattern_nested_type(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, pattern: SelfHostPlannedPattern) -> Option<U32> {
+  match pattern.source {
+    SelfHostHirPattern::ProductPattern(_, _) => self_host_product_pattern_type(link, pattern)
+    _ => self_host_linked_pattern_variant_type(link, module_, pattern, self_host_nested_pattern_payload_shape(module_, pattern), self_host_linked_type_nominal_declaration(module_, pattern.type_))
+  }
+}
+
+fn self_host_pattern_push_payload_path(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, pattern: SelfHostPlannedPattern, type_index: U32, index: U32, path: Array<SelfHostLinkedWasmFieldLink>) -> Option<String> {
+  match pattern.source {
+    SelfHostHirPattern::ProductPattern(children, _) => {
+      let fields = match pattern.shape {
+        SelfHostPlannedValueShape::ProductPlannedValueShape(values) => values
+        _ => return Option::Some("product pattern has no concrete field shapes")
+      }
+      let mut rest = children.length
+      let _ = while 0u32 {
+        current => if current < children.length {
+          let child = self_host_pattern_payload_child(module_, pattern, current)
+          if module_.patterns[child].source is SelfHostHirPattern::RestPattern(_) {
+            rest = current
+          }
+          continue current + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      let field = if index < rest {
+        index
+      } else {
+        fields.length() - (children.length - index)
+      }
+      if field >= fields.length() {
+        return Option::Some("product pattern field is outside its type")
+      }
+      let _ = while 0u32 {
+        start => if start < fields.length() - 1u32 {
+          let pair = self_host_product_pattern_pair_type(link, fields, start)
+          let slot = if field == start {
+            0u32
+          } else {
+            1u32
+          }
+          path.push(SelfHostLinkedWasmFieldLink::{
+            type_index: pair
+            field_index: slot
+          })
+          if field == start || start + 2u32 == fields.length() {
+            break self_host_semantic_unit()
+          }
+          continue start + 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+    }
+    _ => {
+      let field = match self_host_pattern_payload_field(link, module_, pattern, type_index, index) {
+        Option::Some(value) => value
+        Option::None => return Option::Some("pattern field has no exact physical identity")
+      }
+      path.push(SelfHostLinkedWasmFieldLink::{
+        type_index: type_index
+        field_index: field
+      })
+    }
+  }
+  Option::None
+}

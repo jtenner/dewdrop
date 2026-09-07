@@ -421,6 +421,7 @@ pub enum Pattern {
   LiteralPattern(Expr, UInt64)
   QualifiedPattern(Pattern, String, UInt64)
   TuplePattern(Pattern, Array[Pattern], UInt64)
+  ProductPattern(Array[Pattern], UInt64)
   StructPattern(Pattern, Array[PatternField], UInt64?, UInt64)
   AlternativePattern(Pattern, Array[Pattern], UInt64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -445,6 +446,7 @@ pub enum PatternError {
   UnclosedTuplePattern(UInt64)
   UnclosedStructPattern(UInt64)
   EmptyTuplePattern(UInt64)
+  InvalidProductPatternArity(Int, UInt64)
   PatternLexicalError(@tokenizer.LexError, UInt64)
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn PatternError::offset(Self) -> UInt64

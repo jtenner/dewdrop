@@ -5572,7 +5572,7 @@ fn program_pattern_contains_binding(
   match module_.patterns[pattern].source {
     HirQualifiedPattern(base, _, _) =>
       program_pattern_contains_binding(module_, base, binding, depth + 1)
-    HirTuplePattern(_, children, _) => {
+    HirTuplePattern(_, children, _) | HirProductPattern(children, _) => {
       if children.start < 0 ||
         children.start + children.length > module_.pattern_children.length() {
         return false

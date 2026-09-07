@@ -332,7 +332,7 @@ priv enum StarshineEmitTask {
 
 ///|
 priv enum StarshinePatternEmitTask {
-  EmitStarshinePattern(@semantic.PatternId, Array[@lib.Instruction])
+  EmitStarshinePattern(@semantic.PatternId, Array[@lib.Instruction], Int)
   FinishStarshinePatternAll(Int)
   FinishStarshinePatternAny(Int)
   FinishStarshineVariantPattern(Array[@lib.Instruction], Int, Int, Int)
@@ -1971,7 +1971,7 @@ fn starshine_pattern_uses_general_emission(
       _ => ()
     }
     match planned.source {
-      @semantic.HirAlternativePattern(_, _, _) => return true
+      @semantic.HirAlternativePattern(_, _, _) | @semantic.HirProductPattern(_, _) => return true
       @semantic.HirTuplePattern(_, arguments, _) =>
         for index in 0..<arguments.length {
           let child = lowering.pattern_children[arguments.start + index]
@@ -2083,12 +2083,12 @@ fn starshine_general_match_pattern_instructions(
   StarshineCodeEmissionError,
 ] {
   let tasks : Array[StarshinePatternEmitTask] = [
-    EmitStarshinePattern(root, [starshine_match_local_get(scratch_local)]),
+    EmitStarshinePattern(root, [starshine_match_local_get(scratch_local)], 0),
   ]
   let results : Array[Array[@lib.Instruction]] = []
   while tasks.length() > 0 {
     match tasks.pop().unwrap() {
-      EmitStarshinePattern(pattern, value) => {
+      EmitStarshinePattern(pattern, value, leaf_start) => {
         let source = lowering.patterns[pattern]
         match source.source {
           @semantic.HirAlternativePattern(first, remaining, _) => {
@@ -2100,10 +2100,68 @@ fn starshine_general_match_pattern_instructions(
                 EmitStarshinePattern(
                   lowering.pattern_children[remaining.start + index],
                   value.copy(),
+                  leaf_start,
                 ),
               )
             }
-            tasks.push(EmitStarshinePattern(first, value))
+            tasks.push(EmitStarshinePattern(first, value, leaf_start))
+            continue
+          }
+          @semantic.HirProductPattern(arguments, _) => {
+            let shape = starshine_specialized_shape(lowering, generic_specialization, source.type_, source.shape)
+            let fields = match shape {
+              @semantic.ProductPlannedValueShape(fields) => fields
+              @semantic.UnitPlannedValueShape if arguments.length == 0 => []
+              _ => return Err(UnsupportedExpression(body.body, pattern))
+            }
+            let starts : Array[Int] = []
+            let mut next_leaf = leaf_start
+            for field in fields {
+              starts.push(next_leaf)
+              let leaves : Array[@semantic.PlannedValueShape] = []
+              starshine_product_leaf_shapes(field, leaves)
+              next_leaf += leaves.length()
+            }
+            let mut explicit_count = 0
+            let mut rest = -1
+            for index in 0..<arguments.length {
+              let child = lowering.pattern_children[arguments.start + index]
+              if lowering.patterns[child].source is @semantic.HirRestPattern(_) {
+                rest = index
+              } else {
+                explicit_count += 1
+              }
+            }
+            if (rest < 0 && explicit_count != fields.length()) || explicit_count > fields.length() {
+              return Err(UnsupportedExpression(body.body, pattern))
+            }
+            tasks.push(FinishStarshinePatternAll(explicit_count))
+            let mut index = arguments.length
+            while index > 0 {
+              index -= 1
+              let child = lowering.pattern_children[arguments.start + index]
+              if lowering.patterns[child].source is @semantic.HirRestPattern(_) {
+                continue
+              }
+              let field_index = if rest < 0 || index < rest { index } else { fields.length() - (arguments.length - index) }
+              let field_shape = fields[field_index]
+              if field_shape is @semantic.ProductPlannedValueShape(_) {
+                tasks.push(EmitStarshinePattern(child, value.copy(), starts[field_index]))
+              } else if field_shape is @semantic.UnitPlannedValueShape {
+                tasks.push(EmitStarshinePattern(child, [], 0))
+              } else {
+                let loader = value.copy()
+                if product_ref_scratch < 0 {
+                  return Err(UnsupportedExpression(body.body, pattern))
+                }
+                loader.push(starshine_array_local_set(product_ref_scratch))
+                match starshine_append_product_unbox(loader, planned, program, body.body, product_ref_scratch, field_shape, leaf_start=starts[field_index]) {
+                  Ok(_) => ()
+                  Err(error) => return Err(error)
+                }
+                tasks.push(EmitStarshinePattern(child, loader, 0))
+              }
+            }
             continue
           }
           @semantic.HirLiteralPattern(expression, _) => {
@@ -2124,8 +2182,7 @@ fn starshine_general_match_pattern_instructions(
             match source.reference {
               @semantic.PatternBindingReference(local_id) => {
                 if local_id < 0 ||
-                  local_id >= local_indices.length() ||
-                  local_indices[local_id] < 0 {
+                  local_id >= local_indices.length() {
                   return Err(InvalidLocal(body.body, local_id))
                 }
                 let local_info = lowering.locals[body.locals.start + local_id]
@@ -2135,6 +2192,13 @@ fn starshine_general_match_pattern_instructions(
                   local_info.type_,
                   local_info.shape,
                 )
+                if local_shape is @semantic.UnitPlannedValueShape {
+                  results.push([@lib.Instruction::i32_const(@lib.I32::new(1))])
+                  continue
+                }
+                if local_indices[local_id] < 0 {
+                  return Err(InvalidLocal(body.body, local_id))
+                }
                 append_starshine_instructions(output, value)
                 if local_shape is @semantic.ProductPlannedValueShape(_) {
                   if product_ref_scratch < 0 {
@@ -2155,6 +2219,7 @@ fn starshine_general_match_pattern_instructions(
                       body.body,
                       product_ref_scratch,
                       local_shape,
+                      leaf_start=leaf_start,
                     ) {
                     Ok(_) => ()
                     Err(error) => return Err(error)
@@ -2256,7 +2321,7 @@ fn starshine_general_match_pattern_instructions(
             while child > 0 {
               child -= 1
               tasks.push(
-                EmitStarshinePattern(child_patterns[child], child_values[child]),
+                EmitStarshinePattern(child_patterns[child], child_values[child], 0),
               )
             }
           }
@@ -2447,7 +2512,7 @@ fn starshine_general_match_pattern_instructions(
             while child > 0 {
               child -= 1
               tasks.push(
-                EmitStarshinePattern(child_patterns[child], child_values[child]),
+                EmitStarshinePattern(child_patterns[child], child_values[child], 0),
               )
             }
           }
@@ -3716,7 +3781,7 @@ fn starshine_body_locals(
           scrutinee_source.shape,
         )
         let scratch_type = match scrutinee_shape {
-          @semantic.ErrorPlannedValueShape => Some(@lib.ValType::eqref_null())
+          @semantic.ErrorPlannedValueShape | @semantic.ProductPlannedValueShape(_) | @semantic.UnitPlannedValueShape => Some(@lib.ValType::eqref_null())
           shape => starshine_shape_value_type(shape)
         }
         match scratch_type {
@@ -3726,6 +3791,16 @@ fn starshine_body_locals(
             body_local_types.push(type_)
           }
           None => ()
+        }
+        if scrutinee_shape is @semantic.ProductPlannedValueShape(_) {
+          if match_result_local_indices[scrutinee - body.expressions.start] < 0 {
+            match_result_local_indices[scrutinee - body.expressions.start] = parameter_count + body_local_types.length()
+            starshine_append_shape_value_types(body_local_types, scrutinee_shape)
+          }
+          if fixed_array_ref_scratch_index < 0 {
+            fixed_array_ref_scratch_index = parameter_count + body_local_types.length()
+            body_local_types.push(@lib.ValType::eqref_null())
+          }
         }
         let result_source = lowering.expressions[expression]
         let result_shape = starshine_specialized_shape(
@@ -7485,6 +7560,23 @@ fn starshine_emit_body_instructions(
           arms.length + guard_count + 1,
         )
         let output = fragments[0]
+        let scrutinee = match lowering.expressions[expression].kind {
+          @semantic.PlannedMatchExpression(value, _) => value
+          _ => return Err(UnsupportedExpression(body.body, expression))
+        }
+        let source = lowering.expressions[scrutinee]
+        let shape = starshine_specialized_shape(lowering, generic_specialization, source.type_, source.shape)
+        if shape is @semantic.ProductPlannedValueShape(_) {
+          let bundle = match_result_local_indices[scrutinee - body.expressions.start]
+          if bundle < 0 { return Err(UnsupportedExpression(body.body, scrutinee)) }
+          starshine_append_product_local_sets(output, bundle, shape)
+          match starshine_product_box_from_locals(planned, program, body.body, bundle, shape) {
+            Ok(instructions) => append_starshine_instructions(output, instructions)
+            Err(error) => return Err(error)
+          }
+        } else if shape is @semantic.UnitPlannedValueShape {
+          output.push(@lib.Instruction::ref_null(@lib.HeapType::abs(@lib.AbsHeapType::eq())))
+        }
         let arm_bodies : Array[Array[@lib.Instruction]] = []
         let arm_guards : Array[Array[@lib.Instruction]?] = []
         let mut fragment_index = 1

@@ -1,4 +1,38 @@
 ///|
+test "anonymous tuple patterns nest in constructor payloads" {
+  for
+    source in [
+      b"Some((left, right))", b"((left, right), tail)", b"(value)", b"()", b"(left, ..., right)",
+    ] {
+    assert_true(Parser::from_bytes(source).parse_pattern() is Ok(_))
+  }
+}
+
+///|
+test "product patterns preserve grouping and reject singleton products" {
+  assert_eq(Parser::from_bytes(b"(value)").parse_pattern(), Ok(BindingPattern("value", 1UL)))
+  assert_eq(Parser::from_bytes(b"(value,)").parse_pattern(), Err(InvalidProductPatternArity(1, 0UL)))
+  assert_eq(Parser::from_bytes(b"(left, right)").parse_pattern(), Ok(ProductPattern([BindingPattern("left", 1UL), BindingPattern("right", 7UL)], 0UL)))
+  assert_eq(Parser::from_bytes(b"()").parse_pattern(), Ok(ProductPattern([], 0UL)))
+}
+
+///|
+test "product pattern arity limit is 32 logical fields" {
+  let source = Buffer(size_hint=80)
+  source.write_string_utf8("(")
+  for index in 0..<32 {
+    if index > 0 { source.write_string_utf8(",") }
+    source.write_string_utf8("_")
+  }
+  let valid = Buffer(size_hint=80)
+  valid.write_bytes(source.to_bytes())
+  valid.write_string_utf8(")")
+  assert_true(Parser::from_bytes(valid.to_bytes()).parse_pattern() is Ok(ProductPattern(_, _)))
+  source.write_string_utf8(",_)")
+  assert_eq(Parser::from_bytes(source.to_bytes()).parse_pattern(), Err(InvalidProductPatternArity(33, 0UL)))
+}
+
+///|
 test "patterns parse wildcard binding and literal bases separately" {
   assert_eq(Parser::from_bytes(b"_").parse_pattern(), Ok(WildcardPattern(0UL)))
   assert_eq(

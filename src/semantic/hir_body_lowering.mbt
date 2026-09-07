@@ -622,6 +622,15 @@ fn CollectionBuilder::visit_pattern_source(
       }
       self.schedule_pattern(base)
     }
+    @parser.ProductPattern(arguments, _) => {
+      let pattern_start = self.body_pattern_results.length()
+      self.push_body_task(body_finish_pattern, source_index, pattern_start, 0)
+      let mut index = arguments.length()
+      while index > 0 {
+        index -= 1
+        self.schedule_pattern(arguments[index])
+      }
+    }
     @parser.StructPattern(base, fields, _, _) => {
       let pattern_start = self.body_pattern_results.length()
       self.push_body_task(body_finish_pattern, source_index, pattern_start, 0)
@@ -673,6 +682,13 @@ fn CollectionBuilder::finish_pattern_source(
         { start: argument_start, length: arguments.length(), },
         offset,
       )
+    }
+    @parser.ProductPattern(arguments, offset) => {
+      let start = self.pattern_children.length()
+      for index in 0..<arguments.length() {
+        self.pattern_children.push(self.body_pattern_results[first_start + index])
+      }
+      HirProductPattern({ start, length: arguments.length() }, offset)
     }
     @parser.StructPattern(_, fields, rest_offset, offset) => {
       let field_start = self.pattern_fields.length()

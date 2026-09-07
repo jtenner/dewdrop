@@ -1573,6 +1573,11 @@ fn parse_write_pattern(writer : @cache_binary.Writer, value : Pattern) -> Unit {
       parse_write_patterns(writer, arguments)
       parse_write_offset(writer, offset)
     }
+    ProductPattern(arguments, offset) => {
+      writer.write_byte(9)
+      parse_write_patterns(writer, arguments)
+      parse_write_offset(writer, offset)
+    }
     StructPattern(target, fields, rest, offset) => {
       writer.write_byte(6)
       parse_write_pattern(writer, target)
@@ -1632,6 +1637,11 @@ fn parse_read_pattern(
     5 =>
       TuplePattern(
         parse_read_pattern(reader, field + ".target", depth + 1),
+        parse_read_patterns(reader, field + ".arguments", depth + 1),
+        parse_read_offset(reader, field + ".offset"),
+      )
+    9 =>
+      ProductPattern(
         parse_read_patterns(reader, field + ".arguments", depth + 1),
         parse_read_offset(reader, field + ".offset"),
       )
@@ -2530,6 +2540,11 @@ fn parse_write_pattern_error(
       parse_write_lex_error(writer, error)
       parse_write_offset(writer, offset)
     }
+    InvalidProductPatternArity(arity, offset) => {
+      writer.write_byte(12)
+      writer.write_var_u64(arity.to_uint64())
+      parse_write_offset(writer, offset)
+    }
   }
 }
 
@@ -2569,6 +2584,10 @@ fn parse_read_pattern_error(
     8 => UnclosedTuplePattern(parse_read_offset(reader, field + ".offset"))
     9 => UnclosedStructPattern(parse_read_offset(reader, field + ".offset"))
     10 => EmptyTuplePattern(parse_read_offset(reader, field + ".offset"))
+    12 => InvalidProductPatternArity(
+      reader.read_count(parse_event_maximum_items, field + ".arity"),
+      parse_read_offset(reader, field + ".offset"),
+    )
     11 =>
       PatternLexicalError(
         parse_read_lex_error(reader, field + ".error"),

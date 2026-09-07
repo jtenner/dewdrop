@@ -3,6 +3,7 @@ open dew.std.option
 fn self_host_pattern_payload_span(pattern: SelfHostPlannedPattern) -> SelfHostHirSpan {
   match pattern.source {
     TuplePattern(_, children, _) => children
+    ProductPattern(children, _) => children
     StructPattern(_, fields, _, _, _) => fields
     _ => SelfHostHirSpan::{
       start: 0u32
@@ -77,8 +78,11 @@ fn self_host_emit_nested_pattern_bindings(
   scratch: U32,
   path: Array<SelfHostLinkedWasmFieldLink>,
   destination: StarshineInstructions,
+  bind_direct: Bool,
 ) -> Option<String> {
-  if path.length() > module_.patterns.length() {
+  // One logical product edge adds at most 31 pair-field steps (arity <= 32).
+  // Divide to check that structural bound without overflowing multiplication.
+  if path.length() / 32u32 > module_.patterns.length() {
     return Option::Some("nested binding path exceeds the pattern arena")
   }
   let children = self_host_pattern_payload_span(pattern)
@@ -89,22 +93,27 @@ fn self_host_emit_nested_pattern_bindings(
       if child_id >= module_.patterns.length() {
         return Option::Some("nested binding child is outside its arena")
       }
-      let child = self_host_planned_pattern_identity(module_.patterns[child_id])
-      let field = match self_host_pattern_payload_field(link, module_, pattern, type_index, current) {
-        Option::Some(value) => value
-        Option::None => return Option::Some("pattern field has no exact physical identity")
+      let child = self_host_specialized_pattern(link, canonical, module_, module_.patterns[child_id])
+      if child.source is SelfHostHirPattern::RestPattern(_) || child.shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+        continue current + 1u32
       }
-      path.push(SelfHostLinkedWasmFieldLink::{
-        type_index: type_index
-        field_index: field
-      })
+      let path_start = path.length()
+      match self_host_pattern_push_payload_path(link, module_, pattern, type_index, current, path) {
+        Option::Some(error) => return Option::Some(error)
+        Option::None => {}
+      }
+      let field = path[path.length() - 1u32]
       match child.reference {
-        SelfHostBodyPatternReference::PatternBindingReference(local) => if path.length() > 1u32 || pattern.source is StructPattern(_, _, _, _, _) {
+        SelfHostBodyPatternReference::PatternBindingReference(local) => if bind_direct || path.length() > 1u32 || pattern.source is StructPattern(_, _, _, _, _) || pattern.source is ProductPattern(_, _) {
           let slot = match self_host_linked_i32_local_slot(canonical, module_, body, local) {
             Option::Some(value) => value
             Option::None => return Option::Some("nested binding has no physical local")
           }
-          let actual = match self_host_linked_physical_field_shape(link, type_index, field) {
+          let actual_shape = match self_host_linked_pair_field_shape(link, field.type_index, field.field_index) {
+            Option::Some(shape) => Option::Some(shape)
+            Option::None => self_host_linked_physical_field_shape(link, field.type_index, field.field_index)
+          }
+          let actual = match actual_shape {
             Option::Some(shape) => self_host_body_carrier_from_shape(shape)
             Option::None => return Option::Some("nested binding has no physical field")
           }
@@ -117,23 +126,40 @@ fn self_host_emit_nested_pattern_bindings(
             return Option::Some("nested binding local is outside the body plan")
           }
           if !self_host_body_carrier_equal(plan.local_values[local_slot].carrier, actual) {
-            return Option::Some("nested binding field and local carriers disagree")
+            let message = StringBuilder::new()
+            message.append("ABI-710 nested binding field and local carriers disagree body=")
+            message.append_u64(body.body)
+            message.append(" pattern=")
+            message.append_u32(child_id)
+            message.append(" logical=")
+            message.append_i32(child.type_)
+            message.append(" field_type=")
+            message.append_u32(field.type_index)
+            message.append(" field=")
+            message.append_u32(field.field_index)
+            message.append(" local=")
+            message.append_u32(local)
+            message.append(" expected=")
+            message.append(self_host_linked_shape_name(self_host_body_carrier_shape(plan.local_values[local_slot].carrier)))
+            message.append(" actual=")
+            message.append(self_host_linked_shape_name(self_host_body_carrier_shape(actual)))
+            return Option::Some(message.finish())
           }
           self_host_emit_pattern_path(scratch, path, destination)
           StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_local_set(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(slot))))
         }
         _ => if self_host_pattern_payload_span(child).length > 0u32 {
-          let child_type = match self_host_linked_pattern_variant_type(link, module_, child, self_host_nested_pattern_payload_shape(module_, child), self_host_linked_type_nominal_declaration(module_, child.type_)) {
+          let child_type = match self_host_pattern_nested_type(link, module_, child) {
             Option::Some(value) => value
             Option::None => return Option::Some("nested binding has no exact parent variant")
           }
-          match self_host_emit_nested_pattern_bindings(link, module_, body, canonical, child, child_type, scratch, path, destination) {
+          match self_host_emit_nested_pattern_bindings(link, module_, body, canonical, child, child_type, scratch, path, destination, true) {
             Option::Some(error) => return Option::Some(error)
             Option::None => {}
           }
         }
       }
-      let _ = path.pop()
+      path.truncate(path_start)
       continue current + 1u32
     } else {
       break self_host_semantic_unit()
@@ -154,7 +180,7 @@ fn self_host_emit_nested_pattern_tests(
   path: Array<SelfHostLinkedWasmFieldLink>,
   destination: StarshineInstructions,
 ) -> Option<String> {
-  if path.length() > module_.patterns.length() {
+  if path.length() / 32u32 > module_.patterns.length() {
     return Option::Some("nested pattern path exceeds the pattern arena")
   }
   let children = self_host_pattern_payload_span(pattern)
@@ -165,18 +191,18 @@ fn self_host_emit_nested_pattern_tests(
       if child_id >= module_.patterns.length() {
         return Option::Some("nested pattern child is outside its arena")
       }
-      let child = self_host_planned_pattern_identity(module_.patterns[child_id])
+      let child = self_host_specialized_pattern(link, canonical, module_, module_.patterns[child_id])
+      if child.source is SelfHostHirPattern::RestPattern(_) || child.shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+        continue current + 1u32
+      }
       if !(child.reference is SelfHostBodyPatternReference::PatternBindingReference(_)) && !(child.source is SelfHostHirPattern::WildcardPattern(_)) {
         let predicate = StarshineFfi.ffi_ffi_bridge_instructions_new()
         let absent = StarshineFfi.ffi_ffi_bridge_instructions_new()
-        let field = match self_host_pattern_payload_field(link, module_, pattern, type_index, current) {
-          Option::Some(value) => value
-          Option::None => return Option::Some("pattern test field has no exact physical identity")
+        let path_start = path.length()
+        match self_host_pattern_push_payload_path(link, module_, pattern, type_index, current, path) {
+          Option::Some(error) => return Option::Some(error)
+          Option::None => {}
         }
-        path.push(SelfHostLinkedWasmFieldLink::{
-          type_index: type_index
-          field_index: field
-        })
         self_host_emit_pattern_path(scratch, path, predicate)
         match child.source {
           SelfHostHirPattern::LiteralPattern(expression, _) => {
@@ -221,7 +247,7 @@ fn self_host_emit_nested_pattern_tests(
             }
           }
           _ => {
-            let child_type = match self_host_linked_pattern_variant_type(link, module_, child, self_host_nested_pattern_payload_shape(module_, child), self_host_linked_type_nominal_declaration(module_, child.type_)) {
+            let child_type = match self_host_pattern_nested_type(link, module_, child) {
               Option::Some(value) => value
               Option::None => return Option::Some("nested variant pattern has no exact physical type")
             }
@@ -232,7 +258,7 @@ fn self_host_emit_nested_pattern_tests(
             }
           }
         }
-        let _ = path.pop()
+        path.truncate(path_start)
         StarshineFfi.ffi_ffi_bridge_instructions_push(absent, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(0i32)))
         StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_if(self_host_linked_block_type(SelfHostPlannedValueShape::I32PlannedValueShape), predicate, absent))
       }

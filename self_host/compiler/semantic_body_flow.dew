@@ -507,7 +507,22 @@ impl SelfHostBodyFlowAnalyzer {
     }
     match self.collected.patterns[pattern] {
       SelfHostHirPattern::WildcardPattern(_) => true
-      SelfHostHirPattern::BindingPattern(_, _) => true
+      SelfHostHirPattern::BindingPattern(_, _) => self.pattern_variant(pattern) is Option::None
+      SelfHostHirPattern::ProductPattern(children, _) => {
+        self_host_assert_array_span(children.start, children.length, self.collected.pattern_children.length(), "ARN-101 product coverage children")
+        let _ = while 0u32 {
+          index => if index < children.length {
+            let child = self.collected.pattern_children[children.start + index]
+            if !(self.collected.patterns[child] is SelfHostHirPattern::RestPattern(_)) && !self.pattern_catches_all(child) {
+              return false
+            }
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        true
+      }
       SelfHostHirPattern::AlternativePattern(first, alternatives, _) => {
         if self.pattern_catches_all(first) {
           return true

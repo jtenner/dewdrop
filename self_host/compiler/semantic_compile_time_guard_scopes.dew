@@ -209,6 +209,17 @@ impl SelfHostBasicBodyInferencer {
               }
               SelfHostHirPattern::AlternativePattern(root, span, _) => {
                 work.push(SelfHostCompileTimeGuardWalk::GuardPattern(root))
+                self_host_assert_array_span(span.start, span.length, self.collected.pattern_children.length(), "ARN-101 guarded pattern children")
+                let _ = while 0u32 {
+                  child => if child < span.length {
+                    work.push(SelfHostCompileTimeGuardWalk::GuardPattern(self.collected.pattern_children[span.start + child]))
+                    continue child + 1u32
+                  } else {
+                    break self_host_semantic_unit()
+                  }
+                }
+              }
+              SelfHostHirPattern::ProductPattern(span, _) => {
                 self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.collected.pattern_children.length()), "ARN-101 guarded pattern children")
                 let _ = while 0u32 {
                   index => if index < span.length {

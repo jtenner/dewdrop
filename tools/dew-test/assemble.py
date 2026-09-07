@@ -67,6 +67,7 @@ def main() -> None:
         ("specialization_callbacks", "app.callback_probes"),
         ("member_calls", "app.member_probes"),
         ("debug_dispatch", "app.debug_probes"),
+        ("product_patterns", "app.product_patterns"),
         ("constructor_evaluations", "app.constructor_probes"),
         ("raw_gc_storage", "app.raw_gc"),
         ("raw_gc_unit", "app.raw_gc_unit"),

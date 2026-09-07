@@ -148,6 +148,7 @@ pub enum SelfHostPattern {
   LiteralPattern(SelfHostExpr, U32)
   QualifiedPattern(SelfHostPattern, String, U32)
   TuplePattern(SelfHostPattern, Array<SelfHostPattern>, U32)
+  ProductPattern(Array<SelfHostPattern>, U32)
   StructPattern(SelfHostPattern, Array<SelfHostPatternField>, Option<U32>, U32)
   AlternativePattern(SelfHostPattern, Array<SelfHostPattern>, U32)
 }
@@ -162,6 +163,7 @@ impl SelfHostPattern {
       LiteralPattern(_, offset) => offset
       QualifiedPattern(_, _, offset) => offset
       TuplePattern(_, _, offset) => offset
+      ProductPattern(_, offset) => offset
       StructPattern(_, _, _, offset) => offset
       AlternativePattern(_, _, offset) => offset
     }

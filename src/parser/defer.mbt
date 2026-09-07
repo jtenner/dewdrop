@@ -419,6 +419,14 @@ fn deferred_pattern_binds_name(pattern : Pattern, name : String) -> Bool {
       }
       false
     }
+    ProductPattern(items, _) => {
+      for item in items {
+        if deferred_pattern_binds_name(item, name) {
+          return true
+        }
+      }
+      false
+    }
     StructPattern(base, fields, _, _) => {
       if deferred_pattern_binds_name(base, name) {
         return true

@@ -425,7 +425,7 @@ fn BodyFlowAnalyzer::initialize_pattern_irrefutability(
           VariantInferredPatternConstructor(_, _) => true
           _ => false
         }
-      HirTuplePattern(_, children, _) => {
+      HirTuplePattern(_, children, _) | HirProductPattern(children, _) => {
         let mut result = true
         for index in 0..<children.length {
           let child = self.collected.pattern_children[children.start + index]
@@ -498,7 +498,7 @@ fn BodyFlowAnalyzer::initialize_pattern_irrefutability(
         match self.collected.patterns[pattern] {
           HirWildcardPattern(_) | HirBindingPattern(_, _) | HirRestPattern(_) =>
             true
-          HirAlternativePattern(_, _, _) => valid_payload
+          HirAlternativePattern(_, _, _) | HirProductPattern(_, _) => valid_payload
           _ => false
         }
     }
@@ -593,6 +593,7 @@ fn BodyFlowAnalyzer::coverage_atom(
     NoInferredPatternConstructor =>
       match self.collected.patterns[pattern] {
         HirWildcardPattern(_) | HirBindingPattern(_, _) => CatchAllCoverageAtom
+        HirProductPattern(_, _) if self.pattern_is_irrefutable(pattern) => CatchAllCoverageAtom
         HirLiteralPattern(expression, _) =>
           match self.collected.expressions[expression] {
             HirBoolExpr(value, _) => BoolCoverageAtom(value)

@@ -1,5 +1,6 @@
 open dew.std.result
 open dew.std.testing
+open dew.std.string_builder
 
 test "self-host parser parses constructor patterns" {
   match self_host_parse_pattern_source(b"Option::Some(value)") {
@@ -35,4 +36,47 @@ test "self-host parser rejects bare rest patterns" {
     self_host_parse_pattern_source(b"...") is Result::Err(_),
     "accepted bare rest pattern",
   )
+}
+test "anonymous tuple patterns nest in constructor payloads" {
+  for source in [b"Some((left, right))", b"((left, right), tail)", b"(value)", b"()", b"(left, ..., right)"] {
+    assert(self_host_parse_pattern_source(source) is Result::Ok(_), "anonymous tuple pattern must parse")
+  }
+}
+
+test "product patterns preserve grouping and reject singleton products" {
+  assert(self_host_parse_pattern_source(b"(value)") is Result::Ok(SelfHostPattern::BindingPattern(_, 1u32)), "grouping changed pattern")
+  assert(self_host_parse_pattern_source(b"(value,)") is Result::Err(SelfHostParseError::InvalidProductArity(1u32, 0u32)), "singleton product must fail with arity")
+  match self_host_parse_pattern_source(b"(left, right)") {
+    Result::Ok(SelfHostPattern::ProductPattern(fields, 0u32)) => {
+      assert(fields.length() == 2u32, "product pattern field count")
+      assert(fields[0u32] is SelfHostPattern::BindingPattern(_, 1u32), "first product pattern field")
+      assert(fields[1u32] is SelfHostPattern::BindingPattern(_, 7u32), "second product pattern field")
+    }
+    _ => assert(false, "product pattern must parse")
+  }
+}
+
+test "product pattern arity limit is 32 logical fields" {
+  for count in [32u32, 33u32] {
+    let source = StringBuilder::new()
+    source.append("(")
+    let _ = while 0u32 {
+      index => if index < count {
+        if index > 0u32 {
+          source.append(",")
+        }
+        source.append("_")
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    source.append(")")
+    let result = self_host_parse_pattern_source(source.finish().as_bytes())
+    if count == 32u32 {
+      assert(result is Result::Ok(SelfHostPattern::ProductPattern(_, _)), "32 product fields must parse")
+    } else {
+      assert(result is Result::Err(SelfHostParseError::InvalidProductArity(33u32, 0u32)), "33 product fields must report their arity")
+    }
+  }
 }

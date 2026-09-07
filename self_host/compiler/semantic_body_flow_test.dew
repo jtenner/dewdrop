@@ -246,6 +246,20 @@ test "body flow analyzes lambda bodies" {
   assert(flows.lambdas[0u32].flow.falls_through, "lambda falls through")
 }
 
+test "product coverage does not treat a short unit variant as a binding" {
+  let (_, missing) = self_host_flow_source(
+    985u64,
+    b"enum Choice {\n  Missing\n  Present(I32)\n}\nfn choose(value: (Choice, I32)) -> I32 {\n  match value {\n    (Missing, _) => 0\n  }\n}\n",
+  )
+  assert(self_host_flow_non_exhaustive_count(missing.bodies[0u32]) == 1u32, "missing product case is diagnosed")
+  let (_, complete) = self_host_flow_source(
+    986u64,
+    b"enum Choice {\n  Missing\n  Present(I32)\n}\nfn choose(value: (Choice, I32)) -> I32 {\n  match value {\n    (Missing, _) => 0\n    (_, result) => result\n  }\n}\n",
+  )
+  assert(self_host_flow_non_exhaustive_count(complete.bodies[0u32]) == 0u32, "product binding covers the remaining cases")
+  assert(self_host_flow_redundant_count(complete.bodies[0u32]) == 0u32, "product binding is not redundant")
+}
+
 test "body flow diagnoses non-exhaustive and redundant match arms" {
   let (_, missing) = self_host_flow_source(
     972u64,

@@ -16032,10 +16032,13 @@ fn self_host_emit_linked_i32_expression(
                 match_payload_hint,
                 logical_match_result_shape,
               ))
-              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
-                scratch,
-                destination,
-              ))
+              let subject_shape = self_host_linked_call_argument_shape(link, canonical_body_plan, module_, body, caller_specialization, value)
+              if !(subject_shape is SelfHostPlannedValueShape::UnitPlannedValueShape) {
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
+                  scratch,
+                  destination,
+                ))
+              }
               self_host_linked_i32_schedule_expression(
                 tasks,
                 expression_depths,
@@ -21036,10 +21039,7 @@ fn self_host_emit_linked_i32_expression(
           ) {
             return Option::Some("linked I32 match pattern is outside its arena")
           }
-          let pattern = self_host_planned_pattern_at(
-            module_.patterns,
-            arm.pattern,
-          )
+          let pattern = self_host_specialized_pattern(link, canonical_body_plan, module_, module_.patterns[arm.pattern])
           let subject_nominal = if self_host_u32_greater(
             pattern_subject_nominals.length(),
             arm.pattern,
@@ -21383,6 +21383,26 @@ fn self_host_emit_linked_i32_expression(
               StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_ref_test_nominal(self_host_u32_to_i32(type_index)))
               condition_ready = true
             }
+            SelfHostHirPattern::AlternativePattern(first, remaining, _) => {
+              match self_host_emit_reference_pattern_alternatives(link, module_, body, canonical_body_plan, first, remaining, scratch, destination) {
+                Option::Some(error) => return Option::Some(error)
+                Option::None => {}
+              }
+              condition_ready = true
+            }
+            SelfHostHirPattern::ProductPattern(children, _) => {
+              if children.length == 0u32 {
+                catch_all = true
+              } else {
+                variant_type = match self_host_product_pattern_type(link, pattern) {
+                  Option::Some(value) => value
+                  Option::None => return Option::Some("product pattern has no exact physical type")
+                }
+                StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_local_get(StarshineFfi.ffi_lib_LocalIdx_new(scratch.into())))
+                StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_ref_test_nominal(self_host_u32_to_i32(variant_type)))
+                condition_ready = true
+              }
+            }
             SelfHostHirPattern::TuplePattern(_, _, _) => match self_host_linked_pattern_variant_type(
               link,
               module_,
@@ -21569,7 +21589,7 @@ fn self_host_emit_linked_i32_expression(
               result_shape,
             ))
             if !self_host_u32_equal(variant_type, 4294967295u32) {
-              match self_host_emit_nested_pattern_bindings(link, module_, body, canonical_body_plan, pattern, variant_type, scratch, [], binding_destination) {
+              match self_host_emit_nested_pattern_bindings(link, module_, body, canonical_body_plan, pattern, variant_type, scratch, [], binding_destination, false) {
                 Option::Some(error) => return Option::Some(error)
                 Option::None => {}
               }
@@ -26370,6 +26390,40 @@ fn self_host_linked_pattern_binds_local(
           _ => {}
         }
         match pattern.source {
+          SelfHostHirPattern::ProductPattern(children, _) => {
+            self_host_assert_array_span(children.start, children.length, module_.pattern_children.length(), "ARN-101 product binding children")
+            let _ = while 0u32 {
+              index => if index < children.length {
+                pending.push(module_.pattern_children[children.start + index])
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          SelfHostHirPattern::AlternativePattern(first, children, _) => {
+            pending.push(first)
+            self_host_assert_array_span(children.start, children.length, module_.pattern_children.length(), "ARN-101 alternative binding children")
+            let _ = while 0u32 {
+              index => if index < children.length {
+                pending.push(module_.pattern_children[children.start + index])
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
+          SelfHostHirPattern::StructPattern(_, fields, _, _, _) => {
+            self_host_assert_array_span(fields.start, fields.length, module_.pattern_fields.length(), "ARN-101 named binding fields")
+            let _ = while 0u32 {
+              index => if index < fields.length {
+                pending.push(module_.pattern_fields[fields.start + index].pattern)
+                continue index + 1u32
+              } else {
+                break self_host_semantic_unit()
+              }
+            }
+          }
           SelfHostHirPattern::TuplePattern(_, children, _) => {
             let mut child = 0u32
             let _ = while child {

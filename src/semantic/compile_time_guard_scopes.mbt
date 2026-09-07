@@ -266,6 +266,14 @@ fn BasicBodyInferencer::mark_guard_scope(
               )
             }
           }
+          HirProductPattern(span, _) =>
+            for offset in 0..<span.length {
+              work.push(
+                GuardPattern(
+                  self.collected.pattern_children[span.start + offset],
+                ),
+              )
+            }
           HirStructPattern(root, span, _, _, _) => {
             work.push(GuardPattern(root))
             for offset in 0..<span.length {

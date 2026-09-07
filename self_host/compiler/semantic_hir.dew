@@ -403,6 +403,7 @@ pub enum SelfHostHirPattern {
   LiteralPattern(U32, U32)
   QualifiedPattern(U32, U32, U32)
   TuplePattern(U32, SelfHostHirSpan, U32)
+  ProductPattern(SelfHostHirSpan, U32)
   StructPattern(U32, SelfHostHirSpan, Bool, U32, U32)
   AlternativePattern(U32, SelfHostHirSpan, U32)
 }
@@ -417,6 +418,7 @@ impl SelfHostHirPattern {
       SelfHostHirPattern::LiteralPattern(_, offset) => offset
       SelfHostHirPattern::QualifiedPattern(_, _, offset) => offset
       SelfHostHirPattern::TuplePattern(_, _, offset) => offset
+      SelfHostHirPattern::ProductPattern(_, offset) => offset
       SelfHostHirPattern::StructPattern(_, _, _, _, offset) => offset
       SelfHostHirPattern::AlternativePattern(_, _, offset) => offset
     }

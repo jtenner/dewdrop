@@ -2634,24 +2634,6 @@ impl SelfHostBasicBodyInferencer {
             _ => self.solver.fresh_variable()
           }
           SelfHostHirPattern::LiteralPattern(expression, _) => self.expression_type(expression)
-          SelfHostHirPattern::TuplePattern(base, children, _) => if self_host_u32_equal(
-            base,
-            4294967295u32,
-          ) {
-            let fields = []
-            let mut index = 0u32
-            let _ = while index {
-              child => if child < children.length {
-                fields.push(self.pattern_type(self.collected.pattern_children[children.start + child]))
-                continue child + 1u32
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-            self.solver.product_type(fields)
-          } else {
-            self.solver.fresh_variable()
-          }
           _ => self.solver.fresh_variable()
         }
         self.pattern_types[self.pattern_index(current)] = type_
@@ -3475,10 +3457,7 @@ impl SelfHostBasicBodyInferencer {
           continue current + 1u32
         }
         match self.collected.patterns[current] {
-          SelfHostHirPattern::TuplePattern(base, _, _) => if !self_host_u32_equal(
-            base,
-            4294967295u32,
-          ) {
+          SelfHostHirPattern::TuplePattern(base, _, _) => {
             self.consumed_pattern_roots[self.pattern_index(base)] = true
           }
           SelfHostHirPattern::StructPattern(base, _, _, _, _) => {
@@ -3491,17 +3470,18 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
-    pattern = self.body.patterns.start
+    // Children are collected before parents. Resolve the outer expected type
+    // before selecting a constructor or product inside its payload.
+    pattern = end
     let _ = while pattern {
-      current => if current < end {
+      next => if next > self.body.patterns.start {
+        let current = next - 1u32
         if !self.live_pattern(current) {
-          continue current + 1u32
+          continue current
         }
         match self.collected.patterns[current] {
-          SelfHostHirPattern::TuplePattern(base, children, offset) => if !self_host_u32_equal(
-            base,
-            4294967295u32,
-          ) {
+          SelfHostHirPattern::ProductPattern(children, offset) => self.constrain_product_pattern(current, children, offset)
+          SelfHostHirPattern::TuplePattern(base, children, offset) => {
             self.select_tuple_variant_pattern(
               current,
               base,
@@ -3540,7 +3520,7 @@ impl SelfHostBasicBodyInferencer {
           )
           _ => {}
         }
-        continue current + 1u32
+        continue current
       } else {
         break self_host_semantic_unit()
       }
@@ -3582,6 +3562,7 @@ impl SelfHostBasicBodyInferencer {
             _ => {}
           }
           SelfHostHirPattern::TuplePattern(_, _, _) => {}
+          SelfHostHirPattern::ProductPattern(_, _) => {}
           SelfHostHirPattern::QualifiedPattern(_, _, _) => {}
           SelfHostHirPattern::StructPattern(_, _, _, _, _) => {}
           _ => self.solver.poison_type(self.pattern_type(current))

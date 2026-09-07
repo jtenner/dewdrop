@@ -257,6 +257,11 @@ fn selected_inference_source(
               )
             }
           }
+          HirProductPattern(span, _) => {
+            for offset in 0..<span.length {
+              work.push(InferencePattern(collected.pattern_children[span.start + offset]))
+            }
+          }
           HirStructPattern(root, span, _, _, _) => {
             work.push(InferencePattern(root))
             for offset in 0..<span.length {

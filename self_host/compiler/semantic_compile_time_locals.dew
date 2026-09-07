@@ -8,14 +8,18 @@ fn self_host_compile_time_push_pattern(module_: SelfHostPlannedModuleLowering, p
     SelfHostHirPattern::RestPattern(_) => {}
     SelfHostHirPattern::LiteralPattern(value, _) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
     SelfHostHirPattern::QualifiedPattern(base, _, _) => work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(base))
-    SelfHostHirPattern::TuplePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, base, children, false, work)
-    SelfHostHirPattern::AlternativePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, base, children, false, work)
-    SelfHostHirPattern::StructPattern(base, fields, _, _, _) => self_host_compile_time_push_pattern_children(module_, base, fields, true, work)
+    SelfHostHirPattern::TuplePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, Option::Some(base), children, false, work)
+    SelfHostHirPattern::ProductPattern(children, _) => self_host_compile_time_push_pattern_children(module_, Option::None, children, false, work)
+    SelfHostHirPattern::AlternativePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, Option::Some(base), children, false, work)
+    SelfHostHirPattern::StructPattern(base, fields, _, _, _) => self_host_compile_time_push_pattern_children(module_, Option::Some(base), fields, true, work)
   }
 }
 
-fn self_host_compile_time_push_pattern_children(module_: SelfHostPlannedModuleLowering, base: U32, children: SelfHostHirSpan, fields: Bool, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
-  work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(base))
+fn self_host_compile_time_push_pattern_children(module_: SelfHostPlannedModuleLowering, base: Option<U32>, children: SelfHostHirSpan, fields: Bool, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
+  match base {
+    Option::Some(value) => work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(value))
+    Option::None => {}
+  }
   let length = if fields {
     module_.pattern_fields.length()
   } else {

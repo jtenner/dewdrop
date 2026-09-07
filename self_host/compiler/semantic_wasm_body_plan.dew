@@ -394,7 +394,7 @@ fn self_host_body_specialization_shape_for_type(
   logical_type: I32,
   shape: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedValueShape {
-  if !(shape is SelfHostPlannedValueShape::GenericPlannedValueShape) ||
+  if (!(shape is SelfHostPlannedValueShape::GenericPlannedValueShape) && !(shape is SelfHostPlannedValueShape::ProductPlannedValueShape(_))) ||
     specialization == 4294967295u32 ||
     specialization >= link.fragments.specialization.requests.length() {
     return shape
@@ -3786,6 +3786,8 @@ fn self_host_body_seed_match_payload_binding(
     return false
   }
   let _ = target
+  self_host_assert_array_span(children.start, children.length, module_.pattern_children.length(), "ARN-101 match payload children")
+  self_host_assert_array_index(module_.pattern_children[children.start], module_.patterns.length(), "ARN-104 match payload pattern")
   let name = self_host_linked_pattern_name(module_, pattern)
   let argument = if name == "Err" {
     1u32
@@ -3999,11 +4001,14 @@ fn self_host_body_seed_match_payload_binding(
       let local_index = self_host_u32_add(body.locals.start, current)
       if local_index < module_.locals.length() {
         let local_id = module_.locals[local_index].local_id
-        if self_host_linked_pattern_binds_local(
-          module_,
-          pattern_index,
-          local_id,
-        ) && current < local_values.length() && self_host_body_plan_force_local_value(
+        // This evidence describes the whole payload, not any descendants
+        // inside a product or another constructor stored in that payload.
+        let child = module_.pattern_children[children.start]
+        let direct_binding = match module_.patterns[child].reference {
+          SelfHostBodyPatternReference::PatternBindingReference(candidate) => candidate == local_id
+          _ => false
+        }
+        if direct_binding && current < local_values.length() && self_host_body_plan_force_local_value(
           local_values,
           locals,
           current,

@@ -11,6 +11,7 @@ import { checkSpecializationCallbacks } from "./specialization-callback-cases.mj
 import { checkMemberCalls } from "./member-call-cases.mjs";
 import { wasiForeignProbe } from "./wasi-foreign-cases.mjs";
 import { debugDispatchProbe } from "./debug-dispatch-cases.mjs";
+import { checkProductPatterns } from "./product-pattern-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { checkRingOperations } from "./ring-operation-cases.mjs";
@@ -154,6 +155,15 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const request = await readFile(".tmp/self-host-hardening/product-patterns.request.bin");
+  const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+  console.log(`self-host product pattern checks passed: ${checkProductPatterns(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host product pattern corpus failed", error);
+}
 try {
   const start = performance.now();
   const request = await readFile(".tmp/self-host-hardening/debug-dispatch.request.bin");

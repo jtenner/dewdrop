@@ -1,0 +1,152 @@
+open dew.std.string
+open dew.std.option
+
+enum ProductCase {
+  Present((I32, I64))
+  Missing
+}
+
+fn product_i32(value: I64) -> I32 {
+  value.into()
+}
+fn product_unit() -> Unit {}
+
+fn read_case(value: ProductCase) -> I32 {
+  match value {
+    Present((left, right)) => left + product_i32(right)
+    Missing => 0i32
+  }
+}
+
+fn read_pair(value: (I32, I64)) -> I32 {
+  match value {
+    (left, right) => left + product_i32(right)
+  }
+}
+
+fn read_nested(value: ((I32, I64), I32)) -> I32 {
+  match value {
+    ((left, right), tail) => left + product_i32(right) + tail
+  }
+}
+
+fn read_slice(value: (I32, I64, I32, I32)) -> I32 {
+  match value {
+    (left, ..., right) => left + right
+  }
+}
+
+fn read_unit(value: (I32, Unit, I64)) -> I32 {
+  match value {
+    (left, effect, right) => {
+      let _ = effect
+      left + product_i32(right)
+    }
+  }
+}
+
+fn read_literal(value: (I32, I64)) -> I32 {
+  match value {
+    (1i32, right) => product_i32(right)
+    (_, _) => 99i32
+  }
+}
+
+struct ProductTrace {
+  mut count: I32
+}
+
+fn product_effect(trace: ProductTrace) -> (I32, I64) {
+  trace.count = trace.count + 1i32
+  (7i32, 35i64)
+}
+
+fn read_once() -> I32 {
+  let trace = ProductTrace::{
+    count: 0i32
+  }
+  let result = match product_effect(trace) {
+    (0i32, _) => 0i32
+    (left, right) => left + product_i32(right)
+  }
+  result + trace.count
+}
+
+fn read_whole_nested(value: ((I32, I64), I32)) -> I32 {
+  match value {
+    (pair, tail) => read_pair(pair) + tail
+  }
+}
+
+fn read_enum_field(value: (ProductCase, I32)) -> I32 {
+  match value {
+    (Present((left, right)), tail) => left + product_i32(right) + tail
+    (_, _) => 0i32
+  }
+}
+
+fn read_text(value: (String, I32)) -> I32 {
+  match value {
+    ("yes", result) => result
+    (_, _) => 0i32
+  }
+}
+
+fn read_alternative(value: (I32, I64)) -> I32 {
+  match value {
+    (1i32, right), (2i32, right) => product_i32(right)
+    (_, _) => 0i32
+  }
+}
+
+fn read_empty(value: Unit) -> I32 {
+  match value {
+    () => 42i32
+  }
+}
+
+fn reject_product_guard(trace: ProductTrace) -> Bool {
+  trace.count = trace.count + 1i32
+  false
+}
+
+fn read_guard_once(value: (I32, I64)) -> I32 {
+  let trace = ProductTrace::{
+    count: 0i32
+  }
+  let result = match value {
+    (1i32, right), (1i32, right) if reject_product_guard(trace) => product_i32(right)
+    (_, _) => 40i32
+  }
+  result + trace.count
+}
+
+fn read_generic<t>(value: Option<(I32, t)>) -> t {
+  match value {
+    Some((_, right)) => right
+    None => unreachable()
+  }
+}
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => read_case(Present((7i32, 35i64)))
+    1u32 => read_pair((8i32, 34i64))
+    2u32 => read_nested(((7i32, 30i64), 5i32))
+    3u32 => read_slice((7i32, 300i64, 200i32, 35i32))
+    4u32 => read_unit((7i32, product_unit(), 35i64))
+    5u32 => read_literal((1i32, 42i64))
+    6u32 => read_literal((2i32, 42i64))
+    7u32 => read_once()
+    8u32 => read_whole_nested(((7i32, 30i64), 5i32))
+    9u32 => read_enum_field((Present((7i32, 30i64)), 5i32))
+    10u32 => read_enum_field((Missing, 5i32))
+    11u32 => read_text(("yes", 42i32))
+    12u32 => read_text(("no", 42i32))
+    13u32 => read_alternative((2i32, 42i64))
+    14u32 => read_empty(())
+    15u32 => read_guard_once((1i32, 42i64))
+    16u32 => product_i32(read_generic(Some((7i32, 42i64))))
+    _ => -1i32
+  }
+}

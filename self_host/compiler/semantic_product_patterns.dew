@@ -1,0 +1,107 @@
+open dew.std.array
+
+impl SelfHostBasicBodyInferencer {
+  fn constrain_product_pattern(self, pattern: U32, children: SelfHostHirSpan, offset: U32) -> Unit {
+    self_host_assert_array_span(children.start, children.length, self.collected.pattern_children.length(), "ARN-101 product pattern children")
+    let expected = self.pattern_type(pattern)
+    let origin = self_host_pattern_type_origin(pattern, offset)
+    if children.length == 0u32 {
+      self.constrain(expected, self.primitive(SelfHostPrimitiveType::UnitType), origin)
+      return
+    }
+    let mut rest = children.length
+    let mut explicit_count = 0u32
+    let _ = while 0u32 {
+      index => if index < children.length {
+        let child = self.collected.pattern_children[children.start + index]
+        if self.collected.patterns[child] is SelfHostHirPattern::RestPattern(_) {
+          rest = index
+        } else {
+          explicit_count = explicit_count + 1u32
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    let fields = []
+    let term = self.solver.type_term(self.solver.representative_type(expected))
+    let mut valid = true
+    match term {
+      SelfHostBodyTypeTerm::BodyProductType(span) => {
+        self_host_assert_array_span(span.start, span.length, self.solver.type_arguments.length(), "ARN-101 product pattern body fields")
+        let _ = while 0u32 {
+          index => if index < span.length {
+            fields.push(self.solver.type_arguments[span.start + index])
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+      }
+      SelfHostBodyTypeTerm::BodyResolvedType(type_) => match self.resolved.types[type_] {
+        SelfHostResolvedType::ProductType(span) => {
+          self_host_assert_array_span(span.start, span.length, self.resolved.type_arguments.length(), "ARN-101 product pattern resolved fields")
+          let _ = while 0u32 {
+            index => if index < span.length {
+              fields.push(self.solver.resolved_type(self.resolved.type_arguments[span.start + index]))
+              continue index + 1u32
+            } else {
+              break self_host_semantic_unit()
+            }
+          }
+        }
+        _ => {
+          valid = false
+        }
+      }
+      SelfHostBodyTypeTerm::BodyVariableType(_) => if rest == children.length {
+        let _ = while 0u32 {
+          index => if index < children.length {
+            fields.push(self.pattern_type(self.collected.pattern_children[children.start + index]))
+            continue index + 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        self.constrain(expected, self.solver.product_type(fields), origin)
+      } else {
+        valid = false
+      }
+      _ => {
+        valid = false
+      }
+    }
+    if !valid {
+      if !(term is SelfHostBodyTypeTerm::BodyErrorType) {
+        self.diagnostics.push(SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(pattern, offset))
+      }
+      self.fail_pattern_constructor(pattern)
+    } else if (rest == children.length && explicit_count != fields.length()) || explicit_count > fields.length() {
+      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::PatternPayloadArityMismatch(pattern, fields.length(), explicit_count, offset))
+      self.fail_pattern_constructor(pattern)
+      valid = false
+    }
+    let _ = while 0u32 {
+      index => if index < children.length {
+        let child = self.collected.pattern_children[children.start + index]
+        if index != rest {
+          let field = if valid {
+            let position = if index < rest {
+              index
+            } else {
+              fields.length() - (children.length - index)
+            }
+            fields[position]
+          } else {
+            self.solver.error_type()
+          }
+          self.constrain(self.pattern_type(child), field, origin)
+        }
+        continue index + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+  }
+}

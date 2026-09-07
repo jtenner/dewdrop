@@ -470,6 +470,17 @@ fn self_host_lowering_expression_kind(
     self_host_u32_add(job.operator_targets.start, relative)
   ]
   if collected.expressions[expression] is SelfHostHirExpr::NameExpr(_, _) {
+    match selection {
+      SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, 2u32, _) => return SelfHostPlannedExpressionKind::PlannedConstruct(
+        expression,
+        SelfHostHirSpan::{
+          start: 0u32
+          length: 0u32
+        },
+        selection,
+      )
+      _ => {}
+    }
     match call_target {
       SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => return SelfHostPlannedExpressionKind::PlannedFunctionReference(declaration)
       _ => {}
@@ -1060,7 +1071,9 @@ fn self_host_lowering_directize_targets(
           self_host_lowering_consume_expression_target(expressions, target)
         }
         SelfHostPlannedExpressionKind::PlannedConstruct(target, _, _) => {
-          self_host_lowering_consume_expression_target(expressions, target)
+          if target != current {
+            self_host_lowering_consume_expression_target(expressions, target)
+          }
         }
         _ => {}
       }

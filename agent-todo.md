@@ -248,10 +248,13 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Add stable phase snapshots to both compilers. Compare by semantic identity
   and stop at the first difference, from collection through emission. Keep
   bootstrap byte comparison as an additional check, not a substitute.
-- [ ] Finish nested anonymous tuple patterns, such as `Some((left, right))`,
-  in both parsers and downstream pattern handling. Current fixtures use a named
-  payload followed by tuple destructuring. Extend imported/unqualified enum
-  ambiguity and construction coverage while removing name-based backend rules.
+- [x] Finish nested anonymous tuple patterns, such as `Some((left, right))`,
+  in both parsers and downstream pattern handling. Imported/unqualified payload
+  tests retain exact types and constructor identity. Short unit constructors
+  survive lowering; nested patterns use selected declarations, not spelling.
+  Both compilers pass 17 shared execution cases, including Unit, rest, generic
+  payloads, and guard order. Clean B/C bytes match. See the
+  [product pattern log](docs/research/product-patterns-2026-09-07.md).
   The native importer now rebuilds product field spans in the receiving arena.
   Nested imports and structural identity have focused tests; see the
   [imported product log](docs/research/imported-product-spans-2026-09-07.md).

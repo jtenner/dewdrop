@@ -577,6 +577,23 @@ impl SelfHostCollectionBuilder {
           ),
         )
       }
+      SelfHostPattern::ProductPattern(arguments, offset) => {
+        let lowered = self_host_empty_semantic_ids()
+        for argument in arguments {
+          lowered.push(self.lower_pattern(argument))
+        }
+        let start = self.pattern_children.length()
+        for child in lowered {
+          self.pattern_children.push(child)
+        }
+        self.emit_pattern(SelfHostHirPattern::ProductPattern(
+          SelfHostHirSpan::{
+            start: start
+            length: lowered.length()
+          },
+          offset,
+        ))
+      }
       SelfHostPattern::StructPattern(base, fields, rest, offset) => {
         let base_id = self.lower_pattern(base)
         let lowered = self_host_empty_semantic_ids()

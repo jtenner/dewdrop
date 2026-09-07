@@ -86,6 +86,7 @@ fn starshine_append_product_unbox(
   body_id : @semantic.BodyId,
   product_local : Int,
   shape : @semantic.PlannedValueShape,
+  leaf_start? : Int = 0,
 ) -> Result[Unit, StarshineCodeEmissionError] {
   let leaves : Array[@semantic.PlannedValueShape] = []
   starshine_product_leaf_shapes(shape, leaves)
@@ -93,7 +94,7 @@ fn starshine_append_product_unbox(
   for index, leaf in leaves {
     output.push(starshine_array_local_get(product_local))
     output.push(starshine_match_cast(box_type))
-    output.push(@lib.Instruction::i32_const(@lib.I32::new(index)))
+    output.push(@lib.Instruction::i32_const(@lib.I32::new(leaf_start + index)))
     output.push(
       @lib.Instruction::array_get(
         @lib.TypeIdx::new(box_type.reinterpret_as_uint()),

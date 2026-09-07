@@ -290,6 +290,7 @@ pub enum HirPattern {
   HirLiteralPattern(ExprId, UInt64)
   HirQualifiedPattern(PatternId, NameId, UInt64)
   HirTuplePattern(PatternId, HirSpan, UInt64)
+  HirProductPattern(HirSpan, UInt64)
   HirStructPattern(PatternId, HirSpan, Bool, UInt64, UInt64)
   HirAlternativePattern(PatternId, HirSpan, UInt64)
 } derive(Eq, Debug)
@@ -304,6 +305,7 @@ pub fn HirPattern::offset(self : HirPattern) -> UInt64 {
     | HirLiteralPattern(_, offset)
     | HirQualifiedPattern(_, _, offset)
     | HirTuplePattern(_, _, offset)
+    | HirProductPattern(_, offset)
     | HirStructPattern(_, _, _, _, offset)
     | HirAlternativePattern(_, _, offset) => offset
   }

@@ -1,4 +1,14 @@
 ///|
+test "parse-event artifact preserves nested product patterns and their errors" {
+  let events = parse_bytes(b"fn value(input: (I32, I64)) -> I32 {\n match input {\n (left, right) => left\n }\n}\n").to_array()
+  for event in events { assert_false(event is Diagnostic(_)) }
+  assert_eq(deserialize_parse_events(serialize_parse_events(events).unwrap()).unwrap(), events)
+  let invalid = parse_bytes(b"fn value(input: I32) -> I32 {\n match input {\n (left,) => left\n }\n}\n").to_array()
+  assert_true(invalid.any(fn(event) { event is Diagnostic(_) }))
+  assert_eq(deserialize_parse_events(serialize_parse_events(invalid).unwrap()).unwrap(), invalid)
+}
+
+///|
 test "parse-event artifact round-trips complete declarations and diagnostics" {
   let events = parse_bytes(
     b"open app.library\npub fn value(input: F32) -> F32 {\n  input + 1.5f32\n}\npub struct Pair {\n  left: I32\n  right: I32\n}\ninvalid declaration\n",

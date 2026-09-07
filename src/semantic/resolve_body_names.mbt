@@ -870,6 +870,14 @@ fn BodyNameResolver::collect_pattern_alternative(
         self.pattern_stack.push(base)
         self.pattern_contexts.push(false)
       }
+      HirProductPattern(arguments, _) => {
+        let mut index = arguments.length
+        while index > 0 {
+          index -= 1
+          self.pattern_stack.push(self.collected.pattern_children[arguments.start + index])
+          self.pattern_contexts.push(true)
+        }
+      }
       HirStructPattern(base, fields, _, _, _) => {
         let mut index = fields.length
         while index > 0 {

@@ -87,6 +87,11 @@ self_host_measure 'hardening Debug dispatch request' \
     "$work/debug-dispatch.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-debug-dispatch.wasm \
     app.debug_probes tools/dew-test/debug_dispatch.dew
+self_host_measure 'hardening product pattern request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/product-patterns.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-product-patterns.wasm \
+    app.product_patterns tools/dew-test/product_patterns.dew
 mapfile -t compiler_sources < <(
   find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' ! -name main.dew | sort
 )
@@ -95,6 +100,8 @@ test_args=("$work/tests.raw.wasm" self_host.compiler
   self_host.compiler ffi_smoke.dew self_host/starshine/smoke.dew)
 for source in "${compiler_sources[@]}" \
   self_host/compiler/compiler_runtime_assertions_test.dew \
+  self_host/compiler/parser_pattern_test.dew \
+  self_host/compiler/semantic_product_patterns_test.dew \
   self_host/compiler/semantic_wasm_body_plan_test.dew \
   self_host/compiler/semantic_physical_specialization_test.dew \
   self_host/compiler/semantic_method_context_test.dew \
