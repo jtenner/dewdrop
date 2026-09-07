@@ -18,17 +18,8 @@ builtin string_ends_with_view(value: String, suffix: StringView) -> Bool = "dew_
 builtin string_view_byte_length(value: StringView) -> U32 = "dew_string_view_byte_length"
 builtin string_view_byte_at(value: StringView, index: U32) -> U8 = "dew_string_view_byte_at"
 builtin string_view_to_string(value: StringView) -> String = "dew_string_view_to_string"
-builtin string_view_as_bytes(value: StringView) -> Bytes = "dew_string_view_as_bytes"
-builtin string_view_utf16_length(value: StringView) -> U32 = "dew_string_view_utf16_length"
-builtin string_view_equals(left: StringView, right: StringView) -> Bool = "dew_string_view_equals"
-builtin string_view_hash(value: StringView) -> U64 = "dew_string_view_hash"
+builtin string_view_as_bytes_unchecked(value: StringView) -> Bytes = "dew_string_view_as_bytes"
 builtin string_view_view(value: StringView, start: U32, length: U32) -> StringView = "dew_string_view_view"
-builtin string_view_find_raw(value: StringView, needle: StringView) -> U32 = "dew_string_view_find"
-builtin string_view_find_string_raw(value: StringView, needle: String) -> U32 = "dew_string_view_find_string"
-builtin string_view_starts_with(value: StringView, prefix: StringView) -> Bool = "dew_string_view_starts_with"
-builtin string_view_starts_with_string(value: StringView, prefix: String) -> Bool = "dew_string_view_starts_with_string"
-builtin string_view_ends_with(value: StringView, suffix: StringView) -> Bool = "dew_string_view_ends_with"
-builtin string_view_ends_with_string(value: StringView, suffix: String) -> Bool = "dew_string_view_ends_with_string"
 builtin string_builder_new() -> StringBuilder = "dew_string_builder_new"
 builtin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = "dew_string_builder_with_capacity"
 builtin string_builder_byte_length(value: StringBuilder) -> U32 = "dew_string_builder_byte_length"
@@ -48,6 +39,78 @@ builtin bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string
 builtin bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
 builtin bytes_view(value: Bytes, start: U32, length: U32) -> Bytes = "dew_bytes_view"
 builtin bytes_concat(left: Bytes, right: Bytes) -> Bytes = "dew_bytes_concat"
+
+fn string_view_as_bytes(value: StringView) -> Bytes {
+  string_view_as_bytes_unchecked(value)
+}
+
+// The caller supplies known-valid UTF-8 from a String or StringView.
+fn text_utf16_length(value: Bytes) -> U32 {
+  let length = bytes_byte_length(value)
+  let mut continuations = 0u32
+  let mut four_byte_leads = 0u32
+  let tail = while 0u32 {
+    index if length - index >= 16u32 => {
+      let chunk = wasm_bytes_load_u8x16(value, index)
+      let continuation_mask = wasm_u8x16_eq(wasm_u8x16_and(chunk, wasm_u8x16_splat(192u8)), wasm_u8x16_splat(128u8))
+      let four_byte_mask = wasm_u8x16_ge_u(chunk, wasm_u8x16_splat(240u8))
+      continuations = continuations + wasm_u32_popcnt(wasm_u8x16_bitmask(continuation_mask))
+      four_byte_leads = four_byte_leads + wasm_u32_popcnt(wasm_u8x16_bitmask(four_byte_mask))
+      continue index + 16u32
+    }
+    index => break index
+  }
+  while tail {
+    index if index < length => {
+      let byte = bytes_byte_at(value, index)
+      if byte >= 128u8 && byte < 192u8 {
+        continuations = continuations + 1u32
+      }
+      if byte >= 240u8 {
+        four_byte_leads = four_byte_leads + 1u32
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  length - continuations + four_byte_leads
+}
+
+fn string_view_utf16_length(value: StringView) -> U32 {
+  text_utf16_length(string_view_as_bytes(value))
+}
+
+fn string_view_equals(left: StringView, right: StringView) -> Bool {
+  bytes_equals(string_view_as_bytes(left), string_view_as_bytes(right))
+}
+
+fn string_view_hash(value: StringView) -> U64 {
+  bytes_hash(string_view_as_bytes(value))
+}
+
+fn string_view_find_raw(value: StringView, needle: StringView) -> U32 {
+  bytes_find_raw(string_view_as_bytes(value), string_view_as_bytes(needle))
+}
+
+fn string_view_find_string_raw(value: StringView, needle: String) -> U32 {
+  bytes_find_raw(string_view_as_bytes(value), string_as_bytes(needle))
+}
+
+fn string_view_starts_with(value: StringView, prefix: StringView) -> Bool {
+  bytes_starts_with(string_view_as_bytes(value), string_view_as_bytes(prefix))
+}
+
+fn string_view_starts_with_string(value: StringView, prefix: String) -> Bool {
+  bytes_starts_with(string_view_as_bytes(value), string_as_bytes(prefix))
+}
+
+fn string_view_ends_with(value: StringView, suffix: StringView) -> Bool {
+  bytes_ends_with(string_view_as_bytes(value), string_view_as_bytes(suffix))
+}
+
+fn string_view_ends_with_string(value: StringView, suffix: String) -> Bool {
+  bytes_ends_with(string_view_as_bytes(value), string_as_bytes(suffix))
+}
 
 fn bytes_to_string(value: Bytes) -> String {
   if !bytes_is_valid_utf8(value) {

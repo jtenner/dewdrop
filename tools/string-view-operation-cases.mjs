@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+
+export function checkStringViewOperations(main) {
+  const labels = ["empty values and bounds", "unaligned equality and hash",
+    "short search candidates", "long search and final candidate",
+    "mixed String/view affixes", "UTF-16 count at each vector alignment",
+    "full Unicode vectors", "nested Unicode views"];
+  for (const [index, label] of labels.entries()) {
+    assert.equal(main(index), 1, `StringView ${label}`);
+  }
+  return labels.length;
+}

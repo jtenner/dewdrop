@@ -22,9 +22,42 @@ impl SelfHostBasicBodyInferencer {
     let type_ = self.solver.representative_type(self.expression_type(left))
     match self.solver.type_term(type_) {
       SelfHostBodyTypeTerm::BodyResolvedType(resolved) => match self.resolved.types[resolved] {
-        SelfHostResolvedType::PrimitiveType(primitive) => {
-          let rank = primitive.rank()
-          rank != 0u32 && rank != 8u32 && rank != 9u32 && rank != 14u32 && rank != 41u32
+        SelfHostResolvedType::PrimitiveType(primitive) => match primitive {
+          SelfHostPrimitiveType::BoolType => true
+          SelfHostPrimitiveType::I8Type => true
+          SelfHostPrimitiveType::I16Type => true
+          SelfHostPrimitiveType::I32Type => true
+          SelfHostPrimitiveType::I64Type => true
+          SelfHostPrimitiveType::U8Type => true
+          SelfHostPrimitiveType::U16Type => true
+          SelfHostPrimitiveType::U32Type => true
+          SelfHostPrimitiveType::U64Type => true
+          SelfHostPrimitiveType::F32Type => true
+          SelfHostPrimitiveType::F64Type => true
+          SelfHostPrimitiveType::V128Type => true
+          SelfHostPrimitiveType::Swar32Type => true
+          SelfHostPrimitiveType::Swar64Type => true
+          SelfHostPrimitiveType::I8x4Type => true
+          SelfHostPrimitiveType::U8x4Type => true
+          SelfHostPrimitiveType::I16x2Type => true
+          SelfHostPrimitiveType::U16x2Type => true
+          SelfHostPrimitiveType::I8x8Type => true
+          SelfHostPrimitiveType::U8x8Type => true
+          SelfHostPrimitiveType::I16x4Type => true
+          SelfHostPrimitiveType::U16x4Type => true
+          SelfHostPrimitiveType::I32x2Type => true
+          SelfHostPrimitiveType::U32x2Type => true
+          SelfHostPrimitiveType::I8x16Type => true
+          SelfHostPrimitiveType::U8x16Type => true
+          SelfHostPrimitiveType::I16x8Type => true
+          SelfHostPrimitiveType::U16x8Type => true
+          SelfHostPrimitiveType::I32x4Type => true
+          SelfHostPrimitiveType::U32x4Type => true
+          SelfHostPrimitiveType::I64x2Type => true
+          SelfHostPrimitiveType::U64x2Type => true
+          SelfHostPrimitiveType::F32x4Type => true
+          SelfHostPrimitiveType::F64x2Type => true
+          _ => false
         }
         _ => false
       }

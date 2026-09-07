@@ -106,6 +106,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   conversion now run in Dew. Bytes storage operations and the SIMD storage
   bridge still need migration. See the
   [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
+  StringView scans also run in Dew, with shared native/self-host tests and a
+  fix for reference-identity equality. View storage and String algorithms remain.
+  See the [StringView log](docs/research/string-view-library-algorithms-2026-09-06.md).
 - [ ] Convert remaining host-operation builtins into foreign declarations.
   Keep generated Dew types, provider metadata, and emitted signatures in sync.
 - [ ] Remove all remaining standard-module path, declaration-number, and name

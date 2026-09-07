@@ -37,6 +37,11 @@ self_host_measure 'hardening Bytes-library request' \
     "$work/bytes.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-bytes-probe.wasm \
     app.bytes_probes tools/dew-test/bytes_operations.dew
+self_host_measure 'hardening StringView-library request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/string-view.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-string-view-probe.wasm \
+    app.string_view_probes tools/dew-test/string_view_operations.dew
 self_host_measure 'hardening raw GC storage request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/raw-gc.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
@@ -71,6 +76,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_wasm_body_plan_test.dew \
   self_host/compiler/semantic_physical_specialization_test.dew \
   self_host/compiler/semantic_method_context_test.dew \
+  self_host/compiler/semantic_text_operators_test.dew \
   self_host/compiler/semantic_raw_conversions_test.dew \
   self_host/compiler/semantic_raw_memory_test.dew \
   self_host/compiler/semantic_raw_arithmetic_test.dew \

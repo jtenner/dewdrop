@@ -1,0 +1,74 @@
+open dew.std.preamble
+open dew.std.string
+open dew.std.bytes
+open dew.std.option
+
+fn view_result(value: Bool) -> I32 {
+  if value {
+    1i32
+  } else {
+    0i32
+  }
+}
+
+pub fn main(case: U32) -> I32 {
+  if case == 0u32 {
+    let empty = "".view(0u32, 0u32)
+    let value = "!abc?".view(1u32, 3u32)
+    view_result(empty.equals(empty) && empty.utf16_length() == 0u32 && value.starts_with(empty) && value.ends_with(empty) && value.find(empty) is Option::Some(0u32) && empty.find(value) is Option::None && !empty.starts_with(value) && !empty.ends_with(value))
+  } else if case == 1u32 {
+    let left = "!0123456789abcdef0123456789abcdef0123456789abcdef?".view(1u32, 48u32)
+    let right = "--0123456789abcdef0123456789abcdef0123456789abcdef--".view(2u32, 48u32)
+    if !left.as_bytes().equals(right.as_bytes()) {
+      return -6i32
+    }
+    if !left.equals(right) {
+      return -5i32
+    }
+    if !(left == right) {
+      return -1i32
+    }
+    if left.hash() != right.hash() {
+      return -2i32
+    }
+    if left.hash() != left.as_bytes().hash() {
+      return -3i32
+    }
+    if !(left != "0123456789abcdef0123456789abcdef0123456789abcdeg".view(0u32, 48u32)) {
+      return -4i32
+    }
+    1i32
+  } else if case == 2u32 {
+    let value = "!aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaab?".view(1u32, 38u32)
+    let needle = "!aaaab?".view(1u32, 5u32)
+    view_result(value.find(needle) is Option::Some(29u32) && value.find_string("ab") is Option::Some(32u32) && !value.contains_string("ac") && value.contains(needle))
+  } else if case == 3u32 {
+    let value = "!0123456789abcdef0123456789abcdef0123456789abcdef?".view(1u32, 48u32)
+    let needle = "!456789abcdef0123456789abcdef0123456789abcdef?".view(1u32, 44u32)
+    view_result(value.find(needle) is Option::Some(4u32) && value.find_string("456789abcdef0123456789abcdef0123456789abcdeg") is Option::None && value.find(value) is Option::Some(0u32))
+  } else if case == 4u32 {
+    let value = "!λ0123456789abcdef🌍?".view(1u32, 22u32)
+    view_result(value.starts_with("!λ012?".view(1u32, 5u32)) && value.starts_with_string("λ012") && value.ends_with("!def🌍?".view(1u32, 7u32)) && value.ends_with_string("def🌍") && !value.starts_with_string("λ013") && !value.ends_with_string("deg🌍"))
+  } else if case == 5u32 {
+    let source = "0123456789abcdef0123456789abcdefλ🌍€"
+    while 0u32 {
+      offset if offset <= 32u32 => {
+        let view = source.view(offset, source.byte_length() - offset)
+        if view.utf16_length() != 36u32 - offset || view.hash() != view.as_bytes().hash() {
+          return 0i32
+        }
+        continue offset + 1u32
+      }
+      _ => break ()
+    }
+    1i32
+  } else if case == 6u32 {
+    let view = "!🌍🌍🌍🌍🌍🌍🌍🌍λ€?".view(1u32, 37u32)
+    view_result(view.utf16_length() == 18u32 && view.find_string("λ€") is Option::Some(32u32) && view.hash() == view.as_bytes().hash())
+  } else if case == 7u32 {
+    let nested = "!!λhello🌍??".view(2u32, 11u32).view(2u32, 9u32)
+    view_result(nested.to_string() == "hello🌍" && nested.utf16_length() == 7u32 && nested.find_string("🌍") is Option::Some(5u32) && nested.starts_with_string("hello") && nested.ends_with_string("🌍"))
+  } else {
+    unreachable()
+  }
+}

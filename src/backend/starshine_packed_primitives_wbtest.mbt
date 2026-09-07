@@ -297,6 +297,24 @@ test "unchecked Bytes to String is one reference cast without allocation" {
 }
 
 ///|
+test "StringView to Bytes is one reference cast without allocation" {
+  let actual = emit_starshine_text_runtime_function(
+    b"dew_string_view_as_bytes", 17, -1, -1,
+  ).unwrap()
+  let expected = @lib.Func::new(
+    @lib.Locals::empty(),
+    @lib.Expr::new([
+      @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
+      @lib.Instruction::ref_cast(
+        false,
+        @lib.HeapType::new(@lib.TypeIdx::new(19U)),
+      ),
+    ]),
+  )
+  assert_eq(actual, expected)
+}
+
+///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
 test "WASI Bytes marshalling freezes imports memory and runtime bodies" {
   let (lowering, fragments, diagnostics) = backend_packed_primitive_pipeline(

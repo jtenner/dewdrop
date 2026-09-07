@@ -1,0 +1,30 @@
+test "StringView equality retains the selected imported trait method" {
+  let link = self_host_physical_test_named_import_link(
+    "app.comparison",
+    b"pub trait Eq {\n  fn eq(self, right: Self) -> Bool\n}\nimpl Eq for StringView {\n  fn eq(self, right: StringView) -> Bool {\n    true\n  }\n}\n",
+    b"open app.comparison\npub fn run(left: StringView, right: StringView) -> Bool {\n  left == right\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  let mut calls = 0u32
+  for expression in module_.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedOperatorCall(_, SelfHostHirBinaryOperator::Equal, _, _, _) => {
+        calls = calls + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(calls == 1u32, "StringView equality must call its trait implementation")
+}
+
+test "reference primitive equality without an implementation is an error" {
+  let link = self_host_physical_test_named_import_link(
+    "app.comparison",
+    b"pub trait Eq {\n  fn eq(self, right: Self) -> Bool\n}\n",
+    b"open app.comparison\npub fn run(left: StringBuilder, right: StringBuilder) -> Bool {\n  left == right\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "one missing operator diagnostic")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, _), "missing value equality cannot become reference identity")
+}
