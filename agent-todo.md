@@ -160,8 +160,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   loop. The eight old formatters are removed from both compiler backends. See the
   [integer Debug log](docs/research/debug-integers-library-2026-09-07.md).
   F32/F64 bit formatting now runs in Dew too, with exact NaN/signed-zero tests
-  and one-to-one reinterpret intrinsics. Text and V128 formatting still remain.
+  and one-to-one reinterpret intrinsics. Text formatting still remains.
   See the [float Debug log](docs/research/debug-floats-library-2026-09-07.md).
+  V128 formatting also runs in Dew, with two one-to-one lane reads and shared
+  exact-output tests for lane order. See the
+  [V128 Debug log](docs/research/debug-vectors-library-2026-09-07.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap

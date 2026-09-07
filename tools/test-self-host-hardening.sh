@@ -102,6 +102,11 @@ self_host_measure 'hardening float Debug request' \
     "$work/debug-floats.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-debug-floats.wasm \
     app.debug_floats tools/dew-test/debug_floats.dew
+self_host_measure 'hardening V128 Debug request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/debug-vectors.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-debug-vectors.wasm \
+    app.debug_vectors tools/dew-test/debug_vectors.dew
 self_host_measure 'hardening WASI Bytes request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/wasi-bytes.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \

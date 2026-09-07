@@ -1,0 +1,25 @@
+open dew.std.wasm.intrinsics
+
+fn debug_vector_bits(low: U64, high: U64) -> V128 {
+  let zero = unsafe_bitcast::<V128, U64x2>(v128_splat_i64(0i64))
+  let first = wasm_u64x2_replace_0(zero, low)
+  unsafe_bitcast::<U64x2, V128>(wasm_u64x2_replace_1(first, high))
+}
+
+fn debug_vector_generic<t: Debug>(value: t) -> Unit {
+  debug(value)
+}
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => debug(debug_vector_bits(0u64, 0u64))
+    1u32 => debug(debug_vector_bits(18446744073709551615u64, 18446744073709551615u64))
+    2u32 => debug(debug_vector_bits(1u64, 0u64))
+    3u32 => debug(debug_vector_bits(0u64, 1u64))
+    4u32 => debug(debug_vector_bits(81985529216486895u64, 18364758544493064720u64))
+    5u32 => debug_vector_generic(debug_vector_bits(18364758544493064720u64, 81985529216486895u64))
+    6u32 => debug(v128_splat_i64(-1i64))
+    _ => unreachable()
+  }
+  0i32
+}

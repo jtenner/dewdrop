@@ -140,7 +140,22 @@ fn __dew_debug_f64(value: F64) -> U32 {
 }
 builtin __dew_debug_string(value: String) -> U32 = "dew_debug_string"
 builtin __dew_debug_bytes(value: Bytes) -> U32 = "dew_debug_bytes"
-builtin __dew_debug_v128(value: V128) -> U32 = "dew_debug_v128"
+builtin __dew_debug_v128_low(value: V128) -> U64 = "i64x2.extract_lane 0"
+builtin __dew_debug_v128_high(value: V128) -> U64 = "i64x2.extract_lane 1"
+
+fn __dew_debug_v128(value: V128) -> U32 {
+  u8_store(16u32, 118u8)
+  u8_store(17u32, 49u8)
+  u8_store(18u32, 50u8)
+  u8_store(19u32, 56u8)
+  u8_store(20u32, 40u8)
+  u8_store(21u32, 48u8)
+  u8_store(22u32, 120u8)
+  let middle = __dew_debug_hex_digits(__dew_debug_v128_high(value), 23u32, 16u32)
+  let end = __dew_debug_hex_digits(__dew_debug_v128_low(value), middle, 16u32)
+  u8_store(end, 41u8)
+  __dew_debug_write_scratch(16u32, end + 1u32 - 16u32)
+}
 pub fn debug<t: Debug>(value: t) -> Unit {
   value.debug()
 }
