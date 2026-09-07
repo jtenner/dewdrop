@@ -1283,7 +1283,7 @@ test "raw opcode rejects a user declaration with the wrong signature" {
 
 test "a diverging argument prevents raw intrinsic emission" {
   let fragments = self_host_physical_test_fragments(
-    b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\nbuiltin stop() -> Never = \"dew_unreachable\"\npub fn main() -> U32 {\n  cast::<I32, U32>(stop())\n}\n",
+    b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\nbuiltin stop() -> Never = \"unreachable\"\npub fn main() -> U32 {\n  cast::<I32, U32>(stop())\n}\n",
   )
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)

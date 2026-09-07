@@ -86,7 +86,7 @@ def main() -> None:
     aliases: list[tuple[str, list[str]]] = [
         ("dew_debug_ignore", ["StarshineFfi.ffi_lib_Instruction_drop()"]),
         ("dew_debug_dispatch", ["StarshineFfi.ffi_lib_Instruction_drop()"]),
-        ("dew_unreachable", ["StarshineFfi.ffi_lib_Instruction_unreachable_()"]),
+        ("unreachable", ["StarshineFfi.ffi_lib_Instruction_unreachable_()"]),
         ("i32.load8_s", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(0i32)"]),
         ("i32.store8", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(1i32)"]),
         ("i32.load8_u", ["StarshineFfi.ffi_ffi_bridge_instruction_memory_builtin(2i32)"]),

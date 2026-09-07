@@ -1,7 +1,7 @@
 ///|
 test "compile time flow removes calls and later operands after a Never argument" {
   let (program, lowering) = compile_time_evidence_test(
-    b"open dew.std.types\nbuiltin stop() -> Never = \"dew_unreachable\"\nfn later() -> I32 {\n  9i32\n}\nfn consume(left: I32, middle: I32, right: I32) -> I32 {\n  right\n}\npub fn main() -> I32 {\n  let _ = is_unit::<Unit>()\n  consume(1i32, stop(), later())\n}\n",
+    b"open dew.std.types\nbuiltin stop() -> Never = \"unreachable\"\nfn later() -> I32 {\n  9i32\n}\nfn consume(left: I32, middle: I32, right: I32) -> I32 {\n  right\n}\npub fn main() -> I32 {\n  let _ = is_unit::<Unit>()\n  consume(1i32, stop(), later())\n}\n",
   )
   let module_ = lowering.modules[0]
   assert_eq(module_.diagnostics, [])

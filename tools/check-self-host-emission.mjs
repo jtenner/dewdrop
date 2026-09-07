@@ -225,7 +225,7 @@ for (const [name, expected] of [
   const start = performance.now();
   try {
     const source = "builtin unsafe_bitcast<a, b>(value: a) -> b = \"unsafe.bitcast\"\n" +
-      "builtin unreachable() -> Never = \"dew_unreachable\"\n" +
+      "builtin unreachable() -> Never = \"unreachable\"\n" +
       await readFile(new URL("../std/preamble/70-into-builtins.dew", import.meta.url), "utf8");
     let checks = 0;
     for (const width of [32, 64]) {
@@ -257,7 +257,7 @@ for (const [name, expected] of [
   const start = performance.now();
   try {
     const source = "builtin unsafe_bitcast<a, b>(value: a) -> b = \"unsafe.bitcast\"\n" +
-      "builtin unreachable() -> Never = \"dew_unreachable\"\npub trait Into<t> {\n  fn into(self) -> t\n}\n" +
+      "builtin unreachable() -> Never = \"unreachable\"\npub trait Into<t> {\n  fn into(self) -> t\n}\n" +
       await readFile(new URL("../std/preamble/70-into-builtins.dew", import.meta.url), "utf8") +
       await readFile(new URL("../std/preamble/80-into-impls.dew", import.meta.url), "utf8");
     const checks = await checkScalarConversions(async (origin, target) => {
@@ -319,7 +319,7 @@ for (const [name, expected] of [
     const math = await readFile(new URL("../std/math.dew", import.meta.url), "utf8");
     const floatStart = math.indexOf("pub builtin f32_to_bits(");
     assert.ok(floatStart >= 0, "math library float section is missing");
-    const source = "builtin unreachable() -> Never = \"dew_unreachable\"\n" + math.slice(floatStart);
+    const source = "builtin unreachable() -> Never = \"unreachable\"\n" + math.slice(floatStart);
     assert.equal((source.match(/^pub builtin /gm) ?? []).length, 16, "math float instruction inventory differs");
     const checks = await checkMathOperations(
       (width, op) => compileSource(source + `\npub fn main(value: F${width}) -> F${width} {\n  f${width}_${op}(value)\n}\n`),

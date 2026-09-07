@@ -443,7 +443,7 @@ test "compile-time dead locals retain their logical type" {
 
 test "compile-time flow cuts non-returning call operands and remains stable" {
   let module_ = self_host_test_query_flow_module(
-    b"builtin stop() -> Never = \"dew_unreachable\"\nfn later() -> I32 {\n  9i32\n}\nfn consume(left: I32, middle: I32, right: I32) -> I32 {\n  right\n}\npub fn main() -> I32 {\n  consume(1i32, stop(), later())\n}\n",
+    b"builtin stop() -> Never = \"unreachable\"\nfn later() -> I32 {\n  9i32\n}\nfn consume(left: I32, middle: I32, right: I32) -> I32 {\n  right\n}\npub fn main() -> I32 {\n  consume(1i32, stop(), later())\n}\n",
   )
   let body = module_.bodies[module_.bodies.length() - 1u32]
   let _ = self_host_prune_compile_time_body(module_, body)

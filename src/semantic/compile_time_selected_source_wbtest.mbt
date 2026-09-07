@@ -90,7 +90,7 @@ test "compile time selected source: selected short circuit skips its dependent r
 ///|
 test "compile time selected source: a nonreturning call operand removes later dependent checks" {
   let (program, lowering) = compile_time_evidence_test(
-    b"open dew.std.types\nbuiltin stop() -> Never = \"dew_unreachable\"\nfn accept(left: I32, right: I32) -> I32 {\n  right\n}\nfn read<T>(value: T, flag: Bool) -> I32 {\n  if is_integer::<T>() {\n    if flag {\n      accept(stop(), value.missing)\n    } else {\n      42i32\n    }\n  } else {\n    0i32\n  }\n}\npub fn main() -> I32 {\n  read(7i64, false)\n}\n",
+    b"open dew.std.types\nbuiltin stop() -> Never = \"unreachable\"\nfn accept(left: I32, right: I32) -> I32 {\n  right\n}\nfn read<T>(value: T, flag: Bool) -> I32 {\n  if is_integer::<T>() {\n    if flag {\n      accept(stop(), value.missing)\n    } else {\n      42i32\n    }\n  } else {\n    0i32\n  }\n}\npub fn main() -> I32 {\n  read(7i64, false)\n}\n",
   )
   let fragments = plan_program_wasmgc_fragments(
     analyze_program_semantics(program),

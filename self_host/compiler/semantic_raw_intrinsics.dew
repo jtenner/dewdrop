@@ -49,6 +49,12 @@ pub struct SelfHostRawIntrinsicSignature {
 }
 
 fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSignature> {
+  if name.equals(b"unreachable") {
+    return Option::Some(SelfHostRawIntrinsicSignature::{
+      inputs: []
+      result: SelfHostWasmBodyCarrier::NeverBodyCarrier
+    })
+  }
   if name.equals(b"i32.reinterpret_f32") {
     return Option::Some(SelfHostRawIntrinsicSignature::{
       inputs: [SelfHostWasmBodyCarrier::F32BodyCarrier]
@@ -380,13 +386,6 @@ fn self_host_raw_intrinsic_error(
       }
     }
   }
-  let source = match self_host_body_plan_expression(
-    body_plan,
-    module_.expression_children[arguments.start],
-  ) {
-    Option::Some(value) => value.carrier
-    Option::None => return Option::Some("raw intrinsic source plan is missing")
-  }
   match signature {
     Option::Some(value) => {
       if !self_host_body_carrier_equal(target, value.result) {
@@ -409,6 +408,13 @@ fn self_host_raw_intrinsic_error(
       return Option::None
     }
     Option::None => {}
+  }
+  let source = match self_host_body_plan_expression(
+    body_plan,
+    module_.expression_children[arguments.start],
+  ) {
+    Option::Some(value) => value.carrier
+    Option::None => return Option::Some("raw intrinsic source plan is missing")
   }
   let supported = match source {
     SelfHostWasmBodyCarrier::I32BodyCarrier => true

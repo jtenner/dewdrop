@@ -29,6 +29,7 @@ fn raw_wasm_nonreference_carrier(
 // Opcode identity, not a Dew declaration name or a standard-module ordinal.
 pub fn raw_wasm_builtin_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
   match name {
+    b"unreachable" => Some({ inputs: [], result: None, })
     b"i32.reinterpret_f32" =>
       Some({ inputs: [WasmF32Value], result: Some(WasmI32Value), })
     b"f32.reinterpret_i32" =>

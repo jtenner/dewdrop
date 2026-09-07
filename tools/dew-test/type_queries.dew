@@ -822,7 +822,7 @@ fn query_selected_short_circuit<T>(value: T) -> I32 {
   }
 }
 
-builtin query_unreachable() -> Never = "dew_unreachable"
+builtin query_unreachable() -> Never = "unreachable"
 
 fn query_selected_never<T>(value: T, flag: Bool) -> I32 {
   if is_integer::<T>() {

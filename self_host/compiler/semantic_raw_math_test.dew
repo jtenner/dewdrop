@@ -1,3 +1,15 @@
+test "raw unreachable accepts zero operands without a source lookup" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin stop() -> Never = \"unreachable\"\npub fn main() -> I32 {\n  stop()\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(_) => {}
+    Result::Err(error) => assert(false, error)
+  }
+}
+
 fn self_host_assert_invalid_raw_math(source: Bytes) -> Unit {
   let fragments = self_host_physical_test_fragments(source)
   let link = self_host_plan_program_wasmgc_link(fragments, false)
