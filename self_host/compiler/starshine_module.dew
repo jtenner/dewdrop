@@ -660,6 +660,7 @@ fn self_host_linked_exact_emitted_expression_carrier(
     Option::Some(plan) => match self_host_body_plan_expression(plan, expression) {
       Option::Some(planned) => if link.erased_fields.get(planned.selected_field) is Option::Some(true) ||
         module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, _) ||
+        module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedBinaryExpression(_, _, _) ||
         planned.value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier ||
         planned.value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
         // Erasure and non-returning flow are fixed facts. Array storage and

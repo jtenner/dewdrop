@@ -89,6 +89,14 @@ pub fn main(value: I32, expected: I32) -> I32 {
     value: 19i64
   }
   let indexed_result = road[1u32] == 19i64
+  let float_slot = MemberSlot::{
+    item: 1.5f32
+  }
+  let double_slot = MemberSlot::{
+    item: 2.5f64
+  }
+  let indexed_float_results = float_slot[0u32] + float_slot[1u32] == 3.0f32 &&
+    double_slot[0u32] + double_slot[1u32] == 5.0f64
   cell.value = 0i32
   let wrapper = MemberWrapper::{
     inner: cell
@@ -104,7 +112,7 @@ pub fn main(value: I32, expected: I32) -> I32 {
   }
   slot[0u32] = wrapper
   slot[0u32].inner.value = value
-  if indexed_result && tuple_binding && receiver_effects && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
+  if indexed_result && indexed_float_results && tuple_binding && receiver_effects && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
     slot[0u32].inner.read()
   } else {
     -1i32
