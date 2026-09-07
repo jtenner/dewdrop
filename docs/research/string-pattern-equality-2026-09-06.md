@@ -23,9 +23,13 @@ initial native test failed with `NoInferredCallTarget` before the implementation
 
 ## Still required
 
-This is the inference part of the String migration, not its emission change.
-Preserve the selected target in lowering; root and specialize the implicit call;
-build its subject/literal operand recipe; and verify that recipe before emission.
+This is the inference and lowering part of the String migration, not its emission
+change. Lowering retains the selected declaration and type arguments on the
+literal. The native literal carries an `InferredCallTarget`; the self-host uses
+its existing `call_target` and `call_type_arguments` fields. Reachability and
+specialization use those targets through the ordinary call-recipe path.
+
+Build the subject/literal operand recipe and verify it before emission.
 Then replace `dew_string_equals` with ordinary Dew equality and remove all late
 runtime-name lookups, including nested patterns. Missing or ambiguous trait
 scope must become an explicit diagnostic when the legacy path is removed.
@@ -45,3 +49,7 @@ source expression. A pattern call therefore needs its own operand source kind.
 - Final self-host hardening: 236 tests, 29 exact invariant records, and all
   shared library and emission probes pass (63.729 seconds). This also exceeds
   the limit. No compiler-B/C bootstrap was run for this inference-only step.
+- Lowering and reachability step: three native tests pass (8.330 seconds),
+  including an exact linked-target check. Self-host hardening passes 236 tests,
+  29 invariant records, and all shared probes (63.734 seconds, a performance
+  bug). Generated files pass (14.764 seconds).

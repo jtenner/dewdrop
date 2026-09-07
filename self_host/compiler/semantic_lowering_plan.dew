@@ -710,6 +710,8 @@ fn self_host_lowering_plan_expressions(
         self_host_u32_add(job.operator_targets.start, current)
       ]
       let selected_target = match source_expression {
+        // An implicit pattern comparison owns call evidence, not a Bool value.
+        SelfHostHirExpr::StringExpr(_, _) => operator_target
         SelfHostHirExpr::BinaryExpr(_, _, _, _) => operator_target
         SelfHostHirExpr::IndexExpr(_, _, _) => operator_target
         SelfHostHirExpr::IndexSetExpr(_, _, _, _) => operator_target

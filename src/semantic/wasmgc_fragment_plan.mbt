@@ -4359,7 +4359,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         expression_index in body.expressions.start..<(body.expressions.start +
         body.expressions.length) {
         match lowering.expressions[expression_index].kind {
-          PlannedStringConst(_) | PlannedBytesConst(_) => {
+          PlannedStringConst(_, _) | PlannedBytesConst(_) => {
             uses_text_runtime = true
             break
           }

@@ -37,7 +37,8 @@ pub enum PlannedExpressionKind {
   PlannedF32Const(Float)
   PlannedF64Const(Double)
   PlannedBoolConst(Bool)
-  PlannedStringConst(Bytes)
+  // A literal pattern can carry an implicit Eq call. Its value is still String.
+  PlannedStringConst(Bytes, InferredCallTarget)
   PlannedStringArrayConst(Array[Bytes])
   PlannedBytesConst(Bytes)
   PlannedLocalGet(LocalId)
@@ -860,7 +861,8 @@ fn plan_expression_kind(
     HirF32Expr(value, _) => PlannedF32Const(value)
     HirF64Expr(value, _) => PlannedF64Const(value)
     HirBoolExpr(value, _) => PlannedBoolConst(value)
-    HirStringExpr(value, _) => PlannedStringConst(value)
+    HirStringExpr(value, _) =>
+      PlannedStringConst(value, inferred.operator_targets[expression])
     HirBytesExpr(value, _) => PlannedBytesConst(value)
     HirAssignmentExpr(target, value, _) =>
       match collected.expressions[target] {

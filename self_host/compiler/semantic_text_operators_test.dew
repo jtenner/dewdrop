@@ -52,6 +52,19 @@ test "String literal patterns retain imported Eq and their String value type" {
   for expression in module_.expressions {
     match expression.kind {
       SelfHostPlannedExpressionKind::PlannedStringConst(_) => {
+        assert(expression.call_target is SelfHostBasicCallTarget::SelectedBasicCallTarget(_, _), "lowering must retain the selected pattern equality")
+        let mut linked = false
+        match expression.call_target {
+          SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
+            for function_ in link.functions {
+              if function_.declaration == declaration {
+                linked = true
+              }
+            }
+          }
+          _ => {}
+        }
+        assert(linked, "pattern equality target must be linked")
         assert(expression.shape is SelfHostPlannedValueShape::RefPlannedValueShape, "pattern comparison must not change the literal to Bool")
         literals = literals + 1u32
       }

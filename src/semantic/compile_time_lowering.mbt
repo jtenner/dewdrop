@@ -345,7 +345,7 @@ fn fold_compile_time_assertion(
   let condition = module_.expression_children[arguments.start]
   let message = module_.expression_children[arguments.start + 1]
   let text = match module_.expressions[message].kind {
-    PlannedStringConst(text) => @utf8.decode_lossy(text)
+    PlannedStringConst(text, _) => @utf8.decode_lossy(text)
     _ =>
       return Err("CT-020 static_assert message must be a compile-time string")
   }

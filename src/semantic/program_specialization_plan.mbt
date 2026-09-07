@@ -108,7 +108,7 @@ fn program_body_uses_string_literal_pattern(
     match module_.patterns[pattern].source {
       HirLiteralPattern(expression, _) =>
         match module_.expressions[expression].kind {
-          PlannedStringConst(_) => return true
+          PlannedStringConst(_, _) => return true
           _ => ()
         }
       _ => ()
@@ -185,12 +185,9 @@ fn program_reachable_callable_roots(
       for
         expression in body.expressions.start..<(body.expressions.start +
         body.expressions.length) {
-        let target = match module_.expressions[expression].kind {
-          PlannedDirectCall(target, _, _, _)
-          | PlannedTailCall(target, _, _, _)
-          | PlannedOperatorCall(target, _, _, _, _)
-          | PlannedIndexCall(target, _, _, _)
-          | PlannedIndexSetCall(target, _, _, _, _) => target
+        let target = match
+          program_call_target_and_arguments(module_.expressions[expression]) {
+          Some((target, _)) => target
           _ => continue
         }
         if target != 0UL && !reachable.contains(target) {
@@ -232,12 +229,9 @@ fn program_reachable_callable_roots(
       for
         expression in body.expressions.start..<(body.expressions.start +
         body.expressions.length) {
-        let target = match module_.expressions[expression].kind {
-          PlannedDirectCall(target, _, _, _)
-          | PlannedTailCall(target, _, _, _)
-          | PlannedOperatorCall(target, _, _, _, _)
-          | PlannedIndexCall(target, _, _, _)
-          | PlannedIndexSetCall(target, _, _, _, _) => target
+        let target = match
+          program_call_target_and_arguments(module_.expressions[expression]) {
+          Some((target, _)) => target
           _ => continue
         }
         if target == 0UL || reachable.contains(target) {
@@ -1643,6 +1637,8 @@ fn program_call_target_and_arguments(
   expression : PlannedExpression,
 ) -> (DeclId, HirSpan)? {
   match expression.kind {
+    PlannedStringConst(_, SelectedInferredCallTarget(target, arguments)) =>
+      Some((target, arguments))
     PlannedDirectCall(target, _, _, arguments)
     | PlannedTailCall(target, _, _, arguments)
     | PlannedOperatorCall(target, _, _, _, arguments)

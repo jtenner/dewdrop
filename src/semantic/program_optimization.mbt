@@ -86,7 +86,7 @@ fn program_effect_summary_expression_is_discardable(
     | PlannedF32Const(_)
     | PlannedF64Const(_)
     | PlannedBoolConst(_)
-    | PlannedStringConst(_)
+    | PlannedStringConst(_, _)
     | PlannedBytesConst(_)
     | PlannedLocalGet(_)
     | PlannedCaptureGet(_) => true

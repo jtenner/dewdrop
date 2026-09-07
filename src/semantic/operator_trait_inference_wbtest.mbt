@@ -79,10 +79,25 @@ test "String literal patterns select Eq without changing the literal type" {
     resolve_module_names(collected),
   )
   assert_eq(inferred.diagnostics.length(), 0)
+  let lowering = plan_module_lowering(
+    collected,
+    resolved,
+    plan_module_type_layouts(collected, resolved),
+    plan_module_initialization(collected, inferred.module_values),
+    plan_module_functions(collected, resolved),
+    resolve_module_names(collected),
+    inferred,
+    analyze_module_flows(collected, resolved, inferred),
+  )
   let mut comparisons = 0
   for pattern in collected.patterns {
     match pattern {
       HirLiteralPattern(expression, _) => {
+        match lowering.expressions[expression].kind {
+          PlannedStringConst(_, target) =>
+            assert_eq(target, inferred.operator_targets[expression])
+          kind => fail(@debug.to_string(kind))
+        }
         assert_eq(
           planned_value_shape(
             resolved,
@@ -140,6 +155,11 @@ test "String literal patterns select an imported Eq without an explicit operator
   assert_true(program.modules[0].find_name("eq") is Some(_))
   assert_true(imports.scope.lookup_trait("Eq") is Some(_))
   assert_eq(inferred.diagnostics.length(), 0)
+  let analyzed = analyze_program_semantics(program)
+  let lowered = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowered, 0)
+  assert_eq(link.diagnostics, [])
+  assert_true(link.function_of(program.modules[1].methods[1].id) is Some(_))
   let mut comparisons = 0
   for pattern in program.modules[0].patterns {
     match pattern {

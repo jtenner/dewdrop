@@ -106,7 +106,7 @@ fn compile_time_push_expression(
     | PlannedF32Const(_)
     | PlannedF64Const(_)
     | PlannedBoolConst(_)
-    | PlannedStringConst(_)
+    | PlannedStringConst(_, _)
     | PlannedStringArrayConst(_)
     | PlannedBytesConst(_)
     | PlannedLocalGet(_)

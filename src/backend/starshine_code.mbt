@@ -1954,7 +1954,7 @@ fn starshine_match_literal_condition(
   }
   let condition = value.copy()
   match lowering.expressions[expression].kind {
-    @semantic.PlannedStringConst(literal) => {
+    @semantic.PlannedStringConst(literal, _) => {
       append_starshine_instructions(
         condition,
         starshine_text_constant_instructions(planned, program, literal, true),
@@ -5137,7 +5137,7 @@ fn starshine_emit_body_instructions(
                 @lib.I32::new(if value { 1 } else { 0 }),
               ),
             ])
-          @semantic.PlannedStringConst(value) =>
+          @semantic.PlannedStringConst(value, _) =>
             results.push(
               starshine_text_constant_instructions(
                 planned, program, value, true,
