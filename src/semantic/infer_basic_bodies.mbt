@@ -717,6 +717,7 @@ priv struct BasicBodyInferencer {
   trait_evidence : Array[InferredTraitEvidence]
   trait_evidence_children : Array[Int]
   trait_evidence_arguments : Array[InferredTraitEvidenceArgument]
+  trait_search : BodyTraitSearch
   call_type_arguments : Array[BodyTypeId]
   call_scratch : CallInferenceScratch
   module_values : ModuleValueInferenceContext?
@@ -787,6 +788,7 @@ fn BasicBodyInferencer::new(
     field_spans,
     solver,
     pending_member_equations: [],
+    trait_search: BodyTraitSearch::new(),
     guarded_trait_scopes: {},
     reachability,
     deferred_types: [],
@@ -1106,8 +1108,8 @@ fn BasicBodyInferencer::trait_object_assignable(
     return true
   }
   let diagnostic_start = self.solver.diagnostics.length()
-  let satisfied = self.trait_obligation_satisfied_at_depth(
-    actual, expected, trait_declaration, origin, 0,
+  let satisfied = self.trait_obligation_satisfied(
+    actual, expected, trait_declaration, origin,
   )
   self.solver.diagnostics.truncate(diagnostic_start)
   satisfied
@@ -3092,6 +3094,7 @@ fn BodyInferenceDiagnostic::rank(self : BodyInferenceDiagnostic) -> Int {
     NoMatchingFunctionReference(_, _, _) => 42
     AmbiguousFunctionReference(_, _, _, _, _, _) => 43
     UnsatisfiedTraitObligation(_, _, _, _, _) => 44
+    TraitObligationFailure(_, _, _, _) => 46
     CallTypeArgumentCountMismatch(_, _, _, _, _) => 45
   }
 }

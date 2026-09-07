@@ -708,6 +708,13 @@ fn ib_write_inference_diagnostic(
       ib_write_int(writer, b)
       writer.write_var_u64(c)
     }
+    TraitObligationFailure(declaration, expression, message, offset) => {
+      writer.write_byte(46)
+      ib_write_id(writer, declaration)
+      ib_write_int(writer, expression)
+      writer.write_string(message)
+      writer.write_var_u64(offset)
+    }
   }
 }
 
@@ -995,6 +1002,12 @@ fn ib_read_inference_diagnostic(
         ib_read_int(reader, field),
         reader.read_var_u64(field),
       )
+    46 => TraitObligationFailure(
+      ib_read_id(reader, field),
+      ib_read_int(reader, field),
+      reader.read_string(inference_binary_maximum_text, field),
+      reader.read_var_u64(field),
+    )
     _ => {
       reader.fail(field, "unknown body-diagnostic discriminant")
       ReturnOutsideCallable(0UL)

@@ -168,11 +168,11 @@ fn BasicBodyInferencer::try_method_candidate(
   }
   if viable {
     viable = self.impl_candidate_bounds_satisfied(
-      implementation_index, origin, 0,
+      implementation_index, origin,
     )
   }
   if viable {
-    viable = self.method_candidate_bounds_satisfied(declaration, origin, 0)
+    viable = self.method_candidate_bounds_satisfied(declaration, origin)
   }
   self.solver.rollback(snapshot)
   viable
@@ -354,7 +354,7 @@ fn BasicBodyInferencer::try_operator_candidate(
   }
   if viable {
     viable = self.impl_candidate_bounds_satisfied(
-      implementation_index, origin, 0,
+      implementation_index, origin,
     )
   }
   self.solver.rollback(snapshot)
@@ -460,7 +460,7 @@ fn BasicBodyInferencer::try_index_candidate(
   }
   if viable {
     viable = self.impl_candidate_bounds_satisfied(
-      implementation_index, origin, 0,
+      implementation_index, origin,
     )
   }
   self.solver.rollback(snapshot)
@@ -1230,7 +1230,7 @@ fn BasicBodyInferencer::try_qualified_method_candidate(
   }
   if viable {
     viable = self.impl_candidate_bounds_satisfied(
-      implementation_index, origin, 0,
+      implementation_index, origin,
     )
   }
   self.solver.rollback(snapshot)

@@ -245,7 +245,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   depth cutoff; cycles retain numeric type context. Equal type IDs still check
   children under different generic contexts. See the
   [implementation walk log](docs/research/implementation-type-walks-2026-09-07.md).
-  Native inference search still needs closure.
+  Native inference now uses rollback-stable logical obligation keys, explicit
+  cycle/limit diagnostics, and restored caller generic environments. Deep chains,
+  sibling bounds, and diagnostic codecs have focused tests. See the
+  [native search log](docs/research/native-trait-search-2026-09-07.md).
+  Native physical evidence keys still need closure: two writers truncate at
+  depth 64, another writes an `invalid` sentinel, and product shape keys omit
+  field shapes. Replace those paths with checked, complete structural keys.
   See the [interface walk log](docs/research/interface-type-walks-2026-09-07.md).
 - [ ] Complete stable numeric failure records and the negative invariant tests.
   Start with a valid state, change one field, and check the exact code and source

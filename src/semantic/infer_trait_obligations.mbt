@@ -363,11 +363,7 @@ fn BasicBodyInferencer::impl_candidate_bounds_satisfied(
   self : BasicBodyInferencer,
   implementation_index : Int,
   origin : TypeConstraintOrigin,
-  depth : Int,
 ) -> Bool {
-  if depth >= 64 {
-    return false
-  }
   let implementation = self.impl_index.implementations[implementation_index]
   let local_impl = semantic_id_module(implementation.declaration) ==
     self.collected.module_id
@@ -437,12 +433,11 @@ fn BasicBodyInferencer::impl_candidate_bounds_satisfied(
     }
   }
   for obligation in obligations {
-    if !self.trait_obligation_satisfied_at_depth(
+    if !self.trait_obligation_satisfied(
         obligation.target,
         obligation.bound,
         obligation.trait_declaration,
         origin,
-        depth + 1,
       ) {
       return false
     }
@@ -455,11 +450,7 @@ fn BasicBodyInferencer::method_candidate_bounds_satisfied(
   self : BasicBodyInferencer,
   declaration : DeclId,
   origin : TypeConstraintOrigin,
-  depth : Int,
 ) -> Bool {
-  if depth >= 64 {
-    return false
-  }
   let local_method = semantic_id_module(declaration) == self.collected.module_id
   let generics = if local_method {
     self.collected.generic_parameters_of(declaration)
@@ -505,13 +496,12 @@ fn BasicBodyInferencer::method_candidate_bounds_satisfied(
           }
         _ => continue
       }
-      if !self.trait_obligation_satisfied_at_depth(
+      if !self.trait_obligation_satisfied(
           self.call_scratch.candidate_type_arguments[argument_start +
           generic_offset],
           self.instantiate_signature_type(resolved_bound),
           trait_declaration,
           origin,
-          depth + 1,
         ) {
         return false
       }
@@ -543,17 +533,13 @@ fn BasicBodyInferencer::validate_method_call_obligations(
 }
 
 ///|
-fn BasicBodyInferencer::trait_obligation_satisfied_at_depth(
+fn BasicBodyInferencer::trait_obligation_candidates(
   self : BasicBodyInferencer,
   target : BodyTypeId,
   bound : BodyTypeId,
   trait_declaration : DeclId,
   origin : TypeConstraintOrigin,
-  depth : Int,
 ) -> Bool {
-  if depth >= 64 {
-    return false
-  }
   if self.body_declared_trait_obligation_satisfied(
       target, bound, trait_declaration, origin,
     ) {
@@ -590,7 +576,7 @@ fn BasicBodyInferencer::trait_obligation_satisfied_at_depth(
         self.solver.unify(bound, candidate_trait, origin)
       if viable {
         viable = self.impl_candidate_bounds_satisfied(
-          implementation_index, origin, depth,
+          implementation_index, origin,
         )
       }
       self.solver.rollback(snapshot)
@@ -607,11 +593,7 @@ fn BasicBodyInferencer::select_impl_candidate_prerequisite_evidence_nodes(
   self : BasicBodyInferencer,
   implementation_index : Int,
   origin : TypeConstraintOrigin,
-  depth : Int,
 ) -> Array[Int]? {
-  if depth >= 64 {
-    return None
-  }
   let implementation = self.impl_index.implementations[implementation_index]
   let local_impl = semantic_id_module(implementation.declaration) ==
     self.collected.module_id
@@ -683,12 +665,11 @@ fn BasicBodyInferencer::select_impl_candidate_prerequisite_evidence_nodes(
   let nodes : Array[Int] = []
   for obligation in obligations {
     match
-      self.select_trait_obligation_evidence_at_depth(
+      self.select_trait_obligation_evidence_in_search(
         obligation.target,
         obligation.bound,
         obligation.trait_declaration,
         origin,
-        depth + 1,
       ) {
       Some(node) => nodes.push(node)
       None => return None
@@ -730,17 +711,13 @@ fn BasicBodyInferencer::trait_evidence_argument(
 }
 
 ///|
-fn BasicBodyInferencer::select_trait_obligation_evidence_at_depth(
+fn BasicBodyInferencer::trait_obligation_candidate_evidence(
   self : BasicBodyInferencer,
   target : BodyTypeId,
   bound : BodyTypeId,
   trait_declaration : DeclId,
   origin : TypeConstraintOrigin,
-  depth : Int,
 ) -> Int? {
-  if depth >= 64 {
-    return None
-  }
   match
     self.body_declared_trait_obligation_evidence(
       target, bound, trait_declaration, origin,
@@ -804,7 +781,7 @@ fn BasicBodyInferencer::select_trait_obligation_evidence_at_depth(
       }
       let prerequisites = if arguments_complete {
         self.select_impl_candidate_prerequisite_evidence_nodes(
-          implementation_index, origin, depth,
+          implementation_index, origin,
         )
       } else {
         None
@@ -852,8 +829,8 @@ fn BasicBodyInferencer::select_trait_obligation_evidence(
   trait_declaration : DeclId,
   origin : TypeConstraintOrigin,
 ) -> Int? {
-  self.select_trait_obligation_evidence_at_depth(
-    target, bound, trait_declaration, origin, 0,
+  self.select_trait_obligation_evidence_in_search(
+    target, bound, trait_declaration, origin,
   )
 }
 
@@ -908,7 +885,7 @@ fn BasicBodyInferencer::record_selected_impl_prerequisite_evidence(
 ) -> Unit {
   match
     self.select_impl_candidate_prerequisite_evidence_nodes(
-      implementation_index, origin, 0,
+      implementation_index, origin,
     ) {
     Some(nodes) => self.append_expression_evidence_nodes(expression, nodes)
     None =>
@@ -982,7 +959,7 @@ fn BasicBodyInferencer::validate_generic_parameter_obligations(
       ) {
       Some(evidence) => self.trait_evidence_roots.push(evidence)
       None =>
-        if !self.defer_expression_check(expression, [
+        if self.trait_search.failure is None && !self.defer_expression_check(expression, [
             self.call_type_arguments[type_arguments.start + generic_offset],
             bound,
           ]) {

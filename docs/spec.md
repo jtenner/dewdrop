@@ -1037,6 +1037,8 @@ A bare trait is module-visible; `pub trait` exports it. Trait methods inherit me
 
 Implementation signature comparison validates both complete type graphs, including generic and `Self` substitution edges, before applying equality or error recovery. Cycles and invalid owned spans are compiler contract failures, not type mismatches or depth-limit results. Equal structural type IDs do not bypass comparison of children under different generic contexts. Completed shared children are valid; nominal declaration references do not expand into their declarations during this walk.
 
+Native inference tracks active trait obligations by logical target, logical trait type, and declaration identity. It reads live solver bindings without zonking an open transaction. A repeated active obligation produces `CT-013 cyclic trait prerequisite`; exhausting 65,536 search attempts or 256 active obligations produces `CT-012 trait evidence search limit exceeded`. These are explicit source diagnostics, not ordinary missing evidence. Nested searches restore the caller's generic argument environment and invalidate cached IDs from rolled-back candidates.
+
 Dew supports static and instance trait methods. Static trait methods are callable using qualified syntax:
 
 ```dew

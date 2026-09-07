@@ -297,6 +297,8 @@ fn rebase_family_diagnostic(
         expression(value),
         source_offset(offset),
       )
+    TraitObligationFailure(declaration, value, message, offset) =>
+      TraitObligationFailure(declaration, expression(value), message, source_offset(offset))
     UnresolvedExpressionTypeArgument(value, index, offset) =>
       UnresolvedExpressionTypeArgument(
         expression(value),

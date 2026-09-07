@@ -344,6 +344,7 @@ pub enum BodyInferenceDiagnostic {
   NoMatchingMethod(Int, Int, UInt64)
   AmbiguousMethod(Int, Int, UInt64, UInt64, Int, UInt64)
   UnsatisfiedTraitObligation(UInt64, UInt64, UInt64, Int, UInt64)
+  TraitObligationFailure(UInt64, Int, String, UInt64)
   UnresolvedExpressionTypeArgument(Int, Int, UInt64)
   ReturnOutsideCallable(UInt64)
   UnresolvedExpressionType(Int, UInt64)
