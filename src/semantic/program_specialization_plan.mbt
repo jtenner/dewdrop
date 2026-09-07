@@ -275,12 +275,7 @@ fn program_reachable_callable_roots(
         }
         match callable.kind {
           PlannedBuiltinCallable(name) =>
-            if name == b"dew_bytes_to_string" {
-              runtime_changed = program_add_named_callable_root(
-                  lowering, b"dew_bytes_is_valid_utf8", reachable,
-                ) ||
-                runtime_changed
-            } else if name == b"dew_test_assert" {
+            if name == b"dew_test_assert" {
               runtime_changed = program_add_named_callable_root(
                   lowering, b"dew_string_as_bytes", reachable,
                 ) ||

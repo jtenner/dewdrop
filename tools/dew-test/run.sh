@@ -23,4 +23,5 @@ node tools/check-array-operations.mjs tools/dew-test/array_operations.wasm
 node tools/check-ring-operations.mjs tools/dew-test/ring_operations.wasm
 node tools/check-map-operations.mjs tools/dew-test/map_operations.wasm
 node tools/check-set-operations.mjs tools/dew-test/set_operations.wasm
+node tools/check-bytes-operations.mjs tools/dew-test/bytes_operations.wasm
 node tools/check-type-queries.mjs tools/dew-test/type_queries.wasm

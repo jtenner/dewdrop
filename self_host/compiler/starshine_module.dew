@@ -12138,11 +12138,6 @@ fn self_host_linked_primitive_text_runtime_name(
     0u32,
   ) {
     b"dew_string_as_bytes"
-  } else if method_name == "to_string" && self_host_u32_equal(
-    explicit_argument_count,
-    0u32,
-  ) {
-    b"dew_bytes_to_string"
   } else {
     b""
   }
@@ -12190,10 +12185,6 @@ fn self_host_linked_unqualified_runtime_name(name: String) -> Bytes {
     b"dew_string_view_find"
   } else if name == "string_view_find_string_raw" {
     b"dew_string_view_find_string"
-  } else if name == "bytes_find_raw" {
-    b"dew_bytes_find"
-  } else if name == "bytes_find_byte_raw" {
-    b"dew_bytes_find_byte"
   } else if name.starts_with("string_") || name.starts_with("bytes_") ||
     name.starts_with("array_") ||
     name.starts_with("debug_") {

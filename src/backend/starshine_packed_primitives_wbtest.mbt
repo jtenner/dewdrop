@@ -244,7 +244,7 @@ test "GC-backed BytesBuilder validates through Starshine" {
 
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
-test "checked Bytes to String retains its private UTF8 validator dependency" {
+test "checked Bytes to String links the ordinary Dew UTF8 validator" {
   let (lowering, fragments, diagnostics) = backend_packed_primitive_pipeline(
     b"open dew.std.string\nopen dew.std.bytes\npub fn convert() -> U32 {\n  b\"checked λ 🌍\".to_string().byte_length()\n}\n",
   )
@@ -253,13 +253,19 @@ test "checked Bytes to String retains its private UTF8 validator dependency" {
   let mut validator_reachable = false
   let mut conversion_reachable = false
   for function_ in fragments.functions {
+    if !function_.elided && function_.name == b"bytes_is_valid_utf8" {
+      assert_true(function_.kind is @semantic.PlannedWasmDefinedFunction(_))
+      validator_reachable = true
+    }
+    if !function_.elided && function_.name == b"bytes_to_string" {
+      assert_true(function_.kind is @semantic.PlannedWasmDefinedFunction(_))
+      conversion_reachable = true
+    }
     match function_.kind {
-      @semantic.PlannedWasmRuntimeFunction(name) =>
-        if name == b"dew_bytes_is_valid_utf8" && !function_.elided {
-          validator_reachable = true
-        } else if name == b"dew_bytes_to_string" && !function_.elided {
-          conversion_reachable = true
-        }
+      @semantic.PlannedWasmRuntimeFunction(name) => {
+        assert_false(name == b"dew_bytes_is_valid_utf8")
+        assert_false(name == b"dew_bytes_to_string")
+      }
       _ => ()
     }
   }
@@ -270,6 +276,24 @@ test "checked Bytes to String retains its private UTF8 validator dependency" {
   assert_true(
     emit_starshine_program_binary(lowering, fragments).unwrap().length() > 8,
   )
+}
+
+///|
+test "unchecked Bytes to String is one reference cast without allocation" {
+  let actual = emit_starshine_text_runtime_function(
+    b"dew_bytes_to_string_unchecked", 17, -1, -1,
+  ).unwrap()
+  let expected = @lib.Func::new(
+    @lib.Locals::empty(),
+    @lib.Expr::new([
+      @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
+      @lib.Instruction::ref_cast(
+        false,
+        @lib.HeapType::new(@lib.TypeIdx::new(18U)),
+      ),
+    ]),
+  )
+  assert_eq(actual, expected)
 }
 
 ///|

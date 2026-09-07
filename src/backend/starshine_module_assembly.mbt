@@ -45,7 +45,6 @@ pub fn emit_starshine_code_section(
               emit_starshine_text_runtime_function(
                 name,
                 starshine_text_runtime_base(planned),
-                planned.runtime_function_index(b"dew_bytes_is_valid_utf8"),
                 planned.imported_function_index(
                   b"wasi_snapshot_preview1.fd_write",
                 ),

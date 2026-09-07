@@ -1091,7 +1091,6 @@ fn emit_starshine_program_code_section(
               emit_starshine_text_runtime_function(
                 name,
                 planned.type_count,
-                planned.runtime_function_index(b"dew_bytes_is_valid_utf8"),
                 planned.imported_function_index(
                   b"wasi_snapshot_preview1.fd_write",
                 ),

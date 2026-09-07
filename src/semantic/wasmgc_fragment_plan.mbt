@@ -618,8 +618,6 @@ fn wasmgc_add_runtime_dependencies(
   jobs : Array[WasmFunctionFragmentJob?],
   reachable : Array[Bool],
 ) -> Unit {
-  let mut validator = -1
-  let mut conversion = -1
   let mut string_as_bytes = -1
   let mut wasi_write = -1
   let mut wasi_read = -1
@@ -630,11 +628,7 @@ fn wasmgc_add_runtime_dependencies(
   for index, job in jobs {
     match job.unwrap().kind {
       PlannedWasmRuntimeFunction(name) =>
-        if name == b"dew_bytes_is_valid_utf8" {
-          validator = index
-        } else if name == b"dew_bytes_to_string" {
-          conversion = index
-        } else if name == b"dew_string_as_bytes" {
+        if name == b"dew_string_as_bytes" {
           string_as_bytes = index
         } else if name == b"dew_wasi_fd_write" {
           wasi_write = index
@@ -655,9 +649,6 @@ fn wasmgc_add_runtime_dependencies(
         }
       _ => ()
     }
-  }
-  if conversion >= 0 && reachable[conversion] && validator >= 0 {
-    reachable[validator] = true
   }
   if test_assert >= 0 && reachable[test_assert] {
     if string_as_bytes >= 0 {
@@ -2263,8 +2254,6 @@ fn wasmgc_builtin_is_debug_runtime(name : Bytes) -> Bool {
 fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
   wasmgc_builtin_is_debug_runtime(name) ||
   raw_wasm_simd_uses_memory(name) ||
-  name == b"dew_bytes_load_u8x16" ||
-  name == b"dew_string_load_u8x16" ||
   name == b"i32.load8_s" ||
   name == b"i32.load8_u" ||
   name == b"i32.store8" ||
@@ -2335,18 +2324,10 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_bytes_builder_append_byte" ||
   name == b"dew_bytes_builder_finish" ||
   name == b"dew_bytes_byte_length" ||
-  name == b"dew_bytes_is_valid_utf8" ||
-  name == b"dew_bytes_to_string" ||
   name == b"dew_bytes_to_string_unchecked" ||
-  name == b"dew_bytes_equals" ||
-  name == b"dew_bytes_hash" ||
   name == b"dew_bytes_byte_at" ||
   name == b"dew_bytes_view" ||
   name == b"dew_bytes_concat" ||
-  name == b"dew_bytes_find_byte" ||
-  name == b"dew_bytes_find" ||
-  name == b"dew_bytes_starts_with" ||
-  name == b"dew_bytes_ends_with" ||
   name == b"dew_bytes_load_u8x16" ||
   name == b"dew_string_load_u8x16" ||
   name == b"dew_wasi_fd_write" ||

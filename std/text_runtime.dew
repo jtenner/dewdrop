@@ -1,3 +1,5 @@
+open dew.std.wasm.intrinsics
+
 builtin string_byte_length(value: String) -> U32 = "dew_string_byte_length"
 builtin string_as_bytes(value: String) -> Bytes = "dew_string_as_bytes"
 builtin string_utf16_length(value: String) -> U32 = "dew_string_utf16_length"
@@ -42,14 +44,253 @@ builtin bytes_builder_append(value: BytesBuilder, part: Bytes) -> Unit = "dew_by
 builtin bytes_builder_append_byte(value: BytesBuilder, byte: U8) -> Unit = "dew_bytes_builder_append_byte"
 builtin bytes_builder_finish(value: BytesBuilder) -> Bytes = "dew_bytes_builder_finish"
 builtin bytes_byte_length(value: Bytes) -> U32 = "dew_bytes_byte_length"
-builtin bytes_is_valid_utf8(value: Bytes) -> Bool = "dew_bytes_is_valid_utf8"
-builtin bytes_to_string(value: Bytes) -> String = "dew_bytes_to_string"
-builtin bytes_equals(left: Bytes, right: Bytes) -> Bool = "dew_bytes_equals"
-builtin bytes_hash(value: Bytes) -> U64 = "dew_bytes_hash"
+builtin bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string_unchecked"
 builtin bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
 builtin bytes_view(value: Bytes, start: U32, length: U32) -> Bytes = "dew_bytes_view"
 builtin bytes_concat(left: Bytes, right: Bytes) -> Bytes = "dew_bytes_concat"
-builtin bytes_find_byte_raw(value: Bytes, byte: U8) -> U32 = "dew_bytes_find_byte"
-builtin bytes_find_raw(value: Bytes, needle: Bytes) -> U32 = "dew_bytes_find"
-builtin bytes_starts_with(left: Bytes, prefix: Bytes) -> Bool = "dew_bytes_starts_with"
-builtin bytes_ends_with(left: Bytes, suffix: Bytes) -> Bool = "dew_bytes_ends_with"
+
+fn bytes_to_string(value: Bytes) -> String {
+  if !bytes_is_valid_utf8(value) {
+    unreachable()
+  }
+  bytes_to_string_unchecked(value)
+}
+
+// All callers prove both ranges before this allocation-free comparison.
+fn bytes_range_equals(left: Bytes, left_start: U32, right: Bytes, right_start: U32, length: U32) -> Bool {
+  let tail = while 0u32 {
+    index if length - index >= 16u32 => {
+      let left_chunk = wasm_bytes_load_u8x16(left, left_start + index)
+      let right_chunk = wasm_bytes_load_u8x16(right, right_start + index)
+      if wasm_u8x16_bitmask(wasm_u8x16_eq(left_chunk, right_chunk)) != 65535u32 {
+        return false
+      }
+      continue index + 16u32
+    }
+    index => break index
+  }
+  while tail {
+    index if index < length => {
+      if bytes_byte_at(left, left_start + index) != bytes_byte_at(right, right_start + index) {
+        return false
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  true
+}
+
+fn bytes_equals(left: Bytes, right: Bytes) -> Bool {
+  let length = bytes_byte_length(left)
+  length == bytes_byte_length(right) && bytes_range_equals(left, 0u32, right, 0u32, length)
+}
+
+fn bytes_starts_with(left: Bytes, prefix: Bytes) -> Bool {
+  let length = bytes_byte_length(prefix)
+  length <= bytes_byte_length(left) && bytes_range_equals(left, 0u32, prefix, 0u32, length)
+}
+
+fn bytes_ends_with(left: Bytes, suffix: Bytes) -> Bool {
+  let length = bytes_byte_length(left)
+  let suffix_length = bytes_byte_length(suffix)
+  suffix_length <= length && bytes_range_equals(left, length - suffix_length, suffix, 0u32, suffix_length)
+}
+
+fn bytes_widen_byte(value: U8) -> U64 {
+  value.into()
+}
+
+fn bytes_hash_chunk(initial: U64, chunk: U8x16) -> U64 {
+  let mut hash = initial
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_0(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_1(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_2(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_3(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_4(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_5(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_6(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_7(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_8(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_9(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_10(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_11(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_12(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_13(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_14(chunk))) * 1099511628211u64
+  hash = (hash ^ bytes_widen_byte(wasm_u8x16_extract_15(chunk))) * 1099511628211u64
+  hash
+}
+
+fn bytes_hash(value: Bytes) -> U64 {
+  let length = bytes_byte_length(value)
+  let mut hash = 14695981039346656037u64
+  let tail = while 0u32 {
+    index if length - index >= 16u32 => {
+      hash = bytes_hash_chunk(hash, wasm_bytes_load_u8x16(value, index))
+      continue index + 16u32
+    }
+    index => break index
+  }
+  while tail {
+    index if index < length => {
+      hash = (hash ^ bytes_widen_byte(bytes_byte_at(value, index))) * 1099511628211u64
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  hash
+}
+
+fn bytes_find_byte_raw(value: Bytes, byte: U8) -> U32 {
+  let length = bytes_byte_length(value)
+  let wanted = wasm_u8x16_splat(byte)
+  let tail = while 0u32 {
+    index if length - index >= 16u32 => {
+      let mask = wasm_u8x16_bitmask(wasm_u8x16_eq(wasm_bytes_load_u8x16(value, index), wanted))
+      if mask != 0u32 {
+        return index + wasm_u32_ctz(mask)
+      }
+      continue index + 16u32
+    }
+    index => break index
+  }
+  while tail {
+    index if index < length => {
+      if bytes_byte_at(value, index) == byte {
+        return index
+      }
+      continue index + 1u32
+    }
+    _ => break 4294967295u32
+  }
+}
+
+fn bytes_find_short(value: Bytes, needle: Bytes, needle_length: U32, limit: U32) -> U32 {
+  let first = wasm_u8x16_splat(bytes_byte_at(needle, 0u32))
+  let last = wasm_u8x16_splat(bytes_byte_at(needle, needle_length - 1u32))
+  while 0u32 {
+    candidate if candidate <= limit => {
+      if limit - candidate >= 15u32 {
+        let heads = wasm_u8x16_bitmask(wasm_u8x16_eq(wasm_bytes_load_u8x16(value, candidate), first))
+        let tails = wasm_u8x16_bitmask(wasm_u8x16_eq(wasm_bytes_load_u8x16(value, candidate + needle_length - 1u32), last))
+        while heads & tails {
+          mask if mask != 0u32 => {
+            let index = candidate + wasm_u32_ctz(mask)
+            if bytes_range_equals(value, index, needle, 0u32, needle_length) {
+              return index
+            }
+            continue mask & (mask - 1u32)
+          }
+          _ => break ()
+        }
+        continue candidate + 16u32
+      }
+      if bytes_range_equals(value, candidate, needle, 0u32, needle_length) {
+        return candidate
+      }
+      continue candidate + 1u32
+    }
+    _ => break 4294967295u32
+  }
+}
+
+fn bytes_find_raw(value: Bytes, needle: Bytes) -> U32 {
+  let length = bytes_byte_length(value)
+  let needle_length = bytes_byte_length(needle)
+  if needle_length == 0u32 {
+    return 0u32
+  }
+  if needle_length > length {
+    return 4294967295u32
+  }
+  if needle_length == 1u32 {
+    return bytes_find_byte_raw(value, bytes_byte_at(needle, 0u32))
+  }
+  let limit = length - needle_length
+  if needle_length <= 16u32 {
+    return bytes_find_short(value, needle, needle_length, limit)
+  }
+  // Rolling hashes reject most long candidates in constant time. A hash match
+  // is only a candidate: compare the bytes before reporting a match.
+  let mut needle_hash = 0u64
+  let mut window_hash = 0u64
+  let mut power = 1u64
+  while 0u32 {
+    index if index < needle_length => {
+      needle_hash = needle_hash * 257u64 + bytes_widen_byte(bytes_byte_at(needle, index))
+      window_hash = window_hash * 257u64 + bytes_widen_byte(bytes_byte_at(value, index))
+      if index < needle_length - 1u32 {
+        power = power * 257u64
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  while 0u32 {
+    candidate => {
+      if window_hash == needle_hash && bytes_range_equals(value, candidate, needle, 0u32, needle_length) {
+        return candidate
+      }
+      if candidate == limit {
+        break 4294967295u32
+      }
+      window_hash = (window_hash - bytes_widen_byte(bytes_byte_at(value, candidate)) * power) * 257u64 + bytes_widen_byte(bytes_byte_at(value, candidate + needle_length))
+      continue candidate + 1u32
+    }
+  }
+}
+
+fn bytes_utf8_continuation(byte: U8) -> Bool {
+  byte >= 128u8 && byte <= 191u8
+}
+
+fn bytes_is_valid_utf8(value: Bytes) -> Bool {
+  let length = bytes_byte_length(value)
+  while 0u32 {
+    index if index < length => {
+      let remaining = length - index
+      if remaining >= 16u32 && wasm_u8x16_bitmask(wasm_bytes_load_u8x16(value, index)) == 0u32 {
+        continue index + 16u32
+      }
+      let first = bytes_byte_at(value, index)
+      if first < 128u8 {
+        continue index + 1u32
+      }
+      if first < 194u8 || first > 244u8 {
+        return false
+      }
+      if first < 224u8 {
+        if remaining < 2u32 || !bytes_utf8_continuation(bytes_byte_at(value, index + 1u32)) {
+          return false
+        }
+        continue index + 2u32
+      }
+      if first < 240u8 {
+        if remaining < 3u32 {
+          return false
+        }
+        let second = bytes_byte_at(value, index + 1u32)
+        if !bytes_utf8_continuation(second) || !bytes_utf8_continuation(bytes_byte_at(value, index + 2u32)) {
+          return false
+        }
+        if (first == 224u8 && second < 160u8) || (first == 237u8 && second >= 160u8) {
+          return false
+        }
+        continue index + 3u32
+      }
+      if remaining < 4u32 {
+        return false
+      }
+      let second = bytes_byte_at(value, index + 1u32)
+      if !bytes_utf8_continuation(second) || !bytes_utf8_continuation(bytes_byte_at(value, index + 2u32)) || !bytes_utf8_continuation(bytes_byte_at(value, index + 3u32)) {
+        return false
+      }
+      if (first == 240u8 && second < 144u8) || (first == 244u8 && second >= 144u8) {
+        return false
+      }
+      continue index + 4u32
+    }
+    _ => break true
+  }
+}

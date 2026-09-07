@@ -23,13 +23,17 @@ builtin self_host_facet_bytes_builder_finish(
   builder: BytesBuilder,
 ) -> Bytes = "dew_bytes_builder_finish"
 
-builtin self_host_facet_bytes_is_valid_utf8(
+fn self_host_facet_bytes_is_valid_utf8(
   value: Bytes,
-) -> Bool = "dew_bytes_is_valid_utf8"
+) -> Bool {
+  value.is_valid_utf8()
+}
 
-builtin self_host_facet_bytes_to_string(
+fn self_host_facet_bytes_to_string(
   value: Bytes,
-) -> String = "dew_bytes_to_string"
+) -> String {
+  value.to_string()
+}
 
 builtin self_host_facet_bytes_byte_length(
   value: Bytes,

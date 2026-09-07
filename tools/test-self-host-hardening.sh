@@ -32,6 +32,11 @@ self_host_measure 'hardening Set-library request' \
     "$work/set.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-set-probe.wasm \
     app.set_probes tools/dew-test/set_operations.dew
+self_host_measure 'hardening Bytes-library request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/bytes.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-bytes-probe.wasm \
+    app.bytes_probes tools/dew-test/bytes_operations.dew
 self_host_measure 'hardening raw GC storage request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/raw-gc.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \

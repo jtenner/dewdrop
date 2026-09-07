@@ -102,6 +102,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   [storage log](docs/research/circular-buffer-library-storage-2026-09-06.md).
 - [ ] Move Text, Bytes, views, and builders out of compiler-owned algorithms.
   Keep encoding, bounds, and lifetime checks in ordinary library code.
+  Bytes equality, hash, searches, affixes, UTF-8 validation, and checked String
+  conversion now run in Dew. Bytes storage operations and the SIMD storage
+  bridge still need migration. See the
+  [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
 - [ ] Convert remaining host-operation builtins into foreign declarations.
   Keep generated Dew types, provider metadata, and emitted signatures in sync.
 - [ ] Remove all remaining standard-module path, declaration-number, and name

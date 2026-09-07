@@ -362,6 +362,9 @@ fn selected_standard_modules(
   if (text_mask & 1) != 0 {
     fixed_array = true
   }
+  if text_mask != 0 {
+    wasm_intrinsics = true
+  }
   if fixed_array {
     wasm_intrinsics = true
   }
