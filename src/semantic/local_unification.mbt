@@ -103,9 +103,7 @@ pub fn LocalTypeSolver::new(
 
 ///|
 pub fn LocalTypeSolver::reset(self : LocalTypeSolver) -> Unit {
-  guard self.snapshots.length() == 0 else {
-    abort("cannot reset a solver with active inference snapshots")
-  }
+  self.assert_solver_boundary(true, 0)
   self.types.clear()
   self.types.push(BodyErrorType)
   self.type_arguments.clear()
@@ -366,8 +364,19 @@ fn LocalTypeSolver::occurs_in(
   variable_root : TypeVariableId,
   type_ : BodyTypeId,
 ) -> Bool {
-  self.next_occurs_generation()
+  self.assert_occurs_idle()
+  let result = self.occurs_in_work(variable_root, type_)
   self.occurs_stack.clear()
+  result
+}
+
+///|
+fn LocalTypeSolver::occurs_in_work(
+  self : LocalTypeSolver,
+  variable_root : TypeVariableId,
+  type_ : BodyTypeId,
+) -> Bool {
+  self.next_occurs_generation()
   self.occurs_stack.push(type_)
   while self.occurs_stack.length() > 0 {
     let current = self.representative_type(self.occurs_stack.pop().unwrap())
@@ -790,8 +799,24 @@ pub fn LocalTypeSolver::unify(
   right : BodyTypeId,
   origin : TypeConstraintOrigin,
 ) -> Bool {
+  self.assert_solver_boundary(false, 0)
+  let result = self.unify_work(left, right, origin)
+  match self.check_solver_arrays() {
+    Ok(_) => ()
+    Err(error) => abort("solver work invariant: " + @debug.to_string(error))
+  }
   self.unify_left.clear()
   self.unify_right.clear()
+  result
+}
+
+///|
+fn LocalTypeSolver::unify_work(
+  self : LocalTypeSolver,
+  left : BodyTypeId,
+  right : BodyTypeId,
+  origin : TypeConstraintOrigin,
+) -> Bool {
   self.push_unification_pair(left, right)
   let mut deferred : Array[(BodyTypeId, BodyTypeId)]? = None
   let mut bound_since_retry = false
@@ -1011,7 +1036,7 @@ pub fn LocalTypeSolver::unify(
 
 ///|
 pub fn LocalTypeSolver::snapshot(self : LocalTypeSolver) -> InferenceSnapshot {
-  self.assert_undo_arrays()
+  self.assert_solver_boundary(false, 0)
   guard self.next_snapshot_token < 18446744073709551615UL else {
     abort("SOL-204 inference snapshot identity space exhausted")
   }
@@ -1057,10 +1082,7 @@ pub fn LocalTypeSolver::rollback(
   self : LocalTypeSolver,
   snapshot : InferenceSnapshot,
 ) -> Unit {
-  guard self.snapshots.length() > 0 &&
-    self.snapshots[self.snapshots.length() - 1] == snapshot else {
-    abort("SOL-204 inference snapshots must roll back in LIFO order")
-  }
+  self.assert_snapshot_state(snapshot)
   self.restore_undo(snapshot.undo_start)
   self.variable_parents.truncate(snapshot.variable_count)
   self.variable_sizes.truncate(snapshot.variable_count)
@@ -1085,14 +1107,7 @@ pub fn LocalTypeSolver::commit(
   self : LocalTypeSolver,
   snapshot : InferenceSnapshot,
 ) -> Unit {
-  guard self.snapshots.length() > 0 &&
-    self.snapshots[self.snapshots.length() - 1] == snapshot else {
-    abort("SOL-204 inference snapshots must commit in LIFO order")
-  }
-  match self.check_undo_restore(snapshot.undo_start) {
-    Ok(_) => ()
-    Err(error) => abort("solver undo invariant: " + @debug.to_string(error))
-  }
+  self.assert_snapshot_state(snapshot)
   ignore(self.snapshots.pop())
   if self.snapshots.length() == 0 {
     self.undo_kinds.clear()
@@ -1132,9 +1147,24 @@ pub fn LocalTypeSolver::zonk_type(
   root : BodyTypeId,
   origin? : TypeConstraintOrigin = synthetic_type_origin(-1, 0UL),
 ) -> BodyTypeId {
-  guard self.snapshots.length() == 0 else {
-    abort("cannot freeze a type while an inference snapshot is active")
+  self.assert_solver_boundary(true, 1)
+  let result = self.zonk_type_work(root, origin)
+  match self.check_solver_arrays() {
+    Ok(_) => ()
+    Err(error) => abort("solver work invariant: " + @debug.to_string(error))
   }
+  self.zonk_results.clear()
+  self.zonk_application_scratch.clear()
+  self.assert_solver_boundary(true, 1)
+  result
+}
+
+///|
+fn LocalTypeSolver::zonk_type_work(
+  self : LocalTypeSolver,
+  root : BodyTypeId,
+  origin : TypeConstraintOrigin,
+) -> BodyTypeId {
   let representative = self.zonk_member_type(root, origin)
   if representative <= 0 {
     return representative
@@ -1363,6 +1393,17 @@ pub fn LocalTypeSolver::has_unresolved_variable(
   self : LocalTypeSolver,
   root : BodyTypeId,
 ) -> Bool {
+  self.assert_occurs_idle()
+  let result = self.has_unresolved_variable_work(root)
+  self.occurs_stack.clear()
+  result
+}
+
+///|
+fn LocalTypeSolver::has_unresolved_variable_work(
+  self : LocalTypeSolver,
+  root : BodyTypeId,
+) -> Bool {
   let representative = self.representative_type(root)
   if representative <= 0 {
     return false
@@ -1376,7 +1417,6 @@ pub fn LocalTypeSolver::has_unresolved_variable(
     BodyErrorType | BodyResolvedType(_) => return false
   }
   self.next_occurs_generation()
-  self.occurs_stack.clear()
   self.occurs_stack.push(representative)
   while self.occurs_stack.length() > 0 {
     let current = self.representative_type(self.occurs_stack.pop().unwrap())

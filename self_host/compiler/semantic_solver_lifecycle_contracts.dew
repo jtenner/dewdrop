@@ -1,0 +1,40 @@
+impl SelfHostLocalTypeSolver {
+  fn assert_snapshot_arenas(self, snapshot: SelfHostInferenceSnapshot) -> Unit {
+    self.assert_solver_invariant(snapshot.variable_count <= self.variable_parents.length(),
+      204u32, snapshot.variable_count, self.variable_parents.length(), 10u32)
+    self.assert_solver_invariant(snapshot.type_count <= self.types.length(),
+      204u32, snapshot.type_count, self.types.length(), 11u32)
+    self.assert_solver_invariant(snapshot.argument_count <= self.type_arguments.length(),
+      204u32, snapshot.argument_count, self.type_arguments.length(), 12u32)
+    self.assert_solver_invariant(snapshot.diagnostic_count <= self.diagnostics.length(),
+      204u32, snapshot.diagnostic_count, self.diagnostics.length(), 13u32)
+  }
+
+  fn assert_solver_boundary(self, closed: Bool, detail: U32) -> Unit {
+    self.assert_solver_invariant(!closed || self.snapshots.length() == 0u32,
+      206u32, 0u32, self.snapshots.length(), detail)
+    self.assert_variable_arrays()
+    self.assert_undo_arrays()
+    self.assert_type_caches()
+    self.assert_unification_stack()
+    self.assert_zonk_stack()
+    self.assert_solver_invariant(self.unify_left.length() == 0u32,
+      206u32, 0u32, self.unify_left.length(), 40u32)
+    self.assert_solver_invariant(self.occurs_stack.length() == 0u32,
+      206u32, 0u32, self.occurs_stack.length(), 41u32)
+    self.assert_solver_invariant(self.zonk_task_types.length() == 0u32,
+      206u32, 0u32, self.zonk_task_types.length(), 42u32)
+    self.assert_solver_invariant(self.zonk_results.length() == 0u32,
+      206u32, 0u32, self.zonk_results.length(), 45u32)
+    self.assert_solver_invariant(self.zonk_scratch.length() == 0u32,
+      206u32, 0u32, self.zonk_scratch.length(), 46u32)
+    self.assert_solver_invariant(self.snapshots.length() > 0u32 || self.undo_kinds.length() == 0u32,
+      205u32, 0u32, self.undo_kinds.length(), 3u32)
+  }
+
+  fn assert_occurs_idle(self) -> Unit {
+    self.assert_type_caches()
+    self.assert_solver_invariant(self.occurs_stack.length() == 0u32,
+      206u32, 0u32, self.occurs_stack.length(), 41u32)
+  }
+}

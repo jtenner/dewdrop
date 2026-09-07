@@ -216,6 +216,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Native union sizes and resolved-type encoding now check machine and arena
   limits before writes or arithmetic. See the
   [value limit log](docs/research/solver-value-limits-2026-09-07.md).
+  Both solvers now finish owned work on normal return and check idle, parallel
+  state before reset, snapshot, or zonk. Self-host commit and rollback preflight
+  every undo record before writes or removal. See the
+  [lifecycle log](docs/research/solver-lifecycle-2026-09-07.md).
+  Complete type-graph/child ownership checks at other consumers remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
   order must hold, and stored identities, physical indices, and import offsets
   must agree. Missing bases or bodies must produce a diagnostic.

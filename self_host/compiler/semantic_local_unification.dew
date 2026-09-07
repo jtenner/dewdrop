@@ -225,15 +225,7 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn reset(self) -> Unit {
-    self.assert_solver_invariant(
-      self.snapshots.length() == 0u32,
-      206u32, 0u32, self.snapshots.length(), 0u32,
-    )
-    self.assert_variable_arrays()
-    self.assert_undo_arrays()
-    self.assert_type_caches()
-    self.assert_unification_stack()
-    self.assert_zonk_stack()
+    self.assert_solver_boundary(true, 0u32)
     self.types.clear()
     self.types.push(SelfHostBodyTypeTerm::BodyErrorType)
     self.type_arguments.clear()
@@ -567,8 +559,14 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn occurs_in(self, variable_root: U32, type_: I32) -> Bool {
-    self.next_occurs_generation()
+    self.assert_occurs_idle()
+    let result = self.occurs_in_work(variable_root, type_)
     self.occurs_stack.clear()
+    result
+  }
+
+  fn occurs_in_work(self, variable_root: U32, type_: I32) -> Bool {
+    self.next_occurs_generation()
     self.occurs_stack.push(type_)
     let _ = while self.occurs_stack.length() {
       length => if length > 0u32 {
@@ -1005,9 +1003,20 @@ impl SelfHostLocalTypeSolver {
     right: I32,
     origin: SelfHostTypeConstraintOrigin,
   ) -> Bool {
+    self.assert_solver_boundary(false, 0u32)
+    let result = self.unify_work(left, right, origin)
     self.assert_unification_stack()
     self.unify_left.clear()
     self.unify_right.clear()
+    result
+  }
+
+  fn unify_work(
+    self,
+    left: I32,
+    right: I32,
+    origin: SelfHostTypeConstraintOrigin,
+  ) -> Bool {
     self.push_unification_pair(left, right)
     let mut deferred = Option::None
     let mut bound_since_retry = false
@@ -1285,11 +1294,7 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn snapshot(self) -> SelfHostInferenceSnapshot {
-    self.assert_variable_arrays()
-    self.assert_undo_arrays()
-    self.assert_type_caches()
-    self.assert_unification_stack()
-    self.assert_zonk_stack()
+    self.assert_solver_boundary(false, 0u32)
     self.assert_solver_invariant(
       self.next_snapshot_token < 4294967295u32,
       204u32, 4294967295u32, self.next_snapshot_token, self.snapshots.length(),
@@ -1310,42 +1315,18 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn restore_undo(self, start: U32) -> Unit {
-    self.assert_variable_arrays()
-    self.assert_undo_arrays()
-    self.assert_solver_invariant(
-      start <= self.undo_kinds.length(),
-      205u32, self.undo_kinds.length(), start, 0u32,
-    )
+    self.assert_undo_restore(start)
     let _ = while self.undo_kinds.length() {
       length => if length > start {
         let slot = length - 1u32
         let kind = self.undo_kinds[slot]
         let index = self.undo_indices[slot]
         let old_value = self.undo_values[slot]
-        self.assert_solver_invariant(kind <= 2u32, 205u32, 2u32, kind, slot)
-        self.assert_solver_invariant(
-          index < self.variable_parents.length(),
-          205u32, self.variable_parents.length(), index, kind,
-        )
         if kind == 0u32 {
-          self.assert_solver_invariant(
-            self_host_body_i32_to_u32(old_value) < self.variable_parents.length(),
-            205u32, self.variable_parents.length(), self_host_body_i32_to_u32(old_value), index,
-          )
           self.variable_parents[index] = self_host_body_i32_to_u32(old_value)
         } else if kind == 1u32 {
-          let size = self_host_body_i32_to_u32(old_value)
-          self.assert_solver_invariant(size > 0u32 && size <= self.variable_parents.length(),
-            205u32, self.variable_parents.length(), size, index)
-          self.variable_sizes[index] = size
+          self.variable_sizes[index] = self_host_body_i32_to_u32(old_value)
         } else {
-          if old_value >= 0i32 {
-            self.assert_solver_invariant(self_host_body_i32_to_u32(old_value) < self.types.length(),
-              205u32, self.types.length(), self_host_body_i32_to_u32(old_value), index)
-          } else if old_value < -1i32 {
-            self.assert_solver_invariant(self.decoded_resolved_type(old_value) < self.resolved.types.length(),
-              205u32, self.resolved.types.length(), self.decoded_resolved_type(old_value), index)
-          }
           self.variable_bindings[index] = old_value
         }
         self.undo_kinds.truncate(slot)
@@ -1360,15 +1341,8 @@ impl SelfHostLocalTypeSolver {
 
   fn rollback(self, snapshot: SelfHostInferenceSnapshot) -> Unit {
     self.assert_top_snapshot(snapshot)
-    self.assert_type_caches()
-    self.assert_solver_invariant(snapshot.variable_count <= self.variable_parents.length(),
-      204u32, snapshot.variable_count, self.variable_parents.length(), 10u32)
-    self.assert_solver_invariant(snapshot.type_count <= self.types.length(),
-      204u32, snapshot.type_count, self.types.length(), 11u32)
-    self.assert_solver_invariant(snapshot.argument_count <= self.type_arguments.length(),
-      204u32, snapshot.argument_count, self.type_arguments.length(), 12u32)
-    self.assert_solver_invariant(snapshot.diagnostic_count <= self.diagnostics.length(),
-      204u32, snapshot.diagnostic_count, self.diagnostics.length(), 13u32)
+    self.assert_solver_boundary(false, 0u32)
+    self.assert_snapshot_arenas(snapshot)
     self.restore_undo(snapshot.undo_start)
     self.variable_parents.truncate(snapshot.variable_count)
     self.variable_sizes.truncate(snapshot.variable_count)
@@ -1390,8 +1364,9 @@ impl SelfHostLocalTypeSolver {
 
   fn commit(self, snapshot: SelfHostInferenceSnapshot) -> Unit {
     self.assert_top_snapshot(snapshot)
-    self.assert_variable_arrays()
-    self.assert_undo_arrays()
+    self.assert_solver_boundary(false, 0u32)
+    self.assert_snapshot_arenas(snapshot)
+    self.assert_undo_restore(snapshot.undo_start)
     let _ = self_host_array_pop(self.snapshots)
     if self.snapshots.length() == 0u32 {
       self.undo_kinds.clear()
@@ -1429,12 +1404,16 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn zonk_type(self, root: I32) -> I32 {
-    self.assert_solver_invariant(
-      self.snapshots.length() == 0u32,
-      206u32, 0u32, self.snapshots.length(), 1u32,
-    )
-    self.assert_type_caches()
+    self.assert_solver_boundary(true, 1u32)
+    let result = self.zonk_type_work(root)
     self.assert_zonk_stack()
+    self.zonk_results.clear()
+    self.zonk_scratch.clear()
+    self.assert_solver_boundary(true, 1u32)
+    result
+  }
+
+  fn zonk_type_work(self, root: I32) -> I32 {
     let representative = self.zonk_member_type(root)
     if representative <= 0i32 {
       return representative
@@ -1739,6 +1718,13 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn has_unresolved_variable(self, root: I32) -> Bool {
+    self.assert_occurs_idle()
+    let result = self.has_unresolved_variable_work(root)
+    self.occurs_stack.clear()
+    result
+  }
+
+  fn has_unresolved_variable_work(self, root: I32) -> Bool {
     let representative = self.representative_type(root)
     if representative <= 0i32 {
       return false

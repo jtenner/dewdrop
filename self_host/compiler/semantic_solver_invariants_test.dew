@@ -1,3 +1,72 @@
+test "solver finishes work on both positive and negative results" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let first = solver.fresh_variable()
+  let second = solver.fresh_variable()
+  let product = solver.product_type([first, second])
+  assert(solver.occurs_in(0u32, product), "occurs result")
+  assert(solver.occurs_stack.length() == 0u32, "occurs work drained")
+  assert(solver.has_unresolved_variable(product), "unresolved result")
+  assert(solver.occurs_stack.length() == 0u32, "unresolved work drained")
+  let i32 = solver.resolved_type(solver.resolved.primitive(SelfHostPrimitiveType::I32Type))
+  let i64 = solver.resolved_type(solver.resolved.primitive(SelfHostPrimitiveType::I64Type))
+  let left = solver.product_type([i32, i32])
+  let right = solver.product_type([i64, i32])
+  assert(!solver.unify(left, right, self_host_synthetic_type_origin(0u32, 0u32)), "ordinary mismatch")
+  assert(solver.unify_left.length() == 0u32 && solver.unify_right.length() == 0u32, "failed unification work drained")
+  assert(solver.zonk_type(left) == left, "frozen result")
+  assert(solver.zonk_results.length() == 0u32 && solver.zonk_scratch.length() == 0u32, "zonk work drained")
+  solver.reset()
+  solver.assert_solver_boundary(true, 0u32)
+}
+
+test "solver preflights all undo entries without changing state" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  let snapshot = solver.snapshot()
+  solver.set_variable_binding(0u32, 0i32)
+  solver.set_variable_binding(0u32, -1i32)
+  assert(solver.check_undo_restore(snapshot.undo_start) is Option::None, "valid undo range")
+  solver.undo_kinds[0u32] = 3u32
+  match solver.check_undo_restore(snapshot.undo_start) {
+    Option::Some(failure) => {
+      assert(failure.code == 205u32 && failure.phase == 2u32, "exact failure and phase")
+      assert(failure.module_id == 80u64 && failure.declaration == 0u64 && failure.body == 0u64, "exact owner")
+      assert(failure.expression == 4294967295u32 && failure.expected == 2u64 && failure.actual == 3u64 && failure.detail == 0u64, "exact record context")
+    }
+    Option::None => assert(false, "invalid older undo entry must fail")
+  }
+  assert(solver.variable_bindings[0u32] == -1i32, "no newer undo write happened")
+  assert(solver.undo_kinds.length() == 2u32 && solver.undo_values[1u32] == 0i32, "undo range preserved")
+  assert(solver.snapshot_count() == 1u32, "snapshot preserved")
+  solver.undo_kinds[0u32] = 2u32
+  solver.rollback(snapshot)
+  assert(solver.variable_bindings[0u32] == -1i32 && solver.undo_count() == 0u32, "valid rollback restores saved state")
+}
+
+test "SOL-205 commit cannot discard an invalid undo record" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  let snapshot = solver.snapshot()
+  solver.set_variable_binding(0u32, 0i32)
+  solver.undo_kinds[0u32] = 3u32
+  solver.commit(snapshot)
+}
+
+test "SOL-206 reset cannot discard aligned pending work" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  solver.unify_left.push(0i32)
+  solver.unify_right.push(0i32)
+  solver.reset()
+}
+
+test "SOL-205 reset cannot discard an unowned undo record" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  solver.undo_kinds.push(0u32)
+  solver.undo_indices.push(0u32)
+  solver.undo_values.push(0i32)
+  solver.reset()
+}
+
 test "SOL-204 nested snapshots with identical state are distinct" expect_trap "unreachable" {
   let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
   let outer = solver.snapshot()
