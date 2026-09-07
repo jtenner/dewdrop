@@ -1,3 +1,67 @@
+test "ARN-104 unification cannot hide a missing sentinel" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let variable = solver.fresh_variable()
+  let _ = solver.unify(variable, -1i32, self_host_synthetic_type_origin(0u32, 0u32))
+}
+
+test "SOL-201 representative checks the stored variable identity" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let variable = solver.fresh_variable()
+  assert(solver.representative_type(variable) == variable, "valid stored variable")
+  solver.variable_types[0u32] = 0i32
+  let _ = solver.representative_type(variable)
+}
+
+test "SOL-206 zonk rejects a later structural cycle" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let product = solver.product_type([0i32, 0i32])
+  solver.assert_type_graph(product)
+  solver.type_arguments[1u32] = product
+  let _ = solver.zonk_type(product)
+}
+
+test "ARN-104 solver type reads cannot hide a missing sentinel" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.type_term(-1i32)
+}
+
+test "ARN-101 unification checks owned spans before identity" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let product = solver.product_type([0i32])
+  solver.assert_type_graph(product)
+  solver.types[1u32] = SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+    start: 1u32
+    length: 1u32
+  })
+  let _ = solver.unify(product, product, self_host_synthetic_type_origin(0u32, 0u32))
+}
+
+test "solver graph checks accept deep shared types and preserve a bad child" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let scalar = solver.resolved_type(solver.resolved.primitive(SelfHostPrimitiveType::I32Type))
+  let root = while (0u32, scalar) {
+    (depth, type_) => if depth < 1024u32 {
+      continue (depth + 1u32, solver.product_type([type_, type_]))
+    } else {
+      break type_
+    }
+  }
+  solver.assert_type_graph(root)
+  assert(solver.zonk_type(root) == root, "deep shared type freezes")
+  let last = solver.type_arguments.length() - 1u32
+  let saved = solver.type_arguments[last]
+  solver.type_arguments[last] = -1i32
+  match solver.check_type_graph(root) {
+    Result::Err(failure) => {
+      assert(failure.code == 104u32 && failure.actual == 4294967295u64, "missing child is not Error")
+    }
+    Result::Ok(_) => assert(false, "missing child must be reported")
+  }
+  assert(solver.type_arguments[last] == -1i32, "bad child remains visible")
+  solver.type_arguments[last] = saved
+  solver.assert_type_graph(root)
+}
+
 test "solver finishes work on both positive and negative results" {
   let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
   let first = solver.fresh_variable()

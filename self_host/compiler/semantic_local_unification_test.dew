@@ -222,23 +222,30 @@ test "local unification reports one mismatch and poisons its variable" {
   assert(solver.diagnostic_count() == 1u32, "duplicate mismatch")
 }
 
-test "local unification converts the unbound sentinel to the error type" {
+test "local unification keeps missing IDs distinct from Error terms" {
   let fixture = self_host_unification_test_types()
   let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
   let variable = solver.fresh_variable()
+  match solver.check_type_graph(-1i32) {
+    Result::Err(failure) => {
+      assert(failure.code == 104u32 && failure.phase == 2u32, "missing ID diagnostic")
+      assert(failure.expected == 2u64 && failure.actual == 4294967295u64 && failure.detail == 0u64, "exact missing ID")
+    }
+    Result::Ok(_) => assert(false, "the missing sentinel must not become Error")
+  }
   assert(
     solver.unify(
       variable,
-      -1i32,
+      solver.error_type(),
       self_host_synthetic_type_origin(5u32, 6u32),
     ),
-    "sentinel recovery",
+    "explicit Error recovery",
   )
   assert(
     solver.representative_type(variable) == solver.error_type(),
-    "sentinel error type",
+    "explicit Error type",
   )
-  assert(solver.diagnostic_count() == 0u32, "sentinel diagnostics")
+  assert(solver.diagnostic_count() == 0u32, "Error recovery does not add a duplicate diagnostic")
 }
 
 test "local unification rejects infinite types with iterative occurs checking" {

@@ -157,7 +157,7 @@ fn LocalTypeSolver::decoded_resolved_type(
   type_ : BodyTypeId,
 ) -> ResolvedTypeId {
   guard type_ < -1 else { abort("body type is not a resolved type") }
-  let resolved = -type_ - 2
+  let resolved = -(type_ + 2)
   guard resolved >= 0 && resolved < self.resolved.types.length() else {
     abort("invalid resolved body type")
   }
@@ -169,12 +169,10 @@ pub fn LocalTypeSolver::type_term(
   self : LocalTypeSolver,
   type_ : BodyTypeId,
 ) -> BodyTypeTerm {
-  if type_ < -1 {
-    BodyResolvedType(self.decoded_resolved_type(type_))
-  } else if type_ >= 0 && type_ < self.types.length() {
-    self.types[type_]
-  } else {
-    abort("invalid body type ID")
+  match self.check_type_term(type_) {
+    Ok(term) => term
+    Err(error) =>
+      abort("solver type arena invariant: " + @debug.to_string(error))
   }
 }
 
@@ -365,6 +363,7 @@ fn LocalTypeSolver::occurs_in(
   type_ : BodyTypeId,
 ) -> Bool {
   self.assert_occurs_idle()
+  self.assert_type_graph(type_)
   let result = self.occurs_in_work(variable_root, type_)
   self.occurs_stack.clear()
   result
@@ -800,6 +799,8 @@ pub fn LocalTypeSolver::unify(
   origin : TypeConstraintOrigin,
 ) -> Bool {
   self.assert_solver_boundary(false, 0)
+  self.assert_type_graph(left)
+  self.assert_type_graph(right)
   let result = self.unify_work(left, right, origin)
   match self.check_solver_arrays() {
     Ok(_) => ()
@@ -1148,6 +1149,7 @@ pub fn LocalTypeSolver::zonk_type(
   origin? : TypeConstraintOrigin = synthetic_type_origin(-1, 0UL),
 ) -> BodyTypeId {
   self.assert_solver_boundary(true, 1)
+  self.assert_type_graph(root)
   let result = self.zonk_type_work(root, origin)
   match self.check_solver_arrays() {
     Ok(_) => ()
@@ -1394,6 +1396,7 @@ pub fn LocalTypeSolver::has_unresolved_variable(
   root : BodyTypeId,
 ) -> Bool {
   self.assert_occurs_idle()
+  self.assert_type_graph(root)
   let result = self.has_unresolved_variable_work(root)
   self.occurs_stack.clear()
   result

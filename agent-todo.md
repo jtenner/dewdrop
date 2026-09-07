@@ -220,7 +220,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   state before reset, snapshot, or zonk. Self-host commit and rollback preflight
   every undo record before writes or removal. See the
   [lifecycle log](docs/research/solver-lifecycle-2026-09-07.md).
-  Complete type-graph/child ownership checks at other consumers remain open.
+  Unification, occurs/unresolved searches, and zonk now check complete input type
+  graphs. Missing solver IDs cannot become Error, and Error siblings cannot
+  hide structural cycles or bad spans. See the
+  [type graph log](docs/research/solver-type-graphs-2026-09-07.md).
+  Complete child ownership checks at other phase consumers remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
   order must hold, and stored identities, physical indices, and import offsets
   must agree. Missing bases or bodies must produce a diagnostic.

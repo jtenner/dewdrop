@@ -300,18 +300,16 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn decoded_resolved_type(self, type_: I32) -> U32 {
-    self_host_body_i32_to_u32(-type_ - 2i32)
+    self_host_body_i32_to_u32(-(type_ + 2i32))
   }
 
   fn type_term(self, type_: I32) -> SelfHostBodyTypeTerm {
-    if type_ < -1i32 {
-      SelfHostBodyTypeTerm::BodyResolvedType(
-        self.decoded_resolved_type(type_),
-      )
-    } else if type_ >= 0i32 {
-      self.types[self_host_body_i32_to_u32(type_)]
-    } else {
-      SelfHostBodyTypeTerm::BodyErrorType
+    match self.check_type_term(type_) {
+      Result::Ok(term) => term
+      Result::Err(failure) => {
+        self_host_assert_compiler_invariant_with_failure(false, failure, "solver type arena is invalid")
+        unreachable()
+      }
     }
   }
 
@@ -439,6 +437,14 @@ impl SelfHostLocalTypeSolver {
   }
 
   fn representative_type(self, type_: I32) -> I32 {
+    self.assert_variable_arrays()
+    match self.check_type_source(type_) {
+      Result::Err(failure) => {
+        self_host_assert_compiler_invariant_with_failure(false, failure, "solver representative is invalid")
+        unreachable()
+      }
+      Result::Ok(_) => {}
+    }
     let mut current = type_
     let mut hops = 0u32
     while current {
@@ -560,6 +566,7 @@ impl SelfHostLocalTypeSolver {
 
   fn occurs_in(self, variable_root: U32, type_: I32) -> Bool {
     self.assert_occurs_idle()
+    self.assert_type_graph(type_)
     let result = self.occurs_in_work(variable_root, type_)
     self.occurs_stack.clear()
     result
@@ -1004,6 +1011,8 @@ impl SelfHostLocalTypeSolver {
     origin: SelfHostTypeConstraintOrigin,
   ) -> Bool {
     self.assert_solver_boundary(false, 0u32)
+    self.assert_type_graph(left)
+    self.assert_type_graph(right)
     let result = self.unify_work(left, right, origin)
     self.assert_unification_stack()
     self.unify_left.clear()
@@ -1405,6 +1414,7 @@ impl SelfHostLocalTypeSolver {
 
   fn zonk_type(self, root: I32) -> I32 {
     self.assert_solver_boundary(true, 1u32)
+    self.assert_type_graph(root)
     let result = self.zonk_type_work(root)
     self.assert_zonk_stack()
     self.zonk_results.clear()
@@ -1719,6 +1729,7 @@ impl SelfHostLocalTypeSolver {
 
   fn has_unresolved_variable(self, root: I32) -> Bool {
     self.assert_occurs_idle()
+    self.assert_type_graph(root)
     let result = self.has_unresolved_variable_work(root)
     self.occurs_stack.clear()
     result

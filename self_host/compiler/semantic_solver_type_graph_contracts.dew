@@ -1,0 +1,227 @@
+struct SelfHostSolverTypeVisit {
+  type_: I32
+  finish: Bool
+}
+
+struct SelfHostSolverTypeEdges {
+  span: SelfHostHirSpan
+  extra: Option<I32>
+  resolved: Bool
+}
+
+impl SelfHostLocalTypeSolver {
+  fn check_type_term(self, type_: I32) -> Result<SelfHostBodyTypeTerm, SelfHostInvariantFailure> {
+    let term = if type_ < -1i32 {
+      SelfHostBodyTypeTerm::BodyResolvedType(self_host_body_i32_to_u32(-(type_ + 2i32)))
+    } else if type_ >= 0i32 && self_host_body_i32_to_u32(type_) < self.types.length() {
+      self.types[self_host_body_i32_to_u32(type_)]
+    } else {
+      return Result::Err(self.solver_failure(104u32, self.types.length(), self_host_body_i32_to_u32(type_), 0u32))
+    }
+    match term {
+      SelfHostBodyTypeTerm::BodyResolvedType(resolved) => if resolved >= self.resolved.types.length() {
+        return Result::Err(self.solver_failure(104u32, self.resolved.types.length(), resolved, self_host_body_i32_to_u32(type_)))
+      }
+      SelfHostBodyTypeTerm::BodyVariableType(variable) => if variable >= self.variable_parents.length() {
+        return Result::Err(self.solver_failure(201u32, self.variable_parents.length(), variable, self_host_body_i32_to_u32(type_)))
+      }
+      _ => {}
+    }
+    Result::Ok(term)
+  }
+
+  // Unlike path compression, this read-only walk is safe in a preflight.
+  fn check_type_source(self, type_: I32) -> Result<I32, SelfHostInvariantFailure> {
+    let count = self.variable_parents.length()
+    let mut bindings = 0u32
+    while type_ {
+      current => match self.check_type_term(current) {
+        Result::Err(failure) => break Result::Err(failure)
+        Result::Ok(term) => match term {
+          SelfHostBodyTypeTerm::BodyVariableType(variable) => {
+            let mut hops = 0u32
+            let root = while variable {
+              candidate => {
+                if candidate >= count {
+                  return Result::Err(self.solver_failure(202u32, count, candidate, variable))
+                }
+                if hops >= count {
+                  return Result::Err(self.solver_failure(202u32, count, hops, variable))
+                }
+                let next = self.variable_parents[candidate]
+                if next == candidate {
+                  break candidate
+                }
+                hops = hops + 1u32
+                continue next
+              }
+            }
+            if bindings >= count {
+              return Result::Err(self.solver_failure(202u32, count, bindings, self_host_body_i32_to_u32(type_)))
+            }
+            bindings = bindings + 1u32
+            let binding = self.variable_bindings[root]
+            if binding != -1i32 {
+              continue binding
+            }
+            let stored = self.variable_types[root]
+            if stored < 0i32 || self_host_body_i32_to_u32(stored) >= self.types.length() {
+              return Result::Err(self.solver_failure(201u32, root, self_host_body_i32_to_u32(stored), 4u32))
+            }
+            match self.types[self_host_body_i32_to_u32(stored)] {
+              SelfHostBodyTypeTerm::BodyVariableType(owner) => if owner != root {
+                return Result::Err(self.solver_failure(201u32, root, self_host_body_i32_to_u32(stored), 4u32))
+              }
+              _ => return Result::Err(self.solver_failure(201u32, root, self_host_body_i32_to_u32(stored), 4u32))
+            }
+            break Result::Ok(stored)
+          }
+          _ => break Result::Ok(current)
+        }
+      }
+    }
+  }
+
+  fn checked_resolved_body_type(self, type_: U32) -> Result<I32, SelfHostInvariantFailure> {
+    if type_ > 2147483646u32 {
+      return Result::Err(self.solver_failure(207u32, 2147483646u32, type_, 0u32))
+    }
+    if type_ >= self.resolved.types.length() {
+      return Result::Err(self.solver_failure(104u32, self.resolved.types.length(), type_, 0u32))
+    }
+    Result::Ok(self.resolved_type(type_))
+  }
+
+  fn checked_type_edges(self, term: SelfHostBodyTypeTerm) -> Result<SelfHostSolverTypeEdges, SelfHostInvariantFailure> {
+    let empty = SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }
+    let (span, extra, resolved) = match term {
+      SelfHostBodyTypeTerm::BodyProductType(span) => (span, Option::None, false)
+      SelfHostBodyTypeTerm::BodyAppliedType(base, span) => (span, Option::Some(base), false)
+      SelfHostBodyTypeTerm::BodyFunctionType(span, result) => (span, Option::Some(result), false)
+      SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => (empty, Option::Some(owner), false)
+      SelfHostBodyTypeTerm::BodyResolvedType(type_) => {
+        let (span, extra) = match self.resolved.types[type_] {
+          SelfHostResolvedType::ProductType(span) => (span, Option::None)
+          SelfHostResolvedType::AppliedType(base, span) => (span, Option::Some(base))
+          SelfHostResolvedType::FunctionType(span, result) => (span, Option::Some(result))
+          SelfHostResolvedType::MemberTypeProjection(owner, _, _) => (empty, Option::Some(owner))
+          _ => (empty, Option::None)
+        }
+        let converted = match extra {
+          Option::Some(child) => match self.checked_resolved_body_type(child) {
+            Result::Ok(value) => Option::Some(value)
+            Result::Err(failure) => return Result::Err(failure)
+          }
+          Option::None => Option::None
+        }
+        (span, converted, true)
+      }
+      _ => (empty, Option::None, false)
+    }
+    let length = if resolved {
+      self.resolved.type_arguments.length()
+    } else {
+      self.type_arguments.length()
+    }
+    if !self_host_array_span_is_valid(span.start, span.length, length) {
+      return Result::Err(self.solver_failure(101u32, length, span.start, span.length))
+    }
+    Result::Ok(SelfHostSolverTypeEdges::{
+      span: span
+      extra: extra
+      resolved: resolved
+    })
+  }
+
+  fn check_type_graph(self, root: I32) -> Result<Unit, SelfHostInvariantFailure> {
+    match self.check_undo_restore(self.undo_kinds.length()) {
+      Option::Some(failure) => return Result::Err(failure)
+      Option::None => {}
+    }
+    let states = Map::empty()
+    let work = [SelfHostSolverTypeVisit::{
+      type_: root
+      finish: false
+    }]
+    let _ = while work.length() {
+      length => if length > 0u32 {
+        let visit = work[length - 1u32]
+        work.truncate(length - 1u32)
+        let id = match self.check_type_source(visit.type_) {
+          Result::Ok(value) => value
+          Result::Err(failure) => return Result::Err(failure)
+        }
+        if visit.finish {
+          states.set(id, 2u32)
+          continue work.length()
+        }
+        let state = match states.get(id) {
+          Option::Some(value) => value
+          Option::None => 0u32
+        }
+        if state == 1u32 {
+          return Result::Err(self.solver_failure(206u32, 0u32, self_host_body_i32_to_u32(id), self_host_body_i32_to_u32(root)))
+        }
+        if state == 2u32 {
+          continue work.length()
+        }
+        states.set(id, 1u32)
+        work.push(SelfHostSolverTypeVisit::{
+          type_: id
+          finish: true
+        })
+        let term = match self.check_type_term(id) {
+          Result::Ok(value) => value
+          Result::Err(failure) => return Result::Err(failure)
+        }
+        let edges = match self.checked_type_edges(term) {
+          Result::Ok(value) => value
+          Result::Err(failure) => return Result::Err(failure)
+        }
+        match edges.extra {
+          Option::Some(child) => work.push(SelfHostSolverTypeVisit::{
+            type_: child
+            finish: false
+          })
+          Option::None => {}
+        }
+        let _ = while edges.span.length {
+          remaining => if remaining > 0u32 {
+            let offset = edges.span.start + remaining - 1u32
+            let child = if edges.resolved {
+              match self.checked_resolved_body_type(self.resolved.type_arguments[offset]) {
+                Result::Ok(value) => value
+                Result::Err(failure) => return Result::Err(failure)
+              }
+            } else {
+              self.type_arguments[offset]
+            }
+            work.push(SelfHostSolverTypeVisit::{
+              type_: child
+              finish: false
+            })
+            continue remaining - 1u32
+          } else {
+            break self_host_semantic_unit()
+          }
+        }
+        continue work.length()
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    Result::Ok(self_host_semantic_unit())
+  }
+
+  fn assert_type_graph(self, root: I32) -> Unit {
+    match self.check_type_graph(root) {
+      Result::Err(failure) => {
+        let _ = self_host_assert_compiler_invariant_with_failure(false, failure, "solver type graph is invalid")
+      }
+      Result::Ok(_) => {}
+    }
+  }
+}
