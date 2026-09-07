@@ -213,6 +213,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   including saved values and encoded resolved bindings. Commit cannot discard
   an invalid undo record. See the
   [undo log](docs/research/solver-undo-records-2026-09-07.md).
+  Native union sizes and resolved-type encoding now check machine and arena
+  limits before writes or arithmetic. See the
+  [value limit log](docs/research/solver-value-limits-2026-09-07.md).
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
   order must hold, and stored identities, physical indices, and import offsets
   must agree. Missing bases or bodies must produce a diagnostic.

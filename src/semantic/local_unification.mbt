@@ -146,10 +146,10 @@ pub fn LocalTypeSolver::resolved_type(
   self : LocalTypeSolver,
   type_ : ResolvedTypeId,
 ) -> BodyTypeId {
-  if type_ == self.resolved.error_type {
-    self.error_type()
-  } else {
-    -type_ - 2
+  match self.check_resolved_type_encoding(type_) {
+    Ok(encoded) => encoded
+    Err(error) =>
+      abort("solver type encoding invariant: " + @debug.to_string(error))
   }
 }
 
@@ -326,6 +326,10 @@ fn LocalTypeSolver::union_variables(
   if left_root == right_root {
     return left_root
   }
+  let size = match self.check_union_size(left_root, right_root) {
+    Ok(size) => size
+    Err(error) => abort("solver union invariant: " + @debug.to_string(error))
+  }
   let (larger, smaller) = if self.variable_sizes[left_root] >=
     self.variable_sizes[right_root] {
     (left_root, right_root)
@@ -333,10 +337,7 @@ fn LocalTypeSolver::union_variables(
     (right_root, left_root)
   }
   self.set_variable_parent(smaller, larger)
-  self.set_variable_size(
-    larger,
-    self.variable_sizes[larger] + self.variable_sizes[smaller],
-  )
+  self.set_variable_size(larger, size)
   larger
 }
 
