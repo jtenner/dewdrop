@@ -528,52 +528,8 @@ fn empty_program_trait_evidence_request() -> ProgramTraitEvidenceRequest {
 }
 
 ///|
-fn write_program_trait_evidence_key(
-  output : Buffer,
-  request : ProgramTraitEvidenceRequest,
-  node : Int,
-) -> Unit {
-  guard node >= 0 && node < request.evidence.length() else {
-    output.write_string_utf8("invalid")
-    return
-  }
-  let evidence = request.evidence[node]
-  match evidence.kind {
-    PlannedConcreteTraitEvidence(implementation, arguments) => {
-      output.write_string_utf8(implementation.to_string())
-      output.write_string_utf8("<")
-      for index in 0..<arguments.length {
-        if index > 0 {
-          output.write_string_utf8(",")
-        }
-        output.write_string_utf8(
-          program_specialization_shape_name(
-            request.arguments[arguments.start + index],
-          ),
-        )
-      }
-      output.write_string_utf8(">")
-    }
-    PlannedRuntimeTraitEvidence(trait_, parameter) => {
-      output.write_string_utf8("runtime<")
-      output.write_string_utf8(trait_.to_string())
-      output.write_string_utf8(",")
-      output.write_string_utf8(parameter.to_string())
-      output.write_string_utf8(">")
-    }
-  }
-  output.write_string_utf8("[")
-  for index in 0..<evidence.prerequisites.length {
-    if index > 0 {
-      output.write_string_utf8(",")
-    }
-    write_program_trait_evidence_key(
-      output,
-      request,
-      request.children[evidence.prerequisites.start + index],
-    )
-  }
-  output.write_string_utf8("]")
+fn write_program_trait_evidence_key(output : Buffer, request : ProgramTraitEvidenceRequest, node : Int) -> Unit {
+  output.write_string_utf8(trait_evidence_key(RequestEvidenceKey(request), node))
 }
 
 ///|
@@ -1026,56 +982,6 @@ fn resolve_program_lowering_evidence_node(
   }
 }
 
-///|
-fn append_program_trait_evidence_request_key(
-  request : ProgramTraitEvidenceRequest,
-  node : Int,
-  depth : Int,
-  output : Buffer,
-) -> Unit {
-  if depth >= 64 || node < 0 || node >= request.evidence.length() {
-    output.write_string_utf8("!")
-    return
-  }
-  match request.evidence[node].kind {
-    PlannedConcreteTraitEvidence(implementation, arguments) => {
-      output.write_string_utf8("i")
-      output.write_string_utf8(implementation.to_string())
-      output.write_string_utf8("[")
-      for index in 0..<arguments.length {
-        if index > 0 {
-          output.write_string_utf8(",")
-        }
-        output.write_string_utf8("s")
-        output.write_string_utf8(
-          wasmgc_trait_evidence_shape_code(
-            request.arguments[arguments.start + index],
-          ).to_string(),
-        )
-      }
-      output.write_string_utf8("]{")
-      let prerequisites = request.evidence[node].prerequisites
-      for index in 0..<prerequisites.length {
-        if index > 0 {
-          output.write_string_utf8(",")
-        }
-        append_program_trait_evidence_request_key(
-          request,
-          request.children[prerequisites.start + index],
-          depth + 1,
-          output,
-        )
-      }
-      output.write_string_utf8("}")
-    }
-    PlannedRuntimeTraitEvidence(trait_, parameter) => {
-      output.write_string_utf8("r")
-      output.write_string_utf8(trait_.to_string())
-      output.write_string_utf8("@")
-      output.write_string_utf8(parameter.to_string())
-    }
-  }
-}
 
 ///|
 fn program_trait_evidence_request_identity(
@@ -1083,13 +989,12 @@ fn program_trait_evidence_request_identity(
   root : Int,
 ) -> (DeclId, String)? {
   guard root >= 0 && root < request.evidence.length() else { return None }
+  let key = trait_evidence_key(RequestEvidenceKey(request), root)
   let implementation = match request.evidence[root].kind {
     PlannedConcreteTraitEvidence(value, _) => value
     PlannedRuntimeTraitEvidence(_, _) => return None
   }
-  let output = Buffer()
-  append_program_trait_evidence_request_key(request, root, 0, output)
-  Some((implementation, @utf8.decode_lossy(output.to_bytes())))
+  Some((implementation, key))
 }
 
 ///|

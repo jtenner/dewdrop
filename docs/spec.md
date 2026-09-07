@@ -1039,6 +1039,8 @@ Implementation signature comparison validates both complete type graphs, includi
 
 Native inference tracks active trait obligations by logical target, logical trait type, and declaration identity. It reads live solver bindings without zonking an open transaction. A repeated active obligation produces `CT-013 cyclic trait prerequisite`; exhausting 65,536 search attempts or 256 active obligations produces `CT-012 trait evidence search limit exceeded`. These are explicit source diagnostics, not ordinary missing evidence. Nested searches restore the caller's generic argument environment and invalidate cached IDs from rolled-back candidates.
 
+Native physical trait evidence keys use one checked structural encoding for lowering and specialization requests. It retains every recorded shape kind, nested product field, declaration, and ordered prerequisite. Cycles and invalid owned spans are errors. A 65,536-node/work limit produces EVD-213 rather than a truncated key; keys never use `!` or `invalid` to replace missing data. Key equality does not replace physical-carrier or full Wasm reference validation.
+
 Dew supports static and instance trait methods. Static trait methods are callable using qualified syntax:
 
 ```dew

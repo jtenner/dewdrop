@@ -249,9 +249,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   cycle/limit diagnostics, and restored caller generic environments. Deep chains,
   sibling bounds, and diagnostic codecs have focused tests. See the
   [native search log](docs/research/native-trait-search-2026-09-07.md).
-  Native physical evidence keys still need closure: two writers truncate at
-  depth 64, another writes an `invalid` sentinel, and product shape keys omit
-  field shapes. Replace those paths with checked, complete structural keys.
+  Native physical evidence keys now use one checked writer. Deep leaves and
+  product fields remain distinct; missing/cyclic data and work limits cannot
+  produce a partial key. See the
+  [evidence key log](docs/research/physical-evidence-keys-2026-09-07.md).
+  Native evidence-concreteness predicates still need checked worklists instead
+  of recursive/depth-based false results.
   See the [interface walk log](docs/research/interface-type-walks-2026-09-07.md).
 - [ ] Complete stable numeric failure records and the negative invariant tests.
   Start with a valid state, change one field, and check the exact code and source

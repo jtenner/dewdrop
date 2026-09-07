@@ -2848,70 +2848,11 @@ fn wasmgc_trait_evidence_shape_code(shape : PlannedValueShape) -> Int {
 }
 
 ///|
-fn append_wasmgc_trait_evidence_key(
-  lowering : PlannedModuleLowering,
-  evidence : Int,
-  depth : Int,
-  output : Buffer,
-) -> Unit {
-  if depth >= 64 || evidence < 0 || evidence >= lowering.trait_evidence.length() {
-    output.write_string_utf8("!")
-    return
-  }
-  match lowering.trait_evidence[evidence].kind {
-    GuardedInferredTraitEvidence(target, bound) =>
-      output.write_string_utf8("g\{target}:\{bound}")
-    BoundInferredTraitEvidence(slot) => {
-      output.write_string_utf8("b")
-      output.write_string_utf8(slot.to_string())
-    }
-    ConcreteInferredTraitEvidence(implementation, arguments) => {
-      output.write_string_utf8("i")
-      output.write_string_utf8(implementation.to_string())
-      output.write_string_utf8("[")
-      for index in 0..<arguments.length {
-        if index > 0 {
-          output.write_string_utf8(",")
-        }
-        match lowering.trait_evidence_arguments[arguments.start + index] {
-          ShapeInferredTraitEvidenceArgument(shape) => {
-            output.write_string_utf8("s")
-            output.write_string_utf8(
-              wasmgc_trait_evidence_shape_code(shape).to_string(),
-            )
-          }
-          GenericInferredTraitEvidenceArgument(parameter) => {
-            output.write_string_utf8("g")
-            output.write_string_utf8(parameter.to_string())
-          }
-        }
-      }
-      output.write_string_utf8("]{")
-      let prerequisites = lowering.trait_evidence[evidence].prerequisites
-      for index in 0..<prerequisites.length {
-        if index > 0 {
-          output.write_string_utf8(",")
-        }
-        append_wasmgc_trait_evidence_key(
-          lowering,
-          lowering.trait_evidence_children[prerequisites.start + index],
-          depth + 1,
-          output,
-        )
-      }
-      output.write_string_utf8("}")
-    }
-  }
-}
-
-///|
 pub fn wasmgc_trait_evidence_key(
   lowering : PlannedModuleLowering,
   evidence : Int,
 ) -> String {
-  let output = Buffer()
-  append_wasmgc_trait_evidence_key(lowering, evidence, 0, output)
-  @utf8.decode_lossy(output.to_bytes())
+  trait_evidence_key(LoweringEvidenceKey(lowering), evidence)
 }
 
 ///|
