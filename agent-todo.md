@@ -162,6 +162,9 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.
+  Index writes now always use their frozen call recipe; the shared fixture also
+  checks non-generic Unit writes in exact source order. See the
+  [index write log](docs/research/array-index-write-recipes-2026-09-07.md).
 - [ ] Complete full Wasm reference checks. Check heap type and nullability,
   not just an eqref label, for call operands, results, locals, and branches.
 - [ ] Put constructor and other temporary locals in the frozen physical plan.

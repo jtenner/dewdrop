@@ -18,6 +18,15 @@ CORE_OPERATIONS = (
 
 
 class ArrayBuiltinPolicyTests(unittest.TestCase):
+    def test_index_writes_have_only_a_frozen_call_recipe(self):
+        source = (ROOT / "self_host/compiler/starshine_module.dew").read_text()
+        start = source.index("            SelfHostPlannedExpressionKind::PlannedIndexSet(")
+        end = source.index('            _ => {\n              return Option::Some("linked expression is outside the current emitter subset")', start)
+        write = source[start:end]
+        self.assertIn("self_host_linked_schedule_frozen_call(", write)
+        for fallback in ("ordinary_call", "array_module_id", "EmitLinkedArraySet", "container_owner"):
+            self.assertNotIn(fallback, write, f"index write must use its frozen recipe: {fallback}")
+
     def test_emission_cannot_synthesize_old_array_calls(self):
         source = (ROOT / "self_host/compiler/starshine_module.dew").read_text()
         for name in ("EmitLinkedArrayBuiltin", "EmitLinkedArrayEmpty", "EmitLinkedArrayIterNext"):
