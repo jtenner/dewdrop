@@ -2733,57 +2733,11 @@ fn frozen_impl_type_is_visible(
   root : ResolvedTypeId,
   exported : Map[DeclId, Bool],
 ) -> Bool {
-  let mut current = root
-  while true {
-    if current < 0 || current >= resolved.types.length() {
-      return false
-    }
-    match resolved.types[current] {
-      NominalType(declaration) | TraitType(declaration) =>
-        return semantic_id_module(declaration) != resolved.module_id ||
-          exported.contains(declaration)
-      MemberTypeProjection(owner, _, _) => current = owner
-      ProductType(fields) => {
-        for index in 0..<fields.length {
-          if !frozen_impl_type_is_visible(
-              resolved,
-              resolved.type_arguments[fields.start + index],
-              exported,
-            ) {
-            return false
-          }
-        }
-        return true
-      }
-      AppliedType(base, arguments) => {
-        for index in 0..<arguments.length {
-          if !frozen_impl_type_is_visible(
-              resolved,
-              resolved.type_arguments[arguments.start + index],
-              exported,
-            ) {
-            return false
-          }
-        }
-        current = base
-      }
-      FunctionType(parameters, result) => {
-        for index in 0..<parameters.length {
-          if !frozen_impl_type_is_visible(
-              resolved,
-              resolved.type_arguments[parameters.start + index],
-              exported,
-            ) {
-            return false
-          }
-        }
-        return frozen_impl_type_is_visible(resolved, result, exported)
-      }
-      ErrorType => return false
-      PrimitiveType(_) | GenericParameterType(_) | SelfType(_) => return true
-    }
+  match check_frozen_impl_type_visibility(resolved, root, exported) {
+    Ok(visible) => visible
+    Err(failure) =>
+      abort("interface type invariant: " + @debug.to_string(failure))
   }
-  false
 }
 
 ///|

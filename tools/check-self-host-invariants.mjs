@@ -10,6 +10,14 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "EVD-211 interface type cycles retain the type identity",
+    expected: [211, 3, 6000n, 0n, 0n, 3, 0n, 3n, 1n],
+  },
+  {
+    name: "ARN-101 interface type child spans are owned",
+    expected: [101, 3, 6000n, 0n, 0n, 3, 0n, 0n, 1n],
+  },
   ...[
     ["LNK-502 linked function index must match its table slot", 502, 1, 0n, 99n, 0n],
     ["LNK-504 linked function fragment must exist", 504, 1, 1n, 99n, 2n],

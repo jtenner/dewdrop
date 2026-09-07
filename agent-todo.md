@@ -224,6 +224,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   used by inference and type queries. Trees retain logical arguments and exact
   direct-child spans. See the
   [shared search log](docs/research/shared-trait-evidence-2026-09-07.md).
+  Both interface visibility walkers now check cycles and owned spans and handle
+  deep/shared type graphs. Private or Error siblings cannot hide a cycle.
+  Native inference search and implementation comparison still need closure.
+  See the [interface walk log](docs/research/interface-type-walks-2026-09-07.md).
 - [ ] Complete stable numeric failure records and the negative invariant tests.
   Start with a valid state, change one field, and check the exact code and source
   context. Missing data or an unexpected trap must never count as a pass.

@@ -1,6 +1,7 @@
 open dew.std.array
 open dew.std.map
 open dew.std.option
+open dew.std.result
 open dew.std.string
 
 fn self_host_interface_string_equal_at(
@@ -455,112 +456,114 @@ fn self_host_frozen_trait_impl_is_owned(
   }
 }
 
-// This recursive check keeps each type index on its U32 source carrier.
-// The depth limit rejects malformed recursive interface evidence at compile time.
-fn self_host_frozen_impl_type_visible_at(
+struct SelfHostInterfaceTypeVisit {
+  type_: U32
+  finish: Bool
+}
+
+fn self_host_interface_type_failure(resolved: SelfHostResolvedModuleTypes, root: U32, code: U32, expected: U32, actual: U32, detail: U32) -> SelfHostInvariantFailure {
+  SelfHostInvariantFailure::{
+    code: code
+    phase: 3u32
+    module_id: resolved.module_id
+    declaration: 0u64
+    body: 0u64
+    expression: root
+    expected: self_host_u32_to_u64(expected)
+    actual: self_host_u32_to_u64(actual)
+    detail: self_host_u32_to_u64(detail)
+  }
+}
+
+fn self_host_check_frozen_impl_type_visible(
   resolved: SelfHostResolvedModuleTypes,
   root: U32,
   exported: Map<U64, Bool>,
-  depth: U32,
-) -> Bool {
-  if depth >= 1024u32 || root >= resolved.types.length() {
-    return false
+) -> Result<Bool, SelfHostInvariantFailure> {
+  let states = Map::empty()
+  let work = [SelfHostInterfaceTypeVisit::{
+    type_: root
+    finish: false
+  }]
+  let mut visible = true
+  let _ = while work.length() {
+    length => if length > 0u32 {
+      let visit = work[length - 1u32]
+      work.truncate(length - 1u32)
+      let type_ = visit.type_
+      if type_ >= resolved.types.length() {
+        return Result::Err(self_host_interface_type_failure(resolved, root, 104u32, resolved.types.length(), type_, 0u32))
+      }
+      if visit.finish {
+        states.set(type_, 2u32)
+        continue work.length()
+      }
+      let state = match states.get(type_) {
+        Option::Some(value) => value
+        Option::None => 0u32
+      }
+      if state == 1u32 {
+        return Result::Err(self_host_interface_type_failure(resolved, root, 211u32, 0u32, type_, 1u32))
+      }
+      if state == 2u32 {
+        continue work.length()
+      }
+      states.set(type_, 1u32)
+      work.push(SelfHostInterfaceTypeVisit::{
+        type_: type_
+        finish: true
+      })
+      let node = resolved.types[type_]
+      let fields = match node {
+        SelfHostResolvedType::ProductType(span) => span
+        SelfHostResolvedType::AppliedType(_, span) => span
+        SelfHostResolvedType::FunctionType(span, _) => span
+        _ => self_host_empty_hir_span(0u32)
+      }
+      if !self_host_array_span_is_valid(fields.start, fields.length, resolved.type_arguments.length()) {
+        return Result::Err(self_host_interface_type_failure(resolved, root, 101u32, resolved.type_arguments.length(), fields.start, fields.length))
+      }
+      match node {
+        SelfHostResolvedType::ErrorType => {
+          visible = false
+        }
+        SelfHostResolvedType::NominalType(declaration) => if self_host_semantic_id_module(declaration) == resolved.module_id && !self_host_frozen_exported_declaration(exported, declaration) {
+          visible = false
+        }
+        SelfHostResolvedType::TraitType(declaration) => if self_host_semantic_id_module(declaration) == resolved.module_id && !self_host_frozen_exported_declaration(exported, declaration) {
+          visible = false
+        }
+        SelfHostResolvedType::AppliedType(base, _) => work.push(SelfHostInterfaceTypeVisit::{
+          type_: base
+          finish: false
+        })
+        SelfHostResolvedType::FunctionType(_, result) => work.push(SelfHostInterfaceTypeVisit::{
+          type_: result
+          finish: false
+        })
+        SelfHostResolvedType::MemberTypeProjection(owner, _, _) => work.push(SelfHostInterfaceTypeVisit::{
+          type_: owner
+          finish: false
+        })
+        _ => {}
+      }
+      let _ = while fields.length {
+        offset => if offset > 0u32 {
+          work.push(SelfHostInterfaceTypeVisit::{
+            type_: resolved.type_arguments[fields.start + offset - 1u32]
+            finish: false
+          })
+          continue offset - 1u32
+        } else {
+          break self_host_semantic_unit()
+        }
+      }
+      continue work.length()
+    } else {
+      break self_host_semantic_unit()
+    }
   }
-  match resolved.types[root] {
-    SelfHostResolvedType::ErrorType => false
-    SelfHostResolvedType::NominalType(declaration) => self_host_semantic_id_module(
-      declaration,
-    ) != resolved.module_id || self_host_frozen_exported_declaration(
-      exported,
-      declaration,
-    )
-    SelfHostResolvedType::TraitType(declaration) => self_host_semantic_id_module(
-      declaration,
-    ) != resolved.module_id || self_host_frozen_exported_declaration(
-      exported,
-      declaration,
-    )
-    SelfHostResolvedType::ProductType(fields) => {
-      let mut index = 0u32
-      let _ = while index {
-        current => if current < fields.length {
-          let child = self_host_u32_add(fields.start, current)
-          if child >= resolved.type_arguments.length() ||
-            !self_host_frozen_impl_type_visible_at(
-              resolved,
-              resolved.type_arguments[child],
-              exported,
-              depth + 1u32,
-            ) {
-            return false
-          }
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      true
-    }
-    SelfHostResolvedType::AppliedType(base, arguments) => {
-      if !self_host_frozen_impl_type_visible_at(
-        resolved,
-        base,
-        exported,
-        depth + 1u32,
-      ) {
-        return false
-      }
-      let mut index = 0u32
-      let _ = while index {
-        current => if current < arguments.length {
-          let child = self_host_u32_add(arguments.start, current)
-          if child >= resolved.type_arguments.length() ||
-            !self_host_frozen_impl_type_visible_at(
-              resolved,
-              resolved.type_arguments[child],
-              exported,
-              depth + 1u32,
-            ) {
-            return false
-          }
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      true
-    }
-    SelfHostResolvedType::FunctionType(parameters, result) => {
-      if !self_host_frozen_impl_type_visible_at(
-        resolved,
-        result,
-        exported,
-        depth + 1u32,
-      ) {
-        return false
-      }
-      let mut index = 0u32
-      let _ = while index {
-        current => if current < parameters.length {
-          let child = self_host_u32_add(parameters.start, current)
-          if child >= resolved.type_arguments.length() ||
-            !self_host_frozen_impl_type_visible_at(
-              resolved,
-              resolved.type_arguments[child],
-              exported,
-              depth + 1u32,
-            ) {
-            return false
-          }
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      true
-    }
-    _ => true
-  }
+  Result::Ok(visible)
 }
 
 fn self_host_frozen_impl_type_visible(
@@ -568,7 +571,13 @@ fn self_host_frozen_impl_type_visible(
   root: U32,
   exported: Map<U64, Bool>,
 ) -> Bool {
-  self_host_frozen_impl_type_visible_at(resolved, root, exported, 0u32)
+  match self_host_check_frozen_impl_type_visible(resolved, root, exported) {
+    Result::Ok(visible) => visible
+    Result::Err(failure) => {
+      self_host_assert_compiler_invariant_with_failure(false, failure, "interface type graph must be valid and acyclic")
+      unreachable()
+    }
+  }
 }
 
 fn self_host_frozen_callable_kind(
