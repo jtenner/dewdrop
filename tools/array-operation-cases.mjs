@@ -26,5 +26,6 @@ export function checkArrayOperations(main) {
     `Dew array checked bound or overflow case ${test}`);
   }
   assert.throws(() => main(4294967295), WebAssembly.RuntimeError, "unknown array case is not a passing case");
-  return 28;
+  assert.equal(main(27), 1, "packed Array literals keep signedness and work after growth");
+  return 29;
 }

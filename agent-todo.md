@@ -81,6 +81,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   Unused native Array operation nodes and emitters are now removed; literal
   construction remains; shared ring producers are now removed. See the
   [cleanup log](docs/research/array-legacy-ir-cleanup-2026-09-06.md).
+  Literal storage now rejects unresolved evidence and preserves packed integer
+  widths; all 29 shared checks pass. The unused opcode switch/helpers are gone.
+  See the [literal storage log](docs/research/array-literal-storage-2026-09-06.md).
 - [x] Move Map hashing, buckets, growth, lookup, and iteration into Dew. Typed
   entries preserve aliases, cached hashes avoid repeated user calls during
   growth, and all 12 shared native/self-host checks pass. Native Map IR and

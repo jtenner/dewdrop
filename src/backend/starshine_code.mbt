@@ -267,15 +267,7 @@ priv enum StarshineEmitTask {
   FinishStarshineRefIntrinsic(Int)
   FinishStarshineFixedArray(Int, @semantic.PlannedValueShape, Int, Int, Int)
   FinishStarshineArrayLiteral(@semantic.PlannedValueShape, Int, Int, Int, Int)
-  FinishStarshineArray(
-    Int,
-    @semantic.PlannedValueShape?,
-    Int,
-    Int,
-    Int,
-    Int,
-    Int
-  )
+  FinishStarshineScalarArrayLiteral(@semantic.PlannedValueShape, Int, Int, Int)
   FinishStarshineProductBox(@semantic.PlannedValueShape, Int)
   FinishStarshineProductUnbox(@semantic.PlannedValueShape, Int)
   FinishStarshineConstructor(
@@ -3965,17 +3957,7 @@ fn starshine_body_locals(
             body_local_types.length()
           body_local_types.push(@lib.ValType::eqref_null())
         }
-      @semantic.PlannedArrayLiteral(_, _, _) => {
-        if fixed_array_ref_scratch_index < 0 {
-          fixed_array_ref_scratch_index = parameter_count +
-            body_local_types.length()
-          body_local_types.push(@lib.ValType::eqref_null())
-        }
-        if fixed_array_i32_scratch_index < 0 {
-          fixed_array_i32_scratch_index = parameter_count +
-            body_local_types.length()
-          body_local_types.push(@lib.ValType::i32())
-        }
+      @semantic.PlannedArrayLiteral(_, _, _) =>
         match lowering.expressions[expression].kind {
           @semantic.PlannedArrayLiteral(elements, element_type, shape) =>
             if elements.length > 0 {
@@ -4010,7 +3992,6 @@ fn starshine_body_locals(
             }
           _ => ()
         }
-      }
       _ => ()
     }
   }
@@ -4081,13 +4062,6 @@ fn starshine_value_carrier(shape : @semantic.PlannedValueShape) -> Int {
 }
 
 ///|
-fn starshine_fixed_array_carrier(shape : @semantic.PlannedValueShape) -> Int {
-  match shape {
-    @semantic.I8PlannedValueShape | @semantic.U8PlannedValueShape => 6
-    @semantic.I16PlannedValueShape | @semantic.U16PlannedValueShape => 7
-    _ => starshine_value_carrier(shape)
-  }
-}
 
 ///|
 fn starshine_fixed_array_get_instruction(
@@ -5179,16 +5153,13 @@ fn starshine_emit_body_instructions(
               )
             })
             match
-              starshine_finish_array(
+              starshine_finish_scalar_array_literal(
                 planned,
                 program,
                 body.body,
-                48,
-                Some(source.shape),
+                source.shape,
                 fragments,
-                -1,
                 map_key_local_indices[expression - body.expressions.start],
-                -1,
                 map_value_local_indices[expression - body.expressions.start],
               ) {
               Ok(instructions) => results.push(instructions)
@@ -6153,13 +6124,10 @@ fn starshine_emit_body_instructions(
                 )
               _ =>
                 tasks.push(
-                  FinishStarshineArray(
-                    48,
-                    Some(element_shape),
+                  FinishStarshineScalarArrayLiteral(
+                    element_shape,
                     elements.length,
-                    fixed_array_ref_scratch_index,
                     map_key_local_indices[expression - body.expressions.start],
-                    fixed_array_i32_scratch_index,
                     map_value_local_indices[expression - body.expressions.start],
                   ),
                 )
@@ -7057,27 +7025,21 @@ fn starshine_emit_body_instructions(
           Err(error) => return Err(error)
         }
       }
-      FinishStarshineArray(
-        operation,
+      FinishStarshineScalarArrayLiteral(
         shape,
         count,
-        wrapper_local,
         backing_local,
-        index_local,
         value_local
       ) => {
         let fragments = pop_starshine_fragments(results, count)
         match
-          starshine_finish_array(
+          starshine_finish_scalar_array_literal(
             planned,
             program,
             body.body,
-            operation,
             shape,
             fragments,
-            wrapper_local,
             backing_local,
-            index_local,
             value_local,
           ) {
           Ok(output) => results.push(output)

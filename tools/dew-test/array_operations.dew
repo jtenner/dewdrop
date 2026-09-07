@@ -261,6 +261,20 @@ pub fn main(case: U32) -> I32 {
     } else {
       0i32
     }
+  } else if case == 27u32 {
+    let signed8 = [-127i8, 126i8]
+    let unsigned8 = [128u8, 255u8]
+    let signed16 = [-32767i16, 32766i16]
+    let unsigned16 = [32768u16, 65535u16]
+    signed8.push(-128i8)
+    unsigned8.push(254u8)
+    signed16.push(-32768i16)
+    unsigned16.push(65534u16)
+    if signed8[0u32] == -127i8 && signed8[2u32] == -128i8 && unsigned8[1u32] == 255u8 && unsigned8[2u32] == 254u8 && signed16[0u32] == -32767i16 && signed16[2u32] == -32768i16 && unsigned16[1u32] == 65535u16 && unsigned16[2u32] == 65534u16 {
+      1i32
+    } else {
+      0i32
+    }
   } else if case == 9u32 {
     let cell = BulkCell::{
       value: 0i32

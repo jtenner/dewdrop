@@ -10,12 +10,10 @@ fn starshine_array_local_set(index : Int) -> @lib.Instruction {
 
 ///|
 fn starshine_array_storage_carrier(shape : @semantic.PlannedValueShape) -> Int {
-  match shape {
-    // Unit has a logical array element but no operand. Its storage slot is a
-    // null marker; this does not turn Unit into an expression carrier.
-    @semantic.UnitPlannedValueShape => 5
-    _ => starshine_value_carrier(shape)
-  }
+  // Literal backing is raw array storage, not an expression carrier. Keep
+  // packed widths and reject missing evidence through the same contract as
+  // ordinary array instructions. Unit occupies only a null storage marker.
+  @semantic.wasmgc_raw_array_storage_carrier(shape)
 }
 
 ///|
@@ -42,86 +40,8 @@ fn starshine_array_append_unit_marker(
 }
 
 ///|
-fn starshine_array_shape_uses_reference_storage(
-  shape : @semantic.PlannedValueShape,
-) -> Bool {
-  match shape {
-    @semantic.UnitPlannedValueShape
-    | @semantic.RefPlannedValueShape
-    | @semantic.GenericPlannedValueShape
-    | @semantic.ProductPlannedValueShape(_) => true
-    _ => false
-  }
-}
 
 ///|
-fn starshine_array_append_option(
-  output : Array[@lib.Instruction],
-  _planned : @semantic.PlannedModuleWasmGCFragments,
-  program : @semantic.PlannedProgramWasmGCLink?,
-  shape : @semantic.PlannedValueShape,
-  present : Bool,
-  value : Array[@lib.Instruction],
-) -> Result[Unit, StarshineCodeEmissionError] {
-  let link = match program {
-    Some(value) => value
-    None => return Err(UnsupportedExpression(0UL, -405))
-  }
-  let option_module = @semantic.semantic_id_module(
-    @semantic.standard_option_some_variant(),
-  )
-  let option_module_index = match link.module_lookup.get(option_module) {
-    Some(value) => value
-    None => return Err(UnsupportedExpression(0UL, -405))
-  }
-  let option_plan = link.modules[option_module_index]
-  let variant = if present {
-    @semantic.standard_option_some_variant()
-  } else {
-    @semantic.standard_option_none_variant()
-  }
-  let selected_physical = if present {
-    starshine_variant_payload_physical_type_for_fields(
-      option_plan,
-      variant,
-      StarshineExpectedTupleFields([shape]),
-    )
-  } else {
-    starshine_variant_payload_physical_type(option_plan, variant)
-  }
-  let physical = match selected_physical {
-    Some(value) => value
-    None => return Err(UnsupportedExpression(0UL, -405))
-  }
-  let type_index = link.physical_type_index(
-    option_module_index,
-    physical.type_index,
-  )
-  output.push(
-    @lib.Instruction::i32_const(
-      @lib.I32::new(option_plan.variant_tag_of(variant).unwrap()),
-    ),
-  )
-  if present {
-    for field_offset in 1..<physical.fields.length {
-      let field = option_plan.fields[physical.fields.start + field_offset]
-      if starshine_shape_matches_storage(shape, field.storage) {
-        append_starshine_instructions(output, value)
-      } else {
-        append_starshine_instructions(
-          output,
-          starshine_default_storage_instructions(field.storage),
-        )
-      }
-    }
-  }
-  output.push(
-    @lib.Instruction::struct_new(
-      @lib.TypeIdx::new(type_index.reinterpret_as_uint()),
-    ),
-  )
-  Ok(())
-}
 
 ///|
 fn starshine_product_leaf_shapes(
@@ -288,21 +208,15 @@ fn starshine_finish_array_literal(
 }
 
 ///|
-fn starshine_finish_array(
+fn starshine_finish_scalar_array_literal(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
   body_id : @semantic.BodyId,
-  operation : Int,
-  shape : @semantic.PlannedValueShape?,
+  shape : @semantic.PlannedValueShape,
   fragments : Array[Array[@lib.Instruction]],
-  _wrapper_local : Int,
   backing_local : Int,
-  _index_local : Int,
   value_local : Int,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
-  if operation != 48 {
-    return Err(UnsupportedExpression(body_id, -409))
-  }
   let wrapper_type = match
     starshine_emitted_type_index(
       planned,
@@ -312,10 +226,7 @@ fn starshine_finish_array(
     Some(value) => value
     None => return Err(UnsupportedExpression(body_id, -401))
   }
-  let carrier = match shape {
-    Some(value) => starshine_array_storage_carrier(value)
-    None => -1
-  }
+  let carrier = starshine_array_storage_carrier(shape)
   let array_type = starshine_fixed_array_base_for_body(planned, program) +
     carrier
   let output : Array[@lib.Instruction] = []
@@ -344,7 +255,7 @@ fn starshine_finish_array(
   output.push(starshine_array_local_set(backing_local))
   for index, fragment in fragments {
     append_starshine_instructions(output, fragment)
-    starshine_array_append_unit_marker(output, shape)
+    starshine_array_append_unit_marker(output, Some(shape))
     output.push(starshine_array_local_set(value_local))
     output.push(starshine_array_local_get(backing_local))
     output.push(starshine_match_cast(array_type))

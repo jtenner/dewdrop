@@ -1,28 +1,43 @@
 ///|
-test "removed array emitter operations report an exact diagnostic" {
+test "Array literal storage rejects unresolved physical evidence" {
   let stages = backend_test_single_module_stages(
     28113UL, b"open dew.std.array\npub fn run() -> I32 {\n  let values = [1, 2]\n  values[0u32]\n}\n",
   )
   assert_eq(stages.diagnostic_count(), 0)
   let planned = stages.link.modules[stages.link.root_module_index]
-  for operation in 0..<50 {
-    if operation == 48 {
-      continue
+  let shapes : Array[@semantic.PlannedValueShape] = []
+  for module_ in stages.lowering.modules {
+    for index, type_ in module_.resolved_types {
+      match type_ {
+        @semantic.ErrorType
+        | @semantic.GenericParameterType(_)
+        | @semantic.PrimitiveType(@semantic.NeverType) =>
+          shapes.push(
+            @semantic.planned_value_shape_from_resolved_types(
+              module_.resolved_types,
+              module_.resolved_type_arguments,
+              index,
+            ),
+          )
+        _ => ()
+      }
     }
+  }
+  assert_true(shapes.any(shape => shape is @semantic.GenericPlannedValueShape))
+  assert_true(shapes.any(shape => shape is @semantic.ErrorPlannedValueShape))
+  assert_true(shapes.any(shape => shape is @semantic.NeverPlannedValueShape))
+  for shape in shapes {
     assert_eq(
-      starshine_finish_array(
+      starshine_finish_scalar_array_literal(
         planned,
         Some(stages.link),
         0UL,
-        operation,
-        None,
+        shape,
         [],
         -1,
         -1,
-        -1,
-        -1,
       ),
-      Err(UnsupportedExpression(0UL, -409)),
+      Err(UnsupportedExpression(0UL, -417)),
     )
   }
 }
@@ -50,8 +65,9 @@ test "product array elements use reference storage" {
     for expression in module_.expressions {
       if expression.shape is @semantic.ProductPlannedValueShape(_) {
         found = true
-        assert_true(
-          starshine_array_shape_uses_reference_storage(expression.shape),
+        assert_eq(
+          starshine_array_storage_value_type(expression.shape),
+          Some(@lib.ValType::eqref_null()),
         )
       }
     }
