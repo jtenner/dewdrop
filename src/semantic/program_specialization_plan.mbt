@@ -528,8 +528,14 @@ fn empty_program_trait_evidence_request() -> ProgramTraitEvidenceRequest {
 }
 
 ///|
-fn write_program_trait_evidence_key(output : Buffer, request : ProgramTraitEvidenceRequest, node : Int) -> Unit {
-  output.write_string_utf8(trait_evidence_key(RequestEvidenceKey(request), node))
+fn write_program_trait_evidence_key(
+  output : Buffer,
+  request : ProgramTraitEvidenceRequest,
+  node : Int,
+) -> Unit {
+  output.write_string_utf8(
+    trait_evidence_key(RequestEvidenceKey(request), node),
+  )
 }
 
 ///|
@@ -981,7 +987,6 @@ fn resolve_program_lowering_evidence_node(
       )
   }
 }
-
 
 ///|
 fn program_trait_evidence_request_identity(
@@ -2492,15 +2497,13 @@ fn program_collect_external_runtime_trait_uses(
                 traits_by_module, seen_traits, module_index, trait_,
               )
             ConcreteInferredTraitEvidence(_, _) =>
-              if !runtime_trait_evidence_is_concrete(module_, evidence, 0) &&
-                program_runtime_trait_evidence_is_forwardable(
-                  module_, evidence, 0,
-                ) {
+              if !trait_evidence_concrete(module_, evidence) &&
+                program_runtime_trait_evidence_is_forwardable(module_, evidence) {
                 program_append_external_runtime_trait(
                   traits_by_module, seen_traits, module_index, trait_,
                 )
                 program_collect_external_runtime_evidence_implementation_uses(
-                  lowering, module_lookup, module_, evidence, 0, visited, traits_by_module,
+                  lowering, module_lookup, module_, evidence, visited, traits_by_module,
                   seen_traits,
                 )
               }
@@ -2545,11 +2548,10 @@ fn program_collect_external_runtime_trait_uses(
       roots.start + roots.length <= module_.trait_evidence_roots.length() {
       for index in 0..<roots.length {
         let root = module_.trait_evidence_roots[roots.start + index]
-        if !runtime_trait_evidence_is_concrete(module_, root, 0) &&
-          program_runtime_trait_evidence_is_forwardable(module_, root, 0) {
+        if !trait_evidence_concrete(module_, root) &&
+          program_runtime_trait_evidence_is_forwardable(module_, root) {
           program_collect_external_runtime_evidence_implementation_uses(
-            lowering, module_lookup, module_, root, 0, visited, traits_by_module,
-            seen_traits,
+            lowering, module_lookup, module_, root, visited, traits_by_module, seen_traits,
           )
           forwards_bound = true
         }
@@ -2568,6 +2570,79 @@ priv enum ProgramExternalRuntimeEvidenceClass {
   ProgramExternalConcreteEvidence
   ProgramExternalDirectRuntimeEvidence
   ProgramExternalCapturedRuntimeEvidence
+} derive(Eq, Debug)
+
+///|
+fn check_external_runtime_evidence_class(
+  lowering : PlannedModuleLowering,
+  evidence : Int,
+  parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
+) -> Result[ProgramExternalRuntimeEvidenceClass?, TraitEvidenceKeyFailure] {
+  let source = LoweringEvidenceKey(lowering)
+  match check_trait_evidence_concrete(source, evidence) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  let results : Map[Int, ProgramExternalRuntimeEvidenceClass?] = {}
+  let work = [(evidence, false)]
+  while work.length() > 0 {
+    let (index, finish) = work.pop().unwrap()
+    if results.contains(index) {
+      continue
+    }
+    let node = source.node(index)
+    if !finish {
+      work.push((index, true))
+      let mut offset = node.children.length
+      while offset > 0 {
+        offset -= 1
+        work.push((source.children()[node.children.start + offset], false))
+      }
+      continue
+    }
+    match node.kind {
+      GuardedKey(_, _) => results[index] = None
+      BoundKey(slot) => {
+        if slot < 0 || slot >= parameter_classes.length() {
+          return Err(
+            source.failure(
+              evidence,
+              212,
+              parameter_classes.length(),
+              slot,
+              index,
+            ),
+          )
+        }
+        results[index] = Some(parameter_classes[slot])
+      }
+      ConcreteKey(_) => {
+        let mut captured = false
+        let mut supported = true
+        for offset in 0..<node.children.length {
+          let child = source.children()[node.children.start + offset]
+          match results.get(child) {
+            Some(Some(ProgramExternalConcreteEvidence)) => ()
+            Some(Some(_)) => captured = true
+            Some(None) => supported = false
+            None => return Err(source.failure(evidence, 106, 1, 0, child))
+          }
+        }
+        results[index] = if !supported {
+          None
+        } else if captured {
+          Some(ProgramExternalCapturedRuntimeEvidence)
+        } else {
+          Some(ProgramExternalConcreteEvidence)
+        }
+      }
+      RuntimeKey(_, _) => return Err(source.failure(evidence, 212, 0, 1, index))
+    }
+  }
+  match results.get(evidence) {
+    Some(result) => Ok(result)
+    None => Err(source.failure(evidence, 106, 1, 0, evidence))
+  }
 }
 
 ///|
@@ -2575,55 +2650,14 @@ fn program_external_runtime_evidence_class(
   lowering : PlannedModuleLowering,
   evidence : Int,
   parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
-  depth : Int,
 ) -> ProgramExternalRuntimeEvidenceClass? {
-  if evidence < 0 ||
-    evidence >= lowering.trait_evidence.length() ||
-    depth > lowering.trait_evidence.length() {
-    return None
-  }
-  let node = lowering.trait_evidence[evidence]
-  match node.kind {
-    GuardedInferredTraitEvidence(_, _) => None
-    BoundInferredTraitEvidence(slot) => {
-      if slot < 0 ||
-        slot >= parameter_classes.length() ||
-        node.prerequisites.length > 0 {
-        return None
-      }
-      Some(parameter_classes[slot])
-    }
-    ConcreteInferredTraitEvidence(_, _) => {
-      if node.prerequisites.start < 0 ||
-        node.prerequisites.start + node.prerequisites.length >
-        lowering.trait_evidence_children.length() {
-        return None
-      }
-      let mut captured = false
-      for index in 0..<node.prerequisites.length {
-        let child = lowering.trait_evidence_children[node.prerequisites.start +
-          index]
-        match
-          program_external_runtime_evidence_class(
-            lowering,
-            child,
-            parameter_classes,
-            depth + 1,
-          ) {
-          Some(ProgramExternalConcreteEvidence) => ()
-          Some(ProgramExternalDirectRuntimeEvidence)
-          | Some(ProgramExternalCapturedRuntimeEvidence) => captured = true
-          None => return None
-        }
-      }
-      Some(
-        if captured {
-          ProgramExternalCapturedRuntimeEvidence
-        } else {
-          ProgramExternalConcreteEvidence
-        },
+  match
+    check_external_runtime_evidence_class(lowering, evidence, parameter_classes) {
+    Ok(result) => result
+    Err(error) =>
+      abort(
+        "trait evidence classification invariant: " + @debug.to_string(error),
       )
-    }
   }
 }
 
@@ -2653,63 +2687,58 @@ fn program_collect_external_runtime_evidence_implementation_uses(
   module_lookup : Map[ModuleId, Int],
   evidence_owner : PlannedModuleLowering,
   evidence : Int,
-  depth : Int,
   visited : Map[DeclId, Bool],
   traits_by_module : Array[Array[DeclId]],
   seen_traits : Map[String, Bool],
 ) -> Unit {
-  if evidence < 0 ||
-    evidence >= evidence_owner.trait_evidence.length() ||
-    depth > evidence_owner.trait_evidence.length() {
-    return
-  }
-  let node = evidence_owner.trait_evidence[evidence]
-  match node.kind {
-    ConcreteInferredTraitEvidence(implementation, _) =>
-      if !runtime_trait_evidence_is_concrete(evidence_owner, evidence, 0) {
-        let implementation_module = match
-          module_lookup.get(semantic_id_module(implementation)) {
-          Some(value) => value
-          None => -1
-        }
-        if implementation_module >= 0 &&
-          implementation_module < lowering.modules.length() {
-          for
-            callable in lowering.modules[implementation_module].functions.callables {
-            match callable.kind {
-              PlannedImplMethodCallable(owner, Some(_)) if owner ==
-                implementation =>
-                program_collect_external_runtime_trait_uses(
-                  lowering,
-                  module_lookup,
-                  callable.declaration,
-                  visited,
-                  traits_by_module,
-                  seen_traits,
-                )
-              _ => ()
+  // Validate every node before collecting any usable dependency.
+  ignore(trait_evidence_concrete(evidence_owner, evidence))
+  let work = [evidence]
+  let seen : Map[Int, Bool] = {}
+  while work.length() > 0 {
+    let index = work.pop().unwrap()
+    if seen.contains(index) {
+      continue
+    }
+    seen[index] = true
+    let node = evidence_owner.trait_evidence[index]
+    match node.kind {
+      ConcreteInferredTraitEvidence(implementation, _) =>
+        if !trait_evidence_concrete(evidence_owner, index) {
+          let implementation_module = match
+            module_lookup.get(semantic_id_module(implementation)) {
+            Some(value) => value
+            None => -1
+          }
+          if implementation_module >= 0 &&
+            implementation_module < lowering.modules.length() {
+            for
+              callable in lowering.modules[implementation_module].functions.callables {
+              match callable.kind {
+                PlannedImplMethodCallable(owner, Some(_)) if owner ==
+                  implementation =>
+                  program_collect_external_runtime_trait_uses(
+                    lowering,
+                    module_lookup,
+                    callable.declaration,
+                    visited,
+                    traits_by_module,
+                    seen_traits,
+                  )
+                _ => ()
+              }
             }
           }
         }
-      }
-    BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) => ()
-  }
-  if node.prerequisites.start < 0 ||
-    node.prerequisites.start + node.prerequisites.length >
-    evidence_owner.trait_evidence_children.length() {
-    return
-  }
-  for index in 0..<node.prerequisites.length {
-    program_collect_external_runtime_evidence_implementation_uses(
-      lowering,
-      module_lookup,
-      evidence_owner,
-      evidence_owner.trait_evidence_children[node.prerequisites.start + index],
-      depth + 1,
-      visited,
-      traits_by_module,
-      seen_traits,
-    )
+      BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) => ()
+    }
+    let mut offset = node.prerequisites.length
+    while offset > 0 {
+      offset -= 1
+      work.push(
+        evidence_owner.trait_evidence_children[node.prerequisites.start + offset],
+      )
+    }
   }
 }
 
@@ -2798,7 +2827,7 @@ fn program_runtime_trait_callable_body_supports_external_evidence_for_classes(
       let root = module_.trait_evidence_roots[roots.start + index]
       let class_ = match
         program_external_runtime_evidence_class(
-          module_, root, parameter_classes, 0,
+          module_, root, parameter_classes,
         ) {
         Some(value) => value
         None => return false
@@ -2835,7 +2864,7 @@ fn program_runtime_trait_callable_body_supports_external_evidence_for_classes(
       SelectedInferredTraitObjectCoercion(_, evidence) =>
         match
           program_external_runtime_evidence_class(
-            module_, evidence, parameter_classes, 0,
+            module_, evidence, parameter_classes,
           ) {
           Some(ProgramExternalConcreteEvidence)
           | Some(ProgramExternalDirectRuntimeEvidence)
@@ -2847,41 +2876,6 @@ fn program_runtime_trait_callable_body_supports_external_evidence_for_classes(
     }
   }
   true
-}
-
-///|
-fn program_runtime_trait_evidence_is_forwardable(
-  lowering : PlannedModuleLowering,
-  evidence : Int,
-  depth : Int,
-) -> Bool {
-  if evidence < 0 ||
-    evidence >= lowering.trait_evidence.length() ||
-    depth > lowering.trait_evidence.length() {
-    return false
-  }
-  let node = lowering.trait_evidence[evidence]
-  if node.prerequisites.start < 0 ||
-    node.prerequisites.start + node.prerequisites.length >
-    lowering.trait_evidence_children.length() {
-    return false
-  }
-  match node.kind {
-    GuardedInferredTraitEvidence(_, _) => false
-    BoundInferredTraitEvidence(_) => node.prerequisites.length == 0
-    ConcreteInferredTraitEvidence(_, _) => {
-      for index in 0..<node.prerequisites.length {
-        if !program_runtime_trait_evidence_is_forwardable(
-            lowering,
-            lowering.trait_evidence_children[node.prerequisites.start + index],
-            depth + 1,
-          ) {
-          return false
-        }
-      }
-      true
-    }
-  }
 }
 
 ///|
@@ -2928,11 +2922,11 @@ fn program_runtime_trait_fallback_evidence(
       }
       for index in 0..<roots.length {
         let root = module_.trait_evidence_roots[roots.start + index]
-        if runtime_trait_evidence_is_concrete(module_, root, 0) {
+        if trait_evidence_concrete(module_, root) {
           continue
         }
         if !forwards_runtime_evidence ||
-          !program_runtime_trait_evidence_is_forwardable(module_, root, 0) {
+          !program_runtime_trait_evidence_is_forwardable(module_, root) {
           return None
         }
       }
@@ -2951,9 +2945,7 @@ fn program_runtime_trait_fallback_evidence(
               None => used_traits[slot] = trait_
             }
           ConcreteInferredTraitEvidence(_, _) =>
-            if !program_runtime_trait_evidence_is_forwardable(
-                module_, evidence, 0,
-              ) {
+            if !program_runtime_trait_evidence_is_forwardable(module_, evidence) {
               return None
             }
         }

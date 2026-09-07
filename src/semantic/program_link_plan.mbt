@@ -775,10 +775,9 @@ fn program_link_validate_calls(
                 roots.start + roots.length <=
                 module_.trait_evidence_roots.length() {
                 for index in 0..<roots.length {
-                  if !runtime_trait_evidence_is_concrete(
+                  if !trait_evidence_concrete(
                       module_,
                       module_.trait_evidence_roots[roots.start + index],
-                      0,
                     ) {
                     runtime_evidence = true
                   }

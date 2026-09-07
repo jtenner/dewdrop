@@ -2856,46 +2856,6 @@ pub fn wasmgc_trait_evidence_key(
 }
 
 ///|
-fn wasmgc_trait_evidence_runtime_materialized(
-  lowering : PlannedModuleLowering,
-  evidence : Int,
-  depth : Int,
-) -> Bool {
-  if evidence < 0 ||
-    evidence >= lowering.trait_evidence.length() ||
-    depth > lowering.trait_evidence.length() {
-    return false
-  }
-  let node = lowering.trait_evidence[evidence]
-  match node.kind {
-    BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) =>
-      return false
-    ConcreteInferredTraitEvidence(_, arguments) =>
-      for index in 0..<arguments.length {
-        match lowering.trait_evidence_arguments[arguments.start + index] {
-          ShapeInferredTraitEvidenceArgument(_) => ()
-          GenericInferredTraitEvidenceArgument(_) => return false
-        }
-      }
-  }
-  if node.prerequisites.start < 0 ||
-    node.prerequisites.start + node.prerequisites.length >
-    lowering.trait_evidence_children.length() {
-    return false
-  }
-  for index in 0..<node.prerequisites.length {
-    if !wasmgc_trait_evidence_runtime_materialized(
-        lowering,
-        lowering.trait_evidence_children[node.prerequisites.start + index],
-        depth + 1,
-      ) {
-      return false
-    }
-  }
-  true
-}
-
-///|
 fn wasmgc_trait_evidence_implementation(
   lowering : PlannedModuleLowering,
   evidence : Int,
@@ -4088,9 +4048,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       None => continue
     }
     let evidence_key = wasmgc_trait_evidence_key(lowering, evidence)
-    let runtime_materialized = wasmgc_trait_evidence_runtime_materialized(
-      lowering, evidence, 0,
-    )
+    let runtime_materialized = trait_evidence_concrete(lowering, evidence)
     let key = trait_declaration.to_string() + ":" + evidence_key
     if dictionary_keys.contains(key) {
       continue

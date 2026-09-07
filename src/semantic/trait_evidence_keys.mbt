@@ -1,4 +1,5 @@
-///| Both sources use one checked structural identity format.
+///|
+/// Both sources use one checked structural identity format.
 priv enum TraitEvidenceKeySource {
   LoweringEvidenceKey(PlannedModuleLowering)
   RequestEvidenceKey(ProgramTraitEvidenceRequest)
@@ -37,32 +38,42 @@ fn TraitEvidenceKeySource::count(self : TraitEvidenceKeySource) -> Int {
   }
 }
 
-///| Caller checks the node index before this projection.
-fn TraitEvidenceKeySource::node(self : TraitEvidenceKeySource, index : Int) -> TraitEvidenceKeyNode {
-  let empty = { start: 0, length: 0 }
+///|
+/// Caller checks the node index before this projection.
+fn TraitEvidenceKeySource::node(
+  self : TraitEvidenceKeySource,
+  index : Int,
+) -> TraitEvidenceKeyNode {
+  let empty = { start: 0, length: 0, }
   match self {
     LoweringEvidenceKey(value) => {
       let node = value.trait_evidence[index]
       let (kind, arguments) = match node.kind {
-        ConcreteInferredTraitEvidence(declaration, arguments) => (ConcreteKey(declaration), arguments)
+        ConcreteInferredTraitEvidence(declaration, arguments) =>
+          (ConcreteKey(declaration), arguments)
         BoundInferredTraitEvidence(slot) => (BoundKey(slot), empty)
-        GuardedInferredTraitEvidence(target, bound) => (GuardedKey(target, bound), empty)
+        GuardedInferredTraitEvidence(target, bound) =>
+          (GuardedKey(target, bound), empty)
       }
-      { kind, arguments, children: node.prerequisites }
+      { kind, arguments, children: node.prerequisites, }
     }
     RequestEvidenceKey(value) => {
       let node = value.evidence[index]
       let (kind, arguments) = match node.kind {
-        PlannedConcreteTraitEvidence(declaration, arguments) => (ConcreteKey(declaration), arguments)
-        PlannedRuntimeTraitEvidence(declaration, parameter) => (RuntimeKey(declaration, parameter), empty)
+        PlannedConcreteTraitEvidence(declaration, arguments) =>
+          (ConcreteKey(declaration), arguments)
+        PlannedRuntimeTraitEvidence(declaration, parameter) =>
+          (RuntimeKey(declaration, parameter), empty)
       }
-      { kind, arguments, children: node.prerequisites }
+      { kind, arguments, children: node.prerequisites, }
     }
   }
 }
 
 ///|
-fn TraitEvidenceKeySource::children(self : TraitEvidenceKeySource) -> Array[Int] {
+fn TraitEvidenceKeySource::children(
+  self : TraitEvidenceKeySource,
+) -> Array[Int] {
   match self {
     LoweringEvidenceKey(value) => value.trait_evidence_children
     RequestEvidenceKey(value) => value.children
@@ -78,29 +89,48 @@ fn TraitEvidenceKeySource::argument_count(self : TraitEvidenceKeySource) -> Int 
 }
 
 ///|
-fn TraitEvidenceKeySource::argument(self : TraitEvidenceKeySource, index : Int) -> InferredTraitEvidenceArgument {
+fn TraitEvidenceKeySource::argument(
+  self : TraitEvidenceKeySource,
+  index : Int,
+) -> InferredTraitEvidenceArgument {
   match self {
     LoweringEvidenceKey(value) => value.trait_evidence_arguments[index]
-    RequestEvidenceKey(value) => ShapeInferredTraitEvidenceArgument(value.arguments[index])
+    RequestEvidenceKey(value) =>
+      ShapeInferredTraitEvidenceArgument(value.arguments[index])
   }
 }
 
 ///|
-fn TraitEvidenceKeySource::failure(self : TraitEvidenceKeySource, root : Int, code : Int, expected : Int, actual : Int, detail : Int) -> TraitEvidenceKeyFailure {
+fn TraitEvidenceKeySource::failure(
+  self : TraitEvidenceKeySource,
+  root : Int,
+  code : Int,
+  expected : Int,
+  actual : Int,
+  detail : Int,
+) -> TraitEvidenceKeyFailure {
   let module_id = match self {
     LoweringEvidenceKey(value) => value.module_id
-    RequestEvidenceKey(_) => if root >= 0 && root < self.count() {
-      match self.node(root).kind {
-        ConcreteKey(declaration) | RuntimeKey(declaration, _) => semantic_id_module(declaration)
-        _ => 0UL
+    RequestEvidenceKey(_) =>
+      if root >= 0 && root < self.count() {
+        match self.node(root).kind {
+          ConcreteKey(declaration) | RuntimeKey(declaration, _) =>
+            semantic_id_module(declaration)
+          _ => 0UL
+        }
+      } else {
+        0UL
       }
-    } else { 0UL }
   }
-  { code, module_id, root, expected, actual, detail }
+  { code, module_id, root, expected, actual, detail, }
 }
 
-///| Validate the whole graph before producing any usable key.
-fn check_trait_evidence_key_graph(source : TraitEvidenceKeySource, root : Int) -> Result[Unit, TraitEvidenceKeyFailure] {
+///|
+/// Validate the whole graph before producing any usable key.
+fn check_trait_evidence_key_graph(
+  source : TraitEvidenceKeySource,
+  root : Int,
+) -> Result[Unit, TraitEvidenceKeyFailure] {
   let states : Map[Int, Int] = {}
   let work = [(root, false)]
   let children = source.children()
@@ -124,20 +154,59 @@ fn check_trait_evidence_key_graph(source : TraitEvidenceKeySource, root : Int) -
     states[index] = 1
     work.push((index, true))
     let node = source.node(index)
-    if !program_specialization_span_is_valid(node.arguments, source.argument_count()) {
-      return Err(source.failure(root, 101, source.argument_count(), node.arguments.start, node.arguments.length))
+    if !program_specialization_span_is_valid(
+        node.arguments,
+        source.argument_count(),
+      ) {
+      return Err(
+        source.failure(
+          root,
+          101,
+          source.argument_count(),
+          node.arguments.start,
+          node.arguments.length,
+        ),
+      )
     }
     if !program_specialization_span_is_valid(node.children, children.length()) {
-      return Err(source.failure(root, 101, children.length(), node.children.start, node.children.length))
+      return Err(
+        source.failure(
+          root,
+          101,
+          children.length(),
+          node.children.start,
+          node.children.length,
+        ),
+      )
     }
     match node.kind {
       ConcreteKey(_) => ()
-      _ => if node.children.length != 0 {
-        return Err(source.failure(root, 212, 0, node.children.length, index))
+      kind => {
+        if node.children.length != 0 {
+          return Err(source.failure(root, 212, 0, node.children.length, index))
+        }
+        let slots = match kind {
+          BoundKey(slot) | RuntimeKey(_, slot) => [slot]
+          GuardedKey(target, bound) => [target, bound]
+          ConcreteKey(_) => []
+        }
+        for slot in slots {
+          if slot < 0 {
+            return Err(source.failure(root, 212, 0, slot, index))
+          }
+        }
       }
     }
     if node.children.length > 65536 - work.length() {
-      return Err(source.failure(root, 213, 65536 - work.length(), node.children.length, 1))
+      return Err(
+        source.failure(
+          root,
+          213,
+          65536 - work.length(),
+          node.children.length,
+          1,
+        ),
+      )
     }
     let mut offset = node.children.length
     while offset > 0 {
@@ -156,8 +225,15 @@ priv enum TraitEvidenceKeyWrite {
   WriteEvidenceKeyText(String)
 }
 
-///| Check growth before pushing a wide field list onto the work stack.
-fn check_evidence_key_work_room(source : TraitEvidenceKeySource, root : Int, current : Int, items : Int, overhead : Int) -> Result[Unit, TraitEvidenceKeyFailure] {
+///|
+/// Check growth before pushing a wide field list onto the work stack.
+fn check_evidence_key_work_room(
+  source : TraitEvidenceKeySource,
+  root : Int,
+  current : Int,
+  items : Int,
+  overhead : Int,
+) -> Result[Unit, TraitEvidenceKeyFailure] {
   let remaining = 65536 - current
   if overhead > remaining || items > (remaining - overhead) / 2 {
     return Err(source.failure(root, 213, remaining, items, 3))
@@ -165,10 +241,14 @@ fn check_evidence_key_work_room(source : TraitEvidenceKeySource, root : Int, cur
   Ok(())
 }
 
-///| A resource limit reports an error; it never publishes a truncated key.
+///|
+/// A resource limit reports an error; it never publishes a truncated key.
 // Count serialization work as well as graph nodes: shared DAGs can otherwise
 // expand to exponential tree text, and malformed shape objects can be cyclic.
-fn check_trait_evidence_key(source : TraitEvidenceKeySource, root : Int) -> Result[String, TraitEvidenceKeyFailure] {
+fn check_trait_evidence_key(
+  source : TraitEvidenceKeySource,
+  root : Int,
+) -> Result[String, TraitEvidenceKeyFailure] {
   match check_trait_evidence_key_graph(source, root) {
     Err(error) => return Err(error)
     Ok(_) => ()
@@ -184,9 +264,18 @@ fn check_trait_evidence_key(source : TraitEvidenceKeySource, root : Int) -> Resu
     match work.pop().unwrap() {
       WriteEvidenceKeyText(value) => output.write_string_utf8(value)
       WriteEvidenceKeyShape(shape) => {
-        output.write_string_utf8(wasmgc_trait_evidence_shape_code(shape).to_string())
+        output.write_string_utf8(
+          wasmgc_trait_evidence_shape_code(shape).to_string(),
+        )
         if shape is ProductPlannedValueShape(fields) {
-          match check_evidence_key_work_room(source, root, work.length(), fields.length(), 1) {
+          match
+            check_evidence_key_work_room(
+              source,
+              root,
+              work.length(),
+              fields.length(),
+              1,
+            ) {
             Err(error) => return Err(error)
             Ok(_) => ()
           }
@@ -196,28 +285,40 @@ fn check_trait_evidence_key(source : TraitEvidenceKeySource, root : Int) -> Resu
           while offset > 0 {
             offset -= 1
             work.push(WriteEvidenceKeyShape(fields[offset]))
-            if offset > 0 { work.push(WriteEvidenceKeyText(",")) }
+            if offset > 0 {
+              work.push(WriteEvidenceKeyText(","))
+            }
           }
         }
       }
-      WriteEvidenceKeyArgument(index) => match source.argument(index) {
-        ShapeInferredTraitEvidenceArgument(shape) => {
-          output.write_string_utf8("s")
-          work.push(WriteEvidenceKeyShape(shape))
+      WriteEvidenceKeyArgument(index) =>
+        match source.argument(index) {
+          ShapeInferredTraitEvidenceArgument(shape) => {
+            output.write_string_utf8("s")
+            work.push(WriteEvidenceKeyShape(shape))
+          }
+          GenericInferredTraitEvidenceArgument(parameter) => {
+            output.write_string_utf8("g")
+            output.write_string_utf8(parameter.to_string())
+          }
         }
-        GenericInferredTraitEvidenceArgument(parameter) => {
-          output.write_string_utf8("g")
-          output.write_string_utf8(parameter.to_string())
-        }
-      }
       WriteEvidenceKeyNode(index) => {
         let node = source.node(index)
         match node.kind {
           BoundKey(slot) => output.write_string_utf8("b\{slot}")
-          GuardedKey(target, bound) => output.write_string_utf8("g\{target}:\{bound}")
-          RuntimeKey(declaration, parameter) => output.write_string_utf8("r\{declaration}@\{parameter}")
+          GuardedKey(target, bound) =>
+            output.write_string_utf8("g\{target}:\{bound}")
+          RuntimeKey(declaration, parameter) =>
+            output.write_string_utf8("r\{declaration}@\{parameter}")
           ConcreteKey(declaration) => {
-            match check_evidence_key_work_room(source, root, work.length(), node.children.length, 2) {
+            match
+              check_evidence_key_work_room(
+                source,
+                root,
+                work.length(),
+                node.children.length,
+                2,
+              ) {
               Err(error) => return Err(error)
               Ok(_) => ()
             }
@@ -226,11 +327,24 @@ fn check_trait_evidence_key(source : TraitEvidenceKeySource, root : Int) -> Resu
             let mut offset = node.children.length
             while offset > 0 {
               offset -= 1
-              work.push(WriteEvidenceKeyNode(source.children()[node.children.start + offset]))
-              if offset > 0 { work.push(WriteEvidenceKeyText(",")) }
+              work.push(
+                WriteEvidenceKeyNode(
+                  source.children()[node.children.start + offset],
+                ),
+              )
+              if offset > 0 {
+                work.push(WriteEvidenceKeyText(","))
+              }
             }
             work.push(WriteEvidenceKeyText("]{"))
-            match check_evidence_key_work_room(source, root, work.length(), node.arguments.length, 0) {
+            match
+              check_evidence_key_work_room(
+                source,
+                root,
+                work.length(),
+                node.arguments.length,
+                0,
+              ) {
               Err(error) => return Err(error)
               Ok(_) => ()
             }
@@ -238,7 +352,9 @@ fn check_trait_evidence_key(source : TraitEvidenceKeySource, root : Int) -> Resu
             while offset > 0 {
               offset -= 1
               work.push(WriteEvidenceKeyArgument(node.arguments.start + offset))
-              if offset > 0 { work.push(WriteEvidenceKeyText(",")) }
+              if offset > 0 {
+                work.push(WriteEvidenceKeyText(","))
+              }
             }
           }
         }
@@ -252,6 +368,7 @@ fn check_trait_evidence_key(source : TraitEvidenceKeySource, root : Int) -> Resu
 fn trait_evidence_key(source : TraitEvidenceKeySource, root : Int) -> String {
   match check_trait_evidence_key(source, root) {
     Ok(key) => key
-    Err(error) => abort("trait evidence key invariant: " + @debug.to_string(error))
+    Err(error) =>
+      abort("trait evidence key invariant: " + @debug.to_string(error))
   }
 }

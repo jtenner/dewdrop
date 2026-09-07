@@ -1370,39 +1370,6 @@ fn transparent_trait_call_summaries(
 }
 
 ///|
-fn runtime_trait_evidence_is_concrete(
-  module_ : PlannedModuleLowering,
-  evidence : Int,
-  depth : Int,
-) -> Bool {
-  if depth >= 64 || evidence < 0 || evidence >= module_.trait_evidence.length() {
-    return false
-  }
-  match module_.trait_evidence[evidence].kind {
-    BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) => false
-    ConcreteInferredTraitEvidence(_, arguments) => {
-      for index in 0..<arguments.length {
-        match module_.trait_evidence_arguments[arguments.start + index] {
-          ShapeInferredTraitEvidenceArgument(_) => ()
-          GenericInferredTraitEvidenceArgument(_) => return false
-        }
-      }
-      let prerequisites = module_.trait_evidence[evidence].prerequisites
-      for index in 0..<prerequisites.length {
-        if !runtime_trait_evidence_is_concrete(
-            module_,
-            module_.trait_evidence_children[prerequisites.start + index],
-            depth + 1,
-          ) {
-          return false
-        }
-      }
-      true
-    }
-  }
-}
-
-///|
 fn runtime_trait_implementation_method(
   modules : Array[PlannedModuleLowering],
   module_lookup : Map[ModuleId, Int],
@@ -1512,7 +1479,7 @@ fn runtime_trait_direct_call_candidate(
     ExactRuntimeTraitFlow(_, evidence, _, type_, _, _) => (evidence, type_)
     _ => return None
   }
-  if !runtime_trait_evidence_is_concrete(module_, evidence, 0) {
+  if !trait_evidence_concrete(module_, evidence) {
     return None
   }
   let (implementation, owner_arguments) = match

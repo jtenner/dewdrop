@@ -228,7 +228,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   total, unique set, including startup functions. Import-offset cleanup and
   complete native type/fragment checks remain. See the
   [link record log](docs/research/physical-link-records-2026-09-07.md).
-- [ ] Separate trait cycles and search limits from ordinary missing evidence.
+- [x] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.
   Native trait signatures now compare substituted tuple fields; an Error field
@@ -253,8 +253,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   product fields remain distinct; missing/cyclic data and work limits cannot
   produce a partial key. See the
   [evidence key log](docs/research/physical-evidence-keys-2026-09-07.md).
-  Native evidence-concreteness predicates still need checked worklists instead
-  of recursive/depth-based false results.
+  Native evidence-concreteness, forwarding, runtime classification, and
+  dependency collection now use checked worklists. Pending evidence cannot
+  hide Error shapes, bad IDs, or cycles. Resource limits retain exact records.
+  See the [predicate log](docs/research/physical-evidence-predicates-2026-09-07.md).
   See the [interface walk log](docs/research/interface-type-walks-2026-09-07.md).
 - [ ] Complete stable numeric failure records and the negative invariant tests.
   Start with a valid state, change one field, and check the exact code and source
