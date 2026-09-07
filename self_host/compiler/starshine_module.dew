@@ -24471,7 +24471,7 @@ fn self_host_emit_linked_i32_expression(
             }
           }
           if condition_ready && variant_type != 4294967295u32 {
-            match self_host_emit_nested_pattern_tests(link, module_, pattern, variant_type, scratch, [], destination) {
+            match self_host_emit_nested_pattern_tests(link, canonical_body_plan, module_, pattern, variant_type, scratch, [], destination) {
               Option::Some(error) => return Option::Some(error)
               Option::None => {}
             }
@@ -24761,15 +24761,20 @@ fn self_host_emit_linked_i32_expression(
                 body,
                 condition,
               ) {
-                let function_index = self_host_linked_runtime_function_index(
-                  link,
-                  b"dew_string_equals",
-                )
-                if function_index < 0i32 {
-                  return Option::Some("linked literal string match runtime is missing")
+                let function_index = if module_.expressions[condition].call_target is SelfHostBasicCallTarget::SelectedBasicCallTarget(_, _) {
+                  match canonical_body_plan {
+                    Option::Some(plan) => self_host_emitted_string_pattern_target(link, plan, module_, arm.pattern, condition)
+                    Option::None => return Option::Some("BOD-610 String pattern has no physical body plan")
+                  }
+                } else {
+                  let legacy = self_host_linked_runtime_function_index(link, b"dew_string_equals")
+                  if legacy < 0i32 {
+                    return Option::Some("linked literal string match runtime is missing")
+                  }
+                  self_host_i32_to_u32(legacy)
                 }
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
-                  self_host_i32_to_u32(function_index),
+                  function_index,
                   destination,
                 ))
               } else {

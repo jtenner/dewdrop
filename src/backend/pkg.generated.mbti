@@ -68,6 +68,7 @@ pub enum StarshineCodeEmissionError {
   UnsupportedBuiltin(Bytes)
   InvalidBuiltinSignature(Bytes, Array[@semantic.PlannedWasmValueType], Array[@semantic.PlannedWasmValueType])
   InvalidFunctionBody(UInt64)
+  InvalidPatternEqualitySignature(UInt64, Int, UInt64, Array[@semantic.PlannedWasmValueType], Array[@semantic.PlannedWasmValueType])
   ProgramLinkDiagnostics(Int)
 } derive(Eq, @debug.Debug)
 

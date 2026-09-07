@@ -33,6 +33,13 @@ pub enum StarshineCodeEmissionError {
     Array[@semantic.PlannedWasmValueType]
   )
   InvalidFunctionBody(@semantic.BodyId)
+  InvalidPatternEqualitySignature(
+    @semantic.BodyId,
+    @semantic.ExprId,
+    @semantic.DeclId,
+    Array[@semantic.PlannedWasmValueType],
+    Array[@semantic.PlannedWasmValueType]
+  )
   ProgramLinkDiagnostics(Int)
 } derive(Eq, Debug)
 
@@ -1948,13 +1955,31 @@ fn starshine_match_literal_condition(
   body : @semantic.PlannedBodyLowering,
   expression : @semantic.ExprId,
   value : Array[@lib.Instruction],
+  generic_specialization : StarshineGenericSpecialization?,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   if expression < 0 || expression >= lowering.expressions.length() {
     return Err(UnsupportedExpression(body.body, expression))
   }
   let condition = value.copy()
   match lowering.expressions[expression].kind {
-    @semantic.PlannedStringConst(literal, _) => {
+    @semantic.PlannedStringConst(literal, target) => {
+      match target {
+        @semantic.SelectedInferredCallTarget(declaration, arguments) =>
+          return starshine_match_string_call(
+            planned,
+            program,
+            body.body,
+            expression,
+            declaration,
+            arguments,
+            generic_specialization,
+            value,
+            starshine_text_constant_instructions(
+              planned, program, literal, true,
+            ),
+          )
+        _ => ()
+      }
       append_starshine_instructions(
         condition,
         starshine_text_constant_instructions(planned, program, literal, true),
@@ -2157,7 +2182,7 @@ fn starshine_general_match_pattern_instructions(
           @semantic.HirLiteralPattern(expression, _) => {
             match
               starshine_match_literal_condition(
-                lowering, planned, program, body, expression, value,
+                lowering, planned, program, body, expression, value, generic_specialization,
               ) {
               Ok(condition) => results.push(condition)
               Err(error) => return Err(error)
@@ -2571,6 +2596,7 @@ fn starshine_simple_match_pattern_instructions(
           body,
           expression,
           [starshine_match_local_get(scratch_local)],
+          generic_specialization,
         ) {
         Ok(condition) => Ok((condition, bindings))
         Err(error) => Err(error)

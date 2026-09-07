@@ -62,6 +62,51 @@ fn program_effect_summary_arguments_are_discardable(
 }
 
 ///|
+fn program_pattern_calls_are_discardable(
+  module_ : PlannedModuleLowering,
+  root : PatternId,
+  summaries : Map[DeclId, ProgramCallableEffectSummary],
+) -> Bool {
+  // Reuse the checked IR pattern edges used by reachability. This includes
+  // literals inside tuple/struct constructors and alternative patterns.
+  let work = [CtReachPattern(root)]
+  let visited : Map[PatternId, Bool] = Map::default()
+  while work.length() > 0 {
+    match work.pop().unwrap() {
+      CtReachPattern(pattern) => {
+        if pattern < 0 {
+          continue
+        }
+        guard pattern < module_.patterns.length() else {
+          abort("ARN-104 effect-summary pattern is outside its arena")
+        }
+        if module_.patterns[pattern].elided || visited.contains(pattern) {
+          continue
+        }
+        visited[pattern] = true
+        compile_time_push_pattern(module_, pattern, work)
+      }
+      CtReachExpression(expression) => {
+        guard expression >= 0 && expression < module_.expressions.length() else {
+          abort("ARN-104 effect-summary pattern literal is outside its arena")
+        }
+        match module_.expressions[expression].kind {
+          PlannedStringConst(_, SelectedInferredCallTarget(target, _)) =>
+            match summaries.get(target) {
+              Some({ discardable: true, }) => ()
+              _ => return false
+            }
+          PlannedStringConst(_, ErrorInferredCallTarget) => return false
+          _ => ()
+        }
+      }
+      _ => abort("effect-summary pattern walk received a non-pattern task")
+    }
+  }
+  true
+}
+
+///|
 fn program_effect_summary_expression_is_discardable(
   module_ : PlannedModuleLowering,
   expression : ExprId,
@@ -123,12 +168,25 @@ fn program_effect_summary_expression_is_discardable(
           summaries,
           depth + 1,
         ) ||
-        arms.start < 0 ||
-        arms.start + arms.length > module_.pattern_arms.length() {
+        !program_specialization_span_is_valid(
+          arms,
+          module_.arm_children.length(),
+        ) {
         return false
       }
       for index in 0..<arms.length {
-        let arm = module_.pattern_arms[arms.start + index]
+        let arm_id = module_.arm_children[arms.start + index]
+        guard arm_id >= 0 && arm_id < module_.pattern_arms.length() else {
+          abort("ARN-104 effect-summary arm is outside its arena")
+        }
+        let arm = module_.pattern_arms[arm_id]
+        if !program_pattern_calls_are_discardable(
+            module_,
+            arm.pattern,
+            summaries,
+          ) {
+          return false
+        }
         if (
             arm.guard_condition >= 0 &&
             !program_effect_summary_expression_is_discardable(

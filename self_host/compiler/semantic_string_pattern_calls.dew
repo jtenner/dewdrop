@@ -274,3 +274,49 @@ fn self_host_verify_body_string_pattern_calls(
     }
   }
 }
+
+fn self_host_emitted_string_pattern_target(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  module_: SelfHostPlannedModuleLowering,
+  pattern: U32,
+  expression: U32,
+) -> U32 {
+  let call = match self_host_body_call_plan(plan, expression) {
+    Option::Some(value) => value
+    Option::None => {
+      let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+        code: 704u32
+        phase: 7u32
+        module_id: plan.module_id
+        declaration: plan.declaration
+        body: plan.body
+        expression: expression
+        expected: 2u64
+        actual: 0u64
+        detail: u32_into_u64(pattern)
+      }, "String pattern emission requires a frozen call recipe")
+      return 4294967295u32
+    }
+  }
+  match self_host_check_string_pattern_call(link, plan, module_, pattern, expression, call) {
+    Option::Some(failure) => {
+      let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+        code: self_host_body_diagnostic_code(failure.context)
+        phase: 7u32
+        module_id: plan.module_id
+        declaration: plan.declaration
+        body: plan.body
+        expression: expression
+        expected: self_host_body_carrier_code(failure.expected)
+        actual: self_host_body_carrier_code(failure.actual)
+        detail: failure.entity
+      }, "String pattern emission must agree with its frozen recipe")
+    }
+    Option::None => {}
+  }
+  // The common call emitter accepts the physical index, including the two
+  // planning imports. It applies the provider import offset exactly once.
+  // Return the frozen target unchanged; there is no second resolution.
+  call.physical_function
+}

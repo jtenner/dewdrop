@@ -1,0 +1,77 @@
+// This local trait deliberately does not use standard text equality.
+trait Eq {
+  fn eq(self, right: Self) -> Bool
+}
+
+struct PatternCounts {
+  mut evaluations: U32
+  mut comparisons: U32
+}
+
+let pattern_counts = PatternCounts::{
+  evaluations: 0u32
+  comparisons: 0u32
+}
+
+impl Eq for String {
+  fn eq(self, right: String) -> Bool {
+    pattern_counts.comparisons = pattern_counts.comparisons + 1u32
+    false
+  }
+}
+
+enum PatternText {
+  Text(String)
+  Empty
+}
+
+fn pattern_input() -> String {
+  pattern_counts.evaluations = pattern_counts.evaluations + 1u32
+  "same"
+}
+
+fn flat_pattern(value: String) -> U32 {
+  match value {
+    "same" => 1u32
+    "other" => 2u32
+    _ => 7u32
+  }
+}
+
+fn nested_pattern(value: PatternText) -> U32 {
+  match value {
+    PatternText::Text("same") => 1u32
+    _ => 7u32
+  }
+}
+
+pub fn main(case_: U32) -> U32 {
+  pattern_counts.evaluations = 0u32
+  pattern_counts.comparisons = 0u32
+  match case_ {
+    0u32 => {
+      let result = flat_pattern(pattern_input())
+      result + pattern_counts.comparisons * 100u32 + pattern_counts.evaluations * 10000u32
+    }
+    1u32 => {
+      let result = nested_pattern(PatternText::Text("same"))
+      result + pattern_counts.comparisons * 100u32
+    }
+    2u32 => {
+      flat_pattern("same")
+      pattern_counts.comparisons
+    }
+    3u32 => {
+      if pattern_input() is "same" {
+        999u32
+      } else {
+        pattern_counts.comparisons + pattern_counts.evaluations * 100u32
+      }
+    }
+    4u32 => {
+      nested_pattern(PatternText::Empty)
+      pattern_counts.comparisons
+    }
+    _ => 4294967295u32
+  }
+}

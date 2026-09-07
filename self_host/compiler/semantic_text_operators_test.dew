@@ -183,6 +183,7 @@ fn self_host_test_string_pattern_call_mutations(
   fragment_module.function_value_types[fragment.results.start] = result
 
   assert(self_host_check_string_pattern_call(link, body, module_, pattern, call.expression, call) is Option::None, "restoring each mutation must restore the valid recipe")
+  assert(self_host_emitted_string_pattern_target(link, body, module_, pattern, call.expression) == call.physical_function, "ABI-701 call emission must receive the unchanged physical target")
 }
 
 test "String literal patterns report a missing imported Eq implementation" {

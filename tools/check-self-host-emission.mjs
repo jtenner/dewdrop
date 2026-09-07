@@ -17,6 +17,7 @@ import { checkSetOperations } from "./set-operation-cases.mjs";
 import { checkBytesOperations } from "./bytes-operation-cases.mjs";
 import { checkStringViewOperations } from "./string-view-operation-cases.mjs";
 import { checkStringOperations } from "./string-operation-cases.mjs";
+import { checkStringPatterns } from "./string-pattern-cases.mjs";
 import { checkRawGcStorage } from "./raw-gc-storage-cases.mjs";
 import { checkRawGcUnit } from "./raw-gc-unit-cases.mjs";
 import { checkFixedArrayOperations } from "./fixed-array-operations-cases.mjs";
@@ -573,6 +574,17 @@ pub fn main() -> I32 {
   } catch (error) {
     failures++;
     console.error("self-host real-library String probe failed", error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const request = await readFile(new URL("../.tmp/self-host-hardening/string-patterns.request.bin", import.meta.url));
+    const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+    console.log(`self-host String pattern checks passed: ${checkStringPatterns(exports.main)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+  } catch (error) {
+    failures++;
+    console.error("self-host String pattern probe failed", error);
   }
 }
 {

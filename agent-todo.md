@@ -110,15 +110,18 @@ Correctness comes first. Keep these timing defects visible after query completio
   fix for reference-identity equality. View storage remains.
   See the [StringView log](docs/research/string-view-library-algorithms-2026-09-06.md).
   String scans and concatenation use the Bytes library path. String equality
-  still needs an explicit literal-pattern call plan before its runtime builder
-  can be removed. See the [String log](docs/research/string-library-algorithms-2026-09-06.md).
+  still needs its runtime builder removed.
+  See the [String log](docs/research/string-library-algorithms-2026-09-06.md).
   String pattern inference now selects the ordinary Eq method and keeps the
   literal's String type. Lowering and specialization retain that evidence.
   Self-host physical call recipes now retain the cached subject and literal and
-  verify target identity, operand types, and result. Both emitters still need to
-  consume the exact target. See the
+  verify target identity, operand types, and result. Both emitters use the
+  selected target when evidence is present. Remove the no-evidence legacy path.
+  See the
   [pattern log](docs/research/string-pattern-equality-2026-09-06.md).
   See also the [recipe checks](docs/research/string-pattern-call-recipes-2026-09-07.md).
+  The [emission checks](docs/research/string-pattern-emission-2026-09-07.md) cover
+  custom equality, nested patterns, evaluation order, and optimizer effects.
 - [ ] Convert remaining host-operation builtins into foreign declarations.
   Keep generated Dew types, provider metadata, and emitted signatures in sync.
 - [ ] Remove all remaining standard-module path, declaration-number, and name
