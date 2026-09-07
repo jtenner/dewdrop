@@ -163,7 +163,72 @@ fn resolve_compile_time_guarded_calls(
         Some(value) => value
         None => return Err("CT-040 trait implementation has no required method")
       }
+      let method_module = context.modules[context.declaration_module(method)]
+      let implementation_callable = match
+        method_module.functions.callable_of(method) {
+        Some(value) => value
+        None => return Err("CT-040 guarded method has no callable")
+      }
+      if implementation_callable.parameters.length != callable.parameters.length ||
+        implementation_callable.has_receiver != callable.has_receiver ||
+        implementation_callable.generic_parameters.length !=
+        callable.generic_parameters.length {
+        return Err("CT-040 guarded implementation signature mismatch")
+      }
+      let expected_bindings : Map[GenericParameterId, CompileTimeType] = {}
+      let required_collected = context.program.modules[context.declaration_module(
+          requirement,
+        )]
+      for offset in 0..<trait_count {
+        expected_bindings[required_collected.generic_parameters[callable.owner_generic_parameters.start +
+        offset].id] = arguments[offset]
+      }
       let collected = context.program.modules[context.declaration_module(method)]
+      let actual_bindings = witness.bindings.copy()
+      for offset in 0..<callable.generic_parameters.length {
+        expected_bindings[required_collected.generic_parameters[callable.generic_parameters.start +
+        offset].id] = arguments[trait_count + offset]
+        actual_bindings[collected.generic_parameters[implementation_callable.generic_parameters.start +
+        offset].id] = arguments[trait_count + offset]
+      }
+      for offset in 0..<(callable.parameters.length + 1) {
+        let expected_type = if offset == callable.parameters.length {
+          callable.result_type
+        } else {
+          requirement_module.functions.parameters[callable.parameters.start +
+          offset].type_
+        }
+        let actual_type = if offset == callable.parameters.length {
+          implementation_callable.result_type
+        } else {
+          method_module.functions.parameters[implementation_callable.parameters.start +
+          offset].type_
+        }
+        let expected = match
+          compile_time_read_type(
+            requirement_module,
+            -expected_type - 2,
+            expected_bindings,
+            self_binding=Some((trait_declaration, target)),
+          ) {
+          Ok(value) => value
+          Err(_) => return Err("CT-040 invalid guarded requirement signature")
+        }
+        let actual = match
+          compile_time_read_type(
+            method_module,
+            -actual_type - 2,
+            actual_bindings,
+            self_binding=Some((witness.implementation.declaration, target)),
+          ) {
+          Ok(value) => value
+          Err(_) =>
+            return Err("CT-040 invalid guarded implementation signature")
+        }
+        if actual != expected {
+          return Err("CT-040 guarded implementation signature mismatch")
+        }
+      }
       let owner_generics = collected.generic_parameters_of(
         witness.implementation.declaration,
       )

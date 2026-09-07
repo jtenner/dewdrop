@@ -788,6 +788,49 @@ test "associated prerequisite search excludes foreign implementations" {
   )
 }
 
+test "guarded imported trait calls reject a wrong implementation result" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"open app.library\nstruct Key {}\nimpl Read for Key {\n  fn read(self) -> I64 {\n    42i64\n  }\n}\npub fn main() -> I32 {\n  invoke(Key::{})\n}\n",
+    b"pub builtin query<t, trait_>() -> Bool = \"types.implements\"\npub trait Read {\n  fn read(self) -> I32\n}\npub fn invoke<t>(value: t) -> I32 {\n  if query::<t, Read>() {\n    value.read()\n  } else {\n    0i32\n  }\n}\n",
+  )
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "guarded signature fixture imports")
+  let plan = self_host_plan_program_specialization(self_host_plan_program_lowering(fixture.frozen), false)
+  let errors = plan.lowering.compile_time.diagnostics
+  for error in errors {
+    assert(error.starts_with("CT-015 invalid or ambiguous trait implementation"), error)
+  }
+  assert(errors.length() > 0u32, "invalid imported implementation must have a diagnostic")
+  assert(errors[0u32].starts_with("CT-015 invalid or ambiguous trait implementation"), "invalid imported implementation fails before guarded call replacement")
+}
+
+test "Self and generic parameters have separate signature binding identities" {
+  let collected = self_host_collect_bytes(28141u64, b"pub fn main() -> I32 {\n  0i32\n}\n")
+  let resolved = self_host_resolve_module_types(collected)
+  let self_id = resolved.types.length()
+  resolved.types.push(SelfHostResolvedType::SelfType(42u64))
+  let parameter = resolved.types.length()
+  resolved.types.push(SelfHostResolvedType::GenericParameterType(42u64))
+  let start = resolved.type_arguments.length()
+  resolved.type_arguments.push(self_id)
+  resolved.type_arguments.push(parameter)
+  let product = resolved.types.length()
+  resolved.types.push(SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+    start: start
+    length: 2u32
+  }))
+  let bindings = self_host_empty_compile_time_bindings()
+  let i32_type = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I32Type)
+  let i64_type = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I64Type)
+  bindings.set(42u64, i32_type)
+  match self_host_read_compile_time_resolved_arena_with_self(resolved, product, bindings, 0u32, 42u64, Option::Some(i64_type)) {
+    Result::Ok(actual) => match self_host_compile_time_types_equal(actual, SelfHostCompileTimeType::ProductCompileTimeType([i64_type, i32_type])) {
+      Result::Ok(equal) => assert(equal, "Self and generic parameter IDs cannot overwrite each other")
+      Result::Err(error) => assert(false, error)
+    }
+    Result::Err(error) => assert(false, error)
+  }
+}
+
 test "compile-time implements does not treat depth 65 as absence" {
   let text = StringBuilder::new()
   text.append("builtin query<a, b>() -> Bool = \"types.implements\"\ntrait Mark {}\nstruct Box<t> {\n value: t\n}\nimpl Mark for I32 {}\nimpl<t: Mark> Mark for Box<t> {}\npub fn main() -> Bool {\n query::<")

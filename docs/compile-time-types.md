@@ -1,5 +1,9 @@
 # Compile-time type queries
 
+Guarded trait calls check the selected method's full logical signature against
+the trait requirement before lowering. A mismatch reports `CT-040 guarded
+implementation signature mismatch`; equal physical carriers are not sufficient.
+
 Use `open dew.std.types`. These are pure compiler builtins. They use the Dew
 type, not its Wasm storage type. No query call reaches runtime emission.
 

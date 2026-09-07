@@ -162,6 +162,93 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
     Option::None => return Result::Err("CT-040 guarded method has no module")
   }
   let collected = lowering.collected.modules.at(owner)
+  let method_module = lowering.modules[owner]
+  let implementation_callable = match self_host_program_specialization_callable(method_module, method) {
+    Option::Some(value) => value
+    Option::None => return Result::Err("CT-040 guarded method has no callable")
+  }
+  if implementation_callable.parameters.length != callable.parameters.length ||
+    implementation_callable.has_receiver != callable.has_receiver ||
+    implementation_callable.generic_parameters.length != callable.generic_parameters.length {
+    return Result::Err("CT-040 guarded implementation signature mismatch")
+  }
+  let required_owner = match lowering.index.declaration_owner(callable.declaration) {
+    Option::Some(value) => value
+    Option::None => return Result::Err("CT-040 guarded requirement has no module")
+  }
+  let required_collected = lowering.collected.modules.at(required_owner)
+  let requirement_module = lowering.modules[required_owner]
+  let expected_bindings = self_host_empty_compile_time_bindings()
+  let actual_bindings = self_host_empty_compile_time_bindings()
+  for entry in witness.bindings {
+    actual_bindings.set(entry.key(), entry.value())
+  }
+  while 0u32 {
+    offset if offset < trait_count => {
+      expected_bindings.set(required_collected.generic_parameters[callable.owner_generic_parameters.start + offset].id, arguments[offset])
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
+  while 0u32 {
+    offset if offset < callable.generic_parameters.length => {
+      expected_bindings.set(required_collected.generic_parameters[callable.generic_parameters.start + offset].id, arguments[trait_count + offset])
+      actual_bindings.set(collected.generic_parameters[implementation_callable.generic_parameters.start + offset].id, arguments[trait_count + offset])
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
+  while 0u32 {
+    offset if offset <= callable.parameters.length => {
+      let expected_type = if offset == callable.parameters.length {
+        callable.result_type
+      } else {
+        requirement_module.functions.parameters[callable.parameters.start + offset].type_
+      }
+      let actual_type = if offset == callable.parameters.length {
+        implementation_callable.result_type
+      } else {
+        method_module.functions.parameters[implementation_callable.parameters.start + offset].type_
+      }
+      let expected = match self_host_read_compile_time_resolved_arena_with_self(requirement_module.resolved_types, expected_type, expected_bindings, 0u32, trait_, Option::Some(target)) {
+        Result::Ok(value) => value
+        Result::Err(_) => return Result::Err("CT-040 invalid guarded requirement signature")
+      }
+      let actual = match self_host_read_compile_time_resolved_arena_with_self(method_module.resolved_types, actual_type, actual_bindings, 0u32, witness.implementation.declaration, Option::Some(target)) {
+        Result::Ok(value) => value
+        Result::Err(_) => return Result::Err("CT-040 invalid guarded implementation signature")
+      }
+      match self_host_compile_time_types_equal(actual, expected) {
+        Result::Ok(equal) => if !equal {
+          let detail = StringBuilder::new()
+          detail.append("CT-040 guarded implementation signature mismatch slot=")
+          detail.append_u32(offset)
+          detail.append(" expected_type=")
+          detail.append_u32(expected_type)
+          detail.append(" actual_type=")
+          detail.append_u32(actual_type)
+          match expected {
+            SelfHostCompileTimeType::ParameterCompileTimeType(id) => {
+              detail.append(" expected_parameter=")
+              detail.append_u64(id)
+            }
+            _ => {}
+          }
+          match actual {
+            SelfHostCompileTimeType::ParameterCompileTimeType(id) => {
+              detail.append(" actual_parameter=")
+              detail.append_u64(id)
+            }
+            _ => {}
+          }
+          return Result::Err(detail.finish())
+        }
+        Result::Err(error) => return Result::Err(error)
+      }
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
   let generics = collected.generic_parameters_of(witness.implementation.declaration)
   // Bound calls inside this implementation need the same exact logical key.
   // Physical carrier equality cannot identify their prerequisite targets.

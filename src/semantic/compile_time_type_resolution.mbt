@@ -13,6 +13,7 @@ fn compile_time_read_type(
   module_ : PlannedModuleLowering,
   type_ : BodyTypeId,
   bindings : Map[GenericParameterId, CompileTimeType],
+  self_binding? : (DeclId, CompileTimeType)? = None,
 ) -> Result[CompileTimeType, CompileTimeTypeError] {
   let work = [CtReadBody(type_)]
   let results : Array[CompileTimeType] = []
@@ -80,9 +81,17 @@ fn compile_time_read_type(
             work.push(CtReadResolved(owner))
           }
           PrimitiveType(primitive) => results.push(CtPrimitive(primitive))
-          GenericParameterType(parameter) | SelfType(parameter) =>
+          GenericParameterType(parameter) =>
             results.push(
               bindings.get(parameter).unwrap_or(CtParameter(parameter)),
+            )
+          SelfType(owner) =>
+            results.push(
+              match self_binding {
+                Some((expected_owner, type_)) if owner == expected_owner =>
+                  type_
+                _ => bindings.get(owner).unwrap_or(CtParameter(owner))
+              },
             )
           NominalType(declaration) => results.push(CtNominal(declaration))
           TraitType(declaration) => results.push(CtTrait(declaration))

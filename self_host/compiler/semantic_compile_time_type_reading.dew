@@ -22,6 +22,17 @@ fn self_host_read_compile_time_resolved_arena(
   bindings: Map<U64, SelfHostCompileTimeType>,
   depth: U32,
 ) -> Result<SelfHostCompileTimeType, String> {
+  self_host_read_compile_time_resolved_arena_with_self(resolved, index, bindings, depth, 18446744073709551615u64, Option::None)
+}
+
+fn self_host_read_compile_time_resolved_arena_with_self(
+  resolved: SelfHostResolvedModuleTypes,
+  index: U32,
+  bindings: Map<U64, SelfHostCompileTimeType>,
+  depth: U32,
+  self_owner: U64,
+  self_type: Option<SelfHostCompileTimeType>,
+) -> Result<SelfHostCompileTimeType, String> {
   if depth >= 256u32 {
     return Result::Err("CT-002 type query nesting limit exceeded")
   }
@@ -31,7 +42,7 @@ fn self_host_read_compile_time_resolved_arena(
   let type_ = resolved.types[index]
   let span = match type_ {
     SelfHostResolvedType::ErrorType => return Result::Err("CT-002 erroneous type query argument")
-    SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_resolved_arena(resolved, owner, bindings, depth + 1u32) {
+    SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_resolved_arena_with_self(resolved, owner, bindings, depth + 1u32, self_owner, self_type) {
       Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::MemberProjectionCompileTimeType(value, operation, selector))
       Result::Err(error) => Result::Err(error)
     }
@@ -42,7 +53,11 @@ fn self_host_read_compile_time_resolved_arena(
       Option::Some(value) => value
       Option::None => SelfHostCompileTimeType::ParameterCompileTimeType(id)
     })
-    SelfHostResolvedType::SelfType(id) => return Result::Ok(match bindings.get(id) {
+    SelfHostResolvedType::SelfType(id) => return Result::Ok(match if id == self_owner {
+      self_type
+    } else {
+      bindings.get(id)
+    } {
       Option::Some(value) => value
       Option::None => SelfHostCompileTimeType::ParameterCompileTimeType(id)
     })
@@ -56,7 +71,7 @@ fn self_host_read_compile_time_resolved_arena(
   let fields = self_host_empty_compile_time_types()
   let _ = while 0u32 {
     offset => if offset < span.length {
-      match self_host_read_compile_time_resolved_arena(resolved, resolved.type_arguments[span.start + offset], bindings, depth + 1u32) {
+      match self_host_read_compile_time_resolved_arena_with_self(resolved, resolved.type_arguments[span.start + offset], bindings, depth + 1u32, self_owner, self_type) {
         Result::Ok(value) => fields.push(value)
         Result::Err(error) => return Result::Err(error)
       }
@@ -67,11 +82,11 @@ fn self_host_read_compile_time_resolved_arena(
   }
   match type_ {
     SelfHostResolvedType::ProductType(_) => Result::Ok(SelfHostCompileTimeType::ProductCompileTimeType(fields))
-    SelfHostResolvedType::AppliedType(base, _) => match self_host_read_compile_time_resolved_arena(resolved, base, bindings, depth + 1u32) {
+    SelfHostResolvedType::AppliedType(base, _) => match self_host_read_compile_time_resolved_arena_with_self(resolved, base, bindings, depth + 1u32, self_owner, self_type) {
       Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::AppliedCompileTimeType(value, fields))
       Result::Err(error) => Result::Err(error)
     }
-    SelfHostResolvedType::FunctionType(_, result) => match self_host_read_compile_time_resolved_arena(resolved, result, bindings, depth + 1u32) {
+    SelfHostResolvedType::FunctionType(_, result) => match self_host_read_compile_time_resolved_arena_with_self(resolved, result, bindings, depth + 1u32, self_owner, self_type) {
       Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::FunctionCompileTimeType(fields, value))
       Result::Err(error) => Result::Err(error)
     }
