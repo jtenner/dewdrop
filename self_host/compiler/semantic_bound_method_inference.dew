@@ -272,6 +272,9 @@ impl SelfHostBasicBodyInferencer {
       }
       self.store_call_target(expression, target, 2u32)
     } else {
+      if self.postpone_method_failure(expression) {
+        return true
+      }
       self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
       self.solver.poison_type(self.expression_type(expression))
       self.diagnostics.push(SelfHostBodyInferenceDiagnostic::AmbiguousMethod(name, expression, first, second, count, offset))

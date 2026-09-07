@@ -502,6 +502,8 @@ struct SelfHostBasicBodyInferencer {
   pattern_type_arguments: Array<I32>
   pending_direct_calls: Array<U32>
   pending_method_calls: Array<U32>
+  retry_method_calls: Array<U32>
+  mut postpone_method_failures: Bool
   pending_variant_calls: Array<U32>
   pending_variant_values: Array<U32>
   pending_operators: Array<U32>
@@ -612,6 +614,8 @@ impl SelfHostBasicBodyInferencer {
       pattern_type_arguments: []
       pending_direct_calls: []
       pending_method_calls: []
+      retry_method_calls: []
+      postpone_method_failures: false
       pending_variant_calls: []
       pending_variant_values: []
       pending_operators: []
@@ -4910,6 +4914,9 @@ impl SelfHostBasicBodyInferencer {
       )
       true
     } else {
+      if self.postpone_method_failure(expression) {
+        return true
+      }
       self.store_call_target(
         expression,
         SelfHostBasicCallTarget::ErrorBasicCallTarget,
@@ -5061,6 +5068,9 @@ impl SelfHostBasicBodyInferencer {
         }
       }
     } else {
+      if self.postpone_method_failure(expression) {
+        return true
+      }
       self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
       self.solver.poison_type(self.expression_type(expression))
       self.solver.poison_type(self.expression_type(target))
@@ -5173,6 +5183,9 @@ impl SelfHostBasicBodyInferencer {
         selected_callable,
       )
     } else {
+      if self.postpone_method_failure(expression) {
+        return
+      }
       self.store_call_target(
         expression,
         SelfHostBasicCallTarget::ErrorBasicCallTarget,
@@ -5203,7 +5216,18 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn postpone_method_failure(self, expression: U32) -> Bool {
+    if !self.postpone_method_failures {
+      return false
+    }
+    // Candidate probes have rolled back. Keep the expression unpoisoned so
+    // a surrounding call can supply its required argument/result type.
+    self.retry_method_calls.push(expression)
+    true
+  }
+
   fn constrain_pending_method_calls(self) -> Unit {
+    self.postpone_method_failures = true
     let mut method_cursor = 0u32
     let mut operator_cursor = 0u32
     let mut field_cursor = 0u32
@@ -5244,6 +5268,39 @@ impl SelfHostBasicBodyInferencer {
         continue true
       }
     }
+    // Retry only unresolved methods. A successful round removes at least one
+    // entry, so the loop has a structural bound instead of a fixed pass limit.
+    let pending = []
+    while self.retry_method_calls.length() {
+      count if count > 0u32 => {
+        pending.clear()
+        for expression in self.retry_method_calls {
+          pending.push(expression)
+        }
+        self.retry_method_calls.clear()
+        for expression in self.pending_fields {
+          self.constrain_ready_field(expression)
+        }
+        let _ = self.constrain_pending_member_equations(false)
+        for expression in pending {
+          self.constrain_pending_method_call(expression)
+        }
+        let remaining = self.retry_method_calls.length()
+        self_host_assert_compiler_invariant(remaining <= count, "method retry queue must not grow")
+        if remaining == count {
+          break ()
+        }
+        continue remaining
+      }
+      _ => break ()
+    }
+    // No remaining context can resolve these candidates. Preserve the normal
+    // exact ambiguity/no-match diagnostic rather than picking a candidate.
+    self.postpone_method_failures = false
+    for expression in self.retry_method_calls {
+      self.constrain_pending_method_call(expression)
+    }
+    self.retry_method_calls.clear()
     self.pending_method_calls.clear()
     self.pending_operators.clear()
   }

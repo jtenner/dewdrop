@@ -1,0 +1,21 @@
+test "outer imported method supplies the result type of an inner conversion" {
+  let link = self_host_physical_test_named_import_link(
+    "app.conversions",
+    b"pub trait Convert<t> {\n  fn convert(self) -> t\n}\nimpl Convert<U32> for U32 {\n  fn convert(self) -> U32 {\n    self\n  }\n}\nimpl Convert<U64> for U32 {\n  fn convert(self) -> U64 {\n    17u64\n  }\n}\npub struct Sink {}\nimpl Sink {\n  fn accept(self, value: U64) -> U64 {\n    value\n  }\n}\n",
+    b"open app.conversions\npub fn run(value: U32) -> U64 {\n  let sink = Sink::{}\n  sink.accept((value % 251u32).convert())\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+}
+
+test "retrying a method cannot hide a true result type ambiguity" {
+  let link = self_host_physical_test_named_import_link(
+    "app.conversions",
+    b"pub trait Convert<t> {\n  fn convert(self) -> t\n}\nimpl Convert<U32> for U32 {\n  fn convert(self) -> U32 {\n    self\n  }\n}\nimpl Convert<U64> for U32 {\n  fn convert(self) -> U64 {\n    17u64\n  }\n}\n",
+    b"open app.conversions\npub fn run(value: U32) -> Unit {\n  value.convert()\n  ()\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "one unresolved ambiguity remains")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _), "both valid conversions must stay visible")
+}
