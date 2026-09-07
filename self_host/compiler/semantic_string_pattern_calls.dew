@@ -112,6 +112,7 @@ fn self_host_body_build_string_pattern_calls(
                   operands.push(SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(expression))
                   calls.push(SelfHostPhysicalCallPlan::{
                     expression: expression
+                    receiver_expression: 4294967295u32
                     declaration: declaration
                     specialization: target_specialization
                     physical_function: physical_function

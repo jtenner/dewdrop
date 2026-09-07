@@ -6118,7 +6118,8 @@ fn self_host_linked_direct_receiver_expression(
     return Option::None
   }
   let base = self_host_planned_expression_at(module_.expressions, target).member_base
-  if base < module_.expressions.length() {
+  if base < module_.expressions.length() &&
+    !self_host_body_name_reference_is_namespace(module_.expressions[base].reference) {
     Option::Some(base)
   } else {
     Option::None
@@ -13528,27 +13529,7 @@ fn self_host_linked_i32_push_call_evaluations(
         return Option::Some("ABI-702 call evaluation is outside its arena")
       }
       let source_expression = plan.call_evaluations[index]
-      let mut receiver = false
-      let mut operand = 0u32
-      let _ = while operand {
-        position => if position < call.operands.length {
-          let operand_index = self_host_u32_add(call.operands.start, position)
-          if operand_index < plan.call_operands.length() {
-            match plan.call_operands[operand_index] {
-              SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(value) => if self_host_u32_equal(
-                value,
-                source_expression,
-              ) {
-                receiver = true
-              }
-              _ => {}
-            }
-          }
-          continue position + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
+      let receiver = source_expression == call.receiver_expression
       if include_receiver || !receiver {
         match self_host_body_plan_expression(plan, source_expression) {
           Option::Some(source_plan) => if source_plan.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {

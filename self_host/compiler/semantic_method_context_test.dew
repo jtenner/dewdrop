@@ -1,3 +1,19 @@
+test "imported method candidates accept Never and reject wrong scalar arguments" {
+  let runtime = b"impl Unit {\n  fn consume(self, value: I64) -> I64 {\n    value\n  }\n}\n"
+  let link = self_host_physical_test_named_import_link("app.methods", runtime,
+    b"open app.methods\npub fn run() -> I32 {\n  ().consume(return 7i32)\n  0i32\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+  let wrong = self_host_physical_test_named_import_link("app.methods", runtime,
+    b"open app.methods\npub fn run() -> I64 {\n  ().consume(true)\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(wrong.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "wrong argument must stay diagnostic")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _), "wrong scalar is not assignable")
+}
+
 test "outer imported method supplies the result type of an inner conversion" {
   let link = self_host_physical_test_named_import_link(
     "app.conversions",

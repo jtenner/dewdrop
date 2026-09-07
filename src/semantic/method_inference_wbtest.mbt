@@ -1,4 +1,27 @@
 ///|
+test "method candidates accept Never arguments without erasing type errors" {
+  let prefix = b"impl Unit {\n  fn consume(self, value: I64) -> I64 {\n    value\n  }\n}\n"
+  let (_, _, _, inferred) = call_test_module(
+    731UL,
+    prefix +
+    b"fn instance() -> I32 {\n  ().consume(return 7i32)\n  0i32\n}\nfn qualified() -> I32 {\n  Unit::consume(return 8i32, 9i64)\n  0i32\n}\n",
+  )
+  assert_eq(inferred.diagnostics.length(), 0)
+  let (_, _, _, wrong) = call_test_module(
+    732UL,
+    prefix +
+    b"fn instance() -> I64 {\n  ().consume(true)\n}\nfn qualified() -> I64 {\n  Unit::consume((), true)\n}\n",
+  )
+  let mut missing = 0
+  for diagnostic in wrong.diagnostics {
+    if diagnostic is NoMatchingMethod(_, _, _) {
+      missing += 1
+    }
+  }
+  assert_eq(missing, 2)
+}
+
+///|
 test "inherent instance methods select exact implementation declarations" {
   let (collected, resolved, _, inferred) = call_test_module(
     701UL, b"struct Item {\n  value: I32\n}\nimpl Item {\n  fn get(self) -> I32 {\n    self.value\n  }\n}\nfn use(item: Item) -> I32 {\n  item.get()\n}\n",

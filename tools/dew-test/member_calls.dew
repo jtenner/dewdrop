@@ -104,6 +104,28 @@ fn member_unit_value(cell: MemberCell) -> Unit {
   cell.value = member_add(cell.value, 1i32)
 }
 
+impl Unit {
+  fn member_use(self, trace: MemberCell, value: I64) -> I64 {
+    member_record(trace, 3i32)
+    value
+  }
+}
+
+fn member_unit_method_value(trace: MemberCell) -> I64 {
+  member_record(trace, 2i32)
+  37i64
+}
+
+fn member_stop_before_call(trace: MemberCell) -> I32 {
+  Unit::member_use(return trace.value, trace, member_unit_method_value(trace))
+  99i32
+}
+
+fn member_stop_in_argument(trace: MemberCell) -> I32 {
+  member_record(trace, 1i32).member_use(trace, return trace.value)
+  99i32
+}
+
 pub fn main(value: I32, expected: I32) -> I32 {
   let cell = MemberCell::{
     value: 0i32
@@ -118,6 +140,13 @@ pub fn main(value: I32, expected: I32) -> I32 {
   }
   member_plain_unit_receiver(trace)[member_plain_unit_index(trace)] = member_plain_unit_value(trace)
   let plain_unit_order = trace.value == 1234i32
+  trace.value = 0i32
+  let unit_result = member_record(trace, 1i32).member_use(trace, member_unit_method_value(trace))
+  let unit_receiver_order = trace.value == 123i32 && unit_result == 37i64
+  trace.value = 7i32
+  let stopped_before_call = member_stop_before_call(trace) == 7i32 && trace.value == 7i32
+  trace.value = 0i32
+  let stopped_in_argument = member_stop_in_argument(trace) == 1i32 && trace.value == 1i32
   let (tuple_left, tuple_right) = member_extract(MemberPayload::Value((7i32, 11i64)), (0i32, 0i64))
   let tuple_binding = tuple_left == 7i32 && tuple_right == 11i64
   let road = RoadMap::{
@@ -148,7 +177,7 @@ pub fn main(value: I32, expected: I32) -> I32 {
   }
   slot[0u32] = wrapper
   slot[0u32].inner.value = value
-  if indexed_result && indexed_float_results && tuple_binding && receiver_effects && plain_unit_order && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
+  if indexed_result && indexed_float_results && tuple_binding && receiver_effects && plain_unit_order && unit_receiver_order && stopped_before_call && stopped_in_argument && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
     slot[0u32].inner.read()
   } else {
     -1i32

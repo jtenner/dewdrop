@@ -62,6 +62,7 @@ pub enum SelfHostPhysicalOperandSource {
 
 pub struct SelfHostPhysicalCallPlan {
   expression: U32
+  receiver_expression: U32
   declaration: U64
   specialization: U32
   physical_function: U32
@@ -4277,51 +4278,27 @@ fn self_host_body_force_call_arguments(
     link,
     physical_function,
   )
-  let flatten_product = self_host_u32_equal(arguments.length, 1u32) &&
-    self_host_u32_equal(parameter_count, 2u32)
-  let mut physical_argument_count = 0u32
-  let mut count_argument = 0u32
-  let _ = while count_argument {
-    current => if current < arguments.length {
-      let child = self_host_u32_add(arguments.start, current)
-      if child < module_.expression_children.length() {
-        let argument_expression = module_.expression_children[child]
-        if argument_expression >= body.expressions.start && argument_expression <
-          self_host_u32_add(body.expressions.start, body.expressions.length) {
-          let carrier = expressions[self_host_body_expression_slot(
-            body,
-            argument_expression,
-          )].carrier
-          if !(carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) && !(
-            carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier
-          ) {
-            let count = if flatten_product && argument_expression < module_.expressions.length() {
-              match module_.expressions[argument_expression].kind {
-                SelfHostPlannedExpressionKind::PlannedProductNew(fields) => fields.length
-                _ => 1u32
-              }
-            } else {
-              1u32
-            }
-            physical_argument_count = self_host_u32_add(
-              physical_argument_count,
-              count,
-            )
-          }
-        }
-      }
-      continue current + 1u32
+  // Walk the source arguments from the first physical parameter. A receiver
+  // contributes a slot only when it is implicit and produces a stack value.
+  // Counting from the right moves earlier operands when a later argument is
+  // Never, even though that call will never be emitted.
+  let receiver = match self_host_body_call_target_identity(link, call_function_index) {
+    Option::Some(target) => self_host_body_call_receiver_expression(link, module_, expression, target.declaration)
+    Option::None => 4294967295u32
+  }
+  let parameter_offset = if receiver == 4294967295u32 {
+    0u32
+  } else {
+    let carrier = expressions[self_host_body_expression_slot(body, receiver)].carrier
+    if carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+      return false
+    }
+    if carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+      0u32
     } else {
-      break self_host_semantic_unit()
+      1u32
     }
   }
-  if parameter_count < physical_argument_count {
-    return false
-  }
-  let parameter_offset = self_host_u32_subtract(
-    parameter_count,
-    physical_argument_count,
-  )
   let expression_end = self_host_u32_add(
     body.expressions.start,
     body.expressions.length,
@@ -4340,9 +4317,15 @@ fn self_host_body_force_call_arguments(
             body,
             argument_expression,
           )].carrier
-          if actual_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier ||
-            actual_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+          if actual_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+            break self_host_semantic_unit()
+          }
+          if actual_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
             continue current + 1u32
+          }
+          if physical_argument >= parameter_count {
+            // The frozen recipe verifier reports the exact count mismatch.
+            break self_host_semantic_unit()
           }
           let expected_shape = self_host_linked_physical_function_parameter_shape(
             link,
@@ -4385,7 +4368,6 @@ fn self_host_body_force_call_arguments(
       break self_host_semantic_unit()
     }
   }
-  let _ = expression
   changed
 }
 
@@ -4474,6 +4456,7 @@ fn self_host_body_empty_scratches(
 fn self_host_body_empty_call_plans() -> Array<SelfHostPhysicalCallPlan> {
   let values = [SelfHostPhysicalCallPlan::{
     expression: 0u32
+    receiver_expression: 4294967295u32
     declaration: 0u64
     specialization: 4294967295u32
     physical_function: 4294967295u32
@@ -4725,6 +4708,7 @@ fn self_host_body_build_physical_call_plans(
             }
             calls.push(SelfHostPhysicalCallPlan::{
               expression: current
+              receiver_expression: receiver
               declaration: target.declaration
               specialization: target.specialization
               physical_function: self_host_linked_physical_function_index(
@@ -7252,13 +7236,28 @@ fn self_host_verify_body_call_arguments(
     )
     return
   }
-  let expected_receiver_count = if self_host_linked_declaration_has_receiver(
-    link,
-    call.declaration,
-  ) {
-    1u32
-  } else {
+  let expected_receiver = self_host_body_call_receiver_expression(link, module_,
+    expression_plan.expression, call.declaration,
+  )
+  if call.receiver_expression != expected_receiver {
+    self_host_body_add_diagnostic(diagnostics, plan, module_, expression_plan.expression,
+      u32_into_u64(call.receiver_expression), "call receiver count mismatch",
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+    )
+    return
+  }
+  let expected_receiver_count = if expected_receiver == 4294967295u32 {
     0u32
+  } else {
+    match self_host_body_plan_expression(plan, expected_receiver) {
+      Option::Some(receiver) => if receiver.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+        0u32
+      } else {
+        1u32
+      }
+      Option::None => 1u32
+    }
   }
   let mut receiver_count = 0u32
   let mut operand = 0u32

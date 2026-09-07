@@ -172,6 +172,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Index writes now always use their frozen call recipe; the shared fixture also
   checks non-generic Unit writes in exact source order. See the
   [index write log](docs/research/array-index-write-recipes-2026-09-07.md).
+  Unit receivers now retain their evaluation identity without a stack operand.
+  Never method arguments stop left-to-right physical propagation; qualified
+  instance calls do not evaluate a type owner. See the
+  [receiver log](docs/research/unit-receiver-call-recipes-2026-09-07.md).
 - [ ] Complete full Wasm reference checks. Check heap type and nullability,
   not just an eqref label, for call operands, results, locals, and branches.
 - [ ] Put constructor and other temporary locals in the frozen physical plan.

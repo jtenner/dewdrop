@@ -1688,34 +1688,31 @@ impl SelfHostBasicBodyInferencer {
       current => if current < self.collected.methods.length() {
         let method = self_host_collected_method_identity(self.collected.methods[current])
         if self_host_u32_equal(method.name, name) {
-          let parameters = self.collected.parameters_of(method.id)
-          let has_receiver = self_host_u32_greater(parameters.length, 0u32) &&
-            (self.collected.parameters[parameters.start].kind is SelfHostCollectedParameterKind::ReceiverParameterDecl)
-          if !has_receiver {
-            let mut implementation = 0u32
-            let _ = while implementation {
-              candidate => if candidate < self.collected.impls.length() {
-                let impl_ = self.collected.impls[candidate]
-                if self_host_u64_equal(impl_.declaration, method.parent) && (impl_.trait_type is Option::None) &&
-                  self.static_owner_matches(base, self.resolved.impl_target_types[candidate]) {
-                  named_count = named_count + 1u32
-                  match self.local_callable_index_of_declaration(method.id) {
-                    Option::Some(callable) => if self.local_callable_candidate_viable(expression, arguments, offset, callable) {
-                      if viable_count == 0u32 {
-                        selected_local = callable
-                        first = method.id
-                      } else if viable_count == 1u32 {
-                        second = method.id
-                      }
-                      viable_count = viable_count + 1u32
+          // Qualified instance calls supply the receiver as argument zero.
+          // Candidate checking uses the full logical parameter list.
+          let mut implementation = 0u32
+          let _ = while implementation {
+            candidate => if candidate < self.collected.impls.length() {
+              let impl_ = self.collected.impls[candidate]
+              if self_host_u64_equal(impl_.declaration, method.parent) && (impl_.trait_type is Option::None) &&
+                self.static_owner_matches(base, self.resolved.impl_target_types[candidate]) {
+                named_count = named_count + 1u32
+                match self.local_callable_index_of_declaration(method.id) {
+                  Option::Some(callable) => if self.local_callable_candidate_viable(expression, arguments, offset, callable) {
+                    if viable_count == 0u32 {
+                      selected_local = callable
+                      first = method.id
+                    } else if viable_count == 1u32 {
+                      second = method.id
                     }
-                    Option::None => {}
+                    viable_count = viable_count + 1u32
                   }
+                  Option::None => {}
                 }
-                continue candidate + 1u32
-              } else {
-                break self_host_semantic_unit()
               }
+              continue candidate + 1u32
+            } else {
+              break self_host_semantic_unit()
             }
           }
         }
@@ -1728,9 +1725,7 @@ impl SelfHostBasicBodyInferencer {
     let _ = while callable_index {
       current => if current < self.imported.callables.length() {
         let callable = self_host_resolved_imported_callable_at(self.imported.callables, current)
-        let has_receiver = callable.parameters.length > 0u32 &&
-          self.imported.parameter_receivers[callable.parameters.start]
-        if !has_receiver && self_host_basic_string_equal(callable.name, method_name) {
+        if self_host_basic_string_equal(callable.name, method_name) {
           match callable.kind {
             SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(implementation_id) => match self.imported_implementation(implementation_id) {
               Option::Some(implementation) => if implementation.trait_type is Option::None {
@@ -3964,7 +3959,7 @@ impl SelfHostBasicBodyInferencer {
             self_host_u32_add(parameters.start, current)
           ],
         )
-        viable = self.solver.unify(
+        viable = self.try_constrain_assignable(
           self.expression_type(
             self.collected.expression_children[
               self_host_u32_add(arguments.start, current)
@@ -4190,7 +4185,7 @@ impl SelfHostBasicBodyInferencer {
     let mut index = 0u32
     let _ = while index {
       current => if viable && current < arguments.length {
-        viable = self.solver.unify(
+        viable = self.try_constrain_assignable(
           self.expression_type(
             self.collected.expression_children[
               self_host_u32_add(arguments.start, current)
@@ -4535,7 +4530,7 @@ impl SelfHostBasicBodyInferencer {
     let mut index = 0u32
     let _ = while index {
       current => if viable && current < arguments.length {
-        viable = self.solver.unify(
+        viable = self.try_constrain_assignable(
           self.expression_type(
             self.collected.expression_children[
               self_host_u32_add(arguments.start, current)
@@ -4715,7 +4710,7 @@ impl SelfHostBasicBodyInferencer {
     let mut index = 0u32
     let _ = while index {
       current => if viable && current < arguments.length {
-        viable = self.solver.unify(
+        viable = self.try_constrain_assignable(
           self.expression_type(
             self.collected.expression_children[
               self_host_u32_add(arguments.start, current)

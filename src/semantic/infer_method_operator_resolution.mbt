@@ -148,7 +148,7 @@ fn BasicBodyInferencer::try_method_candidate(
   }
   let mut index = 0
   while viable && index < arguments.length {
-    viable = self.solver.unify(
+    viable = self.assignable_viable(
       self.expression_type(
         self.collected.expression_children[arguments.start + index],
       ),
@@ -1210,7 +1210,7 @@ fn BasicBodyInferencer::try_qualified_method_candidate(
   let mut viable = true
   let mut index = 0
   while viable && index < arguments.length {
-    viable = self.solver.unify(
+    viable = self.assignable_viable(
       self.expression_type(
         self.collected.expression_children[arguments.start + index],
       ),

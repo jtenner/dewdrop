@@ -121,6 +121,7 @@ fn self_host_test_string_pattern_call_mutations(
 ) -> Unit {
   let missing = SelfHostPhysicalCallPlan::{
     expression: call.expression
+    receiver_expression: call.receiver_expression
     declaration: call.declaration
     specialization: call.specialization
     physical_function: 4294967295u32
@@ -131,6 +132,7 @@ fn self_host_test_string_pattern_call_mutations(
   self_host_test_string_pattern_call_error(link, body, module_, pattern, missing, 607u32)
   let wrong_target = SelfHostPhysicalCallPlan::{
     expression: call.expression
+    receiver_expression: call.receiver_expression
     declaration: 0u64
     specialization: call.specialization
     physical_function: call.physical_function
@@ -141,6 +143,7 @@ fn self_host_test_string_pattern_call_mutations(
   self_host_test_string_pattern_call_error(link, body, module_, pattern, wrong_target, 701u32)
   let short_recipe = SelfHostPhysicalCallPlan::{
     expression: call.expression
+    receiver_expression: call.receiver_expression
     declaration: call.declaration
     specialization: call.specialization
     physical_function: call.physical_function
