@@ -18,11 +18,6 @@ fn text_local(index : Int) -> @lib.LocalIdx {
   @lib.LocalIdx::new(index.reinterpret_as_uint())
 }
 
-///|
-fn text_false_return() -> Array[@lib.Instruction] {
-  [text_i32(0), @lib.Instruction::return_()]
-}
-
 ///| Load one byte from the v128 chunk array. The caller supplies the logical
 
 ///|
@@ -139,139 +134,6 @@ fn starshine_text_length_type_body(base : Int, type_offset : Int) -> @lib.Func {
 ///|
 fn starshine_text_length_body(base : Int, string_ : Bool) -> @lib.Func {
   starshine_text_length_type_body(base, if string_ { 1 } else { 2 })
-}
-
-///|
-/// Compare exact logical bytes across flat values and shared views.
-fn starshine_text_equals_type_body(base : Int, type_offset : Int) -> @lib.Func {
-  let array_type = @lib.TypeIdx::new(base.reinterpret_as_uint())
-  let value_type = @lib.TypeIdx::new((base + type_offset).reinterpret_as_uint())
-  let left_ref = 2
-  let right_ref = 3
-  let left_chunks = 4
-  let right_chunks = 5
-  let length = 6
-  let left_index = 7
-  let right_index = 8
-  let index = 9
-  let left_vector = 10
-  let right_vector = 11
-  let body : Array[@lib.Instruction] = [
-    @lib.Instruction::local_get(text_local(0)),
-    @lib.Instruction::ref_cast(false, @lib.HeapType::new(value_type)),
-    @lib.Instruction::local_set(text_local(left_ref)),
-    @lib.Instruction::local_get(text_local(1)),
-    @lib.Instruction::ref_cast(false, @lib.HeapType::new(value_type)),
-    @lib.Instruction::local_set(text_local(right_ref)),
-    @lib.Instruction::local_get(text_local(left_ref)),
-    @lib.Instruction::struct_get(value_type, 2U),
-    @lib.Instruction::local_tee(text_local(length)),
-    @lib.Instruction::local_get(text_local(right_ref)),
-    @lib.Instruction::struct_get(value_type, 2U),
-    @lib.Instruction::i32_ne(),
-    @lib.Instruction::if_(@lib.BlockType::void_(), text_false_return(), None),
-    @lib.Instruction::local_get(text_local(left_ref)),
-    @lib.Instruction::struct_get(value_type, 0U),
-    @lib.Instruction::local_set(text_local(left_chunks)),
-    @lib.Instruction::local_get(text_local(right_ref)),
-    @lib.Instruction::struct_get(value_type, 0U),
-    @lib.Instruction::local_set(text_local(right_chunks)),
-    @lib.Instruction::local_get(text_local(left_ref)),
-    @lib.Instruction::struct_get(value_type, 1U),
-    @lib.Instruction::local_set(text_local(left_index)),
-    @lib.Instruction::local_get(text_local(right_ref)),
-    @lib.Instruction::struct_get(value_type, 1U),
-    @lib.Instruction::local_set(text_local(right_index)),
-    text_i32(0),
-    @lib.Instruction::local_set(text_local(index)),
-  ]
-  let loop_body : Array[@lib.Instruction] = [
-    @lib.Instruction::local_get(text_local(index)),
-    @lib.Instruction::local_get(text_local(length)),
-    @lib.Instruction::i32_ge_u(),
-    @lib.Instruction::if_(
-      @lib.BlockType::void_(),
-      [text_i32(1), @lib.Instruction::return_()],
-      None,
-    ),
-    @lib.Instruction::local_get(text_local(index)),
-    text_i32(16),
-    @lib.Instruction::i32_add(),
-    @lib.Instruction::local_get(text_local(length)),
-    @lib.Instruction::i32_le_u(),
-  ]
-  let full : Array[@lib.Instruction] = []
-  text_load_logical_v128(full, array_type, left_chunks, left_index, left_vector)
-  text_load_logical_v128(
-    full, array_type, right_chunks, right_index, right_vector,
-  )
-  for
-    instruction in [
-      @lib.Instruction::local_get(text_local(left_vector)),
-      @lib.Instruction::local_get(text_local(right_vector)),
-      @lib.Instruction::v128_xor(),
-      @lib.Instruction::v128_any_true(),
-      @lib.Instruction::if_(@lib.BlockType::void_(), text_false_return(), None),
-    ] {
-    full.push(instruction)
-  }
-  for physical_index in [left_index, right_index] {
-    full.push(@lib.Instruction::local_get(text_local(physical_index)))
-    full.push(text_i32(16))
-    full.push(@lib.Instruction::i32_add())
-    full.push(@lib.Instruction::local_set(text_local(physical_index)))
-  }
-  full.push(@lib.Instruction::local_get(text_local(index)))
-  full.push(text_i32(16))
-  full.push(@lib.Instruction::i32_add())
-  full.push(@lib.Instruction::local_set(text_local(index)))
-  full.push(@lib.Instruction::br(@lib.LabelIdx::new(1U)))
-  loop_body.push(@lib.Instruction::if_(@lib.BlockType::void_(), full, None))
-  for instruction in text_byte_at(array_type, left_chunks, left_index, 0) {
-    loop_body.push(instruction)
-  }
-  for instruction in text_byte_at(array_type, right_chunks, right_index, 0) {
-    loop_body.push(instruction)
-  }
-  loop_body.push(@lib.Instruction::i32_ne())
-  loop_body.push(
-    @lib.Instruction::if_(@lib.BlockType::void_(), text_false_return(), None),
-  )
-  for physical_index in [left_index, right_index] {
-    loop_body.push(@lib.Instruction::local_get(text_local(physical_index)))
-    loop_body.push(text_i32(1))
-    loop_body.push(@lib.Instruction::i32_add())
-    loop_body.push(@lib.Instruction::local_set(text_local(physical_index)))
-  }
-  loop_body.push(@lib.Instruction::local_get(text_local(index)))
-  loop_body.push(text_i32(1))
-  loop_body.push(@lib.Instruction::i32_add())
-  loop_body.push(@lib.Instruction::local_set(text_local(index)))
-  loop_body.push(@lib.Instruction::br(@lib.LabelIdx::new(0U)))
-  body.push(
-    @lib.Instruction::loop_(@lib.BlockType::void_(), @lib.Expr::new(loop_body)),
-  )
-  body.push(text_i32(1))
-  @lib.Func::new(
-    @lib.Locals::from_types([
-      text_runtime_ref(base + type_offset),
-      text_runtime_ref(base + type_offset),
-      text_runtime_ref(base),
-      text_runtime_ref(base),
-      @lib.ValType::i32(),
-      @lib.ValType::i32(),
-      @lib.ValType::i32(),
-      @lib.ValType::i32(),
-      @lib.ValType::v128(),
-      @lib.ValType::v128(),
-    ]),
-    @lib.Expr::new(body),
-  )
-}
-
-///|
-fn starshine_text_equals_body(base : Int, string_ : Bool) -> @lib.Func {
-  starshine_text_equals_type_body(base, if string_ { 1 } else { 2 })
 }
 
 ///| Bounds-checked dynamic byte access over V128 chunks. Out-of-range access
@@ -1706,8 +1568,6 @@ fn emit_starshine_text_runtime_function(
     Some(starshine_text_length_body(base, false))
   } else if name == b"dew_string_as_bytes" {
     Some(starshine_text_reference_cast_body(base + 2))
-  } else if name == b"dew_string_equals" {
-    Some(starshine_text_equals_body(base, true))
   } else if name == b"dew_string_byte_at" {
     Some(starshine_text_byte_at_body(base, true))
   } else if name == b"dew_string_view" {

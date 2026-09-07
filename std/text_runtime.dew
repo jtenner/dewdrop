@@ -2,7 +2,6 @@ open dew.std.wasm.intrinsics
 
 builtin string_byte_length(value: String) -> U32 = "dew_string_byte_length"
 builtin string_as_bytes_unchecked(value: String) -> Bytes = "dew_string_as_bytes"
-builtin string_equals(left: String, right: String) -> Bool = "dew_string_equals"
 builtin string_byte_at(value: String, index: U32) -> U8 = "dew_string_byte_at"
 builtin string_view(value: String, start: U32, length: U32) -> StringView = "dew_string_view"
 builtin string_view_byte_length(value: StringView) -> U32 = "dew_string_view_byte_length"
@@ -32,6 +31,10 @@ builtin bytes_concat(left: Bytes, right: Bytes) -> Bytes = "dew_bytes_concat"
 
 fn string_as_bytes(value: String) -> Bytes {
   string_as_bytes_unchecked(value)
+}
+
+fn string_equals(left: String, right: String) -> Bool {
+  bytes_equals(string_as_bytes(left), string_as_bytes(right))
 }
 
 fn string_utf16_length(value: String) -> U32 {

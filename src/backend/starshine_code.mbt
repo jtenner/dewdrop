@@ -468,18 +468,6 @@ fn starshine_text_runtime_base_for_body(
 }
 
 ///|
-fn starshine_runtime_function_index_for_body(
-  planned : @semantic.PlannedModuleWasmGCFragments,
-  program : @semantic.PlannedProgramWasmGCLink?,
-  name : Bytes,
-) -> Int {
-  match program {
-    Some(link) => link.runtime_function_index(name)
-    None => planned.runtime_function_index(name)
-  }
-}
-
-///|
 fn starshine_text_constant_instructions(
   planned : @semantic.PlannedModuleWasmGCFragments,
   program : @semantic.PlannedProgramWasmGCLink?,
@@ -1962,7 +1950,7 @@ fn starshine_match_literal_condition(
   }
   let condition = value.copy()
   match lowering.expressions[expression].kind {
-    @semantic.PlannedStringConst(literal, target) => {
+    @semantic.PlannedStringConst(literal, target) =>
       match target {
         @semantic.SelectedInferredCallTarget(declaration, arguments) =>
           return starshine_match_string_call(
@@ -1978,23 +1966,8 @@ fn starshine_match_literal_condition(
               planned, program, literal, true,
             ),
           )
-        _ => ()
+        _ => return Err(UnsupportedExpression(body.body, expression))
       }
-      append_starshine_instructions(
-        condition,
-        starshine_text_constant_instructions(planned, program, literal, true),
-      )
-      let equals = starshine_runtime_function_index_for_body(
-        planned, program, b"dew_string_equals",
-      )
-      if equals < 0 {
-        return Err(UnsupportedExpression(body.body, expression))
-      }
-      condition.push(
-        @lib.Instruction::call(@lib.FuncIdx::new(equals.reinterpret_as_uint())),
-      )
-      return Ok(condition)
-    }
     _ => ()
   }
   let literal = match

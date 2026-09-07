@@ -21,3 +21,25 @@ test "String pattern effects prevent removal of flat and nested comparisons" {
   assert_false(summaries.contains(collected.lookup_value("flat").unwrap()))
   assert_false(summaries.contains(collected.lookup_value("nested").unwrap()))
 }
+
+///|
+test "String pattern with missing equality evidence is not discardable" {
+  let program = collect_program_manifest_with_standard_sources(
+    99501UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.patterns", [
+        ManifestFile::new(
+          "patterns.dew", b"fn flat(value: String) -> U32 {\n  match value {\n    \"same\" => 1u32\n    _ => 0u32\n  }\n}\n",
+        ),
+      ]),
+    ]),
+    StandardLibrarySources::new([]),
+    false,
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let summaries = program_callable_effect_summaries(lowering.modules)
+  assert_false(
+    summaries.contains(program.modules[0].lookup_value("flat").unwrap()),
+  )
+}

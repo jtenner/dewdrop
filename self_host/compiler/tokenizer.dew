@@ -324,10 +324,12 @@ fn self_host_identifier_continue(source: Bytes, index: U32) -> Bool {
   self_host_identifier_start(source, index) || self_host_ascii_digit(source.byte_at(index))
 }
 
-builtin self_host_tokenizer_string_equals(
+fn self_host_tokenizer_string_equals(
   left: String,
   right: String,
-) -> Bool = "dew_string_equals"
+) -> Bool {
+  left.equals(right)
+}
 
 fn self_host_keyword(value: String) -> U32 {
   if self_host_tokenizer_string_equals(value, "fn") {

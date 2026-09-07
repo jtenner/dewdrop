@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Current handoff updated September 6, 2026. The older deferred backlog below
+> Current handoff updated September 7, 2026. The older deferred backlog below
 > comes from [`docs/roadmap.md`](docs/roadmap.md); it is not a claim that the whole
 > roadmap was re-audited today. Use small commits with tests, docs, and measured
 > compiler runs. Fix correctness before speed. Do not push without a new request.
@@ -109,14 +109,16 @@ Correctness comes first. Keep these timing defects visible after query completio
   StringView scans also run in Dew, with shared native/self-host tests and a
   fix for reference-identity equality. View storage remains.
   See the [StringView log](docs/research/string-view-library-algorithms-2026-09-06.md).
-  String scans and concatenation use the Bytes library path. String equality
-  still needs its runtime builder removed.
+  String scans, equality, and concatenation use the Bytes library path. The
+  String equality runtime builder and runtime-name lookup are removed.
   See the [String log](docs/research/string-library-algorithms-2026-09-06.md).
   String pattern inference now selects the ordinary Eq method and keeps the
   literal's String type. Lowering and specialization retain that evidence.
   Self-host physical call recipes now retain the cached subject and literal and
   verify target identity, operand types, and result. Both emitters use the
-  selected target when evidence is present. Remove the no-evidence legacy path.
+  selected target and reject missing evidence. The no-evidence legacy path is
+  removed; optional optimization cannot discard an unresolved comparison.
+  See the [equality removal log](docs/research/string-equality-library-2026-09-07.md).
   See the
   [pattern log](docs/research/string-pattern-equality-2026-09-06.md).
   See also the [recipe checks](docs/research/string-pattern-call-recipes-2026-09-07.md).

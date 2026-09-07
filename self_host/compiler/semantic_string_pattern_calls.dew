@@ -254,10 +254,10 @@ fn self_host_verify_body_string_pattern_calls(
           SelfHostHirPattern::LiteralPattern(expression, _) => {
             self_host_assert_string_pattern_expression(module_, body, expression)
             let literal = self_host_planned_expression_at(module_.expressions, expression)
-            if literal.kind is SelfHostPlannedExpressionKind::PlannedStringConst(_) && literal.call_target is SelfHostBasicCallTarget::SelectedBasicCallTarget(_, _) {
+            if literal.kind is SelfHostPlannedExpressionKind::PlannedStringConst(_) {
               let failure = match self_host_body_call_plan(plan, expression) {
                 Option::Some(call) => self_host_check_string_pattern_call(link, plan, module_, pattern_id, expression, call)
-                Option::None => self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, SelfHostWasmBodyCarrier::EqRefBodyCarrier, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+                Option::None => self_host_string_pattern_call_failure("call target is missing", 0u64, SelfHostWasmBodyCarrier::EqRefBodyCarrier, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
               }
               match failure {
                 Option::Some(value) => self_host_body_add_diagnostic(diagnostics, plan, module_, expression, value.entity, value.context, value.expected, value.actual)

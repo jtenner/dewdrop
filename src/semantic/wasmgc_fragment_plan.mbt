@@ -2282,7 +2282,6 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   wasmgc_builtin_is_debug_runtime(name) ||
   name == b"dew_string_byte_length" ||
   name == b"dew_string_as_bytes" ||
-  name == b"dew_string_equals" ||
   name == b"dew_string_byte_at" ||
   name == b"dew_string_view" ||
   name == b"dew_string_view_byte_length" ||

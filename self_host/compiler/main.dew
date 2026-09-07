@@ -23,10 +23,12 @@ fn self_host_main_string_as_bytes(
   value.as_bytes()
 }
 
-builtin self_host_main_string_equals(
+fn self_host_main_string_equals(
   left: String,
   right: String,
-) -> Bool = "dew_string_equals"
+) -> Bool {
+  left.equals(right)
+}
 
 fn self_host_main_has_module_path(
   paths: Array<String>,

@@ -450,6 +450,7 @@ test "wide imported enum construction validates through Starshine" {
     Err(UnsupportedBuiltin(_)) => fail("unsupported builtin")
     Err(InvalidFunctionBody(_)) => fail("invalid function body")
     Err(ProgramLinkDiagnostics(_)) => fail("program link diagnostics")
+    Err(error) => fail(@debug.to_string(error))
   }
 }
 

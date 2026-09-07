@@ -190,6 +190,7 @@ test "Bytes search primitives and Option<U32> validate through Starshine" {
     Err(UnsupportedBuiltin(_)) => abort("unsupported builtin")
     Err(InvalidFunctionBody(_)) => abort("invalid function body")
     Err(ProgramLinkDiagnostics(_)) => abort("program link diagnostics")
+    Err(error) => fail(@debug.to_string(error))
   }
   assert_eq(@validate.validate_module(module_), Ok(()))
   assert_true(

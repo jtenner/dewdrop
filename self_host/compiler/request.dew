@@ -3,10 +3,12 @@ open dew.std.option
 open dew.std.result
 open dew.std.string
 
-builtin self_host_request_string_equals(
+fn self_host_request_string_equals(
   left: String,
   right: String,
-) -> Bool = "dew_string_equals"
+) -> Bool {
+  left.equals(right)
+}
 
 fn self_host_unit() -> Unit {
 }

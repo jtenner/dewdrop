@@ -96,28 +96,6 @@ fn program_add_named_callable_root(
 }
 
 ///|
-fn program_body_uses_string_literal_pattern(
-  module_ : PlannedModuleLowering,
-  body : PlannedBodyLowering,
-) -> Bool {
-  for
-    pattern in body.patterns.start..<(body.patterns.start + body.patterns.length) {
-    if module_.patterns[pattern].elided {
-      continue
-    }
-    match module_.patterns[pattern].source {
-      HirLiteralPattern(expression, _) =>
-        match module_.expressions[expression].kind {
-          PlannedStringConst(_, _) => return true
-          _ => ()
-        }
-      _ => ()
-    }
-  }
-  false
-}
-
-///|
 fn program_reachable_callable_roots(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
@@ -127,7 +105,6 @@ fn program_reachable_callable_roots(
   let module_lookup = lowering.index.module_lookup
   let reachable : Map[DeclId, Bool] = Map::default()
   let work : Array[DeclId] = []
-  let mut needs_string_pattern_equals = false
   for module_ in lowering.modules {
     for callable in module_.functions.callables {
       let elided_trait_wrapper = lowering.elided_trait_wrappers.contains(
@@ -179,9 +156,6 @@ fn program_reachable_callable_roots(
         continue
       }
       let body = module_.bodies[body_index]
-      if program_body_uses_string_literal_pattern(module_, body) {
-        needs_string_pattern_equals = true
-      }
       for
         expression in body.expressions.start..<(body.expressions.start +
         body.expressions.length) {
@@ -223,9 +197,6 @@ fn program_reachable_callable_roots(
         continue
       }
       let body = module_.bodies[body_index]
-      if program_body_uses_string_literal_pattern(module_, body) {
-        needs_string_pattern_equals = true
-      }
       for
         expression in body.expressions.start..<(body.expressions.start +
         body.expressions.length) {
@@ -253,11 +224,6 @@ fn program_reachable_callable_roots(
         work.push(target)
       }
     }
-  }
-  if needs_string_pattern_equals {
-    ignore(
-      program_add_named_callable_root(lowering, b"dew_string_equals", reachable),
-    )
   }
   let mut runtime_changed = true
   while runtime_changed {

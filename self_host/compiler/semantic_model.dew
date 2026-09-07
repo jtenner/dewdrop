@@ -4,10 +4,12 @@ open dew.std.map
 open dew.std.option
 open dew.std.string
 
-builtin self_host_semantic_string_equals(
+fn self_host_semantic_string_equals(
   left: String,
   right: String,
-) -> Bool = "dew_string_equals"
+) -> Bool {
+  left.equals(right)
+}
 
 fn self_host_semantic_u64_at(values: Array<U64>, index: U32) -> U64 {
   array_get_unchecked(values, index)

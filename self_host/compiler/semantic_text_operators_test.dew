@@ -196,3 +196,15 @@ test "String literal patterns report a missing imported Eq implementation" {
   assert(module_.inferred.diagnostics.length() == 1u32, "one missing pattern equality diagnostic")
   assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, _), "missing pattern equality cannot select an unrelated method")
 }
+
+test "String pattern without trait evidence has a missing target diagnostic" {
+  let link = self_host_physical_test_named_import_link(
+    "app.no_equality",
+    b"pub fn unused() -> U32 {\n  0u32\n}\n",
+    b"open app.no_equality\npub fn run(value: String) -> I32 {\n  match value {\n    \"ready\" => 1\n    _ => 0\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 1u32, "missing pattern target must be reported once")
+  assert(physical.diagnostics[0u32].code == 607u32, "BOD-607: missing equality must not reach runtime lookup")
+}

@@ -96,7 +96,7 @@ fn program_pattern_calls_are_discardable(
               Some({ discardable: true, }) => ()
               _ => return false
             }
-          PlannedStringConst(_, ErrorInferredCallTarget) => return false
+          PlannedStringConst(_, _) => return false
           _ => ()
         }
       }
