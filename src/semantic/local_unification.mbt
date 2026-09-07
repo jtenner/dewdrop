@@ -277,6 +277,7 @@ fn LocalTypeSolver::record_undo(
   index : Int,
   old_value : Int,
 ) -> Unit {
+  self.assert_undo_arrays()
   if self.snapshots.length() > 0 {
     self.undo_kinds.push(kind)
     self.undo_indices.push(index)
@@ -1009,6 +1010,7 @@ pub fn LocalTypeSolver::unify(
 
 ///|
 pub fn LocalTypeSolver::snapshot(self : LocalTypeSolver) -> InferenceSnapshot {
+  self.assert_undo_arrays()
   guard self.next_snapshot_token < 18446744073709551615UL else {
     abort("SOL-204 inference snapshot identity space exhausted")
   }
@@ -1028,16 +1030,24 @@ pub fn LocalTypeSolver::snapshot(self : LocalTypeSolver) -> InferenceSnapshot {
 
 ///|
 fn LocalTypeSolver::restore_undo(self : LocalTypeSolver, start : Int) -> Unit {
+  match self.check_undo_restore(start) {
+    Ok(_) => ()
+    Err(error) => abort("solver undo invariant: " + @debug.to_string(error))
+  }
   while self.undo_kinds.length() > start {
-    let kind = self.undo_kinds.pop().unwrap()
-    let index = self.undo_indices.pop().unwrap()
-    let old_value = self.undo_values.pop().unwrap()
+    let slot = self.undo_kinds.length() - 1
+    let kind = self.undo_kinds[slot]
+    let index = self.undo_indices[slot]
+    let old_value = self.undo_values[slot]
     match kind {
       0 => self.variable_parents[index] = old_value
       1 => self.variable_sizes[index] = old_value
       2 => self.variable_bindings[index] = old_value
       _ => abort("invalid inference undo entry")
     }
+    self.undo_kinds.truncate(slot)
+    self.undo_indices.truncate(slot)
+    self.undo_values.truncate(slot)
   }
 }
 
@@ -1077,6 +1087,10 @@ pub fn LocalTypeSolver::commit(
   guard self.snapshots.length() > 0 &&
     self.snapshots[self.snapshots.length() - 1] == snapshot else {
     abort("SOL-204 inference snapshots must commit in LIFO order")
+  }
+  match self.check_undo_restore(snapshot.undo_start) {
+    Ok(_) => ()
+    Err(error) => abort("solver undo invariant: " + @debug.to_string(error))
   }
   ignore(self.snapshots.pop())
   if self.snapshots.length() == 0 {

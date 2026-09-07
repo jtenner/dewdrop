@@ -209,6 +209,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   reject type-binding cycles even when the parent forest is valid. Native
   binding IDs and stored variable identities are checked before use. See the
   [root walk log](docs/research/solver-root-walks-2026-09-07.md).
+  Native rollback now validates the complete undo range before the first write,
+  including saved values and encoded resolved bindings. Commit cannot discard
+  an invalid undo record. See the
+  [undo log](docs/research/solver-undo-records-2026-09-07.md).
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
   order must hold, and stored identities, physical indices, and import offsets
   must agree. Missing bases or bodies must produce a diagnostic.
