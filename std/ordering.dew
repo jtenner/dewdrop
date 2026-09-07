@@ -1,5 +1,11 @@
-builtin ordering_string_byte_length(value: String) -> U32 = "dew_string_byte_length"
-builtin ordering_string_byte_at(value: String, index: U32) -> U8 = "dew_string_byte_at"
+open dew.std.string
+
+fn ordering_string_byte_length(value: String) -> U32 {
+  value.byte_length()
+}
+fn ordering_string_byte_at(value: String, index: U32) -> U8 {
+  value.byte_at(index)
+}
 builtin ordering_string_view_byte_length(value: StringView) -> U32 = "dew_string_view_byte_length"
 builtin ordering_string_view_byte_at(value: StringView, index: U32) -> U8 = "dew_string_view_byte_at"
 builtin ordering_bytes_byte_length(value: Bytes) -> U32 = "dew_bytes_byte_length"

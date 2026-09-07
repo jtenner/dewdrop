@@ -5,7 +5,8 @@ import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {"equals": "equals", "utf16_length": "utf16_length", "hash": "hash",
+NAMES = {"byte_length": "byte_length", "byte_at": "byte_at",
+         "equals": "equals", "utf16_length": "utf16_length", "hash": "hash",
          "find_raw": "find", "find_view_raw": "find_view",
          "starts_with": "starts_with", "starts_with_view": "starts_with_view",
          "ends_with": "ends_with", "ends_with_view": "ends_with_view",
@@ -39,6 +40,19 @@ class StringAlgorithmPolicyTests(unittest.TestCase):
                      "self_host/compiler/main.dew"):
             with self.subTest(path=path):
                 self.assertFalse('"dew_string_equals"' in (ROOT / path).read_text(), f"{path}: obsolete String equality runtime lookup")
+
+    def test_string_access_does_not_use_runtime_shortcuts(self):
+        for path in ("std/ordering.dew", "std/text.dew",
+                     "self_host/compiler/facet_runtime.dew",
+                     "self_host/compiler/starshine_module.dew"):
+            source = (ROOT / path).read_text()
+            for name in ("byte_length", "byte_at"):
+                with self.subTest(path=path, name=name):
+                    self.assertFalse(f'"dew_string_{name}"' in source,
+                                     f"{path}: obsolete String access builtin")
+        self.assertFalse("self_host_linked_primitive_text_runtime_name" in
+                         (ROOT / "self_host/compiler/starshine_module.dew").read_text(),
+                         "String methods must use their selected declaration")
 
 
 if __name__ == "__main__":

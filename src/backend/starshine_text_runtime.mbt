@@ -131,11 +131,6 @@ fn starshine_text_length_type_body(base : Int, type_offset : Int) -> @lib.Func {
   )
 }
 
-///|
-fn starshine_text_length_body(base : Int, string_ : Bool) -> @lib.Func {
-  starshine_text_length_type_body(base, if string_ { 1 } else { 2 })
-}
-
 ///| Bounds-checked dynamic byte access over V128 chunks. Out-of-range access
 
 ///|
@@ -179,11 +174,6 @@ fn starshine_text_byte_at_type_body(base : Int, type_offset : Int) -> @lib.Func 
     ]),
     @lib.Expr::new(body),
   )
-}
-
-///|
-fn starshine_text_byte_at_body(base : Int, string_ : Bool) -> @lib.Func {
-  starshine_text_byte_at_type_body(base, if string_ { 1 } else { 2 })
 }
 
 ///|
@@ -1562,14 +1552,10 @@ fn emit_starshine_text_runtime_function(
   wasi_fd_write_function_index : Int,
   wasi_fd_read_function_index : Int,
 ) -> @lib.Func? {
-  if name == b"dew_string_byte_length" {
-    Some(starshine_text_length_body(base, true))
-  } else if name == b"dew_bytes_byte_length" {
-    Some(starshine_text_length_body(base, false))
+  if name == b"dew_bytes_byte_length" {
+    Some(starshine_text_length_type_body(base, 2))
   } else if name == b"dew_string_as_bytes" {
     Some(starshine_text_reference_cast_body(base + 2))
-  } else if name == b"dew_string_byte_at" {
-    Some(starshine_text_byte_at_body(base, true))
   } else if name == b"dew_string_view" {
     Some(starshine_string_view_body(base, 1))
   } else if name == b"dew_string_view_byte_length" {
@@ -1613,7 +1599,7 @@ fn emit_starshine_text_runtime_function(
   } else if name == b"dew_bytes_to_string_unchecked" {
     Some(starshine_text_reference_cast_body(base + 1))
   } else if name == b"dew_bytes_byte_at" {
-    Some(starshine_text_byte_at_body(base, false))
+    Some(starshine_text_byte_at_type_body(base, 2))
   } else if name == b"dew_bytes_view" {
     Some(starshine_bytes_view_body(base))
   } else if name == b"dew_bytes_concat" {

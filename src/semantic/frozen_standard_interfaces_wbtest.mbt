@@ -20,7 +20,9 @@ test "frozen standard runtime calls remain reachable" {
   )
   let fragments = plan_program_wasmgc_fragments(analyzed, lowering)
   let runtime_index = program.module_index("dew.std.text_runtime").unwrap()
-  let declaration = make_semantic_id(0xffff0001UL, 1)
+  let declaration = program.modules[runtime_index]
+    .lookup_value("string_as_bytes_unchecked")
+    .unwrap()
   let mut referenced = false
   for module_ in lowering.modules {
     for body in module_.bodies {

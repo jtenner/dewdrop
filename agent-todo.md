@@ -111,6 +111,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   See the [StringView log](docs/research/string-view-library-algorithms-2026-09-06.md).
   String scans, equality, and concatenation use the Bytes library path. The
   String equality runtime builder and runtime-name lookup are removed.
+  String byte access, ordering, and text iteration use the Bytes path. The
+  emitter no longer selects text methods by name. See the
+  [byte access log](docs/research/string-byte-access-2026-09-07.md).
   See the [String log](docs/research/string-library-algorithms-2026-09-06.md).
   String pattern inference now selects the ordinary Eq method and keeps the
   literal's String type. Lowering and specialization retain that evidence.

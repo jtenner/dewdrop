@@ -74,6 +74,18 @@ pub fn main(case: U32) -> I32 {
     string_result(left.equals(right) && strings_same(left, right) && !strings_different(left, right) && string_field_same(StringLabel::{
       name: left
     }, right))
+  } else if case == 9u32 {
+    let value = "!0123456789abcdefλ🌍?".view(1u32, 22u32).to_string()
+    string_result("".byte_length() == 0u32 && value.byte_length() == 22u32 && value.byte_at(0u32) == 48u8 && value.byte_at(15u32) == 102u8 && value.byte_at(16u32) == 206u8 && value.byte_at(17u32) == 187u8 && value.byte_at(18u32) == 240u8 && value.byte_at(21u32) == 141u8)
+  } else if case == 10u32 {
+    "x".byte_at(1u32)
+    0i32
+  } else if case == 11u32 {
+    "x".byte_at(4294967295u32)
+    0i32
+  } else if case == 12u32 {
+    "".byte_at(0u32)
+    0i32
   } else {
     unreachable()
   }

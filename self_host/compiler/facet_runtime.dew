@@ -44,14 +44,18 @@ builtin self_host_facet_bytes_byte_at(
   index: U32,
 ) -> U8 = "dew_bytes_byte_at"
 
-builtin self_host_facet_string_byte_length(
+fn self_host_facet_string_byte_length(
   value: String,
-) -> U32 = "dew_string_byte_length"
+) -> U32 {
+  value.byte_length()
+}
 
-builtin self_host_facet_string_byte_at(
+fn self_host_facet_string_byte_at(
   value: String,
   index: U32,
-) -> U8 = "dew_string_byte_at"
+) -> U8 {
+  value.byte_at(index)
+}
 
 struct FacetProcess {
 }
