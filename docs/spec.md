@@ -1035,6 +1035,8 @@ One trailing comma is accepted in trait type-parameter and method-parameter list
 
 A bare trait is module-visible; `pub trait` exports it. Trait methods inherit membership in the trait contract and do not have separate visibility modifiers.
 
+Implementation signature comparison validates both complete type graphs, including generic and `Self` substitution edges, before applying equality or error recovery. Cycles and invalid owned spans are compiler contract failures, not type mismatches or depth-limit results. Equal structural type IDs do not bypass comparison of children under different generic contexts. Completed shared children are valid; nominal declaration references do not expand into their declarations during this walk.
+
 Dew supports static and instance trait methods. Static trait methods are callable using qualified syntax:
 
 ```dew

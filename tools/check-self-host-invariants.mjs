@@ -11,6 +11,10 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "EVD-211 implementation type cycles retain the type identity",
+    expected: [211, 3, 6014n, 0n, 0n, 3, 0n, 3n, 1n],
+  },
+  {
     name: "EVD-211 interface type cycles retain the type identity",
     expected: [211, 3, 6000n, 0n, 0n, 3, 0n, 3n, 1n],
   },

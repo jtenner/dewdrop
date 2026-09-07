@@ -517,51 +517,6 @@ priv struct ImplTypeContext {
 }
 
 ///|
-fn impl_substitute_type(
-  resolved : ResolvedModuleTypes,
-  root : ResolvedTypeId,
-  context : ImplTypeContext,
-) -> ResolvedTypeId {
-  let mut current = root
-  while true {
-    let next = match resolved.types[current] {
-      GenericParameterType(parameter) => {
-        let parameter_index = semantic_id_local(parameter)
-        if parameter_index >= context.generic_parameters.start &&
-          parameter_index <
-          context.generic_parameters.start + context.generic_parameters.length {
-          let relative = parameter_index - context.generic_parameters.start
-          if relative < context.generic_arguments.length {
-            resolved.type_arguments[context.generic_arguments.start + relative]
-          } else {
-            current
-          }
-        } else if parameter_index >= context.method_parameters.start &&
-          parameter_index <
-          context.method_parameters.start + context.method_parameters.length {
-          let relative = parameter_index - context.method_parameters.start
-          if relative < context.method_arguments.length {
-            resolved.generic_parameter_types[context.method_arguments.start +
-            relative]
-          } else {
-            current
-          }
-        } else {
-          current
-        }
-      }
-      SelfType(owner) if owner == context.self_owner => context.self_type
-      _ => current
-    }
-    if next == current {
-      return current
-    }
-    current = next
-  }
-  root
-}
-
-///|
 fn impl_signature_types_equal(
   resolved : ResolvedModuleTypes,
   left_root : ResolvedTypeId,
@@ -569,77 +524,14 @@ fn impl_signature_types_equal(
   right_root : ResolvedTypeId,
   right_context : ImplTypeContext,
 ) -> Bool {
-  let left_stack : Array[ResolvedTypeId] = [left_root]
-  let right_stack : Array[ResolvedTypeId] = [right_root]
-  while left_stack.length() > 0 {
-    let left = impl_substitute_type(
-      resolved,
-      left_stack.pop().unwrap(),
-      left_context,
-    )
-    let right = impl_substitute_type(
-      resolved,
-      right_stack.pop().unwrap(),
-      right_context,
-    )
-    if left == right {
-      continue
-    }
-    match (resolved.types[left], resolved.types[right]) {
-      (ErrorType, _) | (_, ErrorType) => continue
-      (ProductType(left_fields), ProductType(right_fields)) => {
-        if left_fields.length != right_fields.length {
-          return false
-        }
-        let mut index = left_fields.length
-        while index > 0 {
-          index -= 1
-          left_stack.push(resolved.type_arguments[left_fields.start + index])
-          right_stack.push(resolved.type_arguments[right_fields.start + index])
-        }
-      }
-      (
-        AppliedType(left_base, left_arguments),
-        AppliedType(right_base, right_arguments),
-      ) => {
-        if left_arguments.length != right_arguments.length {
-          return false
-        }
-        left_stack.push(left_base)
-        right_stack.push(right_base)
-        let mut index = left_arguments.length
-        while index > 0 {
-          index -= 1
-          left_stack.push(resolved.type_arguments[left_arguments.start + index])
-          right_stack.push(
-            resolved.type_arguments[right_arguments.start + index],
-          )
-        }
-      }
-      (
-        FunctionType(left_parameters, left_result),
-        FunctionType(right_parameters, right_result),
-      ) => {
-        if left_parameters.length != right_parameters.length {
-          return false
-        }
-        left_stack.push(left_result)
-        right_stack.push(right_result)
-        let mut index = left_parameters.length
-        while index > 0 {
-          index -= 1
-          left_stack.push(
-            resolved.type_arguments[left_parameters.start + index],
-          )
-          right_stack.push(
-            resolved.type_arguments[right_parameters.start + index],
-          )
-        }
-      }
-      _ => return false
-    }
+  match
+    check_impl_signature_types_equal(
+      resolved, left_root, left_context, right_root, right_context,
+    ) {
+    Ok(equal) => equal
+    Err(error) =>
+      abort("implementation type graph invariant: " + @debug.to_string(error))
   }
-  right_stack.length() == 0
 }
 
 ///|

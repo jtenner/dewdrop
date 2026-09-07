@@ -240,7 +240,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   [shared search log](docs/research/shared-trait-evidence-2026-09-07.md).
   Both interface visibility walkers now check cycles and owned spans and handle
   deep/shared type graphs. Private or Error siblings cannot hide a cycle.
-  Native inference search and implementation comparison still need closure.
+  Both implementation signature comparators now check complete graphs and
+  substitution edges before equality or Error recovery. There is no fixed
+  depth cutoff; cycles retain numeric type context. Equal type IDs still check
+  children under different generic contexts. See the
+  [implementation walk log](docs/research/implementation-type-walks-2026-09-07.md).
+  Native inference search still needs closure.
   See the [interface walk log](docs/research/interface-type-walks-2026-09-07.md).
 - [ ] Complete stable numeric failure records and the negative invariant tests.
   Start with a valid state, change one field, and check the exact code and source
