@@ -1506,11 +1506,37 @@ fn record_program_specialized_call(
   target_specialization_abi_key : String,
   forwarded_runtime_evidence_parameters : Array[Int],
 ) -> Unit {
+  match
+    try_record_program_specialized_call(
+      calls, runtime_evidence_parameters, caller_body, caller_specialization_abi_key,
+      expression, target, target_specialization_abi_key, forwarded_runtime_evidence_parameters,
+    ) {
+    Ok(_) => ()
+    Err(error) => abort(error)
+  }
+}
+
+///|
+// Check the complete target before touching either parallel arena. An identical
+// replay is harmless; a different ABI or hidden operand is not a replay.
+fn try_record_program_specialized_call(
+  calls : Array[PlannedProgramSpecializedCall],
+  runtime_evidence_parameters : Array[Int],
+  caller_body : BodyId,
+  caller_specialization_abi_key : String,
+  expression : ExprId,
+  target : DeclId,
+  target_specialization_abi_key : String,
+  forwarded_runtime_evidence_parameters : Array[Int],
+) -> Result[Unit, String] {
   for existing in calls {
     if existing.caller_body == caller_body &&
       existing.caller_specialization_abi_key == caller_specialization_abi_key &&
       existing.expression == expression {
-      return
+      return verify_program_specialized_call_replay(
+        existing, runtime_evidence_parameters, target, target_specialization_abi_key,
+        forwarded_runtime_evidence_parameters,
+      )
     }
   }
   let parameter_start = runtime_evidence_parameters.length()
@@ -1528,6 +1554,48 @@ fn record_program_specialized_call(
       length: forwarded_runtime_evidence_parameters.length(),
     },
   })
+  Ok(())
+}
+
+///|
+fn verify_program_specialized_call_replay(
+  existing : PlannedProgramSpecializedCall,
+  runtime_evidence_parameters : Array[Int],
+  target : DeclId,
+  target_specialization_abi_key : String,
+  forwarded_runtime_evidence_parameters : Array[Int],
+) -> Result[Unit, String] {
+  let context = "body=\{existing.caller_body} caller=\{existing.caller_specialization_abi_key} expression=\{existing.expression}"
+  if existing.target != target ||
+    existing.target_specialization_abi_key != target_specialization_abi_key {
+    return Err(
+      "SPC-303 \{context} expected=\{existing.target}:\{existing.target_specialization_abi_key} actual=\{target}:\{target_specialization_abi_key}",
+    )
+  }
+  let span = existing.runtime_evidence_parameters
+  guard program_specialization_span_is_valid(
+    span,
+    runtime_evidence_parameters.length(),
+  ) else {
+    return Err(
+      "ARN-101 \{context} evidence span=\{span.start}:\{span.length} arena=\{runtime_evidence_parameters.length()}",
+    )
+  }
+  if span.length != forwarded_runtime_evidence_parameters.length() {
+    return Err(
+      "SPC-303 \{context} expected evidence count=\{span.length} actual=\{forwarded_runtime_evidence_parameters.length()}",
+    )
+  }
+  for index in 0..<span.length {
+    let expected = runtime_evidence_parameters[span.start + index]
+    let actual = forwarded_runtime_evidence_parameters[index]
+    if expected != actual {
+      return Err(
+        "SPC-303 \{context} evidence=\{index} expected=\{expected} actual=\{actual}",
+      )
+    }
+  }
+  Ok(())
 }
 
 ///|
@@ -1545,6 +1613,24 @@ fn record_program_evidence_function_reference(
     if existing.caller_body == caller_body &&
       existing.caller_specialization_abi_key == caller_specialization_abi_key &&
       existing.expression == expression {
+      match
+        verify_program_specialized_call_replay(
+          {
+            caller_body: existing.caller_body,
+            caller_specialization_abi_key: existing.caller_specialization_abi_key,
+            expression: existing.expression,
+            target: existing.target,
+            target_specialization_abi_key: existing.target_specialization_abi_key,
+            runtime_evidence_parameters: existing.runtime_evidence_parameters,
+          },
+          runtime_evidence_parameters,
+          target,
+          target_specialization_abi_key,
+          forwarded_runtime_evidence_parameters,
+        ) {
+        Ok(_) => ()
+        Err(error) => abort(error)
+      }
       return
     }
   }

@@ -11,6 +11,14 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "SPC-303 source call declarations cannot disagree",
+    expected: [303, 5, 77n, (88n << 32n) + 11n, (77n << 32n) + 17n, 19, (88n << 32n) + 11n, (88n << 32n) + 12n, 3n],
+  },
+  {
+    name: "SPC-303 source call specializations cannot disagree",
+    expected: [303, 5, 77n, (88n << 32n) + 11n, (77n << 32n) + 17n, 19, 7n, 9n, 3n],
+  },
+  {
     name: "ARN-104 compile-time storage requires prior child types",
     expected: [104, 2, 24702n, 0n, 0n, 4294967295, 1n, 1n, 0n],
   },

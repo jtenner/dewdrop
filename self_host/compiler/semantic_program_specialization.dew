@@ -539,6 +539,75 @@ fn self_host_program_specialization_record_call(
   })
 }
 
+// Receiver normalization can add requests while the work queue is running.
+// Check the final semantic targets before fragments can discard that identity.
+// Use two exact integer keys, not a hash or a string as identity evidence.
+fn self_host_program_specialization_call_bodies() -> Map<U64, Map<U64, U32>> {
+  Map::empty()
+}
+
+fn self_host_program_specialization_verify_calls(
+  calls: Array<SelfHostProgramSpecializedCall>,
+) -> Unit {
+  let bodies = self_host_program_specialization_call_bodies()
+  let mut index = 0u32
+  while index {
+    _ => if index < calls.length() {
+      let call = calls[index]
+      let entries = match bodies.get(call.caller_body) {
+        Option::Some(value) => value
+        Option::None => {
+          let value = self_host_empty_u64_u32_map()
+          bodies.set(call.caller_body, value)
+          value
+        }
+      }
+      let key = (u32_into_u64(call.caller_specialization) << 32u64) |
+        u32_into_u64(call.expression)
+      match entries.get(key) {
+        Option::Some(previous_index) => {
+          let previous = calls[previous_index]
+          let _ = self_host_assert_compiler_invariant_with_failure(
+            previous.target == call.target,
+            SelfHostInvariantFailure::{
+              code: 303u32
+              phase: 5u32
+              module_id: self_host_semantic_id_module(call.caller_body)
+              declaration: previous.target
+              body: call.caller_body
+              expression: call.expression
+              expected: previous.target
+              actual: call.target
+              detail: u32_into_u64(call.caller_specialization)
+            },
+            "one source call key has two declarations",
+          )
+          let _ = self_host_assert_compiler_invariant_with_failure(
+            previous.target_specialization == call.target_specialization,
+            SelfHostInvariantFailure::{
+              code: 303u32
+              phase: 5u32
+              module_id: self_host_semantic_id_module(call.caller_body)
+              declaration: call.target
+              body: call.caller_body
+              expression: call.expression
+              expected: u32_into_u64(previous.target_specialization)
+              actual: u32_into_u64(call.target_specialization)
+              detail: u32_into_u64(call.caller_specialization)
+            },
+            "one source call key has two specializations",
+          )
+        }
+        Option::None => entries.set(key, index)
+      }
+      index = index + 1u32
+      continue index
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
 fn self_host_program_specialization_mark_nominal(
   reachable: Array<U64>,
   reachable_seen: Map<U64, Bool>,
@@ -2068,6 +2137,7 @@ fn self_host_plan_program_specialization(
       continue step + 1u32
     }
   }
+  self_host_program_specialization_verify_calls(calls)
   SelfHostProgramSpecializationPlan::{
     lowering: lowering
     reachable_declarations: reachable

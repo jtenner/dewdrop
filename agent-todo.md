@@ -162,6 +162,10 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.
+  Native replays now verify declarations, ABI keys, and hidden evidence operands;
+  self-host source call records are checked before fragment planning. Both
+  target disagreements have exact numeric-record tests. See the
+  [call identity log](docs/research/specialized-call-identity-2026-09-07.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.
