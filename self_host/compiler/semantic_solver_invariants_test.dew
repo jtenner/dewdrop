@@ -110,3 +110,117 @@ test "resolved type encoding round trips at the signed limit" {
   assert(encoded == -2147483648i32, "last encodable resolved type")
   assert(solver.decoded_resolved_type(encoded) == 2147483646u32, "decode the last encodable type")
 }
+
+test "SOL-205 undo size must be positive" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  let snapshot = solver.snapshot()
+  solver.set_variable_size(0u32, 1u32)
+  solver.undo_values[0u32] = 0i32
+  solver.rollback(snapshot)
+}
+
+test "SOL-205 undo binding must name a present type" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.fresh_variable()
+  let snapshot = solver.snapshot()
+  solver.set_variable_binding(0u32, 0i32)
+  solver.undo_values[0u32] = 2i32
+  solver.rollback(snapshot)
+}
+
+test "SOL-206 unify cannot discard a broken work stack" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  solver.unify_left.push(0i32)
+  let _ = solver.unify(0i32, 0i32, self_host_synthetic_type_origin(0u32, 0u32))
+}
+
+test "SOL-206 zonk cannot discard a broken work stack" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  solver.zonk_task_types.push(0i32)
+  let _ = solver.zonk_type(0i32)
+}
+
+test "SOL-206 type caches must remain parallel" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  solver.zonk_values.clear()
+  let _ = solver.snapshot()
+}
+
+test "SOL-206 zonk product must have its child results" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let product = solver.product_type([0i32])
+  solver.finish_zonk_product(product, 0u32)
+}
+
+test "ARN-101 zonk argument span must belong to its arena" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.product_type([0i32])
+  solver.push_zonk_span(SelfHostHirSpan::{
+    start: 1u32
+    length: 1u32
+  })
+}
+
+test "SOL-206 zonk application must have the correct term" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  solver.finish_zonk_application(0i32, 0u32)
+}
+
+test "SOL-206 zonk function must have the correct term" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  solver.finish_zonk_function(0i32, 0u32)
+}
+
+test "SOL-206 zonk product must have the correct term" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  solver.finish_zonk_product(0i32, 0u32)
+}
+
+test "SOL-204 rollback cannot invent missing arena contents" expect_trap "unreachable" {
+  let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
+  let _ = solver.product_type([0i32])
+  let snapshot = solver.snapshot()
+  solver.type_arguments.clear()
+  solver.rollback(snapshot)
+}
+
+test "solver nested committed changes restore parents sizes and bindings" {
+  let fixture = self_host_unification_test_types()
+  let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
+  let a = solver.fresh_variable()
+  let b = solver.fresh_variable()
+  let scalar = solver.resolved_type(fixture.resolved.primitive(SelfHostPrimitiveType::I32Type))
+  let parents = solver.variable_parents.copy()
+  let sizes = solver.variable_sizes.copy()
+  let bindings = solver.variable_bindings.copy()
+  let variables = solver.variable_types.copy()
+  let type_count = solver.type_count()
+  let outer = solver.snapshot()
+  let origin = self_host_synthetic_type_origin(0u32, 1u32)
+  assert(solver.unify(a, b, origin), "union inside outer snapshot")
+  let inner = solver.snapshot()
+  assert(solver.unify(b, scalar, origin), "bind inside inner snapshot")
+  let _ = solver.product_type([solver.fresh_variable(), a])
+  solver.commit(inner)
+  solver.rollback(outer)
+  assert(solver.variable_count() == 2u32, "variable arena restored")
+  let _ = while 0u32 {
+    index => if index < 2u32 {
+      assert(solver.variable_parents[index] == parents[index], "parent contents restored")
+      assert(solver.variable_sizes[index] == sizes[index], "size contents restored")
+      assert(solver.variable_bindings[index] == bindings[index], "binding contents restored")
+      assert(solver.variable_types[index] == variables[index], "variable types restored")
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  assert(solver.type_count() == type_count, "type arena restored")
+  assert(solver.type_arguments.length() == 0u32, "argument arena restored")
+  assert(solver.diagnostic_count() == 0u32, "diagnostics restored")
+  assert(solver.snapshot_count() == 0u32, "snapshots closed")
+  assert(solver.undo_count() == 0u32, "undo records consumed")
+  solver.assert_type_caches()
+  solver.assert_undo_arrays()
+}

@@ -24,6 +24,7 @@ let zonk_finish_projection = 4
 
 ///|
 pub struct InferenceSnapshot {
+  token : UInt64
   undo_start : Int
   variable_count : Int
   type_count : Int
@@ -43,6 +44,7 @@ pub struct LocalTypeSolver {
   variable_types : Array[BodyTypeId]
   diagnostics : Array[LocalInferenceDiagnostic]
   snapshots : Array[InferenceSnapshot]
+  mut next_snapshot_token : UInt64
   undo_kinds : Array[Int]
   undo_indices : Array[Int]
   undo_values : Array[Int]
@@ -78,6 +80,7 @@ pub fn LocalTypeSolver::new(
     variable_types: [],
     diagnostics: [],
     snapshots: [],
+    next_snapshot_token: 0UL,
     undo_kinds: [],
     undo_indices: [],
     undo_values: [],
@@ -1024,13 +1027,19 @@ pub fn LocalTypeSolver::unify(
 
 ///|
 pub fn LocalTypeSolver::snapshot(self : LocalTypeSolver) -> InferenceSnapshot {
+  guard self.next_snapshot_token < 18446744073709551615UL else {
+    abort("SOL-204 inference snapshot identity space exhausted")
+  }
   let snapshot = {
+    token: self.next_snapshot_token,
     undo_start: self.undo_kinds.length(),
     variable_count: self.variable_parents.length(),
     type_count: self.types.length(),
     argument_count: self.type_arguments.length(),
     diagnostic_count: self.diagnostics.length(),
   }
+  // Never reset this counter: a handle from a previous job must stay stale.
+  self.next_snapshot_token += 1UL
   self.snapshots.push(snapshot)
   snapshot
 }
@@ -1057,7 +1066,7 @@ pub fn LocalTypeSolver::rollback(
 ) -> Unit {
   guard self.snapshots.length() > 0 &&
     self.snapshots[self.snapshots.length() - 1] == snapshot else {
-    abort("inference snapshots must roll back in LIFO order")
+    abort("SOL-204 inference snapshots must roll back in LIFO order")
   }
   self.restore_undo(snapshot.undo_start)
   self.variable_parents.truncate(snapshot.variable_count)
@@ -1085,7 +1094,7 @@ pub fn LocalTypeSolver::commit(
 ) -> Unit {
   guard self.snapshots.length() > 0 &&
     self.snapshots[self.snapshots.length() - 1] == snapshot else {
-    abort("inference snapshots must commit in LIFO order")
+    abort("SOL-204 inference snapshots must commit in LIFO order")
   }
   ignore(self.snapshots.pop())
   if self.snapshots.length() == 0 {

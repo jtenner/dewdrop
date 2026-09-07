@@ -192,6 +192,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   expression lookup reports ARN-102 before subtraction. Boundary and exact
   failure-record tests pass; other phase consumers remain to be audited. See
   [checked index notes](docs/research/checked-body-indices-2026-09-07.md).
+  Solver work stacks and undo values now have numeric checks. Native snapshots
+  have unique tokens, including across reset. Nested rollback tests check saved
+  contents. See [solver notes](docs/research/solver-work-stack-contracts-2026-09-07.md).
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
   order must hold, and stored identities, physical indices, and import offsets
   must agree. Missing bases or bodies must produce a diagnostic.
