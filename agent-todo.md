@@ -156,6 +156,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   foreign calls. Shared tests cover partial/empty/multi-window operations and
   invalid host results. The obsolete read runtime is removed; Debug's old write
   transport remains. See the [Bytes I/O log](docs/research/wasi-bytes-library-2026-09-07.md).
+  Integer Debug formatting now uses Dew functions and a bounded foreign-write
+  loop. The eight old formatters are removed from both compiler backends; float,
+  text, and V128 formatting still remain. See the
+  [integer Debug log](docs/research/debug-integers-library-2026-09-07.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
@@ -163,6 +167,8 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Delete unused legacy builtin plans/builders after each migration. Enforce
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.
+  Include the pinned Starshine `src/ffi_bridge` runtime copies in each removal;
+  several old text and Array algorithms still exist there after native cleanup.
 
 ### Finish the compiler correctness audit
 

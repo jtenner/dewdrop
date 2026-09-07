@@ -3,8 +3,16 @@
 test "standard preamble is a deterministic declaration prefix" {
   let source = b"pub fn identity(value: I32) -> I32 {\n  value\n}\n"
   let collected = collect_bytes_with_standard_preamble(995UL, source)
-  assert_eq(collected.preamble_declaration_count, 1334)
-  assert_eq(collected.declarations.length(), 836)
+  let preamble = collect_program_files(995UL, [])
+  assert_eq(preamble.diagnostics.length(), 0)
+  assert_eq(
+    collected.preamble_declaration_count,
+    preamble.preamble_declaration_count,
+  )
+  assert_eq(collected.declarations.length(), preamble.declarations.length() + 1)
+  for index, declaration in preamble.declarations {
+    assert_eq(collected.declarations[index], declaration)
+  }
   assert_eq(collected.diagnostics.length(), 0)
   let identity = collected.lookup_value("identity").unwrap()
   assert_eq(semantic_id_local(identity), collected.preamble_declaration_count)
@@ -498,7 +506,13 @@ test "single-module phase helper never injects optional standard sources" {
   let resolved = resolve_module_types(collected)
   let names = resolve_module_names(collected)
   let inferred = infer_module_bodies(collected, resolved, names)
-  assert_eq(collected.preamble_declaration_count, 1334)
+  let preamble = collect_program_files(987UL, [])
+  assert_eq(
+    collected.preamble_declaration_count,
+    preamble.preamble_declaration_count,
+  )
+  assert_eq(collected.files.length(), preamble.files.length() + 1)
+  assert_eq(collected.lookup_value("string_builder_new"), None)
   assert_eq(inferred.diagnostics.length(), 1)
   match inferred.diagnostics[0] {
     NoMatchingMethod(_, _, _) => ()

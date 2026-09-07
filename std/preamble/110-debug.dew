@@ -4,14 +4,85 @@ pub trait Debug {
 
 builtin __dew_debug_write(fd: U32, value: Bytes) -> U32 = "dew_wasi_fd_write"
 fn __dew_debug_ignore(value: U32) -> Unit {}
-builtin __dew_debug_i8(value: I8) -> U32 = "dew_debug_i8"
-builtin __dew_debug_i16(value: I16) -> U32 = "dew_debug_i16"
-builtin __dew_debug_i32(value: I32) -> U32 = "dew_debug_i32"
-builtin __dew_debug_i64(value: I64) -> U32 = "dew_debug_i64"
-builtin __dew_debug_u8(value: U8) -> U32 = "dew_debug_u8"
-builtin __dew_debug_u16(value: U16) -> U32 = "dew_debug_u16"
-builtin __dew_debug_u32(value: U32) -> U32 = "dew_debug_u32"
-builtin __dew_debug_u64(value: U64) -> U32 = "dew_debug_u64"
+// The synchronous host call owns this scratch range until it returns.
+// No host callback may re-enter Debug while its bytes are pending.
+fn __dew_debug_write_scratch(start: U32, length: U32) -> U32 {
+  if start < 16u32 || start > 65536u32 || length > 65536u32 - start {
+    unreachable()
+  }
+  while 0u32 {
+    written if written < length => {
+      let remaining = length - written
+      u32_store(0u32, start + written)
+      u32_store(4u32, remaining)
+      u32_store(8u32, 0u32)
+      if DebugOutput.__dew_debug_fd_write(1u32, 0u32, 1u32, 8u32) != 0u32 {
+        unreachable()
+      } else {
+        let count = u32_load(8u32)
+        if count == 0u32 || count > remaining {
+          unreachable()
+        } else {
+          continue written + count
+        }
+      }
+    }
+    _ => break length
+  }
+}
+
+fn __dew_debug_integer(value: U64, negative: Bool) -> U32 {
+  // A U64 needs at most 20 decimal digits. Reserve 32 bytes, including sign.
+  let mut cursor = 48u32
+  let _ = while value {
+    magnitude => {
+      cursor = cursor - 1u32
+      u8_store(cursor, u64_into_u8(magnitude % 10u64 + 48u64))
+      let next = magnitude / 10u64
+      if next == 0u64 {
+        break 0u32
+      } else {
+        continue next
+      }
+    }
+  }
+  if negative {
+    cursor = cursor - 1u32
+    u8_store(cursor, 45u8)
+  }
+  __dew_debug_write_scratch(cursor, 48u32 - cursor)
+}
+
+fn __dew_debug_i8(value: I8) -> U32 {
+  __dew_debug_i64(i8_into_i64(i8_into_i8(value)))
+}
+fn __dew_debug_i16(value: I16) -> U32 {
+  __dew_debug_i64(i16_into_i64(i16_into_i16(value)))
+}
+fn __dew_debug_i32(value: I32) -> U32 {
+  __dew_debug_i64(value.into())
+}
+fn __dew_debug_i64(value: I64) -> U32 {
+  let bits = unsafe_bitcast::<I64, U64>(value)
+  if value < 0i64 {
+    // Unsigned subtraction also handles the signed minimum exactly.
+    __dew_debug_integer(0u64 - bits, true)
+  } else {
+    __dew_debug_integer(bits, false)
+  }
+}
+fn __dew_debug_u8(value: U8) -> U32 {
+  __dew_debug_u64(u8_into_u64(u8_into_u8(value)))
+}
+fn __dew_debug_u16(value: U16) -> U32 {
+  __dew_debug_u64(u16_into_u64(u16_into_u16(value)))
+}
+fn __dew_debug_u32(value: U32) -> U32 {
+  __dew_debug_u64(value.into())
+}
+fn __dew_debug_u64(value: U64) -> U32 {
+  __dew_debug_integer(value, false)
+}
 builtin __dew_debug_f32(value: F32) -> U32 = "dew_debug_f32"
 builtin __dew_debug_f64(value: F64) -> U32 = "dew_debug_f64"
 builtin __dew_debug_string(value: String) -> U32 = "dew_debug_string"

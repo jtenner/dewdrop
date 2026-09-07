@@ -6,7 +6,47 @@ test "all typed packed lane primitives resolve as distinct types" {
   let resolved = resolve_module_types(collected)
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(resolved.diagnostics.length(), 0)
-  assert_eq(collected.preamble_declaration_count, 1334)
+  let seen : Map[ResolvedTypeId, Bool] = Map([])
+  for
+    entry in [
+      ("keep_i8x4", I8x4Type),
+      ("keep_u8x4", U8x4Type),
+      ("keep_i16x2", I16x2Type),
+      ("keep_u16x2", U16x2Type),
+      ("keep_i8x8", I8x8Type),
+      ("keep_u8x8", U8x8Type),
+      ("keep_i16x4", I16x4Type),
+      ("keep_u16x4", U16x4Type),
+      ("keep_i32x2", I32x2Type),
+      ("keep_u32x2", U32x2Type),
+      ("keep_i8x16", I8x16Type),
+      ("keep_u8x16", U8x16Type),
+      ("keep_i16x8", I16x8Type),
+      ("keep_u16x8", U16x8Type),
+      ("keep_i32x4", I32x4Type),
+      ("keep_u32x4", U32x4Type),
+      ("keep_i64x2", I64x2Type),
+      ("keep_u64x2", U64x2Type),
+      ("keep_f32x4", F32x4Type),
+      ("keep_f64x2", F64x2Type),
+    ] {
+    let (name, primitive) = entry
+    let declaration = collected.lookup_value(name).unwrap()
+    let parameters = collected.parameters_of(declaration)
+    assert_eq(parameters.length, 1)
+    let type_id = resolved.parameter_types[parameters.start]
+    assert_eq(resolved.types[type_id], PrimitiveType(primitive))
+    assert_false(seen.contains(type_id), msg=name)
+    seen[type_id] = true
+    let mut found = false
+    for index, callable in collected.callables {
+      if callable.declaration == declaration {
+        assert_eq(resolved.callable_return_types[index], type_id)
+        found = true
+      }
+    }
+    assert_true(found, msg=name)
+  }
 }
 
 ///|

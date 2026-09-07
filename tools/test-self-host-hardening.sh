@@ -92,6 +92,11 @@ self_host_measure 'hardening product pattern request' \
     "$work/product-patterns.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-product-patterns.wasm \
     app.product_patterns tools/dew-test/product_patterns.dew
+self_host_measure 'hardening integer Debug request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/debug-integers.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-debug-integers.wasm \
+    app.debug_integers tools/dew-test/debug_integers.dew
 self_host_measure 'hardening WASI Bytes request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/wasi-bytes.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
