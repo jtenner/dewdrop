@@ -112,27 +112,9 @@ test "generated standard builtin registry matches collected bootstrap declaratio
   let map = program.modules[program.module_index("dew.std.map").unwrap()]
   assert_eq(map.module_id, standard_library_module_id(11))
   assert_standard_registry_declaration(map, 0, "Map")
-  assert_eq(
-    standard_map_method_declaration("singleton"),
-    make_semantic_id(map.module_id, 9),
-  )
-  assert_eq(
-    standard_map_method_declaration("clear"),
-    make_semantic_id(map.module_id, 18),
-  )
-  assert_eq(
-    standard_map_operation(make_semantic_id(map.module_id, 21)),
-    MapGetUnchecked,
-  )
-  assert_eq(standard_map_operation(make_semantic_id(map.module_id, 23)), MapSet)
-  assert_eq(
-    standard_map_operation(make_semantic_id(map.module_id, 24)),
-    MapEmpty,
-  )
-  assert_eq(
-    standard_map_operation(make_semantic_id(map.module_id, 26)),
-    MapClear,
-  )
+  for callable in map.callables {
+    assert_true(map.body_of(callable.declaration) is Some(_))
+  }
 
   let set = program.modules[program.module_index("dew.std.set").unwrap()]
   assert_eq(set.module_id, standard_library_module_id(12))

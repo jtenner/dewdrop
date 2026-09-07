@@ -239,14 +239,6 @@ fn program_reachable_callable_roots(
           | PlannedOperatorCall(target, _, _, _, _)
           | PlannedIndexCall(target, _, _, _)
           | PlannedIndexSetCall(target, _, _, _, _) => (target, 0UL)
-          PlannedMapSingleton(_, _, _, _, hash, eq)
-          | PlannedMapEmpty(_, _, hash, eq)
-          | PlannedMapGet(_, _, _, _, hash, eq)
-          | PlannedMapGetUnchecked(_, _, _, _, hash, eq) => (hash, eq)
-          PlannedMapInsert(_, _, _, _, _, hash, eq)
-          | PlannedMapSet(_, _, _, _, _, hash, eq) => (hash, eq)
-          PlannedMapContainsKey(_, _, _, hash, eq)
-          | PlannedMapRemove(_, _, _, hash, eq) => (hash, eq)
           PlannedSetEmpty(_, hash, eq)
           | PlannedSetSingleton(_, _, hash, eq)
           | PlannedSetContains(_, _, _, hash, eq)
@@ -404,17 +396,6 @@ fn program_reachable_callable_roots(
             PlannedStructNew(declaration, _, _) => reachable[declaration] = true
             PlannedArrayLiteral(_, _, _) =>
               reachable[standard_array_type_declaration()] = true
-            PlannedMapSingleton(_, _, _, _, _, _)
-            | PlannedMapEmpty(_, _, _, _)
-            | PlannedMapLength(_)
-            | PlannedMapGet(_, _, _, _, _, _)
-            | PlannedMapGetUnchecked(_, _, _, _, _, _)
-            | PlannedMapInsert(_, _, _, _, _, _, _)
-            | PlannedMapSet(_, _, _, _, _, _, _)
-            | PlannedMapContainsKey(_, _, _, _, _)
-            | PlannedMapRemove(_, _, _, _, _)
-            | PlannedMapClear(_) =>
-              reachable[standard_map_type_declaration()] = true
             PlannedSetEmpty(_, _, _)
             | PlannedSetSingleton(_, _, _, _)
             | PlannedSetLength(_)
@@ -3186,34 +3167,6 @@ fn plan_program_wasmgc_fragments_for_root(
         lowering, module_, selected_demand,
       ) {
       match expression.kind {
-        PlannedMapKeys(_, _, _)
-        | PlannedMapKeyIterNext(_, _, _)
-        | PlannedMapKeyIterNextOption(_, _, _) => {
-          program_roots[standard_map_type_declaration()] = true
-          program_roots[standard_map_key_iterator_type_declaration()] = true
-        }
-        PlannedMapValues(_, _, _)
-        | PlannedMapValueIterNext(_, _, _)
-        | PlannedMapValueIterNextOption(_, _, _) => {
-          program_roots[standard_map_type_declaration()] = true
-          program_roots[standard_map_value_iterator_type_declaration()] = true
-        }
-        PlannedMapEntries(_, _, _)
-        | PlannedMapEntryIterNext(_, _, _)
-        | PlannedMapEntryIterNextOption(_, _, _) => {
-          program_roots[standard_map_type_declaration()] = true
-          program_roots[standard_map_entry_iterator_type_declaration()] = true
-          program_roots[standard_map_entry_type_declaration()] = true
-        }
-        PlannedMapIterHasNext(_, iterator, _, _) => {
-          program_roots[standard_map_type_declaration()] = true
-          let declaration = match iterator {
-            0 => standard_map_key_iterator_type_declaration()
-            1 => standard_map_value_iterator_type_declaration()
-            _ => standard_map_entry_iterator_type_declaration()
-          }
-          program_roots[declaration] = true
-        }
         PlannedSetIter(_, _)
         | PlannedSetIterHasNext(_, _)
         | PlannedSetIterNext(_, _)

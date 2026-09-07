@@ -168,53 +168,36 @@ fn starshine_finish_hash_iter(
   body_id : @semantic.BodyId,
   operation : Int,
   key_shape : @semantic.PlannedValueShape,
-  value_shape : @semantic.PlannedValueShape,
+  _value_shape : @semantic.PlannedValueShape,
   fragments : Array[Array[@lib.Instruction]],
   iterator_local : Int,
   state_local : Int,
   entry_local : Int,
   _index_local : Int,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
-  let set_operation = (operation >= 10 && operation <= 12) || operation == 18
-  let collection_declaration = if set_operation {
-    @semantic.standard_set_type_declaration()
-  } else {
-    @semantic.standard_map_type_declaration()
+  if operation != 10 && operation != 11 && operation != 12 && operation != 18 {
+    return Err(UnsupportedExpression(body_id, -501))
   }
+  let collection_declaration = @semantic.standard_set_type_declaration()
   let collection_type = match
     starshine_emitted_type_index(planned, program, collection_declaration) {
     Some(value) => value
     None => return Err(UnsupportedExpression(body_id, -501))
   }
-  let iterator_declaration = match operation {
-    1 | 4 | 5 | 15 => @semantic.standard_map_key_iterator_type_declaration()
-    2 | 6 | 13 | 16 => @semantic.standard_map_value_iterator_type_declaration()
-    3 | 7 | 14 | 17 => @semantic.standard_map_entry_iterator_type_declaration()
-    10 | 11 | 12 | 18 => @semantic.standard_set_iterator_type_declaration()
-    _ => collection_declaration
+  let iterator_declaration = @semantic.standard_set_iterator_type_declaration()
+  let wrapper_type = match
+    starshine_emitted_type_index(planned, program, iterator_declaration) {
+    Some(value) => value
+    None => return Err(UnsupportedExpression(body_id, -501))
   }
-  let wrapper_type = starshine_emitted_type_index(
-    planned, program, iterator_declaration,
-  ).unwrap_or(collection_type)
   let map_base = starshine_map_base_for_body(planned, program)
   let bucket_type = map_base
   let entry_type = map_base + 1
   let output : Array[@lib.Instruction] = []
-  if operation == 8 || operation == 9 {
-    append_starshine_instructions(output, fragments[0])
-    output.push(starshine_match_cast(entry_type))
-    let shape = if operation == 8 { key_shape } else { value_shape }
-    let field = starshine_map_entry_field(shape, operation == 9)
-    if field < 0 {
-      return Err(UnsupportedExpression(body_id, -502))
-    }
-    output.push(starshine_map_entry_get(entry_type, field))
-    return Ok(output)
-  }
   if iterator_local < 0 || state_local < 0 || entry_local < 0 {
     return Err(UnsupportedExpression(body_id, -503))
   }
-  if operation == 1 || operation == 2 || operation == 3 || operation == 10 {
+  if operation == 10 {
     append_starshine_instructions(output, fragments[0])
     output.push(starshine_array_local_set(iterator_local))
     output.push(@lib.Instruction::i32_const(@lib.I32::new(2)))
@@ -250,7 +233,7 @@ fn starshine_finish_hash_iter(
       wrapper_type, collection_type, bucket_type, entry_type, iterator_local, entry_local,
     ),
   )
-  if operation == 4 || operation == 11 || operation == 13 || operation == 14 {
+  if operation == 11 {
     append_starshine_instructions(
       output,
       starshine_hash_iter_state_field(
@@ -268,7 +251,7 @@ fn starshine_finish_hash_iter(
     ),
   )
   output.push(starshine_array_local_set(entry_local))
-  if operation >= 15 && operation <= 18 {
+  if operation == 18 {
     let success : Array[@lib.Instruction] = []
     starshine_hash_iter_set_state_field(
       success,
@@ -309,23 +292,14 @@ fn starshine_finish_hash_iter(
       @lib.Instruction::if_(@lib.BlockType::void_(), advance_bucket, None),
     )
     let value : Array[@lib.Instruction] = []
-    let option_shape = if operation == 17 {
-      @semantic.planned_reference_shape()
-    } else {
-      let key_result = operation == 15 || operation == 18
-      let selected = if key_result { key_shape } else { value_shape }
-      let field = starshine_map_entry_field(selected, !key_result)
-      if field < 0 {
-        return Err(UnsupportedExpression(body_id, -504))
-      }
-      value.push(starshine_array_local_get(entry_local))
-      value.push(starshine_match_cast(entry_type))
-      value.push(starshine_map_entry_get(entry_type, field))
-      selected
+    let option_shape = key_shape
+    let field = starshine_map_entry_field(key_shape, false)
+    if field < 0 {
+      return Err(UnsupportedExpression(body_id, -504))
     }
-    if operation == 17 {
-      value.push(starshine_array_local_get(entry_local))
-    }
+    value.push(starshine_array_local_get(entry_local))
+    value.push(starshine_match_cast(entry_type))
+    value.push(starshine_map_entry_get(entry_type, field))
     match
       starshine_array_append_option(
         success, planned, program, option_shape, true, value,
@@ -405,18 +379,12 @@ fn starshine_finish_hash_iter(
   output.push(
     @lib.Instruction::if_(@lib.BlockType::void_(), advance_bucket, None),
   )
-  if operation == 7 {
-    output.push(starshine_array_local_get(entry_local))
-  } else {
-    let key_result = operation == 5 || operation == 12
-    let shape = if key_result { key_shape } else { value_shape }
-    let field = starshine_map_entry_field(shape, !key_result)
-    if field < 0 {
-      return Err(UnsupportedExpression(body_id, -504))
-    }
-    output.push(starshine_array_local_get(entry_local))
-    output.push(starshine_match_cast(entry_type))
-    output.push(starshine_map_entry_get(entry_type, field))
+  let field = starshine_map_entry_field(key_shape, false)
+  if field < 0 {
+    return Err(UnsupportedExpression(body_id, -504))
   }
+  output.push(starshine_array_local_get(entry_local))
+  output.push(starshine_match_cast(entry_type))
+  output.push(starshine_map_entry_get(entry_type, field))
   Ok(output)
 }

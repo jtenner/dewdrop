@@ -1308,45 +1308,6 @@ pub fn self_host_emit_erased_field_probe() -> Bytes {
   }
 }
 
-pub fn self_host_emit_string_map_probe() -> Bytes {
-  let manifest = SelfHostProgramManifest::{
-    modules: [
-      SelfHostManifestModule::{
-        path: "dew.std.option"
-        files: [SelfHostManifestFile::{
-          path: "option.dew"
-          source: b"pub enum Option<t> {\n  None\n  Some(t)\n}\n"
-          test_only: false
-        }]
-      },
-      SelfHostManifestModule::{
-        path: "dew.std.map"
-        files: [SelfHostManifestFile::{
-          path: "map.dew"
-          test_only: false
-          source: b"open dew.std.option\npub struct Map<k, v> {}\npub builtin map_empty<k, v>() -> Map<k, v> = \"dew_map_empty\"\npub builtin map_set<k, v>(map: Map<k, v>, key: k, value: v) -> Unit = \"dew_map_set\"\npub builtin map_get<k, v>(map: Map<k, v>, key: k) -> Option<v> = \"dew_map_get\"\nimpl<k, v> Map<k, v> {\n  fn empty() -> Map<k, v> {\n    map_empty()\n  }\n  fn set(self, key: k, value: v) -> Unit {\n    map_set(self, key, value)\n  }\n  fn get(self, key: k) -> Option<v> {\n    map_get(self, key)\n  }\n}\n"
-        }]
-      },
-      SelfHostManifestModule::{
-        path: "app.main"
-        files: [SelfHostManifestFile::{
-          path: "main.dew"
-          test_only: false
-          source: b"open dew.std.option\nopen dew.std.map\nbuiltin concat(left: String, right: String) -> String = \"dew_string_concat\"\nbuiltin equals(left: String, right: String) -> Bool = \"dew_string_equals\"\nfn empty() -> Map<String, U32> {\n  Map::empty()\n}\nfn lookup(map: Map<String, U32>, key: String) -> U32 {\n  match map.get(key) {\n    Option::Some(value) => value\n    Option::None => 0u32\n  }\n}\npub fn main() -> U32 {\n  let map = empty()\n  let key = concat(\"Op\", \"tion\")\n  if equals(key, \"Option\") {\n    map.set(key, 9u32)\n    map.set(\"Result\", 17u32)\n    lookup(map, concat(\"Opt\", \"ion\")) + lookup(map, \"Result\") + lookup(map, \"Missing\")\n  } else {\n    1u32\n  }\n}\n"
-        }]
-      },
-    ]
-  }
-  let link = self_host_physical_test_manifest_link(manifest)
-  self_host_physical_test_assert_clean_inference(link)
-  match build_self_host_linked_i32_module(link, 5502u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
-      assert(false, error)
-      b""
-    }
-  }
-}
 
 pub fn self_host_emit_string_equality_probe() -> Bytes {
   let fragments = self_host_physical_test_fragments(

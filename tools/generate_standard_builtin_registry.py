@@ -65,15 +65,16 @@ def rendered_source() -> str:
         prefix = f"standard_{module_name}"
         # Type identities may still be used by literal/runtime producers after
         # all operations have moved to ordinary library calls.
-        lines.extend(
-            [
-                "///|",
-                f"pub fn {prefix}_type_declaration() -> DeclId {{",
-                f"  make_semantic_id(standard_library_module_id({module.get('type_slot', module['slot'])}), {module['type']})",
-                "}",
-                "",
-            ]
-        )
+        if "type" in module:
+            lines.extend(
+                [
+                    "///|",
+                    f"pub fn {prefix}_type_declaration() -> DeclId {{",
+                    f"  make_semantic_id(standard_library_module_id({module.get('type_slot', module['slot'])}), {module['type']})",
+                    "}",
+                    "",
+                ]
+            )
         if "methods" in module:
             lines.extend([
                 "///|",

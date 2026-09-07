@@ -293,7 +293,7 @@ pub fn required_standard_library_source_paths(
   if include_array {
     required.push("std/array.dew")
   }
-  if include_map || include_array {
+  if include_map {
     required.push("std/map.dew")
   }
   if include_set {
@@ -442,7 +442,7 @@ pub fn required_standard_library_source_paths(
       )
     }
   }
-  if standard_types_requested(files) {
+  if standard_types_requested(files) || include_map {
     required.push("std/types.dew")
   }
   required
@@ -578,7 +578,9 @@ pub fn collect_program_manifest_with_standard_sources(
       facet_mask,
       lane_mask,
     ) = selected_standard_modules(files)
-    selected_types = selected_types || standard_types_requested(files)
+    selected_types = selected_types ||
+      standard_types_requested(files) ||
+      include_map
     selected_text_mask = selected_text_mask | text_mask
     selected_show = selected_show || include_show
     selected_disposable = selected_disposable || include_disposable
@@ -593,7 +595,7 @@ pub fn collect_program_manifest_with_standard_sources(
       include_array ||
       collection_mask != 0
     selected_array = selected_array || include_array || collection_mask != 0
-    selected_map = selected_map || include_map || include_array
+    selected_map = selected_map || include_map
     selected_set = selected_set || include_set
     selected_collection_mask = selected_collection_mask | collection_mask
     selected_facet_mask = selected_facet_mask | facet_mask

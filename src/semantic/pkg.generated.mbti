@@ -187,22 +187,6 @@ pub fn standard_deque_type_declaration() -> UInt64
 
 pub fn standard_library_source_paths() -> Array[String]
 
-pub fn standard_map_entry_iterator_type_declaration() -> UInt64
-
-pub fn standard_map_entry_type_declaration() -> UInt64
-
-pub fn standard_map_index_declaration() -> UInt64
-
-pub fn standard_map_index_set_declaration() -> UInt64
-
-pub fn standard_map_key_iterator_type_declaration() -> UInt64
-
-pub fn standard_map_method_declaration(String) -> UInt64
-
-pub fn standard_map_type_declaration() -> UInt64
-
-pub fn standard_map_value_iterator_type_declaration() -> UInt64
-
 pub fn standard_nullable_ref_type_declaration() -> UInt64
 
 pub fn standard_option_none_variant() -> UInt64
@@ -806,6 +790,8 @@ pub enum CollectionDiagnostic {
 } derive(Eq, @debug.Debug)
 
 type CompileTimeConstant derive(Eq, @debug.Debug)
+
+type CompileTimeEvidenceBudget
 
 type CompileTimeEvidenceSearch
 
@@ -1727,28 +1713,6 @@ pub enum PlannedExpressionKind {
   PlannedFixedArrayLength(Int, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(Int, Int, PlannedValueShape)
   PlannedFixedArraySetUnchecked(Int, Int, Int, PlannedValueShape)
-  PlannedMapSingleton(Int, Int, PlannedValueShape, PlannedValueShape, UInt64, UInt64)
-  PlannedMapEmpty(PlannedValueShape, PlannedValueShape, UInt64, UInt64)
-  PlannedMapLength(Int)
-  PlannedMapGet(Int, Int, PlannedValueShape, PlannedValueShape, UInt64, UInt64)
-  PlannedMapGetUnchecked(Int, Int, PlannedValueShape, PlannedValueShape, UInt64, UInt64)
-  PlannedMapInsert(Int, Int, Int, PlannedValueShape, PlannedValueShape, UInt64, UInt64)
-  PlannedMapSet(Int, Int, Int, PlannedValueShape, PlannedValueShape, UInt64, UInt64)
-  PlannedMapContainsKey(Int, Int, PlannedValueShape, UInt64, UInt64)
-  PlannedMapRemove(Int, Int, PlannedValueShape, UInt64, UInt64)
-  PlannedMapClear(Int)
-  PlannedMapKeys(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapValues(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntries(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapIterHasNext(Int, Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapKeyIterNext(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapKeyIterNextOption(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapValueIterNext(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapValueIterNextOption(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntryIterNext(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntryIterNextOption(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntryKey(Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntryValue(Int, PlannedValueShape, PlannedValueShape)
   PlannedSetEmpty(PlannedValueShape, UInt64, UInt64)
   PlannedSetSingleton(Int, PlannedValueShape, UInt64, UInt64)
   PlannedSetLength(Int)

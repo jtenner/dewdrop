@@ -92,65 +92,6 @@ pub enum PlannedExpressionKind {
   PlannedFixedArrayLength(ExprId, PlannedValueShape)
   PlannedFixedArrayGetUnchecked(ExprId, ExprId, PlannedValueShape)
   PlannedFixedArraySetUnchecked(ExprId, ExprId, ExprId, PlannedValueShape)
-  PlannedMapSingleton(
-    ExprId,
-    ExprId,
-    PlannedValueShape,
-    PlannedValueShape,
-    DeclId,
-    DeclId
-  )
-  PlannedMapEmpty(PlannedValueShape, PlannedValueShape, DeclId, DeclId)
-  PlannedMapLength(ExprId)
-  PlannedMapGet(
-    ExprId,
-    ExprId,
-    PlannedValueShape,
-    PlannedValueShape,
-    DeclId,
-    DeclId
-  )
-  PlannedMapGetUnchecked(
-    ExprId,
-    ExprId,
-    PlannedValueShape,
-    PlannedValueShape,
-    DeclId,
-    DeclId
-  )
-  PlannedMapInsert(
-    ExprId,
-    ExprId,
-    ExprId,
-    PlannedValueShape,
-    PlannedValueShape,
-    DeclId,
-    DeclId
-  )
-  PlannedMapSet(
-    ExprId,
-    ExprId,
-    ExprId,
-    PlannedValueShape,
-    PlannedValueShape,
-    DeclId,
-    DeclId
-  )
-  PlannedMapContainsKey(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
-  PlannedMapRemove(ExprId, ExprId, PlannedValueShape, DeclId, DeclId)
-  PlannedMapClear(ExprId)
-  PlannedMapKeys(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapValues(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntries(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapIterHasNext(ExprId, Int, PlannedValueShape, PlannedValueShape)
-  PlannedMapKeyIterNext(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapKeyIterNextOption(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapValueIterNext(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapValueIterNextOption(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntryIterNext(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntryIterNextOption(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntryKey(ExprId, PlannedValueShape, PlannedValueShape)
-  PlannedMapEntryValue(ExprId, PlannedValueShape, PlannedValueShape)
   PlannedSetEmpty(PlannedValueShape, DeclId, DeclId)
   PlannedSetSingleton(ExprId, PlannedValueShape, DeclId, DeclId)
   PlannedSetLength(ExprId)
@@ -1090,130 +1031,44 @@ fn plan_expression_kind(
           } else {
             ErrorPlannedValueShape
           }
-          let map_value_shape = if type_arguments.length > 1 {
-            planned_value_shape(
-              resolved,
-              inferred,
-              inferred.call_type_arguments[type_arguments.start + 1],
-            )
-          } else {
-            ErrorPlannedValueShape
-          }
           match standard_wasm_intrinsics_operation(declaration) {
             WasmRefNull => PlannedWasmRefNull
             WasmRefIsNull => PlannedWasmRefIsNull(base)
             WasmRefAsNonNull => PlannedWasmRefAsNonNull(base)
             _ =>
-              match standard_map_operation(declaration) {
-                MapSingleton => {
-                  let map_key = collected.expression_children[arguments.start]
-                  let map_value = collected.expression_children[arguments.start +
-                    1]
-                  PlannedMapSingleton(
-                    map_key, map_value, key_shape, map_value_shape, hash_declaration,
+              match standard_set_operation(declaration) {
+                SetEmpty =>
+                  PlannedSetEmpty(key_shape, hash_declaration, eq_declaration)
+                SetSingleton =>
+                  PlannedSetSingleton(
+                    collected.expression_children[arguments.start],
+                    key_shape,
+                    hash_declaration,
                     eq_declaration,
                   )
-                }
-                MapLength => PlannedMapLength(base)
-                MapGet =>
-                  PlannedMapGet(
-                    base, key, key_shape, map_value_shape, hash_declaration, eq_declaration,
-                  )
-                MapGetUnchecked =>
-                  PlannedMapGetUnchecked(
-                    base, key, key_shape, map_value_shape, hash_declaration, eq_declaration,
-                  )
-                MapInsert =>
-                  PlannedMapInsert(
-                    base, key, value, key_shape, map_value_shape, hash_declaration,
-                    eq_declaration,
-                  )
-                MapSet =>
-                  PlannedMapSet(
-                    base, key, value, key_shape, map_value_shape, hash_declaration,
-                    eq_declaration,
-                  )
-                MapContainsKey =>
-                  PlannedMapContainsKey(
+                SetLength => PlannedSetLength(base)
+                SetIsEmpty => PlannedSetIsEmpty(base)
+                SetContains =>
+                  PlannedSetContains(
                     base, key, key_shape, hash_declaration, eq_declaration,
                   )
-                MapEmpty =>
-                  PlannedMapEmpty(
-                    key_shape, map_value_shape, hash_declaration, eq_declaration,
-                  )
-                MapRemove =>
-                  PlannedMapRemove(
+                SetInsert =>
+                  PlannedSetInsert(
                     base, key, key_shape, hash_declaration, eq_declaration,
                   )
-                MapClear => PlannedMapClear(base)
-                MapKeys => PlannedMapKeys(base, key_shape, map_value_shape)
-                MapValues => PlannedMapValues(base, key_shape, map_value_shape)
-                MapEntries =>
-                  PlannedMapEntries(base, key_shape, map_value_shape)
-                MapKeyIterHasNext =>
-                  PlannedMapIterHasNext(base, 1, key_shape, map_value_shape)
-                MapValueIterHasNext =>
-                  PlannedMapIterHasNext(base, 2, key_shape, map_value_shape)
-                MapEntryIterHasNext =>
-                  PlannedMapIterHasNext(base, 3, key_shape, map_value_shape)
-                MapKeyIterNext =>
-                  PlannedMapKeyIterNext(base, key_shape, map_value_shape)
-                MapKeyIterNextOption =>
-                  PlannedMapKeyIterNextOption(base, key_shape, map_value_shape)
-                MapValueIterNext =>
-                  PlannedMapValueIterNext(base, key_shape, map_value_shape)
-                MapValueIterNextOption =>
-                  PlannedMapValueIterNextOption(
-                    base, key_shape, map_value_shape,
+                SetRemove =>
+                  PlannedSetRemove(
+                    base, key, key_shape, hash_declaration, eq_declaration,
                   )
-                MapEntryIterNext =>
-                  PlannedMapEntryIterNext(base, key_shape, map_value_shape)
-                MapEntryIterNextOption =>
-                  PlannedMapEntryIterNextOption(
-                    base, key_shape, map_value_shape,
-                  )
-                MapEntryKey =>
-                  PlannedMapEntryKey(base, key_shape, map_value_shape)
-                MapEntryValue =>
-                  PlannedMapEntryValue(base, key_shape, map_value_shape)
+                SetClear => PlannedSetClear(base)
+                SetIter => PlannedSetIter(base, key_shape)
+                SetIterHasNext => PlannedSetIterHasNext(base, key_shape)
+                SetIterNext => PlannedSetIterNext(base, key_shape)
+                SetIterNextOption => PlannedSetIterNextOption(base, key_shape)
                 _ =>
-                  match standard_set_operation(declaration) {
-                    SetEmpty =>
-                      PlannedSetEmpty(
-                        key_shape, hash_declaration, eq_declaration,
-                      )
-                    SetSingleton =>
-                      PlannedSetSingleton(
-                        collected.expression_children[arguments.start],
-                        key_shape,
-                        hash_declaration,
-                        eq_declaration,
-                      )
-                    SetLength => PlannedSetLength(base)
-                    SetIsEmpty => PlannedSetIsEmpty(base)
-                    SetContains =>
-                      PlannedSetContains(
-                        base, key, key_shape, hash_declaration, eq_declaration,
-                      )
-                    SetInsert =>
-                      PlannedSetInsert(
-                        base, key, key_shape, hash_declaration, eq_declaration,
-                      )
-                    SetRemove =>
-                      PlannedSetRemove(
-                        base, key, key_shape, hash_declaration, eq_declaration,
-                      )
-                    SetClear => PlannedSetClear(base)
-                    SetIter => PlannedSetIter(base, key_shape)
-                    SetIterHasNext => PlannedSetIterHasNext(base, key_shape)
-                    SetIterNext => PlannedSetIterNext(base, key_shape)
-                    SetIterNextOption =>
-                      PlannedSetIterNextOption(base, key_shape)
-                    _ =>
-                      PlannedDirectCall(
-                        declaration, receiver, arguments, type_arguments,
-                      )
-                  }
+                  PlannedDirectCall(
+                    declaration, receiver, arguments, type_arguments,
+                  )
               }
           }
         }
@@ -1257,34 +1112,7 @@ fn plan_expression_kind(
     HirIndexExpr(base, index, offset) =>
       match inferred.operator_targets[expression] {
         SelectedInferredCallTarget(declaration, type_arguments) =>
-          if standard_map_operation(declaration) == MapGetUnchecked {
-            let hash_declaration = match inferred.map_hash_targets[expression] {
-              SelectedInferredCallTarget(selected, _) => selected
-              _ => 0UL
-            }
-            let eq_declaration = match inferred.map_eq_targets[expression] {
-              SelectedInferredCallTarget(selected, _) => selected
-              _ => 0UL
-            }
-            PlannedMapGetUnchecked(
-              base,
-              index,
-              planned_value_shape(
-                resolved,
-                inferred,
-                inferred.call_type_arguments[type_arguments.start],
-              ),
-              planned_value_shape(
-                resolved,
-                inferred,
-                inferred.call_type_arguments[type_arguments.start + 1],
-              ),
-              hash_declaration,
-              eq_declaration,
-            )
-          } else {
-            PlannedIndexCall(declaration, base, index, type_arguments)
-          }
+          PlannedIndexCall(declaration, base, index, type_arguments)
         NoInferredCallTarget
         | ErrorInferredCallTarget
         | SelectedBoundInferredCallTarget(_, _, _)
@@ -1297,35 +1125,7 @@ fn plan_expression_kind(
     HirIndexSetExpr(base, index, value, offset) =>
       match inferred.operator_targets[expression] {
         SelectedInferredCallTarget(declaration, type_arguments) =>
-          if standard_map_operation(declaration) == MapSet {
-            let hash_declaration = match inferred.map_hash_targets[expression] {
-              SelectedInferredCallTarget(selected, _) => selected
-              _ => 0UL
-            }
-            let eq_declaration = match inferred.map_eq_targets[expression] {
-              SelectedInferredCallTarget(selected, _) => selected
-              _ => 0UL
-            }
-            PlannedMapSet(
-              base,
-              index,
-              value,
-              planned_value_shape(
-                resolved,
-                inferred,
-                inferred.call_type_arguments[type_arguments.start],
-              ),
-              planned_value_shape(
-                resolved,
-                inferred,
-                inferred.call_type_arguments[type_arguments.start + 1],
-              ),
-              hash_declaration,
-              eq_declaration,
-            )
-          } else {
-            PlannedIndexSetCall(declaration, base, index, value, type_arguments)
-          }
+          PlannedIndexSetCall(declaration, base, index, value, type_arguments)
         NoInferredCallTarget
         | ErrorInferredCallTarget
         | SelectedBoundInferredCallTarget(_, _, _)

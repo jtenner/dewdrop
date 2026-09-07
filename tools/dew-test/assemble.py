@@ -73,13 +73,14 @@ def main() -> None:
         ("raw_array_contracts", "app.raw_array_contracts"),
         ("array_operations", "app.array_probes"),
         ("ring_operations", "app.ring_probes"),
+        ("map_operations", "app.map_probes"),
         ("type_queries", "app.type_queries"),
     ]:
         subprocess.run(
             [
                 "moon", "run", "--target", "native", "src/dew_test_gen", "--",
                 f"tools/dew-test/{fixture}.wasm", module,
-                module, f"tools/dew-test/{fixture}_test.dew",
+                module, f"tools/dew-test/{fixture}.dew",
                 str(ROOT / f"tools/dew-test/{fixture}.dew"),
             ],
             cwd=ROOT,

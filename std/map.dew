@@ -1,14 +1,293 @@
-pub struct Map<key, value> {}
+open dew.std.preamble
+open dew.std.wasm.intrinsics
+open dew.std.types
+open dew.std.option
+open dew.std.string
+open dew.std.bytes
 
-builtin map_singleton<key, value>(key: key, value: value) -> Map<key, value> = "dew_map_singleton"
-builtin map_length<key, value>(map: Map<key, value>) -> U32 = "dew_map_length"
-builtin map_get<key, value>(map: Map<key, value>, key: key) -> Option<value> = "dew_map_get"
-builtin map_get_unchecked<key, value>(map: Map<key, value>, key: key) -> value = "dew_map_get_unchecked"
-builtin map_insert<key, value>(map: Map<key, value>, key: key, value: value) -> Unit = "dew_map_insert"
-builtin map_set<key, value>(map: Map<key, value>, key: key, value: value) -> Unit = "dew_map_set"
-builtin map_contains_key<key, value>(map: Map<key, value>, key: key) -> Bool = "dew_map_contains_key"
+pub struct Map<key, value> {
+  mut buckets: WasmArray<Option<MapEntry<key, value>>>
+  mut count: U32
+}
+
+pub struct MapEntry<key, value> {
+  mut next: Option<MapEntry<key, value>>
+  hash: U64
+  key: key
+  mut value: value
+}
+
+pub struct MapEntryIter<key, value> {
+  owner: Map<key, value>
+  mut bucket: U32
+  mut current: Option<MapEntry<key, value>>
+}
+pub struct MapKeyIter<key, value> {
+  inner: MapEntryIter<key, value>
+}
+pub struct MapValueIter<key, value> {
+  inner: MapEntryIter<key, value>
+}
+
+fn map_hash<key>(key: key) -> U64 {
+  if implements::<key, Hash>() {
+    key.hash()
+  } else {
+    static_assert(false, "Map keys must implement Hash")
+    unreachable()
+  }
+}
+
+fn map_hash_equal<key>(left: key, right: key) -> Bool {
+  if implements::<key, Hash>() {
+    left.hash_eq(right)
+  } else {
+    static_assert(false, "Map keys must implement Hash")
+    unreachable()
+  }
+}
+
+fn map_bucket_index(hash: U64, count: U32) -> U32 {
+  if count == 0u32 || (count & (count - 1u32)) != 0u32 {
+    unreachable()
+  } else {
+    let low = unsafe_bitcast::<I32, U32>(i64_trunc_i32(unsafe_bitcast::<U64, I64>(hash)))
+    low & (count - 1u32)
+  }
+}
+
+fn map_empty<key, value>() -> Map<key, value> {
+  Map::{
+    buckets: wasm_array_new(16u32, Option::None)
+    count: 0u32
+  }
+}
+
+fn map_singleton<key, value>(key: key, value: value) -> Map<key, value> {
+  let map = map_empty()
+  map_insert(map, key, value)
+  map
+}
+
+fn map_length<key, value>(map: Map<key, value>) -> U32 {
+  map.count
+}
+
+fn map_find<key, value>(map: Map<key, value>, key: key, hash: U64) -> Option<MapEntry<key, value>> {
+  let index = map_bucket_index(hash, wasm_array_len(map.buckets))
+  while wasm_array_get(map.buckets, index) {
+    Option::None => break Option::None
+    Option::Some(entry) => {
+      if entry.hash == hash && map_hash_equal(entry.key, key) {
+        break Option::Some(entry)
+      } else {
+        continue entry.next
+      }
+    }
+  }
+}
+
+fn map_get<key, value>(map: Map<key, value>, key: key) -> Option<value> {
+  match map_find(map, key, map_hash(key)) {
+    Option::Some(entry) => Option::Some(entry.value)
+    Option::None => Option::None
+  }
+}
+
+fn map_get_unchecked<key, value>(map: Map<key, value>, key: key) -> value {
+  match map_find(map, key, map_hash(key)) {
+    Option::Some(entry) => entry.value
+    Option::None => unreachable()
+  }
+}
+
+fn map_contains_key<key, value>(map: Map<key, value>, key: key) -> Bool {
+  map_find(map, key, map_hash(key)) is Option::Some(_)
+}
+
+fn map_grow<key, value>(map: Map<key, value>) -> Unit {
+  let old = map.buckets
+  let capacity = wasm_array_len(old)
+  if capacity >= 2147483648u32 {
+    unreachable()
+  } else {
+    let buckets = wasm_array_new(capacity * 2u32, Option::None)
+    while 0u32 {
+      index if index < capacity => {
+        while wasm_array_get(old, index) {
+          Option::None => break ()
+          Option::Some(entry) => {
+            let next = entry.next
+            let target = map_bucket_index(entry.hash, capacity * 2u32)
+            entry.next = wasm_array_get(buckets, target)
+            wasm_array_set(buckets, target, Option::Some(entry))
+            continue next
+          }
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    map.buckets = buckets
+  }
+}
+
+fn map_insert<key, value>(map: Map<key, value>, key: key, value: value) -> Unit {
+  let hash = map_hash(key)
+  match map_find(map, key, hash) {
+    Option::Some(entry) => {
+      entry.value = value
+    }
+    Option::None => {
+      if map.count == 4294967295u32 {
+        unreachable()
+      } else {
+        if map.count >= wasm_array_len(map.buckets) {
+          map_grow(map)
+        }
+        let index = map_bucket_index(hash, wasm_array_len(map.buckets))
+        let entry = MapEntry::{
+          next: wasm_array_get(map.buckets, index)
+          hash: hash
+          key: key
+          value: value
+        }
+        wasm_array_set(map.buckets, index, Option::Some(entry))
+        map.count = map.count + 1u32
+      }
+    }
+  }
+}
+
+fn map_set<key, value>(map: Map<key, value>, key: key, value: value) -> Unit {
+  map_insert(map, key, value)
+}
+
+fn map_remove<key, value>(map: Map<key, value>, key: key) -> Bool {
+  let hash = map_hash(key)
+  let index = map_bucket_index(hash, wasm_array_len(map.buckets))
+  let mut previous = Option::None
+  while wasm_array_get(map.buckets, index) {
+    Option::None => break false
+    Option::Some(entry) => {
+      if entry.hash == hash && map_hash_equal(entry.key, key) {
+        match previous {
+          Option::None => {
+            wasm_array_set(map.buckets, index, entry.next)
+          }
+          Option::Some(parent) => {
+            parent.next = entry.next
+          }
+        }
+        map.count = map.count - 1u32
+        break true
+      } else {
+        previous = Option::Some(entry)
+        continue entry.next
+      }
+    }
+  }
+}
+
+fn map_clear<key, value>(map: Map<key, value>) -> Unit {
+  map.buckets = wasm_array_new(16u32, Option::None)
+  map.count = 0u32
+}
+
+fn map_entries<key, value>(map: Map<key, value>) -> MapEntryIter<key, value> {
+  MapEntryIter::{
+    owner: map
+    bucket: 0u32
+    current: Option::None
+  }
+}
+
+fn map_entry_iter_has_next<key, value>(iter: MapEntryIter<key, value>) -> Bool {
+  if iter.current is Option::Some(_) {
+    true
+  } else {
+    while iter.bucket {
+      bucket if bucket < wasm_array_len(iter.owner.buckets) => {
+        match wasm_array_get(iter.owner.buckets, bucket) {
+          Option::Some(entry) => {
+            iter.current = Option::Some(entry)
+            break true
+          }
+          Option::None => {
+            iter.bucket = bucket + 1u32
+            continue bucket + 1u32
+          }
+        }
+      }
+      _ => break false
+    }
+  }
+}
+
+fn map_entry_iter_next_option<key, value>(iter: MapEntryIter<key, value>) -> Option<MapEntry<key, value>> {
+  if map_entry_iter_has_next(iter) {
+    let current = iter.current
+    match current {
+      Option::Some(entry) => {
+        iter.current = entry.next
+        if entry.next is Option::None {
+          iter.bucket = iter.bucket + 1u32
+        }
+      }
+      Option::None => unreachable()
+    }
+    current
+  } else {
+    Option::None
+  }
+}
+
+fn map_entry_iter_next<key, value>(iter: MapEntryIter<key, value>) -> MapEntry<key, value> {
+  match map_entry_iter_next_option(iter) {
+    Option::Some(entry) => entry
+    Option::None => unreachable()
+  }
+}
+
+fn map_keys<key, value>(map: Map<key, value>) -> MapKeyIter<key, value> {
+  MapKeyIter::{
+    inner: map_entries(map)
+  }
+}
+fn map_values<key, value>(map: Map<key, value>) -> MapValueIter<key, value> {
+  MapValueIter::{
+    inner: map_entries(map)
+  }
+}
+fn map_key_iter_has_next<key, value>(iter: MapKeyIter<key, value>) -> Bool {
+  map_entry_iter_has_next(iter.inner)
+}
+fn map_value_iter_has_next<key, value>(iter: MapValueIter<key, value>) -> Bool {
+  map_entry_iter_has_next(iter.inner)
+}
+fn map_key_iter_next<key, value>(iter: MapKeyIter<key, value>) -> key {
+  map_entry_iter_next(iter.inner).key
+}
+fn map_value_iter_next<key, value>(iter: MapValueIter<key, value>) -> value {
+  map_entry_iter_next(iter.inner).value
+}
+fn map_key_iter_next_option<key, value>(iter: MapKeyIter<key, value>) -> Option<key> {
+  match map_entry_iter_next_option(iter.inner) {
+    Option::Some(entry) => Option::Some(entry.key)
+    Option::None => Option::None
+  }
+}
+fn map_value_iter_next_option<key, value>(iter: MapValueIter<key, value>) -> Option<value> {
+  match map_entry_iter_next_option(iter.inner) {
+    Option::Some(entry) => Option::Some(entry.value)
+    Option::None => Option::None
+  }
+}
 
 impl<key, value> Map<key, value> {
+  fn empty() -> Map<key, value> {
+    map_empty()
+  }
   fn singleton(key: key, value: value) -> Map<key, value> {
     map_singleton(key, value)
   }
@@ -21,17 +300,14 @@ impl<key, value> Map<key, value> {
   fn get_unchecked(self, key: key) -> value {
     map_get_unchecked(self, key)
   }
+  fn contains_key(self, key: key) -> Bool {
+    map_contains_key(self, key)
+  }
   fn insert(self, key: key, value: value) -> Unit {
     map_insert(self, key, value)
   }
   fn set(self, key: key, value: value) -> Unit {
     map_set(self, key, value)
-  }
-  fn contains_key(self, key: key) -> Bool {
-    map_contains_key(self, key)
-  }
-  fn empty() -> Map<key, value> {
-    map_empty()
   }
   fn remove(self, key: key) -> Bool {
     map_remove(self, key)
@@ -39,8 +315,26 @@ impl<key, value> Map<key, value> {
   fn clear(self) -> Unit {
     map_clear(self)
   }
+  fn entries(self) -> MapEntryIter<key, value> {
+    map_entries(self)
+  }
   fn iter(self) -> MapEntryIter<key, value> {
     map_entries(self)
+  }
+  fn keys(self) -> MapKeyIter<key, value> {
+    map_keys(self)
+  }
+  fn values(self) -> MapValueIter<key, value> {
+    map_values(self)
+  }
+}
+
+impl<key, value> MapEntry<key, value> {
+  fn key(self) -> key {
+    self.key
+  }
+  fn value(self) -> value {
+    self.value
   }
 }
 
@@ -49,73 +343,38 @@ impl<key, value> IndexedGet<key, value> for Map<key, value> {
     map_get_unchecked(self, key)
   }
 }
-
 impl<key, value> IndexedSet<key, value> for Map<key, value> {
   fn indexed_set(self, key: key, value: value) -> Unit {
     map_set(self, key, value)
   }
 }
-
-builtin map_empty<key, value>() -> Map<key, value> = "dew_map_empty"
-builtin map_remove<key, value>(map: Map<key, value>, key: key) -> Bool = "dew_map_remove"
-builtin map_clear<key, value>(map: Map<key, value>) -> Unit = "dew_map_clear"
-
-pub struct MapEntry<key, value> {}
-pub struct MapKeyIter<key, value> {}
-pub struct MapValueIter<key, value> {}
-pub struct MapEntryIter<key, value> {}
-
-builtin map_keys<key, value>(map: Map<key, value>) -> MapKeyIter<key, value> = "dew_map_keys"
-builtin map_values<key, value>(map: Map<key, value>) -> MapValueIter<key, value> = "dew_map_values"
-builtin map_entries<key, value>(map: Map<key, value>) -> MapEntryIter<key, value> = "dew_map_entries"
-builtin map_key_iter_has_next<key, value>(iter: MapKeyIter<key, value>) -> Bool = "dew_map_key_iter_has_next"
-builtin map_key_iter_next<key, value>(iter: MapKeyIter<key, value>) -> key = "dew_map_key_iter_next"
-builtin map_value_iter_has_next<key, value>(iter: MapValueIter<key, value>) -> Bool = "dew_map_value_iter_has_next"
-builtin map_value_iter_next<key, value>(iter: MapValueIter<key, value>) -> value = "dew_map_value_iter_next"
-builtin map_entry_iter_has_next<key, value>(iter: MapEntryIter<key, value>) -> Bool = "dew_map_entry_iter_has_next"
-builtin map_entry_iter_next<key, value>(iter: MapEntryIter<key, value>) -> MapEntry<key, value> = "dew_map_entry_iter_next"
-builtin map_entry_key<key, value>(entry: MapEntry<key, value>) -> key = "dew_map_entry_key"
-builtin map_entry_value<key, value>(entry: MapEntry<key, value>) -> value = "dew_map_entry_value"
-
-impl<key, value> Map<key, value> {
-  fn keys(self) -> MapKeyIter<key, value> {
-    map_keys(self)
-  }
-  fn values(self) -> MapValueIter<key, value> {
-    map_values(self)
-  }
-  fn entries(self) -> MapEntryIter<key, value> {
-    map_entries(self)
-  }
-}
-
-impl<key, value> MapEntry<key, value> {
-  fn key(self) -> key {
-    map_entry_key(self)
-  }
-  fn value(self) -> value {
-    map_entry_value(self)
-  }
-}
-
 impl<key, value> Iter<key> for MapKeyIter<key, value> {
   fn next(self) -> Option<key> {
     map_key_iter_next_option(self)
   }
 }
-
+impl<key, value> MapKeyIter<key, value> {
+  fn has_next(self) -> Bool {
+    map_key_iter_has_next(self)
+  }
+}
+impl<key, value> MapValueIter<key, value> {
+  fn has_next(self) -> Bool {
+    map_value_iter_has_next(self)
+  }
+}
+impl<key, value> MapEntryIter<key, value> {
+  fn has_next(self) -> Bool {
+    map_entry_iter_has_next(self)
+  }
+}
 impl<key, value> Iter<value> for MapValueIter<key, value> {
   fn next(self) -> Option<value> {
     map_value_iter_next_option(self)
   }
 }
-
 impl<key, value> Iter<MapEntry<key, value>> for MapEntryIter<key, value> {
   fn next(self) -> Option<MapEntry<key, value>> {
     map_entry_iter_next_option(self)
   }
 }
-
-builtin map_key_iter_next_option<key, value>(iter: MapKeyIter<key, value>) -> Option<key> = "dew_map_key_iter_next_option"
-builtin map_value_iter_next_option<key, value>(iter: MapValueIter<key, value>) -> Option<value> = "dew_map_value_iter_next_option"
-builtin map_entry_iter_next_option<key, value>(iter: MapEntryIter<key, value>) -> Option<MapEntry<key, value>> = "dew_map_entry_iter_next_option"

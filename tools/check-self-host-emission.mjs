@@ -12,6 +12,7 @@ import { checkMemberCalls } from "./member-call-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { checkRingOperations } from "./ring-operation-cases.mjs";
+import { checkMapOperations } from "./map-operation-cases.mjs";
 import { checkRawGcStorage } from "./raw-gc-storage-cases.mjs";
 import { checkRawGcUnit } from "./raw-gc-unit-cases.mjs";
 import { checkFixedArrayOperations } from "./fixed-array-operations-cases.mjs";
@@ -179,7 +180,6 @@ for (const [name, expected] of [
   ["self_host_emit_array_size_method_body_probe", 85],
   ["self_host_emit_scalar_iterator_probe", 6],
   ["self_host_emit_erased_field_probe", 42n],
-  ["self_host_emit_string_map_probe", 26],
   ["self_host_emit_string_equality_probe", 1],
   ["self_host_emit_nested_variant_probe", 12],
   ["self_host_emit_short_constructor_probe", 42],
@@ -515,6 +515,17 @@ pub fn main() -> I32 {
   } catch (error) {
     failures++;
     console.error("self-host real-library ring probe failed", error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const request = await readFile(new URL("../.tmp/self-host-hardening/map.request.bin", import.meta.url));
+    const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+    console.log(`self-host real-library Map checks passed: ${checkMapOperations(exports.main)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+  } catch (error) {
+    failures++;
+    console.error("self-host real-library Map probe failed", error);
   }
 }
 {

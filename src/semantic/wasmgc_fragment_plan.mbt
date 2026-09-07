@@ -1758,10 +1758,7 @@ fn wasmgc_append_physical_type_fields(
   let start = target.length()
   match source.kind {
     PlannedWasmStructType(declaration) =>
-      if declaration == standard_map_key_iterator_type_declaration() ||
-        declaration == standard_map_value_iterator_type_declaration() ||
-        declaration == standard_map_entry_iterator_type_declaration() ||
-        declaration == standard_set_iterator_type_declaration() {
+      if declaration == standard_set_iterator_type_declaration() {
         wasmgc_append_mutable_field(
           target,
           WasmStructField(declaration),
@@ -1774,8 +1771,7 @@ fn wasmgc_append_physical_type_fields(
           WasmI32Storage,
           source.offset,
         )
-      } else if declaration == standard_map_type_declaration() ||
-        declaration == standard_set_type_declaration() {
+      } else if declaration == standard_set_type_declaration() {
         wasmgc_append_mutable_field(
           target,
           WasmStructField(declaration),
@@ -2212,8 +2208,7 @@ fn wasmgc_value_type(
         }
       NominalType(declaration) => {
         if resolved.raw_array_declarations.contains(declaration) ||
-          declaration == standard_array_entry_type_declaration() ||
-          declaration == standard_map_entry_type_declaration() {
+          declaration == standard_array_entry_type_declaration() {
           return Some(WasmNullableEqRefValue)
         }
         if semantic_id_module(declaration) != resolved.module_id {
@@ -4556,29 +4551,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       expression in body.expressions.start..<(body.expressions.start +
       body.expressions.length) {
       match lowering.expressions[expression].kind {
-        PlannedMapSingleton(_, _, _, _, _, _)
-        | PlannedMapEmpty(_, _, _, _)
-        | PlannedMapLength(_)
-        | PlannedMapGet(_, _, _, _, _, _)
-        | PlannedMapGetUnchecked(_, _, _, _, _, _)
-        | PlannedMapInsert(_, _, _, _, _, _, _)
-        | PlannedMapSet(_, _, _, _, _, _, _)
-        | PlannedMapContainsKey(_, _, _, _, _)
-        | PlannedMapRemove(_, _, _, _, _)
-        | PlannedMapClear(_)
-        | PlannedMapKeys(_, _, _)
-        | PlannedMapValues(_, _, _)
-        | PlannedMapEntries(_, _, _)
-        | PlannedMapIterHasNext(_, _, _, _)
-        | PlannedMapKeyIterNext(_, _, _)
-        | PlannedMapKeyIterNextOption(_, _, _)
-        | PlannedMapValueIterNext(_, _, _)
-        | PlannedMapValueIterNextOption(_, _, _)
-        | PlannedMapEntryIterNext(_, _, _)
-        | PlannedMapEntryIterNextOption(_, _, _)
-        | PlannedMapEntryKey(_, _, _)
-        | PlannedMapEntryValue(_, _, _)
-        | PlannedSetEmpty(_, _, _)
+        PlannedSetEmpty(_, _, _)
         | PlannedSetSingleton(_, _, _, _)
         | PlannedSetLength(_)
         | PlannedSetIsEmpty(_)

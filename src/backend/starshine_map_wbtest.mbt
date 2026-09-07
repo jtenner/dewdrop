@@ -17,12 +17,9 @@ test "maps emit collision-safe Hash and Eq calls" {
   assert_eq(lowering.modules[0].diagnostics.length(), 0)
   let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
-  assert_true(
-    link.type_lookup.get(@semantic.standard_map_type_declaration()) is Some(_),
-  )
   match emit_starshine_program_module(lowering, link) {
     Ok(module_) => assert_eq(@validate.validate_module(module_), Ok(()))
-    Err(error) => assert_eq(error, UnsupportedBuiltin(b"expected-debug"))
+    Err(error) => fail(@debug.to_string(error))
   }
 }
 
@@ -47,7 +44,7 @@ test "map remove and clear emit a valid body" {
   assert_eq(link.diagnostics.length(), 0)
   match emit_starshine_program_module(lowering, link) {
     Ok(module_) => assert_eq(@validate.validate_module(module_), Ok(()))
-    Err(error) => assert_eq(error, UnsupportedBuiltin(b"expected-debug"))
+    Err(error) => fail(@debug.to_string(error))
   }
 }
 
@@ -72,6 +69,6 @@ test "map growth emits a valid Unit-returning body" {
   assert_eq(link.diagnostics.length(), 0)
   match emit_starshine_program_module(lowering, link) {
     Ok(module_) => assert_eq(@validate.validate_module(module_), Ok(()))
-    Err(error) => assert_eq(error, UnsupportedBuiltin(b"expected-debug"))
+    Err(error) => fail(@debug.to_string(error))
   }
 }

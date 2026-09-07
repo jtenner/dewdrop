@@ -1,0 +1,180 @@
+open dew.std.preamble
+open dew.std.map
+open dew.std.option
+open dew.std.string
+open dew.std.bytes
+
+struct MapCounts {
+  mut hashes: U32
+  mut comparisons: U32
+}
+
+struct CountedKey {
+  value: U32
+  counts: MapCounts
+}
+
+impl Hash for CountedKey {
+  fn hash(self) -> U64 {
+    self.counts.hashes = self.counts.hashes + 1u32
+    self.value.into()
+  }
+  fn hash_eq(self, right: CountedKey) -> Bool {
+    self.counts.comparisons = self.counts.comparisons + 1u32
+    self.value == right.value
+  }
+}
+
+struct MapBox {
+  mut value: I64
+}
+
+struct CollisionKey {
+  value: U32
+}
+
+impl Hash for CollisionKey {
+  fn hash(self) -> U64 {
+    0u64
+  }
+  fn hash_eq(self, right: CollisionKey) -> Bool {
+    self.value == right.value
+  }
+}
+
+fn map_result(value: Bool) -> I32 {
+  if value {
+    1i32
+  } else {
+    0i32
+  }
+}
+
+fn map_expect<t>(value: Option<t>) -> t {
+  match value {
+    Option::Some(item) => item
+    Option::None => unreachable()
+  }
+}
+
+pub fn main(case: U32) -> I32 {
+  if case == 0u32 {
+    let map = Map::singleton(1u32, 2i64)
+    map.insert(3u32, 4i64)
+    map[1u32] = 5i64
+    map_result(map.length() == 2u32 && map[1u32] == 5i64 && map.get(3u32) is Option::Some(4i64) && map.get(9u32) is Option::None)
+  } else if case == 1u32 {
+    let map = Map::empty()
+    while 0u32 {
+      index if index < 129u32 => {
+        map.insert(CollisionKey::{
+          value: index
+        }, index)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let first = map.remove(CollisionKey::{
+      value: 0u32
+    })
+    let middle = map.remove(CollisionKey::{
+      value: 64u32
+    })
+    let last = map.remove(CollisionKey::{
+      value: 128u32
+    })
+    map_result(first && middle && last && map.length() == 126u32 && map[CollisionKey::{
+      value: 65u32
+    }] == 65u32)
+  } else if case == 2u32 {
+    let map = Map::singleton(1u32, ())
+    map[2u32] = ()
+    map[1u32]
+    let iter = map.values()
+    let first = iter.next() is Option::Some(_)
+    let second = iter.next() is Option::Some(_)
+    map_result(first && second && iter.next() is Option::None && map.length() == 2u32)
+  } else if case == 3u32 {
+    let map = Map::singleton(1u32, (2i32, 3i64))
+    let (a, b) = map[1u32]
+    let (c, d) = map_expect(map.values().next())
+    map_result(a == 2i32 && b == 3i64 && c == 2i32 && d == 3i64)
+  } else if case == 4u32 {
+    let map = Map::singleton(1u32, 2i64)
+    let alias = map
+    alias.clear()
+    map.insert(3u32, 4i64)
+    map_result(alias.length() == 1u32 && alias[3u32] == 4i64 && !alias.contains_key(1u32))
+  } else if case == 5u32 {
+    let map = Map::singleton(1u32, 2i64)
+    let entry = map_expect(map.entries().next())
+    map.insert(1u32, 3i64)
+    map_result(entry.key() == 1u32 && entry.value() == 3i64)
+  } else if case == 6u32 {
+    let map = Map::singleton(1u32, 2i64)
+    map[9u32]
+    0i32
+  } else if case == 7u32 {
+    let map = Map::singleton(1u32, 2i64)
+    let iter = map.keys()
+    let ready = iter.has_next() && iter.has_next()
+    let first = iter.next() is Option::Some(1u32)
+    map_result(ready && first && !iter.has_next() && iter.next() is Option::None && iter.next() is Option::None)
+  } else if case == 8u32 {
+    let map = Map::singleton("Op".concat("tion"), 9u32)
+    map.insert("Result", 17u32)
+    let bytes = Map::singleton(b"dew", 3u32)
+    map_result(map["Opt".concat("ion")] + map["Result"] == 26u32 &&
+      map.get("Missing") is Option::None && bytes[b"dew"] == 3u32)
+  } else if case == 9u32 {
+    let counts = MapCounts::{
+      hashes: 0u32
+      comparisons: 0u32
+    }
+    let map = Map::empty()
+    while 0u32 {
+      index if index < 17u32 => {
+        map.insert(CountedKey::{
+          value: index
+          counts: counts
+        }, index)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let grow_once = counts.hashes == 17u32 && counts.comparisons == 0u32
+    map.insert(CountedKey::{
+      value: 16u32
+      counts: counts
+    }, 33u32)
+    map_result(grow_once && counts.hashes == 18u32 && counts.comparisons == 1u32 && map.length() == 17u32)
+  } else if case == 10u32 {
+    let box = MapBox::{
+      value: 3i64
+    }
+    let map = Map::singleton(0u32, box)
+    map[0u32].value = 5i64
+    let floats = Map::singleton(0u32, 1.5f32)
+    floats[1u32] = 2.5f32
+    let doubles = Map::singleton(0u32, 3.5f64)
+    map_result(box.value == 5i64 && floats[0u32] + floats[1u32] == 4.0f32 && doubles[0u32] == 3.5f64)
+  } else if case == 11u32 {
+    let map = Map::empty()
+    while 0u32 {
+      index if index < 65u32 => {
+        map.insert(index, index)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let mut count = 0u32
+    let mut sum = 0u32
+    for entry in map {
+      count = count + 1u32
+      sum = sum + entry.key() + entry.value()
+    }
+    map_result(count == 65u32 && sum == 4160u32 && !map.remove(99u32))
+  } else {
+    unreachable()
+  }
+}

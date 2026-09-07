@@ -1,5 +1,5 @@
 ///|
-test "map standard source has stable compiler-owned identities" {
+test "Map declares storage and ordinary Dew functions" {
   let module_id = standard_library_module_id(11)
   let collected = collect_program_files_with_frozen_standard_imports(
     module_id,
@@ -17,29 +17,17 @@ test "map standard source has stable compiler-owned identities" {
     ),
   )
   assert_eq(collected.diagnostics.length(), 0)
-  assert_eq(semantic_id_local(collected.lookup_type("Map").unwrap()), 0)
-  assert_eq(
-    semantic_id_local(collected.lookup_value("map_singleton").unwrap()),
-    1,
-  )
-  assert_eq(collected.callables.length(), 45)
-  assert_eq(semantic_id_local(collected.callables[7].declaration), 9)
-  assert_eq(semantic_id_local(collected.callables[15].declaration), 17)
-  assert_eq(semantic_id_local(collected.callables[16].declaration), 18)
-  assert_eq(semantic_id_local(collected.callables[17].declaration), 19)
-  assert_eq(semantic_id_local(collected.callables[18].declaration), 21)
-  assert_eq(semantic_id_local(collected.callables[19].declaration), 23)
-  assert_eq(semantic_id_local(collected.callables[20].declaration), 24)
-  assert_eq(semantic_id_local(collected.callables[21].declaration), 25)
-  assert_eq(semantic_id_local(collected.callables[22].declaration), 26)
-  assert_eq(semantic_id_local(collected.callables[23].declaration), 31)
-  assert_eq(semantic_id_local(collected.callables[33].declaration), 41)
-  assert_eq(semantic_id_local(collected.callables[34].declaration), 43)
-  assert_eq(semantic_id_local(collected.callables[44].declaration), 57)
+  assert_true(collected.lookup_type("Map") is Some(_))
+  assert_true(collected.lookup_type("MapEntry") is Some(_))
+  assert_true(collected.lookup_value("map_singleton") is Some(_))
+  assert_true(collected.callables.length() > 0)
+  for callable in collected.callables {
+    assert_true(collected.body_of(callable.declaration) is Some(_))
+  }
 }
 
 ///|
-test "compiler-owned Map selects Hash and Eq evidence" {
+test "Map calls use ordinary method and index lowering" {
   let program = collect_program_manifest(
     2612UL,
     ProgramManifest::new([
@@ -66,8 +54,12 @@ test "compiler-owned Map selects Hash and Eq evidence" {
       _ => ()
     }
   }
-  assert_true(selected_hash)
-  assert_true(selected_eq)
+  assert_false(selected_hash)
+  assert_false(selected_eq)
+  let lowering = plan_program_lowering(program, analyzed)
+  assert_eq(lowering.modules[0].diagnostics, [])
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics, [])
 }
 
 ///|
@@ -101,15 +93,23 @@ test "Map rejects keys without Hash evidence" {
     ]),
   )
   let analyzed = analyze_program_semantics(program)
-  let mut missing_hash = 0
-  for diagnostic in analyzed.modules[0].inferred.diagnostics {
-    match diagnostic {
-      NoMatchingMethod(_, _, _) | AmbiguousMethod(_, _, _, _, _, _) =>
-        missing_hash += 1
-      _ => ()
-    }
+  assert_eq(analyzed.modules[0].inferred.diagnostics, [])
+  let lowering = plan_program_lowering(program, analyzed)
+  let link = plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_true(link.diagnostics.length() > 0)
+  for diagnostic in link.diagnostics {
+    assert_true(
+      diagnostic
+      is ProgramCompileTimeFailure(
+        _,
+        _,
+        _,
+        _,
+        "CT-021 static assertion failed: Map keys must implement Hash",
+        _
+      ),
+    )
   }
-  assert_true(missing_hash > 0)
 }
 
 ///|
@@ -125,7 +125,20 @@ test "Hash implementations require collision equality" {
     ]),
   )
   let analyzed = analyze_program_semantics(program)
-  assert_true(analyzed.modules[0].inferred.diagnostics.length() > 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let diagnostics = plan_program_wasmgc_link(analyzed, lowering, 0).diagnostics
+  assert_eq(diagnostics.length(), 1)
+  assert_true(
+    diagnostics[0]
+    is ProgramCompileTimeFailure(
+      _,
+      _,
+      _,
+      _,
+      "CT-040 trait implementation has no required method",
+      _
+    ),
+  )
 }
 
 ///|
@@ -141,5 +154,18 @@ test "Hash implementations must return U64" {
     ]),
   )
   let analyzed = analyze_program_semantics(program)
-  assert_true(analyzed.modules[0].inferred.diagnostics.length() > 0)
+  let lowering = plan_program_lowering(program, analyzed)
+  let diagnostics = plan_program_wasmgc_link(analyzed, lowering, 0).diagnostics
+  assert_eq(diagnostics.length(), 1)
+  assert_true(
+    diagnostics[0]
+    is ProgramCompileTimeFailure(
+      _,
+      _,
+      _,
+      _,
+      "CT-040 guarded implementation signature mismatch",
+      _
+    ),
+  )
 }

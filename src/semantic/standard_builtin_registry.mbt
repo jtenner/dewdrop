@@ -6,30 +6,6 @@ enum StandardBuiltinOperation {
   WasmRefNull
   WasmRefIsNull
   WasmRefAsNonNull
-  MapSingleton
-  MapLength
-  MapGet
-  MapGetUnchecked
-  MapInsert
-  MapSet
-  MapContainsKey
-  MapEmpty
-  MapRemove
-  MapClear
-  MapKeys
-  MapValues
-  MapEntries
-  MapKeyIterHasNext
-  MapKeyIterNext
-  MapKeyIterNextOption
-  MapValueIterHasNext
-  MapValueIterNext
-  MapValueIterNextOption
-  MapEntryIterHasNext
-  MapEntryIterNext
-  MapEntryIterNextOption
-  MapEntryKey
-  MapEntryValue
   SetEmpty
   SetSingleton
   SetLength
@@ -91,98 +67,6 @@ pub fn standard_circular_buffer_type_declaration() -> DeclId {
 ///|
 pub fn standard_deque_type_declaration() -> DeclId {
   make_semantic_id(standard_library_module_id(37), 0)
-}
-
-///|
-pub fn standard_map_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 0)
-}
-
-///|
-pub fn standard_map_method_declaration(name : String) -> DeclId {
-  let local_id = match name {
-    "singleton" => 9
-    "length" => 10
-    "get" => 11
-    "get_unchecked" => 12
-    "insert" => 13
-    "set" => 14
-    "contains_key" => 15
-    "empty" => 16
-    "remove" => 17
-    "clear" => 18
-    "iter" => 19
-    _ => -1
-  }
-  if local_id < 0 {
-    0UL
-  } else {
-    make_semantic_id(standard_library_module_id(11), local_id)
-  }
-}
-
-///|
-pub fn standard_map_entry_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 27)
-}
-
-///|
-pub fn standard_map_key_iterator_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 28)
-}
-
-///|
-pub fn standard_map_value_iterator_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 29)
-}
-
-///|
-pub fn standard_map_entry_iterator_type_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 30)
-}
-
-///|
-pub fn standard_map_index_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 21)
-}
-
-///|
-pub fn standard_map_index_set_declaration() -> DeclId {
-  make_semantic_id(standard_library_module_id(11), 23)
-}
-
-///|
-fn standard_map_operation(declaration : DeclId) -> StandardBuiltinOperation {
-  if semantic_id_module(declaration) != standard_library_module_id(11) {
-    return NoStandardBuiltinOperation
-  }
-  match semantic_id_local(declaration) {
-    1 | 9 => MapSingleton
-    2 | 10 => MapLength
-    3 | 11 => MapGet
-    4 | 12 | 21 => MapGetUnchecked
-    5 | 13 => MapInsert
-    6 | 14 | 23 => MapSet
-    7 | 15 => MapContainsKey
-    16 | 24 => MapEmpty
-    17 | 25 => MapRemove
-    18 | 26 => MapClear
-    31 | 43 => MapKeys
-    32 | 44 => MapValues
-    33 | 45 | 19 => MapEntries
-    34 => MapKeyIterHasNext
-    35 => MapKeyIterNext
-    50 | 55 => MapKeyIterNextOption
-    36 => MapValueIterHasNext
-    37 => MapValueIterNext
-    52 | 56 => MapValueIterNextOption
-    38 => MapEntryIterHasNext
-    39 => MapEntryIterNext
-    54 | 57 => MapEntryIterNextOption
-    40 | 47 => MapEntryKey
-    41 | 48 => MapEntryValue
-    _ => NoStandardBuiltinOperation
-  }
 }
 
 ///|

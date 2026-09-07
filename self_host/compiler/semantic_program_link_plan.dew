@@ -121,7 +121,6 @@ fn self_host_program_link_is_runtime_builtin(name: Bytes) -> Bool {
   name.starts_with(b"dew_string_") ||
   name.starts_with(b"dew_bytes_") ||
   name.starts_with(b"dew_array_") ||
-  name.starts_with(b"dew_map_") ||
   (name.starts_with(b"dew_debug_") &&
     !name.equals(b"dew_debug_ignore") &&
     !name.equals(b"dew_debug_dispatch")) ||

@@ -41,37 +41,7 @@
     "map": {
       "slot": 11,
       "path": "dew.std.map",
-      "type": 0,
-      "methods": {"singleton": 9, "length": 10, "get": 11, "get_unchecked": 12, "insert": 13, "set": 14, "contains_key": 15, "empty": 16, "remove": 17, "clear": 18, "iter": 19},
-      "index": 21,
-      "index_set": 23,
-      "opaque_types": {"entry": 27, "key_iterator": 28, "value_iterator": 29, "entry_iterator": 30},
-      "operations": {
-        "MapSingleton": [1, 9],
-        "MapLength": [2, 10],
-        "MapGet": [3, 11],
-        "MapGetUnchecked": [4, 12, 21],
-        "MapInsert": [5, 13],
-        "MapSet": [6, 14, 23],
-        "MapContainsKey": [7, 15],
-        "MapEmpty": [16, 24],
-        "MapRemove": [17, 25],
-        "MapClear": [18, 26],
-        "MapKeys": [31, 43],
-        "MapValues": [32, 44],
-        "MapEntries": [33, 45, 19],
-        "MapKeyIterHasNext": [34],
-        "MapKeyIterNext": [35],
-        "MapKeyIterNextOption": [50, 55],
-        "MapValueIterHasNext": [36],
-        "MapValueIterNext": [37],
-        "MapValueIterNextOption": [52, 56],
-        "MapEntryIterHasNext": [38],
-        "MapEntryIterNext": [39],
-        "MapEntryIterNextOption": [54, 57],
-        "MapEntryKey": [40, 47],
-        "MapEntryValue": [41, 48]
-      }
+      "operations": {}
     },
     "set": {
       "slot": 12,

@@ -21,4 +21,5 @@ node tools/check-fixed-array-operations.mjs tools/dew-test/fixed_array_operation
 node tools/check-raw-array-contracts.mjs tools/dew-test/raw_array_contracts.wasm
 node tools/check-array-operations.mjs tools/dew-test/array_operations.wasm
 node tools/check-ring-operations.mjs tools/dew-test/ring_operations.wasm
+node tools/check-map-operations.mjs tools/dew-test/map_operations.wasm
 node tools/check-type-queries.mjs tools/dew-test/type_queries.wasm

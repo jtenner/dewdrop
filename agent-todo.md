@@ -81,8 +81,14 @@ Correctness comes first. Keep these timing defects visible after query completio
   Unused native Array operation nodes and emitters are now removed; literal
   construction remains; shared ring producers are now removed. See the
   [cleanup log](docs/research/array-legacy-ir-cleanup-2026-09-06.md).
-- [ ] Move Map and Set hashing, buckets, growth, lookup, and iteration into Dew.
-  Keep their values and bounds correct before tuning them.
+- [x] Move Map hashing, buckets, growth, lookup, and iteration into Dew. Typed
+  entries preserve aliases, cached hashes avoid repeated user calls during
+  growth, and all 12 shared native/self-host checks pass. Native Map IR and
+  self-host Map runtime emitters are removed. The clean B/C fixed point passes.
+  See the [Map log](docs/research/map-library-storage-2026-09-06.md).
+- [ ] Move Set storage and iteration into Dew using Map with Unit values.
+  Keep insert-result, collision, bounds, and alias behavior correct. Remove the
+  remaining shared native hash-table runtime after this migration.
 - [x] Move Queue, circular-buffer, and deque storage algorithms into Dew.
   Each family has a separate commit. Declared typed storage replaces the shared
   Array layout, and unused native ring code is removed. Twenty shared checks
