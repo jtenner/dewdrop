@@ -314,7 +314,7 @@ test "program link does not treat a variant constructor as a call" {
 
 test "program link does not require a physical inline builtin" {
   let link = self_host_link_test_plan(
-    b"builtin debug<t>(value: t) -> Unit = \"dew_debug_dispatch\"\npub fn run() -> Unit {\n  debug(42)\n}\n",
+    b"builtin count(value: U32) -> U32 = \"i32.clz\"\npub fn run() -> U32 {\n  count(42u32)\n}\n",
   )
   assert(link.diagnostics.length() == 0u32, "inline builtin diagnostics")
   assert(link.specialized_calls.length() == 0u32, "inline builtin physical call")
@@ -322,7 +322,7 @@ test "program link does not require a physical inline builtin" {
 
 test "builtin lookup rejects the missing fragment sentinel" {
   let link = self_host_link_test_plan(
-    b"builtin keep(value: U32) -> U32 = \"dew_debug_ignore\"\npub fn run() -> U32 {\n  keep(1u32)\n}\n",
+    b"builtin keep(value: U32) -> U32 = \"i32.clz\"\npub fn run() -> U32 {\n  keep(1u32)\n}\n",
   )
   let module_ = link.fragments.modules[0u32]
   let mut declaration = 0u64
@@ -332,7 +332,7 @@ test "builtin lookup rejects the missing fragment sentinel" {
       let fragment = self_host_program_link_fragment_function(module_, current)
       match fragment.kind {
         SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if name.equals(
-          b"dew_debug_ignore",
+          b"i32.clz",
         ) {
           declaration = fragment.declaration
         }
@@ -348,7 +348,7 @@ test "builtin lookup rejects the missing fragment sentinel" {
     self_host_semantic_id_local(declaration)
   ] = 4294967295u32
   match self_host_linked_builtin_name(link, declaration) {
-    Option::Some(name) => assert(name.equals(b"dew_debug_ignore"), "fallback builtin")
+    Option::Some(name) => assert(name.equals(b"i32.clz"), "fallback builtin")
     Option::None => assert(false, "fallback builtin lookup")
   }
 }

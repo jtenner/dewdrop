@@ -3,7 +3,7 @@ pub trait Debug {
 }
 
 builtin __dew_debug_write(fd: U32, value: Bytes) -> U32 = "dew_wasi_fd_write"
-builtin __dew_debug_ignore(value: U32) -> Unit = "dew_debug_ignore"
+fn __dew_debug_ignore(value: U32) -> Unit {}
 builtin __dew_debug_i8(value: I8) -> U32 = "dew_debug_i8"
 builtin __dew_debug_i16(value: I16) -> U32 = "dew_debug_i16"
 builtin __dew_debug_i32(value: I32) -> U32 = "dew_debug_i32"
@@ -17,7 +17,13 @@ builtin __dew_debug_f64(value: F64) -> U32 = "dew_debug_f64"
 builtin __dew_debug_string(value: String) -> U32 = "dew_debug_string"
 builtin __dew_debug_bytes(value: Bytes) -> U32 = "dew_debug_bytes"
 builtin __dew_debug_v128(value: V128) -> U32 = "dew_debug_v128"
-pub builtin debug<t: Debug>(value: t) -> Unit = "dew_debug_dispatch"
+pub fn debug<t: Debug>(value: t) -> Unit {
+  value.debug()
+}
+
+foreign import "wasi_snapshot_preview1" as DebugOutput {
+  fn __dew_debug_fd_write(fd: U32, iovs: U32, count: U32, written: U32) -> U32 = "fd_write"
+}
 
 impl Debug for Unit {
   fn debug(self) -> Unit {

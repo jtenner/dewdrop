@@ -82,6 +82,11 @@ self_host_measure 'hardening WASI foreign request' \
     "$work/wasi-foreign.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-wasi-foreign.wasm \
     app.wasi_probes tests/module-snapshots/wasm/wasi-preview1-runtime.dew
+self_host_measure 'hardening Debug dispatch request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/debug-dispatch.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-debug-dispatch.wasm \
+    app.debug_probes tools/dew-test/debug_dispatch.dew
 mapfile -t compiler_sources < <(
   find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' ! -name main.dew | sort
 )

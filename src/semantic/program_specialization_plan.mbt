@@ -88,11 +88,99 @@ fn program_add_named_callable_root(
             reachable[callable.declaration] = true
             return true
           }
+        PlannedForeignCallable(namespace, field, true) => {
+          let identity : WasmImportIdentity = {
+            module_name: namespace,
+            field,
+            kind: ForeignHostWasmImport,
+          }
+          if identity.lookup_name() == name {
+            if reachable.contains(callable.declaration) {
+              return false
+            }
+            reachable[callable.declaration] = true
+            return true
+          }
+        }
         _ => ()
       }
     }
   }
   false
+}
+
+///|
+fn program_enqueue_expression_evidence(
+  lowering : PlannedProgramLowering,
+  module_ : PlannedModuleLowering,
+  expression : ExprId,
+  reachable : Map[DeclId, Bool],
+  work : Array[DeclId],
+) -> Unit {
+  let pending : Array[Int] = []
+  let roots : HirSpan = if module_.expression_evidence.is_empty() {
+    { start: 0, length: 0, }
+  } else {
+    guard expression >= 0 && expression < module_.expression_evidence.length() else {
+      abort("EVD-212 missing expression evidence slot")
+    }
+    module_.expression_evidence[expression]
+  }
+  guard roots.start >= 0 &&
+    roots.start <= module_.trait_evidence_roots.length() &&
+    roots.length >= 0 &&
+    roots.length <= module_.trait_evidence_roots.length() - roots.start else {
+    abort("EVD-212 invalid expression evidence span")
+  }
+  for index in 0..<roots.length {
+    pending.push(module_.trait_evidence_roots[roots.start + index])
+  }
+  match module_.expressions[expression].trait_object_coercion {
+    SelectedInferredTraitObjectCoercion(_, evidence) => pending.push(evidence)
+    _ => ()
+  }
+  let seen : Map[Int, Bool] = {}
+  while pending.length() > 0 {
+    let index = pending.pop().unwrap()
+    if seen.contains(index) {
+      continue
+    }
+    seen[index] = true
+    guard index >= 0 && index < module_.trait_evidence.length() else {
+      abort("EVD-212 invalid expression evidence node")
+    }
+    let evidence = module_.trait_evidence[index]
+    let children = evidence.prerequisites
+    guard children.start >= 0 &&
+      children.start <= module_.trait_evidence_children.length() &&
+      children.length >= 0 &&
+      children.length <=
+      module_.trait_evidence_children.length() - children.start else {
+      abort("EVD-212 invalid prerequisite evidence span")
+    }
+    for child in 0..<children.length {
+      pending.push(module_.trait_evidence_children[children.start + child])
+    }
+    let implementation = match evidence.kind {
+      ConcreteInferredTraitEvidence(implementation, _) => implementation
+      _ => continue
+    }
+    let owner = match
+      lowering.index.module_lookup.get(semantic_id_module(implementation)) {
+      Some(owner) => owner
+      None => abort("EVD-212 missing evidence implementation module")
+    }
+    for callable in lowering.modules[owner].functions.callables {
+      match callable.kind {
+        PlannedImplMethodCallable(parent, _) if parent == implementation =>
+          if !reachable.contains(callable.declaration) {
+            reachable[callable.declaration] = true
+            work.push(callable.declaration)
+          }
+        _ => ()
+      }
+    }
+  }
 }
 
 ///|
@@ -119,30 +207,6 @@ fn program_reachable_callable_roots(
     }
   }
   for module_ in lowering.modules {
-    for evidence in module_.trait_evidence {
-      let implementation = match evidence.kind {
-        ConcreteInferredTraitEvidence(implementation, _) => implementation
-        BoundInferredTraitEvidence(_) | GuardedInferredTraitEvidence(_, _) =>
-          continue
-      }
-      let owner_index = match
-        module_lookup.get(semantic_id_module(implementation)) {
-        Some(value) => value
-        None => continue
-      }
-      for callable in lowering.modules[owner_index].functions.callables {
-        match callable.kind {
-          PlannedImplMethodCallable(owner, _) if owner == implementation =>
-            if !reachable.contains(callable.declaration) {
-              reachable[callable.declaration] = true
-              work.push(callable.declaration)
-            }
-          _ => ()
-        }
-      }
-    }
-  }
-  for module_ in lowering.modules {
     for step in module_.initialization.steps {
       if step.test_only && !emit_tests {
         continue
@@ -159,6 +223,9 @@ fn program_reachable_callable_roots(
       for
         expression in body.expressions.start..<(body.expressions.start +
         body.expressions.length) {
+        program_enqueue_expression_evidence(
+          lowering, module_, expression, reachable, work,
+        )
         let target = match
           program_call_target_and_arguments(module_.expressions[expression]) {
           Some((target, _)) => target
@@ -200,6 +267,9 @@ fn program_reachable_callable_roots(
       for
         expression in body.expressions.start..<(body.expressions.start +
         body.expressions.length) {
+        program_enqueue_expression_evidence(
+          lowering, module_, expression, reachable, work,
+        )
         let target = match
           program_call_target_and_arguments(module_.expressions[expression]) {
           Some((target, _)) => target
@@ -3301,6 +3371,10 @@ fn plan_program_wasmgc_fragments_for_root(
     }
     for body in module_.bodies {
       if generic_bodies.contains(body.body) {
+        continue
+      }
+      if module_.functions.callable_of(body.declaration) is Some(_) &&
+        !program_roots.contains(body.declaration) {
         continue
       }
       for expression in compile_time_owned_expressions(module_, body) {

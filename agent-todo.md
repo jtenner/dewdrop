@@ -149,6 +149,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   The 46 raw Preview 1 functions now use public `foreign import` declarations.
   Higher-level Bytes I/O and diagnostics remain. See the
   [WASI log](docs/research/wasi-foreign-imports-2026-09-07.md).
+  Debug dispatch and result discard now use ordinary Dew functions; primitive
+  output has an explicit private foreign import. Formatting and Bytes I/O
+  remain. See the [Debug log](docs/research/debug-library-dispatch-2026-09-07.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap

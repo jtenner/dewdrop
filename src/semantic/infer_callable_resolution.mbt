@@ -375,131 +375,6 @@ fn BasicBodyInferencer::call_has_object_argument(
 }
 
 ///|
-fn BasicBodyInferencer::is_debug_dispatch(
-  self : BasicBodyInferencer,
-  declaration : DeclId,
-) -> Bool {
-  if semantic_id_module(declaration) == self.collected.module_id {
-    for builtin in self.collected.builtins {
-      if builtin.declaration == declaration {
-        return builtin.builtin_name == b"dew_debug_dispatch"
-      }
-    }
-    return false
-  }
-  let imports = match self.imports {
-    Some(value) => value
-    None => return false
-  }
-  for interface_index in imports.scope.imported_interfaces {
-    let interface_ = imports.scope.interfaces[interface_index].unwrap()
-    for callable in interface_.callables {
-      if callable.declaration == declaration {
-        return match callable.kind {
-          FrozenBuiltinCallable(name) => name == b"dew_debug_dispatch"
-          _ => false
-        }
-      }
-    }
-  }
-  false
-}
-
-///|
-fn BasicBodyInferencer::select_debug_dispatch(
-  self : BasicBodyInferencer,
-  call_slot : Int,
-  expression : ExprId,
-  receiver : ExprId,
-  offset : UInt64,
-) -> Unit {
-  let name = self.collected.find_name("debug").unwrap()
-  if self.select_declared_bound_method(
-      call_slot,
-      expression,
-      receiver,
-      name,
-      { start: 0, length: 0, },
-      offset,
-    ) {
-    return
-  }
-  if !self.collect_method_candidates(self.expression_type(receiver), name) {
-    self.call_targets[call_slot] = ErrorInferredCallTarget
-    self.diagnose(NoMatchingMethod(name, expression, offset))
-    return
-  }
-  let arguments = { start: 0, length: 0, }
-  let mut viable_count = 0
-  let mut selected_declaration = 0UL
-  let mut selected_impl = -1
-  let mut selected_specificity = -1
-  let mut second_declaration = 0UL
-  for candidate_index in 0..<self.call_scratch.method_candidates.length() {
-    let declaration = self.call_scratch.method_candidates[candidate_index]
-    let implementation_index = self.call_scratch.method_candidate_impls[candidate_index]
-    if self.try_method_candidate(
-        expression, receiver, arguments, declaration, implementation_index, offset,
-      ) {
-      let specificity = self.impl_index.implementations[implementation_index].specificity
-      if specificity > selected_specificity {
-        selected_specificity = specificity
-        viable_count = 1
-        selected_declaration = declaration
-        selected_impl = implementation_index
-        second_declaration = 0UL
-      } else if specificity == selected_specificity {
-        viable_count += 1
-        if viable_count == 2 {
-          second_declaration = declaration
-        }
-      }
-    }
-  }
-  if viable_count == 1 {
-    self.select_method_candidate(
-      call_slot, expression, receiver, arguments, selected_declaration, selected_impl,
-      offset,
-    )
-  } else {
-    self.call_targets[call_slot] = ErrorInferredCallTarget
-    if viable_count > 1 {
-      self.diagnose(
-        AmbiguousMethod(
-          name, expression, selected_declaration, second_declaration, viable_count,
-          offset,
-        ),
-      )
-    } else {
-      self.diagnose(NoMatchingMethod(name, expression, offset))
-    }
-  }
-}
-
-///|
-fn BasicBodyInferencer::constrain_debug_dispatches(
-  self : BasicBodyInferencer,
-) -> Unit {
-  for call_slot in self.call_scratch.pending_debug_dispatches {
-    let expression = self.call_expressions[call_slot]
-    let arguments = match self.collected.expressions[expression] {
-      HirCallExpr(_, values, _) => values
-      _ => abort("pending debug dispatch is not a call")
-    }
-    if arguments.length != 1 {
-      continue
-    }
-    self.select_debug_dispatch(
-      call_slot,
-      expression,
-      self.collected.expression_children[arguments.start],
-      self.collected.expressions[expression].offset(),
-    )
-  }
-  self.call_scratch.pending_debug_dispatches.clear()
-}
-
-///|
 fn BasicBodyInferencer::select_call_candidate(
   self : BasicBodyInferencer,
   call_slot : Int,
@@ -555,13 +430,9 @@ fn BasicBodyInferencer::select_call_candidate(
   self.call_targets[call_slot] = SelectedInferredCallTarget(
     declaration, type_arguments,
   )
-  if self.is_debug_dispatch(declaration) && arguments.length == 1 {
-    self.call_scratch.pending_debug_dispatches.push(call_slot)
-  } else {
-    self.validate_call_obligations(
-      expression, declaration, type_arguments, offset,
-    )
-  }
+  self.validate_call_obligations(
+    expression, declaration, type_arguments, offset,
+  )
 }
 
 ///|

@@ -274,7 +274,6 @@ priv struct CallInferenceScratch {
   overload_maximal_candidates : Array[DeclId]
   pending_methods : Array[ExprId]
   deferred_methods : Array[ExprId]
-  pending_debug_dispatches : Array[Int]
   pending_operators : Array[ExprId]
   string_pattern_expressions : Map[ExprId, Bool]
   deferred_operators : Array[ExprId]
@@ -319,7 +318,6 @@ fn CallInferenceScratch::new() -> CallInferenceScratch {
     overload_maximal_candidates: [],
     pending_methods: [],
     deferred_methods: [],
-    pending_debug_dispatches: [],
     pending_operators: [],
     string_pattern_expressions: Map::default(),
     deferred_operators: [],
@@ -3172,7 +3170,6 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
     }
   }
   self.constrain_method_calls(true)
-  self.constrain_debug_dispatches()
   self.constrain_operator_calls(true)
   self.constrain_members(true)
   self.validate_field_assignments()

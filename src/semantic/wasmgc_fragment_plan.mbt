@@ -2488,7 +2488,11 @@ fn wasmgc_plan_function_job(
     PlannedForeignCallable(logical_name, export_name, host_import) =>
       PlannedWasmImportedFunction(
         if host_import {
-          { module_name: logical_name, field: export_name, kind: ForeignHostWasmImport }
+          {
+            module_name: logical_name,
+            field: export_name,
+            kind: ForeignHostWasmImport,
+          }
         } else {
           WasmImportIdentity::static_link(logical_name, export_name)
         },
@@ -3792,7 +3796,12 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       ),
     )
   }
-  wasmgc_add_runtime_dependencies(function_jobs, reachable_functions)
+  // A whole-program root set already includes runtime dependencies. Repeating
+  // local lookup can select a second declaration for the same host import.
+  // Standalone module planning still needs its local dependency closure.
+  if program_roots.is_empty() {
+    wasmgc_add_runtime_dependencies(function_jobs, reachable_functions)
+  }
   let builtin_names : Map[DeclId, Bytes] = {}
   for callable in functions.callables {
     match callable.kind {

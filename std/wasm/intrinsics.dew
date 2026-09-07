@@ -802,9 +802,6 @@ pub builtin wasm_v128_ge_f64(left: V128, right: V128) -> V128 = "f64x2.ge"
 pub builtin wasm_v128_abs_f64(value: V128) -> V128 = "f64x2.abs"
 pub builtin wasm_v128_neg_f64(value: V128) -> V128 = "f64x2.neg"
 
-// std/preamble/110-debug.dew
-pub builtin wasm___dew_debug_ignore(value: U32) -> Unit = "dew_debug_ignore"
-
 // std/preamble/30-packed.dew
 pub builtin wasm_unsafe_bitcast<source, target>(value: source) -> target = "unsafe.bitcast"
 

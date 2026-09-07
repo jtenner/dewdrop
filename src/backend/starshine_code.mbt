@@ -833,8 +833,6 @@ fn starshine_inline_builtin_instructions(
     }
   } else if name == b"unreachable" {
     Ok([@lib.Instruction::unreachable_()])
-  } else if name == b"dew_debug_ignore" {
-    Ok([@lib.Instruction::drop()])
   } else if name == b"unsafe.bitcast" {
     Ok([])
   } else if name == b"ref_null" {

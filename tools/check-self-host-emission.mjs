@@ -10,6 +10,7 @@ import { checkMathOperations } from "./math-operation-cases.mjs";
 import { checkSpecializationCallbacks } from "./specialization-callback-cases.mjs";
 import { checkMemberCalls } from "./member-call-cases.mjs";
 import { wasiForeignProbe } from "./wasi-foreign-cases.mjs";
+import { debugDispatchProbe } from "./debug-dispatch-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { checkRingOperations } from "./ring-operation-cases.mjs";
@@ -153,6 +154,16 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const request = await readFile(".tmp/self-host-hardening/debug-dispatch.request.bin");
+  const probe = debugDispatchProbe();
+  const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request", probe.imports);
+  console.log(`self-host Debug dispatch checks passed: ${probe.check(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host Debug dispatch corpus failed", error);
+}
 try {
   const start = performance.now();
   const request = await readFile(".tmp/self-host-hardening/wasi-foreign.request.bin");

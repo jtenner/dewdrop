@@ -1,0 +1,66 @@
+struct DebugTrace {
+  mut value: I32
+}
+
+struct DebugValue {
+  digit: I32
+  trace: DebugTrace
+}
+
+impl Debug for DebugValue {
+  fn debug(self) -> Unit {
+    self.trace.value = self.trace.value * 10i32 + self.digit
+  }
+}
+
+fn debug_through_generic<t: Debug>(value: t) -> Unit {
+  debug(value)
+}
+
+fn debug_custom() -> I32 {
+  let trace = DebugTrace::{
+    value: 0i32
+  }
+  debug(DebugValue::{
+    digit: 1i32
+    trace: trace
+  })
+  debug(DebugValue::{
+    digit: 2i32
+    trace: trace
+  })
+  trace.value
+}
+
+fn debug_generic_custom() -> I32 {
+  let trace = DebugTrace::{
+    value: 0i32
+  }
+  debug_through_generic(DebugValue::{
+    digit: 3i32
+    trace: trace
+  })
+  debug(DebugValue::{
+    digit: 1i32
+    trace: trace
+  })
+  trace.value
+}
+
+fn debug_never_argument() -> I32 {
+  debug::<I32>(return 7i32)
+  99i32
+}
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => debug_custom()
+    1u32 => debug_generic_custom()
+    2u32 => debug_never_argument()
+    3u32 => {
+      debug(42i32)
+      0i32
+    }
+    _ => -1i32
+  }
+}
