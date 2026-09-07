@@ -97,6 +97,7 @@ impl SelfHostBasicBodyInferencer {
     let mut count = 0u32
     let mut needs_evidence = false
     let right = match self.collected.expressions[expression] {
+      SelfHostHirExpr::StringExpr(_, _) => expression
       SelfHostHirExpr::BinaryExpr(_, _, value, _) => value
       _ => return
     }

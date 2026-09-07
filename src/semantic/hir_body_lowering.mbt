@@ -594,6 +594,15 @@ fn CollectionBuilder::visit_pattern_source(
     @parser.RestPattern(offset) =>
       ignore(self.emit_pattern(HirRestPattern(offset)))
     @parser.LiteralPattern(expression, _) => {
+      match expression {
+        @parser.StringExpr(_, _) => {
+          // A string pattern uses the same trait lookup as `==`, even when
+          // neither trait nor method is spelled in this source module.
+          ignore(self.intern("Eq"))
+          ignore(self.intern("eq"))
+        }
+        _ => ()
+      }
       let expr_start = self.body_expr_results.length()
       self.push_body_task(body_finish_pattern, source_index, expr_start, 0)
       self.schedule_expr(expression)

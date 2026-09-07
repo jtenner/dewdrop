@@ -28,3 +28,46 @@ test "reference primitive equality without an implementation is an error" {
   assert(module_.inferred.diagnostics.length() == 1u32, "one missing operator diagnostic")
   assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, _), "missing value equality cannot become reference identity")
 }
+
+test "String literal patterns retain imported Eq and their String value type" {
+  let link = self_host_physical_test_named_import_link(
+    "app.comparison",
+    b"pub trait Eq {\n  fn eq(self, right: Self) -> Bool\n}\nimpl Eq for String {\n  fn eq(self, right: String) -> Bool {\n    true\n  }\n}\n",
+    b"open app.comparison\npub fn run(value: String) -> I32 {\n  match value {\n    \"ready\" => 1\n    _ => 0\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  let mut comparisons = 0u32
+  for target in module_.inferred.operator_targets {
+    match target {
+      SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => {
+        assert(arguments.length == 0u32, "concrete String equality has no generic arguments")
+        comparisons = comparisons + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(comparisons == 1u32, "String literal pattern must retain its Eq target")
+  let mut literals = 0u32
+  for expression in module_.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedStringConst(_) => {
+        assert(expression.shape is SelfHostPlannedValueShape::RefPlannedValueShape, "pattern comparison must not change the literal to Bool")
+        literals = literals + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(literals == 1u32, "one String literal")
+}
+
+test "String literal patterns report a missing imported Eq implementation" {
+  let link = self_host_physical_test_named_import_link(
+    "app.comparison",
+    b"pub trait Eq {\n  fn eq(self, right: Self) -> Bool\n}\n",
+    b"open app.comparison\npub fn run(value: String) -> I32 {\n  match value {\n    \"ready\" => 1\n    _ => 0\n  }\n}\n",
+  )
+  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  assert(module_.inferred.diagnostics.length() == 1u32, "one missing pattern equality diagnostic")
+  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, _), "missing pattern equality cannot select an unrelated method")
+}

@@ -513,12 +513,21 @@ impl SelfHostCollectionBuilder {
       SelfHostPattern::RestPattern(offset) => self.emit_pattern(
         SelfHostHirPattern::RestPattern(offset),
       )
-      SelfHostPattern::LiteralPattern(expression, offset) => self.emit_pattern(
-        SelfHostHirPattern::LiteralPattern(
-          self.lower_expression(expression),
-          offset,
-        ),
-      )
+      SelfHostPattern::LiteralPattern(expression, offset) => {
+        match expression {
+          SelfHostExpr::StringExpr(_, _) => {
+            let _ = self.intern("Eq")
+            let _ = self.intern("eq")
+          }
+          _ => {}
+        }
+        self.emit_pattern(
+          SelfHostHirPattern::LiteralPattern(
+            self.lower_expression(expression),
+            offset,
+          ),
+        )
+      }
       SelfHostPattern::QualifiedPattern(base, name, offset) => {
         let base_id = self.lower_pattern(base)
         self.emit_pattern(

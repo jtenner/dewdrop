@@ -276,6 +276,7 @@ priv struct CallInferenceScratch {
   deferred_methods : Array[ExprId]
   pending_debug_dispatches : Array[Int]
   pending_operators : Array[ExprId]
+  string_pattern_expressions : Map[ExprId, Bool]
   deferred_operators : Array[ExprId]
   method_candidates : Array[DeclId]
   method_candidate_impls : Array[Int]
@@ -320,6 +321,7 @@ fn CallInferenceScratch::new() -> CallInferenceScratch {
     deferred_methods: [],
     pending_debug_dispatches: [],
     pending_operators: [],
+    string_pattern_expressions: Map::default(),
     deferred_operators: [],
     method_candidates: [],
     method_candidate_impls: [],
@@ -363,6 +365,7 @@ fn CallInferenceScratch::begin_body(self : CallInferenceScratch) -> Unit {
   self.pending_methods.clear()
   self.deferred_methods.clear()
   self.pending_operators.clear()
+  self.string_pattern_expressions.clear()
   self.deferred_operators.clear()
   self.method_candidates.clear()
   self.method_candidate_impls.clear()
@@ -2852,12 +2855,15 @@ fn BasicBodyInferencer::constrain_expressions(
       | HirF32Expr(_, _)
       | HirF64Expr(_, _)
       | HirBoolExpr(_, _)
-      | HirStringExpr(_, _)
       | HirBytesExpr(_, _)
       | HirNameExpr(_, _)
       | HirImportAliasExpr(_, _)
       | HirProductExpr(_, _)
       | HirTypeBindingExpr(_, _) => ()
+      HirStringExpr(_, _) =>
+        if self.call_scratch.string_pattern_expressions.contains(expression) {
+          self.call_scratch.pending_operators.push(expression)
+        }
       HirArrayExpr(elements, offset) => {
         let expression_type = self.solver.representative_type(
           self.expression_type(expression),
@@ -3133,6 +3139,7 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   self.initialize_return_type()
   self.constrain_name_expressions()
   self.constrain_block_items()
+  self.prepare_string_pattern_operators()
   self.constrain_expressions()
   if self.control_span.length > 0 {
     self.constrain_control_results()

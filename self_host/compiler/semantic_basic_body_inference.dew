@@ -507,6 +507,7 @@ struct SelfHostBasicBodyInferencer {
   pending_variant_calls: Array<U32>
   pending_variant_values: Array<U32>
   pending_operators: Array<U32>
+  string_pattern_expressions: Map<U32, Bool>
   pending_constructions: Array<U32>
   pending_fields: Array<U32>
   pending_member_equations: Array<SelfHostPendingMemberEquation>
@@ -619,6 +620,7 @@ impl SelfHostBasicBodyInferencer {
       pending_variant_calls: []
       pending_variant_values: []
       pending_operators: []
+      string_pattern_expressions: self_host_empty_u32_bool_map()
       pending_constructions: []
       pending_fields: []
       pending_member_equations: []
@@ -3578,7 +3580,12 @@ impl SelfHostBasicBodyInferencer {
           SelfHostHirPattern::WildcardPattern(_) => {}
           SelfHostHirPattern::BindingPattern(_, _) => {}
           SelfHostHirPattern::RestPattern(_) => {}
-          SelfHostHirPattern::LiteralPattern(_, _) => {}
+          SelfHostHirPattern::LiteralPattern(expression, _) => match self.collected.expressions[expression] {
+            SelfHostHirExpr::StringExpr(_, _) => {
+              self.string_pattern_expressions.set(expression, true)
+            }
+            _ => {}
+          }
           SelfHostHirPattern::TuplePattern(_, _, _) => {}
           SelfHostHirPattern::QualifiedPattern(_, _, _) => {}
           SelfHostHirPattern::StructPattern(_, _, _, _, _) => {}
@@ -6823,6 +6830,13 @@ impl SelfHostBasicBodyInferencer {
     }
   }
 
+  fn operator_result_type(self, expression: U32) -> I32 {
+    match self.collected.expressions[expression] {
+      SelfHostHirExpr::StringExpr(_, _) => self.primitive(SelfHostPrimitiveType::BoolType)
+      _ => self.expression_type(expression)
+    }
+  }
+
   fn binary_operator_candidate_viable(
     self,
     expression: U32,
@@ -6871,7 +6885,7 @@ impl SelfHostBasicBodyInferencer {
     }
     if viable {
       viable = self.solver.unify(
-        self.expression_type(expression),
+        self.operator_result_type(expression),
         self.instantiate_signature_type(
           self_host_basic_u32_at(self.resolved.callable_return_types, callable),
         ),
@@ -6928,7 +6942,7 @@ impl SelfHostBasicBodyInferencer {
       origin,
     )
     self.constrain(
-      self.expression_type(expression),
+      self.operator_result_type(expression),
       self.instantiate_signature_type(
         self_host_basic_u32_at(self.resolved.callable_return_types, callable),
       ),
@@ -6957,6 +6971,12 @@ impl SelfHostBasicBodyInferencer {
 
   fn constrain_pending_binary_operator(self, expression: U32) -> Unit {
     let (operator, left, right, offset) = match self.collected.expressions[expression] {
+      SelfHostHirExpr::StringExpr(_, offset) => (
+        SelfHostHirBinaryOperator::Equal,
+        expression,
+        expression,
+        offset,
+      )
       SelfHostHirExpr::BinaryExpr(value, left_expression, right_expression, expression_offset) => (
         value,
         left_expression,
@@ -7140,6 +7160,7 @@ impl SelfHostBasicBodyInferencer {
     callable: SelfHostResolvedImportedCallable,
   ) -> Bool {
     let operands = match self.collected.expressions[expression] {
+      SelfHostHirExpr::StringExpr(_, _) => [expression, expression]
       SelfHostHirExpr::BinaryExpr(_, left, right, _) => [left, right]
       SelfHostHirExpr::IndexExpr(base, index, _) => [base, index]
       SelfHostHirExpr::IndexSetExpr(base, index, value, _) => [base, index, value]
@@ -7172,7 +7193,7 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
-    self.solver.unify(self.expression_type(expression), self.instantiate_signature_type(callable.result_type), origin)
+    self.solver.unify(self.operator_result_type(expression), self.instantiate_signature_type(callable.result_type), origin)
   }
 
   fn index_operator_candidate_viable(
@@ -7546,6 +7567,7 @@ impl SelfHostBasicBodyInferencer {
 
   fn constrain_pending_operator(self, expression: U32) -> Unit {
     match self.collected.expressions[expression] {
+        SelfHostHirExpr::StringExpr(_, _) => self.constrain_pending_binary_operator(expression)
         SelfHostHirExpr::BinaryExpr(_, _, _, _) => self.constrain_pending_binary_operator(
           expression,
         )
@@ -7648,6 +7670,11 @@ impl SelfHostBasicBodyInferencer {
           self.collected.expressions[current],
         )
         match self.collected.expressions[current] {
+          SelfHostHirExpr::StringExpr(_, _) => if self.string_pattern_expressions.contains_key(current) {
+            if self.local_trait_named("Eq") is Option::Some(_) || self.imported_operator_trait(SelfHostHirBinaryOperator::Equal) is Option::Some(_) {
+              self.pending_operators.push(current)
+            }
+          }
           SelfHostHirExpr::ArrayExpr(elements, _) => {
             let representative = self.solver.representative_type(self.expression_type(current))
             let element_type = match self.solver.type_term(representative) {

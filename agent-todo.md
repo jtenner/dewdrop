@@ -112,6 +112,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   String scans and concatenation use the Bytes library path. String equality
   still needs an explicit literal-pattern call plan before its runtime builder
   can be removed. See the [String log](docs/research/string-library-algorithms-2026-09-06.md).
+  String pattern inference now selects the ordinary Eq method and keeps the
+  literal's String type. Lowering, call recipes, and emission still need that
+  evidence. See the [pattern log](docs/research/string-pattern-equality-2026-09-06.md).
 - [ ] Convert remaining host-operation builtins into foreign declarations.
   Keep generated Dew types, provider metadata, and emitted signatures in sync.
 - [ ] Remove all remaining standard-module path, declaration-number, and name

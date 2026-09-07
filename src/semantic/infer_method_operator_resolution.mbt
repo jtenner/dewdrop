@@ -267,6 +267,45 @@ fn BasicBodyInferencer::collect_operator_candidates(
 }
 
 ///|
+fn BasicBodyInferencer::prepare_string_pattern_operators(
+  self : BasicBodyInferencer,
+) -> Unit {
+  // Keep implicit comparisons in the same arena-ordered work queue as explicit
+  // operators. The pattern literal remains a String-valued expression.
+  if self.trait_declaration_named("Eq") is None ||
+    self.collected.find_name("eq") is None {
+    return
+  }
+  for
+    pattern in self.body.patterns.start..<(self.body.patterns.start +
+    self.body.patterns.length) {
+    if !self.live_pattern(pattern) {
+      continue
+    }
+    match self.collected.patterns[pattern] {
+      HirLiteralPattern(expression, _) =>
+        match self.collected.expressions[expression] {
+          HirStringExpr(_, _) =>
+            self.call_scratch.string_pattern_expressions[expression] = true
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+}
+
+///|
+fn BasicBodyInferencer::operator_result_type(
+  self : BasicBodyInferencer,
+  expression : ExprId,
+) -> BodyTypeId {
+  match self.collected.expressions[expression] {
+    HirStringExpr(_, _) => self.primitive(BoolType)
+    _ => self.expression_type(expression)
+  }
+}
+
+///|
 fn BasicBodyInferencer::try_operator_candidate(
   self : BasicBodyInferencer,
   expression : ExprId,
@@ -308,7 +347,7 @@ fn BasicBodyInferencer::try_operator_candidate(
   }
   if viable {
     viable = self.solver.unify(
-      self.expression_type(expression),
+      self.operator_result_type(expression),
       self.instantiate_signature_type(self.call_result_type(declaration)),
       origin,
     )
@@ -352,7 +391,7 @@ fn BasicBodyInferencer::select_operator_candidate(
   )
   self.constrain_assignable(
     self.instantiate_signature_type(self.call_result_type(declaration)),
-    self.expression_type(expression),
+    self.operator_result_type(expression),
     origin,
   )
   let start = self.call_type_arguments.length()
@@ -917,6 +956,7 @@ fn BasicBodyInferencer::try_resolve_operator(
   let source = self.collected.expressions[expression]
   let (trait_name, method_name_string, target_expression, offset) = match
     source {
+    HirStringExpr(_, offset) => ("Eq", "eq", expression, offset)
     HirBinaryExpr(operator, left, _, offset) => {
       let (trait_name, method_name) = binary_operator_trait(operator).unwrap()
       (trait_name, method_name, left, offset)
@@ -929,6 +969,7 @@ fn BasicBodyInferencer::try_resolve_operator(
   }
   let (left, right) = match source {
     HirBinaryExpr(_, left, right, _) => (left, right)
+    HirStringExpr(_, _) => (expression, expression)
     _ => (-1, -1)
   }
   let trait_declaration = self.trait_declaration_named(trait_name).unwrap()
@@ -977,7 +1018,7 @@ fn BasicBodyInferencer::try_resolve_operator(
     let declaration = self.call_scratch.method_candidates[candidate_index]
     let implementation_index = self.call_scratch.method_candidate_impls[candidate_index]
     let viable = match source {
-      HirBinaryExpr(_, _, _, _) =>
+      HirBinaryExpr(_, _, _, _) | HirStringExpr(_, _) =>
         self.try_operator_candidate(
           expression, left, right, declaration, implementation_index, offset,
         )
@@ -1005,7 +1046,7 @@ fn BasicBodyInferencer::try_resolve_operator(
   }
   if self.call_scratch.trial_viable_count == 1 {
     match source {
-      HirBinaryExpr(_, _, _, _) =>
+      HirBinaryExpr(_, _, _, _) | HirStringExpr(_, _) =>
         self.select_operator_candidate(
           expression,
           left,
