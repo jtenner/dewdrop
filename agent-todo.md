@@ -252,6 +252,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   in both parsers and downstream pattern handling. Current fixtures use a named
   payload followed by tuple destructuring. Extend imported/unqualified enum
   ambiguity and construction coverage while removing name-based backend rules.
+  The native importer now rebuilds product field spans in the receiving arena.
+  Nested imports and structural identity have focused tests; see the
+  [imported product log](docs/research/imported-product-spans-2026-09-07.md).
 - [x] Keep readable, typed Starshine FFI names through regeneration. Audit any
   remaining numbered references; test identity and signature agreement rather
   than merely renaming incompatible reference types.

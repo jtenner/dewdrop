@@ -263,7 +263,7 @@ fn InterfaceTypeImporter::intern_simple(
   match type_ {
     ErrorType => return self.resolved.error_type
     PrimitiveType(primitive) => return self.resolved.primitive(primitive)
-    AppliedType(_, _) | FunctionType(_, _) =>
+    AppliedType(_, _) | FunctionType(_, _) | ProductType(_) =>
       abort("simple imported type is structural")
     _ => ()
   }
@@ -275,6 +275,33 @@ fn InterfaceTypeImporter::intern_simple(
   let index = self.resolved.types.length()
   self.resolved.types.push(type_)
   index
+}
+
+///|
+fn InterfaceTypeImporter::intern_product(
+  self : InterfaceTypeImporter,
+  fields : Array[ResolvedTypeId],
+) -> ResolvedTypeId {
+  for index, existing in self.resolved.types {
+    if existing is ProductType(span) && span.length == fields.length() {
+      guard arena_span_is_valid(span, self.resolved.type_arguments.length()) else {
+        abort("ARN-101 imported product fields")
+      }
+      let mut same = true
+      for field in 0..<span.length {
+        if self.resolved.type_arguments[span.start + field] != fields[field] {
+          same = false
+          break
+        }
+      }
+      if same { return index }
+    }
+  }
+  let start = self.resolved.type_arguments.length()
+  for field in fields { self.resolved.type_arguments.push(field) }
+  let result = self.resolved.types.length()
+  self.resolved.types.push(ProductType({ start, length: fields.length() }))
+  result
 }
 
 ///|
@@ -402,6 +429,17 @@ fn InterfaceTypeImporter::import_type(
     let source = self.interfaces[source_interface].unwrap().resolved_types
     if state == 0 {
       match source.types[source_type] {
+        ProductType(fields) => {
+          guard arena_span_is_valid(fields, source.type_arguments.length()) else {
+            abort("ARN-101 source product fields")
+          }
+          self.push(source_interface, source_type, 3, self.results.length())
+          let mut index = fields.length
+          while index > 0 {
+            index -= 1
+            self.push(source_interface, source.type_arguments[fields.start + index], 0, 0)
+          }
+        }
         AppliedType(base, arguments) => {
           self.push(source_interface, source_type, 1, self.results.length())
           let mut index = arguments.length
@@ -453,6 +491,17 @@ fn InterfaceTypeImporter::import_type(
         imported_base,
         self.application_scratch,
       )
+      self.memos[source_interface][source_type] = imported
+      self.results.truncate(result_start)
+      self.results.push(imported)
+    } else if state == 3 {
+      let fields = match source.types[source_type] {
+        ProductType(fields) => fields
+        _ => abort("imported type finish task is not a product")
+      }
+      self.application_scratch.clear()
+      append_int_result_range(self.results, result_start, result_start + fields.length, self.application_scratch)
+      let imported = self.intern_product(self.application_scratch)
       self.memos[source_interface][source_type] = imported
       self.results.truncate(result_start)
       self.results.push(imported)
