@@ -452,13 +452,15 @@ fn self_host_plan_program_module_graph(
     dependencies,
     dependency_modules,
   )
-  SelfHostProgramModuleGraph::{
+  let graph = SelfHostProgramModuleGraph::{
     dependencies: dependencies
     dependency_modules: dependency_modules
     sccs: sccs
     scc_modules: scc_modules
     module_scc: module_scc
   }
+  self_host_verify_program_module_graph(graph, frozen.collected.modules.length())
+  graph
 }
 
 fn self_host_infer_program_module_bodies(

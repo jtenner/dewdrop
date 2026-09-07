@@ -1078,6 +1078,10 @@ fn self_host_plan_program_wasmgc_link(
   fragments: SelfHostPlannedProgramWasmGCFragments,
   emit_tests: Bool,
 ) -> SelfHostPlannedProgramWasmGCLink {
+  self_host_verify_program_module_graph(
+    fragments.specialization.lowering.graph,
+    fragments.modules.length(),
+  )
   let types = []
   let module_type_bases = self_host_program_link_u32_slots(
     fragments.modules.length(),

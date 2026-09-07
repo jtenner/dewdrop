@@ -1,0 +1,91 @@
+// Validate the schedule before any consumer uses it to assign physical bases.
+// Detail tags match the native graph verifier. Do not format a string on the
+// failure path: the host renders the complete LNK-501 record after the trap.
+fn self_host_assert_module_graph_fact(
+  condition: Bool,
+  module_index: U32,
+  expected: U32,
+  actual: U32,
+  detail: U32,
+) -> Unit {
+  if !condition {
+    let _ = self_host_assert_compiler_invariant_with_failure(
+      false,
+      SelfHostInvariantFailure::{
+        code: 501u32
+        phase: 5u32
+        module_id: 0u64
+        declaration: 0u64
+        body: 0u64
+        expression: module_index
+        expected: u32_into_u64(expected)
+        actual: u32_into_u64(actual)
+        detail: u32_into_u64(detail)
+      },
+      "invalid module dependency schedule",
+    )
+  }
+}
+
+fn self_host_verify_program_module_graph(
+  graph: SelfHostProgramModuleGraph,
+  module_count: U32,
+) -> Unit {
+  let missing = 4294967295u32
+  self_host_assert_module_graph_fact(graph.dependencies.length() == module_count,
+    missing, module_count, graph.dependencies.length(), 0u32)
+  self_host_assert_module_graph_fact(graph.scc_modules.length() == module_count,
+    missing, module_count, graph.scc_modules.length(), 1u32)
+  self_host_assert_module_graph_fact(graph.module_scc.length() == module_count,
+    missing, module_count, graph.module_scc.length(), 12u32)
+  let owners = self_host_u32_slots(module_count, missing)
+  let mut cursor = 0u32
+  let mut component = 0u32
+  for span in graph.sccs {
+    self_host_assert_module_graph_fact(span.length > 0u32,
+      component, 1u32, span.length, 2u32)
+    self_host_assert_module_graph_fact(span.start == cursor,
+      component, cursor, span.start, 3u32)
+    self_host_assert_module_graph_fact(self_host_array_span_is_valid(span.start, span.length, module_count),
+      component, module_count, span.length, 4u32)
+    let mut relative = 0u32
+    while relative {
+      current => if current < span.length {
+        let member = graph.scc_modules[span.start + current]
+        self_host_assert_module_graph_fact(member < module_count,
+          component, module_count, member, 5u32)
+        self_host_assert_module_graph_fact(owners[member] == missing,
+          member, missing, owners[member], 6u32)
+        self_host_assert_module_graph_fact(graph.module_scc[member] == component,
+          member, component, graph.module_scc[member], 7u32)
+        owners[member] = component
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    cursor = cursor + span.length
+    component = component + 1u32
+  }
+  self_host_assert_module_graph_fact(cursor == module_count,
+    missing, module_count, cursor, 11u32)
+  let mut source = 0u32
+  for span in graph.dependencies {
+    self_host_assert_module_graph_fact(self_host_array_span_is_valid(span.start, span.length, graph.dependency_modules.length()),
+      source, graph.dependency_modules.length(), span.start, 8u32)
+    let mut relative = 0u32
+    while relative {
+      current => if current < span.length {
+        let dependency = graph.dependency_modules[span.start + current]
+        self_host_assert_module_graph_fact(dependency < module_count,
+          source, module_count, dependency, 9u32)
+        self_host_assert_module_graph_fact(owners[dependency] <= owners[source],
+          source, owners[source], owners[dependency], 10u32)
+        continue current + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    source = source + 1u32
+  }
+}

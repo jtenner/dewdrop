@@ -10,6 +10,18 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["repeated SCC module is rejected", 0, 4294967295, 0, 6],
+    ["missing SCC module is rejected", 4294967295, 3, 2, 1],
+    ["reversed dependency order is rejected", 1, 1, 2, 10],
+    ["overlapping SCC spans are rejected", 1, 1, 0, 3],
+    ["dependency span overflow is rejected", 1, 2, 4294967295, 8],
+    ["out of range dependency is rejected", 1, 3, 3, 9],
+    ["stored component identity must match", 1, 1, 2, 7],
+  ].map(([name, expression, expected, actual, detail]) => ({
+    name: `LNK-501 ${name}`,
+    expected: [501, 5, 0n, 0n, 0n, expression, BigInt(expected), BigInt(actual), BigInt(detail)],
+  })),
   {
     name: "SPC-303 source call declarations cannot disagree",
     expected: [303, 5, 77n, (88n << 32n) + 11n, (77n << 32n) + 17n, 19, (88n << 32n) + 11n, (88n << 32n) + 12n, 3n],

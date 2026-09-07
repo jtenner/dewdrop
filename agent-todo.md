@@ -187,6 +187,10 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
   order must hold, and stored identities, physical indices, and import offsets
   must agree. Missing bases or bodies must produce a diagnostic.
+  Both compilers now check SCC coverage, uniqueness, owned spans, and dependency
+  order at graph construction and linking. Seven self-host negative cases check
+  complete LNK-501 records. See the
+  [graph log](docs/research/module-graph-invariants-2026-09-07.md).
 - [ ] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.

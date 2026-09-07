@@ -858,6 +858,7 @@ pub fn link_program_wasmgc_fragments(
   lowering : PlannedProgramLowering,
   root_module_index : Int,
 ) -> PlannedProgramWasmGCLink {
+  assert_module_dependency_graph(fragments.graph)
   guard root_module_index >= 0 && root_module_index < lowering.modules.length() else {
     abort("program root module index is outside the manifest")
   }

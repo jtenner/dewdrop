@@ -1571,7 +1571,7 @@ pub fn build_module_dependency_graph(
   let (sccs, scc_modules) = module_dependency_sccs(
     dependencies, dependency_modules,
   )
-  {
+  let graph = {
     module_ids,
     dependencies,
     dependency_modules,
@@ -1579,6 +1579,8 @@ pub fn build_module_dependency_graph(
     scc_modules,
     diagnostics,
   }
+  assert_module_dependency_graph(graph)
+  graph
 }
 
 ///|

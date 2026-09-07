@@ -105,7 +105,8 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_compile_time_queries_test.dew \
   self_host/compiler/semantic_physical_type_demand_test.dew \
   self_host/compiler/semantic_imported_trait_contract_test.dew \
-  self_host/compiler/semantic_solver_invariants_test.dew
+  self_host/compiler/semantic_solver_invariants_test.dew \
+  self_host/compiler/semantic_module_graph_invariants_test.dew
 do
   test_args+=(self_host.compiler "${source#self_host/compiler/}" "$source")
 done
