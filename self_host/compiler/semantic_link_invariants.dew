@@ -1,0 +1,151 @@
+open dew.std.map
+open dew.std.option
+
+fn self_host_assert_link_fact(
+  condition: Bool, code: U32, module_id: U64, declaration: U64,
+  slot: U32, expected: U64, actual: U64, detail: U64,
+) -> Unit {
+  if !condition {
+    let _ = self_host_assert_compiler_invariant_with_failure(false,
+      SelfHostInvariantFailure::{
+        code: code
+        phase: 5u32
+        module_id: module_id
+        declaration: declaration
+        body: if code == 610u32 {
+          expected
+        } else {
+          0u64
+        }
+        expression: slot
+        expected: expected
+        actual: actual
+        detail: detail
+      }, "invalid physical link record")
+  }
+}
+
+fn self_host_link_body_owners(link: SelfHostPlannedProgramWasmGCLink) -> Map<U64, U64> {
+  let owners = self_host_link_empty_body_owners()
+  for module_ in link.fragments.specialization.lowering.modules {
+    for body in module_.bodies {
+      self_host_assert_link_fact(owners.get(body.body) is Option::None,
+        504u32, module_.module_id, body.declaration, 4294967295u32,
+        0u64, body.body, 12u64)
+      owners.set(body.body, body.declaration)
+    }
+  }
+  owners
+}
+
+fn self_host_link_empty_body_owners() -> Map<U64, U64> {
+  Map::empty()
+}
+
+// Verify source identity and table position before consumers build lookup maps.
+// The walk is linear in the linked tables and the source body arena.
+fn self_host_verify_link_records(link: SelfHostPlannedProgramWasmGCLink) -> Unit {
+  let modules = link.fragments.modules
+  let module_count = modules.length()
+  let lowering = link.fragments.specialization.lowering
+  let missing = 4294967295u32
+  self_host_verify_program_module_graph(lowering.graph, module_count)
+  self_host_assert_link_fact(link.module_type_bases.length() == module_count,
+    503u32, 0u64, 0u64, missing, u32_into_u64(module_count), u32_into_u64(link.module_type_bases.length()), 1u64)
+  self_host_assert_link_fact(lowering.modules.length() == module_count,
+    504u32, 0u64, 0u64, missing, u32_into_u64(module_count), u32_into_u64(lowering.modules.length()), 0u64)
+  let mut type_cursor = 0u32
+  for module_index in lowering.graph.scc_modules {
+    let module_ = modules[module_index]
+    self_host_assert_link_fact(module_.module_id == lowering.modules[module_index].module_id,
+      504u32, module_.module_id, 0u64, module_index,
+      lowering.modules[module_index].module_id, module_.module_id, 1u64)
+    let base = link.module_type_bases[module_index]
+    self_host_assert_link_fact(base == type_cursor,
+      503u32, module_.module_id, 0u64, module_index, u32_into_u64(type_cursor), u32_into_u64(base), 0u64)
+    let count = module_.physical_types.length()
+    self_host_assert_link_fact(self_host_array_span_is_valid(base, count, link.types.length()),
+      503u32, module_.module_id, 0u64, module_index,
+      u32_into_u64(link.types.length()), u32_into_u64(count), 2u64)
+    let _ = while 0u32 {
+      fragment => if fragment < count {
+        let slot = base + fragment
+        let type_ = link.types[slot]
+        self_host_assert_link_fact(type_.type_index == slot,
+          502u32, module_.module_id, 0u64, slot, u32_into_u64(slot), u32_into_u64(type_.type_index), 1u64)
+        self_host_assert_link_fact(type_.module_index == module_index,
+          504u32, module_.module_id, 0u64, slot, u32_into_u64(module_index), u32_into_u64(type_.module_index), 4u64)
+        self_host_assert_link_fact(type_.fragment_index == fragment,
+          504u32, module_.module_id, 0u64, slot, u32_into_u64(fragment), u32_into_u64(type_.fragment_index), 5u64)
+        continue fragment + 1u32
+      } else {
+        break self_host_semantic_unit()
+      }
+    }
+    type_cursor = base + count
+  }
+  self_host_assert_link_fact(type_cursor == link.types.length(),
+    502u32, 0u64, 0u64, missing, u32_into_u64(type_cursor), u32_into_u64(link.types.length()), 2u64)
+  self_host_assert_link_fact(link.imported_function_count <= link.functions.length(),
+    502u32, 0u64, 0u64, missing, u32_into_u64(link.functions.length()), u32_into_u64(link.imported_function_count), 3u64)
+  self_host_assert_link_fact(link.defined_function_count == link.functions.length() - link.imported_function_count,
+    502u32, 0u64, 0u64, missing, u32_into_u64(link.functions.length() - link.imported_function_count), u32_into_u64(link.defined_function_count), 4u64)
+  let bodies = self_host_link_body_owners(link)
+  let seen_fragments = self_host_link_empty_body_owners()
+  let mut slot = 0u32
+  for function_ in link.functions {
+    self_host_assert_link_fact(function_.module_index < module_count,
+      504u32, 0u64, function_.declaration, slot,
+      u32_into_u64(module_count), u32_into_u64(function_.module_index), 6u64)
+    let module_ = modules[function_.module_index]
+    self_host_assert_link_fact(function_.function_index == slot,
+      502u32, module_.module_id, function_.declaration, slot,
+      u32_into_u64(slot), u32_into_u64(function_.function_index), 0u64)
+    self_host_assert_link_fact(function_.fragment_index < module_.functions.length(),
+      504u32, module_.module_id, function_.declaration, slot,
+      u32_into_u64(module_.functions.length()), u32_into_u64(function_.fragment_index), 2u64)
+    let fragment = module_.functions[function_.fragment_index]
+    self_host_assert_link_fact(function_.declaration == fragment.declaration,
+      504u32, module_.module_id, function_.declaration, slot,
+      fragment.declaration, function_.declaration, 3u64)
+    self_host_assert_link_fact(function_.specialization == fragment.specialization,
+      504u32, module_.module_id, function_.declaration, slot,
+      u32_into_u64(fragment.specialization), u32_into_u64(function_.specialization), 7u64)
+    let lambda = match fragment.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(value) => value
+      _ => missing
+    }
+    self_host_assert_link_fact(function_.lambda == lambda,
+      504u32, module_.module_id, function_.declaration, slot,
+      u32_into_u64(lambda), u32_into_u64(function_.lambda), 8u64)
+    self_host_assert_link_fact(function_.imported == (slot < link.imported_function_count) &&
+      function_.imported == self_host_program_link_is_imported(fragment),
+      502u32, module_.module_id, function_.declaration, slot,
+      u32_into_u64(link.imported_function_count), u32_into_u64(slot), 5u64)
+    let fragment_key = (u32_into_u64(function_.module_index) << 32u64) | u32_into_u64(function_.fragment_index)
+    self_host_assert_link_fact(seen_fragments.get(fragment_key) is Option::None,
+      504u32, module_.module_id, function_.declaration, slot,
+      0u64, fragment_key, 9u64)
+    seen_fragments.set(fragment_key, u32_into_u64(slot))
+    self_host_assert_link_fact(self_host_array_span_is_valid(fragment.parameters.start, fragment.parameters.length, module_.function_value_types.length()),
+      101u32, module_.module_id, function_.declaration, slot,
+      u32_into_u64(module_.function_value_types.length()), u32_into_u64(fragment.parameters.start),
+      (10u64 << 32u64) | u32_into_u64(fragment.parameters.length))
+    self_host_assert_link_fact(self_host_array_span_is_valid(fragment.results.start, fragment.results.length, module_.function_value_types.length()),
+      101u32, module_.module_id, function_.declaration, slot,
+      u32_into_u64(module_.function_value_types.length()), u32_into_u64(fragment.results.start),
+      (11u64 << 32u64) | u32_into_u64(fragment.results.length))
+    match fragment.kind {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(body) => {
+        let present = match bodies.get(body) {
+          Option::Some(owner) => owner == function_.declaration
+          Option::None => false
+        }
+        self_host_assert_link_fact(present,
+          610u32, module_.module_id, function_.declaration, slot, body, 0u64, 0u64)
+      }
+      _ => {}
+    }
+    slot = slot + 1u32
+  }
+}

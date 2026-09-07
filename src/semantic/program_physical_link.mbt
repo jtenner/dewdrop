@@ -1813,7 +1813,7 @@ pub fn link_program_wasmgc_fragments(
     }
   }
   verify_program_compile_time_closure(lowering, functions, diagnostics)
-  {
+  let link : PlannedProgramWasmGCLink = {
     root_module_index,
     graph: lowering.graph,
     modules: fragments.modules,
@@ -1848,6 +1848,10 @@ pub fn link_program_wasmgc_fragments(
     module_runtime_function_indices,
     diagnostics,
   }
+  if diagnostics.is_empty() {
+    assert_program_function_indices(link)
+  }
+  link
 }
 
 ///|

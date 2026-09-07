@@ -202,6 +202,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   order at graph construction and linking. Seven self-host negative cases check
   complete LNK-501 records. See the
   [graph log](docs/research/module-graph-invariants-2026-09-07.md).
+  Self-host links now verify type bases, function/type records, signature spans,
+  source body identity, and import order. Native emitted indices form a checked
+  total, unique set, including startup functions. Import-offset cleanup and
+  complete native type/fragment checks remain. See the
+  [link record log](docs/research/physical-link-records-2026-09-07.md).
 - [ ] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.
@@ -224,6 +229,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   hardening lane. See [FFI notes](docs/research/ffi-carrier-identity-2026-09-07.md).
 
 ### Final checks for this work
+
+The September 7 link-record batch passes all eight lanes: 955 native tests,
+268 integration tests, 326 library tests and shared execution corpora, 278
+self-host tests with 61 exact failure records, generated checks, 15 stress tests,
+and 10,982 pinned Starshine tests. Clean B/C core and linked bytes match.
+See [measured results](docs/research/physical-link-records-2026-09-07.md).
+These are batch results; the remaining implementation tasks are still open.
 
 - [ ] Run `tools/test-native.sh`, `tools/test-integration-native.sh`,
   `tools/dew-test/run.sh`, `tools/test-self-host-hardening.sh`, and

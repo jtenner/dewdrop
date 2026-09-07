@@ -10,6 +10,25 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["LNK-502 linked function index must match its table slot", 502, 1, 0n, 99n, 0n],
+    ["LNK-504 linked function fragment must exist", 504, 1, 1n, 99n, 2n],
+    ["LNK-504 linked declaration must match its fragment", 504, 2, (5100n << 32n) + 1n, (5100n << 32n) + 2n, 3n],
+    ["LNK-503 module type base cannot be missing", 503, null, 0n, 4294967295n, 0n],
+    ["LNK-502 linked type index must match its table slot", 502, null, 0n, 99n, 1n],
+    ["LNK-504 linked type fragment must match its owner", 504, null, 0n, 99n, 5n],
+  ].map(([name, code, declaration, expected, actual, detail]) => ({
+    name,
+    expected: [code, 5, 5100n, declaration === null ? 0n : (5100n << 32n) + BigInt(declaration), 0n, 0, expected, actual, detail],
+  })),
+  {
+    name: "BOD-610 linked definition must have a body",
+    expected: [610, 5, 5100n, (5100n << 32n) + 1n, 5100n << 32n, 0, 5100n << 32n, 0n, 0n],
+  },
+  {
+    name: "LNK-504 source bodies must have unique identities",
+    expected: [504, 5, 5100n, (5100n << 32n) + 1n, 0n, 4294967295, 0n, 5100n << 32n, 12n],
+  },
   {
     name: "ARN-101 physical body span must fit its arena",
     expected: [101, 6, 5100n, (5100n << 32n) + 1n, (5100n << 32n) + 1n, 4294967295, 2n, 1n, (1n << 32n) + 2n],
@@ -68,7 +87,7 @@ const probes = [
   },
   {
     name: "BOD-610 a linked function requires a source body",
-    expected: [610, 6, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 1n, 0n, 0n],
+    expected: [610, 5, 5100n, 5100n << 32n, 5100n << 32n, 0, 5100n << 32n, 0n, 0n],
   },
   {
     name: "LNK-504 two named physical functions cannot own one declaration",

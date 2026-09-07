@@ -995,6 +995,7 @@ fn self_host_validate_program_wasmgc_link(
     return Option::Some(queries[0u32])
   }
   if self_host_u32_equal(link.diagnostics.length(), 0u32) {
+    self_host_verify_link_records(link)
     Option::None
   } else {
     // Body emission must not repair a missing physical call target.

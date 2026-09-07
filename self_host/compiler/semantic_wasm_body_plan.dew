@@ -8367,6 +8367,7 @@ fn self_host_verify_one_physical_body(
 pub fn self_host_plan_program_wasm_bodies(
   link: SelfHostPlannedProgramWasmGCLink,
 ) -> SelfHostPlannedProgramWasmBodyPlan {
+  self_host_verify_link_records(link)
   let indexes = self_host_build_physical_body_indexes(link)
   let bodies = []
   let diagnostics = []

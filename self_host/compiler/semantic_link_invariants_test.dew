@@ -1,0 +1,86 @@
+fn self_host_link_invariant_fixture() -> SelfHostPlannedProgramWasmGCLink {
+  let lowering = self_host_physical_test_lowering(b"struct Record {\n  value: I32\n}\npub fn run() -> I32 {\n  let value = Record::{\n    value: 7\n  }\n  value.value\n}\n")
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(lowering, false)), false)
+  assert(link.diagnostics.length() == 0u32, "valid link fixture")
+  assert(link.functions.length() == 1u32, "one linked function")
+  assert(link.types.length() > 0u32, "present physical record type")
+  link
+}
+
+fn self_host_link_test_replace_function(link: SelfHostPlannedProgramWasmGCLink, index: U32, fragment: U32, declaration: U64) -> Unit {
+  let original = link.functions[0u32]
+  link.functions[0u32] = SelfHostPlannedProgramWasmFunction::{
+    module_index: original.module_index
+    fragment_index: fragment
+    declaration: declaration
+    specialization: original.specialization
+    lambda: original.lambda
+    function_index: index
+    imported: original.imported
+  }
+}
+
+test "link invariant fixture is valid before mutation" {
+  let link = self_host_link_invariant_fixture()
+  assert(self_host_validate_program_wasmgc_link(link) is Option::None, "valid link")
+}
+
+test "LNK-502 linked function index must match its table slot" expect_trap "unreachable" {
+  let link = self_host_link_invariant_fixture()
+  self_host_link_test_replace_function(link, 99u32, link.functions[0u32].fragment_index, link.functions[0u32].declaration)
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
+
+test "LNK-504 linked function fragment must exist" expect_trap "unreachable" {
+  let link = self_host_link_invariant_fixture()
+  self_host_link_test_replace_function(link, 0u32, 99u32, link.functions[0u32].declaration)
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
+
+test "LNK-504 linked declaration must match its fragment" expect_trap "unreachable" {
+  let link = self_host_link_invariant_fixture()
+  self_host_link_test_replace_function(link, 0u32, link.functions[0u32].fragment_index, link.functions[0u32].declaration + 1u64)
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
+
+test "LNK-503 module type base cannot be missing" expect_trap "unreachable" {
+  let link = self_host_link_invariant_fixture()
+  link.module_type_bases[0u32] = 4294967295u32
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
+
+test "LNK-502 linked type index must match its table slot" expect_trap "unreachable" {
+  let link = self_host_link_invariant_fixture()
+  let original = link.types[0u32]
+  link.types[0u32] = SelfHostPlannedProgramWasmType::{
+    module_index: original.module_index
+    fragment_index: original.fragment_index
+    type_index: 99u32
+  }
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
+
+test "LNK-504 linked type fragment must match its owner" expect_trap "unreachable" {
+  let link = self_host_link_invariant_fixture()
+  let original = link.types[0u32]
+  link.types[0u32] = SelfHostPlannedProgramWasmType::{
+    module_index: original.module_index
+    fragment_index: 99u32
+    type_index: original.type_index
+  }
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
+
+test "BOD-610 linked definition must have a body" expect_trap "unreachable" {
+  let link = self_host_link_invariant_fixture()
+  link.fragments.specialization.lowering.modules[0u32].bodies.clear()
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
+
+test "LNK-504 source bodies must have unique identities" expect_trap "unreachable" {
+  let link = self_host_link_invariant_fixture()
+  let bodies = link.fragments.specialization.lowering.modules[0u32].bodies
+  bodies.push(bodies[0u32])
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
