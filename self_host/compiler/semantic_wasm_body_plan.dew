@@ -4128,7 +4128,11 @@ fn self_host_body_force_constructor_field_carriers(
               body,
               expressions,
               argument,
-              self_host_body_carrier_from_storage(destination.storage),
+              if link.unit_fields.get(destination.declaration) is Option::Some(true) {
+                SelfHostWasmBodyCarrier::UnitBodyCarrier
+              } else {
+                self_host_body_carrier_from_storage(destination.storage)
+              },
             ) {
             changed = true
           }

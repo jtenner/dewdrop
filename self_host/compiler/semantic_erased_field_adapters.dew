@@ -15,6 +15,20 @@ fn self_host_build_erased_field_index(lowering: SelfHostPlannedProgramLowering) 
   fields
 }
 
+// A declared Unit field permits a null storage marker, never scalar boxing.
+// Keep this certificate separate from generic field erasure.
+fn self_host_build_unit_field_index(lowering: SelfHostPlannedProgramLowering) -> Map<U64, Bool> {
+  let fields = self_host_empty_erased_field_index()
+  for module_ in lowering.modules {
+    for field in self_host_erased_field_layouts(module_) {
+      if self_host_planned_resolved_value_shape(module_.resolved_types, field.type_) is SelfHostPlannedValueShape::UnitPlannedValueShape {
+        fields.set(field.field, true)
+      }
+    }
+  }
+  fields
+}
+
 fn self_host_erased_field_layouts(module_: SelfHostPlannedModuleLowering) -> Array<SelfHostPlannedFieldLayout> {
   module_.type_layouts.fields
 }
@@ -31,6 +45,10 @@ fn self_host_linked_field_storage_matches_shape(
   storage: SelfHostPlannedWasmStorageType,
   shape: SelfHostPlannedValueShape,
 ) -> Bool {
+  if shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+    return link.unit_fields.get(field) is Option::Some(true) &&
+      storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+  }
   if shape is SelfHostPlannedValueShape::GenericPlannedValueShape {
     return link.erased_fields.get(field) is Option::Some(true) &&
       storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
@@ -46,7 +64,8 @@ fn self_host_linked_erased_field_unit_storage(
 ) -> Bool {
   carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier &&
     storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage &&
-    link.erased_fields.get(field) is Option::Some(true)
+    (link.erased_fields.get(field) is Option::Some(true) ||
+      link.unit_fields.get(field) is Option::Some(true))
 }
 
 fn self_host_linked_physical_erased_unit_field(
@@ -139,6 +158,9 @@ fn self_host_body_field_read_carrier(
   field: U64,
   storage: SelfHostPlannedWasmStorageType,
 ) -> SelfHostWasmBodyCarrier {
+  if link.unit_fields.get(field) is Option::Some(true) {
+    return SelfHostWasmBodyCarrier::UnitBodyCarrier
+  }
   if link.erased_fields.get(field) is Option::Some(true) {
     let type_ = module_.expressions[expression].type_
     let shape = self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, type_)

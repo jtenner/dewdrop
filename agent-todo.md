@@ -177,8 +177,12 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Put constructor and other temporary locals in the frozen physical plan.
   No emitter step may invent a new carrier or overwrite conflicting evidence.
   Verify all worklist constraints at the fixed point and reject later mutation.
-- [ ] Finish constructor non-returning-value tests. A Never field or payload
+- [x] Finish constructor non-returning-value tests. A Never field or payload
   must prevent later effects and construction, including generic tuple payloads.
+  Nine shared execution checks pass in both compilers. Construction stops at
+  the non-returning prefix before storage selection; declared Unit fields have
+  a separate marker certificate. See the
+  [constructor log](docs/research/constructor-never-prefixes-2026-09-07.md).
 - [ ] Complete the emission shadow stack. Track operand types and control
   frames through each instruction, including unreachable code and adapters.
 - [ ] Complete solver transaction and arena checks. Require LIFO snapshots,

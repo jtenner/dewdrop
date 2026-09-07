@@ -101,7 +101,23 @@ fn self_host_refresh_compile_time_strict_flow(module_: SelfHostPlannedModuleLowe
   let source = module_.expressions[expression]
   let edges = [SelfHostCompileTimeReachTask::BlockCompileTimeReach(0u32)]
   edges.clear()
-  self_host_compile_time_push_expression(module_, source.kind, edges)
+  // A constructor's namespace is a semantic target, not an evaluation. In
+  // particular a consumed qualified variant target must not expose its type
+  // name as a runtime receiver when building a non-returning prefix.
+  match source.kind {
+    SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => self_host_compile_time_push_fields(module_, fields, edges)
+    SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, arguments, _) => if source.selection is SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _) {
+      self_host_compile_time_push_children(module_, arguments, edges)
+    } else {
+      self_host_compile_time_push_expression(module_, source.kind, edges)
+    }
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => if source.selection is SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _) {
+      self_host_compile_time_push_children(module_, arguments, edges)
+    } else {
+      self_host_compile_time_push_expression(module_, source.kind, edges)
+    }
+    _ => self_host_compile_time_push_expression(module_, source.kind, edges)
+  }
   let values = self_host_u32_slots(0u32, 0u32)
   let mut flow = self_host_flow_falls_through()
   for edge in edges {

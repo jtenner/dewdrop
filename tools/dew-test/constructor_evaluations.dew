@@ -17,6 +17,12 @@ struct Fields<t> {
   last: I32
 }
 
+struct StoppingFields {
+  first: I32
+  erased: Unit
+  last: I32
+}
+
 fn tick(counter: Counter) -> I32 {
   counter.value = counter.value + 1i32
   counter.value
@@ -24,6 +30,11 @@ fn tick(counter: Counter) -> I32 {
 
 fn effect(counter: Counter) -> Unit {
   counter.value = counter.value + 1i32
+}
+
+fn generic_never_payload<t>(counter: Counter, item: t) -> I32 {
+  let value = Choice::Present((item, return tick(counter), tick(counter)))
+  0i32
 }
 
 pub fn main(case: U32) -> I32 {
@@ -64,6 +75,37 @@ pub fn main(case: U32) -> I32 {
       first: tick(counter)
     }
     if value.last == 1i32 && value.first == 3i32 && counter.value == 3i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 4u32 {
+    let value = StoppingFields::{
+      first: tick(counter)
+      erased: return counter.value
+      last: tick(counter)
+    }
+    0i32
+  } else if case == 5u32 {
+    let value = Triple::Items(tick(counter), return counter.value, tick(counter))
+    0i32
+  } else if case == 6u32 {
+    generic_never_payload(counter, (7i32, 11i64))
+  } else if case == 7u32 {
+    let value = StoppingFields::{
+      last: tick(counter)
+      erased: return counter.value
+      first: tick(counter)
+    }
+    0i32
+  } else if case == 8u32 {
+    let value = StoppingFields::{
+      first: tick(counter)
+      erased: effect(counter)
+      last: tick(counter)
+    }
+    value.erased
+    if value.first == 1i32 && value.last == 3i32 && counter.value == 3i32 {
       1i32
     } else {
       0i32

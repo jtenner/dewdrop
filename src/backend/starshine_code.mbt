@@ -3342,6 +3342,22 @@ fn starshine_constructor_evaluations(
 }
 
 ///|
+// Zero means every evaluation completes. A positive result includes the first
+// non-returning child. No constructor type or storage certificate is needed
+// when that child prevents construction.
+fn starshine_diverging_evaluation_count(
+  lowering : @semantic.PlannedModuleLowering,
+  evaluations : Array[@semantic.ExprId],
+) -> Int {
+  for index, value in evaluations {
+    if !lowering.expressions[value].flow.may_fall_through() {
+      return index + 1
+    }
+  }
+  0
+}
+
+///|
 fn starshine_body_locals(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
@@ -6050,8 +6066,16 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(target))
           }
           @semantic.PlannedProductNew(elements) => {
-            tasks.push(FinishStarshineProduct(elements.length))
-            let mut index = elements.length
+            let mut count = elements.length
+            for index in 0..<elements.length {
+              let child = lowering.expression_children[elements.start + index]
+              if !lowering.expressions[child].flow.may_fall_through() {
+                count = index + 1
+                break
+              }
+            }
+            tasks.push(FinishStarshineProduct(count))
+            let mut index = count
             while index > 0 {
               index -= 1
               tasks.push(
@@ -6104,6 +6128,18 @@ fn starshine_emit_body_instructions(
               lowering,
               source.kind,
             )
+            let prefix_count = starshine_diverging_evaluation_count(
+              lowering, evaluations,
+            )
+            if prefix_count > 0 {
+              tasks.push(FinishStarshineProduct(prefix_count))
+              let mut index = prefix_count
+              while index > 0 {
+                index -= 1
+                tasks.push(EmitStarshineExpression(evaluations[index]))
+              }
+              continue
+            }
             let declaration = match source.kind {
               @semantic.PlannedStructNew(value, _, _)
               | @semantic.PlannedVariantTupleNew(value, _, _)

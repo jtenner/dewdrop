@@ -1,0 +1,36 @@
+test "nonreturning constructor lowering owns its prefix and preserves source children" {
+  let fragments = self_host_physical_test_fragments(
+    b"enum Wrapped {\n  Value(I32, I32, I32)\n}\npub fn run() -> I32 {\n  let value = Wrapped::Value(1i32, return 42i32, 3i32)\n  0i32\n}\n",
+  )
+  let lowering = fragments.specialization.lowering
+  let collected = lowering.collected.modules.at(0u32)
+  let module_ = lowering.modules[0u32]
+  assert(collected.expression_children.length() == 3u32, "source child arena stays unchanged")
+  let mut found = 0u32
+  for source in module_.expressions {
+    match source.kind {
+      SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => {
+        found = found + 1u32
+        assert(!source.flow.falls_through, "prefix retains the flow proof")
+        assert(children.length == 2u32, "later operand is excluded")
+        assert(children.start >= collected.expression_children.length(), "prefix has private storage")
+        let terminal = module_.expression_children[children.start + 1u32]
+        assert(module_.expressions[terminal].kind is SelfHostPlannedExpressionKind::PlannedReturnExpression(_), "prefix ends at the original return")
+      }
+      _ => {}
+    }
+  }
+  assert(found == 1u32, "constructor becomes one evaluation prefix")
+}
+
+test "declared Unit fields permit only a Unit marker not generic or scalar boxing" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Marker {\n  value: Unit\n}\npub fn run() -> I32 {\n  let marker = Marker::{\n    value: ()\n  }\n  marker.value\n  42i32\n}\n",
+  ), false)
+  let field = link.fragments.specialization.lowering.modules[0u32].type_layouts.fields[0u32].field
+  let storage = SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+  assert(self_host_linked_erased_field_unit_storage(link, field, storage, SelfHostWasmBodyCarrier::UnitBodyCarrier), "declared Unit marker is explicit")
+  assert(self_host_linked_erased_field_box_type(link, field, SelfHostWasmBodyCarrier::I32BodyCarrier) is Option::None, "Unit does not permit boxing")
+  assert(!self_host_linked_field_storage_matches_shape(link, field, storage, SelfHostPlannedValueShape::GenericPlannedValueShape), "Unit does not permit missing generic evidence")
+  assert(!self_host_linked_field_storage_matches_shape(link, 0u64, storage, SelfHostPlannedValueShape::UnitPlannedValueShape), "missing field identity does not permit Unit storage")
+}

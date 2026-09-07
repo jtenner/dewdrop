@@ -1,0 +1,25 @@
+// A non-returning child prevents allocation. Lower the source-order prefix
+// before specialization and storage planning, using the existing flow proof.
+// Keep source expression IDs; only the private lowering child arena can grow.
+fn self_host_lower_nonreturning_constructions(module_: SelfHostPlannedModuleLowering) -> Unit {
+  let mut index = 0u32
+  while index {
+    expression => if expression < module_.expressions.length() {
+      let source = module_.expressions[expression]
+      if !source.flow.falls_through {
+        let construction = match source.kind {
+          SelfHostPlannedExpressionKind::PlannedProductNew(_) => true
+          SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => true
+          SelfHostPlannedExpressionKind::PlannedConstruct(_, _, _) => true
+          _ => source.selection is SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _)
+        }
+        if construction {
+          self_host_refresh_compile_time_strict_flow(module_, expression)
+        }
+      }
+      continue expression + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}

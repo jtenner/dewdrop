@@ -85,6 +85,7 @@ pub struct SelfHostPlannedProgramWasmGCLink {
   specialized_calls: Array<SelfHostPlannedProgramSpecializedCallLink>
   call_index: SelfHostLinkedCallIndex
   erased_fields: Map<U64, Bool>
+  unit_fields: Map<U64, Bool>
   initializers: Array<SelfHostPlannedProgramInitializer>
   imported_function_count: U32
   defined_function_count: U32
@@ -1173,6 +1174,7 @@ fn self_host_plan_program_wasmgc_link(
     specialized_calls: specialized_calls
     call_index: self_host_build_linked_call_index(functions, specialized_calls)
     erased_fields: self_host_build_erased_field_index(fragments.specialization.lowering)
+    unit_fields: self_host_build_unit_field_index(fragments.specialization.lowering)
     initializers: initializers
     imported_function_count: imported_count
     defined_function_count: defined_count

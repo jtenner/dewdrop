@@ -1355,7 +1355,7 @@ fn self_host_plan_module_lowering_with_reachability(
     }
   }
   self_host_lowering_directize_targets(expressions)
-  SelfHostPlannedModuleLowering::{
+  let module_ = SelfHostPlannedModuleLowering::{
     local_initializer_sources: self_host_query_local_sources(collected, names)
     module_id: collected.module_id
     names: collected.names
@@ -1377,13 +1377,15 @@ fn self_host_plan_module_lowering_with_reachability(
     patterns: patterns
     pattern_fields: pattern_fields
     pattern_arms: pattern_arms
-    expression_children: collected.expression_children
+    expression_children: collected.expression_children.copy()
     pattern_children: collected.pattern_children
     arm_children: collected.arm_children
     inferred: inferred
     evidence: evidence
     flow_diagnostics: flow_diagnostics
   }
+  self_host_lower_nonreturning_constructions(module_)
+  module_
 }
 
 fn self_host_lowering_local_sources(
