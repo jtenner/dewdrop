@@ -116,16 +116,24 @@ fn materialize_compile_time_lambdas(
     for offset in 0..<lambda.locals.length {
       let local = instance.locals[lambda.locals.start + offset]
       if local.kind == ParameterLocal {
+        let shape = program_resolve_specialized_shape(
+          instance,
+          generics,
+          fragments.specialization_shapes,
+          owner.specialization_shapes,
+          local.type_,
+          local.shape,
+        )
+        assert_lambda_physical_shape(
+          instance.module_id,
+          owner.declaration,
+          lambda,
+          shape,
+          (1UL << 32) | offset.to_uint64(),
+        )
         program_append_specialization_value_types(
           fragments.function_value_types,
-          program_resolve_specialized_shape(
-            instance,
-            generics,
-            fragments.specialization_shapes,
-            owner.specialization_shapes,
-            local.type_,
-            local.shape,
-          ),
+          shape,
         )
       }
     }
@@ -138,20 +146,13 @@ fn materialize_compile_time_lambdas(
       lambda.root_type,
       lambda.result_shape,
     )
-    if result_shape == GenericPlannedValueShape {
-      abort(
-        "SPC-301 unresolved lambda result owner=" +
-        owner.name.to_string() +
-        " lambda=" +
-        index.to_string() +
-        " root=" +
-        lambda.root_type.to_string() +
-        " root-shape=" +
-        @debug.to_string(lambda.root_shape) +
-        " declared=" +
-        @debug.to_string(lambda.result_shape),
-      )
-    }
+    assert_lambda_physical_shape(
+      instance.module_id,
+      owner.declaration,
+      lambda,
+      result_shape,
+      0xffffffffUL,
+    )
     program_append_specialization_value_types(
       fragments.function_value_types,
       result_shape,

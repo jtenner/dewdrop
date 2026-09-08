@@ -160,10 +160,13 @@ fn prepare_compile_time_lambda_layouts(
         capture.type_,
         capture.shape,
       )
-      guard !(shape is GenericPlannedValueShape ||
-        shape is ErrorPlannedValueShape) else {
-        abort("SPC-301 lambda capture requires concrete evidence")
-      }
+      assert_lambda_physical_shape(
+        instance.module_id,
+        owner.declaration,
+        lambda,
+        shape,
+        (2UL << 32) | offset.to_uint64(),
+      )
       changed = changed || shape != template.captures[global].shape
       instance.captures[global] = { ..capture, shape, }
       if capture.mutable_ {

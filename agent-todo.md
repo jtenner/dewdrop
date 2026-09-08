@@ -247,6 +247,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Self-host mutable capture cells now reject invalid shapes before storage
   conversion, including after generic substitution. Unit remains erased. See
   the [capture-cell log](docs/research/capture-cell-shapes-2026-09-08.md).
+  Native selected lambda parameters, results, and captures now reject invalid
+  product leaves as well as top-level Generic/Error shapes, with complete
+  numeric context. See the
+  [native lambda log](docs/research/native-lambda-shapes-2026-09-08.md).
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.
