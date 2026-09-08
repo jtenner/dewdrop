@@ -143,6 +143,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   emitter no longer selects text methods by name. See the
   [byte access log](docs/research/string-byte-access-2026-09-07.md).
   See the [String log](docs/research/string-library-algorithms-2026-09-06.md).
+  The pinned provider's 13 old String algorithms and unused private builders
+  are removed too. StringView and storage remain separate work. See the
+  [provider log](docs/research/string-provider-removal-2026-09-07.md).
   String pattern inference now selects the ordinary Eq method and keeps the
   literal's String type. Lowering and specialization retain that evidence.
   Self-host physical call recipes now retain the cached subject and literal and
