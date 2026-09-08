@@ -11,6 +11,23 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ARN-103 owned capture cell tables cover every logical local", 103, 6, 2n, 1n, 718n],
+    ["BOD-610 a required owned capture cell cannot be omitted", 610, 6, 1n, 0n, 1n],
+    ["BOD-605 owned capture cell local identity cannot change after freeze", 605, 7, 1n, 0n, (191n << 32n) | 1n],
+    ["BOD-605 owned capture cell source index cannot change after freeze", 605, 7, 1n, 0n, (192n << 32n) | 1n],
+    ["BOD-605 owned capture cell source slot cannot change after freeze", 605, 7, 1n, 0n, (193n << 32n) | 1n],
+    ["BOD-605 owned capture cell physical slot cannot change after freeze", 605, 7, 2n, 3n, (194n << 32n) | 1n],
+    ["BOD-605 owned capture cell heap type cannot change after freeze", 605, 7, 1n, 2n, (195n << 32n) | 1n],
+    ["BOD-605 owned capture cell stored type cannot change after freeze", 605, 7, 2n, 1n, (196n << 32n) | 1n],
+    ["BOD-605 owned capture cell parameter role cannot change after freeze", 605, 7, 0n, 1n, (197n << 32n) | 1n],
+    ["BOD-605 owned capture cell presence cannot change after freeze", 605, 7, 1n, 0n, (190n << 32n) | 1n],
+    ["BOD-605 owned capture cell table length cannot change after freeze", 605, 7, 2n, 1n, (190n << 32n) | 4294967295n],
+  ].map(([name, code, phase, expected, actual, detail]) => ({
+    name,
+    expected: [code, phase, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, expected, actual, detail],
+  })),
+  ...[
     ["BOD-610 marker storage cannot hide unknown evidence", 610, 1n, 0n],
     ["BOD-610 marker storage cannot hide conflicting evidence", 610, 1n, 1n],
     ["BOD-611 Never marker storage requires divergent source flow", 611, 0n, 1n],

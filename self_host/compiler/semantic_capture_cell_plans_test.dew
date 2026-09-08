@@ -1,0 +1,180 @@
+fn self_host_capture_cell_plan_fixture() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn make(seed: I64) -> fn() -> I64 {\n  let mut value = seed\n  fn() -> I64 {\n    value = value + 1i64\n    value\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid mutable closure source")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  for plan in program.bodies {
+    if plan.lambda == 4294967295u32 {
+      assert(plan.declaration == (5100u64 << 32u64) && plan.body == (5100u64 << 32u64), "stable capture owner identity")
+      return (link, plan)
+    }
+  }
+  unreachable()
+}
+
+test "capture cell slots retain frozen layout instead of reselecting source flags" {
+  let (link, plan) = self_host_capture_cell_plan_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let before = match self_host_linked_capture_cell_slot(Option::Some(plan), module_, body, 1u32) {
+    Option::Some(slot) => slot
+    Option::None => unreachable()
+  }
+  let source = module_.locals[1u32]
+  assert(source.local_id == 1u32 && source.mutable_, "valid source before one flag mutation")
+  module_.locals[1u32] = SelfHostPlannedLocal::{
+    body: source.body
+    lambda: source.lambda
+    local_id: source.local_id
+    elided: source.elided
+    kind: source.kind
+    mutable_: false
+    type_: source.type_
+    shape: source.shape
+    nominal: source.nominal
+    offset: source.offset
+  }
+  match self_host_linked_capture_cell_slot(Option::Some(plan), module_, body, 1u32) {
+    Option::Some(slot) => assert(slot == before, "the frozen cell slot cannot change")
+    Option::None => assert(false, "emission must not remove a frozen capture cell")
+  }
+}
+
+fn self_host_test_owned_cell(plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> SelfHostPhysicalCaptureCellPlan {
+  assert(plan.capture_cells.length() == 2u32, "parameter and mutable local each have a plan entry")
+  assert(plan.capture_cells[0u32] is Option::None, "ordinary parameter needs no cell")
+  let cell = match plan.capture_cells[1u32] {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  assert(cell.local_id == 1u32 && cell.local_index == 1u32 && cell.source_slot == 1u32, "stable cell source identity")
+  assert(cell.local_slot == 2u32 && cell.type_index == 1u32 && !cell.parameter, "stable cell physical identity")
+  assert(cell.storage is SelfHostPlannedWasmStorageType::WasmI64Storage, "cell stores I64")
+  cell
+}
+
+fn self_host_test_change_owned_cell(plan: SelfHostPlannedPhysicalBodyCarrierPlan, field: U32, value: U32) -> Unit {
+  let source = self_host_test_owned_cell(plan)
+  plan.capture_cells[1u32] = Option::Some(SelfHostPhysicalCaptureCellPlan::{
+    local_id: if field == 1u32 {
+      value
+    } else {
+      source.local_id
+    }
+    local_index: if field == 2u32 {
+      value
+    } else {
+      source.local_index
+    }
+    source_slot: if field == 3u32 {
+      value
+    } else {
+      source.source_slot
+    }
+    local_slot: if field == 4u32 {
+      value
+    } else {
+      source.local_slot
+    }
+    type_index: if field == 5u32 {
+      value
+    } else {
+      source.type_index
+    }
+    storage: if field == 6u32 {
+      SelfHostPlannedWasmStorageType::WasmI32Storage
+    } else {
+      source.storage
+    }
+    parameter: if field == 7u32 {
+      true
+    } else {
+      source.parameter
+    }
+  })
+}
+
+test "owned capture cell records preserve source and heap identity" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let _ = self_host_test_owned_cell(plan)
+  self_host_assert_frozen_physical_body(self_host_freeze_physical_body(plan), plan)
+}
+
+test "ARN-103 owned capture cell tables cover every logical local" expect_trap "unreachable" {
+  let (link, plan) = self_host_capture_cell_plan_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let _ = plan.capture_cells.pop()
+  self_host_verify_owned_capture_cells(link, module_, body, plan)
+}
+
+test "BOD-610 a required owned capture cell cannot be omitted" expect_trap "unreachable" {
+  let (link, plan) = self_host_capture_cell_plan_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  plan.capture_cells[1u32] = Option::None
+  self_host_verify_owned_capture_cells(link, module_, body, plan)
+}
+
+test "BOD-605 owned capture cell local identity cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_owned_cell(plan, 1u32, 0u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 owned capture cell source index cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_owned_cell(plan, 2u32, 0u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 owned capture cell source slot cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_owned_cell(plan, 3u32, 0u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 owned capture cell physical slot cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_owned_cell(plan, 4u32, 3u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 owned capture cell heap type cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_owned_cell(plan, 5u32, 2u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 owned capture cell stored type cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_owned_cell(plan, 6u32, 0u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 owned capture cell parameter role cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_owned_cell(plan, 7u32, 1u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 owned capture cell presence cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  plan.capture_cells[1u32] = Option::None
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 owned capture cell table length cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_cell_plan_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  let _ = plan.capture_cells.pop()
+  self_host_assert_frozen_physical_body(frozen, plan)
+}

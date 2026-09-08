@@ -132,6 +132,7 @@ test "BOD-605 frozen body identity uses the original diagnostic owner" expect_tr
     control_result_values: source.control_result_values
     control_results: source.control_results
     scratches: source.scratches
+    capture_cells: source.capture_cells
     calls: source.calls
     call_evaluations: source.call_evaluations
     call_operands: source.call_operands

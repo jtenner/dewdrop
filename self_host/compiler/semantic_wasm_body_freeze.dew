@@ -27,6 +27,7 @@ fn self_host_freeze_physical_body(
     control_result_values: source.control_result_values.copy()
     control_results: source.control_results.copy()
     scratches: source.scratches.copy()
+    capture_cells: source.capture_cells.copy()
     calls: source.calls.copy()
     call_evaluations: source.call_evaluations.copy()
     call_operands: source.call_operands.copy()
@@ -423,6 +424,7 @@ fn self_host_assert_frozen_physical_body(
       break self_host_semantic_unit()
     }
   }
+  self_host_assert_frozen_capture_cells(frozen, live)
 }
 
 fn self_host_assert_frozen_body_plan(plan: SelfHostPlannedProgramWasmBodyPlan) -> Unit {

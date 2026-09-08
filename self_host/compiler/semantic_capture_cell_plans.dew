@@ -1,0 +1,136 @@
+// One entry per logical local. None is a verified absence, including erased
+// Unit locals. Emission must not select cells again from mutable source flags.
+pub struct SelfHostPhysicalCaptureCellPlan {
+  local_id: U32
+  local_index: U32
+  source_slot: U32
+  local_slot: U32
+  type_index: U32
+  storage: SelfHostPlannedWasmStorageType
+  parameter: Bool
+}
+
+fn self_host_capture_cell_plan_check(condition: Bool, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, phase: U32, code: U32, expected: U64, actual: U64, local: U32) -> Unit {
+  if !condition {
+    self_host_physical_scratch_failure(module_, body, 4294967295u32, phase, code, expected, actual, u32_into_u64(local))
+  }
+}
+
+fn self_host_capture_cell_record(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, module_index: U32, specialization: U32, local_index: U32, source_slot: U32, local_slot: U32, carrier: SelfHostWasmBodyCarrier) -> SelfHostPhysicalCaptureCellPlan {
+  let local = module_.locals[local_index]
+  let mut selected = Option::None
+  let fragments = link.fragments.modules[module_index]
+  for linked in link.types {
+    if linked.module_index == module_index {
+      self_host_capture_cell_plan_check(linked.fragment_index < fragments.physical_types.length(), module_, body, 6u32, 504u32,
+        u32_into_u64(fragments.physical_types.length()), u32_into_u64(linked.fragment_index), local.local_id)
+      let physical = fragments.physical_types[linked.fragment_index]
+      match physical.kind {
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(source, request) => if source == local_index && request == specialization {
+          self_host_capture_cell_plan_check(!(selected is Option::Some(_)), module_, body, 6u32, 504u32, 1u64, 2u64, local.local_id)
+          self_host_capture_cell_plan_check(self_host_array_span_is_valid(physical.fields.start, physical.fields.length, fragments.fields.length()), module_, body, 6u32, 101u32,
+            u32_into_u64(fragments.fields.length()), u32_into_u64(physical.fields.length), local.local_id)
+          self_host_capture_cell_plan_check(physical.fields.length == 1u32, module_, body, 6u32, 504u32, 1u64, u32_into_u64(physical.fields.length), local.local_id)
+          let field = fragments.fields[physical.fields.start]
+          let role_matches = match field.role {
+            SelfHostPlannedWasmFieldRole::WasmCaptureCellValueField(source) => source == local_index
+            _ => false
+          }
+          self_host_capture_cell_plan_check(role_matches && field.mutable_ && field.physical_index == 0u32, module_, body, 6u32, 504u32,
+            1u64, self_host_body_freeze_bool(role_matches && field.mutable_ && field.physical_index == 0u32), local.local_id)
+          let expected = self_host_body_carrier_from_shape(self_host_linked_storage_shape(field.storage))
+          self_host_capture_cell_plan_check(self_host_body_carrier_equal(expected, carrier), module_, body, 6u32, 710u32,
+            self_host_body_carrier_code(expected), self_host_body_carrier_code(carrier), local.local_id)
+          selected = Option::Some(SelfHostPhysicalCaptureCellPlan::{
+            local_id: local.local_id
+            local_index: local_index
+            source_slot: source_slot
+            local_slot: local_slot
+            type_index: linked.type_index
+            storage: field.storage
+            parameter: local.kind is SelfHostBodyLocalKind::ParameterLocal
+          })
+        }
+        _ => {}
+      }
+    }
+  }
+  match selected {
+    Option::Some(cell) => cell
+    Option::None => self_host_physical_scratch_failure(module_, body, 4294967295u32, 6u32, 610u32, 1u64, 0u64, u32_into_u64(local.local_id))
+  }
+}
+
+fn self_host_plan_owned_capture_cells(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, module_index: U32, specialization: U32, lambda: U32, values: Array<SelfHostPlannedPhysicalValueInfo>, slots: Array<U32>, physical_count: U32, temporary_count: U32) -> Array<Option<SelfHostPhysicalCaptureCellPlan>> {
+  let result = []
+  let environment = if lambda == 4294967295u32 {
+    0u64
+  } else {
+    1u64
+  }
+  let mut next = environment + u32_into_u64(physical_count) + u32_into_u64(temporary_count)
+  let mut relative = 0u32
+  for value in values {
+    let index = body.locals.start + relative
+    let local = module_.locals[index]
+    let source_slot = slots[relative]
+    if source_slot != 4294967295u32 && self_host_local_needs_capture_cell(module_, local) {
+      self_host_capture_cell_plan_check(next < 4294967295u64, module_, body, 6u32, 710u32, 4294967294u64, next, local.local_id)
+      result.push(Option::Some(self_host_capture_cell_record(link, module_, body, module_index, specialization, index, source_slot,
+        u64_into_u32(next), value.carrier)))
+      next = next + 1u64
+    } else {
+      result.push(Option::None)
+    }
+    relative = relative + 1u32
+  }
+  result
+}
+
+fn self_host_verify_owned_capture_cells(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  self_host_assert_physical_table_count(plan, body.locals.length, plan.capture_cells.length(), 718u32)
+  let expected = self_host_plan_owned_capture_cells(link, module_, body, plan.module_index, plan.specialization, plan.lambda,
+    plan.local_values, plan.local_slots, plan.physical_local_count, plan.scratches.length())
+  let mut index = 0u32
+  for entry in expected {
+    let actual = plan.capture_cells[index]
+    let local = module_.locals[body.locals.start + index].local_id
+    match entry {
+      Option::None => self_host_capture_cell_plan_check(actual is Option::None, module_, body, 6u32, 610u32, 0u64, 1u64, local)
+      Option::Some(cell) => match actual {
+        Option::None => self_host_capture_cell_plan_check(false, module_, body, 6u32, 610u32, 1u64, 0u64, local)
+        Option::Some(value) => {
+          self_host_capture_cell_plan_check(value.local_id == cell.local_id, module_, body, 6u32, 106u32, u32_into_u64(cell.local_id), u32_into_u64(value.local_id), local)
+          self_host_capture_cell_plan_check(value.local_index == cell.local_index, module_, body, 6u32, 106u32, u32_into_u64(cell.local_index), u32_into_u64(value.local_index), local)
+          self_host_capture_cell_plan_check(value.source_slot == cell.source_slot, module_, body, 6u32, 710u32, u32_into_u64(cell.source_slot), u32_into_u64(value.source_slot), local)
+          self_host_capture_cell_plan_check(value.local_slot == cell.local_slot, module_, body, 6u32, 710u32, u32_into_u64(cell.local_slot), u32_into_u64(value.local_slot), local)
+          self_host_capture_cell_plan_check(value.type_index == cell.type_index, module_, body, 6u32, 706u32, u32_into_u64(cell.type_index), u32_into_u64(value.type_index), local)
+          self_host_capture_cell_plan_check(self_host_program_representation_storage_code(value.storage) == self_host_program_representation_storage_code(cell.storage), module_, body, 6u32, 710u32,
+            u32_into_u64(self_host_i32_to_u32(self_host_program_representation_storage_code(cell.storage))),
+            u32_into_u64(self_host_i32_to_u32(self_host_program_representation_storage_code(value.storage))), local)
+          self_host_capture_cell_plan_check(value.parameter == cell.parameter, module_, body, 6u32, 106u32,
+            self_host_body_freeze_bool(cell.parameter), self_host_body_freeze_bool(value.parameter), local)
+        }
+      }
+    }
+    index = index + 1u32
+  }
+}
+
+fn self_host_owned_capture_cell(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local: U32) -> Option<SelfHostPhysicalCaptureCellPlan> {
+  let plan = self_host_physical_scratch_plan(canonical, module_, body, 4294967295u32, local)
+  self_host_capture_cell_plan_check(plan.capture_cells.length() == body.locals.length, module_, body, 7u32, 103u32,
+    u32_into_u64(body.locals.length), u32_into_u64(plan.capture_cells.length()), local)
+  let relative = self_host_body_local_slot(module_, body, local)
+  let entry = plan.capture_cells[relative]
+  match entry {
+    Option::Some(cell) => {
+      self_host_capture_cell_plan_check(cell.local_id == local, module_, body, 7u32, 106u32,
+        u32_into_u64(local), u32_into_u64(cell.local_id), local)
+      self_host_capture_cell_plan_check(cell.local_index == body.locals.start + relative, module_, body, 7u32, 106u32,
+        u32_into_u64(body.locals.start + relative), u32_into_u64(cell.local_index), local)
+    }
+    Option::None => {}
+  }
+  entry
+}

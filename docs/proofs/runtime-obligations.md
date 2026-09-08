@@ -502,6 +502,15 @@ prove full reference types, source-local types, or capture-cell layouts. See
 The marker and Unit loop regressions are in
 [the temporary type log](../research/frozen-temporary-types-2026-09-08.md).
 
+## Owned capture-cell records
+
+Owned capture-cell records now share the body freeze boundary. Each logical
+local has one optional entry with checked source, slot, heap, storage, and
+parameter identities. Emission uses those records; frozen field or presence
+changes report BOD-605. This does not prove forwarded capture pointees or all
+reference assignability. See
+[the owned cell log](../research/owned-capture-cell-plans-2026-09-08.md).
+
 ## Physical call target updates
 
 A missing call target can become known. A known target can only be repeated;

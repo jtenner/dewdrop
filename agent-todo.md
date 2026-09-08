@@ -380,7 +380,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   Constructor field temporary types now come from frozen source-order records;
   emission checks presence, uniqueness, source agreement, and mirrored carriers.
   Global initializers now pass through body planning, verification, and freeze.
-  Capture-cell slots and full reference types remain. See the
+  Forwarded capture types and full reference checks remain. See the
   [temporary plan log](docs/research/constructor-temporary-plans-2026-09-08.md).
   The old collection temporary allocations and slot counts based on
   `self_host_array_pop`, `next`, and `push` spelling are removed. An ordinary
@@ -399,8 +399,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   Expression temporary allocation now uses the frozen record order and
   physical carrier types. Unused Unit/Never slots have explicit I32 storage;
   Unit loop initializers and continues are evaluated without empty-stack
-  stores. Capture-cell records and full reference types remain. See the
+  stores. Forwarded capture and full reference checks remain. See the
   [temporary type log](docs/research/frozen-temporary-types-2026-09-08.md).
+  Owned capture cells now retain source identity, source/cell slots, selected
+  heap type, stored type, and parameter role in the body freeze witness.
+  Emission uses those records and typed nullable cell locals. Forwarded mutable
+  captures still need frozen pointee types. See the
+  [owned cell log](docs/research/owned-capture-cell-plans-2026-09-08.md).
   Object constructor emission now uses a checked exact field-ID recipe, with
   separate source evaluation and physical load order. Missing or different IDs
   cannot be repaired by names or tentative carriers. Recipe freeze and nominal

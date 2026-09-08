@@ -31051,19 +31051,11 @@ fn self_host_linked_scalar_locals(
       return Result::Err("frozen temporary storage has no physical local type")
     }
   }
-  let mut capture_local = 0u32
-  while capture_local {
-    _ => if capture_local < body.locals.length {
-    let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + capture_local])
-    if self_host_local_needs_capture_cell(module_, local) && !self_host_linked_local_is_erased(canonical_body_plan, module_, body, local.local_id) {
-      if !self_host_linked_scalar_append_local_type(locals, SelfHostPlannedValueShape::RefPlannedValueShape) {
-        return Result::Err("captured local cell storage is unsupported")
-      }
-    }
-    capture_local = capture_local + 1u32
-    continue capture_local
-    } else {
-      break self_host_semantic_unit()
+  for entry in temporary_plan.capture_cells {
+    match entry {
+      Option::Some(cell) => StarshineFfi.ffi_lib_Locals_push(locals,
+        StarshineFfi.ffi_ffi_bridge_nominal_ref_type(self_host_u32_to_i32(cell.type_index), 1i32))
+      Option::None => {}
     }
   }
   Result::Ok(locals)

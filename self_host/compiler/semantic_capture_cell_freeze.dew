@@ -1,0 +1,28 @@
+fn self_host_assert_frozen_capture_cells(frozen: SelfHostPlannedPhysicalBodyCarrierPlan, live: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  self_host_body_freeze_check(frozen, 4294967295u32, 190u32, 4294967295u32,
+    u32_into_u64(frozen.capture_cells.length()), u32_into_u64(live.capture_cells.length()))
+  let mut index = 0u32
+  for expected in frozen.capture_cells {
+    let actual = live.capture_cells[index]
+    self_host_body_freeze_check(frozen, 4294967295u32, 190u32, index,
+      self_host_body_freeze_bool(expected is Option::Some(_)), self_host_body_freeze_bool(actual is Option::Some(_)))
+    match expected {
+      Option::Some(cell) => match actual {
+        Option::Some(value) => {
+          self_host_body_freeze_check(frozen, 4294967295u32, 191u32, index, u32_into_u64(cell.local_id), u32_into_u64(value.local_id))
+          self_host_body_freeze_check(frozen, 4294967295u32, 192u32, index, u32_into_u64(cell.local_index), u32_into_u64(value.local_index))
+          self_host_body_freeze_check(frozen, 4294967295u32, 193u32, index, u32_into_u64(cell.source_slot), u32_into_u64(value.source_slot))
+          self_host_body_freeze_check(frozen, 4294967295u32, 194u32, index, u32_into_u64(cell.local_slot), u32_into_u64(value.local_slot))
+          self_host_body_freeze_check(frozen, 4294967295u32, 195u32, index, u32_into_u64(cell.type_index), u32_into_u64(value.type_index))
+          self_host_body_freeze_check(frozen, 4294967295u32, 196u32, index,
+            self_host_body_freeze_storage(Option::Some(cell.storage)), self_host_body_freeze_storage(Option::Some(value.storage)))
+          self_host_body_freeze_check(frozen, 4294967295u32, 197u32, index,
+            self_host_body_freeze_bool(cell.parameter), self_host_body_freeze_bool(value.parameter))
+        }
+        Option::None => {}
+      }
+      Option::None => {}
+    }
+    index = index + 1u32
+  }
+}
