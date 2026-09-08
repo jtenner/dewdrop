@@ -543,6 +543,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   total, unique set, including startup functions. Import-offset cleanup and
   complete native type/fragment checks remain. See the
   [link record log](docs/research/physical-link-records-2026-09-07.md).
+  Global initializer links now retain test-inclusion mode and are checked
+  against the full source schedule before module/body access. Counts, slots,
+  source identities, shapes, and body owners must agree. Initializer function
+  handles use checked wide arithmetic. Complete startup/adaptor recipes and
+  link freeze remain. See the
+  [initializer log](docs/research/initializer-link-records-2026-09-08.md).
   Native plain-function lookup now checks table bounds and declaration,
   module, fragment, lambda, kind, and ABI-key identity at link completion and each
   read. Missing keys stay missing; specialization entries cannot replace plain

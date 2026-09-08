@@ -11,6 +11,13 @@ retain the phase where they occur. This closes the field-name repair path;
 it does not yet prove exact constructor target selection or recipe freeze.
 See [the propagation log](../research/constructor-propagation-identities-2026-09-08.md).
 
+Global initializer link records must form an exact copy of the selected source
+schedule, in dependency order and with the retained test-inclusion mode. The
+source module, declaration, body owner, logical shape, and physical global slot
+must agree before a linked module index is used. Function handle sums are
+checked in U64 and exclude the missing sentinel before narrowing. See
+[the initializer log](../research/initializer-link-records-2026-09-08.md).
+
 ## Arena access
 
 For arena \(A\) and index \(i\):

@@ -10,7 +10,8 @@ fn self_host_plan_initializer_bodies(link: SelfHostPlannedProgramWasmGCLink, ind
       declaration: initializer.declaration
       specialization: 4294967295u32
       lambda: 4294967295u32
-      function_index: link.functions.length() + position
+      function_index: self_host_initializer_function_index(module_.module_id,
+        initializer, link.functions.length(), position)
       imported: false
     }
     let source = self_host_body_require_linked_source(self_host_body_lookup(module_, initializer.body), identity, initializer.body)

@@ -11,6 +11,46 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["LNK-502 initializer function handles cannot reach the missing sentinel", 4294967295n, 0n],
+    ["LNK-502 initializer function handle addition cannot wrap", 4294967298n, 1n],
+  ].map(([name, actual, slot]) => ({
+    name,
+    expected: [502, 5, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, 4294967294n, actual, (15n << 32n) | slot],
+  })),
+  ...[
+    ["LNK-504 initializer module matches its source step", 504, 0n, 99n, 0n],
+    ["LNK-504 initializer declaration matches its source step", 504, 5100n << 32n, (5100n << 32n) + 1n, 1n],
+    ["ARN-106 initializer body matches its source step", 106, 5100n << 32n, (5100n << 32n) + 1n, 2n],
+    ["SPC-301 initializer shape cannot contain an error", 301, 0n, 2n, 3n],
+    ["SPC-301 initializer shape cannot remain generic", 301, 0n, 1n, 3n],
+    ["BOD-610 initializer body must be present", 610, 1n, 0n, 13n],
+    ["ABI-709 initializer shape matches its source type", 709, 1n, 0n, 4n],
+    ["ARN-106 initializer test role matches its source step", 106, 0n, 1n, 5n],
+    ["LNK-502 initializer global index matches its table slot", 502, 0n, 1n, 6n],
+    ["LNK-502 initializer order matches its source schedule", 502, 0n, 1n, 7n],
+  ].map(([name, code, expected, actual, role]) => ({
+    name,
+    expected: [code, 5, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, expected, actual, role << 32n],
+  })),
+  {
+    name: "LNK-502 initializer links cannot outlive their source steps",
+    expected: [502, 5, 0n, 0n, 0n, 4294967295, 0n, 1n, 9n << 32n],
+  },
+  {
+    name: "LNK-502 every selected source initializer must have a link",
+    expected: [502, 5, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, 2n, 1n, (9n << 32n) | 1n],
+  },
+  ...[
+    ["ARN-103 initializer table cannot lose a global", 0n],
+    ["ARN-103 initializer table cannot duplicate a global", 2n],
+  ].map(([name, expected]) => ({
+    name,
+    expected: [103, 5, 0n, 0n, 0n, 4294967295, expected, 1n, 720n],
+  })),
+  ...[
     ["BOD-608 constructor propagation rejects a missing field identity", 0n],
     ["BOD-608 constructor propagation rejects another declaration's field", (5100n << 32n) | 1n],
   ].map(([name, actual]) => ({

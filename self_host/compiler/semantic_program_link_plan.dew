@@ -87,6 +87,7 @@ pub struct SelfHostPlannedProgramWasmGCLink {
   erased_fields: Map<U64, Bool>
   unit_fields: Map<U64, Bool>
   initializers: Array<SelfHostPlannedProgramInitializer>
+  emit_tests: Bool
   imported_function_count: U32
   defined_function_count: U32
   global_count: U32
@@ -1181,6 +1182,7 @@ fn self_host_plan_program_wasmgc_link(
     erased_fields: self_host_build_erased_field_index(fragments.specialization.lowering)
     unit_fields: self_host_build_unit_field_index(fragments.specialization.lowering)
     initializers: initializers
+    emit_tests: emit_tests
     imported_function_count: imported_count
     defined_function_count: defined_count
     global_count: initializers.length()

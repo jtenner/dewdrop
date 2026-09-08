@@ -91,6 +91,7 @@ fn self_host_verify_link_records(link: SelfHostPlannedProgramWasmGCLink) -> Unit
   self_host_assert_link_fact(link.defined_function_count == link.functions.length() - link.imported_function_count,
     502u32, 0u64, 0u64, missing, u32_into_u64(link.functions.length() - link.imported_function_count), u32_into_u64(link.defined_function_count), 4u64)
   let bodies = self_host_link_body_owners(link)
+  self_host_verify_initializer_links(link, bodies)
   let seen_fragments = self_host_link_empty_body_owners()
   let mut slot = 0u32
   for function_ in link.functions {
