@@ -3246,34 +3246,36 @@ fn self_host_body_pattern_payload_value(
       _,
       arguments,
     ) => {
+      let payload_type = match pattern.source {
+        SelfHostHirPattern::TuplePattern(_, children, _) => if field_index <
+          children.length && self_host_u32_add(
+            children.start,
+            field_index,
+          ) < module_.pattern_children.length() {
+          let child = module_.pattern_children[self_host_u32_add(
+            children.start,
+            field_index,
+          )]
+          if child < module_.patterns.length() {
+            module_.patterns[child].type_
+          } else {
+            -1i32
+          }
+        } else {
+          -1i32
+        }
+        _ => -1i32
+      }
       match indexes.type_by_variant.get(constructor) {
         Option::Some(type_index) => {
-          let physical_carrier = self_host_body_physical_field_carrier(
+          let physical_carrier = self_host_body_pattern_field_carrier(
             link,
+            module_,
             type_index,
             field_index,
+            payload_type,
           )
           if !(physical_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
-            let payload_type = match pattern.source {
-              SelfHostHirPattern::TuplePattern(_, children, _) => if field_index <
-                children.length && self_host_u32_add(
-                  children.start,
-                  field_index,
-                ) < module_.pattern_children.length() {
-                let child = module_.pattern_children[self_host_u32_add(
-                  children.start,
-                  field_index,
-                )]
-                if child < module_.patterns.length() {
-                  module_.patterns[child].type_
-                } else {
-                  -1i32
-                }
-              } else {
-                -1i32
-              }
-              _ => -1i32
-            }
             let physical_payload_owner = self_host_linked_field_value_nominal_declaration(
               link,
               SelfHostLinkedWasmFieldLink::{
@@ -3310,10 +3312,12 @@ fn self_host_body_pattern_payload_value(
         fallback.nominal_owner,
       ) {
         Option::Some(type_index) => {
-          let physical_carrier = self_host_body_physical_field_carrier(
+          let physical_carrier = self_host_body_pattern_field_carrier(
             link,
+            module_,
             type_index,
             field_index,
+            payload_type,
           )
           if !(physical_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
             let physical_payload_owner = self_host_linked_field_value_nominal_declaration(
@@ -3683,10 +3687,12 @@ fn self_host_body_force_physical_pattern_payloads(
                     let child = self_host_planned_pattern_identity(
                       module_.patterns[child_index],
                     )
-                    let carrier = self_host_body_physical_field_carrier(
+                    let carrier = self_host_body_pattern_field_carrier(
                       link,
+                      module_,
                       type_index,
                       current,
+                      child.type_,
                     )
                     let owner = self_host_linked_field_value_nominal_declaration(
                       link,
@@ -7811,10 +7817,12 @@ fn self_host_verify_body_pattern_payloads(
                                         local_id,
                                       )
                                       if slot < plan.local_values.length() {
-                                        let expected_carrier = self_host_body_physical_field_carrier(
+                                        let expected_carrier = self_host_body_pattern_field_carrier(
                                           link,
+                                          module_,
                                           type_index,
                                           current_field,
+                                          module_.patterns[child_pattern_index].type_,
                                         )
                                         let actual = plan.local_values[slot]
                                         let actual_carrier = if slot < plan.locals.length() {

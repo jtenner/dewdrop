@@ -1,0 +1,29 @@
+// A stored null marker for a logical Unit payload is not a reference value
+// supplied to the binding. Require the selected field's storage certificate.
+fn self_host_body_pattern_field_carrier(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  type_index: U32,
+  field_index: U32,
+  logical_type: I32,
+) -> SelfHostWasmBodyCarrier {
+  let carrier = self_host_body_physical_field_carrier(link, type_index, field_index)
+  if self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, logical_type) is SelfHostPlannedValueShape::UnitPlannedValueShape {
+    for linked_type in link.types {
+      if linked_type.type_index == type_index {
+        let fragment = link.fragments.modules[linked_type.module_index]
+        let physical = fragment.physical_types[linked_type.fragment_index]
+        self_host_assert_compiler_invariant(self_host_array_span_is_valid(physical.fields.start, physical.fields.length, fragment.fields.length()), "FRG-403 pattern payload storage span")
+        if field_index < physical.fields.length {
+          let field = fragment.fields[physical.fields.start + field_index]
+          let unit = SelfHostWasmBodyCarrier::UnitBodyCarrier
+          if self_host_linked_variant_unit_storage(link, field, unit) ||
+            self_host_linked_erased_field_unit_storage(link, field.declaration, field.storage, unit) {
+            return unit
+          }
+        }
+      }
+    }
+  }
+  carrier
+}

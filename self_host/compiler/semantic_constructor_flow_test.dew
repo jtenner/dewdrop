@@ -1,3 +1,46 @@
+test "Unit enum payload bindings do not inherit reference marker carriers" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"enum Payload {\n  Value(I64, Unit, I32)\n}\nfn consume(value: Unit) -> Unit {}\npub fn run(value: Payload) -> I32 {\n  match value {\n    Value(left, effect, right) => {\n      consume(effect)\n      right\n    }\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = 0u32
+  for linked_type in link.types {
+    let fragment = link.fragments.modules[linked_type.module_index]
+    let physical = fragment.physical_types[linked_type.fragment_index]
+    for pattern in module_.patterns {
+      if pattern.shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+        while 0u32 {
+          index if index < physical.fields.length => {
+            let slot = physical.fields.start + index
+            let field = fragment.fields[slot]
+            if self_host_linked_variant_unit_storage(link, field, SelfHostWasmBodyCarrier::UnitBodyCarrier) {
+              assert(self_host_body_pattern_field_carrier(link, module_, linked_type.type_index, index, pattern.type_) is SelfHostWasmBodyCarrier::UnitBodyCarrier, "declared null marker is a logical Unit binding")
+              fragment.fields[slot] = SelfHostPlannedWasmField::{
+                role: field.role
+                declaration: field.declaration
+                physical_index: field.physical_index
+                storage: SelfHostPlannedWasmStorageType::WasmI64Storage
+                mutable_: field.mutable_
+                exact_nominal: field.exact_nominal
+                offset: field.offset
+              }
+              assert(self_host_body_pattern_field_carrier(link, module_, linked_type.type_index, index, pattern.type_) is SelfHostWasmBodyCarrier::I64BodyCarrier, "wrong scalar storage must not become a valid Unit certificate")
+              fragment.fields[slot] = field
+              checked = checked + 1u32
+            }
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+      }
+    }
+  }
+  assert(checked > 0u32, "inspect a selected Unit payload field")
+}
+
 test "nonreturning constructor lowering owns its prefix and preserves source children" {
   let fragments = self_host_physical_test_fragments(
     b"enum Wrapped {\n  Value(I32, I32, I32)\n}\npub fn run() -> I32 {\n  let value = Wrapped::Value(1i32, return 42i32, 3i32)\n  0i32\n}\n",
