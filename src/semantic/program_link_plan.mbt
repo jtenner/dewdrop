@@ -294,11 +294,11 @@ pub fn PlannedProgramWasmGCLink::specialized_call_function(
   expression : ExprId,
 ) -> PlannedProgramWasmFunction? {
   match
-    self.specialized_call_lookup.get(
-      program_specialized_call_key(body, specialization_abi_key, expression),
+    check_program_specialized_call_lookup(
+      self, body, specialization_abi_key, expression,
     ) {
-    Some(index) => Some(self.functions[index])
-    None => None
+    Ok(value) => value
+    Err(failure) => abort(@debug.to_string(failure))
   }
 }
 

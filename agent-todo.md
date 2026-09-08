@@ -282,6 +282,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   A different physical-target replay cannot overwrite that witness. Physical
   shape lookup also rejects multiple source candidates. See the
   [exact generic target log](docs/research/exact-generic-call-targets-2026-09-08.md).
+  The shared specialized-call getter now checks the retained witness as well;
+  the link boundary verifies matching key sets and exact targets before return.
+  See the [consumer log](docs/research/specialized-call-consumers-2026-09-08.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.
