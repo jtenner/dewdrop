@@ -478,6 +478,12 @@ Thus a successful update preserves the functional call-site mapping. This does
 not prove the target selection itself. See
 [the target update log](../research/physical-call-target-updates-2026-09-08.md).
 
+The body planner's subsequent receiver-refinement and carrier-based recovery
+rules are removed. Carrier equality cannot replace or reconstruct the retained
+logical call target. Missing method mappings stay missing at seeding and report
+BOD-607 at verification. This is not yet a proof of every earlier selector. See
+[the recovery log](../research/body-target-recovery-removal-2026-09-08.md).
+
 ## Fixed specialization demand
 
 Query, projection, and bound-call demand is closed over the source caller graph

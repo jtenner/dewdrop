@@ -325,6 +325,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   with SPC-303 and check body ownership, table length, and stored identity.
   Missing proposals cannot erase evidence. Receiver-based selection remains.
   See the [target update log](docs/research/physical-call-target-updates-2026-09-08.md).
+  Body planning no longer refines a selected target from receiver carriers or
+  repairs a missing target from receiver names or the last argument carrier.
+  A removed exact method mapping yields BOD-607; same-carrier logical instances
+  retain distinct results. Other phase selectors still need cleanup. See the
+  [body recovery log](docs/research/body-target-recovery-removal-2026-09-08.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Raw builtin references now have explicit outlined physical targets in both
   compilers. The native failure required a returned function value; a local

@@ -77,3 +77,48 @@ test "ARN-106 call target updates check the stored expression identity" expect_t
   expressions[2u32] = self_host_test_physical_expression_id(expressions[2u32], 2u32)
   let _ = self_host_body_plan_set_call_function(body, expressions, 3u32, 0u32)
 }
+
+test "a missing generic method mapping cannot be repaired from its receiver" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Box<t> {\n  value: t\n}\nimpl<t> Box<t> {\n  fn get(self) -> t {\n    self.value\n  }\n}\npub fn run(value: Box<I64>) -> I64 {\n  value.get()\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid generic method link")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid generic method body plan before mutation")
+  assert(link.specialized_calls.length() == 1u32, "one exact generic method mapping")
+  let call = link.specialized_calls[0u32]
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = module_.bodies[self_host_semantic_id_local(call.caller_body)]
+  let indexes = self_host_build_physical_body_indexes(link)
+  let original = self_host_body_seed_expression(link, indexes, module_, body,
+    call.caller_specialization, call.expression,
+  )
+  assert(original.call_function_index == call.function_index, "seed retains the exact selected function")
+  assert(link.call_index.heads.remove(call.caller_body), "remove just the caller's exact mapping")
+  let missing = self_host_body_seed_expression(link, indexes, module_, body,
+    call.caller_specialization, call.expression,
+  )
+  assert(missing.call_function_index == 4294967295u32, "a unique receiver-compatible function is not an exact mapping")
+  let mut checked = 0u32
+  for plan in program.bodies {
+    if plan.body == call.caller_body && plan.specialization == call.caller_specialization {
+      let diagnostics = []
+      self_host_verify_body_call_arguments(link, plan, module_, body, missing,
+        SelfHostHirSpan::{
+          start: 0u32
+          length: 0u32
+        }, diagnostics,
+      )
+      assert(diagnostics.length() == 1u32, "missing target has one call diagnostic")
+      let failure = diagnostics[0u32]
+      assert(failure.code == 607u32 && failure.context == "call target is missing", "exact missing-target diagnostic")
+      assert(failure.module_id == plan.module_id && failure.declaration == plan.declaration && failure.body == plan.body, "exact caller identity")
+      assert(failure.expression == call.expression && failure.source_offset == module_.expressions[call.expression].offset, "exact call expression and source offset")
+      assert(failure.physical_function_index == plan.physical_function_index && failure.specialization == plan.specialization && failure.specialization_key == plan.specialization_key, "exact physical caller")
+      assert(failure.entity == 0u64 && failure.expected is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier && failure.actual is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, "missing evidence is not fabricated")
+      checked = checked + 1u32
+    }
+  }
+  assert(checked == 1u32, "the mutated caller was verified")
+}

@@ -1,4 +1,5 @@
 builtin is_unit<t>() -> Bool = "types.is_unit"
+builtin is_signed<t>() -> Bool = "types.is_signed_integer"
 builtin unreachable() -> Never = "unreachable"
 
 struct Box<t> {
@@ -8,6 +9,14 @@ struct Box<t> {
 impl<t> Box<t> {
   fn get(self) -> t {
     self.value
+  }
+
+  fn signed(self) -> I64 {
+    if is_signed::<t>() {
+      42i64
+    } else {
+      7i64
+    }
   }
 }
 
@@ -46,8 +55,16 @@ pub fn main(case: U32) -> I64 {
     })
   } else if case == 2u32 {
     plain()
-  } else {
+  } else if case == 3u32 {
     plain_trait()
+  } else if case == 4u32 {
+    Box::{
+      value: 1i32
+    }.signed()
+  } else {
+    Box::{
+      value: 1u32
+    }.signed()
   }
 }
 

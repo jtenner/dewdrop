@@ -7,6 +7,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class TraitCallPolicyTests(unittest.TestCase):
+    def test_body_planning_does_not_reselect_targets_from_carriers(self):
+        source = (ROOT / "self_host/compiler/semantic_wasm_body_plan.dew").read_text()
+        for name in ("self_host_body_refine_receiver_specialization",
+                     "self_host_body_function_matches_receiver_shapes",
+                     "self_host_body_unique_function_for_last_parameter_carrier",
+                     "self_host_body_function_for_physical_receiver_method"):
+            with self.subTest(name=name):
+                self.assertFalse(name in source,
+                                 f"body planning still uses carrier target recovery: {name}")
+
     def source_function(self, name):
         source = (ROOT / "self_host/compiler/starshine_module.dew").read_text()
         start = source.index("fn " + name + "(")
