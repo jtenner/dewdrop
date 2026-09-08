@@ -21,6 +21,7 @@ python3 tools/test_debug_swar_policy.py
 python3 tools/test_debug_unit_policy.py
 python3 tools/test_debug_bool_policy.py
 python3 tools/test_variant_lookup_policy.py
+python3 tools/test_trait_call_policy.py
 python3 tools/test_assertion_library_policy.py
 python3 tools/test_production_assertion_policy.py
 python3 tools/test_wasi_write_runtime_policy.py

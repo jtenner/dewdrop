@@ -130,3 +130,52 @@ pub fn mixed_scalars(value: I64) -> I64 {
     0i64
   }
 }
+trait FirstRead {
+  fn read(self) -> I64
+}
+
+trait SecondRead {
+  fn read(self) -> I64
+}
+
+impl FirstRead for I64 {
+  fn read(self) -> I64 {
+    self
+  }
+}
+
+impl SecondRead for I64 {
+  fn read(self) -> I64 {
+    self + 1i64
+  }
+}
+
+fn first_read<t: FirstRead>(value: t) -> I64 {
+  value.read()
+}
+
+fn second_read<t: SecondRead>(value: t) -> I64 {
+  value.read()
+}
+
+fn first_reader() -> fn(I64) -> I64 {
+  fn(value: I64) -> I64 {
+    first_read(value)
+  }
+}
+
+fn second_reader() -> fn(I64) -> I64 {
+  fn(value: I64) -> I64 {
+    second_read(value)
+  }
+}
+
+pub fn trait_identity_callback(value: I64) -> I64 {
+  let first = first_reader()
+  let second = second_reader()
+  if second(value) == value + 1i64 {
+    first(value)
+  } else {
+    0i64
+  }
+}

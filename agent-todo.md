@@ -242,6 +242,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   explicit type query. An unrelated generic implementation no longer hides a
   valid target. See the
   [bound-call log](docs/research/bound-call-logical-selection-2026-09-08.md).
+  Removed the emitter's final same-name trait scan and its first-linked-function
+  fallback. Missing targets retain the source diagnostic. See the
+  [emitter trait log](docs/research/emitter-trait-fallback-2026-09-08.md).
+  A generic function-value factory with a trait-bound target still loses its
+  witness/target in native compilation; generic lambda factories also fail.
+  Fix these retained regressions before closing this row. See the
+  [bound function-value log](docs/research/bound-trait-function-values-2026-09-08.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.

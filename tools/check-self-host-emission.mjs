@@ -618,7 +618,8 @@ pub fn main() -> I32 {
       ["nested_i32_i64", "left: I32, right: I64", "left, right"],
       ["nested_i64_i32", "left: I64, right: I32", "left, right"],
       ...["erased_product", "mixed_scalars", "nominal_callback", "generic_nominal_callback",
-        "captured_nominal_callback", "captured_generic_nominal_callback", "callback_evaluation_order"]
+        "captured_nominal_callback", "captured_generic_nominal_callback", "callback_evaluation_order",
+        "trait_identity_callback"]
         .map(name => [name, "value: I64", "value"]),
     ]) {
       exports[name] = await compileSource(source + `\npub fn main(${parameters}) -> I64 {\n  ${name}(${arguments_})\n}\n`);

@@ -12147,91 +12147,6 @@ fn self_host_linked_method_result_argument_shape_for_receiver(
   Option::None
 }
 
-fn self_host_linked_trait_call_index(
-  link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
-  expression: U32,
-  declaration: U64,
-) -> Option<U32> {
-  let target_name = match link.fragments.specialization.lowering.index.declaration_owner(
-    declaration,
-  ) {
-    Option::Some(owner) => match self_host_program_specialization_callable(
-      link.fragments.specialization.lowering.modules[owner],
-      declaration,
-    ) {
-      Option::Some(callable) => callable.name
-      Option::None => {
-        return Option::None
-      }
-    }
-    Option::None => {
-      return Option::None
-    }
-  }
-  let mut selected_implementation = 0u64
-  match module_.evidence.evidence_body(body.declaration) {
-    Option::Some(evidence_body) => if expression >= body.expressions.start {
-      let relative = expression - body.expressions.start
-      if relative < evidence_body.expression_evidence_count() {
-        let span = evidence_body.expression_evidence_at(relative)
-        if self_host_u32_greater(span.length, 0u32) &&
-          self_host_u32_greater(evidence_body.evidence_count(), span.start) {
-          selected_implementation = evidence_body.evidence_at(span.start).implementation
-        }
-      }
-    }
-    Option::None => {}
-  }
-  let mut fallback = 4294967295u32
-  for candidate_module in link.fragments.specialization.lowering.modules {
-    let mut callable_index = 0u32
-    let _ = while callable_index {
-      current => if current < self_host_program_specialization_callable_count(
-        candidate_module,
-      ) {
-        let callable = self_host_program_specialization_callable_at(
-          candidate_module,
-          current,
-        )
-        match callable.kind {
-          SelfHostPlannedCallableKind::PlannedImplMethodCallable(
-            implementation,
-            _,
-          ) => if callable.name.equals(target_name) &&
-            (self_host_u64_equal(selected_implementation, 0u64) ||
-              self_host_u64_equal(selected_implementation, implementation)) {
-            for function_ in link.functions {
-              if self_host_u64_equal(function_.declaration, callable.declaration) {
-                if self_host_u64_equal(selected_implementation, implementation) {
-                  return Option::Some(
-                    self_host_linked_physical_function_index(
-                      function_.function_index,
-                    ),
-                  )
-                }
-                if self_host_u32_equal(fallback, 4294967295u32) {
-                  fallback = function_.function_index
-                }
-              }
-            }
-          }
-          _ => {}
-        }
-        continue current + 1u32
-      } else {
-        break self_host_semantic_unit()
-      }
-    }
-  }
-  if self_host_u32_equal(fallback, 4294967295u32) {
-    Option::None
-  } else {
-    Option::Some(self_host_linked_physical_function_index(fallback))
-  }
-}
-
 fn self_host_linked_missing_call_error(
   link: SelfHostPlannedProgramWasmGCLink,
   declaration: U64,
@@ -17042,55 +16957,28 @@ fn self_host_emit_linked_i32_expression(
                       Option::None => {}
                     }
                   }
-                  Option::None => match self_host_linked_trait_call_index(
-                    link,
-                    module_,
-                    body,
-                    expression,
-                    declaration,
-                  ) {
-                    Option::Some(function_index) => {
-                      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
-                        function_index,
-                        destination,
-                      ))
-                      match self_host_linked_i32_push_arguments(
+                  Option::None => {
+                    let message = StringBuilder::new()
+                    message.append(self_host_linked_missing_call_error(
+                      link,
+                      declaration,
+                    ))
+                    message.append(" expression=")
+                    message.append_u32(expression)
+                    message.append(" target=")
+                    message.append_u32(target)
+                    if target < module_.expressions.length() && self_host_u32_greater(
+                      self_host_linked_module_name_count(module_),
+                      module_.expressions[target].source_name,
+                    ) {
+                      let target_name = self_host_linked_module_name_at(
                         module_,
-                        arguments,
-                        destination,
-                        tasks,
-                        expression_depths,
-                        depth,
-                      ) {
-                        Option::Some(error) => {
-                          return Option::Some(error)
-                        }
-                        Option::None => {}
-                      }
-                    }
-                    Option::None => {
-                      let message = StringBuilder::new()
-                      message.append(self_host_linked_missing_call_error(
-                        link,
-                        declaration,
-                      ))
-                      message.append(" expression=")
-                      message.append_u32(expression)
-                      message.append(" target=")
-                      message.append_u32(target)
-                      if target < module_.expressions.length() && self_host_u32_greater(
-                        self_host_linked_module_name_count(module_),
                         module_.expressions[target].source_name,
-                      ) {
-                        let target_name = self_host_linked_module_name_at(
-                          module_,
-                          module_.expressions[target].source_name,
-                        )
-                        message.append(" target_name=")
-                        message.append(target_name)
-                      }
-                      return Option::Some(message.finish())
+                      )
+                      message.append(" target_name=")
+                      message.append(target_name)
                     }
+                    return Option::Some(message.finish())
                   }
                 }
               }
