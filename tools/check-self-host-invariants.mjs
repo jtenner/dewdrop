@@ -11,6 +11,25 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["lowered unary children cannot cross physical bodies", 1, 1n, 0n, 1n],
+    ["required lowered children cannot be missing", 1, 1n, 4294967295n, 1n],
+    ["only the exact lowered return sentinel can be erased", 1, 1n, 4294967294n, 1n],
+    ["lowered local reads require an owned logical slot", 2, 0n, 1n, 1n],
+    ["lowered block references cannot cross physical bodies", 3, 1n, 0n, 1n],
+    ["an owned argument list cannot borrow another body value", 1, 1n, 0n, 1n],
+    ["physical work graphs require owned source operands", 1, 1n, 0n, 1n],
+  ].map(([name, tag, expected, actual, length]) => ({
+    name: `ARN-104 ${name}`,
+    expected: [104, 6, 5100n, (5100n << 32n) + 1n, (5100n << 32n) + 1n, 1, expected, actual, (BigInt(tag) << 32n) | length],
+  })),
+  ...[
+    ["lowered argument spans are checked before reading", 1, 0n, 10n],
+    ["lowered block item spans are checked before reading", 4294967295, 2n, 11n],
+  ].map(([name, expression, expected, tag]) => ({
+    name: `ARN-101 ${name}`,
+    expected: [101, 6, 5100n, (5100n << 32n) + 1n, (5100n << 32n) + 1n, expression, expected, 1n, (tag << 32n) | 4294967295n],
+  })),
+  ...[
     ["aligned physical local tables cannot omit a logical local", 3n, 2n, 711n],
     ["physical local carriers remain complete", 3n, 2n, 712n],
     ["physical expressions cannot omit the body tail", 1n, 0n, 713n],

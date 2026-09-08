@@ -272,6 +272,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   checked spans and body ownership. New IR expression variants must extend the
   explicit edge checker. Only the exact missing sentinel erases optional edges.
   See the [child ownership log](docs/research/planned-body-child-ownership-2026-09-07.md).
+  The self-host planner now checks those source child lists before work-graph
+  construction and again at final verification. Nine source mutations retain
+  exact phase-6 records. See the
+  [self-host child log](docs/research/self-host-lowered-child-ownership-2026-09-07.md).
   Complete child-list, stored-identity, parallel-array, and later-consumer checks
   remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
