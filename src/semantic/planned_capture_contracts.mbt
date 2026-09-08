@@ -43,6 +43,10 @@ fn PlannedBodyChildChecker::capture_table(
       )
       return None
     }
+    self.capture_source_local(parent, index, capture.source)
+    if self.failure is Some(_) {
+      return None
+    }
   }
   Some(span)
 }
@@ -76,6 +80,17 @@ fn PlannedBodyChildChecker::closure_captures(
       expected.length.to_uint64(),
       captures.length.to_uint64(),
       (20UL << 32) | lambda.to_uint64(),
+    )
+  }
+  if self.failure is Some(_) {
+    return
+  }
+  for offset in 0..<expected.length {
+    let index = expected.start + offset
+    self.capture_source_available(
+      parent,
+      index,
+      self.lowering.captures[index].source,
     )
   }
 }

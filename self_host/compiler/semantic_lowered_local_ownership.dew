@@ -1,0 +1,22 @@
+fn self_host_lowered_child_local_record(context: SelfHostLoweredChildContext, parent: U32, index: U32, relative: U32, lambda: U32) -> Unit {
+  self_host_lowered_child_index(context, parent, SelfHostHirSpan::{
+    start: 0u32
+    length: context.module_.locals.length()
+  }, index, 2u32)
+  let local = context.module_.locals[index]
+  if !self_host_u64_equal(local.body, context.body.body) {
+    self_host_lowered_child_failure(context, 106u32, parent,
+      context.body.body, local.body, (6u64 << 32u64) | u32_into_u64(index),
+    )
+  }
+  if local.local_id != relative {
+    self_host_lowered_child_failure(context, 106u32, parent,
+      u32_into_u64(relative), u32_into_u64(local.local_id), (2u64 << 32u64) | u32_into_u64(index),
+    )
+  }
+  if local.lambda != lambda {
+    self_host_lowered_child_failure(context, 106u32, parent,
+      u32_into_u64(lambda), u32_into_u64(local.lambda), (7u64 << 32u64) | u32_into_u64(index),
+    )
+  }
+}

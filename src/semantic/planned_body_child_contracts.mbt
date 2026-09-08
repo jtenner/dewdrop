@@ -4,6 +4,7 @@ priv struct PlannedBodyChildChecker {
   body : PlannedBodyLowering
   phase : Int
   local_span : HirSpan
+  owner_lambda : LambdaId
   mut capture_span : HirSpan
   mut failure : BodyArenaFailure?
 }
@@ -357,8 +358,15 @@ fn check_planned_body_children(
     body,
     phase,
     local_span: { start: 0, length: body.locals.length, },
+    owner_lambda: lambda,
     capture_span: { start: 0, length: 0, },
     failure: None,
+  }
+  for relative in 0..<body.locals.length {
+    checker.local_identity(-1, body.locals.start + relative, relative, lambda)
+    if checker.failure is Some(failure) {
+      return Err(failure)
+    }
   }
   if lambda != -1 {
     match checker.capture_table(-1, lambda) {

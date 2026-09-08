@@ -1,0 +1,76 @@
+fn self_host_lowered_child_capture_source(context: SelfHostLoweredChildContext, parent: U32, index: U32, source: SelfHostLambdaCaptureSource) -> Unit {
+  let (span, local, lambda) = match source {
+    SelfHostLambdaCaptureSource::BodyLocalCapture(owner, local) => {
+      if !self_host_u64_equal(owner, context.body.body) {
+        self_host_lowered_child_failure(context, 106u32, parent,
+          context.body.body, owner, (22u64 << 32u64) | u32_into_u64(index),
+        )
+      }
+      let body_index = self_host_semantic_id_local(owner)
+      self_host_lowered_child_index(context, parent, SelfHostHirSpan::{
+        start: 0u32
+        length: context.module_.bodies.length()
+      }, body_index, 22u32)
+      let body = context.module_.bodies[body_index]
+      if !self_host_u64_equal(body.body, owner) {
+        self_host_lowered_child_failure(context, 106u32, parent,
+          owner, body.body, (22u64 << 32u64) | u32_into_u64(body_index),
+        )
+      }
+      (body.locals, local, 4294967295u32)
+    }
+    SelfHostLambdaCaptureSource::LambdaLocalCapture(owner, local) => {
+      // Do not recursively inspect the source lambda's captures. A malformed
+      // self-reference must remain a bounded ownership check.
+      let lambda = self_host_lowered_child_lambda_record(context, parent, owner)
+      (lambda.locals, local, owner)
+    }
+  }
+  self_host_lowered_child_span(context, parent, span, context.module_.locals.length(), 2u32)
+  self_host_lowered_child_index(context, parent, SelfHostHirSpan::{
+    start: 0u32
+    length: span.length
+  }, local, 2u32)
+  self_host_lowered_child_local_record(context, parent, span.start + local, local, lambda)
+}
+
+fn self_host_lowered_capture_source_available(context: SelfHostLoweredChildContext, source: SelfHostLambdaCaptureSource) -> Bool {
+  let direct = match source {
+    SelfHostLambdaCaptureSource::BodyLocalCapture(owner, _) => context.lambda == 4294967295u32 && self_host_u64_equal(owner, context.body.body)
+    SelfHostLambdaCaptureSource::LambdaLocalCapture(owner, _) => owner == context.lambda
+  }
+  if direct {
+    return true
+  }
+  if context.lambda != 4294967295u32 {
+    // The enclosing table passed entry validation, including its sources.
+    let enclosing = context.module_.lambdas[context.lambda].captures
+    let _ = while 0u32 {
+      offset if offset < enclosing.length => {
+        let capture = context.module_.captures[enclosing.start + offset]
+        if self_host_lambda_capture_source_equal(capture.source, source) {
+          return true
+        }
+        continue offset + 1u32
+      }
+      _ => break self_host_semantic_unit()
+    }
+  }
+  false
+}
+
+fn self_host_lowered_child_closure(context: SelfHostLoweredChildContext, parent: U32, lambda: U32) -> Unit {
+  let captures = self_host_lowered_child_lambda(context, parent, lambda)
+  let _ = while 0u32 {
+    offset if offset < captures.length => {
+      let index = captures.start + offset
+      if !self_host_lowered_capture_source_available(context, context.module_.captures[index].source) {
+        self_host_lowered_child_failure(context, 104u32, parent,
+          1u64, 0u64, (23u64 << 32u64) | u32_into_u64(index),
+        )
+      }
+      continue offset + 1u32
+    }
+    _ => break self_host_semantic_unit()
+  }
+}

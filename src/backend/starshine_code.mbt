@@ -4372,7 +4372,8 @@ fn starshine_capture_source_instructions(
   body : @semantic.PlannedBodyLowering,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let direct_local = match source {
-    @semantic.BodyLocalCapture(_, local_id) if current_lambda < 0 => local_id
+    @semantic.BodyLocalCapture(owner, local_id) if current_lambda == -1 &&
+      owner == body.body => local_id
     @semantic.LambdaLocalCapture(owner, local_id) if owner == current_lambda =>
       local_id
     _ => -1

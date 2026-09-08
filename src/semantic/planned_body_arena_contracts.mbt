@@ -77,52 +77,6 @@ fn check_planned_body_arenas(
       ),
     )
   }
-  for relative in 0..<body.locals.length {
-    let index = body.locals.start + relative
-    let local = lowering.locals[index]
-    if local.body != body.body {
-      return Err(
-        planned_body_arena_failure(
-          lowering,
-          body,
-          phase,
-          106,
-          -1,
-          body.body,
-          local.body,
-          (6UL << 32) | index.to_uint64(),
-        ),
-      )
-    }
-    if local.local_id != relative {
-      return Err(
-        planned_body_arena_failure(
-          lowering,
-          body,
-          phase,
-          106,
-          -1,
-          relative.to_uint64(),
-          local.local_id.reinterpret_as_uint().to_uint64(),
-          (2UL << 32) | index.to_uint64(),
-        ),
-      )
-    }
-    if local.lambda != lambda {
-      return Err(
-        planned_body_arena_failure(
-          lowering,
-          body,
-          phase,
-          106,
-          -1,
-          lambda.reinterpret_as_uint().to_uint64(),
-          local.lambda.reinterpret_as_uint().to_uint64(),
-          (7UL << 32) | index.to_uint64(),
-        ),
-      )
-    }
-  }
   check_planned_body_children(lowering, body, phase, lambda)
 }
 

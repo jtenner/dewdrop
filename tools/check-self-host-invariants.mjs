@@ -10,6 +10,24 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "ARN-104 closure captures require their enclosing environment",
+    expected: [104, 6, 5100n, 18446744073709551615n, 5100n << 32n, 1, 1n, 0n, (23n << 32n) | 1n],
+  },
+  ...[
+    "capture sources retain their root body",
+    "erased captures still require their source owner",
+  ].map(name => ({
+    name: `ARN-106 ${name}`,
+    expected: [106, 6, 5100n, 18446744073709551615n, 5100n << 32n, 4294967295, 5100n << 32n, (5100n << 32n) + 1n, 22n << 32n],
+  })),
+  ...[
+    ["locals stay in their owning span", 2n],
+    ["lambdas are present", 16n],
+  ].map(([name, tag]) => ({
+    name: `ARN-104 capture source ${name}`,
+    expected: [104, 6, 5100n, 18446744073709551615n, 5100n << 32n, 4294967295, 0n, 1n, (tag << 32n) | 1n],
+  })),
   ...[
     ["relative identity", 17n],
     ["lambda owner", 18n],

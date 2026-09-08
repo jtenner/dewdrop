@@ -1,0 +1,26 @@
+test "ARN-104 closure captures require their enclosing environment" expect_trap "unreachable" {
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(b"pub fn maker(seed: I64) -> fn(I64) -> fn(I64) -> I64 {\n  fn(offset: I64) -> fn(I64) -> I64 {\n    fn(extra: I64) -> I64 {\n      seed + offset + extra\n    }\n  }\n}\n"),
+    false,
+  )
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid nested capturing closures")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  assert(module_.lambdas.length() == 2u32 && module_.captures.length() == 3u32, "two nested lambdas and three captures")
+  let index = module_.lambdas[1u32].captures.start
+  assert(index == 1u32, "the inner lambda starts at capture one")
+  let source = module_.captures[index]
+  assert(self_host_lambda_capture_source_equal(source.source,
+    SelfHostLambdaCaptureSource::BodyLocalCapture(5100u64 << 32u64, 0u32),
+  ), "the original first inner capture forwards seed")
+  module_.captures[index] = self_host_capture_test_resourced(source,
+    SelfHostLambdaCaptureSource::LambdaLocalCapture(1u32, 0u32),
+  )
+  for plan in program.bodies {
+    if plan.lambda == 0u32 {
+      self_host_verify_one_physical_body(link, plan, [])
+      return self_host_semantic_unit()
+    }
+  }
+  assert(false, "the enclosing lambda plan must be present")
+}

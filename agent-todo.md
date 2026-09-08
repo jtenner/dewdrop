@@ -291,9 +291,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   See the [local identity log](docs/research/physical-local-identity-2026-09-07.md).
   Physical capture reads/writes now require an owned slot. Lambda/capture IDs,
   root bodies, and capture spans are checked; native closure/direct-call recipes
-  must retain the selected capture span. Capture-source locals and forwarded
-  environments still need checks. See the
+  must retain the selected capture span. See the
   [capture log](docs/research/physical-capture-ownership-2026-09-07.md).
+  Capture sources now retain their exact body/lambda and local identity,
+  including Unit captures. Closure construction checks direct or forwarded
+  availability in the enclosing environment; native direct emission also
+  preserves the source body guard. See the
+  [source log](docs/research/capture-source-ownership-2026-09-07.md).
   Complete child-list, stored-identity, parallel-array, and later-consumer checks
   remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency
