@@ -605,11 +605,23 @@ fn self_host_wasmgc_append_function(
   value_types: Array<SelfHostPlannedWasmValueType>,
 ) -> Unit {
   let parameter_start = value_types.length()
-  let deferred = request is Option::None && self_host_query_projected_signature(module_, callable)
-  let parameter_count = if deferred {
-    0u32
-  } else {
+  let elided = !reachable || request is Option::None && self_host_u32_greater(
+    self_host_program_specialization_callable_generics(callable).length, 0u32,
+  )
+  let kind = self_host_wasmgc_function_kind(callable)
+  let physical_signature = !elided && !(kind is SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction)
+  // Non-emitted templates retain their logical signature in the callable.
+  // Trait requirements and compile-time declarations are logical metadata too.
+  // None of these publish a fabricated reference-valued physical signature.
+  if physical_signature && !self_host_array_span_is_valid(callable.parameters.start, callable.parameters.length, module_.functions.parameters.length()) {
+    self_host_named_fragment_failure(module_, callable, 101u32,
+      u32_into_u64(module_.functions.parameters.length()), u32_into_u64(callable.parameters.length), u32_into_u64(callable.parameters.start),
+    )
+  }
+  let parameter_count = if physical_signature {
     callable.parameters.length
+  } else {
+    0u32
   }
   let mut parameter = 0u32
   let _ = while parameter {
@@ -633,7 +645,7 @@ fn self_host_wasmgc_append_function(
       }
       self_host_wasmgc_append_shape(
         value_types,
-        parameter_shape,
+        self_host_named_fragment_shape(module_, callable, parameter_shape, current),
       )
       continue current + 1u32
     } else {
@@ -641,22 +653,23 @@ fn self_host_wasmgc_append_function(
     }
   }
   let result_start = value_types.length()
-  if !deferred {
-  self_host_wasmgc_append_shape(
-    value_types,
-    self_host_wasmgc_specialized_shape(
+  if physical_signature {
+    let result_shape = self_host_wasmgc_specialized_shape(
       module_,
       callable,
       request,
       shapes,
       callable.result_type,
       callable.result_shape,
-    ),
-  )
+    )
+    self_host_wasmgc_append_shape(
+      value_types,
+      self_host_named_fragment_shape(module_, callable, result_shape, 4294967295u32),
+    )
   }
   functions.push(SelfHostPlannedWasmFunctionFragment::{
     declaration: callable.declaration
-    kind: self_host_wasmgc_function_kind(callable)
+    kind: kind
     direct_builtin: direct_builtin
     parameters: SelfHostHirSpan::{
       start: parameter_start
@@ -667,10 +680,7 @@ fn self_host_wasmgc_append_function(
       length: value_types.length() - result_start
     }
     specialization: request_index
-    elided: !reachable || request is Option::None && self_host_u32_greater(
-      self_host_program_specialization_callable_generics(callable).length,
-      0u32,
-    )
+    elided: elided
     offset: callable.offset
   })
 }

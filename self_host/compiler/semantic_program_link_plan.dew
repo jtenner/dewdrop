@@ -788,7 +788,8 @@ fn self_host_validate_program_representation(
             ) && self_host_u32_equal(
               callable.owner_generic_parameters.length,
               0u32,
-            ) && !callable.has_receiver {
+            ) && !callable.has_receiver && !function_.elided &&
+              !(function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction) {
               let expected = self_host_planned_resolved_value_shape(
                 lowering_module.resolved_types,
                 callable.result_type,

@@ -1,0 +1,26 @@
+fn self_host_named_fragment_failure(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  let body = match self_host_program_specialization_callable_body(callable) {
+    Option::Some(value) => value
+    Option::None => 0u64
+  }
+  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: 4u32
+    module_id: module_.module_id
+    declaration: callable.declaration
+    body: body
+    expression: 4294967295u32
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "named physical signature requires owned parameters and concrete shapes")
+  unreachable()
+}
+
+fn self_host_named_fragment_shape(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable, shape: SelfHostPlannedValueShape, ordinal: U32) -> SelfHostPlannedValueShape {
+  let error = self_host_specialization_shape_error(shape)
+  if error != 0u32 {
+    self_host_named_fragment_failure(module_, callable, 301u32, 0u64, u32_into_u64(error), u32_into_u64(ordinal))
+  }
+  shape
+}

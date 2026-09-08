@@ -11,6 +11,26 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["named physical parameters cannot use Generic evidence", 1n],
+    ["named physical parameters cannot use Error evidence", 2n],
+    ["named physical products cannot hide Error evidence", 2n],
+  ].map(([name, actual]) => ({
+    name: `SPC-301 ${name}`,
+    expected: [301, 4, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, actual, 0n],
+  })),
+  ...[
+    ["named physical results cannot use Generic evidence", 1n],
+    ["named physical results cannot use Error evidence", 2n],
+    ["named physical products cannot hide Generic evidence", 1n],
+  ].map(([name, actual]) => ({
+    name: `SPC-301 ${name}`,
+    expected: [301, 4, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, actual, 4294967295n],
+  })),
+  {
+    name: "ARN-101 named physical parameter spans are checked before reads",
+    expected: [101, 4, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, 1n, 0n],
+  },
+  ...[
     ["FRG-403 payload storage cannot read the next payload", 403, 1n, 1n, 0n],
     ["FRG-403 payload owner lookup cannot read the next payload", 403, 1n, 1n, 0n],
     ["ARN-101 payload storage checks span before addition", 101, 2n, 2n, (1n << 32n) | 4294967295n],

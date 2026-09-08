@@ -239,6 +239,11 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete physical-boundary checks. Reject missing, Generic, Error,
   conflicting, or consumed evidence before a reachable value reaches emission.
   Extend the existing specialization checks to every fragment/storage boundary.
+  Named function parameters/results now require concrete shape evidence,
+  including product leaves, before physical signature conversion. Elided bases
+  and signature-only declarations retain logical metadata without a fabricated
+  physical signature. See the
+  [named signature log](docs/research/named-fragment-shapes-2026-09-08.md).
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.
