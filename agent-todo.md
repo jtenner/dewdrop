@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Current handoff updated September 7, 2026. The older deferred backlog below
+> Current handoff updated September 8, 2026. The older deferred backlog below
 > comes from [`docs/roadmap.md`](docs/roadmap.md); it is not a claim that the whole
 > roadmap was re-audited today. Use small commits with tests, docs, and measured
 > compiler runs. Fix correctness before speed. Do not push without a new request.
@@ -201,6 +201,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   missing-pattern diagnostics no longer guess a physical type by name. Runtime
   adapter layouts still remain. See the
   [variant lookup log](docs/research/variant-lookup-cleanup-2026-09-08.md).
+  Active runtime payload seeding now uses selected adapter IDs. Exact call
+  payloads follow the declared result's substituted type arguments, not a
+  fixed generic slot or a get suffix. Shared receiver recovery still remains.
+  See the [payload identity log](docs/research/pattern-payload-identity-2026-09-08.md).
 - [ ] Delete unused legacy builtin plans/builders after each migration. Enforce
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.

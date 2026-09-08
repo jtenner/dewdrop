@@ -3788,13 +3788,9 @@ fn self_host_body_seed_match_payload_binding(
   let _ = target
   self_host_assert_array_span(children.start, children.length, module_.pattern_children.length(), "ARN-101 match payload children")
   self_host_assert_array_index(module_.pattern_children[children.start], module_.patterns.length(), "ARN-104 match payload pattern")
-  let name = self_host_linked_pattern_name(module_, pattern)
-  let argument = if name == "Err" {
-    1u32
-  } else if name == "Some" || name == "Ok" {
-    0u32
-  } else {
-    return false
+  let argument = match self_host_pattern_runtime_payload_argument(link, module_, pattern) {
+    Option::Some(value) => value
+    Option::None => return false
   }
   let mut shape = self_host_linked_type_argument_shape(
     module_,
@@ -3842,31 +3838,13 @@ fn self_host_body_seed_match_payload_binding(
     }
   }
   if self_host_u32_equal(argument, 0u32) {
-    if subject_function != 4294967295u32 {
-      let physical_function = self_host_linked_physical_function_index(
-        subject_function,
-      )
-      let physical_name = self_host_linked_physical_function_name(
-        link,
-        physical_function,
-      )
-      if physical_name.ends_with(b"get") {
-        let specialization_shape = self_host_linked_physical_function_specialization_shape_at(
-          link,
-          physical_function,
-          1u32,
-        )
-        if !(specialization_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-          shape = Option::Some(specialization_shape)
-        }
-      }
-    }
-    match self_host_linked_exact_map_get_value_shape(
+    match self_host_linked_exact_call_result_payload_shape(
       link,
       module_,
       body,
       caller_specialization,
       subject_expression,
+      argument,
     ) {
       Option::Some(value_shape) => {
         shape = Option::Some(value_shape)
@@ -3951,23 +3929,15 @@ fn self_host_body_seed_match_payload_binding(
       Option::None => {}
     }
   }
-  if self_host_u32_equal(argument, 0u32) && subject_function != 4294967295u32 {
+  if subject_function != 4294967295u32 {
     let physical_function = self_host_linked_physical_function_index(
       subject_function,
     )
-    let physical_name = self_host_linked_physical_function_name(
-      link,
-      physical_function,
-    )
-    if physical_name.ends_with(b"get") {
-      let specialization_shape = self_host_linked_physical_function_specialization_shape_at(
-        link,
-        physical_function,
-        1u32,
-      )
-      if !(specialization_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-        shape = Option::Some(specialization_shape)
+    match self_host_linked_physical_result_argument_shape(link, physical_function, argument) {
+      Option::Some(value) => {
+        shape = Option::Some(value)
       }
+      Option::None => {}
     }
   }
   let declared_child_shape = if children.start < module_.pattern_children.length() {
@@ -3980,7 +3950,7 @@ fn self_host_body_seed_match_payload_binding(
   } else {
     SelfHostPlannedValueShape::ErrorPlannedValueShape
   }
-  let payload_shape = if (name == "Some" || name == "Ok" || name == "Err") && !(
+  let payload_shape = if !(
     declared_child_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
   ) {
     declared_child_shape
@@ -6324,12 +6294,21 @@ fn self_host_plan_one_physical_body(
                       ) {
                         changed = true
                       }
-                      let generic_payload_hint = match self_host_linked_exact_map_get_value_shape(
+                      let payload_argument = match self_host_pattern_runtime_payload_argument(
+                        link,
+                        module_,
+                        module_.patterns[source_arm.pattern],
+                      ) {
+                        Option::Some(value) => value
+                        Option::None => 0u32
+                      }
+                      let generic_payload_hint = match self_host_linked_exact_call_result_payload_shape(
                         link,
                         module_,
                         body,
                         linked_function.specialization,
                         subject,
+                        payload_argument,
                       ) {
                         Option::Some(shape) => shape
                         Option::None => match self_host_linked_map_get_value_shape(
@@ -6360,9 +6339,8 @@ fn self_host_plan_one_physical_body(
                           }
                         }
                       }
-                      let pattern_name = self_host_linked_pattern_name(
-                        module_,
-                        module_.patterns[source_arm.pattern],
+                      let pattern_adapter = link.runtime_variant_adapters.get(
+                        self_host_pattern_constructor_declaration(module_, module_.patterns[source_arm.pattern]),
                       )
                       let declared_payload_hint = match module_.patterns[
                         source_arm.pattern
@@ -6382,7 +6360,7 @@ fn self_host_plan_one_physical_body(
                         }
                         _ => SelfHostPlannedValueShape::ErrorPlannedValueShape
                       }
-                      let physical_payload_hint = if pattern_name == "Some" {
+                      let physical_payload_hint = if pattern_adapter is Option::Some(SelfHostRuntimeVariantAdapter::RuntimeOptionSome) {
                         match self_host_linked_match_binding_use_shape(
                           link,
                           module_,
@@ -6421,7 +6399,7 @@ fn self_host_plan_one_physical_body(
                             Option::None => generic_payload_hint
                           }
                         }
-                      } else if (pattern_name == "Ok" || pattern_name == "Err") && !(
+                      } else if (pattern_adapter is Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultOk) || pattern_adapter is Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultErr)) && !(
                         declared_payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape
                       ) {
                         declared_payload_hint

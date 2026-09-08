@@ -1,0 +1,67 @@
+open dew.std.option
+
+fn self_host_pattern_runtime_payload_argument(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  pattern: SelfHostPlannedPattern,
+) -> Option<U32> {
+  let declaration = self_host_pattern_constructor_declaration(module_, pattern)
+  match link.runtime_variant_adapters.get(declaration) {
+    Option::Some(adapter) => match adapter {
+      SelfHostRuntimeVariantAdapter::RuntimeOptionNone => Option::None
+      SelfHostRuntimeVariantAdapter::RuntimeOptionSome, SelfHostRuntimeVariantAdapter::RuntimeResultOk => Option::Some(0u32)
+      SelfHostRuntimeVariantAdapter::RuntimeResultErr => Option::Some(1u32)
+    }
+    Option::None => Option::None
+  }
+}
+
+fn self_host_linked_physical_result_argument_shape(
+  link: SelfHostPlannedProgramWasmGCLink,
+  physical_function: U32,
+  argument: U32,
+) -> Option<SelfHostPlannedValueShape> {
+  let function_ = match self_host_linked_physical_function(link, physical_function) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let module_ = self_host_program_function_lowering(
+    link.fragments.specialization.lowering,
+    function_.module_index,
+    function_.specialization,
+  )
+  let callable = match self_host_program_specialization_callable(module_, function_.declaration) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  self_host_assert_array_index(callable.result_type, module_.resolved_types.types.length(), "FRG-403 call result type")
+  let arguments = match module_.resolved_types.types[callable.result_type] {
+    SelfHostResolvedType::AppliedType(_, values) => values
+    _ => return Option::None
+  }
+  self_host_assert_array_span(arguments.start, arguments.length, module_.resolved_types.type_arguments.length(), "FRG-403 call result arguments")
+  if argument >= arguments.length {
+    return Option::None
+  }
+  let payload = module_.resolved_types.type_arguments[arguments.start + argument]
+  self_host_assert_array_index(payload, module_.resolved_types.types.length(), "FRG-403 call result payload")
+  let request = if function_.specialization == 4294967295u32 {
+    Option::None
+  } else {
+    self_host_assert_array_index(function_.specialization, link.fragments.specialization.requests.length(), "SPC-301 call result request")
+    Option::Some(link.fragments.specialization.requests[function_.specialization])
+  }
+  let shape = self_host_wasmgc_specialized_shape(
+    module_,
+    callable,
+    request,
+    link.fragments.specialization.shapes,
+    payload,
+    self_host_planned_resolved_value_shape(module_.resolved_types, payload),
+  )
+  if self_host_specialization_shape_error(shape) != 0u32 {
+    Option::None
+  } else {
+    Option::Some(shape)
+  }
+}

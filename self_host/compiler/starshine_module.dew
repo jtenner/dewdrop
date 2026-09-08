@@ -5532,12 +5532,13 @@ fn self_host_linked_is_unresolved_map_get(
   }
 }
 
-fn self_host_linked_exact_map_get_value_shape(
+fn self_host_linked_exact_call_result_payload_shape(
   link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
   caller_specialization: U32,
   root: U32,
+  argument: U32,
 ) -> Option<SelfHostPlannedValueShape> {
   if root >= module_.expressions.length() {
     return Option::None
@@ -5588,18 +5589,11 @@ fn self_host_linked_exact_map_get_value_shape(
     _ => Option::None
   }
   match call_index {
-    Option::Some(function_index) => {
-      let shape = self_host_linked_physical_function_specialization_shape_at(
+    Option::Some(function_index) => self_host_linked_physical_result_argument_shape(
         link,
         function_index,
-        1u32,
+        argument,
       )
-      if shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-        Option::None
-      } else {
-        Option::Some(shape)
-      }
-    }
     Option::None => Option::None
   }
 }
