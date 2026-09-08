@@ -377,6 +377,11 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete full Wasm reference checks. Check heap type and nullability,
   not just an eqref label, for call operands, results, locals, and branches.
 - [ ] Put constructor and other temporary locals in the frozen physical plan.
+  Constructor field temporary types now come from frozen source-order records;
+  emission checks presence, uniqueness, source agreement, and mirrored carriers.
+  Global initializers now pass through body planning, verification, and freeze.
+  Exact temporary slots and other temporary kinds remain. See the
+  [temporary plan log](docs/research/constructor-temporary-plans-2026-09-08.md).
   Object constructor emission now uses a checked exact field-ID recipe, with
   separate source evaluation and physical load order. Missing or different IDs
   cannot be repaired by names or tentative carriers. Recipe freeze and nominal

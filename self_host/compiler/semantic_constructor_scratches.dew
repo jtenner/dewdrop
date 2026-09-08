@@ -1,0 +1,101 @@
+fn self_host_constructor_scratch_carrier(carrier: SelfHostWasmBodyCarrier) -> SelfHostWasmBodyCarrier {
+  if carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    // Constructors store an explicit null marker for an erased source value.
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier
+  } else {
+    carrier
+  }
+}
+
+fn self_host_constructor_scratch_failure(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, phase: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: phase
+    module_id: module_.module_id
+    declaration: body.declaration
+    body: body.body
+    expression: expression
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "constructor temporary values require unique frozen carrier evidence")
+  unreachable()
+}
+
+fn self_host_plan_constructor_scratches(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, fields: SelfHostHirSpan, expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>, scratches: Array<SelfHostPlannedPhysicalScratchCarrier>) -> Unit {
+  if !self_host_array_span_is_valid(fields.start, fields.length, module_.object_fields.length()) {
+    self_host_constructor_scratch_failure(module_, body, expression, 6u32, 101u32,
+      u32_into_u64(module_.object_fields.length()), u32_into_u64(fields.length), u32_into_u64(fields.start))
+  }
+  while 0u32 {
+    ordinal if ordinal < fields.length => {
+      let child = module_.object_fields[fields.start + ordinal].value
+      let source = expressions[self_host_body_expression_slot(body, child)].value
+      let value = self_host_body_value_with_carrier(source, self_host_constructor_scratch_carrier(source.carrier))
+      scratches.push(SelfHostPlannedPhysicalScratchCarrier::{
+        expression: expression
+        ordinal: ordinal
+        value: value
+        carrier: value.carrier
+        context: "constructor source field"
+      })
+      continue ordinal + 1u32
+    }
+    _ => break ()
+  }
+}
+
+fn self_host_constructor_scratch_value(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, ordinal: U32) -> SelfHostPlannedPhysicalValueInfo {
+  if !self_host_array_span_is_valid(body.expressions.start, body.expressions.length, module_.expressions.length()) {
+    self_host_constructor_scratch_failure(module_, body, expression, 7u32, 101u32,
+      u32_into_u64(module_.expressions.length()), u32_into_u64(body.expressions.length), u32_into_u64(body.expressions.start))
+  }
+  let _ = self_host_body_expression_slot(body, expression)
+  let plan = match canonical {
+    Option::Some(value) => value
+    Option::None => self_host_constructor_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(ordinal))
+  }
+  let fields = match module_.expressions[expression].kind {
+    SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => fields
+    _ => self_host_constructor_scratch_failure(module_, body, expression, 7u32, 606u32, 1u64, 0u64, u32_into_u64(ordinal))
+  }
+  if !self_host_array_span_is_valid(fields.start, fields.length, module_.object_fields.length()) {
+    self_host_constructor_scratch_failure(module_, body, expression, 7u32, 101u32,
+      u32_into_u64(module_.object_fields.length()), u32_into_u64(fields.length), u32_into_u64(fields.start))
+  }
+  if ordinal >= fields.length {
+    self_host_constructor_scratch_failure(module_, body, expression, 7u32, 403u32,
+      u32_into_u64(fields.length), u32_into_u64(ordinal), 0u64)
+  }
+  let child = module_.object_fields[fields.start + ordinal].value
+  let _ = self_host_body_expression_slot(body, child)
+  let source = match self_host_body_plan_expression(plan, child) {
+    Option::Some(value) => value
+    Option::None => self_host_constructor_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(ordinal))
+  }
+  let expected = self_host_constructor_scratch_carrier(source.carrier)
+  if expected is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier || expected is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+    self_host_constructor_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, self_host_body_carrier_code(expected), u32_into_u64(ordinal))
+  }
+  let mut selected = Option::None
+  for scratch in plan.scratches {
+    if scratch.expression == expression && scratch.ordinal == ordinal {
+      if selected is Option::Some(_) {
+        self_host_constructor_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 2u64, u32_into_u64(ordinal))
+      }
+      if !self_host_body_carrier_equal(expected, scratch.value.carrier) {
+        self_host_constructor_scratch_failure(module_, body, expression, 7u32, 710u32,
+          self_host_body_carrier_code(expected), self_host_body_carrier_code(scratch.value.carrier), u32_into_u64(ordinal))
+      }
+      if !self_host_body_carrier_equal(scratch.value.carrier, scratch.carrier) {
+        self_host_constructor_scratch_failure(module_, body, expression, 7u32, 710u32,
+          self_host_body_carrier_code(scratch.value.carrier), self_host_body_carrier_code(scratch.carrier), u32_into_u64(ordinal))
+      }
+      selected = Option::Some(scratch.value)
+    }
+  }
+  match selected {
+    Option::Some(value) => value
+    Option::None => self_host_constructor_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(ordinal))
+  }
+}

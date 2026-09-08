@@ -1,0 +1,147 @@
+fn self_host_test_read_constructor_scratch(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, ordinal: U32) -> SelfHostPlannedPhysicalValueInfo {
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = match self_host_body_lookup_for_plan(module_, plan) {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  self_host_constructor_scratch_value(Option::Some(plan), module_, body, 4u32, ordinal)
+}
+
+fn self_host_test_change_constructor_scratch(plan: SelfHostPlannedPhysicalBodyCarrierPlan, mirrored: Bool) -> Unit {
+  let original = plan.scratches[0u32]
+  plan.scratches[0u32] = SelfHostPlannedPhysicalScratchCarrier::{
+    expression: original.expression
+    ordinal: original.ordinal
+    value: if mirrored {
+      original.value
+    } else {
+      self_host_body_value_with_carrier(original.value, SelfHostWasmBodyCarrier::I32BodyCarrier)
+    }
+    carrier: if mirrored {
+      SelfHostWasmBodyCarrier::I32BodyCarrier
+    } else {
+      original.carrier
+    }
+    context: original.context
+  }
+}
+
+test "BOD-610 constructor temporary records cannot be missing" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  let _ = plan.scratches.pop()
+  let _ = self_host_test_read_constructor_scratch(link, plan, 2u32)
+}
+
+test "BOD-610 constructor emission requires a body plan" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = match self_host_body_lookup_for_plan(module_, plan) {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  let _ = self_host_constructor_scratch_value(Option::None, module_, body, 4u32, 0u32)
+}
+
+test "BOD-610 constructor temporary records must be unique" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  plan.scratches.push(plan.scratches[0u32])
+  let _ = self_host_test_read_constructor_scratch(link, plan, 0u32)
+}
+
+test "ABI-710 constructor temporary values must match their source" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  self_host_test_change_constructor_scratch(plan, false)
+  let _ = self_host_test_read_constructor_scratch(link, plan, 0u32)
+}
+
+test "ABI-710 constructor temporary carrier copies must agree" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  self_host_test_change_constructor_scratch(plan, true)
+  let _ = self_host_test_read_constructor_scratch(link, plan, 0u32)
+}
+
+test "BOD-605 frozen constructor temporaries retain their value type" expect_trap "unreachable" {
+  let (_, plan) = self_host_constructor_scratch_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_constructor_scratch(plan, false)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "FRG-403 constructor temporary ordinals stay in the field span" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  let _ = self_host_test_read_constructor_scratch(link, plan, 3u32)
+}
+
+fn self_host_constructor_scratch_fixture() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Record {\n  left: I32\n  effect: Unit\n  right: I64\n}\npub fn main(left: I32, right: I64) -> I64 {\n  let item = Record::{\n    right: right\n    effect: ()\n    left: left\n  }\n  item.right\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid constructor scratch source")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  assert(program.bodies.length() == 1u32, "one constructor body")
+  (link, program.bodies[0u32])
+}
+
+test "declared Never calls terminate reference-valued match branches" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"builtin unreachable() -> Never = \"unreachable\"\nstruct Record {\n  value: I64\n}\nenum Choice {\n  Present(Record)\n  Absent\n}\nfn stop() -> Never {\n  unreachable()\n}\nfn choose(value: Choice) -> Record {\n  match value {\n    Choice::Present(item) => item\n    Choice::Absent => stop()\n  }\n}\npub fn main() -> I64 {\n  let item = Record::{\n    value: 42i64\n  }\n  choose(Choice::Present(item)).value\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid reference and Never branches")
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => assert(bytes.byte_length() > 0u32, "validated reference result with a nonreturning call branch")
+    Result::Err(error) => assert(false, error)
+  }
+}
+
+test "constructor temporary values are planned in source order before freeze" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let expected = [SelfHostWasmBodyCarrier::I64BodyCarrier,
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier, SelfHostWasmBodyCarrier::I32BodyCarrier]
+  let mut checked = 0u32
+  for expression in plan.expressions {
+    match module_.expressions[expression.expression].kind {
+      SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => {
+        assert(fields.length == 3u32, "three source fields including Unit")
+        assert(expression.expression == 4u32, "stable constructor expression")
+        while 0u32 {
+          index if index < fields.length => {
+            match self_host_body_plan_scratch_value(plan, expression.expression, index) {
+              Option::Some(value) => assert(self_host_body_carrier_equal(value.carrier, expected[index]), "source-ordered carrier or explicit Unit marker")
+              Option::None => assert(false, "constructor temporary is missing from the physical plan")
+            }
+            checked = checked + 1u32
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+      }
+      _ => {}
+    }
+  }
+  assert(checked == 3u32 && plan.scratches.length() == 3u32, "exact planned temporary count")
+}
+
+test "global constructor initializers have verified frozen temporary values" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Record {\n  value: I64\n}\nlet record = Record::{\n  value: 42i64\n}\npub fn main() -> I64 {\n  record.value\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32 && link.initializers.length() == 1u32, "valid global initializer")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  let initializer = link.initializers[0u32]
+  let module_ = link.fragments.specialization.lowering.modules[initializer.module_index]
+  match self_host_program_wasm_body_plan_for_identity(program, module_.module_id, initializer.body, 4294967295u32) {
+    Option::Some(plan) => {
+      assert(plan.scratches.length() == 1u32, "one constructor temporary")
+      assert(plan.scratches[0u32].carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "global I64 temporary")
+      assert(plan.physical_function_index == link.functions.length() + 2u32, "exact initializer handle")
+    }
+    Option::None => assert(false, "global initializer body plan is missing")
+  }
+  self_host_assert_frozen_body_plan(program)
+}

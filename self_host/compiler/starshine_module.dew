@@ -2492,6 +2492,12 @@ fn self_host_linked_schedule_call_result_adapter(
     module_.inferred,
     planned.type_,
   )
+  if carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier && !planned.flow.falls_through {
+    // A zero-result Wasm call does not itself make the caller unreachable.
+    // Retain the verified Dew divergence proof after the call instruction.
+    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedUnreachable(destination))
+    return
+  }
   let semantic_result_is_unit = semantic_result_shape is SelfHostPlannedValueShape::UnitPlannedValueShape ||
     planned.shape is SelfHostPlannedValueShape::UnitPlannedValueShape
   if self_host_u32_equal(
@@ -31335,14 +31341,8 @@ fn self_host_linked_scalar_locals(
           let mut position = 0u32
           while position {
             index if index < fields.length => {
-              let child = module_.object_fields[fields.start + index].value
-              let carrier = self_host_linked_exact_emitted_expression_carrier(canonical_body_plan, link, module_, body, caller_specialization, child)
-              let shape = if carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
-                // A Unit source is evaluated, then a null storage marker is saved.
-                SelfHostPlannedValueShape::RefPlannedValueShape
-              } else {
-                self_host_body_carrier_shape(carrier)
-              }
+              let value = self_host_constructor_scratch_value(canonical_body_plan, module_, body, expression, index)
+              let shape = self_host_body_carrier_shape(value.carrier)
               if !self_host_linked_scalar_append_local_type(locals, shape) {
                 return Result::Err("constructor evaluation has no concrete scratch carrier")
               }

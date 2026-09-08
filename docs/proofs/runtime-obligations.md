@@ -468,6 +468,15 @@ machine overflow or silent early completion. This does not prove every transfer
 monotone or every physical type sound. See
 [the work-queue audit](../research/carrier-work-queue-audit-2026-09-08.md).
 
+## Constructor temporary evidence
+
+Constructor source-field temporaries now belong to the body freeze witness.
+Emission requires one record per source ordinal and checks its stored carrier
+against the source value and mirrored carrier. Global initializer bodies now
+use the same verification and freeze boundary. This establishes retained
+constructor temporary evidence, not complete temporary slot or reference-type
+soundness. See [the temporary plan log](../research/constructor-temporary-plans-2026-09-08.md).
+
 ## Physical call target updates
 
 A missing call target can become known. A known target can only be repeated;

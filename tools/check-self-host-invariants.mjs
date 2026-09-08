@@ -11,6 +11,19 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["BOD-610 constructor temporary records cannot be missing", 610, 1n, 0n, 2n],
+    ["BOD-610 constructor emission requires a body plan", 610, 1n, 0n, 0n],
+    ["BOD-610 constructor temporary records must be unique", 610, 1n, 2n, 0n],
+    ["ABI-710 constructor temporary values must match their source", 710, 5n, 4n, 0n],
+    ["ABI-710 constructor temporary carrier copies must agree", 710, 5n, 4n, 0n],
+    ["BOD-605 frozen constructor temporaries retain their value type", 605, 5n, 4n, 133n << 32n],
+    ["FRG-403 constructor temporary ordinals stay in the field span", 403, 3n, 3n, 0n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, (5100n << 32n) | 1n, 5100n << 32n,
+      4, expected, actual, detail],
+  })),
+  ...[
     ["ARN-101 constructor recipes require an owned source span", 101, 1n, 2n, 0n],
     ["ARN-101 constructor recipes require an owned physical span", 101, 2n, 1n, (1n << 32n) | 2n],
     ["BOD-608 constructor recipes require complete source fields", 608, 1n, 0n, 1n << 32n],
