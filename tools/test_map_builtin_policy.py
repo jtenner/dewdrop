@@ -19,7 +19,7 @@ class MapBuiltinPolicyTests(unittest.TestCase):
                     self.assertTrue(name not in source, f"{path.name} retains {name}")
         interface = (ROOT / "starshine-mb/src/ffi_bridge/pkg.generated.mbti").read_text()
         self.assertTrue(
-            "pub fn runtime_function_builder_new(Int, Int, Int) -> RuntimeFunctionBuilder" in interface,
+            "pub fn runtime_function_builder_new(Int, Int) -> RuntimeFunctionBuilder" in interface,
             "the runtime builder must not accept obsolete collection carrier/layout arguments",
         )
 
