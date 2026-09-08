@@ -1,9 +1,9 @@
 {
   "version": 1,
   "provider": "starshine",
-  "submodule_revision": "312d8a30878e66d183e9e18582ef465c9e97be69",
+  "submodule_revision": "e41ef6fde0c860cdacf15ff417be72f67ea922a4",
   "wasm_path": "starshine-mb/dist/ffi/starshine-ffi.wasm",
-  "wasm_sha256": "4297cd1aef3ecd324c07ba1b27d1c398cc81251190698524342be97b15acb4b7",
+  "wasm_sha256": "3719e065cec0ac397926bdd8bfd0e149d3c3bd286cb3665e885c46d59b0063a8",
   "available_export_count": 4188,
   "binding_count": 469,
   "interfaces": [
@@ -27,7 +27,7 @@
   "fingerprint": {
     "algorithm": "blake3-256",
     "domain": "DEW_SELF_HOST_COMPILER_FINGERPRINT_V1",
-    "prefix_sha256": "930fe114c2a6e6c3a9b6dd3ccda82c9f032a0f42b8ee122232e248a91716098e",
+    "prefix_sha256": "4ae152000736130eac3ec3187eb22edf3af563c6692ea55b4beb88bb4ad2d5ca",
     "provider_input": "exact wasm bytes appended after the prefix"
   },
   "exports": [
@@ -68,7 +68,7 @@
       "function_index": 2778,
       "internal_name": "ffi_lib_SubType_comp_type",
       "export_name": "SubType::comp_type",
-      "signature": "((ref 0), (ref null 1092)) -> (ref 0)",
+      "signature": "((ref 0), (ref null 1103)) -> (ref 0)",
       "status": "bound"
     },
     {
@@ -212,7 +212,7 @@
       "function_index": 2891,
       "internal_name": "ffi_lib_Locals_empty",
       "export_name": "Locals::empty",
-      "signature": "() -> (ref 391)",
+      "signature": "() -> (ref 387)",
       "status": "bound"
     },
     {
@@ -220,7 +220,7 @@
       "function_index": 3541,
       "internal_name": "ffi_lib_Func_new",
       "export_name": "Func::new",
-      "signature": "((ref 391), (ref 139)) -> (ref 0)",
+      "signature": "((ref 387), (ref 139)) -> (ref 0)",
       "status": "bound"
     },
     {
@@ -244,7 +244,7 @@
       "function_index": 4469,
       "internal_name": "ffi_ffi_bridge_runtime_function_builder_new",
       "export_name": "ffi_bridge::runtime_function_builder_new",
-      "signature": "(i32, i32) -> (ref 2927)",
+      "signature": "(i32, i32) -> (ref 2918)",
       "status": "bound"
     },
     {
@@ -252,7 +252,7 @@
       "function_index": 4419,
       "internal_name": "ffi_ffi_bridge_RuntimeFunctionBuilder_push_name_byte",
       "export_name": "RuntimeFunctionBuilder::push_name_byte",
-      "signature": "((ref 2927), i32) -> Unit",
+      "signature": "((ref 2918), i32) -> Unit",
       "status": "bound"
     },
     {
@@ -260,7 +260,7 @@
       "function_index": 4496,
       "internal_name": "ffi_ffi_bridge_funcs_push_runtime",
       "export_name": "ffi_bridge::funcs_push_runtime",
-      "signature": "((ref 164), (ref 2927)) -> i32",
+      "signature": "((ref 164), (ref 2918)) -> i32",
       "status": "bound"
     },
     {
@@ -356,7 +356,7 @@
       "function_index": 4503,
       "internal_name": "ffi_ffi_bridge_encode_module",
       "export_name": "ffi_bridge::encode_module",
-      "signature": "((ref 172)) -> (ref 1640)",
+      "signature": "((ref 172)) -> (ref 1654)",
       "status": "bound"
     },
     {
@@ -364,7 +364,7 @@
       "function_index": 4429,
       "internal_name": "ffi_ffi_bridge_EncodedModule_is_ok",
       "export_name": "EncodedModule::is_ok",
-      "signature": "((ref 1640)) -> i32",
+      "signature": "((ref 1654)) -> i32",
       "status": "bound"
     },
     {
@@ -372,7 +372,7 @@
       "function_index": 4430,
       "internal_name": "ffi_ffi_bridge_EncodedModule_byte_length",
       "export_name": "EncodedModule::byte_length",
-      "signature": "((ref 1640)) -> i32",
+      "signature": "((ref 1654)) -> i32",
       "status": "bound"
     },
     {
@@ -380,7 +380,7 @@
       "function_index": 4431,
       "internal_name": "ffi_ffi_bridge_EncodedModule_byte_at",
       "export_name": "EncodedModule::byte_at",
-      "signature": "((ref 1640), i32) -> i32",
+      "signature": "((ref 1654), i32) -> i32",
       "status": "bound"
     },
     {
@@ -956,7 +956,7 @@
       "function_index": 2867,
       "internal_name": "ffi_lib_Locals_single",
       "export_name": "Locals::single",
-      "signature": "(i32, (ref 0)) -> (ref 391)",
+      "signature": "(i32, (ref 0)) -> (ref 387)",
       "status": "bound"
     },
     {
@@ -1092,7 +1092,7 @@
       "function_index": 4493,
       "internal_name": "ffi_ffi_bridge_global_builder_new",
       "export_name": "ffi_bridge::global_builder_new",
-      "signature": "() -> (ref 1956)",
+      "signature": "() -> (ref 1950)",
       "status": "bound"
     },
     {
@@ -1100,7 +1100,7 @@
       "function_index": 4425,
       "internal_name": "ffi_ffi_bridge_GlobalBuilder_push",
       "export_name": "GlobalBuilder::push",
-      "signature": "((ref 1956), i32) -> Unit",
+      "signature": "((ref 1950), i32) -> Unit",
       "status": "bound"
     },
     {
@@ -1108,7 +1108,7 @@
       "function_index": 4475,
       "internal_name": "ffi_ffi_bridge_module_with_globals",
       "export_name": "ffi_bridge::module_with_globals",
-      "signature": "((ref 172), (ref 1956)) -> (ref 172)",
+      "signature": "((ref 172), (ref 1950)) -> (ref 172)",
       "status": "bound"
     },
     {
@@ -1132,7 +1132,7 @@
       "function_index": 4495,
       "internal_name": "ffi_ffi_bridge_function_reference_builder_new",
       "export_name": "ffi_bridge::function_reference_builder_new",
-      "signature": "() -> (ref 4512)",
+      "signature": "() -> (ref 4507)",
       "status": "bound"
     },
     {
@@ -1140,7 +1140,7 @@
       "function_index": 4427,
       "internal_name": "ffi_ffi_bridge_FunctionReferenceBuilder_push",
       "export_name": "FunctionReferenceBuilder::push",
-      "signature": "((ref 4512), i32) -> Unit",
+      "signature": "((ref 4507), i32) -> Unit",
       "status": "bound"
     },
     {
@@ -1148,7 +1148,7 @@
       "function_index": 4478,
       "internal_name": "ffi_ffi_bridge_module_with_declarative_functions",
       "export_name": "ffi_bridge::module_with_declarative_functions",
-      "signature": "((ref 172), (ref 4512)) -> (ref 172)",
+      "signature": "((ref 172), (ref 4507)) -> (ref 172)",
       "status": "bound"
     },
     {
@@ -1164,7 +1164,7 @@
       "function_index": 4492,
       "internal_name": "ffi_ffi_bridge_import_builder_new",
       "export_name": "ffi_bridge::import_builder_new",
-      "signature": "(i32) -> (ref 1734)",
+      "signature": "(i32) -> (ref 1749)",
       "status": "bound"
     },
     {
@@ -1172,7 +1172,7 @@
       "function_index": 4421,
       "internal_name": "ffi_ffi_bridge_ImportBuilder_push_module_byte",
       "export_name": "ImportBuilder::push_module_byte",
-      "signature": "((ref 1734), i32) -> Unit",
+      "signature": "((ref 1749), i32) -> Unit",
       "status": "bound"
     },
     {
@@ -1180,7 +1180,7 @@
       "function_index": 4423,
       "internal_name": "ffi_ffi_bridge_ImportBuilder_push_field_byte",
       "export_name": "ImportBuilder::push_field_byte",
-      "signature": "((ref 1734), i32) -> Unit",
+      "signature": "((ref 1749), i32) -> Unit",
       "status": "bound"
     },
     {
@@ -1188,7 +1188,7 @@
       "function_index": 4489,
       "internal_name": "ffi_ffi_bridge_imports_push_builder",
       "export_name": "ffi_bridge::imports_push_builder",
-      "signature": "((ref 171), (ref 1734)) -> Unit",
+      "signature": "((ref 171), (ref 1749)) -> Unit",
       "status": "bound"
     },
     {
@@ -1292,7 +1292,7 @@
       "function_index": 2875,
       "internal_name": "ffi_lib_Locals_push",
       "export_name": "Locals::push",
-      "signature": "((ref 391), (ref 0)) -> Unit",
+      "signature": "((ref 387), (ref 0)) -> Unit",
       "status": "bound"
     },
     {
@@ -1716,7 +1716,7 @@
       "function_index": 4502,
       "internal_name": "ffi_ffi_bridge_field_types_new",
       "export_name": "ffi_bridge::field_types_new",
-      "signature": "() -> (ref 1193)",
+      "signature": "() -> (ref 1209)",
       "status": "bound"
     },
     {
@@ -1724,7 +1724,7 @@
       "function_index": 4500,
       "internal_name": "ffi_ffi_bridge_field_types_push",
       "export_name": "ffi_bridge::field_types_push",
-      "signature": "((ref 1193), (ref 1191)) -> Unit",
+      "signature": "((ref 1209), (ref 1207)) -> Unit",
       "status": "bound"
     },
     {
@@ -1732,7 +1732,7 @@
       "function_index": 3588,
       "internal_name": "ffi_lib_CompType_struct_",
       "export_name": "CompType::struct_",
-      "signature": "((ref 1193)) -> (ref 0)",
+      "signature": "((ref 1209)) -> (ref 0)",
       "status": "bound"
     },
     {
@@ -1740,7 +1740,7 @@
       "function_index": 3591,
       "internal_name": "ffi_lib_CompType_array",
       "export_name": "CompType::array",
-      "signature": "((ref 1191)) -> (ref 0)",
+      "signature": "((ref 1207)) -> (ref 0)",
       "status": "bound"
     },
     {
@@ -1756,7 +1756,7 @@
       "function_index": 3543,
       "internal_name": "ffi_lib_FieldType_new",
       "export_name": "FieldType::new",
-      "signature": "((ref 0), i32) -> (ref 1191)",
+      "signature": "((ref 0), i32) -> (ref 1207)",
       "status": "bound"
     },
     {
@@ -1884,7 +1884,7 @@
       "function_index": 2773,
       "internal_name": "ffi_lib_SubType_new",
       "export_name": "SubType::new",
-      "signature": "(i32, (ref 49), (ref 0), (ref null 1092)) -> (ref 0)",
+      "signature": "(i32, (ref 49), (ref 0), (ref null 1103)) -> (ref 0)",
       "status": "bound"
     },
     {

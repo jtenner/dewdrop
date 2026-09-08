@@ -43,4 +43,5 @@ Runs above 30 seconds remain speed bugs.
 Old Debug/write transport and production assertions remain separate work and
 must not be marked complete by this batch. The provider also has an unused
 private copy of the old assertion body (no dispatcher or export calls it);
-remove that copy with the next provider transport cleanup.
+that copy is removed by the subsequent
+[provider transport cleanup](wasi-write-runtime-removal-2026-09-08.md).

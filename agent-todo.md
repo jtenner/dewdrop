@@ -190,12 +190,19 @@ Correctness comes first. Keep these timing defects visible after query completio
   [Unit log](docs/research/debug-unit-library-2026-09-07.md).
   Bool formatting also uses Dew ASCII stores and checked foreign writes. No
   primitive Debug implementation calls the old write builtin now, but the
-  old write builtin remains declared pending transport cleanup. See the
+  old write builtin is also removed with the transport cleanup below. See the
   [Bool log](docs/research/debug-bool-library-2026-09-07.md).
   Test assertion output now uses an ordinary module-local Dew function and the
   checked WASI Bytes loop. The hidden body, dependency roots, and emitter target
   override are removed. Production assertions are separate work. See the
   [test assertion log](docs/research/test-assertion-library-2026-09-08.md).
+  The old Bytes write runtime, unused provider assertion copy, and private
+  Debug write declaration are now removed. Debug text still needs its own
+  foreign-write dependency. See the
+  [transport cleanup log](docs/research/wasi-write-runtime-removal-2026-09-08.md).
+  Derived Debug labels now expand to ordinary stores and checked Dew writes.
+  Nine shared checks cover every enum form and nested generic values. See the
+  [derive output log](docs/research/derived-debug-literal-output-2026-09-08.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
@@ -227,6 +234,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   self-host source call records are checked before fragment planning. Both
   target disagreements have exact numeric-record tests. See the
   [call identity log](docs/research/specialized-call-identity-2026-09-07.md).
+  Bound calls now use logical implementation witnesses without requiring an
+  explicit type query. An unrelated generic implementation no longer hides a
+  valid target. See the
+  [bound-call log](docs/research/bound-call-logical-selection-2026-09-08.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.
@@ -248,6 +259,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   the non-returning prefix before storage selection; declared Unit fields have
   a separate marker certificate. See the
   [constructor log](docs/research/constructor-never-prefixes-2026-09-07.md).
+  Unit payload bindings also keep their logical empty value separate from a
+  certified null storage marker. Planning and emission agree that no local
+  operand exists. See the
+  [Unit pattern log](docs/research/pattern-unit-storage-2026-09-08.md).
 - [ ] Complete the emission shadow stack. Track operand types and control
   frames through each instruction, including unreachable code and adapters.
 - [ ] Complete solver transaction and arena checks. Require LIFO snapshots,

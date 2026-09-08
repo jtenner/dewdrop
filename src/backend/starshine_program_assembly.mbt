@@ -384,10 +384,6 @@ fn starshine_program_uses_wasi(
       continue
     }
     match function_.kind {
-      @semantic.PlannedWasmRuntimeFunction(name) =>
-        if name == b"dew_wasi_fd_write" {
-          return true
-        }
       @semantic.PlannedWasmImportedFunction(identity) =>
         if identity.kind is @semantic.WasiWasmImport ||
           identity.kind is @semantic.ForeignHostWasmImport {

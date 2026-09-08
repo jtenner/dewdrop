@@ -619,15 +619,12 @@ fn wasmgc_add_runtime_dependencies(
   jobs : Array[WasmFunctionFragmentJob?],
   reachable : Array[Bool],
 ) -> Unit {
-  let mut wasi_write = -1
   let debug_runtimes : Array[Int] = []
   let mut wasi_write_import = -1
   for index, job in jobs {
     match job.unwrap().kind {
       PlannedWasmRuntimeFunction(name) =>
-        if name == b"dew_wasi_fd_write" {
-          wasi_write = index
-        } else if wasmgc_builtin_is_debug_runtime(name) {
+        if wasmgc_builtin_is_debug_runtime(name) {
           debug_runtimes.push(index)
         }
       PlannedWasmImportedFunction(identity) =>
@@ -637,9 +634,6 @@ fn wasmgc_add_runtime_dependencies(
         }
       _ => ()
     }
-  }
-  if wasi_write >= 0 && reachable[wasi_write] && wasi_write_import >= 0 {
-    reachable[wasi_write_import] = true
   }
   if wasi_write_import >= 0 {
     for index in debug_runtimes {
@@ -2235,7 +2229,6 @@ fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
   name == b"f64.store" ||
   name == b"v128.load" ||
   name == b"v128.store" ||
-  name == b"dew_wasi_fd_write" ||
   name == b"dew_bench_wasi_stage_write" ||
   name == b"dew_bench_wasi_stage_read"
 }
@@ -2267,7 +2260,6 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_bytes_view" ||
   name == b"dew_bytes_load_u8x16" ||
   name == b"dew_string_load_u8x16" ||
-  name == b"dew_wasi_fd_write" ||
   name == b"dew_bench_wasi_stage_write" ||
   name == b"dew_bench_wasi_stage_read"
 }

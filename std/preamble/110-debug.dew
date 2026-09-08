@@ -2,7 +2,6 @@ pub trait Debug {
   fn debug(self) -> Unit
 }
 
-builtin __dew_debug_write(fd: U32, value: Bytes) -> U32 = "dew_wasi_fd_write"
 fn __dew_debug_ignore(value: U32) -> Unit {}
 // The synchronous host call owns this scratch range until it returns.
 // No host callback may re-enter Debug while its bytes are pending.
