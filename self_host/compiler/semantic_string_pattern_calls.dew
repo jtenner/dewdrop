@@ -1,14 +1,14 @@
 // String pattern comparisons use cached subjects, not a second evaluation of
 // the match expression. Keep their Bool result separate from the literal value.
 struct SelfHostStringPatternCallFailure {
-  context: String
+  context: SelfHostPhysicalDiagnosticReason
   entity: U64
   expected: SelfHostWasmBodyCarrier
   actual: SelfHostWasmBodyCarrier
 }
 
 fn self_host_string_pattern_call_failure(
-  context: String,
+  context: SelfHostPhysicalDiagnosticReason,
   entity: U64,
   expected: SelfHostWasmBodyCarrier,
   actual: SelfHostWasmBodyCarrier,
@@ -153,62 +153,62 @@ fn self_host_check_string_pattern_call(
   let reference = SelfHostWasmBodyCarrier::EqRefBodyCarrier
   let body = match self_host_body_lookup_for_plan(module_, plan) {
     Option::Some(value) => value
-    Option::None => return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+    Option::None => return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan, 0u64, reference, unknown)
   }
   if !self_host_array_span_is_valid(body.patterns.start, body.patterns.length, module_.patterns.length()) ||
     !self_host_array_span_is_valid(body.expressions.start, body.expressions.length, module_.expressions.length()) {
-    return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan, 0u64, reference, unknown)
   }
   if pattern_id < body.patterns.start || pattern_id - body.patterns.start >= body.patterns.length || !self_host_string_pattern_expression_is_owned(body, expression) {
-    return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan, 0u64, reference, unknown)
   }
   match module_.patterns[pattern_id].source {
     SelfHostHirPattern::LiteralPattern(value, _) => if value != expression {
-      return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+      return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan, 0u64, reference, unknown)
     }
-    _ => return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+    _ => return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan, 0u64, reference, unknown)
   }
   let target = match self_host_linked_physical_function(link, call.physical_function) {
     Option::Some(value) => value
-    Option::None => return self_host_string_pattern_call_failure("call target is missing", call.declaration, unknown, unknown)
+    Option::None => return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallTarget, call.declaration, unknown, unknown)
   }
   let declaration = match module_.expressions[expression].call_target {
     SelfHostBasicCallTarget::SelectedBasicCallTarget(value, _) => value
     _ => 0u64
   }
   if call.expression != expression || call.declaration != declaration || target.declaration != declaration || target.specialization != call.specialization {
-    return self_host_string_pattern_call_failure("planned and emitted call target differ", call.declaration, unknown, unknown)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::CallTargetMismatch, call.declaration, unknown, unknown)
   }
   if !call.emits_call {
-    return self_host_string_pattern_call_failure("erased call value became an operand", call.declaration, reference, unknown)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::ErasedCallOperand, call.declaration, reference, unknown)
   }
   if call.evaluations.length != 1u32 || call.evaluations.start >= plan.call_evaluations.length() {
-    return self_host_string_pattern_call_failure("call evaluation schedule mismatch", call.declaration, unknown, unknown)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::CallEvaluationScheduleMismatch, call.declaration, unknown, unknown)
   }
   if plan.call_evaluations[call.evaluations.start] != expression {
-    return self_host_string_pattern_call_failure("call evaluation schedule mismatch", call.declaration, unknown, unknown)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::CallEvaluationScheduleMismatch, call.declaration, unknown, unknown)
   }
   let parameter_count = self_host_linked_physical_function_parameter_count(link, call.physical_function)
   if call.operands.length != 2u32 || parameter_count != 2u32 {
-    return self_host_string_pattern_call_failure("call argument count mismatch", u32_into_u64(parameter_count), unknown, unknown)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::CallOperandCountMismatch, u32_into_u64(parameter_count), unknown, unknown)
   }
   if call.operands.start > plan.call_operands.length() || call.operands.length > plan.call_operands.length() - call.operands.start {
-    return self_host_string_pattern_call_failure("call argument has no physical value plan", call.declaration, unknown, unknown)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan, call.declaration, unknown, unknown)
   }
   match plan.call_operands[call.operands.start] {
     SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(value) => if value != pattern_id {
-      return self_host_string_pattern_call_failure("call argument has no physical value plan", 0u64, reference, unknown)
+      return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan, 0u64, reference, unknown)
     }
-    _ => return self_host_string_pattern_call_failure("call receiver count mismatch", 0u64, reference, unknown)
+    _ => return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::CallReceiverCountMismatch, 0u64, reference, unknown)
   }
   match plan.call_operands[call.operands.start + 1u32] {
     SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(value) => if value != expression {
-      return self_host_string_pattern_call_failure("call argument has no physical value plan", 1u64, reference, unknown)
+      return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan, 1u64, reference, unknown)
     }
-    _ => return self_host_string_pattern_call_failure("call argument has no physical value plan", 1u64, reference, unknown)
+    _ => return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan, 1u64, reference, unknown)
   }
   if !self_host_linked_declaration_has_receiver(link, declaration) {
-    return self_host_string_pattern_call_failure("call receiver count mismatch", call.declaration, reference, unknown)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::CallReceiverCountMismatch, call.declaration, reference, unknown)
   }
   let literal = match self_host_body_plan_expression(plan, expression) {
     Option::Some(value) => value.carrier
@@ -224,7 +224,7 @@ fn self_host_check_string_pattern_call(
         literal
       }
       if !(actual is SelfHostWasmBodyCarrier::EqRefBodyCarrier) || !self_host_body_carrier_equal(expected, actual) {
-        return self_host_string_pattern_call_failure("call argument carrier mismatch", u32_into_u64(index), expected, actual)
+        return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::CallOperandCarrierMismatch, u32_into_u64(index), expected, actual)
       }
       continue index + 1u32
     } else {
@@ -233,7 +233,7 @@ fn self_host_check_string_pattern_call(
   }
   let result = self_host_body_function_result_carrier(link, target.function_index)
   if self_host_linked_physical_function_result_count(link, call.physical_function) != 1u32 || !(result is SelfHostWasmBodyCarrier::I32BodyCarrier) {
-    return self_host_string_pattern_call_failure("call result", call.declaration, SelfHostWasmBodyCarrier::I32BodyCarrier, result)
+    return self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::CallResultMismatch, call.declaration, SelfHostWasmBodyCarrier::I32BodyCarrier, result)
   }
   Option::None
 }
@@ -258,7 +258,7 @@ fn self_host_verify_body_string_pattern_calls(
             if literal.kind is SelfHostPlannedExpressionKind::PlannedStringConst(_) {
               let failure = match self_host_body_call_plan(plan, expression) {
                 Option::Some(call) => self_host_check_string_pattern_call(link, plan, module_, pattern_id, expression, call)
-                Option::None => self_host_string_pattern_call_failure("call target is missing", 0u64, SelfHostWasmBodyCarrier::EqRefBodyCarrier, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+                Option::None => self_host_string_pattern_call_failure(SelfHostPhysicalDiagnosticReason::MissingCallTarget, 0u64, SelfHostWasmBodyCarrier::EqRefBodyCarrier, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
               }
               match failure {
                 Option::Some(value) => self_host_body_add_diagnostic(diagnostics, plan, module_, expression, value.entity, value.context, value.expected, value.actual)
@@ -303,7 +303,7 @@ fn self_host_emitted_string_pattern_target(
   match self_host_check_string_pattern_call(link, plan, module_, pattern, expression, call) {
     Option::Some(failure) => {
       let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
-        code: self_host_body_diagnostic_code(failure.context)
+        code: failure.context.code()
         phase: 7u32
         module_id: plan.module_id
         declaration: plan.declaration

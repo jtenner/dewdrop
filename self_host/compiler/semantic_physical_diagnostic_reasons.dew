@@ -1,0 +1,138 @@
+// Codes are stable. Text is for display, never for selecting a failure code.
+enum SelfHostPhysicalDiagnosticReason {
+  CarrierConflict
+  CarrierAnalysisDidNotConverge
+  MissingCallTarget
+  CallTargetMismatch
+  CallEvaluationScheduleMismatch
+  CallOperandCountMismatch
+  MissingCallOperandPlan
+  CallOperandCarrierMismatch
+  CallReceiverCountMismatch
+  ErasedCallOperand
+  CallResultMismatch
+  MissingConcreteBodyRoot
+  MissingPhysicalBody
+  MissingPhysicalFieldIdentity
+  FieldSelectionMismatch
+  FieldOwnerMismatch
+  FieldReceiverOwnerMismatch
+  FieldReceiverHeapMismatch
+  MissingConstructorType
+  ConstructorTypeMismatch
+  MissingConstructorFieldIdentity
+  ConstructorArgumentCarrierMismatch
+  ConstructorArgumentOwnerMismatch
+  MissingConstructorArgumentPlan
+  PatternPayloadCarrierMismatch
+  PatternPayloadOwnerMismatch
+  LoopBindingOwnerMismatch
+  IncorrectCallDivergence
+  LocalAssignmentCarrierMismatch
+  ReturnOperandMismatch
+  FieldLoadCarrierMismatch
+  MissingFieldLoadIdentity
+  LocalInitializerCarrierMismatch
+  BodyResultMismatch
+  RawIntrinsicOperandCountMismatch
+  MissingRawIntrinsicBodyPlan
+  MissingRawIntrinsicResultPlan
+  MissingRawIntrinsicOperandPlan
+  RawIntrinsicCarrierMismatch
+  MissingRawIntrinsicSourcePlan
+  InvalidBitcastCarriers
+}
+
+impl SelfHostPhysicalDiagnosticReason {
+  fn code(self) -> U32 {
+    match self {
+      SelfHostPhysicalDiagnosticReason::CarrierConflict => 601u32
+      SelfHostPhysicalDiagnosticReason::CarrierAnalysisDidNotConverge => 604u32
+      SelfHostPhysicalDiagnosticReason::MissingCallTarget => 607u32
+      SelfHostPhysicalDiagnosticReason::CallTargetMismatch => 701u32
+      SelfHostPhysicalDiagnosticReason::CallEvaluationScheduleMismatch => 702u32
+      SelfHostPhysicalDiagnosticReason::CallOperandCountMismatch => 703u32
+      SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan => 704u32
+      SelfHostPhysicalDiagnosticReason::CallOperandCarrierMismatch => 705u32
+      SelfHostPhysicalDiagnosticReason::CallReceiverCountMismatch => 707u32
+      SelfHostPhysicalDiagnosticReason::ErasedCallOperand => 708u32
+      SelfHostPhysicalDiagnosticReason::CallResultMismatch => 709u32
+      SelfHostPhysicalDiagnosticReason::MissingConcreteBodyRoot => 612u32
+      SelfHostPhysicalDiagnosticReason::MissingPhysicalBody => 610u32
+      SelfHostPhysicalDiagnosticReason::MissingPhysicalFieldIdentity => 608u32
+      SelfHostPhysicalDiagnosticReason::FieldSelectionMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::FieldOwnerMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::FieldReceiverOwnerMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::FieldReceiverHeapMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::MissingConstructorType => 608u32
+      SelfHostPhysicalDiagnosticReason::ConstructorTypeMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::MissingConstructorFieldIdentity => 608u32
+      SelfHostPhysicalDiagnosticReason::ConstructorArgumentCarrierMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::ConstructorArgumentOwnerMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::MissingConstructorArgumentPlan => 608u32
+      SelfHostPhysicalDiagnosticReason::PatternPayloadCarrierMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::PatternPayloadOwnerMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::LoopBindingOwnerMismatch => 609u32
+      SelfHostPhysicalDiagnosticReason::IncorrectCallDivergence => 611u32
+      SelfHostPhysicalDiagnosticReason::LocalAssignmentCarrierMismatch => 710u32
+      SelfHostPhysicalDiagnosticReason::ReturnOperandMismatch => 711u32
+      SelfHostPhysicalDiagnosticReason::FieldLoadCarrierMismatch => 608u32
+      SelfHostPhysicalDiagnosticReason::MissingFieldLoadIdentity => 608u32
+      SelfHostPhysicalDiagnosticReason::LocalInitializerCarrierMismatch => 710u32
+      SelfHostPhysicalDiagnosticReason::BodyResultMismatch => 612u32
+      SelfHostPhysicalDiagnosticReason::RawIntrinsicOperandCountMismatch => 714u32
+      SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicBodyPlan => 610u32
+      SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicResultPlan => 610u32
+      SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicOperandPlan => 704u32
+      SelfHostPhysicalDiagnosticReason::RawIntrinsicCarrierMismatch => 714u32
+      SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicSourcePlan => 704u32
+      SelfHostPhysicalDiagnosticReason::InvalidBitcastCarriers => 714u32
+    }
+  }
+
+  fn description(self) -> String {
+    match self {
+      SelfHostPhysicalDiagnosticReason::CarrierConflict => "body carrier conflict"
+      SelfHostPhysicalDiagnosticReason::CarrierAnalysisDidNotConverge => "physical body carrier analysis did not converge"
+      SelfHostPhysicalDiagnosticReason::MissingCallTarget => "call target is missing"
+      SelfHostPhysicalDiagnosticReason::CallTargetMismatch => "planned and emitted call target differ"
+      SelfHostPhysicalDiagnosticReason::CallEvaluationScheduleMismatch => "call evaluation schedule mismatch"
+      SelfHostPhysicalDiagnosticReason::CallOperandCountMismatch => "call argument count mismatch"
+      SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan => "call argument has no physical value plan"
+      SelfHostPhysicalDiagnosticReason::CallOperandCarrierMismatch => "call argument carrier mismatch"
+      SelfHostPhysicalDiagnosticReason::CallReceiverCountMismatch => "call receiver count mismatch"
+      SelfHostPhysicalDiagnosticReason::ErasedCallOperand => "erased call value became an operand"
+      SelfHostPhysicalDiagnosticReason::CallResultMismatch => "call result"
+      SelfHostPhysicalDiagnosticReason::MissingConcreteBodyRoot => "body root has no concrete physical value"
+      SelfHostPhysicalDiagnosticReason::MissingPhysicalBody => "physical source body is missing"
+      SelfHostPhysicalDiagnosticReason::MissingPhysicalFieldIdentity => "field access has no exact physical field identity"
+      SelfHostPhysicalDiagnosticReason::FieldSelectionMismatch => "field physical identity differs from inference selection"
+      SelfHostPhysicalDiagnosticReason::FieldOwnerMismatch => "field physical owner differs from declared field owner"
+      SelfHostPhysicalDiagnosticReason::FieldReceiverOwnerMismatch => "field target owner does not match receiver type"
+      SelfHostPhysicalDiagnosticReason::FieldReceiverHeapMismatch => "field receiver nominal owner or physical heap type mismatch"
+      SelfHostPhysicalDiagnosticReason::MissingConstructorType => "constructor has no exact physical destination type"
+      SelfHostPhysicalDiagnosticReason::ConstructorTypeMismatch => "constructor selected physical type mismatch"
+      SelfHostPhysicalDiagnosticReason::MissingConstructorFieldIdentity => "constructor destination field has no exact source FieldId"
+      SelfHostPhysicalDiagnosticReason::ConstructorArgumentCarrierMismatch => "constructor argument carrier mismatch"
+      SelfHostPhysicalDiagnosticReason::ConstructorArgumentOwnerMismatch => "constructor argument nominal provenance mismatch"
+      SelfHostPhysicalDiagnosticReason::MissingConstructorArgumentPlan => "constructor argument has no physical value plan"
+      SelfHostPhysicalDiagnosticReason::PatternPayloadCarrierMismatch => "pattern payload carrier mismatch"
+      SelfHostPhysicalDiagnosticReason::PatternPayloadOwnerMismatch => "pattern payload nominal provenance mismatch"
+      SelfHostPhysicalDiagnosticReason::LoopBindingOwnerMismatch => "loop binding nominal provenance mismatch"
+      SelfHostPhysicalDiagnosticReason::IncorrectCallDivergence => "direct call result is incorrectly marked as diverging"
+      SelfHostPhysicalDiagnosticReason::LocalAssignmentCarrierMismatch => "local assignment carrier mismatch"
+      SelfHostPhysicalDiagnosticReason::ReturnOperandMismatch => "return operand"
+      SelfHostPhysicalDiagnosticReason::FieldLoadCarrierMismatch => "field load"
+      SelfHostPhysicalDiagnosticReason::MissingFieldLoadIdentity => "field load has no selected physical field"
+      SelfHostPhysicalDiagnosticReason::LocalInitializerCarrierMismatch => "local initializer carrier mismatch"
+      SelfHostPhysicalDiagnosticReason::BodyResultMismatch => "function result"
+      SelfHostPhysicalDiagnosticReason::RawIntrinsicOperandCountMismatch => "raw intrinsic operand count does not match its opcode"
+      SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicBodyPlan => "raw intrinsic requires a physical body plan"
+      SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicResultPlan => "raw intrinsic result plan is missing"
+      SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicOperandPlan => "raw intrinsic operand plan is missing"
+      SelfHostPhysicalDiagnosticReason::RawIntrinsicCarrierMismatch => "raw intrinsic input or result carrier does not match its opcode"
+      SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicSourcePlan => "raw intrinsic source plan is missing"
+      SelfHostPhysicalDiagnosticReason::InvalidBitcastCarriers => "unsafe.bitcast requires equal concrete non-reference carriers"
+    }
+  }
+}

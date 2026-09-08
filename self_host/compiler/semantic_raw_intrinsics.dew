@@ -340,7 +340,7 @@ fn self_host_raw_intrinsic_error(
   module_: SelfHostPlannedModuleLowering,
   expression: U32,
   arguments: SelfHostHirSpan,
-) -> Option<String> {
+) -> Option<SelfHostPhysicalDiagnosticReason> {
   let signature = self_host_raw_intrinsic_signature(name)
   if !name.equals(b"unsafe.bitcast") && signature is Option::None {
     return Option::None
@@ -354,15 +354,15 @@ fn self_host_raw_intrinsic_error(
     arguments.length,
     module_.expression_children.length(),
   ) {
-    return Option::Some("raw intrinsic operand count does not match its opcode")
+    return Option::Some(SelfHostPhysicalDiagnosticReason::RawIntrinsicOperandCountMismatch)
   }
   let body_plan = match plan {
     Option::Some(value) => value
-    Option::None => return Option::Some("raw intrinsic requires a physical body plan")
+    Option::None => return Option::Some(SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicBodyPlan)
   }
   let target = match self_host_body_plan_expression(body_plan, expression) {
     Option::Some(value) => value.carrier
-    Option::None => return Option::Some("raw intrinsic result plan is missing")
+    Option::None => return Option::Some(SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicResultPlan)
   }
   // Never is flow, not an operand carrier. Require both frozen carrier and
   // flow evidence before omitting the stack contract for an unexecuted opcode.
@@ -378,7 +378,7 @@ fn self_host_raw_intrinsic_error(
             !module_.expressions[argument].flow.falls_through {
             return Option::None
           }
-          Option::None => return Option::Some("raw intrinsic operand plan is missing")
+          Option::None => return Option::Some(SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicOperandPlan)
         }
         continue index + 1u32
       } else {
@@ -389,16 +389,16 @@ fn self_host_raw_intrinsic_error(
   match signature {
     Option::Some(value) => {
       if !self_host_body_carrier_equal(target, value.result) {
-        return Option::Some("raw intrinsic input or result carrier does not match its opcode")
+        return Option::Some(SelfHostPhysicalDiagnosticReason::RawIntrinsicCarrierMismatch)
       }
       let _ = while 0u32 {
         index => if index < value.inputs.length() {
           let actual = match self_host_body_plan_expression(body_plan, module_.expression_children[arguments.start + index]) {
             Option::Some(operand) => operand.carrier
-            Option::None => return Option::Some("raw intrinsic operand plan is missing")
+            Option::None => return Option::Some(SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicOperandPlan)
           }
           if !self_host_body_carrier_equal(actual, value.inputs[index]) {
-            return Option::Some("raw intrinsic input or result carrier does not match its opcode")
+            return Option::Some(SelfHostPhysicalDiagnosticReason::RawIntrinsicCarrierMismatch)
           }
           continue index + 1u32
         } else {
@@ -414,7 +414,7 @@ fn self_host_raw_intrinsic_error(
     module_.expression_children[arguments.start],
   ) {
     Option::Some(value) => value.carrier
-    Option::None => return Option::Some("raw intrinsic source plan is missing")
+    Option::None => return Option::Some(SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicSourcePlan)
   }
   let supported = match source {
     SelfHostWasmBodyCarrier::I32BodyCarrier => true
@@ -427,5 +427,5 @@ fn self_host_raw_intrinsic_error(
   if supported && self_host_body_carrier_equal(source, target) {
     return Option::None
   }
-  Option::Some("unsafe.bitcast requires equal concrete non-reference carriers")
+  Option::Some(SelfHostPhysicalDiagnosticReason::InvalidBitcastCarriers)
 }

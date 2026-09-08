@@ -107,7 +107,7 @@ fn self_host_test_string_pattern_call_error(
   code: U32,
 ) -> Unit {
   match self_host_check_string_pattern_call(link, body, module_, pattern, call.expression, call) {
-    Option::Some(failure) => assert(self_host_body_diagnostic_code(failure.context) == code, failure.context)
+    Option::Some(failure) => assert(failure.context.code() == code, failure.context.description())
     Option::None => assert(false, "a one-field pattern recipe mutation must fail")
   }
 }

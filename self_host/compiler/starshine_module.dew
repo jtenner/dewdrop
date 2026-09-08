@@ -16514,7 +16514,7 @@ fn self_host_emit_linked_i32_expression(
                         Option::None => {}
                       }
                       match self_host_raw_intrinsic_error(raw_name, canonical_body_plan, module_, expression, arguments) {
-                        Option::Some(error) => return Option::Some(error)
+                        Option::Some(error) => return Option::Some(error.description())
                         Option::None => {}
                       }
                       tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(raw_name, destination))
@@ -16976,7 +16976,7 @@ fn self_host_emit_linked_i32_expression(
                     ))
                   } else {
                     match self_host_raw_intrinsic_error(name, canonical_body_plan, module_, expression, arguments) {
-                      Option::Some(error) => return Option::Some(error)
+                      Option::Some(error) => return Option::Some(error.description())
                       Option::None => {}
                     }
                     tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(
@@ -18579,7 +18579,7 @@ fn self_host_emit_linked_i32_expression(
                   }
                   if !name.equals(b"ref_null") {
                     match self_host_raw_intrinsic_error(name, canonical_body_plan, module_, expression, arguments) {
-                      Option::Some(error) => return Option::Some(error)
+                      Option::Some(error) => return Option::Some(error.description())
                       Option::None => {}
                     }
                     tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(
@@ -18846,7 +18846,7 @@ fn self_host_emit_linked_i32_expression(
                           ))
                         } else {
                           match self_host_raw_intrinsic_error(builtin_name, canonical_body_plan, module_, expression, arguments) {
-                            Option::Some(error) => return Option::Some(error)
+                            Option::Some(error) => return Option::Some(error.description())
                             Option::None => {}
                           }
                           tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(
@@ -19548,7 +19548,7 @@ fn self_host_emit_linked_i32_expression(
                           }
                         } else {
                           match self_host_raw_intrinsic_error(builtin_name, canonical_body_plan, module_, expression, arguments) {
-                            Option::Some(error) => return Option::Some(error)
+                            Option::Some(error) => return Option::Some(error.description())
                             Option::None => {}
                           }
                           tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedBuiltin(

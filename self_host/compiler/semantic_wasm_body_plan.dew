@@ -96,49 +96,6 @@ pub struct SelfHostPhysicalCarrierDiagnostic {
   actual: SelfHostWasmBodyCarrier
 }
 
-fn self_host_body_diagnostic_code(context: String) -> U32 {
-  if context == "body carrier conflict" {
-    return 601u32
-  }
-  if context == "physical body carrier analysis did not converge" {
-    return 604u32
-  }
-  if context == "call target is missing" {
-    return 607u32
-  }
-  if context == "planned and emitted call target differ" {
-    return 701u32
-  }
-  if context == "call evaluation schedule mismatch" {
-    return 702u32
-  }
-  if context == "call argument count mismatch" {
-    return 703u32
-  }
-  if context == "call argument has no physical value plan" {
-    return 704u32
-  }
-  if context == "call argument carrier mismatch" {
-    return 705u32
-  }
-  if context == "call receiver count mismatch" {
-    return 707u32
-  }
-  if context == "erased call value became an operand" {
-    return 708u32
-  }
-  if context == "call result" {
-    return 709u32
-  }
-  if context == "body root has no concrete physical value" {
-    return 612u32
-  }
-  if context == "physical source body is missing" {
-    return 610u32
-  }
-  0u32
-}
-
 pub struct SelfHostPlannedPhysicalBodyCarrierPlan {
   converged: Bool
   stalled_work_item: U32
@@ -6917,7 +6874,7 @@ fn self_host_body_add_known_expression_diagnostic(
   expression: U32,
   entity: U64,
   selected_owner: U64,
-  context: String,
+  reason: SelfHostPhysicalDiagnosticReason,
   expected: SelfHostWasmBodyCarrier,
   actual: SelfHostWasmBodyCarrier,
 ) -> Unit {
@@ -6929,7 +6886,7 @@ fn self_host_body_add_known_expression_diagnostic(
     Option::None => b""
   }
   diagnostics.push(SelfHostPhysicalCarrierDiagnostic::{
-    code: self_host_body_diagnostic_code(context)
+    code: reason.code()
     module_id: plan.module_id
     declaration: plan.declaration
     declaration_name: declaration_name
@@ -6950,7 +6907,7 @@ fn self_host_body_add_known_expression_diagnostic(
     } else {
       ""
     }
-    context: context
+    context: reason.description()
     logical_type: source.type_
     logical_shape: source.shape
     selected_owner: selected_owner
@@ -6967,7 +6924,7 @@ fn self_host_body_add_diagnostic(
   module_: SelfHostPlannedModuleLowering,
   expression: U32,
   entity: U64,
-  context: String,
+  reason: SelfHostPhysicalDiagnosticReason,
   expected: SelfHostWasmBodyCarrier,
   actual: SelfHostWasmBodyCarrier,
 ) -> Unit {
@@ -6984,7 +6941,7 @@ fn self_host_body_add_diagnostic(
     Option::None => b""
   }
   diagnostics.push(SelfHostPhysicalCarrierDiagnostic::{
-    code: self_host_body_diagnostic_code(context)
+    code: reason.code()
     module_id: plan.module_id
     declaration: plan.declaration
     declaration_name: declaration_name
@@ -7005,7 +6962,7 @@ fn self_host_body_add_diagnostic(
     } else {
       ""
     }
-    context: context
+    context: reason.description()
     logical_type: source.type_
     logical_shape: source.shape
     selected_owner: match self_host_body_plan_expression(plan, expression) {
@@ -7026,7 +6983,7 @@ fn self_host_body_add_nominal_diagnostic(
   expression: U32,
   expected_owner: U64,
   actual_owner: U64,
-  context: String,
+  reason: SelfHostPhysicalDiagnosticReason,
   expected: SelfHostWasmBodyCarrier,
   actual: SelfHostWasmBodyCarrier,
 ) -> Unit {
@@ -7043,7 +7000,7 @@ fn self_host_body_add_nominal_diagnostic(
     Option::None => b""
   }
   diagnostics.push(SelfHostPhysicalCarrierDiagnostic::{
-    code: self_host_body_diagnostic_code(context)
+    code: reason.code()
     module_id: plan.module_id
     declaration: plan.declaration
     declaration_name: declaration_name
@@ -7064,7 +7021,7 @@ fn self_host_body_add_nominal_diagnostic(
     } else {
       ""
     }
-    context: context
+    context: reason.description()
     logical_type: source.type_
     logical_shape: source.shape
     selected_owner: match self_host_body_plan_expression(plan, expression) {
@@ -7131,7 +7088,7 @@ fn self_host_verify_body_call_result(
       module_,
       expression_plan.expression,
       u32_into_u64(expression_plan.call_function_index),
-      "call result",
+      SelfHostPhysicalDiagnosticReason::CallResultMismatch,
       expected,
       expression_plan.carrier,
     )
@@ -7163,7 +7120,7 @@ fn self_host_verify_body_call_arguments(
       module_,
       expression_plan.expression,
       0u64,
-      "call target is missing",
+      SelfHostPhysicalDiagnosticReason::MissingCallTarget,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
     )
@@ -7185,7 +7142,7 @@ fn self_host_verify_body_call_arguments(
         module_,
         expression_plan.expression,
         u32_into_u64(expression_plan.call_function_index),
-        "call argument has no physical value plan",
+        SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan,
         SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
         SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       )
@@ -7199,7 +7156,7 @@ fn self_host_verify_body_call_arguments(
       module_,
       expression_plan.expression,
       u32_into_u64(call.physical_function),
-      "planned and emitted call target differ",
+      SelfHostPhysicalDiagnosticReason::CallTargetMismatch,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
     )
@@ -7215,7 +7172,7 @@ fn self_host_verify_body_call_arguments(
       module_,
       expression_plan.expression,
       u32_into_u64(expression_plan.call_function_index),
-      "call argument count mismatch",
+      SelfHostPhysicalDiagnosticReason::CallOperandCountMismatch,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
     )
@@ -7226,7 +7183,7 @@ fn self_host_verify_body_call_arguments(
   )
   if call.receiver_expression != expected_receiver {
     self_host_body_add_diagnostic(diagnostics, plan, module_, expression_plan.expression,
-      u32_into_u64(call.receiver_expression), "call receiver count mismatch",
+      u32_into_u64(call.receiver_expression), SelfHostPhysicalDiagnosticReason::CallReceiverCountMismatch,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
     )
@@ -7256,7 +7213,7 @@ fn self_host_verify_body_call_arguments(
           module_,
           expression_plan.expression,
           u32_into_u64(current),
-          "call argument has no physical value plan",
+          SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan,
           SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
           SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
         )
@@ -7285,7 +7242,7 @@ fn self_host_verify_body_call_arguments(
               module_,
               argument_expression,
               u32_into_u64(current),
-              "erased call value became an operand",
+              SelfHostPhysicalDiagnosticReason::ErasedCallOperand,
               expected,
               actual.carrier,
             )
@@ -7302,7 +7259,7 @@ fn self_host_verify_body_call_arguments(
               module_,
               argument_expression,
               u32_into_u64(current),
-              "call argument carrier mismatch",
+              SelfHostPhysicalDiagnosticReason::CallOperandCarrierMismatch,
               expected,
               actual.carrier,
             )
@@ -7313,7 +7270,7 @@ fn self_host_verify_body_call_arguments(
             module_,
             argument_expression,
             u32_into_u64(current),
-            "call argument has no physical value plan",
+            SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan,
             expected,
             SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
           )
@@ -7331,7 +7288,7 @@ fn self_host_verify_body_call_arguments(
       module_,
       expression_plan.expression,
       u32_into_u64(receiver_count),
-      "call receiver count mismatch",
+      SelfHostPhysicalDiagnosticReason::CallReceiverCountMismatch,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
     )
@@ -7423,7 +7380,7 @@ fn self_host_verify_body_field_owner(
         module_,
         expression_plan.expression,
         0u64,
-        "field access has no exact physical field identity",
+        SelfHostPhysicalDiagnosticReason::MissingPhysicalFieldIdentity,
         SelfHostWasmBodyCarrier::EqRefBodyCarrier,
         SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       )
@@ -7469,7 +7426,7 @@ fn self_host_verify_body_field_owner(
       module_,
       expression_plan.expression,
       expression_plan.selected_field,
-      "field physical identity differs from inference selection",
+      SelfHostPhysicalDiagnosticReason::FieldSelectionMismatch,
       SelfHostWasmBodyCarrier::EqRefBodyCarrier,
       expression_plan.value.carrier,
     )
@@ -7486,7 +7443,7 @@ fn self_host_verify_body_field_owner(
       module_,
       expression_plan.expression,
       expression_plan.selected_field,
-      "field physical owner differs from declared field owner",
+      SelfHostPhysicalDiagnosticReason::FieldOwnerMismatch,
       SelfHostWasmBodyCarrier::EqRefBodyCarrier,
       expression_plan.value.carrier,
     )
@@ -7511,7 +7468,7 @@ fn self_host_verify_body_field_owner(
       module_,
       expression_plan.expression,
       expression_plan.selected_field,
-      "field target owner does not match receiver type",
+      SelfHostPhysicalDiagnosticReason::FieldReceiverOwnerMismatch,
       SelfHostWasmBodyCarrier::EqRefBodyCarrier,
       expression_plan.value.carrier,
     )
@@ -7532,7 +7489,7 @@ fn self_host_verify_body_field_owner(
       module_,
       expression_plan.expression,
       expression_plan.selected_field,
-      "field receiver nominal owner or physical heap type mismatch",
+      SelfHostPhysicalDiagnosticReason::FieldReceiverHeapMismatch,
       SelfHostWasmBodyCarrier::EqRefBodyCarrier,
       expression_plan.value.carrier,
     )
@@ -7556,7 +7513,7 @@ fn self_host_verify_body_constructor(
         module_,
         expression_plan.expression,
         0u64,
-        "constructor has no exact physical destination type",
+        SelfHostPhysicalDiagnosticReason::MissingConstructorType,
         SelfHostWasmBodyCarrier::EqRefBodyCarrier,
         SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       )
@@ -7566,7 +7523,7 @@ fn self_host_verify_body_constructor(
         module_,
         expression_plan.expression,
         0u64,
-        "constructor has no exact physical destination type",
+        SelfHostPhysicalDiagnosticReason::MissingConstructorType,
         SelfHostWasmBodyCarrier::EqRefBodyCarrier,
         SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       )
@@ -7600,7 +7557,7 @@ fn self_host_verify_body_constructor(
           module_,
           expression_plan.expression,
           u32_into_u64(expected_type),
-          "constructor selected physical type mismatch",
+          SelfHostPhysicalDiagnosticReason::ConstructorTypeMismatch,
           SelfHostWasmBodyCarrier::EqRefBodyCarrier,
           expression_plan.value.carrier,
         )
@@ -7674,7 +7631,7 @@ fn self_host_verify_body_constructor(
               module_,
               expression_plan.expression,
               destination.declaration,
-              "constructor destination field has no exact source FieldId",
+              SelfHostPhysicalDiagnosticReason::MissingConstructorFieldIdentity,
               self_host_body_carrier_from_storage(destination.storage),
               SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
             )
@@ -7698,7 +7655,7 @@ fn self_host_verify_body_constructor(
                     module_,
                     argument,
                     destination.declaration,
-                    "constructor argument carrier mismatch",
+                    SelfHostPhysicalDiagnosticReason::ConstructorArgumentCarrierMismatch,
                     expected_carrier,
                     actual.value.carrier,
                   )
@@ -7720,7 +7677,7 @@ fn self_host_verify_body_constructor(
                     argument,
                     expected_owner,
                     actual.value.nominal_owner,
-                    "constructor argument nominal provenance mismatch",
+                    SelfHostPhysicalDiagnosticReason::ConstructorArgumentOwnerMismatch,
                     expected_carrier,
                     actual.value.carrier,
                   )
@@ -7732,7 +7689,7 @@ fn self_host_verify_body_constructor(
                 module_,
                 argument,
                 destination.declaration,
-                "constructor argument has no physical value plan",
+                SelfHostPhysicalDiagnosticReason::MissingConstructorArgumentPlan,
                 self_host_body_carrier_from_storage(destination.storage),
                 SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
               )
@@ -7839,7 +7796,7 @@ fn self_host_verify_body_pattern_payloads(
                                             module_,
                                             subject,
                                             u32_into_u64(local_id),
-                                            "pattern payload carrier mismatch",
+                                            SelfHostPhysicalDiagnosticReason::PatternPayloadCarrierMismatch,
                                             expected_carrier,
                                             actual_carrier,
                                           )
@@ -7862,7 +7819,7 @@ fn self_host_verify_body_pattern_payloads(
                                                 subject,
                                                 expected_owner,
                                                 actual_owner,
-                                                "pattern payload nominal provenance mismatch",
+                                                SelfHostPhysicalDiagnosticReason::PatternPayloadOwnerMismatch,
                                                 expected_carrier,
                                                 actual_carrier,
                                               )
@@ -7988,7 +7945,7 @@ fn self_host_verify_one_physical_body(
     Option::None => {
       self_host_body_add_diagnostic(
         diagnostics, plan, module_, 4294967295u32, u32_into_u64(plan.lambda),
-        "physical source body is missing", plan.result_carrier,
+        SelfHostPhysicalDiagnosticReason::MissingPhysicalBody, plan.result_carrier,
         SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       )
       return
@@ -8011,7 +7968,7 @@ fn self_host_verify_one_physical_body(
       module_,
       stalled_expression,
       u32_into_u64(plan.stalled_work_item),
-      "physical body carrier analysis did not converge",
+      SelfHostPhysicalDiagnosticReason::CarrierAnalysisDidNotConverge,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
     )
@@ -8048,7 +8005,7 @@ fn self_host_verify_one_physical_body(
           body.expressions.start,
           expected_nominal,
           actual_nominal,
-          "loop binding nominal provenance mismatch",
+          SelfHostPhysicalDiagnosticReason::LoopBindingOwnerMismatch,
           SelfHostWasmBodyCarrier::EqRefBodyCarrier,
           plan.local_values[current].carrier,
         )
@@ -8084,7 +8041,7 @@ fn self_host_verify_one_physical_body(
             expression,
             u32_into_u64(expression_plan.call_function_index),
             expression_plan.value.nominal_owner,
-            "direct call result is incorrectly marked as diverging",
+            SelfHostPhysicalDiagnosticReason::IncorrectCallDivergence,
             expression_plan.carrier,
             SelfHostWasmBodyCarrier::NeverBodyCarrier,
           )
@@ -8099,7 +8056,7 @@ fn self_host_verify_one_physical_body(
         module_,
         expression,
         0u64,
-        "body carrier conflict",
+        SelfHostPhysicalDiagnosticReason::CarrierConflict,
         expression_plan.conflict_expected,
         expression_plan.conflict_actual,
       )
@@ -8110,7 +8067,7 @@ fn self_host_verify_one_physical_body(
         if expression_plan.call_function_index == 4294967295u32 ||
           !self_host_linked_function_declaration_module_matches(link, expression_plan.call_function_index, declaration) {
           self_host_body_add_diagnostic(
-            diagnostics, plan, module_, expression, declaration, "call target is missing",
+            diagnostics, plan, module_, expression, declaration, SelfHostPhysicalDiagnosticReason::MissingCallTarget,
             SelfHostWasmBodyCarrier::EqRefBodyCarrier,
             SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
           )
@@ -8119,7 +8076,7 @@ fn self_host_verify_one_physical_body(
       SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda) => {
         if !self_host_lambda_construction_target_matches(link, plan, expression_plan, lambda) {
           self_host_body_add_diagnostic(
-            diagnostics, plan, module_, expression, plan.declaration, "call target is missing",
+            diagnostics, plan, module_, expression, plan.declaration, SelfHostPhysicalDiagnosticReason::MissingCallTarget,
             SelfHostWasmBodyCarrier::EqRefBodyCarrier,
             SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
           )
@@ -8140,7 +8097,7 @@ fn self_host_verify_one_physical_body(
                   module_,
                   value,
                   u32_into_u64(local_id),
-                  "local assignment carrier mismatch",
+                  SelfHostPhysicalDiagnosticReason::LocalAssignmentCarrierMismatch,
                   expected,
                   actual.carrier,
                 )
@@ -8162,7 +8119,7 @@ fn self_host_verify_one_physical_body(
               module_,
               expression,
               0u64,
-              "return operand",
+              SelfHostPhysicalDiagnosticReason::ReturnOperandMismatch,
               plan.result_carrier,
               actual.carrier,
             )
@@ -8192,7 +8149,7 @@ fn self_host_verify_one_physical_body(
                 SelfHostPlannedExpressionKind::PlannedFieldGet(field, _, _) => field
                 _ => u32_into_u64(expression_plan.selected_field_index)
               },
-              "field load",
+              SelfHostPhysicalDiagnosticReason::FieldLoadCarrierMismatch,
               expected,
               expression_plan.carrier,
             )
@@ -8204,7 +8161,7 @@ fn self_host_verify_one_physical_body(
           module_,
           expression,
           0u64,
-          "field load has no selected physical field",
+          SelfHostPhysicalDiagnosticReason::MissingFieldLoadIdentity,
           SelfHostWasmBodyCarrier::EqRefBodyCarrier,
           SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
         )
@@ -8330,7 +8287,7 @@ fn self_host_verify_one_physical_body(
                       module_,
                       initializer,
                       u32_into_u64(local_id),
-                      "local initializer carrier mismatch",
+                      SelfHostPhysicalDiagnosticReason::LocalInitializerCarrierMismatch,
                       expected,
                       actual.carrier,
                     )
@@ -8380,7 +8337,7 @@ fn self_host_verify_one_physical_body(
         SelfHostHirBodyRoot::BlockBodyRoot(_) => body.expressions.start
       },
       0u64,
-      "function result",
+      SelfHostPhysicalDiagnosticReason::BodyResultMismatch,
       plan.result_carrier,
       root_carrier,
     )
@@ -8398,7 +8355,7 @@ fn self_host_verify_one_physical_body(
         SelfHostHirBodyRoot::BlockBodyRoot(_) => body.expressions.start
       },
       0u64,
-      "body root has no concrete physical value",
+      SelfHostPhysicalDiagnosticReason::MissingConcreteBodyRoot,
       plan.result_carrier,
       root_carrier,
     )

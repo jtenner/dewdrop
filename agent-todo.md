@@ -382,6 +382,10 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete stable numeric failure records and the negative invariant tests.
   Start with a valid state, change one field, and check the exact code and source
   context. Missing data or an unexpected trap must never count as a pass.
+  Physical body errors now use 41 typed reasons with exhaustive code and text
+  mappings. Field, constructor, local, flow, and raw-instruction errors no longer
+  become code zero. See the
+  [typed reason log](docs/research/physical-diagnostic-reasons-2026-09-08.md).
 - [ ] Add stable phase snapshots to both compilers. Compare by semantic identity
   and stop at the first difference, from collection through emission. Keep
   bootstrap byte comparison as an additional check, not a substitute.
