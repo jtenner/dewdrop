@@ -11,6 +11,15 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ARN-101 source function lookup checks the fragment arena", 101, 2n, 2n, (70n << 32n) | 2n],
+    ["LNK-504 source function lookup checks the stored declaration", 504, 5100n << 32n, (5100n << 32n) | 1n, (71n << 32n) | 1n],
+    ["SPC-304 source function lookup cannot substitute a specialization", 304, 4294967295n, 7n, 73n << 32n],
+    ["LNK-504 source function lookup cannot substitute a lambda", 504, 0n, 1n, 74n << 32n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 5, 5100n, 5100n << 32n, 0n, 4294967295, expected, actual, detail],
+  })),
+  ...[
     ["ABI-703 outlined builtin parameter count must match", 703, 2n, 1n, 0n],
     ["ABI-705 outlined builtin operands retain their scalar type", 705, 4n, 5n, 1n],
     ["ABI-709 outlined builtin result retains its scalar type", 709, 4n, 5n, 0n],

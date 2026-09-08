@@ -107,6 +107,13 @@ certificates, not a proof that every plan is immutable or every emitted call
 preserves Wasm subtyping. See the
 [alias checks](../research/physical-type-aliases-2026-09-08.md).
 
+Source function lookup has its own boundary checks. A missing local slot does
+not scan other fragments. Present slots retain declaration and plain-instance
+identity; imported plain fragments must be unique. Native link preflight checks
+table coverage before a later type or call lookup reads it. The self-host
+builtin lookup uses checked source indices and no malformed-plan recovery scan.
+See the [source lookup checks](../research/source-function-lookups-2026-09-08.md).
+
 For arrays that use the same expression index:
 
 \[

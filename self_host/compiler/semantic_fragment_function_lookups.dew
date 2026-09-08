@@ -1,0 +1,62 @@
+fn self_host_fragment_function_lookup_failure(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  declaration: U64,
+  code: U32,
+  expected: U64,
+  actual: U64,
+  role: U64,
+  index: U32,
+) -> Never {
+  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: 5u32
+    module_id: module_.module_id
+    declaration: declaration
+    body: 0u64
+    expression: 4294967295u32
+    expected: expected
+    actual: actual
+    detail: (role << 32u64) | u32_into_u64(index)
+  }, "source function lookup must retain its exact plain declaration")
+  unreachable()
+}
+
+fn self_host_fragment_function_index(
+  module_: SelfHostPlannedModuleWasmGCFragments,
+  declaration: U64,
+) -> U32 {
+  let owner = self_host_semantic_id_module(declaration)
+  if module_.module_id != owner {
+    self_host_fragment_function_lookup_failure(module_, declaration, 504u32,
+      owner, module_.module_id, 69u64, 0u32)
+  }
+  let local = self_host_semantic_id_local(declaration)
+  if local >= module_.function_by_declaration.length() {
+    return 4294967295u32
+  }
+  let index = module_.function_by_declaration[local]
+  if index == 4294967295u32 {
+    return index
+  }
+  if index >= module_.functions.length() {
+    self_host_fragment_function_lookup_failure(module_, declaration, 101u32,
+      u32_into_u64(module_.functions.length()), u32_into_u64(index), 70u64, index)
+  }
+  let fragment = self_host_planned_wasm_function_fragment_identity(module_.functions[index])
+  if fragment.declaration != declaration {
+    self_host_fragment_function_lookup_failure(module_, declaration, 504u32,
+      declaration, fragment.declaration, 71u64, index)
+  }
+  if fragment.specialization != 4294967295u32 {
+    self_host_fragment_function_lookup_failure(module_, declaration, 304u32,
+      4294967295u64, u32_into_u64(fragment.specialization), 73u64, index)
+  }
+  match fragment.kind {
+    SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_) => {
+      self_host_fragment_function_lookup_failure(module_, declaration, 504u32,
+        0u64, 1u64, 74u64, index)
+    }
+    _ => {}
+  }
+  index
+}

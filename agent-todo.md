@@ -477,6 +477,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   full relocated types, including heap identity and nullability. Late adapter
   and text recipes and complete plan freeze still remain. See the
   [alias log](docs/research/physical-type-aliases-2026-09-08.md).
+  Native source-function lookup now checks bounds, stored identity, plain
+  instance kind, and table coverage. Imported plain fragments must be unique.
+  The self-host builtin lookup also removes its malformed-plan recovery scan.
+  See the [source lookup log](docs/research/source-function-lookups-2026-09-08.md).
 - [x] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.

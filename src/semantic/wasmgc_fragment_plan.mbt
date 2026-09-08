@@ -465,21 +465,10 @@ pub fn PlannedModuleWasmGCFragments::function_of(
   self : PlannedModuleWasmGCFragments,
   declaration : DeclId,
 ) -> PlannedWasmFunctionFragment? {
-  if semantic_id_module(declaration) == self.module_id {
-    let local_index = semantic_id_local(declaration)
-    if local_index >= 0 && local_index < self.function_by_declaration.length() {
-      let index = self.function_by_declaration[local_index]
-      if index >= 0 {
-        return Some(self.functions[index])
-      }
-    }
+  match check_module_function_lookup(self, declaration) {
+    Ok(value) => value
+    Err(error) => abort(@debug.to_string(error))
   }
-  for function_ in self.functions {
-    if function_.declaration == declaration {
-      return Some(function_)
-    }
-  }
-  None
 }
 
 ///|

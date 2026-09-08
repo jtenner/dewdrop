@@ -205,6 +205,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_solver_invariants_test.dew \
   self_host/compiler/semantic_module_graph_invariants_test.dew \
   self_host/compiler/semantic_link_invariants_test.dew \
+  self_host/compiler/semantic_fragment_function_lookups_test.dew \
   self_host/compiler/semantic_builtin_functions_test.dew \
   self_host/compiler/semantic_constructor_flow_test.dew
 do

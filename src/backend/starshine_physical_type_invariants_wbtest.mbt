@@ -33,6 +33,38 @@ test "emission rejects a missing physical type relocation before writing section
 }
 
 ///|
+test "emission checks source function lookup bounds before alias verification" {
+  let (lowering, link, diagnostics) = backend_packed_primitive_pipeline(
+    b"pub fn identity(value: I32) -> I32 {\n  value\n}\n",
+  )
+  assert_eq(diagnostics, 0)
+  assert_eq(
+    @validate.validate_module(
+      emit_starshine_program_module(lowering, link).unwrap(),
+    ),
+    Ok(()),
+  )
+  assert_eq(link.modules[0].functions.length(), 1)
+  link.modules[0].function_by_declaration[0] = 1
+  assert_eq(
+    emit_starshine_program_module(lowering, link),
+    Err(
+      CompilerInvariantFailure({
+        code: 101U,
+        phase: 7U,
+        module_id: 2520UL,
+        declaration: 2520UL << 32,
+        body: 0UL,
+        expression: 0xffffffffU,
+        expected: 1UL,
+        actual: 1UL,
+        detail: (70UL << 32) | 1UL,
+      }),
+    ),
+  )
+}
+
+///|
 test "emission rejects a changed canonical signature alias before section writes" {
   let (lowering, link, diagnostics) = backend_packed_primitive_pipeline(
     b"pub struct Pair {\n  left: I32\n  right: I64\n}\npub fn read(value: Pair) -> I64 {\n  value.right\n}\npub fn read_again(value: Pair) -> I64 {\n  value.right\n}\npub fn callback() -> fn(Pair) -> I64 {\n  read\n}\n",

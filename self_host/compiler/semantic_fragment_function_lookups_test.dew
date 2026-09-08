@@ -1,0 +1,70 @@
+fn self_host_fragment_function_lookup_fixture() -> SelfHostPlannedProgramWasmGCLink {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin keep(value: U32) -> U32 = \"i32.clz\"\npub fn run() -> U32 {\n  keep(1u32)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(lowering, false)), false)
+  assert(link.diagnostics.length() == 0u32, "valid source function lookup fixture")
+  let module_ = link.fragments.modules[0u32]
+  assert(module_.module_id == 5100u64, "source lookup owner")
+  assert(module_.functions.length() == 2u32, "two source functions")
+  assert(self_host_fragment_function_index(module_, 5100u64 << 32u64) == 0u32,
+    "plain source function before mutation")
+  link
+}
+
+test "source function lookup preserves missing builtin entries" {
+  let link = self_host_fragment_function_lookup_fixture()
+  let declaration = 5100u64 << 32u64
+  match self_host_linked_builtin_name(link, declaration) {
+    Option::Some(name) => assert(name.equals(b"i32.clz"), "present builtin name")
+    Option::None => assert(false, "missing valid builtin")
+  }
+  link.fragments.modules[0u32].function_by_declaration[0u32] = 4294967295u32
+  assert(self_host_linked_builtin_name(link, declaration) is Option::None,
+    "missing builtin entry stays missing")
+}
+
+test "ARN-101 source function lookup checks the fragment arena" expect_trap "unreachable" {
+  let link = self_host_fragment_function_lookup_fixture()
+  link.fragments.modules[0u32].function_by_declaration[0u32] = 2u32
+  let _ = self_host_linked_builtin_name(link, 5100u64 << 32u64)
+}
+
+test "LNK-504 source function lookup checks the stored declaration" expect_trap "unreachable" {
+  let link = self_host_fragment_function_lookup_fixture()
+  link.fragments.modules[0u32].function_by_declaration[0u32] = 1u32
+  let _ = self_host_linked_builtin_name(link, 5100u64 << 32u64)
+}
+
+fn self_host_fragment_function_lookup_replace(
+  link: SelfHostPlannedProgramWasmGCLink,
+  specialization: U32,
+  kind: SelfHostPlannedWasmFunctionKind,
+) -> Unit {
+  let module_ = link.fragments.modules[0u32]
+  let original = self_host_planned_wasm_function_fragment_identity(module_.functions[0u32])
+  module_.functions[0u32] = SelfHostPlannedWasmFunctionFragment::{
+    declaration: original.declaration
+    kind: kind
+    direct_builtin: original.direct_builtin
+    parameters: original.parameters
+    results: original.results
+    specialization: specialization
+    elided: original.elided
+    offset: original.offset
+  }
+}
+
+test "SPC-304 source function lookup cannot substitute a specialization" expect_trap "unreachable" {
+  let link = self_host_fragment_function_lookup_fixture()
+  self_host_fragment_function_lookup_replace(link, 7u32, link.fragments.modules[0u32].functions[0u32].kind)
+  let _ = self_host_linked_builtin_name(link, 5100u64 << 32u64)
+}
+
+test "LNK-504 source function lookup cannot substitute a lambda" expect_trap "unreachable" {
+  let link = self_host_fragment_function_lookup_fixture()
+  self_host_fragment_function_lookup_replace(link, 4294967295u32,
+    SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(7u32))
+  let _ = self_host_linked_builtin_name(link, 5100u64 << 32u64)
+}

@@ -46,6 +46,10 @@ fn physical_type_failure(
 fn verify_module_physical_type_fragments(
   module_ : PlannedModuleWasmGCFragments,
 ) -> Result[Unit, ProgramPhysicalTypeFailure] {
+  match verify_module_function_lookups(module_) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
   let physical = module_.physical_types
   let groups = module_.type_groups
   let seen = Array::make(physical.length(), false)
