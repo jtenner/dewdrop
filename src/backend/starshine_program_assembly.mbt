@@ -309,6 +309,7 @@ fn emit_starshine_program_import_section(
           )
         }
       @semantic.PlannedWasmInlineBuiltinFunction(_)
+      | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -328,6 +329,7 @@ fn emit_starshine_program_function_section(
   for function_ in planned.functions {
     match function_.kind {
       @semantic.PlannedWasmDefinedFunction(_)
+      | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmTraitAdapterFunction(_, _) =>
@@ -1064,6 +1066,16 @@ fn emit_starshine_program_code_section(
             emit_starshine_program_trait_adapter_body(
               planned, function_, implementation_method, helper_plan,
             ) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
+      @semantic.PlannedWasmOutlinedBuiltinFunction(name) =>
+        if !function_.elided {
+          match emit_starshine_outlined_builtin(
+            function_.kind, name, planned.modules[function_.module_index].function_value_types,
+            function_.parameters, function_.results,
+          ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)
           }

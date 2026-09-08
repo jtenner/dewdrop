@@ -22,9 +22,9 @@ self-host failures. It is not a proof of the full language.
 | Branch values inherit the `if` result type | Checked; bootstrap test is in progress | `starshine_module.dew` | `branch-expected-type.md` |
 | Lost struct nominal has one name-and-field recovery | Checked; bootstrap test is open | `starshine_module.dew` | `struct-constructor.md` |
 | Fixed-array get returns the declared element carrier | Checked; bootstrap test is in progress | `starshine_module.dew` | `array-get-carrier.md` |
-| Retained static function call returns its declared carrier | Checked; bootstrap test is in progress | `starshine_module.dew` | `function-value-call.md` |
+| Retained static function call returns its declared carrier | Checked and tested for concrete paths; full proof is open | `starshine_module.dew` | `function-value-call.md` |
 | Match fallthrough arms have one result carrier | Checked; bootstrap test is in progress | `starshine_module.dew` | `match-result-carrier.md` |
-| Emitted call stack matches the physical signature | Open; current compiler-B failure | Starshine module validation | `call-namespace.md` |
+| Emitted call stack matches the physical signature | Open as a complete theorem; passing scalar recipes and bootstrap tests do not prove all reference/control paths | Starshine module validation and call-recipe checks | `call-namespace.md` |
 | Dense type remap keeps valid indices and order | Proved | core linker validation | `src/compiler_proofs/type_remap_proofs.mbtp` |
 
 ## Files

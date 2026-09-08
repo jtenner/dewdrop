@@ -1,6 +1,73 @@
 builtin add(left: I32, right: I32) -> I32 = "i32.add"
+builtin xor64(left: I64, right: I64) -> I64 = "i64.xor"
+builtin abs32(value: F32) -> F32 = "f32.abs"
+builtin neg64(value: F64) -> F64 = "f64.neg"
+builtin splat(value: I64) -> V128 = "i64x2.splat"
+builtin lane(value: V128) -> I64 = "i64x2.extract_lane 1"
+builtin store(address: U32, value: I32) -> Unit = "i32.store"
+builtin load(address: U32) -> I32 = "i32.load"
+builtin bits(value: I32) -> U32 = "unsafe.bitcast"
+builtin generic_bits<a, b>(value: a) -> b = "unsafe.bitcast"
+builtin halt() -> Never = "unreachable"
 
-pub fn main() -> I32 {
-  let operation = add
-  operation(0i32, 1i32)
+fn operation_from_function() -> fn(I32, I32) -> I32 {
+  add
+}
+
+fn bits_from_function() -> fn(I32) -> U32 {
+  generic_bits
+}
+
+pub fn main(which: U32) -> I32 {
+  let correct = match which {
+    0u32 => {
+      let operation = add
+      operation(40i32, 2i32) == 42i32
+    }
+    1u32 => {
+      let operation = xor64
+      operation(4294967296i64, 7i64) == 4294967303i64
+    }
+    2u32 => {
+      let operation = abs32
+      operation(-2.5f32) == 2.5f32
+    }
+    3u32 => {
+      let operation = neg64
+      operation(2.5f64) == -2.5f64
+    }
+    4u32 => {
+      let make = splat
+      let read = lane
+      read(make(42i64)) == 42i64
+    }
+    5u32 => {
+      let write = store
+      let read = load
+      write(32u32, 4660i32)
+      read(32u32) == 4660i32
+    }
+    6u32 => {
+      let operation = bits
+      operation(-1i32) == 4294967295u32
+    }
+    7u32 => {
+      let operation = operation_from_function()
+      operation(40i32, 2i32) == 42i32
+    }
+    8u32 => {
+      let operation = bits_from_function()
+      operation(-1i32) == 4294967295u32
+    }
+    9u32 => {
+      let operation = halt
+      operation()
+    }
+    _ => false
+  }
+  if correct {
+    1i32
+  } else {
+    0i32
+  }
 }

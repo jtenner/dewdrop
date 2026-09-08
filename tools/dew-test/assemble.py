@@ -76,6 +76,7 @@ def main() -> None:
         ("debug_derived", "app.debug_derived"),
         ("debug_text", "app.debug_text"),
         ("intrinsic_names", "app.intrinsic_names"),
+        ("intrinsic_function_reference", "app.builtin_references"),
         ("production_assertions", "app.production_assertions"),
         ("wasi_bytes", "app.wasi_bytes"),
         ("product_patterns", "app.product_patterns"),

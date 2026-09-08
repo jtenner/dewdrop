@@ -567,6 +567,10 @@ fn self_host_program_link_append_fragment_detail(
                 message.append("builtin:")
                 message.append(bytes_to_string(name))
               }
+              SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedBuiltinFunction(name) => {
+                message.append("outlined builtin:")
+                message.append(bytes_to_string(name))
+              }
               SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _) => message.append("import")
               SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(_) => message.append("defined")
               SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_) => message.append("lambda")

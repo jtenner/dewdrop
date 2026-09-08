@@ -68,6 +68,7 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     })
   }
   if name.equals(b"f32.abs") ||
+    name.equals(b"f32.neg") ||
     name.equals(b"f32.sqrt") ||
     name.equals(b"f32.ceil") ||
     name.equals(b"f32.floor") ||
@@ -91,6 +92,7 @@ fn self_host_raw_intrinsic_signature(name: Bytes) -> Option<SelfHostRawIntrinsic
     })
   }
   if name.equals(b"f64.abs") ||
+    name.equals(b"f64.neg") ||
     name.equals(b"f64.sqrt") ||
     name.equals(b"f64.ceil") ||
     name.equals(b"f64.floor") ||

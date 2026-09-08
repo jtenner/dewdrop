@@ -145,6 +145,8 @@ fn starshine_numeric_builtin_instructions(
     Some([@lib.Instruction::f32_reinterpret_i32()])
   } else if name == b"f32.abs" {
     Some([@lib.Instruction::f32_abs()])
+  } else if name == b"f32.neg" {
+    Some([@lib.Instruction::f32_neg()])
   } else if name == b"f32.sqrt" {
     Some([@lib.Instruction::f32_sqrt()])
   } else if name == b"f32.ceil" {
@@ -161,6 +163,8 @@ fn starshine_numeric_builtin_instructions(
     Some([@lib.Instruction::f64_reinterpret_i64()])
   } else if name == b"f64.abs" {
     Some([@lib.Instruction::f64_abs()])
+  } else if name == b"f64.neg" {
+    Some([@lib.Instruction::f64_neg()])
   } else if name == b"f64.sqrt" {
     Some([@lib.Instruction::f64_sqrt()])
   } else if name == b"f64.ceil" {

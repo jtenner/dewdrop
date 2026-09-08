@@ -246,22 +246,35 @@ type                = identifier
 For example:
 
 ```dew
-pub builtin i32_add(a: I32, b: I32) -> I32 = "i32_add"
+pub builtin i32_add(a: I32, b: I32) -> I32 = "i32.add"
 
-pub builtin select<t, u>(value: t, fallback: u) -> t = "select"
+pub builtin unsafe_bitcast<from, to>(value: from) -> to = "unsafe.bitcast"
 ```
 
-The final standard double-quoted string is the compiler builtin registry name, and its lossless payload is retained as `Bytes`. `#|` multiline string syntax is not accepted in this declaration position. The compiler resolves the exact string against an extensible builtin registry; compiler extensions may register custom builtin implementations.
+The final standard double-quoted string identifies the instruction, explicit
+unsafe cast, or pure compile-time query/assertion. Its lossless payload is
+retained as `Bytes`. `#|` multiline strings are not accepted here. Builtins must
+not implement runtime library algorithms or host services: those use Dew
+functions and foreign declarations, respectively. Compile-time builtins must
+finish before physical planning and must not emit runtime calls. Declaration
+names, standard-module paths, and declaration order do not identify an opcode.
 
 `pub` exports the declaration from its module. Without `pub`, the declaration remains visible throughout the declaring module but is not exported. Files do not create visibility boundaries: all files assigned to one module contribute to one shared type, trait, value, implementation, and callable namespace, so a default-visible function declared in one file is callable from every other file in that module. Dew has no private declaration visibility; this default is represented as `ModuleVisible`, analogous to protected module scope rather than private scope.
 
-The AST retains ordered type parameters, typed value parameters, the declared return type, and the builtin name. Generic names and named types use the same syntactic type form and are resolved during semantic analysis. Instantiated generic information is attached to calls before the compiler replaces the builtin call with custom inline Wasm. Generic call arguments may be inferred or supplied explicitly with exact turbofish syntax such as `call::<I32, Bool>(...)`.
+The AST retains ordered type parameters, typed value parameters, the declared return type, and the builtin name. Generic names and named types use the same syntactic type form and are resolved during semantic analysis. Instantiated generic information is attached to calls before instruction lowering or compile-time evaluation. Generic call arguments may be inferred or supplied explicitly with exact turbofish syntax such as `call::<I32, Bool>(...)`.
 
 Return types are required, including explicit `-> Unit`. One trailing comma is accepted in type-parameter and value-parameter lists. A generic parameter may carry ordered trait bounds such as `t: Eq + Debug`. Bounds lower into flat HIR type syntax, resolve in the trait namespace, and survive private frozen-interface cache version 1 serialization. Local and imported calls enforce those bounds, and generic implementation candidates recursively enforce their own prerequisites. Generic-body evidence selection and executable evidence propagation remain incomplete. Signature types may be named or recursively applied generic types such as `Result<List<I32>>`.
 
 Dew-visible builtin names may be overloaded. Multiple declarations may also refer to the same builtin registry string without sharing one canonical signature. Overload resolution and ambiguity are semantic concerns.
 
-A compiler-provided builtin expansion must report or carry the type of the value it produces. That result type must match the fully instantiated return type declared by the selected builtin overload. The compiler enforces this check as a type guard at the extensible builtin boundary.
+An instruction builtin must match its selected physical operand and result
+types. A source declaration is not permission to change a Wasm instruction's
+stack contract. Taking a supported scalar/SIMD/memory builtin as a function
+value creates an explicit Wasm wrapper with that contract, not a host import.
+Scalar unsafe-bitcast wrappers require equal physical input/output carriers.
+Parameterized heap wrappers require a separate exact type recipe; a broad
+reference carrier is not such a recipe. Compile-time queries have no runtime
+function-value wrapper.
 
 The implemented entry point is:
 

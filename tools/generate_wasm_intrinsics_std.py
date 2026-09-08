@@ -54,6 +54,8 @@ class IntrinsicDeclaration:
 
 
 EXTRA_DECLARATIONS = [
+    IntrinsicDeclaration("Wasm scalar instruction", "f32_neg", "wasm_f32_neg", "", "(value: F32) -> F32", "f32.neg"),
+    IntrinsicDeclaration("Wasm scalar instruction", "f64_neg", "wasm_f64_neg", "", "(value: F64) -> F64", "f64.neg"),
     IntrinsicDeclaration(
         source="WasmGC array operations",
         name="array_new",

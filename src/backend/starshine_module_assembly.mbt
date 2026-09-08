@@ -32,6 +32,15 @@ pub fn emit_starshine_code_section(
             Err(error) => return Err(error)
           }
         }
+      @semantic.PlannedWasmOutlinedBuiltinFunction(name) =>
+        if !function_.elided {
+          match emit_starshine_outlined_builtin(
+            function_.kind, name, planned.function_value_types, function_.parameters, function_.results,
+          ) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
       @semantic.PlannedWasmRuntimeFunction(name) =>
         if !function_.elided {
           match

@@ -2265,6 +2265,7 @@ pub struct PlannedWasmFunctionFragment {
 pub enum PlannedWasmFunctionKind {
   PlannedWasmImportedFunction(WasmImportIdentity)
   PlannedWasmInlineBuiltinFunction(Bytes)
+  PlannedWasmOutlinedBuiltinFunction(Bytes)
   PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmDefinedFunction(UInt64)
   PlannedWasmDefinedLambdaFunction(Int)

@@ -203,6 +203,7 @@ pub fn WasmImportIdentity::lookup_name(self : WasmImportIdentity) -> Bytes {
 pub enum PlannedWasmFunctionKind {
   PlannedWasmImportedFunction(WasmImportIdentity)
   PlannedWasmInlineBuiltinFunction(Bytes)
+  PlannedWasmOutlinedBuiltinFunction(Bytes)
   PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmDefinedFunction(BodyId)
   PlannedWasmDefinedLambdaFunction(LambdaId)
@@ -3638,16 +3639,33 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     None => ()
   }
   let direct_builtins = wasmgc_forwarding_builtins(lowering, builtin_names)
+  for callable_index, callable in functions.callables {
+    if local_function_value_roots.contains(callable.declaration) ||
+      program_function_value_roots.contains(callable.declaration) {
+      let job = function_jobs[callable_index].unwrap()
+      match job.kind {
+        PlannedWasmInlineBuiltinFunction(name) =>
+          function_jobs[callable_index] = Some({
+            ..job,
+            kind: PlannedWasmOutlinedBuiltinFunction(name),
+          })
+        _ => ()
+      }
+    }
+  }
   let elided_functions = Array::make(functions.callables.length(), false)
   for callable_index, callable in functions.callables {
     let direct_builtin = direct_builtins[callable_index]
     elided_functions[callable_index] = compile_time_projected_signature(
         lowering, callable,
       ) ||
-      (direct_builtin.length() > 0 && callable.visibility == ModuleVisible) ||
+      (direct_builtin.length() > 0 && callable.visibility == ModuleVisible &&
+        !local_function_value_roots.contains(callable.declaration) &&
+        !program_function_value_roots.contains(callable.declaration)) ||
       (match function_jobs[callable_index].unwrap().kind {
         PlannedWasmImportedFunction(_)
         | PlannedWasmDefinedFunction(_)
+        | PlannedWasmOutlinedBuiltinFunction(_)
         | PlannedWasmRuntimeFunction(_) => !reachable_functions[callable_index]
         _ => false
       })
@@ -3665,7 +3683,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         if !elided_functions[callable_index] {
           imported_function_count += 1
         }
-      PlannedWasmDefinedFunction(_) | PlannedWasmRuntimeFunction(_) =>
+      PlannedWasmDefinedFunction(_) | PlannedWasmRuntimeFunction(_)
+      | PlannedWasmOutlinedBuiltinFunction(_) =>
         if !elided_functions[callable_index] {
           defined_function_count += 1
         }
@@ -3710,7 +3729,8 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           import_index += 1
           index
         }
-      PlannedWasmDefinedFunction(_) | PlannedWasmRuntimeFunction(_) =>
+      PlannedWasmDefinedFunction(_) | PlannedWasmRuntimeFunction(_)
+      | PlannedWasmOutlinedBuiltinFunction(_) =>
         if elided_functions[callable_index] {
           -1
         } else {
@@ -3727,6 +3747,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     let emits_signature = match job.kind {
       PlannedWasmImportedFunction(_)
       | PlannedWasmDefinedFunction(_)
+      | PlannedWasmOutlinedBuiltinFunction(_)
       | PlannedWasmRuntimeFunction(_) => !elided_functions[callable_index]
       PlannedWasmSignatureOnlyFunction =>
         runtime_requirements.contains(callable.declaration)
@@ -4292,6 +4313,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     }
     match function_jobs[callable_index].unwrap().kind {
       PlannedWasmInlineBuiltinFunction(name)
+      | PlannedWasmOutlinedBuiltinFunction(name)
       | PlannedWasmRuntimeFunction(name) =>
         if wasmgc_builtin_uses_linear_memory(name) {
           uses_linear_memory = true
@@ -4337,6 +4359,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       } else {
         match function_.kind {
           PlannedWasmInlineBuiltinFunction(name)
+          | PlannedWasmOutlinedBuiltinFunction(name)
           | PlannedWasmRuntimeFunction(name) => name
           _ => b""
         }

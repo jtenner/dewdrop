@@ -75,8 +75,8 @@ def main() -> None:
     args = parser.parse_args()
     source = SOURCE.read_text()
     branches = BRANCH.findall(source)
-    if len(branches) != 84:
-        raise SystemExit(f"expected 84 numeric instruction branches, found {len(branches)}")
+    if len(branches) != 86:
+        raise SystemExit(f"expected 86 numeric instruction branches, found {len(branches)}")
     conversion_branches = BRANCH.findall(CONVERSION_SOURCE.read_text())
     if len(conversion_branches) != 23:
         raise SystemExit(

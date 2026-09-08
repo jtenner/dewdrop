@@ -786,6 +786,10 @@ fn pb_write_function_kind(
       ib_write_id(writer, requirement)
     }
     PlannedWasmSignatureOnlyFunction => writer.write_byte(6)
+    PlannedWasmOutlinedBuiltinFunction(name) => {
+      writer.write_byte(7)
+      writer.write_bytes(name)
+    }
   }
 }
 
@@ -812,6 +816,9 @@ fn pb_read_function_kind(
         ib_read_id(reader, field),
       )
     6 => PlannedWasmSignatureOnlyFunction
+    7 => PlannedWasmOutlinedBuiltinFunction(
+      reader.read_bytes(planning_binary_maximum_text, field),
+    )
     _ => {
       reader.fail(field, "unknown Wasm function-kind discriminant")
       PlannedWasmSignatureOnlyFunction

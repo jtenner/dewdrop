@@ -10,6 +10,16 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["ABI-703 outlined builtin parameter count must match", 703, 2n, 1n, 0n],
+    ["ABI-705 outlined builtin operands retain their scalar type", 705, 4n, 5n, 1n],
+    ["ABI-709 outlined builtin result retains its scalar type", 709, 4n, 5n, 0n],
+    ["ARN-101 outlined builtin parameter span is checked before reads", 101, 4n, (4294967295n << 32n) | 2n, 0n],
+    ["ARN-101 outlined builtin result span is checked before reads", 101, 4n, (4n << 32n) | 1n, 1n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, 5100n << 32n, 0n, 4294967295, expected, actual, detail],
+  })),
   ...[["zero", 0n], ["reserved", 1n], ["missing", 4294967295n]].map(([kind, actual]) => ({
     name: `ARN-105 emitted function rejects ${kind} handle`,
     expected: [105, 7, 0n, 0n, 0n, 4294967295, 2n, actual, 0n],

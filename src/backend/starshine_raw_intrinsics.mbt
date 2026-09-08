@@ -13,7 +13,8 @@ fn starshine_verify_raw_builtin_signature(
     direct
   } else {
     match kind {
-      @semantic.PlannedWasmInlineBuiltinFunction(name) => name
+      @semantic.PlannedWasmInlineBuiltinFunction(name)
+      | @semantic.PlannedWasmOutlinedBuiltinFunction(name) => name
       _ => return Ok(())
     }
   }

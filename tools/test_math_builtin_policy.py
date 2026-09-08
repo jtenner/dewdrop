@@ -19,7 +19,7 @@ class MathBuiltinPolicyTests(unittest.TestCase):
     def test_numeric_table_has_no_library_operation_names(self):
         source = (ROOT / "src/backend/starshine_numeric_builtins.mbt").read_text()
         targets = re.findall(r'name == b"([^"]+)"', source)
-        self.assertEqual(len(targets), 84)
+        self.assertEqual(len(targets), 86)
         for target in targets:
             with self.subTest(target=target):
                 self.assertRegex(target, r'^(i32|i64|f32|f64)\.')

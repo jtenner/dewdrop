@@ -1,14 +1,35 @@
-# Function-value call result recovery
+# Function-value call identity and result
 
 This note records the result-carrier rule for a call that lowering stored as a
 function-value call even though its target still names a static callable.
 
-## Evidence order
+## Current contract
+
+The priority rule below is historical and is superseded. A selected target's
+declaration, specialization, and physical signature must agree with the call
+plan. Source expected types add constraints; they cannot overwrite a concrete
+disagreement or make a missing target look present. A broad `eqref` label is
+not a heap-type or nullability proof.
+
+Address-taken raw builtins now have explicit outlined-instruction fragments
+in both compilers. They load the physical parameters and emit the declared
+instruction without host imports. Compile-time queries remain signature-only.
+Scalar/SIMD/memory signatures are checked; scalar unsafe bitcasts retain the
+equal-carrier rule. Parameterized heap wrappers remain open.
+
+Wasm erases Never to no result values. Indirect-call dispatch must restore
+the non-returning state with `unreachable`, so a surrounding value-producing
+branch cannot fall through with an empty stack. Unit still falls through.
+These paths are checked and tested by the
+[outlined intrinsic corpus](../research/outlined-intrinsics-2026-09-08.md).
+The complete call-stack preservation theorem remains open.
+
+## Historical evidence order (superseded)
 
 Let `P(e)` be the early planned result shape, `D(e)` the declaration selected
 from the retained call target, and `Σ(D(e))` its callable signature.
 
-The safe result order is:
+The former implementation used this result priority:
 
 \[
 \operatorname{ExactScalar}(P(e))
@@ -62,5 +83,5 @@ D(e) &= \mathsf{u32\_into\_u64}, \\
 \end{aligned}
 \]
 
-Status: **Checked**. Constructor scheduling rejects the call if its recovered
-carrier does not equal the physical struct field carrier.
+Status: concrete carrier checks are **checked and tested**. The historical
+priority rule is not a current proof premise.

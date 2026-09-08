@@ -17,7 +17,7 @@ fn self_host_named_fragment_shape_test(shape: SelfHostPlannedValueShape) -> Unit
   }
   let functions = []
   let values = []
-  self_host_wasmgc_append_function(module_, callable, b"", true, Option::None, 4294967295u32, [], functions, values)
+  self_host_wasmgc_append_function(module_, callable, b"", true, false, Option::None, 4294967295u32, [], functions, values)
   if shape is SelfHostPlannedValueShape::I64PlannedValueShape {
     assert(functions.length() == 1u32 && values.length() == 2u32, "one concrete signature")
     assert(values[0u32] is SelfHostPlannedWasmValueType::WasmI64Value && values[1u32] is SelfHostPlannedWasmValueType::WasmI64Value, "parameter and result retain I64")
@@ -48,8 +48,8 @@ test "program representation accepts omitted non-emitted signatures" {
   let lowered = link.fragments.specialization.lowering.modules[0u32]
   let omitted_functions = []
   let omitted_values = []
-  self_host_wasmgc_append_function(lowered, lowered.functions.callables[0u32], b"", false, Option::None, 4294967295u32, [], omitted_functions, omitted_values)
-  self_host_wasmgc_append_function(lowered, lowered.functions.callables[1u32], b"", false, Option::None, 4294967295u32, [], omitted_functions, omitted_values)
+  self_host_wasmgc_append_function(lowered, lowered.functions.callables[0u32], b"", false, false, Option::None, 4294967295u32, [], omitted_functions, omitted_values)
+  self_host_wasmgc_append_function(lowered, lowered.functions.callables[1u32], b"", false, false, Option::None, 4294967295u32, [], omitted_functions, omitted_values)
   link.fragments.modules[0u32].functions[0u32] = omitted_functions[0u32]
   link.fragments.modules[0u32].functions[1u32] = omitted_functions[1u32]
   let mut omitted = 0u32
@@ -107,7 +107,7 @@ fn self_host_named_result_shape_test(shape: SelfHostPlannedValueShape) -> Unit {
   }
   let functions = []
   let values = []
-  self_host_wasmgc_append_function(module_, callable, b"", true, Option::None, 4294967295u32, [], functions, values)
+  self_host_wasmgc_append_function(module_, callable, b"", true, false, Option::None, 4294967295u32, [], functions, values)
   if shape is SelfHostPlannedValueShape::I64PlannedValueShape {
     assert(functions.length() == 1u32 && values.length() == 2u32, "one concrete result signature")
     assert(values[1u32] is SelfHostPlannedWasmValueType::WasmI64Value, "result retains I64")
@@ -157,7 +157,7 @@ test "ARN-101 named physical parameter spans are checked before reads" expect_tr
   let module_ = lowering.modules[0u32]
   let callable = module_.functions.callables[0u32]
   let _ = module_.functions.parameters.pop()
-  self_host_wasmgc_append_function(module_, callable, b"", true, Option::None, 4294967295u32, [], [], [])
+  self_host_wasmgc_append_function(module_, callable, b"", true, false, Option::None, 4294967295u32, [], [], [])
 }
 
 test "trait requirements retain logical but not physical signatures" {

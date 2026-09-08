@@ -1323,6 +1323,7 @@ pub fn link_program_wasmgc_fragments(
           function_.function_index = -1
         }
       PlannedWasmInlineBuiltinFunction(_)
+      | PlannedWasmOutlinedBuiltinFunction(_)
       | PlannedWasmRuntimeFunction(_)
       | PlannedWasmDefinedFunction(_)
       | PlannedWasmDefinedLambdaFunction(_)
@@ -1335,6 +1336,7 @@ pub fn link_program_wasmgc_fragments(
     match function_.kind {
       PlannedWasmDefinedFunction(_)
       | PlannedWasmDefinedLambdaFunction(_)
+      | PlannedWasmOutlinedBuiltinFunction(_)
       | PlannedWasmRuntimeFunction(_)
       | PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {

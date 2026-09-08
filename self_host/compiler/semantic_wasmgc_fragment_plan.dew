@@ -61,6 +61,7 @@ pub struct SelfHostPlannedWasmField {
 pub enum SelfHostPlannedWasmFunctionKind {
   PlannedWasmImportedFunction(Bytes, Bytes)
   PlannedWasmInlineBuiltinFunction(Bytes)
+  PlannedWasmOutlinedBuiltinFunction(Bytes)
   PlannedWasmDefinedFunction(U64)
   PlannedWasmDefinedLambdaFunction(U32)
   PlannedWasmSignatureOnlyFunction
@@ -598,6 +599,7 @@ fn self_host_wasmgc_append_function(
   callable: SelfHostPlannedCallable,
   direct_builtin: Bytes,
   reachable: Bool,
+  outlined: Bool,
   request: Option<SelfHostProgramSpecializationRequest>,
   request_index: U32,
   shapes: Array<SelfHostPlannedValueShape>,
@@ -608,7 +610,15 @@ fn self_host_wasmgc_append_function(
   let elided = !reachable || request is Option::None && self_host_u32_greater(
     self_host_program_specialization_callable_generics(callable).length, 0u32,
   )
-  let kind = self_host_wasmgc_function_kind(callable)
+  let original_kind = self_host_wasmgc_function_kind(callable)
+  let kind = match original_kind {
+    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if outlined && !self_host_program_link_is_runtime_builtin(name) {
+      SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedBuiltinFunction(name)
+    } else {
+      original_kind
+    }
+    _ => original_kind
+  }
   let physical_signature = !elided && !(kind is SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction)
   // Non-emitted templates retain their logical signature in the callable.
   // Trait requirements and compile-time declarations are logical metadata too.
@@ -861,6 +871,7 @@ fn self_host_plan_program_wasmgc_fragments(
   specialization: SelfHostProgramSpecializationPlan,
 ) -> SelfHostPlannedProgramWasmGCFragments {
   self_host_assert_program_capture_metadata(specialization.lowering, 4u32)
+  let referenced = self_host_wasmgc_referenced_builtin_declarations(specialization)
   let modules = []
   let reachable = self_host_program_specialization_seen()
   for declaration in specialization.reachable_declarations {
@@ -915,6 +926,7 @@ fn self_host_plan_program_wasmgc_fragments(
           callable,
           direct_builtin,
           reachable.contains_key(callable.declaration),
+          referenced.contains_key(callable.declaration),
           Option::None,
           4294967295u32,
           specialization.shapes,
@@ -955,6 +967,7 @@ fn self_host_plan_program_wasmgc_fragments(
                 callable,
                 b"",
                 true,
+                referenced.contains_key(callable.declaration),
                 Option::Some(selected),
                 request,
                 specialization.shapes,

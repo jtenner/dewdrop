@@ -11977,6 +11977,7 @@ fn self_host_linked_missing_call_error(
           let reason = match fragment.kind {
             SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _) => "linked imported call target was not assigned a function"
             SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(_) => "linked builtin call target was not assigned a function"
+            SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedBuiltinFunction(_) => "outlined builtin call target was not assigned a function"
             SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(_) => "linked defined call target was not assigned a function"
             SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_) => "linked lambda call target was not assigned a function"
             SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction => "linked signature-only call target has no body"
@@ -20248,6 +20249,14 @@ fn self_host_emit_linked_i32_expression(
               alternative,
             ),
           )
+          // Wasm erases Never to a void signature. Retain the logical proof
+          // after a call_ref dispatch, so an enclosing value join cannot fall
+          // through with an empty stack if a Never function were to return.
+          if result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape {
+            StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+              StarshineFfi.ffi_lib_Instruction_unreachable_(),
+            )
+          }
         }
         SelfHostLinkedI32EmitTask::EmitLinkedI32Loop(
           destination,
@@ -33162,6 +33171,12 @@ fn build_self_host_linked_i32_module(
             )
           }
           SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _) => {}
+          SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedBuiltinFunction(name) => {
+            match self_host_append_outlined_builtin(fragment_module, fragment, name, functions) {
+              Option::Some(error) => return Result::Err(error)
+              Option::None => {}
+            }
+          }
           SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => {
             if !self_host_linked_append_runtime_function(
               link,

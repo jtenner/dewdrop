@@ -252,6 +252,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   private declarations. Compiler-owned root/optimizer filtering and implicit
   standard dependency selection still remain. See the
   [visibility log](docs/research/module-source-visibility-2026-09-08.md).
+  Native reference instructions now bind to builtin opcode metadata, including
+  imported declarations and selected instances. The generated declaration-
+  ordinal operation switch is removed; reordered declarations retain their
+  meaning. Nominal/trait identity tables still remain. See the
+  [reference metadata log](docs/research/reference-intrinsic-metadata-2026-09-08.md).
 - [ ] Delete unused legacy builtin plans/builders after each migration. Enforce
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.
@@ -310,9 +315,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   the link boundary verifies matching key sets and exact targets before return.
   See the [consumer log](docs/research/specialized-call-consumers-2026-09-08.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
-  A new isolated regression also shows that first-class raw builtin references
-  lack a self-host physical target (`intrinsic_function_reference.dew`); native
-  supports them. Keep this case visible while adding checked outlined targets.
+  Raw builtin references now have explicit outlined physical targets in both
+  compilers. The native failure required a returned function value; a local
+  reference alone became a direct call and hid it. Scalar, SIMD, memory, and
+  unsafe-cast wrappers have a shared execution corpus. Parameterized heap
+  instruction wrappers still need exact layout recipes. See the
+  [outlined intrinsic log](docs/research/outlined-intrinsics-2026-09-08.md).
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.
   Native direct-call trait operands now have an independent ordered copy in

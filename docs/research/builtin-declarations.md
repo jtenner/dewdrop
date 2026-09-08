@@ -2,6 +2,11 @@
 
 Date: 2026-07-29
 
+This is a historical parser note. Its custom runtime-expansion policy and old
+opcode examples are superseded by [the builtin specification](../spec.md#332-builtin-declarations).
+Current builtins are only one-to-one Wasm instructions, explicit unsafe casts,
+and pure compile-time queries/assertions.
+
 ## Syntax
 
 The initial parser accepts:

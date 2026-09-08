@@ -8,6 +8,10 @@ pub struct NullableRef<t> {}
 // Compatibility spelling for the first published intrinsic.
 pub builtin i64_trunc_i32(value: I64) -> I32 = "i32.wrap_i64"
 
+// Wasm scalar instruction
+pub builtin wasm_f32_neg(value: F32) -> F32 = "f32.neg"
+pub builtin wasm_f64_neg(value: F64) -> F64 = "f64.neg"
+
 // WasmGC array operations
 pub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = "array.new"
 pub builtin wasm_array_len<t>(value: WasmArray<t>) -> U32 = "array.len"

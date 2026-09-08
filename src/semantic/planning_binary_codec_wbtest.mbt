@@ -10,6 +10,19 @@ fn planning_codec_test_stages() -> SemanticCompilerTestStages {
 }
 
 ///|
+test "WasmGC codec retains outlined intrinsic identity" {
+  let stages = compiler_test_stages(23953UL, [
+    CompilerTestModule::new("cache.builtin", [
+      CompilerTestSource::new("main.dew", b"builtin add(a: I32, b: I32) -> I32 = \"i32.add\"\npub fn factory() -> fn(I32, I32) -> I32 {\n  add\n}\n"),
+    ]),
+  ])
+  let fragments = plan_program_wasmgc_fragments(stages.analyzed, stages.lowering).modules[0]
+  assert_true(fragments.functions[0].kind is PlannedWasmOutlinedBuiltinFunction(_))
+  let encoded = serialize_planned_module_wasmgc_fragments(fragments).unwrap()
+  assert_eq(deserialize_planned_module_wasmgc_fragments(encoded).unwrap(), fragments)
+}
+
+///|
 test "planned type layouts use a canonical bounded binary round trip" {
   let stages = planning_codec_test_stages()
   let layouts = stages.lowering.modules[0].type_layouts

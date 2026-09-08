@@ -1,0 +1,42 @@
+open dew.std.map
+
+fn self_host_wasmgc_collect_function_references(
+  module_: SelfHostPlannedModuleLowering,
+  span: SelfHostHirSpan,
+  references: Map<U64, Bool>,
+) -> Unit {
+  self_host_assert_array_span(span.start, span.length, module_.expressions.length(), "ARN-101 function reference demand")
+  while 0u32 {
+    offset if offset < span.length => {
+      match module_.expressions[span.start + offset].kind {
+        SelfHostPlannedExpressionKind::PlannedFunctionReference(declaration) => references.set(declaration, true)
+        _ => {}
+      }
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
+}
+
+fn self_host_wasmgc_referenced_builtin_declarations(
+  specialization: SelfHostProgramSpecializationPlan,
+) -> Map<U64, Bool> {
+  let references = self_host_empty_u64_bool_map()
+  for module_ in specialization.lowering.modules {
+    self_host_wasmgc_collect_function_references(module_, SelfHostHirSpan::{
+      start: 0u32
+      length: module_.expressions.length()
+    }, references)
+  }
+  // Projected instances can retain a different reference after query removal.
+  // Scan only the selected owner's body, not a whole copied module per request.
+  for item in specialization.lowering.compile_time.instances {
+    let instance = item.value()
+    for body in instance.module_.bodies {
+      if body.declaration == instance.declaration {
+        self_host_wasmgc_collect_function_references(instance.module_, body.expressions, references)
+      }
+    }
+  }
+  references
+}

@@ -924,6 +924,7 @@ fn starshine_finish_call(
           Err(error) => return Err(error)
         }
       @semantic.PlannedWasmImportedFunction(_)
+      | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -1275,6 +1276,7 @@ fn starshine_finish_program_call(
           Err(error) => return Err(error)
         }
       @semantic.PlannedWasmImportedFunction(_)
+      | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)

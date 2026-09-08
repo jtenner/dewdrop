@@ -35,6 +35,7 @@ pub fn raw_wasm_builtin_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
     b"f32.reinterpret_i32" =>
       Some({ inputs: [WasmI32Value], result: Some(WasmF32Value), })
     b"f32.abs"
+    | b"f32.neg"
     | b"f32.sqrt"
     | b"f32.ceil"
     | b"f32.floor"
@@ -46,6 +47,7 @@ pub fn raw_wasm_builtin_signature(name : Bytes) -> RawWasmIntrinsicSignature? {
     b"f64.reinterpret_i64" =>
       Some({ inputs: [WasmI64Value], result: Some(WasmF64Value), })
     b"f64.abs"
+    | b"f64.neg"
     | b"f64.sqrt"
     | b"f64.ceil"
     | b"f64.floor"
