@@ -19,7 +19,118 @@ test "ordinary function names do not add collection temporary locals" {
       }
     }
     assert(plan.scratches.length() == 0u32, "no planned expression temporaries")
-    assert(self_host_linked_i32_scratch_count(module_, body) == 0u32, "ordinary calls must not add compiler collection locals")
+    assert(self_host_linked_i32_scratch_count(Option::Some(plan), module_, body) == 0u32, "ordinary calls must not add compiler collection locals")
   }
   assert(calls == 1u32, "one ordinary direct call")
+}
+
+test "BOD-610 temporary slot lookup requires a body plan" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let _ = self_host_linked_i32_scratch_slot(Option::None, link, module_, body, 3u32)
+}
+
+test "BOD-610 temporary slot lookup cannot invent a missing slot" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let _ = plan.scratches.pop()
+  let _ = self_host_linked_i32_scratch_slot(Option::Some(plan), link, module_, body, 3u32)
+}
+
+test "BOD-610 temporary slot lookup rejects duplicate slots" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  plan.scratches.push(plan.scratches[0u32])
+  let _ = self_host_linked_i32_scratch_slot(Option::Some(plan), link, module_, body, 3u32)
+}
+
+test "temporary slots start after frozen source locals" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  assert(plan.lambda == 4294967295u32, "ordinary function has no closure environment")
+  assert(self_host_linked_i32_scratch_slot(Option::Some(plan), link, module_, body, 3u32) == plan.physical_local_count, "first temporary follows physical source locals")
+}
+
+fn self_host_test_temporary_plan_identity(source: SelfHostPlannedPhysicalBodyCarrierPlan, module_id: U64, body_id: U64, local_count: U32) -> SelfHostPlannedPhysicalBodyCarrierPlan {
+  SelfHostPlannedPhysicalBodyCarrierPlan::{
+    converged: source.converged
+    stalled_work_item: source.stalled_work_item
+    module_index: source.module_index
+    module_id: module_id
+    declaration: source.declaration
+    body: body_id
+    lambda: source.lambda
+    physical_function_index: source.physical_function_index
+    specialization: source.specialization
+    specialization_key: source.specialization_key
+    result_carrier: source.result_carrier
+    physical_local_count: local_count
+    result: source.result
+    expressions: source.expressions
+    local_values: source.local_values
+    locals: source.locals
+    local_slots: source.local_slots
+    control_state_values: source.control_state_values
+    control_states: source.control_states
+    control_result_values: source.control_result_values
+    control_results: source.control_results
+    scratches: source.scratches
+    calls: source.calls
+    call_evaluations: source.call_evaluations
+    call_operands: source.call_operands
+  }
+}
+
+test "ARN-106 temporary slots require the selected module" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let changed = self_host_test_temporary_plan_identity(plan, 5101u64, plan.body, plan.physical_local_count)
+  let _ = self_host_linked_i32_scratch_slot(Option::Some(changed), link, module_, body, 3u32)
+}
+
+test "ARN-106 temporary slots require the selected body" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let changed = self_host_test_temporary_plan_identity(plan, plan.module_id, plan.body + 1u64, plan.physical_local_count)
+  let _ = self_host_linked_i32_scratch_slot(Option::Some(changed), link, module_, body, 3u32)
+}
+
+test "ABI-710 temporary slots cannot use the missing sentinel" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let changed = self_host_test_temporary_plan_identity(plan, plan.module_id, plan.body, 4294967295u32)
+  let _ = self_host_linked_i32_scratch_slot(Option::Some(changed), link, module_, body, 3u32)
+}
+
+test "constructor temporary ordinals use exact frozen slots" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  assert(plan.scratches.length() == 3u32, "three source-order constructor temporaries")
+  for scratch in plan.scratches {
+    let slot = self_host_physical_scratch_slot(Option::Some(plan), module_, body, scratch.expression, scratch.ordinal)
+    assert(slot == plan.physical_local_count + scratch.ordinal, "each field ordinal has its own slot")
+  }
+  assert(self_host_linked_i32_scratch_count(Option::Some(plan), module_, body) == 3u32, "frozen records define the temporary count")
+}
+
+test "lambda temporary slots include the closure environment" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub struct Storage<t> {}\nbuiltin allocate<t>(length: U32, value: t) -> Storage<t> = \"array_new\"\npub fn maker() -> fn(I64) -> Storage<I64> {\n  fn(value: I64) -> Storage<I64> {\n    allocate(1u32, value)\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid lambda temporary source")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  let mut checked = 0u32
+  for plan in program.bodies {
+    if plan.lambda != 4294967295u32 {
+      let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+      assert(plan.scratches.length() == 1u32, "one lambda allocation temporary")
+      let scratch = plan.scratches[0u32]
+      let slot = self_host_physical_scratch_slot(Option::Some(plan), module_, body, scratch.expression, scratch.ordinal)
+      assert(slot == 1u32 + plan.physical_local_count, "environment precedes source locals and temporaries")
+      checked = checked + 1u32
+    }
+  }
+  assert(checked == 1u32, "checked one lambda body")
 }

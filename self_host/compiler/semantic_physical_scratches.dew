@@ -13,17 +13,65 @@ fn self_host_physical_scratch_failure(module_: SelfHostPlannedModuleLowering, bo
   unreachable()
 }
 
+fn self_host_physical_scratch_plan(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, ordinal: U32) -> SelfHostPlannedPhysicalBodyCarrierPlan {
+  let plan = match canonical {
+    Option::Some(value) => value
+    Option::None => self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(ordinal))
+  }
+  if plan.module_id != module_.module_id {
+    self_host_physical_scratch_failure(module_, body, expression, 7u32, 106u32, module_.module_id, plan.module_id, 0u64)
+  }
+  if plan.body != body.body {
+    self_host_physical_scratch_failure(module_, body, expression, 7u32, 106u32, body.body, plan.body, 1u64)
+  }
+  plan
+}
+
 fn self_host_physical_scratch_body(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, ordinal: U32) -> SelfHostPlannedPhysicalBodyCarrierPlan {
   if !self_host_array_span_is_valid(body.expressions.start, body.expressions.length, module_.expressions.length()) {
     self_host_physical_scratch_failure(module_, body, expression, 7u32, 101u32,
       u32_into_u64(module_.expressions.length()), u32_into_u64(body.expressions.length), u32_into_u64(body.expressions.start))
   }
   let _ = self_host_body_expression_slot(body, expression)
-  let plan = match canonical {
+  self_host_physical_scratch_plan(canonical, module_, body, expression, ordinal)
+}
+
+fn self_host_physical_scratch_base(plan: SelfHostPlannedPhysicalBodyCarrierPlan, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32) -> U32 {
+  let environment = if plan.lambda == 4294967295u32 {
+    0u32
+  } else {
+    1u32
+  }
+  if plan.physical_local_count > 4294967295u32 - environment {
+    self_host_physical_scratch_failure(module_, body, expression, 7u32, 710u32,
+      u32_into_u64(4294967295u32 - environment), u32_into_u64(plan.physical_local_count), 0u64)
+  }
+  plan.physical_local_count + environment
+}
+
+fn self_host_physical_scratch_slot(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, ordinal: U32) -> U32 {
+  let plan = self_host_physical_scratch_body(canonical, module_, body, expression, ordinal)
+  let mut selected = Option::None
+  let mut position = 0u32
+  for scratch in plan.scratches {
+    if scratch.expression == expression && scratch.ordinal == ordinal {
+      if selected is Option::Some(_) {
+        self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 2u64, u32_into_u64(ordinal))
+      }
+      selected = Option::Some(position)
+    }
+    position = position + 1u32
+  }
+  let offset = match selected {
     Option::Some(value) => value
     Option::None => self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(ordinal))
   }
-  plan
+  let base = self_host_physical_scratch_base(plan, module_, body, expression)
+  if offset >= 4294967295u32 - base {
+    self_host_physical_scratch_failure(module_, body, expression, 7u32, 710u32,
+      4294967294u64, u32_into_u64(base) + u32_into_u64(offset), u32_into_u64(ordinal))
+  }
+  base + offset
 }
 
 fn self_host_require_physical_scratch(plan: SelfHostPlannedPhysicalBodyCarrierPlan, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, ordinal: U32, expected: SelfHostWasmBodyCarrier) -> SelfHostPlannedPhysicalValueInfo {

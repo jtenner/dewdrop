@@ -393,6 +393,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   when a forwarding body diverges. Exact slots and other temporary kinds
   remain open. See the
   [raw temporary log](docs/research/raw-array-temporary-plans-2026-09-08.md).
+  Temporary slot lookup and counts now use the frozen records, including each
+  constructor field ordinal. Missing, duplicate, wrong-owner, and sentinel
+  slots produce numeric failures. Capture cells still need frozen records;
+  other temporary type selection and allocation checks remain. See the
+  [slot log](docs/research/frozen-temporary-slots-2026-09-08.md).
   Object constructor emission now uses a checked exact field-ID recipe, with
   separate source evaluation and physical load order. Missing or different IDs
   cannot be repaired by names or tentative carriers. Recipe freeze and nominal

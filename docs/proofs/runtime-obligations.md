@@ -488,6 +488,16 @@ with a Never opcode contract. These checks do not prove every raw instruction
 recipe or full temporary layout. See
 [the raw temporary log](../research/raw-array-temporary-plans-2026-09-08.md).
 
+## Temporary slot identity
+
+The frozen temporary array defines each expression/ordinal offset. Slot lookup
+requires one record and the requested module/body identity, then adds the
+frozen source-local count and closure-environment offset with checked bounds.
+Constructor fields use individual ordinal lookups. This removes source-kind
+recounting from slot selection but does not yet prove all emitted local types
+or capture-cell layouts. See
+[the slot log](../research/frozen-temporary-slots-2026-09-08.md).
+
 ## Physical call target updates
 
 A missing call target can become known. A known target can only be repeated;

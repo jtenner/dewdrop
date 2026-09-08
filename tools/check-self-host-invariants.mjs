@@ -11,6 +11,12 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["BOD-610 temporary slot lookup requires a body plan", 610, 1n, 0n, 0n],
+    ["BOD-610 temporary slot lookup cannot invent a missing slot", 610, 1n, 0n, 0n],
+    ["BOD-610 temporary slot lookup rejects duplicate slots", 610, 1n, 2n, 0n],
+    ["ARN-106 temporary slots require the selected module", 106, 5100n, 5101n, 0n],
+    ["ARN-106 temporary slots require the selected body", 106, 5100n << 32n, (5100n << 32n) + 1n, 1n],
+    ["ABI-710 temporary slots cannot use the missing sentinel", 710, 4294967294n, 4294967295n, 0n],
     ["BOD-610 raw array allocation requires a body plan", 610, 1n, 0n, 0n],
     ["BOD-610 raw array length temporaries cannot be missing", 610, 1n, 0n, 0n],
     ["BOD-610 raw array length temporaries must be unique", 610, 1n, 2n, 0n],
