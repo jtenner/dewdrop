@@ -234,7 +234,7 @@ enum SelfHostLinkedI32EmitTask {
   EmitLinkedArrayLiteral(U32, U32, U32, StarshineInstructions)
   EmitLinkedArraySet(U32, StarshineInstructions)
   EmitLinkedFixedArrayGetPrefix(U32, StarshineInstructions)
-  EmitLinkedFixedArrayGet(U32, StarshineInstructions)
+  EmitLinkedRawArrayGet(SelfHostRawArrayStorage, StarshineInstructions)
   EmitLinkedI32Call(U32, StarshineInstructions)
   PrepareLinkedFunctionValueCall(U32, StarshineInstructions)
   EmitLinkedFunctionValueCall(
@@ -291,7 +291,7 @@ enum SelfHostLinkedI32EmitTask {
 fn self_host_linked_block_type(
   shape: SelfHostPlannedValueShape,
 ) -> StarshineValue {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::I32PlannedValueShape => StarshineFfi.ffi_lib_BlockType_val_type(
       StarshineFfi.ffi_lib_ValType_i32(),
     )
@@ -467,7 +467,7 @@ fn self_host_linked_concrete_shape_carrier(
   if shape is SelfHostPlannedValueShape::ProductPlannedValueShape(_) {
     return SelfHostWasmBodyCarrier::EqRefBodyCarrier
   }
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostWasmBodyCarrier::I32BodyCarrier
     SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostWasmBodyCarrier::I64BodyCarrier
     SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostWasmBodyCarrier::F32BodyCarrier
@@ -613,8 +613,8 @@ fn self_host_linked_binary_operand_shape(
   left: SelfHostPlannedValueShape,
   right: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedValueShape {
-  let left_scalar = self_host_specialization_canonical_scalar(left)
-  let right_scalar = self_host_specialization_canonical_scalar(right)
+  let left_scalar = self_host_physical_scalar_shape(left)
+  let right_scalar = self_host_physical_scalar_shape(right)
   match left_scalar {
     SelfHostPlannedValueShape::RefPlannedValueShape => match right_scalar {
       SelfHostPlannedValueShape::I32PlannedValueShape => right
@@ -806,7 +806,7 @@ fn self_host_linked_exact_emitted_expression_carrier(
         if !(planned_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
           planned_shape is SelfHostPlannedValueShape::NeverPlannedValueShape
         ) && !(
-          self_host_specialization_canonical_scalar(planned_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+          self_host_physical_scalar_shape(planned_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
         ) {
           return self_host_linked_array_body_carrier_from_shape(planned_shape)
         }
@@ -820,7 +820,7 @@ fn self_host_linked_exact_emitted_expression_carrier(
         if !(backend_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
           backend_shape is SelfHostPlannedValueShape::NeverPlannedValueShape
         ) && !(
-          self_host_specialization_canonical_scalar(backend_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+          self_host_physical_scalar_shape(backend_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
         ) {
           return self_host_linked_array_body_carrier_from_shape(backend_shape)
         }
@@ -1412,9 +1412,9 @@ fn self_host_linked_if_result_shape(
       else_expression,
     )
     if self_host_linked_expression_is_let_value(module_, body, expression) && (
-      self_host_specialization_canonical_scalar(then_shape) is SelfHostPlannedValueShape::RefPlannedValueShape ||
-      self_host_specialization_canonical_scalar(else_shape) is SelfHostPlannedValueShape::RefPlannedValueShape ||
-      self_host_specialization_canonical_scalar(fallback) is SelfHostPlannedValueShape::RefPlannedValueShape
+      self_host_physical_scalar_shape(then_shape) is SelfHostPlannedValueShape::RefPlannedValueShape ||
+      self_host_physical_scalar_shape(else_shape) is SelfHostPlannedValueShape::RefPlannedValueShape ||
+      self_host_physical_scalar_shape(fallback) is SelfHostPlannedValueShape::RefPlannedValueShape
     ) {
       SelfHostPlannedValueShape::RefPlannedValueShape
     } else if then_returns_variant || else_returns_variant {
@@ -2021,7 +2021,7 @@ fn self_host_linked_constructor_field_shape_matches(
   if self_host_linked_erased_field_box_type(link, physical.declaration, self_host_body_carrier_from_shape(source_shape)) is Option::Some(_) {
     return physical_shape is SelfHostPlannedValueShape::RefPlannedValueShape
   }
-  match self_host_specialization_canonical_scalar(source_shape) {
+  match self_host_physical_scalar_shape(source_shape) {
     SelfHostPlannedValueShape::I32PlannedValueShape => physical_shape is SelfHostPlannedValueShape::I32PlannedValueShape
     SelfHostPlannedValueShape::I64PlannedValueShape => physical_shape is SelfHostPlannedValueShape::I64PlannedValueShape
     SelfHostPlannedValueShape::F32PlannedValueShape => physical_shape is SelfHostPlannedValueShape::F32PlannedValueShape
@@ -5410,7 +5410,7 @@ fn self_host_linked_iterator_pattern_use_shape(
                                     local,
                                   ) {
                                     Option::Some(shape) => if !(
-                                      self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                                      self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
                                     ) {
                                       return Option::Some(shape)
                                     }
@@ -5980,7 +5980,7 @@ fn self_host_linked_array_push_item_expression_shape(
           return shape
         }
         Option::None => if !(
-          self_host_specialization_canonical_scalar(
+          self_host_physical_scalar_shape(
             module_.expressions[item].shape,
           ) is SelfHostPlannedValueShape::RefPlannedValueShape
         ) {
@@ -6025,7 +6025,7 @@ fn self_host_linked_array_push_item_expression_shape(
           local_id,
         ) {
           Option::Some(shape) => if !(
-            self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+            self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
           ) {
             return shape
           }
@@ -6274,7 +6274,7 @@ fn self_host_linked_unresolved_array_push_item_shape(
                         caller_specialization,
                         local_id,
                       ) {
-                        Option::Some(shape) => if self_host_specialization_canonical_scalar(
+                        Option::Some(shape) => if self_host_physical_scalar_shape(
                           shape,
                         ) is SelfHostPlannedValueShape::RefPlannedValueShape {
                           return shape
@@ -11428,7 +11428,7 @@ fn self_host_linked_call_argument_shape(
         if !(canonical_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
           canonical_shape is SelfHostPlannedValueShape::NeverPlannedValueShape
         ) && (!(
-          self_host_specialization_canonical_scalar(
+          self_host_physical_scalar_shape(
             canonical_shape,
           ) is SelfHostPlannedValueShape::RefPlannedValueShape
         ) || !self_host_u64_equal(planned.value.nominal_owner, 0u64) || !self_host_u32_equal(
@@ -11469,7 +11469,7 @@ fn self_host_linked_call_argument_shape(
             source,
           )
           if !(source_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-            self_host_specialization_canonical_scalar(source_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+            self_host_physical_scalar_shape(source_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
           ) {
             return source_shape
           }
@@ -11477,7 +11477,7 @@ fn self_host_linked_call_argument_shape(
             Option::Some(declared) => if !(
               declared is SelfHostPlannedValueShape::ErrorPlannedValueShape
             ) && !(
-              self_host_specialization_canonical_scalar(declared) is SelfHostPlannedValueShape::RefPlannedValueShape
+              self_host_physical_scalar_shape(declared) is SelfHostPlannedValueShape::RefPlannedValueShape
             ) {
               return declared
             }
@@ -13293,11 +13293,11 @@ fn self_host_linked_canonical_or_inferred_shape(
         let shape = self_host_body_carrier_shape(planned.carrier)
         if !self_host_u64_equal(planned.value.nominal_owner, 0u64) ||
           planned.value.physical_heap_type != 4294967295u32 || !(
-          self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+          self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
         ) {
           shape
         } else if !(inferred is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-          self_host_specialization_canonical_scalar(inferred) is SelfHostPlannedValueShape::RefPlannedValueShape
+          self_host_physical_scalar_shape(inferred) is SelfHostPlannedValueShape::RefPlannedValueShape
         ) {
           inferred
         } else {
@@ -13491,12 +13491,12 @@ fn self_host_linked_source_or_inferred_item_shape(
   inferred: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedValueShape {
   match source {
-    Option::Some(shape) => if self_host_specialization_canonical_scalar(
+    Option::Some(shape) => if self_host_physical_scalar_shape(
       shape,
     ) is SelfHostPlannedValueShape::RefPlannedValueShape && !(
       inferred is SelfHostPlannedValueShape::ErrorPlannedValueShape
     ) && !(
-      self_host_specialization_canonical_scalar(inferred) is SelfHostPlannedValueShape::RefPlannedValueShape
+      self_host_physical_scalar_shape(inferred) is SelfHostPlannedValueShape::RefPlannedValueShape
     ) {
       inferred
     } else {
@@ -13686,8 +13686,8 @@ fn self_host_linked_canonical_match_binding_shape(
                                         Option::Some(shape) => shape
                                         Option::None => match use_payload_shape {
                                         Option::Some(shape) => if payload_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape || (
-                                          self_host_specialization_canonical_scalar(payload_shape) is SelfHostPlannedValueShape::RefPlannedValueShape && !(
-                                            self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                                          self_host_physical_scalar_shape(payload_shape) is SelfHostPlannedValueShape::RefPlannedValueShape && !(
+                                            self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
                                           )
                                         ) {
                                           shape
@@ -14181,7 +14181,7 @@ fn self_host_emit_linked_i32_expression(
                       expression,
                     ),
                   )
-                  match self_host_specialization_canonical_scalar(prefix_shape) {
+                  match self_host_physical_scalar_shape(prefix_shape) {
                     SelfHostPlannedValueShape::I64PlannedValueShape => {
                       StarshineFfi.ffi_ffi_bridge_instructions_push(
                         destination,
@@ -15034,7 +15034,7 @@ fn self_host_emit_linked_i32_expression(
                   Option::None => inferred_match_result_shape
                 }
               }
-              let contextual_match_result_shape = match self_host_specialization_canonical_scalar(
+              let contextual_match_result_shape = match self_host_physical_scalar_shape(
                 expected_result_shape,
               ) {
                 SelfHostPlannedValueShape::I32PlannedValueShape => match self_host_linked_special_match_scalar_result_shape(
@@ -15098,7 +15098,7 @@ fn self_host_emit_linked_i32_expression(
                   expression,
                 )
               }
-              let contextual_or_recovered_match_result_shape = match self_host_specialization_canonical_scalar(
+              let contextual_or_recovered_match_result_shape = match self_host_physical_scalar_shape(
                 contextual_match_result_shape,
               ) {
                 SelfHostPlannedValueShape::I32PlannedValueShape => contextual_match_result_shape
@@ -15122,7 +15122,7 @@ fn self_host_emit_linked_i32_expression(
                 caller_specialization,
                 expression,
               )
-              let scalar_arm_context_shape = match self_host_specialization_canonical_scalar(
+              let scalar_arm_context_shape = match self_host_physical_scalar_shape(
                 direct_expected_match_result_shape,
               ) {
                 SelfHostPlannedValueShape::I32PlannedValueShape => direct_expected_match_result_shape
@@ -15132,7 +15132,7 @@ fn self_host_emit_linked_i32_expression(
                 SelfHostPlannedValueShape::V128PlannedValueShape => direct_expected_match_result_shape
                 _ => static_match_result_shape
               }
-              let raw_exact_scalar_arm_result_shape = match self_host_specialization_canonical_scalar(
+              let raw_exact_scalar_arm_result_shape = match self_host_physical_scalar_shape(
                 scalar_arm_context_shape,
               ) {
                 SelfHostPlannedValueShape::I32PlannedValueShape => self_host_linked_special_match_scalar_result_shape(
@@ -15173,38 +15173,38 @@ fn self_host_emit_linked_i32_expression(
                 _ => Option::None
               }
               let exact_scalar_arm_result_shape = match raw_exact_scalar_arm_result_shape {
-                Option::Some(shape) => match self_host_specialization_canonical_scalar(
+                Option::Some(shape) => match self_host_physical_scalar_shape(
                   direct_expected_match_result_shape,
                 ) {
-                  SelfHostPlannedValueShape::I32PlannedValueShape => if self_host_specialization_canonical_scalar(
+                  SelfHostPlannedValueShape::I32PlannedValueShape => if self_host_physical_scalar_shape(
                     shape,
                   ) is SelfHostPlannedValueShape::I32PlannedValueShape {
                     Option::Some(shape)
                   } else {
                     Option::None
                   }
-                  SelfHostPlannedValueShape::I64PlannedValueShape => if self_host_specialization_canonical_scalar(
+                  SelfHostPlannedValueShape::I64PlannedValueShape => if self_host_physical_scalar_shape(
                     shape,
                   ) is SelfHostPlannedValueShape::I64PlannedValueShape {
                     Option::Some(shape)
                   } else {
                     Option::None
                   }
-                  SelfHostPlannedValueShape::F32PlannedValueShape => if self_host_specialization_canonical_scalar(
+                  SelfHostPlannedValueShape::F32PlannedValueShape => if self_host_physical_scalar_shape(
                     shape,
                   ) is SelfHostPlannedValueShape::F32PlannedValueShape {
                     Option::Some(shape)
                   } else {
                     Option::None
                   }
-                  SelfHostPlannedValueShape::F64PlannedValueShape => if self_host_specialization_canonical_scalar(
+                  SelfHostPlannedValueShape::F64PlannedValueShape => if self_host_physical_scalar_shape(
                     shape,
                   ) is SelfHostPlannedValueShape::F64PlannedValueShape {
                     Option::Some(shape)
                   } else {
                     Option::None
                   }
-                  SelfHostPlannedValueShape::V128PlannedValueShape => if self_host_specialization_canonical_scalar(
+                  SelfHostPlannedValueShape::V128PlannedValueShape => if self_host_physical_scalar_shape(
                     shape,
                   ) is SelfHostPlannedValueShape::V128PlannedValueShape {
                     Option::Some(shape)
@@ -15259,7 +15259,7 @@ fn self_host_emit_linked_i32_expression(
                     module_,
                     arms,
                   ) {
-                    match self_host_specialization_canonical_scalar(
+                    match self_host_physical_scalar_shape(
                       selected_match_result_shape,
                     ) {
                       SelfHostPlannedValueShape::I32PlannedValueShape => selected_match_result_shape
@@ -15365,18 +15365,18 @@ fn self_host_emit_linked_i32_expression(
                 ) && !(
                   match_result_shape is SelfHostPlannedValueShape::UnitPlannedValueShape
                 ) && !(match_result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) && !(
-                  self_host_specialization_canonical_scalar(match_result_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                  self_host_physical_scalar_shape(match_result_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
                 ) {
                   match_result_shape
                 } else if special_binding_result &&
-                self_host_specialization_canonical_scalar(
+                self_host_physical_scalar_shape(
                   match_payload_hint,
                 ) is SelfHostPlannedValueShape::RefPlannedValueShape {
                 match_payload_hint
               } else if !(
                 inferred_match_result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
               ) && !(
-                self_host_specialization_canonical_scalar(inferred_match_result_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                self_host_physical_scalar_shape(inferred_match_result_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
               ) {
                 inferred_match_result_shape
               } else if special_binding_result && !(
@@ -15497,7 +15497,7 @@ fn self_host_emit_linked_i32_expression(
                 Option::Some(shape) => if !(
                   shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
                 ) && !(
-                  self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                  self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
                 ) {
                   shape
                 } else {
@@ -16431,16 +16431,13 @@ fn self_host_emit_linked_i32_expression(
                     index_child >= module_.expression_children.length() {
                     return Option::Some("linked fixed-array get arguments are outside their arena")
                   }
-                  let array_type = self_host_u32_add(
-                    self_host_linked_array_runtime_base(link),
-                    self_host_i32_to_u32(
-                      self_host_linked_array_carrier_from_shape(
-                        specialized_selected_element_shape,
-                      ),
-                    ),
-                  )
-                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGet(
-                    array_type,
+                  let storage = match self_host_linked_expression_raw_array_storage(link, module_, caller_specialization, array_expression) {
+                    Option::Some(value) => value
+                    Option::None => return Option::Some("SPC-301 selected raw array read storage is not concrete")
+                  }
+                  let array_type = storage.type_index
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRawArrayGet(
+                    storage,
                     destination,
                   ))
                   self_host_linked_i32_schedule_expression(
@@ -16961,7 +16958,7 @@ fn self_host_emit_linked_i32_expression(
                   left_shape,
                   inferred_right_shape,
                 )
-                match self_host_specialization_canonical_scalar(binary_shape) {
+                match self_host_physical_scalar_shape(binary_shape) {
                   SelfHostPlannedValueShape::I64PlannedValueShape => match self_host_linked_integer_binary_unsigned_proof(
                     link,
                     module_,
@@ -17006,7 +17003,7 @@ fn self_host_emit_linked_i32_expression(
                       caller_specialization,
                       expression,
                     )
-                    let reference_binary_shape = match self_host_specialization_canonical_scalar(
+                    let reference_binary_shape = match self_host_physical_scalar_shape(
                       inferred_right_shape,
                     ) {
                       SelfHostPlannedValueShape::I32PlannedValueShape => inferred_right_shape
@@ -17014,7 +17011,7 @@ fn self_host_emit_linked_i32_expression(
                       SelfHostPlannedValueShape::F32PlannedValueShape => inferred_right_shape
                       SelfHostPlannedValueShape::F64PlannedValueShape => inferred_right_shape
                       SelfHostPlannedValueShape::V128PlannedValueShape => inferred_right_shape
-                      _ => match self_host_specialization_canonical_scalar(
+                      _ => match self_host_physical_scalar_shape(
                         expected_binary_shape,
                       ) {
                         SelfHostPlannedValueShape::I32PlannedValueShape => expected_binary_shape
@@ -17029,7 +17026,7 @@ fn self_host_emit_linked_i32_expression(
                         )
                       }
                     }
-                    match self_host_specialization_canonical_scalar(
+                    match self_host_physical_scalar_shape(
                       reference_binary_shape,
                     ) {
                       SelfHostPlannedValueShape::I64PlannedValueShape => match self_host_linked_integer_binary_unsigned_proof(
@@ -17741,50 +17738,12 @@ fn self_host_emit_linked_i32_expression(
               }
             }
             SelfHostPlannedExpressionKind::PlannedArrayLiteral(children) => {
-              let mut carrier = 5i32
-              if self_host_u32_greater(children.length, 0u32) {
-                let first_index = children.start
-                if first_index < module_.expression_children.length() {
-                  let first = module_.expression_children[first_index]
-                  if first < module_.expressions.length() {
-                    carrier = self_host_linked_array_carrier_from_shape(
-                      self_host_linked_array_push_item_expression_shape(
-                        link,
-                        module_,
-                        body,
-                        caller_specialization,
-                        first,
-                      ),
-                    )
-                  }
-                }
-              } else {
-                match self_host_linked_expression_container_element_shape(
-                  link,
-                  module_,
-                  body,
-                  expression,
-                ) {
-                  Option::Some(shape) => {
-                    carrier = self_host_linked_array_carrier_from_shape(shape)
-                  }
-                  Option::None => match self_host_linked_array_literal_use_shape(
-                    link,
-                    module_,
-                    body,
-                    caller_specialization,
-                    canonical_body_plan,
-                    expression,
-                  ) {
-                    Option::Some(shape) => {
-                      carrier = self_host_linked_array_carrier_from_shape(shape)
-                    }
-                    Option::None => {}
-                  }
-                }
+              let storage = match self_host_linked_expression_raw_array_storage(link, module_, caller_specialization, expression) {
+                Option::Some(value) => value
+                Option::None => return Option::Some("SPC-301 array literal element storage is not concrete")
               }
               tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayLiteral(
-                self_host_linked_array_runtime_base(link) + self_host_i32_to_u32(carrier),
+                storage.type_index,
                 self_host_linked_array_wrapper_type(link),
                 children.length,
                 destination,
@@ -17936,7 +17895,10 @@ fn self_host_emit_linked_i32_expression(
                   Option::Some(value) => value
                   Option::None => return Option::Some("SPC-301 raw array.new_default element type is not concrete")
                 }
-                let array_type = self_host_linked_array_runtime_base(link) + self_host_i32_to_u32(self_host_linked_array_carrier_from_shape(shape))
+                let array_type = match self_host_linked_raw_array_storage(link, shape) {
+                  Option::Some(storage) => storage.type_index
+                  Option::None => return Option::Some("SPC-301 raw array.new_default storage is not concrete")
+                }
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayNewDefault(array_type, destination))
                 self_host_linked_i32_schedule_expression(tasks, expression_depths, module_.expression_children[arguments.start], destination, depth)
                 continue tasks.length()
@@ -17950,7 +17912,10 @@ fn self_host_emit_linked_i32_expression(
                   Option::Some(value) => value
                   Option::None => return Option::Some("SPC-301 raw array.copy element type is not concrete")
                 }
-                let array_type = self_host_linked_array_runtime_base(link) + self_host_i32_to_u32(self_host_linked_array_carrier_from_shape(shape))
+                let array_type = match self_host_linked_raw_array_storage(link, shape) {
+                  Option::Some(storage) => storage.type_index
+                  Option::None => return Option::Some("SPC-301 raw array.copy storage is not concrete")
+                }
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayCopy(array_type, destination))
                 while 5u32 {
                   remaining if remaining > 0u32 => {
@@ -17974,20 +17939,14 @@ fn self_host_emit_linked_i32_expression(
                 let value_expression = module_.expression_children[
                   self_host_u32_add(arguments.start, 1u32)
                 ]
-                let value_shape = self_host_body_specialization_shape_for_type(
-                  link,
-                  module_,
-                  caller_specialization,
-                  module_.expressions[value_expression].type_,
-                  module_.expressions[value_expression].shape,
-                )
-                let array_type = self_host_linked_array_runtime_base(link) +
-                  self_host_i32_to_u32(
-                    match self_host_raw_array_storage_carrier(value_shape) {
-                      Option::Some(carrier) => carrier
-                      Option::None => return Option::Some("SPC-301 raw array.new element type is not concrete")
-                    },
-                  )
+                let value_shape = match self_host_raw_array_expression_element_shape(link, module_, caller_specialization, expression) {
+                  Option::Some(shape) => shape
+                  Option::None => return Option::Some("SPC-301 raw array.new element type is not concrete")
+                }
+                let array_type = match self_host_linked_raw_array_storage(link, value_shape) {
+                  Option::Some(storage) => storage.type_index
+                  Option::None => return Option::Some("SPC-301 raw array.new storage is not concrete")
+                }
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedArrayNew(
                   array_type,
                   destination,
@@ -18047,21 +18006,15 @@ fn self_host_emit_linked_i32_expression(
                 let value_expression = module_.expression_children[
                   self_host_u32_add(arguments.start, 2u32)
                 ]
-                let value_shape = self_host_body_specialization_shape_for_type(
-                  link,
-                  module_,
-                  caller_specialization,
-                  module_.expressions[value_expression].type_,
-                  module_.expressions[value_expression].shape,
-                )
-                let array_type = self_host_linked_array_runtime_base(link) +
-                  self_host_i32_to_u32(
-                    match self_host_raw_array_storage_carrier(value_shape) {
-                      Option::Some(carrier) => carrier
-                      Option::None => return Option::Some("SPC-301 raw array.set element type is not concrete")
-                    },
-                  )
                 let array_expression = module_.expression_children[arguments.start]
+                let value_shape = match self_host_raw_array_expression_element_shape(link, module_, caller_specialization, array_expression) {
+                  Option::Some(shape) => shape
+                  Option::None => return Option::Some("SPC-301 raw array.set element type is not concrete")
+                }
+                let array_type = match self_host_linked_raw_array_storage(link, value_shape) {
+                  Option::Some(storage) => storage.type_index
+                  Option::None => return Option::Some("SPC-301 raw array.set storage is not concrete")
+                }
                 let index_expression = module_.expression_children[
                   self_host_u32_add(arguments.start, 1u32)
                 ]
@@ -18111,34 +18064,27 @@ fn self_host_emit_linked_i32_expression(
                 // The raw read returns its declared, specialized element type.
                 // Its enclosing expression (for example Option<T>) is not
                 // evidence for the storage type of T.
-                let element_shape = self_host_body_specialization_shape_for_type(
-                  link,
-                  module_,
-                  caller_specialization,
-                  planned.type_,
-                  planned.shape,
-                )
+                let element_shape = match self_host_raw_array_expression_element_shape(link, module_, caller_specialization, module_.expression_children[first_index]) {
+                  Option::Some(shape) => shape
+                  Option::None => return Option::Some("SPC-301 raw array.get element type is not concrete")
+                }
                 let _ = self_host_linked_refine_canonical_expression_shape(
                   canonical_body_plan,
                   expression,
                   element_shape,
                 )
-                let array_type = self_host_u32_add(
-                  self_host_linked_array_runtime_base(link),
-                  self_host_i32_to_u32(
-                    match self_host_raw_array_storage_carrier(element_shape) {
-                      Option::Some(carrier) => carrier
-                      Option::None => return Option::Some("SPC-301 raw array.get element type is not concrete")
-                    },
-                  ),
-                )
+                let storage = match self_host_linked_raw_array_storage(link, element_shape) {
+                  Option::Some(value) => value
+                  Option::None => return Option::Some("SPC-301 raw array.get storage is not concrete")
+                }
+                let array_type = storage.type_index
                 if self_host_linked_canonical_expression_shape(canonical_body_plan, expression) is Option::Some(SelfHostPlannedValueShape::UnitPlannedValueShape) {
                   // array.get still executes and checks bounds. Its stored
                   // marker is not a logical result or a caller operand.
                   tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Drop(destination))
                 }
-                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGet(
-                  array_type,
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRawArrayGet(
+                  storage,
                   destination,
                 ))
                 self_host_linked_i32_schedule_expression(
@@ -20030,17 +19976,8 @@ fn self_host_emit_linked_i32_expression(
             self_host_u32_to_i32(array_type),
           ),
         )
-        SelfHostLinkedI32EmitTask::EmitLinkedFixedArrayGet(
-          array_type,
-          destination,
-        ) => StarshineFfi.ffi_ffi_bridge_instructions_push(
-          destination,
-          StarshineFfi.ffi_lib_Instruction_array_get(
-            StarshineFfi.ffi_lib_TypeIdx_new(
-              self_host_u32_to_i32(array_type),
-            ),
-          ),
-        )
+        SelfHostLinkedI32EmitTask::EmitLinkedRawArrayGet(storage, destination) =>
+          self_host_emit_raw_array_get(storage, destination)
         SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
           function_index,
           destination,
@@ -20461,7 +20398,7 @@ fn self_host_emit_linked_i32_expression(
           if canonical_body_plan is Option::None && direct_binding_result && !(result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
             result_shape is SelfHostPlannedValueShape::UnitPlannedValueShape
           ) && !(result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) && !(
-            self_host_specialization_canonical_scalar(
+            self_host_physical_scalar_shape(
               result_shape,
             ) is SelfHostPlannedValueShape::RefPlannedValueShape
           ) {
@@ -20483,7 +20420,7 @@ fn self_host_emit_linked_i32_expression(
                     if !resolved_payload_hint && !(
                       child_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
                     ) && !(
-                      self_host_specialization_canonical_scalar(child_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                      self_host_physical_scalar_shape(child_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
                     ) {
                       canonical_payload_hint = child_shape
                       resolved_payload_hint = true
@@ -21209,7 +21146,7 @@ fn self_host_emit_linked_i32_expression(
                 } else {
                   condition_shape
                 }
-                match self_host_specialization_canonical_scalar(comparison_shape) {
+                match self_host_physical_scalar_shape(comparison_shape) {
                   SelfHostPlannedValueShape::I64PlannedValueShape => tasks.push(
                     SelfHostLinkedI32EmitTask::EmitLinkedI64Binary(
                       SelfHostHirBinaryOperator::Equal,
@@ -24327,7 +24264,7 @@ fn self_host_linked_expression_container_argument_shape(
             Option::Some(shape) => if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
               shape is SelfHostPlannedValueShape::GenericPlannedValueShape
             ) && !(
-              self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+              self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
             ) {
               return Option::Some(shape)
             }
@@ -25256,7 +25193,7 @@ fn self_host_linked_append_shape_value_types(
   values: StarshineValueTypes,
   shape: SelfHostPlannedValueShape,
 ) -> Unit {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::UnitPlannedValueShape => {}
     SelfHostPlannedValueShape::NeverPlannedValueShape => {}
     SelfHostPlannedValueShape::I32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_val_types_push(
@@ -25301,7 +25238,7 @@ fn self_host_linked_function_value_argument_shape(
   }
   let planned = self_host_linked_expression_at(module_, expression)
   if !(planned.shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-    self_host_specialization_canonical_scalar(planned.shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+    self_host_physical_scalar_shape(planned.shape) is SelfHostPlannedValueShape::RefPlannedValueShape
   ) {
     return planned.shape
   }
@@ -26265,7 +26202,7 @@ fn self_host_linked_local_direct_pattern_scalar_shape(
                                     ) {
                                       let shape = self_host_planned_pattern_at(module_.patterns, child_pattern).shape
                                       if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                                        self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                                        self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
                                       ) {
                                         return Option::Some(shape)
                                       }
@@ -26277,7 +26214,7 @@ fn self_host_linked_local_direct_pattern_scalar_shape(
                                         arms,
                                       ) {
                                         Option::Some(use_shape) => if !(
-                                          self_host_specialization_canonical_scalar(use_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                                          self_host_physical_scalar_shape(use_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
                                         ) {
                                           return Option::Some(use_shape)
                                         }
@@ -26569,7 +26506,7 @@ fn self_host_linked_local_has_canonical_constructor_reference_use(
                             parent.selected_type_index,
                             position,
                           ) {
-                            Option::Some(shape) => if self_host_specialization_canonical_scalar(
+                            Option::Some(shape) => if self_host_physical_scalar_shape(
                               shape,
                             ) is SelfHostPlannedValueShape::RefPlannedValueShape {
                               return true
@@ -26664,7 +26601,7 @@ fn self_host_linked_local_has_reference_receiver_use(
                       caller_specialization,
                       value,
                     )
-                    if self_host_specialization_canonical_scalar(expected) is SelfHostPlannedValueShape::RefPlannedValueShape {
+                    if self_host_physical_scalar_shape(expected) is SelfHostPlannedValueShape::RefPlannedValueShape {
                       return true
                     }
                   }
@@ -26710,7 +26647,7 @@ fn self_host_linked_local_has_reference_receiver_use(
                           caller_specialization,
                           value,
                         )
-                        if self_host_specialization_canonical_scalar(expected) is SelfHostPlannedValueShape::RefPlannedValueShape {
+                        if self_host_physical_scalar_shape(expected) is SelfHostPlannedValueShape::RefPlannedValueShape {
                           return true
                         }
                       }
@@ -26897,7 +26834,7 @@ fn self_host_linked_local_scalar_use_shape(
             caller_specialization,
             expression,
           )
-          match self_host_specialization_canonical_scalar(shape) {
+          match self_host_physical_scalar_shape(shape) {
             SelfHostPlannedValueShape::I32PlannedValueShape => {
               return Option::Some(shape)
             }
@@ -27098,7 +27035,7 @@ fn self_host_linked_local_call_argument_shape(
               body,
               local_id,
             )
-            if self_host_specialization_canonical_scalar(
+            if self_host_physical_scalar_shape(
               shallow_shape,
             ) is SelfHostPlannedValueShape::RefPlannedValueShape {
               return Option::Some(shallow_shape)
@@ -27108,7 +27045,7 @@ fn self_host_linked_local_call_argument_shape(
               self_host_planned_expression_at(module_.expressions, function_target).type_,
               matching_position,
             ) {
-              Option::Some(shape) => if self_host_specialization_canonical_scalar(
+              Option::Some(shape) => if self_host_physical_scalar_shape(
                 shape,
               ) is SelfHostPlannedValueShape::RefPlannedValueShape {
                 return Option::Some(shape)
@@ -27260,7 +27197,7 @@ fn self_host_linked_pattern_binding_use_shape(
             caller_specialization,
             expression,
           )
-          match self_host_specialization_canonical_scalar(shape) {
+          match self_host_physical_scalar_shape(shape) {
             SelfHostPlannedValueShape::RefPlannedValueShape => {
               return Option::Some(shape)
             }
@@ -27746,7 +27683,7 @@ fn self_host_linked_special_match_scalar_result_shape(
                   caller_specialization,
                   arm_body,
                 )
-                match self_host_specialization_canonical_scalar(expected_arm_shape) {
+                match self_host_physical_scalar_shape(expected_arm_shape) {
                   SelfHostPlannedValueShape::I32PlannedValueShape => expected_arm_shape
                   SelfHostPlannedValueShape::I64PlannedValueShape => expected_arm_shape
                   SelfHostPlannedValueShape::F32PlannedValueShape => expected_arm_shape
@@ -27786,7 +27723,7 @@ fn self_host_linked_special_match_scalar_result_shape(
                 arm_body,
               )
             }
-            match self_host_specialization_canonical_scalar(shape) {
+            match self_host_physical_scalar_shape(shape) {
               SelfHostPlannedValueShape::I32PlannedValueShape => {
                 return Option::Some(shape)
               }
@@ -29157,7 +29094,7 @@ fn self_host_linked_expression_expected_shape(
                               use_expression,
                             )
                             if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-                              if self_host_specialization_canonical_scalar(
+                              if self_host_physical_scalar_shape(
                                 shape,
                               ) is SelfHostPlannedValueShape::RefPlannedValueShape {
                                 return shape
@@ -29825,7 +29762,7 @@ fn self_host_linked_match_binding_shape(
                   arms,
                 ) {
                   Option::Some(shape) => shape
-                  Option::None => match self_host_specialization_canonical_scalar(
+                  Option::None => match self_host_physical_scalar_shape(
                     contextual_payload_hint,
                   ) {
                     SelfHostPlannedValueShape::I32PlannedValueShape => contextual_payload_hint
@@ -29901,7 +29838,7 @@ fn self_host_linked_match_binding_shape(
                                         type_index,
                                         current_child,
                                       ) {
-                                        Option::Some(field_shape) => if self_host_specialization_canonical_scalar(
+                                        Option::Some(field_shape) => if self_host_physical_scalar_shape(
                                           field_shape,
                                         ) is SelfHostPlannedValueShape::RefPlannedValueShape {
                                           return Option::Some(field_shape)
@@ -29938,7 +29875,7 @@ fn self_host_linked_match_binding_shape(
                                     ) => if self_host_u32_equal(candidate, local_id) && !(
                                       payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape
                                     ) {
-                                      if self_host_specialization_canonical_scalar(
+                                      if self_host_physical_scalar_shape(
                                         payload_hint,
                                       ) is SelfHostPlannedValueShape::RefPlannedValueShape {
                                         return Option::Some(payload_hint)
@@ -29984,7 +29921,7 @@ fn self_host_linked_match_binding_shape(
                     )
                   }
                   if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-                    if self_host_specialization_canonical_scalar(
+                    if self_host_physical_scalar_shape(
                       shape,
                     ) is SelfHostPlannedValueShape::RefPlannedValueShape {
                       return Option::Some(shape)
@@ -30282,7 +30219,7 @@ fn self_host_linked_scalar_append_local_type(
   locals: StarshineLocals,
   shape: SelfHostPlannedValueShape,
 ) -> Bool {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::I32PlannedValueShape => StarshineFfi.ffi_lib_Locals_push(
       locals,
       StarshineFfi.ffi_lib_ValType_i32(),
@@ -30322,7 +30259,7 @@ fn self_host_linked_scalar_append_local_type(
 fn self_host_linked_scalar_local_carrier(
   shape: SelfHostPlannedValueShape,
 ) -> SelfHostWasmBodyCarrier {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostWasmBodyCarrier::I32BodyCarrier
     SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostWasmBodyCarrier::I64BodyCarrier
     SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostWasmBodyCarrier::F32BodyCarrier
@@ -30708,7 +30645,7 @@ fn self_host_linked_scalar_locals(
                   planned_local.local_id,
                 ) {
                   Option::Some(shape) => Option::Some(shape)
-                  Option::None => match self_host_specialization_canonical_scalar(
+                  Option::None => match self_host_physical_scalar_shape(
                 expected_result_shape,
               ) {
                 SelfHostPlannedValueShape::I32PlannedValueShape => self_host_linked_special_scalar_binding_shape(
@@ -30924,7 +30861,7 @@ fn self_host_linked_scalar_locals(
           )
           let exact_scalar_loop_binding_shape = match loop_binding_shape {
             Option::Some(shape) => if !(
-              self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+              self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
             ) {
               Option::Some(shape)
             } else {
@@ -30934,7 +30871,7 @@ fn self_host_linked_scalar_locals(
           }
           let physical_scalar_pattern_shape = match physical_pattern_binding_shape {
             Option::Some(shape) => if !(
-              self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+              self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
             ) {
               Option::Some(shape)
             } else {
@@ -30944,7 +30881,7 @@ fn self_host_linked_scalar_locals(
           }
           let canonical_scalar_pattern_shape = match canonical_match_binding_shape {
             Option::Some(shape) => if !(
-              self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+              self_host_physical_scalar_shape(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
             ) {
               Option::Some(shape)
             } else {
@@ -30955,7 +30892,7 @@ fn self_host_linked_scalar_locals(
           let recovered_scalar_local_shape = if !(
             selected_recovered_local_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
           ) && !(
-            self_host_specialization_canonical_scalar(selected_recovered_local_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+            self_host_physical_scalar_shape(selected_recovered_local_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
           ) {
             Option::Some(selected_recovered_local_shape)
           } else {
@@ -31031,7 +30968,7 @@ fn self_host_linked_scalar_locals(
           ) {
             match special_match_subject_shape {
               Option::Some(shape) => if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-                self_host_specialization_canonical_scalar(
+                self_host_physical_scalar_shape(
                   shape,
                 ) is SelfHostPlannedValueShape::RefPlannedValueShape
               ) {
@@ -31060,11 +30997,11 @@ fn self_host_linked_scalar_locals(
               let canonical_shape = self_host_body_carrier_shape(
                 canonical.local_values[current].carrier,
               )
-              if self_host_specialization_canonical_scalar(canonical_shape) is SelfHostPlannedValueShape::RefPlannedValueShape &&
+              if self_host_physical_scalar_shape(canonical_shape) is SelfHostPlannedValueShape::RefPlannedValueShape &&
                 self_host_u64_equal(canonical.local_values[current].nominal_owner, 0u64) && !(
                   selected_recovered_local_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
                 ) && !(
-                  self_host_specialization_canonical_scalar(selected_recovered_local_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                  self_host_physical_scalar_shape(selected_recovered_local_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
                 ) {
                 selected_recovered_local_shape
               } else {
@@ -31625,12 +31562,12 @@ fn self_host_linked_scalar_locals(
               expression,
               0u32,
             ) {
-              Option::Some(shape) => if self_host_specialization_canonical_scalar(
+              Option::Some(shape) => if self_host_physical_scalar_shape(
                 shape,
               ) is SelfHostPlannedValueShape::RefPlannedValueShape && !(
                 inferred_scratch_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
               ) && !(
-                self_host_specialization_canonical_scalar(inferred_scratch_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
+                self_host_physical_scalar_shape(inferred_scratch_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
               ) {
                 inferred_scratch_shape
               } else {
@@ -31702,9 +31639,9 @@ fn self_host_linked_scalar_locals(
           }
           match certified_scratch_shape {
             Option::Some(expected_shape) => if self_host_program_representation_shape_carrier_code(
-              self_host_specialization_canonical_scalar(expected_shape),
+              self_host_physical_scalar_shape(expected_shape),
             ) != self_host_program_representation_shape_carrier_code(
-              self_host_specialization_canonical_scalar(scratch_shape),
+              self_host_physical_scalar_shape(scratch_shape),
             ) {
               // A product projection scratch local must use its certified result carrier.
               let message = StringBuilder::new()
@@ -32223,6 +32160,7 @@ fn build_self_host_linked_i32_module(
       self_host_linked_append_text_runtime_types(link, rec_types)
       self_host_linked_append_array_runtime_types(link, rec_types)
       self_host_linked_append_erased_field_box_types(rec_types)
+      self_host_append_packed_array_types(rec_types)
       let function_value_signature_error = self_host_linked_append_function_value_signatures(
         link,
         rec_types,
@@ -32232,8 +32170,8 @@ fn build_self_host_linked_i32_module(
         Option::Some(error) => return Result::Err(error)
         Option::None => {}
       }
-      let initializer_type_index = self_host_linked_text_runtime_base(link) +
-        77u32 + function_value_signatures.length() * 2u32
+      let initializer_type_index = self_host_linked_function_value_type_base(link) +
+        function_value_signatures.length() * 2u32
       if self_host_u32_greater(link.initializers.length(), 0u32) {
         self_host_linked_append_function_value_type(
           rec_types,

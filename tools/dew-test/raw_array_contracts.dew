@@ -2,6 +2,7 @@
 // part of the raw instruction contract.
 open dew.std.types
 open dew.std.option
+open dew.std.array
 
 struct UnrelatedRecord {
   value: I64
@@ -17,6 +18,18 @@ builtin local_default<t>(length: U32) -> LocalStorage<t> = "array.new_default"
 builtin local_copy<t>(target: LocalStorage<t>, target_index: U32, source: LocalStorage<t>, source_index: U32, length: U32) -> Unit = "array.copy"
 // The standard Wasm spelling must use the same declared type contract.
 builtin spelled_new<t>(length: U32, value: t) -> LocalStorage<t> = "array.new"
+builtin bits<a, b>(value: a) -> b = "unsafe.bitcast"
+
+fn narrow_plain<t>(value: t) -> I32 {
+  let values = spelled_new(1u32, value)
+  bits::<t, I32>(local_get(values, 0u32))
+}
+
+fn narrow_library<t>(value: t) -> I32 {
+  let values = [value]
+  values.push(value)
+  bits::<t, I32>(values[1u32])
+}
 
 fn initialized<unused, t>(value: t) -> LocalStorage<t> {
   let result = local_default::<t>(2u32)
@@ -198,6 +211,113 @@ pub fn main(case: U32) -> I32 {
     } else {
       0i32
     }
+  } else if case == 16u32 {
+    let values = spelled_new(1u32, bits::<I32, I8>(511i32))
+    if bits::<I8, I32>(local_get(values, 0u32)) == -1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 17u32 {
+    let values = spelled_new(1u32, bits::<I32, U8>(-1i32))
+    if bits::<U8, I32>(local_get(values, 0u32)) == 255i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 18u32 {
+    let values = spelled_new(1u32, bits::<I32, I16>(131071i32))
+    if bits::<I16, I32>(local_get(values, 0u32)) == -1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 19u32 {
+    let values = spelled_new(1u32, bits::<I32, U16>(-1i32))
+    if bits::<U16, I32>(local_get(values, 0u32)) == 65535i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 20u32 {
+    if narrow_plain(bits::<I32, I8>(511i32)) == -1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 21u32 {
+    if narrow_plain(bits::<I32, U8>(-1i32)) == 255i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 22u32 {
+    if narrow_plain(bits::<I32, I16>(131071i32)) == -1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 23u32 {
+    if narrow_plain(bits::<I32, U16>(-1i32)) == 65535i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 24u32 {
+    if narrow_library(bits::<I32, I8>(511i32)) == -1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 25u32 {
+    if narrow_library(bits::<I32, U8>(-1i32)) == 255i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 26u32 {
+    if narrow_library(bits::<I32, I16>(131071i32)) == -1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 27u32 {
+    if narrow_library(bits::<I32, U16>(-1i32)) == 65535i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 28u32 {
+    if bits::<I8, I32>(copy_initialized(bits::<I32, I8>(511i32))) == -1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 29u32 {
+    if bits::<U8, I32>(copy_initialized(bits::<I32, U8>(-1i32))) == 255i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 30u32 {
+    if bits::<I16, I32>(copy_initialized(bits::<I32, I16>(131071i32))) == -1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 31u32 {
+    if bits::<U16, I32>(copy_initialized(bits::<I32, U16>(-1i32))) == 65535i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 32u32 {
+    let values = spelled_new(1u32, 1i8)
+    bits::<I8, I32>(local_get(values, 1u32))
+  } else if case == 33u32 {
+    let values = local_default::<U16>(1u32)
+    local_set(values, 1u32, 1u16)
+    0i32
   } else {
     0i32
   }

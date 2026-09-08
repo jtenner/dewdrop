@@ -673,7 +673,7 @@ fn self_host_program_representation_storage_matches_shape(
   storage: SelfHostPlannedWasmStorageType,
   shape: SelfHostPlannedValueShape,
 ) -> Bool {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::I32PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI32Storage
     SelfHostPlannedValueShape::I64PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI64Storage
     SelfHostPlannedValueShape::F32PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmF32Storage
@@ -689,7 +689,7 @@ fn self_host_program_representation_storage_matches_shape(
 fn self_host_program_representation_shape_name(
   shape: SelfHostPlannedValueShape,
 ) -> String {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::ErrorPlannedValueShape => "error"
     SelfHostPlannedValueShape::UnitPlannedValueShape => "unit"
     SelfHostPlannedValueShape::NeverPlannedValueShape => "never"
@@ -708,7 +708,7 @@ fn self_host_program_representation_shape_name(
 fn self_host_program_representation_shape_carrier_code(
   shape: SelfHostPlannedValueShape,
 ) -> I32 {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::UnitPlannedValueShape => -1i32
     SelfHostPlannedValueShape::NeverPlannedValueShape => -1i32
     SelfHostPlannedValueShape::I32PlannedValueShape => 0i32

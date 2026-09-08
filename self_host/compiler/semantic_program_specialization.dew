@@ -82,7 +82,8 @@ struct SelfHostProgramCallRecipe {
   target: U64
 }
 
-fn self_host_specialization_canonical_scalar(
+// Function stack carriers erase narrow widths; storage specialization cannot.
+fn self_host_physical_scalar_shape(
   shape: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedValueShape {
   match shape {
@@ -100,6 +101,18 @@ fn self_host_specialization_canonical_scalar(
     SelfHostPlannedValueShape::GenericPlannedValueShape => SelfHostPlannedValueShape::GenericPlannedValueShape
     SelfHostPlannedValueShape::ErrorPlannedValueShape => SelfHostPlannedValueShape::ErrorPlannedValueShape
     _ => shape
+  }
+}
+
+fn self_host_specialization_canonical_scalar(
+  shape: SelfHostPlannedValueShape,
+) -> SelfHostPlannedValueShape {
+  match shape {
+    SelfHostPlannedValueShape::I8PlannedValueShape => shape
+    SelfHostPlannedValueShape::U8PlannedValueShape => shape
+    SelfHostPlannedValueShape::I16PlannedValueShape => shape
+    SelfHostPlannedValueShape::U16PlannedValueShape => shape
+    _ => self_host_physical_scalar_shape(shape)
   }
 }
 
@@ -225,6 +238,18 @@ fn self_host_specialization_shapes_equal(
           return false
         }
         SelfHostPlannedValueShape::NeverPlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::NeverPlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::I8PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::I8PlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::U8PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::U8PlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::I16PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::I16PlannedValueShape) {
+          return false
+        }
+        SelfHostPlannedValueShape::U16PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::U16PlannedValueShape) {
           return false
         }
         SelfHostPlannedValueShape::I32PlannedValueShape => if !(canonical_right is SelfHostPlannedValueShape::I32PlannedValueShape) {

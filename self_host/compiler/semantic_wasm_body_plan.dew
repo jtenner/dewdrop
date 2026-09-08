@@ -282,7 +282,7 @@ fn self_host_body_carrier_from_shape(
     }
     _ => {}
   }
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::UnitPlannedValueShape => SelfHostWasmBodyCarrier::UnitBodyCarrier
     SelfHostPlannedValueShape::NeverPlannedValueShape => SelfHostWasmBodyCarrier::NeverBodyCarrier
     SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostWasmBodyCarrier::I32BodyCarrier
@@ -402,16 +402,7 @@ fn self_host_body_specialization_key(
         let shape = link.fragments.specialization.shapes[
           self_host_u32_add(request.shapes.start, current)
         ]
-        output.append(match self_host_specialization_canonical_scalar(shape) {
-          SelfHostPlannedValueShape::I32PlannedValueShape => "i32"
-          SelfHostPlannedValueShape::I64PlannedValueShape => "i64"
-          SelfHostPlannedValueShape::F32PlannedValueShape => "f32"
-          SelfHostPlannedValueShape::F64PlannedValueShape => "f64"
-          SelfHostPlannedValueShape::V128PlannedValueShape => "v128"
-          SelfHostPlannedValueShape::UnitPlannedValueShape => "unit"
-          SelfHostPlannedValueShape::NeverPlannedValueShape => "never"
-          _ => "eqref"
-        })
+        output.append(self_host_linked_shape_name(shape))
         continue current + 1u32
       } else {
         break self_host_semantic_unit()
@@ -5835,7 +5826,7 @@ fn self_host_plan_one_physical_body(
                           linked_function.specialization,
                           arms,
                         ) {
-                          Option::Some(shape) => if self_host_specialization_canonical_scalar(
+                          Option::Some(shape) => if self_host_physical_scalar_shape(
                             shape,
                           ) is SelfHostPlannedValueShape::RefPlannedValueShape {
                             shape

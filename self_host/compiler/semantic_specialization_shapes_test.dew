@@ -13,11 +13,64 @@ test "specialization normalization retains missing and erroneous evidence" {
   ]))
   match product {
     SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
-      assert(fields[0u32] is SelfHostPlannedValueShape::I32PlannedValueShape, "concrete carrier normalization")
+      assert(fields[0u32] is SelfHostPlannedValueShape::U8PlannedValueShape, "packed storage width and signedness survive normalization")
       assert(fields[1u32] is SelfHostPlannedValueShape::GenericPlannedValueShape, "nested generic evidence")
       assert(fields[2u32] is SelfHostPlannedValueShape::ErrorPlannedValueShape, "nested error evidence")
     }
     _ => assert(false, "product was lost")
+  }
+}
+
+test "packed storage shapes remain distinct despite a shared i32 carrier" {
+  let shapes = [SelfHostPlannedValueShape::I8PlannedValueShape,
+    SelfHostPlannedValueShape::U8PlannedValueShape,
+    SelfHostPlannedValueShape::I16PlannedValueShape,
+    SelfHostPlannedValueShape::U16PlannedValueShape,
+    SelfHostPlannedValueShape::I32PlannedValueShape]
+  for left in shapes {
+    assert(self_host_physical_scalar_shape(left) is SelfHostPlannedValueShape::I32PlannedValueShape, "function carrier still erases packed width")
+    assert(self_host_linked_shape_name(self_host_specialization_canonical_scalar(left)) == self_host_linked_shape_name(left), "packed canonical shape remains exact")
+    assert(self_host_specialization_shapes_equal(left, left), "packed shape equality is reflexive")
+    for right in shapes {
+      assert(self_host_specialization_shapes_equal(left, right) == (self_host_linked_shape_name(left) == self_host_linked_shape_name(right)), "packed shapes cannot share a storage specialization")
+    }
+  }
+}
+
+test "raw array storage keeps heap width separate from signed reads" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn run() -> I32 {\n  42\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid storage fixture")
+  let shapes = [SelfHostPlannedValueShape::I8PlannedValueShape,
+    SelfHostPlannedValueShape::U8PlannedValueShape,
+    SelfHostPlannedValueShape::I16PlannedValueShape,
+    SelfHostPlannedValueShape::U16PlannedValueShape]
+  while 0u32 {
+    index if index < shapes.length() => {
+      let storage = match self_host_linked_raw_array_storage(link, shapes[index]) {
+        Option::Some(value) => value
+        Option::None => {
+          assert(false, "a concrete packed shape must have storage")
+          unreachable()
+        }
+      }
+      assert(storage.type_index == self_host_linked_packed_array_type_base(link) + index / 2u32, "signed and unsigned reads share only the storage width")
+      if index % 2u32 == 0u32 {
+        assert(storage.read is SelfHostRawArrayRead::SignedPackedRawArrayRead, "signed packed instruction")
+      } else {
+        assert(storage.read is SelfHostRawArrayRead::UnsignedPackedRawArrayRead, "unsigned packed instruction")
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  for invalid in [SelfHostPlannedValueShape::GenericPlannedValueShape,
+    SelfHostPlannedValueShape::ErrorPlannedValueShape,
+    SelfHostPlannedValueShape::NeverPlannedValueShape,
+    SelfHostPlannedValueShape::ProductPlannedValueShape([SelfHostPlannedValueShape::GenericPlannedValueShape])] {
+    assert(self_host_linked_raw_array_storage(link, invalid) is Option::None, "missing or invalid storage has no physical recipe")
   }
 }
 

@@ -115,7 +115,7 @@ pub struct SelfHostPlannedProgramWasmGCFragments {
 fn self_host_wasmgc_value_type(
   shape: SelfHostPlannedValueShape,
 ) -> Option<SelfHostPlannedWasmValueType> {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::UnitPlannedValueShape => Option::None
     SelfHostPlannedValueShape::NeverPlannedValueShape => Option::None
     SelfHostPlannedValueShape::I32PlannedValueShape => Option::Some(SelfHostPlannedWasmValueType::WasmI32Value)
@@ -130,7 +130,7 @@ fn self_host_wasmgc_value_type(
 fn self_host_wasmgc_storage_type(
   shape: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedWasmStorageType {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI32Storage
     SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI64Storage
     SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF32Storage
@@ -305,7 +305,7 @@ fn self_host_wasmgc_plan_type(
             role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
             declaration: source.field
             physical_index: current
-            storage: match self_host_specialization_canonical_scalar(
+            storage: match self_host_physical_scalar_shape(
               self_host_planned_resolved_value_shape(
                 module_.resolved_types,
                 source.type_,

@@ -84,6 +84,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Literal storage now rejects unresolved evidence and preserves packed integer
   widths; all 29 shared checks pass. The unused opcode switch/helpers are gone.
   See the [literal storage log](docs/research/array-literal-storage-2026-09-06.md).
+  Narrow raw arrays now retain packed width and signed reads through ordinary
+  generic calls, literals, and growth. The literal's reference/first-child
+  storage guesses are removed; its wrapper recipe remains. All 34 shared raw
+  array checks pass. See the
+  [narrow storage log](docs/research/narrow-array-storage-2026-09-08.md).
   The stack, iterator, accessor, and link fixtures now use declared Dew bodies,
   not removed runtime builtins. See the
   [fixture log](docs/research/array-library-fixtures-2026-09-07.md).
@@ -572,7 +577,7 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [x] Keep readable, typed Starshine FFI names through regeneration. Audit any
   remaining numbered references; test identity and signature agreement rather
   than merely renaming incompatible reference types.
-  Regeneration verifies all 469 selected signatures and keeps named carriers;
+  Regeneration verifies all 474 selected signatures and keeps named carriers;
   three unused Array algorithm exports have now been removed.
   Constructor aliases preserve nullability. Invalid identity proofs and numbered
   Dew references fail with diagnostics. The real linked FFI smoke runs in the

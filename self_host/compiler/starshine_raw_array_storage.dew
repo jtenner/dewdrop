@@ -1,0 +1,35 @@
+fn self_host_append_packed_array_types(rec_types: StarshineRecTypes) -> Unit {
+  while 0u32 {
+    index if index < 2u32 => {
+      let packed = if index == 0u32 {
+        StarshineFfi.ffi_lib_PackType_i8()
+      } else {
+        StarshineFfi.ffi_lib_PackType_i16()
+      }
+      StarshineFfi.ffi_ffi_bridge_rec_types_push(rec_types,
+        StarshineFfi.ffi_lib_RecType_new(
+          StarshineFfi.ffi_lib_SubType_comp_type(
+            StarshineFfi.ffi_lib_CompType_array(
+              StarshineFfi.ffi_lib_FieldType_new(
+                StarshineFfi.ffi_lib_StorageType_pack_type(packed),
+                StarshineFfi.ffi_lib_Mut_var_(),
+              ),
+            ), wasm_ref_null(),
+          ),
+        ),
+      )
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+}
+
+fn self_host_emit_raw_array_get(storage: SelfHostRawArrayStorage, destination: StarshineInstructions) -> Unit {
+  let type_ = StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(storage.type_index))
+  let instruction = match storage.read {
+    SelfHostRawArrayRead::FullRawArrayRead => StarshineFfi.ffi_lib_Instruction_array_get(type_)
+    SelfHostRawArrayRead::SignedPackedRawArrayRead => StarshineFfi.ffi_lib_Instruction_array_get_s(type_)
+    SelfHostRawArrayRead::UnsignedPackedRawArrayRead => StarshineFfi.ffi_lib_Instruction_array_get_u(type_)
+  }
+  StarshineFfi.ffi_ffi_bridge_instructions_push(destination, instruction)
+}

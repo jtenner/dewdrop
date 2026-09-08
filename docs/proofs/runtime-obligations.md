@@ -494,6 +494,17 @@ carrier-only request. Generic arity alone does not imply query dependence.
 The concrete-Self invariant remains in force. See
 [the demand log](../research/frozen-query-demand-2026-09-08.md).
 
+## Packed array storage versus function carriers
+
+I8, U8, I16, and U16 all use an i32 function operand. Their storage keys remain
+distinct: widths select different packed heaps and signedness selects
+`array.get_s` versus `array.get_u`. Physical scalar normalization is separate
+from specialization normalization. Array operations and literals derive storage
+from the declared, substituted element type. A missing element certificate
+cannot select a reference array. This does not prove the remaining wrapper
+layout or packed struct/enum field handling. See
+[the narrow array log](../research/narrow-array-storage-2026-09-08.md).
+
 ## Unit pattern storage
 
 A missing physical local is valid for a Unit pattern only when the specialized

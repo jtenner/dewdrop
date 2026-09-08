@@ -1,0 +1,69 @@
+pub enum SelfHostRawArrayRead {
+  FullRawArrayRead
+  SignedPackedRawArrayRead
+  UnsignedPackedRawArrayRead
+}
+
+pub struct SelfHostRawArrayStorage {
+  type_index: U32
+  read: SelfHostRawArrayRead
+}
+
+// The existing synthetic text/collection prefix has 72 entries. Its five
+// erased-field boxes follow. Packed array types extend that prefix without
+// changing any existing adapter's identity. Function-value signatures follow.
+fn self_host_linked_packed_array_type_base(link: SelfHostPlannedProgramWasmGCLink) -> U32 {
+  self_host_linked_text_runtime_base(link) + 77u32
+}
+
+fn self_host_linked_function_value_type_base(link: SelfHostPlannedProgramWasmGCLink) -> U32 {
+  self_host_linked_packed_array_type_base(link) + 2u32
+}
+
+fn self_host_linked_raw_array_storage(
+  link: SelfHostPlannedProgramWasmGCLink,
+  shape: SelfHostPlannedValueShape,
+) -> Option<SelfHostRawArrayStorage> {
+  let carrier = match self_host_raw_array_storage_carrier(shape) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let (type_index, read) = match shape {
+    SelfHostPlannedValueShape::I8PlannedValueShape => (
+      self_host_linked_packed_array_type_base(link),
+      SelfHostRawArrayRead::SignedPackedRawArrayRead,
+    )
+    SelfHostPlannedValueShape::U8PlannedValueShape => (
+      self_host_linked_packed_array_type_base(link),
+      SelfHostRawArrayRead::UnsignedPackedRawArrayRead,
+    )
+    SelfHostPlannedValueShape::I16PlannedValueShape => (
+      self_host_linked_packed_array_type_base(link) + 1u32,
+      SelfHostRawArrayRead::SignedPackedRawArrayRead,
+    )
+    SelfHostPlannedValueShape::U16PlannedValueShape => (
+      self_host_linked_packed_array_type_base(link) + 1u32,
+      SelfHostRawArrayRead::UnsignedPackedRawArrayRead,
+    )
+    _ => (
+      self_host_linked_array_runtime_base(link) + self_host_i32_to_u32(carrier),
+      SelfHostRawArrayRead::FullRawArrayRead,
+    )
+  }
+  Option::Some(SelfHostRawArrayStorage::{
+    type_index: type_index
+    read: read
+  })
+}
+
+fn self_host_linked_expression_raw_array_storage(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  specialization: U32,
+  expression: U32,
+) -> Option<SelfHostRawArrayStorage> {
+  match self_host_raw_array_expression_element_shape(link, module_, specialization, expression) {
+    Option::Some(shape) => self_host_linked_raw_array_storage(link, shape)
+    Option::None => Option::None
+  }
+}

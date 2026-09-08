@@ -97,7 +97,7 @@ fn self_host_linked_append_function_value_signatures(link: SelfHostPlannedProgra
               self_host_linked_append_shape_value_types(direct_results, result_shape)
               self_host_linked_append_shape_value_types(entry_results, result_shape)
             }
-            let direct_type = self_host_linked_text_runtime_base(link) + 77u32 + signatures.length() * 2u32
+            let direct_type = self_host_linked_function_value_type_base(link) + signatures.length() * 2u32
             self_host_linked_append_function_value_type(rec_types, direct_parameters, direct_results)
             self_host_linked_append_function_value_type(rec_types, entry_parameters, entry_results)
             signatures.push(SelfHostLinkedFunctionValueSignature::{

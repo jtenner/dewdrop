@@ -631,7 +631,7 @@ fn self_host_linked_append_runtime_function_name(
 fn self_host_linked_array_carrier_from_shape(
   shape: SelfHostPlannedValueShape,
 ) -> I32 {
-  match self_host_specialization_canonical_scalar(shape) {
+  match self_host_physical_scalar_shape(shape) {
     SelfHostPlannedValueShape::I32PlannedValueShape => 0i32
     SelfHostPlannedValueShape::I64PlannedValueShape => 1i32
     SelfHostPlannedValueShape::F32PlannedValueShape => 2i32
@@ -824,7 +824,7 @@ fn self_host_linked_shape_name(shape: SelfHostPlannedValueShape) -> String {
 fn self_host_linked_default_conversion_target(
   source: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedValueShape {
-  match self_host_specialization_canonical_scalar(source) {
+  match self_host_physical_scalar_shape(source) {
     SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
     SelfHostPlannedValueShape::F64PlannedValueShape => SelfHostPlannedValueShape::F32PlannedValueShape
     SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedValueShape::F64PlannedValueShape
@@ -862,7 +862,7 @@ fn self_host_emit_linked_conversion(
     }
     return true
   }
-  let source_scalar = self_host_specialization_canonical_scalar(source)
+  let source_scalar = self_host_physical_scalar_shape(source)
   if target is SelfHostPlannedValueShape::U8PlannedValueShape ||
     target is SelfHostPlannedValueShape::U16PlannedValueShape ||
     target is SelfHostPlannedValueShape::U32PlannedValueShape {
