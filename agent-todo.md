@@ -425,6 +425,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   read. Missing keys stay missing; specialization entries cannot replace plain
   entries. Imported trait signature fragments retain their source declaration.
   See the [lookup log](docs/research/named-function-lookups-2026-09-08.md).
+  Linked source functions now preserve all four signature/evidence spans,
+  direct-builtin and elision metadata, and checked signature relocation.
+  Linking and emission require one linked record per source function fragment,
+  including specializations and lambdas. Complete physical type tables and
+  synthetic adapter recipes remain separate checks. See the
+  [signature-copy log](docs/research/linked-function-signature-copies-2026-09-08.md).
 - [x] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.

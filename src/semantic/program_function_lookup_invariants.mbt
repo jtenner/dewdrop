@@ -41,6 +41,16 @@ fn check_program_named_function_lookup(
     Some(index) => index
     None => return Ok(None)
   }
+  check_program_source_function_lookup(link, declaration, index, true)
+}
+
+///|
+fn check_program_source_function_lookup(
+  link : PlannedProgramWasmGCLink,
+  declaration : DeclId,
+  index : Int,
+  plain : Bool,
+) -> Result[PlannedProgramWasmFunction?, ProgramFunctionLookupFailure] {
   guard index >= 0 && index < link.functions.length() else {
     return Err(
       program_function_lookup_failure(
@@ -67,7 +77,7 @@ fn check_program_named_function_lookup(
   }
   // This table is populated only by plain fragments. Exact specializations
   // have their own lookup; a damaged entry cannot substitute one here.
-  guard function_.specialization_shapes.length == 0 else {
+  guard !plain || function_.specialization_shapes.length == 0 else {
     return Err(
       program_function_lookup_failure(
         declaration,
@@ -161,6 +171,13 @@ fn check_program_named_function_lookup(
         (7UL << 32) | slot,
       ),
     )
+  }
+  match
+    check_program_function_signature_copy(
+      link, index, module_, fragment, function_,
+    ) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
   }
   Ok(Some(function_))
 }

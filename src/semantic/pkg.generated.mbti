@@ -215,6 +215,8 @@ pub fn validate_module_wasmgc_arenas(PlannedModuleWasmGCFragments) -> Result[Uni
 
 pub fn validate_planned_module_type_layouts(PlannedModuleTypeLayouts) -> Result[Unit, String]
 
+pub fn verify_program_source_function_fragments(PlannedProgramWasmGCLink) -> Result[Unit, ProgramFunctionLookupFailure]
+
 pub fn wasmgc_capture_cell_slot(PlannedValueShape) -> Int
 
 pub fn wasmgc_capture_cell_storage(Int) -> PlannedWasmStorageType

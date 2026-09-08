@@ -1202,6 +1202,23 @@ pub fn emit_starshine_program_module(
   if planned.diagnostics.length() > 0 {
     return Err(ProgramLinkDiagnostics(planned.diagnostics.length()))
   }
+  match @semantic.verify_program_source_function_fragments(planned) {
+    Ok(_) => ()
+    Err(failure) =>
+      return Err(
+        CompilerInvariantFailure({
+          code: failure.code.to_uint(),
+          phase: 7U,
+          module_id: failure.module_id,
+          declaration: failure.declaration,
+          body: failure.body,
+          expression: failure.expression,
+          expected: failure.expected,
+          actual: failure.actual,
+          detail: failure.detail,
+        }),
+      )
+  }
   @semantic.assert_program_capture_metadata(lowering, 7)
   let helper_plan = starshine_program_adapter_helper_plan(lowering, planned)
   match helper_plan.evidence_error {
