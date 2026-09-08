@@ -1,0 +1,453 @@
+// A freeze witness owns separate array containers. Every retained element is an
+// immutable record, enum, scalar, or String. No mutable array is shared with the
+// live plan. Compare exact fields, not hashes, before and after emission.
+fn self_host_freeze_physical_body(
+  source: SelfHostPlannedPhysicalBodyCarrierPlan,
+) -> SelfHostPlannedPhysicalBodyCarrierPlan {
+  SelfHostPlannedPhysicalBodyCarrierPlan::{
+    converged: source.converged
+    stalled_work_item: source.stalled_work_item
+    module_index: source.module_index
+    module_id: source.module_id
+    declaration: source.declaration
+    body: source.body
+    lambda: source.lambda
+    physical_function_index: source.physical_function_index
+    specialization: source.specialization
+    specialization_key: source.specialization_key
+    result_carrier: source.result_carrier
+    physical_local_count: source.physical_local_count
+    result: source.result
+    expressions: source.expressions.copy()
+    local_values: source.local_values.copy()
+    locals: source.locals.copy()
+    local_slots: source.local_slots.copy()
+    control_state_values: source.control_state_values.copy()
+    control_states: source.control_states.copy()
+    control_result_values: source.control_result_values.copy()
+    control_results: source.control_results.copy()
+    scratches: source.scratches.copy()
+    calls: source.calls.copy()
+    call_evaluations: source.call_evaluations.copy()
+    call_operands: source.call_operands.copy()
+  }
+}
+
+fn self_host_freeze_physical_bodies(
+  bodies: Array<SelfHostPlannedPhysicalBodyCarrierPlan>,
+) -> Array<SelfHostPlannedPhysicalBodyCarrierPlan> {
+  let frozen = []
+  for body in bodies {
+    frozen.push(self_host_freeze_physical_body(body))
+  }
+  frozen
+}
+
+fn self_host_body_freeze_bool(value: Bool) -> U64 {
+  if value {
+    1u64
+  } else {
+    0u64
+  }
+}
+
+fn self_host_body_freeze_storage(value: Option<SelfHostPlannedWasmStorageType>) -> U64 {
+  match value {
+    Option::None => 0u64
+    Option::Some(storage) => 1u64 + u32_into_u64(self_host_i32_to_u32(
+      self_host_program_representation_storage_code(storage),
+    ))
+  }
+}
+
+fn self_host_body_freeze_operand_kind(value: SelfHostPhysicalOperandSource) -> U64 {
+  match value {
+    SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(_) => 0u64
+    SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(_) => 1u64
+    SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(_) => 2u64
+    SelfHostPhysicalOperandSource::TraitEvidencePhysicalOperand(_) => 3u64
+    SelfHostPhysicalOperandSource::ClosureEnvironmentPhysicalOperand(_) => 4u64
+    SelfHostPhysicalOperandSource::RuntimeContextPhysicalOperand(_) => 5u64
+  }
+}
+
+fn self_host_body_freeze_operand_value(value: SelfHostPhysicalOperandSource) -> U64 {
+  // Pattern subjects hold a cached value ID, not an expression evaluation.
+  // The evaluation helper deliberately erases that ID; a freeze check must not.
+  match value {
+    SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(source) => u32_into_u64(source)
+    SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(source) => u32_into_u64(source)
+    SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(source) => u32_into_u64(source)
+    SelfHostPhysicalOperandSource::TraitEvidencePhysicalOperand(source) => u32_into_u64(source)
+    SelfHostPhysicalOperandSource::ClosureEnvironmentPhysicalOperand(source) => u32_into_u64(source)
+    SelfHostPhysicalOperandSource::RuntimeContextPhysicalOperand(source) => u32_into_u64(source)
+  }
+}
+
+fn self_host_body_freeze_check(
+  frozen: SelfHostPlannedPhysicalBodyCarrierPlan,
+  expression: U32,
+  role: U32,
+  index: U32,
+  expected: U64,
+  actual: U64,
+) -> Unit {
+  if expected != actual {
+    let _ = self_host_assert_compiler_invariant_with_failure(
+      false,
+      SelfHostInvariantFailure::{
+        code: 605u32
+        phase: 7u32
+        module_id: frozen.module_id
+        declaration: frozen.declaration
+        body: frozen.body
+        expression: expression
+        expected: expected
+        actual: actual
+        detail: (u32_into_u64(role) << 32u64) | u32_into_u64(index)
+      },
+      "physical body plan changed after freeze",
+    )
+  }
+}
+
+fn self_host_assert_frozen_physical_body(
+  frozen: SelfHostPlannedPhysicalBodyCarrierPlan,
+  live: SelfHostPlannedPhysicalBodyCarrierPlan,
+) -> Unit {
+  self_host_body_freeze_check(frozen, 4294967295u32, 1u32, 4294967295u32,
+    self_host_body_freeze_bool(frozen.converged), self_host_body_freeze_bool(live.converged))
+  self_host_body_freeze_check(frozen, 4294967295u32, 2u32, 4294967295u32,
+    u32_into_u64(frozen.stalled_work_item), u32_into_u64(live.stalled_work_item))
+  self_host_body_freeze_check(frozen, 4294967295u32, 3u32, 4294967295u32,
+    u32_into_u64(frozen.module_index), u32_into_u64(live.module_index))
+  self_host_body_freeze_check(frozen, 4294967295u32, 4u32, 4294967295u32,
+    frozen.module_id, live.module_id)
+  self_host_body_freeze_check(frozen, 4294967295u32, 5u32, 4294967295u32,
+    frozen.declaration, live.declaration)
+  self_host_body_freeze_check(frozen, 4294967295u32, 6u32, 4294967295u32,
+    frozen.body, live.body)
+  self_host_body_freeze_check(frozen, 4294967295u32, 7u32, 4294967295u32,
+    u32_into_u64(frozen.lambda), u32_into_u64(live.lambda))
+  self_host_body_freeze_check(frozen, 4294967295u32, 8u32, 4294967295u32,
+    u32_into_u64(frozen.physical_function_index), u32_into_u64(live.physical_function_index))
+  self_host_body_freeze_check(frozen, 4294967295u32, 9u32, 4294967295u32,
+    u32_into_u64(frozen.specialization), u32_into_u64(live.specialization))
+  self_host_body_freeze_check(frozen, 4294967295u32, 10u32, 4294967295u32,
+    1u64, self_host_body_freeze_bool(frozen.specialization_key == live.specialization_key))
+  self_host_body_freeze_check(frozen, 4294967295u32, 11u32, 4294967295u32,
+    self_host_body_carrier_code(frozen.result_carrier), self_host_body_carrier_code(live.result_carrier))
+  self_host_body_freeze_check(frozen, 4294967295u32, 12u32, 4294967295u32,
+    u32_into_u64(frozen.physical_local_count), u32_into_u64(live.physical_local_count))
+  self_host_body_freeze_check(frozen, 4294967295u32, 20u32, 4294967295u32,
+    u32_into_u64(self_host_i32_to_u32(frozen.result.logical_type)), u32_into_u64(self_host_i32_to_u32(live.result.logical_type)))
+  self_host_body_freeze_check(frozen, 4294967295u32, 21u32, 4294967295u32,
+    self_host_body_carrier_code(frozen.result.carrier), self_host_body_carrier_code(live.result.carrier))
+  self_host_body_freeze_check(frozen, 4294967295u32, 22u32, 4294967295u32,
+    self_host_body_carrier_code(frozen.result.conflict_expected), self_host_body_carrier_code(live.result.conflict_expected))
+  self_host_body_freeze_check(frozen, 4294967295u32, 23u32, 4294967295u32,
+    self_host_body_carrier_code(frozen.result.conflict_actual), self_host_body_carrier_code(live.result.conflict_actual))
+  self_host_body_freeze_check(frozen, 4294967295u32, 24u32, 4294967295u32,
+    frozen.result.nominal_owner, live.result.nominal_owner)
+  self_host_body_freeze_check(frozen, 4294967295u32, 25u32, 4294967295u32,
+    u32_into_u64(frozen.result.physical_heap_type), u32_into_u64(live.result.physical_heap_type))
+  self_host_body_freeze_check(frozen, 4294967295u32, 40u32, 4294967295u32,
+    u32_into_u64(frozen.expressions.length()), u32_into_u64(live.expressions.length()))
+  let mut expressions_index = 0u32
+  let _ = while expressions_index {
+    index => if index < frozen.expressions.length() {
+      let expected = frozen.expressions[index]
+      let actual = live.expressions[index]
+      self_host_body_freeze_check(frozen, expected.expression, 40u32, index,
+        u32_into_u64(expected.expression), u32_into_u64(actual.expression))
+      self_host_body_freeze_check(frozen, expected.expression, 41u32, index,
+        u32_into_u64(self_host_i32_to_u32(expected.value.logical_type)), u32_into_u64(self_host_i32_to_u32(actual.value.logical_type)))
+      self_host_body_freeze_check(frozen, expected.expression, 42u32, index,
+        self_host_body_carrier_code(expected.value.carrier), self_host_body_carrier_code(actual.value.carrier))
+      self_host_body_freeze_check(frozen, expected.expression, 43u32, index,
+        self_host_body_carrier_code(expected.value.conflict_expected), self_host_body_carrier_code(actual.value.conflict_expected))
+      self_host_body_freeze_check(frozen, expected.expression, 44u32, index,
+        self_host_body_carrier_code(expected.value.conflict_actual), self_host_body_carrier_code(actual.value.conflict_actual))
+      self_host_body_freeze_check(frozen, expected.expression, 45u32, index,
+        expected.value.nominal_owner, actual.value.nominal_owner)
+      self_host_body_freeze_check(frozen, expected.expression, 46u32, index,
+        u32_into_u64(expected.value.physical_heap_type), u32_into_u64(actual.value.physical_heap_type))
+      self_host_body_freeze_check(frozen, expected.expression, 47u32, index,
+        self_host_body_carrier_code(expected.carrier), self_host_body_carrier_code(actual.carrier))
+      self_host_body_freeze_check(frozen, expected.expression, 48u32, index,
+        self_host_body_carrier_code(expected.conflict_expected), self_host_body_carrier_code(actual.conflict_expected))
+      self_host_body_freeze_check(frozen, expected.expression, 49u32, index,
+        self_host_body_carrier_code(expected.conflict_actual), self_host_body_carrier_code(actual.conflict_actual))
+      self_host_body_freeze_check(frozen, expected.expression, 50u32, index,
+        u32_into_u64(expected.receiver_expression), u32_into_u64(actual.receiver_expression))
+      self_host_body_freeze_check(frozen, expected.expression, 51u32, index,
+        u32_into_u64(self_host_i32_to_u32(expected.receiver_logical_type)), u32_into_u64(self_host_i32_to_u32(actual.receiver_logical_type)))
+      self_host_body_freeze_check(frozen, expected.expression, 52u32, index,
+        expected.receiver_nominal_owner, actual.receiver_nominal_owner)
+      self_host_body_freeze_check(frozen, expected.expression, 53u32, index,
+        u32_into_u64(expected.receiver_physical_heap_type), u32_into_u64(actual.receiver_physical_heap_type))
+      self_host_body_freeze_check(frozen, expected.expression, 54u32, index,
+        expected.selected_field, actual.selected_field)
+      self_host_body_freeze_check(frozen, expected.expression, 55u32, index,
+        u32_into_u64(expected.selected_type_index), u32_into_u64(actual.selected_type_index))
+      self_host_body_freeze_check(frozen, expected.expression, 56u32, index,
+        u32_into_u64(expected.selected_field_index), u32_into_u64(actual.selected_field_index))
+      self_host_body_freeze_check(frozen, expected.expression, 57u32, index,
+        self_host_body_freeze_storage(expected.selected_storage), self_host_body_freeze_storage(actual.selected_storage))
+      self_host_body_freeze_check(frozen, expected.expression, 58u32, index,
+        u32_into_u64(expected.call_function_index), u32_into_u64(actual.call_function_index))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 70u32, 4294967295u32,
+    u32_into_u64(frozen.local_values.length()), u32_into_u64(live.local_values.length()))
+  let mut local_values_index = 0u32
+  let _ = while local_values_index {
+    index => if index < frozen.local_values.length() {
+      let expected = frozen.local_values[index]
+      let actual = live.local_values[index]
+      self_host_body_freeze_check(frozen, 4294967295u32, 70u32, index,
+        u32_into_u64(self_host_i32_to_u32(expected.logical_type)), u32_into_u64(self_host_i32_to_u32(actual.logical_type)))
+      self_host_body_freeze_check(frozen, 4294967295u32, 71u32, index,
+        self_host_body_carrier_code(expected.carrier), self_host_body_carrier_code(actual.carrier))
+      self_host_body_freeze_check(frozen, 4294967295u32, 72u32, index,
+        self_host_body_carrier_code(expected.conflict_expected), self_host_body_carrier_code(actual.conflict_expected))
+      self_host_body_freeze_check(frozen, 4294967295u32, 73u32, index,
+        self_host_body_carrier_code(expected.conflict_actual), self_host_body_carrier_code(actual.conflict_actual))
+      self_host_body_freeze_check(frozen, 4294967295u32, 74u32, index,
+        expected.nominal_owner, actual.nominal_owner)
+      self_host_body_freeze_check(frozen, 4294967295u32, 75u32, index,
+        u32_into_u64(expected.physical_heap_type), u32_into_u64(actual.physical_heap_type))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 80u32, 4294967295u32,
+    u32_into_u64(frozen.locals.length()), u32_into_u64(live.locals.length()))
+  let mut locals_index = 0u32
+  let _ = while locals_index {
+    index => if index < frozen.locals.length() {
+      let expected = frozen.locals[index]
+      let actual = live.locals[index]
+      self_host_body_freeze_check(frozen, 4294967295u32, 80u32, index,
+        self_host_body_carrier_code(expected), self_host_body_carrier_code(actual))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 81u32, 4294967295u32,
+    u32_into_u64(frozen.local_slots.length()), u32_into_u64(live.local_slots.length()))
+  let mut local_slots_index = 0u32
+  let _ = while local_slots_index {
+    index => if index < frozen.local_slots.length() {
+      let expected = frozen.local_slots[index]
+      let actual = live.local_slots[index]
+      self_host_body_freeze_check(frozen, 4294967295u32, 81u32, index,
+        u32_into_u64(expected), u32_into_u64(actual))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 90u32, 4294967295u32,
+    u32_into_u64(frozen.control_state_values.length()), u32_into_u64(live.control_state_values.length()))
+  let mut control_state_values_index = 0u32
+  let _ = while control_state_values_index {
+    index => if index < frozen.control_state_values.length() {
+      let expected = frozen.control_state_values[index]
+      let actual = live.control_state_values[index]
+      self_host_body_freeze_check(frozen, 4294967295u32, 90u32, index,
+        u32_into_u64(self_host_i32_to_u32(expected.logical_type)), u32_into_u64(self_host_i32_to_u32(actual.logical_type)))
+      self_host_body_freeze_check(frozen, 4294967295u32, 91u32, index,
+        self_host_body_carrier_code(expected.carrier), self_host_body_carrier_code(actual.carrier))
+      self_host_body_freeze_check(frozen, 4294967295u32, 92u32, index,
+        self_host_body_carrier_code(expected.conflict_expected), self_host_body_carrier_code(actual.conflict_expected))
+      self_host_body_freeze_check(frozen, 4294967295u32, 93u32, index,
+        self_host_body_carrier_code(expected.conflict_actual), self_host_body_carrier_code(actual.conflict_actual))
+      self_host_body_freeze_check(frozen, 4294967295u32, 94u32, index,
+        expected.nominal_owner, actual.nominal_owner)
+      self_host_body_freeze_check(frozen, 4294967295u32, 95u32, index,
+        u32_into_u64(expected.physical_heap_type), u32_into_u64(actual.physical_heap_type))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 100u32, 4294967295u32,
+    u32_into_u64(frozen.control_states.length()), u32_into_u64(live.control_states.length()))
+  let mut control_states_index = 0u32
+  let _ = while control_states_index {
+    index => if index < frozen.control_states.length() {
+      let expected = frozen.control_states[index]
+      let actual = live.control_states[index]
+      self_host_body_freeze_check(frozen, 4294967295u32, 100u32, index,
+        self_host_body_carrier_code(expected), self_host_body_carrier_code(actual))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 110u32, 4294967295u32,
+    u32_into_u64(frozen.control_result_values.length()), u32_into_u64(live.control_result_values.length()))
+  let mut control_result_values_index = 0u32
+  let _ = while control_result_values_index {
+    index => if index < frozen.control_result_values.length() {
+      let expected = frozen.control_result_values[index]
+      let actual = live.control_result_values[index]
+      self_host_body_freeze_check(frozen, 4294967295u32, 110u32, index,
+        u32_into_u64(self_host_i32_to_u32(expected.logical_type)), u32_into_u64(self_host_i32_to_u32(actual.logical_type)))
+      self_host_body_freeze_check(frozen, 4294967295u32, 111u32, index,
+        self_host_body_carrier_code(expected.carrier), self_host_body_carrier_code(actual.carrier))
+      self_host_body_freeze_check(frozen, 4294967295u32, 112u32, index,
+        self_host_body_carrier_code(expected.conflict_expected), self_host_body_carrier_code(actual.conflict_expected))
+      self_host_body_freeze_check(frozen, 4294967295u32, 113u32, index,
+        self_host_body_carrier_code(expected.conflict_actual), self_host_body_carrier_code(actual.conflict_actual))
+      self_host_body_freeze_check(frozen, 4294967295u32, 114u32, index,
+        expected.nominal_owner, actual.nominal_owner)
+      self_host_body_freeze_check(frozen, 4294967295u32, 115u32, index,
+        u32_into_u64(expected.physical_heap_type), u32_into_u64(actual.physical_heap_type))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 120u32, 4294967295u32,
+    u32_into_u64(frozen.control_results.length()), u32_into_u64(live.control_results.length()))
+  let mut control_results_index = 0u32
+  let _ = while control_results_index {
+    index => if index < frozen.control_results.length() {
+      let expected = frozen.control_results[index]
+      let actual = live.control_results[index]
+      self_host_body_freeze_check(frozen, 4294967295u32, 120u32, index,
+        self_host_body_carrier_code(expected), self_host_body_carrier_code(actual))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 130u32, 4294967295u32,
+    u32_into_u64(frozen.scratches.length()), u32_into_u64(live.scratches.length()))
+  let mut scratches_index = 0u32
+  let _ = while scratches_index {
+    index => if index < frozen.scratches.length() {
+      let expected = frozen.scratches[index]
+      let actual = live.scratches[index]
+      self_host_body_freeze_check(frozen, expected.expression, 130u32, index,
+        u32_into_u64(expected.expression), u32_into_u64(actual.expression))
+      self_host_body_freeze_check(frozen, expected.expression, 131u32, index,
+        u32_into_u64(expected.ordinal), u32_into_u64(actual.ordinal))
+      self_host_body_freeze_check(frozen, expected.expression, 132u32, index,
+        u32_into_u64(self_host_i32_to_u32(expected.value.logical_type)), u32_into_u64(self_host_i32_to_u32(actual.value.logical_type)))
+      self_host_body_freeze_check(frozen, expected.expression, 133u32, index,
+        self_host_body_carrier_code(expected.value.carrier), self_host_body_carrier_code(actual.value.carrier))
+      self_host_body_freeze_check(frozen, expected.expression, 134u32, index,
+        self_host_body_carrier_code(expected.value.conflict_expected), self_host_body_carrier_code(actual.value.conflict_expected))
+      self_host_body_freeze_check(frozen, expected.expression, 135u32, index,
+        self_host_body_carrier_code(expected.value.conflict_actual), self_host_body_carrier_code(actual.value.conflict_actual))
+      self_host_body_freeze_check(frozen, expected.expression, 136u32, index,
+        expected.value.nominal_owner, actual.value.nominal_owner)
+      self_host_body_freeze_check(frozen, expected.expression, 137u32, index,
+        u32_into_u64(expected.value.physical_heap_type), u32_into_u64(actual.value.physical_heap_type))
+      self_host_body_freeze_check(frozen, expected.expression, 138u32, index,
+        self_host_body_carrier_code(expected.carrier), self_host_body_carrier_code(actual.carrier))
+      self_host_body_freeze_check(frozen, expected.expression, 139u32, index,
+        1u64, self_host_body_freeze_bool(expected.context == actual.context))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 150u32, 4294967295u32,
+    u32_into_u64(frozen.calls.length()), u32_into_u64(live.calls.length()))
+  let mut calls_index = 0u32
+  let _ = while calls_index {
+    index => if index < frozen.calls.length() {
+      let expected = frozen.calls[index]
+      let actual = live.calls[index]
+      self_host_body_freeze_check(frozen, expected.expression, 150u32, index,
+        u32_into_u64(expected.expression), u32_into_u64(actual.expression))
+      self_host_body_freeze_check(frozen, expected.expression, 151u32, index,
+        u32_into_u64(expected.receiver_expression), u32_into_u64(actual.receiver_expression))
+      self_host_body_freeze_check(frozen, expected.expression, 152u32, index,
+        expected.declaration, actual.declaration)
+      self_host_body_freeze_check(frozen, expected.expression, 153u32, index,
+        u32_into_u64(expected.specialization), u32_into_u64(actual.specialization))
+      self_host_body_freeze_check(frozen, expected.expression, 154u32, index,
+        u32_into_u64(expected.physical_function), u32_into_u64(actual.physical_function))
+      self_host_body_freeze_check(frozen, expected.expression, 155u32, index,
+        self_host_body_freeze_bool(expected.emits_call), self_host_body_freeze_bool(actual.emits_call))
+      self_host_body_freeze_check(frozen, expected.expression, 156u32, index,
+        u32_into_u64(expected.evaluations.start), u32_into_u64(actual.evaluations.start))
+      self_host_body_freeze_check(frozen, expected.expression, 157u32, index,
+        u32_into_u64(expected.evaluations.length), u32_into_u64(actual.evaluations.length))
+      self_host_body_freeze_check(frozen, expected.expression, 158u32, index,
+        u32_into_u64(expected.operands.start), u32_into_u64(actual.operands.start))
+      self_host_body_freeze_check(frozen, expected.expression, 159u32, index,
+        u32_into_u64(expected.operands.length), u32_into_u64(actual.operands.length))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 170u32, 4294967295u32,
+    u32_into_u64(frozen.call_evaluations.length()), u32_into_u64(live.call_evaluations.length()))
+  let mut call_evaluations_index = 0u32
+  let _ = while call_evaluations_index {
+    index => if index < frozen.call_evaluations.length() {
+      let expected = frozen.call_evaluations[index]
+      let actual = live.call_evaluations[index]
+      self_host_body_freeze_check(frozen, expected, 170u32, index,
+        u32_into_u64(expected), u32_into_u64(actual))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  self_host_body_freeze_check(frozen, 4294967295u32, 180u32, 4294967295u32,
+    u32_into_u64(frozen.call_operands.length()), u32_into_u64(live.call_operands.length()))
+  let mut call_operands_index = 0u32
+  let _ = while call_operands_index {
+    index => if index < frozen.call_operands.length() {
+      let expected = frozen.call_operands[index]
+      let actual = live.call_operands[index]
+      self_host_body_freeze_check(frozen, self_host_body_call_operand_expression(expected), 180u32, index,
+        self_host_body_freeze_operand_kind(expected), self_host_body_freeze_operand_kind(actual))
+      self_host_body_freeze_check(frozen, self_host_body_call_operand_expression(expected), 181u32, index,
+        self_host_body_freeze_operand_value(expected), self_host_body_freeze_operand_value(actual))
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}
+
+fn self_host_assert_frozen_body_plan(plan: SelfHostPlannedProgramWasmBodyPlan) -> Unit {
+  let _ = self_host_assert_compiler_invariant_with_failure(
+    plan.frozen_bodies.length() == plan.bodies.length() && plan.diagnostics.length() == 0u32,
+    SelfHostInvariantFailure::{
+      code: 605u32
+      phase: 7u32
+      module_id: 0u64
+      declaration: 0u64
+      body: 0u64
+      expression: 4294967295u32
+      expected: u32_into_u64(plan.frozen_bodies.length())
+      actual: u32_into_u64(plan.bodies.length())
+      detail: u32_into_u64(plan.diagnostics.length())
+    },
+    "frozen physical program body count or diagnostics changed",
+  )
+  let mut body_index = 0u32
+  let _ = while body_index {
+    index => if index < plan.frozen_bodies.length() {
+      self_host_assert_frozen_physical_body(plan.frozen_bodies[index], plan.bodies[index])
+      continue index + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+}

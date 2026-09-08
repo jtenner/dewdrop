@@ -1,0 +1,205 @@
+fn self_host_test_frozen_program() -> SelfHostPlannedProgramWasmBodyPlan {
+  let link = self_host_test_physical_table_link()
+  self_host_physical_test_assert_clean_inference(link)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, "valid freeze fixture")
+  assert(plan.bodies.length() == 1u32, "one frozen body")
+  assert(plan.bodies[0u32].expressions[0u32].expression == 0u32, "source expression identity")
+  assert(plan.bodies[0u32].locals.length() == 3u32, "three logical locals")
+  assert(plan.bodies[0u32].local_slots[1u32] == 0u32, "physical I64 parameter slot")
+  self_host_assert_frozen_body_plan(plan)
+  plan
+}
+
+test "physical freeze copies array containers and keeps equal records valid" {
+  let plan = self_host_test_frozen_program()
+  let live = plan.bodies[0u32]
+  let original = live.expressions[0u32]
+  live.expressions[0u32] = self_host_test_physical_expression_id(original, original.expression)
+  self_host_assert_frozen_body_plan(plan)
+  let _ = live.expressions.pop()
+  assert(plan.frozen_bodies[0u32].expressions.length() == 1u32, "live mutations cannot change the witness")
+}
+
+test "BOD-605 frozen programs cannot lose a body" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  let _ = plan.bodies.pop()
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen expressions retain their source identity" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  let live = plan.bodies[0u32]
+  live.expressions[0u32] = self_host_test_physical_expression_id(live.expressions[0u32], 1u32)
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen locals retain their scalar carrier" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  plan.bodies[0u32].locals[1u32] = SelfHostWasmBodyCarrier::I32BodyCarrier
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen locals retain their physical slot" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  plan.bodies[0u32].local_slots[1u32] = 1u32
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen expressions table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  let _ = plan.bodies[0u32].expressions.pop()
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen local_values table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  let _ = plan.bodies[0u32].local_values.pop()
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen locals table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  let _ = plan.bodies[0u32].locals.pop()
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen local_slots table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  let _ = plan.bodies[0u32].local_slots.pop()
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen control_state_values table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  plan.bodies[0u32].control_state_values.push(plan.bodies[0u32].local_values[0u32])
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen control_states table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  plan.bodies[0u32].control_states.push(SelfHostWasmBodyCarrier::UnitBodyCarrier)
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen control_result_values table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  plan.bodies[0u32].control_result_values.push(plan.bodies[0u32].local_values[0u32])
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen control_results table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  plan.bodies[0u32].control_results.push(SelfHostWasmBodyCarrier::UnitBodyCarrier)
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen call_evaluations table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  plan.bodies[0u32].call_evaluations.push(0u32)
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen call_operands table length cannot change" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  plan.bodies[0u32].call_operands.push(SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(0u32))
+  self_host_assert_frozen_body_plan(plan)
+}
+
+test "BOD-605 frozen body identity uses the original diagnostic owner" expect_trap "unreachable" {
+  let plan = self_host_test_frozen_program()
+  let source = plan.bodies[0u32]
+  plan.bodies[0u32] = SelfHostPlannedPhysicalBodyCarrierPlan::{
+    converged: source.converged
+    stalled_work_item: source.stalled_work_item
+    module_index: source.module_index
+    module_id: 5101u64
+    declaration: source.declaration
+    body: source.body
+    lambda: source.lambda
+    physical_function_index: source.physical_function_index
+    specialization: source.specialization
+    specialization_key: source.specialization_key
+    result_carrier: source.result_carrier
+    physical_local_count: source.physical_local_count
+    result: source.result
+    expressions: source.expressions
+    local_values: source.local_values
+    locals: source.locals
+    local_slots: source.local_slots
+    control_state_values: source.control_state_values
+    control_states: source.control_states
+    control_result_values: source.control_result_values
+    control_results: source.control_results
+    scratches: source.scratches
+    calls: source.calls
+    call_evaluations: source.call_evaluations
+    call_operands: source.call_operands
+  }
+  self_host_assert_frozen_body_plan(plan)
+}
+test "physical freeze retains cached pattern subject IDs" {
+  assert(self_host_body_freeze_operand_value(
+    SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(7u32),
+  ) == 7u64, "cached subject identity is part of the witness")
+  assert(self_host_body_freeze_operand_value(
+    SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(8u32),
+  ) == 8u64, "another cached subject remains distinct")
+}
+fn self_host_test_frozen_call_program() -> SelfHostPlannedProgramWasmBodyPlan {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"fn keep(value: I64) -> I64 {\n  value\n}\npub fn run() -> I64 {\n  keep(42i64)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid call link")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid frozen call")
+  assert(program.bodies.length() == 2u32, "two source bodies")
+  let caller = program.bodies[1u32]
+  assert(caller.declaration == ((5100u64 << 32u64) | 1u64), "caller identity")
+  assert(caller.calls.length() == 1u32, "one exact call recipe")
+  assert(caller.calls[0u32].expression == 3u32, "call expression identity")
+  assert(caller.calls[0u32].physical_function == 2u32, "exact physical callee handle")
+  assert(caller.call_evaluations.length() == 1u32 && caller.call_evaluations[0u32] == 2u32,
+    "one argument evaluation")
+  assert(caller.call_operands.length() == 1u32 &&
+    self_host_body_freeze_operand_value(caller.call_operands[0u32]) == 2u64,
+    "one argument operand")
+  self_host_assert_frozen_body_plan(program)
+  program
+}
+
+test "BOD-605 frozen calls retain the selected physical target" expect_trap "unreachable" {
+  let program = self_host_test_frozen_call_program()
+  let caller = program.bodies[1u32]
+  let original = caller.calls[0u32]
+  caller.calls[0u32] = SelfHostPhysicalCallPlan::{
+    expression: original.expression
+    receiver_expression: original.receiver_expression
+    declaration: original.declaration
+    specialization: original.specialization
+    physical_function: 3u32
+    emits_call: original.emits_call
+    evaluations: original.evaluations
+    operands: original.operands
+  }
+  self_host_assert_frozen_body_plan(program)
+}
+
+test "BOD-605 frozen calls retain evaluation order" expect_trap "unreachable" {
+  let program = self_host_test_frozen_call_program()
+  program.bodies[1u32].call_evaluations[0u32] = 1u32
+  self_host_assert_frozen_body_plan(program)
+}
+
+test "BOD-605 frozen calls retain operand source kind" expect_trap "unreachable" {
+  let program = self_host_test_frozen_call_program()
+  program.bodies[1u32].call_operands[0u32] = SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(2u32)
+  self_host_assert_frozen_body_plan(program)
+}
+
+test "BOD-605 frozen calls retain operand source identity" expect_trap "unreachable" {
+  let program = self_host_test_frozen_call_program()
+  program.bodies[1u32].call_operands[0u32] = SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(1u32)
+  self_host_assert_frozen_body_plan(program)
+}

@@ -101,7 +101,22 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
               Result::Ok(value) => value
               Result::Err(_) => false
             }
-            self_host_assert_compiler_invariant(concrete, "SPC-301 implementation Self type is not concrete")
+            let _ = self_host_assert_compiler_invariant_with_failure(concrete,
+              SelfHostInvariantFailure::{
+                code: 301u32
+                phase: 4u32
+                module_id: module_.module_id
+                declaration: request.declaration
+                body: request.declaration
+                expression: 4294967295u32
+                expected: 1u64
+                actual: if concrete {
+                  1u64
+                } else {
+                  0u64
+                }
+                detail: (u32_into_u64(specialization) << 32u64) | u32_into_u64(target)
+              }, "implementation Self type is not concrete")
             bindings.selves.set(implementation, self_type)
           }
           Result::Err(_) => {

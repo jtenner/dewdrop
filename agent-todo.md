@@ -349,6 +349,15 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Put constructor and other temporary locals in the frozen physical plan.
   No emitter step may invent a new carrier or overwrite conflicting evidence.
   Verify all worklist constraints at the fixed point and reject later mutation.
+  Self-host body plans now retain exact freeze witnesses and check all tables
+  before and after emission. The late Array method-target repair is removed.
+  Full temporary coverage and transfer audit remain. See the
+  [freeze log](docs/research/physical-body-freeze-2026-09-08.md).
+  The freeze work also exposed generic Array iteration gaps: a Unit payload
+  binding loses its storage certificate, and the original generic copying
+  helper requested an Array method without a concrete Self type. The latter
+  now reports SPC-301 context, not an anonymous trap. Keep these separate from
+  the freeze check and do not treat library-copy reuse as an inference fix.
 - [x] Finish constructor non-returning-value tests. A Never field or payload
   must prevent later effects and construction, including generic tuple payloads.
   Nine shared execution checks pass in both compilers. Construction stops at

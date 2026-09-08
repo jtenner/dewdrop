@@ -163,6 +163,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/parser_pattern_test.dew \
   self_host/compiler/semantic_product_patterns_test.dew \
   self_host/compiler/semantic_wasm_body_plan_test.dew \
+  self_host/compiler/semantic_wasm_body_freeze_test.dew \
   self_host/compiler/semantic_physical_body_tables_test.dew \
   self_host/compiler/semantic_body_child_ownership_test.dew \
   self_host/compiler/semantic_lowered_syntax_graph_test.dew \

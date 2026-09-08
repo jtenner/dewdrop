@@ -11,6 +11,37 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["selected physical target", 3, 2n, 3n, 154n],
+    ["evaluation order", 2, 2n, 1n, 170n],
+    ["operand source kind", 2, 0n, 1n, 180n],
+    ["operand source identity", 2, 2n, 1n, 181n],
+  ].map(([kind, expression, expected, actual, role]) => ({
+    name: `BOD-605 frozen calls retain ${kind === "selected physical target" ? "the " : ""}${kind}`,
+    expected: [605, 7, 5100n, (5100n << 32n) | 1n, (5100n << 32n) | 1n,
+      expression, expected, actual, role << 32n],
+  })),
+  ...[
+    ["BOD-605 frozen programs cannot lose a body", 4294967295, 1n, 0n, (0n << 32n) | 0n, true],
+    ["BOD-605 frozen expressions retain their source identity", 0, 0n, 1n, (40n << 32n) | 0n, false],
+    ["BOD-605 frozen locals retain their scalar carrier", 4294967295, 5n, 4n, (80n << 32n) | 1n, false],
+    ["BOD-605 frozen locals retain their physical slot", 4294967295, 0n, 1n, (81n << 32n) | 1n, false],
+    ["BOD-605 frozen expressions table length cannot change", 4294967295, 1n, 0n, (40n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen local_values table length cannot change", 4294967295, 3n, 2n, (70n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen locals table length cannot change", 4294967295, 3n, 2n, (80n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen local_slots table length cannot change", 4294967295, 3n, 2n, (81n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen control_state_values table length cannot change", 4294967295, 0n, 1n, (90n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen control_states table length cannot change", 4294967295, 0n, 1n, (100n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen control_result_values table length cannot change", 4294967295, 0n, 1n, (110n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen control_results table length cannot change", 4294967295, 0n, 1n, (120n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen call_evaluations table length cannot change", 4294967295, 0n, 1n, (170n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen call_operands table length cannot change", 4294967295, 0n, 1n, (180n << 32n) | 4294967295n, false],
+    ["BOD-605 frozen body identity uses the original diagnostic owner", 4294967295, 5100n, 5101n, (4n << 32n) | 4294967295n, false],
+  ].map(([name, expression, expected, actual, detail, global]) => ({
+    name,
+    expected: [605, 7, global ? 0n : 5100n, global ? 0n : 5100n << 32n,
+      global ? 0n : 5100n << 32n, expression, expected, actual, detail],
+  })),
+  ...[
     ["ARN-101 source function lookup checks the fragment arena", 101, 2n, 2n, (70n << 32n) | 2n],
     ["LNK-504 source function lookup checks the stored declaration", 504, 5100n << 32n, (5100n << 32n) | 1n, (71n << 32n) | 1n],
     ["SPC-304 source function lookup cannot substitute a specialization", 304, 4294967295n, 7n, 73n << 32n],

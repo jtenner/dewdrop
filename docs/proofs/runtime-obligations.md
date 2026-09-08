@@ -438,3 +438,12 @@ choose(preferred, fallback) = if preferred ≠ −1 then preferred else fallback
 
 The branch-free form also avoids asking an unproved `if` carrier merge to
 compile the body planner that is responsible for that same carrier merge.
+## Physical body freeze witness
+
+The self-host body plan copies its mutable array containers after verification.
+Their elements are immutable, so later live-array changes cannot change the
+witness. Before and after emission, exact metadata and table-field comparisons
+report BOD-605 using the frozen owner. No digest equality substitutes for these
+checks. The old post-verification Array target search is removed. This boundary
+does not yet prove complete temporary-local coverage or a post-fixed-point audit
+of every transfer. See [the freeze log](../research/physical-body-freeze-2026-09-08.md).

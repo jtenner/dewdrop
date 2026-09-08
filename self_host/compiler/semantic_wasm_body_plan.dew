@@ -126,6 +126,7 @@ pub struct SelfHostPlannedPhysicalBodyCarrierPlan {
 
 pub struct SelfHostPlannedProgramWasmBodyPlan {
   bodies: Array<SelfHostPlannedPhysicalBodyCarrierPlan>
+  frozen_bodies: Array<SelfHostPlannedPhysicalBodyCarrierPlan>
   diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>
 }
 
@@ -8388,6 +8389,7 @@ pub fn self_host_plan_program_wasm_bodies(
   }
   SelfHostPlannedProgramWasmBodyPlan::{
     bodies: bodies
+    frozen_bodies: self_host_freeze_physical_bodies(bodies)
     diagnostics: diagnostics
   }
 }
