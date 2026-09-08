@@ -134,3 +134,64 @@ test "lambda temporary slots include the closure environment" {
   }
   assert(checked == 1u32, "checked one lambda body")
 }
+
+test "Unit control temporaries retain explicit physical marker types" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn main() -> I64 {\n  let matched = match () {\n    _ => 42i64\n  }\n  while () {\n    _ => break matched\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid Unit control source")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  let mut checked = 0u32
+  for plan in program.bodies {
+    for scratch in plan.scratches {
+      assert(scratch.value.carrier is SelfHostWasmBodyCarrier::I32BodyCarrier, "Unit control storage needs an explicit I32 marker, not a Unit carrier")
+      assert(scratch.carrier is SelfHostWasmBodyCarrier::I32BodyCarrier, "marker carrier copies agree")
+      checked = checked + 1u32
+    }
+  }
+  assert(checked == 2u32, "match subject and loop state markers")
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => assert(bytes.byte_length() > 0u32, "Unit control marker slots validate")
+    Result::Err(error) => assert(false, error)
+  }
+}
+
+fn self_host_test_invalid_marker_carrier(carrier: SelfHostWasmBodyCarrier) -> Unit {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let source = match self_host_body_plan_expression(plan, 1u32) {
+    Option::Some(value) => value.value
+    Option::None => unreachable()
+  }
+  assert(source.carrier is SelfHostWasmBodyCarrier::I32BodyCarrier, "valid source before one carrier mutation")
+  let changed = self_host_body_value_with_carrier(source, carrier)
+  let _ = self_host_body_marker_scratch_value(module_, body, 3u32, 1u32, changed)
+}
+
+test "BOD-610 marker storage cannot hide unknown evidence" expect_trap "unreachable" {
+  self_host_test_invalid_marker_carrier(SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+}
+
+test "BOD-610 marker storage cannot hide conflicting evidence" expect_trap "unreachable" {
+  self_host_test_invalid_marker_carrier(SelfHostWasmBodyCarrier::ConflictingBodyCarrier)
+}
+
+test "BOD-611 Never marker storage requires divergent source flow" expect_trap "unreachable" {
+  self_host_test_invalid_marker_carrier(SelfHostWasmBodyCarrier::NeverBodyCarrier)
+}
+
+test "FRG-403 single temporary instructions reject another ordinal" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let source = plan.scratches[0u32]
+  let changed = SelfHostPlannedPhysicalScratchCarrier::{
+    expression: source.expression
+    ordinal: 1u32
+    value: source.value
+    carrier: source.carrier
+    context: source.context
+  }
+  let _ = self_host_linked_physical_scratch_value(plan, module_, body, changed)
+}

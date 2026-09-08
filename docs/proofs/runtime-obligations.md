@@ -493,10 +493,14 @@ recipe or full temporary layout. See
 The frozen temporary array defines each expression/ordinal offset. Slot lookup
 requires one record and the requested module/body identity, then adds the
 frozen source-local count and closure-environment offset with checked bounds.
-Constructor fields use individual ordinal lookups. This removes source-kind
-recounting from slot selection but does not yet prove all emitted local types
-or capture-cell layouts. See
+Constructor fields use individual ordinal lookups. Emission now allocates all
+planned expression temporaries in this same record order and uses their frozen
+physical carriers. Control/projection slots with no stack value retain explicit
+unused I32 storage; Unit loop evaluations do not emit stores. This does not
+prove full reference types, source-local types, or capture-cell layouts. See
 [the slot log](../research/frozen-temporary-slots-2026-09-08.md).
+The marker and Unit loop regressions are in
+[the temporary type log](../research/frozen-temporary-types-2026-09-08.md).
 
 ## Physical call target updates
 

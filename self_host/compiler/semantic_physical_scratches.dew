@@ -13,6 +13,30 @@ fn self_host_physical_scratch_failure(module_: SelfHostPlannedModuleLowering, bo
   unreachable()
 }
 
+// Control and projection slots exist even when the source has no stack value.
+// Retain their explicit unused I32 storage, not a Unit/Never physical carrier.
+fn self_host_body_marker_scratch_value(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, source: U32, value: SelfHostPlannedPhysicalValueInfo) -> SelfHostPlannedPhysicalValueInfo {
+  if !self_host_array_span_is_valid(body.expressions.start, body.expressions.length, module_.expressions.length()) {
+    self_host_physical_scratch_failure(module_, body, expression, 6u32, 101u32,
+      u32_into_u64(module_.expressions.length()), u32_into_u64(body.expressions.length), u32_into_u64(body.expressions.start))
+  }
+  let _ = self_host_body_expression_slot(body, source)
+  if value.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier || value.carrier is SelfHostWasmBodyCarrier::ConflictingBodyCarrier {
+    self_host_physical_scratch_failure(module_, body, expression, 6u32, 610u32,
+      1u64, self_host_body_carrier_code(value.carrier), u32_into_u64(source))
+  }
+  if value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    if module_.expressions[source].flow.falls_through {
+      self_host_physical_scratch_failure(module_, body, expression, 6u32, 611u32, 0u64, 1u64, u32_into_u64(source))
+    }
+    return self_host_body_value_with_carrier(value, SelfHostWasmBodyCarrier::I32BodyCarrier)
+  }
+  if value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+    return self_host_body_value_with_carrier(value, SelfHostWasmBodyCarrier::I32BodyCarrier)
+  }
+  value
+}
+
 fn self_host_physical_scratch_plan(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, ordinal: U32) -> SelfHostPlannedPhysicalBodyCarrierPlan {
   let plan = match canonical {
     Option::Some(value) => value

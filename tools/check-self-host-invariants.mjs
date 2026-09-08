@@ -11,6 +11,16 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["BOD-610 marker storage cannot hide unknown evidence", 610, 1n, 0n],
+    ["BOD-610 marker storage cannot hide conflicting evidence", 610, 1n, 1n],
+    ["BOD-611 Never marker storage requires divergent source flow", 611, 0n, 1n],
+  ].map(([name, code, expected, actual]) => ({
+    name,
+    expected: [code, 6, 5100n, (5100n << 32n) | 3n, 5100n << 32n,
+      3, expected, actual, 1n],
+  })),
+  ...[
+    ["FRG-403 single temporary instructions reject another ordinal", 403, 1n, 1n, 0n],
     ["BOD-610 temporary slot lookup requires a body plan", 610, 1n, 0n, 0n],
     ["BOD-610 temporary slot lookup cannot invent a missing slot", 610, 1n, 0n, 0n],
     ["BOD-610 temporary slot lookup rejects duplicate slots", 610, 1n, 2n, 0n],

@@ -269,7 +269,7 @@ enum SelfHostLinkedI32EmitTask {
     SelfHostPlannedValueShape,
   )
   EmitLinkedI32Break(U32, U32, StarshineInstructions)
-  EmitLinkedI32Continue(U32, U32, StarshineInstructions)
+  EmitLinkedI32Continue(U32, U32, Bool, StarshineInstructions)
   VisitLinkedI32MatchArms(
     SelfHostHirSpan,
     U32,
@@ -9666,116 +9666,6 @@ fn self_host_linked_exact_expression_shape(
   }
 }
 
-fn self_host_linked_scratch_shape(
-  link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
-  caller_specialization: U32,
-  expression: U32,
-) -> SelfHostPlannedValueShape {
-  match module_.expressions[expression].kind {
-    SelfHostPlannedExpressionKind::PlannedMatchExpression(value, arms) => match self_host_linked_exact_expression_shape(
-      link,
-      module_,
-      body,
-      caller_specialization,
-      value,
-    ) {
-      Option::Some(shape) => shape
-      Option::None => match self_host_linked_specialized_call_result_shape(
-        link,
-        body.body,
-        caller_specialization,
-        value,
-      ) {
-        Option::Some(shape) => shape
-        Option::None => if !self_host_u64_equal(
-        self_host_linked_match_subject_nominal_declaration(
-          link,
-          module_,
-          body,
-          value,
-        ),
-        0u64,
-      ) || self_host_linked_match_uses_reference_patterns(
-        link,
-        module_,
-        arms,
-      ) {
-        SelfHostPlannedValueShape::RefPlannedValueShape
-      } else if value < module_.expressions.length() {
-        self_host_linked_backend_expression_shape(
-          link,
-          module_,
-          body,
-          caller_specialization,
-          value,
-        )
-        } else {
-          SelfHostPlannedValueShape::I32PlannedValueShape
-        }
-      }
-    }
-    SelfHostPlannedExpressionKind::PlannedWhileExpression(_, initial, _) => if initial < module_.expressions.length() {
-      let initial_shape = match self_host_linked_exact_expression_shape(
-        link,
-        module_,
-        body,
-        caller_specialization,
-        initial,
-      ) {
-        Option::Some(shape) => if shape is SelfHostPlannedValueShape::ErrorPlannedValueShape ||
-          shape is SelfHostPlannedValueShape::GenericPlannedValueShape {
-          self_host_linked_backend_expression_shape(
-            link,
-            module_,
-            body,
-            caller_specialization,
-            initial,
-          )
-        } else {
-          shape
-        }
-        Option::None => self_host_linked_backend_expression_shape(
-          link,
-          module_,
-          body,
-          caller_specialization,
-          initial,
-        )
-      }
-      if initial_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape &&
-        self_host_linked_is_unresolved_iterator_next(module_, initial) {
-        SelfHostPlannedValueShape::RefPlannedValueShape
-      } else {
-        initial_shape
-      }
-    } else {
-      SelfHostPlannedValueShape::I32PlannedValueShape
-    }
-    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) => SelfHostPlannedValueShape::RefPlannedValueShape
-    SelfHostPlannedExpressionKind::PlannedProductField(_, _, _) => module_.expressions[expression].shape
-    SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => SelfHostPlannedValueShape::RefPlannedValueShape
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => if self_host_linked_is_unresolved_iterator_next(
-      module_,
-      expression,
-    ) || self_host_linked_is_unresolved_map_get(
-      module_,
-      expression,
-    ) || self_host_linked_is_unresolved_map_contains_key(
-      module_,
-      expression,
-    ) || self_host_linked_is_unresolved_array_push(
-      module_,
-      expression,
-    ) {
-      SelfHostPlannedValueShape::RefPlannedValueShape
-    } else {
-      SelfHostPlannedValueShape::I32PlannedValueShape
-    }
-    _ => SelfHostPlannedValueShape::I32PlannedValueShape
-  }
-}
 
 fn self_host_linked_body_parameter_offset(
   module_: SelfHostPlannedModuleLowering,
@@ -13490,25 +13380,6 @@ fn self_host_linked_canonical_match_binding_shape(
   Option::None
 }
 
-fn self_host_linked_canonical_scratch_shape(
-  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
-  expression: U32,
-  ordinal: U32,
-) -> Option<SelfHostPlannedValueShape> {
-  match canonical {
-    Option::Some(plan) => match self_host_body_plan_scratch_value(
-      plan,
-      expression,
-      ordinal,
-    ) {
-      Option::Some(value) => Option::Some(
-        self_host_body_carrier_shape(value.carrier),
-      )
-      Option::None => Option::None
-    }
-    Option::None => Option::None
-  }
-}
 
 fn self_host_linked_canonical_call_index(
   canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
@@ -15257,10 +15128,13 @@ fn self_host_emit_linked_i32_expression(
                 loop_payload_hint,
                 SelfHostPlannedValueShape::UnitPlannedValueShape,
               ))
-              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
-                scratch,
-                destination,
-              ))
+              let initial_carrier = self_host_linked_exact_emitted_expression_carrier(canonical_body_plan, link, module_, body, caller_specialization, initial)
+              if !(initial_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) {
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(
+                  scratch,
+                  destination,
+                ))
+              }
               self_host_linked_i32_schedule_expression(
                 tasks,
                 expression_depths,
@@ -15307,6 +15181,7 @@ fn self_host_emit_linked_i32_expression(
               tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Continue(
                 control,
                 depth,
+                !(self_host_linked_exact_emitted_expression_carrier(canonical_body_plan, link, module_, body, caller_specialization, value) is SelfHostWasmBodyCarrier::UnitBodyCarrier),
                 destination,
               ))
               self_host_linked_i32_schedule_expression(
@@ -19946,15 +19821,18 @@ fn self_host_emit_linked_i32_expression(
         SelfHostLinkedI32EmitTask::EmitLinkedI32Continue(
           control,
           depth,
+          stores_value,
           destination,
         ) => match self_host_linked_i32_loop_link(loop_links, control) {
           Option::Some(link_) => {
-            StarshineFfi.ffi_ffi_bridge_instructions_push(
-              destination,
-              StarshineFfi.ffi_lib_Instruction_local_set(
-                StarshineFfi.ffi_lib_LocalIdx_new(link_.state_slot.into()),
-              ),
-            )
+            if stores_value {
+              StarshineFfi.ffi_ffi_bridge_instructions_push(
+                destination,
+                StarshineFfi.ffi_lib_Instruction_local_set(
+                  StarshineFfi.ffi_lib_LocalIdx_new(link_.state_slot.into()),
+                ),
+              )
+            }
             let relative = self_host_u32_subtract(
               self_host_u32_subtract(depth, link_.loop_depth),
               1u32,
@@ -31166,234 +31044,11 @@ fn self_host_linked_scalar_locals(
       break self_host_semantic_unit()
     }
   }
-  let mut expression_offset = 0u32
-  let _ = while expression_offset {
-    current => if current < body.expressions.length {
-      let expression = self_host_u32_add(body.expressions.start, current)
-      match module_.expressions[expression].kind {
-        SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => {
-          let mut position = 0u32
-          while position {
-            index if index < fields.length => {
-              let value = self_host_constructor_scratch_value(canonical_body_plan, module_, body, expression, index)
-              let shape = self_host_body_carrier_shape(value.carrier)
-              if !self_host_linked_scalar_append_local_type(locals, shape) {
-                return Result::Err("constructor evaluation has no concrete scratch carrier")
-              }
-              continue index + 1u32
-            }
-            _ => break self_host_semantic_unit()
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedMatchExpression(subject, _) => {
-          let subject_shape = self_host_body_carrier_shape(
-            self_host_linked_exact_emitted_expression_carrier(
-              canonical_body_plan,
-              link,
-              module_,
-              body,
-              caller_specialization,
-              subject,
-            ),
-          )
-          let inferred_scratch_shape = self_host_linked_scratch_shape(
-            link,
-            module_,
-            body,
-            caller_specialization,
-            expression,
-          )
-          let scratch_shape = if !(subject_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-            subject_shape is SelfHostPlannedValueShape::UnitPlannedValueShape
-          ) && !(subject_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) {
-            subject_shape
-          } else {
-            match self_host_linked_canonical_scratch_shape(
-              canonical_body_plan,
-              expression,
-              0u32,
-            ) {
-              Option::Some(shape) => shape
-              Option::None => if inferred_scratch_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-                SelfHostPlannedValueShape::I32PlannedValueShape
-              } else {
-                inferred_scratch_shape
-              }
-            }
-          }
-          if !self_host_linked_scalar_append_local_type(
-            locals,
-            scratch_shape,
-          ) {
-            return Result::Err("linked match scratch type is unsupported")
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedWhileExpression(_, initial, _) => {
-          let initial_shape = self_host_body_carrier_shape(
-            self_host_linked_exact_emitted_expression_carrier(
-              canonical_body_plan,
-              link,
-              module_,
-              body,
-              caller_specialization,
-              initial,
-            ),
-          )
-          let inferred_scratch_shape = self_host_linked_scratch_shape(
-            link,
-            module_,
-            body,
-            caller_specialization,
-            expression,
-          )
-          let scratch_shape = if !(initial_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-            initial_shape is SelfHostPlannedValueShape::UnitPlannedValueShape
-          ) && !(initial_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) {
-            initial_shape
-          } else {
-            match self_host_linked_canonical_scratch_shape(
-              canonical_body_plan,
-              expression,
-              0u32,
-            ) {
-              Option::Some(shape) => if self_host_physical_scalar_shape(
-                shape,
-              ) is SelfHostPlannedValueShape::RefPlannedValueShape && !(
-                inferred_scratch_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-              ) && !(
-                self_host_physical_scalar_shape(inferred_scratch_shape) is SelfHostPlannedValueShape::RefPlannedValueShape
-              ) {
-                inferred_scratch_shape
-              } else {
-                shape
-              }
-              Option::None => if inferred_scratch_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-                SelfHostPlannedValueShape::I32PlannedValueShape
-              } else {
-                inferred_scratch_shape
-              }
-            }
-          }
-          if !self_host_linked_scalar_append_local_type(
-            locals,
-            scratch_shape,
-          ) {
-            return Result::Err("linked loop scratch type is unsupported")
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) => {
-          if !self_host_linked_scalar_append_local_type(
-            locals,
-            SelfHostPlannedValueShape::RefPlannedValueShape,
-          ) {
-            return Result::Err("linked function-value scratch type is unsupported")
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedProductField(
-          base,
-          field,
-          count,
-        ) => {
-          let inferred_scratch_shape = if self_host_u32_equal(count, 2u32) {
-            match self_host_linked_preferred_pair_type_for_projection(
-              link,
-              module_,
-              body,
-              caller_specialization,
-              base,
-            ) {
-              Option::Some(type_index) => match self_host_linked_pair_field_shape(
-                link,
-                type_index,
-                field,
-              ) {
-                Option::Some(shape) => shape
-                Option::None => match self_host_linked_physical_field_shape(
-                  link,
-                  type_index,
-                  field,
-                ) {
-                  Option::Some(shape) => shape
-                  Option::None => module_.expressions[expression].shape
-                }
-              }
-              Option::None => module_.expressions[expression].shape
-            }
-          } else {
-            module_.expressions[expression].shape
-          }
-          let certified_scratch_shape = self_host_linked_canonical_scratch_shape(
-            canonical_body_plan,
-            expression,
-            0u32,
-          )
-          let scratch_shape = match certified_scratch_shape {
-            Option::Some(shape) => shape
-            Option::None => inferred_scratch_shape
-          }
-          match certified_scratch_shape {
-            Option::Some(expected_shape) => if self_host_program_representation_shape_carrier_code(
-              self_host_physical_scalar_shape(expected_shape),
-            ) != self_host_program_representation_shape_carrier_code(
-              self_host_physical_scalar_shape(scratch_shape),
-            ) {
-              // A product projection scratch local must use its certified result carrier.
-              let message = StringBuilder::new()
-              message.append("linked product projection scratch carrier mismatch module=")
-              message.append_u64(module_.module_id)
-              message.append(" declaration=")
-              message.append_u64(body.declaration)
-              message.append(" body=")
-              message.append_u64(body.body)
-              message.append(" specialization=")
-              message.append_u32(caller_specialization)
-              message.append(" expression=")
-              message.append_u32(expression)
-              message.append(" base=")
-              message.append_u32(base)
-              message.append(" field=")
-              message.append_u32(field)
-              message.append(" count=")
-              message.append_u32(count)
-              message.append(" source_shape=")
-              message.append(self_host_program_representation_shape_name(
-                module_.expressions[expression].shape,
-              ))
-              message.append(" expected=")
-              message.append(self_host_program_representation_shape_name(
-                expected_shape,
-              ))
-              message.append(" actual=")
-              message.append(self_host_program_representation_shape_name(
-                inferred_scratch_shape,
-              ))
-              return Result::Err(message.finish())
-            }
-            Option::None => {}
-          }
-          if !self_host_linked_scalar_append_local_type(locals, scratch_shape) {
-            return Result::Err("linked tuple-field scratch type is unsupported")
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => {
-          if !self_host_linked_scalar_append_local_type(
-            locals,
-            SelfHostPlannedValueShape::RefPlannedValueShape,
-          ) {
-            return Result::Err("linked array-literal scratch type is unsupported")
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, _, _, _, _) => if name.equals(b"array_new") {
-          let value = self_host_raw_array_length_scratch(canonical_body_plan, module_, body, expression)
-          if !self_host_linked_scalar_append_local_type(locals, self_host_body_carrier_shape(value.carrier)) {
-            return Result::Err("linked raw array length scratch type is unsupported")
-          }
-        }
-        _ => {}
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
+  let temporary_plan = self_host_physical_scratch_plan(canonical_body_plan, module_, body, 4294967295u32, 0u32)
+  for scratch in temporary_plan.scratches {
+    let value = self_host_linked_physical_scratch_value(temporary_plan, module_, body, scratch)
+    if !self_host_linked_scalar_append_local_type(locals, self_host_body_carrier_shape(value.carrier)) {
+      return Result::Err("frozen temporary storage has no physical local type")
     }
   }
   let mut capture_local = 0u32

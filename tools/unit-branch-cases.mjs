@@ -16,5 +16,8 @@ export function checkUnitBranches(exports) {
     assert.equal(exports.main(index + 8, 0), expected, `${name}: selected branch preserves effects`);
     checks++;
   }
+  assert.equal(exports.main(12, 0), 42, "Unit match subject runs once without a stack value");
+  assert.equal(exports.main(13, 0), 42, "Unit loop initial and continue values run once without stores");
+  checks += 2;
   return checks;
 }

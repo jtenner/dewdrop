@@ -6176,15 +6176,15 @@ fn self_host_plan_physical_body_with_signature(
           self_host_body_add_scratch(
             scratches,
             expression_plan.expression,
-            value,
+            self_host_body_marker_scratch_value(module_, body, expression_plan.expression, subject, value),
             "match subject",
           )
         }
-        SelfHostPlannedExpressionKind::PlannedWhileExpression(loop_control, _, _) => if loop_control < control_states.length() {
+        SelfHostPlannedExpressionKind::PlannedWhileExpression(loop_control, initial, _) => if loop_control < control_states.length() {
           self_host_body_add_scratch(
             scratches,
             expression_plan.expression,
-            control_state_values[loop_control],
+            self_host_body_marker_scratch_value(module_, body, expression_plan.expression, initial, control_state_values[loop_control]),
             "loop state",
           )
         }
@@ -6200,7 +6200,7 @@ fn self_host_plan_physical_body_with_signature(
         SelfHostPlannedExpressionKind::PlannedProductField(_, _, _) => self_host_body_add_scratch(
           scratches,
           expression_plan.expression,
-          expression_plan.value,
+          self_host_body_marker_scratch_value(module_, body, expression_plan.expression, expression_plan.expression, expression_plan.value),
           "product projection",
         )
         SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => self_host_body_add_scratch(

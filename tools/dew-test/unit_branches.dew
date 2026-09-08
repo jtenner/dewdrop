@@ -26,7 +26,32 @@ pub fn main(which: U32, flag: Bool) -> I32 {
     9u32 => folded_false()
     10u32 => query_true()
     11u32 => query_false()
+    12u32 => unit_match_subject()
+    13u32 => unit_loop_state()
     _ => -1
+  }
+}
+
+fn unit_match_subject() -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  let matched = match mark(counter, ()) {
+    _ => 41
+  }
+  matched + counter.count
+}
+
+fn unit_loop_state() -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  while mark(counter, ()) {
+    _ => if counter.count < 3 {
+      continue mark(counter, ())
+    } else {
+      break counter.count + 39
+    }
   }
 }
 
