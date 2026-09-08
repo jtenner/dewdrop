@@ -1,0 +1,41 @@
+struct Empty {} derive(Debug)
+
+struct Point {
+  value: I32
+  active: Bool
+} derive(Debug)
+
+struct Envelope<t> {
+  value: t
+} derive(Debug)
+
+enum Event {
+  Idle
+  Pair(I64, Unit)
+  Named {
+    count: U32
+  }
+} derive(Debug)
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => debug(Empty::{})
+    1u32 => debug(Point::{
+      value: -17
+      active: true
+    })
+    2u32 => debug(Envelope::{
+      value: Point::{
+        value: 42
+        active: false
+      }
+    })
+    3u32 => debug(Event::Idle)
+    4u32 => debug(Event::Pair(-9i64, ()))
+    5u32 => debug(Event::Named::{
+      count: 19u32
+    })
+    _ => unreachable()
+  }
+  0i32
+}

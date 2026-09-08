@@ -531,11 +531,41 @@ fn derived_debug_utf8(value : String) -> Bytes {
 
 ///|
 fn derived_debug_write(value : Bytes, offset : UInt64) -> Expr {
-  CallExpr(
-    NameExpr("__dew_debug_write", offset),
-    [U32Expr(1UL, offset), BytesExpr(value, offset)],
-    offset,
-  )
+  // Formatting labels are static here. Build normal Dew stores and a call to
+  // the library's checked writer; no opaque Bytes transport is required.
+  let expressions : Array[Expr] = []
+  let mut start = 0
+  while start < value.length() {
+    let remaining = value.length() - start
+    let length = if remaining > 65520 { 65520 } else { remaining }
+    let mut cursor = 0
+    while cursor < length {
+      let mut word = 0UL
+      let lanes = if length - cursor > 8 { 8 } else { length - cursor }
+      for lane in 0..<lanes {
+        word = word |
+          (value[start + cursor + lane].to_uint().to_uint64() << (lane * 8))
+      }
+      expressions.push(
+        CallExpr(
+          NameExpr("u64_store", offset),
+          [U32Expr((16 + cursor).to_uint64(), offset), U64Expr(word, offset)],
+          offset,
+        ),
+      )
+      cursor += 8
+    }
+    expressions.push(
+      CallExpr(
+        NameExpr("__dew_debug_write_scratch", offset),
+        [U32Expr(16UL, offset), U32Expr(length.to_uint64(), offset)],
+        offset,
+      ),
+    )
+    start += length
+  }
+  expressions.push(U32Expr(value.length().to_uint64(), offset))
+  BlockExpr(derived_debug_block(expressions, offset))
 }
 
 ///|

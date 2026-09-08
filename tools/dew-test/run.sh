@@ -22,6 +22,7 @@ node tools/check-debug-vectors.mjs tools/dew-test/debug_vectors.wasm
 node tools/check-debug-swar.mjs tools/dew-test/debug_swar.wasm
 node tools/check-debug-unit.mjs tools/dew-test/debug_unit.wasm
 node tools/check-debug-bool.mjs tools/dew-test/debug_bool.wasm
+node tools/check-debug-derived.mjs tools/dew-test/debug_derived.wasm
 node tools/check-wasi-bytes.mjs tools/dew-test/wasi_bytes.wasm
 node tools/check-product-patterns.mjs tools/dew-test/product_patterns.wasm
 node tools/check-constructor-evaluations.mjs tools/dew-test/constructor_evaluations.wasm

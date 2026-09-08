@@ -17,6 +17,7 @@ import { debugVectorProbe } from "./debug-vector-cases.mjs";
 import { debugSwarProbe } from "./debug-swar-cases.mjs";
 import { debugUnitProbe } from "./debug-unit-cases.mjs";
 import { debugBoolProbe } from "./debug-bool-cases.mjs";
+import { debugDerivedProbe } from "./debug-derived-cases.mjs";
 import { wasiBytesProbe } from "./wasi-bytes-cases.mjs";
 import { checkProductPatterns } from "./product-pattern-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
@@ -162,6 +163,16 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const request = await readFile(".tmp/self-host-hardening/debug-derived.request.bin");
+  const probe = debugDerivedProbe();
+  const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request", probe.imports);
+  console.log(`self-host derived Debug checks passed: ${probe.check(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host derived Debug corpus failed", error);
+}
 try {
   const start = performance.now();
   const request = await readFile(".tmp/self-host-hardening/debug-bool.request.bin");

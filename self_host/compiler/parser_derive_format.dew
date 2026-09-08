@@ -1,4 +1,5 @@
 open dew.std.array
+open dew.std.bytes
 open dew.std.option
 open dew.std.string
 
@@ -45,14 +46,46 @@ fn self_host_derived_debug_write(
   value: Bytes,
   offset: U32,
 ) -> SelfHostExpr {
-  SelfHostExpr::CallExpr(
-    SelfHostExpr::NameExpr("__dew_debug_write", offset),
-    [
-      SelfHostExpr::U32Expr(1u64, offset),
-      SelfHostExpr::BytesExpr(value, offset),
-    ],
-    offset,
-  )
+  // Static labels become ordinary Dew stores and checked library writes.
+  let expressions = []
+  let _ = while 0u32 {
+    start if start < value.byte_length() => {
+      let remaining = value.byte_length() - start
+      let length = if remaining > 65520u32 {
+        65520u32
+      } else {
+        remaining
+      }
+      let _ = while 0u32 {
+        cursor if cursor < length => {
+          let mut word = 0u64
+          let _ = while 0u32 {
+            lane if lane < 8u32 && lane < length - cursor => {
+              word = word | (u8_into_u64(value.byte_at(start + cursor + lane)) << u32_into_u64(lane * 8u32))
+              continue lane + 1u32
+            }
+            _ => break self_host_semantic_unit()
+          }
+          expressions.push(SelfHostExpr::CallExpr(
+            SelfHostExpr::NameExpr("u64_store", offset),
+            [SelfHostExpr::U32Expr(u32_into_u64(16u32 + cursor), offset), SelfHostExpr::U64Expr(word, offset)],
+            offset,
+          ))
+          continue cursor + 8u32
+        }
+        _ => break self_host_semantic_unit()
+      }
+      expressions.push(SelfHostExpr::CallExpr(
+        SelfHostExpr::NameExpr("__dew_debug_write_scratch", offset),
+        [SelfHostExpr::U32Expr(16u64, offset), SelfHostExpr::U32Expr(u32_into_u64(length), offset)],
+        offset,
+      ))
+      continue start + length
+    }
+    _ => break self_host_semantic_unit()
+  }
+  expressions.push(SelfHostExpr::U32Expr(u32_into_u64(value.byte_length()), offset))
+  SelfHostExpr::BlockExpr(self_host_derived_expression_list_block(expressions, offset))
 }
 
 fn self_host_derived_debug_text(
