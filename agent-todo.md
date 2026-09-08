@@ -186,8 +186,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   with checked foreign writes for every part. See the
   [packed Debug log](docs/research/debug-swar-library-2026-09-07.md).
   Unit output also uses direct Dew ASCII stores and the checked foreign loop;
-  argument effects still run once. Bool and test assertions still use the old
-  write transport. See the [Unit log](docs/research/debug-unit-library-2026-09-07.md).
+  argument effects still run once. See the
+  [Unit log](docs/research/debug-unit-library-2026-09-07.md).
+  Bool formatting also uses Dew ASCII stores and checked foreign writes. No
+  primitive Debug implementation calls the old write builtin now, but the
+  test-assertion dependency builder still needs its declaration. See the
+  [Bool log](docs/research/debug-bool-library-2026-09-07.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap

@@ -1,0 +1,32 @@
+struct DebugBoolTrace {
+  mut count: U32
+}
+
+fn debug_bool_effect(trace: DebugBoolTrace) -> Bool {
+  trace.count = trace.count + 1u32
+  false
+}
+
+fn debug_bool_generic<t: Debug>(value: t) -> Unit {
+  debug(value)
+}
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => debug(true)
+    1u32 => debug(false)
+    2u32 => debug_bool_generic(true)
+    3u32 => debug_bool_generic(false)
+    4u32 => {
+      let trace = DebugBoolTrace::{
+        count: 0u32
+      }
+      debug_bool_generic(debug_bool_effect(trace))
+      if trace.count != 1u32 {
+        unreachable()
+      }
+    }
+    _ => unreachable()
+  }
+  0i32
+}

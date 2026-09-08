@@ -174,11 +174,21 @@ impl Debug for Unit {
 
 impl Debug for Bool {
   fn debug(self) -> Unit {
-    __dew_debug_ignore(if self {
-      __dew_debug_write(1u32, b"true")
+    let length = if self {
+      u8_store(16u32, 116u8)
+      u8_store(17u32, 114u8)
+      u8_store(18u32, 117u8)
+      u8_store(19u32, 101u8)
+      4u32
     } else {
-      __dew_debug_write(1u32, b"false")
-    })
+      u8_store(16u32, 102u8)
+      u8_store(17u32, 97u8)
+      u8_store(18u32, 108u8)
+      u8_store(19u32, 115u8)
+      u8_store(20u32, 101u8)
+      5u32
+    }
+    __dew_debug_ignore(__dew_debug_write_scratch(16u32, length))
   }
 }
 
