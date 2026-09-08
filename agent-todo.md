@@ -387,6 +387,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   function rename now keeps identical code bytes. Other name-based recovery
   remains. See the
   [temporary name log](docs/research/temporary-local-name-removal-2026-09-08.md).
+  Raw `array.new` length temporaries now retain frozen I32 evidence and the
+  source logical type. Proved Never arguments stop the evaluation prefix and
+  prevent allocation emission. Both compilers also preserve declared results
+  when a forwarding body diverges. Exact slots and other temporary kinds
+  remain open. See the
+  [raw temporary log](docs/research/raw-array-temporary-plans-2026-09-08.md).
   Object constructor emission now uses a checked exact field-ID recipe, with
   separate source evaluation and physical load order. Missing or different IDs
   cannot be repaired by names or tentative carriers. Recipe freeze and nominal

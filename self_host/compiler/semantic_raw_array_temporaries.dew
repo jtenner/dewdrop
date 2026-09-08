@@ -1,0 +1,53 @@
+// Both callers have checked the body arena before reading the instruction.
+fn self_host_raw_array_length_expression(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, phase: U32) -> U32 {
+  let _ = self_host_body_expression_slot(body, expression)
+  let arguments = match module_.expressions[expression].kind {
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, _, _, arguments, _) => if name.equals(b"array_new") {
+      arguments
+    } else {
+      self_host_physical_scratch_failure(module_, body, expression, phase, 606u32, 1u64, 0u64, 0u64)
+    }
+    _ => self_host_physical_scratch_failure(module_, body, expression, phase, 606u32, 1u64, 0u64, 0u64)
+  }
+  if !self_host_array_span_is_valid(arguments.start, arguments.length, module_.expression_children.length()) {
+    self_host_physical_scratch_failure(module_, body, expression, phase, 101u32,
+      u32_into_u64(module_.expression_children.length()), u32_into_u64(arguments.length), u32_into_u64(arguments.start))
+  }
+  if arguments.length != 2u32 {
+    self_host_physical_scratch_failure(module_, body, expression, phase, 703u32, 2u64, u32_into_u64(arguments.length), 0u64)
+  }
+  let source = module_.expression_children[arguments.start]
+  let _ = self_host_body_expression_slot(body, source)
+  source
+}
+
+fn self_host_raw_array_length_value(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, source: U32, value: SelfHostPlannedPhysicalValueInfo, phase: U32) -> SelfHostPlannedPhysicalValueInfo {
+  if value.carrier is SelfHostWasmBodyCarrier::I32BodyCarrier {
+    return value
+  }
+  if value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier && !module_.expressions[source].flow.falls_through {
+    // The source never reaches a store. Reserve the instruction's I32 slot;
+    // the existing Never evaluation prefix still prevents array allocation.
+    return self_host_body_value_with_carrier(value, SelfHostWasmBodyCarrier::I32BodyCarrier)
+  }
+  self_host_physical_scratch_failure(module_, body, expression, phase, 710u32,
+    self_host_body_carrier_code(SelfHostWasmBodyCarrier::I32BodyCarrier), self_host_body_carrier_code(value.carrier), 0u64)
+}
+
+fn self_host_plan_raw_array_temporary(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>, scratches: Array<SelfHostPlannedPhysicalScratchCarrier>) -> Unit {
+  let source = self_host_raw_array_length_expression(module_, body, expression, 6u32)
+  let value = self_host_raw_array_length_value(module_, body, expression, source,
+    expressions[self_host_body_expression_slot(body, source)].value, 6u32)
+  self_host_body_add_scratch(scratches, expression, value, "raw array length")
+}
+
+fn self_host_raw_array_length_scratch(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32) -> SelfHostPlannedPhysicalValueInfo {
+  let plan = self_host_physical_scratch_body(canonical, module_, body, expression, 0u32)
+  let source = self_host_raw_array_length_expression(module_, body, expression, 7u32)
+  let value = match self_host_body_plan_expression(plan, source) {
+    Option::Some(value) => value.value
+    Option::None => self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, 0u64)
+  }
+  let expected = self_host_raw_array_length_value(module_, body, expression, source, value, 7u32)
+  self_host_require_physical_scratch(plan, module_, body, expression, 0u32, expected.carrier)
+}

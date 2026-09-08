@@ -6159,6 +6159,9 @@ fn self_host_plan_physical_body_with_signature(
         SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => self_host_plan_constructor_scratches(
           module_, body, expression_plan.expression, fields, expressions, scratches,
         )
+        SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, _, _, _, _) => if name.equals(b"array_new") {
+          self_host_plan_raw_array_temporary(module_, body, expression_plan.expression, expressions, scratches)
+        }
         SelfHostPlannedExpressionKind::PlannedMatchExpression(subject, _) => {
           let value = if subject >= body.expressions.start && subject < expression_end {
             expressions[self_host_body_expression_slot(body, subject)].value

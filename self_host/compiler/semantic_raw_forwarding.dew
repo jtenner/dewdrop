@@ -132,7 +132,12 @@ fn self_host_raw_forwarding_builtin(
     SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => value
     _ => return Option::None
   }
-  if expression < body.expressions.start || expression - body.expressions.start >= body.expressions.length {
+  if expression >= module_.expressions.length() || expression < body.expressions.start || expression - body.expressions.start >= body.expressions.length {
+    return Option::None
+  }
+  // A Never body is valid at any declared result type. Replacing its caller
+  // with the opcode would instead replace that declared result contract.
+  if module_.expressions[expression].shape is SelfHostPlannedValueShape::NeverPlannedValueShape && !(callable.result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) {
     return Option::None
   }
   let unwrapped = self_host_raw_strip_identity_casts(lowering, module_, body.expressions, expression)

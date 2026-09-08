@@ -2497,8 +2497,14 @@ fn wasmgc_direct_builtin_of(
     PlannedExpressionItem(expression) => expression
     PlannedLetItem(_, _, _) | PlannedElidedLetItem(_) => return b""
   }
-  if expression < body.expressions.start ||
+  if expression < 0 || expression >= lowering.expressions.length() ||
+    expression < body.expressions.start ||
     expression - body.expressions.start >= body.expressions.length {
+    return b""
+  }
+  // Divergence in the body does not replace the callable's declared result.
+  if lowering.expressions[expression].shape is NeverPlannedValueShape &&
+    !(callable.result_shape is NeverPlannedValueShape) {
     return b""
   }
   let unwrapped = wasmgc_strip_carrier_identity_casts(

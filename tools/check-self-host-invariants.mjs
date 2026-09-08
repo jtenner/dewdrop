@@ -11,6 +11,20 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["BOD-610 raw array allocation requires a body plan", 610, 1n, 0n, 0n],
+    ["BOD-610 raw array length temporaries cannot be missing", 610, 1n, 0n, 0n],
+    ["BOD-610 raw array length temporaries must be unique", 610, 1n, 2n, 0n],
+    ["ABI-710 raw array length temporaries retain I32 storage", 710, 4n, 5n, 0n],
+    ["ABI-710 raw array length carrier copies must agree", 710, 4n, 5n, 0n],
+    ["BOD-605 frozen raw array length temporaries retain their type", 605, 4n, 5n, 133n << 32n],
+    ["BOD-610 Unit is not a physical temporary type", 610, 1n, 2n, 0n],
+    ["BOD-610 Never is not a physical temporary type", 610, 1n, 3n, 0n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, (5100n << 32n) | 3n, 5100n << 32n,
+      3, expected, actual, detail],
+  })),
+  ...[
     ["BOD-610 constructor temporary records cannot be missing", 610, 1n, 0n, 2n],
     ["BOD-610 constructor emission requires a body plan", 610, 1n, 0n, 0n],
     ["BOD-610 constructor temporary records must be unique", 610, 1n, 2n, 0n],

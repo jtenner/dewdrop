@@ -1,0 +1,22 @@
+test "raw forwarding keeps declared scalar reference and Unit results" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin trap() -> Never = \"unreachable\"\nstruct Box {}\nfn scalar() -> I64 {\n  trap()\n}\nfn reference() -> Box {\n  trap()\n}\nfn effect() -> Unit {\n  trap()\n}\nfn never() -> Never {\n  trap()\n}\npub fn main() -> I64 {\n  42i64\n}\n",
+  )
+  let lowering = fragments.specialization.lowering
+  let module_ = lowering.modules[0u32]
+  let mut checked = 0u32
+  for callable in module_.functions.callables {
+    if callable.name.equals(b"scalar") || callable.name.equals(b"reference") || callable.name.equals(b"effect") {
+      assert(self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) is Option::None,
+        "a nonreturning body cannot replace the declared result with a builtin result")
+      checked = checked + 1u32
+    } else if callable.name.equals(b"never") {
+      match self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) {
+        Option::Some(name) => assert(name.equals(b"unreachable"), "declared Never keeps the exact opcode")
+        Option::None => assert(false, "valid Never forwarding remains supported")
+      }
+      checked = checked + 1u32
+    }
+  }
+  assert(checked == 4u32, "all four declared results were checked")
+}

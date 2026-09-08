@@ -17745,6 +17745,9 @@ fn self_host_emit_linked_i32_expression(
                 continue tasks.length()
               }
               if name.equals(b"array_new") {
+                if self_host_linked_schedule_raw_array_never_prefix(canonical_body_plan, link, module_, body, caller_specialization, expression, tasks, expression_depths, destination, depth) {
+                  continue tasks.length()
+                }
                 if !self_host_u32_equal(arguments.length, 2u32) ||
                   self_host_u32_add(arguments.start, 1u32) >= module_.expression_children.length() {
                   return Option::Some("linked raw array new needs length and value")
@@ -31454,7 +31457,8 @@ fn self_host_linked_scalar_locals(
           }
         }
         SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, _, _, _, _) => if name.equals(b"array_new") {
-          if !self_host_linked_scalar_append_local_type(locals, SelfHostPlannedValueShape::I32PlannedValueShape) {
+          let value = self_host_raw_array_length_scratch(canonical_body_plan, module_, body, expression)
+          if !self_host_linked_scalar_append_local_type(locals, self_host_body_carrier_shape(value.carrier)) {
             return Result::Err("linked raw array length scratch type is unsupported")
           }
         }

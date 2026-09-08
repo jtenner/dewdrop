@@ -1,0 +1,126 @@
+fn self_host_raw_array_temporary_fixture() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub struct Storage<t> {}\nbuiltin allocate<t>(length: U32, value: t) -> Storage<t> = \"array_new\"\nbuiltin read<t>(value: Storage<t>, index: U32) -> t = \"array_get\"\npub fn main() -> I64 {\n  let storage = allocate(1u32, 42i64)\n  read(storage, 0u32)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid raw array temporary source")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  assert(program.bodies.length() == 1u32, "one emitted raw array caller")
+  assert(program.bodies[0u32].declaration == ((5100u64 << 32u64) | 3u64), "stable raw array caller identity")
+  assert(program.bodies[0u32].body == (5100u64 << 32u64), "stable raw array body identity")
+  (link, program.bodies[0u32])
+}
+
+test "raw array allocation length has a frozen I32 temporary" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let mut allocations = 0u32
+  for expression in plan.expressions {
+    match module_.expressions[expression.expression].kind {
+      SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, _, _, arguments, _) => if name.equals(b"array_new") {
+        assert(expression.expression == 3u32, "stable raw allocation expression")
+        assert(arguments.length == 2u32, "length and initializer evaluations")
+        match self_host_body_plan_scratch_value(plan, expression.expression, 0u32) {
+          Option::Some(value) => {
+            assert(value.carrier is SelfHostWasmBodyCarrier::I32BodyCarrier, "length has an I32 stack value")
+            let length = module_.expression_children[arguments.start]
+            match self_host_body_plan_expression(plan, length) {
+              Option::Some(source) => assert(value.logical_type == source.value.logical_type, "temporary retains the length type, not the array result type")
+              Option::None => assert(false, "missing length expression")
+            }
+          }
+          Option::None => assert(false, "raw array length temporary is missing from the physical plan")
+        }
+        allocations = allocations + 1u32
+      }
+      _ => {}
+    }
+  }
+  assert(allocations == 1u32 && plan.scratches.length() == 1u32, "one exact length temporary")
+}
+
+fn self_host_test_raw_array_temporary_source(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> (SelfHostPlannedModuleLowering, SelfHostPlannedBodyLowering) {
+  let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+  let body = match self_host_body_lookup_for_plan(module_, plan) {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  (module_, body)
+}
+
+fn self_host_test_change_raw_array_temporary(plan: SelfHostPlannedPhysicalBodyCarrierPlan, mirrored: Bool) -> Unit {
+  assert(plan.scratches.length() == 1u32, "one valid temporary before mutation")
+  let original = plan.scratches[0u32]
+  assert(original.expression == 3u32, "raw allocation temporary identity")
+  plan.scratches[0u32] = SelfHostPlannedPhysicalScratchCarrier::{
+    expression: original.expression
+    ordinal: original.ordinal
+    value: if mirrored {
+      original.value
+    } else {
+      self_host_body_value_with_carrier(original.value, SelfHostWasmBodyCarrier::I64BodyCarrier)
+    }
+    carrier: if mirrored {
+      SelfHostWasmBodyCarrier::I64BodyCarrier
+    } else {
+      original.carrier
+    }
+    context: original.context
+  }
+}
+
+test "BOD-610 raw array allocation requires a body plan" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let _ = self_host_raw_array_length_scratch(Option::None, module_, body, 3u32)
+}
+
+test "BOD-610 raw array length temporaries cannot be missing" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let _ = plan.scratches.pop()
+  let _ = self_host_raw_array_length_scratch(Option::Some(plan), module_, body, 3u32)
+}
+
+test "BOD-610 raw array length temporaries must be unique" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  plan.scratches.push(plan.scratches[0u32])
+  let _ = self_host_raw_array_length_scratch(Option::Some(plan), module_, body, 3u32)
+}
+
+test "ABI-710 raw array length temporaries retain I32 storage" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  self_host_test_change_raw_array_temporary(plan, false)
+  let _ = self_host_raw_array_length_scratch(Option::Some(plan), module_, body, 3u32)
+}
+
+test "ABI-710 raw array length carrier copies must agree" expect_trap "unreachable" {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  self_host_test_change_raw_array_temporary(plan, true)
+  let _ = self_host_raw_array_length_scratch(Option::Some(plan), module_, body, 3u32)
+}
+
+test "BOD-605 frozen raw array length temporaries retain their type" expect_trap "unreachable" {
+  let (_, plan) = self_host_raw_array_temporary_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_raw_array_temporary(plan, false)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+fn self_host_test_nonphysical_temporary_type(carrier: SelfHostWasmBodyCarrier) -> Unit {
+  let (link, plan) = self_host_raw_array_temporary_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let _ = self_host_require_physical_scratch(plan, module_, body, 3u32, 0u32, carrier)
+}
+
+test "BOD-610 Unit is not a physical temporary type" expect_trap "unreachable" {
+  self_host_test_nonphysical_temporary_type(SelfHostWasmBodyCarrier::UnitBodyCarrier)
+}
+
+test "BOD-610 Never is not a physical temporary type" expect_trap "unreachable" {
+  self_host_test_nonphysical_temporary_type(SelfHostWasmBodyCarrier::NeverBodyCarrier)
+}

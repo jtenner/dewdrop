@@ -44,6 +44,7 @@ import { checkTypeQueries } from "./type-query-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { checkGenericQueryOrder } from "./generic-query-order-cases.mjs";
 import { checkTemporaryLocalLayout } from "./temporary-local-layout-cases.mjs";
+import { checkRawArrayTemporaryFlow } from "./raw-array-temporary-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
@@ -173,6 +174,16 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const count = await checkRawArrayTemporaryFlow((source, inspect) => compileProbeBytes(
+    new TextEncoder().encode(source), "self_host_emission_probe_compile_source", unusedImports, inspect,
+  ));
+  console.log(`self-host raw array temporary flow checks passed: ${count} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host raw array temporary flow checks failed", error);
+}
 try {
   const start = performance.now();
   const count = await checkTemporaryLocalLayout((source, inspect) => compileProbeBytes(

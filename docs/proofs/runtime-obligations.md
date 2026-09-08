@@ -477,6 +477,17 @@ use the same verification and freeze boundary. This establishes retained
 constructor temporary evidence, not complete temporary slot or reference-type
 soundness. See [the temporary plan log](../research/constructor-temporary-plans-2026-09-08.md).
 
+## Raw array temporary evidence
+
+Raw `array.new` length temporaries use the same retained-evidence consumer as
+constructor fields. The frozen record keeps the source length type. A Never
+argument contributes flow evidence, not an operand: the emitter evaluates only
+the prefix through that argument and emits no allocation opcode. Both compilers
+also decline raw forwarding that would replace a declared value/Unit result
+with a Never opcode contract. These checks do not prove every raw instruction
+recipe or full temporary layout. See
+[the raw temporary log](../research/raw-array-temporary-plans-2026-09-08.md).
+
 ## Physical call target updates
 
 A missing call target can become known. A known target can only be repeated;
