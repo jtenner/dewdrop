@@ -160,14 +160,6 @@ EXTRA_DECLARATIONS = [
         signature="(value: Bytes, start: U32) -> U8x16",
         target="dew_bytes_load_u8x16",
     ),
-    IntrinsicDeclaration(
-        source="WasmGC text representation bridges",
-        name="string_load_u8x16",
-        alias="wasm_string_load_u8x16",
-        generics="",
-        signature="(value: String, start: U32) -> U8x16",
-        target="dew_string_load_u8x16",
-    ),
 ]
 
 
@@ -271,6 +263,13 @@ def rendered_intrinsics() -> tuple[str, int, int]:
             lines.append(f"// {declaration.source}")
             previous_source = declaration.source
         lines.append(declaration.render())
+    lines.extend([
+        "",
+        "// Library conversion; only the shared Bytes storage bridge remains.",
+        "pub fn wasm_string_load_u8x16(value: String, start: U32) -> U8x16 {",
+        "  wasm_bytes_load_u8x16(__dew_text_bytes(value), start)",
+        "}",
+    ])
     return "\n".join(lines).rstrip() + "\n", len(declarations), len(backend_names)
 
 

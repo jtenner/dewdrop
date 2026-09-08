@@ -149,6 +149,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   The pinned provider's 13 old String algorithms and unused private builders
   are removed too. Text storage remains separate work. See the
   [provider log](docs/research/string-provider-removal-2026-09-07.md).
+  String SIMD access now uses an ordinary Dew conversion and the shared Bytes
+  load. The separate native/provider String SIMD entry is removed; the Bytes
+  storage bridge remains. See the
+  [SIMD access log](docs/research/string-simd-library-access-2026-09-08.md).
   String pattern inference now selects the ordinary Eq method and keeps the
   literal's String type. Lowering and specialization retain that evidence.
   Self-host physical call recipes now retain the cached subject and literal and

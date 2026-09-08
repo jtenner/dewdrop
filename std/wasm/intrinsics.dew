@@ -36,7 +36,6 @@ pub builtin wasm_u32_popcnt(value: U32) -> U32 = "i32.popcnt"
 
 // WasmGC text representation bridges
 pub builtin wasm_bytes_load_u8x16(value: Bytes, start: U32) -> U8x16 = "dew_bytes_load_u8x16"
-pub builtin wasm_string_load_u8x16(value: String, start: U32) -> U8x16 = "dew_string_load_u8x16"
 
 // std/f32x4.dew
 pub builtin wasm_f32x4_not(value: F32x4) -> F32x4 = "v128.not"
@@ -1393,4 +1392,9 @@ pub fn wasm_u8x8_or(left: U8x8, right: U8x8) -> U8x8 {
 }
 pub fn wasm_u8x8_xor(left: U8x8, right: U8x8) -> U8x8 {
   unsafe_bitcast::<U64, U8x8>(u64_xor(unsafe_bitcast::<U8x8, U64>(left), unsafe_bitcast::<U8x8, U64>(right)))
+}
+
+// Library conversion; only the shared Bytes storage bridge remains.
+pub fn wasm_string_load_u8x16(value: String, start: U32) -> U8x16 {
+  wasm_bytes_load_u8x16(__dew_text_bytes(value), start)
 }

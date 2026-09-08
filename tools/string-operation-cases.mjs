@@ -14,5 +14,15 @@ export function checkStringOperations(main) {
       error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
     `String byte access rejects an out-of-range index: ${index}`);
   }
-  return labels.length + 3;
+  for (const [index, label] of [[13, "SIMD loads preserve logical view bounds"],
+    [14, "SIMD arguments run once in source order"],
+    [15, "SIMD library access works through a returned function"]]) {
+    assert.equal(main(index), 1, `String ${label}`);
+  }
+  for (const index of [16, 17, 18]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `String SIMD access rejects an out-of-range index: ${index}`);
+  }
+  return labels.length + 9;
 }

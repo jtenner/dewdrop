@@ -2,6 +2,25 @@ open dew.std.preamble
 open dew.std.string
 open dew.std.bytes
 open dew.std.option
+open dew.std.wasm.intrinsics
+
+struct StringLoadLog {
+  mut order: U32
+}
+
+fn string_load_source(log: StringLoadLog) -> String {
+  log.order = log.order * 10u32 + 1u32
+  "xx0123456789abcdef-yy".view(2u32, 17u32).to_string()
+}
+
+fn string_load_index(log: StringLoadLog) -> U32 {
+  log.order = log.order * 10u32 + 2u32
+  1u32
+}
+
+fn string_load_function() -> fn(String, U32) -> U8x16 {
+  wasm_string_load_u8x16
+}
 
 struct StringLabel {
   name: String
@@ -85,6 +104,30 @@ pub fn main(case: U32) -> I32 {
     0i32
   } else if case == 12u32 {
     "".byte_at(0u32)
+    0i32
+  } else if case == 13u32 {
+    let source = "xx0123456789abcdef-yy".view(2u32, 17u32).to_string()
+    let aligned = wasm_string_load_u8x16(source, 0u32)
+    let unaligned = wasm_string_load_u8x16(source, 1u32)
+    string_result(wasm_u8x16_extract_0(aligned) == 48u8 && wasm_u8x16_extract_15(aligned) == 102u8 && wasm_u8x16_extract_0(unaligned) == 49u8 && wasm_u8x16_extract_15(unaligned) == 45u8)
+  } else if case == 14u32 {
+    let log = StringLoadLog::{
+      order: 0u32
+    }
+    let loaded = wasm_string_load_u8x16(string_load_source(log), string_load_index(log))
+    string_result(log.order == 12u32 && wasm_u8x16_extract_0(loaded) == 49u8 && wasm_u8x16_extract_15(loaded) == 45u8)
+  } else if case == 15u32 {
+    let load = string_load_function()
+    let loaded = load("0123456789abcdef", 0u32)
+    string_result(wasm_u8x16_extract_0(loaded) == 48u8 && wasm_u8x16_extract_15(loaded) == 102u8)
+  } else if case == 16u32 {
+    wasm_string_load_u8x16("0123456789abcdef", 1u32)
+    0i32
+  } else if case == 17u32 {
+    wasm_string_load_u8x16("0123456789abcdef", 4294967295u32)
+    0i32
+  } else if case == 18u32 {
+    wasm_string_load_u8x16("", 0u32)
     0i32
   } else {
     unreachable()
