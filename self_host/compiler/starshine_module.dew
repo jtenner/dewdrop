@@ -33985,24 +33985,10 @@ fn build_self_host_linked_i32_module(
           }
           SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _) => {}
           SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => {
-            let carrier = self_host_linked_runtime_function_carrier(
-              link,
-              linked_function,
-              fragment_module,
-              fragment,
-            )
             if !self_host_linked_append_runtime_function(
               link,
               functions,
               name,
-              carrier,
-              self_host_linked_runtime_second_carrier(
-                link,
-                linked_function,
-                fragment_module,
-                fragment,
-                carrier,
-              ),
             ) {
               return Result::Err(bytes_to_string(name))
             }

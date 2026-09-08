@@ -97,14 +97,18 @@ Correctness comes first. Keep these timing defects visible after query completio
   only literal construction and planning heuristics remain in this cleanup.
   See the [method emission log](docs/research/array-method-emission-removal-2026-09-07.md).
   The pinned provider's old Array algorithms and three unused instruction
-  exports are removed too. Shared Map layout helpers remain for its separate
-  provider cleanup. See the
+  exports are removed too. The shared Map layout helpers are also gone after
+  its separate provider cleanup. See the
   [provider removal log](docs/research/array-provider-removal-2026-09-07.md).
 - [x] Move Map hashing, buckets, growth, lookup, and iteration into Dew. Typed
   entries preserve aliases, cached hashes avoid repeated user calls during
   growth, and all 12 shared native/self-host checks pass. Native Map IR and
   self-host Map runtime emitters are removed. The clean B/C fixed point passes.
   See the [Map log](docs/research/map-library-storage-2026-09-06.md).
+  The unused pinned-provider Map algorithms are removed too, including their
+  Array layout helpers. The provider constructor no longer accepts collection
+  carrier or Option layout arguments. See the
+  [provider log](docs/research/map-bridge-removal-2026-09-07.md).
 - [x] Move Set storage and iteration into Dew using Map with Unit values.
   Eight shared checks pass in both compilers. Special Set inference/layout/IR,
   the remaining native hash-table runtime, and its extra target arrays are gone.
@@ -177,7 +181,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.
   Include the pinned Starshine `src/ffi_bridge` runtime copies in each removal;
-  several old text and Map algorithms still exist there after native cleanup.
+  several old text algorithms still exist there after native cleanup.
 
 ### Finish the compiler correctness audit
 

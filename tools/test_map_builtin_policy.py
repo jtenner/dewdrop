@@ -9,6 +9,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class MapBuiltinPolicyTests(unittest.TestCase):
+    def test_provider_has_no_old_map_or_array_layout(self):
+        for path in (ROOT / "starshine-mb/src/ffi_bridge").glob("*.mbt"):
+            if path.name.endswith("test.mbt"):
+                continue
+            source = path.read_text()
+            for name in ("dew_map_", "bridge_map_", "bridge_array_"):
+                with self.subTest(path=path.name, name=name):
+                    self.assertTrue(name not in source, f"{path.name} retains {name}")
+        interface = (ROOT / "starshine-mb/src/ffi_bridge/pkg.generated.mbti").read_text()
+        self.assertTrue(
+            "pub fn runtime_function_builder_new(Int, Int, Int) -> RuntimeFunctionBuilder" in interface,
+            "the runtime builder must not accept obsolete collection carrier/layout arguments",
+        )
+
     def test_declared_storage_and_ordinary_functions(self):
         source = (ROOT / "std/map.dew").read_text()
         self.assertIn("pub struct Map<key, value>", source)

@@ -767,8 +767,6 @@ fn self_host_linked_append_runtime_function(
   link: SelfHostPlannedProgramWasmGCLink,
   functions: StarshineFunctions,
   name: Bytes,
-  carrier: I32,
-  second_carrier: I32,
 ) -> Bool {
   if name == b"dew_bytes_to_string_unchecked" || name == b"dew_string_view_as_bytes" || name == b"dew_string_as_bytes" {
     let target_offset = if name == b"dew_bytes_to_string_unchecked" {
@@ -796,10 +794,6 @@ fn self_host_linked_append_runtime_function(
     self_host_u32_to_i32(self_host_linked_text_runtime_base(link)),
     -1i32,
     6i32,
-    carrier,
-    second_carrier,
-    self_host_linked_option_none_type_index(link),
-    self_host_linked_option_some_type_index(link, second_carrier),
   )
   self_host_linked_append_runtime_function_name(builder, name)
   StarshineFfi.ffi_ffi_bridge_funcs_push_runtime(functions, builder) != 0i32
