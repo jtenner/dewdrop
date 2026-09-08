@@ -7,12 +7,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DebugTextPolicyTests(unittest.TestCase):
+    def test_bytes_formatter_is_a_dew_function(self):
+        source = (ROOT / "std/preamble/110-debug.dew").read_text()
+        self.assertRegex(source, r"(?m)^pub fn __dew_debug_bytes\(")
+        self.assertNotRegex(source, r"(?m)^(?:pub )?builtin __dew_debug_bytes\(")
+
+    def test_private_formatter_and_write_builders_are_removed(self):
+        for path in ["src/backend/starshine_wasi_runtime.mbt",
+                     "starshine-mb/src/ffi_bridge/wasi_runtime.mbt"]:
+            with self.subTest(path=path):
+                self.assertFalse((ROOT / path).exists(), "obsolete runtime file remains")
+
     def test_string_formatter_is_a_dew_function(self):
         source = (ROOT / "std/preamble/110-debug.dew").read_text()
         self.assertRegex(source, r"(?m)^pub fn __dew_debug_string\(")
         self.assertNotRegex(source, r"(?m)^(?:pub )?builtin __dew_debug_string\(")
 
-    def test_string_runtime_entry_is_removed(self):
+    def test_text_runtime_entries_are_removed(self):
         for path in [
             "src/backend/starshine_text_runtime.mbt",
             "starshine-mb/src/ffi_bridge/text_runtime.mbt",
@@ -20,7 +31,9 @@ class DebugTextPolicyTests(unittest.TestCase):
             "self_host/compiler/semantic_program_link_plan.dew",
         ]:
             with self.subTest(path=path):
-                self.assertNotIn('"dew_debug_string"', (ROOT / path).read_text())
+                source = (ROOT / path).read_text()
+                self.assertNotIn('"dew_debug_string"', source)
+                self.assertNotIn('"dew_debug_bytes"', source)
 
 
 if __name__ == "__main__":

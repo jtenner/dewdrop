@@ -24,9 +24,7 @@ class DebugFloatPolicyTests(unittest.TestCase):
                 self.assertIsNotNone(re.search(rf"\bfn\s+__dew_debug_{kind}\(", source))
 
     def test_compiler_float_formatting_is_removed(self):
-        for path in ("src/backend/starshine_wasi_runtime.mbt",
-                     "src/backend/starshine_text_runtime.mbt",
-                     "starshine-mb/src/ffi_bridge/wasi_runtime.mbt",
+        for path in ("src/backend/starshine_text_runtime.mbt",
                      "starshine-mb/src/ffi_bridge/text_runtime.mbt",
                      "src/semantic/wasmgc_fragment_plan.mbt",
                      "self_host/compiler/semantic_program_link_plan.dew"):

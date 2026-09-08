@@ -203,7 +203,9 @@ pub fn __dew_debug_quoted_text(value: Bytes, bytes: Bool) -> U32 {
 pub fn __dew_debug_string(value: String) -> U32 {
   __dew_debug_quoted_text(__dew_text_bytes(value), false)
 }
-pub builtin __dew_debug_bytes(value: Bytes) -> U32 = "dew_debug_bytes"
+pub fn __dew_debug_bytes(value: Bytes) -> U32 {
+  __dew_debug_quoted_text(value, true)
+}
 pub builtin __dew_debug_v128_low(value: V128) -> U64 = "i64x2.extract_lane 0"
 pub builtin __dew_debug_v128_high(value: V128) -> U64 = "i64x2.extract_lane 1"
 

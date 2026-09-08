@@ -1083,9 +1083,6 @@ fn emit_starshine_program_code_section(
               emit_starshine_text_runtime_function(
                 name,
                 planned.type_count,
-                planned.imported_function_index(
-                  b"wasi_snapshot_preview1.fd_write",
-                ),
               ) {
               Some(function_body) => functions.push(function_body)
               None => return Err(UnsupportedBuiltin(name))

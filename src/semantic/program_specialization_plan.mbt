@@ -72,44 +72,6 @@ fn program_variant_declaration(
 }
 
 ///|
-fn program_add_named_callable_root(
-  lowering : PlannedProgramLowering,
-  name : Bytes,
-  reachable : Map[DeclId, Bool],
-) -> Bool {
-  for module_ in lowering.modules {
-    for callable in module_.functions.callables {
-      match callable.kind {
-        PlannedBuiltinCallable(candidate) =>
-          if candidate == name {
-            if reachable.contains(callable.declaration) {
-              return false
-            }
-            reachable[callable.declaration] = true
-            return true
-          }
-        PlannedForeignCallable(namespace, field, true) => {
-          let identity : WasmImportIdentity = {
-            module_name: namespace,
-            field,
-            kind: ForeignHostWasmImport,
-          }
-          if identity.lookup_name() == name {
-            if reachable.contains(callable.declaration) {
-              return false
-            }
-            reachable[callable.declaration] = true
-            return true
-          }
-        }
-        _ => ()
-      }
-    }
-  }
-  false
-}
-
-///|
 fn program_enqueue_expression_evidence(
   lowering : PlannedProgramLowering,
   module_ : PlannedModuleLowering,
@@ -292,27 +254,6 @@ fn program_reachable_callable_roots(
         }
         reachable[target] = true
         work.push(target)
-      }
-    }
-  }
-  let mut runtime_changed = true
-  while runtime_changed {
-    runtime_changed = false
-    for module_ in lowering.modules {
-      for callable in module_.functions.callables {
-        if !reachable.contains(callable.declaration) {
-          continue
-        }
-        match callable.kind {
-          PlannedBuiltinCallable(name) =>
-            if wasmgc_builtin_is_debug_runtime(name) {
-              runtime_changed = program_add_named_callable_root(
-                  lowering, b"wasi_snapshot_preview1.fd_write", reachable,
-                ) ||
-                runtime_changed
-            }
-          _ => ()
-        }
       }
     }
   }

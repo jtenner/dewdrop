@@ -792,7 +792,6 @@ fn self_host_linked_append_runtime_function(
   }
   let builder = StarshineFfi.ffi_ffi_bridge_runtime_function_builder_new(
     self_host_u32_to_i32(self_host_linked_text_runtime_base(link)),
-    6i32,
   )
   self_host_linked_append_runtime_function_name(builder, name)
   StarshineFfi.ffi_ffi_bridge_funcs_push_runtime(functions, builder) != 0i32

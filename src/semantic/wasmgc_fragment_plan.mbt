@@ -609,42 +609,6 @@ fn wasmgc_reachable_defined_functions(
   reachable
 }
 
-///| Runtime functions remain ordinary planned callables, but some contain
-
-///| private calls that are not represented in Dew HIR. Freeze those exact
-
-///|
-/// dependencies before function-index assignment.
-fn wasmgc_add_runtime_dependencies(
-  jobs : Array[WasmFunctionFragmentJob?],
-  reachable : Array[Bool],
-) -> Unit {
-  let debug_runtimes : Array[Int] = []
-  let mut wasi_write_import = -1
-  for index, job in jobs {
-    match job.unwrap().kind {
-      PlannedWasmRuntimeFunction(name) =>
-        if wasmgc_builtin_is_debug_runtime(name) {
-          debug_runtimes.push(index)
-        }
-      PlannedWasmImportedFunction(identity) =>
-        if identity.module_name == b"wasi_snapshot_preview1" &&
-          identity.field == b"fd_write" {
-          wasi_write_import = index
-        }
-      _ => ()
-    }
-  }
-  if wasi_write_import >= 0 {
-    for index in debug_runtimes {
-      if reachable[index] {
-        reachable[wasi_write_import] = true
-        break
-      }
-    }
-  }
-}
-
 ///|
 fn wasmgc_variant_has_payload(variant : PlannedVariantLayout) -> Bool {
   match variant.payload {
@@ -2218,13 +2182,7 @@ fn wasmgc_value_type(
 }
 
 ///|
-fn wasmgc_builtin_is_debug_runtime(name : Bytes) -> Bool {
-  name == b"dew_debug_bytes"
-}
-
-///|
 fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
-  wasmgc_builtin_is_debug_runtime(name) ||
   raw_wasm_simd_uses_memory(name) ||
   name == b"i32.load8_s" ||
   name == b"i32.load8_u" ||
@@ -2246,7 +2204,6 @@ fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
 
 ///|
 fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
-  wasmgc_builtin_is_debug_runtime(name) ||
   name == b"dew_string_as_bytes" ||
   name == b"dew_string_view" ||
   name == b"dew_string_view_as_bytes" ||
@@ -3658,12 +3615,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         ),
       ),
     )
-  }
-  // A whole-program root set already includes runtime dependencies. Repeating
-  // local lookup can select a second declaration for the same host import.
-  // Standalone module planning still needs its local dependency closure.
-  if program_roots.is_empty() {
-    wasmgc_add_runtime_dependencies(function_jobs, reachable_functions)
   }
   let builtin_names : Map[DeclId, Bytes] = {}
   for callable in functions.callables {

@@ -215,6 +215,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   windows and foreign writes. The native/provider String runtime entries are
   removed. Bytes Debug and text storage remain separate work. See the
   [text Debug log](docs/research/debug-text-library-2026-09-07.md).
+  Bytes Debug also runs in Dew now. The native/provider private formatters and
+  scratch-write builders are deleted, and the provider's write-index argument
+  is gone. Native hidden Debug dependency roots are removed. The self-host's
+  forced-WASI-import rule still needs a separate check. See the
+  [Bytes Debug log](docs/research/debug-bytes-library-2026-09-08.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
@@ -246,7 +251,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.
   Include the pinned Starshine `src/ffi_bridge` runtime copies in each removal;
-  text storage, Debug text formatting, and transport builders still remain.
+  text storage and SIMD storage bridges still remain.
 
 ### Finish the compiler correctness audit
 

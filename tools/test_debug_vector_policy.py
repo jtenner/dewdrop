@@ -16,9 +16,7 @@ class DebugVectorPolicyTests(unittest.TestCase):
         self.assertIn('builtin __dew_debug_v128_high(value: V128) -> U64 = "i64x2.extract_lane 1"', source)
 
     def test_compiler_vector_formatting_is_removed(self):
-        for path in ("src/backend/starshine_wasi_runtime.mbt",
-                     "src/backend/starshine_text_runtime.mbt",
-                     "starshine-mb/src/ffi_bridge/wasi_runtime.mbt",
+        for path in ("src/backend/starshine_text_runtime.mbt",
                      "starshine-mb/src/ffi_bridge/text_runtime.mbt",
                      "src/semantic/wasmgc_fragment_plan.mbt",
                      "self_host/compiler/semantic_program_link_plan.dew"):

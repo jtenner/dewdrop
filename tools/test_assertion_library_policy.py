@@ -19,7 +19,6 @@ class AssertionLibraryPolicyTests(unittest.TestCase):
             "src/backend/starshine_code.mbt",
             "src/backend/starshine_program_assembly.mbt",
             "src/backend/starshine_module_assembly.mbt",
-            "src/backend/starshine_wasi_runtime.mbt",
             "src/semantic/wasmgc_fragment_plan.mbt",
             "src/semantic/program_specialization_plan.mbt",
         )

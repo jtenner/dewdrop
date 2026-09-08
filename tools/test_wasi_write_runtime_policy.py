@@ -12,15 +12,12 @@ class WasiWriteRuntimePolicyTests(unittest.TestCase):
         self.assertTrue("dew_wasi_fd_write" not in source,
                         "Debug must not retain the unused opaque Bytes write builtin")
 
-    def test_no_compiler_owned_write_or_assertion_bodies(self):
+    def test_compiler_owned_write_files_are_removed(self):
         for path in ("src/backend/starshine_wasi_runtime.mbt",
                      "starshine-mb/src/ffi_bridge/wasi_runtime.mbt"):
-            source = (ROOT / path).read_text()
             with self.subTest(path=path):
-                self.assertTrue("fn starshine_wasi_fd_write_body(" not in source,
-                                f"old Bytes write algorithm remains in {path}")
-                self.assertTrue("fn starshine_test_assert_body(" not in source,
-                                f"unused assertion algorithm remains in {path}")
+                self.assertFalse((ROOT / path).exists(),
+                                 f"obsolete write and formatting builders remain in {path}")
 
     def test_no_legacy_write_dispatch_or_dependency_roots(self):
         for path in ("src/backend/starshine_module_assembly.mbt",

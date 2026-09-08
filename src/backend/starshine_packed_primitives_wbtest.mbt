@@ -282,7 +282,7 @@ test "checked Bytes to String links the ordinary Dew UTF8 validator" {
 ///|
 test "unchecked Bytes to String is one reference cast without allocation" {
   let actual = emit_starshine_text_runtime_function(
-    b"dew_bytes_to_string_unchecked", 17, -1,
+    b"dew_bytes_to_string_unchecked", 17,
   ).unwrap()
   let expected = @lib.Func::new(
     @lib.Locals::empty(),
@@ -310,7 +310,7 @@ test "String and StringView to Bytes are one reference cast without allocation" 
     ]),
   )
   for name in [b"dew_string_as_bytes", b"dew_string_view_as_bytes"] {
-    let actual = emit_starshine_text_runtime_function(name, 17, -1).unwrap()
+    let actual = emit_starshine_text_runtime_function(name, 17).unwrap()
     assert_eq(actual, expected)
   }
 }

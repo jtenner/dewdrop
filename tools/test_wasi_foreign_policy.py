@@ -34,8 +34,7 @@ class WasiForeignPolicyTests(unittest.TestCase):
                     source = path.read_text()
                     self.assertNotIn('"dew_wasi_fd_read"', source)
                     self.assertNotIn('starshine_wasi_fd_read_body', source)
-        for path in ("starshine-mb/src/ffi_bridge/wasi_runtime.mbt",
-                     "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+        for path in ("starshine-mb/src/ffi_bridge/text_runtime.mbt",):
             with self.subTest(path=path):
                 source = (ROOT / path).read_text()
                 self.assertNotIn('"dew_wasi_fd_read"', source)
