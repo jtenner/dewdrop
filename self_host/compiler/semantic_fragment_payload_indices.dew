@@ -1,0 +1,35 @@
+fn self_host_fragment_payload_failure(layouts: SelfHostPlannedModuleTypeLayouts, owner: U64, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: 4u32
+    module_id: layouts.module_id
+    declaration: owner
+    body: 0u64
+    expression: 4294967295u32
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "fragment payload index must belong to its own parallel type/shape span")
+  unreachable()
+}
+
+fn self_host_fragment_payload_index(layouts: SelfHostPlannedModuleTypeLayouts, owner: U64, payload: SelfHostHirSpan, index: U32) -> U32 {
+  let length = layouts.payload_types.length()
+  if layouts.payload_shapes.length() != length {
+    self_host_fragment_payload_failure(layouts, owner, 103u32,
+      u32_into_u64(length), u32_into_u64(layouts.payload_shapes.length()), 1u64,
+    )
+  }
+  if !self_host_array_span_is_valid(payload.start, payload.length, length) {
+    self_host_fragment_payload_failure(layouts, owner, 101u32,
+      u32_into_u64(length), u32_into_u64(payload.length),
+      (1u64 << 32u64) | u32_into_u64(payload.start),
+    )
+  }
+  if index >= payload.length {
+    self_host_fragment_payload_failure(layouts, owner, 403u32,
+      u32_into_u64(payload.length), u32_into_u64(index), u32_into_u64(payload.start),
+    )
+  }
+  payload.start + index
+}

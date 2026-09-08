@@ -672,8 +672,12 @@ fn wasmgc_variant_shapes_equal(
         return false
       }
       for index in 0..<left_types.length {
-        if layouts.payload_types[left_types.start + index] !=
-          layouts.payload_types[right_types.start + index] {
+        if layouts.payload_types[assert_fragment_payload_index(
+            layouts, left, left_types, index,
+          )] !=
+          layouts.payload_types[assert_fragment_payload_index(
+            layouts, right, right_types, index,
+          )] {
           return false
         }
       }
@@ -1164,7 +1168,12 @@ fn wasmgc_required_nominal_declarations(
                 for type_index in 0..<types.length {
                   if wasmgc_mark_nominal_type(
                       resolved,
-                      layouts.payload_types[types.start + type_index],
+                      layouts.payload_types[assert_fragment_payload_index(
+                        layouts,
+                        variant.variant,
+                        types,
+                        type_index,
+                      )],
                       required,
                     ) {
                     changed = true
@@ -1405,7 +1414,9 @@ fn wasmgc_plan_physical_type_job(
           for index in 0..<types.length {
             wasmgc_add_type_dependency(
               resolved,
-              layouts.payload_types[types.start + index],
+              layouts.payload_types[assert_fragment_payload_index(
+                layouts, variant, types, index,
+              )],
               entity_by_declaration,
               marks,
               generation,
@@ -1782,7 +1793,9 @@ fn wasmgc_append_physical_type_fields(
         PlannedUnitVariantLayout => ()
         PlannedTupleVariantLayout(types) =>
           for index in 0..<types.length {
-            let payload_type = layouts.payload_types[types.start + index]
+            let payload_type = layouts.payload_types[assert_fragment_payload_index(
+                layouts, variant, types, index,
+              )]
             let role = WasmTuplePayloadField(variant, index)
             if wasmgc_is_erased_generic_storage(resolved, payload_type) {
               wasmgc_append_specialized_generic_field(

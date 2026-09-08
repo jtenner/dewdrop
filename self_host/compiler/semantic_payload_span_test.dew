@@ -1,0 +1,68 @@
+fn self_host_payload_span_test_module() -> SelfHostPlannedModuleLowering {
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(
+      b"pub enum Choice {\n  One(I64)\n  Two(I32)\n}\npub fn run(value: Choice) -> I32 {\n  1\n}\n",
+    ), false,
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  assert(module_.type_layouts.payload_types.length() == 2u32, "two stored payload types")
+  assert(module_.type_layouts.payload_shapes.length() == 2u32, "two stored payload shapes")
+  module_
+}
+
+test "fragment payload storage accepts owned scalar fields" {
+  let module_ = self_host_payload_span_test_module()
+  let first = SelfHostHirSpan::{
+    start: 0u32
+    length: 1u32
+  }
+  let second = SelfHostHirSpan::{
+    start: 1u32
+    length: 1u32
+  }
+  assert(self_host_wasmgc_payload_storage_type(module_, module_.type_layouts.variants[0u32].variant, first, 0u32) is SelfHostPlannedWasmStorageType::WasmI64Storage, "first payload is I64")
+  assert(self_host_wasmgc_payload_storage_type(module_, module_.type_layouts.variants[1u32].variant, second, 0u32) is SelfHostPlannedWasmStorageType::WasmI32Storage, "second payload is I32")
+  assert(!self_host_wasmgc_payload_exact_nominal(module_, module_.type_layouts.variants[0u32].variant, first, 0u32), "scalar payload has no exact GC owner")
+}
+
+test "FRG-403 payload storage cannot read the next payload" expect_trap "unreachable" {
+  let module_ = self_host_payload_span_test_module()
+  let _ = self_host_wasmgc_payload_storage_type(module_, module_.type_layouts.variants[0u32].variant, SelfHostHirSpan::{
+    start: 0u32
+    length: 1u32
+  }, 1u32)
+}
+
+test "FRG-403 payload owner lookup cannot read the next payload" expect_trap "unreachable" {
+  let module_ = self_host_payload_span_test_module()
+  let _ = self_host_wasmgc_payload_exact_nominal(module_, module_.type_layouts.variants[0u32].variant, SelfHostHirSpan::{
+    start: 0u32
+    length: 1u32
+  }, 1u32)
+}
+
+test "ARN-101 payload storage checks span before addition" expect_trap "unreachable" {
+  let module_ = self_host_payload_span_test_module()
+  let _ = self_host_wasmgc_payload_storage_type(module_, module_.type_layouts.variants[0u32].variant, SelfHostHirSpan::{
+    start: 4294967295u32
+    length: 2u32
+  }, 1u32)
+}
+
+test "ARN-101 payload owner lookup checks span before addition" expect_trap "unreachable" {
+  let module_ = self_host_payload_span_test_module()
+  let _ = self_host_wasmgc_payload_exact_nominal(module_, module_.type_layouts.variants[0u32].variant, SelfHostHirSpan::{
+    start: 2u32
+    length: 1u32
+  }, 0u32)
+}
+
+test "ARN-103 payload type and shape arrays remain parallel" expect_trap "unreachable" {
+  let module_ = self_host_payload_span_test_module()
+  let _ = module_.type_layouts.payload_shapes.pop()
+  let _ = self_host_wasmgc_payload_storage_type(module_, module_.type_layouts.variants[0u32].variant, SelfHostHirSpan::{
+    start: 0u32
+    length: 1u32
+  }, 0u32)
+}

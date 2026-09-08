@@ -349,6 +349,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   explicit work stack checks expression, block, pattern, and arm edges without
   a depth cap; shared nodes and normal loop control remain valid. See the
   [cycle log](docs/research/lowered-body-cycles-2026-09-08.md).
+  Fragment payload reads now use a checked payload-relative index in both
+  compilers. Type/shape arrays stay parallel, the span is checked before
+  addition, and a field ordinal cannot read the next payload. Numeric failures
+  retain the owning variant. See the
+  [payload span log](docs/research/fragment-payload-spans-2026-09-08.md).
   Both physical boundaries now check each stored local's relative ID, body ID,
   and exact lambda owner. Lambda emission passes its selected owner explicitly.
   See the [local identity log](docs/research/physical-local-identity-2026-09-07.md).

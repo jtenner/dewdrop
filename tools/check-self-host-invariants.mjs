@@ -11,6 +11,16 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["FRG-403 payload storage cannot read the next payload", 403, 1n, 1n, 0n],
+    ["FRG-403 payload owner lookup cannot read the next payload", 403, 1n, 1n, 0n],
+    ["ARN-101 payload storage checks span before addition", 101, 2n, 2n, (1n << 32n) | 4294967295n],
+    ["ARN-101 payload owner lookup checks span before addition", 101, 2n, 1n, (1n << 32n) | 2n],
+    ["ARN-103 payload type and shape arrays remain parallel", 103, 2n, 1n, 1n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 4, 5100n, 5100n << 32n, 0n, 4294967295, expected, actual, detail],
+  })),
+  ...[
     "lowered unary expressions cannot contain themselves",
     "lowered blocks cannot contain themselves",
     "physical work graphs reject cyclic syntax",

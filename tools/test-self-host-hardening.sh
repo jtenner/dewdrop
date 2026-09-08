@@ -163,6 +163,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_physical_specialization_test.dew \
   self_host/compiler/semantic_pattern_adapter_identity_test.dew \
   self_host/compiler/semantic_pattern_payload_spelling_test.dew \
+  self_host/compiler/semantic_payload_span_test.dew \
   self_host/compiler/semantic_method_context_test.dew \
   self_host/compiler/semantic_text_operators_test.dew \
   self_host/compiler/semantic_raw_conversions_test.dew \

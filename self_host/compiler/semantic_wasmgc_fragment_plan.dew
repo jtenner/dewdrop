@@ -158,17 +158,15 @@ fn self_host_wasmgc_field_storage_type(
 
 fn self_host_wasmgc_payload_storage_type(
   module_: SelfHostPlannedModuleLowering,
+  owner: U64,
   payload: SelfHostHirSpan,
   index: U32,
 ) -> SelfHostPlannedWasmStorageType {
-  let shape = module_.type_layouts.payload_shapes[
-    self_host_u32_add(payload.start, index)
-  ]
+  let slot = self_host_fragment_payload_index(module_.type_layouts, owner, payload, index)
+  let shape = module_.type_layouts.payload_shapes[slot]
   let declared_shape = self_host_planned_resolved_value_shape(
     module_.resolved_types,
-    module_.type_layouts.payload_types[
-      self_host_u32_add(payload.start, index)
-    ],
+    module_.type_layouts.payload_types[slot],
   )
   if declared_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
     self_host_wasmgc_storage_type(shape)
@@ -213,26 +211,14 @@ fn self_host_wasmgc_layout_at(
   array_get_unchecked(values, index)
 }
 
-fn self_host_wasmgc_payload_type_at(
-  values: Array<U32>,
-  index: U32,
-) -> U32 {
-  array_get_unchecked(values, index)
-}
-
 fn self_host_wasmgc_payload_exact_nominal(
   module_: SelfHostPlannedModuleLowering,
+  owner: U64,
   payload: SelfHostHirSpan,
   payload_index: U32,
 ) -> Bool {
-  let type_index = self_host_u32_add(payload.start, payload_index)
-  if type_index >= module_.type_layouts.payload_types.length() {
-    return false
-  }
-  let resolved_type = self_host_wasmgc_payload_type_at(
-    module_.type_layouts.payload_types,
-    type_index,
-  )
+  let type_index = self_host_fragment_payload_index(module_.type_layouts, owner, payload, payload_index)
+  let resolved_type = module_.type_layouts.payload_types[type_index]
   let runtime_base = match module_.resolved_types.type_at(resolved_type) {
     SelfHostResolvedType::PrimitiveType(_) => true
     SelfHostResolvedType::AppliedType(base, _) => match module_.resolved_types.type_at(
@@ -394,12 +380,14 @@ fn self_host_wasmgc_plan_type(
                     physical_index: payload_index
                     storage: self_host_wasmgc_payload_storage_type(
                       module_,
+                      source.variant,
                       payload,
                       payload_index,
                     )
                     mutable_: false
                     exact_nominal: self_host_wasmgc_payload_exact_nominal(
                       module_,
+                      source.variant,
                       payload,
                       payload_index,
                     )

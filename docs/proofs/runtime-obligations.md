@@ -45,6 +45,14 @@ The low-level typed comparisons are in `compiler_value_primitives.dew`.
 Parser, semantic, and emitter code can use them without a dependency on a
 later compiler phase.
 
+Fragment payload indices also require ownership within their declared payload
+span, not just membership in the shared type array. Both compilers first check
+equal type/shape array lengths, then `start <= arena_length` and
+`length <= arena_length - start`, then `ordinal < length`. Only then do they
+compute `start + ordinal`. Failures retain phase 4, module, and variant identity;
+an ordinal outside the payload reports `FRG-403`. See the
+[payload checks](../research/fragment-payload-spans-2026-09-08.md).
+
 ## Lowered syntax is acyclic
 
 Owned indices alone do not exclude cycles. Before physical work-graph creation
