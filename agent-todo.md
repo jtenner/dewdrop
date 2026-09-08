@@ -268,6 +268,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   and stored local body/relative IDs before allocation. Named and lambda bodies
   have positive checks; invalid spans and identities retain numeric context.
   See the [native boundary log](docs/research/native-planned-body-arenas-2026-09-07.md).
+  Native lowered expression operands and block/pattern/field/arm lists now have
+  checked spans and body ownership. New IR expression variants must extend the
+  explicit edge checker. Only the exact missing sentinel erases optional edges.
+  See the [child ownership log](docs/research/planned-body-child-ownership-2026-09-07.md).
   Complete child-list, stored-identity, parallel-array, and later-consumer checks
   remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency

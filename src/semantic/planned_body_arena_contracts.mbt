@@ -108,7 +108,7 @@ fn check_planned_body_arenas(
       )
     }
   }
-  Ok(())
+  check_planned_body_children(lowering, body, phase)
 }
 
 ///|
