@@ -104,7 +104,7 @@ fn verify_module_physical_type_fragments(
         404, 1UL, 0UL, 11UL, index))
     }
   }
-  Ok(())
+  verify_module_physical_storage_references(module_)
 }
 
 ///|
@@ -270,7 +270,19 @@ pub fn verify_program_physical_type_fragments(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  verify_program_physical_type_schedule(link)
+  match verify_program_physical_type_schedule(link) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  match verify_program_physical_storage_references(link) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  match verify_program_physical_field_aliases(link) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  verify_program_physical_signature_aliases(link)
 }
 
 ///|

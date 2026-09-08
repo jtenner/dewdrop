@@ -99,6 +99,14 @@ cannot claim the same index. These are runtime checks and regression tests,
 not a proof of all late synthetic adapter or reference-subtyping rules. See
 the [type-table checks](../research/physical-type-tables-2026-09-08.md).
 
+Native shared closure and trait layouts now require equal field identities,
+mutability, and relocated storage types. Signature aliases require equal
+ordered operands and results, with full heap identity and nullability. Source
+field references have checked local and recursive ownership. These are runtime
+certificates, not a proof that every plan is immutable or every emitted call
+preserves Wasm subtyping. See the
+[alias checks](../research/physical-type-aliases-2026-09-08.md).
+
 For arrays that use the same expression index:
 
 \[

@@ -472,6 +472,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   numeric records before writing sections. Canonical trait layout proofs and
   late adapter/text-runtime recipes remain open. See the
   [type-table log](docs/research/physical-type-tables-2026-09-08.md).
+  Native field references now check heap/signature bounds and recursive-group
+  ownership. Canonical closure/trait fields and function signatures compare
+  full relocated types, including heap identity and nullability. Late adapter
+  and text recipes and complete plan freeze still remain. See the
+  [alias log](docs/research/physical-type-aliases-2026-09-08.md).
 - [x] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.

@@ -27,6 +27,7 @@ self-host failures. It is not a proof of the full language.
 | Emitted call stack matches the physical signature | Open as a complete theorem; passing scalar recipes and bootstrap tests do not prove all reference/control paths | Starshine module validation and call-recipe checks | `call-namespace.md` |
 | Dense type remap keeps valid indices and order | Proved | core linker validation | `src/compiler_proofs/type_remap_proofs.mbtp` |
 | Native physical type prefix has checked owners and one entry per emitted index | Checked and tested; full late-adapter/reference proof is open | `program_physical_type_invariants.mbt`, `program_physical_type_schedule.mbt` | `../research/physical-type-tables-2026-09-08.md` |
+| Native shared physical layouts retain full field and signature types | Checked and tested; plan freeze and general reference subtyping remain open | `program_physical_reference_invariants.mbt`, `program_physical_alias_invariants.mbt` | `../research/physical-type-aliases-2026-09-08.md` |
 
 ## Files
 

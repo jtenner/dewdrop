@@ -36,9 +36,11 @@ new correctness check, not a speed-work change.
 
 ## Limits
 
-This checks the linked type-section prefix. It does not finish source-to-Wasm
-heap/nullability proofs, prove all canonical trait field/signature layouts, or
-freeze the late adapter and text-runtime types that emission still appends.
+This checks the linked type-section prefix. The later
+[alias checks](physical-type-aliases-2026-09-08.md) add canonical trait
+field/signature layout agreement. These checks do not finish source-to-Wasm
+heap/nullability proofs or freeze the late adapter and text-runtime types
+that emission still appends.
 Those tasks remain open. A passing Wasm validator is not a source-mapped shadow
 stack proof.
 
