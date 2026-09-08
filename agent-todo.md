@@ -260,6 +260,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   allocation and check membership before relative lookup. Exact owner/phase
   records cover cross-body and machine-boundary mutations. See the
   [front-end arena log](docs/research/body-arena-contracts-2026-09-07.md).
+  The self-host physical verifier now checks complete local/expression/control
+  tables and ordered expression identity before reads. Erased locals cannot
+  disappear from logical tables. Eleven mutations have exact numeric records.
+  See the [table log](docs/research/physical-body-table-completeness-2026-09-07.md).
   Complete child-list, stored-identity, parallel-array, and later-consumer checks
   remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency

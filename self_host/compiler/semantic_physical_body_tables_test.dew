@@ -1,0 +1,133 @@
+fn self_host_test_physical_table_link() -> SelfHostPlannedProgramWasmGCLink {
+  self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(b"pub fn select(left: Unit, value: I64, right: Unit) -> I64 {\n  value\n}\n"),
+    false,
+  )
+}
+
+fn self_host_test_physical_table_plan(link: SelfHostPlannedProgramWasmGCLink) -> SelfHostPlannedPhysicalBodyCarrierPlan {
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "the unmodified body plan must be valid")
+  assert(program.bodies.length() == 1u32, "one physical body")
+  let plan = program.bodies[0u32]
+  assert(plan.local_values.length() == 3u32 && plan.locals.length() == 3u32 && plan.local_slots.length() == 3u32, "all three logical locals include erased Unit values")
+  assert(plan.expressions.length() == 1u32, "one local read")
+  plan
+}
+
+fn self_host_test_physical_expression_id(source: SelfHostPlannedPhysicalExpressionCarrier, expression: U32) -> SelfHostPlannedPhysicalExpressionCarrier {
+  SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: expression
+    value: source.value
+    carrier: source.carrier
+    conflict_expected: source.conflict_expected
+    conflict_actual: source.conflict_actual
+    receiver_expression: source.receiver_expression
+    receiver_logical_type: source.receiver_logical_type
+    receiver_nominal_owner: source.receiver_nominal_owner
+    receiver_physical_heap_type: source.receiver_physical_heap_type
+    selected_field: source.selected_field
+    selected_type_index: source.selected_type_index
+    selected_field_index: source.selected_field_index
+    selected_storage: source.selected_storage
+    call_function_index: source.call_function_index
+  }
+}
+
+test "physical body tables retain erased logical entries" {
+  let link = self_host_test_physical_table_link()
+  let plan = self_host_test_physical_table_plan(link)
+  let diagnostics = []
+  self_host_verify_one_physical_body(link, plan, diagnostics)
+  assert(diagnostics.length() == 0u32, "complete tables verify")
+  assert(plan.local_slots[0u32] == 4294967295u32 && plan.local_slots[2u32] == 4294967295u32, "erasure removes operands, not logical table entries")
+}
+
+test "ARN-103 aligned physical local tables cannot omit a logical local" expect_trap "unreachable" {
+  let link = self_host_test_physical_table_link()
+  let plan = self_host_test_physical_table_plan(link)
+  let _ = plan.local_values.pop()
+  let _ = plan.local_slots.pop()
+  let _ = plan.locals.pop()
+  self_host_verify_one_physical_body(link, plan, [])
+}
+
+test "ARN-103 physical local carriers remain complete" expect_trap "unreachable" {
+  let link = self_host_test_physical_table_link()
+  let plan = self_host_test_physical_table_plan(link)
+  let _ = plan.locals.pop()
+  self_host_verify_one_physical_body(link, plan, [])
+}
+
+test "ARN-103 physical expressions cannot omit the body tail" expect_trap "unreachable" {
+  let link = self_host_test_physical_table_link()
+  let plan = self_host_test_physical_table_plan(link)
+  let _ = plan.expressions.pop()
+  self_host_verify_one_physical_body(link, plan, [])
+}
+
+test "ARN-103 physical control states require an owning loop" expect_trap "unreachable" {
+  let link = self_host_test_physical_table_link()
+  let plan = self_host_test_physical_table_plan(link)
+  plan.control_states.push(SelfHostWasmBodyCarrier::UnitBodyCarrier)
+  self_host_verify_one_physical_body(link, plan, [])
+}
+
+test "ARN-103 physical control state values require an owning loop" expect_trap "unreachable" {
+  let link = self_host_test_physical_table_link()
+  let plan = self_host_test_physical_table_plan(link)
+  plan.control_state_values.push(plan.local_values[0u32])
+  self_host_verify_one_physical_body(link, plan, [])
+}
+
+test "ARN-103 physical control results require an owning loop" expect_trap "unreachable" {
+  let link = self_host_test_physical_table_link()
+  let plan = self_host_test_physical_table_plan(link)
+  plan.control_results.push(SelfHostWasmBodyCarrier::UnitBodyCarrier)
+  self_host_verify_one_physical_body(link, plan, [])
+}
+
+test "ARN-103 physical control result values require an owning loop" expect_trap "unreachable" {
+  let link = self_host_test_physical_table_link()
+  let plan = self_host_test_physical_table_plan(link)
+  plan.control_result_values.push(plan.local_values[0u32])
+  self_host_verify_one_physical_body(link, plan, [])
+}
+
+fn self_host_test_physical_foreign_expression(expression: U32) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(b"pub fn first() -> I64 {\n  1i64\n}\npub fn second() -> I64 {\n  2i64\n}\n"),
+    false,
+  )
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "unmodified two-body source must be valid")
+  let plan = program.bodies[1u32]
+  assert(plan.expressions.length() == 1u32 && plan.expressions[0u32].expression == 1u32, "second body owns only expression one")
+  plan.expressions[0u32] = self_host_test_physical_expression_id(plan.expressions[0u32], expression)
+  self_host_verify_one_physical_body(link, plan, [])
+}
+
+test "ARN-102 frozen expression cannot belong to an earlier body" expect_trap "unreachable" {
+  self_host_test_physical_foreign_expression(0u32)
+}
+
+test "ARN-102 frozen expression cannot follow its body" expect_trap "unreachable" {
+  self_host_test_physical_foreign_expression(2u32)
+}
+
+test "ARN-102 frozen expression cannot be the missing sentinel" expect_trap "unreachable" {
+  self_host_test_physical_foreign_expression(4294967295u32)
+}
+
+test "ARN-106 physical expression table preserves stored identity" expect_trap "unreachable" {
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(b"pub fn run() -> I64 {\n  1i64\n  2i64\n}\n"),
+    false,
+  )
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "unmodified expression sequence must be valid")
+  let plan = program.bodies[0u32]
+  assert(plan.expressions.length() == 2u32, "two literal expressions")
+  plan.expressions[0u32] = self_host_test_physical_expression_id(plan.expressions[0u32], 1u32)
+  self_host_verify_one_physical_body(link, plan, [])
+}

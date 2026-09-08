@@ -7924,13 +7924,14 @@ fn self_host_verify_body_pattern_payloads(
   }
 }
 
-fn self_host_verify_one_physical_body(
-  link: SelfHostPlannedProgramWasmGCLink,
+fn self_host_assert_physical_table_count(
   plan: SelfHostPlannedPhysicalBodyCarrierPlan,
-  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+  expected: U32,
+  actual: U32,
+  table: U32,
 ) -> Unit {
   let _ = self_host_assert_compiler_invariant_with_failure(
-    self_host_u32_equal(plan.local_slots.length(), plan.local_values.length()),
+    self_host_u32_equal(expected, actual),
     SelfHostInvariantFailure::{
       code: 103u32
       phase: 6u32
@@ -7938,12 +7939,71 @@ fn self_host_verify_one_physical_body(
       declaration: plan.declaration
       body: plan.body
       expression: 4294967295u32
-      expected: u32_into_u64(plan.local_values.length())
-      actual: u32_into_u64(plan.local_slots.length())
-      detail: 710u64
+      expected: u32_into_u64(expected)
+      actual: u32_into_u64(actual)
+      detail: u32_into_u64(table)
     },
-    "physical local slots must remain parallel to logical local values",
+    "physical table must contain every owned logical entry exactly once",
   )
+}
+
+fn self_host_verify_physical_body_tables(
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+) -> Unit {
+  // Repeat arena checks at the read boundary: a plan can outlive its producer.
+  // Unit/elided locals still occupy logical entries; only their Wasm slots vanish.
+  self_host_assert_physical_body_span(body, body.expressions, module_.expressions.length(), 1u32)
+  self_host_assert_physical_body_span(body, body.locals, module_.locals.length(), 2u32)
+  self_host_assert_physical_body_span(body, body.blocks, module_.blocks.length(), 3u32)
+  self_host_assert_physical_body_span(body, body.patterns, module_.patterns.length(), 4u32)
+  self_host_assert_physical_body_span(body, body.pattern_arms, module_.pattern_arms.length(), 5u32)
+  self_host_assert_physical_table_count(plan, body.locals.length, plan.local_values.length(), 711u32)
+  self_host_assert_physical_table_count(plan, body.locals.length, plan.locals.length(), 712u32)
+  self_host_assert_physical_table_count(plan, body.expressions.length, plan.expressions.length(), 713u32)
+  let mut control_count = 0u32
+  let mut relative = 0u32
+  for expression_plan in plan.expressions {
+    let expression = expression_plan.expression
+    // Membership precedes both subtraction and the source-array read. Length
+    // alone cannot prove order or exclude a duplicated in-range expression ID.
+    let slot = self_host_body_expression_slot(body, expression)
+    let _ = self_host_assert_compiler_invariant_with_failure(
+      self_host_u32_equal(slot, relative),
+      SelfHostInvariantFailure::{
+        code: 106u32
+        phase: 6u32
+        module_id: plan.module_id
+        declaration: plan.declaration
+        body: plan.body
+        expression: expression
+        expected: u32_into_u64(body.expressions.start + relative)
+        actual: u32_into_u64(expression)
+        detail: 713u64
+      },
+      "physical expression table must preserve its owning source identity",
+    )
+    match module_.expressions[expression].kind {
+      SelfHostPlannedExpressionKind::PlannedWhileExpression(control, _, _) => if control != 4294967295u32 && control >= control_count {
+        control_count = control + 1u32
+      }
+      _ => {}
+    }
+    relative = relative + 1u32
+  }
+  self_host_assert_physical_table_count(plan, control_count, plan.control_states.length(), 714u32)
+  self_host_assert_physical_table_count(plan, control_count, plan.control_state_values.length(), 715u32)
+  self_host_assert_physical_table_count(plan, control_count, plan.control_results.length(), 716u32)
+  self_host_assert_physical_table_count(plan, control_count, plan.control_result_values.length(), 717u32)
+}
+
+fn self_host_verify_one_physical_body(
+  link: SelfHostPlannedProgramWasmGCLink,
+  plan: SelfHostPlannedPhysicalBodyCarrierPlan,
+  diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>,
+) -> Unit {
+  self_host_assert_physical_table_count(plan, plan.local_values.length(), plan.local_slots.length(), 710u32)
   let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
   let body = match self_host_body_lookup_for_plan(module_, plan) {
     Option::Some(value) => value
@@ -7956,6 +8016,7 @@ fn self_host_verify_one_physical_body(
       return
     }
   }
+  self_host_verify_physical_body_tables(module_, body, plan)
   if !plan.converged {
     let stalled_expression = if plan.stalled_work_item == 4294967295u32 ||
       self_host_u32_equal(plan.stalled_work_item, 0u32) {
@@ -7990,31 +8051,29 @@ fn self_host_verify_one_physical_body(
   let _ = while local_offset {
     current => if current < body.locals.length {
       let local_index = self_host_u32_add(body.locals.start, current)
-      if local_index < module_.locals.length() && current < plan.local_values.length() {
-        let local = module_.locals[local_index]
-        let expected_nominal = self_host_linked_loop_binding_nominal_declaration(
-          link,
+      let local = module_.locals[local_index]
+      let expected_nominal = self_host_linked_loop_binding_nominal_declaration(
+        link,
+        module_,
+        body,
+        local.local_id,
+      )
+      let actual_nominal = plan.local_values[current].nominal_owner
+      if !self_host_u64_equal(expected_nominal, 0u64) &&
+        !self_host_u64_equal(actual_nominal, 0u64) &&
+        !self_host_u64_equal(expected_nominal, actual_nominal) {
+        // A loop binding must keep the nominal type of its container element.
+        self_host_body_add_nominal_diagnostic(
+          diagnostics,
+          plan,
           module_,
-          body,
-          local.local_id,
+          body.expressions.start,
+          expected_nominal,
+          actual_nominal,
+          "loop binding nominal provenance mismatch",
+          SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+          plan.local_values[current].carrier,
         )
-        let actual_nominal = plan.local_values[current].nominal_owner
-        if !self_host_u64_equal(expected_nominal, 0u64) &&
-          !self_host_u64_equal(actual_nominal, 0u64) &&
-          !self_host_u64_equal(expected_nominal, actual_nominal) {
-          // A loop binding must keep the nominal type of its container element.
-          self_host_body_add_nominal_diagnostic(
-            diagnostics,
-            plan,
-            module_,
-            body.expressions.start,
-            expected_nominal,
-            actual_nominal,
-            "loop binding nominal provenance mismatch",
-            SelfHostWasmBodyCarrier::EqRefBodyCarrier,
-            plan.local_values[current].carrier,
-          )
-        }
       }
       continue current + 1u32
     } else {

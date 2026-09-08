@@ -10,6 +10,29 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["aligned physical local tables cannot omit a logical local", 3n, 2n, 711n],
+    ["physical local carriers remain complete", 3n, 2n, 712n],
+    ["physical expressions cannot omit the body tail", 1n, 0n, 713n],
+    ["physical control states require an owning loop", 0n, 1n, 714n],
+    ["physical control state values require an owning loop", 0n, 1n, 715n],
+    ["physical control results require an owning loop", 0n, 1n, 716n],
+    ["physical control result values require an owning loop", 0n, 1n, 717n],
+  ].map(([name, expected, actual, detail]) => ({
+    name: `ARN-103 ${name}`,
+    expected: [103, 6, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, expected, actual, detail],
+  })),
+  ...[
+    ["belong to an earlier body", 0], ["follow its body", 2],
+    ["be the missing sentinel", 4294967295],
+  ].map(([name, expression]) => ({
+    name: `ARN-102 frozen expression cannot ${name}`,
+    expected: [102, 6, 5100n, (5100n << 32n) + 1n, (5100n << 32n) + 1n, expression, 1n, BigInt(expression), 1n],
+  })),
+  {
+    name: "ARN-106 physical expression table preserves stored identity",
+    expected: [106, 6, 5100n, 5100n << 32n, 5100n << 32n, 1, 0n, 1n, 713n],
+  },
   {
     name: "EVD-211 implementation type cycles retain the type identity",
     expected: [211, 3, 6014n, 0n, 0n, 3, 0n, 3n, 1n],
