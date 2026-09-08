@@ -1,6 +1,23 @@
 open dew.std.option
 open dew.std.bytes_builder
 
+test "bound calls without queries select applicable generic implementations" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"trait Read {\n  fn read(self) -> I32\n}\nstruct Wrap<t> {\n  value: t\n}\nimpl Read for I32 {\n  fn read(self) -> I32 {\n    self\n  }\n}\nimpl<t: Read> Read for Wrap<t> {\n  fn read(self) -> I32 {\n    self.value.read()\n  }\n}\nfn forward<t: Read>(value: t) -> I32 {\n  value.read()\n}\npub fn run() -> I32 {\n  forward(7i32) + forward(Wrap::{\n    value: 35i32\n  })\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.fragments.specialization.lowering.compile_time.diagnostics.length() == 0u32, "logical trait selection has no diagnostic")
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+  let mut implementations = 0u32
+  for function_ in link.functions {
+    if self_host_linked_function_name(link, function_) == b"read" {
+      implementations = implementations + 1u32
+    }
+  }
+  assert(implementations == 2u32, "both concrete selected implementation bodies are linked")
+}
+
 test "raw array storage rejects unresolved and uninhabited nested elements" {
   let invalid = [
     SelfHostPlannedValueShape::GenericPlannedValueShape,

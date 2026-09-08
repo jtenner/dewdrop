@@ -87,6 +87,16 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
   let mut module_index = 0u32
   for module_ in modules {
     let projections = self_host_query_module_has_projections(module_)
+    // Every bound call needs the selected logical implementation, even when
+    // neither caller nor callee contains an explicit compile-time query.
+    for body in module_.bodies {
+      for expression in self_host_compile_time_owned_expressions(module_, body) {
+        if module_.expressions[expression].call_target is SelfHostBasicCallTarget::BoundTraitBasicCallTarget(_, _, _, _) && !sensitive.contains_key(body.declaration) {
+          sensitive.set(body.declaration, true)
+          work.push(body.declaration)
+        }
+      }
+    }
     if projections {
       let collected = frozen.collected.modules.at(module_index)
       for body in module_.bodies {
