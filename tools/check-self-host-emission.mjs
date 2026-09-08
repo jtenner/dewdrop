@@ -7,7 +7,7 @@ import { checkMemoryOperations } from "./memory-operation-cases.mjs";
 import { checkSimdMemoryOperations } from "./simd-memory-operation-cases.mjs";
 import { checkArithmeticOperations } from "./arithmetic-operation-cases.mjs";
 import { checkMathOperations } from "./math-operation-cases.mjs";
-import { checkSpecializationCallbacks } from "./specialization-callback-cases.mjs";
+import { checkSpecializationCallbacks, specializationCallbackNames } from "./specialization-callback-cases.mjs";
 import { checkMemberCalls } from "./member-call-cases.mjs";
 import { wasiForeignProbe } from "./wasi-foreign-cases.mjs";
 import { debugDispatchProbe } from "./debug-dispatch-cases.mjs";
@@ -617,9 +617,7 @@ pub fn main() -> I32 {
       ["pair_i64_i32", "left: I64, right: I32", "left, right"],
       ["nested_i32_i64", "left: I32, right: I64", "left, right"],
       ["nested_i64_i32", "left: I64, right: I32", "left, right"],
-      ...["erased_product", "mixed_scalars", "nominal_callback", "generic_nominal_callback",
-        "captured_nominal_callback", "captured_generic_nominal_callback", "callback_evaluation_order",
-        "trait_identity_callback", "bound_function_callback", "bound_lambda_callback"]
+      ...["erased_product", ...specializationCallbackNames]
         .map(name => [name, "value: I64", "value"]),
     ]) {
       exports[name] = await compileSource(source + `\npub fn main(${parameters}) -> I64 {\n  ${name}(${arguments_})\n}\n`);

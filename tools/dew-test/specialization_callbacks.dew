@@ -188,13 +188,13 @@ fn second_generic_reader<t: SecondRead>() -> fn(t) -> I64 {
   second_read
 }
 
-fn first_generic_lambda<t: FirstRead>() -> fn(t) -> I64 {
+pub fn first_generic_lambda<t: FirstRead>() -> fn(t) -> I64 {
   fn(value: t) -> I64 {
     first_read(value)
   }
 }
 
-fn second_generic_lambda<t: SecondRead>() -> fn(t) -> I64 {
+pub fn second_generic_lambda<t: SecondRead>() -> fn(t) -> I64 {
   fn(value: t) -> I64 {
     second_read(value)
   }
@@ -218,4 +218,27 @@ pub fn bound_lambda_callback(value: I64) -> I64 {
   } else {
     0i64
   }
+}
+
+fn invoke_bound_callback(callback: fn(I64) -> I64, value: I64) -> I64 {
+  callback(value)
+}
+
+pub fn direct_bound_callback(value: I64) -> I64 {
+  if invoke_bound_callback(second_read, value) == value + 1i64 {
+    invoke_bound_callback(first_read, value)
+  } else {
+    0i64
+  }
+}
+
+pub fn closed_generic_lambda<t: FirstRead>() -> fn(I64) -> I64 {
+  fn(value: I64) -> I64 {
+    direct_bound_callback(value)
+  }
+}
+
+pub fn closed_bound_callback(value: I64) -> I64 {
+  let callback = closed_generic_lambda::<I64>()
+  callback(value)
 }

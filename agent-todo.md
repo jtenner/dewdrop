@@ -250,6 +250,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   evidence, not the generic template, and runtime capture records match the
   full caller identity. See the
   [bound function-value log](docs/research/bound-trait-function-values-2026-09-08.md).
+  Callback-to-direct-call rewrites now copy logical arguments between their
+  distinct arenas and preserve exact trait roots. Closed runtime-export lambdas
+  keep their owner's key; admission uses a cycle-safe worklist. See the
+  [export admission log](docs/research/runtime-trait-export-admission-2026-09-08.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.
@@ -257,6 +261,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   their escaping closure recipe. Concrete lambda instances and public generic
   function-value factories now work; the external runtime lambda case is
   retained in the [bound callback log](docs/research/bound-trait-function-values-2026-09-08.md).
+  Optional erased exports now require a proved ABI, including all nested lambda
+  expressions. This avoids a late emission failure but does not implement
+  runtime dictionary capture; that part stays open.
   Index writes now always use their frozen call recipe; the shared fixture also
   checks non-generic Unit writes in exact source order. See the
   [index write log](docs/research/array-index-write-recipes-2026-09-07.md).

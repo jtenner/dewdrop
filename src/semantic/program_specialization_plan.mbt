@@ -1443,12 +1443,17 @@ fn materialize_program_generic_specialization(
     specialization_evidence,
     specialization_abi_key,
   })
+  let owner = module_.functions[module_.functions.length() - 1]
   let lambda_signatures = materialize_compile_time_lambdas(
-    lowering,
-    owner_index,
-    module_,
-    module_.functions[module_.functions.length() - 1],
+    lowering, owner_index, module_, owner,
   )
+  if erased_fallback {
+    materialize_runtime_export_lambdas(
+      lowering.modules[owner_index],
+      module_,
+      owner,
+    )
+  }
   modules[owner_index] = {
     ..module_,
     signature_type_count: module_.signature_type_count + 1 + lambda_signatures,
@@ -2721,142 +2726,6 @@ fn program_collect_external_runtime_evidence_implementation_uses(
       )
     }
   }
-}
-
-///|
-fn program_runtime_trait_callable_supports_external_evidence_for_classes(
-  lowering : PlannedProgramLowering,
-  module_lookup : Map[ModuleId, Int],
-  declaration : DeclId,
-  parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
-  states : Map[String, Int],
-) -> Bool {
-  let key = program_external_runtime_evidence_state_key(
-    declaration, parameter_classes,
-  )
-  match states.get(key) {
-    Some(2) => return true
-    Some(3) => return false
-    Some(1) => return true
-    _ => ()
-  }
-  states[key] = 1
-  let supported = program_runtime_trait_callable_body_supports_external_evidence_for_classes(
-    lowering, module_lookup, declaration, parameter_classes, states,
-  )
-  states[key] = if supported { 2 } else { 3 }
-  supported
-}
-
-///|
-fn program_runtime_trait_callable_body_supports_external_evidence_for_classes(
-  lowering : PlannedProgramLowering,
-  module_lookup : Map[ModuleId, Int],
-  declaration : DeclId,
-  parameter_classes : Array[ProgramExternalRuntimeEvidenceClass],
-  states : Map[String, Int],
-) -> Bool {
-  let module_index = match module_lookup.get(semantic_id_module(declaration)) {
-    Some(value) => value
-    None => return false
-  }
-  if module_index < 0 || module_index >= lowering.modules.length() {
-    return false
-  }
-  let module_ = lowering.modules[module_index]
-  let callable = match module_.functions.callable_of(declaration) {
-    Some(value) => value
-    None => return false
-  }
-  let body_id = match callable.kind {
-    PlannedFunctionCallable(body) | PlannedImplMethodCallable(_, Some(body)) =>
-      body
-    _ => return false
-  }
-  let body_index = semantic_id_local(body_id)
-  if body_index < 0 || body_index >= module_.bodies.length() {
-    return false
-  }
-  let body = module_.bodies[body_index]
-  for
-    expression in body.expressions.start..<(body.expressions.start +
-    body.expressions.length) {
-    match module_.expressions[expression].kind {
-      PlannedBoundDirectCall(_, slot, receiver, _, _) =>
-        if receiver < 0 || slot < 0 || slot >= parameter_classes.length() {
-          return false
-        }
-      PlannedBoundOperatorCall(_, slot, _, _, _, _) =>
-        if slot < 0 || slot >= parameter_classes.length() {
-          return false
-        }
-      _ => ()
-    }
-    if expression < 0 || expression >= module_.expression_evidence.length() {
-      return false
-    }
-    let call = program_evidence_target_and_arguments(
-      module_.expressions[expression],
-    )
-    let roots = module_.expression_evidence[expression]
-    if roots.start < 0 ||
-      roots.start + roots.length > module_.trait_evidence_roots.length() {
-      return false
-    }
-    let target_classes : Array[ProgramExternalRuntimeEvidenceClass] = []
-    for index in 0..<roots.length {
-      let root = module_.trait_evidence_roots[roots.start + index]
-      let class_ = match
-        program_external_runtime_evidence_class(
-          module_, root, parameter_classes,
-        ) {
-        Some(value) => value
-        None => return false
-      }
-      target_classes.push(class_)
-    }
-    if target_classes.length() > 0 {
-      match call {
-        Some((target, arguments)) if arguments.length > 0 => {
-          let mut has_runtime = false
-          for class_ in target_classes {
-            match class_ {
-              ProgramExternalConcreteEvidence => ()
-              ProgramExternalDirectRuntimeEvidence
-              | ProgramExternalCapturedRuntimeEvidence => has_runtime = true
-            }
-          }
-          if has_runtime &&
-            !program_runtime_trait_callable_supports_external_evidence_for_classes(
-              lowering, module_lookup, target, target_classes, states,
-            ) {
-            return false
-          }
-        }
-        None =>
-          match module_.expressions[expression].kind {
-            PlannedParameterSelect(_, _) => ()
-            _ => return false
-          }
-        _ => return false
-      }
-    }
-    match module_.expressions[expression].trait_object_coercion {
-      SelectedInferredTraitObjectCoercion(_, evidence) =>
-        match
-          program_external_runtime_evidence_class(
-            module_, evidence, parameter_classes,
-          ) {
-          Some(ProgramExternalConcreteEvidence)
-          | Some(ProgramExternalDirectRuntimeEvidence)
-          | Some(ProgramExternalCapturedRuntimeEvidence) => ()
-          None => return false
-        }
-      ErrorInferredTraitObjectCoercion => return false
-      NoInferredTraitObjectCoercion => ()
-    }
-  }
-  true
 }
 
 ///|

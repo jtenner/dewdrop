@@ -13,6 +13,12 @@ regression is `.tmp/public_runtime_trait_lambda_wbtest.mbt`; its helper is the
 checked-in `bound_trait_callback_check` test helper after the concrete fix lands.
 Do not turn a compile failure or arbitrary trap into a passing test.
 
+Update: [export admission](runtime-trait-export-admission-2026-09-08.md) now
+withholds the unproved optional erased export and tests successful concrete
+emission. Closed lambdas with no runtime dictionary use have exact owner-key
+fragments. The actual dictionary capture design below remains unimplemented;
+safe admission is not a substitute for that work.
+
 ## Current boundaries
 
 - `materialize_compile_time_lambdas` makes per-logical-key lambda functions and

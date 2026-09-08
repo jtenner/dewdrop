@@ -1535,7 +1535,12 @@ fn directize_body_function_values(
                   target.expressions[call] = {
                     ..call_source,
                     kind: PlannedDirectCall(
-                      declaration, -1, arguments, type_arguments,
+                      declaration,
+                      -1,
+                      arguments,
+                      directized_function_reference_arguments(
+                        target, initializer, call, type_arguments,
+                      ),
                     ),
                   }
                   let get_source = target.expressions[expression]
@@ -1816,11 +1821,11 @@ fn plan_module_lowering_in_order(
     ) {
       planned_value_shape(resolved, inferred, type_)
     }),
-    call_type_arguments: inferred.call_type_arguments,
+    call_type_arguments: inferred.call_type_arguments.copy(),
     call_type_argument_shapes: inferred.call_type_arguments.map(fn(type_) {
       planned_value_shape(resolved, inferred, type_)
     }),
-    expression_evidence: inferred.expression_evidence,
+    expression_evidence: inferred.expression_evidence.copy(),
     trait_evidence_roots: inferred.trait_evidence_roots,
     trait_evidence: inferred.trait_evidence,
     trait_evidence_children: inferred.trait_evidence_children,

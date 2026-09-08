@@ -815,7 +815,14 @@ fn directize_transparent_callback_calls(
           PlannedDirectLambdaCall(lambda, captures, forwarded)
         }
         PlannedFunctionReference(target, type_arguments) =>
-          PlannedDirectCall(target, -1, forwarded, type_arguments)
+          PlannedDirectCall(
+            target,
+            -1,
+            forwarded,
+            directized_function_reference_arguments(
+              module_, callback_expression, expression, type_arguments,
+            ),
+          )
         _ => continue
       }
       let callback_source = module_.expressions[callback_expression]
