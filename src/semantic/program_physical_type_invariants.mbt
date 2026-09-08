@@ -108,7 +108,11 @@ fn verify_module_physical_type_fragments(
         404, 1UL, 0UL, 11UL, index))
     }
   }
-  verify_module_physical_storage_references(module_)
+  match verify_module_physical_storage_references(module_) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  verify_module_function_type_fragments(module_)
 }
 
 ///|

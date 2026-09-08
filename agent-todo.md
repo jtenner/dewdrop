@@ -500,6 +500,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   instance kind, and table coverage. Imported plain fragments must be unique.
   The self-host builtin lookup also removes its malformed-plan recovery scan.
   See the [source lookup log](docs/research/source-function-lookups-2026-09-08.md).
+  Native function-type preflight now checks all source signature spans,
+  references, stored logical IDs, reverse lookup entries, and callback maps
+  before interning. Structural signature cycles report ARN-108; shared children
+  and nominal recursion remain valid. See the
+  [signature preflight log](docs/research/function-type-preflight-2026-09-08.md).
 - [x] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.

@@ -438,6 +438,17 @@ choose(preferred, fallback) = if preferred ≠ −1 then preferred else fallback
 
 The branch-free form also avoids asking an unproved `if` carrier merge to
 compile the body planner that is responsible for that same carrier merge.
+## Function signature expansion
+
+Before native interning, source signatures have checked spans and reference
+indices. An enter/leave traversal rejects an edge to an active structural
+signature with ARN-108. Finished nodes can be reused. Thus the structural graph
+expanded by signature equality is acyclic and each expansion path is finite.
+Nominal references are leaves; their recursive groups are checked separately.
+Forward/reverse logical signature tables and callback maps must agree before
+they can select a signature. See
+[the preflight log](../research/function-type-preflight-2026-09-08.md).
+
 ## Physical body freeze witness
 
 The self-host body plan copies its mutable array containers after verification.

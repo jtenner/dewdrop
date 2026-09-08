@@ -862,15 +862,17 @@ pub fn link_program_wasmgc_fragments(
   guard root_module_index >= 0 && root_module_index < lowering.modules.length() else {
     abort("program root module index is outside the manifest")
   }
-  match validate_program_specialization_plan(fragments, lowering) {
-    Ok(_) => ()
-    Err(error) => abort(error)
-  }
+  // Preserve numeric source context before generic arena validation or
+  // signature interning can consume a malformed fragment table.
   for module_ in fragments.modules {
     match verify_module_physical_type_fragments(module_) {
       Ok(_) => ()
       Err(error) => abort(@debug.to_string(error))
     }
+  }
+  match validate_program_specialization_plan(fragments, lowering) {
+    Ok(_) => ()
+    Err(error) => abort(error)
   }
   let module_type_bases = Array::make(lowering.modules.length(), -1)
   let module_type_indices : Array[Array[Int]] = []
