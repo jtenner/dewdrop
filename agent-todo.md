@@ -244,6 +244,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   and signature-only declarations retain logical metadata without a fabricated
   physical signature. See the
   [named signature log](docs/research/named-fragment-shapes-2026-09-08.md).
+  Self-host mutable capture cells now reject invalid shapes before storage
+  conversion, including after generic substitution. Unit remains erased. See
+  the [capture-cell log](docs/research/capture-cell-shapes-2026-09-08.md).
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.

@@ -1,0 +1,23 @@
+// Check the selected shape, after substitution for a generic owner. A mutable
+// capture cell is real physical storage, not a generic declaration template.
+fn self_host_capture_cell_physical_shape(module_: SelfHostPlannedModuleLowering, local: SelfHostPlannedLocal, index: U32, shape: SelfHostPlannedValueShape) -> SelfHostPlannedValueShape {
+  let error = self_host_specialization_shape_error(shape)
+  if error != 0u32 {
+    let declaration = match self_host_lambda_owner_callable(module_, local.body) {
+      Option::Some(owner) => owner.declaration
+      Option::None => 0u64
+    }
+    let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+      code: 301u32
+      phase: 4u32
+      module_id: module_.module_id
+      declaration: declaration
+      body: local.body
+      expression: 4294967295u32
+      expected: 0u64
+      actual: u32_into_u64(error)
+      detail: u32_into_u64(index)
+    }, "capture cell storage requires concrete specialization evidence")
+  }
+  shape
+}

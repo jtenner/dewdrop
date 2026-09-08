@@ -814,13 +814,14 @@ fn self_host_wasmgc_plan_closures(
     current => if current < module_.locals.length() {
       let local = module_.locals[current]
       if self_host_local_needs_capture_cell(module_, local) && !self_host_lambda_owner_is_generic(module_, local.body) {
+        let shape = self_host_capture_cell_physical_shape(module_, local, current, local.shape)
         let type_index = physical_types.length()
         let field_start = fields.length()
         fields.push(SelfHostPlannedWasmField::{
           role: SelfHostPlannedWasmFieldRole::WasmCaptureCellValueField(current)
           declaration: 0u64
           physical_index: 0u32
-          storage: self_host_wasmgc_storage_type(local.shape)
+          storage: self_host_wasmgc_storage_type(shape)
           mutable_: true
           exact_nominal: false
           offset: local.offset

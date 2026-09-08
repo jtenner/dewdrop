@@ -11,6 +11,17 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["capture cells cannot use Generic evidence", 1n],
+    ["capture cells cannot use Error evidence", 2n],
+    ["capture cell products cannot hide Error evidence", 2n],
+    ["specialized capture cells cannot use Generic evidence", 1n],
+    ["specialized capture cells cannot use Error evidence", 2n],
+    ["specialized capture products cannot hide Error evidence", 2n],
+  ].map(([name, actual]) => ({
+    name: `SPC-301 ${name}`,
+    expected: [301, 4, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, actual, 1n],
+  })),
+  ...[
     ["named physical parameters cannot use Generic evidence", 1n],
     ["named physical parameters cannot use Error evidence", 2n],
     ["named physical products cannot hide Error evidence", 2n],
