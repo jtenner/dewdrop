@@ -457,6 +457,16 @@ machine overflow or silent early completion. This does not prove every transfer
 monotone or every physical type sound. See
 [the work-queue audit](../research/carrier-work-queue-audit-2026-09-08.md).
 
+## Physical call target updates
+
+A missing call target can become known. A known target can only be repeated;
+a different known proposal reports SPC-303. A missing proposal leaves the
+current fact unchanged. The setter checks body ownership, complete table length,
+and stored expression identity before reading or writing the selected slot.
+Thus a successful update preserves the functional call-site mapping. This does
+not prove the target selection itself. See
+[the target update log](../research/physical-call-target-updates-2026-09-08.md).
+
 ## Unit pattern storage
 
 A missing physical local is valid for a Unit pattern only when the specialized

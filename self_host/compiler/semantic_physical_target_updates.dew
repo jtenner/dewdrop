@@ -1,0 +1,66 @@
+fn self_host_call_target_update_failure(
+  body: SelfHostPlannedBodyLowering,
+  expression: U32,
+  code: U32,
+  expected: U64,
+  actual: U64,
+  detail: U64,
+) -> Never {
+  let _ = self_host_assert_compiler_invariant_with_failure(false,
+    SelfHostInvariantFailure::{
+      code: code
+      phase: 6u32
+      module_id: self_host_semantic_id_module(body.body)
+      declaration: body.declaration
+      body: body.body
+      expression: expression
+      expected: expected
+      actual: actual
+      detail: detail
+    }, "physical call target update contract")
+  unreachable()
+}
+
+fn self_host_body_plan_set_call_function(
+  body: SelfHostPlannedBodyLowering,
+  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
+  expression: U32,
+  function_index: U32,
+) -> Bool {
+  let slot = self_host_body_expression_slot(body, expression)
+  if expressions.length() != body.expressions.length {
+    self_host_call_target_update_failure(body, expression, 103u32,
+      u32_into_u64(body.expressions.length), u32_into_u64(expressions.length()), 0u64)
+  }
+  let source = expressions[slot]
+  if source.expression != expression {
+    self_host_call_target_update_failure(body, expression, 106u32,
+      u32_into_u64(expression), u32_into_u64(source.expression), u32_into_u64(slot))
+  }
+  if function_index == 4294967295u32 || source.call_function_index == function_index {
+    return false
+  }
+  if source.call_function_index != 4294967295u32 {
+    // A call-site key is functional. A different second target is a
+    // contradiction, not an idempotent update and not an overwrite.
+    self_host_call_target_update_failure(body, expression, 303u32,
+      u32_into_u64(source.call_function_index), u32_into_u64(function_index), u32_into_u64(slot))
+  }
+  expressions[slot] = SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: source.expression
+    value: source.value
+    carrier: source.carrier
+    conflict_expected: source.conflict_expected
+    conflict_actual: source.conflict_actual
+    receiver_expression: source.receiver_expression
+    receiver_logical_type: source.receiver_logical_type
+    receiver_nominal_owner: source.receiver_nominal_owner
+    receiver_physical_heap_type: source.receiver_physical_heap_type
+    selected_field: source.selected_field
+    selected_type_index: source.selected_type_index
+    selected_field_index: source.selected_field_index
+    selected_storage: source.selected_storage
+    call_function_index: function_index
+  }
+  true
+}

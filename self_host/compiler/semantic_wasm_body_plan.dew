@@ -1545,47 +1545,6 @@ fn self_host_body_function_for_physical_receiver_method(
   selected
 }
 
-fn self_host_body_plan_set_call_function(
-  body: SelfHostPlannedBodyLowering,
-  expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
-  expression: U32,
-  function_index: U32,
-) -> Bool {
-  if self_host_u32_equal(function_index, 4294967295u32) ||
-    expression < body.expressions.start || expression >= self_host_u32_add(
-      body.expressions.start,
-      body.expressions.length,
-    ) {
-    return false
-  }
-  let slot = self_host_body_expression_slot(body, expression)
-  let source = expressions[slot]
-  if self_host_u32_equal(source.call_function_index, function_index) {
-    return false
-  }
-  if !self_host_u32_equal(source.call_function_index, 4294967295u32) {
-    // A call-site key is functional. A later target cannot replace the first
-    // exact target selected for this physical plan.
-    return false
-  }
-  expressions[slot] = SelfHostPlannedPhysicalExpressionCarrier::{
-    expression: source.expression
-    value: source.value
-    carrier: source.carrier
-    conflict_expected: source.conflict_expected
-    conflict_actual: source.conflict_actual
-    receiver_expression: source.receiver_expression
-    receiver_logical_type: source.receiver_logical_type
-    receiver_nominal_owner: source.receiver_nominal_owner
-    receiver_physical_heap_type: source.receiver_physical_heap_type
-    selected_field: source.selected_field
-    selected_type_index: source.selected_type_index
-    selected_field_index: source.selected_field_index
-    selected_storage: source.selected_storage
-    call_function_index: function_index
-  }
-  true
-}
 
 fn self_host_body_lookup(
   module_: SelfHostPlannedModuleLowering,

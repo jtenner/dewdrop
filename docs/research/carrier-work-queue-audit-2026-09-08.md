@@ -61,8 +61,15 @@ exact records, and all shared execution corpora pass (70.875 seconds).
 Clean bootstrap passes (240.686 seconds). Compiler B and compiler C have
 identical raw and linked SHA-256 hashes:
 `a906c81e7333a3e081c1e737762827ce74bb7bff9b8741c1dbb584c03d500d3e`.
-The broader native, integration, library, generated, and stress run continues
-separately. Runs above 30 seconds remain timing defects; no speed work is included.
+The broader serial regression run also passes:
+
+- Native: all 1,201 tests (185.319 seconds).
+- Integration: all 268 tests (67.075 seconds).
+- Library: 326 tests and all shared execution corpora (27.492 seconds).
+- Generated checks (4.560 seconds).
+- Stress: all 15 tests (0.360 seconds).
+
+Runs above 30 seconds remain timing defects; no speed work is included.
 
 This is a runtime post-fixed-point check, not a mechanized proof of every
 transfer's monotonicity or full Wasm reference typing. Those separate

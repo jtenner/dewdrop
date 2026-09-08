@@ -1,0 +1,79 @@
+fn self_host_test_call_target_update() -> (SelfHostPlannedBodyLowering, Array<SelfHostPlannedPhysicalExpressionCarrier>) {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"fn keep(value: I64) -> I64 {\n  value\n}\npub fn run() -> I64 {\n  keep(42i64)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid target update source")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid target update plan")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = module_.bodies[1u32]
+  let expressions = program.bodies[1u32].expressions.copy()
+  assert(body.declaration == ((5100u64 << 32u64) | 1u64), "caller declaration")
+  assert(body.expressions.start == 1u32 && body.expressions.length == 3u32, "caller expression span")
+  assert(expressions.length() == 3u32 && expressions[2u32].expression == 3u32, "stored call identity")
+  assert(expressions[2u32].call_function_index == 0u32, "selected linked callee")
+  (body, expressions)
+}
+
+fn self_host_test_expression_call_target(source: SelfHostPlannedPhysicalExpressionCarrier, target: U32) -> SelfHostPlannedPhysicalExpressionCarrier {
+  SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: source.expression
+    value: source.value
+    carrier: source.carrier
+    conflict_expected: source.conflict_expected
+    conflict_actual: source.conflict_actual
+    receiver_expression: source.receiver_expression
+    receiver_logical_type: source.receiver_logical_type
+    receiver_nominal_owner: source.receiver_nominal_owner
+    receiver_physical_heap_type: source.receiver_physical_heap_type
+    selected_field: source.selected_field
+    selected_type_index: source.selected_type_index
+    selected_field_index: source.selected_field_index
+    selected_storage: source.selected_storage
+    call_function_index: target
+  }
+}
+
+test "call target updates allow an identical fact without mutation" {
+  let (body, expressions) = self_host_test_call_target_update()
+  assert(!self_host_body_plan_set_call_function(body, expressions, 3u32, 0u32), "identical target adds no fact")
+  assert(expressions[2u32].call_function_index == 0u32, "selected target remains exact")
+}
+
+test "missing call target evidence cannot replace a known target" {
+  let (body, expressions) = self_host_test_call_target_update()
+  assert(!self_host_body_plan_set_call_function(body, expressions, 3u32, 4294967295u32), "missing evidence adds no fact")
+  assert(expressions[2u32].call_function_index == 0u32, "missing evidence cannot erase a target")
+}
+
+test "a pending call target increases only when a target is supplied" {
+  let (body, expressions) = self_host_test_call_target_update()
+  expressions[2u32] = self_host_test_expression_call_target(expressions[2u32], 4294967295u32)
+  assert(!self_host_body_plan_set_call_function(body, expressions, 3u32, 4294967295u32), "missing target stays missing")
+  assert(expressions[2u32].call_function_index == 4294967295u32, "no first-function fallback")
+  assert(self_host_body_plan_set_call_function(body, expressions, 3u32, 0u32), "known target adds a fact")
+  assert(expressions[2u32].call_function_index == 0u32, "exact supplied target")
+}
+
+test "SPC-303 call target updates reject concrete disagreement" expect_trap "unreachable" {
+  let (body, expressions) = self_host_test_call_target_update()
+  let _ = self_host_body_plan_set_call_function(body, expressions, 3u32, 1u32)
+}
+
+test "ARN-102 call target updates reject another body's expression" expect_trap "unreachable" {
+  let (body, expressions) = self_host_test_call_target_update()
+  let _ = self_host_body_plan_set_call_function(body, expressions, 0u32, 0u32)
+}
+
+test "ARN-103 call target updates require the complete expression table" expect_trap "unreachable" {
+  let (body, expressions) = self_host_test_call_target_update()
+  let _ = expressions.pop()
+  let _ = self_host_body_plan_set_call_function(body, expressions, 3u32, 0u32)
+}
+
+test "ARN-106 call target updates check the stored expression identity" expect_trap "unreachable" {
+  let (body, expressions) = self_host_test_call_target_update()
+  expressions[2u32] = self_host_test_physical_expression_id(expressions[2u32], 2u32)
+  let _ = self_host_body_plan_set_call_function(body, expressions, 3u32, 0u32)
+}

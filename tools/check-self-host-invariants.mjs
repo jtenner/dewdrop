@@ -10,6 +10,16 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["SPC-303 call target updates reject concrete disagreement", 303, 3, 0n, 1n, 2n],
+    ["ARN-102 call target updates reject another body's expression", 102, 0, 1n, 0n, 3n],
+    ["ARN-103 call target updates require the complete expression table", 103, 3, 3n, 2n, 0n],
+    ["ARN-106 call target updates check the stored expression identity", 106, 3, 3n, 2n, 2n],
+  ].map(([name, code, expression, expected, actual, detail]) => ({
+    name,
+    expected: [code, 6, 5100n, (5100n << 32n) | 1n, (5100n << 32n) | 1n,
+      expression, expected, actual, detail],
+  })),
   {
     name: "ARN-101 carrier graph node totals cannot wrap U32",
     expected: [101, 6, 5100n, 5100n << 32n, 5100n << 32n, 4294967295,

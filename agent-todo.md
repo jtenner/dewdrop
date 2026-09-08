@@ -314,6 +314,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   The shared specialized-call getter now checks the retained witness as well;
   the link boundary verifies matching key sets and exact targets before return.
   See the [consumer log](docs/research/specialized-call-consumers-2026-09-08.md).
+  Self-host physical target updates now reject a different second known target
+  with SPC-303 and check body ownership, table length, and stored identity.
+  Missing proposals cannot erase evidence. Receiver-based selection remains.
+  See the [target update log](docs/research/physical-call-target-updates-2026-09-08.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Raw builtin references now have explicit outlined physical targets in both
   compilers. The native failure required a returned function value; a local
