@@ -276,6 +276,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   construction and again at final verification. Nine source mutations retain
   exact phase-6 records. See the
   [self-host child log](docs/research/self-host-lowered-child-ownership-2026-09-07.md).
+  Both physical boundaries now check each stored local's relative ID, body ID,
+  and exact lambda owner. Lambda emission passes its selected owner explicitly.
+  See the [local identity log](docs/research/physical-local-identity-2026-09-07.md).
   Complete child-list, stored-identity, parallel-array, and later-consumer checks
   remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency

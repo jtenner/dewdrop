@@ -10,6 +10,18 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "ARN-106 lambda locals retain their exact owner",
+    expected: [106, 6, 5100n, 18446744073709551615n, 5100n << 32n, 4294967295, 0n, 1n, 7n << 32n],
+  },
+  ...[
+    ["lowered locals preserve their relative identity", 0n, 1n, 2n],
+    ["lowered locals preserve their source body", (5100n << 32n) + 1n, 5100n << 32n, 6n],
+    ["named body locals cannot belong to a lambda", 4294967295n, 0n, 7n],
+  ].map(([name, expected, actual, tag]) => ({
+    name: `ARN-106 ${name}`,
+    expected: [106, 6, 5100n, (5100n << 32n) + 1n, (5100n << 32n) + 1n, 4294967295, expected, actual, (tag << 32n) | 1n],
+  })),
   ...[
     ["lowered unary children cannot cross physical bodies", 1, 1n, 0n, 1n],
     ["required lowered children cannot be missing", 1, 1n, 4294967295n, 1n],

@@ -19,7 +19,12 @@ test "native physical body arenas accept named and lambda bodies" {
   }
   assert_eq(lowering.lambdas.length(), 1)
   assert_eq(
-    check_planned_body_arenas(lowering, lowering.lambda_body(0).unwrap(), 7),
+    check_planned_body_arenas(
+      lowering,
+      lowering.lambda_body(0).unwrap(),
+      7,
+      lambda=0,
+    ),
     Ok(()),
   )
 }
@@ -172,6 +177,51 @@ test "native physical locals cannot belong to a different body" {
       expected: body.body,
       actual: other,
       detail: (6UL << 32) | index.to_uint64(),
+    }),
+  )
+}
+
+///|
+test "native named body locals cannot belong to a lambda" {
+  let lowering = planned_body_arena_test_lowering()
+  let body = lowering.bodies[1]
+  let index = body.locals.start
+  lowering.locals[index] = { ..lowering.locals[index], lambda: 0, }
+  assert_eq(
+    check_planned_body_arenas(lowering, body, 7),
+    Err({
+      code: 106,
+      phase: 7,
+      module_id: 6046UL,
+      declaration: body.declaration,
+      body: body.body,
+      expression: 0xffffffffU,
+      expected: 4294967295UL,
+      actual: 0UL,
+      detail: (7UL << 32) | index.to_uint64(),
+    }),
+  )
+}
+
+///|
+test "native lambda locals require their exact lambda owner" {
+  let lowering = planned_body_arena_test_lowering()
+  let body = lowering.lambda_body(0).unwrap()
+  assert_eq(check_planned_body_arenas(lowering, body, 7, lambda=0), Ok(()))
+  let index = body.locals.start
+  lowering.locals[index] = { ..lowering.locals[index], lambda: 1, }
+  assert_eq(
+    check_planned_body_arenas(lowering, body, 7, lambda=0),
+    Err({
+      code: 106,
+      phase: 7,
+      module_id: 6046UL,
+      declaration: body.declaration,
+      body: body.body,
+      expression: 0xffffffffU,
+      expected: 0UL,
+      actual: 1UL,
+      detail: (7UL << 32) | index.to_uint64(),
     }),
   )
 }

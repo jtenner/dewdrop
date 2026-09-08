@@ -19,7 +19,7 @@ pub fn analyze_program_semantics_with_cached_interfaces(CollectedProgram, Array[
 
 pub fn analyze_program_semantics_with_frozen(CollectedProgram, FrozenProgramInterfaces) -> AnalyzedProgramSemantics
 
-pub fn assert_planned_body_arenas(PlannedModuleLowering, PlannedBodyLowering, Int) -> Unit
+pub fn assert_planned_body_arenas(PlannedModuleLowering, PlannedBodyLowering, Int, lambda? : Int) -> Unit
 
 pub fn build_module_dependency_graph(CollectedProgram) -> ModuleDependencyGraph
 

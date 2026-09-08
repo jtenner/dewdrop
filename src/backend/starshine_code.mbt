@@ -3428,6 +3428,7 @@ fn starshine_body_locals(
   generic_specialization : StarshineGenericSpecialization?,
   body : @semantic.PlannedBodyLowering,
   leading_parameter_count : Int,
+  lambda? : @semantic.LambdaId = -1,
 ) -> (
   Array[Int],
   Array[@lib.ValType],
@@ -3441,7 +3442,7 @@ fn starshine_body_locals(
   Array[Int],
   Array[Int],
 ) {
-  @semantic.assert_planned_body_arenas(lowering, body, 7)
+  @semantic.assert_planned_body_arenas(lowering, body, 7, lambda~)
   let local_indices = Array::make(body.locals.length, -1)
   let elided_locals = Array::make(body.locals.length, false)
   for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
@@ -8479,6 +8480,7 @@ fn emit_starshine_lambda_body(
     generic_specialization,
     body,
     starshine_lambda_leading_parameter_count(lowering, planned, lambda),
+    lambda~,
   )
   let parameter_count = planned.functions[planned.lambda_function_indices[lambda]].parameters.length
   let (function_reference_cache_indices, cache_count) = starshine_function_reference_cache_indices(

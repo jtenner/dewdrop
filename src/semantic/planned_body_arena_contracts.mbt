@@ -30,6 +30,7 @@ fn check_planned_body_arenas(
   lowering : PlannedModuleLowering,
   body : PlannedBodyLowering,
   phase : Int,
+  lambda? : LambdaId = -1,
 ) -> Result[Unit, BodyArenaFailure] {
   let arenas = [
     (1, body.expressions, lowering.expressions.length()),
@@ -107,6 +108,20 @@ fn check_planned_body_arenas(
         ),
       )
     }
+    if local.lambda != lambda {
+      return Err(
+        planned_body_arena_failure(
+          lowering,
+          body,
+          phase,
+          106,
+          -1,
+          lambda.reinterpret_as_uint().to_uint64(),
+          local.lambda.reinterpret_as_uint().to_uint64(),
+          (7UL << 32) | index.to_uint64(),
+        ),
+      )
+    }
   }
   check_planned_body_children(lowering, body, phase)
 }
@@ -118,8 +133,9 @@ pub fn assert_planned_body_arenas(
   lowering : PlannedModuleLowering,
   body : PlannedBodyLowering,
   phase : Int,
+  lambda? : LambdaId = -1,
 ) -> Unit {
-  match check_planned_body_arenas(lowering, body, phase) {
+  match check_planned_body_arenas(lowering, body, phase, lambda~) {
     Ok(_) => ()
     Err(error) =>
       abort("planned body arena invariant: " + @debug.to_string(error))

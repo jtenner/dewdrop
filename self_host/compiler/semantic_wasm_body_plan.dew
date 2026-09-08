@@ -5253,7 +5253,7 @@ fn self_host_plan_one_physical_body(
   lambda: U32,
 ) -> SelfHostPlannedPhysicalBodyCarrierPlan {
   let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, linked_function.module_index, linked_function.specialization)
-  self_host_verify_lowered_body_children(module_, body)
+  self_host_verify_lowered_body_children(module_, body, lambda)
   let embedded_targets = self_host_body_embedded_targets(module_, body)
   let local_by_initializer = self_host_body_local_by_initializer(module_, body)
   let fragment_module = self_host_body_fragment_module(
@@ -7950,7 +7950,7 @@ fn self_host_verify_physical_body_tables(
 ) -> Unit {
   // Repeat arena checks at the read boundary: a plan can outlive its producer.
   // Unit/elided locals still occupy logical entries; only their Wasm slots vanish.
-  self_host_verify_lowered_body_children(module_, body)
+  self_host_verify_lowered_body_children(module_, body, plan.lambda)
   self_host_assert_physical_table_count(plan, body.locals.length, plan.local_values.length(), 711u32)
   self_host_assert_physical_table_count(plan, body.locals.length, plan.locals.length(), 712u32)
   self_host_assert_physical_table_count(plan, body.expressions.length, plan.expressions.length(), 713u32)

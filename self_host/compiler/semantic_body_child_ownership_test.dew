@@ -111,3 +111,65 @@ test "ARN-104 physical work graphs require owned source operands" expect_trap "u
   )
   let _ = self_host_plan_program_wasm_bodies(link)
 }
+
+fn self_host_child_test_reowned_local(source: SelfHostPlannedLocal, local_id: U32, body_id: U64, lambda: U32) -> SelfHostPlannedLocal {
+  SelfHostPlannedLocal::{
+    body: body_id
+    lambda: lambda
+    local_id: local_id
+    elided: source.elided
+    kind: source.kind
+    mutable_: source.mutable_
+    type_: source.type_
+    shape: source.shape
+    nominal: source.nominal
+    offset: source.offset
+  }
+}
+
+fn self_host_child_test_local_identity(local_id: U32, body_id: U64, lambda: U32) -> Unit {
+  let link = self_host_child_test_link()
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid unmodified body")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  assert(module_.locals.length() == 2u32, "two logical parameter entries")
+  module_.locals[1u32] = self_host_child_test_reowned_local(module_.locals[1u32], local_id, body_id, lambda)
+  self_host_verify_one_physical_body(link, program.bodies[1u32], [])
+}
+
+test "ARN-106 lowered locals preserve their relative identity" expect_trap "unreachable" {
+  self_host_child_test_local_identity(1u32, (5100u64 << 32u64) + 1u64, 4294967295u32)
+}
+
+test "ARN-106 lowered locals preserve their source body" expect_trap "unreachable" {
+  self_host_child_test_local_identity(0u32, 5100u64 << 32u64, 4294967295u32)
+}
+
+test "ARN-106 named body locals cannot belong to a lambda" expect_trap "unreachable" {
+  self_host_child_test_local_identity(0u32, (5100u64 << 32u64) + 1u64, 0u32)
+}
+
+test "ARN-106 lambda locals retain their exact owner" expect_trap "unreachable" {
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_physical_test_fragments(b"pub fn maker() -> fn(I64) -> I64 {\n  fn(value: I64) -> I64 {\n    value\n  }\n}\n"),
+    false,
+  )
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid unmodified closure")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut found = false
+  for plan in program.bodies {
+    if plan.lambda != 4294967295u32 {
+      let body = match self_host_body_lookup_for_plan(module_, plan) {
+        Option::Some(value) => value
+        Option::None => unreachable()
+      }
+      assert(body.locals.start == 0u32 && body.locals.length == 1u32 && plan.lambda == 0u32, "one lambda parameter with no parent locals")
+      let source = module_.locals[0u32]
+      module_.locals[0u32] = self_host_child_test_reowned_local(source, source.local_id, source.body, 1u32)
+      found = true
+      self_host_verify_one_physical_body(link, plan, [])
+    }
+  }
+  assert(found, "the fixture must verify its lambda")
+}
