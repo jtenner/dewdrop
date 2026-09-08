@@ -1,6 +1,7 @@
 struct SelfHostLoweredChildContext {
   module_: SelfHostPlannedModuleLowering
   body: SelfHostPlannedBodyLowering
+  lambda: U32
   locals: SelfHostHirSpan
   lambdas: SelfHostHirSpan
 }
@@ -126,7 +127,10 @@ fn self_host_lowered_child_expression_edges(context: SelfHostLoweredChildContext
       self_host_lowered_child_local(context, parent, local)
       self_host_lowered_child_expression(context, parent, value)
     }
-    SelfHostPlannedExpressionKind::PlannedCaptureSet(_, value) => self_host_lowered_child_expression(context, parent, value)
+    SelfHostPlannedExpressionKind::PlannedCaptureSet(capture, value) => {
+      self_host_lowered_child_capture(context, parent, capture)
+      self_host_lowered_child_expression(context, parent, value)
+    }
     SelfHostPlannedExpressionKind::PlannedReturnExpression(value) => self_host_lowered_child_optional_expression(context, parent, value)
     SelfHostPlannedExpressionKind::PlannedBreakExpression(_, value) => self_host_lowered_child_expression(context, parent, value)
     SelfHostPlannedExpressionKind::PlannedContinueExpression(_, value) => self_host_lowered_child_expression(context, parent, value)
@@ -181,7 +185,9 @@ fn self_host_lowered_child_expression_edges(context: SelfHostLoweredChildContext
       self_host_lowered_child_expression(context, parent, target)
       self_host_lowered_child_arguments(context, parent, arguments)
     }
-    SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda) => self_host_lowered_child_index(context, parent, context.lambdas, lambda, 16u32)
+    SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda) => {
+      let _ = self_host_lowered_child_lambda(context, parent, lambda)
+    }
     SelfHostPlannedExpressionKind::PlannedPoisonExpression => {}
     SelfHostPlannedExpressionKind::PlannedDeferredExpression => {}
     SelfHostPlannedExpressionKind::PlannedConsumedExpression => {}
@@ -201,7 +207,7 @@ fn self_host_lowered_child_expression_edges(context: SelfHostLoweredChildContext
     SelfHostPlannedExpressionKind::PlannedStringConst(_) => {}
     SelfHostPlannedExpressionKind::PlannedStringArrayConst(_) => {}
     SelfHostPlannedExpressionKind::PlannedBytesConst(_) => {}
-    SelfHostPlannedExpressionKind::PlannedCaptureGet(_) => {}
+    SelfHostPlannedExpressionKind::PlannedCaptureGet(capture) => self_host_lowered_child_capture(context, parent, capture)
     SelfHostPlannedExpressionKind::PlannedModuleValueGet(_) => {}
     SelfHostPlannedExpressionKind::PlannedFunctionReference(_) => {}
   }
@@ -216,6 +222,7 @@ fn self_host_verify_lowered_body_children(module_: SelfHostPlannedModuleLowering
   let context = SelfHostLoweredChildContext::{
     module_: module_
     body: body
+    lambda: lambda
     locals: SelfHostHirSpan::{
       start: 0u32
       length: body.locals.length
@@ -224,6 +231,9 @@ fn self_host_verify_lowered_body_children(module_: SelfHostPlannedModuleLowering
       start: 0u32
       length: module_.lambdas.length()
     }
+  }
+  if lambda != 4294967295u32 {
+    let _ = self_host_lowered_child_lambda(context, 4294967295u32, lambda)
   }
   let _ = while 0u32 {
     offset if offset < body.locals.length => {

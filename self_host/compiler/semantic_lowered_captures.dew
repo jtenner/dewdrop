@@ -1,0 +1,52 @@
+fn self_host_lowered_child_capture(context: SelfHostLoweredChildContext, parent: U32, capture: U32) -> Unit {
+  // The current lambda and its global capture span passed entry validation.
+  let length = if context.lambda == 4294967295u32 {
+    0u32
+  } else {
+    context.module_.lambdas[context.lambda].captures.length
+  }
+  self_host_lowered_child_index(context, parent, SelfHostHirSpan::{
+    start: 0u32
+    length: length
+  }, capture, 17u32)
+}
+
+fn self_host_lowered_child_lambda(context: SelfHostLoweredChildContext, parent: U32, lambda: U32) -> SelfHostHirSpan {
+  self_host_lowered_child_index(context, parent, context.lambdas, lambda, 16u32)
+  let source = context.module_.lambdas[lambda]
+  if source.lambda != lambda {
+    self_host_lowered_child_failure(context, 106u32, parent,
+      u32_into_u64(lambda), u32_into_u64(source.lambda),
+      (16u64 << 32u64) | u32_into_u64(lambda),
+    )
+  }
+  if !self_host_u64_equal(source.root_body, context.body.body) {
+    self_host_lowered_child_failure(context, 106u32, parent,
+      context.body.body, source.root_body,
+      (21u64 << 32u64) | u32_into_u64(lambda),
+    )
+  }
+  let span = source.captures
+  self_host_lowered_child_span(context, parent, span, context.module_.captures.length(), 17u32)
+  let _ = while 0u32 {
+    offset if offset < span.length => {
+      let index = span.start + offset
+      let capture = context.module_.captures[index]
+      if capture.lambda != lambda {
+        self_host_lowered_child_failure(context, 106u32, parent,
+          u32_into_u64(lambda), u32_into_u64(capture.lambda),
+          (18u64 << 32u64) | u32_into_u64(index),
+        )
+      }
+      if capture.capture != offset {
+        self_host_lowered_child_failure(context, 106u32, parent,
+          u32_into_u64(offset), u32_into_u64(capture.capture),
+          (17u64 << 32u64) | u32_into_u64(index),
+        )
+      }
+      continue offset + 1u32
+    }
+    _ => break self_host_semantic_unit()
+  }
+  span
+}

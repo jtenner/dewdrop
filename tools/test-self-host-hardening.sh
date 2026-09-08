@@ -140,6 +140,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_wasm_body_plan_test.dew \
   self_host/compiler/semantic_physical_body_tables_test.dew \
   self_host/compiler/semantic_body_child_ownership_test.dew \
+  self_host/compiler/semantic_capture_ownership_test.dew \
   self_host/compiler/semantic_physical_specialization_test.dew \
   self_host/compiler/semantic_method_context_test.dew \
   self_host/compiler/semantic_text_operators_test.dew \

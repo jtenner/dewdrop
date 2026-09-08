@@ -123,7 +123,7 @@ fn check_planned_body_arenas(
       )
     }
   }
-  check_planned_body_children(lowering, body, phase)
+  check_planned_body_children(lowering, body, phase, lambda)
 }
 
 ///|

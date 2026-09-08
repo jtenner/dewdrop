@@ -10,6 +10,21 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["relative identity", 17n],
+    ["lambda owner", 18n],
+  ].map(([name, tag]) => ({
+    name: `ARN-106 physical capture entries preserve their ${name}`,
+    expected: [106, 6, 5100n, 18446744073709551615n, 5100n << 32n, 4294967295, 0n, 1n, tag << 32n],
+  })),
+  {
+    name: "ARN-104 physical capture reads require an owning lambda",
+    expected: [104, 6, 5100n, (5100n << 32n) + 1n, (5100n << 32n) + 1n, 1, 0n, 0n, 17n << 32n],
+  },
+  {
+    name: "ARN-104 physical capture reads stay in the lambda capture span",
+    expected: [104, 6, 5100n, 18446744073709551615n, 5100n << 32n, 1, 0n, 1n, (17n << 32n) | 1n],
+  },
   {
     name: "ARN-106 lambda locals retain their exact owner",
     expected: [106, 6, 5100n, 18446744073709551615n, 5100n << 32n, 4294967295, 0n, 1n, 7n << 32n],

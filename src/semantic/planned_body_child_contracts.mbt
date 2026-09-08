@@ -4,6 +4,7 @@ priv struct PlannedBodyChildChecker {
   body : PlannedBodyLowering
   phase : Int
   local_span : HirSpan
+  mut capture_span : HirSpan
   mut failure : BodyArenaFailure?
 }
 
@@ -200,12 +201,36 @@ fn PlannedBodyChildChecker::lambda(
   parent : Int,
   lambda : LambdaId,
 ) -> Bool {
-  self.owned(
-    parent,
-    { start: 0, length: self.lowering.lambdas.length(), },
-    lambda,
-    16,
-  )
+  if !self.owned(
+      parent,
+      { start: 0, length: self.lowering.lambdas.length(), },
+      lambda,
+      16,
+    ) {
+    return false
+  }
+  let source = self.lowering.lambdas[lambda]
+  if source.lambda != lambda {
+    self.fail(
+      106,
+      parent,
+      lambda.to_uint64(),
+      source.lambda.reinterpret_as_uint().to_uint64(),
+      (16UL << 32) | lambda.to_uint64(),
+    )
+    return false
+  }
+  if source.root_body != self.body.body {
+    self.fail(
+      106,
+      parent,
+      self.body.body,
+      source.root_body,
+      (21UL << 32) | lambda.to_uint64(),
+    )
+    return false
+  }
+  true
 }
 
 ///|
@@ -218,13 +243,17 @@ fn PlannedBodyChildChecker::expression_edges(
 ) -> Unit {
   match kind {
     PlannedLocalGet(local) => self.local(parent, local)
+    PlannedCaptureGet(capture) => self.capture(parent, capture)
+    PlannedCaptureSet(capture, value) => {
+      self.capture(parent, capture)
+      self.expression(parent, value)
+    }
     PlannedLocalSet(local, value) => {
       self.local(parent, local)
       self.expression(parent, value)
     }
     PlannedReturnExpression(value) => self.optional_expression(parent, value)
-    PlannedCaptureSet(_, value)
-    | PlannedPackedEnumPayload(_, value)
+    PlannedPackedEnumPayload(_, value)
     | PlannedBreakExpression(_, value)
     | PlannedContinueExpression(_, value)
     | PlannedPrefixExpression(_, value)
@@ -286,14 +315,12 @@ fn PlannedBodyChildChecker::expression_edges(
       self.expression(parent, receiver)
       self.arguments(parent, arguments)
     }
-    PlannedDirectLambdaCall(lambda, _, arguments) => {
-      ignore(self.lambda(parent, lambda))
+    PlannedDirectLambdaCall(lambda, captures, arguments) => {
+      self.closure_captures(parent, lambda, captures)
       self.arguments(parent, arguments)
     }
-    PlannedLambdaClosure(lambda, captures) => {
-      ignore(self.lambda(parent, lambda))
-      ignore(self.span(parent, captures, self.lowering.captures.length(), 17))
-    }
+    PlannedLambdaClosure(lambda, captures) =>
+      self.closure_captures(parent, lambda, captures)
     PlannedPoisonExpression
     | PlannedDeferredExpression
     | PlannedConsumedExpression
@@ -311,7 +338,6 @@ fn PlannedBodyChildChecker::expression_edges(
     | PlannedStringConst(_, _)
     | PlannedStringArrayConst(_)
     | PlannedBytesConst(_)
-    | PlannedCaptureGet(_)
     | PlannedModuleValueGet(_, _)
     | PlannedFunctionReference(_, _)
     | PlannedUnitVariant(_, _)
@@ -324,13 +350,24 @@ fn check_planned_body_children(
   lowering : PlannedModuleLowering,
   body : PlannedBodyLowering,
   phase : Int,
+  lambda : LambdaId,
 ) -> Result[Unit, BodyArenaFailure] {
   let checker : PlannedBodyChildChecker = {
     lowering,
     body,
     phase,
     local_span: { start: 0, length: body.locals.length, },
+    capture_span: { start: 0, length: 0, },
     failure: None,
+  }
+  if lambda != -1 {
+    match checker.capture_table(-1, lambda) {
+      Some(span) => checker.capture_span = { start: 0, length: span.length, }
+      None => ()
+    }
+    if checker.failure is Some(failure) {
+      return Err(failure)
+    }
   }
   for
     expression in body.expressions.start..<(body.expressions.start +
