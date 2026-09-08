@@ -134,6 +134,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   StringView scans also run in Dew, with shared native/self-host tests and a
   fix for reference-identity equality. View storage remains.
   See the [StringView log](docs/research/string-view-library-algorithms-2026-09-06.md).
+  The pinned provider's 12 old StringView operations and eight unused shared
+  text builders are removed too. See the
+  [provider log](docs/research/string-view-provider-removal-2026-09-07.md).
   StringView byte access and conversion also use Dew calls; the old wrapper-copy
   builder is removed. See the
   [StringView access log](docs/research/string-view-byte-access-2026-09-07.md).
@@ -144,7 +147,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   [byte access log](docs/research/string-byte-access-2026-09-07.md).
   See the [String log](docs/research/string-library-algorithms-2026-09-06.md).
   The pinned provider's 13 old String algorithms and unused private builders
-  are removed too. StringView and storage remain separate work. See the
+  are removed too. Text storage remains separate work. See the
   [provider log](docs/research/string-provider-removal-2026-09-07.md).
   String pattern inference now selects the ordinary Eq method and keeps the
   literal's String type. Lowering and specialization retain that evidence.
@@ -187,7 +190,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.
   Include the pinned Starshine `src/ffi_bridge` runtime copies in each removal;
-  several old text algorithms still exist there after native cleanup.
+  text storage, Debug text formatting, and transport builders still remain.
 
 ### Finish the compiler correctness audit
 
