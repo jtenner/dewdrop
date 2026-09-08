@@ -18,6 +18,7 @@ import { debugSwarProbe } from "./debug-swar-cases.mjs";
 import { debugUnitProbe } from "./debug-unit-cases.mjs";
 import { debugBoolProbe } from "./debug-bool-cases.mjs";
 import { debugTextProbe } from "./debug-text-cases.mjs";
+import { intrinsicNameProbe } from "./intrinsic-name-cases.mjs";
 import { debugDerivedProbe } from "./debug-derived-cases.mjs";
 import { productionAssertionProbe } from "./production-assertion-cases.mjs";
 import { wasiBytesProbe } from "./wasi-bytes-cases.mjs";
@@ -167,6 +168,16 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const source = await readFile("tools/dew-test/intrinsic_names.dew");
+  const probe = intrinsicNameProbe();
+  const exports = await compileProbeBytes(source, "self_host_emission_probe_compile_source", probe.imports);
+  console.log(`self-host intrinsic name checks passed: ${probe.check(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host intrinsic name corpus failed", error);
+}
 try {
   const start = performance.now();
   const request = await readFile(".tmp/self-host-hardening/unit-branches.request.bin");

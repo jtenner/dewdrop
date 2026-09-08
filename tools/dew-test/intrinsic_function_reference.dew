@@ -1,0 +1,6 @@
+builtin add(left: I32, right: I32) -> I32 = "i32.add"
+
+pub fn main() -> I32 {
+  let operation = add
+  operation(0i32, 1i32)
+}

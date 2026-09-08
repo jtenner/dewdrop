@@ -1,10 +1,7 @@
 fn self_host_linked_text_runtime_base(
   link: SelfHostPlannedProgramWasmGCLink,
 ) -> U32 {
-  self_host_u32_add(
-    self_host_u32_add(link.types.length(), link.functions.length()),
-    16u32,
-  )
+  self_host_u32_add(link.types.length(), link.functions.length())
 }
 
 fn self_host_linked_nominal_ref_type(type_index: U32) -> StarshineValue {

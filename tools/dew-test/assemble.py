@@ -75,6 +75,7 @@ def main() -> None:
         ("debug_bool", "app.debug_bool"),
         ("debug_derived", "app.debug_derived"),
         ("debug_text", "app.debug_text"),
+        ("intrinsic_names", "app.intrinsic_names"),
         ("production_assertions", "app.production_assertions"),
         ("wasi_bytes", "app.wasi_bytes"),
         ("product_patterns", "app.product_patterns"),

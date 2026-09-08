@@ -161,7 +161,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   See also the [recipe checks](docs/research/string-pattern-call-recipes-2026-09-07.md).
   The [emission checks](docs/research/string-pattern-emission-2026-09-07.md) cover
   custom equality, nested patterns, evaluation order, and optimizer effects.
-- [ ] Convert remaining host-operation builtins into foreign declarations.
+- [x] Convert remaining host-operation builtins into foreign declarations.
   Keep generated Dew types, provider metadata, and emitted signatures in sync.
   The 46 raw Preview 1 functions now use public `foreign import` declarations.
   Diagnostics remain. See the
@@ -220,6 +220,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   is gone. Native hidden Debug dependency roots are removed. The self-host's
   forced-WASI-import rule still needs a separate check. See the
   [Bytes Debug log](docs/research/debug-bytes-library-2026-09-08.md).
+  The self-host's hidden sixteen-import WASI prefix, name-based host-call
+  dispatch, forced import retention, and index offsets are removed too. Ordinary
+  foreign declarations supply host calls. Function-handle sentinels are checked
+  before conversion. See the
+  [intrinsic-name log](docs/research/intrinsic-wasi-name-dispatch-2026-09-08.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
@@ -305,6 +310,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   the link boundary verifies matching key sets and exact targets before return.
   See the [consumer log](docs/research/specialized-call-consumers-2026-09-08.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
+  A new isolated regression also shows that first-class raw builtin references
+  lack a self-host physical target (`intrinsic_function_reference.dew`); native
+  supports them. Keep this case visible while adding checked outlined targets.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.
   Native direct-call trait operands now have an independent ordered copy in

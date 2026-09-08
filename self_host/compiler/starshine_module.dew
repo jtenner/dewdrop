@@ -236,7 +236,6 @@ enum SelfHostLinkedI32EmitTask {
   EmitLinkedFixedArrayGetPrefix(U32, StarshineInstructions)
   EmitLinkedFixedArrayGet(U32, StarshineInstructions)
   EmitLinkedI32Call(U32, StarshineInstructions)
-  EmitLinkedWasiCall(U32, StarshineInstructions)
   PrepareLinkedFunctionValueCall(U32, StarshineInstructions)
   EmitLinkedFunctionValueCall(
     U32,
@@ -10105,11 +10104,41 @@ fn self_host_linked_i32_local_slot(
 }
 
 fn self_host_linked_physical_function_index(function_index: U32) -> U32 {
+  let _ = self_host_assert_compiler_invariant_with_failure(
+    function_index <= 4294967292u32,
+    SelfHostInvariantFailure::{
+      code: 502u32
+      phase: 6u32
+      module_id: 0u64
+      declaration: 0u64
+      body: 0u64
+      expression: 4294967295u32
+      expected: 4294967292u64
+      actual: u32_into_u64(function_index)
+      detail: 0u64
+    },
+    "function handle encoding must leave the missing sentinel reserved",
+  )
   self_host_u32_add(function_index, 2u32)
 }
 
 fn self_host_linked_emitted_function_index(function_index: U32) -> U32 {
-  self_host_u32_add(function_index, 14u32)
+  let _ = self_host_assert_compiler_invariant_with_failure(
+    function_index >= 2u32 && function_index != 4294967295u32,
+    SelfHostInvariantFailure::{
+      code: 105u32
+      phase: 7u32
+      module_id: 0u64
+      declaration: 0u64
+      body: 0u64
+      expression: 4294967295u32
+      expected: 2u64
+      actual: u32_into_u64(function_index)
+      detail: 0u64
+    },
+    "emitted function requires a present tagged function handle",
+  )
+  self_host_u32_subtract(function_index, 2u32)
 }
 
 fn self_host_linked_physical_function(
@@ -16638,22 +16667,7 @@ fn self_host_emit_linked_i32_expression(
                 )
               } {
                 Option::Some(name) => {
-                  let direct_wasi_function_index = self_host_linked_wasi_function_index(
-                    name,
-                  )
-                  let wasi_function_index = if direct_wasi_function_index >= 0i32 {
-                    direct_wasi_function_index
-                  } else {
-                    self_host_linked_wasi_function_index(
-                      self_host_linked_declaration_name(link, declaration),
-                    )
-                  }
-                  if wasi_function_index >= 0i32 {
-                    tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedWasiCall(
-                      self_host_i32_to_u32(wasi_function_index),
-                      destination,
-                    ))
-                  } else if self_host_program_link_is_runtime_builtin(name) {
+                  if self_host_program_link_is_runtime_builtin(name) {
                     let function_index = self_host_linked_runtime_function_index(
                       link,
                       name,
@@ -17952,32 +17966,6 @@ fn self_host_emit_linked_i32_expression(
               arguments,
               _,
             ) => {
-              let direct_wasi_function_index = self_host_linked_wasi_function_index(name)
-              let wasi_function_index = if direct_wasi_function_index >= 0i32 {
-                direct_wasi_function_index
-              } else {
-                self_host_linked_wasi_function_index(
-                  self_host_linked_declaration_name(link, declaration),
-                )
-              }
-              if wasi_function_index >= 0i32 {
-                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedWasiCall(
-                  self_host_i32_to_u32(wasi_function_index),
-                  destination,
-                ))
-                match self_host_linked_i32_push_arguments(
-                  module_,
-                  arguments,
-                  destination,
-                  tasks,
-                  expression_depths,
-                  depth,
-                ) {
-                  Option::Some(error) => return Option::Some(error)
-                  Option::None => {}
-                }
-                continue tasks.length()
-              }
               if name.equals(b"array.new_default") {
                 if arguments.length != 1u32 || !self_host_array_span_is_valid(arguments.start, arguments.length, module_.expression_children.length()) {
                   return Option::Some("ABI-703 raw array.new_default needs one length")
@@ -20101,17 +20089,6 @@ fn self_host_emit_linked_i32_expression(
               self_host_u32_to_i32(
                 self_host_linked_emitted_function_index(function_index),
               ),
-            ),
-          ),
-        )
-        SelfHostLinkedI32EmitTask::EmitLinkedWasiCall(
-          function_index,
-          destination,
-        ) => StarshineFfi.ffi_ffi_bridge_instructions_push(
-          destination,
-          StarshineFfi.ffi_lib_Instruction_call(
-            StarshineFfi.ffi_lib_FuncIdx_new(
-              self_host_u32_to_i32(function_index),
             ),
           ),
         )
@@ -31892,8 +31869,8 @@ fn self_host_linked_starshine_validation_error(
     "Starshine rejected the linked self-host output module",
   ))
   let emitted = StarshineFfi.ffi_ffi_bridge_validation_error_function_index()
-  if emitted >= 16i32 {
-    let logical = self_host_i32_to_u32(emitted - 16i32)
+  if emitted >= 0i32 {
+    let logical = self_host_i32_to_u32(emitted)
     let physical = self_host_linked_physical_function_index(logical)
     message.append(" linked_function=")
     message.append_u32(logical)
@@ -31981,119 +31958,9 @@ fn self_host_linked_append_import_name(
   }
 }
 
-fn self_host_linked_append_wasi_import(
-  imports: StarshineImports,
-  type_index: U32,
-  name: Bytes,
-) -> Unit {
-  let builder = StarshineFfi.ffi_ffi_bridge_import_builder_new(
-    self_host_u32_to_i32(type_index),
-  )
-  self_host_linked_append_import_name(
-    builder,
-    b"wasi_snapshot_preview1",
-    true,
-  )
-  self_host_linked_append_import_name(builder, name, false)
-  StarshineFfi.ffi_ffi_bridge_imports_push_builder(imports, builder)
-}
 
-fn self_host_linked_append_wasi_signature(
-  rec_types: StarshineRecTypes,
-  parameter_count: U32,
-  path_open: Bool,
-) -> Unit {
-  let parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
-  let mut parameter = 0u32
-  let _ = while parameter {
-    current => if current < parameter_count {
-      if path_open && (self_host_u32_equal(current, 5u32) ||
-        self_host_u32_equal(current, 6u32)) {
-        StarshineFfi.ffi_ffi_bridge_val_types_push(
-          parameters,
-          StarshineFfi.ffi_lib_ValType_i64(),
-        )
-      } else {
-        StarshineFfi.ffi_ffi_bridge_val_types_push(
-          parameters,
-          StarshineFfi.ffi_lib_ValType_i32(),
-        )
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let results = StarshineFfi.ffi_ffi_bridge_val_types_new()
-  StarshineFfi.ffi_ffi_bridge_val_types_push(
-    results,
-    StarshineFfi.ffi_lib_ValType_i32(),
-  )
-  self_host_linked_append_function_value_type(rec_types, parameters, results)
-}
 
-fn self_host_linked_append_wasi_void_signature(
-  rec_types: StarshineRecTypes,
-  parameter_count: U32,
-) -> Unit {
-  let parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
-  let mut parameter = 0u32
-  let _ = while parameter {
-    current => if current < parameter_count {
-      StarshineFfi.ffi_ffi_bridge_val_types_push(
-        parameters,
-        StarshineFfi.ffi_lib_ValType_i32(),
-      )
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  self_host_linked_append_function_value_type(
-    rec_types,
-    parameters,
-    StarshineFfi.ffi_ffi_bridge_val_types_new(),
-  )
-}
 
-fn self_host_linked_wasi_function_index(name: Bytes) -> I32 {
-  let qualified = name.starts_with(b"wasi")
-  if name.equals(b"args_get") || (qualified && name.ends_with(b"args_get")) {
-    0i32
-  } else if name.equals(b"args_sizes_get") || (qualified && name.ends_with(b"args_sizes_get")) {
-    1i32
-  } else if name.equals(b"environ_get") || (qualified && name.ends_with(b"environ_get")) {
-    2i32
-  } else if name.equals(b"environ_sizes_get") || (qualified && name.ends_with(b"environ_sizes_get")) {
-    3i32
-  } else if name.equals(b"fd_close") || (qualified && name.ends_with(b"fd_close")) {
-    4i32
-  } else if name.equals(b"fd_filestat_get") || (qualified && name.ends_with(b"fd_filestat_get")) {
-    5i32
-  } else if name.equals(b"fd_write") || (qualified && name.ends_with(b"fd_write")) {
-    6i32
-  } else if name.equals(b"fd_read") || (qualified && name.ends_with(b"fd_read")) {
-    7i32
-  } else if name.equals(b"fd_sync") || (qualified && name.ends_with(b"fd_sync")) {
-    8i32
-  } else if name.equals(b"path_create_directory") || (qualified && name.ends_with(b"path_create_directory")) {
-    9i32
-  } else if name.equals(b"path_filestat_get") || (qualified && name.ends_with(b"path_filestat_get")) {
-    10i32
-  } else if name.equals(b"path_open") || (qualified && name.ends_with(b"path_open")) {
-    11i32
-  } else if name.equals(b"path_remove_directory") || (qualified && name.ends_with(b"path_remove_directory")) {
-    12i32
-  } else if name.equals(b"path_rename") || (qualified && name.ends_with(b"path_rename")) {
-    13i32
-  } else if name.equals(b"path_unlink_file") || (qualified && name.ends_with(b"path_unlink_file")) {
-    14i32
-  } else if name.equals(b"proc_exit") || (qualified && name.ends_with(b"proc_exit")) {
-    15i32
-  } else {
-    -1i32
-  }
-}
 
 fn self_host_linked_emitted_local_carrier_error(
   link: SelfHostPlannedProgramWasmGCLink,
@@ -33093,26 +32960,6 @@ fn build_self_host_linked_i32_module(
       let functions = StarshineFfi.ffi_ffi_bridge_funcs_new()
       let globals = StarshineFfi.ffi_ffi_bridge_global_builder_new()
       let function_references = StarshineFfi.ffi_ffi_bridge_function_reference_builder_new()
-      let wasi_type_base = self_host_u32_add(
-        link.types.length(),
-        link.functions.length(),
-      )
-      self_host_linked_append_wasi_import(imports, wasi_type_base, b"args_get")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 1u32, b"args_sizes_get")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 2u32, b"environ_get")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 3u32, b"environ_sizes_get")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 4u32, b"fd_close")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 5u32, b"fd_filestat_get")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 6u32, b"fd_write")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 7u32, b"fd_read")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 8u32, b"fd_sync")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 9u32, b"path_create_directory")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 10u32, b"path_filestat_get")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 11u32, b"path_open")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 12u32, b"path_remove_directory")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 13u32, b"path_rename")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 14u32, b"path_unlink_file")
-      self_host_linked_append_wasi_import(imports, wasi_type_base + 15u32, b"proc_exit")
       let mut linked_function_emit_index = 0u32
       let _ = while linked_function_emit_index {
         current => if current < link.functions.length() {
@@ -33196,22 +33043,6 @@ fn build_self_host_linked_i32_module(
           break self_host_semantic_unit()
         }
       }
-      self_host_linked_append_wasi_signature(rec_types, 2u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 2u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 2u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 2u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 1u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 2u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 4u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 4u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 1u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 3u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 5u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 9u32, true)
-      self_host_linked_append_wasi_signature(rec_types, 3u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 6u32, false)
-      self_host_linked_append_wasi_signature(rec_types, 3u32, false)
-      self_host_linked_append_wasi_void_signature(rec_types, 1u32)
       self_host_linked_append_text_runtime_types(link, rec_types)
       self_host_linked_append_array_runtime_types(link, rec_types)
       self_host_linked_append_erased_field_box_types(rec_types)
@@ -33481,7 +33312,7 @@ fn build_self_host_linked_i32_module(
               StarshineFfi.ffi_lib_Instruction_call(
                 StarshineFfi.ffi_lib_FuncIdx_new(
                   self_host_u32_to_i32(
-                    link.functions.length() + current + 16u32,
+                    link.functions.length() + current,
                   ),
                 ),
               ),
@@ -33535,7 +33366,7 @@ fn build_self_host_linked_i32_module(
         StarshineFfi.ffi_ffi_bridge_module_with_start_function(
           global_module,
           self_host_u32_to_i32(
-            link.functions.length() + link.initializers.length() + 16u32,
+            link.functions.length() + link.initializers.length(),
           ),
         )
       } else {
@@ -33545,7 +33376,7 @@ fn build_self_host_linked_i32_module(
         StarshineFfi.ffi_ffi_bridge_module_with_declarative_functions(
           StarshineFfi.ffi_ffi_bridge_module_with_compiler_exports(
             started_module,
-            self_host_u32_to_i32(root_function_index + 16u32),
+            self_host_u32_to_i32(root_function_index),
           ),
           function_references,
         ),

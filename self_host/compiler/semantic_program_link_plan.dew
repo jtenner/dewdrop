@@ -386,15 +386,7 @@ fn self_host_program_link_append_function_class(
       let _ = while fragment_index {
         current => if current < self_host_program_link_fragment_function_count(module_) {
           let function_ = self_host_program_link_fragment_function(module_, current)
-          let forced_wasi_import = match function_.kind {
-            SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(
-              library,
-              field,
-            ) => library.equals(b"wasi_snapshot_preview1") &&
-              (field.equals(b"fd_write") || field.equals(b"fd_read"))
-            _ => false
-          }
-          if (self_host_program_link_is_emitted(function_) || forced_wasi_import) &&
+          if self_host_program_link_is_emitted(function_) &&
             self_host_program_link_is_imported(function_) == imported {
             functions.push(SelfHostPlannedProgramWasmFunction::{
               module_index: current_module

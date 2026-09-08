@@ -1,0 +1,40 @@
+builtin wasi_probe_args_get(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_args_sizes_get(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_environ_get(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_environ_sizes_get(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_fd_close(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_fd_filestat_get(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_fd_write(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_fd_read(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_fd_sync(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_path_create_directory(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_path_filestat_get(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_path_open(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_path_remove_directory(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_path_rename(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_path_unlink_file(left: I32, right: I32) -> I32 = "i32.add"
+builtin wasi_probe_proc_exit(left: I32, right: I32) -> I32 = "i32.add"
+builtin fd_write(left: I32, right: I32) -> I32 = "i32.add"
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => wasi_probe_args_get(0i32, 100i32)
+    1u32 => wasi_probe_args_sizes_get(1i32, 100i32)
+    2u32 => wasi_probe_environ_get(2i32, 100i32)
+    3u32 => wasi_probe_environ_sizes_get(3i32, 100i32)
+    4u32 => wasi_probe_fd_close(4i32, 100i32)
+    5u32 => wasi_probe_fd_filestat_get(5i32, 100i32)
+    6u32 => wasi_probe_fd_write(6i32, 100i32)
+    7u32 => wasi_probe_fd_read(7i32, 100i32)
+    8u32 => wasi_probe_fd_sync(8i32, 100i32)
+    9u32 => wasi_probe_path_create_directory(9i32, 100i32)
+    10u32 => wasi_probe_path_filestat_get(10i32, 100i32)
+    11u32 => wasi_probe_path_open(11i32, 100i32)
+    12u32 => wasi_probe_path_remove_directory(12i32, 100i32)
+    13u32 => wasi_probe_path_rename(13i32, 100i32)
+    14u32 => wasi_probe_path_unlink_file(14i32, 100i32)
+    15u32 => wasi_probe_proc_exit(15i32, 100i32)
+    16u32 => fd_write(16i32, 100i32)
+    _ => -1i32
+  }
+}

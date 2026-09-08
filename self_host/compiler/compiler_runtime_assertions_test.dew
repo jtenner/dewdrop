@@ -1,3 +1,31 @@
+test "function handle decoding uses the actual linked index" {
+  for logical in [0u32, 1u32, 15u32, 16u32, 17u32, 4294967292u32] {
+    let handle = self_host_linked_physical_function_index(logical)
+    assert(handle == logical + 2u32, "internal handles retain their two reserved slots")
+    assert(self_host_linked_emitted_function_index(handle) == logical, "emitted indices cannot include hidden imports")
+  }
+}
+
+test "ARN-105 emitted function rejects zero handle" expect_trap "unreachable" {
+  assert(self_host_linked_emitted_function_index(2u32) == 0u32, "valid handle before mutation")
+  let _ = self_host_linked_emitted_function_index(0u32)
+}
+
+test "ARN-105 emitted function rejects reserved handle" expect_trap "unreachable" {
+  assert(self_host_linked_emitted_function_index(3u32) == 1u32, "valid handle before mutation")
+  let _ = self_host_linked_emitted_function_index(1u32)
+}
+
+test "ARN-105 emitted function rejects missing handle" expect_trap "unreachable" {
+  assert(self_host_linked_emitted_function_index(3u32) == 1u32, "valid handle before mutation")
+  let _ = self_host_linked_emitted_function_index(4294967295u32)
+}
+
+test "LNK-502 function handle encoding preserves the missing sentinel" expect_trap "unreachable" {
+  assert(self_host_linked_physical_function_index(4294967292u32) == 4294967294u32, "valid handle before mutation")
+  let _ = self_host_linked_physical_function_index(4294967293u32)
+}
+
 test "invariant record keeps numeric context" {
   self_host_record_invariant_failure(
     SelfHostInvariantFailure::{

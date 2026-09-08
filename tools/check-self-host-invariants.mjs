@@ -10,6 +10,14 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[["zero", 0n], ["reserved", 1n], ["missing", 4294967295n]].map(([kind, actual]) => ({
+    name: `ARN-105 emitted function rejects ${kind} handle`,
+    expected: [105, 7, 0n, 0n, 0n, 4294967295, 2n, actual, 0n],
+  })),
+  {
+    name: "LNK-502 function handle encoding preserves the missing sentinel",
+    expected: [502, 6, 0n, 0n, 0n, 4294967295, 4294967292n, 4294967293n, 0n],
+  },
   ...[
     ["capture cells cannot use Generic evidence", 1n],
     ["capture cells cannot use Error evidence", 2n],
