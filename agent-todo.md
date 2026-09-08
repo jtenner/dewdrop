@@ -415,6 +415,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   cannot be repaired by names or tentative carriers. Recipe freeze and nominal
   constructor recovery still remain. See the
   [constructor identity log](docs/research/constructor-field-identity-2026-09-08.md).
+  The body worklist also checks that complete exact field map before changing
+  carrier evidence. Source names cannot repair a field ID during propagation.
+  See the [propagation log](docs/research/constructor-propagation-identities-2026-09-08.md).
   No emitter step may invent a new carrier or overwrite conflicting evidence.
   Verify all worklist constraints at the fixed point and reject later mutation.
   Self-host body plans now retain exact freeze witnesses and check all tables

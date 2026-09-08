@@ -3639,6 +3639,8 @@ fn self_host_body_force_constructor_field_carriers(
         physical_module,
         linked_type.fragment_index,
       )
+      let recipe = self_host_constructor_field_recipe_in_phase(module_, body,
+        expression_plan.expression, fields, physical_module, physical, type_index, 6u32)
       let mut physical_offset = 0u32
       let _ = while physical_offset {
         current => if current < physical.fields.length {
@@ -3646,46 +3648,8 @@ fn self_host_body_force_constructor_field_carriers(
             physical_module,
             self_host_u32_add(physical.fields.start, current),
           )
-          let mut argument = 4294967295u32
-          let mut source_offset = 0u32
-          let _ = while source_offset {
-            source => if source < fields.length {
-              let object_index = self_host_u32_add(fields.start, source)
-              if object_index < module_.object_fields.length() {
-                let object_field = self_host_planned_object_field_identity(
-                  module_.object_fields[object_index],
-                )
-                let exact_field = self_host_u64_equal(
-                  object_field.field,
-                  destination.declaration,
-                )
-                let named_field = self_host_u32_greater(
-                  self_host_linked_module_name_count(module_),
-                  object_field.name,
-                ) && match self_host_linked_field_name(
-                  link,
-                  destination.declaration,
-                ) {
-                  Option::Some(destination_name) => self_host_linked_module_name_at(
-                    module_,
-                    object_field.name,
-                  ) == destination_name
-                  Option::None => false
-                }
-                if exact_field {
-                  argument = object_field.value
-                  break self_host_semantic_unit()
-                }
-                if named_field && self_host_u32_equal(argument, 4294967295u32) {
-                  argument = object_field.value
-                }
-              }
-              continue source + 1u32
-            } else {
-              break self_host_semantic_unit()
-            }
-          }
-          if !(link.erased_fields.get(destination.declaration) is Option::Some(true)) && !self_host_u32_equal(argument, 4294967295u32) &&
+          let argument = module_.object_fields[fields.start + recipe[current]].value
+          if !(link.erased_fields.get(destination.declaration) is Option::Some(true)) &&
             self_host_body_plan_force_expression_carrier(
               body,
               expressions,

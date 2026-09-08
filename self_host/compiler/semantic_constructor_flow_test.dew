@@ -29,6 +29,38 @@ fn self_host_constructor_field_identity_fixture(replacement: U64) -> Unit {
   }
 }
 
+fn self_host_constructor_propagation_identity_fixture(replacement: U64) -> Unit {
+  let link = self_host_constructor_field_identity_link()
+  let program = self_host_plan_program_wasm_bodies(link)
+  let plan = program.bodies[0u32]
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = module_.bodies[0u32]
+  let field = module_.object_fields[0u32]
+  module_.object_fields[0u32] = SelfHostPlannedObjectField::{
+    field: replacement
+    name: field.name
+    value: field.value
+    offset: field.offset
+  }
+  let expression = match self_host_body_plan_expression(plan, 2u32) {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  let _ = self_host_body_force_constructor_field_carriers(link, module_, body,
+    plan.specialization, expression, SelfHostHirSpan::{
+      start: 0u32
+      length: 1u32
+    }, plan.expressions)
+}
+
+test "BOD-608 constructor propagation rejects a missing field identity" expect_trap "unreachable" {
+  self_host_constructor_propagation_identity_fixture(0u64)
+}
+
+test "BOD-608 constructor propagation rejects another declaration's field" expect_trap "unreachable" {
+  self_host_constructor_propagation_identity_fixture((5100u64 << 32u64) | 1u64)
+}
+
 test "BOD-608 constructor field names cannot replace declaration identity" expect_trap "unreachable" {
   self_host_constructor_field_identity_fixture((5100u64 << 32u64) | 1u64)
 }

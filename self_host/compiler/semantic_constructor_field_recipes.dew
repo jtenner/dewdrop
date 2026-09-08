@@ -1,7 +1,7 @@
-fn self_host_constructor_field_failure(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+fn self_host_constructor_field_failure(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, phase: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
   let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
     code: code
-    phase: 7u32
+    phase: phase
     module_id: module_.module_id
     declaration: body.declaration
     body: body.body
@@ -16,16 +16,20 @@ fn self_host_constructor_field_failure(module_: SelfHostPlannedModuleLowering, b
 // The result maps physical field order to source evaluation order. Names and
 // tentative inferred carriers are not evidence for field identity.
 fn self_host_constructor_field_recipe(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, fields: SelfHostHirSpan, physical_module: SelfHostPlannedModuleWasmGCFragments, physical: SelfHostPlannedWasmPhysicalType, type_index: U32) -> Array<U32> {
+  self_host_constructor_field_recipe_in_phase(module_, body, expression, fields, physical_module, physical, type_index, 7u32)
+}
+
+fn self_host_constructor_field_recipe_in_phase(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, fields: SelfHostHirSpan, physical_module: SelfHostPlannedModuleWasmGCFragments, physical: SelfHostPlannedWasmPhysicalType, type_index: U32, phase: U32) -> Array<U32> {
   if !self_host_array_span_is_valid(fields.start, fields.length, module_.object_fields.length()) {
-    self_host_constructor_field_failure(module_, body, expression, 101u32,
+    self_host_constructor_field_failure(module_, body, expression, phase, 101u32,
       u32_into_u64(module_.object_fields.length()), u32_into_u64(fields.length), u32_into_u64(fields.start))
   }
   if !self_host_array_span_is_valid(physical.fields.start, physical.fields.length, physical_module.fields.length()) {
-    self_host_constructor_field_failure(module_, body, expression, 101u32,
+    self_host_constructor_field_failure(module_, body, expression, phase, 101u32,
       u32_into_u64(physical_module.fields.length()), u32_into_u64(physical.fields.length), (1u64 << 32u64) | u32_into_u64(physical.fields.start))
   }
   if fields.length != physical.fields.length {
-    self_host_constructor_field_failure(module_, body, expression, 608u32,
+    self_host_constructor_field_failure(module_, body, expression, phase, 608u32,
       u32_into_u64(physical.fields.length), u32_into_u64(fields.length), (1u64 << 32u64) | u32_into_u64(type_index))
   }
   let missing = 4294967295u32
@@ -40,7 +44,7 @@ fn self_host_constructor_field_recipe(module_: SelfHostPlannedModuleLowering, bo
           let candidate = physical_module.fields[physical.fields.start + index]
           if field.field != 0u64 && candidate.declaration == field.field {
             if selected != missing {
-              self_host_constructor_field_failure(module_, body, expression, 608u32,
+              self_host_constructor_field_failure(module_, body, expression, phase, 608u32,
                 u32_into_u64(type_index), field.field, u32_into_u64(slot))
             }
             selected = index
@@ -50,11 +54,11 @@ fn self_host_constructor_field_recipe(module_: SelfHostPlannedModuleLowering, bo
         _ => break ()
       }
       if selected == missing {
-        self_host_constructor_field_failure(module_, body, expression, 608u32,
+        self_host_constructor_field_failure(module_, body, expression, phase, 608u32,
           u32_into_u64(type_index), field.field, u32_into_u64(slot))
       }
       if recipe[selected] != missing {
-        self_host_constructor_field_failure(module_, body, expression, 608u32,
+        self_host_constructor_field_failure(module_, body, expression, phase, 608u32,
           u32_into_u64(type_index), field.field, u32_into_u64(slot))
       }
       recipe[selected] = source

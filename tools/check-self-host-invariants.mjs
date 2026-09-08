@@ -11,6 +11,14 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["BOD-608 constructor propagation rejects a missing field identity", 0n],
+    ["BOD-608 constructor propagation rejects another declaration's field", (5100n << 32n) | 1n],
+  ].map(([name, actual]) => ({
+    name,
+    expected: [608, 6, 5100n, (5100n << 32n) | 2n, 5100n << 32n,
+      2, 0n, actual, 0n],
+  })),
+  ...[
     ["BOD-605 capture access capture ID cannot change after freeze", 605, 7, 0n, 1n, 200n << 32n],
     ["BOD-605 capture access source kind cannot change after freeze", 605, 7, 0n, 1n, 201n << 32n],
     ["BOD-605 capture access source owner cannot change after freeze", 605, 7, 5100n << 32n, (5100n << 32n) + 1n, 202n << 32n],
@@ -113,7 +121,7 @@ const probes = [
     name: kind === "declaration identity"
       ? "BOD-608 constructor field names cannot replace declaration identity"
       : "BOD-608 constructor field names cannot repair a missing identity",
-    expected: [608, 7, 5100n, (5100n << 32n) | 2n, 5100n << 32n,
+    expected: [608, 6, 5100n, (5100n << 32n) | 2n, 5100n << 32n,
       2, 0n, actual, 0n],
   })),
   ...[

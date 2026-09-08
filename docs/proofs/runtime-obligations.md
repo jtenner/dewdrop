@@ -4,6 +4,13 @@ Formal proofs use ideal values. Compiler data uses bounded arrays, machine
 integers, mutable arenas, and linked indices. Runtime assertions guard that
 gap.
 
+Constructor carrier propagation must validate its complete source-to-physical
+field map before its first carrier write. Field declaration IDs, not names,
+establish that map. The same checked recipe is used at emission. Failures
+retain the phase where they occur. This closes the field-name repair path;
+it does not yet prove exact constructor target selection or recipe freeze.
+See [the propagation log](../research/constructor-propagation-identities-2026-09-08.md).
+
 ## Arena access
 
 For arena \(A\) and index \(i\):
