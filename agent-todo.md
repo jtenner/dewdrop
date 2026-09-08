@@ -288,6 +288,10 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.
+  Native direct-call trait operands now have an independent ordered copy in
+  the saved target witness. Linking and emission check spans, counts, and
+  exact operands; different replays cannot overwrite the recipe. See the
+  [trait operand log](docs/research/frozen-trait-call-operands-2026-09-08.md).
   Public generic lambda factories still need runtime trait dictionaries in
   their escaping closure recipe. Concrete lambda instances and public generic
   function-value factories now work; the external runtime lambda case is

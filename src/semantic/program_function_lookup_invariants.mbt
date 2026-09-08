@@ -1,5 +1,5 @@
 ///|
-priv struct ProgramFunctionLookupFailure {
+pub struct ProgramFunctionLookupFailure {
   code : Int
   phase : Int
   module_id : ModuleId

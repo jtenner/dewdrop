@@ -1785,6 +1785,7 @@ pub fn link_program_wasmgc_fragments(
       match
         record_program_physical_call_target(
           specialized_call_targets, call, target_index, functions[target_index],
+          fragments.specialized_call_runtime_evidence_parameters,
         ) {
         Ok(_) => ()
         Err(failure) => abort(@debug.to_string(failure))
@@ -1864,6 +1865,7 @@ pub fn link_program_wasmgc_fragments(
     assert_program_function_indices(link)
     assert_program_named_function_lookups(link)
     assert_program_specialized_call_lookups(link)
+    assert_program_call_evidence_recipes(link)
   }
   link
 }

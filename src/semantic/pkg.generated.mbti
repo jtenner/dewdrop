@@ -31,6 +31,8 @@ pub fn build_module_impl_index(CollectedModule, ResolvedModuleTypes) -> ModuleIm
 
 pub fn build_module_impl_index_with_imports(CollectedModule, ResolvedModuleTypes, ResolvedModuleImports) -> ModuleImplIndex
 
+pub fn check_program_specialized_call_runtime_evidence(PlannedProgramWasmGCLink, UInt64, String, Int) -> Result[HirSpan?, ProgramFunctionLookupFailure]
+
 pub fn collect_bytes(UInt64, Bytes) -> CollectedModule
 
 pub fn collect_compiler_source_diagnostics(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, PlannedProgramWasmGCLink) -> Array[CompilerSourceDiagnostic]
@@ -2039,6 +2041,7 @@ pub struct PlannedProgramPhysicalCallTarget {
   specialization_abi_key : String
   function_index : Int
   function_table_index : Int
+  runtime_evidence_operands : Array[Int]
 } derive(Eq, @debug.Debug)
 
 pub struct PlannedProgramSpecializationPlan {
@@ -2435,6 +2438,18 @@ pub fn ProgramFile::named(UInt64, String, Bytes) -> Self
 pub fn ProgramFile::new(UInt64, Bytes) -> Self
 
 type ProgramFunctionIndexFailure derive(Eq, @debug.Debug)
+
+pub struct ProgramFunctionLookupFailure {
+  code : Int
+  phase : Int
+  module_id : UInt64
+  declaration : UInt64
+  body : UInt64
+  expression : UInt
+  expected : UInt64
+  actual : UInt64
+  detail : UInt64
+} derive(Eq, @debug.Debug)
 
 pub struct ProgramIndex {
   module_lookup : Map[UInt64, Int]

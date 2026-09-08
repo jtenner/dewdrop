@@ -309,9 +309,13 @@ pub fn PlannedProgramWasmGCLink::specialized_call_runtime_evidence(
   specialization_abi_key : String,
   expression : ExprId,
 ) -> HirSpan? {
-  self.specialized_call_runtime_evidence_lookup.get(
-    program_specialized_call_key(body, specialization_abi_key, expression),
-  )
+  match
+    check_program_specialized_call_runtime_evidence(
+      self, body, specialization_abi_key, expression,
+    ) {
+    Ok(value) => value
+    Err(failure) => abort(@debug.to_string(failure))
+  }
 }
 
 ///|

@@ -27,6 +27,7 @@ test "physical call target replay cannot overwrite its frozen identity" {
       call,
       witness.function_table_index,
       function_,
+      [],
     ),
     Ok(()),
   )
@@ -37,6 +38,7 @@ test "physical call target replay cannot overwrite its frozen identity" {
       call,
       witness.function_table_index,
       function_,
+      [],
     ),
     Ok(()),
   )
@@ -69,7 +71,7 @@ test "physical call target replay cannot overwrite its frozen identity" {
   for item in changes {
     let (changed, index, selected, expected, actual, detail) = item
     assert_eq(
-      record_program_physical_call_target(targets, changed, index, selected),
+      record_program_physical_call_target(targets, changed, index, selected, []),
       Err({
         code: 303,
         phase: 5,
@@ -125,6 +127,7 @@ test "physical call target insertion checks the selected declaration and key" {
           call,
           witness.function_table_index,
           selected,
+          [],
         ),
         Err({
           code: 504,

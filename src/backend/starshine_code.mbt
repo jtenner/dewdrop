@@ -1157,9 +1157,12 @@ fn starshine_finish_program_call(
     Ok(None) => return Err(MissingFunction(declaration))
     Err(failure) => return Err(failure)
   }
-  let runtime_evidence = planned.specialized_call_runtime_evidence(
-    body, caller_specialization_abi_key, expression,
-  )
+  let runtime_evidence = match starshine_call_runtime_evidence(
+    planned, body, caller_specialization_abi_key, expression,
+  ) {
+    Ok(value) => value
+    Err(failure) => return Err(failure)
+  }
   let runtime_evidence_length = match runtime_evidence {
     Some(value) => value.length
     None => 0
