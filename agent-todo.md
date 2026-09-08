@@ -196,6 +196,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
   must not change compiler rules.
+  Removed three obsolete global variant-name searches and their dead fallback
+  tails. Runtime variant selectors retain typed declaration adapter metadata;
+  missing-pattern diagnostics no longer guess a physical type by name. Runtime
+  adapter layouts still remain. See the
+  [variant lookup log](docs/research/variant-lookup-cleanup-2026-09-08.md).
 - [ ] Delete unused legacy builtin plans/builders after each migration. Enforce
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.

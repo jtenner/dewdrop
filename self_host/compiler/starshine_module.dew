@@ -3684,59 +3684,13 @@ fn self_host_linked_append_function_shape_candidates(
   }
 }
 
-fn self_host_linked_variant_type_by_owner_name_and_arity(
-  link: SelfHostPlannedProgramWasmGCLink,
-  owner: U64,
-  name: String,
-  arity: U32,
-) -> Option<U32> {
-  for linked_type in link.types {
-    let physical_module = link.fragments.modules[linked_type.module_index]
-    let physical = self_host_linked_physical_type_at(
-      physical_module,
-      linked_type.fragment_index,
-    )
-    match physical.kind {
-      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
-        declaration,
-        variant,
-        _,
-      ) => if self_host_u64_equal(declaration, owner) &&
-        self_host_u32_equal(physical.fields.length, arity) {
-        let lowering_module = link.fragments.specialization.lowering.modules[
-          linked_type.module_index
-        ]
-        let mut named_index = 0u32
-        let _ = while named_index {
-          current => if current < self_host_linked_named_variant_count(
-            lowering_module,
-          ) {
-            let named = self_host_linked_named_variant_at(
-              lowering_module,
-              current,
-            )
-            if self_host_u64_equal(named.declaration, variant) &&
-              named.name == name {
-              return Option::Some(linked_type.type_index)
-            }
-            continue current + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-      }
-      _ => {}
-    }
-  }
-  Option::None
-}
 
 fn self_host_linked_pattern_variant_type(
   link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
   pattern: SelfHostPlannedPattern,
   payload_hint: SelfHostPlannedValueShape,
-  subject_nominal: U64,
+  _subject_nominal: U64,
 ) -> Option<U32> {
   let declaration = self_host_pattern_constructor_declaration(module_, pattern)
   let adapter = match link.runtime_variant_adapters.get(declaration) {
@@ -3747,50 +3701,11 @@ fn self_host_linked_pattern_variant_type(
       return self_host_linked_variant_type_index(link, declaration)
     }
   }
-  let mut selected_type = 4294967295u32
-  match pattern.selected_constructor {
-    SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
-      declaration,
-      _,
-      _,
-    ) => match self_host_linked_variant_type_index(link, declaration) {
-      Option::Some(type_index) => {
-        selected_type = type_index
-      }
-      Option::None => {}
-    }
-    _ => {}
-  }
-  let mut name = 4294967295u32
-  match pattern.source {
-    SelfHostHirPattern::QualifiedPattern(_, candidate, _) => {
-      name = candidate
-    }
-    SelfHostHirPattern::BindingPattern(candidate, _) => {
-      name = candidate
-    }
-    SelfHostHirPattern::TuplePattern(target, _, _) => if target < module_.patterns.length() {
-      match self_host_planned_pattern_at(module_.patterns, target).source {
-        SelfHostHirPattern::QualifiedPattern(_, candidate, _) => {
-          name = candidate
-        }
-        SelfHostHirPattern::BindingPattern(candidate, _) => {
-          name = candidate
-        }
-        _ => {}
-      }
-    }
-    _ => {}
-  }
-  let pattern_arity = match pattern.source {
-    SelfHostHirPattern::TuplePattern(_, children, _) => children.length
-    _ => 0u32
-  }
-  if name < self_host_linked_module_name_count(module_) {
-    let pattern_name = self_host_linked_module_name_at(module_, name)
-    if adapter is SelfHostRuntimeVariantAdapter::RuntimeOptionNone {
+  match adapter {
+    SelfHostRuntimeVariantAdapter::RuntimeOptionNone => {
       Option::Some(self_host_linked_array_runtime_base(link) + 10u32)
-    } else if adapter is SelfHostRuntimeVariantAdapter::RuntimeOptionSome {
+    }
+    SelfHostRuntimeVariantAdapter::RuntimeOptionSome => {
       let mut carrier = if payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape {
         5i32
       } else {
@@ -3829,7 +3744,8 @@ fn self_host_linked_pattern_variant_type(
       Option::Some(
         self_host_linked_array_runtime_base(link) + 11u32 + self_host_i32_to_u32(carrier),
       )
-    } else if adapter is SelfHostRuntimeVariantAdapter::RuntimeResultOk || adapter is SelfHostRuntimeVariantAdapter::RuntimeResultErr {
+    }
+    SelfHostRuntimeVariantAdapter::RuntimeResultOk, SelfHostRuntimeVariantAdapter::RuntimeResultErr => {
       let mut carrier = if payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape {
         5i32
       } else {
@@ -3872,46 +3788,7 @@ fn self_host_linked_pattern_variant_type(
           24u32
         } + self_host_i32_to_u32(carrier),
       )
-    } else if !self_host_u64_equal(subject_nominal, 0u64) {
-      match self_host_linked_variant_type_by_owner_name_and_arity(
-        link,
-        subject_nominal,
-        pattern_name,
-        pattern_arity,
-      ) {
-        Option::Some(type_index) => Option::Some(type_index)
-        Option::None => self_host_linked_variant_type_by_name_and_arity(
-          link,
-          pattern_name,
-          pattern_arity,
-        )
-      }
-    } else if !self_host_u32_equal(selected_type, 4294967295u32) {
-      match self_host_linked_type_field_count(link, selected_type) {
-        Option::Some(count) => if self_host_u32_equal(count, pattern_arity) {
-          Option::Some(selected_type)
-        } else {
-          self_host_linked_variant_type_by_name_and_arity(
-            link,
-            pattern_name,
-            pattern_arity,
-          )
-        }
-        Option::None => self_host_linked_variant_type_by_name_and_arity(
-          link,
-          pattern_name,
-          pattern_arity,
-        )
-      }
-    } else {
-      self_host_linked_variant_type_by_name_and_arity(
-        link,
-        pattern_name,
-        pattern_arity,
-      )
     }
-  } else {
-    Option::None
   }
 }
 
@@ -4164,18 +4041,15 @@ fn self_host_linked_expression_variant_type(
   if self_host_u64_equal(variant_declaration, 0u64) {
     variant_declaration = declaration
   }
-  let name = match link.runtime_variant_adapters.get(variant_declaration) {
-    Option::Some(adapter) => match adapter {
-      SelfHostRuntimeVariantAdapter::RuntimeOptionNone => "None"
-      SelfHostRuntimeVariantAdapter::RuntimeOptionSome => "Some"
-      SelfHostRuntimeVariantAdapter::RuntimeResultOk => "Ok"
-      SelfHostRuntimeVariantAdapter::RuntimeResultErr => "Err"
-    }
+  let adapter = match link.runtime_variant_adapters.get(variant_declaration) {
+    Option::Some(value) => value
     Option::None => return self_host_linked_variant_type_index(link, variant_declaration)
   }
-  if name == "None" {
+  match adapter {
+    SelfHostRuntimeVariantAdapter::RuntimeOptionNone => {
     Option::Some(self_host_linked_array_runtime_base(link) + 10u32)
-  } else if name == "Some" {
+  }
+    SelfHostRuntimeVariantAdapter::RuntimeOptionSome => {
     let mut carrier = match self_host_linked_type_first_argument_shape(
       module_,
       planned.type_,
@@ -4240,7 +4114,8 @@ fn self_host_linked_expression_variant_type(
         carrier,
       ),
     )
-  } else if name == "Ok" || name == "Err" {
+  }
+    SelfHostRuntimeVariantAdapter::RuntimeResultOk, SelfHostRuntimeVariantAdapter::RuntimeResultErr => {
     let mut carrier = 5i32
     match self_host_linked_variant_first_payload_expression(
       module_,
@@ -4292,52 +4167,13 @@ fn self_host_linked_expression_variant_type(
       Option::None => {}
     }
     Option::Some(
-      self_host_linked_array_runtime_base(link) + if name == "Ok" {
+      self_host_linked_array_runtime_base(link) + if adapter is SelfHostRuntimeVariantAdapter::RuntimeResultOk {
         18u32
       } else {
         24u32
       } + self_host_i32_to_u32(carrier),
     )
-  } else if !self_host_u64_equal(variant_declaration, 0u64) {
-    match self_host_linked_variant_type_index(link, variant_declaration) {
-      Option::Some(type_index) => match self_host_linked_type_field_count(
-        link,
-        type_index,
-      ) {
-        Option::Some(field_count) => if self_host_u32_equal(
-          field_count,
-          arguments.length,
-        ) {
-          Option::Some(type_index)
-        } else if name.byte_length() > 0u32 {
-          self_host_linked_variant_type_by_name_and_arity(
-            link,
-            name,
-            arguments.length,
-          )
-        } else {
-          Option::None
-        }
-        Option::None => Option::None
-      }
-      Option::None => if name.byte_length() > 0u32 {
-        self_host_linked_variant_type_by_name_and_arity(
-          link,
-          name,
-          arguments.length,
-        )
-      } else {
-        Option::None
-      }
     }
-  } else if name.byte_length() > 0u32 {
-    self_host_linked_variant_type_by_name_and_arity(
-      link,
-      name,
-      arguments.length,
-    )
-  } else {
-    Option::None
   }
 }
 
@@ -4485,124 +4321,7 @@ fn self_host_linked_type_field_count(
   Option::None
 }
 
-fn self_host_linked_variant_type_by_name_and_arity(
-  link: SelfHostPlannedProgramWasmGCLink,
-  name: String,
-  arity: U32,
-) -> Option<U32> {
-  let mut selected_type = 4294967295u32
-  let mut module_index = 0u32
-  let _ = while module_index {
-    current_module => if current_module < self_host_linked_lowering_module_count(link) {
-      let module_ = self_host_linked_lowering_module_at(link, current_module)
-      let mut variant_index = 0u32
-      let _ = while variant_index {
-        current_variant => if current_variant < self_host_linked_named_variant_count(
-          module_,
-        ) {
-          let variant = self_host_linked_named_variant_at(
-            module_,
-            current_variant,
-          )
-          if variant.name == name {
-            for linked_type in link.types {
-              if self_host_u32_equal(linked_type.module_index, current_module) {
-                let physical_module = link.fragments.modules[linked_type.module_index]
-                let physical = self_host_linked_physical_type_at(
-                  physical_module,
-                  linked_type.fragment_index,
-                )
-                match physical.kind {
-                  SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
-                    _,
-                    declaration,
-                    _,
-                  ) => if self_host_u64_equal(
-                    declaration,
-                    variant.declaration,
-                  ) && self_host_u32_equal(physical.fields.length, arity) {
-                    if !self_host_u32_equal(selected_type, 4294967295u32) &&
-                      !self_host_u32_equal(selected_type, linked_type.type_index) {
-                      return Option::None
-                    }
-                    selected_type = linked_type.type_index
-                  }
-                  _ => {}
-                }
-              }
-            }
-          }
-          continue current_variant + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      continue current_module + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  if self_host_u32_equal(selected_type, 4294967295u32) {
-    Option::None
-  } else {
-    Option::Some(selected_type)
-  }
-}
 
-fn self_host_linked_variant_type_by_name(
-  link: SelfHostPlannedProgramWasmGCLink,
-  name: String,
-) -> Option<U32> {
-  for module_ in link.fragments.specialization.lowering.modules {
-    let mut index = 0u32
-    let _ = while index {
-      current => if current < self_host_linked_named_variant_count(module_) {
-        let variant = self_host_linked_named_variant_at(module_, current)
-        if variant.name == name {
-          match self_host_linked_variant_type_index(
-            link,
-            variant.declaration,
-          ) {
-            Option::Some(type_index) => {
-              return Option::Some(type_index)
-            }
-            Option::None => {}
-          }
-        }
-        continue current + 1u32
-      } else {
-        break self_host_semantic_unit()
-      }
-    }
-  }
-  if name == "Some" || name == "None" {
-    let expected_tag = if name == "Some" {
-      1u32
-    } else {
-      0u32
-    }
-    for linked_type in link.types {
-      let physical_module = link.fragments.modules[linked_type.module_index]
-      let physical = self_host_linked_physical_type_at(
-        physical_module,
-        linked_type.fragment_index,
-      )
-      match physical.kind {
-        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
-          _,
-          _,
-          tag,
-        ) => if self_host_u32_equal(tag, expected_tag) &&
-          ((name == "Some" && self_host_u32_equal(physical.fields.length, 1u32)) ||
-            (name == "None" && self_host_u32_equal(physical.fields.length, 0u32))) {
-          return Option::Some(linked_type.type_index)
-        }
-        _ => {}
-      }
-    }
-  }
-  Option::None
-}
 
 fn self_host_linked_named_field_count(
   module_: SelfHostPlannedModuleLowering,
@@ -17375,15 +17094,6 @@ fn self_host_emit_linked_i32_expression(
                         )
                         message.append(" target_name=")
                         message.append(target_name)
-                        message.append(" variant_type=")
-                        match self_host_linked_variant_type_by_name_and_arity(
-                          link,
-                          target_name,
-                          arguments.length,
-                        ) {
-                          Option::Some(type_index) => message.append_u32(type_index)
-                          Option::None => message.append("none")
-                        }
                       }
                       return Option::Some(message.finish())
                     }
@@ -21522,23 +21232,8 @@ fn self_host_emit_linked_i32_expression(
                 message.append(":")
                 let missing_pattern_name = self_host_linked_pattern_name(module_, pattern)
                 message.append(missing_pattern_name)
-                let missing_pattern_arity = match pattern.source {
-                  SelfHostHirPattern::TuplePattern(_, children, _) => children.length
-                  _ => 0u32
-                }
-                match self_host_linked_variant_type_by_name_and_arity(
-                  link,
-                  missing_pattern_name,
-                  missing_pattern_arity,
-                ) {
-                  Option::Some(type_index) => {
-                    message.append(":unique_type=")
-                    message.append_u32(type_index)
-                    message.append(":owner=")
-                    message.append_u64(self_host_body_physical_owner(link, type_index))
-                  }
-                  Option::None => message.append(":unique_type=none")
-                }
+                message.append(":declaration=")
+                message.append_u64(self_host_pattern_constructor_declaration(module_, pattern))
                 return Option::Some(message.finish())
               }
             }
