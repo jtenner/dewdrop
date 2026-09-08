@@ -113,6 +113,16 @@ def main() -> None:
         cwd=ROOT,
         check=True,
     )
+    subprocess.run(
+        [
+            "moon", "run", "--target", "native", "src/dew_test_gen", "--",
+            "tools/dew-test/wasi_staging.wasm", "app.wasi_staging",
+            "app.wasi_staging", "staging.dew", "tools/wasi-parity/staging.dew",
+            "app.wasi_staging", "staging_probes.dew", "tools/wasi-parity/staging_probes.dew",
+        ],
+        cwd=ROOT,
+        check=True,
+    )
 
 
 if __name__ == "__main__":

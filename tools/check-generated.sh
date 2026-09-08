@@ -25,6 +25,7 @@ python3 tools/test_trait_call_policy.py
 python3 tools/test_assertion_library_policy.py
 python3 tools/test_production_assertion_policy.py
 python3 tools/test_wasi_write_runtime_policy.py
+python3 tools/test_wasi_staging_policy.py
 python3 tools/test_arithmetic_builtin_policy.py
 python3 tools/test_math_builtin_policy.py
 python3 tools/test_array_builtin_policy.py

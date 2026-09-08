@@ -137,6 +137,11 @@ self_host_measure 'hardening WASI Bytes request' \
     "$work/wasi-bytes.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-wasi-bytes.wasm \
     app.wasi_bytes tools/dew-test/wasi_bytes.dew
+self_host_measure 'hardening Bytes staging request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/bytes-staging.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-bytes-staging.wasm \
+    app.wasi_staging tools/wasi-parity/staging.dew tools/wasi-parity/staging_probes.dew
 mapfile -t compiler_sources < <(
   find self_host/compiler -maxdepth 1 -name '*.dew' ! -name '*_test.dew' ! -name main.dew | sort
 )

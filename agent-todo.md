@@ -207,6 +207,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Derived Debug labels now expand to ordinary stores and checked Dew writes.
   Nine shared checks cover every enum form and nested generic values. See the
   [derive output log](docs/research/derived-debug-literal-output-2026-09-08.md).
+  Benchmark byte staging now has ordinary Dew bodies too. Both legacy runtime
+  names and the native/provider copy builders are removed; 54 shared checks
+  cover bounds, exact bytes, scratch isolation, and owned read results. See the
+  [staging log](docs/research/bytes-staging-library-2026-09-08.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap

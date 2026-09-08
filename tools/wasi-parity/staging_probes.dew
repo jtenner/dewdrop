@@ -1,0 +1,57 @@
+open dew.std.bytes
+open dew.std.bytes_builder
+
+fn stage_probe_byte(index: U32, salt: U32) -> U8 {
+  ((index * 131u32 + salt * 17u32 + 7u32) & 255u32).into()
+}
+
+fn stage_probe_write(length: U32, alignment: U32, salt: U32) -> U32 {
+  if alignment > 15u32 || length > 65521u32 {
+    unreachable()
+  }
+  let builder = BytesBuilder::with_capacity(alignment + length + 4u32)
+  while 0u32 {
+    index if index < alignment => {
+      builder.append_byte(160u8)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte(stage_probe_byte(index, salt))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  builder.append(b"TAIL")
+  bench_wasi_stage_write(builder.finish().view(alignment, length))
+}
+
+fn stage_probe_read(length: U32, salt: U32) -> U32 {
+  let value = bench_wasi_stage_read(length)
+  if value.byte_length() != length {
+    return 0u32
+  }
+  // Changing scratch after the read must not change the owned Bytes value.
+  if length > 0u32 {
+    u8_store(16u32, 0u8)
+  }
+  while 0u32 {
+    index if index < length => {
+      if value.byte_at(index) != stage_probe_byte(index, salt) {
+        return 0u32
+      }
+      continue index + 1u32
+    }
+    _ => break 1u32
+  }
+}
+
+pub fn main(operation: U32, length: U32, alignment: U32, salt: U32) -> U32 {
+  if operation == 0u32 {
+    stage_probe_write(length, alignment, salt)
+  } else {
+    stage_probe_read(length, salt)
+  }
+}

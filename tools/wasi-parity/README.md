@@ -1,7 +1,7 @@
 # WASI Bytes parity and benchmark harness
 
 This harness compiles real Dew source to WasmGC and executes the bounded
-`Bytes` marshalling runtime against deterministic Preview 1 `fd_write` and
+`Bytes` library functions against deterministic Preview 1 `fd_write` and
 `fd_read` host implementations.
 
 ```bash
@@ -19,7 +19,7 @@ The runtime uses this fixed one-page linear-memory layout:
 Linear memory is temporary staging only. Dew `Bytes` remains owned by an
 immutable GC struct over `array<mut v128>` storage.
 
-The current deterministic suite performs 196 fail-closed checks. Coverage includes:
+The deterministic host suite checks complete output and explicit host failures. Coverage includes:
 
 - scalar, vector, old 4 KiB, full-page `65519/65520/65521`, and 100,000-byte boundary lengths;
 - every GC backing start alignment from 0 through 15;
@@ -36,6 +36,19 @@ The current deterministic suite performs 196 fail-closed checks. Coverage includ
 
 The generated Dew source and Wasm binary are ignored.
 
+The benchmark stage functions are ordinary Dew code in [staging.dew](staging.dew).
+They use byte loads/stores and BytesBuilder, with a 65,520-byte bound checked
+before any copy. Neither compiler provides a staging runtime builtin. Raw host
+probes call the same foreign declarations as other Dew code.
+
+[staging-cases.mjs](staging-cases.mjs) has 54 shared native/self-host checks for
+empty/full windows, vector boundaries, all 16 source alignments, exact bytes,
+header/tail preservation, immutable read results after scratch changes, and
+oversized-range traps before scratch mutation. These run in the normal library
+and self-host hardening lanes, not only in the benchmark. Standalone CLI builds
+need the test-only memory export helper before this host inspection; that helper
+adds a memory export and validates the resulting module.
+
 ## Benchmark
 
 After running the parity harness:
@@ -51,3 +64,4 @@ The benchmark reports benchmark-only GC-to-scratch and scratch-to-GC phases,
 raw 4 KiB host callbacks, complete 4 KiB/10,000/65,520/100,000-byte operations,
 and a partial-write workload. Full operation measurements retain the executable
 Preview 1 boundary, while the phase probes show where time is spent.
+The staging migration does not include speed tuning or new benchmark results.

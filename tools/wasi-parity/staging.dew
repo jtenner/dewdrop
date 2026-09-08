@@ -1,0 +1,32 @@
+open dew.std.bytes
+open dew.std.bytes_builder
+
+// The parity harness owns this scratch range for the whole synchronous call.
+// These helpers do not call the host and must not overwrite the iovec header.
+fn bench_wasi_stage_write(value: Bytes) -> U32 {
+  let length = value.byte_length()
+  if length > 65520u32 {
+    unreachable()
+  }
+  while 0u32 {
+    index if index < length => {
+      u8_store(16u32 + index, value.byte_at(index))
+      continue index + 1u32
+    }
+    _ => break length
+  }
+}
+
+fn bench_wasi_stage_read(length: U32) -> Bytes {
+  if length > 65520u32 {
+    unreachable()
+  }
+  let builder = BytesBuilder::with_capacity(length)
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte(u8_load(16u32 + index))
+      continue index + 1u32
+    }
+    _ => break builder.finish()
+  }
+}

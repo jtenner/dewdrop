@@ -20,6 +20,7 @@ import { debugBoolProbe } from "./debug-bool-cases.mjs";
 import { debugDerivedProbe } from "./debug-derived-cases.mjs";
 import { productionAssertionProbe } from "./production-assertion-cases.mjs";
 import { wasiBytesProbe } from "./wasi-bytes-cases.mjs";
+import { checkBytesStaging } from "./wasi-parity/staging-cases.mjs";
 import { checkProductPatterns } from "./product-pattern-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
 import { checkArrayOperations } from "./array-operation-cases.mjs";
@@ -164,6 +165,15 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const request = await readFile(".tmp/self-host-hardening/bytes-staging.request.bin");
+  const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+  console.log(`self-host Bytes staging checks passed: ${checkBytesStaging(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host Bytes staging corpus failed", error);
+}
 try {
   const start = performance.now();
   const request = await readFile(".tmp/self-host-hardening/production-assertions.request.bin");

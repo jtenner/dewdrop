@@ -2228,9 +2228,7 @@ fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
   name == b"f64.load" ||
   name == b"f64.store" ||
   name == b"v128.load" ||
-  name == b"v128.store" ||
-  name == b"dew_bench_wasi_stage_write" ||
-  name == b"dew_bench_wasi_stage_read"
+  name == b"v128.store"
 }
 
 ///|
@@ -2259,9 +2257,7 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_bytes_byte_at" ||
   name == b"dew_bytes_view" ||
   name == b"dew_bytes_load_u8x16" ||
-  name == b"dew_string_load_u8x16" ||
-  name == b"dew_bench_wasi_stage_write" ||
-  name == b"dew_bench_wasi_stage_read"
+  name == b"dew_string_load_u8x16"
 }
 
 ///|
