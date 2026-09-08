@@ -1,0 +1,25 @@
+test "ordinary function names do not add collection temporary locals" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"fn self_host_array_pop(value: I64) -> I64 {\n  value\n}\npub fn main() -> I64 {\n  self_host_array_pop(42i64)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid ordinary named function")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  let mut calls = 0u32
+  for plan in program.bodies {
+    let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
+    let body = match self_host_body_lookup_for_plan(module_, plan) {
+      Option::Some(value) => value
+      Option::None => unreachable()
+    }
+    for expression in plan.expressions {
+      if module_.expressions[expression.expression].kind is SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) {
+        calls = calls + 1u32
+      }
+    }
+    assert(plan.scratches.length() == 0u32, "no planned expression temporaries")
+    assert(self_host_linked_i32_scratch_count(module_, body) == 0u32, "ordinary calls must not add compiler collection locals")
+  }
+  assert(calls == 1u32, "one ordinary direct call")
+}

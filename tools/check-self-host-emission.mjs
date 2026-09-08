@@ -43,6 +43,7 @@ import { checkPackedFields } from "./packed-field-cases.mjs";
 import { checkTypeQueries } from "./type-query-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { checkGenericQueryOrder } from "./generic-query-order-cases.mjs";
+import { checkTemporaryLocalLayout } from "./temporary-local-layout-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
@@ -142,7 +143,7 @@ async function compileSourceExports(fixture) {
   return compileProbeBytes(new TextEncoder().encode(fixture), "self_host_emission_probe_compile_source");
 }
 
-async function compileProbeBytes(input, entry, imports = unusedImports) {
+async function compileProbeBytes(input, entry, imports = unusedImports, inspect = () => {}) {
   const builder = compiler.exports.self_host_emission_probe_source_new();
   for (const byte of input) {
     compiler.exports.self_host_emission_probe_source_append(builder, byte);
@@ -160,6 +161,7 @@ async function compileProbeBytes(input, entry, imports = unusedImports) {
     bytes[index] = compiler.exports.self_host_emission_probe_byte_at(output, index);
   }
   const module = await WebAssembly.compile(bytes);
+  inspect(bytes);
   const instance = await WebAssembly.instantiate(module, imports(module));
   instance.exports.__dew_init?.();
   assert.equal(typeof instance.exports.main, "function", "source probe main export is missing");
@@ -171,6 +173,16 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const count = await checkTemporaryLocalLayout((source, inspect) => compileProbeBytes(
+    new TextEncoder().encode(source), "self_host_emission_probe_compile_source", unusedImports, inspect,
+  ));
+  console.log(`self-host temporary local name checks passed: ${count} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host temporary local name checks failed", error);
+}
 try {
   const start = performance.now();
   const source = await readFile("tools/dew-test/generic_query_order.dew");

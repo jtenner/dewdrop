@@ -5599,28 +5599,6 @@ fn self_host_linked_is_direct_map_get_candidate(
   }
 }
 
-
-fn self_host_linked_is_direct_self_host_array_pop(
-  module_: SelfHostPlannedModuleLowering,
-  expression: U32,
-) -> Bool {
-  if expression >= module_.expressions.length() {
-    return false
-  }
-  match module_.expressions[expression].kind {
-    SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => if target < module_.expressions.length() {
-      let name = module_.expressions[target].source_name
-      name < self_host_linked_module_name_count(module_) &&
-        self_host_linked_module_name_at(module_, name) == "self_host_array_pop"
-    } else {
-      false
-    }
-    _ => false
-  }
-}
-
-
-
 fn self_host_linked_is_unresolved_array_push(
   module_: SelfHostPlannedModuleLowering,
   expression: U32,
@@ -7059,23 +7037,6 @@ fn self_host_linked_i32_scratch_count(
         }
         SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => {
           count = self_host_u32_add(count, 1u32)
-        }
-        SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => if self_host_linked_is_direct_self_host_array_pop(
-          module_,
-          expression,
-        ) {
-          count = self_host_u32_add(count, 11u32)
-        }
-        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => if self_host_linked_is_unresolved_iterator_next(
-          module_,
-          expression,
-        ) {
-          count = self_host_u32_add(count, 1u32)
-        } else if self_host_linked_is_unresolved_array_push(
-          module_,
-          expression,
-        ) {
-          count = self_host_u32_add(count, 11u32)
         }
         _ => {}
       }
@@ -9898,23 +9859,6 @@ fn self_host_linked_i32_scratch_slot(
         }
         SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, _, _, _, _) => if name.equals(b"array_new") {
           count = self_host_u32_add(count, 1u32)
-        }
-        SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => if self_host_linked_is_direct_self_host_array_pop(
-          module_,
-          candidate,
-        ) {
-          count = self_host_u32_add(count, 11u32)
-        }
-        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => if self_host_linked_is_unresolved_iterator_next(
-          module_,
-          candidate,
-        ) {
-          count = self_host_u32_add(count, 1u32)
-        } else if self_host_linked_is_unresolved_array_push(
-          module_,
-          candidate,
-        ) {
-          count = self_host_u32_add(count, 11u32)
         }
         _ => {}
       }
@@ -30137,46 +30081,6 @@ fn self_host_linked_scalar_local_carrier(
   }
 }
 
-fn self_host_linked_append_array_runtime_scratch(
-  locals: StarshineLocals,
-) -> Bool {
-  self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::RefPlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::I32PlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::I64PlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::F32PlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::F64PlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::V128PlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::RefPlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::RefPlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::I32PlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::I32PlannedValueShape,
-  ) && self_host_linked_scalar_append_local_type(
-    locals,
-    SelfHostPlannedValueShape::RefPlannedValueShape,
-  )
-}
-
-
 fn self_host_linked_scalar_locals(
   link: SelfHostPlannedProgramWasmGCLink,
   canonical_body_plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
@@ -31552,31 +31456,6 @@ fn self_host_linked_scalar_locals(
         SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, _, _, _, _) => if name.equals(b"array_new") {
           if !self_host_linked_scalar_append_local_type(locals, SelfHostPlannedValueShape::I32PlannedValueShape) {
             return Result::Err("linked raw array length scratch type is unsupported")
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, arguments, _) => if self_host_linked_is_direct_self_host_array_pop(
-          module_,
-          expression,
-        ) {
-          if !self_host_linked_append_array_runtime_scratch(locals) {
-            return Result::Err("linked self-host pop scratch type is unsupported")
-          }
-        }
-        SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => {
-          if self_host_linked_is_unresolved_iterator_next(module_, expression) {
-            if !self_host_linked_scalar_append_local_type(
-              locals,
-              SelfHostPlannedValueShape::RefPlannedValueShape,
-            ) {
-              return Result::Err("linked iterator scratch type is unsupported")
-            }
-          } else if self_host_linked_is_unresolved_array_push(
-            module_,
-            expression,
-          ) {
-            if !self_host_linked_append_array_runtime_scratch(locals) {
-              return Result::Err("linked array push scratch type is unsupported")
-            }
           }
         }
         _ => {}

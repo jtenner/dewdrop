@@ -382,6 +382,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Global initializers now pass through body planning, verification, and freeze.
   Exact temporary slots and other temporary kinds remain. See the
   [temporary plan log](docs/research/constructor-temporary-plans-2026-09-08.md).
+  The old collection temporary allocations and slot counts based on
+  `self_host_array_pop`, `next`, and `push` spelling are removed. An ordinary
+  function rename now keeps identical code bytes. Other name-based recovery
+  remains. See the
+  [temporary name log](docs/research/temporary-local-name-removal-2026-09-08.md).
   Object constructor emission now uses a checked exact field-ID recipe, with
   separate source evaluation and physical load order. Missing or different IDs
   cannot be repaired by names or tentative carriers. Recipe freeze and nominal
