@@ -264,6 +264,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   tables and ordered expression identity before reads. Erased locals cannot
   disappear from logical tables. Eleven mutations have exact numeric records.
   See the [table log](docs/research/physical-body-table-completeness-2026-09-07.md).
+  Native local planning now checks all five lowered body spans, root membership,
+  and stored local body/relative IDs before allocation. Named and lambda bodies
+  have positive checks; invalid spans and identities retain numeric context.
+  See the [native boundary log](docs/research/native-planned-body-arenas-2026-09-07.md).
   Complete child-list, stored-identity, parallel-array, and later-consumer checks
   remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency

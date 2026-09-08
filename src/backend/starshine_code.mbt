@@ -3441,6 +3441,7 @@ fn starshine_body_locals(
   Array[Int],
   Array[Int],
 ) {
+  @semantic.assert_planned_body_arenas(lowering, body, 7)
   let local_indices = Array::make(body.locals.length, -1)
   let elided_locals = Array::make(body.locals.length, false)
   for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
