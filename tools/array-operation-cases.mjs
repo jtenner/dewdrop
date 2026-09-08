@@ -27,5 +27,6 @@ export function checkArrayOperations(main) {
   }
   assert.throws(() => main(4294967295), WebAssembly.RuntimeError, "unknown array case is not a passing case");
   assert.equal(main(27), 1, "packed Array literals keep signedness and work after growth");
-  return 29;
+  assert.equal(main(28), 1, "generic iteration copies retain scalar, Unit, reference, and nested types");
+  return 30;
 }

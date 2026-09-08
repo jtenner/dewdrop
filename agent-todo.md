@@ -353,10 +353,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   before and after emission. The late Array method-target repair is removed.
   Full temporary coverage and transfer audit remain. See the
   [freeze log](docs/research/physical-body-freeze-2026-09-08.md).
-  The freeze work also exposed generic Array iteration gaps: a Unit payload
-  binding loses its storage certificate, and the original generic copying
-  helper requested an Array method without a concrete Self type. The latter
-  now reports SPC-301 context, not an anonymous trap. Keep these separate from
+  The freeze work also exposed generic Array iteration gaps. Unit payload
+  bindings now check the specialized logical type and exact declared or adapter
+  storage; 30 shared Array cases cover the copy loop. See the
+  [Unit iteration log](docs/research/generic-array-unit-iteration-2026-09-08.md).
+  The original generic copying helper also requested an Array method without
+  a concrete Self type. This separate specialization issue remains and now
+  reports SPC-301 context, not an anonymous trap. Keep these separate from
   the freeze check and do not treat library-copy reuse as an inference fix.
 - [x] Finish constructor non-returning-value tests. A Never field or payload
   must prevent later effects and construction, including generic tuple payloads.

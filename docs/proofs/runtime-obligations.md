@@ -447,3 +447,12 @@ report BOD-605 using the frozen owner. No digest equality substitutes for these
 checks. The old post-verification Array target search is removed. This boundary
 does not yet prove complete temporary-local coverage or a post-fixed-point audit
 of every transfer. See [the freeze log](../research/physical-body-freeze-2026-09-08.md).
+
+## Unit pattern storage
+
+A missing physical local is valid for a Unit pattern only when the specialized
+child type is Unit and its selected payload has a storage certificate. Declared
+fields use their checked null-marker record. Existing runtime variant adapters
+must match the selected declaration, the exact Unit heap type, and the payload
+field. An eqref carrier alone is not proof. See
+[the Unit iteration log](../research/generic-array-unit-iteration-2026-09-08.md).

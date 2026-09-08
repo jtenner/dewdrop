@@ -21057,7 +21057,8 @@ fn self_host_emit_linked_i32_expression(
                                     let local_slot = self_host_body_local_slot(module_, body, local)
                                     if local_slot < plan.local_values.length() &&
                                       plan.local_values[local_slot].carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier &&
-                                      self_host_body_pattern_field_carrier(link, module_, variant_type, physical_child, child_pattern.type_) is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+                                      self_host_unit_pattern_binding_has_storage(link, module_, plan.specialization,
+                                        pattern, child_pattern, variant_type, physical_child) {
                                       // A declared Unit payload has a checked storage marker,
                                       // but no local.get/struct.get/local.set stack operand.
                                       continue current_child + 1u32

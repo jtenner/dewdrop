@@ -77,3 +77,53 @@ test "declared Unit fields permit only a Unit marker not generic or scalar boxin
   assert(!self_host_linked_field_storage_matches_shape(link, field, storage, SelfHostPlannedValueShape::GenericPlannedValueShape), "Unit does not permit missing generic evidence")
   assert(!self_host_linked_field_storage_matches_shape(link, 0u64, storage, SelfHostPlannedValueShape::UnitPlannedValueShape), "missing field identity does not permit Unit storage")
 }
+test "runtime Unit pattern storage requires the exact selected layout" {
+  let link = self_host_physical_test_named_import_link("dew.std.option",
+    b"pub enum Option<t> {\n  None\n  Some(t)\n}\n",
+    b"open dew.std.option\npub fn run(value: Option<Unit>) -> I32 {\n  match value {\n    Some(effect) => {\n      effect\n      42i32\n    }\n    None => 0i32\n  }\n}\n",
+  )
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid Unit adapter source")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid Unit adapter body")
+  let module_ = link.fragments.specialization.lowering.modules[1u32]
+  let mut checked = 0u32
+  for pattern in module_.patterns {
+    match pattern.source {
+      SelfHostHirPattern::TuplePattern(_, children, _) => if children.length == 1u32 {
+        let child = module_.patterns[module_.pattern_children[children.start]]
+        if child.shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+          let type_index = match self_host_linked_pattern_variant_type(link, module_, pattern,
+            SelfHostPlannedValueShape::UnitPlannedValueShape, 0u64) {
+            Option::Some(value) => value
+            Option::None => {
+              assert(false, "selected Unit variant has a layout")
+              4294967295u32
+            }
+          }
+          let field_index = self_host_linked_variant_payload_field_index(link, type_index, 0u32)
+          assert(self_host_unit_pattern_binding_has_storage(link, module_, 4294967295u32,
+            pattern, child, type_index, field_index), "exact Unit marker layout")
+          assert(!self_host_unit_pattern_binding_has_storage(link, module_, 4294967295u32,
+            pattern, child, type_index + 1u32, field_index), "another heap type is not the selected Unit marker")
+          assert(!self_host_unit_pattern_binding_has_storage(link, module_, 4294967295u32,
+            pattern, child, type_index, field_index + 1u32), "another field is not the selected payload")
+          let scalar = SelfHostPlannedPattern::{
+            elided: child.elided
+            type_: -self_host_body_u32_to_i32(module_.resolved_types.primitive(SelfHostPrimitiveType::I64Type)) - 2i32
+            shape: child.shape
+            source: child.source
+            reference: child.reference
+            selected_constructor: child.selected_constructor
+            offset: child.offset
+          }
+          assert(!self_host_unit_pattern_binding_has_storage(link, module_, 4294967295u32,
+            pattern, scalar, type_index, field_index), "a scalar type cannot use a Unit marker")
+          checked = checked + 1u32
+        }
+      }
+      _ => {}
+    }
+  }
+  assert(checked == 1u32, "one selected Unit payload")
+}
