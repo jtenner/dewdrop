@@ -7,6 +7,7 @@ export function checkSpecializationCallbacks(exports) {
     "mixed_scalars", "nominal_callback", "generic_nominal_callback",
     "captured_nominal_callback", "captured_generic_nominal_callback",
     "callback_evaluation_order", "trait_identity_callback",
+    "bound_function_callback", "bound_lambda_callback",
   ]) {
     assert.equal(typeof exports[name], "function", `missing export ${name}`);
     for (const value of specializationI64Values) {

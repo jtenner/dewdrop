@@ -12,6 +12,9 @@ struct CompileTimeProgramContext {
   modules : Array[PlannedModuleLowering]
   targets : Map[DeclId, Bytes]
   sensitive : Map[DeclId, Bool]
+  // Bound calls benefit from exact logical instances but can still use an
+  // explicit runtime dictionary ABI. Pure queries cannot use that ABI.
+  logical : Map[DeclId, Bool]
   instances : Map[String, CompileTimeSpecializedBody]
 }
 
@@ -83,6 +86,27 @@ fn compile_time_generic_expression(
 }
 
 ///|
+fn compile_time_propagate_demand(
+  callers : Map[DeclId, Array[DeclId]],
+  demand : Map[DeclId, Bool],
+  work : Array[DeclId],
+) -> Unit {
+  while work.length() > 0 {
+    let target = work.pop().unwrap()
+    match callers.get(target) {
+      Some(entries) =>
+        for caller in entries {
+          if !demand.contains(caller) {
+            demand[caller] = true
+            work.push(caller)
+          }
+        }
+      None => ()
+    }
+  }
+}
+
+///|
 fn compile_time_program_context(
   program : CollectedProgram,
   analyzed : AnalyzedProgramSemantics,
@@ -90,8 +114,10 @@ fn compile_time_program_context(
   targets : Map[DeclId, Bytes],
 ) -> CompileTimeProgramContext {
   let sensitive : Map[DeclId, Bool] = Map([])
+  let logical : Map[DeclId, Bool] = Map([])
   let callers : Map[DeclId, Array[DeclId]] = Map([])
   let work : Array[DeclId] = []
+  let logical_work : Array[DeclId] = []
   for module_index, module_ in lowering.modules {
     let has_projections = module_.resolved_types.any(type_ => {
         type_ is MemberTypeProjection(_, _, _)
@@ -104,6 +130,16 @@ fn compile_time_program_context(
       }
     }
     for index, expression in module_.expressions {
+      // Trait-bound calls need their logical witness in returned function and
+      // lambda bodies too. Physical carriers cannot identify an implementation.
+      if expression.kind is PlannedBoundDirectCall(_, _, _, _, _) ||
+        expression.kind is PlannedBoundOperatorCall(_, _, _, _, _, _) {
+        if compile_time_expression_owner(module_, index) is Some(caller) &&
+          !logical.contains(caller) {
+          logical[caller] = true
+          logical_work.push(caller)
+        }
+      }
       if has_projections &&
         compile_time_binding_type(program, analyzed, module_index, index)
         is Some(type_) &&
@@ -141,25 +177,15 @@ fn compile_time_program_context(
       }
     }
   }
-  while work.length() > 0 {
-    let target = work.pop().unwrap()
-    match callers.get(target) {
-      Some(entries) =>
-        for caller in entries {
-          if !sensitive.contains(caller) {
-            sensitive[caller] = true
-            work.push(caller)
-          }
-        }
-      None => ()
-    }
-  }
+  compile_time_propagate_demand(callers, sensitive, work)
+  compile_time_propagate_demand(callers, logical, logical_work)
   {
     program,
     analyzed,
     modules: lowering.modules,
     targets,
     sensitive,
+    logical,
     instances: {},
   }
 }
@@ -203,17 +229,25 @@ fn compile_time_specialization_key(
   erased_fallback : Bool,
 ) -> String? {
   let context = match lowering.compile_time {
-    Some(value) if value.sensitive.contains(declaration) => value
+    Some(value) if value.sensitive.contains(declaration) ||
+      value.logical.contains(declaration) => value
     _ => return Some(abi_key)
   }
-  // A public generic export has no concrete logical arguments. It must not
-  // invent a Ref instantiation; only actual call sites create query instances.
-  if erased_fallback {
-    return None
+  // A pure query needs concrete logical types. Ordinary bound calls can also
+  // use the existing explicit runtime-evidence ABI, without claiming that a
+  // query was resolved or fabricating a logical Ref instantiation.
+  let runtime_key = if context.sensitive.contains(declaration) {
+    None
+  } else {
+    Some(abi_key)
   }
-  if logical_types.length() == 0 ||
-    compile_time_types_are_concrete(logical_types) != Ok(true) {
-    return None
+  if erased_fallback || logical_types.length() == 0 {
+    return runtime_key
+  }
+  match compile_time_types_are_concrete(logical_types) {
+    Ok(true) => ()
+    Ok(false) => return runtime_key
+    Err(_) => return None
   }
   let key = abi_key + ":logical[" + compile_time_types_key(logical_types) + "]"
   match context.instances.get(key) {

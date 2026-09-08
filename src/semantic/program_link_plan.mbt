@@ -769,26 +769,52 @@ fn program_link_validate_calls(
             if function_reference &&
               expression_index >= 0 &&
               expression_index < module_.expression_evidence.length() {
-              let roots = module_.expression_evidence[expression_index]
-              let mut runtime_evidence = false
-              if roots.start >= 0 &&
-                roots.start + roots.length <=
-                module_.trait_evidence_roots.length() {
-                for index in 0..<roots.length {
-                  if !trait_evidence_concrete(
-                      module_,
-                      module_.trait_evidence_roots[roots.start + index],
-                    ) {
-                    runtime_evidence = true
-                  }
+              // The template may use a runtime witness while this exact
+              // caller supplies a concrete implementation. Verify the same
+              // substituted evidence used to materialize the function value.
+              let fragments = modules[caller.module_index]
+              guard caller.fragment_index >= 0 &&
+                caller.fragment_index < fragments.functions.length() else {
+                abort("LNK-504 function reference caller fragment is missing")
+              }
+              let caller_fragment = fragments.functions[caller.fragment_index]
+              guard caller_fragment.declaration == caller.declaration &&
+                caller_fragment.specialization_abi_key ==
+                caller.specialization_abi_key else {
+                abort(
+                  "LNK-504 function reference caller fragment identity differs",
+                )
+              }
+              let evidence = match
+                resolve_program_expression_evidence(
+                  module_,
+                  fragments,
+                  Some(caller_fragment),
+                  expression_index,
+                ) {
+                Some(value) => value
+                None => {
+                  diagnostics.push(
+                    UnsupportedProgramGenericCall(
+                      module_.module_id,
+                      target,
+                      expression.offset,
+                    ),
+                  )
+                  continue
                 }
               }
+              let runtime_evidence = evidence.evidence.any(node => {
+                node.kind is PlannedRuntimeTraitEvidence(_, _)
+              })
               if runtime_evidence {
                 let mut captured = false
                 for reference in evidence_function_references {
-                  if semantic_id_module(reference.caller_body) ==
-                    module_.module_id &&
+                  if reference.caller_body == body.body &&
+                    reference.caller_specialization_abi_key ==
+                    caller.specialization_abi_key &&
                     reference.expression == expression_index &&
+                    reference.target == target &&
                     reference.runtime_evidence_parameters.length > 0 {
                     captured = true
                     break

@@ -179,3 +179,43 @@ pub fn trait_identity_callback(value: I64) -> I64 {
     0i64
   }
 }
+
+fn first_generic_reader<t: FirstRead>() -> fn(t) -> I64 {
+  first_read
+}
+
+fn second_generic_reader<t: SecondRead>() -> fn(t) -> I64 {
+  second_read
+}
+
+fn first_generic_lambda<t: FirstRead>() -> fn(t) -> I64 {
+  fn(value: t) -> I64 {
+    first_read(value)
+  }
+}
+
+fn second_generic_lambda<t: SecondRead>() -> fn(t) -> I64 {
+  fn(value: t) -> I64 {
+    second_read(value)
+  }
+}
+
+pub fn bound_function_callback(value: I64) -> I64 {
+  let first = first_generic_reader::<I64>()
+  let second = second_generic_reader::<I64>()
+  if second(value) == value + 1i64 {
+    first(value)
+  } else {
+    0i64
+  }
+}
+
+pub fn bound_lambda_callback(value: I64) -> I64 {
+  let first = first_generic_lambda::<I64>()
+  let second = second_generic_lambda::<I64>()
+  if second(value) == value + 1i64 {
+    first(value)
+  } else {
+    0i64
+  }
+}

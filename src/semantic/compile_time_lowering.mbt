@@ -120,7 +120,9 @@ fn fold_program_compile_time_queries(
   let context = compile_time_program_context(
     program, analyzed, lowering, targets,
   )
-  if targets.length() == 0 && context.sensitive.is_empty() {
+  if targets.length() == 0 &&
+    context.sensitive.is_empty() &&
+    context.logical.is_empty() {
     return lowering
   }
   for index, module_ in lowering.modules {
