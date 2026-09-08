@@ -250,11 +250,9 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
     _ => break ()
   }
   let generics = collected.generic_parameters_of(witness.implementation.declaration)
-  // Bound calls inside this implementation need the same exact logical key.
-  // Physical carrier equality cannot identify their prerequisite targets.
-  if generics.length > 0u32 || callable.generic_parameters.length > 0u32 {
-    lowering.compile_time.sensitive.set(method, true)
-  }
+  // Query and bound-call demand is closed before requests are created.
+  // The selected implementation already participates in that source scan.
+  // Reclassifying it here would invalidate earlier carrier-only requests.
   let start = module_.inferred.call_type_arguments.length()
   let _ = while 0u32 {
     index => if index < generics.length {
@@ -345,12 +343,9 @@ fn self_host_resolve_guarded_calls(lowering: SelfHostPlannedProgramLowering, mod
                   Option::None => unreachable()
                 }
               }
-              _ => if callable.owner_generic_parameters.length > 0u32 || callable.generic_parameters.length > 0u32 {
-                // A retained generic helper can contain bound calls even when
-                // it has no query of its own. Keep the caller's logical types
-                // through that edge so its selected body can resolve them.
-                lowering.compile_time.sensitive.set(requirement, true)
-              }
+              // Ordinary calls retain the target's precomputed demand. Being
+              // generic alone does not require a private query instance.
+              _ => {}
             }
             Option::None => {}
           }

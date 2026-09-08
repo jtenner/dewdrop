@@ -64,6 +64,7 @@ def main() -> None:
         ("arithmetic_operations", "dew.std.arithmetic"),
         ("math_operations", "dew.std.math_probes"),
         ("specialization_products", "app.specialization_probes"),
+        ("generic_query_order", "app.query_order"),
         ("specialization_callbacks", "app.callback_probes"),
         ("member_calls", "app.member_probes"),
         ("debug_dispatch", "app.debug_probes"),

@@ -368,10 +368,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   bindings now check the specialized logical type and exact declared or adapter
   storage; 30 shared Array cases cover the copy loop. See the
   [Unit iteration log](docs/research/generic-array-unit-iteration-2026-09-08.md).
-  The original generic copying helper also requested an Array method without
-  a concrete Self type. This separate specialization issue remains and now
-  reports SPC-301 context, not an anonymous trap. Keep these separate from
-  the freeze check and do not treat library-copy reuse as an inference fix.
+  The original generic copying helper's missing-Self failure is now fixed:
+  late query-demand changes had invalidated earlier specialization requests.
+  Demand now stays fixed after its source-graph closure. Both small source
+  cases and the isolated full compiler-source helper compile successfully.
+  Production still uses ordinary library copies. See the
+  [query-demand log](docs/research/frozen-query-demand-2026-09-08.md).
 - [x] Finish constructor non-returning-value tests. A Never field or payload
   must prevent later effects and construction, including generic tuple payloads.
   Nine shared execution checks pass in both compilers. Construction stops at

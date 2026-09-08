@@ -203,6 +203,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_compile_time_types_test.dew \
   self_host/compiler/semantic_computed_types_test.dew \
   self_host/compiler/semantic_compile_time_queries_test.dew \
+  self_host/compiler/semantic_compile_time_demand_test.dew \
   self_host/compiler/semantic_physical_type_demand_test.dew \
   self_host/compiler/semantic_imported_trait_contract_test.dew \
   self_host/compiler/semantic_solver_invariants_test.dew \

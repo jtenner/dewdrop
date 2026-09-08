@@ -1,0 +1,66 @@
+builtin is_unit<t>() -> Bool = "types.is_unit"
+builtin unreachable() -> Never = "unreachable"
+
+struct Box<t> {
+  value: t
+}
+
+impl<t> Box<t> {
+  fn get(self) -> t {
+    self.value
+  }
+}
+
+trait Read<t> {
+  fn read(self) -> t
+}
+
+impl<t> Read<t> for Box<t> {
+  fn read(self) -> t {
+    self.value
+  }
+}
+
+fn choose<t>(value: Box<t>) -> t {
+  if is_unit::<t>() {
+    unreachable()
+  } else {
+    value.get()
+  }
+}
+
+fn choose_trait<t: Read<I64>>(value: t) -> I64 {
+  value.read()
+}
+
+// Both query-dependent calls are queued before the independent plain calls.
+// Resolving them must not change how an existing plain request is interpreted.
+pub fn main(case: U32) -> I64 {
+  if case == 0u32 {
+    choose(Box::{
+      value: 42i64
+    })
+  } else if case == 1u32 {
+    choose_trait(Box::{
+      value: 42i64
+    })
+  } else if case == 2u32 {
+    plain()
+  } else {
+    plain_trait()
+  }
+}
+
+pub fn plain() -> I64 {
+  let value = Box::{
+    value: 7i64
+  }
+  value.get()
+}
+
+pub fn plain_trait() -> I64 {
+  let value = Box::{
+    value: 9i64
+  }
+  value.read()
+}

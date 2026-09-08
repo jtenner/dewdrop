@@ -41,6 +41,7 @@ import { checkFixedArrayOperations } from "./fixed-array-operations-cases.mjs";
 import { checkRawArrayContracts } from "./raw-array-contract-cases.mjs";
 import { checkTypeQueries } from "./type-query-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
+import { checkGenericQueryOrder } from "./generic-query-order-cases.mjs";
 import { readSelfHostInvariantFailure, formatSelfHostInvariantFailure } from "./self-host-invariant-record.mjs";
 
 // Imports in these pure probes must never execute. Do not hide a host call.
@@ -169,6 +170,15 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const source = await readFile("tools/dew-test/generic_query_order.dew");
+  const exports = await compileProbeBytes(source, "self_host_emission_probe_compile_source");
+  console.log(`self-host generic query order checks passed: ${checkGenericQueryOrder(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host generic query order corpus failed", error);
+}
 try {
   const start = performance.now();
   const source = await readFile("tools/dew-test/intrinsic_function_reference.dew");

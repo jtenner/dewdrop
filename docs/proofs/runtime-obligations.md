@@ -478,6 +478,16 @@ Thus a successful update preserves the functional call-site mapping. This does
 not prove the target selection itself. See
 [the target update log](../research/physical-call-target-updates-2026-09-08.md).
 
+## Fixed specialization demand
+
+Query, projection, and bound-call demand is closed over the source caller graph
+before specialization requests are created. Resolving selected ordinary calls
+or trait implementations cannot add new demand. Thus processing one request
+cannot retroactively require logical arguments omitted by an earlier valid
+carrier-only request. Generic arity alone does not imply query dependence.
+The concrete-Self invariant remains in force. See
+[the demand log](../research/frozen-query-demand-2026-09-08.md).
+
 ## Unit pattern storage
 
 A missing physical local is valid for a Unit pattern only when the specialized

@@ -1,0 +1,40 @@
+fn self_host_test_query_demand_is_fixed(source: Bytes, name: Bytes) -> Unit {
+  let lowering = self_host_physical_test_lowering(source)
+  assert(lowering.collected.modules.at(0u32).diagnostic_count() == 0u32, "valid demand fixture source")
+  match self_host_validate_program_inference(lowering) {
+    Option::Some(error) => assert(false, error)
+    Option::None => {}
+  }
+  let mut method = 0u64
+  for callable in lowering.modules[0u32].functions.callables {
+    if callable.name == name {
+      method = callable.declaration
+    }
+  }
+  assert(method != 0u64, "fixture method exists")
+  let expected = lowering.compile_time.sensitive.length()
+  assert(expected > 0u32, "fixture has a query-dependent caller")
+  assert(!lowering.compile_time.sensitive.contains_key(method), "plain method has no query-dependent body")
+  let plan = self_host_plan_program_specialization(lowering, false)
+  assert(plan.lowering.compile_time.diagnostics.length() == 0u32, "specialization has no query errors")
+  assert(plan.lowering.compile_time.sensitive.length() == expected, "query demand is fixed before requests")
+  assert(!plan.lowering.compile_time.sensitive.contains_key(method), "resolving another caller cannot reclassify the plain method")
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(plan), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid linked methods")
+  assert(self_host_plan_program_wasm_bodies(link).diagnostics.length() == 0u32, "valid physical call recipes")
+}
+
+test "ordinary generic calls cannot change query demand after requests exist" {
+  self_host_test_query_demand_is_fixed(
+    b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nbuiltin unreachable() -> Never = \"unreachable\"\nstruct Box<t> {\n  value: t\n}\nimpl<t> Box<t> {\n  fn get(self) -> t {\n    self.value\n  }\n}\nfn choose<t>(value: Box<t>) -> t {\n  if is_unit::<t>() {\n    unreachable()\n  } else {\n    value.get()\n  }\n}\npub fn main() -> I64 {\n  choose(Box::{\n    value: 42i64\n  })\n}\npub fn plain() -> I64 {\n  let value = Box::{\n    value: 7i64\n  }\n  value.get()\n}\n",
+    b"get",
+  )
+}
+
+test "generic trait implementations cannot change query demand after requests exist" {
+  self_host_test_query_demand_is_fixed(
+    b"struct Box<t> {\n  value: t\n}\ntrait Read<t> {\n  fn read(self) -> t\n}\nimpl<t> Read<t> for Box<t> {\n  fn read(self) -> t {\n    self.value\n  }\n}\nfn choose<t: Read<I64>>(value: t) -> I64 {\n  value.read()\n}\npub fn main() -> I64 {\n  choose(Box::{\n    value: 42i64\n  })\n}\npub fn plain() -> I64 {\n  let value = Box::{\n    value: 7i64\n  }\n  value.read()\n}\n",
+    b"read",
+  )
+}
