@@ -1,0 +1,21 @@
+import dew.std.preamble as @core
+
+foreign import "assertion_probe" as AssertionProbe {
+  fn effect(value: U32) -> Unit = "effect"
+}
+
+fn assertion_condition(value: Bool) -> Bool {
+  AssertionProbe.effect(1u32)
+  value
+}
+
+fn assertion_message() -> String {
+  AssertionProbe.effect(2u32)
+  "production assertion"
+}
+
+pub fn main(succeeds: Bool) -> U32 {
+  @core.assert(assertion_condition(succeeds), assertion_message())
+  AssertionProbe.effect(3u32)
+  7u32
+}

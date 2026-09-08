@@ -1,4 +1,9 @@
-pub builtin assert(condition: Bool, message: String) -> Unit = "dew_assert"
+pub fn assert(condition: Bool, message: String) -> Unit {
+  let _ = message
+  if !condition {
+    unreachable()
+  }
+}
 pub builtin unreachable() -> Never = "unreachable"
 pub builtin i32_add(left: I32, right: I32) -> I32 = "i32.add"
 pub builtin i32_sub(left: I32, right: I32) -> I32 = "i32.sub"

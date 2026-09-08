@@ -60,8 +60,9 @@ unexpected trap unreachable: assertion failed: visible assertion λ
 ```
 
 There is no `dew.assertions` section or assertion-ID global. Production modules
-retain the direct zero-I/O inline assertion trap and do not gain WASI imports or
-memory from this test-only transport.
+use the ordinary preamble assertion body with a zero-I/O trap and do not make
+host writes for production assertions. Test-mode output uses its separate
+memory transport.
 
 `builtin_traps.dew` is compiled separately to verify that false assertions, `unreachable()`, out-of-bounds typed memory access, invalid, reversed, or out-of-bounds String/StringView/Bytes ranges, invalid StringBuilder ASCII/scalar/checked input, and every post-`finish()` StringBuilder/BytesBuilder operation—including use through aliases and repeated finish—produce Wasm runtime traps. Every public export in the dedicated trap artifact is required to trap, so new probes remain visible without a runner allowlist.
 

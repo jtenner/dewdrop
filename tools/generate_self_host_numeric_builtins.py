@@ -122,34 +122,7 @@ def main() -> None:
         "  }",
     ]
 
-    lines.extend(
-        [
-            "  if name.equals(b\"dew_assert\") {",
-            "    StarshineFfi.ffi_ffi_bridge_instructions_push(",
-            "      destination,",
-            "      StarshineFfi.ffi_lib_Instruction_drop(),",
-            "    )",
-            "    StarshineFfi.ffi_ffi_bridge_instructions_push(",
-            "      destination,",
-            "      StarshineFfi.ffi_lib_Instruction_i32_eqz(),",
-            "    )",
-            "    let consequent = StarshineFfi.ffi_ffi_bridge_instructions_new()",
-            "    let alternative = StarshineFfi.ffi_ffi_bridge_instructions_new()",
-            "    StarshineFfi.ffi_ffi_bridge_instructions_push(",
-            "      consequent,",
-            "      StarshineFfi.ffi_lib_Instruction_unreachable_(),",
-            "    )",
-            "    StarshineFfi.ffi_ffi_bridge_instructions_push(",
-            "      destination,",
-            "      StarshineFfi.ffi_ffi_bridge_instruction_if(",
-            "        StarshineFfi.ffi_lib_BlockType_void_(),",
-            "        consequent,",
-            "        alternative,",
-            "      ),",
-            "    )",
-        ]
-    )
-    first = False
+    first = True
     for name, instructions in aliases:
         lines.append(f"  {'if' if first else '} else if'} name.equals(b\"{name}\") {{")
         first = False

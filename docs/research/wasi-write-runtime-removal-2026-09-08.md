@@ -45,7 +45,7 @@ in 0.034 seconds. Clean bootstrap passes in 172.547 seconds: compiler B/C raw
 and linked SHA-256 are both
 `11af19f322bcdf073be04e3598f7857dcd54e176fcceac4597f8a5c5c35f2da1`.
 
-The full pinned Starshine lane is still running at this commit. Provider source
-and bindings remain unchanged during that run. Its result will be recorded
-after completion; the earlier 18 bridge checks are not presented as the full
-provider suite.
+The full pinned Starshine lane completes after the removal commit: all 10,991
+tests pass in 303.270 seconds. Provider source and bindings remain unchanged
+during that run. All eight lanes pass. Its printed invalid-module diagnostic
+comes from a negative provider check; the complete suite reports zero failures.

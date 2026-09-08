@@ -127,6 +127,11 @@ self_host_measure 'hardening derived Debug request' \
     "$work/debug-derived.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-debug-derived.wasm \
     app.debug_derived tools/dew-test/debug_derived.dew
+self_host_measure 'hardening production assertion request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/production-assertions.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-production-assertions.wasm \
+    app.production_assertions tools/dew-test/production_assertions.dew
 self_host_measure 'hardening WASI Bytes request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/wasi-bytes.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \

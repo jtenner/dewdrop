@@ -651,7 +651,6 @@ pub builtin wasm_f64_trunc(value: F64) -> F64 = "f64.trunc"
 pub builtin wasm_f64_nearest(value: F64) -> F64 = "f64.nearest"
 
 // std/preamble/00-builtins.dew
-pub builtin wasm_assert(condition: Bool, message: String) -> Unit = "dew_assert"
 pub builtin wasm_unreachable() -> Never = "unreachable"
 pub builtin wasm_i32_add(left: I32, right: I32) -> I32 = "i32.add"
 pub builtin wasm_i32_sub(left: I32, right: I32) -> I32 = "i32.sub"

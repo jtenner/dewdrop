@@ -194,8 +194,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   [Bool log](docs/research/debug-bool-library-2026-09-07.md).
   Test assertion output now uses an ordinary module-local Dew function and the
   checked WASI Bytes loop. The hidden body, dependency roots, and emitter target
-  override are removed. Production assertions are separate work. See the
+  override are removed. See the
   [test assertion log](docs/research/test-assertion-library-2026-09-08.md).
+  Production assertions now use ordinary Dew control flow too. The old native
+  and generated self-host expansions and wasm_assert alias are removed. Shared
+  tests preserve argument order, trap behavior, and zero host calls. See the
+  [production assertion log](docs/research/production-assertion-library-2026-09-08.md).
   The old Bytes write runtime, unused provider assertion copy, and private
   Debug write declaration are now removed. Debug text still needs its own
   foreign-write dependency. See the

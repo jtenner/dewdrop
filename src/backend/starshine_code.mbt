@@ -812,17 +812,7 @@ fn starshine_inline_builtin_instructions(
     Some(instructions) => return Ok(instructions)
     None => ()
   }
-  if name == b"dew_assert" {
-    Ok([
-      @lib.Instruction::drop(),
-      @lib.Instruction::i32_eqz(),
-      @lib.Instruction::if_(
-        @lib.BlockType::void_(),
-        [@lib.Instruction::unreachable_()],
-        None,
-      ),
-    ])
-  } else if name == b"unreachable" {
+  if name == b"unreachable" {
     Ok([@lib.Instruction::unreachable_()])
   } else if name == b"unsafe.bitcast" {
     Ok([])
