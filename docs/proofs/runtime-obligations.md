@@ -448,6 +448,15 @@ checks. The old post-verification Array target search is removed. This boundary
 does not yet prove complete temporary-local coverage or a post-fixed-point audit
 of every transfer. See [the freeze log](../research/physical-body-freeze-2026-09-08.md).
 
+The subsequent work-queue audit now executes every existing transfer once more
+and requires no change before completion. It uses the same transfer code, not
+a second approximation. Queue closure also requires the full audit count and
+no active transfer. Strictly decreasing adjacency links prove finite graph
+walks; wide node totals and an explicit progress resource diagnostic prevent
+machine overflow or silent early completion. This does not prove every transfer
+monotone or every physical type sound. See
+[the work-queue audit](../research/carrier-work-queue-audit-2026-09-08.md).
+
 ## Unit pattern storage
 
 A missing physical local is valid for a Unit pattern only when the specialized

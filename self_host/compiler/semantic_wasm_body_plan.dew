@@ -1873,6 +1873,9 @@ fn self_host_body_schedule_all_work_items(
   queue: Array<U32>,
   pending: Array<Bool>,
 ) -> Unit {
+  if pending.length() == 0u32 {
+    return
+  }
   self_host_body_schedule_work_item(queue, pending, 0u32)
   let mut item = self_host_u32_subtract(pending.length(), 1u32)
   let _ = while item {
@@ -4828,6 +4831,20 @@ fn self_host_body_build_work_graph(
   body: SelfHostPlannedBodyLowering,
   maximum_control: U32,
 ) -> SelfHostBodyWorkGraph {
+  let wide_count = 1u64 + u32_into_u64(body.expressions.length) +
+    u32_into_u64(body.locals.length) + 2u64 * u32_into_u64(maximum_control)
+  let _ = self_host_assert_compiler_invariant_with_failure(wide_count <= 4294967295u64,
+    SelfHostInvariantFailure::{
+      code: 101u32
+      phase: 6u32
+      module_id: module_.module_id
+      declaration: body.declaration
+      body: body.body
+      expression: 4294967295u32
+      expected: 4294967295u64
+      actual: wide_count
+      detail: (15u64 << 32u64) | 4294967295u64
+    }, "physical carrier work graph node count overflow")
   let local_base = self_host_u32_add(body.expressions.length, 1u32)
   let control_state_base = self_host_u32_add(local_base, body.locals.length)
   let control_result_base = self_host_u32_add(control_state_base, maximum_control)
@@ -5485,41 +5502,10 @@ fn self_host_plan_one_physical_body(
     body,
     maximum_control,
   )
-  let work_item_count = work_graph.heads.length()
-  let work_queue = []
-  let work_pending = []
-  let mut work_item = 0u32
-  let _ = while work_item {
-    current => if current < work_item_count {
-      work_pending.push(false)
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  self_host_body_schedule_work_item(work_queue, work_pending, 0u32)
-  let mut expression_work_item = body.expressions.length
-  let _ = while expression_work_item {
-    current => if current > 0u32 {
-      self_host_body_schedule_work_item(work_queue, work_pending, current)
-      continue self_host_u32_subtract(current, 1u32)
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let mut work_limit_exceeded = false
-  let mut stalled_work_item = 4294967295u32
-  let mut work_head = 0u32
-  let mut processed_work_items = 0u32
-  let mut successful_changes = 0u32
-  // Each work item owns fewer than sixteen finite-height evidence components.
-  // This bound is proportional to the plan size. It detects a transfer that
-  // changes facts back and forth without restoring the old fixed-pass limit.
-  let maximum_changes = work_item_count * 16u32
-  let _ = while work_head {
-    current_work_head => if current_work_head < work_queue.length() && !work_limit_exceeded {
-      let current_work_item = work_queue[current_work_head]
-      work_pending[current_work_item] = false
+  let work = self_host_body_work_queue_new(work_graph, module_.module_id,
+    body.declaration, body.body, body.expressions)
+  let _ = while self_host_body_work_queue_next(work) {
+    Option::Some(current_work_item) => {
       let mut changed = false
       let mut block_offset = if self_host_u32_equal(current_work_item, 0u32) {
         0u32
@@ -6587,41 +6573,15 @@ fn self_host_plan_one_physical_body(
           break self_host_semantic_unit()
         }
       }
-      if current_work_item > body.expressions.length {
-        // A hub has no transfer rule. Its job is to wake the exact expressions
-        // and block constraints that depend on its local or control cell.
-        self_host_body_schedule_work_dependents(
-          work_graph,
-          work_queue,
-          work_pending,
-          current_work_item,
-        )
-      }
-      if changed {
-        successful_changes = self_host_u32_add(successful_changes, 1u32)
-        if successful_changes > maximum_changes {
-          work_limit_exceeded = true
-          stalled_work_item = current_work_item
-        } else {
-          self_host_body_schedule_work_dependents(
-            work_graph,
-            work_queue,
-            work_pending,
-            current_work_item,
-          )
-        }
-      }
-      let next_work_head = self_host_u32_add(current_work_head, 1u32)
-      processed_work_items = next_work_head
-      continue next_work_head
-    } else {
-      break self_host_semantic_unit()
+      self_host_body_work_queue_finish(work, current_work_item, changed)
+      continue self_host_body_work_queue_next(work)
     }
+    Option::None => break self_host_semantic_unit()
   }
-  let analysis_converged = processed_work_items >= work_queue.length() &&
-    !work_limit_exceeded
-  // The plan is frozen here. All physical facts above are worklist facts.
-  // The remaining work only materializes immutable call and scratch recipes.
+  let analysis_converged = work.complete
+  let stalled_work_item = 4294967295u32
+  // Every transfer has now passed the post-fixed-point audit. Materialize the
+  // call, scratch, and local recipes before final verification and freeze.
   let call_evaluations = []
   let call_operands = []
   let calls = self_host_body_build_physical_call_plans(

@@ -351,8 +351,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Verify all worklist constraints at the fixed point and reject later mutation.
   Self-host body plans now retain exact freeze witnesses and check all tables
   before and after emission. The late Array method-target repair is removed.
-  Full temporary coverage and transfer audit remain. See the
+  Full temporary coverage remains. See the
   [freeze log](docs/research/physical-body-freeze-2026-09-08.md).
+  The work queue now audits every transfer before completion, retains required
+  self-dependencies, and checks graph/queue contracts with numeric records.
+  See the [work-queue audit](docs/research/carrier-work-queue-audit-2026-09-08.md).
   The freeze work also exposed generic Array iteration gaps. Unit payload
   bindings now check the specialized logical type and exact declared or adapter
   storage; 30 shared Array cases cover the copy loop. See the

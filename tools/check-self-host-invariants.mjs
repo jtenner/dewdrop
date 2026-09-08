@@ -10,6 +10,27 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "ARN-101 carrier graph node totals cannot wrap U32",
+    expected: [101, 6, 5100n, 5100n << 32n, 5100n << 32n, 4294967295,
+      4294967295n, 8589934592n, (15n << 32n) | 4294967295n],
+  },
+  ...[
+    ["BOD-604 final transfer audit detects a missing dependency", 604, 24, 0n, 1n, (0n << 32n) | 5n],
+    ["ARN-103 carrier graph edge arrays remain parallel", 103, 4294967295, 8n, 9n, (10n << 32n) | 4294967295n],
+    ["ARN-101 carrier graph heads stay in the edge arena", 101, 20, 9n, 9n, (11n << 32n) | 0n],
+    ["ARN-101 carrier graph targets stay in the node arena", 101, 20, 10n, 10n, (12n << 32n) | 0n],
+    ["ARN-104 carrier graph adjacency links strictly decrease", 104, 20, 0n, 0n, (13n << 32n) | 0n],
+    ["BOD-604 a carrier transfer must finish before the next starts", 604, 4294967295, 4294967295n, 0n, (1n << 32n) | 0n],
+    ["BOD-604 carrier completion must match the active transfer", 604, 4294967295, 0n, 1n, (2n << 32n) | 1n],
+    ["BOD-604 a completion flag cannot replace the transfer audit", 604, 4294967295, 10n, 0n, (8n << 32n) | 4294967295n],
+    ["ARN-101 queued carrier items are checked before pending lookup", 101, 4294967295, 10n, 10n, (7n << 32n) | 10n],
+    ["BOD-604 a nonconverging carrier transfer has a resource diagnostic", 604, 4294967295, 64n, 65n, (4n << 32n) | 0n],
+  ].map(([name, code, expression, expected, actual, detail]) => ({
+    name,
+    expected: [code, 6, 5100n, 5100n << 32n, 5100n << 32n,
+      expression, expected, actual, detail],
+  })),
   ...[
     ["selected physical target", 3, 2n, 3n, 154n],
     ["evaluation order", 2, 2n, 1n, 170n],

@@ -1,0 +1,165 @@
+fn self_host_test_carrier_chain_graph() -> SelfHostBodyWorkGraph {
+  let graph = self_host_body_empty_work_graph(10u32)
+  let _ = while 0u32 {
+    item => if item < 9u32 {
+      self_host_body_add_work_dependency(graph, item, item + 1u32)
+      continue item + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  graph
+}
+
+fn self_host_test_carrier_work_queue(graph: SelfHostBodyWorkGraph, expressions: U32) -> SelfHostBodyWorkQueue {
+  self_host_body_work_queue_new(graph, 5100u64, 5100u64 << 32u64, 5100u64 << 32u64,
+    SelfHostHirSpan::{
+      start: 20u32
+      length: expressions
+    })
+}
+
+fn self_host_test_run_carrier_chain(graph: SelfHostBodyWorkGraph) -> SelfHostBodyWorkQueue {
+  let work = self_host_test_carrier_work_queue(graph, 9u32)
+  let values = self_host_body_empty_carriers()
+  let _ = while 0u32 {
+    item => if item < 10u32 {
+      values.push(SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+      continue item + 1u32
+    } else {
+      break self_host_semantic_unit()
+    }
+  }
+  values[0u32] = SelfHostWasmBodyCarrier::I64BodyCarrier
+  let _ = while self_host_body_work_queue_next(work) {
+    Option::Some(item) => {
+      let mut changed = false
+      if item > 0u32 {
+        let merged = self_host_body_merge_carrier(values[item], values[item - 1u32])
+        changed = !self_host_body_carrier_equal(values[item], merged)
+        values[item] = merged
+      }
+      self_host_body_work_queue_finish(work, item, changed)
+      continue self_host_body_work_queue_next(work)
+    }
+    Option::None => break self_host_semantic_unit()
+  }
+  assert(work.complete && work.auditing && work.audited_items == 10u32, "every chain constraint has a stable audit")
+  assert(values[9u32] is SelfHostWasmBodyCarrier::I64BodyCarrier, "all ten cells have propagated")
+  work
+}
+
+test "physical work queue audits a ten-cell propagation chain" {
+  let work = self_host_test_run_carrier_chain(self_host_test_carrier_chain_graph())
+  assert(work.successful_changes == 9u64, "nine strict carrier increases")
+  assert(self_host_body_work_queue_next(work) is Option::None, "completed work stays complete")
+}
+
+test "physical work queue retains transfer self-dependencies" {
+  let work = self_host_test_carrier_work_queue(self_host_body_empty_work_graph(1u32), 0u32)
+  let mut state = 0u32
+  let _ = while self_host_body_work_queue_next(work) {
+    Option::Some(item) => {
+      let changed = state < 2u32
+      if changed {
+        state = state + 1u32
+      }
+      self_host_body_work_queue_finish(work, item, changed)
+      continue self_host_body_work_queue_next(work)
+    }
+    Option::None => break self_host_semantic_unit()
+  }
+  assert(state == 2u32 && work.successful_changes == 2u64, "one rule can increase more than once")
+  assert(work.complete && work.audited_items == 1u32, "the final self-dependent transfer is stable")
+}
+
+test "scheduling an empty carrier work set does not underflow" {
+  let queue = []
+  let pending = []
+  self_host_body_schedule_all_work_items(queue, pending)
+  assert(queue.length() == 0u32, "empty work stays empty")
+}
+
+test "BOD-604 final transfer audit detects a missing dependency" expect_trap "unreachable" {
+  let graph = self_host_test_carrier_chain_graph()
+  let _ = self_host_test_run_carrier_chain(graph)
+  graph.heads[4u32] = 4294967295u32
+  let _ = self_host_test_run_carrier_chain(graph)
+}
+
+test "ARN-103 carrier graph edge arrays remain parallel" expect_trap "unreachable" {
+  let graph = self_host_test_carrier_chain_graph()
+  let _ = self_host_test_run_carrier_chain(graph)
+  let _ = graph.targets.pop()
+  let _ = self_host_test_carrier_work_queue(graph, 9u32)
+}
+
+test "ARN-101 carrier graph heads stay in the edge arena" expect_trap "unreachable" {
+  let graph = self_host_test_carrier_chain_graph()
+  let _ = self_host_test_run_carrier_chain(graph)
+  graph.heads[0u32] = 9u32
+  let _ = self_host_test_carrier_work_queue(graph, 9u32)
+}
+
+test "ARN-101 carrier graph targets stay in the node arena" expect_trap "unreachable" {
+  let graph = self_host_test_carrier_chain_graph()
+  let _ = self_host_test_run_carrier_chain(graph)
+  graph.targets[0u32] = 10u32
+  let _ = self_host_test_carrier_work_queue(graph, 9u32)
+}
+
+test "ARN-104 carrier graph adjacency links strictly decrease" expect_trap "unreachable" {
+  let graph = self_host_test_carrier_chain_graph()
+  let _ = self_host_test_run_carrier_chain(graph)
+  graph.next[0u32] = 0u32
+  let _ = self_host_test_carrier_work_queue(graph, 9u32)
+}
+
+test "BOD-604 a carrier transfer must finish before the next starts" expect_trap "unreachable" {
+  let work = self_host_test_carrier_work_queue(self_host_body_empty_work_graph(1u32), 0u32)
+  assert(self_host_body_work_queue_next(work) is Option::Some(0u32), "one active transfer")
+  let _ = self_host_body_work_queue_next(work)
+}
+
+test "BOD-604 carrier completion must match the active transfer" expect_trap "unreachable" {
+  let work = self_host_test_carrier_work_queue(self_host_body_empty_work_graph(1u32), 0u32)
+  assert(self_host_body_work_queue_next(work) is Option::Some(0u32), "one active transfer")
+  self_host_body_work_queue_finish(work, 1u32, false)
+}
+
+test "BOD-604 a completion flag cannot replace the transfer audit" expect_trap "unreachable" {
+  let work = self_host_test_carrier_work_queue(self_host_test_carrier_chain_graph(), 9u32)
+  work.complete = true
+  let _ = self_host_body_work_queue_next(work)
+}
+
+test "ARN-101 queued carrier items are checked before pending lookup" expect_trap "unreachable" {
+  let work = self_host_test_carrier_work_queue(self_host_test_carrier_chain_graph(), 9u32)
+  work.queue[0u32] = 10u32
+  let _ = self_host_body_work_queue_next(work)
+}
+
+test "BOD-604 a nonconverging carrier transfer has a resource diagnostic" expect_trap "unreachable" {
+  let work = self_host_test_carrier_work_queue(self_host_body_empty_work_graph(1u32), 0u32)
+  let mut state = false
+  let _ = while self_host_body_work_queue_next(work) {
+    Option::Some(item) => {
+      state = !state
+      self_host_body_work_queue_finish(work, item, true)
+      continue self_host_body_work_queue_next(work)
+    }
+    Option::None => {
+      assert(false, "a changing rule must not be accepted as complete")
+      break self_host_semantic_unit()
+    }
+  }
+}
+test "ARN-101 carrier graph node totals cannot wrap U32" expect_trap "unreachable" {
+  let lowering = self_host_physical_test_lowering(b"pub fn run() -> I32 {\n  42i32\n}\n")
+  let module_ = lowering.modules[0u32]
+  let body = module_.bodies[0u32]
+  assert(body.expressions.length == 1u32 && body.locals.length == 0u32, "valid small body")
+  let valid = self_host_body_build_work_graph(module_, body, 0u32)
+  assert(valid.heads.length() == 2u32, "one block and one expression node")
+  let _ = self_host_body_build_work_graph(module_, body, 4294967295u32)
+}
