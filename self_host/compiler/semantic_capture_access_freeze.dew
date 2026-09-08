@@ -1,0 +1,50 @@
+fn self_host_capture_source_kind(source: SelfHostLambdaCaptureSource) -> U64 {
+  match source {
+    SelfHostLambdaCaptureSource::BodyLocalCapture(_, _) => 0u64
+    SelfHostLambdaCaptureSource::LambdaLocalCapture(_, _) => 1u64
+  }
+}
+
+fn self_host_capture_source_owner(source: SelfHostLambdaCaptureSource) -> U64 {
+  match source {
+    SelfHostLambdaCaptureSource::BodyLocalCapture(body, _) => body
+    SelfHostLambdaCaptureSource::LambdaLocalCapture(lambda, _) => u32_into_u64(lambda)
+  }
+}
+
+fn self_host_capture_source_id(source: SelfHostLambdaCaptureSource) -> U64 {
+  match source {
+    SelfHostLambdaCaptureSource::BodyLocalCapture(_, local) => u32_into_u64(local)
+    SelfHostLambdaCaptureSource::LambdaLocalCapture(_, local) => u32_into_u64(local)
+  }
+}
+
+fn self_host_assert_frozen_capture_accesses(frozen: SelfHostPlannedPhysicalBodyCarrierPlan, live: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  self_host_body_freeze_check(frozen, 4294967295u32, 200u32, 4294967295u32,
+    u32_into_u64(frozen.capture_accesses.length()), u32_into_u64(live.capture_accesses.length()))
+  let mut index = 0u32
+  for expected in frozen.capture_accesses {
+    let actual = live.capture_accesses[index]
+    self_host_body_freeze_check(frozen, 4294967295u32, 200u32, index,
+      u32_into_u64(expected.capture), u32_into_u64(actual.capture))
+    self_host_body_freeze_check(frozen, 4294967295u32, 201u32, index,
+      self_host_capture_source_kind(expected.source), self_host_capture_source_kind(actual.source))
+    self_host_body_freeze_check(frozen, 4294967295u32, 202u32, index,
+      self_host_capture_source_owner(expected.source), self_host_capture_source_owner(actual.source))
+    self_host_body_freeze_check(frozen, 4294967295u32, 203u32, index,
+      self_host_capture_source_id(expected.source), self_host_capture_source_id(actual.source))
+    self_host_body_freeze_check(frozen, 4294967295u32, 204u32, index,
+      self_host_body_freeze_bool(expected.erased), self_host_body_freeze_bool(actual.erased))
+    self_host_body_freeze_check(frozen, 4294967295u32, 205u32, index,
+      u32_into_u64(expected.closure_type), u32_into_u64(actual.closure_type))
+    self_host_body_freeze_check(frozen, 4294967295u32, 206u32, index,
+      u32_into_u64(expected.field_index), u32_into_u64(actual.field_index))
+    self_host_body_freeze_check(frozen, 4294967295u32, 207u32, index,
+      self_host_body_freeze_storage(expected.field_storage), self_host_body_freeze_storage(actual.field_storage))
+    self_host_body_freeze_check(frozen, 4294967295u32, 208u32, index,
+      u32_into_u64(expected.cell_type), u32_into_u64(actual.cell_type))
+    self_host_body_freeze_check(frozen, 4294967295u32, 209u32, index,
+      self_host_body_freeze_storage(expected.cell_storage), self_host_body_freeze_storage(actual.cell_storage))
+    index = index + 1u32
+  }
+}

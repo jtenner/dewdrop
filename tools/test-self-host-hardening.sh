@@ -222,7 +222,8 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_temporary_layout_test.dew \
   self_host/compiler/semantic_raw_array_temporaries_test.dew \
   self_host/compiler/semantic_raw_forwarding_test.dew \
-  self_host/compiler/semantic_capture_cell_plans_test.dew
+  self_host/compiler/semantic_capture_cell_plans_test.dew \
+  self_host/compiler/semantic_capture_access_plans_test.dew
 do
   test_args+=(self_host.compiler "${source#self_host/compiler/}" "$source")
 done

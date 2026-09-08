@@ -13864,7 +13864,7 @@ fn self_host_emit_linked_i32_expression(
                 match self_host_linked_local_capture_cell(link, canonical_body_plan, module_, body, local) {
                   Option::Some(cell) => {
                     self_host_emit_capture_local_get(cell.local_slot, destination)
-                    self_host_emit_capture_field_get(link, cell.type_index, 0u32, destination)
+                    self_host_emit_capture_field_get(cell.storage, cell.type_index, 0u32, destination)
                   }
                   Option::None => self_host_emit_capture_local_get(slot, destination)
                 }

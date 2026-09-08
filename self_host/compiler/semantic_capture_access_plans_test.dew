@@ -1,0 +1,209 @@
+fn self_host_capture_access_fixture() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
+  let (link, _) = self_host_capture_cell_plan_fixture()
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  for plan in program.bodies {
+    if plan.lambda == 0u32 {
+      return (link, plan)
+    }
+  }
+  unreachable()
+}
+
+test "capture writes retain frozen cell types instead of reselecting linked fragments" {
+  let (link, plan) = self_host_capture_access_fixture()
+  let before = match self_host_capture_write_type(link, plan, 0u32) {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  assert(before == 1u32, "stable original cell type")
+  let source = link.types[before]
+  link.types[before] = SelfHostPlannedProgramWasmType::{
+    module_index: source.module_index
+    fragment_index: 0u32
+    type_index: source.type_index
+  }
+  match self_host_capture_write_type(link, plan, 0u32) {
+    Option::Some(value) => assert(value == before, "capture write target must remain frozen")
+    Option::None => assert(false, "capture write must not lose its frozen pointee type")
+  }
+}
+
+fn self_host_test_capture_access(plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> SelfHostPhysicalCaptureAccessPlan {
+  assert(plan.declaration == (5100u64 << 32u64) && plan.body == (5100u64 << 32u64) && plan.lambda == 0u32, "stable lambda diagnostic identity")
+  assert(plan.capture_accesses.length() == 1u32, "one frozen capture access")
+  let access = self_host_capture_access(plan, 0u32)
+  assert(!access.erased && access.closure_type == 2u32 && access.field_index == 1u32 && access.cell_type == 1u32, "exact captured cell layout")
+  assert(self_host_capture_source_kind(access.source) == 0u64 && self_host_capture_source_owner(access.source) == (5100u64 << 32u64) && self_host_capture_source_id(access.source) == 1u64, "exact body-local source")
+  assert(self_host_body_freeze_storage(access.field_storage) == 6u64 && self_host_body_freeze_storage(access.cell_storage) == 2u64, "reference cell pointer and I64 payload")
+  access
+}
+
+fn self_host_test_change_capture_access(plan: SelfHostPlannedPhysicalBodyCarrierPlan, field: U32) -> Unit {
+  let source = self_host_test_capture_access(plan)
+  plan.capture_accesses[0u32] = SelfHostPhysicalCaptureAccessPlan::{
+    capture: if field == 1u32 {
+      1u32
+    } else {
+      source.capture
+    }
+    source: if field == 2u32 {
+      SelfHostLambdaCaptureSource::LambdaLocalCapture(0u32, 1u32)
+    } else if field == 3u32 {
+      SelfHostLambdaCaptureSource::BodyLocalCapture((5100u64 << 32u64) + 1u64, 1u32)
+    } else if field == 4u32 {
+      SelfHostLambdaCaptureSource::BodyLocalCapture(5100u64 << 32u64, 0u32)
+    } else {
+      source.source
+    }
+    erased: if field == 5u32 {
+      true
+    } else {
+      source.erased
+    }
+    closure_type: if field == 6u32 {
+      0u32
+    } else {
+      source.closure_type
+    }
+    field_index: if field == 7u32 {
+      0u32
+    } else {
+      source.field_index
+    }
+    field_storage: if field == 8u32 {
+      Option::Some(SelfHostPlannedWasmStorageType::WasmI32Storage)
+    } else if field == 11u32 {
+      Option::None
+    } else {
+      source.field_storage
+    }
+    cell_type: if field == 9u32 {
+      0u32
+    } else {
+      source.cell_type
+    }
+    cell_storage: if field == 10u32 {
+      Option::Some(SelfHostPlannedWasmStorageType::WasmI32Storage)
+    } else if field == 12u32 {
+      Option::None
+    } else {
+      source.cell_storage
+    }
+  }
+}
+
+test "capture access records retain exact closure and cell fields" {
+  let (link, plan) = self_host_capture_access_fixture()
+  let _ = self_host_test_capture_access(plan)
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  self_host_verify_capture_accesses(link, module_, body, plan)
+  self_host_assert_frozen_physical_body(self_host_freeze_physical_body(plan), plan)
+}
+
+test "BOD-605 capture access capture ID cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 1u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 capture access source kind cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 2u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 capture access source owner cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 3u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 capture access source local cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 4u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 capture access erasure cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 5u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 capture access closure type cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 6u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 capture access field index cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 7u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 capture access field storage cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 8u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 capture access cell type cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 9u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 capture access cell storage cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_test_change_capture_access(plan, 10u32)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "ARN-103 capture access tables cover every lambda capture" expect_trap "unreachable" {
+  let (link, plan) = self_host_capture_access_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let _ = plan.capture_accesses.pop()
+  self_host_verify_capture_accesses(link, module_, body, plan)
+}
+
+test "ARN-102 capture access stays in the frozen lambda frame" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let _ = self_host_capture_access(plan, 1u32)
+}
+
+test "ARN-106 capture access retains its stored ID" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  self_host_test_change_capture_access(plan, 1u32)
+  let _ = self_host_capture_access(plan, 0u32)
+}
+
+test "BOD-610 capture reads require the frozen field storage" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  self_host_test_change_capture_access(plan, 11u32)
+  let _ = self_host_capture_access_storage(plan, plan.capture_accesses[0u32], false)
+}
+
+test "BOD-610 capture reads require the frozen cell storage" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  self_host_test_change_capture_access(plan, 12u32)
+  let _ = self_host_capture_access_storage(plan, plan.capture_accesses[0u32], true)
+}
+
+test "BOD-605 capture access table length cannot change after freeze" expect_trap "unreachable" {
+  let (_, plan) = self_host_capture_access_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  let _ = plan.capture_accesses.pop()
+  self_host_assert_frozen_physical_body(frozen, plan)
+}

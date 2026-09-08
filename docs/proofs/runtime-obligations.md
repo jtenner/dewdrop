@@ -507,9 +507,15 @@ The marker and Unit loop regressions are in
 Owned capture-cell records now share the body freeze boundary. Each logical
 local has one optional entry with checked source, slot, heap, storage, and
 parameter identities. Emission uses those records; frozen field or presence
-changes report BOD-605. This does not prove forwarded capture pointees or all
-reference assignability. See
+changes report BOD-605. See
 [the owned cell log](../research/owned-capture-cell-plans-2026-09-08.md).
+
+Lambda capture accesses now retain source identity, erasure, closure field
+types/indices, and optional cell pointees. They are independently verified and
+frozen. Packed field reads use the retained storage type. This does not yet
+prove closure construction recipes, runtime trait evidence capture, or all
+reference assignability. See
+[the capture access log](../research/frozen-capture-accesses-2026-09-08.md).
 
 ## Physical call target updates
 

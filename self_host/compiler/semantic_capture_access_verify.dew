@@ -1,0 +1,29 @@
+fn self_host_verify_capture_accesses(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  let expected = self_host_plan_capture_accesses(link, module_, body, plan.module_index, plan.specialization, plan.lambda)
+  self_host_assert_physical_table_count(plan, expected.length(), plan.capture_accesses.length(), 719u32)
+  let mut index = 0u32
+  for wanted in expected {
+    let actual = plan.capture_accesses[index]
+    self_host_capture_cell_plan_check(u32_into_u64(wanted.capture) == u32_into_u64(actual.capture), module_, body, 6u32, 106u32,
+      u32_into_u64(wanted.capture), u32_into_u64(actual.capture), index)
+    self_host_capture_cell_plan_check(self_host_capture_source_kind(wanted.source) == self_host_capture_source_kind(actual.source), module_, body, 6u32, 106u32,
+      self_host_capture_source_kind(wanted.source), self_host_capture_source_kind(actual.source), index)
+    self_host_capture_cell_plan_check(self_host_capture_source_owner(wanted.source) == self_host_capture_source_owner(actual.source), module_, body, 6u32, 106u32,
+      self_host_capture_source_owner(wanted.source), self_host_capture_source_owner(actual.source), index)
+    self_host_capture_cell_plan_check(self_host_capture_source_id(wanted.source) == self_host_capture_source_id(actual.source), module_, body, 6u32, 106u32,
+      self_host_capture_source_id(wanted.source), self_host_capture_source_id(actual.source), index)
+    self_host_capture_cell_plan_check(self_host_body_freeze_bool(wanted.erased) == self_host_body_freeze_bool(actual.erased), module_, body, 6u32, 106u32,
+      self_host_body_freeze_bool(wanted.erased), self_host_body_freeze_bool(actual.erased), index)
+    self_host_capture_cell_plan_check(u32_into_u64(wanted.closure_type) == u32_into_u64(actual.closure_type), module_, body, 6u32, 706u32,
+      u32_into_u64(wanted.closure_type), u32_into_u64(actual.closure_type), index)
+    self_host_capture_cell_plan_check(u32_into_u64(wanted.field_index) == u32_into_u64(actual.field_index), module_, body, 6u32, 504u32,
+      u32_into_u64(wanted.field_index), u32_into_u64(actual.field_index), index)
+    self_host_capture_cell_plan_check(self_host_body_freeze_storage(wanted.field_storage) == self_host_body_freeze_storage(actual.field_storage), module_, body, 6u32, 710u32,
+      self_host_body_freeze_storage(wanted.field_storage), self_host_body_freeze_storage(actual.field_storage), index)
+    self_host_capture_cell_plan_check(u32_into_u64(wanted.cell_type) == u32_into_u64(actual.cell_type), module_, body, 6u32, 706u32,
+      u32_into_u64(wanted.cell_type), u32_into_u64(actual.cell_type), index)
+    self_host_capture_cell_plan_check(self_host_body_freeze_storage(wanted.cell_storage) == self_host_body_freeze_storage(actual.cell_storage), module_, body, 6u32, 710u32,
+      self_host_body_freeze_storage(wanted.cell_storage), self_host_body_freeze_storage(actual.cell_storage), index)
+    index = index + 1u32
+  }
+}

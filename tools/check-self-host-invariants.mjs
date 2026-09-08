@@ -11,6 +11,28 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["BOD-605 capture access capture ID cannot change after freeze", 605, 7, 0n, 1n, 200n << 32n],
+    ["BOD-605 capture access source kind cannot change after freeze", 605, 7, 0n, 1n, 201n << 32n],
+    ["BOD-605 capture access source owner cannot change after freeze", 605, 7, 5100n << 32n, (5100n << 32n) + 1n, 202n << 32n],
+    ["BOD-605 capture access source local cannot change after freeze", 605, 7, 1n, 0n, 203n << 32n],
+    ["BOD-605 capture access erasure cannot change after freeze", 605, 7, 0n, 1n, 204n << 32n],
+    ["BOD-605 capture access closure type cannot change after freeze", 605, 7, 2n, 0n, 205n << 32n],
+    ["BOD-605 capture access field index cannot change after freeze", 605, 7, 1n, 0n, 206n << 32n],
+    ["BOD-605 capture access field storage cannot change after freeze", 605, 7, 6n, 1n, 207n << 32n],
+    ["BOD-605 capture access cell type cannot change after freeze", 605, 7, 1n, 0n, 208n << 32n],
+    ["BOD-605 capture access cell storage cannot change after freeze", 605, 7, 2n, 1n, 209n << 32n],
+    ["ARN-103 capture access tables cover every lambda capture", 103, 6, 1n, 0n, 719n],
+    ["ARN-102 capture access stays in the frozen lambda frame", 102, 7, 1n, 1n, 0n],
+    ["ARN-106 capture access retains its stored ID", 106, 7, 0n, 1n, 0n],
+    ["BOD-610 capture reads require the frozen field storage", 610, 7, 1n, 0n, 0n],
+    ["BOD-610 capture reads require the frozen cell storage", 610, 7, 1n, 0n, 1n << 32n],
+    ["BOD-605 capture access table length cannot change after freeze", 605, 7, 1n, 0n, (200n << 32n) | 4294967295n],
+  ].map(([name, code, phase, expected, actual, detail]) => ({
+    name,
+    expected: [code, phase, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, expected, actual, detail],
+  })),
+  ...[
     ["ARN-103 owned capture cell tables cover every logical local", 103, 6, 2n, 1n, 718n],
     ["BOD-610 a required owned capture cell cannot be omitted", 610, 6, 1n, 0n, 1n],
     ["BOD-605 owned capture cell local identity cannot change after freeze", 605, 7, 1n, 0n, (191n << 32n) | 1n],
