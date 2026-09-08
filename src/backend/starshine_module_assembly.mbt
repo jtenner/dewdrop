@@ -3,6 +3,7 @@ pub fn emit_starshine_code_section(
   lowering : @semantic.PlannedModuleLowering,
   planned : @semantic.PlannedModuleWasmGCFragments,
 ) -> Result[@lib.CodeSec, StarshineCodeEmissionError] {
+  @semantic.assert_planned_capture_metadata(lowering, 7)
   let functions : Array[@lib.Func] = []
   for function_ in planned.functions {
     match function_.kind {

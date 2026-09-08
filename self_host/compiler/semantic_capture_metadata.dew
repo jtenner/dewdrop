@@ -1,0 +1,110 @@
+fn self_host_capture_metadata_failure(module_: SelfHostPlannedModuleLowering, body: U64, phase: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: phase
+    module_id: module_.module_id
+    declaration: 0u64
+    body: body
+    expression: 4294967295u32
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "capture metadata has no valid source owner")
+  unreachable()
+}
+
+fn self_host_capture_metadata_body(module_: SelfHostPlannedModuleLowering, owner: U64, phase: U32, tag: U32, entity: U32) -> SelfHostPlannedBodyLowering {
+  let module_id = self_host_semantic_id_module(owner)
+  let detail = (u32_into_u64(tag) << 32u64) | u32_into_u64(entity)
+  if module_id != module_.module_id {
+    self_host_capture_metadata_failure(module_, owner, phase, 106u32, module_.module_id, module_id, detail)
+  }
+  let index = self_host_semantic_id_local(owner)
+  if index >= module_.bodies.length() {
+    self_host_capture_metadata_failure(module_, owner, phase, 104u32, u32_into_u64(module_.bodies.length()), u32_into_u64(index), detail)
+  }
+  let body = module_.bodies[index]
+  if body.body != owner {
+    self_host_capture_metadata_failure(module_, owner, phase, 106u32, owner, body.body, detail)
+  }
+  body
+}
+
+fn self_host_capture_metadata_context(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, phase: U32) -> SelfHostLoweredChildContext {
+  SelfHostLoweredChildContext::{
+    module_: module_
+    body: body
+    phase: phase
+    lambda: 4294967295u32
+    locals: SelfHostHirSpan::{
+      start: 0u32
+      length: body.locals.length
+    }
+    lambdas: SelfHostHirSpan::{
+      start: 0u32
+      length: module_.lambdas.length()
+    }
+  }
+}
+
+fn self_host_assert_module_capture_metadata(module_: SelfHostPlannedModuleLowering, phase: U32) -> Unit {
+  while 0u32 {
+    index if index < module_.lambdas.length() => {
+      let source = module_.lambdas[index]
+      let body = self_host_capture_metadata_body(module_, source.root_body, phase, 21u32, index)
+      let context = self_host_capture_metadata_context(module_, body, phase)
+      let _ = self_host_lowered_child_lambda(context, 4294967295u32, index)
+      self_host_lowered_child_span(context, 4294967295u32, source.locals, module_.locals.length(), 2u32)
+      while 0u32 {
+        offset if offset < source.locals.length => {
+          self_host_lowered_child_local_record(context, 4294967295u32, source.locals.start + offset, offset, index)
+          continue offset + 1u32
+        }
+        _ => break ()
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  while 0u32 {
+    index if index < module_.locals.length() => {
+      let local = module_.locals[index]
+      let body = self_host_capture_metadata_body(module_, local.body, phase, 6u32, index)
+      let context = self_host_capture_metadata_context(module_, body, phase)
+      let span = if local.lambda == 4294967295u32 {
+        body.locals
+      } else {
+        self_host_lowered_child_lambda_record(context, 4294967295u32, local.lambda).locals
+      }
+      self_host_lowered_child_span(context, 4294967295u32, span, module_.locals.length(), 2u32)
+      self_host_lowered_child_index(context, 4294967295u32, span, index, 2u32)
+      self_host_lowered_child_local_record(context, 4294967295u32, index, index - span.start, local.lambda)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  // Check global entries too: an empty/short owner span cannot hide an orphan.
+  while 0u32 {
+    index if index < module_.captures.length() => {
+      let capture = module_.captures[index]
+      if capture.lambda >= module_.lambdas.length() {
+        self_host_capture_metadata_failure(module_, 0u64, phase, 104u32, 0u64, u32_into_u64(capture.lambda), (18u64 << 32u64) | u32_into_u64(module_.lambdas.length()))
+      }
+      let source = module_.lambdas[capture.lambda]
+      let body = self_host_capture_metadata_body(module_, source.root_body, phase, 21u32, capture.lambda)
+      let context = self_host_capture_metadata_context(module_, body, phase)
+      self_host_lowered_child_index(context, 4294967295u32, source.captures, index, 17u32)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+}
+
+fn self_host_assert_program_capture_metadata(lowering: SelfHostPlannedProgramLowering, phase: U32) -> Unit {
+  for module_ in lowering.modules {
+    self_host_assert_module_capture_metadata(module_, phase)
+  }
+  for entry in lowering.compile_time.instances {
+    self_host_assert_module_capture_metadata(entry.value().module_, phase)
+  }
+}

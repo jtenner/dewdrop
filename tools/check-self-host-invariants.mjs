@@ -11,6 +11,28 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "ARN-104 emission rejects orphan captures before local planning",
+    expected: [104, 7, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, 1n, (17n << 32n) | 1n],
+  },
+  {
+    name: "ARN-104 fragment metadata rejects orphan captures",
+    expected: [104, 4, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, 1n, (17n << 32n) | 1n],
+  },
+  {
+    name: "ARN-104 fragment metadata rejects orphan locals",
+    expected: [104, 4, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, 2n, (2n << 32n) | 1n],
+  },
+  ...[
+    ["lambda owner", 18n], ["relative identity", 17n],
+  ].map(([name, tag]) => ({
+    name: `ARN-106 fragment capture entries retain their ${name}`,
+    expected: [106, 4, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, 1n, tag << 32n],
+  })),
+  {
+    name: "ARN-106 fragment capture sources retain their root body",
+    expected: [106, 4, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 5100n << 32n, (5100n << 32n) + 1n, 22n << 32n],
+  },
+  {
     name: "ARN-104 closure captures require their enclosing environment",
     expected: [104, 6, 5100n, 18446744073709551615n, 5100n << 32n, 1, 1n, 0n, (23n << 32n) | 1n],
   },

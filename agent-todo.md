@@ -330,6 +330,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   availability in the enclosing environment; native direct emission also
   preserves the source body guard. See the
   [source log](docs/research/capture-source-ownership-2026-09-07.md).
+  Global capture/local metadata now has a preflight before fragment storage
+  planning and public emission, including private generic instances. Checked
+  source IDs and complete spans catch orphan entries before arena reads; the
+  record retains phase 4 or 7 instead of borrowing a physical-body context.
+  See the [metadata log](docs/research/fragment-capture-metadata-2026-09-08.md).
   Complete child-list, stored-identity, parallel-array, and later-consumer checks
   remain open.
 - [ ] Complete SCC and linker checks. Every module must occur once, dependency

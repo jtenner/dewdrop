@@ -103,6 +103,7 @@ fn prepare_compile_time_lambda_layouts(
   owner : PlannedWasmFunctionFragment,
   root : BodyId,
 ) -> Unit {
+  assert_planned_capture_metadata(instance, 4)
   let mut has_lambda = false
   for lambda in instance.lambdas {
     if lambda.root_body == root && !lambda.elided {

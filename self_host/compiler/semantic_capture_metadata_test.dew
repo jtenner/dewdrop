@@ -1,0 +1,54 @@
+test "fragment metadata accepts valid capture tables" {
+  let fixture = self_host_capture_test_fixture()
+  self_host_assert_module_capture_metadata(fixture.module_, 4u32)
+}
+
+test "fragment metadata accepts generic template capture carriers" {
+  let lowering = self_host_physical_test_lowering(b"pub fn maker<t>(value: t) -> fn() -> t {\n  fn() -> t {\n    value\n  }\n}\n")
+  assert(self_host_validate_program_inference(lowering) is Option::None, "valid generic closure inference")
+  let module_ = lowering.modules[0u32]
+  assert(module_.captures.length() == 1u32, "one generic capture")
+  assert(module_.captures[0u32].shape is SelfHostPlannedValueShape::GenericPlannedValueShape, "test pending template storage, not concrete specialization")
+  self_host_assert_module_capture_metadata(module_, 4u32)
+}
+
+test "ARN-104 emission rejects orphan captures before local planning" expect_trap "unreachable" {
+  let fixture = self_host_capture_test_fixture()
+  fixture.module_.captures.push(fixture.module_.captures[0u32])
+  let _ = build_self_host_linked_i32_module(fixture.link, 5100u64)
+}
+
+test "ARN-104 fragment metadata rejects orphan captures" expect_trap "unreachable" {
+  let fixture = self_host_capture_test_fixture()
+  fixture.module_.captures.push(fixture.module_.captures[0u32])
+  self_host_assert_module_capture_metadata(fixture.module_, 4u32)
+}
+
+test "ARN-106 fragment capture entries retain their lambda owner" expect_trap "unreachable" {
+  let fixture = self_host_capture_test_fixture()
+  let source = fixture.module_.captures[0u32]
+  fixture.module_.captures[0u32] = self_host_capture_test_reidentified(source, 1u32, source.capture)
+  self_host_assert_module_capture_metadata(fixture.module_, 4u32)
+}
+
+test "ARN-106 fragment capture entries retain their relative identity" expect_trap "unreachable" {
+  let fixture = self_host_capture_test_fixture()
+  let source = fixture.module_.captures[0u32]
+  fixture.module_.captures[0u32] = self_host_capture_test_reidentified(source, source.lambda, 1u32)
+  self_host_assert_module_capture_metadata(fixture.module_, 4u32)
+}
+
+test "ARN-106 fragment capture sources retain their root body" expect_trap "unreachable" {
+  let fixture = self_host_capture_test_fixture()
+  let source = fixture.module_.captures[0u32]
+  fixture.module_.captures[0u32] = self_host_capture_test_resourced(source,
+    SelfHostLambdaCaptureSource::BodyLocalCapture(fixture.module_.bodies[1u32].body, 0u32),
+  )
+  self_host_assert_module_capture_metadata(fixture.module_, 4u32)
+}
+
+test "ARN-104 fragment metadata rejects orphan locals" expect_trap "unreachable" {
+  let fixture = self_host_capture_test_fixture()
+  fixture.module_.locals.push(fixture.module_.locals[0u32])
+  self_host_assert_module_capture_metadata(fixture.module_, 4u32)
+}

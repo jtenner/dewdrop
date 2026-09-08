@@ -1,6 +1,7 @@
 struct SelfHostLoweredChildContext {
   module_: SelfHostPlannedModuleLowering
   body: SelfHostPlannedBodyLowering
+  phase: U32
   lambda: U32
   locals: SelfHostHirSpan
   lambdas: SelfHostHirSpan
@@ -10,7 +11,7 @@ fn self_host_lowered_child_failure(context: SelfHostLoweredChildContext, code: U
   let _ = self_host_assert_compiler_invariant_with_failure(false,
     SelfHostInvariantFailure::{
       code: code
-      phase: 6u32
+      phase: context.phase
       module_id: context.module_.module_id
       declaration: context.body.declaration
       body: context.body.body
@@ -220,6 +221,7 @@ fn self_host_verify_lowered_body_children(module_: SelfHostPlannedModuleLowering
   let context = SelfHostLoweredChildContext::{
     module_: module_
     body: body
+    phase: 6u32
     lambda: lambda
     locals: SelfHostHirSpan::{
       start: 0u32

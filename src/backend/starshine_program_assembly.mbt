@@ -1198,6 +1198,7 @@ pub fn emit_starshine_program_module(
   if planned.diagnostics.length() > 0 {
     return Err(ProgramLinkDiagnostics(planned.diagnostics.length()))
   }
+  @semantic.assert_program_capture_metadata(lowering, 7)
   let helper_plan = starshine_program_adapter_helper_plan(lowering, planned)
   match helper_plan.evidence_error {
     Some(error) => return Err(error)

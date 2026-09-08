@@ -861,6 +861,7 @@ fn self_host_wasmgc_plan_closures(
 fn self_host_plan_program_wasmgc_fragments(
   specialization: SelfHostProgramSpecializationPlan,
 ) -> SelfHostPlannedProgramWasmGCFragments {
+  self_host_assert_program_capture_metadata(specialization.lowering, 4u32)
   let modules = []
   let reachable = self_host_program_specialization_seen()
   for declaration in specialization.reachable_declarations {

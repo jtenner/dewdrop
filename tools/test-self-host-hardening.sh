@@ -151,6 +151,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_physical_body_tables_test.dew \
   self_host/compiler/semantic_body_child_ownership_test.dew \
   self_host/compiler/semantic_capture_ownership_test.dew \
+  self_host/compiler/semantic_capture_metadata_test.dew \
   self_host/compiler/semantic_capture_sources_test.dew \
   self_host/compiler/semantic_capture_forwarding_test.dew \
   self_host/compiler/semantic_physical_specialization_test.dew \
