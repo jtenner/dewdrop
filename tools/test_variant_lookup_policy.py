@@ -40,6 +40,17 @@ class VariantLookupPolicyTests(unittest.TestCase):
                 self.assertTrue(heuristic not in function,
                                 f"payload seeding contains a spelling or slot guess: {heuristic}")
 
+    def test_missing_payload_does_not_use_a_variant_spelling(self):
+        source = (ROOT / "self_host/compiler/semantic_wasm_body_plan.dew").read_text()
+        start = source.index("fn self_host_body_pattern_payload_value(")
+        end = source.index("\nfn ", start + 3)
+        function = source[start:end]
+        for heuristic in ("self_host_linked_declaration_name(", "ends_with(",
+                          "pattern_type_arguments["):
+            with self.subTest(heuristic=heuristic):
+                self.assertFalse(heuristic in function,
+                                 f"missing payload evidence uses a spelling or slot guess: {heuristic}")
+
     def test_exact_call_payload_uses_the_declared_result(self):
         source = SOURCE.read_text()
         start = source.index("fn self_host_linked_exact_call_result_payload_shape(")

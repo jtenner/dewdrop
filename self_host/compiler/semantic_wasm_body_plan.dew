@@ -3201,7 +3201,7 @@ fn self_host_body_pattern_payload_value(
     SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
       constructor,
       _,
-      arguments,
+      _,
     ) => {
       let payload_type = match pattern.source {
         SelfHostHirPattern::TuplePattern(_, children, _) => if field_index <
@@ -3331,37 +3331,8 @@ fn self_host_body_pattern_payload_value(
           inferred_payload_owner,
         )
       }
-      let name = self_host_linked_declaration_name(link, constructor)
-      if !(name.ends_with(b"Some") || name.ends_with(b"Ok") || name.ends_with(
-        b"Err",
-      )) {
-        return fallback
-      }
-      let argument = if name.ends_with(b"Err") {
-        1u32
-      } else {
-        0u32
-      }
-      if argument < arguments.length {
-        let index = self_host_u32_add(arguments.start, argument)
-        if index < module_.inferred.pattern_type_arguments.length() {
-          let type_ = module_.inferred.pattern_type_arguments[index]
-          let shape = self_host_planned_merged_body_value_shape(
-            module_.resolved_types,
-            module_.inferred,
-            type_,
-          )
-          if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-            let owner = self_host_linked_type_nominal_declaration(module_, type_)
-            return self_host_body_physical_value(
-              indexes,
-              type_,
-              self_host_body_carrier_from_shape(shape),
-              owner,
-            )
-          }
-        }
-      }
+      // A source spelling or arbitrary generic slot cannot restore evidence
+      // when both the selected physical field and logical child are missing.
     }
     _ => {}
   }

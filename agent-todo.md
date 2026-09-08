@@ -224,6 +224,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   payloads follow the declared result's substituted type arguments, not a
   fixed generic slot or a get suffix. Shared receiver recovery still remains.
   See the [payload identity log](docs/research/pattern-payload-identity-2026-09-08.md).
+  The last body-payload Some/Ok/Err suffix-recovery tail is now removed too.
+  Valid user variants keep their declared storage; missing fields remain
+  unresolved. See the
+  [payload spelling log](docs/research/pattern-payload-spelling-2026-09-08.md).
 - [ ] Delete unused legacy builtin plans/builders after each migration. Enforce
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.
