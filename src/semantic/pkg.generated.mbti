@@ -215,6 +215,8 @@ pub fn validate_module_wasmgc_arenas(PlannedModuleWasmGCFragments) -> Result[Uni
 
 pub fn validate_planned_module_type_layouts(PlannedModuleTypeLayouts) -> Result[Unit, String]
 
+pub fn verify_program_physical_type_fragments(PlannedProgramWasmGCLink) -> Result[Unit, ProgramPhysicalTypeFailure]
+
 pub fn verify_program_source_function_fragments(PlannedProgramWasmGCLink) -> Result[Unit, ProgramFunctionLookupFailure]
 
 pub fn wasmgc_capture_cell_slot(PlannedValueShape) -> Int
@@ -2469,6 +2471,18 @@ pub struct ProgramManifest {
   modules : Array[ManifestModule]
 } derive(Eq, @debug.Debug)
 pub fn ProgramManifest::new(Array[ManifestModule]) -> Self
+
+pub struct ProgramPhysicalTypeFailure {
+  code : Int
+  phase : Int
+  module_id : UInt64
+  declaration : UInt64
+  body : UInt64
+  expression : UInt
+  expected : UInt64
+  actual : UInt64
+  detail : UInt64
+} derive(Eq, @debug.Debug)
 
 type ProgramSpecializationShapeNameTask
 

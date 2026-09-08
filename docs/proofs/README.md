@@ -26,6 +26,7 @@ self-host failures. It is not a proof of the full language.
 | Match fallthrough arms have one result carrier | Checked; bootstrap test is in progress | `starshine_module.dew` | `match-result-carrier.md` |
 | Emitted call stack matches the physical signature | Open as a complete theorem; passing scalar recipes and bootstrap tests do not prove all reference/control paths | Starshine module validation and call-recipe checks | `call-namespace.md` |
 | Dense type remap keeps valid indices and order | Proved | core linker validation | `src/compiler_proofs/type_remap_proofs.mbtp` |
+| Native physical type prefix has checked owners and one entry per emitted index | Checked and tested; full late-adapter/reference proof is open | `program_physical_type_invariants.mbt`, `program_physical_type_schedule.mbt` | `../research/physical-type-tables-2026-09-08.md` |
 
 ## Files
 

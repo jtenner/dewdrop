@@ -866,6 +866,12 @@ pub fn link_program_wasmgc_fragments(
     Ok(_) => ()
     Err(error) => abort(error)
   }
+  for module_ in fragments.modules {
+    match verify_module_physical_type_fragments(module_) {
+      Ok(_) => ()
+      Err(error) => abort(@debug.to_string(error))
+    }
+  }
   let module_type_bases = Array::make(lowering.modules.length(), -1)
   let module_type_indices : Array[Array[Int]] = []
   for module_ in fragments.modules {
@@ -1864,6 +1870,7 @@ pub fn link_program_wasmgc_fragments(
     diagnostics,
   }
   if diagnostics.is_empty() {
+    assert_program_physical_type_fragments(link)
     assert_program_function_indices(link)
     assert_program_source_function_fragments(link)
     assert_program_named_function_lookups(link)

@@ -1211,6 +1211,15 @@ pub fn emit_starshine_program_module(
   if planned.diagnostics.length() > 0 {
     return Err(ProgramLinkDiagnostics(planned.diagnostics.length()))
   }
+  match @semantic.verify_program_physical_type_fragments(planned) {
+    Ok(_) => ()
+    Err(failure) => return Err(CompilerInvariantFailure({
+      code: failure.code.reinterpret_as_uint(), phase: 7U,
+      module_id: failure.module_id, declaration: failure.declaration,
+      body: failure.body, expression: failure.expression,
+      expected: failure.expected, actual: failure.actual, detail: failure.detail,
+    }))
+  }
   match @semantic.verify_program_source_function_fragments(planned) {
     Ok(_) => ()
     Err(failure) =>

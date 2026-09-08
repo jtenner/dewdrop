@@ -466,6 +466,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   including specializations and lambdas. Complete physical type tables and
   synthetic adapter recipes remain separate checks. See the
   [signature-copy log](docs/research/linked-function-signature-copies-2026-09-08.md).
+  Native physical type tables now check field spans/order, recursive-group
+  coverage, source owners, relocations, nominal lookup entries, canonical
+  signatures, and the exact emitted type-prefix order. Emission returns full
+  numeric records before writing sections. Canonical trait layout proofs and
+  late adapter/text-runtime recipes remain open. See the
+  [type-table log](docs/research/physical-type-tables-2026-09-08.md).
 - [x] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.

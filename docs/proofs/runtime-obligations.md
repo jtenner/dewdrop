@@ -89,6 +89,16 @@ shared tests check both compilers. See the
 
 ## Parallel arenas
 
+Native physical type fragments and linked tables are checked before linking
+reads and before section emission. Recursive-group spans partition the owned
+types; relocations preserve their source identity; canonical signatures own
+valid operand/result spans. A second walk reconstructs the emitted type prefix
+and requires one assignment per index and an exact final count. Canonical
+source aliases may share one emitted signature record, but two emitted records
+cannot claim the same index. These are runtime checks and regression tests,
+not a proof of all late synthetic adapter or reference-subtyping rules. See
+the [type-table checks](../research/physical-type-tables-2026-09-08.md).
+
 For arrays that use the same expression index:
 
 \[
