@@ -1,16 +1,18 @@
 ///|
 test "raw unreachable emits one Wasm instruction" {
   assert_eq(
-    starshine_inline_builtin_instructions(b"unreachable", -1),
+    starshine_inline_builtin_instructions(b"unreachable"),
     Ok([@lib.Instruction::unreachable_()]),
   )
   let stages = backend_test_single_module_stages(
-    29382UL,
-    b"builtin stop() -> Never = \"unreachable\"\npub fn main(flag: Bool) -> I32 {\n  if flag {\n    stop()\n  } else {\n    7i32\n  }\n}\n",
+    29382UL, b"builtin stop() -> Never = \"unreachable\"\npub fn main(flag: Bool) -> I32 {\n  if flag {\n    stop()\n  } else {\n    7i32\n  }\n}\n",
   )
   assert_eq(
     @semantic.collect_compiler_source_diagnostics(
-      stages.program, stages.analyzed, stages.lowering, stages.link,
+      stages.program,
+      stages.analyzed,
+      stages.lowering,
+      stages.link,
     ),
     [],
   )

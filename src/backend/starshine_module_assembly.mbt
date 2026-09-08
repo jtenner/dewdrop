@@ -33,25 +33,16 @@ pub fn emit_starshine_code_section(
         }
       @semantic.PlannedWasmRuntimeFunction(name) =>
         if !function_.elided {
-          if name == b"dew_test_assert" {
-            functions.push(
-              starshine_test_assert_body(
-                planned.runtime_function_index(b"dew_string_as_bytes"),
-                planned.runtime_function_index(b"dew_wasi_fd_write"),
+          match
+            emit_starshine_text_runtime_function(
+              name,
+              starshine_text_runtime_base(planned),
+              planned.imported_function_index(
+                b"wasi_snapshot_preview1.fd_write",
               ),
-            )
-          } else {
-            match
-              emit_starshine_text_runtime_function(
-                name,
-                starshine_text_runtime_base(planned),
-                planned.imported_function_index(
-                  b"wasi_snapshot_preview1.fd_write",
-                ),
-              ) {
-              Some(function_body) => functions.push(function_body)
-              None => return Err(UnsupportedBuiltin(name))
-            }
+            ) {
+            Some(function_body) => functions.push(function_body)
+            None => return Err(UnsupportedBuiltin(name))
           }
         }
       @semantic.PlannedWasmImportedFunction(_)
@@ -72,7 +63,7 @@ fn starshine_module_uses_wasi(
     }
     match function_.kind {
       @semantic.PlannedWasmRuntimeFunction(name) =>
-        if name == b"dew_wasi_fd_write" || name == b"dew_test_assert" {
+        if name == b"dew_wasi_fd_write" {
           return true
         }
       @semantic.PlannedWasmImportedFunction(identity) =>

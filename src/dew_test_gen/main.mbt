@@ -13,7 +13,7 @@ fn dew_test_io_error_message(error : @fs.IOError) -> String {
 
 ///|
 fn dew_test_runtime_source() -> Bytes {
-  b"open dew.std.string\nopen dew.std.wasi\nbuiltin dew_test_assert_runtime(condition: Bool, message: String) -> Unit = \"dew_test_assert\"\n"
+  b"open dew.std.string\nopen dew.std.wasi\nfn assert(condition: Bool, message: String) -> Unit {\n  if !condition {\n    let _ = wasi_fd_write(1u32, message.as_bytes())\n    unreachable()\n  }\n}\n"
 }
 
 ///|

@@ -593,33 +593,6 @@ fn starshine_wasi_stage_write_body(base : Int) -> @lib.Func {
 }
 
 ///|
-fn starshine_test_assert_body(
-  string_as_bytes_function_index : Int,
-  wasi_write_function_index : Int,
-) -> @lib.Func {
-  let failure : Array[@lib.Instruction] = [
-    text_i32(1),
-    @lib.Instruction::local_get(text_local(1)),
-    @lib.Instruction::call(
-      @lib.FuncIdx::new(string_as_bytes_function_index.reinterpret_as_uint()),
-    ),
-    @lib.Instruction::call(
-      @lib.FuncIdx::new(wasi_write_function_index.reinterpret_as_uint()),
-    ),
-    @lib.Instruction::drop(),
-    @lib.Instruction::unreachable_(),
-  ]
-  @lib.Func::new(
-    @lib.Locals::empty(),
-    @lib.Expr::new([
-      @lib.Instruction::local_get(text_local(0)),
-      @lib.Instruction::i32_eqz(),
-      @lib.Instruction::if_(@lib.BlockType::void_(), failure, None),
-    ]),
-  )
-}
-
-///|
 fn starshine_wasi_fd_write_body(
   base : Int,
   fd_write_function_index : Int,

@@ -48,8 +48,10 @@ diagnostics. A matching trap passes and the runner continues to later tests; a
 missing, unexpected, or differently categorized trap fails the test.
 
 For ordinary failed assertions, CLI/standard test compilation injects a private
-runtime that converts the current runtime `String` message to sharing `Bytes`,
-writes it to WASI stdout through the bounded staging page, and then traps. The
+Dew `assert` function. Normal name resolution selects it. It converts the
+dynamic `String` message to sharing `Bytes`, calls the Dew `wasi_fd_write` loop
+to write to stdout through the bounded staging page, and then traps. There is
+no test-assertion builtin, hidden dependency list, or emitter redirection. The
 runner captures descriptor-1 writes per test and strict-UTF-8 decodes the exact
 dynamic output, allowing diagnostics such as:
 

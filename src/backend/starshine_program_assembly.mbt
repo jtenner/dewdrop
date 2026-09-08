@@ -385,7 +385,7 @@ fn starshine_program_uses_wasi(
     }
     match function_.kind {
       @semantic.PlannedWasmRuntimeFunction(name) =>
-        if name == b"dew_wasi_fd_write" || name == b"dew_test_assert" {
+        if name == b"dew_wasi_fd_write" {
           return true
         }
       @semantic.PlannedWasmImportedFunction(identity) =>
@@ -1078,13 +1078,6 @@ fn emit_starshine_program_code_section(
               Ok(function_body) => functions.push(function_body)
               Err(error) => return Err(error)
             }
-          } else if name == b"dew_test_assert" {
-            functions.push(
-              starshine_test_assert_body(
-                planned.runtime_function_index(b"dew_string_as_bytes"),
-                planned.runtime_function_index(b"dew_wasi_fd_write"),
-              ),
-            )
           } else {
             match
               emit_starshine_text_runtime_function(

@@ -2,7 +2,7 @@
 test "removed Array backing builtins report their exact target" {
   for name in [b"dew_array_backing_length_i32", b"dew_array_backing_length_ref"] {
     assert_eq(
-      starshine_inline_builtin_instructions(name, -1),
+      starshine_inline_builtin_instructions(name),
       Err(UnsupportedBuiltin(name)),
     )
   }

@@ -305,16 +305,7 @@ fn program_reachable_callable_roots(
         }
         match callable.kind {
           PlannedBuiltinCallable(name) =>
-            if name == b"dew_test_assert" {
-              runtime_changed = program_add_named_callable_root(
-                  lowering, b"dew_string_as_bytes", reachable,
-                ) ||
-                runtime_changed
-              runtime_changed = program_add_named_callable_root(
-                  lowering, b"dew_wasi_fd_write", reachable,
-                ) ||
-                runtime_changed
-            } else if wasmgc_builtin_is_debug_runtime(name) {
+            if wasmgc_builtin_is_debug_runtime(name) {
               runtime_changed = program_add_named_callable_root(
                   lowering, b"wasi_snapshot_preview1.fd_write", reachable,
                 ) ||

@@ -31,13 +31,13 @@ test "test mode keeps assertion state out of globals" {
 }
 
 ///|
-test "test assertion runtime reaches bounded WASI write dependencies" {
+test "Dew test assertions reach ordinary WASI write dependencies" {
   let program = @semantic.collect_program_manifest(
     2379UL,
     @semantic.ProgramManifest::new([
       @semantic.ManifestModule::new("test.main", [
         @semantic.ManifestFile::new(
-          "__dew_test_runtime.dew", b"open dew.std.string\nopen dew.std.wasi\nbuiltin dew_test_assert_runtime(condition: Bool, message: String) -> Unit = \"dew_test_assert\"\n",
+          "__dew_test_runtime.dew", b"open dew.std.string\nopen dew.std.wasi\nfn assert(condition: Bool, message: String) -> Unit {\n  if !condition {\n    let _ = wasi_fd_write(1u32, message.as_bytes())\n    unreachable()\n  }\n}\n",
         ),
         @semantic.ManifestFile::new(
           "assertion_test.dew", b"open dew.std.string\ntest \"failure\" {\n  let prefix = \"dynamic \"\n  assert(false, prefix.concat(\"message\"))\n}\n",
@@ -58,11 +58,23 @@ test "test assertion runtime reaches bounded WASI write dependencies" {
   let mut found_wasi_import = false
   let mut found_string_as_bytes = false
   let mut found_wasi_write = false
+  let mut assertion_declaration = 0UL
+  for callable in lowering.modules[0].functions.callables {
+    if callable.name == b"assert" {
+      assertion_declaration = callable.declaration
+    }
+  }
+  assert_true(assertion_declaration != 0UL)
+  let mut found_defined_assertion = false
   for function_ in link.functions {
     if function_.elided {
       continue
     }
     match function_.kind {
+      @semantic.PlannedWasmDefinedFunction(_) =>
+        if function_.declaration == assertion_declaration {
+          found_defined_assertion = true
+        }
       @semantic.PlannedWasmRuntimeFunction(name) =>
         if name == b"dew_test_assert" {
           found_assert_runtime = true
@@ -83,9 +95,10 @@ test "test assertion runtime reaches bounded WASI write dependencies" {
       _ => ()
     }
   }
-  assert_true(found_assert_runtime)
+  assert_false(found_assert_runtime)
   assert_true(found_string_as_bytes)
-  assert_true(found_wasi_write)
+  assert_false(found_wasi_write)
+  assert_true(found_defined_assertion)
   assert_true(found_wasi_import)
   let mut uses_linear_memory = false
   for module_ in link.modules {

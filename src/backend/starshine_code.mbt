@@ -795,7 +795,6 @@ fn starshine_signed_i16_constant(value : UInt64) -> Int {
 ///|
 fn starshine_inline_builtin_instructions(
   name : Bytes,
-  test_assert_function_index : Int,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   match starshine_conversion_builtin_instructions(name) {
     Some(instructions) => return Ok(instructions)
@@ -814,23 +813,15 @@ fn starshine_inline_builtin_instructions(
     None => ()
   }
   if name == b"dew_assert" {
-    if test_assert_function_index >= 0 {
-      Ok([
-        @lib.Instruction::call(
-          @lib.FuncIdx::new(test_assert_function_index.reinterpret_as_uint()),
-        ),
-      ])
-    } else {
-      Ok([
-        @lib.Instruction::drop(),
-        @lib.Instruction::i32_eqz(),
-        @lib.Instruction::if_(
-          @lib.BlockType::void_(),
-          [@lib.Instruction::unreachable_()],
-          None,
-        ),
-      ])
-    }
+    Ok([
+      @lib.Instruction::drop(),
+      @lib.Instruction::i32_eqz(),
+      @lib.Instruction::if_(
+        @lib.BlockType::void_(),
+        [@lib.Instruction::unreachable_()],
+        None,
+      ),
+    ])
   } else if name == b"unreachable" {
     Ok([@lib.Instruction::unreachable_()])
   } else if name == b"unsafe.bitcast" {
@@ -890,9 +881,6 @@ fn starshine_finish_call(
   for fragment in fragments {
     append_starshine_instructions(output, fragment)
   }
-  let test_assert_function_index = planned.runtime_function_index(
-    b"dew_test_assert",
-  )
   let function_ = match planned.function_of(declaration) {
     Some(function_) => function_
     None => return Err(MissingFunction(declaration))
@@ -912,7 +900,6 @@ fn starshine_finish_call(
     match
       starshine_inline_builtin_instructions(
         function_.direct_builtin,
-        test_assert_function_index,
       ) {
       Ok(instructions) => append_starshine_instructions(output, instructions)
       Err(error) => return Err(error)
@@ -923,7 +910,6 @@ fn starshine_finish_call(
         match
           starshine_inline_builtin_instructions(
             name,
-            test_assert_function_index,
           ) {
           Ok(instructions) =>
             append_starshine_instructions(output, instructions)
@@ -1148,9 +1134,6 @@ fn starshine_finish_program_call(
     Some(index) => index
     None => abort("caller's module is not linked")
   }
-  let test_assert_function_index = planned.module_runtime_function_index(
-    caller_module_index, b"dew_test_assert",
-  )
   let caller_specialization_abi_key = match generic_specialization {
     Some(value) => value.specialization_abi_key
     None => ""
@@ -1287,7 +1270,6 @@ fn starshine_finish_program_call(
     match
       starshine_inline_builtin_instructions(
         function_.direct_builtin,
-        test_assert_function_index,
       ) {
       Ok(instructions) => append_starshine_instructions(output, instructions)
       Err(error) => return Err(error)
@@ -1298,7 +1280,6 @@ fn starshine_finish_program_call(
         match
           starshine_inline_builtin_instructions(
             name,
-            test_assert_function_index,
           ) {
           Ok(instructions) =>
             append_starshine_instructions(output, instructions)

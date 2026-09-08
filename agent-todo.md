@@ -190,8 +190,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   [Unit log](docs/research/debug-unit-library-2026-09-07.md).
   Bool formatting also uses Dew ASCII stores and checked foreign writes. No
   primitive Debug implementation calls the old write builtin now, but the
-  test-assertion dependency builder still needs its declaration. See the
+  old write builtin remains declared pending transport cleanup. See the
   [Bool log](docs/research/debug-bool-library-2026-09-07.md).
+  Test assertion output now uses an ordinary module-local Dew function and the
+  checked WASI Bytes loop. The hidden body, dependency roots, and emitter target
+  override are removed. Production assertions are separate work. See the
+  [test assertion log](docs/research/test-assertion-library-2026-09-08.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
