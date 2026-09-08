@@ -183,9 +183,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   exact-output tests for lane order. See the
   [V128 Debug log](docs/research/debug-vectors-library-2026-09-07.md).
   Swar32/Swar64 output now uses Dew ASCII delimiters and unsigned formatting,
-  with checked foreign writes for every part. Unit, Bool, and test assertions
-  still use the old write transport. See the
+  with checked foreign writes for every part. See the
   [packed Debug log](docs/research/debug-swar-library-2026-09-07.md).
+  Unit output also uses direct Dew ASCII stores and the checked foreign loop;
+  argument effects still run once. Bool and test assertions still use the old
+  write transport. See the [Unit log](docs/research/debug-unit-library-2026-09-07.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap

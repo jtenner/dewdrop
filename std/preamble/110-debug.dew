@@ -166,7 +166,9 @@ foreign import "wasi_snapshot_preview1" as DebugOutput {
 
 impl Debug for Unit {
   fn debug(self) -> Unit {
-    __dew_debug_ignore(__dew_debug_write(1u32, b"()"))
+    u8_store(16u32, 40u8)
+    u8_store(17u32, 41u8)
+    __dew_debug_ignore(__dew_debug_write_scratch(16u32, 2u32))
   }
 }
 

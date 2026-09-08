@@ -112,6 +112,11 @@ self_host_measure 'hardening SWAR Debug request' \
     "$work/debug-swar.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-debug-swar.wasm \
     app.debug_swar tools/dew-test/debug_swar.dew
+self_host_measure 'hardening Unit Debug request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/debug-unit.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-debug-unit.wasm \
+    app.debug_unit tools/dew-test/debug_unit.dew
 self_host_measure 'hardening WASI Bytes request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/wasi-bytes.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \

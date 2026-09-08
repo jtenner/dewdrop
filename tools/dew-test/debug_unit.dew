@@ -1,0 +1,31 @@
+struct DebugUnitTrace {
+  mut count: U32
+}
+
+fn debug_unit_value() -> Unit {}
+
+fn debug_unit_effect(trace: DebugUnitTrace) -> Unit {
+  trace.count = trace.count + 1u32
+}
+
+fn debug_unit_generic<t: Debug>(value: t) -> Unit {
+  debug(value)
+}
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => debug(debug_unit_value())
+    1u32 => debug_unit_generic(debug_unit_value())
+    2u32 => {
+      let trace = DebugUnitTrace::{
+        count: 0u32
+      }
+      debug(debug_unit_effect(trace))
+      if trace.count != 1u32 {
+        unreachable()
+      }
+    }
+    _ => unreachable()
+  }
+  0i32
+}
