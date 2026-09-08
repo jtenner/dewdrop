@@ -251,6 +251,7 @@ priv enum StarshineEmitTask {
   EmitStarshineRawExpression(@semantic.ExprId)
   EmitStarshineBlock(@semantic.BlockId)
   EmitStarshineEmpty
+  FinishStarshineDiscard(@semantic.PlannedValueShape)
   FinishStarshineBlock(@semantic.BlockId)
   FinishStarshineLocalSet(Int, Int, @semantic.ExprId)
   FinishStarshineCaptureSet(Int, Int, @semantic.ExprId, Int)
@@ -606,18 +607,8 @@ fn starshine_body_emitted_root_shape(
 ) -> @semantic.PlannedValueShape? {
   let expression = match body.root {
     @semantic.ExpressionBodyRoot(expression) => expression
-    @semantic.BlockBodyRoot(block) => {
-      let source = lowering.blocks[block]
-      if source.items.length == 0 {
-        return None
-      }
-      match
-        lowering.block_items[source.items.start + source.items.length - 1].kind {
-        @semantic.PlannedExpressionItem(expression) => expression
-        @semantic.PlannedLetItem(_, _, _) | @semantic.PlannedElidedLetItem(_) =>
-          return None
-      }
-    }
+    @semantic.BlockBodyRoot(block) =>
+      return starshine_block_emitted_root_shape(lowering, specialization, block)
   }
   let source = lowering.expressions[expression]
   Some(
@@ -626,6 +617,31 @@ fn starshine_body_emitted_root_shape(
       specialization,
       source.type_,
       source.shape,
+    ),
+  )
+}
+
+///| A block's emitted tail can differ from its enclosing expression's Unit
+///| type, including after compile-time branch selection.
+fn starshine_block_emitted_root_shape(
+  lowering : @semantic.PlannedModuleLowering,
+  specialization : StarshineGenericSpecialization?,
+  block : @semantic.BlockId,
+) -> @semantic.PlannedValueShape? {
+  let source = lowering.blocks[block]
+  if source.items.length == 0 {
+    return None
+  }
+  let expression = match
+    lowering.block_items[source.items.start + source.items.length - 1].kind {
+    @semantic.PlannedExpressionItem(expression) => expression
+    @semantic.PlannedLetItem(_, _, _) | @semantic.PlannedElidedLetItem(_) =>
+      return None
+  }
+  let tail = lowering.expressions[expression]
+  Some(
+    starshine_specialized_shape(
+      lowering, specialization, tail.type_, tail.shape,
     ),
   )
 }
@@ -5782,24 +5798,53 @@ fn starshine_emit_body_instructions(
             }
             results.push(output)
           }
-          @semantic.PlannedBlockExpression(block) =>
+          @semantic.PlannedBlockExpression(block) => {
+            if starshine_specialized_shape(
+              lowering, generic_specialization, source.type_, source.shape,
+            ) is @semantic.UnitPlannedValueShape {
+              match
+                starshine_block_emitted_root_shape(
+                  lowering, generic_specialization, block,
+                ) {
+                Some(shape) => tasks.push(FinishStarshineDiscard(shape))
+                None => ()
+              }
+            }
             tasks.push(EmitStarshineBlock(block))
+          }
           @semantic.PlannedIfExpression(condition, then_block, alternative) => {
+            let shape = starshine_specialized_shape(
+              lowering, generic_specialization, source.type_, source.shape,
+            )
             tasks.push(
               FinishStarshineIf(
-                starshine_specialized_shape(
-                  lowering,
-                  generic_specialization,
-                  source.type_,
-                  source.shape,
-                ),
+                shape,
                 match_result_local_indices[expression - body.expressions.start],
               ),
             )
             if alternative < 0 {
               tasks.push(EmitStarshineEmpty)
             } else {
+              if shape is @semantic.UnitPlannedValueShape {
+                let branch = lowering.expressions[alternative]
+                tasks.push(
+                  FinishStarshineDiscard(
+                    starshine_specialized_shape(
+                      lowering, generic_specialization, branch.type_, branch.shape,
+                    ),
+                  ),
+                )
+              }
               tasks.push(EmitStarshineExpression(alternative))
+            }
+            if shape is @semantic.UnitPlannedValueShape {
+              match
+                starshine_block_emitted_root_shape(
+                  lowering, generic_specialization, then_block,
+                ) {
+                Some(tail) => tasks.push(FinishStarshineDiscard(tail))
+                None => ()
+              }
             }
             tasks.push(EmitStarshineBlock(then_block))
             tasks.push(EmitStarshineExpression(condition))
@@ -6635,6 +6680,11 @@ fn starshine_emit_body_instructions(
         }
       }
       EmitStarshineEmpty => results.push([])
+      FinishStarshineDiscard(shape) => {
+        let output = results.pop().unwrap()
+        starshine_append_shape_drops(output, shape)
+        results.push(output)
+      }
       EmitStarshineBlock(block) => {
         let source = lowering.blocks[block]
         tasks.push(FinishStarshineBlock(block))

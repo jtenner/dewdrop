@@ -1,0 +1,20 @@
+import assert from "node:assert/strict";
+
+export function checkUnitBranches(exports) {
+  let checks = 0;
+  for (const [index, name] of ["bool_branch", "i64_branch", "ref_branch", "product_branch", "unit_branch", "nested_branch"].entries()) {
+    assert.equal(exports.main(index, 0), 0, `${name}: skipped branch has no effect`);
+    assert.equal(exports.main(index, 1), 1, `${name}: branch runs exactly once`);
+    checks += 2;
+  }
+  assert.equal(exports.main(6, 0), 5);
+  assert.equal(exports.main(6, 1), 7);
+  assert.equal(exports.main(7, 0), 9);
+  assert.equal(exports.main(7, 1), 9);
+  checks += 4;
+  for (const [index, [name, expected]] of [["folded_true", 1], ["folded_false", 0], ["query_true", 1], ["query_false", 0]].entries()) {
+    assert.equal(exports.main(index + 8, 0), expected, `${name}: selected branch preserves effects`);
+    checks++;
+  }
+  return checks;
+}

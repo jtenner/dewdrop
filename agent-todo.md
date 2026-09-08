@@ -304,6 +304,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   [Unit pattern log](docs/research/pattern-unit-storage-2026-09-08.md).
 - [ ] Complete the emission shadow stack. Track operand types and control
   frames through each instruction, including unreachable code and adapters.
+  Native Unit branches now discard their actual emitted tail values, including
+  blocks selected by compile-time queries. Self-host transfer rules keep the
+  Unit parent's evidence separate from child call results. Twenty shared
+  execution checks preserve side effects. See the
+  [branch result log](docs/research/unit-branch-results-2026-09-08.md).
 - [ ] Complete solver transaction and arena checks. Require LIFO snapshots,
   parallel undo arrays, valid undo entries, bounded parent walks, and exact
   rollback contents. Check span ownership before relative-index subtraction.

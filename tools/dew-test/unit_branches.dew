@@ -1,0 +1,149 @@
+open dew.std.types
+
+struct Counter {
+  mut count: I32
+}
+
+fn mark<t>(counter: Counter, value: t) -> t {
+  counter.count = counter.count + 1
+  value
+}
+
+pub fn main(which: U32, flag: Bool) -> I32 {
+  match which {
+    0u32 => bool_branch(flag)
+    1u32 => i64_branch(flag)
+    2u32 => ref_branch(flag)
+    3u32 => product_branch(flag)
+    4u32 => unit_branch(flag)
+    5u32 => nested_branch(flag)
+    6u32 => return_branch(flag)
+    7u32 => {
+      unit_root(flag)
+      9
+    }
+    8u32 => folded_true()
+    9u32 => folded_false()
+    10u32 => query_true()
+    11u32 => query_false()
+    _ => -1
+  }
+}
+
+pub fn bool_branch(flag: Bool) -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if flag {
+    mark(counter, true)
+  }
+  counter.count
+}
+
+pub fn i64_branch(flag: Bool) -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if flag {
+    mark(counter, 7i64)
+  }
+  counter.count
+}
+
+pub fn ref_branch(flag: Bool) -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if flag {
+    mark(counter, counter)
+  }
+  counter.count
+}
+
+pub fn product_branch(flag: Bool) -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if flag {
+    mark(counter, (3, 7i64))
+  }
+  counter.count
+}
+
+pub fn unit_branch(flag: Bool) -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if flag {
+    mark(counter, ())
+  }
+  counter.count
+}
+
+pub fn nested_branch(flag: Bool) -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if flag {
+    if flag {
+      mark(counter, 7i64)
+    }
+  }
+  counter.count
+}
+
+pub fn return_branch(flag: Bool) -> I32 {
+  if flag {
+    return 7
+  }
+  5
+}
+
+pub fn unit_root(flag: Bool) -> Unit {
+  let counter = Counter::{
+    count: 0
+  }
+  if flag {
+    mark(counter, 7i64)
+  }
+}
+
+pub fn folded_true() -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if true {
+    mark(counter, 7i64)
+  }
+  counter.count
+}
+
+pub fn folded_false() -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if false {
+    mark(counter, 7i64)
+  }
+  counter.count
+}
+
+pub fn query_true() -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if is_unit::<Unit>() {
+    mark(counter, (3, 7i64))
+  }
+  counter.count
+}
+
+pub fn query_false() -> I32 {
+  let counter = Counter::{
+    count: 0
+  }
+  if is_unit::<I64>() {
+    mark(counter, 7i64)
+  }
+  counter.count
+}

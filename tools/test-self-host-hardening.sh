@@ -12,6 +12,11 @@ esac
 work=.tmp/self-host-hardening
 mkdir -p "$work"
 self_host_ensure_starshine_ffi
+self_host_measure 'hardening Unit branch request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/unit-branches.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-unit-branches.wasm \
+    app.unit_branches tools/dew-test/unit_branches.dew
 self_host_measure 'hardening real-library request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/array.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
@@ -166,6 +171,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_payload_span_test.dew \
   self_host/compiler/semantic_named_fragment_shapes_test.dew \
   self_host/compiler/semantic_capture_cell_shapes_test.dew \
+  self_host/compiler/semantic_unit_result_boundaries_test.dew \
   self_host/compiler/semantic_method_context_test.dew \
   self_host/compiler/semantic_text_operators_test.dew \
   self_host/compiler/semantic_raw_conversions_test.dew \

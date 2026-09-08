@@ -23,6 +23,7 @@ import { wasiBytesProbe } from "./wasi-bytes-cases.mjs";
 import { checkBytesStaging } from "./wasi-parity/staging-cases.mjs";
 import { checkProductPatterns } from "./product-pattern-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
+import { checkUnitBranches } from "./unit-branch-cases.mjs";
 import { checkArrayOperations } from "./array-operation-cases.mjs";
 import { checkRingOperations } from "./ring-operation-cases.mjs";
 import { checkMapOperations } from "./map-operation-cases.mjs";
@@ -165,6 +166,15 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const request = await readFile(".tmp/self-host-hardening/unit-branches.request.bin");
+  const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+  console.log(`self-host Unit branch checks passed: ${checkUnitBranches(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host Unit branch corpus failed", error);
+}
 try {
   const start = performance.now();
   const request = await readFile(".tmp/self-host-hardening/bytes-staging.request.bin");

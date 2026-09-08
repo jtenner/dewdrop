@@ -6032,7 +6032,7 @@ fn self_host_plan_one_physical_body(
                 }
               }
             }
-            SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => {
+            SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => if !self_host_body_expression_discards_result(link, module_, linked_function.specialization, current) {
               let tail = self_host_body_block_tail_expression(module_, block)
               if tail != 4294967295u32 && tail >= body.expressions.start &&
                 tail < expression_end {
@@ -6057,7 +6057,7 @@ fn self_host_plan_one_physical_body(
               _,
               then_block,
               else_expression,
-            ) => {
+            ) => if !self_host_body_expression_discards_result(link, module_, linked_function.specialization, current) {
               let expected_carrier = expressions[slot].carrier
               if !(expected_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
                 let then_tail = self_host_body_block_tail_expression(

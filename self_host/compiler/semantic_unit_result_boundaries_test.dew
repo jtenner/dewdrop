@@ -1,0 +1,25 @@
+test "Unit if boundaries retain child call carriers" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(b"fn value() -> I64 {\n  7i64\n}\npub fn run(flag: Bool) -> I32 {\n  if flag {\n    value()\n  }\n  1\n}\n"), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "Unit result must not conflict with child I64")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut branches = 0u32
+  let mut calls = 0u32
+  for body in program.bodies {
+    for expression in body.expressions {
+      match module_.expressions[expression.expression].kind {
+        SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _) => {
+          assert(expression.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier, "parent remains Unit")
+          branches = branches + 1u32
+        }
+        SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => {
+          assert(expression.carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "child retains physical I64")
+          calls = calls + 1u32
+        }
+        _ => {}
+      }
+    }
+  }
+  assert(branches == 1u32 && calls == 1u32, "one branch and one child call checked")
+}

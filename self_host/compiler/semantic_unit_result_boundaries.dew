@@ -1,0 +1,6 @@
+// Unit blocks and branches evaluate their children but do not forward the
+// children's values. They are disposal boundaries, not carrier equalities.
+fn self_host_body_expression_discards_result(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, specialization: U32, expression: U32) -> Bool {
+  let source = module_.expressions[expression]
+  self_host_body_specialization_shape_for_type(link, module_, specialization, source.type_, source.shape) is SelfHostPlannedValueShape::UnitPlannedValueShape
+}

@@ -72,6 +72,21 @@ Control labels, local/capture references, and constructor source metadata are
 not syntax edges. A valid loop may therefore have cyclic control flow without
 having cyclic syntax. See the [tests and implementation log](../research/lowered-body-cycles-2026-09-08.md).
 
+## Unit boundaries discard emitted values
+
+A Unit expression has no result, but a selected child block can still evaluate
+a value-producing tail. If that tail emits the sequence `V`, the enclosing
+Unit boundary appends one drop per physical value in `V`. The drop count comes
+from the selected, specialized tail shape, not from the enclosing Unit type.
+Scalar/reference values count once; native flattened products count their
+non-erased leaves. Unit and Never count zero. Branch evaluation and its side
+effects are unchanged. This also applies when compile-time selection replaces
+an `if` with a block. The self-host carrier worklist does not equate the Unit
+parent with its live child: each retains its own evidence. The native
+instruction worklist enforces the corresponding drop boundary;
+shared tests check both compilers. See the
+[branch result log](../research/unit-branch-results-2026-09-08.md).
+
 ## Parallel arenas
 
 For arrays that use the same expression index:
