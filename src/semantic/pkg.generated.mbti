@@ -1842,6 +1842,7 @@ pub struct PlannedModuleLowering {
   resolved_type_arguments : Array[Int]
   raw_array_declarations : Map[UInt64, Bool]
   raw_array_operations : Map[UInt64, Int]
+  raw_reference_operations : Map[UInt64, RawReferenceOperation]
   types : Array[BodyTypeTerm]
   type_arguments : Array[Int]
   expression_type_arguments : Array[Int]
@@ -2486,6 +2487,12 @@ pub enum ProgramWasmGCLinkDiagnostic {
   EagerProgramInitializationCycle(UInt64, UInt64)
 } derive(Eq, @debug.Debug)
 
+pub enum RawReferenceOperation {
+  RawRefNull
+  RawRefIsNull
+  RawRefAsNonNull
+} derive(Eq, @debug.Debug)
+
 pub struct RawWasmIntrinsicSignature {
   inputs : Array[PlannedWasmValueType]
   result : PlannedWasmValueType?
@@ -2601,6 +2608,7 @@ pub struct ResolvedModuleTypes {
   module_id : UInt64
   raw_array_declarations : Map[UInt64, Bool]
   raw_array_operations : Map[UInt64, Int]
+  raw_reference_operations : Map[UInt64, RawReferenceOperation]
   types : Array[ResolvedType]
   type_arguments : Array[Int]
   syntax_types : Array[Int]
@@ -2671,8 +2679,6 @@ pub struct SourceLocation {
   file : UInt64
   offset : UInt64
 } derive(Eq, @debug.Debug)
-
-type StandardBuiltinOperation derive(Eq, @debug.Debug)
 
 pub struct StandardLibrarySources {
   paths : Array[String]

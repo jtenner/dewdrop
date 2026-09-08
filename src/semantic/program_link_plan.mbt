@@ -479,6 +479,7 @@ pub fn plan_unoptimized_program_lowering_with_type_layouts(
     abort("program lowering inputs have different module counts")
   }
   let raw_arrays = bind_program_raw_array_contracts(program, analyzed)
+  let raw_references = collect_raw_reference_operations(program.modules)
   let slots : Array[PlannedModuleLowering?] = Array::make(
     program.modules.length(),
     None,
@@ -492,6 +493,7 @@ pub fn plan_unoptimized_program_lowering_with_type_layouts(
         ..analyzed.frozen.interfaces[module_index].resolved_types,
         raw_array_declarations: raw_arrays.declarations,
         raw_array_operations: raw_arrays.operations,
+        raw_reference_operations: raw_references,
       }
       let layouts = type_layouts[module_index]
       guard layouts.module_id == collected.module_id else {

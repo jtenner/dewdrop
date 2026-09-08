@@ -738,6 +738,7 @@ fn FrozenInterfaceCacheReader::read_resolved_types(
     // Physical contracts are derived from the current program after thawing.
     raw_array_declarations: {},
     raw_array_operations: {},
+    raw_reference_operations: {},
   }
 }
 

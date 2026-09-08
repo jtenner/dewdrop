@@ -273,6 +273,7 @@ pub struct PlannedModuleLowering {
   resolved_type_arguments : Array[ResolvedTypeId]
   raw_array_declarations : Map[DeclId, Bool]
   raw_array_operations : Map[DeclId, Int]
+  raw_reference_operations : Map[DeclId, RawReferenceOperation]
   types : Array[BodyTypeTerm]
   type_arguments : Array[BodyTypeId]
   expression_type_arguments : Array[BodyTypeId]
@@ -992,10 +993,10 @@ fn plan_expression_kind(
           } else {
             -1
           }
-          match standard_wasm_intrinsics_operation(declaration) {
-            WasmRefNull => PlannedWasmRefNull
-            WasmRefIsNull => PlannedWasmRefIsNull(base)
-            WasmRefAsNonNull => PlannedWasmRefAsNonNull(base)
+          match resolved.raw_reference_operations.get(declaration) {
+            Some(RawRefNull) => PlannedWasmRefNull
+            Some(RawRefIsNull) => PlannedWasmRefIsNull(base)
+            Some(RawRefAsNonNull) => PlannedWasmRefAsNonNull(base)
             _ =>
               PlannedDirectCall(
                 declaration, receiver, arguments, type_arguments,
@@ -1609,6 +1610,13 @@ fn plan_module_lowering_in_order(
     abort("lowering plan order does not cover every body")
   }
   let resolved = materialize_body_function_types(resolved, inferred)
+  // A standalone module has no program-wide contract map. Derive its local
+  // contracts from the same declaration metadata used by program lowering.
+  let resolved = if resolved.raw_reference_operations.is_empty() {
+    { ..resolved, raw_reference_operations: collect_raw_reference_operations([collected]), }
+  } else {
+    resolved
+  }
   let jobs : Array[BodyLoweringPlanJob?] = Array::make(
     collected.bodies.length(),
     None,
@@ -1813,6 +1821,7 @@ fn plan_module_lowering_in_order(
     resolved_type_arguments: resolved.type_arguments,
     raw_array_declarations: resolved.raw_array_declarations,
     raw_array_operations: resolved.raw_array_operations,
+    raw_reference_operations: resolved.raw_reference_operations,
     types: inferred.types,
     type_arguments: inferred.type_arguments,
     expression_type_arguments: inferred.expression_type_arguments,

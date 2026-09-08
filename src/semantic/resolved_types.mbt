@@ -201,6 +201,7 @@ pub struct ResolvedModuleTypes {
   // semantic IDs, not names or standard-library declaration positions.
   raw_array_declarations : Map[DeclId, Bool]
   raw_array_operations : Map[DeclId, Int]
+  raw_reference_operations : Map[DeclId, RawReferenceOperation]
   types : Array[ResolvedType]
   type_arguments : Array[ResolvedTypeId]
   syntax_types : Array[ResolvedTypeId]

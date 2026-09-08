@@ -808,13 +808,10 @@ fn TypeResolver::declaration_is_foreign_type(
 
 ///|
 fn TypeResolver::nullable_ref_intrinsic_owner(
-  _self : TypeResolver,
+  self : TypeResolver,
   owner : DeclId,
 ) -> Bool {
-  match standard_wasm_intrinsics_operation(owner) {
-    WasmRefNull | WasmRefIsNull | WasmRefAsNonNull => true
-    _ => false
-  }
+  raw_reference_operation(planned_builtin_name(self.collected, owner)) is Some(_)
 }
 
 ///|
@@ -1340,6 +1337,7 @@ fn TypeResolver::finish(self : TypeResolver) -> ResolvedModuleTypes {
     module_id: self.collected.module_id,
     raw_array_declarations: {},
     raw_array_operations: {},
+    raw_reference_operations: {},
     types: self.interner.types,
     type_arguments: self.interner.arguments,
     syntax_types: self.syntax_types,
