@@ -274,6 +274,14 @@ Correctness comes first. Keep these timing defects visible after query completio
   distinct arenas and preserve exact trait roots. Closed runtime-export lambdas
   keep their owner's key; admission uses a cycle-safe worklist. See the
   [export admission log](docs/research/runtime-trait-export-admission-2026-09-08.md).
+  Native direct calls with type arguments now require the exact call map;
+  they cannot recover a target from physical shapes. Bounds, missing mappings,
+  and target disagreement return full numeric emission records. Retained
+  witnesses keep the selected declaration, instance key, and physical/table
+  indices; a trait implementation is checked against its selected witness.
+  A different physical-target replay cannot overwrite that witness. Physical
+  shape lookup also rejects multiple source candidates. See the
+  [exact generic target log](docs/research/exact-generic-call-targets-2026-09-08.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.

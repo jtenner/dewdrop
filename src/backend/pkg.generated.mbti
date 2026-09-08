@@ -60,6 +60,7 @@ pub enum StarshineBinaryEmissionError {
 } derive(@debug.Debug)
 
 pub enum StarshineCodeEmissionError {
+  CompilerInvariantFailure(StarshineCompilerInvariantFailure)
   MissingBody(UInt64)
   MissingFunction(UInt64)
   SignatureOnlyCall(UInt64)
@@ -128,6 +129,18 @@ pub struct StarshineCompilerFactSummary {
   mut generation_time_us : UInt64
 } derive(Eq, @debug.Debug)
 pub fn StarshineCompilerFactSummary::new() -> Self
+
+pub struct StarshineCompilerInvariantFailure {
+  code : UInt
+  phase : UInt
+  module_id : UInt64
+  declaration : UInt64
+  body : UInt64
+  expression : UInt
+  expected : UInt64
+  actual : UInt64
+  detail : UInt64
+} derive(Eq, @debug.Debug)
 
 pub enum StarshineProgramBinaryEmissionError {
   StarshineProgramCodeError(StarshineCodeEmissionError)

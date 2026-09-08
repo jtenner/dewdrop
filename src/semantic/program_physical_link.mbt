@@ -1757,6 +1757,10 @@ pub fn link_program_wasmgc_fragments(
     diagnostics,
   )
   let specialized_call_lookup : Map[ProgramSpecializedCallKey, Int] = Map::default()
+  let specialized_call_targets : Map[
+    ProgramSpecializedCallKey,
+    PlannedProgramPhysicalCallTarget,
+  ] = Map::default()
   let specialized_call_runtime_evidence_lookup : Map[
     ProgramSpecializedCallKey,
     HirSpan,
@@ -1778,6 +1782,13 @@ pub fn link_program_wasmgc_fragments(
       }
     }
     if target_index >= 0 {
+      match
+        record_program_physical_call_target(
+          specialized_call_targets, call, target_index, functions[target_index],
+        ) {
+        Ok(_) => ()
+        Err(failure) => abort(@debug.to_string(failure))
+      }
       let key = program_specialized_call_key(
         call.caller_body,
         call.caller_specialization_abi_key,
@@ -1826,6 +1837,7 @@ pub fn link_program_wasmgc_fragments(
     functions,
     function_lookup,
     specialized_call_lookup,
+    specialized_call_targets,
     specialized_call_runtime_evidence_lookup,
     specialized_call_runtime_evidence_parameters: fragments.specialized_call_runtime_evidence_parameters,
     evidence_function_references: fragments.evidence_function_references,

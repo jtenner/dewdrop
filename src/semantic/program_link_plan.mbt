@@ -216,6 +216,10 @@ pub struct PlannedProgramWasmGCLink {
   functions : Array[PlannedProgramWasmFunction]
   function_lookup : Map[DeclId, Int]
   specialized_call_lookup : Map[ProgramSpecializedCallKey, Int]
+  specialized_call_targets : Map[
+    ProgramSpecializedCallKey,
+    PlannedProgramPhysicalCallTarget,
+  ]
   specialized_call_runtime_evidence_lookup : Map[
     ProgramSpecializedCallKey,
     HirSpan,
@@ -245,7 +249,7 @@ pub struct PlannedProgramWasmGCLink {
 }
 
 ///|
-fn program_specialized_call_key(
+pub fn program_specialized_call_key(
   body : BodyId,
   specialization_abi_key : String,
   expression : ExprId,
@@ -402,19 +406,11 @@ pub fn PlannedProgramWasmGCLink::specialized_function_of(
   shapes : Array[PlannedValueShape],
   span : HirSpan,
 ) -> PlannedProgramWasmFunction? {
-  for function_ in self.functions {
-    if function_.declaration == declaration &&
-      function_.specialization_shapes.length > 0 &&
-      program_specialization_shapes_equal(
-        self.modules[function_.module_index].specialization_shapes,
-        function_.specialization_shapes,
-        shapes,
-        span,
-      ) {
-      return Some(function_)
-    }
+  match
+    check_program_specialized_function_lookup(self, declaration, shapes, span) {
+    Ok(value) => value
+    Err(failure) => abort(@debug.to_string(failure))
   }
-  None
 }
 
 ///|
@@ -423,27 +419,10 @@ pub fn PlannedProgramWasmGCLink::specialized_function_of_exact_shapes(
   declaration : DeclId,
   shapes : Array[PlannedValueShape],
 ) -> PlannedProgramWasmFunction? {
-  for function_ in self.functions {
-    if function_.declaration != declaration ||
-      function_.specialization_shapes.length != shapes.length() {
-      continue
-    }
-    let values = self.modules[function_.module_index].specialization_shapes
-    let mut equal = true
-    for index in 0..<shapes.length() {
-      if program_canonical_specialization_shape(
-          values[function_.specialization_shapes.start + index],
-        ) !=
-        program_canonical_specialization_shape(shapes[index]) {
-        equal = false
-        break
-      }
-    }
-    if equal {
-      return Some(function_)
-    }
-  }
-  None
+  self.specialized_function_of(declaration, shapes, {
+    start: 0,
+    length: shapes.length(),
+  })
 }
 
 ///|

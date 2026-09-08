@@ -21,6 +21,7 @@ pub enum StarshineBinaryEmissionError {
 
 ///|
 pub enum StarshineCodeEmissionError {
+  CompilerInvariantFailure(StarshineCompilerInvariantFailure)
   MissingBody(@semantic.BodyId)
   MissingFunction(@semantic.DeclId)
   SignatureOnlyCall(@semantic.DeclId)
@@ -1144,48 +1145,24 @@ fn starshine_finish_program_call(
     Some(value) => value.specialization_abi_key
     None => ""
   }
-  let preselected = planned.specialized_call_function(
-    body, caller_specialization_abi_key, expression,
-  )
+  let function_ = match starshine_planned_call_target(
+    planned, caller.module_id, body, expression, declaration,
+    caller_specialization_abi_key,
+    match type_arguments {
+      Some(arguments) => arguments.length > 0
+      None => false
+    },
+  ) {
+    Ok(Some(function_)) => function_
+    Ok(None) => return Err(MissingFunction(declaration))
+    Err(failure) => return Err(failure)
+  }
   let runtime_evidence = planned.specialized_call_runtime_evidence(
     body, caller_specialization_abi_key, expression,
   )
   let runtime_evidence_length = match runtime_evidence {
     Some(value) => value.length
     None => 0
-  }
-  let function_ = match preselected {
-    Some(function_) => function_
-    None =>
-      match type_arguments {
-        Some(arguments) if arguments.length > 0 => {
-          let caller_lowering = lowering.unwrap()
-          let resolved_shapes : Array[@semantic.PlannedValueShape] = []
-          for index in 0..<arguments.length {
-            let source_index = arguments.start + index
-            resolved_shapes.push(
-              starshine_specialized_shape(
-                caller_lowering,
-                generic_specialization,
-                caller_lowering.call_type_arguments[source_index],
-                caller_lowering.call_type_argument_shapes[source_index],
-              ),
-            )
-          }
-          match
-            planned.specialized_function_of_exact_shapes(
-              declaration, resolved_shapes,
-            ) {
-            Some(function_) => function_
-            None => return Err(MissingFunction(declaration))
-          }
-        }
-        _ =>
-          match planned.function_of(declaration) {
-            Some(function_) => function_
-            None => return Err(MissingFunction(declaration))
-          }
-      }
   }
   let cross_module_or_specialized = caller_module_index !=
     function_.module_index ||

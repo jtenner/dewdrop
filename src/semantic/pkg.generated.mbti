@@ -143,6 +143,8 @@ pub fn program_runtime_trait_evidence_parameter(PlannedModuleLowering, PlannedMo
 
 pub fn program_runtime_trait_evidence_slot_parameter(PlannedModuleWasmGCFragments, HirSpan, Int) -> (UInt64, Int)?
 
+pub fn program_specialized_call_key(UInt64, String, Int) -> ProgramSpecializedCallKey
+
 pub fn raw_wasm_builtin_signature(Bytes) -> RawWasmIntrinsicSignature?
 
 pub fn raw_wasm_shuffle_immediates(Bytes) -> Array[Int]?
@@ -2032,6 +2034,13 @@ pub struct PlannedProgramModuleInitializer {
   function_index : Int
 } derive(Eq, @debug.Debug)
 
+pub struct PlannedProgramPhysicalCallTarget {
+  declaration : UInt64
+  specialization_abi_key : String
+  function_index : Int
+  function_table_index : Int
+} derive(Eq, @debug.Debug)
+
 pub struct PlannedProgramSpecializationPlan {
   graph : ModuleDependencyGraph
   modules : Array[PlannedModuleWasmGCFragments]
@@ -2094,6 +2103,7 @@ pub struct PlannedProgramWasmGCLink {
   functions : Array[PlannedProgramWasmFunction]
   function_lookup : Map[UInt64, Int]
   specialized_call_lookup : Map[ProgramSpecializedCallKey, Int]
+  specialized_call_targets : Map[ProgramSpecializedCallKey, PlannedProgramPhysicalCallTarget]
   specialized_call_runtime_evidence_lookup : Map[ProgramSpecializedCallKey, HirSpan]
   specialized_call_runtime_evidence_parameters : Array[Int]
   evidence_function_references : Array[PlannedProgramEvidenceFunctionReference]
