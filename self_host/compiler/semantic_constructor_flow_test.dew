@@ -1,3 +1,114 @@
+fn self_host_constructor_field_identity_link() -> SelfHostPlannedProgramWasmGCLink {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct First {\n  value: I32\n}\nstruct Second {\n  value: I32\n}\npub fn main() -> I32 {\n  let item = First::{\n    value: 42i32\n  }\n  item.value\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid constructor identity source")
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => assert(bytes.byte_length() > 0u32, "valid constructor before mutation")
+    Result::Err(error) => assert(false, error)
+  }
+  link
+}
+
+fn self_host_constructor_field_identity_fixture(replacement: U64) -> Unit {
+  let link = self_host_constructor_field_identity_link()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  assert(module_.object_fields.length() == 1u32, "one source field")
+  let field = self_host_planned_object_field_at(module_.object_fields, 0u32)
+  assert(field.field == 5100u64 << 32u64, "exact original field identity")
+  module_.object_fields[0u32] = SelfHostPlannedObjectField::{
+    field: replacement
+    name: field.name
+    value: field.value
+    offset: field.offset
+  }
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(_) => {}
+    Result::Err(error) => assert(false, error)
+  }
+}
+
+test "BOD-608 constructor field names cannot replace declaration identity" expect_trap "unreachable" {
+  self_host_constructor_field_identity_fixture((5100u64 << 32u64) | 1u64)
+}
+
+test "BOD-608 constructor field names cannot repair a missing identity" expect_trap "unreachable" {
+  self_host_constructor_field_identity_fixture(0u64)
+}
+
+fn self_host_constructor_field_span_fixture(kind: U32) -> Unit {
+  let link = self_host_constructor_field_identity_link()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let fragment = link.fragments.modules[0u32]
+  let body = module_.bodies[0u32]
+  let physical = fragment.physical_types[0u32]
+  let source = SelfHostHirSpan::{
+    start: 0u32
+    length: 1u32
+  }
+  let valid = self_host_constructor_field_recipe(module_, body, 2u32, source, fragment, physical, 0u32)
+  assert(valid.length() == 1u32 && valid[0u32] == 0u32, "valid field recipe before span mutation")
+  if kind == 0u32 {
+    let _ = self_host_constructor_field_recipe(module_, body, 2u32, SelfHostHirSpan::{
+      start: 0u32
+      length: 2u32
+    }, fragment, physical, 0u32)
+  } else if kind == 1u32 {
+    assert(fragment.fields.length() == 2u32, "two source fields without an unused closure field")
+    let changed = SelfHostPlannedWasmPhysicalType::{
+      kind: physical.kind
+      type_index: physical.type_index
+      fields: SelfHostHirSpan::{
+        start: fragment.fields.length()
+        length: 1u32
+      }
+      offset: physical.offset
+    }
+    let _ = self_host_constructor_field_recipe(module_, body, 2u32, source, fragment, changed, 0u32)
+  } else {
+    let _ = self_host_constructor_field_recipe(module_, body, 2u32, self_host_empty_hir_span(0u32), fragment, physical, 0u32)
+  }
+}
+
+test "ARN-101 constructor recipes require an owned source span" expect_trap "unreachable" {
+  self_host_constructor_field_span_fixture(0u32)
+}
+
+test "ARN-101 constructor recipes require an owned physical span" expect_trap "unreachable" {
+  self_host_constructor_field_span_fixture(1u32)
+}
+
+test "BOD-608 constructor recipes require complete source fields" expect_trap "unreachable" {
+  self_host_constructor_field_span_fixture(2u32)
+}
+
+test "BOD-608 constructor recipes cannot use a source field twice" expect_trap "unreachable" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Pair {\n  left: I32\n  right: I32\n}\npub fn main() -> I32 {\n  let pair = Pair::{\n    right: 2i32\n    left: 40i32\n  }\n  pair.left + pair.right\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid reversed source field order")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let fragment = link.fragments.modules[0u32]
+  let body = module_.bodies[0u32]
+  let physical = fragment.physical_types[0u32]
+  let fields = SelfHostHirSpan::{
+    start: 0u32
+    length: 2u32
+  }
+  let valid = self_host_constructor_field_recipe(module_, body, 3u32, fields, fragment, physical, 0u32)
+  assert(valid.length() == 2u32 && valid[0u32] == 1u32 && valid[1u32] == 0u32, "physical order differs from source order")
+  let second = self_host_planned_object_field_at(module_.object_fields, 1u32)
+  module_.object_fields[1u32] = SelfHostPlannedObjectField::{
+    field: module_.object_fields[0u32].field
+    name: second.name
+    value: second.value
+    offset: second.offset
+  }
+  let _ = self_host_constructor_field_recipe(module_, body, 3u32, fields, fragment, physical, 0u32)
+}
+
 test "Unit enum payload bindings do not inherit reference marker carriers" {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
     b"enum Payload {\n  Value(I64, Unit, I32)\n}\nfn consume(value: Unit) -> Unit {}\npub fn run(value: Payload) -> I32 {\n  match value {\n    Value(left, effect, right) => {\n      consume(effect)\n      right\n    }\n  }\n}\n",

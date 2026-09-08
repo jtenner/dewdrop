@@ -2605,16 +2605,7 @@ fn self_host_linked_schedule_object_constructor(
     }
     _ => {}
   }
-  let used = []
-  let mut used_index = 0u32
-  let _ = while used_index {
-    current => if current < fields.length {
-      used.push(false)
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
+  let field_recipe = self_host_constructor_field_recipe(module_, body, expression, fields, physical_module, physical, type_index)
   let mut field_position = physical.fields.length
   let _ = while field_position {
     current => if self_host_u32_greater(current, 0u32) {
@@ -2623,139 +2614,8 @@ fn self_host_linked_schedule_object_constructor(
         physical_module,
         self_host_u32_add(physical.fields.start, previous),
       )
-      let mut found = 4294967295u32
-      let mut found_position = 4294967295u32
-      let mut source_position = 0u32
-      let _ = while source_position {
-        source => if source < fields.length {
-          let object_index = self_host_u32_add(fields.start, source)
-          if object_index < module_.object_fields.length() {
-            let source_field = self_host_planned_object_field_at(
-              module_.object_fields,
-              object_index,
-            )
-            let exact_declaration = !self_host_u64_equal(
-              source_field.field,
-              0u64,
-            ) && !self_host_u64_equal(
-              physical_field.declaration,
-              0u64,
-            ) && self_host_u64_equal(
-              source_field.field,
-              physical_field.declaration,
-            )
-            let same_declaration = exact_declaration || (
-              source_field.name < self_host_linked_module_name_count(module_) &&
-              match self_host_linked_field_name(
-                link,
-                physical_field.declaration,
-              ) {
-                Option::Some(destination_name) => self_host_linked_module_name_at(
-                  module_,
-                  source_field.name,
-                ) == destination_name
-                Option::None => false
-              }
-            )
-            if self_host_u32_equal(found, 4294967295u32) && !self_host_linked_bool_at(
-              used,
-              source,
-            ) &&
-              same_declaration &&
-              self_host_linked_constructor_field_shape_matches(
-                link,
-                module_,
-                body,
-                caller_specialization,
-                source_field,
-                physical_field,
-              ) {
-              found = source_field.value
-              found_position = source
-              self_host_linked_bool_set(used, source, true)
-            }
-          }
-          continue source + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      if self_host_u32_equal(found, 4294967295u32) {
-        let message = StringBuilder::new()
-        message.append("linked constructor field is missing module=")
-        message.append_u64(module_.module_id)
-        message.append(" declaration=")
-        message.append_u64(body.declaration)
-        message.append(" name=")
-        message.append(bytes_to_string(self_host_linked_declaration_name(
-          link,
-          body.declaration,
-        )))
-        message.append(" body=")
-        message.append_u64(body.body)
-        message.append(" expression=")
-        message.append_u32(expression)
-        if expression < module_.expressions.length() {
-          let source = module_.expressions[expression]
-          message.append(":")
-          message.append(self_host_body_expression_kind_name(source.kind))
-          message.append(" source_name=")
-          if self_host_u32_greater(
-            self_host_linked_module_name_count(module_),
-            source.source_name,
-          ) {
-            message.append(self_host_linked_module_name_at(
-              module_,
-              source.source_name,
-            ))
-          }
-          match source.selection {
-            SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
-              variant,
-              kind,
-              _,
-            ) => {
-              message.append(" selected_variant=")
-              message.append_u64(variant)
-              message.append(" selected_kind=")
-              message.append_u32(kind)
-            }
-            _ => {}
-          }
-        }
-        message.append(" specialization=")
-        message.append_u32(caller_specialization)
-        message.append(" type=")
-        message.append_u32(type_index)
-        message.append(" type_kind=")
-        match physical.kind {
-          SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(owner) => {
-            message.append("struct:")
-            message.append_u64(owner)
-          }
-          SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
-            owner,
-            variant,
-            _,
-          ) => {
-            message.append("variant:")
-            message.append_u64(owner)
-            message.append(":")
-            message.append_u64(variant)
-          }
-          _ => message.append("other")
-        }
-        message.append(" field=")
-        message.append_u64(physical_field.declaration)
-        message.append(" name=")
-        match self_host_linked_field_name(link, physical_field.declaration) {
-          Option::Some(name) => message.append(name)
-          Option::None => {}
-        }
-        message.append(" source_count=")
-        message.append_u32(fields.length)
-        return Option::Some(message.finish())
-      }
+      let found_position = field_recipe[previous]
+      let found = module_.object_fields[fields.start + found_position].value
       let emitted_field_carrier = self_host_linked_exact_emitted_expression_carrier(
         canonical,
         link,

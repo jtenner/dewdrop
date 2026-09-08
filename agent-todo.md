@@ -377,6 +377,11 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete full Wasm reference checks. Check heap type and nullability,
   not just an eqref label, for call operands, results, locals, and branches.
 - [ ] Put constructor and other temporary locals in the frozen physical plan.
+  Object constructor emission now uses a checked exact field-ID recipe, with
+  separate source evaluation and physical load order. Missing or different IDs
+  cannot be repaired by names or tentative carriers. Recipe freeze and nominal
+  constructor recovery still remain. See the
+  [constructor identity log](docs/research/constructor-field-identity-2026-09-08.md).
   No emitter step may invent a new carrier or overwrite conflicting evidence.
   Verify all worklist constraints at the fixed point and reject later mutation.
   Self-host body plans now retain exact freeze witnesses and check all tables

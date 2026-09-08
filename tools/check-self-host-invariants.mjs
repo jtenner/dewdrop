@@ -11,6 +11,30 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ARN-101 constructor recipes require an owned source span", 101, 1n, 2n, 0n],
+    ["ARN-101 constructor recipes require an owned physical span", 101, 2n, 1n, (1n << 32n) | 2n],
+    ["BOD-608 constructor recipes require complete source fields", 608, 1n, 0n, 1n << 32n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, (5100n << 32n) | 2n, 5100n << 32n,
+      2, expected, actual, detail],
+  })),
+  {
+    name: "BOD-608 constructor recipes cannot use a source field twice",
+    expected: [608, 7, 5100n, (5100n << 32n) | 1n, 5100n << 32n,
+      3, 0n, (5100n << 32n) | 1n, 1n],
+  },
+  ...[
+    ["declaration identity", (5100n << 32n) | 1n],
+    ["a missing identity", 0n],
+  ].map(([kind, actual]) => ({
+    name: kind === "declaration identity"
+      ? "BOD-608 constructor field names cannot replace declaration identity"
+      : "BOD-608 constructor field names cannot repair a missing identity",
+    expected: [608, 7, 5100n, (5100n << 32n) | 2n, 5100n << 32n,
+      2, 0n, actual, 0n],
+  })),
+  ...[
     ["declared field errors cannot use retained shape evidence", 1n, 3n, 3n],
     ["declared payload errors cannot use retained shape evidence", 0n, 5n, 5n],
     ["reference fields cannot hide erroneous type arguments", 2n, 47n, 5n],
