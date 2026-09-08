@@ -23,6 +23,7 @@ node tools/check-debug-swar.mjs tools/dew-test/debug_swar.wasm
 node tools/check-debug-unit.mjs tools/dew-test/debug_unit.wasm
 node tools/check-debug-bool.mjs tools/dew-test/debug_bool.wasm
 node tools/check-debug-derived.mjs tools/dew-test/debug_derived.wasm
+node tools/check-debug-text.mjs tools/dew-test/debug_text.wasm
 node tools/check-production-assertions.mjs tools/dew-test/production_assertions.wasm
 node tools/check-wasi-bytes.mjs tools/dew-test/wasi_bytes.wasm
 node tools/wasi-parity/check-staging.mjs tools/dew-test/wasi_staging.wasm

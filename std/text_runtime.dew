@@ -1,6 +1,8 @@
 open dew.std.wasm.intrinsics
 
-pub builtin string_as_bytes_unchecked(value: String) -> Bytes = "dew_string_as_bytes"
+pub fn string_as_bytes_unchecked(value: String) -> Bytes {
+  __dew_text_bytes(value)
+}
 pub builtin string_view(value: String, start: U32, length: U32) -> StringView = "dew_string_view"
 pub builtin string_view_as_bytes_unchecked(value: StringView) -> Bytes = "dew_string_view_as_bytes"
 pub builtin string_view_view(value: StringView, start: U32, length: U32) -> StringView = "dew_string_view_view"
@@ -18,9 +20,13 @@ pub builtin bytes_builder_byte_length(value: BytesBuilder) -> U32 = "dew_bytes_b
 pub builtin bytes_builder_append(value: BytesBuilder, part: Bytes) -> Unit = "dew_bytes_builder_append"
 pub builtin bytes_builder_append_byte(value: BytesBuilder, byte: U8) -> Unit = "dew_bytes_builder_append_byte"
 pub builtin bytes_builder_finish(value: BytesBuilder) -> Bytes = "dew_bytes_builder_finish"
-pub builtin bytes_byte_length(value: Bytes) -> U32 = "dew_bytes_byte_length"
+pub fn bytes_byte_length(value: Bytes) -> U32 {
+  __dew_text_byte_length(value)
+}
 pub builtin bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string_unchecked"
-pub builtin bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
+pub fn bytes_byte_at(value: Bytes, index: U32) -> U8 {
+  __dew_text_byte_at(value, index)
+}
 pub builtin bytes_view(value: Bytes, start: U32, length: U32) -> Bytes = "dew_bytes_view"
 
 pub fn bytes_concat(left: Bytes, right: Bytes) -> Bytes {

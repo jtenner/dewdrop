@@ -20,6 +20,7 @@ python3 tools/test_debug_vector_policy.py
 python3 tools/test_debug_swar_policy.py
 python3 tools/test_debug_unit_policy.py
 python3 tools/test_debug_bool_policy.py
+python3 tools/test_debug_text_policy.py
 python3 tools/test_variant_lookup_policy.py
 python3 tools/test_trait_call_policy.py
 python3 tools/test_assertion_library_policy.py

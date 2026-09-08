@@ -2219,7 +2219,7 @@ fn wasmgc_value_type(
 
 ///|
 fn wasmgc_builtin_is_debug_runtime(name : Bytes) -> Bool {
-  name == b"dew_debug_string" || name == b"dew_debug_bytes"
+  name == b"dew_debug_bytes"
 }
 
 ///|

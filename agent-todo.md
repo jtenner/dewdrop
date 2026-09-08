@@ -211,6 +211,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   names and the native/provider copy builders are removed; 54 shared checks
   cover bounds, exact bytes, scratch isolation, and owned read results. See the
   [staging log](docs/research/bytes-staging-library-2026-09-08.md).
+  String Debug escaping and quoted output now run in Dew, using checked output
+  windows and foreign writes. The native/provider String runtime entries are
+  removed. Bytes Debug and text storage remain separate work. See the
+  [text Debug log](docs/research/debug-text-library-2026-09-07.md).
 - [ ] Remove all remaining standard-module path, declaration-number, and name
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap

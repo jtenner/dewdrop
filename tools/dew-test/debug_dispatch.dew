@@ -61,6 +61,11 @@ pub fn main(which: U32) -> I32 {
       debug(42i32)
       0i32
     }
+    4u32 => u32_into_i32(__dew_debug_string("core"))
+    5u32 => {
+      debug(b"core")
+      0i32
+    }
     _ => -1i32
   }
 }

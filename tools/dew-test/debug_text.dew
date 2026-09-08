@@ -1,0 +1,46 @@
+open dew.std.bytes
+open dew.std.bytes_builder
+open dew.std.string
+
+fn debug_text_generic<t: Debug>(value: t) -> Unit {
+  debug(value)
+}
+
+fn debug_text_repeat(byte: U8, length: U32) -> Bytes {
+  let builder = BytesBuilder::with_capacity(length)
+  while 0u32 {
+    index if index < length => {
+      builder.append_byte(byte)
+      continue index + 1u32
+    }
+    _ => break builder.finish()
+  }
+}
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => debug("")
+    1u32 => debug(b"")
+    2u32 => debug("quote\" slash\\ newline\n return\r tab\t λ 🌍")
+    3u32 => debug(b"\x00\x01\x1f \"\\\n\r\t~\x7f\x80\xff")
+    4u32 => debug(b"!hello\xc2\xa3?".view(1u32, 7u32).to_string())
+    5u32 => debug(b"!\xff\x00\x7f?".view(1u32, 3u32))
+    6u32 => debug_text_generic("generic")
+    7u32 => debug_text_generic(b"generic\xff")
+    8u32 => debug(debug_text_repeat(97u8, 65520u32).to_string())
+    9u32 => {
+      let builder = BytesBuilder::with_capacity(256u32)
+      while 0u32 {
+        index if index < 256u32 => {
+          builder.append_byte(index.into())
+          continue index + 1u32
+        }
+        _ => break debug(builder.finish())
+      }
+    }
+    10u32 => debug(debug_text_repeat(0u8, 17000u32))
+    11u32 => debug(b"\x00\x1f\x7f\xc2\x80\xf0\x9f\x8c\x8d".to_string())
+    _ => unreachable()
+  }
+  0i32
+}

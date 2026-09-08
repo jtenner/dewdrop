@@ -33,7 +33,13 @@ export function debugDispatchProbe() {
       assert.deepEqual(output, [], "custom and Never calls do not write to the host");
       assert.equal(exports.main(3), 0, "primitive Debug retains its foreign dependency");
       assert.equal(new TextDecoder().decode(Uint8Array.from(output)), "42");
-      return 4;
+      output.length = 0;
+      assert.equal(exports.main(4), 6, "String formatter counts quoted bytes without imports");
+      assert.equal(new TextDecoder().decode(Uint8Array.from(output)), '"core"');
+      output.length = 0;
+      assert.equal(exports.main(5), 0, "Bytes Debug needs no explicit library import");
+      assert.equal(new TextDecoder().decode(Uint8Array.from(output)), 'b"core"');
+      return 6;
     },
   };
 }
