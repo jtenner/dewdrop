@@ -19,5 +19,7 @@ fn self_host_capture_cell_physical_shape(module_: SelfHostPlannedModuleLowering,
       detail: u32_into_u64(index)
     }, "capture cell storage requires concrete specialization evidence")
   }
-  shape
+  // A cell replaces a mutable local slot. Preserve the whole stack value, as
+  // the native compiler does; capturing a local must not narrow its writes.
+  self_host_physical_scalar_shape(shape)
 }

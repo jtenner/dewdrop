@@ -77,6 +77,11 @@ self_host_measure 'hardening raw array contract request' \
     "$work/raw-array-contracts.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
     self_host/starshine/fingerprint-prefix.bin unused-raw-array-contracts.wasm \
     app.raw_array_contracts tools/dew-test/raw_array_contracts.dew
+self_host_measure 'hardening packed field request' \
+  moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
+    "$work/packed-fields.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \
+    self_host/starshine/fingerprint-prefix.bin unused-packed-fields.wasm \
+    app.packed_fields tools/dew-test/packed_fields.dew
 self_host_measure 'hardening type-query request' \
   moon run --target native "${native_build_flags[@]}" src/self_host_bootstrap_fixture -- \
     "$work/type-queries.request.bin" starshine-mb/dist/ffi/starshine-ffi.wasm \

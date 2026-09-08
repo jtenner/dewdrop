@@ -1,0 +1,183 @@
+builtin bits<a, b>(value: a) -> b = "unsafe.bitcast"
+
+struct CellI8 {
+  mut value: I8
+}
+enum PayloadI8 {
+  Value(I8)
+}
+fn readI8(value: I8) -> I32 {
+  let cell = CellI8::{
+    value: value
+  }
+  bits::<I8, I32>(cell.value)
+}
+fn writeI8(value: I8) -> I32 {
+  let cell = CellI8::{
+    value: bits::<I32, I8>(0i32)
+  }
+  cell.value = value
+  bits::<I8, I32>(cell.value)
+}
+fn payloadI8(value: I8) -> I32 {
+  match PayloadI8::Value(value) {
+    PayloadI8::Value(item) => bits::<I8, I32>(item)
+  }
+}
+
+struct CellU8 {
+  mut value: U8
+}
+enum PayloadU8 {
+  Value(U8)
+}
+fn readU8(value: U8) -> I32 {
+  let cell = CellU8::{
+    value: value
+  }
+  bits::<U8, I32>(cell.value)
+}
+fn writeU8(value: U8) -> I32 {
+  let cell = CellU8::{
+    value: bits::<I32, U8>(0i32)
+  }
+  cell.value = value
+  bits::<U8, I32>(cell.value)
+}
+fn payloadU8(value: U8) -> I32 {
+  match PayloadU8::Value(value) {
+    PayloadU8::Value(item) => bits::<U8, I32>(item)
+  }
+}
+
+struct CellI16 {
+  mut value: I16
+}
+enum PayloadI16 {
+  Value(I16)
+}
+fn readI16(value: I16) -> I32 {
+  let cell = CellI16::{
+    value: value
+  }
+  bits::<I16, I32>(cell.value)
+}
+fn writeI16(value: I16) -> I32 {
+  let cell = CellI16::{
+    value: bits::<I32, I16>(0i32)
+  }
+  cell.value = value
+  bits::<I16, I32>(cell.value)
+}
+fn payloadI16(value: I16) -> I32 {
+  match PayloadI16::Value(value) {
+    PayloadI16::Value(item) => bits::<I16, I32>(item)
+  }
+}
+
+struct CellU16 {
+  mut value: U16
+}
+enum PayloadU16 {
+  Value(U16)
+}
+fn readU16(value: U16) -> I32 {
+  let cell = CellU16::{
+    value: value
+  }
+  bits::<U16, I32>(cell.value)
+}
+fn writeU16(value: U16) -> I32 {
+  let cell = CellU16::{
+    value: bits::<I32, U16>(0i32)
+  }
+  cell.value = value
+  bits::<U16, I32>(cell.value)
+}
+fn payloadU16(value: U16) -> I32 {
+  match PayloadU16::Value(value) {
+    PayloadU16::Value(item) => bits::<U16, I32>(item)
+  }
+}
+
+fn captureI8(value: I8) -> fn() -> I32 {
+  fn() -> I32 {
+    bits::<I8, I32>(value)
+  }
+}
+fn captureMutableI8(value: I8) -> fn() -> I32 {
+  let mut held = bits::<I32, I8>(0i32)
+  let result = fn() -> I32 {
+    bits::<I8, I32>(held)
+  }
+  held = value
+  result
+}
+
+fn captureU8(value: U8) -> fn() -> I32 {
+  fn() -> I32 {
+    bits::<U8, I32>(value)
+  }
+}
+fn captureMutableU8(value: U8) -> fn() -> I32 {
+  let mut held = bits::<I32, U8>(0i32)
+  let result = fn() -> I32 {
+    bits::<U8, I32>(held)
+  }
+  held = value
+  result
+}
+
+fn captureI16(value: I16) -> fn() -> I32 {
+  fn() -> I32 {
+    bits::<I16, I32>(value)
+  }
+}
+fn captureMutableI16(value: I16) -> fn() -> I32 {
+  let mut held = bits::<I32, I16>(0i32)
+  let result = fn() -> I32 {
+    bits::<I16, I32>(held)
+  }
+  held = value
+  result
+}
+
+fn captureU16(value: U16) -> fn() -> I32 {
+  fn() -> I32 {
+    bits::<U16, I32>(value)
+  }
+}
+fn captureMutableU16(value: U16) -> fn() -> I32 {
+  let mut held = bits::<I32, U16>(0i32)
+  let result = fn() -> I32 {
+    bits::<U16, I32>(held)
+  }
+  held = value
+  result
+}
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => readI8(bits::<I32, I8>(511i32))
+    1u32 => readU8(bits::<I32, U8>(511i32))
+    2u32 => readI16(bits::<I32, I16>(131071i32))
+    3u32 => readU16(bits::<I32, U16>(131071i32))
+    4u32 => writeI8(bits::<I32, I8>(511i32))
+    5u32 => writeU8(bits::<I32, U8>(511i32))
+    6u32 => writeI16(bits::<I32, I16>(131071i32))
+    7u32 => writeU16(bits::<I32, U16>(131071i32))
+    8u32 => payloadI8(bits::<I32, I8>(511i32))
+    9u32 => payloadU8(bits::<I32, U8>(511i32))
+    10u32 => payloadI16(bits::<I32, I16>(131071i32))
+    11u32 => payloadU16(bits::<I32, U16>(131071i32))
+    12u32 => captureI8(bits::<I32, I8>(511i32))()
+    13u32 => captureU8(bits::<I32, U8>(511i32))()
+    14u32 => captureI16(bits::<I32, I16>(131071i32))()
+    15u32 => captureU16(bits::<I32, U16>(131071i32))()
+    16u32 => captureMutableI8(bits::<I32, I8>(511i32))()
+    17u32 => captureMutableU8(bits::<I32, U8>(511i32))()
+    18u32 => captureMutableI16(bits::<I32, I16>(131071i32))()
+    19u32 => captureMutableU16(bits::<I32, U16>(131071i32))()
+    _ => 0i32
+  }
+}

@@ -10,6 +10,10 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "FRG-403 packed field reads require a present source field",
+    expected: [403, 5, 5100n, 0n, 0n, 1, 1n, 1n, 0n],
+  },
   ...[
     ["SPC-303 call target updates reject concrete disagreement", 303, 3, 0n, 1n, 2n],
     ["ARN-102 call target updates reject another body's expression", 102, 0, 1n, 0n, 3n],

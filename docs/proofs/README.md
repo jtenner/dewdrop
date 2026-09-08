@@ -28,6 +28,7 @@ self-host failures. It is not a proof of the full language.
 | Dense type remap keeps valid indices and order | Proved | core linker validation | `src/compiler_proofs/type_remap_proofs.mbtp` |
 | Native physical type prefix has checked owners and one entry per emitted index | Checked and tested; full late-adapter/reference proof is open | `program_physical_type_invariants.mbt`, `program_physical_type_schedule.mbt` | `../research/physical-type-tables-2026-09-08.md` |
 | Native shared physical layouts retain full field and signature types | Checked and tested; plan freeze and general reference subtyping remain open | `program_physical_reference_invariants.mbt`, `program_physical_alias_invariants.mbt` | `../research/physical-type-aliases-2026-09-08.md` |
+| Packed field storage keeps width and signed reads separate from i32 operands | Checked and tested in both compilers; formal proof and synthetic adapter coverage remain open | `semantic_wasmgc_fragment_plan.dew`, `starshine_field_storage.dew` | `../research/packed-field-storage-2026-09-08.md` |
 
 ## Files
 

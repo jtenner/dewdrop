@@ -1,0 +1,37 @@
+// Storage width is separate from the i32 value used on the operand stack.
+fn self_host_field_storage_type(storage: SelfHostPlannedWasmStorageType, value_type: StarshineValue) -> StarshineValue {
+  match storage {
+    SelfHostPlannedWasmStorageType::WasmI8SignedStorage, SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage =>
+      StarshineFfi.ffi_lib_StorageType_pack_type(StarshineFfi.ffi_lib_PackType_i8())
+    SelfHostPlannedWasmStorageType::WasmI16SignedStorage, SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage =>
+      StarshineFfi.ffi_lib_StorageType_pack_type(StarshineFfi.ffi_lib_PackType_i16())
+    _ => StarshineFfi.ffi_lib_StorageType_val_type(value_type)
+  }
+}
+
+fn self_host_linked_struct_get_instruction(link: SelfHostPlannedProgramWasmGCLink, type_index: U32, field_index: U32) -> StarshineValue {
+  let type_ = StarshineFfi.ffi_lib_TypeIdx_new(type_index.into())
+  // Synthetic runtime boxes and closure wrappers retain full-width fields.
+  // Source fragments, including capture cells, carry exact field storage.
+  if type_index < link.types.length() {
+    let shape = match self_host_linked_physical_field_shape(link, type_index, field_index) {
+      Option::Some(value) => value
+      Option::None => {
+        let linked = link.types[type_index]
+        let module_ = link.fragments.modules[linked.module_index]
+        let physical = self_host_linked_physical_type_at(module_, linked.fragment_index)
+        self_host_assert_link_fact(false, 403u32, module_.module_id, 0u64, field_index,
+          u32_into_u64(physical.fields.length), u32_into_u64(field_index), u32_into_u64(type_index))
+        unreachable()
+      }
+    }
+    match shape {
+      SelfHostPlannedValueShape::I8PlannedValueShape, SelfHostPlannedValueShape::I16PlannedValueShape =>
+        return StarshineFfi.ffi_lib_Instruction_struct_get_s(type_, field_index.into())
+      SelfHostPlannedValueShape::U8PlannedValueShape, SelfHostPlannedValueShape::U16PlannedValueShape =>
+        return StarshineFfi.ffi_lib_Instruction_struct_get_u(type_, field_index.into())
+      _ => {}
+    }
+  }
+  StarshineFfi.ffi_lib_Instruction_struct_get(type_, field_index.into())
+}

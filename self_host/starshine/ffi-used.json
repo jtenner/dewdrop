@@ -229,6 +229,8 @@
     "Instruction::v128_const",
     "U32::new",
     "Instruction::struct_get",
+    "Instruction::struct_get_s",
+    "Instruction::struct_get_u",
     "Instruction::struct_set",
     "AbsHeapType::eq",
     "HeapType::abs",

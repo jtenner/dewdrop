@@ -37,6 +37,35 @@ test "packed storage shapes remain distinct despite a shared i32 carrier" {
   }
 }
 
+test "packed field storage preserves width and signedness without changing stack carriers" {
+  let shapes = [SelfHostPlannedValueShape::I8PlannedValueShape,
+    SelfHostPlannedValueShape::U8PlannedValueShape,
+    SelfHostPlannedValueShape::I16PlannedValueShape,
+    SelfHostPlannedValueShape::U16PlannedValueShape,
+    SelfHostPlannedValueShape::I32PlannedValueShape]
+  for shape in shapes {
+    let storage = self_host_wasmgc_storage_type(shape)
+    assert(self_host_linked_shape_name(self_host_program_representation_storage_shape(storage)) == self_host_linked_shape_name(shape), "field storage retains its declared shape")
+    assert(self_host_body_carrier_from_storage(storage) is SelfHostWasmBodyCarrier::I32BodyCarrier, "packed fields use i32 operands")
+    for other in shapes {
+      assert(self_host_program_representation_storage_matches_shape(storage, other) == self_host_specialization_shapes_equal(shape, other), "a different width or signedness is not a storage certificate")
+    }
+  }
+}
+
+test "FRG-403 packed field reads require a present source field" expect_trap "unreachable" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Cell {\n  value: I8\n}\npub fn run(value: Cell) -> I8 {\n  value.value\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid packed field source")
+  match self_host_linked_physical_field_shape(link, 0u32, 0u32) {
+    Option::Some(shape) => assert(shape is SelfHostPlannedValueShape::I8PlannedValueShape, "valid field before changing the index")
+    Option::None => assert(false, "missing fixture field")
+  }
+  let _ = self_host_linked_struct_get_instruction(link, 0u32, 1u32)
+}
+
 test "raw array storage keeps heap width separate from signed reads" {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
     b"pub fn run() -> I32 {\n  42\n}\n",

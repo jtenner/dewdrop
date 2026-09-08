@@ -13,6 +13,10 @@ pub enum SelfHostPlannedWasmValueType {
 }
 
 pub enum SelfHostPlannedWasmStorageType {
+  WasmI8SignedStorage
+  WasmI8UnsignedStorage
+  WasmI16SignedStorage
+  WasmI16UnsignedStorage
   WasmI32Storage
   WasmI64Storage
   WasmF32Storage
@@ -130,7 +134,11 @@ fn self_host_wasmgc_value_type(
 fn self_host_wasmgc_storage_type(
   shape: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedWasmStorageType {
-  match self_host_physical_scalar_shape(shape) {
+  match self_host_specialization_canonical_scalar(shape) {
+    SelfHostPlannedValueShape::I8PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI8SignedStorage
+    SelfHostPlannedValueShape::U8PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage
+    SelfHostPlannedValueShape::I16PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI16SignedStorage
+    SelfHostPlannedValueShape::U16PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage
     SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI32Storage
     SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI64Storage
     SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF32Storage
@@ -305,19 +313,12 @@ fn self_host_wasmgc_plan_type(
             role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
             declaration: source.field
             physical_index: current
-            storage: match self_host_physical_scalar_shape(
+            storage: self_host_wasmgc_storage_type(
               self_host_planned_resolved_value_shape(
                 module_.resolved_types,
                 source.type_,
               ),
-            ) {
-              SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI32Storage
-              SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI64Storage
-              SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF32Storage
-              SelfHostPlannedValueShape::F64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF64Storage
-              SelfHostPlannedValueShape::V128PlannedValueShape => SelfHostPlannedWasmStorageType::WasmV128Storage
-              _ => SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
-            }
+            )
             mutable_: source.mutable_
             exact_nominal: false
             offset: source.offset

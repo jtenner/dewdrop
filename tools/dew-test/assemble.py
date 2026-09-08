@@ -87,6 +87,7 @@ def main() -> None:
         ("raw_gc_unit", "app.raw_gc_unit"),
         ("fixed_array_operations", "app.fixed_array_probes"),
         ("raw_array_contracts", "app.raw_array_contracts"),
+        ("packed_fields", "app.packed_fields"),
         ("array_operations", "app.array_probes"),
         ("ring_operations", "app.ring_probes"),
         ("map_operations", "app.map_probes"),

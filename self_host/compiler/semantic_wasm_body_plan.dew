@@ -313,6 +313,10 @@ fn self_host_body_carrier_from_storage(
   storage: SelfHostPlannedWasmStorageType,
 ) -> SelfHostWasmBodyCarrier {
   match storage {
+    SelfHostPlannedWasmStorageType::WasmI8SignedStorage => SelfHostWasmBodyCarrier::I32BodyCarrier
+    SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage => SelfHostWasmBodyCarrier::I32BodyCarrier
+    SelfHostPlannedWasmStorageType::WasmI16SignedStorage => SelfHostWasmBodyCarrier::I32BodyCarrier
+    SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage => SelfHostWasmBodyCarrier::I32BodyCarrier
     SelfHostPlannedWasmStorageType::WasmI32Storage => SelfHostWasmBodyCarrier::I32BodyCarrier
     SelfHostPlannedWasmStorageType::WasmI64Storage => SelfHostWasmBodyCarrier::I64BodyCarrier
     SelfHostPlannedWasmStorageType::WasmF32Storage => SelfHostWasmBodyCarrier::F32BodyCarrier

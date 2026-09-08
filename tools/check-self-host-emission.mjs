@@ -39,6 +39,7 @@ import { checkRawGcStorage } from "./raw-gc-storage-cases.mjs";
 import { checkRawGcUnit } from "./raw-gc-unit-cases.mjs";
 import { checkFixedArrayOperations } from "./fixed-array-operations-cases.mjs";
 import { checkRawArrayContracts } from "./raw-array-contract-cases.mjs";
+import { checkPackedFields } from "./packed-field-cases.mjs";
 import { checkTypeQueries } from "./type-query-cases.mjs";
 import { specializationI64Values } from "./specialization-product-cases.mjs";
 import { checkGenericQueryOrder } from "./generic-query-order-cases.mjs";
@@ -835,6 +836,17 @@ pub fn main() -> I32 {
   } catch (error) {
     failures++;
     console.error("self-host raw array contract probe failed", error);
+  }
+}
+{
+  const start = performance.now();
+  try {
+    const request = await readFile(new URL("../.tmp/self-host-hardening/packed-fields.request.bin", import.meta.url));
+    const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request");
+    console.log(`self-host packed field checks passed: ${checkPackedFields(exports.main)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+  } catch (error) {
+    failures++;
+    console.error("self-host packed field probe failed", error);
   }
 }
 if (failures) throw new Error(`${failures} self-host emission probe(s) failed`);

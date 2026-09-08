@@ -645,6 +645,10 @@ fn self_host_program_representation_storage_code(
   storage: SelfHostPlannedWasmStorageType,
 ) -> I32 {
   match storage {
+    SelfHostPlannedWasmStorageType::WasmI8SignedStorage => 7i32
+    SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage => 8i32
+    SelfHostPlannedWasmStorageType::WasmI16SignedStorage => 9i32
+    SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage => 10i32
     SelfHostPlannedWasmStorageType::WasmI32Storage => 0i32
     SelfHostPlannedWasmStorageType::WasmI64Storage => 1i32
     SelfHostPlannedWasmStorageType::WasmF32Storage => 2i32
@@ -659,6 +663,10 @@ fn self_host_program_representation_storage_shape(
   storage: SelfHostPlannedWasmStorageType,
 ) -> SelfHostPlannedValueShape {
   match storage {
+    SelfHostPlannedWasmStorageType::WasmI8SignedStorage => SelfHostPlannedValueShape::I8PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage => SelfHostPlannedValueShape::U8PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmI16SignedStorage => SelfHostPlannedValueShape::I16PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage => SelfHostPlannedValueShape::U16PlannedValueShape
     SelfHostPlannedWasmStorageType::WasmI32Storage => SelfHostPlannedValueShape::I32PlannedValueShape
     SelfHostPlannedWasmStorageType::WasmI64Storage => SelfHostPlannedValueShape::I64PlannedValueShape
     SelfHostPlannedWasmStorageType::WasmF32Storage => SelfHostPlannedValueShape::F32PlannedValueShape
@@ -673,7 +681,11 @@ fn self_host_program_representation_storage_matches_shape(
   storage: SelfHostPlannedWasmStorageType,
   shape: SelfHostPlannedValueShape,
 ) -> Bool {
-  match self_host_physical_scalar_shape(shape) {
+  match self_host_specialization_canonical_scalar(shape) {
+    SelfHostPlannedValueShape::I8PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI8SignedStorage
+    SelfHostPlannedValueShape::U8PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage
+    SelfHostPlannedValueShape::I16PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI16SignedStorage
+    SelfHostPlannedValueShape::U16PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage
     SelfHostPlannedValueShape::I32PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI32Storage
     SelfHostPlannedValueShape::I64PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmI64Storage
     SelfHostPlannedValueShape::F32PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmF32Storage

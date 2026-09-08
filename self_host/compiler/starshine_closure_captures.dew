@@ -85,12 +85,12 @@ fn self_host_emit_capture_local_get(slot: U32, destination: StarshineInstruction
   )
 }
 
-fn self_host_emit_capture_field_get(type_: U32, field: U32, destination: StarshineInstructions) -> Unit {
+fn self_host_emit_capture_field_get(link: SelfHostPlannedProgramWasmGCLink, type_: U32, field: U32, destination: StarshineInstructions) -> Unit {
   StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
     StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(self_host_u32_to_i32(type_)),
   )
   StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
-    StarshineFfi.ffi_lib_Instruction_struct_get(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(type_)), StarshineFfi.ffi_lib_U32_new(self_host_u32_to_i32(field))),
+    self_host_linked_struct_get_instruction(link, type_, field),
   )
 }
 
@@ -210,7 +210,7 @@ fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: Self
     Option::None => return Option::Some("capture read has no physical field")
   }
   self_host_emit_capture_local_get(0u32, destination)
-  self_host_emit_capture_field_get(field.type_index, field.field_index, destination)
+  self_host_emit_capture_field_get(link, field.type_index, field.field_index, destination)
   if capture.mutable_ && dereference {
     let local = match self_host_capture_source_local(module_, capture.source) {
       Option::Some(value) => value
@@ -220,7 +220,7 @@ fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: Self
       Option::Some(value) => value
       Option::None => return Option::Some("capture cell has no physical type")
     }
-    self_host_emit_capture_field_get(cell, 0u32, destination)
+    self_host_emit_capture_field_get(link, cell, 0u32, destination)
   }
   Option::None
 }

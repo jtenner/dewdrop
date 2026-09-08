@@ -20,6 +20,11 @@ Generated files:
 
 The compiler fingerprint changes when the submodule revision, an interface digest, a selected export name or signature, or any provider byte changes.
 
+Packed GC storage uses the provider's direct `PackType`, `StorageType`,
+`array.get_s`/`array.get_u`, and `struct.get_s`/`struct.get_u` exports. The
+consumer currently selects 476 signatures. Field width and signedness come
+from compiler plans, not provider-side runtime algorithms.
+
 ## Check
 
 ```sh

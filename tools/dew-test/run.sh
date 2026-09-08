@@ -37,6 +37,7 @@ node tools/check-raw-gc-storage.mjs tools/dew-test/raw_gc_storage.wasm
 node tools/check-raw-gc-unit.mjs tools/dew-test/raw_gc_unit.wasm
 node tools/check-fixed-array-operations.mjs tools/dew-test/fixed_array_operations.wasm
 node tools/check-raw-array-contracts.mjs tools/dew-test/raw_array_contracts.wasm
+node tools/check-packed-fields.mjs tools/dew-test/packed_fields.wasm
 node tools/check-array-operations.mjs tools/dew-test/array_operations.wasm
 node tools/check-ring-operations.mjs tools/dew-test/ring_operations.wasm
 node tools/check-map-operations.mjs tools/dew-test/map_operations.wasm

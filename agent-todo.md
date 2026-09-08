@@ -280,6 +280,11 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete physical-boundary checks. Reject missing, Generic, Error,
   conflicting, or consumed evidence before a reachable value reaches emission.
   Extend the existing specialization checks to every fragment/storage boundary.
+  Self-host packed struct fields, enum payloads, and immutable captures now
+  retain width and signedness, with shared native/self-host execution tests.
+  Mutable capture cells preserve full local values. Generic/Error field
+  boundary fallbacks still need removal. See the
+  [packed field log](docs/research/packed-field-storage-2026-09-08.md).
   Named function parameters/results now require concrete shape evidence,
   including product leaves, before physical signature conversion. Elided bases
   and signature-only declarations retain logical metadata without a fabricated

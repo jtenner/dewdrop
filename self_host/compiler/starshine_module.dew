@@ -2017,7 +2017,7 @@ fn self_host_linked_constructor_field_shape_matches(
   if source_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
     return true
   }
-  let physical_shape = self_host_linked_storage_shape(physical.storage)
+  let physical_shape = self_host_physical_scalar_shape(self_host_linked_storage_shape(physical.storage))
   if self_host_linked_erased_field_box_type(link, physical.declaration, self_host_body_carrier_from_shape(source_shape)) is Option::Some(_) {
     return physical_shape is SelfHostPlannedValueShape::RefPlannedValueShape
   }
@@ -4527,6 +4527,10 @@ fn self_host_linked_storage_shape(
   storage: SelfHostPlannedWasmStorageType,
 ) -> SelfHostPlannedValueShape {
   match storage {
+    SelfHostPlannedWasmStorageType::WasmI8SignedStorage => SelfHostPlannedValueShape::I8PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage => SelfHostPlannedValueShape::U8PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmI16SignedStorage => SelfHostPlannedValueShape::I16PlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage => SelfHostPlannedValueShape::U16PlannedValueShape
     SelfHostPlannedWasmStorageType::WasmI32Storage => SelfHostPlannedValueShape::I32PlannedValueShape
     SelfHostPlannedWasmStorageType::WasmI64Storage => SelfHostPlannedValueShape::I64PlannedValueShape
     SelfHostPlannedWasmStorageType::WasmF32Storage => SelfHostPlannedValueShape::F32PlannedValueShape
@@ -14252,7 +14256,7 @@ fn self_host_emit_linked_i32_expression(
                 match self_host_linked_local_capture_cell(link, canonical_body_plan, module_, body, local) {
                   Option::Some(cell) => {
                     self_host_emit_capture_local_get(cell.local_slot, destination)
-                    self_host_emit_capture_field_get(cell.type_index, 0u32, destination)
+                    self_host_emit_capture_field_get(link, cell.type_index, 0u32, destination)
                   }
                   Option::None => self_host_emit_capture_local_get(slot, destination)
                 }
@@ -19883,10 +19887,7 @@ fn self_host_emit_linked_i32_expression(
           )
           StarshineFfi.ffi_ffi_bridge_instructions_push(
             destination,
-            StarshineFfi.ffi_lib_Instruction_struct_get(
-              StarshineFfi.ffi_lib_TypeIdx_new(type_index.into()),
-              field_index.into(),
-            ),
+            self_host_linked_struct_get_instruction(link, type_index, field_index),
           )
         }
         SelfHostLinkedI32EmitTask::EmitLinkedRefCast(
@@ -20974,12 +20975,7 @@ fn self_host_emit_linked_i32_expression(
                                 )
                                 StarshineFfi.ffi_ffi_bridge_instructions_push(
                                   binding_destination,
-                                  StarshineFfi.ffi_lib_Instruction_struct_get(
-                                    StarshineFfi.ffi_lib_TypeIdx_new(
-                                    self_host_u32_to_i32(variant_type),
-                                  ),
-                                    self_host_u32_to_i32(physical_child),
-                                  ),
+                                  self_host_linked_struct_get_instruction(link, variant_type, physical_child),
                                 )
                                 StarshineFfi.ffi_ffi_bridge_instructions_push(
                                   binding_destination,
@@ -21347,6 +21343,10 @@ fn self_host_linked_scalar_storage_value_type(
   storage: SelfHostPlannedWasmStorageType,
 ) -> Option<StarshineValue> {
   match storage {
+    SelfHostPlannedWasmStorageType::WasmI8SignedStorage => Option::Some(StarshineFfi.ffi_lib_ValType_i32())
+    SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage => Option::Some(StarshineFfi.ffi_lib_ValType_i32())
+    SelfHostPlannedWasmStorageType::WasmI16SignedStorage => Option::Some(StarshineFfi.ffi_lib_ValType_i32())
+    SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage => Option::Some(StarshineFfi.ffi_lib_ValType_i32())
     SelfHostPlannedWasmStorageType::WasmI32Storage => Option::Some(
       StarshineFfi.ffi_lib_ValType_i32(),
     )
@@ -21755,7 +21755,7 @@ fn self_host_linked_append_physical_types(
         StarshineFfi.ffi_ffi_bridge_field_types_push(
           fields,
           StarshineFfi.ffi_lib_FieldType_new(
-            StarshineFfi.ffi_lib_StorageType_val_type(value_type),
+            self_host_field_storage_type(source.storage, value_type),
             mutable_,
           ),
         )
