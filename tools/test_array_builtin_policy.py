@@ -18,6 +18,23 @@ CORE_OPERATIONS = (
 
 
 class ArrayBuiltinPolicyTests(unittest.TestCase):
+    def test_provider_cannot_retain_array_algorithms_or_exports(self):
+        removed = ("instructions_push_array_push", "instructions_push_array_pop",
+                   "instructions_push_array_iter_next")
+        for path in (ROOT / "starshine-mb/src/ffi_bridge").glob("*.mbt"):
+            if path.name.endswith("test.mbt"):
+                continue
+            source = path.read_text()
+            for name in ("dew_array_", *removed):
+                with self.subTest(path=path.name, name=name):
+                    self.assertTrue(name not in source, f"{path.name} retains {name}")
+        interface = (ROOT / "starshine-mb/src/ffi_bridge/pkg.generated.mbti").read_text()
+        selected = json.loads((ROOT / "self_host/starshine/ffi-used.json").read_text())["exports"]
+        for name in removed:
+            with self.subTest(export=name):
+                self.assertTrue(name not in interface, f"provider still exports {name}")
+                self.assertNotIn(f"ffi_bridge::{name}", selected)
+
     def test_index_writes_have_only_a_frozen_call_recipe(self):
         source = (ROOT / "self_host/compiler/starshine_module.dew").read_text()
         start = source.index("            SelfHostPlannedExpressionKind::PlannedIndexSet(")

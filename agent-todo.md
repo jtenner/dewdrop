@@ -96,6 +96,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Remaining push/pop/read/write emitter builders now use selected calls too;
   only literal construction and planning heuristics remain in this cleanup.
   See the [method emission log](docs/research/array-method-emission-removal-2026-09-07.md).
+  The pinned provider's old Array algorithms and three unused instruction
+  exports are removed too. Shared Map layout helpers remain for its separate
+  provider cleanup. See the
+  [provider removal log](docs/research/array-provider-removal-2026-09-07.md).
 - [x] Move Map hashing, buckets, growth, lookup, and iteration into Dew. Typed
   entries preserve aliases, cached hashes avoid repeated user calls during
   growth, and all 12 shared native/self-host checks pass. Native Map IR and
@@ -173,7 +177,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.
   Include the pinned Starshine `src/ffi_bridge` runtime copies in each removal;
-  several old text and Array algorithms still exist there after native cleanup.
+  several old text and Map algorithms still exist there after native cleanup.
 
 ### Finish the compiler correctness audit
 
@@ -306,7 +310,8 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [x] Keep readable, typed Starshine FFI names through regeneration. Audit any
   remaining numbered references; test identity and signature agreement rather
   than merely renaming incompatible reference types.
-  Regeneration verifies all 472 selected signatures and keeps named carriers.
+  Regeneration verifies all 469 selected signatures and keeps named carriers;
+  three unused Array algorithm exports have now been removed.
   Constructor aliases preserve nullability. Invalid identity proofs and numbered
   Dew references fail with diagnostics. The real linked FFI smoke runs in the
   hardening lane. See [FFI notes](docs/research/ffi-carrier-identity-2026-09-07.md).
