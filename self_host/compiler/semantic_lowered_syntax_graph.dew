@@ -1,0 +1,117 @@
+struct SelfHostLoweredSyntaxWalk {
+  ends: Array<U32>
+  states: Array<U32>
+  // One event word avoids parallel work arrays: node << 1 | leave.
+  events: Array<U64>
+}
+
+fn self_host_lowered_syntax_child(context: SelfHostLoweredChildContext, parent: U32, child: U32, tag: U32) -> Unit {
+  let walk = match context.syntax_walk {
+    Option::Some(value) => value
+    Option::None => return ()
+  }
+  let node = match tag {
+    1u32 => child - context.body.expressions.start
+    3u32 => walk.ends[0u32] + (child - context.body.blocks.start)
+    4u32 => walk.ends[1u32] + (child - context.body.patterns.start)
+    5u32 => walk.ends[2u32] + (child - context.body.pattern_arms.start)
+    _ => return ()
+  }
+  // The child ownership check precedes subtraction. The sums were checked
+  // before state allocation. Non-syntax metadata does not enter this graph.
+  match walk.states[node] {
+    0u32 => walk.events.push(u32_into_u64(node) << 1u64)
+    1u32 => {
+      let expression = if parent != 4294967295u32 {
+        parent
+      } else if tag == 1u32 {
+        child
+      } else {
+        4294967295u32
+      }
+      self_host_lowered_child_failure(context, 108u32, expression, 0u64, 1u64,
+        (u32_into_u64(tag) << 32u64) | u32_into_u64(child),
+      )
+    }
+    2u32 => {}
+    state => self_host_lowered_child_failure(context, 108u32, parent, 2u64, u32_into_u64(state), u32_into_u64(node))
+  }
+}
+
+fn self_host_verify_lowered_syntax_graph(context: SelfHostLoweredChildContext) -> Unit {
+  let body = context.body
+  let ends = array_new::<U32>()
+  let mut total = 0u32
+  for length in [body.expressions.length, body.blocks.length, body.patterns.length, body.pattern_arms.length] {
+    if length > 4294967295u32 - total {
+      self_host_lowered_child_failure(context, 101u32, 4294967295u32,
+        u32_into_u64(4294967295u32 - total), u32_into_u64(length), 24u64 << 32u64,
+      )
+    }
+    total = total + length
+    ends.push(total)
+  }
+  let states = array_with_capacity::<U32>(total)
+  while 0u32 {
+    index if index < total => {
+      states.push(0u32)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let walk = SelfHostLoweredSyntaxWalk::{
+    ends: ends
+    states: states
+    events: array_new::<U64>()
+  }
+  context.syntax_walk = Option::Some(walk)
+  while 0u32 {
+    seed if seed < total => {
+      if states[seed] == 0u32 {
+        walk.events.push(u32_into_u64(seed) << 1u64)
+        self_host_lowered_syntax_drain(context, walk)
+      }
+      continue seed + 1u32
+    }
+    _ => break ()
+  }
+  context.syntax_walk = Option::None
+}
+
+fn self_host_lowered_syntax_drain(context: SelfHostLoweredChildContext, walk: SelfHostLoweredSyntaxWalk) -> Unit {
+  let body = context.body
+  let total = walk.states.length()
+  while walk.events.pop() {
+    Option::Some(event) => {
+      let encoded_node = event >> 1u64
+      if encoded_node >= u32_into_u64(total) {
+        self_host_lowered_child_failure(context, 104u32, 4294967295u32, u32_into_u64(total), encoded_node, 24u64 << 32u64)
+      }
+      let node = u64_into_u32(encoded_node)
+      if (event & 1u64) != 0u64 {
+        if walk.states[node] != 1u32 {
+          self_host_lowered_child_failure(context, 108u32, 4294967295u32, 1u64, u32_into_u64(walk.states[node]), u32_into_u64(node))
+        }
+        walk.states[node] = 2u32
+      } else if walk.states[node] != 2u32 {
+        if walk.states[node] != 0u32 {
+          self_host_lowered_child_failure(context, 108u32, 4294967295u32, 0u64, u32_into_u64(walk.states[node]), u32_into_u64(node))
+        }
+        walk.states[node] = 1u32
+        walk.events.push(event | 1u64)
+        if node < walk.ends[0u32] {
+          let expression = body.expressions.start + node
+          self_host_lowered_child_expression_edges(context, expression, context.module_.expressions[expression].kind)
+        } else if node < walk.ends[1u32] {
+          self_host_lowered_child_block_edges(context, body.blocks.start + (node - walk.ends[0u32]))
+        } else if node < walk.ends[2u32] {
+          self_host_lowered_child_pattern_edges(context, body.patterns.start + (node - walk.ends[1u32]))
+        } else {
+          self_host_lowered_child_arm_edges(context, body.pattern_arms.start + (node - walk.ends[2u32]))
+        }
+      }
+      continue walk.events.pop()
+    }
+    Option::None => break ()
+  }
+}

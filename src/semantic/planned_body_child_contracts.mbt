@@ -7,6 +7,7 @@ priv struct PlannedBodyChildChecker {
   owner_lambda : LambdaId
   mut capture_span : HirSpan
   mut failure : BodyArenaFailure?
+  mut syntax_walk : PlannedBodySyntaxWalk?
 }
 
 ///|
@@ -83,7 +84,8 @@ fn PlannedBodyChildChecker::owned(
     )
     return false
   }
-  true
+  self.syntax_child(parent, child, tag)
+  self.failure is None
 }
 
 ///|
@@ -361,6 +363,7 @@ fn check_planned_body_children(
     owner_lambda: lambda,
     capture_span: { start: 0, length: 0, },
     failure: None,
+    syntax_walk: None,
   }
   for relative in 0..<body.locals.length {
     checker.local_identity(-1, body.locals.start + relative, relative, lambda)
@@ -377,89 +380,100 @@ fn check_planned_body_children(
       return Err(failure)
     }
   }
-  for
-    expression in body.expressions.start..<(body.expressions.start +
-    body.expressions.length) {
-    checker.expression_edges(expression, lowering.expressions[expression].kind)
-    if checker.failure is Some(failure) {
-      return Err(failure)
-    }
+  checker.verify_syntax_graph()
+  match checker.failure {
+    Some(failure) => Err(failure)
+    None => Ok(())
   }
-  for block in body.blocks.start..<(body.blocks.start + body.blocks.length) {
-    let items = lowering.blocks[block].items
-    if checker.span(-1, items, lowering.block_items.length(), 11) {
-      for offset in 0..<items.length {
-        match lowering.block_items[items.start + offset].kind {
-          PlannedLetItem(local, _, value) => {
-            checker.local(-1, local)
-            checker.expression(-1, value)
-          }
-          PlannedElidedLetItem(local) => checker.local(-1, local)
-          PlannedExpressionItem(value) => checker.expression(-1, value)
+}
+
+///|
+fn PlannedBodyChildChecker::block_edges(
+  checker : PlannedBodyChildChecker,
+  block : Int,
+) -> Unit {
+  let lowering = checker.lowering
+  let items = lowering.blocks[block].items
+  if checker.span(-1, items, lowering.block_items.length(), 11) {
+    for offset in 0..<items.length {
+      match lowering.block_items[items.start + offset].kind {
+        PlannedLetItem(local, _, value) => {
+          checker.local(-1, local)
+          checker.expression(-1, value)
         }
-        if checker.failure is Some(failure) {
-          return Err(failure)
-        }
+        PlannedElidedLetItem(local) => checker.local(-1, local)
+        PlannedExpressionItem(value) => checker.expression(-1, value)
+      }
+      if checker.failure is Some(_) {
+        return
       }
     }
-    if checker.failure is Some(failure) {
-      return Err(failure)
-    }
   }
-  for
-    pattern in body.patterns.start..<(body.patterns.start + body.patterns.length) {
-    let source = lowering.patterns[pattern]
-    if source.reference is PatternBindingReference(local) {
-      checker.local(-1, local)
-    }
-    match source.source {
-      HirLiteralPattern(expression, _) => checker.expression(-1, expression)
-      HirQualifiedPattern(base, _, _) => checker.pattern(base)
-      HirTuplePattern(base, children, _) => {
-        if base != -1 {
-          checker.pattern(base)
-        }
-        checker.patterns(children)
-      }
-      HirProductPattern(children, _) => checker.patterns(children)
-      HirAlternativePattern(base, alternatives, _) => {
+  if checker.failure is Some(_) {
+    return
+  }
+}
+
+///|
+fn PlannedBodyChildChecker::pattern_edges(
+  checker : PlannedBodyChildChecker,
+  pattern : Int,
+) -> Unit {
+  let lowering = checker.lowering
+  let source = lowering.patterns[pattern]
+  if source.reference is PatternBindingReference(local) {
+    checker.local(-1, local)
+  }
+  match source.source {
+    HirLiteralPattern(expression, _) => checker.expression(-1, expression)
+    HirQualifiedPattern(base, _, _) => checker.pattern(base)
+    HirTuplePattern(base, children, _) => {
+      if base != -1 {
         checker.pattern(base)
-        checker.patterns(alternatives)
       }
-      HirStructPattern(base, fields, _, _, _) => {
-        if base != -1 {
-          checker.pattern(base)
-        }
-        if checker.span(-1, fields, lowering.pattern_fields.length(), 15) {
-          for offset in 0..<fields.length {
-            checker.pattern(
-              lowering.pattern_fields[fields.start + offset].pattern,
-            )
-            if checker.failure is Some(_) {
-              break
-            }
+      checker.patterns(children)
+    }
+    HirProductPattern(children, _) => checker.patterns(children)
+    HirAlternativePattern(base, alternatives, _) => {
+      checker.pattern(base)
+      checker.patterns(alternatives)
+    }
+    HirStructPattern(base, fields, _, _, _) => {
+      if base != -1 {
+        checker.pattern(base)
+      }
+      if checker.span(-1, fields, lowering.pattern_fields.length(), 15) {
+        for offset in 0..<fields.length {
+          checker.pattern(
+            lowering.pattern_fields[fields.start + offset].pattern,
+          )
+          if checker.failure is Some(_) {
+            break
           }
         }
       }
-      HirWildcardPattern(_)
-      | HirBindingPattern(_, _)
-      | HirImportAliasPattern(_, _)
-      | HirRestPattern(_) => ()
     }
-    if checker.failure is Some(failure) {
-      return Err(failure)
-    }
+    HirWildcardPattern(_)
+    | HirBindingPattern(_, _)
+    | HirImportAliasPattern(_, _)
+    | HirRestPattern(_) => ()
   }
-  for
-    arm in body.pattern_arms.start..<(body.pattern_arms.start +
-    body.pattern_arms.length) {
-    let source = lowering.pattern_arms[arm]
-    checker.pattern(source.pattern)
-    checker.optional_expression(-1, source.guard_condition)
-    checker.expression(-1, source.body)
-    if checker.failure is Some(failure) {
-      return Err(failure)
-    }
+  if checker.failure is Some(_) {
+    return
   }
-  Ok(())
+}
+
+///|
+fn PlannedBodyChildChecker::arm_edges(
+  checker : PlannedBodyChildChecker,
+  arm : Int,
+) -> Unit {
+  let lowering = checker.lowering
+  let source = lowering.pattern_arms[arm]
+  checker.pattern(source.pattern)
+  checker.optional_expression(-1, source.guard_condition)
+  checker.expression(-1, source.body)
+  if checker.failure is Some(_) {
+    return
+  }
 }

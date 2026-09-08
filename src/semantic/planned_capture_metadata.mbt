@@ -103,6 +103,7 @@ fn planned_capture_metadata_checker(
     owner_lambda: -1,
     capture_span: { start: 0, length: 0, },
     failure: None,
+    syntax_walk: None,
   }
 }
 

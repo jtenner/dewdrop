@@ -35,6 +35,7 @@ fn self_host_capture_metadata_context(module_: SelfHostPlannedModuleLowering, bo
     module_: module_
     body: body
     phase: phase
+    syntax_walk: Option::None
     lambda: 4294967295u32
     locals: SelfHostHirSpan::{
       start: 0u32

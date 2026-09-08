@@ -10,6 +10,22 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    "lowered unary expressions cannot contain themselves",
+    "lowered blocks cannot contain themselves",
+    "physical work graphs reject cyclic syntax",
+  ].map(name => ({
+    name: `ARN-108 ${name}`,
+    expected: [108, 6, 5100n, (5100n << 32n) + 1n, (5100n << 32n) + 1n, 1, 0n, 1n, (1n << 32n) | 1n],
+  })),
+  {
+    name: "ARN-108 lowered expressions reject indirect cycles",
+    expected: [108, 6, 5100n, 5100n << 32n, 5100n << 32n, 1, 0n, 1n, 1n << 32n],
+  },
+  {
+    name: "ARN-108 lowered patterns cannot contain themselves",
+    expected: [108, 6, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, 1n, 4n << 32n],
+  },
   {
     name: "ARN-104 emission rejects orphan captures before local planning",
     expected: [104, 7, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 0n, 1n, (17n << 32n) | 1n],

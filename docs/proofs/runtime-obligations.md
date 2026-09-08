@@ -45,6 +45,25 @@ The low-level typed comparisons are in `compiler_value_primitives.dew`.
 Parser, semantic, and emitter code can use them without a dependency on a
 later compiler phase.
 
+## Lowered syntax is acyclic
+
+Owned indices alone do not exclude cycles. Before physical work-graph creation
+and emission, the lowered-body checker also visits expression, block, pattern,
+and arm edges with an explicit depth-first stack. Node states are unseen,
+active, and done. An edge to an active ancestor reports `ARN-108` with the child
+arena tag and global ID. A done child can be shared by more than one parent.
+
+Each node enters at most once and receives one leave event. Each visited edge
+can add at most one enter event; a duplicate event for a done node is skipped.
+Thus a finite acyclic syntax graph finishes without recursion or a depth cap.
+Total node-count addition is checked before allocation, and child ownership
+is checked before relative-index subtraction. One U64 stores each event's node
+and enter/leave bit, avoiding parallel event arrays.
+
+Control labels, local/capture references, and constructor source metadata are
+not syntax edges. A valid loop may therefore have cyclic control flow without
+having cyclic syntax. See the [tests and implementation log](../research/lowered-body-cycles-2026-09-08.md).
+
 ## Parallel arenas
 
 For arrays that use the same expression index:

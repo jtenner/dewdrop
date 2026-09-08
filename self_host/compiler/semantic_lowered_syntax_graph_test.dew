@@ -1,0 +1,126 @@
+test "ARN-108 lowered unary expressions cannot contain themselves" expect_trap "unreachable" {
+  self_host_child_test_verify(SelfHostPlannedExpressionKind::PlannedPrefixExpression(SelfHostHirPrefixOperator::Negative, 1u32))
+}
+
+test "ARN-108 lowered blocks cannot contain themselves" expect_trap "unreachable" {
+  self_host_child_test_verify(SelfHostPlannedExpressionKind::PlannedBlockExpression(1u32))
+}
+
+test "ARN-108 physical work graphs reject cyclic syntax" expect_trap "unreachable" {
+  let link = self_host_child_test_link()
+  let valid = self_host_plan_program_wasm_bodies(link)
+  assert(valid.diagnostics.length() == 0u32, "valid plan before mutation")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  module_.expressions[1u32] = self_host_child_test_replace(module_.expressions[1u32],
+    SelfHostPlannedExpressionKind::PlannedPrefixExpression(SelfHostHirPrefixOperator::Negative, 1u32),
+  )
+  let _ = self_host_plan_program_wasm_bodies(link)
+}
+
+fn self_host_syntax_test_module(source: Bytes) -> SelfHostPlannedModuleLowering {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source), false)
+  let valid = self_host_plan_program_wasm_bodies(link)
+  assert(valid.diagnostics.length() == 0u32, "valid source before graph mutation")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  module_
+}
+
+test "ARN-108 lowered expressions reject indirect cycles" expect_trap "unreachable" {
+  let module_ = self_host_syntax_test_module(b"pub fn run(value: I64) -> I64 {\n  value + value\n}\n")
+  assert(module_.expressions.length() == 3u32, "two inputs and addition")
+  module_.expressions[0u32] = self_host_child_test_replace(module_.expressions[0u32],
+    SelfHostPlannedExpressionKind::PlannedPrefixExpression(SelfHostHirPrefixOperator::Negative, 1u32),
+  )
+  module_.expressions[1u32] = self_host_child_test_replace(module_.expressions[1u32],
+    SelfHostPlannedExpressionKind::PlannedPrefixExpression(SelfHostHirPrefixOperator::Negative, 0u32),
+  )
+  self_host_verify_lowered_body_children(module_, module_.bodies[0u32], 4294967295u32)
+}
+
+test "ARN-108 lowered patterns cannot contain themselves" expect_trap "unreachable" {
+  let module_ = self_host_syntax_test_module(b"pub fn run(value: I64) -> I64 {\n  match value {\n    _ => value\n  }\n}\n")
+  let body = module_.bodies[0u32]
+  let index = body.patterns.start
+  let pattern = module_.patterns[index]
+  module_.patterns[index] = SelfHostPlannedPattern::{
+    elided: pattern.elided
+    type_: pattern.type_
+    shape: pattern.shape
+    source: SelfHostHirPattern::QualifiedPattern(index, 0u32, 0u32)
+    reference: pattern.reference
+    selected_constructor: pattern.selected_constructor
+    offset: pattern.offset
+  }
+  self_host_verify_lowered_body_children(module_, body, 4294967295u32)
+}
+
+test "lowered syntax accepts shared children and real loop control" {
+  let module_ = self_host_syntax_test_module(b"pub fn run(value: I64) -> I64 {\n  value + value\n}\n")
+  let source = module_.expressions[2u32]
+  let kind = match source.kind {
+    SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, operator_, _, _, target) =>
+      SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, operator_, 0u32, 0u32, target)
+    SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator_, _, _) =>
+      SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator_, 0u32, 0u32)
+    _ => {
+      assert(false, "the fixture must contain an addition")
+      unreachable()
+    }
+  }
+  module_.expressions[2u32] = self_host_child_test_replace(source, kind)
+  self_host_verify_lowered_body_children(module_, module_.bodies[0u32], 4294967295u32)
+  let leaf = module_.expressions[0u32]
+  let forward = match kind {
+    SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, operator_, _, _, target) =>
+      SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, operator_, 2u32, 1u32, target)
+    SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator_, _, _) =>
+      SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator_, 2u32, 1u32)
+    _ => unreachable()
+  }
+  module_.expressions[0u32] = self_host_child_test_replace(source, forward)
+  module_.expressions[1u32] = self_host_child_test_replace(leaf,
+    SelfHostPlannedExpressionKind::PlannedPrefixExpression(SelfHostHirPrefixOperator::Negative, 2u32),
+  )
+  module_.expressions[2u32] = leaf
+  self_host_verify_lowered_body_children(module_, module_.bodies[0u32], 4294967295u32)
+  let loops = self_host_syntax_test_module(b"pub fn run() -> I64 {\n  while 0i64 {\n    value if value < 3i64 => continue value + 1i64\n    value => break value\n  }\n}\n")
+  self_host_verify_lowered_body_children(loops, loops.bodies[0u32], 4294967295u32)
+}
+
+test "lowered syntax walks a long chain without a depth limit" {
+  let module_ = self_host_syntax_test_module(b"pub fn run(value: I64) -> I64 {\n  value\n}\n")
+  let body = module_.bodies[0u32]
+  assert(module_.expressions.length() == 1u32, "single source expression")
+  let leaf = module_.expressions[0u32]
+  while 0u32 {
+    index if index < 5000u32 => {
+      module_.expressions[index] = self_host_child_test_replace(leaf,
+        SelfHostPlannedExpressionKind::PlannedPrefixExpression(SelfHostHirPrefixOperator::Negative, index + 1u32),
+      )
+      module_.expressions.push(leaf)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let widened = SelfHostPlannedBodyLowering::{
+    body: body.body
+    declaration: body.declaration
+    kind: body.kind
+    root: body.root
+    root_type: body.root_type
+    root_shape: body.root_shape
+    result_shape: body.result_shape
+    flow: body.flow
+    locals: body.locals
+    local_initializers: body.local_initializers
+    local_assignments: body.local_assignments
+    expressions: SelfHostHirSpan::{
+      start: 0u32
+      length: 5001u32
+    }
+    blocks: body.blocks
+    patterns: body.patterns
+    pattern_arms: body.pattern_arms
+  }
+  self_host_verify_lowered_body_children(module_, widened, 4294967295u32)
+}

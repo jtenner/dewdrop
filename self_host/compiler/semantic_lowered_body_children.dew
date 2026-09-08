@@ -5,6 +5,7 @@ struct SelfHostLoweredChildContext {
   lambda: U32
   locals: SelfHostHirSpan
   lambdas: SelfHostHirSpan
+  mut syntax_walk: Option<SelfHostLoweredSyntaxWalk>
 }
 
 fn self_host_lowered_child_failure(context: SelfHostLoweredChildContext, code: U32, parent: U32, expected: U64, actual: U64, detail: U64) -> Unit {
@@ -33,7 +34,7 @@ fn self_host_lowered_child_span(context: SelfHostLoweredChildContext, parent: U3
   }
 }
 
-fn self_host_lowered_child_index(context: SelfHostLoweredChildContext, parent: U32, span: SelfHostHirSpan, child: U32, tag: U32) -> Unit {
+fn self_host_lowered_child_owned(context: SelfHostLoweredChildContext, parent: U32, span: SelfHostHirSpan, child: U32, tag: U32) -> Unit {
   // The span has already passed its arena bound. Check before subtraction.
   let valid = if child < span.start {
     false
@@ -46,6 +47,11 @@ fn self_host_lowered_child_index(context: SelfHostLoweredChildContext, parent: U
       (u32_into_u64(tag) << 32u64) | u32_into_u64(span.length),
     )
   }
+}
+
+fn self_host_lowered_child_index(context: SelfHostLoweredChildContext, parent: U32, span: SelfHostHirSpan, child: U32, tag: U32) -> Unit {
+  self_host_lowered_child_owned(context, parent, span, child, tag)
+  self_host_lowered_syntax_child(context, parent, child, tag)
 }
 
 fn self_host_lowered_child_expression(context: SelfHostLoweredChildContext, parent: U32, child: U32) -> Unit {
@@ -158,8 +164,11 @@ fn self_host_lowered_child_expression_edges(context: SelfHostLoweredChildContext
     SelfHostPlannedExpressionKind::PlannedArrayLiteral(arguments) => self_host_lowered_child_arguments(context, parent, arguments)
     SelfHostPlannedExpressionKind::PlannedObjectNew(fields) => self_host_lowered_child_fields(context, parent, fields)
     SelfHostPlannedExpressionKind::PlannedConstruct(target, fields, _) => {
-      // A unit constructor may use its own expression ID as source metadata.
-      self_host_lowered_child_optional_expression(context, parent, target)
+      // Constructor targets are source metadata, not evaluations. A unit
+      // constructor can use its own ID. Still prove ownership when present.
+      if target != 4294967295u32 {
+        self_host_lowered_child_owned(context, parent, context.body.expressions, target, 1u32)
+      }
       self_host_lowered_child_fields(context, parent, fields)
     }
     SelfHostPlannedExpressionKind::PlannedBinaryExpression(_, left, right) => self_host_lowered_child_pair(context, parent, left, right)
@@ -221,6 +230,7 @@ fn self_host_verify_lowered_body_children(module_: SelfHostPlannedModuleLowering
   let context = SelfHostLoweredChildContext::{
     module_: module_
     body: body
+    syntax_walk: Option::None
     phase: 6u32
     lambda: lambda
     locals: SelfHostHirSpan::{
@@ -243,86 +253,73 @@ fn self_host_verify_lowered_body_children(module_: SelfHostPlannedModuleLowering
     }
     _ => break self_host_semantic_unit()
   }
+  self_host_verify_lowered_syntax_graph(context)
+}
+
+fn self_host_lowered_child_block_edges(context: SelfHostLoweredChildContext, index: U32) -> Unit {
+  let module_ = context.module_
+  let block = module_.blocks[index]
+  self_host_lowered_child_span(context, 4294967295u32, block.items, module_.block_items.length(), 11u32)
   let _ = while 0u32 {
-    offset if offset < body.expressions.length => {
-      let expression = body.expressions.start + offset
-      self_host_lowered_child_expression_edges(context, expression, module_.expressions[expression].kind)
-      continue offset + 1u32
+    item if item < block.items.length => {
+      match module_.block_items[block.items.start + item].kind {
+        SelfHostPlannedBlockItemKind::PlannedLetItem(local, _, value) => {
+          self_host_lowered_child_local(context, 4294967295u32, local)
+          self_host_lowered_child_expression(context, 4294967295u32, value)
+        }
+        SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => self_host_lowered_child_expression(context, 4294967295u32, value)
+      }
+      continue item + 1u32
     }
     _ => break self_host_semantic_unit()
   }
-  let _ = while 0u32 {
-    offset if offset < body.blocks.length => {
-      let block = module_.blocks[body.blocks.start + offset]
-      self_host_lowered_child_span(context, 4294967295u32, block.items, module_.block_items.length(), 11u32)
+}
+
+fn self_host_lowered_child_pattern_edges(context: SelfHostLoweredChildContext, index: U32) -> Unit {
+  let module_ = context.module_
+  let pattern = module_.patterns[index]
+  match pattern.reference {
+    SelfHostBodyPatternReference::PatternBindingReference(local) => self_host_lowered_child_local(context, 4294967295u32, local)
+    _ => {}
+  }
+  match pattern.source {
+    SelfHostHirPattern::LiteralPattern(expression, _) => self_host_lowered_child_expression(context, 4294967295u32, expression)
+    SelfHostHirPattern::QualifiedPattern(base, _, _) => self_host_lowered_child_pattern(context, base)
+    SelfHostHirPattern::TuplePattern(base, children, _) => {
+      if base != 4294967295u32 {
+        self_host_lowered_child_pattern(context, base)
+      }
+      self_host_lowered_child_patterns(context, children)
+    }
+    SelfHostHirPattern::ProductPattern(children, _) => self_host_lowered_child_patterns(context, children)
+    SelfHostHirPattern::AlternativePattern(base, alternatives, _) => {
+      self_host_lowered_child_pattern(context, base)
+      self_host_lowered_child_patterns(context, alternatives)
+    }
+    SelfHostHirPattern::StructPattern(base, fields, _, _, _) => {
+      if base != 4294967295u32 {
+        self_host_lowered_child_pattern(context, base)
+      }
+      self_host_lowered_child_span(context, 4294967295u32, fields, module_.pattern_fields.length(), 15u32)
       let _ = while 0u32 {
-        item if item < block.items.length => {
-          match module_.block_items[block.items.start + item].kind {
-            SelfHostPlannedBlockItemKind::PlannedLetItem(local, _, value) => {
-              self_host_lowered_child_local(context, 4294967295u32, local)
-              self_host_lowered_child_expression(context, 4294967295u32, value)
-            }
-            SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => self_host_lowered_child_expression(context, 4294967295u32, value)
-          }
-          continue item + 1u32
+        index if index < fields.length => {
+          self_host_lowered_child_pattern(context, module_.pattern_fields[fields.start + index].pattern)
+          continue index + 1u32
         }
         _ => break self_host_semantic_unit()
       }
-      continue offset + 1u32
     }
-    _ => break self_host_semantic_unit()
+    SelfHostHirPattern::WildcardPattern(_) => {}
+    SelfHostHirPattern::BindingPattern(_, _) => {}
+    SelfHostHirPattern::ImportAliasPattern(_, _) => {}
+    SelfHostHirPattern::RestPattern(_) => {}
   }
-  let _ = while 0u32 {
-    offset if offset < body.patterns.length => {
-      let pattern = module_.patterns[body.patterns.start + offset]
-      match pattern.reference {
-        SelfHostBodyPatternReference::PatternBindingReference(local) => self_host_lowered_child_local(context, 4294967295u32, local)
-        _ => {}
-      }
-      match pattern.source {
-        SelfHostHirPattern::LiteralPattern(expression, _) => self_host_lowered_child_expression(context, 4294967295u32, expression)
-        SelfHostHirPattern::QualifiedPattern(base, _, _) => self_host_lowered_child_pattern(context, base)
-        SelfHostHirPattern::TuplePattern(base, children, _) => {
-          if base != 4294967295u32 {
-            self_host_lowered_child_pattern(context, base)
-          }
-          self_host_lowered_child_patterns(context, children)
-        }
-        SelfHostHirPattern::ProductPattern(children, _) => self_host_lowered_child_patterns(context, children)
-        SelfHostHirPattern::AlternativePattern(base, alternatives, _) => {
-          self_host_lowered_child_pattern(context, base)
-          self_host_lowered_child_patterns(context, alternatives)
-        }
-        SelfHostHirPattern::StructPattern(base, fields, _, _, _) => {
-          if base != 4294967295u32 {
-            self_host_lowered_child_pattern(context, base)
-          }
-          self_host_lowered_child_span(context, 4294967295u32, fields, module_.pattern_fields.length(), 15u32)
-          let _ = while 0u32 {
-            index if index < fields.length => {
-              self_host_lowered_child_pattern(context, module_.pattern_fields[fields.start + index].pattern)
-              continue index + 1u32
-            }
-            _ => break self_host_semantic_unit()
-          }
-        }
-        SelfHostHirPattern::WildcardPattern(_) => {}
-        SelfHostHirPattern::BindingPattern(_, _) => {}
-        SelfHostHirPattern::ImportAliasPattern(_, _) => {}
-        SelfHostHirPattern::RestPattern(_) => {}
-      }
-      continue offset + 1u32
-    }
-    _ => break self_host_semantic_unit()
-  }
-  let _ = while 0u32 {
-    offset if offset < body.pattern_arms.length => {
-      let arm = module_.pattern_arms[body.pattern_arms.start + offset]
-      self_host_lowered_child_pattern(context, arm.pattern)
-      self_host_lowered_child_optional_expression(context, 4294967295u32, arm.guard_condition)
-      self_host_lowered_child_expression(context, 4294967295u32, arm.body)
-      continue offset + 1u32
-    }
-    _ => break self_host_semantic_unit()
-  }
+}
+
+fn self_host_lowered_child_arm_edges(context: SelfHostLoweredChildContext, index: U32) -> Unit {
+  let module_ = context.module_
+  let arm = module_.pattern_arms[index]
+  self_host_lowered_child_pattern(context, arm.pattern)
+  self_host_lowered_child_optional_expression(context, 4294967295u32, arm.guard_condition)
+  self_host_lowered_child_expression(context, 4294967295u32, arm.body)
 }
