@@ -542,6 +542,9 @@ fn emit_starshine_program_function_body(
         module_index: function_.module_index,
         helper_plan: Some(helper_plan),
         result_function: Some(function_),
+        parameters: starshine_call_frame_parameters(
+          module_fragments, function_.parameters,
+        ),
       },
       body,
       -1,
@@ -867,6 +870,7 @@ fn emit_starshine_program_initializer_body(
         module_index: initializer.module_index,
         helper_plan: None,
         result_function: None,
+        parameters: StarshineCallFrameParameters::empty(),
       },
       body,
       -1,

@@ -127,6 +127,7 @@ priv struct StarshineExpressionEmissionContext {
   module_index : Int
   helper_plan : StarshineProgramAdapterHelperPlan?
   result_function : @semantic.PlannedProgramWasmFunction?
+  parameters : StarshineCallFrameParameters
 }
 
 ///|
@@ -1134,6 +1135,7 @@ fn starshine_finish_program_call(
   type_arguments : @semantic.HirSpan?,
   generic_specialization : StarshineGenericSpecialization?,
   fragments : Array[Array[@lib.Instruction]],
+  caller_parameters : StarshineCallFrameParameters,
   tail : Bool,
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   let output : Array[@lib.Instruction] = []
@@ -1159,6 +1161,7 @@ fn starshine_finish_program_call(
   }
   let runtime_evidence = match starshine_call_runtime_evidence(
     planned, body, caller_specialization_abi_key, expression,
+    caller_parameters,
   ) {
     Ok(value) => value
     Err(failure) => return Err(failure)
@@ -7163,6 +7166,7 @@ fn starshine_emit_body_instructions(
               Some(type_arguments),
               generic_specialization,
               fragments,
+              context.parameters,
               false,
             )
           None => starshine_finish_call(planned, declaration, fragments, false)
@@ -7202,6 +7206,7 @@ fn starshine_emit_body_instructions(
               Some(type_arguments),
               generic_specialization,
               fragments,
+              context.parameters,
               true,
             )
           None => starshine_finish_call(planned, declaration, fragments, true)
@@ -8504,6 +8509,7 @@ fn emit_starshine_lambda_body(
         module_index: program_module_index,
         helper_plan: None,
         result_function: None,
+        parameters: starshine_call_frame_parameters(planned, fragment.parameters),
       },
       body,
       lambda,
@@ -8587,6 +8593,11 @@ fn emit_starshine_function_body(
         module_index: -1,
         helper_plan: None,
         result_function: None,
+        parameters: match planned.function_of(body.declaration) {
+          Some(function_) =>
+            starshine_call_frame_parameters(planned, function_.parameters)
+          None => StarshineCallFrameParameters::empty()
+        },
       },
       body,
       -1,

@@ -68,6 +68,7 @@ test "a missing exact generic call cannot fall back to its only carrier match" {
       Some(types),
       None,
       [],
+      StarshineCallFrameParameters::empty(),
       false,
     ),
     Err(

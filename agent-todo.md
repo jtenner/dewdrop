@@ -292,6 +292,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   the saved target witness. Linking and emission check spans, counts, and
   exact operands; different replays cannot overwrite the recipe. See the
   [trait operand log](docs/research/frozen-trait-call-operands-2026-09-08.md).
+  Emission now also checks each forwarded index against the actual caller's
+  parameter span, including separate lambda frames. See the
+  [frame-bound log](docs/research/trait-call-frame-bounds-2026-09-08.md).
   Public generic lambda factories still need runtime trait dictionaries in
   their escaping closure recipe. Concrete lambda instances and public generic
   function-value factories now work; the external runtime lambda case is
