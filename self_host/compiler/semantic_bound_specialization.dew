@@ -90,7 +90,7 @@ fn self_host_specialization_parameter_evidence_type(caller: Option<SelfHostPlann
 
 fn self_host_program_specialization_call_evidence_types(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, caller: Option<SelfHostPlannedCallable>, specialization: U32, requests: Array<SelfHostProgramSpecializationRequest>, target: U64, arguments: SelfHostHirSpan) -> Array<SelfHostSpecializationEvidenceType> {
   let result = self_host_empty_specialization_evidence_types()
-  if lowering.compile_time.sensitive.contains_key(target) || lowering.compile_time.logical_arguments.contains_key(target) {
+  if lowering.compile_time.sensitive.contains_key(target) {
     let bindings = self_host_compile_time_caller_bindings(caller, specialization, requests)
     match self_host_read_compile_time_arguments(module_, arguments, bindings) {
       Result::Ok(types) => {

@@ -109,6 +109,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   Array layout helpers. The provider constructor no longer accepts collection
   carrier or Option layout arguments. See the
   [provider log](docs/research/map-bridge-removal-2026-09-07.md).
+  The obsolete `dew_map_` query-demand rule and its unused separate logical-key
+  propagation state are removed. Map uses the normal bound-call evidence path.
+  See the [query rule log](docs/research/map-query-rule-removal-2026-09-08.md).
 - [x] Move Set storage and iteration into Dew using Map with Unit values.
   Eight shared checks pass in both compilers. Special Set inference/layout/IR,
   the remaining native hash-table runtime, and its extra target arrays are gone.

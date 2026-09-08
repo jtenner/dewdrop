@@ -9,6 +9,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class MapBuiltinPolicyTests(unittest.TestCase):
+    def test_query_demand_has_no_removed_map_runtime_rule(self):
+        source = (ROOT / "self_host/compiler/semantic_compile_time_specialization.dew").read_text()
+        self.assertFalse('b"dew_map_"' in source,
+                         "query demand still depends on the removed Map runtime prefix")
+
     def test_provider_has_no_old_map_or_array_layout(self):
         for path in (ROOT / "starshine-mb/src/ffi_bridge").glob("*.mbt"):
             if path.name.endswith("test.mbt"):

@@ -40,10 +40,15 @@ test "dead typed query branches are distinct from invalid live values" {
   }
 }
 
-test "runtime logical keys do not turn callers into compile-time queries" {
+test "ordinary forwarding does not acquire removed runtime query demand" {
   let lowering = self_host_physical_test_lowering(
-    b"struct Map<K, V> {}\nbuiltin raw<K, V>(values: Map<K, V>, key: K) -> V = \"dew_map_get_unchecked\"\nfn inner<K, V>(values: Map<K, V>, key: K) -> V {\n  raw(values, key)\n}\nfn outer<K, V>(values: Map<K, V>, key: K) -> V {\n  inner(values, key)\n}\npub fn run(left: Map<String, I32>, right: Map<Bytes, I32>) -> I32 {\n  outer(left, \"key\") + outer(right, b\"key\")\n}\n",
+    b"fn inner<T>(value: T) -> T {\n  value\n}\nfn outer<T>(value: T) -> T {\n  inner(value)\n}\npub fn run(left: String, right: Bytes) -> I32 {\n  outer(left)\n  outer(right)\n  42i32\n}\n",
   )
+  assert(lowering.collected.modules.at(0u32).diagnostic_count() == 0u32, "ordinary forwarding source is valid")
+  match self_host_validate_program_inference(lowering) {
+    Option::Some(error) => assert(false, error)
+    Option::None => {}
+  }
   let mut inner = 0u64
   let mut outer = 0u64
   for callable in lowering.modules[0u32].functions.callables {
@@ -55,19 +60,22 @@ test "runtime logical keys do not turn callers into compile-time queries" {
     }
   }
   assert(inner != 0u64 && outer != 0u64, "runtime forwarding declarations exist")
-  assert(lowering.compile_time.logical_arguments.contains_key(inner), "direct runtime caller keeps logical arguments")
-  assert(lowering.compile_time.logical_arguments.contains_key(outer), "transitive runtime caller keeps logical arguments")
-  assert(!lowering.compile_time.sensitive.contains_key(inner) && !lowering.compile_time.sensitive.contains_key(outer), "runtime arguments do not authorize query folding")
+  assert(lowering.compile_time.targets.length() == 0u32, "ordinary forwarding has no query builtin")
+  assert(lowering.compile_time.sensitive.length() == 0u32, "ordinary forwarding has no query or bound-call demand")
   let plan = self_host_plan_program_specialization(lowering, false)
   let mut count = 0u32
   for request in plan.requests {
     if request.declaration == inner {
-      assert(request.evidence_types.length() == 2u32, "runtime key and value keep exact types")
+      assert(request.evidence_types.length() == 0u32, "identity forwarding needs no logical witness")
       count = count + 1u32
     }
   }
-  assert(count == 2u32, "String and Bytes remain distinct despite equal physical carriers")
-  assert(plan.lowering.compile_time.instances.length() == 0u32, "runtime-only logical keys create no query instances")
+  assert(count == 1u32, "identity forwarding can share its reference-carrier instance")
+  assert(plan.lowering.compile_time.instances.length() == 0u32, "ordinary forwarding creates no query instance")
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(plan), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "ordinary forwarding link is valid")
+  assert(self_host_plan_program_wasm_bodies(link).diagnostics.length() == 0u32, "ordinary forwarding physical bodies are valid")
 }
 
 test "local numeric query guards retain source dependence" {
