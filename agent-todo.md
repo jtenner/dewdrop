@@ -233,6 +233,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   direct-get recovery helpers and their unproved I32 default are removed.
   Other unresolved receiver/collection recovery remains. See the
   [method-result log](docs/research/method-result-spelling-2026-09-08.md).
+  Interface publication now follows source `pub` visibility in both compilers.
+  Existing library exports are explicit; a `dew.std.` path cannot expose
+  private declarations. Compiler-owned root/optimizer filtering and implicit
+  standard dependency selection still remain. See the
+  [visibility log](docs/research/module-source-visibility-2026-09-08.md).
 - [ ] Delete unused legacy builtin plans/builders after each migration. Enforce
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.

@@ -27,7 +27,7 @@ class ScalarBuiltinPolicyTests(unittest.TestCase):
         source = (ROOT / "std/preamble/70-into-builtins.dew").read_text()
         branches = re.findall(r'name == b"([^"]+)" \{\s+Some\(\[(.*?)\]\)', native, re.S)
         self.assertEqual(len(branches), 23)
-        targets = re.findall(r'^builtin .* = "([^"]+)"$', source, re.M)
+        targets = re.findall(r'^(?:pub )?builtin .* = "([^"]+)"$', source, re.M)
         self.assertEqual(set(targets), {name for name, _ in branches})
         self.assertEqual(len(targets), 23)
         for name, body in branches:

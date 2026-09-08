@@ -1,7 +1,7 @@
-fn f32x4_from_v128(value: V128) -> F32x4 {
+pub fn f32x4_from_v128(value: V128) -> F32x4 {
   unsafe_bitcast::<V128, F32x4>(value)
 }
-fn f32x4_to_v128(value: F32x4) -> V128 {
+pub fn f32x4_to_v128(value: F32x4) -> V128 {
   unsafe_bitcast::<F32x4, V128>(value)
 }
 impl Into<I8x16> for F32x4 {
@@ -49,68 +49,68 @@ impl Into<F64x2> for F32x4 {
     unsafe_bitcast::<F32x4, F64x2>(self)
   }
 }
-fn f32x4_load(address: U32) -> F32x4 {
+pub fn f32x4_load(address: U32) -> F32x4 {
   unsafe_bitcast::<V128, F32x4>(v128_load(address))
 }
-fn f32x4_store(address: U32, value: F32x4) -> Unit {
+pub fn f32x4_store(address: U32, value: F32x4) -> Unit {
   v128_store(address, unsafe_bitcast::<F32x4, V128>(value))
 }
-fn f32x4_and(left: F32x4, right: F32x4) -> F32x4 {
+pub fn f32x4_and(left: F32x4, right: F32x4) -> F32x4 {
   unsafe_bitcast::<V128, F32x4>(v128_and(unsafe_bitcast::<F32x4, V128>(left), unsafe_bitcast::<F32x4, V128>(right)))
 }
-fn f32x4_or(left: F32x4, right: F32x4) -> F32x4 {
+pub fn f32x4_or(left: F32x4, right: F32x4) -> F32x4 {
   unsafe_bitcast::<V128, F32x4>(v128_or(unsafe_bitcast::<F32x4, V128>(left), unsafe_bitcast::<F32x4, V128>(right)))
 }
-fn f32x4_xor(left: F32x4, right: F32x4) -> F32x4 {
+pub fn f32x4_xor(left: F32x4, right: F32x4) -> F32x4 {
   unsafe_bitcast::<V128, F32x4>(v128_xor(unsafe_bitcast::<F32x4, V128>(left), unsafe_bitcast::<F32x4, V128>(right)))
 }
-builtin f32x4_not(value: F32x4) -> F32x4 = "v128.not"
-builtin f32x4_andnot(left: F32x4, right: F32x4) -> F32x4 = "v128.andnot"
-builtin f32x4_bitselect(yes: F32x4, no: F32x4, mask: F32x4) -> F32x4 = "v128.bitselect"
-builtin f32x4_any_true(value: F32x4) -> Bool = "v128.any_true"
-builtin f32x4_splat(value: F32) -> F32x4 = "f32x4.splat"
-builtin f32x4_load_splat(address: U32) -> F32x4 = "v128.load32_splat"
-builtin f32x4_load_zero(address: U32) -> F32x4 = "v128.load32_zero"
-builtin f32x4_extract_0(value: F32x4) -> F32 = "f32x4.extract_lane 0"
-builtin f32x4_replace_0(value: F32x4, lane: F32) -> F32x4 = "f32x4.replace_lane 0"
-builtin f32x4_load_lane_0(address: U32, value: F32x4) -> F32x4 = "v128.load32_lane 0"
-builtin f32x4_store_lane_0(address: U32, value: F32x4) -> Unit = "v128.store32_lane 0"
-builtin f32x4_extract_1(value: F32x4) -> F32 = "f32x4.extract_lane 1"
-builtin f32x4_replace_1(value: F32x4, lane: F32) -> F32x4 = "f32x4.replace_lane 1"
-builtin f32x4_load_lane_1(address: U32, value: F32x4) -> F32x4 = "v128.load32_lane 1"
-builtin f32x4_store_lane_1(address: U32, value: F32x4) -> Unit = "v128.store32_lane 1"
-builtin f32x4_extract_2(value: F32x4) -> F32 = "f32x4.extract_lane 2"
-builtin f32x4_replace_2(value: F32x4, lane: F32) -> F32x4 = "f32x4.replace_lane 2"
-builtin f32x4_load_lane_2(address: U32, value: F32x4) -> F32x4 = "v128.load32_lane 2"
-builtin f32x4_store_lane_2(address: U32, value: F32x4) -> Unit = "v128.store32_lane 2"
-builtin f32x4_extract_3(value: F32x4) -> F32 = "f32x4.extract_lane 3"
-builtin f32x4_replace_3(value: F32x4, lane: F32) -> F32x4 = "f32x4.replace_lane 3"
-builtin f32x4_load_lane_3(address: U32, value: F32x4) -> F32x4 = "v128.load32_lane 3"
-builtin f32x4_store_lane_3(address: U32, value: F32x4) -> Unit = "v128.store32_lane 3"
-builtin f32x4_convert_i32x4_s(value: I32x4) -> F32x4 = "f32x4.convert_i32x4_s"
-builtin f32x4_convert_i32x4_u(value: U32x4) -> F32x4 = "f32x4.convert_i32x4_u"
-builtin f32x4_demote_f64x2_zero(value: F64x2) -> F32x4 = "f32x4.demote_f64x2_zero"
-builtin f32x4_add(left: F32x4, right: F32x4) -> F32x4 = "f32x4.add"
-builtin f32x4_sub(left: F32x4, right: F32x4) -> F32x4 = "f32x4.sub"
-builtin f32x4_mul(left: F32x4, right: F32x4) -> F32x4 = "f32x4.mul"
-builtin f32x4_div(left: F32x4, right: F32x4) -> F32x4 = "f32x4.div"
-builtin f32x4_min(left: F32x4, right: F32x4) -> F32x4 = "f32x4.min"
-builtin f32x4_max(left: F32x4, right: F32x4) -> F32x4 = "f32x4.max"
-builtin f32x4_pmin(left: F32x4, right: F32x4) -> F32x4 = "f32x4.pmin"
-builtin f32x4_pmax(left: F32x4, right: F32x4) -> F32x4 = "f32x4.pmax"
-builtin f32x4_eq(left: F32x4, right: F32x4) -> F32x4 = "f32x4.eq"
-builtin f32x4_ne(left: F32x4, right: F32x4) -> F32x4 = "f32x4.ne"
-builtin f32x4_lt(left: F32x4, right: F32x4) -> F32x4 = "f32x4.lt"
-builtin f32x4_le(left: F32x4, right: F32x4) -> F32x4 = "f32x4.le"
-builtin f32x4_gt(left: F32x4, right: F32x4) -> F32x4 = "f32x4.gt"
-builtin f32x4_ge(left: F32x4, right: F32x4) -> F32x4 = "f32x4.ge"
-builtin f32x4_abs(value: F32x4) -> F32x4 = "f32x4.abs"
-builtin f32x4_neg(value: F32x4) -> F32x4 = "f32x4.neg"
-builtin f32x4_sqrt(value: F32x4) -> F32x4 = "f32x4.sqrt"
-builtin f32x4_ceil(value: F32x4) -> F32x4 = "f32x4.ceil"
-builtin f32x4_floor(value: F32x4) -> F32x4 = "f32x4.floor"
-builtin f32x4_trunc(value: F32x4) -> F32x4 = "f32x4.trunc"
-builtin f32x4_nearest(value: F32x4) -> F32x4 = "f32x4.nearest"
+pub builtin f32x4_not(value: F32x4) -> F32x4 = "v128.not"
+pub builtin f32x4_andnot(left: F32x4, right: F32x4) -> F32x4 = "v128.andnot"
+pub builtin f32x4_bitselect(yes: F32x4, no: F32x4, mask: F32x4) -> F32x4 = "v128.bitselect"
+pub builtin f32x4_any_true(value: F32x4) -> Bool = "v128.any_true"
+pub builtin f32x4_splat(value: F32) -> F32x4 = "f32x4.splat"
+pub builtin f32x4_load_splat(address: U32) -> F32x4 = "v128.load32_splat"
+pub builtin f32x4_load_zero(address: U32) -> F32x4 = "v128.load32_zero"
+pub builtin f32x4_extract_0(value: F32x4) -> F32 = "f32x4.extract_lane 0"
+pub builtin f32x4_replace_0(value: F32x4, lane: F32) -> F32x4 = "f32x4.replace_lane 0"
+pub builtin f32x4_load_lane_0(address: U32, value: F32x4) -> F32x4 = "v128.load32_lane 0"
+pub builtin f32x4_store_lane_0(address: U32, value: F32x4) -> Unit = "v128.store32_lane 0"
+pub builtin f32x4_extract_1(value: F32x4) -> F32 = "f32x4.extract_lane 1"
+pub builtin f32x4_replace_1(value: F32x4, lane: F32) -> F32x4 = "f32x4.replace_lane 1"
+pub builtin f32x4_load_lane_1(address: U32, value: F32x4) -> F32x4 = "v128.load32_lane 1"
+pub builtin f32x4_store_lane_1(address: U32, value: F32x4) -> Unit = "v128.store32_lane 1"
+pub builtin f32x4_extract_2(value: F32x4) -> F32 = "f32x4.extract_lane 2"
+pub builtin f32x4_replace_2(value: F32x4, lane: F32) -> F32x4 = "f32x4.replace_lane 2"
+pub builtin f32x4_load_lane_2(address: U32, value: F32x4) -> F32x4 = "v128.load32_lane 2"
+pub builtin f32x4_store_lane_2(address: U32, value: F32x4) -> Unit = "v128.store32_lane 2"
+pub builtin f32x4_extract_3(value: F32x4) -> F32 = "f32x4.extract_lane 3"
+pub builtin f32x4_replace_3(value: F32x4, lane: F32) -> F32x4 = "f32x4.replace_lane 3"
+pub builtin f32x4_load_lane_3(address: U32, value: F32x4) -> F32x4 = "v128.load32_lane 3"
+pub builtin f32x4_store_lane_3(address: U32, value: F32x4) -> Unit = "v128.store32_lane 3"
+pub builtin f32x4_convert_i32x4_s(value: I32x4) -> F32x4 = "f32x4.convert_i32x4_s"
+pub builtin f32x4_convert_i32x4_u(value: U32x4) -> F32x4 = "f32x4.convert_i32x4_u"
+pub builtin f32x4_demote_f64x2_zero(value: F64x2) -> F32x4 = "f32x4.demote_f64x2_zero"
+pub builtin f32x4_add(left: F32x4, right: F32x4) -> F32x4 = "f32x4.add"
+pub builtin f32x4_sub(left: F32x4, right: F32x4) -> F32x4 = "f32x4.sub"
+pub builtin f32x4_mul(left: F32x4, right: F32x4) -> F32x4 = "f32x4.mul"
+pub builtin f32x4_div(left: F32x4, right: F32x4) -> F32x4 = "f32x4.div"
+pub builtin f32x4_min(left: F32x4, right: F32x4) -> F32x4 = "f32x4.min"
+pub builtin f32x4_max(left: F32x4, right: F32x4) -> F32x4 = "f32x4.max"
+pub builtin f32x4_pmin(left: F32x4, right: F32x4) -> F32x4 = "f32x4.pmin"
+pub builtin f32x4_pmax(left: F32x4, right: F32x4) -> F32x4 = "f32x4.pmax"
+pub builtin f32x4_eq(left: F32x4, right: F32x4) -> F32x4 = "f32x4.eq"
+pub builtin f32x4_ne(left: F32x4, right: F32x4) -> F32x4 = "f32x4.ne"
+pub builtin f32x4_lt(left: F32x4, right: F32x4) -> F32x4 = "f32x4.lt"
+pub builtin f32x4_le(left: F32x4, right: F32x4) -> F32x4 = "f32x4.le"
+pub builtin f32x4_gt(left: F32x4, right: F32x4) -> F32x4 = "f32x4.gt"
+pub builtin f32x4_ge(left: F32x4, right: F32x4) -> F32x4 = "f32x4.ge"
+pub builtin f32x4_abs(value: F32x4) -> F32x4 = "f32x4.abs"
+pub builtin f32x4_neg(value: F32x4) -> F32x4 = "f32x4.neg"
+pub builtin f32x4_sqrt(value: F32x4) -> F32x4 = "f32x4.sqrt"
+pub builtin f32x4_ceil(value: F32x4) -> F32x4 = "f32x4.ceil"
+pub builtin f32x4_floor(value: F32x4) -> F32x4 = "f32x4.floor"
+pub builtin f32x4_trunc(value: F32x4) -> F32x4 = "f32x4.trunc"
+pub builtin f32x4_nearest(value: F32x4) -> F32x4 = "f32x4.nearest"
 impl F32x4 {
   fn to_v128(self) -> V128 {
     f32x4_to_v128(self)

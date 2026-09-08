@@ -25,7 +25,7 @@ pub struct PackageArtifact {
   files: Array<PackageArtifactFile>
 }
 
-struct PackageArtifactReader {
+pub struct PackageArtifactReader {
   bytes: Bytes
   mut offset: U32
   mut failed: Bool
@@ -103,38 +103,38 @@ impl PackageArtifact {
   }
 }
 
-fn package_artifact_unit() -> Unit {
+pub fn package_artifact_unit() -> Unit {
 }
 
-fn package_artifact_u32_to_u8(value: U32) -> U8 {
+pub fn package_artifact_u32_to_u8(value: U32) -> U8 {
   value.into()
 }
 
-fn package_artifact_u8_to_u32(value: U8) -> U32 {
+pub fn package_artifact_u8_to_u32(value: U8) -> U32 {
   value.into()
 }
 
-fn package_artifact_u32_to_u64(value: U32) -> U64 {
+pub fn package_artifact_u32_to_u64(value: U32) -> U64 {
   value.into()
 }
 
-fn package_artifact_write_u32(output: BytesBuilder, value: U32) -> Unit {
+pub fn package_artifact_write_u32(output: BytesBuilder, value: U32) -> Unit {
   output.append_byte(package_artifact_u32_to_u8(value & 255u32))
   output.append_byte(package_artifact_u32_to_u8((value >> 8u32) & 255u32))
   output.append_byte(package_artifact_u32_to_u8((value >> 16u32) & 255u32))
   output.append_byte(package_artifact_u32_to_u8((value >> 24u32) & 255u32))
 }
 
-fn package_artifact_write_bytes(output: BytesBuilder, value: Bytes) -> Unit {
+pub fn package_artifact_write_bytes(output: BytesBuilder, value: Bytes) -> Unit {
   package_artifact_write_u32(output, value.byte_length())
   output.append(value)
 }
 
-fn package_artifact_write_string(output: BytesBuilder, value: String) -> Unit {
+pub fn package_artifact_write_string(output: BytesBuilder, value: String) -> Unit {
   package_artifact_write_bytes(output, value.as_bytes())
 }
 
-fn package_artifact_read_u32(reader: PackageArtifactReader) -> U32 {
+pub fn package_artifact_read_u32(reader: PackageArtifactReader) -> U32 {
   if reader.failed || reader.offset > reader.bytes.byte_length() || reader.bytes.byte_length() - reader.offset < 4u32 {
     reader.failed = true
     0u32
@@ -149,7 +149,7 @@ fn package_artifact_read_u32(reader: PackageArtifactReader) -> U32 {
   }
 }
 
-fn package_artifact_read_bytes(reader: PackageArtifactReader, limit: U32) -> Bytes {
+pub fn package_artifact_read_bytes(reader: PackageArtifactReader, limit: U32) -> Bytes {
   let length = package_artifact_read_u32(reader)
   if reader.failed || length > limit || reader.offset > reader.bytes.byte_length() || length > reader.bytes.byte_length() - reader.offset {
     reader.failed = true
@@ -161,7 +161,7 @@ fn package_artifact_read_bytes(reader: PackageArtifactReader, limit: U32) -> Byt
   }
 }
 
-fn package_artifact_read_string(reader: PackageArtifactReader, limit: U32) -> String {
+pub fn package_artifact_read_string(reader: PackageArtifactReader, limit: U32) -> String {
   let value = package_artifact_read_bytes(reader, limit)
   if reader.failed || !value.is_valid_utf8() {
     reader.failed = true
@@ -171,7 +171,7 @@ fn package_artifact_read_string(reader: PackageArtifactReader, limit: U32) -> St
   }
 }
 
-fn package_artifact_digest_matches(payload: Bytes, encoded: Bytes) -> Bool {
+pub fn package_artifact_digest_matches(payload: Bytes, encoded: Bytes) -> Bool {
   let digest = sha256(payload)
   while 0u32 {
     index if index < 32u32 => if encoded.byte_at(payload.byte_length() + index) == digest.get_unchecked(index) {
@@ -183,7 +183,7 @@ fn package_artifact_digest_matches(payload: Bytes, encoded: Bytes) -> Bool {
   }
 }
 
-fn package_artifact_is_hex(value: String, length: U32) -> Bool {
+pub fn package_artifact_is_hex(value: String, length: U32) -> Bool {
   if value.byte_length() != length {
     false
   } else {
@@ -201,7 +201,7 @@ fn package_artifact_is_hex(value: String, length: U32) -> Bool {
   }
 }
 
-fn package_artifact_path_is_valid(value: String) -> Bool {
+pub fn package_artifact_path_is_valid(value: String) -> Bool {
   value.byte_length() > 0u32 &&
   value.byte_length() <= package_path_max_bytes() &&
   value.byte_at(0u32) != 47u8 &&
@@ -213,7 +213,7 @@ fn package_artifact_path_is_valid(value: String) -> Bool {
   !value.ends_with("/..")
 }
 
-fn package_artifact_read_dependencies(
+pub fn package_artifact_read_dependencies(
   reader: PackageArtifactReader,
   count: U32,
   index: U32,
@@ -238,7 +238,7 @@ fn package_artifact_read_dependencies(
   }
 }
 
-fn package_artifact_read_files(
+pub fn package_artifact_read_files(
   reader: PackageArtifactReader,
   count: U32,
   index: U32,
@@ -258,7 +258,7 @@ fn package_artifact_read_files(
   }
 }
 
-fn package_artifact_finish_decode(
+pub fn package_artifact_finish_decode(
   payload: Bytes,
   reader: PackageArtifactReader,
   name: String,
@@ -329,7 +329,7 @@ pub fn package_artifact_try_decode(bytes: Bytes) -> Result<PackageArtifact, Form
   }
 }
 
-fn package_artifact_dependency_size(
+pub fn package_artifact_dependency_size(
   values: Array<PackageDependency>,
   index: U32,
 ) -> U64 {
@@ -343,7 +343,7 @@ fn package_artifact_dependency_size(
   }
 }
 
-fn package_artifact_file_size(
+pub fn package_artifact_file_size(
   values: Array<PackageArtifactFile>,
   index: U32,
 ) -> U64 {
@@ -357,7 +357,7 @@ fn package_artifact_file_size(
   }
 }
 
-fn package_artifact_encoded_size(value: PackageArtifact) -> U64 {
+pub fn package_artifact_encoded_size(value: PackageArtifact) -> U64 {
   68u64 + package_artifact_u32_to_u64(value.name.byte_length()) +
   package_artifact_u32_to_u64(value.version.to_string().byte_length()) +
   package_artifact_u32_to_u64(value.source.byte_length()) +
@@ -367,7 +367,7 @@ fn package_artifact_encoded_size(value: PackageArtifact) -> U64 {
   package_artifact_file_size(value.files, 0u32)
 }
 
-fn package_artifact_dependency_seen(
+pub fn package_artifact_dependency_seen(
   values: Array<PackageDependency>,
   limit: U32,
   name: String,
@@ -381,7 +381,7 @@ fn package_artifact_dependency_seen(
   }
 }
 
-fn package_artifact_validate_dependencies(
+pub fn package_artifact_validate_dependencies(
   values: Array<PackageDependency>,
   index: U32,
 ) -> Result<Unit, FormatValidationErr> {
@@ -399,7 +399,7 @@ fn package_artifact_validate_dependencies(
   }
 }
 
-fn package_artifact_file_seen(
+pub fn package_artifact_file_seen(
   values: Array<PackageArtifactFile>,
   limit: U32,
   path: String,
@@ -413,7 +413,7 @@ fn package_artifact_file_seen(
   }
 }
 
-fn package_artifact_validate_files(
+pub fn package_artifact_validate_files(
   values: Array<PackageArtifactFile>,
   index: U32,
 ) -> Result<Unit, FormatValidationErr> {

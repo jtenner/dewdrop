@@ -1,19 +1,19 @@
 open dew.std.string
 
-fn ordering_string_byte_length(value: String) -> U32 {
+pub fn ordering_string_byte_length(value: String) -> U32 {
   value.byte_length()
 }
-fn ordering_string_byte_at(value: String, index: U32) -> U8 {
+pub fn ordering_string_byte_at(value: String, index: U32) -> U8 {
   value.byte_at(index)
 }
-fn ordering_string_view_byte_length(value: StringView) -> U32 {
+pub fn ordering_string_view_byte_length(value: StringView) -> U32 {
   value.byte_length()
 }
-fn ordering_string_view_byte_at(value: StringView, index: U32) -> U8 {
+pub fn ordering_string_view_byte_at(value: StringView, index: U32) -> U8 {
   value.byte_at(index)
 }
-builtin ordering_bytes_byte_length(value: Bytes) -> U32 = "dew_bytes_byte_length"
-builtin ordering_bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
+pub builtin ordering_bytes_byte_length(value: Bytes) -> U32 = "dew_bytes_byte_length"
+pub builtin ordering_bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
 
 pub enum Ordering {
   Less
@@ -100,7 +100,7 @@ pub fn bytes_comparator() -> BytesComparator {
   }
 }
 
-fn compare_string_bytes(left: String, right: String) -> Ordering {
+pub fn compare_string_bytes(left: String, right: String) -> Ordering {
   let left_length = ordering_string_byte_length(left)
   let right_length = ordering_string_byte_length(right)
   let limit = if left_length < right_length {
@@ -130,7 +130,7 @@ fn compare_string_bytes(left: String, right: String) -> Ordering {
   }
 }
 
-fn compare_string_view_bytes(left: StringView, right: StringView) -> Ordering {
+pub fn compare_string_view_bytes(left: StringView, right: StringView) -> Ordering {
   let left_length = ordering_string_view_byte_length(left)
   let right_length = ordering_string_view_byte_length(right)
   let limit = if left_length < right_length {
@@ -160,7 +160,7 @@ fn compare_string_view_bytes(left: StringView, right: StringView) -> Ordering {
   }
 }
 
-fn compare_bytes(left: Bytes, right: Bytes) -> Ordering {
+pub fn compare_bytes(left: Bytes, right: Bytes) -> Ordering {
   let left_length = ordering_bytes_byte_length(left)
   let right_length = ordering_bytes_byte_length(right)
   let limit = if left_length < right_length {

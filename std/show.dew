@@ -12,18 +12,18 @@ pub trait Show {
   fn append_show(self, formatter: ShowFormatter) -> Unit
 }
 
-fn show_unit() -> Unit {
+pub fn show_unit() -> Unit {
 }
 
-fn show_max_depth() -> U32 {
+pub fn show_max_depth() -> U32 {
   64u32
 }
 
-fn show_max_bytes() -> U32 {
+pub fn show_max_bytes() -> U32 {
   1048576u32
 }
 
-fn show_require_bytes(formatter: ShowFormatter, added: U32) -> Unit {
+pub fn show_require_bytes(formatter: ShowFormatter, added: U32) -> Unit {
   let used = formatter.builder.byte_length()
   if used > show_max_bytes() || added > show_max_bytes() - used {
     unreachable()
@@ -40,7 +40,7 @@ pub fn show<t: Show>(value: t) -> String {
   builder.finish()
 }
 
-fn show_require_depth(formatter: ShowFormatter) -> Unit {
+pub fn show_require_depth(formatter: ShowFormatter) -> Unit {
   if formatter.depth >= show_max_depth() {
     unreachable()
   } else {
@@ -70,35 +70,35 @@ pub fn show_append_ascii(formatter: ShowFormatter, value: U8) -> Unit {
   formatter.builder.append_ascii(value)
 }
 
-fn show_i8_to_i64(value: I8) -> I64 {
+pub fn show_i8_to_i64(value: I8) -> I64 {
   value.into()
 }
 
-fn show_i16_to_i64(value: I16) -> I64 {
+pub fn show_i16_to_i64(value: I16) -> I64 {
   value.into()
 }
 
-fn show_i32_to_i64(value: I32) -> I64 {
+pub fn show_i32_to_i64(value: I32) -> I64 {
   value.into()
 }
 
-fn show_u8_to_u64(value: U8) -> U64 {
+pub fn show_u8_to_u64(value: U8) -> U64 {
   value.into()
 }
 
-fn show_u16_to_u64(value: U16) -> U64 {
+pub fn show_u16_to_u64(value: U16) -> U64 {
   value.into()
 }
 
-fn show_u32_to_u64(value: U32) -> U64 {
+pub fn show_u32_to_u64(value: U32) -> U64 {
   value.into()
 }
 
-fn show_i64_to_u64(value: I64) -> U64 {
+pub fn show_i64_to_u64(value: I64) -> U64 {
   value.into()
 }
 
-fn show_u64_digit_count(value: U64) -> U32 {
+pub fn show_u64_digit_count(value: U64) -> U32 {
   if value < 10u64 {
     1u32
   } else {
@@ -106,7 +106,7 @@ fn show_u64_digit_count(value: U64) -> U32 {
   }
 }
 
-fn show_i64_byte_count(value: I64) -> U32 {
+pub fn show_i64_byte_count(value: I64) -> U32 {
   if value < 0i64 {
     1u32 + show_u64_digit_count(show_i64_to_u64(-(value + 1i64)) + 1u64)
   } else {
@@ -114,12 +114,12 @@ fn show_i64_byte_count(value: I64) -> U32 {
   }
 }
 
-fn show_append_i64(formatter: ShowFormatter, value: I64) -> Unit {
+pub fn show_append_i64(formatter: ShowFormatter, value: I64) -> Unit {
   show_require_bytes(formatter, show_i64_byte_count(value))
   formatter.builder.append_i64(value)
 }
 
-fn show_append_u64(formatter: ShowFormatter, value: U64) -> Unit {
+pub fn show_append_u64(formatter: ShowFormatter, value: U64) -> Unit {
   show_require_bytes(formatter, show_u64_digit_count(value))
   formatter.builder.append_u64(value)
 }
@@ -289,11 +289,11 @@ pub enum CompilerDiagnosticRenderError {
   LimitExceeded(U64, U32)
 }
 
-fn compiler_diagnostic_u32_to_u64(value: U32) -> U64 {
+pub fn compiler_diagnostic_u32_to_u64(value: U32) -> U64 {
   value.into()
 }
 
-fn compiler_diagnostic_level_text(level: CompilerDiagnosticLevel) -> String {
+pub fn compiler_diagnostic_level_text(level: CompilerDiagnosticLevel) -> String {
   match level {
     Error => "error"
     Warning => "warning"
@@ -302,7 +302,7 @@ fn compiler_diagnostic_level_text(level: CompilerDiagnosticLevel) -> String {
   }
 }
 
-fn compiler_diagnostic_render_size(
+pub fn compiler_diagnostic_render_size(
   diagnostic: CompilerDiagnostic,
   level: String,
 ) -> U64 {

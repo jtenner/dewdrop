@@ -118,7 +118,7 @@ pub fn fs_create_directories<f: FileSystem>(
   }
 }
 
-fn fs_unit() -> Unit {
+pub fn fs_unit() -> Unit {
 }
 
 pub fn fs_atomic_write<f: FileSystem>(

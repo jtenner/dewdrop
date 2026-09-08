@@ -9,7 +9,7 @@ pub struct WasiFileSystem {
   root: U32
 }
 
-fn wasi_fs_unit() -> Unit {
+pub fn wasi_fs_unit() -> Unit {
 }
 
 pub fn wasi_file_system(root: U32) -> WasiFileSystem {
@@ -18,7 +18,7 @@ pub fn wasi_file_system(root: U32) -> WasiFileSystem {
   }
 }
 
-fn wasi_fs_error_kind(code: U32) -> FsErrorKind {
+pub fn wasi_fs_error_kind(code: U32) -> FsErrorKind {
   match code {
     2u32 => FsErrorKind::PermissionDenied
     63u32 => FsErrorKind::PermissionDenied
@@ -38,7 +38,7 @@ fn wasi_fs_error_kind(code: U32) -> FsErrorKind {
   }
 }
 
-fn wasi_fs_error(operation: FsOperation, path: RelativePath, code: U32) -> FsError {
+pub fn wasi_fs_error(operation: FsOperation, path: RelativePath, code: U32) -> FsError {
   FsError::{
     operation: operation
     path: path.to_string()
@@ -47,7 +47,7 @@ fn wasi_fs_error(operation: FsOperation, path: RelativePath, code: U32) -> FsErr
   }
 }
 
-fn wasi_copy_path(path: RelativePath, pointer: U32) -> U32 {
+pub fn wasi_copy_path(path: RelativePath, pointer: U32) -> U32 {
   let bytes = path.as_bytes()
   while 0u32 {
     index if index < bytes.byte_length() => {
@@ -58,7 +58,7 @@ fn wasi_copy_path(path: RelativePath, pointer: U32) -> U32 {
   }
 }
 
-fn wasi_copy_bytes(value: Bytes, start: U32, pointer: U32, length: U32) -> Unit {
+pub fn wasi_copy_bytes(value: Bytes, start: U32, pointer: U32, length: U32) -> Unit {
   while 0u32 {
     index if index < length => {
       wasm_u8_store(pointer + index, value.byte_at(start + index))
@@ -68,7 +68,7 @@ fn wasi_copy_bytes(value: Bytes, start: U32, pointer: U32, length: U32) -> Unit 
   }
 }
 
-fn wasi_read_memory(pointer: U32, length: U32, builder: BytesBuilder) -> Unit {
+pub fn wasi_read_memory(pointer: U32, length: U32, builder: BytesBuilder) -> Unit {
   while 0u32 {
     index if index < length => {
       builder.append_byte(wasm_u8_load(pointer + index))
@@ -78,19 +78,19 @@ fn wasi_read_memory(pointer: U32, length: U32, builder: BytesBuilder) -> Unit {
   }
 }
 
-fn wasi_fs_u64_to_u32(value: U64) -> U32 {
+pub fn wasi_fs_u64_to_u32(value: U64) -> U32 {
   value.into()
 }
 
-fn wasi_fs_u32_to_u64(value: U32) -> U64 {
+pub fn wasi_fs_u32_to_u64(value: U32) -> U64 {
   value.into()
 }
 
-fn wasi_read_rights() -> U64 {
+pub fn wasi_read_rights() -> U64 {
   2097154u64
 }
 
-fn wasi_write_rights() -> U64 {
+pub fn wasi_write_rights() -> U64 {
   6291536u64
 }
 

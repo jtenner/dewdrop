@@ -1,7 +1,7 @@
-fn f64x2_from_v128(value: V128) -> F64x2 {
+pub fn f64x2_from_v128(value: V128) -> F64x2 {
   unsafe_bitcast::<V128, F64x2>(value)
 }
-fn f64x2_to_v128(value: F64x2) -> V128 {
+pub fn f64x2_to_v128(value: F64x2) -> V128 {
   unsafe_bitcast::<F64x2, V128>(value)
 }
 impl Into<I8x16> for F64x2 {
@@ -49,60 +49,60 @@ impl Into<F32x4> for F64x2 {
     unsafe_bitcast::<F64x2, F32x4>(self)
   }
 }
-fn f64x2_load(address: U32) -> F64x2 {
+pub fn f64x2_load(address: U32) -> F64x2 {
   unsafe_bitcast::<V128, F64x2>(v128_load(address))
 }
-fn f64x2_store(address: U32, value: F64x2) -> Unit {
+pub fn f64x2_store(address: U32, value: F64x2) -> Unit {
   v128_store(address, unsafe_bitcast::<F64x2, V128>(value))
 }
-fn f64x2_and(left: F64x2, right: F64x2) -> F64x2 {
+pub fn f64x2_and(left: F64x2, right: F64x2) -> F64x2 {
   unsafe_bitcast::<V128, F64x2>(v128_and(unsafe_bitcast::<F64x2, V128>(left), unsafe_bitcast::<F64x2, V128>(right)))
 }
-fn f64x2_or(left: F64x2, right: F64x2) -> F64x2 {
+pub fn f64x2_or(left: F64x2, right: F64x2) -> F64x2 {
   unsafe_bitcast::<V128, F64x2>(v128_or(unsafe_bitcast::<F64x2, V128>(left), unsafe_bitcast::<F64x2, V128>(right)))
 }
-fn f64x2_xor(left: F64x2, right: F64x2) -> F64x2 {
+pub fn f64x2_xor(left: F64x2, right: F64x2) -> F64x2 {
   unsafe_bitcast::<V128, F64x2>(v128_xor(unsafe_bitcast::<F64x2, V128>(left), unsafe_bitcast::<F64x2, V128>(right)))
 }
-builtin f64x2_not(value: F64x2) -> F64x2 = "v128.not"
-builtin f64x2_andnot(left: F64x2, right: F64x2) -> F64x2 = "v128.andnot"
-builtin f64x2_bitselect(yes: F64x2, no: F64x2, mask: F64x2) -> F64x2 = "v128.bitselect"
-builtin f64x2_any_true(value: F64x2) -> Bool = "v128.any_true"
-builtin f64x2_splat(value: F64) -> F64x2 = "f64x2.splat"
-builtin f64x2_load_splat(address: U32) -> F64x2 = "v128.load64_splat"
-builtin f64x2_load_zero(address: U32) -> F64x2 = "v128.load64_zero"
-builtin f64x2_extract_0(value: F64x2) -> F64 = "f64x2.extract_lane 0"
-builtin f64x2_replace_0(value: F64x2, lane: F64) -> F64x2 = "f64x2.replace_lane 0"
-builtin f64x2_load_lane_0(address: U32, value: F64x2) -> F64x2 = "v128.load64_lane 0"
-builtin f64x2_store_lane_0(address: U32, value: F64x2) -> Unit = "v128.store64_lane 0"
-builtin f64x2_extract_1(value: F64x2) -> F64 = "f64x2.extract_lane 1"
-builtin f64x2_replace_1(value: F64x2, lane: F64) -> F64x2 = "f64x2.replace_lane 1"
-builtin f64x2_load_lane_1(address: U32, value: F64x2) -> F64x2 = "v128.load64_lane 1"
-builtin f64x2_store_lane_1(address: U32, value: F64x2) -> Unit = "v128.store64_lane 1"
-builtin f64x2_convert_low_i32x4_s(value: I32x4) -> F64x2 = "f64x2.convert_low_i32x4_s"
-builtin f64x2_convert_low_i32x4_u(value: U32x4) -> F64x2 = "f64x2.convert_low_i32x4_u"
-builtin f64x2_promote_low_f32x4(value: F32x4) -> F64x2 = "f64x2.promote_low_f32x4"
-builtin f64x2_add(left: F64x2, right: F64x2) -> F64x2 = "f64x2.add"
-builtin f64x2_sub(left: F64x2, right: F64x2) -> F64x2 = "f64x2.sub"
-builtin f64x2_mul(left: F64x2, right: F64x2) -> F64x2 = "f64x2.mul"
-builtin f64x2_div(left: F64x2, right: F64x2) -> F64x2 = "f64x2.div"
-builtin f64x2_min(left: F64x2, right: F64x2) -> F64x2 = "f64x2.min"
-builtin f64x2_max(left: F64x2, right: F64x2) -> F64x2 = "f64x2.max"
-builtin f64x2_pmin(left: F64x2, right: F64x2) -> F64x2 = "f64x2.pmin"
-builtin f64x2_pmax(left: F64x2, right: F64x2) -> F64x2 = "f64x2.pmax"
-builtin f64x2_eq(left: F64x2, right: F64x2) -> F64x2 = "f64x2.eq"
-builtin f64x2_ne(left: F64x2, right: F64x2) -> F64x2 = "f64x2.ne"
-builtin f64x2_lt(left: F64x2, right: F64x2) -> F64x2 = "f64x2.lt"
-builtin f64x2_le(left: F64x2, right: F64x2) -> F64x2 = "f64x2.le"
-builtin f64x2_gt(left: F64x2, right: F64x2) -> F64x2 = "f64x2.gt"
-builtin f64x2_ge(left: F64x2, right: F64x2) -> F64x2 = "f64x2.ge"
-builtin f64x2_abs(value: F64x2) -> F64x2 = "f64x2.abs"
-builtin f64x2_neg(value: F64x2) -> F64x2 = "f64x2.neg"
-builtin f64x2_sqrt(value: F64x2) -> F64x2 = "f64x2.sqrt"
-builtin f64x2_ceil(value: F64x2) -> F64x2 = "f64x2.ceil"
-builtin f64x2_floor(value: F64x2) -> F64x2 = "f64x2.floor"
-builtin f64x2_trunc(value: F64x2) -> F64x2 = "f64x2.trunc"
-builtin f64x2_nearest(value: F64x2) -> F64x2 = "f64x2.nearest"
+pub builtin f64x2_not(value: F64x2) -> F64x2 = "v128.not"
+pub builtin f64x2_andnot(left: F64x2, right: F64x2) -> F64x2 = "v128.andnot"
+pub builtin f64x2_bitselect(yes: F64x2, no: F64x2, mask: F64x2) -> F64x2 = "v128.bitselect"
+pub builtin f64x2_any_true(value: F64x2) -> Bool = "v128.any_true"
+pub builtin f64x2_splat(value: F64) -> F64x2 = "f64x2.splat"
+pub builtin f64x2_load_splat(address: U32) -> F64x2 = "v128.load64_splat"
+pub builtin f64x2_load_zero(address: U32) -> F64x2 = "v128.load64_zero"
+pub builtin f64x2_extract_0(value: F64x2) -> F64 = "f64x2.extract_lane 0"
+pub builtin f64x2_replace_0(value: F64x2, lane: F64) -> F64x2 = "f64x2.replace_lane 0"
+pub builtin f64x2_load_lane_0(address: U32, value: F64x2) -> F64x2 = "v128.load64_lane 0"
+pub builtin f64x2_store_lane_0(address: U32, value: F64x2) -> Unit = "v128.store64_lane 0"
+pub builtin f64x2_extract_1(value: F64x2) -> F64 = "f64x2.extract_lane 1"
+pub builtin f64x2_replace_1(value: F64x2, lane: F64) -> F64x2 = "f64x2.replace_lane 1"
+pub builtin f64x2_load_lane_1(address: U32, value: F64x2) -> F64x2 = "v128.load64_lane 1"
+pub builtin f64x2_store_lane_1(address: U32, value: F64x2) -> Unit = "v128.store64_lane 1"
+pub builtin f64x2_convert_low_i32x4_s(value: I32x4) -> F64x2 = "f64x2.convert_low_i32x4_s"
+pub builtin f64x2_convert_low_i32x4_u(value: U32x4) -> F64x2 = "f64x2.convert_low_i32x4_u"
+pub builtin f64x2_promote_low_f32x4(value: F32x4) -> F64x2 = "f64x2.promote_low_f32x4"
+pub builtin f64x2_add(left: F64x2, right: F64x2) -> F64x2 = "f64x2.add"
+pub builtin f64x2_sub(left: F64x2, right: F64x2) -> F64x2 = "f64x2.sub"
+pub builtin f64x2_mul(left: F64x2, right: F64x2) -> F64x2 = "f64x2.mul"
+pub builtin f64x2_div(left: F64x2, right: F64x2) -> F64x2 = "f64x2.div"
+pub builtin f64x2_min(left: F64x2, right: F64x2) -> F64x2 = "f64x2.min"
+pub builtin f64x2_max(left: F64x2, right: F64x2) -> F64x2 = "f64x2.max"
+pub builtin f64x2_pmin(left: F64x2, right: F64x2) -> F64x2 = "f64x2.pmin"
+pub builtin f64x2_pmax(left: F64x2, right: F64x2) -> F64x2 = "f64x2.pmax"
+pub builtin f64x2_eq(left: F64x2, right: F64x2) -> F64x2 = "f64x2.eq"
+pub builtin f64x2_ne(left: F64x2, right: F64x2) -> F64x2 = "f64x2.ne"
+pub builtin f64x2_lt(left: F64x2, right: F64x2) -> F64x2 = "f64x2.lt"
+pub builtin f64x2_le(left: F64x2, right: F64x2) -> F64x2 = "f64x2.le"
+pub builtin f64x2_gt(left: F64x2, right: F64x2) -> F64x2 = "f64x2.gt"
+pub builtin f64x2_ge(left: F64x2, right: F64x2) -> F64x2 = "f64x2.ge"
+pub builtin f64x2_abs(value: F64x2) -> F64x2 = "f64x2.abs"
+pub builtin f64x2_neg(value: F64x2) -> F64x2 = "f64x2.neg"
+pub builtin f64x2_sqrt(value: F64x2) -> F64x2 = "f64x2.sqrt"
+pub builtin f64x2_ceil(value: F64x2) -> F64x2 = "f64x2.ceil"
+pub builtin f64x2_floor(value: F64x2) -> F64x2 = "f64x2.floor"
+pub builtin f64x2_trunc(value: F64x2) -> F64x2 = "f64x2.trunc"
+pub builtin f64x2_nearest(value: F64x2) -> F64x2 = "f64x2.nearest"
 impl F64x2 {
   fn to_v128(self) -> V128 {
     f64x2_to_v128(self)

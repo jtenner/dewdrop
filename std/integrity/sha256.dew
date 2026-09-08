@@ -1,30 +1,30 @@
 open dew.std.fixed_array
 open dew.std.bytes
 
-fn sha256_unit() -> Unit {
+pub fn sha256_unit() -> Unit {
 }
 
-fn sha256_u8_to_u32(value: U8) -> U32 {
+pub fn sha256_u8_to_u32(value: U8) -> U32 {
   value.into()
 }
 
-fn sha256_u32_to_u64(value: U32) -> U64 {
+pub fn sha256_u32_to_u64(value: U32) -> U64 {
   value.into()
 }
 
-fn sha256_u64_to_u32(value: U64) -> U32 {
+pub fn sha256_u64_to_u32(value: U64) -> U32 {
   value.into()
 }
 
-fn sha256_u64_to_u8(value: U64) -> U8 {
+pub fn sha256_u64_to_u8(value: U64) -> U8 {
   value.into()
 }
 
-fn sha256_rotate_right(value: U32, count: U32) -> U32 {
+pub fn sha256_rotate_right(value: U32, count: U32) -> U32 {
   (value >> count) | (value << (32u32 - count))
 }
 
-fn sha256_round_constant(index: U32) -> U32 {
+pub fn sha256_round_constant(index: U32) -> U32 {
   match index {
     0u32 => 1116352408u32
     1u32 => 1899447441u32
@@ -94,7 +94,7 @@ fn sha256_round_constant(index: U32) -> U32 {
   }
 }
 
-fn sha256_initial_state() -> FixedArray<U32> {
+pub fn sha256_initial_state() -> FixedArray<U32> {
   let state = FixedArray::make(8u32, 0u32)
   state.set_unchecked(0u32, 1779033703u32)
   state.set_unchecked(1u32, 3144134277u32)
@@ -107,7 +107,7 @@ fn sha256_initial_state() -> FixedArray<U32> {
   state
 }
 
-fn sha256_padded_byte(
+pub fn sha256_padded_byte(
   input: Bytes,
   input_length: U64,
   index: U64,
@@ -128,7 +128,7 @@ fn sha256_padded_byte(
   }
 }
 
-fn sha256_prepare_schedule(
+pub fn sha256_prepare_schedule(
   schedule: FixedArray<U32>,
   input: Bytes,
   input_length: U64,
@@ -205,7 +205,7 @@ fn sha256_prepare_schedule(
   }
 }
 
-fn sha256_compress(state: FixedArray<U32>, schedule: FixedArray<U32>) -> Unit {
+pub fn sha256_compress(state: FixedArray<U32>, schedule: FixedArray<U32>) -> Unit {
   let mut a = state.get_unchecked(0u32)
   let mut b = state.get_unchecked(1u32)
   let mut c = state.get_unchecked(2u32)
@@ -247,7 +247,7 @@ fn sha256_compress(state: FixedArray<U32>, schedule: FixedArray<U32>) -> Unit {
   state.set_unchecked(7u32, state.get_unchecked(7u32) + h)
 }
 
-fn sha256_u32_to_u8(value: U32) -> U8 {
+pub fn sha256_u32_to_u8(value: U32) -> U8 {
   value.into()
 }
 

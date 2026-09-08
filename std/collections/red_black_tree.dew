@@ -26,45 +26,45 @@ pub struct RedBlackTreeIter<k, v, c> {
   upper_inclusive: Bool
 }
 
-fn tree_unit() -> Unit {}
+pub fn tree_unit() -> Unit {}
 
-fn tree_no_key<k>() -> Option<k> {
+pub fn tree_no_key<k>() -> Option<k> {
   Option::None
 }
 
-fn tree_i32_box(value: I32) -> Array<I32> {
+pub fn tree_i32_box(value: I32) -> Array<I32> {
   let result = array_with_capacity(1u32)
   array_push(result, value)
   result
 }
 
-fn tree_u32_box(value: U32) -> Array<U32> {
+pub fn tree_u32_box(value: U32) -> Array<U32> {
   let result = array_with_capacity(1u32)
   array_push(result, value)
   result
 }
 
-fn tree_index(index: I32) -> U32 {
+pub fn tree_index(index: I32) -> U32 {
   index.into()
 }
 
-fn tree_root<k, v, c>(tree: RedBlackTree<k, v, c>) -> I32 {
+pub fn tree_root<k, v, c>(tree: RedBlackTree<k, v, c>) -> I32 {
   array_get_unchecked(tree.root, 0u32)
 }
 
-fn tree_set_root<k, v, c>(tree: RedBlackTree<k, v, c>, value: I32) -> Unit {
+pub fn tree_set_root<k, v, c>(tree: RedBlackTree<k, v, c>, value: I32) -> Unit {
   array_set_unchecked(tree.root, 0u32, value)
 }
 
-fn tree_live<k, v, c>(tree: RedBlackTree<k, v, c>) -> U32 {
+pub fn tree_live<k, v, c>(tree: RedBlackTree<k, v, c>) -> U32 {
   array_get_unchecked(tree.live, 0u32)
 }
 
-fn tree_set_live<k, v, c>(tree: RedBlackTree<k, v, c>, value: U32) -> Unit {
+pub fn tree_set_live<k, v, c>(tree: RedBlackTree<k, v, c>, value: U32) -> Unit {
   array_set_unchecked(tree.live, 0u32, value)
 }
 
-fn tree_parent<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
+pub fn tree_parent<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
   if node < 0 {
     -1
   } else {
@@ -72,7 +72,7 @@ fn tree_parent<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
   }
 }
 
-fn tree_left<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
+pub fn tree_left<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
   if node < 0 {
     -1
   } else {
@@ -80,7 +80,7 @@ fn tree_left<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
   }
 }
 
-fn tree_right<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
+pub fn tree_right<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
   if node < 0 {
     -1
   } else {
@@ -88,7 +88,7 @@ fn tree_right<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> I32 {
   }
 }
 
-fn tree_is_red<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> Bool {
+pub fn tree_is_red<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> Bool {
   if node < 0 {
     false
   } else {
@@ -96,7 +96,7 @@ fn tree_is_red<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> Bool {
   }
 }
 
-fn tree_set_parent<k, v, c>(
+pub fn tree_set_parent<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
   value: I32,
@@ -108,7 +108,7 @@ fn tree_set_parent<k, v, c>(
   }
 }
 
-fn tree_set_left<k, v, c>(
+pub fn tree_set_left<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
   value: I32,
@@ -120,7 +120,7 @@ fn tree_set_left<k, v, c>(
   }
 }
 
-fn tree_set_right<k, v, c>(
+pub fn tree_set_right<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
   value: I32,
@@ -132,7 +132,7 @@ fn tree_set_right<k, v, c>(
   }
 }
 
-fn tree_set_red<k, v, c>(
+pub fn tree_set_red<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
   value: Bool,
@@ -144,15 +144,15 @@ fn tree_set_red<k, v, c>(
   }
 }
 
-fn tree_key<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> k {
+pub fn tree_key<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> k {
   array_get_unchecked(tree.keys, tree_index(node))
 }
 
-fn tree_value<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> v {
+pub fn tree_value<k, v, c>(tree: RedBlackTree<k, v, c>, node: I32) -> v {
   array_get_unchecked(tree.values, tree_index(node))
 }
 
-fn tree_entry<k, v, c>(
+pub fn tree_entry<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
 ) -> TreeEntry<k, v> {
@@ -189,7 +189,7 @@ pub fn red_black_tree_is_empty<k, v, c>(
   tree_live(tree) == 0u32
 }
 
-fn tree_compare_key<k, v, c: Comparator<k>>(
+pub fn tree_compare_key<k, v, c: Comparator<k>>(
   tree: RedBlackTree<k, v, c>,
   key: k,
   node: I32,
@@ -197,7 +197,7 @@ fn tree_compare_key<k, v, c: Comparator<k>>(
   tree.comparator.compare(key, tree_key(tree, node))
 }
 
-fn tree_find_index<k, v, c: Comparator<k>>(
+pub fn tree_find_index<k, v, c: Comparator<k>>(
   tree: RedBlackTree<k, v, c>,
   key: k,
 ) -> I32 {
@@ -213,7 +213,7 @@ fn tree_find_index<k, v, c: Comparator<k>>(
   }
 }
 
-fn tree_minimum_index<k, v, c>(
+pub fn tree_minimum_index<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   start: I32,
 ) -> I32 {
@@ -230,7 +230,7 @@ fn tree_minimum_index<k, v, c>(
   }
 }
 
-fn tree_maximum_index<k, v, c>(
+pub fn tree_maximum_index<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   start: I32,
 ) -> I32 {
@@ -247,7 +247,7 @@ fn tree_maximum_index<k, v, c>(
   }
 }
 
-fn tree_successor_index<k, v, c>(
+pub fn tree_successor_index<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
 ) -> I32 {
@@ -268,7 +268,7 @@ fn tree_successor_index<k, v, c>(
   }
 }
 
-fn tree_predecessor_index<k, v, c>(
+pub fn tree_predecessor_index<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
 ) -> I32 {
@@ -289,7 +289,7 @@ fn tree_predecessor_index<k, v, c>(
   }
 }
 
-fn tree_left_rotate<k, v, c>(
+pub fn tree_left_rotate<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
 ) -> Unit {
@@ -310,7 +310,7 @@ fn tree_left_rotate<k, v, c>(
   tree_set_parent(tree, node, pivot)
 }
 
-fn tree_right_rotate<k, v, c>(
+pub fn tree_right_rotate<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   node: I32,
 ) -> Unit {
@@ -331,7 +331,7 @@ fn tree_right_rotate<k, v, c>(
   tree_set_parent(tree, node, pivot)
 }
 
-fn tree_insert_fixup<k, v, c>(
+pub fn tree_insert_fixup<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   inserted: I32,
 ) -> Unit {
@@ -457,7 +457,7 @@ pub fn red_black_tree_contains<k, v, c: Comparator<k>>(
   tree_find_index(tree, key) >= 0
 }
 
-fn tree_transplant<k, v, c>(
+pub fn tree_transplant<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   removed: I32,
   replacement: I32,
@@ -473,7 +473,7 @@ fn tree_transplant<k, v, c>(
   tree_set_parent(tree, replacement, parent)
 }
 
-fn tree_delete_fixup<k, v, c>(
+pub fn tree_delete_fixup<k, v, c>(
   tree: RedBlackTree<k, v, c>,
   start: I32,
   start_parent: I32,
@@ -630,7 +630,7 @@ pub fn red_black_tree_maximum<k, v, c>(
   }
 }
 
-fn tree_lower_bound_index<k, v, c: Comparator<k>>(
+pub fn tree_lower_bound_index<k, v, c: Comparator<k>>(
   tree: RedBlackTree<k, v, c>,
   key: k,
   inclusive: Bool,
@@ -730,7 +730,7 @@ pub fn red_black_tree_clear<k, v, c>(
   tree_set_live(tree, 0u32)
 }
 
-fn tree_iter_start<k, v, c: Comparator<k>>(
+pub fn tree_iter_start<k, v, c: Comparator<k>>(
   tree: RedBlackTree<k, v, c>,
   lower: Option<k>,
   lower_inclusive: Bool,

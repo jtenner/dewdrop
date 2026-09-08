@@ -11,41 +11,41 @@ pub struct StringViewCodePoints {
   state: FixedArray<U32>
 }
 
-fn text_code_points_string_byte_length(value: String) -> U32 {
+pub fn text_code_points_string_byte_length(value: String) -> U32 {
   value.byte_length()
 }
-fn text_code_points_string_byte_at(value: String, index: U32) -> U8 {
+pub fn text_code_points_string_byte_at(value: String, index: U32) -> U8 {
   value.byte_at(index)
 }
-fn text_code_points_string_view_byte_length(value: StringView) -> U32 {
+pub fn text_code_points_string_view_byte_length(value: StringView) -> U32 {
   value.byte_length()
 }
-fn text_code_points_string_view_byte_at(value: StringView, index: U32) -> U8 {
+pub fn text_code_points_string_view_byte_at(value: StringView, index: U32) -> U8 {
   value.byte_at(index)
 }
 
-fn code_point_continuation(byte: U8) -> Bool {
+pub fn code_point_continuation(byte: U8) -> Bool {
   byte >= 128u8 && byte <= 191u8
 }
 
-fn code_point_u8_to_u32(value: U8) -> U32 {
+pub fn code_point_u8_to_u32(value: U8) -> U32 {
   value.into()
 }
 
-fn code_point_u32_to_u64(value: U32) -> U64 {
+pub fn code_point_u32_to_u64(value: U32) -> U64 {
   value.into()
 }
 
-fn code_point_u64_to_u32(value: U64) -> U32 {
+pub fn code_point_u64_to_u32(value: U64) -> U32 {
   value.into()
 }
 
-fn code_point_pack(scalar: U32, width: U32) -> U64 {
+pub fn code_point_pack(scalar: U32, width: U32) -> U64 {
   code_point_u32_to_u64(scalar) |
   (code_point_u32_to_u64(width) << 32u64)
 }
 
-fn decode_code_point(
+pub fn decode_code_point(
   first: U8,
   second: U8,
   third: U8,
@@ -83,7 +83,7 @@ fn decode_code_point(
   }
 }
 
-fn code_point_state() -> FixedArray<U32> {
+pub fn code_point_state() -> FixedArray<U32> {
   FixedArray::make(1u32, 0u32)
 }
 
@@ -101,15 +101,15 @@ pub fn string_view_code_points(value: StringView) -> StringViewCodePoints {
   }
 }
 
-fn string_code_points_has_next(iterator: StringCodePoints) -> Bool {
+pub fn string_code_points_has_next(iterator: StringCodePoints) -> Bool {
   iterator.state.get_unchecked(0u32) < text_code_points_string_byte_length(iterator.value)
 }
 
-fn string_view_code_points_has_next(iterator: StringViewCodePoints) -> Bool {
+pub fn string_view_code_points_has_next(iterator: StringViewCodePoints) -> Bool {
   iterator.state.get_unchecked(0u32) < text_code_points_string_view_byte_length(iterator.value)
 }
 
-fn string_code_points_next(iterator: StringCodePoints) -> U32 {
+pub fn string_code_points_next(iterator: StringCodePoints) -> U32 {
   let index = iterator.state.get_unchecked(0u32)
   let length = text_code_points_string_byte_length(iterator.value)
   if index >= length {
@@ -140,7 +140,7 @@ fn string_code_points_next(iterator: StringCodePoints) -> U32 {
   }
 }
 
-fn string_view_code_points_next(iterator: StringViewCodePoints) -> U32 {
+pub fn string_view_code_points_next(iterator: StringViewCodePoints) -> U32 {
   let index = iterator.state.get_unchecked(0u32)
   let length = text_code_points_string_view_byte_length(iterator.value)
   if index >= length {

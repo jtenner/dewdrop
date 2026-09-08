@@ -122,7 +122,7 @@ class ArrayBuiltinPolicyTests(unittest.TestCase):
         source = (ROOT / "std/array.dew").read_text()
         for operation in BULK_OPERATIONS:
             with self.subTest(operation=operation):
-                self.assertRegex(source, rf"(?m)^fn array_{operation}_raw<t>\(")
+                self.assertRegex(source, rf"(?m)^(?:pub )?fn array_{operation}_raw<t>\(")
 
     def test_checked_operations_are_library_functions(self):
         source = (ROOT / "std/array.dew").read_text()

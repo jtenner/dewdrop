@@ -1,4 +1,4 @@
-fn iter_unit() -> Unit {}
+pub fn iter_unit() -> Unit {}
 
 pub fn iter_for_each<t, i: Iter<t>>(
   iter: i,

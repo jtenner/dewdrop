@@ -68,7 +68,7 @@ class SimdBuiltinPolicyTests(unittest.TestCase):
         self.assertEqual(contracts["v128.load8x8_s"], (("I32",), "V128"))
         for family in ("i8x16", "u8x16", "i16x8", "u16x8", "i32x4", "u32x4", "i64x2", "u64x2", "f32x4", "f64x2"):
             source = (ROOT / f"std/{family}.dew").read_text()
-            targets = re.findall(r'^builtin .* = "([^"]+)"$', source, re.M)
+            targets = re.findall(r'^(?:pub )?builtin .* = "([^"]+)"$', source, re.M)
             self.assertTrue(targets)
             for target in targets:
                 with self.subTest(module=family, target=target):

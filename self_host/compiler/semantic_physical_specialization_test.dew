@@ -514,7 +514,7 @@ test "default preamble supplies core calls without changing source files" {
         path: "dew.std.preamble"
         files: [SelfHostManifestFile::{
           path: "core.dew"
-          source: b"fn core_identity(value: U32) -> U32 {\n  value\n}\n"
+          source: b"pub fn core_identity(value: U32) -> U32 {\n  value\n}\n"
           test_only: false
         }]
       },

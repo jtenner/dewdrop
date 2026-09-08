@@ -9,34 +9,34 @@ pub struct SetIter<key> {
   inner: MapKeyIter<key, Unit>
 }
 
-fn set_empty<key>() -> Set<key> {
+pub fn set_empty<key>() -> Set<key> {
   Set::{
     values: Map::empty()
   }
 }
-fn set_singleton<key>(key: key) -> Set<key> {
+pub fn set_singleton<key>(key: key) -> Set<key> {
   Set::{
     values: Map::singleton(key, ())
   }
 }
-fn set_length<key>(set: Set<key>) -> U32 {
+pub fn set_length<key>(set: Set<key>) -> U32 {
   set.values.length()
 }
-fn set_is_empty<key>(set: Set<key>) -> Bool {
+pub fn set_is_empty<key>(set: Set<key>) -> Bool {
   set.values.length() == 0u32
 }
-fn set_contains<key>(set: Set<key>, key: key) -> Bool {
+pub fn set_contains<key>(set: Set<key>, key: key) -> Bool {
   set.values.contains_key(key)
 }
-fn set_insert<key>(set: Set<key>, key: key) -> Bool {
+pub fn set_insert<key>(set: Set<key>, key: key) -> Bool {
   let before = set.values.length()
   set.values.insert(key, ())
   set.values.length() != before
 }
-fn set_remove<key>(set: Set<key>, key: key) -> Bool {
+pub fn set_remove<key>(set: Set<key>, key: key) -> Bool {
   set.values.remove(key)
 }
-fn set_clear<key>(set: Set<key>) -> Unit {
+pub fn set_clear<key>(set: Set<key>) -> Unit {
   set.values.clear()
 }
 
@@ -67,15 +67,15 @@ impl<key> Set<key> {
   }
 }
 
-fn set_iter<key>(set: Set<key>) -> SetIter<key> {
+pub fn set_iter<key>(set: Set<key>) -> SetIter<key> {
   SetIter::{
     inner: set.values.keys()
   }
 }
-fn set_iter_has_next<key>(iter: SetIter<key>) -> Bool {
+pub fn set_iter_has_next<key>(iter: SetIter<key>) -> Bool {
   iter.inner.has_next()
 }
-fn set_iter_next<key>(iter: SetIter<key>) -> key {
+pub fn set_iter_next<key>(iter: SetIter<key>) -> key {
   match iter.inner.next() {
     Option::Some(key) => key
     Option::None => unreachable()
@@ -100,6 +100,6 @@ impl<key> SetIter<key> {
   }
 }
 
-fn set_iter_next_option<key>(iter: SetIter<key>) -> Option<key> {
+pub fn set_iter_next_option<key>(iter: SetIter<key>) -> Option<key> {
   iter.inner.next()
 }

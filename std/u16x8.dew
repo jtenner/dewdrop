@@ -1,7 +1,7 @@
-fn u16x8_from_v128(value: V128) -> U16x8 {
+pub fn u16x8_from_v128(value: V128) -> U16x8 {
   unsafe_bitcast::<V128, U16x8>(value)
 }
-fn u16x8_to_v128(value: U16x8) -> V128 {
+pub fn u16x8_to_v128(value: U16x8) -> V128 {
   unsafe_bitcast::<U16x8, V128>(value)
 }
 impl Into<I8x16> for U16x8 {
@@ -49,84 +49,84 @@ impl Into<F64x2> for U16x8 {
     unsafe_bitcast::<U16x8, F64x2>(self)
   }
 }
-fn u16x8_load(address: U32) -> U16x8 {
+pub fn u16x8_load(address: U32) -> U16x8 {
   unsafe_bitcast::<V128, U16x8>(v128_load(address))
 }
-fn u16x8_store(address: U32, value: U16x8) -> Unit {
+pub fn u16x8_store(address: U32, value: U16x8) -> Unit {
   v128_store(address, unsafe_bitcast::<U16x8, V128>(value))
 }
-fn u16x8_and(left: U16x8, right: U16x8) -> U16x8 {
+pub fn u16x8_and(left: U16x8, right: U16x8) -> U16x8 {
   unsafe_bitcast::<V128, U16x8>(v128_and(unsafe_bitcast::<U16x8, V128>(left), unsafe_bitcast::<U16x8, V128>(right)))
 }
-fn u16x8_or(left: U16x8, right: U16x8) -> U16x8 {
+pub fn u16x8_or(left: U16x8, right: U16x8) -> U16x8 {
   unsafe_bitcast::<V128, U16x8>(v128_or(unsafe_bitcast::<U16x8, V128>(left), unsafe_bitcast::<U16x8, V128>(right)))
 }
-fn u16x8_xor(left: U16x8, right: U16x8) -> U16x8 {
+pub fn u16x8_xor(left: U16x8, right: U16x8) -> U16x8 {
   unsafe_bitcast::<V128, U16x8>(v128_xor(unsafe_bitcast::<U16x8, V128>(left), unsafe_bitcast::<U16x8, V128>(right)))
 }
-builtin u16x8_not(value: U16x8) -> U16x8 = "v128.not"
-builtin u16x8_andnot(left: U16x8, right: U16x8) -> U16x8 = "v128.andnot"
-builtin u16x8_bitselect(yes: U16x8, no: U16x8, mask: U16x8) -> U16x8 = "v128.bitselect"
-builtin u16x8_any_true(value: U16x8) -> Bool = "v128.any_true"
-builtin u16x8_splat(value: U16) -> U16x8 = "i16x8.splat"
-builtin u16x8_load_splat(address: U32) -> U16x8 = "v128.load16_splat"
-builtin u16x8_load_extend_u8x8_u(address: U32) -> U16x8 = "v128.load8x8_u"
-builtin u16x8_extract_0(value: U16x8) -> U16 = "i16x8.extract_lane_u 0"
-builtin u16x8_replace_0(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 0"
-builtin u16x8_load_lane_0(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 0"
-builtin u16x8_store_lane_0(address: U32, value: U16x8) -> Unit = "v128.store16_lane 0"
-builtin u16x8_extract_1(value: U16x8) -> U16 = "i16x8.extract_lane_u 1"
-builtin u16x8_replace_1(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 1"
-builtin u16x8_load_lane_1(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 1"
-builtin u16x8_store_lane_1(address: U32, value: U16x8) -> Unit = "v128.store16_lane 1"
-builtin u16x8_extract_2(value: U16x8) -> U16 = "i16x8.extract_lane_u 2"
-builtin u16x8_replace_2(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 2"
-builtin u16x8_load_lane_2(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 2"
-builtin u16x8_store_lane_2(address: U32, value: U16x8) -> Unit = "v128.store16_lane 2"
-builtin u16x8_extract_3(value: U16x8) -> U16 = "i16x8.extract_lane_u 3"
-builtin u16x8_replace_3(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 3"
-builtin u16x8_load_lane_3(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 3"
-builtin u16x8_store_lane_3(address: U32, value: U16x8) -> Unit = "v128.store16_lane 3"
-builtin u16x8_extract_4(value: U16x8) -> U16 = "i16x8.extract_lane_u 4"
-builtin u16x8_replace_4(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 4"
-builtin u16x8_load_lane_4(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 4"
-builtin u16x8_store_lane_4(address: U32, value: U16x8) -> Unit = "v128.store16_lane 4"
-builtin u16x8_extract_5(value: U16x8) -> U16 = "i16x8.extract_lane_u 5"
-builtin u16x8_replace_5(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 5"
-builtin u16x8_load_lane_5(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 5"
-builtin u16x8_store_lane_5(address: U32, value: U16x8) -> Unit = "v128.store16_lane 5"
-builtin u16x8_extract_6(value: U16x8) -> U16 = "i16x8.extract_lane_u 6"
-builtin u16x8_replace_6(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 6"
-builtin u16x8_load_lane_6(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 6"
-builtin u16x8_store_lane_6(address: U32, value: U16x8) -> Unit = "v128.store16_lane 6"
-builtin u16x8_extract_7(value: U16x8) -> U16 = "i16x8.extract_lane_u 7"
-builtin u16x8_replace_7(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 7"
-builtin u16x8_load_lane_7(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 7"
-builtin u16x8_store_lane_7(address: U32, value: U16x8) -> Unit = "v128.store16_lane 7"
-builtin u16x8_narrow_i32x4_u(low: U32x4, high: U32x4) -> U16x8 = "i16x8.narrow_i32x4_u"
-builtin u16x8_extend_low_i8x16_u(value: U8x16) -> U16x8 = "i16x8.extend_low_i8x16_u"
-builtin u16x8_extend_high_i8x16_u(value: U8x16) -> U16x8 = "i16x8.extend_high_i8x16_u"
-builtin u16x8_extadd_pairwise_i8x16_u(value: U8x16) -> U16x8 = "i16x8.extadd_pairwise_i8x16_u"
-builtin u16x8_extmul_low_i8x16_u(left: U8x16, right: U8x16) -> U16x8 = "i16x8.extmul_low_i8x16_u"
-builtin u16x8_extmul_high_i8x16_u(left: U8x16, right: U8x16) -> U16x8 = "i16x8.extmul_high_i8x16_u"
-builtin u16x8_add(left: U16x8, right: U16x8) -> U16x8 = "i16x8.add"
-builtin u16x8_sub(left: U16x8, right: U16x8) -> U16x8 = "i16x8.sub"
-builtin u16x8_mul(left: U16x8, right: U16x8) -> U16x8 = "i16x8.mul"
-builtin u16x8_min_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.min_u"
-builtin u16x8_max_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.max_u"
-builtin u16x8_avgr_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.avgr_u"
-builtin u16x8_add_sat_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.add_sat_u"
-builtin u16x8_sub_sat_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.sub_sat_u"
-builtin u16x8_eq(left: U16x8, right: U16x8) -> U16x8 = "i16x8.eq"
-builtin u16x8_ne(left: U16x8, right: U16x8) -> U16x8 = "i16x8.ne"
-builtin u16x8_lt_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.lt_u"
-builtin u16x8_le_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.le_u"
-builtin u16x8_gt_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.gt_u"
-builtin u16x8_ge_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.ge_u"
-builtin u16x8_all_true(value: U16x8) -> Bool = "i16x8.all_true"
-builtin u16x8_bitmask(value: U16x8) -> U32 = "i16x8.bitmask"
-builtin u16x8_shl(value: U16x8, count: U32) -> U16x8 = "i16x8.shl"
-builtin u16x8_shr_u(value: U16x8, count: U32) -> U16x8 = "i16x8.shr_u"
+pub builtin u16x8_not(value: U16x8) -> U16x8 = "v128.not"
+pub builtin u16x8_andnot(left: U16x8, right: U16x8) -> U16x8 = "v128.andnot"
+pub builtin u16x8_bitselect(yes: U16x8, no: U16x8, mask: U16x8) -> U16x8 = "v128.bitselect"
+pub builtin u16x8_any_true(value: U16x8) -> Bool = "v128.any_true"
+pub builtin u16x8_splat(value: U16) -> U16x8 = "i16x8.splat"
+pub builtin u16x8_load_splat(address: U32) -> U16x8 = "v128.load16_splat"
+pub builtin u16x8_load_extend_u8x8_u(address: U32) -> U16x8 = "v128.load8x8_u"
+pub builtin u16x8_extract_0(value: U16x8) -> U16 = "i16x8.extract_lane_u 0"
+pub builtin u16x8_replace_0(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 0"
+pub builtin u16x8_load_lane_0(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 0"
+pub builtin u16x8_store_lane_0(address: U32, value: U16x8) -> Unit = "v128.store16_lane 0"
+pub builtin u16x8_extract_1(value: U16x8) -> U16 = "i16x8.extract_lane_u 1"
+pub builtin u16x8_replace_1(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 1"
+pub builtin u16x8_load_lane_1(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 1"
+pub builtin u16x8_store_lane_1(address: U32, value: U16x8) -> Unit = "v128.store16_lane 1"
+pub builtin u16x8_extract_2(value: U16x8) -> U16 = "i16x8.extract_lane_u 2"
+pub builtin u16x8_replace_2(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 2"
+pub builtin u16x8_load_lane_2(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 2"
+pub builtin u16x8_store_lane_2(address: U32, value: U16x8) -> Unit = "v128.store16_lane 2"
+pub builtin u16x8_extract_3(value: U16x8) -> U16 = "i16x8.extract_lane_u 3"
+pub builtin u16x8_replace_3(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 3"
+pub builtin u16x8_load_lane_3(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 3"
+pub builtin u16x8_store_lane_3(address: U32, value: U16x8) -> Unit = "v128.store16_lane 3"
+pub builtin u16x8_extract_4(value: U16x8) -> U16 = "i16x8.extract_lane_u 4"
+pub builtin u16x8_replace_4(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 4"
+pub builtin u16x8_load_lane_4(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 4"
+pub builtin u16x8_store_lane_4(address: U32, value: U16x8) -> Unit = "v128.store16_lane 4"
+pub builtin u16x8_extract_5(value: U16x8) -> U16 = "i16x8.extract_lane_u 5"
+pub builtin u16x8_replace_5(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 5"
+pub builtin u16x8_load_lane_5(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 5"
+pub builtin u16x8_store_lane_5(address: U32, value: U16x8) -> Unit = "v128.store16_lane 5"
+pub builtin u16x8_extract_6(value: U16x8) -> U16 = "i16x8.extract_lane_u 6"
+pub builtin u16x8_replace_6(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 6"
+pub builtin u16x8_load_lane_6(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 6"
+pub builtin u16x8_store_lane_6(address: U32, value: U16x8) -> Unit = "v128.store16_lane 6"
+pub builtin u16x8_extract_7(value: U16x8) -> U16 = "i16x8.extract_lane_u 7"
+pub builtin u16x8_replace_7(value: U16x8, lane: U16) -> U16x8 = "i16x8.replace_lane 7"
+pub builtin u16x8_load_lane_7(address: U32, value: U16x8) -> U16x8 = "v128.load16_lane 7"
+pub builtin u16x8_store_lane_7(address: U32, value: U16x8) -> Unit = "v128.store16_lane 7"
+pub builtin u16x8_narrow_i32x4_u(low: U32x4, high: U32x4) -> U16x8 = "i16x8.narrow_i32x4_u"
+pub builtin u16x8_extend_low_i8x16_u(value: U8x16) -> U16x8 = "i16x8.extend_low_i8x16_u"
+pub builtin u16x8_extend_high_i8x16_u(value: U8x16) -> U16x8 = "i16x8.extend_high_i8x16_u"
+pub builtin u16x8_extadd_pairwise_i8x16_u(value: U8x16) -> U16x8 = "i16x8.extadd_pairwise_i8x16_u"
+pub builtin u16x8_extmul_low_i8x16_u(left: U8x16, right: U8x16) -> U16x8 = "i16x8.extmul_low_i8x16_u"
+pub builtin u16x8_extmul_high_i8x16_u(left: U8x16, right: U8x16) -> U16x8 = "i16x8.extmul_high_i8x16_u"
+pub builtin u16x8_add(left: U16x8, right: U16x8) -> U16x8 = "i16x8.add"
+pub builtin u16x8_sub(left: U16x8, right: U16x8) -> U16x8 = "i16x8.sub"
+pub builtin u16x8_mul(left: U16x8, right: U16x8) -> U16x8 = "i16x8.mul"
+pub builtin u16x8_min_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.min_u"
+pub builtin u16x8_max_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.max_u"
+pub builtin u16x8_avgr_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.avgr_u"
+pub builtin u16x8_add_sat_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.add_sat_u"
+pub builtin u16x8_sub_sat_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.sub_sat_u"
+pub builtin u16x8_eq(left: U16x8, right: U16x8) -> U16x8 = "i16x8.eq"
+pub builtin u16x8_ne(left: U16x8, right: U16x8) -> U16x8 = "i16x8.ne"
+pub builtin u16x8_lt_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.lt_u"
+pub builtin u16x8_le_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.le_u"
+pub builtin u16x8_gt_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.gt_u"
+pub builtin u16x8_ge_u(left: U16x8, right: U16x8) -> U16x8 = "i16x8.ge_u"
+pub builtin u16x8_all_true(value: U16x8) -> Bool = "i16x8.all_true"
+pub builtin u16x8_bitmask(value: U16x8) -> U32 = "i16x8.bitmask"
+pub builtin u16x8_shl(value: U16x8, count: U32) -> U16x8 = "i16x8.shl"
+pub builtin u16x8_shr_u(value: U16x8, count: U32) -> U16x8 = "i16x8.shr_u"
 impl U16x8 {
   fn to_v128(self) -> V128 {
     u16x8_to_v128(self)

@@ -2,26 +2,26 @@ open dew.std.fixed_array
 open dew.std.array
 open dew.std.bytes
 
-fn blake3_unit() -> Unit {
+pub fn blake3_unit() -> Unit {
 }
 
-fn blake3_chunk_start() -> U32 {
+pub fn blake3_chunk_start() -> U32 {
   1u32
 }
 
-fn blake3_chunk_end() -> U32 {
+pub fn blake3_chunk_end() -> U32 {
   2u32
 }
 
-fn blake3_parent() -> U32 {
+pub fn blake3_parent() -> U32 {
   4u32
 }
 
-fn blake3_root() -> U32 {
+pub fn blake3_root() -> U32 {
   8u32
 }
 
-fn blake3_iv() -> FixedArray<U32> {
+pub fn blake3_iv() -> FixedArray<U32> {
   let values = FixedArray::make(8u32, 0u32)
   values.set_unchecked(0u32, 1779033703u32)
   values.set_unchecked(1u32, 3144134277u32)
@@ -34,7 +34,7 @@ fn blake3_iv() -> FixedArray<U32> {
   values
 }
 
-fn blake3_message_permutation() -> FixedArray<U32> {
+pub fn blake3_message_permutation() -> FixedArray<U32> {
   let values = FixedArray::make(16u32, 0u32)
   values.set_unchecked(0u32, 2u32)
   values.set_unchecked(1u32, 6u32)
@@ -55,7 +55,7 @@ fn blake3_message_permutation() -> FixedArray<U32> {
   values
 }
 
-struct Blake3Output {
+pub struct Blake3Output {
   input_chaining_value: FixedArray<U32>
   block_words: FixedArray<U32>
   counter: U64
@@ -63,11 +63,11 @@ struct Blake3Output {
   flags: U32
 }
 
-fn blake3_rotate_right(value: U32, count: U32) -> U32 {
+pub fn blake3_rotate_right(value: U32, count: U32) -> U32 {
   (value >> count) | (value << (32u32 - count))
 }
 
-fn blake3_mix(
+pub fn blake3_mix(
   state: FixedArray<U32>,
   a: U32,
   b: U32,
@@ -86,7 +86,7 @@ fn blake3_mix(
   state.set_unchecked(b, blake3_rotate_right(state.get_unchecked(b) ^ state.get_unchecked(c), 7u32))
 }
 
-fn blake3_round(state: FixedArray<U32>, message: FixedArray<U32>) -> Unit {
+pub fn blake3_round(state: FixedArray<U32>, message: FixedArray<U32>) -> Unit {
   blake3_mix(state, 0u32, 4u32, 8u32, 12u32, message.get_unchecked(0u32), message.get_unchecked(1u32))
   blake3_mix(state, 1u32, 5u32, 9u32, 13u32, message.get_unchecked(2u32), message.get_unchecked(3u32))
   blake3_mix(state, 2u32, 6u32, 10u32, 14u32, message.get_unchecked(4u32), message.get_unchecked(5u32))
@@ -97,7 +97,7 @@ fn blake3_round(state: FixedArray<U32>, message: FixedArray<U32>) -> Unit {
   blake3_mix(state, 3u32, 4u32, 9u32, 14u32, message.get_unchecked(14u32), message.get_unchecked(15u32))
 }
 
-fn blake3_permute(message: FixedArray<U32>) -> FixedArray<U32> {
+pub fn blake3_permute(message: FixedArray<U32>) -> FixedArray<U32> {
   let permutation = blake3_message_permutation()
   let output = FixedArray::make(16u32, 0u32)
   while 0u32 {
@@ -109,11 +109,11 @@ fn blake3_permute(message: FixedArray<U32>) -> FixedArray<U32> {
   }
 }
 
-fn blake3_u64_low(value: U64) -> U32 {
+pub fn blake3_u64_low(value: U64) -> U32 {
   value.into()
 }
 
-fn blake3_compress(output: Blake3Output, root_counter: U64) -> FixedArray<U32> {
+pub fn blake3_compress(output: Blake3Output, root_counter: U64) -> FixedArray<U32> {
   let state = FixedArray::make(16u32, 0u32)
   while 0u32 {
     index if index < 8u32 => {
@@ -160,7 +160,7 @@ fn blake3_compress(output: Blake3Output, root_counter: U64) -> FixedArray<U32> {
   }
 }
 
-fn blake3_copy_u32(values: FixedArray<U32>) -> FixedArray<U32> {
+pub fn blake3_copy_u32(values: FixedArray<U32>) -> FixedArray<U32> {
   let output = FixedArray::make(values.length(), 0u32)
   while 0u32 {
     index if index < values.length() => {
@@ -171,7 +171,7 @@ fn blake3_copy_u32(values: FixedArray<U32>) -> FixedArray<U32> {
   }
 }
 
-fn blake3_chaining_value(output: Blake3Output) -> FixedArray<U32> {
+pub fn blake3_chaining_value(output: Blake3Output) -> FixedArray<U32> {
   let words = blake3_compress(output, output.counter)
   let value = FixedArray::make(8u32, 0u32)
   while 0u32 {
@@ -183,11 +183,11 @@ fn blake3_chaining_value(output: Blake3Output) -> FixedArray<U32> {
   }
 }
 
-fn blake3_u32_to_u8(value: U32) -> U8 {
+pub fn blake3_u32_to_u8(value: U32) -> U8 {
   value.into()
 }
 
-fn blake3_root_digest(output: Blake3Output) -> FixedArray<U8> {
+pub fn blake3_root_digest(output: Blake3Output) -> FixedArray<U8> {
   let rooted = Blake3Output::{
     input_chaining_value: output.input_chaining_value
     block_words: output.block_words
@@ -211,11 +211,11 @@ fn blake3_root_digest(output: Blake3Output) -> FixedArray<U8> {
   }
 }
 
-fn blake3_u8_to_u32(value: U8) -> U32 {
+pub fn blake3_u8_to_u32(value: U8) -> U32 {
   value.into()
 }
 
-fn blake3_block_words(input: Bytes, start: U32, length: U32) -> FixedArray<U32> {
+pub fn blake3_block_words(input: Bytes, start: U32, length: U32) -> FixedArray<U32> {
   let words = FixedArray::make(16u32, 0u32)
   while 0u32 {
     byte_index if byte_index < length => {
@@ -230,7 +230,7 @@ fn blake3_block_words(input: Bytes, start: U32, length: U32) -> FixedArray<U32> 
   }
 }
 
-fn blake3_chunk_output(
+pub fn blake3_chunk_output(
   input: Bytes,
   start: U32,
   length: U32,
@@ -296,7 +296,7 @@ fn blake3_chunk_output(
   }
 }
 
-fn blake3_parent_output(
+pub fn blake3_parent_output(
   left: FixedArray<U32>,
   right: FixedArray<U32>,
 ) -> Blake3Output {
@@ -318,15 +318,15 @@ fn blake3_parent_output(
   }
 }
 
-fn blake3_u32_to_u64(value: U32) -> U64 {
+pub fn blake3_u32_to_u64(value: U32) -> U64 {
   value.into()
 }
 
-fn blake3_cv_level(capacity: U32) -> Array<FixedArray<U32>> {
+pub fn blake3_cv_level(capacity: U32) -> Array<FixedArray<U32>> {
   Array::with_capacity(capacity)
 }
 
-fn blake3_no_root() -> Option<Blake3Output> {
+pub fn blake3_no_root() -> Option<Blake3Output> {
   Option::None
 }
 

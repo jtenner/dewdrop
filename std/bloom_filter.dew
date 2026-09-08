@@ -1,6 +1,6 @@
 pub type BloomFilter = U64
 
-fn bloom_filter_hash_mask(hash: U64) -> U64 {
+pub fn bloom_filter_hash_mask(hash: U64) -> U64 {
   (1u64 << (hash & 63u64)) | (1u64 << ((hash >> 32u64) & 63u64))
 }
 

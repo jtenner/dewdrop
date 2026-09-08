@@ -35,25 +35,25 @@ pub fn semver_max_bytes() -> U32 {
   255u32
 }
 
-fn semver_unit() -> Unit {
+pub fn semver_unit() -> Unit {
 }
 
-fn semver_is_digit(byte: U8) -> Bool {
+pub fn semver_is_digit(byte: U8) -> Bool {
   byte >= 48u8 && byte <= 57u8
 }
 
-fn semver_u8_to_u32(value: U8) -> U32 {
+pub fn semver_u8_to_u32(value: U8) -> U32 {
   value.into()
 }
 
-fn semver_is_identifier_byte(byte: U8) -> Bool {
+pub fn semver_is_identifier_byte(byte: U8) -> Bool {
   semver_is_digit(byte) ||
   (byte >= 65u8 && byte <= 90u8) ||
   (byte >= 97u8 && byte <= 122u8) ||
   byte == 45u8
 }
 
-fn semver_find_byte(value: String, start: U32, end: U32, byte: U8) -> Option<U32> {
+pub fn semver_find_byte(value: String, start: U32, end: U32, byte: U8) -> Option<U32> {
   while start {
     index if index < end => if value.byte_at(index) == byte {
       break Option::Some(index)
@@ -64,7 +64,7 @@ fn semver_find_byte(value: String, start: U32, end: U32, byte: U8) -> Option<U32
   }
 }
 
-fn semver_parse_u32(value: String, start: U32, end: U32) -> Result<U32, SemVerParseError> {
+pub fn semver_parse_u32(value: String, start: U32, end: U32) -> Result<U32, SemVerParseError> {
   if start == end {
     Result::Err(SemVerParseError::InvalidNumber(start))
   } else if end - start > 1u32 && value.byte_at(start) == 48u8 {
@@ -92,7 +92,7 @@ fn semver_parse_u32(value: String, start: U32, end: U32) -> Result<U32, SemVerPa
   }
 }
 
-fn semver_identifier_kind_from(
+pub fn semver_identifier_kind_from(
   value: String,
   index: U32,
   end: U32,
@@ -113,11 +113,11 @@ fn semver_identifier_kind_from(
   }
 }
 
-fn semver_identifier_kind(value: String, start: U32, end: U32) -> U32 {
+pub fn semver_identifier_kind(value: String, start: U32, end: U32) -> U32 {
   semver_identifier_kind_from(value, start, end, 0u32)
 }
 
-fn semver_parse_identifiers_from(
+pub fn semver_parse_identifiers_from(
   value: String,
   item_start: U32,
   index: U32,
@@ -150,7 +150,7 @@ fn semver_parse_identifiers_from(
   }
 }
 
-fn semver_parse_identifiers(
+pub fn semver_parse_identifiers(
   value: String,
   start: U32,
   end: U32,
@@ -163,7 +163,7 @@ fn semver_parse_identifiers(
   }
 }
 
-fn semver_identifiers_to_strings(values: Array<SemVerIdentifier>) -> Array<String> {
+pub fn semver_identifiers_to_strings(values: Array<SemVerIdentifier>) -> Array<String> {
   let output = Array::with_capacity(values.length())
   while 0u32 {
     index if index < values.length() => {
@@ -181,7 +181,7 @@ fn semver_identifiers_to_strings(values: Array<SemVerIdentifier>) -> Array<Strin
   }
 }
 
-fn semver_finish_parse(
+pub fn semver_finish_parse(
   value: String,
   length: U32,
   core_end: U32,
@@ -242,7 +242,7 @@ fn semver_finish_parse(
   }
 }
 
-fn semver_parse_without_build(
+pub fn semver_parse_without_build(
   value: String,
   length: U32,
   main_end: U32,
@@ -321,11 +321,11 @@ impl SemVer {
   }
 }
 
-fn semver_compare_text(left: String, right: String) -> Ordering {
+pub fn semver_compare_text(left: String, right: String) -> Ordering {
   string_comparator().compare(left, right)
 }
 
-fn semver_compare_identifier(left: SemVerIdentifier, right: SemVerIdentifier) -> Ordering {
+pub fn semver_compare_identifier(left: SemVerIdentifier, right: SemVerIdentifier) -> Ordering {
   match left {
     SemVerIdentifier::Numeric(left_number) => match right {
       SemVerIdentifier::Numeric(right_number) => if left_number < right_number {

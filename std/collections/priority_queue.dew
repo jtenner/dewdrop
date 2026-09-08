@@ -6,7 +6,7 @@ pub struct PriorityItem<t, p> {
   priority: p
 }
 
-struct PriorityItemComparator<t, p, c> {
+pub struct PriorityItemComparator<t, p, c> {
   comparator: c
 }
 

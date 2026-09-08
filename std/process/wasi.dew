@@ -13,7 +13,7 @@ pub fn wasi_process() -> WasiProcess {
   WasiProcess::{}
 }
 
-fn wasi_process_error(
+pub fn wasi_process_error(
   operation: ProcessOperation,
   kind: ProcessErrorKind,
   code: U32,
@@ -25,11 +25,11 @@ fn wasi_process_error(
   }
 }
 
-fn wasi_process_backend_error(operation: ProcessOperation, code: U32) -> ProcessError {
+pub fn wasi_process_backend_error(operation: ProcessOperation, code: U32) -> ProcessError {
   wasi_process_error(operation, ProcessErrorKind::Backend, code)
 }
 
-fn wasi_memory_string(pointer: U32, length: U32) -> Result<String, ProcessError> {
+pub fn wasi_memory_string(pointer: U32, length: U32) -> Result<String, ProcessError> {
   let builder = BytesBuilder::with_capacity(length)
   while 0u32 {
     index if index < length => {
@@ -49,7 +49,7 @@ fn wasi_memory_string(pointer: U32, length: U32) -> Result<String, ProcessError>
   }
 }
 
-fn wasi_find_zero(pointer: U32, limit: U32) -> Option<U32> {
+pub fn wasi_find_zero(pointer: U32, limit: U32) -> Option<U32> {
   while 0u32 {
     index if index < limit => {
       if wasm_u8_load(pointer + index) == 0u8 {
@@ -62,7 +62,7 @@ fn wasi_find_zero(pointer: U32, limit: U32) -> Option<U32> {
   }
 }
 
-fn wasi_process_write(
+pub fn wasi_process_write(
   descriptor: U32,
   operation: ProcessOperation,
   value: Bytes,

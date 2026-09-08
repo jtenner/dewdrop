@@ -6,15 +6,15 @@ pub enum Utf8DecodeError {
   InvalidSequence(U32)
 } derive(Eq)
 
-fn utf8_is_continuation(byte: U8) -> Bool {
+pub fn utf8_is_continuation(byte: U8) -> Bool {
   byte >= 128u8 && byte <= 191u8
 }
 
-fn utf8_u8_to_u32(value: U8) -> U32 {
+pub fn utf8_u8_to_u32(value: U8) -> U32 {
   value.into()
 }
 
-fn utf8_valid_sequence_width(value: Bytes, index: U32) -> U32 {
+pub fn utf8_valid_sequence_width(value: Bytes, index: U32) -> U32 {
   let length = value.byte_length()
   let remaining = length - index
   let first = value.byte_at(index)
@@ -63,7 +63,7 @@ fn utf8_valid_sequence_width(value: Bytes, index: U32) -> U32 {
   }
 }
 
-fn utf8_first_invalid_index(value: Bytes) -> U32 {
+pub fn utf8_first_invalid_index(value: Bytes) -> U32 {
   let length = value.byte_length()
   while 0u32 {
     index if index < length => {
@@ -78,7 +78,7 @@ fn utf8_first_invalid_index(value: Bytes) -> U32 {
   }
 }
 
-fn utf8_expected_sequence_width(first: U8) -> U32 {
+pub fn utf8_expected_sequence_width(first: U8) -> U32 {
   if first >= 194u8 && first <= 223u8 {
     2u32
   } else if first >= 224u8 && first <= 239u8 {
@@ -90,7 +90,7 @@ fn utf8_expected_sequence_width(first: U8) -> U32 {
   }
 }
 
-fn utf8_invalid_sequence_width(value: Bytes, index: U32) -> U32 {
+pub fn utf8_invalid_sequence_width(value: Bytes, index: U32) -> U32 {
   let length = value.byte_length()
   let expected = utf8_expected_sequence_width(value.byte_at(index))
   if expected == 1u32 {
@@ -105,7 +105,7 @@ fn utf8_invalid_sequence_width(value: Bytes, index: U32) -> U32 {
   }
 }
 
-fn utf8_append_valid_scalar(
+pub fn utf8_append_valid_scalar(
   builder: StringBuilder,
   value: Bytes,
   index: U32,
@@ -149,7 +149,7 @@ pub fn encode_view(value: StringView) -> Bytes {
   value.as_bytes()
 }
 
-fn utf8_unit() -> Unit {
+pub fn utf8_unit() -> Unit {
 }
 
 pub fn validate(value: Bytes) -> Result<Unit, Utf8DecodeError> {

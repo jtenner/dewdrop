@@ -16,7 +16,7 @@ pub struct RelativePath {
   value: String
 }
 
-fn path_has_nul_or_backslash(value: String) -> Option<PathError> {
+pub fn path_has_nul_or_backslash(value: String) -> Option<PathError> {
   let bytes = value.as_bytes()
   while 0u32 {
     index if index < bytes.byte_length() => {

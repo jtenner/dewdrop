@@ -72,7 +72,7 @@ V128_SPECIAL_MEMORY = [
 
 
 def builtin(name: str, params: str, result: str, target: str) -> str:
-    return f'builtin {name}({params}) -> {result} = "{target}"\n'
+    return f'pub builtin {name}({params}) -> {result} = "{target}"\n'
 
 
 def carrier_helpers(type_name: str, carrier: str, family: list) -> str:
@@ -86,7 +86,7 @@ def carrier_helpers(type_name: str, carrier: str, family: list) -> str:
         return f"unsafe_bitcast::<{source}, {target}>({expression})"
 
     def function(name: str, params: str, result: str, body: str) -> str:
-        return f"fn {name}({params}) -> {result} {{\n  {body}\n}}\n"
+        return f"pub fn {name}({params}) -> {result} {{\n  {body}\n}}\n"
 
     output = [
         function(f"{prefix}_from_{carrier.lower()}", f"value: {carrier}", type_name, cast("value", carrier, type_name)),
@@ -151,7 +151,7 @@ def v128_source(type_name: str, scalar: str, lane: str, kind: str) -> str:
             opcode = "i8x16.shuffle " + " ".join(map(str, indices))
             if shuffle == "reverse":
                 out.append(builtin(f"{p}_reverse_raw", f"left: {type_name}, right: {type_name}", type_name, opcode))
-                out.append(f"fn {p}_reverse(value: {type_name}) -> {type_name} {{\n  {p}_reverse_raw(value, value)\n}}\n")
+                out.append(f"pub fn {p}_reverse(value: {type_name}) -> {type_name} {{\n  {p}_reverse_raw(value, value)\n}}\n")
             else:
                 out.append(builtin(f"{p}_{shuffle}", f"left: {type_name}, right: {type_name}", type_name, opcode))
     for result, suffix, params, _ in V128_CROSS_OPS:
@@ -282,13 +282,13 @@ def swar_i8_extended(type_name: str, kind: str, width: int) -> tuple[str, list[s
         product = f"(({left} * {right}) & 255{suffix})"
         terms.append(f"({product} << {shift}{suffix})" if shift else product)
     out.append(
-        f"fn {p}_mul(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_mul(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
         f"  {wrap(' | '.join(terms))}\n}}\n"
     )
     eq_bits = bits(f"{p}_eq(left, right)")
     out.append(
-        f"fn {p}_ne(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_ne(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  {wrap(f'{eq_bits} ^ {ones}{suffix}')}\n}}\n"
     )
     binary.append("ne")
@@ -296,7 +296,7 @@ def swar_i8_extended(type_name: str, kind: str, width: int) -> tuple[str, list[s
     sign_adjust = f"a ^ {high}{suffix}" if kind == "signed" else "a"
     sign_adjust_b = f"b ^ {high}{suffix}" if kind == "signed" else "b"
     out.append(
-        f"fn {p}_lt(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_lt(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
         f"  let ax = {sign_adjust}\n  let bx = {sign_adjust_b}\n"
         f"  let d = ((ax | {high}{suffix}) - (bx & {low}{suffix})) ^ ((ax ^ (bx ^ {ones}{suffix})) & {high}{suffix})\n"
@@ -305,24 +305,24 @@ def swar_i8_extended(type_name: str, kind: str, width: int) -> tuple[str, list[s
     )
     reverse_lt_bits = bits(f"{p}_lt(right, left)")
     out.append(
-        f"fn {p}_le(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_le(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  {wrap(f'{reverse_lt_bits} ^ {ones}{suffix}')}\n}}\n"
     )
-    out.append(f"fn {p}_gt(left: {type_name}, right: {type_name}) -> {type_name} {{\n  {p}_lt(right, left)\n}}\n")
+    out.append(f"pub fn {p}_gt(left: {type_name}, right: {type_name}) -> {type_name} {{\n  {p}_lt(right, left)\n}}\n")
     forward_lt_bits = bits(f"{p}_lt(left, right)")
     out.append(
-        f"fn {p}_ge(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_ge(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  {wrap(f'{forward_lt_bits} ^ {ones}{suffix}')}\n}}\n"
     )
     for op in ("lt", "le", "gt", "ge"):
         binary.append(op)
     out.append(
-        f"fn {p}_min(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_min(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let a = {bits('left')}\n  let b = {bits('right')}\n  let mask = {bits(f'{p}_lt(left, right)')}\n"
         f"  {wrap('b ^ ((a ^ b) & mask)')}\n}}\n"
     )
     out.append(
-        f"fn {p}_max(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_max(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let a = {bits('left')}\n  let b = {bits('right')}\n  let mask = {bits(f'{p}_lt(left, right)')}\n"
         f"  {wrap('a ^ ((a ^ b) & mask)')}\n}}\n"
     )
@@ -330,7 +330,7 @@ def swar_i8_extended(type_name: str, kind: str, width: int) -> tuple[str, list[s
 
     if kind == "signed":
         out.append(
-            f"fn {p}_abs(value: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_abs(value: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('value')}\n  let mask = ((a & {high}{suffix}) >> 7{suffix}) * 255{suffix}\n"
             f"  let x = a ^ mask\n  let carry = mask & {one}{suffix}\n"
             f"  let lo = (x & {nibble_lo}{suffix}) + (carry & {nibble_lo}{suffix})\n"
@@ -338,12 +338,12 @@ def swar_i8_extended(type_name: str, kind: str, width: int) -> tuple[str, list[s
             f"  {wrap(f'(lo & {nibble_lo}{suffix}) | (hi & {nibble_hi}{suffix})')}\n}}\n"
         )
         out.append(
-            f"fn {p}_neg(value: {type_name}) -> {type_name} {{\n  let a = {bits('value')}\n"
+            f"pub fn {p}_neg(value: {type_name}) -> {type_name} {{\n  let a = {bits('value')}\n"
             f"  {wrap(f'({high}{suffix} - (a & {low}{suffix})) ^ ((a ^ {ones}{suffix}) & {high}{suffix})')}\n}}\n"
         )
         unary += ["abs", "neg"]
         out.append(
-            f"fn {p}_add_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_add_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
             f"  let sum = ((a & {low}{suffix}) + (b & {low}{suffix})) ^ ((a ^ b) & {high}{suffix})\n"
             f"  let overflow = (((a ^ b) ^ {ones}{suffix}) & (a ^ sum) & {high}{suffix}) >> 7{suffix}\n"
@@ -351,7 +351,7 @@ def swar_i8_extended(type_name: str, kind: str, width: int) -> tuple[str, list[s
             f"  {wrap(f'(sum & (mask ^ {ones}{suffix})) | (limit & mask)')}\n}}\n"
         )
         out.append(
-            f"fn {p}_sub_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_sub_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
             f"  let dlo = ((a | {dlo_high}{suffix}) - (b & {dlo_low}{suffix})) ^ ((a ^ (b ^ {ones}{suffix})) & {dlo_high}{suffix})\n"
             f"  let dhi = ((a | {dhi_high}{suffix}) - (b & {dhi_low}{suffix})) ^ ((a ^ (b ^ {ones}{suffix})) & {dhi_high}{suffix})\n"
@@ -364,12 +364,12 @@ def swar_i8_extended(type_name: str, kind: str, width: int) -> tuple[str, list[s
     else:
         no_low_bits = int.from_bytes(bytes([0xFE]) * (width // 8), "little")
         out.append(
-            f"fn {p}_avgr(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_avgr(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
             f"  {wrap(f'(a | b) - (((a ^ b) & {no_low_bits}{suffix}) >> 1{suffix})')}\n}}\n"
         )
         out.append(
-            f"fn {p}_add_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_add_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
             f"  let lo = (a & {even}{suffix}) + (b & {even}{suffix})\n  let hi = ((a >> 8{suffix}) & {even}{suffix}) + ((b >> 8{suffix}) & {even}{suffix})\n"
             f"  let lo_carry = lo & {even_carry}{suffix}\n  let hi_carry = hi & {even_carry}{suffix}\n"
@@ -377,7 +377,7 @@ def swar_i8_extended(type_name: str, kind: str, width: int) -> tuple[str, list[s
             f"  {wrap(f'(lo & {even}{suffix}) | ((hi & {even}{suffix}) << 8{suffix}) | lo_mask | hi_mask')}\n}}\n"
         )
         out.append(
-            f"fn {p}_sub_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_sub_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
             f"  let diff = ((a | {high}{suffix}) - (b & {low}{suffix})) ^ ((a ^ (b ^ {ones}{suffix})) & {high}{suffix})\n"
             f"  let mask = (((((a ^ {ones}{suffix}) & b) | (((a ^ b) ^ {ones}{suffix}) & diff)) & {high}{suffix}) >> 7{suffix}) * 255{suffix}\n"
@@ -455,57 +455,57 @@ def swar_wide_extended(
         product = f"(({left} * {right}) & {lane_mask}{suffix})"
         terms.append(f"({product} << {shift}{suffix})" if shift else product)
     out.append(
-        f"fn {p}_mul(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_mul(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
         f"  {wrap(' | '.join(terms))}\n}}\n"
     )
 
     out.append(
-        f"fn {p}_eq(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_eq(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let x = {bits('left')} ^ {bits('right')}\n"
         f"  let nonzero = ((((x & {low}{suffix}) + {low}{suffix}) | x) & {high}{suffix})\n"
         f"  {wrap(f'(((nonzero >> {lane_width - 1}{suffix}) * {lane_mask}{suffix}) ^ {ones}{suffix})')}\n}}\n"
     )
     out.append(
-        f"fn {p}_ne(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_ne(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let equal = {bits(f'{p}_eq(left, right)')}\n"
         f"  {wrap(f'equal ^ {ones}{suffix}')}\n}}\n"
     )
     signed = kind == "signed"
     out.append(
-        f"fn {p}_lt(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_lt(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
         f"  {wrap(less_mask('a', 'b', signed))}\n}}\n"
     )
     out.append(
-        f"fn {p}_le(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_le(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let greater = {bits(f'{p}_lt(right, left)')}\n"
         f"  {wrap(f'greater ^ {ones}{suffix}')}\n}}\n"
     )
-    out.append(f"fn {p}_gt(left: {type_name}, right: {type_name}) -> {type_name} {{\n  {p}_lt(right, left)\n}}\n")
+    out.append(f"pub fn {p}_gt(left: {type_name}, right: {type_name}) -> {type_name} {{\n  {p}_lt(right, left)\n}}\n")
     out.append(
-        f"fn {p}_ge(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_ge(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let less = {bits(f'{p}_lt(left, right)')}\n"
         f"  {wrap(f'less ^ {ones}{suffix}')}\n}}\n"
     )
     out.append(
-        f"fn {p}_min(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_min(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let a = {bits('left')}\n  let b = {bits('right')}\n  let mask = {bits(f'{p}_lt(left, right)')}\n"
         f"  {wrap('b ^ ((a ^ b) & mask)')}\n}}\n"
     )
     out.append(
-        f"fn {p}_max(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+        f"pub fn {p}_max(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
         f"  let a = {bits('left')}\n  let b = {bits('right')}\n  let mask = {bits(f'{p}_lt(left, right)')}\n"
         f"  {wrap('a ^ ((a ^ b) & mask)')}\n}}\n"
     )
 
     if kind == "signed":
         out.append(
-            f"fn {p}_neg(value: {type_name}) -> {type_name} {{\n  let a = {bits('value')}\n"
+            f"pub fn {p}_neg(value: {type_name}) -> {type_name} {{\n  let a = {bits('value')}\n"
             f"  {wrap(f'({high}{suffix} - (a & {low}{suffix})) ^ ((a ^ {ones}{suffix}) & {high}{suffix})')}\n}}\n"
         )
         out.append(
-            f"fn {p}_abs(value: {type_name}) -> {type_name} {{\n  let a = {bits('value')}\n"
+            f"pub fn {p}_abs(value: {type_name}) -> {type_name} {{\n  let a = {bits('value')}\n"
             f"  let mask = ((a & {high}{suffix}) >> {lane_width - 1}{suffix}) * {lane_mask}{suffix}\n"
             f"  let x = a ^ mask\n  let carry = mask & {one}{suffix}\n"
             f"  {wrap(packed_add('x', 'carry'))}\n}}\n"
@@ -514,14 +514,14 @@ def swar_wide_extended(
         sum_expr = packed_add("a", "b")
         diff_expr = packed_sub("a", "b")
         out.append(
-            f"fn {p}_add_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_add_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n  let sum = {sum_expr}\n"
             f"  let overflow = ((((a ^ b) ^ {ones}{suffix}) & (a ^ sum) & {high}{suffix}) >> {lane_width - 1}{suffix}) * {lane_mask}{suffix}\n"
             f"  let limit = (((a & {high}{suffix}) >> {lane_width - 1}{suffix}) * {lane_mask}{suffix}) ^ {low}{suffix}\n"
             f"  {wrap(f'(sum & (overflow ^ {ones}{suffix})) | (limit & overflow)')}\n}}\n"
         )
         out.append(
-            f"fn {p}_sub_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_sub_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n  let diff = {diff_expr}\n"
             f"  let overflow = (((a ^ b) & (a ^ diff) & {high}{suffix}) >> {lane_width - 1}{suffix}) * {lane_mask}{suffix}\n"
             f"  let limit = (((a & {high}{suffix}) >> {lane_width - 1}{suffix}) * {lane_mask}{suffix}) ^ {low}{suffix}\n"
@@ -530,20 +530,20 @@ def swar_wide_extended(
         binary += ["add_sat", "sub_sat"]
     else:
         out.append(
-            f"fn {p}_avgr(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_avgr(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n"
             f"  {wrap(f'(a | b) - (((a ^ b) & {no_low_bit}{suffix}) >> 1{suffix})')}\n}}\n"
         )
         sum_expr = packed_add("a", "b")
         diff_expr = packed_sub("a", "b")
         out.append(
-            f"fn {p}_add_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_add_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n  let sum = {sum_expr}\n"
             f"  let overflow = {less_mask('sum', 'a', False)}\n"
             f"  {wrap('sum | overflow')}\n}}\n"
         )
         out.append(
-            f"fn {p}_sub_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
+            f"pub fn {p}_sub_sat(left: {type_name}, right: {type_name}) -> {type_name} {{\n"
             f"  let a = {bits('left')}\n  let b = {bits('right')}\n  let diff = {diff_expr}\n"
             f"  let underflow = {less_mask('a', 'b', False)}\n"
             f"  {wrap(f'diff & (underflow ^ {ones}{suffix})')}\n}}\n"
@@ -558,11 +558,11 @@ def swar_wide_extended(
             term = f"({term} << {index}{suffix})"
         bit_terms.append(term)
     out.append(
-        f"fn {p}_bitmask(value: {type_name}) -> U32 {{\n  let a = {bits('value')}\n"
+        f"pub fn {p}_bitmask(value: {type_name}) -> U32 {{\n  let a = {bits('value')}\n"
         f"  {suffix}_into_u32({' | '.join(bit_terms)})\n}}\n"
     )
     out.append(
-        f"fn {p}_all_true(value: {type_name}) -> Bool {{\n"
+        f"pub fn {p}_all_true(value: {type_name}) -> Bool {{\n"
         f"  {bits(f'{p}_eq(value, {p}_from_{raw}({raw}_from_bits(0{suffix})))')} == 0{suffix}\n}}\n"
     )
     return "".join(out), binary, unary
@@ -580,21 +580,21 @@ def swar_source(type_name: str, scalar: str, lane: str, kind: str, width: int) -
     if kind != "float":
         raw_lane = "I" + lane[1:]
         splat_argument = f"{scalar.lower()}_into_{raw_lane.lower()}(value)" if kind == "unsigned" else "value"
-        out.append(f"fn {p}_splat(value: {scalar}) -> {type_name} {{\n  {p}_from_{raw}({raw}_splat_{lane}({splat_argument}))\n}}\n")
+        out.append(f"pub fn {p}_splat(value: {scalar}) -> {type_name} {{\n  {p}_from_{raw}({raw}_splat_{lane}({splat_argument}))\n}}\n")
         signed_suffix = "s" if kind == "signed" else "u"
-        out.append(f"fn {p}_extract(value: {type_name}, index: U8) -> {scalar} {{\n  {raw}_extract_{lane}_{signed_suffix}({p}_to_{raw}(value), index)\n}}\n")
+        out.append(f"pub fn {p}_extract(value: {type_name}, index: U8) -> {scalar} {{\n  {raw}_extract_{lane}_{signed_suffix}({p}_to_{raw}(value), index)\n}}\n")
         replace_lane = scalar
         lane_argument = f"{scalar.lower()}_into_{raw_lane.lower()}(lane)" if kind == "unsigned" else "lane"
-        out.append(f"fn {p}_replace(value: {type_name}, index: U8, lane: {replace_lane}) -> {type_name} {{\n  {p}_from_{raw}({raw}_replace_{lane}({p}_to_{raw}(value), index, {lane_argument}))\n}}\n")
+        out.append(f"pub fn {p}_replace(value: {type_name}, index: U8, lane: {replace_lane}) -> {type_name} {{\n  {p}_from_{raw}({raw}_replace_{lane}({p}_to_{raw}(value), index, {lane_argument}))\n}}\n")
         for op in ("add", "sub"):
-            out.append(f"fn {p}_{op}(left: {type_name}, right: {type_name}) -> {type_name} {{\n  {p}_from_{raw}({raw}_{op}_{lane}({p}_to_{raw}(left), {p}_to_{raw}(right)))\n}}\n")
-        out.append(f"fn {p}_shl(value: {type_name}, count: U8) -> {type_name} {{\n  {p}_from_{raw}({raw}_shl_{lane}({p}_to_{raw}(value), count))\n}}\n")
-        out.append(f"fn {p}_shr(value: {type_name}, count: U8) -> {type_name} {{\n  {p}_from_{raw}({raw}_shr_{lane}_{signed_suffix}({p}_to_{raw}(value), count))\n}}\n")
+            out.append(f"pub fn {p}_{op}(left: {type_name}, right: {type_name}) -> {type_name} {{\n  {p}_from_{raw}({raw}_{op}_{lane}({p}_to_{raw}(left), {p}_to_{raw}(right)))\n}}\n")
+        out.append(f"pub fn {p}_shl(value: {type_name}, count: U8) -> {type_name} {{\n  {p}_from_{raw}({raw}_shl_{lane}({p}_to_{raw}(value), count))\n}}\n")
+        out.append(f"pub fn {p}_shr(value: {type_name}, count: U8) -> {type_name} {{\n  {p}_from_{raw}({raw}_shr_{lane}_{signed_suffix}({p}_to_{raw}(value), count))\n}}\n")
         if lane == "i8":
-            out.append(f"fn {p}_popcnt(value: {type_name}) -> {type_name} {{\n  {p}_from_{raw}({raw}_popcnt_i8({p}_to_{raw}(value)))\n}}\n")
-            out.append(f"fn {p}_bitmask(value: {type_name}) -> U32 {{\n  {raw}_bitmask_i8({p}_to_{raw}(value))\n}}\n")
-            out.append(f"fn {p}_all_true(value: {type_name}) -> Bool {{\n  {raw}_all_true_i8({p}_to_{raw}(value))\n}}\n")
-            out.append(f"fn {p}_eq(left: {type_name}, right: {type_name}) -> {type_name} {{\n  {p}_from_{raw}({raw}_eq_i8({p}_to_{raw}(left), {p}_to_{raw}(right)))\n}}\n")
+            out.append(f"pub fn {p}_popcnt(value: {type_name}) -> {type_name} {{\n  {p}_from_{raw}({raw}_popcnt_i8({p}_to_{raw}(value)))\n}}\n")
+            out.append(f"pub fn {p}_bitmask(value: {type_name}) -> U32 {{\n  {raw}_bitmask_i8({p}_to_{raw}(value))\n}}\n")
+            out.append(f"pub fn {p}_all_true(value: {type_name}) -> Bool {{\n  {raw}_all_true_i8({p}_to_{raw}(value))\n}}\n")
+            out.append(f"pub fn {p}_eq(left: {type_name}, right: {type_name}) -> {type_name} {{\n  {p}_from_{raw}({raw}_eq_i8({p}_to_{raw}(left), {p}_to_{raw}(right)))\n}}\n")
             extended_source, extended_binary, extended_unary = swar_i8_extended(
                 type_name,
                 kind,

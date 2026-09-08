@@ -1,7 +1,7 @@
-fn i8x4_from_swar32(value: Swar32) -> I8x4 {
+pub fn i8x4_from_swar32(value: Swar32) -> I8x4 {
   unsafe_bitcast::<Swar32, I8x4>(value)
 }
-fn i8x4_to_swar32(value: I8x4) -> Swar32 {
+pub fn i8x4_to_swar32(value: I8x4) -> Swar32 {
   unsafe_bitcast::<I8x4, Swar32>(value)
 }
 impl Into<U8x4> for I8x4 {
@@ -19,63 +19,63 @@ impl Into<U16x2> for I8x4 {
     unsafe_bitcast::<I8x4, U16x2>(self)
   }
 }
-fn i8x4_load(address: U32) -> I8x4 {
+pub fn i8x4_load(address: U32) -> I8x4 {
   unsafe_bitcast::<U32, I8x4>(u32_load(address))
 }
-fn i8x4_store(address: U32, value: I8x4) -> Unit {
+pub fn i8x4_store(address: U32, value: I8x4) -> Unit {
   u32_store(address, unsafe_bitcast::<I8x4, U32>(value))
 }
-fn i8x4_and(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_and(left: I8x4, right: I8x4) -> I8x4 {
   unsafe_bitcast::<U32, I8x4>(u32_and(unsafe_bitcast::<I8x4, U32>(left), unsafe_bitcast::<I8x4, U32>(right)))
 }
-fn i8x4_or(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_or(left: I8x4, right: I8x4) -> I8x4 {
   unsafe_bitcast::<U32, I8x4>(u32_or(unsafe_bitcast::<I8x4, U32>(left), unsafe_bitcast::<I8x4, U32>(right)))
 }
-fn i8x4_xor(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_xor(left: I8x4, right: I8x4) -> I8x4 {
   unsafe_bitcast::<U32, I8x4>(u32_xor(unsafe_bitcast::<I8x4, U32>(left), unsafe_bitcast::<I8x4, U32>(right)))
 }
-fn i8x4_splat(value: I8) -> I8x4 {
+pub fn i8x4_splat(value: I8) -> I8x4 {
   i8x4_from_swar32(swar32_splat_i8(value))
 }
-fn i8x4_extract(value: I8x4, index: U8) -> I8 {
+pub fn i8x4_extract(value: I8x4, index: U8) -> I8 {
   swar32_extract_i8_s(i8x4_to_swar32(value), index)
 }
-fn i8x4_replace(value: I8x4, index: U8, lane: I8) -> I8x4 {
+pub fn i8x4_replace(value: I8x4, index: U8, lane: I8) -> I8x4 {
   i8x4_from_swar32(swar32_replace_i8(i8x4_to_swar32(value), index, lane))
 }
-fn i8x4_add(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_add(left: I8x4, right: I8x4) -> I8x4 {
   i8x4_from_swar32(swar32_add_i8(i8x4_to_swar32(left), i8x4_to_swar32(right)))
 }
-fn i8x4_sub(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_sub(left: I8x4, right: I8x4) -> I8x4 {
   i8x4_from_swar32(swar32_sub_i8(i8x4_to_swar32(left), i8x4_to_swar32(right)))
 }
-fn i8x4_shl(value: I8x4, count: U8) -> I8x4 {
+pub fn i8x4_shl(value: I8x4, count: U8) -> I8x4 {
   i8x4_from_swar32(swar32_shl_i8(i8x4_to_swar32(value), count))
 }
-fn i8x4_shr(value: I8x4, count: U8) -> I8x4 {
+pub fn i8x4_shr(value: I8x4, count: U8) -> I8x4 {
   i8x4_from_swar32(swar32_shr_i8_s(i8x4_to_swar32(value), count))
 }
-fn i8x4_popcnt(value: I8x4) -> I8x4 {
+pub fn i8x4_popcnt(value: I8x4) -> I8x4 {
   i8x4_from_swar32(swar32_popcnt_i8(i8x4_to_swar32(value)))
 }
-fn i8x4_bitmask(value: I8x4) -> U32 {
+pub fn i8x4_bitmask(value: I8x4) -> U32 {
   swar32_bitmask_i8(i8x4_to_swar32(value))
 }
-fn i8x4_all_true(value: I8x4) -> Bool {
+pub fn i8x4_all_true(value: I8x4) -> Bool {
   swar32_all_true_i8(i8x4_to_swar32(value))
 }
-fn i8x4_eq(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_eq(left: I8x4, right: I8x4) -> I8x4 {
   i8x4_from_swar32(swar32_eq_i8(i8x4_to_swar32(left), i8x4_to_swar32(right)))
 }
-fn i8x4_mul(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_mul(left: I8x4, right: I8x4) -> I8x4 {
   let a = swar32_to_bits(i8x4_to_swar32(left))
   let b = swar32_to_bits(i8x4_to_swar32(right))
   i8x4_from_swar32(swar32_from_bits((((a & 255u32) * (b & 255u32)) & 255u32) | (((((a >> 8u32) & 255u32) * ((b >> 8u32) & 255u32)) & 255u32) << 8u32) | (((((a >> 16u32) & 255u32) * ((b >> 16u32) & 255u32)) & 255u32) << 16u32) | (((((a >> 24u32) & 255u32) * ((b >> 24u32) & 255u32)) & 255u32) << 24u32)))
 }
-fn i8x4_ne(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_ne(left: I8x4, right: I8x4) -> I8x4 {
   i8x4_from_swar32(swar32_from_bits(swar32_to_bits(i8x4_to_swar32(i8x4_eq(left, right))) ^ 4294967295u32))
 }
-fn i8x4_lt(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_lt(left: I8x4, right: I8x4) -> I8x4 {
   let a = swar32_to_bits(i8x4_to_swar32(left))
   let b = swar32_to_bits(i8x4_to_swar32(right))
   let ax = a ^ 2155905152u32
@@ -84,28 +84,28 @@ fn i8x4_lt(left: I8x4, right: I8x4) -> I8x4 {
   let mask = (((((ax ^ 4294967295u32) & bx) | (((ax ^ bx) ^ 4294967295u32) & d)) & 2155905152u32) >> 7u32) * 255u32
   i8x4_from_swar32(swar32_from_bits(mask))
 }
-fn i8x4_le(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_le(left: I8x4, right: I8x4) -> I8x4 {
   i8x4_from_swar32(swar32_from_bits(swar32_to_bits(i8x4_to_swar32(i8x4_lt(right, left))) ^ 4294967295u32))
 }
-fn i8x4_gt(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_gt(left: I8x4, right: I8x4) -> I8x4 {
   i8x4_lt(right, left)
 }
-fn i8x4_ge(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_ge(left: I8x4, right: I8x4) -> I8x4 {
   i8x4_from_swar32(swar32_from_bits(swar32_to_bits(i8x4_to_swar32(i8x4_lt(left, right))) ^ 4294967295u32))
 }
-fn i8x4_min(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_min(left: I8x4, right: I8x4) -> I8x4 {
   let a = swar32_to_bits(i8x4_to_swar32(left))
   let b = swar32_to_bits(i8x4_to_swar32(right))
   let mask = swar32_to_bits(i8x4_to_swar32(i8x4_lt(left, right)))
   i8x4_from_swar32(swar32_from_bits(b ^ ((a ^ b) & mask)))
 }
-fn i8x4_max(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_max(left: I8x4, right: I8x4) -> I8x4 {
   let a = swar32_to_bits(i8x4_to_swar32(left))
   let b = swar32_to_bits(i8x4_to_swar32(right))
   let mask = swar32_to_bits(i8x4_to_swar32(i8x4_lt(left, right)))
   i8x4_from_swar32(swar32_from_bits(a ^ ((a ^ b) & mask)))
 }
-fn i8x4_abs(value: I8x4) -> I8x4 {
+pub fn i8x4_abs(value: I8x4) -> I8x4 {
   let a = swar32_to_bits(i8x4_to_swar32(value))
   let mask = ((a & 2155905152u32) >> 7u32) * 255u32
   let x = a ^ mask
@@ -114,11 +114,11 @@ fn i8x4_abs(value: I8x4) -> I8x4 {
   let hi = (x & 4042322160u32) + (carry & 4042322160u32) + (lo & 269488144u32)
   i8x4_from_swar32(swar32_from_bits((lo & 252645135u32) | (hi & 4042322160u32)))
 }
-fn i8x4_neg(value: I8x4) -> I8x4 {
+pub fn i8x4_neg(value: I8x4) -> I8x4 {
   let a = swar32_to_bits(i8x4_to_swar32(value))
   i8x4_from_swar32(swar32_from_bits((2155905152u32 - (a & 2139062143u32)) ^ ((a ^ 4294967295u32) & 2155905152u32)))
 }
-fn i8x4_add_sat(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_add_sat(left: I8x4, right: I8x4) -> I8x4 {
   let a = swar32_to_bits(i8x4_to_swar32(left))
   let b = swar32_to_bits(i8x4_to_swar32(right))
   let sum = ((a & 2139062143u32) + (b & 2139062143u32)) ^ ((a ^ b) & 2155905152u32)
@@ -127,7 +127,7 @@ fn i8x4_add_sat(left: I8x4, right: I8x4) -> I8x4 {
   let limit = (((a & 2155905152u32) >> 7u32) * 255u32) ^ 2139062143u32
   i8x4_from_swar32(swar32_from_bits((sum & (mask ^ 4294967295u32)) | (limit & mask)))
 }
-fn i8x4_sub_sat(left: I8x4, right: I8x4) -> I8x4 {
+pub fn i8x4_sub_sat(left: I8x4, right: I8x4) -> I8x4 {
   let a = swar32_to_bits(i8x4_to_swar32(left))
   let b = swar32_to_bits(i8x4_to_swar32(right))
   let dlo = ((a | 8388736u32) - (b & 8323199u32)) ^ ((a ^ (b ^ 4294967295u32)) & 8388736u32)

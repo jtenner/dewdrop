@@ -140,7 +140,7 @@ impl<t> Iter<t> for CircularBufferIter<t> {
   }
 }
 
-fn circular_buffer_create<t>(capacity: U32, growable: Bool) -> CircularBuffer<t> {
+pub fn circular_buffer_create<t>(capacity: U32, growable: Bool) -> CircularBuffer<t> {
   if capacity == 4294967295u32 {
     unreachable()
   } else {
@@ -156,7 +156,7 @@ fn circular_buffer_create<t>(capacity: U32, growable: Bool) -> CircularBuffer<t>
   }
 }
 
-fn circular_buffer_index<t>(buffer: CircularBuffer<t>, offset: U32) -> U32 {
+pub fn circular_buffer_index<t>(buffer: CircularBuffer<t>, offset: U32) -> U32 {
   if buffer.head >= buffer.limit || offset >= buffer.limit {
     unreachable()
   } else {
@@ -169,11 +169,11 @@ fn circular_buffer_index<t>(buffer: CircularBuffer<t>, offset: U32) -> U32 {
   }
 }
 
-fn circular_buffer_clear_slot<t>(buffer: CircularBuffer<t>, index: U32) -> Unit {
+pub fn circular_buffer_clear_slot<t>(buffer: CircularBuffer<t>, index: U32) -> Unit {
   wasm_array_copy(buffer.backing, index, buffer.backing, buffer.limit, 1u32)
 }
 
-fn circular_buffer_make_room<t>(buffer: CircularBuffer<t>) -> Bool {
+pub fn circular_buffer_make_room<t>(buffer: CircularBuffer<t>) -> Bool {
   if buffer.count < buffer.limit {
     true
   } else if !buffer.growable {

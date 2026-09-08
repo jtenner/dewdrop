@@ -32,7 +32,7 @@ pub struct JsonString {
   needs_escape: Bool
 }
 
-struct ParsedJsonString {
+pub struct ParsedJsonString {
   value: String
   needs_escape: Bool
 }
@@ -87,7 +87,7 @@ pub enum JsonOutputError {
   Write(JsonWriteError)
 }
 
-struct JsonParser {
+pub struct JsonParser {
   input: Bytes
   source: String
   state: FixedArray<U32>
@@ -97,7 +97,7 @@ struct JsonParser {
   validated_strings: Bool
 }
 
-struct JsonWriter {
+pub struct JsonWriter {
   builder: StringBuilder
   max_depth: U32
   max_bytes: U32
@@ -105,9 +105,9 @@ struct JsonWriter {
   error_payload: FixedArray<String>
 }
 
-builtin json_bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string_unchecked"
+pub builtin json_bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string_unchecked"
 
-fn json_unit() -> Unit {}
+pub fn json_unit() -> Unit {}
 
 pub fn json_default_limits() -> JsonLimits {
   JsonLimits::{
@@ -118,31 +118,31 @@ pub fn json_default_limits() -> JsonLimits {
   }
 }
 
-fn json_parser_offset(parser: JsonParser) -> U32 {
+pub fn json_parser_offset(parser: JsonParser) -> U32 {
   parser.state.get_unchecked(0u32)
 }
 
-fn json_parser_set_offset(parser: JsonParser, offset: U32) -> Unit {
+pub fn json_parser_set_offset(parser: JsonParser, offset: U32) -> Unit {
   parser.state.set_unchecked(0u32, offset)
 }
 
-fn json_parser_value_count(parser: JsonParser) -> U32 {
+pub fn json_parser_value_count(parser: JsonParser) -> U32 {
   parser.state.get_unchecked(1u32)
 }
 
-fn json_parser_set_value_count(parser: JsonParser, count: U32) -> Unit {
+pub fn json_parser_set_value_count(parser: JsonParser, count: U32) -> Unit {
   parser.state.set_unchecked(1u32, count)
 }
 
-fn json_is_whitespace(byte: U8) -> Bool {
+pub fn json_is_whitespace(byte: U8) -> Bool {
   byte == 32u8 || byte == 9u8 || byte == 10u8 || byte == 13u8
 }
 
-fn json_first_mask_lane(mask: U32) -> U32 {
+pub fn json_first_mask_lane(mask: U32) -> U32 {
   wasm_u32_ctz(mask)
 }
 
-fn json_skip_whitespace_simd(value: Bytes, start: U32) -> U32 {
+pub fn json_skip_whitespace_simd(value: Bytes, start: U32) -> U32 {
   let length = value.byte_length()
   let mut index = start
   while index {
@@ -175,7 +175,7 @@ fn json_skip_whitespace_simd(value: Bytes, start: U32) -> U32 {
   }
 }
 
-fn json_scan_string_special_simd(value: String, start: U32) -> U32 {
+pub fn json_scan_string_special_simd(value: String, start: U32) -> U32 {
   let length = value.byte_length()
   let mut index = start
   while index {
@@ -210,7 +210,7 @@ fn json_scan_string_special_simd(value: String, start: U32) -> U32 {
   }
 }
 
-fn json_scan_bytes_string_special_simd(value: Bytes, start: U32) -> U32 {
+pub fn json_scan_bytes_string_special_simd(value: Bytes, start: U32) -> U32 {
   let length = value.byte_length()
   let mut index = start
   while index {
@@ -245,11 +245,11 @@ fn json_scan_bytes_string_special_simd(value: Bytes, start: U32) -> U32 {
   }
 }
 
-fn json_is_scalar_terminator(byte: U8) -> Bool {
+pub fn json_is_scalar_terminator(byte: U8) -> Bool {
   json_is_whitespace(byte) || byte == 44u8 || byte == 93u8 || byte == 125u8
 }
 
-fn json_scan_scalar_end_simd(value: Bytes, start: U32) -> U32 {
+pub fn json_scan_scalar_end_simd(value: Bytes, start: U32) -> U32 {
   let length = value.byte_length()
   let mut index = start
   while index {
@@ -291,29 +291,29 @@ fn json_scan_scalar_end_simd(value: Bytes, start: U32) -> U32 {
   }
 }
 
-fn json_parser_skip_whitespace(parser: JsonParser) -> Unit {
+pub fn json_parser_skip_whitespace(parser: JsonParser) -> Unit {
   json_parser_set_offset(
     parser,
     json_skip_whitespace_simd(parser.input, json_parser_offset(parser)),
   )
 }
 
-fn json_is_digit(byte: U8) -> Bool {
+pub fn json_is_digit(byte: U8) -> Bool {
   byte >= 48u8 && byte <= 57u8
 }
 
-fn json_is_nonzero_digit(byte: U8) -> Bool {
+pub fn json_is_nonzero_digit(byte: U8) -> Bool {
   byte >= 49u8 && byte <= 57u8
 }
 
-fn json_digit_run_end(value: Bytes, start: U32, end: U32) -> U32 {
+pub fn json_digit_run_end(value: Bytes, start: U32, end: U32) -> U32 {
   while start {
     index if index < end && json_is_digit(value.byte_at(index)) => continue index + 1u32
     index => break index
   }
 }
 
-fn json_number_after_integer(
+pub fn json_number_after_integer(
   value: Bytes,
   start: U32,
   end: U32,
@@ -333,7 +333,7 @@ fn json_number_after_integer(
   }
 }
 
-fn json_number_after_fraction(
+pub fn json_number_after_fraction(
   value: Bytes,
   start: U32,
   end: U32,
@@ -350,7 +350,7 @@ fn json_number_after_fraction(
   }
 }
 
-fn json_number_after_exponent(
+pub fn json_number_after_exponent(
   value: Bytes,
   start: U32,
   end: U32,
@@ -372,7 +372,7 @@ fn json_number_after_exponent(
   }
 }
 
-fn json_number_is_valid(value: Bytes, start: U32, end: U32) -> Bool {
+pub fn json_number_is_valid(value: Bytes, start: U32, end: U32) -> Bool {
   if start >= end {
     false
   } else {
@@ -398,7 +398,7 @@ fn json_number_is_valid(value: Bytes, start: U32, end: U32) -> Bool {
   }
 }
 
-fn json_hex_value(byte: U8) -> U32 {
+pub fn json_hex_value(byte: U8) -> U32 {
   if byte >= 48u8 && byte <= 57u8 {
     u8_into_u32(byte - 48u8)
   } else if byte >= 65u8 && byte <= 70u8 {
@@ -410,7 +410,7 @@ fn json_hex_value(byte: U8) -> U32 {
   }
 }
 
-fn json_parse_hex4(input: Bytes, start: U32) -> Option<U32> {
+pub fn json_parse_hex4(input: Bytes, start: U32) -> Option<U32> {
   if start > input.byte_length() || input.byte_length() - start < 4u32 {
     Option::None
   } else {
@@ -426,7 +426,7 @@ fn json_parse_hex4(input: Bytes, start: U32) -> Option<U32> {
   }
 }
 
-fn json_append_plain_string_segment(
+pub fn json_append_plain_string_segment(
   parser: JsonParser,
   builder: StringBuilder,
   start: U32,
@@ -444,7 +444,7 @@ fn json_append_plain_string_segment(
   }
 }
 
-fn json_parse_string_with_provenance(
+pub fn json_parse_string_with_provenance(
   parser: JsonParser,
 ) -> Result<ParsedJsonString, JsonParseError> {
   let opening = json_parser_offset(parser)
@@ -579,14 +579,14 @@ fn json_parse_string_with_provenance(
   }
 }
 
-fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
+pub fn json_parse_string(parser: JsonParser) -> Result<String, JsonParseError> {
   match json_parse_string_with_provenance(parser) {
     Result::Ok(value) => Result::Ok(value.value)
     Result::Err(error) => Result::Err(error)
   }
 }
 
-fn json_parse_literal(
+pub fn json_parse_literal(
   parser: JsonParser,
   spelling: Bytes,
   value: JsonValue,
@@ -639,7 +639,7 @@ impl JsonString {
   }
 }
 
-fn json_parse_number_lexeme(parser: JsonParser) -> Result<String, JsonParseError> {
+pub fn json_parse_number_lexeme(parser: JsonParser) -> Result<String, JsonParseError> {
   let start = json_parser_offset(parser)
   let end = json_scan_scalar_end_simd(parser.input, start)
   if json_number_is_valid(parser.input, start, end) == false {
@@ -655,7 +655,7 @@ fn json_parse_number_lexeme(parser: JsonParser) -> Result<String, JsonParseError
   }
 }
 
-fn json_parse_number(parser: JsonParser) -> Result<JsonValue, JsonParseError> {
+pub fn json_parse_number(parser: JsonParser) -> Result<JsonValue, JsonParseError> {
   match json_parse_number_lexeme(parser) {
     Result::Ok(value) => {
       if parser.validated_numbers {
@@ -670,7 +670,7 @@ fn json_parse_number(parser: JsonParser) -> Result<JsonValue, JsonParseError> {
   }
 }
 
-fn json_parse_array(
+pub fn json_parse_array(
   parser: JsonParser,
   depth: U32,
 ) -> Result<JsonValue, JsonParseError> {
@@ -710,15 +710,15 @@ fn json_parse_array(
   }
 }
 
-fn json_string_equals(left: String, right: String) -> Bool {
+pub fn json_string_equals(left: String, right: String) -> Bool {
   left.equals(right)
 }
 
-fn json_string_hash(value: String) -> U64 {
+pub fn json_string_hash(value: String) -> U64 {
   value.hash()
 }
 
-fn json_object_prefix_has_key(
+pub fn json_object_prefix_has_key(
   members: Array<JsonMember>,
   end: U32,
   key: String,
@@ -735,19 +735,19 @@ fn json_object_prefix_has_key(
   }
 }
 
-fn json_object_has_key(members: Array<JsonMember>, key: String) -> Bool {
+pub fn json_object_has_key(members: Array<JsonMember>, key: String) -> Bool {
   json_object_prefix_has_key(members, members.length(), key)
 }
 
-fn json_u64_to_u32(value: U64) -> U32 {
+pub fn json_u64_to_u32(value: U64) -> U32 {
   value.into()
 }
 
-fn json_bloom_shard(hash: U64) -> U32 {
+pub fn json_bloom_shard(hash: U64) -> U32 {
   json_u64_to_u32((hash >> 43u64) & 3u64)
 }
 
-fn json_bloom_shard_maybe_contains(
+pub fn json_bloom_shard_maybe_contains(
   first: BloomFilter,
   second: BloomFilter,
   third: BloomFilter,
@@ -766,11 +766,11 @@ fn json_bloom_shard_maybe_contains(
   }
 }
 
-fn json_bloom_threshold() -> U32 {
+pub fn json_bloom_threshold() -> U32 {
   16u32
 }
 
-fn json_parse_object(
+pub fn json_parse_object(
   parser: JsonParser,
   depth: U32,
 ) -> Result<JsonValue, JsonParseError> {
@@ -904,7 +904,7 @@ fn json_parse_object(
   }
 }
 
-fn json_parse_value(
+pub fn json_parse_value(
   parser: JsonParser,
   depth: U32,
 ) -> Result<JsonValue, JsonParseError> {
@@ -953,7 +953,7 @@ fn json_parse_value(
   }
 }
 
-fn json_validate_literal(
+pub fn json_validate_literal(
   parser: JsonParser,
   spelling: Bytes,
 ) -> Result<Unit, JsonParseError> {
@@ -969,7 +969,7 @@ fn json_validate_literal(
   }
 }
 
-fn json_validate_value(
+pub fn json_validate_value(
   parser: JsonParser,
   depth: U32,
 ) -> Result<Unit, JsonParseError> {
@@ -1170,7 +1170,7 @@ fn json_validate_value(
   }
 }
 
-fn json_string_prefix_has_key(
+pub fn json_string_prefix_has_key(
   keys: Array<String>,
   end: U32,
   key: String,
@@ -1187,7 +1187,7 @@ fn json_string_prefix_has_key(
   }
 }
 
-fn json_parse_validated_string_with_limits(
+pub fn json_parse_validated_string_with_limits(
   source: String,
   limits: JsonLimits,
   compact_tokens: Bool,
@@ -1435,14 +1435,14 @@ pub fn json_parse_reader<r: Reader>(
   json_parse_reader_with_limits(reader, chunk_limit, json_default_limits())
 }
 
-fn json_writer_set_error(writer: JsonWriter, code: U32) -> Unit {
+pub fn json_writer_set_error(writer: JsonWriter, code: U32) -> Unit {
   if writer.error.get_unchecked(0u32) == 0u32 {
     writer.error.set_unchecked(0u32, code)
   } else {
   }
 }
 
-fn json_writer_set_payload_error(
+pub fn json_writer_set_payload_error(
   writer: JsonWriter,
   code: U32,
   payload: String,
@@ -1454,7 +1454,7 @@ fn json_writer_set_payload_error(
   }
 }
 
-fn json_writer_append_ascii(writer: JsonWriter, byte: U8) -> Unit {
+pub fn json_writer_append_ascii(writer: JsonWriter, byte: U8) -> Unit {
   if writer.error.get_unchecked(0u32) != 0u32 {
   } else if writer.builder.byte_length() >= writer.max_bytes {
     json_writer_set_error(writer, 3u32)
@@ -1463,7 +1463,7 @@ fn json_writer_append_ascii(writer: JsonWriter, byte: U8) -> Unit {
   }
 }
 
-fn json_writer_append_text(writer: JsonWriter, value: String) -> Unit {
+pub fn json_writer_append_text(writer: JsonWriter, value: String) -> Unit {
   let used = writer.builder.byte_length()
   let added = value.byte_length()
   if writer.error.get_unchecked(0u32) != 0u32 {
@@ -1474,7 +1474,7 @@ fn json_writer_append_text(writer: JsonWriter, value: String) -> Unit {
   }
 }
 
-fn json_writer_append_view(writer: JsonWriter, value: StringView) -> Unit {
+pub fn json_writer_append_view(writer: JsonWriter, value: StringView) -> Unit {
   let used = writer.builder.byte_length()
   let added = value.byte_length()
   if writer.error.get_unchecked(0u32) != 0u32 {
@@ -1485,7 +1485,7 @@ fn json_writer_append_view(writer: JsonWriter, value: StringView) -> Unit {
   }
 }
 
-fn json_hex_ascii(value: U8) -> U8 {
+pub fn json_hex_ascii(value: U8) -> U8 {
   if value < 10u8 {
     value + 48u8
   } else {
@@ -1493,7 +1493,7 @@ fn json_hex_ascii(value: U8) -> U8 {
   }
 }
 
-fn json_write_string(
+pub fn json_write_string(
   writer: JsonWriter,
   value: String,
 ) -> Unit {
@@ -1547,7 +1547,7 @@ fn json_write_string(
   json_writer_append_ascii(writer, 34u8)
 }
 
-fn json_write_validated_string(
+pub fn json_write_validated_string(
   writer: JsonWriter,
   value: JsonString,
 ) -> Unit {
@@ -1560,7 +1560,7 @@ fn json_write_validated_string(
   }
 }
 
-fn json_write_value(
+pub fn json_write_value(
   writer: JsonWriter,
   value: JsonValue,
   depth: U32,

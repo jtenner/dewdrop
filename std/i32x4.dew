@@ -1,7 +1,7 @@
-fn i32x4_from_v128(value: V128) -> I32x4 {
+pub fn i32x4_from_v128(value: V128) -> I32x4 {
   unsafe_bitcast::<V128, I32x4>(value)
 }
-fn i32x4_to_v128(value: I32x4) -> V128 {
+pub fn i32x4_to_v128(value: I32x4) -> V128 {
   unsafe_bitcast::<I32x4, V128>(value)
 }
 impl Into<I8x16> for I32x4 {
@@ -49,70 +49,70 @@ impl Into<F64x2> for I32x4 {
     unsafe_bitcast::<I32x4, F64x2>(self)
   }
 }
-fn i32x4_load(address: U32) -> I32x4 {
+pub fn i32x4_load(address: U32) -> I32x4 {
   unsafe_bitcast::<V128, I32x4>(v128_load(address))
 }
-fn i32x4_store(address: U32, value: I32x4) -> Unit {
+pub fn i32x4_store(address: U32, value: I32x4) -> Unit {
   v128_store(address, unsafe_bitcast::<I32x4, V128>(value))
 }
-fn i32x4_and(left: I32x4, right: I32x4) -> I32x4 {
+pub fn i32x4_and(left: I32x4, right: I32x4) -> I32x4 {
   unsafe_bitcast::<V128, I32x4>(v128_and(unsafe_bitcast::<I32x4, V128>(left), unsafe_bitcast::<I32x4, V128>(right)))
 }
-fn i32x4_or(left: I32x4, right: I32x4) -> I32x4 {
+pub fn i32x4_or(left: I32x4, right: I32x4) -> I32x4 {
   unsafe_bitcast::<V128, I32x4>(v128_or(unsafe_bitcast::<I32x4, V128>(left), unsafe_bitcast::<I32x4, V128>(right)))
 }
-fn i32x4_xor(left: I32x4, right: I32x4) -> I32x4 {
+pub fn i32x4_xor(left: I32x4, right: I32x4) -> I32x4 {
   unsafe_bitcast::<V128, I32x4>(v128_xor(unsafe_bitcast::<I32x4, V128>(left), unsafe_bitcast::<I32x4, V128>(right)))
 }
-builtin i32x4_not(value: I32x4) -> I32x4 = "v128.not"
-builtin i32x4_andnot(left: I32x4, right: I32x4) -> I32x4 = "v128.andnot"
-builtin i32x4_bitselect(yes: I32x4, no: I32x4, mask: I32x4) -> I32x4 = "v128.bitselect"
-builtin i32x4_any_true(value: I32x4) -> Bool = "v128.any_true"
-builtin i32x4_splat(value: I32) -> I32x4 = "i32x4.splat"
-builtin i32x4_load_splat(address: U32) -> I32x4 = "v128.load32_splat"
-builtin i32x4_load_extend_i16x4_s(address: U32) -> I32x4 = "v128.load16x4_s"
-builtin i32x4_load_zero(address: U32) -> I32x4 = "v128.load32_zero"
-builtin i32x4_extract_0(value: I32x4) -> I32 = "i32x4.extract_lane 0"
-builtin i32x4_replace_0(value: I32x4, lane: I32) -> I32x4 = "i32x4.replace_lane 0"
-builtin i32x4_load_lane_0(address: U32, value: I32x4) -> I32x4 = "v128.load32_lane 0"
-builtin i32x4_store_lane_0(address: U32, value: I32x4) -> Unit = "v128.store32_lane 0"
-builtin i32x4_extract_1(value: I32x4) -> I32 = "i32x4.extract_lane 1"
-builtin i32x4_replace_1(value: I32x4, lane: I32) -> I32x4 = "i32x4.replace_lane 1"
-builtin i32x4_load_lane_1(address: U32, value: I32x4) -> I32x4 = "v128.load32_lane 1"
-builtin i32x4_store_lane_1(address: U32, value: I32x4) -> Unit = "v128.store32_lane 1"
-builtin i32x4_extract_2(value: I32x4) -> I32 = "i32x4.extract_lane 2"
-builtin i32x4_replace_2(value: I32x4, lane: I32) -> I32x4 = "i32x4.replace_lane 2"
-builtin i32x4_load_lane_2(address: U32, value: I32x4) -> I32x4 = "v128.load32_lane 2"
-builtin i32x4_store_lane_2(address: U32, value: I32x4) -> Unit = "v128.store32_lane 2"
-builtin i32x4_extract_3(value: I32x4) -> I32 = "i32x4.extract_lane 3"
-builtin i32x4_replace_3(value: I32x4, lane: I32) -> I32x4 = "i32x4.replace_lane 3"
-builtin i32x4_load_lane_3(address: U32, value: I32x4) -> I32x4 = "v128.load32_lane 3"
-builtin i32x4_store_lane_3(address: U32, value: I32x4) -> Unit = "v128.store32_lane 3"
-builtin i32x4_extend_low_i16x8_s(value: I16x8) -> I32x4 = "i32x4.extend_low_i16x8_s"
-builtin i32x4_extend_high_i16x8_s(value: I16x8) -> I32x4 = "i32x4.extend_high_i16x8_s"
-builtin i32x4_extadd_pairwise_i16x8_s(value: I16x8) -> I32x4 = "i32x4.extadd_pairwise_i16x8_s"
-builtin i32x4_extmul_low_i16x8_s(left: I16x8, right: I16x8) -> I32x4 = "i32x4.extmul_low_i16x8_s"
-builtin i32x4_extmul_high_i16x8_s(left: I16x8, right: I16x8) -> I32x4 = "i32x4.extmul_high_i16x8_s"
-builtin i32x4_dot_i16x8_s(left: I16x8, right: I16x8) -> I32x4 = "i32x4.dot_i16x8_s"
-builtin i32x4_trunc_sat_f32x4_s(value: F32x4) -> I32x4 = "i32x4.trunc_sat_f32x4_s"
-builtin i32x4_trunc_sat_f64x2_s_zero(value: F64x2) -> I32x4 = "i32x4.trunc_sat_f64x2_s_zero"
-builtin i32x4_add(left: I32x4, right: I32x4) -> I32x4 = "i32x4.add"
-builtin i32x4_sub(left: I32x4, right: I32x4) -> I32x4 = "i32x4.sub"
-builtin i32x4_mul(left: I32x4, right: I32x4) -> I32x4 = "i32x4.mul"
-builtin i32x4_min_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.min_s"
-builtin i32x4_max_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.max_s"
-builtin i32x4_eq(left: I32x4, right: I32x4) -> I32x4 = "i32x4.eq"
-builtin i32x4_ne(left: I32x4, right: I32x4) -> I32x4 = "i32x4.ne"
-builtin i32x4_lt_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.lt_s"
-builtin i32x4_le_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.le_s"
-builtin i32x4_gt_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.gt_s"
-builtin i32x4_ge_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.ge_s"
-builtin i32x4_abs(value: I32x4) -> I32x4 = "i32x4.abs"
-builtin i32x4_neg(value: I32x4) -> I32x4 = "i32x4.neg"
-builtin i32x4_all_true(value: I32x4) -> Bool = "i32x4.all_true"
-builtin i32x4_bitmask(value: I32x4) -> U32 = "i32x4.bitmask"
-builtin i32x4_shl(value: I32x4, count: U32) -> I32x4 = "i32x4.shl"
-builtin i32x4_shr_s(value: I32x4, count: U32) -> I32x4 = "i32x4.shr_s"
+pub builtin i32x4_not(value: I32x4) -> I32x4 = "v128.not"
+pub builtin i32x4_andnot(left: I32x4, right: I32x4) -> I32x4 = "v128.andnot"
+pub builtin i32x4_bitselect(yes: I32x4, no: I32x4, mask: I32x4) -> I32x4 = "v128.bitselect"
+pub builtin i32x4_any_true(value: I32x4) -> Bool = "v128.any_true"
+pub builtin i32x4_splat(value: I32) -> I32x4 = "i32x4.splat"
+pub builtin i32x4_load_splat(address: U32) -> I32x4 = "v128.load32_splat"
+pub builtin i32x4_load_extend_i16x4_s(address: U32) -> I32x4 = "v128.load16x4_s"
+pub builtin i32x4_load_zero(address: U32) -> I32x4 = "v128.load32_zero"
+pub builtin i32x4_extract_0(value: I32x4) -> I32 = "i32x4.extract_lane 0"
+pub builtin i32x4_replace_0(value: I32x4, lane: I32) -> I32x4 = "i32x4.replace_lane 0"
+pub builtin i32x4_load_lane_0(address: U32, value: I32x4) -> I32x4 = "v128.load32_lane 0"
+pub builtin i32x4_store_lane_0(address: U32, value: I32x4) -> Unit = "v128.store32_lane 0"
+pub builtin i32x4_extract_1(value: I32x4) -> I32 = "i32x4.extract_lane 1"
+pub builtin i32x4_replace_1(value: I32x4, lane: I32) -> I32x4 = "i32x4.replace_lane 1"
+pub builtin i32x4_load_lane_1(address: U32, value: I32x4) -> I32x4 = "v128.load32_lane 1"
+pub builtin i32x4_store_lane_1(address: U32, value: I32x4) -> Unit = "v128.store32_lane 1"
+pub builtin i32x4_extract_2(value: I32x4) -> I32 = "i32x4.extract_lane 2"
+pub builtin i32x4_replace_2(value: I32x4, lane: I32) -> I32x4 = "i32x4.replace_lane 2"
+pub builtin i32x4_load_lane_2(address: U32, value: I32x4) -> I32x4 = "v128.load32_lane 2"
+pub builtin i32x4_store_lane_2(address: U32, value: I32x4) -> Unit = "v128.store32_lane 2"
+pub builtin i32x4_extract_3(value: I32x4) -> I32 = "i32x4.extract_lane 3"
+pub builtin i32x4_replace_3(value: I32x4, lane: I32) -> I32x4 = "i32x4.replace_lane 3"
+pub builtin i32x4_load_lane_3(address: U32, value: I32x4) -> I32x4 = "v128.load32_lane 3"
+pub builtin i32x4_store_lane_3(address: U32, value: I32x4) -> Unit = "v128.store32_lane 3"
+pub builtin i32x4_extend_low_i16x8_s(value: I16x8) -> I32x4 = "i32x4.extend_low_i16x8_s"
+pub builtin i32x4_extend_high_i16x8_s(value: I16x8) -> I32x4 = "i32x4.extend_high_i16x8_s"
+pub builtin i32x4_extadd_pairwise_i16x8_s(value: I16x8) -> I32x4 = "i32x4.extadd_pairwise_i16x8_s"
+pub builtin i32x4_extmul_low_i16x8_s(left: I16x8, right: I16x8) -> I32x4 = "i32x4.extmul_low_i16x8_s"
+pub builtin i32x4_extmul_high_i16x8_s(left: I16x8, right: I16x8) -> I32x4 = "i32x4.extmul_high_i16x8_s"
+pub builtin i32x4_dot_i16x8_s(left: I16x8, right: I16x8) -> I32x4 = "i32x4.dot_i16x8_s"
+pub builtin i32x4_trunc_sat_f32x4_s(value: F32x4) -> I32x4 = "i32x4.trunc_sat_f32x4_s"
+pub builtin i32x4_trunc_sat_f64x2_s_zero(value: F64x2) -> I32x4 = "i32x4.trunc_sat_f64x2_s_zero"
+pub builtin i32x4_add(left: I32x4, right: I32x4) -> I32x4 = "i32x4.add"
+pub builtin i32x4_sub(left: I32x4, right: I32x4) -> I32x4 = "i32x4.sub"
+pub builtin i32x4_mul(left: I32x4, right: I32x4) -> I32x4 = "i32x4.mul"
+pub builtin i32x4_min_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.min_s"
+pub builtin i32x4_max_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.max_s"
+pub builtin i32x4_eq(left: I32x4, right: I32x4) -> I32x4 = "i32x4.eq"
+pub builtin i32x4_ne(left: I32x4, right: I32x4) -> I32x4 = "i32x4.ne"
+pub builtin i32x4_lt_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.lt_s"
+pub builtin i32x4_le_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.le_s"
+pub builtin i32x4_gt_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.gt_s"
+pub builtin i32x4_ge_s(left: I32x4, right: I32x4) -> I32x4 = "i32x4.ge_s"
+pub builtin i32x4_abs(value: I32x4) -> I32x4 = "i32x4.abs"
+pub builtin i32x4_neg(value: I32x4) -> I32x4 = "i32x4.neg"
+pub builtin i32x4_all_true(value: I32x4) -> Bool = "i32x4.all_true"
+pub builtin i32x4_bitmask(value: I32x4) -> U32 = "i32x4.bitmask"
+pub builtin i32x4_shl(value: I32x4, count: U32) -> I32x4 = "i32x4.shl"
+pub builtin i32x4_shr_s(value: I32x4, count: U32) -> I32x4 = "i32x4.shr_s"
 impl I32x4 {
   fn to_v128(self) -> V128 {
     i32x4_to_v128(self)

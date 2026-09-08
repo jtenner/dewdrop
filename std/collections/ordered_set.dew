@@ -50,7 +50,7 @@ pub fn ordered_set_clear<k, c>(set: OrderedSet<k, c>) -> Unit {
   red_black_tree_clear(set.tree)
 }
 
-fn ordered_set_entry_key<k>(entry: Option<TreeEntry<k, Bool>>) -> Option<k> {
+pub fn ordered_set_entry_key<k>(entry: Option<TreeEntry<k, Bool>>) -> Option<k> {
   match entry {
     Option::Some(value) => Option::Some(tree_entry_key(value))
     Option::None => Option::None

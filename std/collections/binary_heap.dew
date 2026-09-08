@@ -14,7 +14,7 @@ pub struct BinaryHeap<t, c> {
 
 pub type BinaryHeapIter<t> = ArrayIter<t>
 
-fn heap_order_is_maximum(order: HeapOrder) -> Bool {
+pub fn heap_order_is_maximum(order: HeapOrder) -> Bool {
   match order {
     HeapOrder::Minimum => false
     HeapOrder::Maximum => true
@@ -56,7 +56,7 @@ pub fn binary_heap_is_empty<t, c>(heap: BinaryHeap<t, c>) -> Bool {
   array_length(heap.values) == 0u32
 }
 
-fn binary_heap_precedes<t, c: Comparator<t>>(
+pub fn binary_heap_precedes<t, c: Comparator<t>>(
   heap: BinaryHeap<t, c>,
   left: t,
   right: t,
@@ -69,9 +69,9 @@ fn binary_heap_precedes<t, c: Comparator<t>>(
   }
 }
 
-fn binary_heap_unit() -> Unit {}
+pub fn binary_heap_unit() -> Unit {}
 
-fn binary_heap_sift_up<t, c: Comparator<t>>(
+pub fn binary_heap_sift_up<t, c: Comparator<t>>(
   heap: BinaryHeap<t, c>,
   start: U32,
 ) -> Unit {
@@ -92,7 +92,7 @@ fn binary_heap_sift_up<t, c: Comparator<t>>(
   }
 }
 
-fn binary_heap_sift_down<t, c: Comparator<t>>(
+pub fn binary_heap_sift_down<t, c: Comparator<t>>(
   heap: BinaryHeap<t, c>,
   start: U32,
 ) -> Unit {

@@ -148,7 +148,7 @@ impl<t> Iter<t> for ArrayIter<t> {
   }
 }
 
-fn array_make_raw<t>(length: U32, value: t) -> Array<t> {
+pub fn array_make_raw<t>(length: U32, value: t) -> Array<t> {
   let output = array_with_capacity(length)
   while 0u32 {
     index if index < length => {
@@ -160,7 +160,7 @@ fn array_make_raw<t>(length: U32, value: t) -> Array<t> {
   output
 }
 
-fn array_reserve_raw<t>(value: Array<t>, additional: U32) -> Unit {
+pub fn array_reserve_raw<t>(value: Array<t>, additional: U32) -> Unit {
   if additional > 4294967295u32 - value.count {
     unreachable()
   } else {
@@ -182,12 +182,12 @@ fn array_reserve_raw<t>(value: Array<t>, additional: U32) -> Unit {
     }
   }
 }
-fn array_shrink_to_fit_raw<t>(value: Array<t>) -> Unit {
+pub fn array_shrink_to_fit_raw<t>(value: Array<t>) -> Unit {
   if value.count != value.limit {
     array_replace_backing(value, value.count)
   }
 }
-fn array_truncate_raw<t>(value: Array<t>, length: U32) -> Unit {
+pub fn array_truncate_raw<t>(value: Array<t>, length: U32) -> Unit {
   if length > value.count {
     unreachable()
   } else if length < value.count {
@@ -196,11 +196,11 @@ fn array_truncate_raw<t>(value: Array<t>, length: U32) -> Unit {
   }
 }
 
-fn array_copy_raw<t>(value: Array<t>) -> Array<t> {
+pub fn array_copy_raw<t>(value: Array<t>) -> Array<t> {
   array_slice_raw(value, 0u32, array_length(value))
 }
 
-fn array_copy_within_raw<t>(value: Array<t>, target: U32, start: U32, end: U32) -> Unit {
+pub fn array_copy_within_raw<t>(value: Array<t>, target: U32, start: U32, end: U32) -> Unit {
   let length = array_length(value)
   array_require_range(length, start, end)
   let count = end - start
@@ -227,7 +227,7 @@ fn array_copy_within_raw<t>(value: Array<t>, target: U32, start: U32, end: U32) 
   }
 }
 
-fn array_fill_raw<t>(value: Array<t>, item: t, start: U32, end: U32) -> Unit {
+pub fn array_fill_raw<t>(value: Array<t>, item: t, start: U32, end: U32) -> Unit {
   array_require_range(array_length(value), start, end)
   while start {
     index if index < end => {
@@ -238,7 +238,7 @@ fn array_fill_raw<t>(value: Array<t>, item: t, start: U32, end: U32) -> Unit {
   }
 }
 
-fn array_slice_raw<t>(value: Array<t>, start: U32, end: U32) -> Array<t> {
+pub fn array_slice_raw<t>(value: Array<t>, start: U32, end: U32) -> Array<t> {
   array_require_range(array_length(value), start, end)
   let output = array_with_capacity(end - start)
   while start {
@@ -251,7 +251,7 @@ fn array_slice_raw<t>(value: Array<t>, start: U32, end: U32) -> Array<t> {
   output
 }
 
-fn array_extend_raw<t>(value: Array<t>, source: Array<t>) -> Unit {
+pub fn array_extend_raw<t>(value: Array<t>, source: Array<t>) -> Unit {
   // Capture the length before push: source may alias value.
   let count = array_length(source)
   if count > 4294967295u32 - array_length(value) {
@@ -299,9 +299,9 @@ pub struct ArrayEntryIter<t> {
   mut index: U32
 }
 
-fn array_unit() -> Unit {}
+pub fn array_unit() -> Unit {}
 
-fn array_min(left: U32, right: U32) -> U32 {
+pub fn array_min(left: U32, right: U32) -> U32 {
   if left < right {
     left
   } else {
@@ -309,18 +309,18 @@ fn array_min(left: U32, right: U32) -> U32 {
   }
 }
 
-fn array_require_range(length: U32, start: U32, end: U32) -> Unit {
+pub fn array_require_range(length: U32, start: U32, end: U32) -> Unit {
   if start > end || end > length {
     unreachable()
   } else {
   }
 }
 
-fn array_extend_values<t>(value: Array<t>, source: Array<t>) -> Unit {
+pub fn array_extend_values<t>(value: Array<t>, source: Array<t>) -> Unit {
   array_extend_raw(value, source)
 }
 
-fn array_at_index(length: U32, index: I32) -> Option<U32> {
+pub fn array_at_index(length: U32, index: I32) -> Option<U32> {
   let wide_length = u32_into_i64(length)
   let wide_index = i32_into_i64(index)
   let resolved = if wide_index < 0i64 {
@@ -335,7 +335,7 @@ fn array_at_index(length: U32, index: I32) -> Option<U32> {
   }
 }
 
-fn array_merge_pass_natural<t: Lt>(
+pub fn array_merge_pass_natural<t: Lt>(
   source: Array<t>,
   target: Array<t>,
   width: U32,
@@ -396,7 +396,7 @@ fn array_merge_pass_natural<t: Lt>(
   }
 }
 
-fn array_merge_pass<t, c: ArrayComparator<t>>(
+pub fn array_merge_pass<t, c: ArrayComparator<t>>(
   source: Array<t>,
   target: Array<t>,
   width: U32,
@@ -1253,7 +1253,7 @@ impl<t> Iter<ArrayEntry<t>> for ArrayEntryIter<t> {
   }
 }
 
-fn arena_index_to_id(index: U32) -> I32 {
+pub fn arena_index_to_id(index: U32) -> I32 {
   if index > 2147483647u32 {
     unreachable()
   } else {
@@ -1261,7 +1261,7 @@ fn arena_index_to_id(index: U32) -> I32 {
   }
 }
 
-fn arena_id_to_index(id: I32) -> U32 {
+pub fn arena_id_to_index(id: I32) -> U32 {
   if id < 0i32 {
     unreachable()
   } else {
@@ -1407,7 +1407,7 @@ impl<t> Arena<t> {
   }
 }
 
-fn array_iter_next_option<t>(value: ArrayIter<t>) -> Option<t> {
+pub fn array_iter_next_option<t>(value: ArrayIter<t>) -> Option<t> {
   if array_iter_has_next(value) {
     Option::Some(array_iter_next(value))
   } else {
@@ -1415,14 +1415,14 @@ fn array_iter_next_option<t>(value: ArrayIter<t>) -> Option<t> {
   }
 }
 
-fn array_replace_backing<t>(value: Array<t>, capacity: U32) -> Unit {
+pub fn array_replace_backing<t>(value: Array<t>, capacity: U32) -> Unit {
   let backing = wasm_array_new_default::<t>(capacity)
   wasm_array_copy(backing, 0u32, value.backing, 0u32, value.count)
   value.backing = backing
   value.limit = capacity
 }
 
-fn array_clear_suffix<t>(value: Array<t>, start: U32) -> Unit {
+pub fn array_clear_suffix<t>(value: Array<t>, start: U32) -> Unit {
   // Unused slots are default-valued. A full array needs one temporary blank
   // slot; this also works for exact-sized literal and Map-produced storage.
   if value.count < value.limit {

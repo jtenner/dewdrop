@@ -511,7 +511,6 @@ test "interface value inference is required only by exported lets" {
   )
   assert_false(
     frozen_module_requires_value_inference(
-      "app.functions",
       function_only.modules[0],
     ),
   )
@@ -525,7 +524,6 @@ test "interface value inference is required only by exported lets" {
   )
   assert_false(
     frozen_module_requires_value_inference(
-      "app.private_value",
       private_value.modules[0],
     ),
   )
@@ -539,7 +537,6 @@ test "interface value inference is required only by exported lets" {
   )
   assert_true(
     frozen_module_requires_value_inference(
-      "app.public_value",
       public_value.modules[0],
     ),
   )

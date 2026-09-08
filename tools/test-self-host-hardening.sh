@@ -190,6 +190,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_trait_evidence_test.dew \
   self_host/compiler/semantic_interface_type_walk_test.dew \
   self_host/compiler/semantic_imported_semantics_test.dew \
+  self_host/compiler/semantic_module_interfaces_test.dew \
   self_host/compiler/semantic_standard_module_ids_test.dew \
   self_host/compiler/semantic_compile_time_types_test.dew \
   self_host/compiler/semantic_computed_types_test.dew \

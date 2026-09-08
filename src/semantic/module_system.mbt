@@ -2756,14 +2756,11 @@ fn freeze_module_interface(
     collected.module_id == functions.module_id else {
     abort("module interface inputs belong to different modules")
   }
-  let publish_standard_top_level = frozen_module_publishes_standard_top_level(
-    path,
-  )
   let declarations : Array[FrozenInterfaceDeclaration] = []
   let exported_declarations : Map[DeclId, Bool] = Map::default()
   for declaration in collected.declarations {
     if semantic_id_local(declaration.id) >= collected.preamble_declaration_count &&
-      (publish_standard_top_level || declaration.visibility == Public) &&
+      declaration.visibility == Public &&
       !collected.declaration_is_test_only(declaration.id) &&
       declaration.has_name() &&
       declaration.kind != ImplDecl &&
@@ -2898,14 +2895,17 @@ fn freeze_module_interface(
         exported_implementations.contains(implementation)
       _ => false
     }
-    let exported = if publish_standard_top_level ||
-      exported_impl_method ||
-      callable.visibility == Public {
+    // Interface visibility belongs to the source declaration. Physical root
+    // selection can withhold a callable without making its source API private.
+    let exported = if exported_impl_method {
       true
     } else {
       match collected.declaration(callable.declaration) {
+        Some(TopLevelReference(source)) => source.visibility == Public
         Some(MethodReference(method_info)) =>
-          if method_info.kind == TraitMethodDecl {
+          if method_info.visibility == Public {
+            true
+          } else if method_info.kind == TraitMethodDecl {
             match collected.declaration(method_info.parent) {
               Some(TopLevelReference(parent)) => parent.visibility == Public
               _ => false
@@ -3727,26 +3727,13 @@ pub struct FrozenProgramInterfaces {
 }
 
 ///|
-fn frozen_module_publishes_standard_top_level(path : String) -> Bool {
-  path.has_prefix("dew.std.") &&
-  path != "dew.std.string" &&
-  path != "dew.std.string_builder" &&
-  path != "dew.std.bytes" &&
-  path != "dew.std.bytes_builder"
-}
-
-///|
 fn frozen_module_requires_value_inference(
-  path : String,
   collected : CollectedModule,
 ) -> Bool {
-  let publish_standard_top_level = frozen_module_publishes_standard_top_level(
-    path,
-  )
   for declaration in collected.declarations {
     if declaration.kind == LetDecl &&
       semantic_id_local(declaration.id) >= collected.preamble_declaration_count &&
-      (publish_standard_top_level || declaration.visibility == Public) &&
+      declaration.visibility == Public &&
       !collected.declaration_is_test_only(declaration.id) &&
       declaration.has_name() {
       return true
@@ -3876,7 +3863,6 @@ fn freeze_program_interfaces_with_cached_hook(
         let resolved = resolve_module_types_with_imports(collected, imports)
         let functions = plan_module_functions(collected, resolved)
         let module_values = if frozen_module_requires_value_inference(
-            program.module_paths[module_index],
             collected,
           ) {
           Some(infer_frozen_module_values(collected, resolved, imports))
@@ -3913,7 +3899,6 @@ fn freeze_program_interfaces_with_cached_hook(
         let resolved = resolve_module_types_with_imports(collected, imports)
         let functions = plan_module_functions(collected, resolved)
         let module_values = if frozen_module_requires_value_inference(
-            program.module_paths[module_index],
             collected,
           ) {
           Some(infer_frozen_module_values(collected, resolved, imports))

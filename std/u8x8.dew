@@ -1,7 +1,7 @@
-fn u8x8_from_swar64(value: Swar64) -> U8x8 {
+pub fn u8x8_from_swar64(value: Swar64) -> U8x8 {
   unsafe_bitcast::<Swar64, U8x8>(value)
 }
-fn u8x8_to_swar64(value: U8x8) -> Swar64 {
+pub fn u8x8_to_swar64(value: U8x8) -> Swar64 {
   unsafe_bitcast::<U8x8, Swar64>(value)
 }
 impl Into<I8x8> for U8x8 {
@@ -29,63 +29,63 @@ impl Into<U32x2> for U8x8 {
     unsafe_bitcast::<U8x8, U32x2>(self)
   }
 }
-fn u8x8_load(address: U32) -> U8x8 {
+pub fn u8x8_load(address: U32) -> U8x8 {
   unsafe_bitcast::<U64, U8x8>(u64_load(address))
 }
-fn u8x8_store(address: U32, value: U8x8) -> Unit {
+pub fn u8x8_store(address: U32, value: U8x8) -> Unit {
   u64_store(address, unsafe_bitcast::<U8x8, U64>(value))
 }
-fn u8x8_and(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_and(left: U8x8, right: U8x8) -> U8x8 {
   unsafe_bitcast::<U64, U8x8>(u64_and(unsafe_bitcast::<U8x8, U64>(left), unsafe_bitcast::<U8x8, U64>(right)))
 }
-fn u8x8_or(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_or(left: U8x8, right: U8x8) -> U8x8 {
   unsafe_bitcast::<U64, U8x8>(u64_or(unsafe_bitcast::<U8x8, U64>(left), unsafe_bitcast::<U8x8, U64>(right)))
 }
-fn u8x8_xor(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_xor(left: U8x8, right: U8x8) -> U8x8 {
   unsafe_bitcast::<U64, U8x8>(u64_xor(unsafe_bitcast::<U8x8, U64>(left), unsafe_bitcast::<U8x8, U64>(right)))
 }
-fn u8x8_splat(value: U8) -> U8x8 {
+pub fn u8x8_splat(value: U8) -> U8x8 {
   u8x8_from_swar64(swar64_splat_i8(u8_into_i8(value)))
 }
-fn u8x8_extract(value: U8x8, index: U8) -> U8 {
+pub fn u8x8_extract(value: U8x8, index: U8) -> U8 {
   swar64_extract_i8_u(u8x8_to_swar64(value), index)
 }
-fn u8x8_replace(value: U8x8, index: U8, lane: U8) -> U8x8 {
+pub fn u8x8_replace(value: U8x8, index: U8, lane: U8) -> U8x8 {
   u8x8_from_swar64(swar64_replace_i8(u8x8_to_swar64(value), index, u8_into_i8(lane)))
 }
-fn u8x8_add(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_add(left: U8x8, right: U8x8) -> U8x8 {
   u8x8_from_swar64(swar64_add_i8(u8x8_to_swar64(left), u8x8_to_swar64(right)))
 }
-fn u8x8_sub(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_sub(left: U8x8, right: U8x8) -> U8x8 {
   u8x8_from_swar64(swar64_sub_i8(u8x8_to_swar64(left), u8x8_to_swar64(right)))
 }
-fn u8x8_shl(value: U8x8, count: U8) -> U8x8 {
+pub fn u8x8_shl(value: U8x8, count: U8) -> U8x8 {
   u8x8_from_swar64(swar64_shl_i8(u8x8_to_swar64(value), count))
 }
-fn u8x8_shr(value: U8x8, count: U8) -> U8x8 {
+pub fn u8x8_shr(value: U8x8, count: U8) -> U8x8 {
   u8x8_from_swar64(swar64_shr_i8_u(u8x8_to_swar64(value), count))
 }
-fn u8x8_popcnt(value: U8x8) -> U8x8 {
+pub fn u8x8_popcnt(value: U8x8) -> U8x8 {
   u8x8_from_swar64(swar64_popcnt_i8(u8x8_to_swar64(value)))
 }
-fn u8x8_bitmask(value: U8x8) -> U32 {
+pub fn u8x8_bitmask(value: U8x8) -> U32 {
   swar64_bitmask_i8(u8x8_to_swar64(value))
 }
-fn u8x8_all_true(value: U8x8) -> Bool {
+pub fn u8x8_all_true(value: U8x8) -> Bool {
   swar64_all_true_i8(u8x8_to_swar64(value))
 }
-fn u8x8_eq(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_eq(left: U8x8, right: U8x8) -> U8x8 {
   u8x8_from_swar64(swar64_eq_i8(u8x8_to_swar64(left), u8x8_to_swar64(right)))
 }
-fn u8x8_mul(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_mul(left: U8x8, right: U8x8) -> U8x8 {
   let a = swar64_to_bits(u8x8_to_swar64(left))
   let b = swar64_to_bits(u8x8_to_swar64(right))
   u8x8_from_swar64(swar64_from_bits((((a & 255u64) * (b & 255u64)) & 255u64) | (((((a >> 8u64) & 255u64) * ((b >> 8u64) & 255u64)) & 255u64) << 8u64) | (((((a >> 16u64) & 255u64) * ((b >> 16u64) & 255u64)) & 255u64) << 16u64) | (((((a >> 24u64) & 255u64) * ((b >> 24u64) & 255u64)) & 255u64) << 24u64) | (((((a >> 32u64) & 255u64) * ((b >> 32u64) & 255u64)) & 255u64) << 32u64) | (((((a >> 40u64) & 255u64) * ((b >> 40u64) & 255u64)) & 255u64) << 40u64) | (((((a >> 48u64) & 255u64) * ((b >> 48u64) & 255u64)) & 255u64) << 48u64) | (((((a >> 56u64) & 255u64) * ((b >> 56u64) & 255u64)) & 255u64) << 56u64)))
 }
-fn u8x8_ne(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_ne(left: U8x8, right: U8x8) -> U8x8 {
   u8x8_from_swar64(swar64_from_bits(swar64_to_bits(u8x8_to_swar64(u8x8_eq(left, right))) ^ 18446744073709551615u64))
 }
-fn u8x8_lt(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_lt(left: U8x8, right: U8x8) -> U8x8 {
   let a = swar64_to_bits(u8x8_to_swar64(left))
   let b = swar64_to_bits(u8x8_to_swar64(right))
   let ax = a
@@ -94,33 +94,33 @@ fn u8x8_lt(left: U8x8, right: U8x8) -> U8x8 {
   let mask = (((((ax ^ 18446744073709551615u64) & bx) | (((ax ^ bx) ^ 18446744073709551615u64) & d)) & 9259542123273814144u64) >> 7u64) * 255u64
   u8x8_from_swar64(swar64_from_bits(mask))
 }
-fn u8x8_le(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_le(left: U8x8, right: U8x8) -> U8x8 {
   u8x8_from_swar64(swar64_from_bits(swar64_to_bits(u8x8_to_swar64(u8x8_lt(right, left))) ^ 18446744073709551615u64))
 }
-fn u8x8_gt(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_gt(left: U8x8, right: U8x8) -> U8x8 {
   u8x8_lt(right, left)
 }
-fn u8x8_ge(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_ge(left: U8x8, right: U8x8) -> U8x8 {
   u8x8_from_swar64(swar64_from_bits(swar64_to_bits(u8x8_to_swar64(u8x8_lt(left, right))) ^ 18446744073709551615u64))
 }
-fn u8x8_min(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_min(left: U8x8, right: U8x8) -> U8x8 {
   let a = swar64_to_bits(u8x8_to_swar64(left))
   let b = swar64_to_bits(u8x8_to_swar64(right))
   let mask = swar64_to_bits(u8x8_to_swar64(u8x8_lt(left, right)))
   u8x8_from_swar64(swar64_from_bits(b ^ ((a ^ b) & mask)))
 }
-fn u8x8_max(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_max(left: U8x8, right: U8x8) -> U8x8 {
   let a = swar64_to_bits(u8x8_to_swar64(left))
   let b = swar64_to_bits(u8x8_to_swar64(right))
   let mask = swar64_to_bits(u8x8_to_swar64(u8x8_lt(left, right)))
   u8x8_from_swar64(swar64_from_bits(a ^ ((a ^ b) & mask)))
 }
-fn u8x8_avgr(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_avgr(left: U8x8, right: U8x8) -> U8x8 {
   let a = swar64_to_bits(u8x8_to_swar64(left))
   let b = swar64_to_bits(u8x8_to_swar64(right))
   u8x8_from_swar64(swar64_from_bits((a | b) - (((a ^ b) & 18374403900871474942u64) >> 1u64)))
 }
-fn u8x8_add_sat(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_add_sat(left: U8x8, right: U8x8) -> U8x8 {
   let a = swar64_to_bits(u8x8_to_swar64(left))
   let b = swar64_to_bits(u8x8_to_swar64(right))
   let lo = (a & 71777214294589695u64) + (b & 71777214294589695u64)
@@ -131,7 +131,7 @@ fn u8x8_add_sat(left: U8x8, right: U8x8) -> U8x8 {
   let hi_mask = hi_carry * 255u64
   u8x8_from_swar64(swar64_from_bits((lo & 71777214294589695u64) | ((hi & 71777214294589695u64) << 8u64) | lo_mask | hi_mask))
 }
-fn u8x8_sub_sat(left: U8x8, right: U8x8) -> U8x8 {
+pub fn u8x8_sub_sat(left: U8x8, right: U8x8) -> U8x8 {
   let a = swar64_to_bits(u8x8_to_swar64(left))
   let b = swar64_to_bits(u8x8_to_swar64(right))
   let diff = ((a | 9259542123273814144u64) - (b & 9187201950435737471u64)) ^ ((a ^ (b ^ 18446744073709551615u64)) & 9259542123273814144u64)

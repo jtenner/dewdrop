@@ -11,6 +11,21 @@ fn self_host_test_freeze_interface(
   self_host_freeze_module_signature_interface(path, collected, resolved)
 }
 
+test "module path spelling cannot publish private declarations" {
+  for path in ["app.api", "dew.std.custom", "dew.std.string", "dew.std.string.custom"] {
+    let interface_ = self_host_test_freeze_interface(
+      28123u64,
+      path,
+      b"pub struct Visible {}\nstruct Hidden {}\npub fn shown(value: I32) -> I32 {\n  value\n}\nfn hidden(value: I32) -> I32 {\n  value\n}\n",
+    )
+    assert(interface_.declaration_count() == 2u32, "private declarations escaped by module spelling")
+    assert(interface_.declaration_named("Visible", SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration) is Option::Some(_), "public type missing")
+    assert(interface_.declaration_named("Hidden", SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration) is Option::None, "private type escaped")
+    assert(interface_.declaration_named("shown", SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration) is Option::Some(_), "public function missing")
+    assert(interface_.declaration_named("hidden", SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration) is Option::None, "private function escaped")
+  }
+}
+
 test "signature interfaces retain only public type declarations" {
   let interface_ = self_host_test_freeze_interface(
     101u64,

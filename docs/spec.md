@@ -198,6 +198,11 @@ Hint
 
 #### 3.3.1 Module preambles and imports
 
+Interface exports follow source visibility in every module. A module path,
+including a `dew.std.` prefix, cannot publish a private declaration. Standard
+library exports carry explicit `pub` declarations. Physical root selection
+does not change which source declarations are public.
+
 Each file begins in preamble mode. The initial import grammar is:
 
 ```text

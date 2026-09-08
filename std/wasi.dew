@@ -5,7 +5,7 @@ open dew.std.bytes_builder
 // Preview 1 calls are synchronous. The shared scratch page belongs to the
 // adapter until the host call returns; host callbacks must not re-enter it.
 // 0..8 is one iovec, 8..12 is the result, and 16..65536 is byte storage.
-fn wasi_bytes_unit() -> Unit {}
+pub fn wasi_bytes_unit() -> Unit {}
 
 pub fn wasi_fd_write(fd: U32, value: Bytes) -> U32 {
   let length = value.byte_length()

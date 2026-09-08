@@ -1,193 +1,193 @@
-fn swar32_splat_i8(value: I8) -> Swar32 {
+pub fn swar32_splat_i8(value: I8) -> Swar32 {
   swar32_from_bits((i8_into_u32(value) & 255u32) * 16843009u32)
 }
-fn swar32_splat_i16(value: I16) -> Swar32 {
+pub fn swar32_splat_i16(value: I16) -> Swar32 {
   swar32_from_bits((i16_into_u32(value) & 65535u32) * 65537u32)
 }
-fn swar32_extract_i8_s(value: Swar32, index: U8) -> I8 {
+pub fn swar32_extract_i8_s(value: Swar32, index: U8) -> I8 {
   let shift = (u8_into_u32(index) & 3u32) * 8u32
   u32_into_i8((swar32_to_bits(value) >> shift) & 255u32)
 }
-fn swar32_extract_i8_u(value: Swar32, index: U8) -> U8 {
+pub fn swar32_extract_i8_u(value: Swar32, index: U8) -> U8 {
   let shift = (u8_into_u32(index) & 3u32) * 8u32
   u32_into_u8((swar32_to_bits(value) >> shift) & 255u32)
 }
-fn swar32_extract_i16_s(value: Swar32, index: U8) -> I16 {
+pub fn swar32_extract_i16_s(value: Swar32, index: U8) -> I16 {
   let shift = (u8_into_u32(index) & 1u32) * 16u32
   u32_into_i16((swar32_to_bits(value) >> shift) & 65535u32)
 }
-fn swar32_extract_i16_u(value: Swar32, index: U8) -> U16 {
+pub fn swar32_extract_i16_u(value: Swar32, index: U8) -> U16 {
   let shift = (u8_into_u32(index) & 1u32) * 16u32
   u32_into_u16((swar32_to_bits(value) >> shift) & 65535u32)
 }
-fn swar32_add_i8(left: Swar32, right: Swar32) -> Swar32 {
+pub fn swar32_add_i8(left: Swar32, right: Swar32) -> Swar32 {
   let a = swar32_to_bits(left)
   let b = swar32_to_bits(right)
   swar32_from_bits(((a & 2139062143u32) + (b & 2139062143u32)) ^ ((a ^ b) & 2155905152u32))
 }
-fn swar32_sub_i8(left: Swar32, right: Swar32) -> Swar32 {
+pub fn swar32_sub_i8(left: Swar32, right: Swar32) -> Swar32 {
   let a = swar32_to_bits(left)
   let b = swar32_to_bits(right)
   swar32_from_bits(((a | 2155905152u32) - (b & 2139062143u32)) ^ ((a ^ (b ^ 4294967295u32)) & 2155905152u32))
 }
-fn swar32_add_i16(left: Swar32, right: Swar32) -> Swar32 {
+pub fn swar32_add_i16(left: Swar32, right: Swar32) -> Swar32 {
   let a = swar32_to_bits(left)
   let b = swar32_to_bits(right)
   swar32_from_bits(((a & 2147450879u32) + (b & 2147450879u32)) ^ ((a ^ b) & 2147516416u32))
 }
-fn swar32_sub_i16(left: Swar32, right: Swar32) -> Swar32 {
+pub fn swar32_sub_i16(left: Swar32, right: Swar32) -> Swar32 {
   let a = swar32_to_bits(left)
   let b = swar32_to_bits(right)
   swar32_from_bits(((a | 2147516416u32) - (b & 2147450879u32)) ^ ((a ^ (b ^ 4294967295u32)) & 2147516416u32))
 }
-fn swar32_any_true(value: Swar32) -> Bool {
+pub fn swar32_any_true(value: Swar32) -> Bool {
   swar32_to_bits(value) != 0u32
 }
-fn swar32_all_true_i8(value: Swar32) -> Bool {
+pub fn swar32_all_true_i8(value: Swar32) -> Bool {
   let a = swar32_to_bits(value)
   ((a - 16843009u32) & (a ^ 4294967295u32) & 2155905152u32) == 0u32
 }
-fn swar32_bitmask_i8(value: Swar32) -> U32 {
+pub fn swar32_bitmask_i8(value: Swar32) -> U32 {
   let a = swar32_to_bits(value)
   ((a >> 7u32) & 1u32) | ((a >> 14u32) & 2u32) | ((a >> 21u32) & 4u32) | ((a >> 28u32) & 8u32)
 }
-fn swar32_popcnt_i8(value: Swar32) -> Swar32 {
+pub fn swar32_popcnt_i8(value: Swar32) -> Swar32 {
   let a = swar32_to_bits(value)
   let b = a - ((a >> 1u32) & 1431655765u32)
   let c = (b & 858993459u32) + ((b >> 2u32) & 858993459u32)
   swar32_from_bits((c + (c >> 4u32)) & 252645135u32)
 }
-fn swar32_eq_i8(left: Swar32, right: Swar32) -> Swar32 {
+pub fn swar32_eq_i8(left: Swar32, right: Swar32) -> Swar32 {
   let x = swar32_to_bits(left) ^ swar32_to_bits(right)
   let mask = (((x & 2139062143u32) + 2139062143u32) | x) & 2155905152u32
   swar32_from_bits(((mask >> 7u32) * 255u32) ^ 4294967295u32)
 }
 
-fn swar64_splat_i8(value: I8) -> Swar64 {
+pub fn swar64_splat_i8(value: I8) -> Swar64 {
   swar64_from_bits((i8_into_u64(value) & 255u64) * 72340172838076673u64)
 }
-fn swar64_splat_i16(value: I16) -> Swar64 {
+pub fn swar64_splat_i16(value: I16) -> Swar64 {
   swar64_from_bits((i16_into_u64(value) & 65535u64) * 281479271743489u64)
 }
-fn swar64_splat_i32(value: I32) -> Swar64 {
+pub fn swar64_splat_i32(value: I32) -> Swar64 {
   swar64_from_bits((i32_into_u64(value) & 4294967295u64) * 4294967297u64)
 }
-fn swar64_extract_i8_s(value: Swar64, index: U8) -> I8 {
+pub fn swar64_extract_i8_s(value: Swar64, index: U8) -> I8 {
   let shift = (u8_into_u64(index) & 7u64) * 8u64
   u64_into_i8((swar64_to_bits(value) >> shift) & 255u64)
 }
-fn swar64_extract_i8_u(value: Swar64, index: U8) -> U8 {
+pub fn swar64_extract_i8_u(value: Swar64, index: U8) -> U8 {
   let shift = (u8_into_u64(index) & 7u64) * 8u64
   u64_into_u8((swar64_to_bits(value) >> shift) & 255u64)
 }
-fn swar64_extract_i16_s(value: Swar64, index: U8) -> I16 {
+pub fn swar64_extract_i16_s(value: Swar64, index: U8) -> I16 {
   let shift = (u8_into_u64(index) & 3u64) * 16u64
   u64_into_i16((swar64_to_bits(value) >> shift) & 65535u64)
 }
-fn swar64_extract_i16_u(value: Swar64, index: U8) -> U16 {
+pub fn swar64_extract_i16_u(value: Swar64, index: U8) -> U16 {
   let shift = (u8_into_u64(index) & 3u64) * 16u64
   u64_into_u16((swar64_to_bits(value) >> shift) & 65535u64)
 }
-fn swar64_extract_i32_s(value: Swar64, index: U8) -> I32 {
+pub fn swar64_extract_i32_s(value: Swar64, index: U8) -> I32 {
   let shift = (u8_into_u64(index) & 1u64) * 32u64
   u64_into_i32((swar64_to_bits(value) >> shift) & 4294967295u64)
 }
-fn swar64_extract_i32_u(value: Swar64, index: U8) -> U32 {
+pub fn swar64_extract_i32_u(value: Swar64, index: U8) -> U32 {
   let shift = (u8_into_u64(index) & 1u64) * 32u64
   u64_into_u32((swar64_to_bits(value) >> shift) & 4294967295u64)
 }
-fn swar64_add_i8(left: Swar64, right: Swar64) -> Swar64 {
+pub fn swar64_add_i8(left: Swar64, right: Swar64) -> Swar64 {
   let a = swar64_to_bits(left)
   let b = swar64_to_bits(right)
   swar64_from_bits(((a & 9187201950435737471u64) + (b & 9187201950435737471u64)) ^ ((a ^ b) & 9259542123273814144u64))
 }
-fn swar64_sub_i8(left: Swar64, right: Swar64) -> Swar64 {
+pub fn swar64_sub_i8(left: Swar64, right: Swar64) -> Swar64 {
   let a = swar64_to_bits(left)
   let b = swar64_to_bits(right)
   swar64_from_bits(((a | 9259542123273814144u64) - (b & 9187201950435737471u64)) ^ ((a ^ (b ^ 18446744073709551615u64)) & 9259542123273814144u64))
 }
-fn swar64_add_i16(left: Swar64, right: Swar64) -> Swar64 {
+pub fn swar64_add_i16(left: Swar64, right: Swar64) -> Swar64 {
   let a = swar64_to_bits(left)
   let b = swar64_to_bits(right)
   swar64_from_bits(((a & 9223231297218904063u64) + (b & 9223231297218904063u64)) ^ ((a ^ b) & 9223512776490647552u64))
 }
-fn swar64_sub_i16(left: Swar64, right: Swar64) -> Swar64 {
+pub fn swar64_sub_i16(left: Swar64, right: Swar64) -> Swar64 {
   let a = swar64_to_bits(left)
   let b = swar64_to_bits(right)
   swar64_from_bits(((a | 9223512776490647552u64) - (b & 9223231297218904063u64)) ^ ((a ^ (b ^ 18446744073709551615u64)) & 9223512776490647552u64))
 }
-fn swar64_add_i32(left: Swar64, right: Swar64) -> Swar64 {
+pub fn swar64_add_i32(left: Swar64, right: Swar64) -> Swar64 {
   let a = swar64_to_bits(left)
   let b = swar64_to_bits(right)
   swar64_from_bits(((a & 9223372034707292159u64) + (b & 9223372034707292159u64)) ^ ((a ^ b) & 9223372039002259456u64))
 }
-fn swar64_sub_i32(left: Swar64, right: Swar64) -> Swar64 {
+pub fn swar64_sub_i32(left: Swar64, right: Swar64) -> Swar64 {
   let a = swar64_to_bits(left)
   let b = swar64_to_bits(right)
   swar64_from_bits(((a | 9223372039002259456u64) - (b & 9223372034707292159u64)) ^ ((a ^ (b ^ 18446744073709551615u64)) & 9223372039002259456u64))
 }
-fn swar64_any_true(value: Swar64) -> Bool {
+pub fn swar64_any_true(value: Swar64) -> Bool {
   swar64_to_bits(value) != 0u64
 }
-fn swar64_all_true_i8(value: Swar64) -> Bool {
+pub fn swar64_all_true_i8(value: Swar64) -> Bool {
   let a = swar64_to_bits(value)
   ((a - 72340172838076673u64) & (a ^ 18446744073709551615u64) & 9259542123273814144u64) == 0u64
 }
-fn swar64_bitmask_i8(value: Swar64) -> U32 {
+pub fn swar64_bitmask_i8(value: Swar64) -> U32 {
   u64_into_u32(((swar64_to_bits(value) & 9259542123273814144u64) * 567382630219905u64) >> 56u64)
 }
-fn swar64_popcnt_i8(value: Swar64) -> Swar64 {
+pub fn swar64_popcnt_i8(value: Swar64) -> Swar64 {
   let a = swar64_to_bits(value)
   let b = a - ((a >> 1u64) & 6148914691236517205u64)
   let c = (b & 3689348814741910323u64) + ((b >> 2u64) & 3689348814741910323u64)
   swar64_from_bits((c + (c >> 4u64)) & 1085102592571150095u64)
 }
-fn swar64_eq_i8(left: Swar64, right: Swar64) -> Swar64 {
+pub fn swar64_eq_i8(left: Swar64, right: Swar64) -> Swar64 {
   let x = swar64_to_bits(left) ^ swar64_to_bits(right)
   let mask = (((x & 9187201950435737471u64) + 9187201950435737471u64) | x) & 9259542123273814144u64
   swar64_from_bits(((mask >> 7u64) * 255u64) ^ 18446744073709551615u64)
 }
 
-fn swar32_replace_i8(value: Swar32, index: U8, lane: I8) -> Swar32 {
+pub fn swar32_replace_i8(value: Swar32, index: U8, lane: I8) -> Swar32 {
   let shift = (u8_into_u32(index) & 3u32) * 8u32
   let mask = 255u32 << shift
   let bits = (swar32_to_bits(value) & (mask ^ 4294967295u32)) | ((i8_into_u32(lane) & 255u32) << shift)
   swar32_from_bits(bits)
 }
-fn swar32_replace_i16(value: Swar32, index: U8, lane: I16) -> Swar32 {
+pub fn swar32_replace_i16(value: Swar32, index: U8, lane: I16) -> Swar32 {
   let shift = (u8_into_u32(index) & 1u32) * 16u32
   let mask = 65535u32 << shift
   let bits = (swar32_to_bits(value) & (mask ^ 4294967295u32)) | ((i16_into_u32(lane) & 65535u32) << shift)
   swar32_from_bits(bits)
 }
-fn swar32_shl_i8(value: Swar32, count: U8) -> Swar32 {
+pub fn swar32_shl_i8(value: Swar32, count: U8) -> Swar32 {
   let shift = u8_into_u32(count) & 7u32
   let keep = (255u32 >> shift) * 16843009u32
   swar32_from_bits((swar32_to_bits(value) & keep) << shift)
 }
-fn swar32_shr_i8_u(value: Swar32, count: U8) -> Swar32 {
+pub fn swar32_shr_i8_u(value: Swar32, count: U8) -> Swar32 {
   let shift = u8_into_u32(count) & 7u32
   let keep = (255u32 >> shift) * 16843009u32
   swar32_from_bits((swar32_to_bits(value) >> shift) & keep)
 }
-fn swar32_shr_i8_s(value: Swar32, count: U8) -> Swar32 {
+pub fn swar32_shr_i8_s(value: Swar32, count: U8) -> Swar32 {
   let shift = u8_into_u32(count) & 7u32
   let keep = (255u32 >> shift) * 16843009u32
   let bits = swar32_to_bits(value)
   let signs = ((bits & 2155905152u32) >> 7u32) * 255u32
   swar32_from_bits(((bits >> shift) & keep) | (signs & (keep ^ 4294967295u32)))
 }
-fn swar32_shl_i16(value: Swar32, count: U8) -> Swar32 {
+pub fn swar32_shl_i16(value: Swar32, count: U8) -> Swar32 {
   let shift = u8_into_u32(count) & 15u32
   let keep = (65535u32 >> shift) * 65537u32
   swar32_from_bits((swar32_to_bits(value) & keep) << shift)
 }
-fn swar32_shr_i16_u(value: Swar32, count: U8) -> Swar32 {
+pub fn swar32_shr_i16_u(value: Swar32, count: U8) -> Swar32 {
   let shift = u8_into_u32(count) & 15u32
   let keep = (65535u32 >> shift) * 65537u32
   swar32_from_bits((swar32_to_bits(value) >> shift) & keep)
 }
-fn swar32_shr_i16_s(value: Swar32, count: U8) -> Swar32 {
+pub fn swar32_shr_i16_s(value: Swar32, count: U8) -> Swar32 {
   let shift = u8_into_u32(count) & 15u32
   let keep = (65535u32 >> shift) * 65537u32
   let bits = swar32_to_bits(value)
@@ -195,69 +195,69 @@ fn swar32_shr_i16_s(value: Swar32, count: U8) -> Swar32 {
   swar32_from_bits(((bits >> shift) & keep) | (signs & (keep ^ 4294967295u32)))
 }
 
-fn swar64_replace_i8(value: Swar64, index: U8, lane: I8) -> Swar64 {
+pub fn swar64_replace_i8(value: Swar64, index: U8, lane: I8) -> Swar64 {
   let shift = (u8_into_u64(index) & 7u64) * 8u64
   let mask = 255u64 << shift
   let bits = (swar64_to_bits(value) & (mask ^ 18446744073709551615u64)) | ((i8_into_u64(lane) & 255u64) << shift)
   swar64_from_bits(bits)
 }
-fn swar64_replace_i16(value: Swar64, index: U8, lane: I16) -> Swar64 {
+pub fn swar64_replace_i16(value: Swar64, index: U8, lane: I16) -> Swar64 {
   let shift = (u8_into_u64(index) & 3u64) * 16u64
   let mask = 65535u64 << shift
   let bits = (swar64_to_bits(value) & (mask ^ 18446744073709551615u64)) | ((i16_into_u64(lane) & 65535u64) << shift)
   swar64_from_bits(bits)
 }
-fn swar64_replace_i32(value: Swar64, index: U8, lane: I32) -> Swar64 {
+pub fn swar64_replace_i32(value: Swar64, index: U8, lane: I32) -> Swar64 {
   let shift = (u8_into_u64(index) & 1u64) * 32u64
   let mask = 4294967295u64 << shift
   let bits = (swar64_to_bits(value) & (mask ^ 18446744073709551615u64)) | ((i32_into_u64(lane) & 4294967295u64) << shift)
   swar64_from_bits(bits)
 }
-fn swar64_shl_i8(value: Swar64, count: U8) -> Swar64 {
+pub fn swar64_shl_i8(value: Swar64, count: U8) -> Swar64 {
   let shift = u8_into_u64(count) & 7u64
   let keep = (255u64 >> shift) * 72340172838076673u64
   swar64_from_bits((swar64_to_bits(value) & keep) << shift)
 }
-fn swar64_shr_i8_u(value: Swar64, count: U8) -> Swar64 {
+pub fn swar64_shr_i8_u(value: Swar64, count: U8) -> Swar64 {
   let shift = u8_into_u64(count) & 7u64
   let keep = (255u64 >> shift) * 72340172838076673u64
   swar64_from_bits((swar64_to_bits(value) >> shift) & keep)
 }
-fn swar64_shr_i8_s(value: Swar64, count: U8) -> Swar64 {
+pub fn swar64_shr_i8_s(value: Swar64, count: U8) -> Swar64 {
   let shift = u8_into_u64(count) & 7u64
   let keep = (255u64 >> shift) * 72340172838076673u64
   let bits = swar64_to_bits(value)
   let signs = ((bits & 9259542123273814144u64) >> 7u64) * 255u64
   swar64_from_bits(((bits >> shift) & keep) | (signs & (keep ^ 18446744073709551615u64)))
 }
-fn swar64_shl_i16(value: Swar64, count: U8) -> Swar64 {
+pub fn swar64_shl_i16(value: Swar64, count: U8) -> Swar64 {
   let shift = u8_into_u64(count) & 15u64
   let keep = (65535u64 >> shift) * 281479271743489u64
   swar64_from_bits((swar64_to_bits(value) & keep) << shift)
 }
-fn swar64_shr_i16_u(value: Swar64, count: U8) -> Swar64 {
+pub fn swar64_shr_i16_u(value: Swar64, count: U8) -> Swar64 {
   let shift = u8_into_u64(count) & 15u64
   let keep = (65535u64 >> shift) * 281479271743489u64
   swar64_from_bits((swar64_to_bits(value) >> shift) & keep)
 }
-fn swar64_shr_i16_s(value: Swar64, count: U8) -> Swar64 {
+pub fn swar64_shr_i16_s(value: Swar64, count: U8) -> Swar64 {
   let shift = u8_into_u64(count) & 15u64
   let keep = (65535u64 >> shift) * 281479271743489u64
   let bits = swar64_to_bits(value)
   let signs = ((bits & 9223512776490647552u64) >> 15u64) * 65535u64
   swar64_from_bits(((bits >> shift) & keep) | (signs & (keep ^ 18446744073709551615u64)))
 }
-fn swar64_shl_i32(value: Swar64, count: U8) -> Swar64 {
+pub fn swar64_shl_i32(value: Swar64, count: U8) -> Swar64 {
   let shift = u8_into_u64(count) & 31u64
   let keep = (4294967295u64 >> shift) * 4294967297u64
   swar64_from_bits((swar64_to_bits(value) & keep) << shift)
 }
-fn swar64_shr_i32_u(value: Swar64, count: U8) -> Swar64 {
+pub fn swar64_shr_i32_u(value: Swar64, count: U8) -> Swar64 {
   let shift = u8_into_u64(count) & 31u64
   let keep = (4294967295u64 >> shift) * 4294967297u64
   swar64_from_bits((swar64_to_bits(value) >> shift) & keep)
 }
-fn swar64_shr_i32_s(value: Swar64, count: U8) -> Swar64 {
+pub fn swar64_shr_i32_s(value: Swar64, count: U8) -> Swar64 {
   let shift = u8_into_u64(count) & 31u64
   let keep = (4294967295u64 >> shift) * 4294967297u64
   let bits = swar64_to_bits(value)

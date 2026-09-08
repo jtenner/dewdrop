@@ -230,6 +230,9 @@ Two source defects are fixed in this follow-up:
   helpers in `dew.std.text_runtime` and the preamble are published; private
   helpers in ordinary user modules and the four excluded string/byte modules
   remain private. The standard-runtime regression failed before the fix.
+  The [September 8 update](module-source-visibility-2026-09-08.md) replaces that
+  path-based exception with explicit library `pub` declarations and the same
+  source-visibility rule for every module.
 - The compiler entry point now applies the request's `default_preamble` flag.
   Its implicit import is a separate appended file, preserving existing file IDs
   and source offsets. Preparation does not mutate the supplied manifest. The

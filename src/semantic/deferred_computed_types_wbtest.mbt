@@ -11,7 +11,10 @@ test "computed member aliases defer an unknown owner until concrete use" {
     ]),
   )
   let analyzed = analyze_program_semantics(program)
-  let bytes = serialize_frozen_interfaces(analyzed.frozen.interfaces).unwrap()
+  let bytes = match serialize_frozen_interfaces(analyzed.frozen.interfaces) {
+    Ok(value) => value
+    Err(error) => fail(error)
+  }
   assert_eq(
     deserialize_frozen_interfaces(bytes).unwrap(),
     analyzed.frozen.interfaces,
