@@ -57,6 +57,8 @@ The clean bootstrap passes (201.489 seconds). Compiler B and C raw and linked
 outputs share SHA-256
 `27a2734ee671cab90d01f68d9a162cace42de028658beeaa4a6243ba5b8d4e80`.
 
-Synthetic runtime type recipes, complete reference assignability, and the
-remaining Generic/Error field-boundary fallbacks are separate open tasks.
+Declared-field error fallbacks are removed by the subsequent
+[declared storage checks](declared-storage-types-2026-09-08.md). Synthetic runtime
+type recipes, complete reference assignability, and other expression/signature
+fallbacks remain separate open tasks.
 Runs above 30 seconds remain recorded performance bugs, outside this stint.

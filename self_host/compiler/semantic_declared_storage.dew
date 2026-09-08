@@ -1,0 +1,110 @@
+open dew.std.map
+open dew.std.option
+
+struct SelfHostDeclaredStorageVisit {
+  type_: U32
+  finish: Bool
+}
+
+fn self_host_declared_storage_failure(resolved: SelfHostResolvedModuleTypes, owner: U64, root: U32, type_: U32, code: U32, expected: U32, actual: U32) -> SelfHostInvariantFailure {
+  SelfHostInvariantFailure::{
+    code: code
+    phase: 4u32
+    module_id: resolved.module_id
+    declaration: owner
+    body: 0u64
+    expression: 4294967295u32
+    expected: u32_into_u64(expected)
+    actual: u32_into_u64(actual)
+    detail: (u32_into_u64(root) << 32u64) | u32_into_u64(type_)
+  }
+}
+
+// A reference carrier must not hide poison in its logical arguments or result.
+// Nominal references are leaves. Declared parameters retain their explicit
+// erased-field adapter; this check does not invent a concrete specialization.
+fn self_host_check_declared_storage_type(resolved: SelfHostResolvedModuleTypes, owner: U64, root: U32) -> Result<Unit, SelfHostInvariantFailure> {
+  let states = self_host_empty_u32_u32_map()
+  let work = [SelfHostDeclaredStorageVisit::{
+    type_: root
+    finish: false
+  }]
+  while work.length() {
+    length if length > 0u32 => {
+      let visit = work[length - 1u32]
+      work.truncate(length - 1u32)
+      let id = visit.type_
+      if id >= resolved.types.length() {
+        return Result::Err(self_host_declared_storage_failure(resolved, owner, root, id,
+          101u32, resolved.types.length(), id))
+      }
+      if visit.finish {
+        states.set(id, 2u32)
+        continue work.length()
+      }
+      match states.get(id) {
+        Option::Some(1u32) => return Result::Err(self_host_declared_storage_failure(resolved, owner, root, id, 108u32, 0u32, 1u32))
+        Option::Some(2u32) => continue work.length()
+        _ => {}
+      }
+      let node = resolved.types[id]
+      let error = match node {
+        SelfHostResolvedType::ErrorType => 1u32
+        SelfHostResolvedType::MemberTypeProjection(_, _, _) => 2u32
+        SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::CompileTimeTypeType) => 3u32
+        _ => 0u32
+      }
+      if error != 0u32 {
+        return Result::Err(self_host_declared_storage_failure(resolved, owner, root, id, 301u32, 0u32, error))
+      }
+      states.set(id, 1u32)
+      work.push(SelfHostDeclaredStorageVisit::{
+        type_: id
+        finish: true
+      })
+      let span = match node {
+        SelfHostResolvedType::ProductType(fields), SelfHostResolvedType::AppliedType(_, fields), SelfHostResolvedType::FunctionType(fields, _) => fields
+        _ => self_host_empty_hir_span(0u32)
+      }
+      if !self_host_array_span_is_valid(span.start, span.length, resolved.type_arguments.length()) {
+        return Result::Err(self_host_declared_storage_failure(resolved, owner, root, id,
+          101u32, resolved.type_arguments.length(), span.length))
+      }
+      let extra = match node {
+        SelfHostResolvedType::AppliedType(base, _) => Option::Some(base)
+        SelfHostResolvedType::FunctionType(_, result) => Option::Some(result)
+        _ => Option::None
+      }
+      match extra {
+        Option::Some(child) => work.push(SelfHostDeclaredStorageVisit::{
+          type_: child
+          finish: false
+        })
+        Option::None => {}
+      }
+      while span.length {
+        remaining if remaining > 0u32 => {
+          work.push(SelfHostDeclaredStorageVisit::{
+            type_: resolved.type_arguments[span.start + remaining - 1u32]
+            finish: false
+          })
+          continue remaining - 1u32
+        }
+        _ => break ()
+      }
+      continue work.length()
+    }
+    _ => break ()
+  }
+  Result::Ok(())
+}
+
+fn self_host_assert_declared_storage_type(resolved: SelfHostResolvedModuleTypes, owner: U64, root: U32) -> Unit {
+  match self_host_check_declared_storage_type(resolved, owner, root) {
+    Result::Ok(_) => {}
+    Result::Err(failure) => {
+      let _ = self_host_assert_compiler_invariant_with_failure(false, failure,
+        "declared physical storage requires a valid logical type graph")
+    }
+  }
+}

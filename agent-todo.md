@@ -282,9 +282,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   Extend the existing specialization checks to every fragment/storage boundary.
   Self-host packed struct fields, enum payloads, and immutable captures now
   retain width and signedness, with shared native/self-host execution tests.
-  Mutable capture cells preserve full local values. Generic/Error field
-  boundary fallbacks still need removal. See the
+  Mutable capture cells preserve full local values. See the
   [packed field log](docs/research/packed-field-storage-2026-09-08.md).
+  Declared struct/variant field and payload graphs now reject Error, unresolved
+  projections, invalid runtime type values, bad child spans, and structural
+  cycles in both compilers. The retained-shape/Ref error fallbacks are removed
+  at these boundaries. Other expression/signature fallbacks remain. See the
+  [declared storage log](docs/research/declared-storage-types-2026-09-08.md).
   Named function parameters/results now require concrete shape evidence,
   including product leaves, before physical signature conversion. Elided bases
   and signature-only declarations retain logical metadata without a fabricated

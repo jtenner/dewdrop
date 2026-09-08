@@ -29,6 +29,7 @@ self-host failures. It is not a proof of the full language.
 | Native physical type prefix has checked owners and one entry per emitted index | Checked and tested; full late-adapter/reference proof is open | `program_physical_type_invariants.mbt`, `program_physical_type_schedule.mbt` | `../research/physical-type-tables-2026-09-08.md` |
 | Native shared physical layouts retain full field and signature types | Checked and tested; plan freeze and general reference subtyping remain open | `program_physical_reference_invariants.mbt`, `program_physical_alias_invariants.mbt` | `../research/physical-type-aliases-2026-09-08.md` |
 | Packed field storage keeps width and signed reads separate from i32 operands | Checked and tested in both compilers; formal proof and synthetic adapter coverage remain open | `semantic_wasmgc_fragment_plan.dew`, `starshine_field_storage.dew` | `../research/packed-field-storage-2026-09-08.md` |
+| Declared storage cannot hide erroneous structural children behind a reference | Checked and tested in both compilers; full reference-subtyping proof remains open | `declared_storage_types.mbt`, `semantic_declared_storage.dew` | `../research/declared-storage-types-2026-09-08.md` |
 
 ## Files
 

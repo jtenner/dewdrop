@@ -10,6 +10,16 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["declared field errors cannot use retained shape evidence", 1n, 3n, 3n],
+    ["declared payload errors cannot use retained shape evidence", 0n, 5n, 5n],
+    ["reference fields cannot hide erroneous type arguments", 2n, 47n, 5n],
+    ["callback fields cannot hide erroneous result types", 3n, 48n, 5n],
+  ].map(([name, owner, root, bad]) => ({
+    name: `SPC-301 ${name}`,
+    expected: [301, 4, 5100n, (5100n << 32n) | owner, 0n, 4294967295,
+      0n, 1n, (root << 32n) | bad],
+  })),
   {
     name: "FRG-403 packed field reads require a present source field",
     expected: [403, 5, 5100n, 0n, 0n, 1, 1n, 1n, 0n],

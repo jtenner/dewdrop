@@ -182,6 +182,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_pattern_adapter_identity_test.dew \
   self_host/compiler/semantic_pattern_payload_spelling_test.dew \
   self_host/compiler/semantic_payload_span_test.dew \
+  self_host/compiler/semantic_declared_storage_test.dew \
   self_host/compiler/semantic_named_fragment_shapes_test.dew \
   self_host/compiler/semantic_capture_cell_shapes_test.dew \
   self_host/compiler/semantic_unit_result_boundaries_test.dew \

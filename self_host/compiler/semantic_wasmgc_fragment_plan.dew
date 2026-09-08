@@ -153,16 +153,12 @@ fn self_host_wasmgc_field_storage_type(
   field: SelfHostPlannedFieldLayout,
 ) -> SelfHostPlannedWasmStorageType {
   // The declared type is the field carrier proof. Inference must not override it.
+  self_host_assert_declared_storage_type(module_.resolved_types, field.field, field.type_)
   let declared_shape = self_host_planned_resolved_value_shape(
     module_.resolved_types,
     field.type_,
   )
-  let shape = if declared_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-    field.shape
-  } else {
-    declared_shape
-  }
-  self_host_wasmgc_storage_type(shape)
+  self_host_wasmgc_storage_type(declared_shape)
 }
 
 fn self_host_wasmgc_payload_storage_type(
@@ -172,16 +168,12 @@ fn self_host_wasmgc_payload_storage_type(
   index: U32,
 ) -> SelfHostPlannedWasmStorageType {
   let slot = self_host_fragment_payload_index(module_.type_layouts, owner, payload, index)
-  let shape = module_.type_layouts.payload_shapes[slot]
+  self_host_assert_declared_storage_type(module_.resolved_types, owner, module_.type_layouts.payload_types[slot])
   let declared_shape = self_host_planned_resolved_value_shape(
     module_.resolved_types,
     module_.type_layouts.payload_types[slot],
   )
-  if declared_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-    self_host_wasmgc_storage_type(shape)
-  } else {
-    self_host_wasmgc_storage_type(declared_shape)
-  }
+  self_host_wasmgc_storage_type(declared_shape)
 }
 
 fn self_host_wasmgc_append_shape(
@@ -313,12 +305,7 @@ fn self_host_wasmgc_plan_type(
             role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
             declaration: source.field
             physical_index: current
-            storage: self_host_wasmgc_storage_type(
-              self_host_planned_resolved_value_shape(
-                module_.resolved_types,
-                source.type_,
-              ),
-            )
+            storage: self_host_wasmgc_field_storage_type(module_, source)
             mutable_: source.mutable_
             exact_nominal: false
             offset: source.offset

@@ -1155,7 +1155,7 @@ fn wasmgc_storage_type(
   let mut current = root
   while true {
     match resolved.types[current] {
-      ErrorType => return Some(WasmNullableEqRefStorage)
+      ErrorType => abort("SPC-301 invalid type bypassed declared storage verification")
       MemberTypeProjection(_, _, _) =>
         abort("SPC-301 unresolved member projection reached physical storage")
       PrimitiveType(UnitType | NeverType | CompileTimeTypeType) => return None
@@ -1688,6 +1688,7 @@ fn wasmgc_append_physical_type_fields(
         PlannedStructLayout(fields) =>
           for index in 0..<fields.length {
             let field = layouts.fields[fields.start + index]
+            assert_declared_storage_type(resolved, field.field, field.type_)
             if wasmgc_is_erased_generic_storage(resolved, field.type_) {
               wasmgc_append_erased_generic_fields(
                 target,
@@ -1750,6 +1751,7 @@ fn wasmgc_append_physical_type_fields(
             let payload_type = layouts.payload_types[assert_fragment_payload_index(
                 layouts, variant, types, index,
               )]
+            assert_declared_storage_type(resolved, variant, payload_type)
             let role = WasmTuplePayloadField(variant, index)
             if wasmgc_is_erased_generic_storage(resolved, payload_type) {
               wasmgc_append_specialized_generic_field(
@@ -1782,6 +1784,7 @@ fn wasmgc_append_physical_type_fields(
         PlannedStructVariantLayout(fields) =>
           for index in 0..<fields.length {
             let field = layouts.fields[fields.start + index]
+            assert_declared_storage_type(resolved, field.field, field.type_)
             let role = WasmStructPayloadField(field.field)
             if wasmgc_is_erased_generic_storage(resolved, field.type_) {
               wasmgc_append_specialized_generic_field(
