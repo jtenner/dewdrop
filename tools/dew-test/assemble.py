@@ -70,6 +70,7 @@ def main() -> None:
         ("debug_integers", "app.debug_integers"),
         ("debug_floats", "app.debug_floats"),
         ("debug_vectors", "app.debug_vectors"),
+        ("debug_swar", "app.debug_swar"),
         ("wasi_bytes", "app.wasi_bytes"),
         ("product_patterns", "app.product_patterns"),
         ("constructor_evaluations", "app.constructor_probes"),

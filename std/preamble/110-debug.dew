@@ -252,19 +252,38 @@ impl Debug for Bytes {
   }
 }
 
+fn __dew_debug_swar(value: U64, wide: Bool) -> U32 {
+  u8_store(16u32, 83u8)
+  u8_store(17u32, 119u8)
+  u8_store(18u32, 97u8)
+  u8_store(19u32, 114u8)
+  u8_store(20u32, if wide {
+    54u8
+  } else {
+    51u8
+  })
+  u8_store(21u32, if wide {
+    52u8
+  } else {
+    50u8
+  })
+  u8_store(22u32, 40u8)
+  let _ = __dew_debug_write_scratch(16u32, 7u32)
+  let digits = __dew_debug_integer(value, false)
+  u8_store(16u32, 41u8)
+  let _ = __dew_debug_write_scratch(16u32, 1u32)
+  8u32 + digits
+}
+
 impl Debug for Swar32 {
   fn debug(self) -> Unit {
-    __dew_debug_ignore(__dew_debug_write(1u32, b"Swar32("))
-    debug(swar32_to_bits(self))
-    __dew_debug_ignore(__dew_debug_write(1u32, b")"))
+    __dew_debug_ignore(__dew_debug_swar(u32_into_u64(swar32_to_bits(self)), false))
   }
 }
 
 impl Debug for Swar64 {
   fn debug(self) -> Unit {
-    __dew_debug_ignore(__dew_debug_write(1u32, b"Swar64("))
-    debug(swar64_to_bits(self))
-    __dew_debug_ignore(__dew_debug_write(1u32, b")"))
+    __dew_debug_ignore(__dew_debug_swar(swar64_to_bits(self), true))
   }
 }
 

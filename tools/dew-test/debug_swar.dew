@@ -1,0 +1,18 @@
+fn debug_swar_generic<t: Debug>(value: t) -> Unit {
+  debug(value)
+}
+
+pub fn main(which: U32) -> I32 {
+  match which {
+    0u32 => debug(unsafe_bitcast::<U32, Swar32>(0u32))
+    1u32 => debug(unsafe_bitcast::<U32, Swar32>(4294967295u32))
+    2u32 => debug(unsafe_bitcast::<U32, Swar32>(2147483648u32))
+    3u32 => debug_swar_generic(unsafe_bitcast::<U32, Swar32>(305419896u32))
+    4u32 => debug(unsafe_bitcast::<U64, Swar64>(0u64))
+    5u32 => debug(unsafe_bitcast::<U64, Swar64>(18446744073709551615u64))
+    6u32 => debug(unsafe_bitcast::<U64, Swar64>(9223372036854775808u64))
+    7u32 => debug_swar_generic(unsafe_bitcast::<U64, Swar64>(81985529216486895u64))
+    _ => unreachable()
+  }
+  0i32
+}

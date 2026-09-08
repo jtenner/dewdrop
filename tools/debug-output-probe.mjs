@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 
 // Shared output contract for primitive Debug migration tests. Host errors are
 // tested only after compilation and instantiation have succeeded.
-export function debugOutputProbe(expected, label, negativeCase = 0) {
+export function debugOutputProbe(expected, label, negativeCase = 0, negativeCalls = [1]) {
   let memory;
   let output;
   let calls;
   let mode;
+  let failureCall;
   return {
     imports(module) {
       const imports = {};
@@ -26,9 +27,10 @@ export function debugOutputProbe(expected, label, negativeCase = 0) {
         const length = view.getUint32(iovs + 4, true);
         assert.ok(length > 0 && address >= 16 && address + length <= 65536);
         calls++;
-        if (mode === "error") return 29;
-        const progress = mode === "zero" ? 0 : mode === "excess" ? length + 1 : Math.min(3, length);
-        if (mode === "partial") output.push(...new Uint8Array(memory.buffer, address, progress));
+        const response = calls < failureCall ? "partial" : mode;
+        if (response === "error") return 29;
+        const progress = response === "zero" ? 0 : response === "excess" ? length + 1 : Math.min(3, length);
+        if (response === "partial") output.push(...new Uint8Array(memory.buffer, address, progress));
         view.setUint32(result, progress, true);
         return 0;
       };
@@ -38,6 +40,7 @@ export function debugOutputProbe(expected, label, negativeCase = 0) {
       memory = exports.memory;
       assert.ok(memory instanceof WebAssembly.Memory);
       mode = "partial";
+      failureCall = Infinity;
       for (let which = 0; which < expected.length; which++) {
         calls = 0;
         output = [];
@@ -46,13 +49,16 @@ export function debugOutputProbe(expected, label, negativeCase = 0) {
         assert.ok(calls >= Math.ceil(expected[which].length / 3), "partial host writes keep all bytes");
       }
       for (const invalid of ["error", "zero", "excess"]) {
-        calls = 0;
-        output = [];
-        mode = invalid;
-        assert.throws(() => exports.main(negativeCase), WebAssembly.RuntimeError);
-        assert.equal(calls, 1, `reject ${invalid} without another host call`);
+        for (const at of negativeCalls) {
+          calls = 0;
+          output = [];
+          mode = invalid;
+          failureCall = at;
+          assert.throws(() => exports.main(negativeCase), WebAssembly.RuntimeError);
+          assert.equal(calls, at, `reject ${invalid} at call ${at} without another host call`);
+        }
       }
-      return expected.length + 3;
+      return expected.length + 3 * negativeCalls.length;
     },
   };
 }

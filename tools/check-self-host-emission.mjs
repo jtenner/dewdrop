@@ -14,6 +14,7 @@ import { debugDispatchProbe } from "./debug-dispatch-cases.mjs";
 import { debugIntegerProbe } from "./debug-integer-cases.mjs";
 import { debugFloatProbe } from "./debug-float-cases.mjs";
 import { debugVectorProbe } from "./debug-vector-cases.mjs";
+import { debugSwarProbe } from "./debug-swar-cases.mjs";
 import { wasiBytesProbe } from "./wasi-bytes-cases.mjs";
 import { checkProductPatterns } from "./product-pattern-cases.mjs";
 import { checkConstructorEvaluations } from "./constructor-evaluation-cases.mjs";
@@ -159,6 +160,16 @@ async function compileSource(fixture) {
 }
 
 let failures = 0;
+try {
+  const start = performance.now();
+  const request = await readFile(".tmp/self-host-hardening/debug-swar.request.bin");
+  const probe = debugSwarProbe();
+  const exports = await compileProbeBytes(request, "self_host_emission_probe_compile_request", probe.imports);
+  console.log(`self-host SWAR Debug checks passed: ${probe.check(exports)} (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host SWAR Debug corpus failed", error);
+}
 try {
   const start = performance.now();
   const request = await readFile(".tmp/self-host-hardening/debug-vectors.request.bin");
