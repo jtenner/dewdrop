@@ -228,6 +228,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Valid user variants keep their declared storage; missing fields remain
   unresolved. See the
   [payload spelling log](docs/research/pattern-payload-spelling-2026-09-08.md).
+  Exact call-result lookup and signature emission now use selected fragments,
+  with no getter/into suffix exemption in final result verification. Two
+  direct-get recovery helpers and their unproved I32 default are removed.
+  Other unresolved receiver/collection recovery remains. See the
+  [method-result log](docs/research/method-result-spelling-2026-09-08.md).
 - [ ] Delete unused legacy builtin plans/builders after each migration. Enforce
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.

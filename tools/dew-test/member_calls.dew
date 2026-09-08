@@ -71,6 +71,28 @@ fn member_record(cell: MemberCell, digit: I32) -> Unit {
   cell.value = member_add(member_mul(cell.value, 10i32), digit)
 }
 
+// Method spelling does not determine the result type. These results differ
+// from the receiver's generic argument, and each call has a visible effect.
+struct NamedProbe<t> {
+  item: t
+  trace: MemberCell
+}
+
+impl<t> NamedProbe<t> {
+  fn get_unchecked(self, index: U32) -> I64 {
+    member_record(self.trace, 1i32)
+    41i64
+  }
+  fn indexed_get(self, index: U32) -> F64 {
+    member_record(self.trace, 2i32)
+    2.5f64
+  }
+  fn into(self) -> I64 {
+    member_record(self.trace, 3i32)
+    43i64
+  }
+}
+
 impl IndexedSet<U32, Unit> for PlainUnitSlot {
   fn indexed_set(self, index: U32, value: Unit) -> Unit {
     member_record(self.trace, 4i32)
@@ -147,6 +169,12 @@ pub fn main(value: I32, expected: I32) -> I32 {
   let stopped_before_call = member_stop_before_call(trace) == 7i32 && trace.value == 7i32
   trace.value = 0i32
   let stopped_in_argument = member_stop_in_argument(trace) == 1i32 && trace.value == 1i32
+  trace.value = 0i32
+  let named = NamedProbe::{
+    item: 7i32
+    trace: trace
+  }
+  let named_results = named.get_unchecked(0u32) == 41i64 && named.indexed_get(0u32) == 2.5f64 && named.into() == 43i64 && trace.value == 123i32
   let (tuple_left, tuple_right) = member_extract(MemberPayload::Value((7i32, 11i64)), (0i32, 0i64))
   let tuple_binding = tuple_left == 7i32 && tuple_right == 11i64
   let road = RoadMap::{
@@ -177,7 +205,7 @@ pub fn main(value: I32, expected: I32) -> I32 {
   }
   slot[0u32] = wrapper
   slot[0u32].inner.value = value
-  if indexed_result && indexed_float_results && tuple_binding && receiver_effects && plain_unit_order && unit_receiver_order && stopped_before_call && stopped_in_argument && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
+  if named_results && indexed_result && indexed_float_results && tuple_binding && receiver_effects && plain_unit_order && unit_receiver_order && stopped_before_call && stopped_in_argument && slot[0u32].inner.value == expected && cell.read() == value && old.read() == 17i32 {
     slot[0u32].inner.read()
   } else {
     -1i32

@@ -960,15 +960,12 @@ fn self_host_linked_exact_emitted_expression_carrier(
       target,
       _,
       _,
-    ) => match self_host_linked_direct_get_emitted_result_shape(
-      canonical,
+    ) => match self_host_linked_selected_call_result_shape(
       link,
-      module_,
-      body,
+      body.body,
       caller_specialization,
       expression,
       declaration,
-      target,
     ) {
       Option::Some(shape) => self_host_body_carrier_from_shape(shape)
       Option::None => match self_host_linked_i32_call_index(
@@ -5839,146 +5836,30 @@ fn self_host_linked_direct_receiver_expression(
   }
 }
 
-fn self_host_linked_direct_get_result_shape(
+fn self_host_linked_selected_call_result_shape(
   link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
-  declaration: U64,
-  target: U32,
-) -> Option<SelfHostPlannedValueShape> {
-  let name = self_host_linked_declaration_name(link, declaration)
-  if !(name.ends_with(b"get_unchecked") || name.ends_with(b"indexed_get")) {
-    return Option::None
-  }
-  if !self_host_linked_declaration_has_receiver(link, declaration) {
-    return Option::None
-  }
-  let base = match self_host_linked_direct_receiver_expression(module_, target) {
-    Option::Some(value) => value
-    Option::None => return Option::None
-  }
-  let direct_owner = self_host_linked_type_owner_module_id(
-    link,
-    module_,
-    self_host_planned_expression_at(module_.expressions, base).type_,
-  )
-  let owner = if self_host_u64_equal(direct_owner, 0u64) {
-    self_host_linked_expression_container_owner_module_id(
-      link,
-      module_,
-      body,
-      base,
-    )
-  } else {
-    direct_owner
-  }
-  let argument = if self_host_u64_equal(owner, link.map_module_id) {
-    1u32
-  } else {
-    0u32
-  }
-  match self_host_linked_expression_container_argument_shape(
-    link,
-    module_,
-    body,
-    base,
-    argument,
-  ) {
-    Option::Some(shape) => Option::Some(shape)
-    Option::None => if self_host_u64_equal(module_.expressions[base].nominal, 0u64) {
-      Option::Some(SelfHostPlannedValueShape::I32PlannedValueShape)
-    } else {
-      Option::None
-    }
-  }
-}
-
-fn self_host_linked_direct_get_emitted_result_shape(
-  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
-  link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
+  caller_body: U64,
   caller_specialization: U32,
   expression: U32,
   declaration: U64,
-  target: U32,
 ) -> Option<SelfHostPlannedValueShape> {
-  let name = self_host_linked_declaration_name(link, declaration)
-  if !(name.ends_with(b"get_unchecked") || name.ends_with(b"indexed_get")) {
-    return Option::None
-  }
-  if self_host_linked_declaration_name(link, body.declaration).equals(
-    b"self_host_array_pop",
-  ) {
-    let shape = self_host_body_specialization_shape(
-      link,
-      caller_specialization,
-      SelfHostPlannedValueShape::GenericPlannedValueShape,
-    )
-    if !(shape is SelfHostPlannedValueShape::GenericPlannedValueShape) && !(
-      shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-    ) {
-      return Option::Some(shape)
-    }
-  }
-  match self_host_linked_canonical_expression_shape(canonical, expression) {
-    Option::Some(shape) => if !(
-      shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-    ) && !(
-      shape is SelfHostPlannedValueShape::GenericPlannedValueShape
-    ) && !(
-      self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
-    ) {
-      // Emission can refine a broad canonical result to the exact slot
-      // carrier. That local proof has precedence over receiver recovery.
-      return Option::Some(shape)
-    }
-    Option::None => {}
-  }
-  let declared_element_shape = self_host_linked_direct_get_result_shape(
+  match self_host_linked_i32_call_index(
     link,
-    module_,
-    body,
+    caller_body,
+    caller_specialization,
+    expression,
     declaration,
-    target,
-  )
-  match declared_element_shape {
-    Option::Some(shape) => if !(
-      shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-    ) && !(
-      shape is SelfHostPlannedValueShape::GenericPlannedValueShape
-    ) && !(
-      self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
-    ) {
-      // The declared scalar element is more precise than a broad canonical
-      // heap type. FixedArray<U32>.get_unchecked must emit i32, not eqref.
-      return Option::Some(shape)
-    }
-    Option::None => {}
-  }
-  match self_host_linked_direct_receiver_expression(module_, target) {
-    Option::Some(base) => if base < module_.expressions.length() {
-      match self_host_linked_canonical_expression_heap_type(
-        canonical,
-        module_,
-        body,
-        base,
-      ) {
-        Option::Some(type_index) => {
-          let carrier = self_host_linked_fixed_array_body_carrier_from_type(
-            link,
-            type_index,
-          )
-          if !(carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
-            return Option::Some(self_host_body_carrier_shape(carrier))
-          }
-        }
-        Option::None => {}
+  ) {
+    Option::Some(function_index) => {
+      let shape = self_host_linked_physical_function_result_shape(link, function_index)
+      if shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
+        Option::None
+      } else {
+        Option::Some(shape)
       }
     }
-    Option::None => {}
+    Option::None => Option::None
   }
-  declared_element_shape
 }
 
 fn self_host_linked_unresolved_get_result_shape(
@@ -9907,37 +9788,28 @@ fn self_host_linked_exact_expression_shape(
   match module_.expressions[expression].kind {
     SelfHostPlannedExpressionKind::PlannedDirectCall(
       declaration,
-      target,
       _,
       _,
-    ) => match self_host_linked_direct_get_result_shape(
+      _,
+    ) => match self_host_linked_i32_call_index(
       link,
-      module_,
-      body,
+      body.body,
+      caller_specialization,
+      expression,
       declaration,
-      target,
     ) {
-      Option::Some(shape) => Option::Some(shape)
-      Option::None => match self_host_linked_i32_call_index(
-        link,
-        body.body,
-        caller_specialization,
-        expression,
-        declaration,
-      ) {
-        Option::Some(function_index) => {
-          let shape = self_host_linked_physical_function_result_shape(
-            link,
-            function_index,
-          )
-          if shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-            Option::None
-          } else {
-            Option::Some(shape)
-          }
+      Option::Some(function_index) => {
+        let shape = self_host_linked_physical_function_result_shape(
+          link,
+          function_index,
+        )
+        if shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
+          Option::None
+        } else {
+          Option::Some(shape)
         }
-        Option::None => Option::None
       }
+      Option::None => Option::None
     }
     SelfHostPlannedExpressionKind::PlannedFieldGet(field, _, _) => self_host_linked_struct_field_shape(
       link,
@@ -9965,72 +9837,19 @@ fn self_host_linked_exact_expression_shape(
     } else {
       Option::None
     }
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments) => {
-      match self_host_planned_expression_at(
-        module_.expressions,
-        expression,
-      ).call_target {
-        SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => match self_host_linked_callable_declared_result_shape(
-          link,
-          declaration,
-        ) {
-          Option::Some(shape) => if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
-            shape is SelfHostPlannedValueShape::GenericPlannedValueShape
-          ) && !(
-            self_host_specialization_canonical_scalar(shape) is SelfHostPlannedValueShape::RefPlannedValueShape
-          ) {
-            return Option::Some(shape)
-          }
-          Option::None => {}
-        }
-        _ => {}
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => {
+      let declaration = match module_.expressions[expression].call_target {
+        SelfHostBasicCallTarget::SelectedBasicCallTarget(value, _) => value
+        _ => 0u64
       }
-      if self_host_u32_equal(arguments.length, 0u32) && target < module_.expressions.length() {
-        match module_.expressions[target].kind {
-          SelfHostPlannedExpressionKind::PlannedUnresolvedField(receiver, name) => if receiver < module_.expressions.length() &&
-            name < self_host_linked_module_name_count(module_) {
-            let method_name = self_host_linked_module_name_at(module_, name)
-            if (method_name == "length" && (
-              self_host_linked_expression_is_fixed_array_value(
-                link,
-                module_,
-                body,
-                receiver,
-              ) || self_host_linked_expression_is_map_value(
-                link,
-                module_,
-                body,
-                receiver,
-              )
-            )) {
-              return Option::Some(SelfHostPlannedValueShape::U32PlannedValueShape)
-            }
-          }
-          _ => {}
-        }
-      }
-      match self_host_linked_unresolved_get_result_shape(
+      match self_host_linked_i32_call_index(
         link,
-        module_,
-        body,
+        body.body,
+        caller_specialization,
         expression,
+        declaration,
       ) {
-      Option::Some(shape) => Option::Some(shape)
-      Option::None => match self_host_linked_i32_call_index(
-      link,
-      body.body,
-      caller_specialization,
-      expression,
-      0u64,
-    ) {
-      Option::Some(function_index) => {
-        let name = self_host_linked_physical_function_name(
-          link,
-          function_index,
-        )
-        if name.ends_with(b"get_unchecked") || name.ends_with(b"indexed_get") {
-          Option::None
-        } else {
+        Option::Some(function_index) => {
           let shape = self_host_linked_physical_function_result_shape(
             link,
             function_index,
@@ -10041,42 +9860,8 @@ fn self_host_linked_exact_expression_shape(
             Option::Some(shape)
           }
         }
+        Option::None => Option::None
       }
-      Option::None => if target < module_.expressions.length() {
-        match module_.expressions[target].kind {
-          SelfHostPlannedExpressionKind::PlannedUnresolvedField(receiver, name) => if name < self_host_linked_module_name_count(
-            module_,
-          ) {
-            match self_host_linked_method_call_index_for_receiver(
-              link,
-              module_,
-              body,
-              receiver,
-              self_host_linked_module_name_at(module_, name),
-            ) {
-              Option::Some(function_index) => {
-                let shape = self_host_linked_physical_function_result_shape(
-                  link,
-                  function_index,
-                )
-                if shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-                  Option::None
-                } else {
-                  Option::Some(shape)
-                }
-              }
-              Option::None => Option::None
-            }
-          } else {
-            Option::None
-          }
-          _ => Option::None
-        }
-      } else {
-        Option::None
-      }
-    }
-    }
     }
     _ => Option::None
   }
@@ -12492,12 +12277,9 @@ fn self_host_linked_assert_array_get_carrier(
             }
             Option::None => message.append(" receiver=none")
           }
-          match self_host_linked_direct_get_result_shape(
+          match self_host_linked_callable_declared_result_shape(
             link,
-            module_,
-            body,
             declaration,
-            target,
           ) {
             Option::Some(shape) => {
               message.append(" declared=")
@@ -14131,13 +13913,7 @@ fn self_host_emit_linked_i32_expression(
               link,
               function_index,
             )
-            let function_name = self_host_linked_physical_function_name(
-              link,
-              function_index,
-            )
-            let emitter_lowers_carrier = function_name.ends_with(b"get_unchecked") ||
-              function_name.ends_with(b"indexed_get") || function_name.ends_with(b"into")
-            if !emitter_lowers_carrier && !(expected is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
+            if !(expected is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
               expected is SelfHostPlannedValueShape::NeverPlannedValueShape
             ) && !(actual is SelfHostPlannedValueShape::ErrorPlannedValueShape) &&
               self_host_linked_array_carrier_from_shape(expected) !=
@@ -30861,15 +30637,12 @@ fn self_host_linked_scalar_locals(
                   target,
                   _,
                   _,
-                ) => self_host_linked_direct_get_emitted_result_shape(
-                  canonical_body_plan,
+                ) => self_host_linked_selected_call_result_shape(
                   link,
-                  module_,
-                  body,
+                  body.body,
                   caller_specialization,
                   initializer,
                   declaration,
-                  target,
                 )
                 SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => if self_host_linked_is_unresolved_get_unchecked(
                   module_,
@@ -33363,24 +33136,7 @@ fn build_self_host_linked_i32_module(
         ) {
           return Result::Err("linked function parameters are outside the emitter subset")
         }
-        let function_name = self_host_linked_function_name(link, linked_function)
-        if (function_name.ends_with(b"get_unchecked") || function_name.ends_with(
-          b"indexed_get",
-        ) || self_host_linked_function_returns_array_element(
-          link,
-          linked_function,
-          fragment,
-        )) && self_host_u32_equal(fragment.results.length, 1u32) {
-          self_host_linked_append_shape_value_types(
-            results,
-            self_host_linked_specialized_function_result_shape(
-              link,
-              linked_function,
-              fragment_module,
-              fragment,
-            ),
-          )
-        } else if !self_host_linked_i32_append_value_types(
+        if !self_host_linked_i32_append_value_types(
           fragment_module,
           fragment.results,
           results,
