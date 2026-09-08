@@ -402,6 +402,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   total, unique set, including startup functions. Import-offset cleanup and
   complete native type/fragment checks remain. See the
   [link record log](docs/research/physical-link-records-2026-09-07.md).
+  Native plain-function lookup now checks table bounds and declaration,
+  module, fragment, lambda, kind, and ABI-key identity at link completion and each
+  read. Missing keys stay missing; specialization entries cannot replace plain
+  entries. Imported trait signature fragments retain their source declaration.
+  See the [lookup log](docs/research/named-function-lookups-2026-09-08.md).
 - [x] Separate trait cycles and search limits from ordinary missing evidence.
   Use visited obligations and explicit limit errors, including implementation
   comparison and module-interface traversal.

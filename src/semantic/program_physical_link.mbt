@@ -1850,6 +1850,7 @@ pub fn link_program_wasmgc_fragments(
   }
   if diagnostics.is_empty() {
     assert_program_function_indices(link)
+    assert_program_named_function_lookups(link)
   }
   link
 }

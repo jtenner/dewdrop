@@ -389,9 +389,9 @@ pub fn PlannedProgramWasmGCLink::function_of(
   self : PlannedProgramWasmGCLink,
   declaration : DeclId,
 ) -> PlannedProgramWasmFunction? {
-  match self.function_lookup.get(declaration) {
-    Some(index) => Some(self.functions[index])
-    None => None
+  match check_program_named_function_lookup(self, declaration) {
+    Ok(value) => value
+    Err(failure) => abort(@debug.to_string(failure))
   }
 }
 
