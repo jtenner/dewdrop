@@ -224,9 +224,136 @@ pub fn main(case: U32) -> I32 {
     bytes_result(byte == 98u8 && log.value == 12u32)
   } else if case == 42u32 {
     bytes_result(bytes_access_matrix())
+  } else if case == 43u32 {
+    bytes_result(bytes_builder_copy_matrix())
+  } else if case == 44u32 {
+    let builder = bytes_builder_capacity_operation()(0u32)
+    bytes_builder_append_operation()(builder, b"a\x00\xff")
+    bytes_builder_byte_operation()(builder, 128u8)
+    bytes_result(bytes_builder_finish_operation()(builder) == b"a\x00\xff\x80")
+  } else if case == 45u32 {
+    let builder = BytesBuilder::with_capacity(0u32)
+    let _ = builder.finish()
+    bytes_builder_finish_operation()(builder)
+    0i32
+  } else if case == 46u32 {
+    let builder = BytesBuilder::new()
+    let _ = builder.finish()
+    bytes_builder_append_operation()(builder, b"")
+    0i32
+  } else if case == 47u32 {
+    let builder = BytesBuilder::new()
+    let _ = builder.finish()
+    bytes_builder_byte_operation()(builder, 1u8)
+    0i32
+  } else if case == 48u32 {
+    let builder = BytesBuilder::new()
+    let alias = builder
+    let _ = builder.finish()
+    bytes_builder_finish_operation()(alias)
+    0i32
+  } else if case == 49u32 {
+    let builder = BytesBuilder::with_capacity(0u32)
+    let alias = builder
+    while 0u32 {
+      index if index < 1025u32 => {
+        builder.append_byte((index & 255u32).into())
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let bytes = alias.finish()
+    bytes_result(bytes.byte_length() == 1025u32 && bytes.byte_at(1023u32) == 255u8 && bytes.byte_at(1024u32) == 0u8)
+  } else if case == 50u32 {
+    // One invalid length field must fail before growth or an array access.
+    bytes_builder_byte_operation()(bytes_builder_overflow_state(4294967295u32), 1u8)
+    0i32
+  } else if case == 51u32 {
+    bytes_builder_append_operation()(bytes_builder_overflow_state(4294967294u32), b"ab")
+    0i32
+  } else if case == 52u32 {
+    let log = BytesViewLog::{
+      value: 0u32
+    }
+    let builder = BytesBuilder::with_capacity(0u32)
+    bytes_builder_append_operation()(bytes_builder_logged_input(log, builder), bytes_builder_logged_part(log))
+    bytes_result(log.value == 12u32 && builder.finish() == b"\x00\xff")
   } else {
     unreachable()
   }
+}
+
+struct BytesBuilderTestStorage {
+  mut chunks: WasmArray<V128>
+  mut length: U32
+  mut consumed: U32
+}
+
+builtin bytes_builder_test_value(value: BytesBuilderTestStorage) -> BytesBuilder = "ref.cast"
+
+fn bytes_builder_overflow_state(length: U32) -> BytesBuilder {
+  bytes_builder_test_value(BytesBuilderTestStorage::{
+    chunks: wasm_array_new_default::<V128>(0u32)
+    length: length
+    consumed: 0u32
+  })
+}
+
+fn bytes_builder_capacity_operation() -> fn(U32) -> BytesBuilder {
+  bytes_builder_with_capacity_raw
+}
+fn bytes_builder_append_operation() -> fn(BytesBuilder, Bytes) -> Unit {
+  bytes_builder_append
+}
+fn bytes_builder_byte_operation() -> fn(BytesBuilder, U8) -> Unit {
+  bytes_builder_append_byte
+}
+fn bytes_builder_finish_operation() -> fn(BytesBuilder) -> Bytes {
+  bytes_builder_finish
+}
+
+fn bytes_builder_logged_input(log: BytesViewLog, value: BytesBuilder) -> BytesBuilder {
+  log.value = log.value * 10u32 + 1u32
+  value
+}
+
+fn bytes_builder_logged_part(log: BytesViewLog) -> Bytes {
+  log.value = log.value * 10u32 + 2u32
+  b"\x00\xff"
+}
+
+fn bytes_builder_copy_matrix() -> Bool {
+  let seed = BytesBuilder::with_capacity(0u32)
+  while 0u32 {
+    index if index < 128u32 => {
+      seed.append_byte(((index * 37u32) & 255u32).into())
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let source = seed.finish()
+  while 0u32 {
+    source_start if source_start < 16u32 => {
+      while 0u32 {
+        prefix if prefix < 16u32 => {
+          for length in [0u32, 1u32, 15u32, 16u32, 17u32, 31u32, 32u32, 33u32, 65u32] {
+            let builder = BytesBuilder::with_capacity(prefix)
+            builder.append(source.view(0u32, prefix))
+            builder.append(source.view(source_start, length))
+            let result = builder.finish()
+            if result.byte_length() != prefix + length || result.view(0u32, prefix) != source.view(0u32, prefix) || result.view(prefix, length) != source.view(source_start, length) {
+              return false
+            }
+          }
+          continue prefix + 1u32
+        }
+        _ => break ()
+      }
+      continue source_start + 1u32
+    }
+    _ => break ()
+  }
+  true
 }
 
 fn bytes_builder_length_operation() -> fn(BytesBuilder) -> U32 {

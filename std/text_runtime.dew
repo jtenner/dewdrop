@@ -56,7 +56,13 @@ pub builtin string_builder_finish(value: StringBuilder) -> String = "dew_string_
 pub fn bytes_builder_new() -> BytesBuilder {
   bytes_builder_with_capacity_raw(64u32)
 }
-pub builtin bytes_builder_with_capacity_raw(capacity: U32) -> BytesBuilder = "dew_bytes_builder_with_capacity"
+pub fn bytes_builder_with_capacity_raw(capacity: U32) -> BytesBuilder {
+  bytes_builder_value(BytesBuilderStorage::{
+    chunks: wasm_array_new_default::<V128>(bytes_storage_chunk_count(capacity))
+    length: 0u32
+    consumed: 0u32
+  })
+}
 builtin bytes_builder_length_raw(value: BytesBuilder) -> U32 = "struct.get 1"
 builtin bytes_builder_consumed_raw(value: BytesBuilder) -> U32 = "struct.get 2"
 pub fn bytes_builder_byte_length(value: BytesBuilder) -> U32 {
@@ -65,9 +71,142 @@ pub fn bytes_builder_byte_length(value: BytesBuilder) -> U32 {
   }
   bytes_builder_length_raw(value)
 }
-pub builtin bytes_builder_append(value: BytesBuilder, part: Bytes) -> Unit = "dew_bytes_builder_append"
-pub builtin bytes_builder_append_byte(value: BytesBuilder, byte: U8) -> Unit = "dew_bytes_builder_append_byte"
-pub builtin bytes_builder_finish(value: BytesBuilder) -> Bytes = "dew_bytes_builder_finish"
+pub fn bytes_builder_append(value: BytesBuilder, part: Bytes) -> Unit {
+  let target = bytes_builder_storage(value)
+  let source = bytes_view_storage(part)
+  let old_length = target.length
+  let required_length = bytes_builder_reserve(target, source.length)
+  let tail = if (old_length & 15u32) == 0u32 && (source.start & 15u32) == 0u32 {
+    let count = source.length >> 4u32
+    wasm_array_copy(target.chunks, old_length >> 4u32, source.chunks, source.start >> 4u32, count)
+    count << 4u32
+  } else {
+    while 0u32 {
+      index if source.length - index >= 16u32 => {
+        let vector = bytes_storage_read_vector(source.chunks, source.start + index)
+        bytes_storage_write_vector(target.chunks, old_length + index, vector)
+        continue index + 16u32
+      }
+      index => break index
+    }
+  }
+  while tail {
+    index if index < source.length => {
+      bytes_storage_write_byte(target.chunks, old_length + index, bytes_byte_at(part, index))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  target.length = required_length
+}
+pub fn bytes_builder_append_byte(value: BytesBuilder, byte: U8) -> Unit {
+  let target = bytes_builder_storage(value)
+  let required_length = bytes_builder_reserve(target, 1u32)
+  bytes_storage_write_byte(target.chunks, target.length, byte)
+  target.length = required_length
+}
+pub fn bytes_builder_finish(value: BytesBuilder) -> Bytes {
+  let source = bytes_builder_storage(value)
+  if source.consumed != 0u32 {
+    unreachable()
+  }
+  source.consumed = 1u32
+  bytes_view_value(BytesViewStorage::{
+    chunks: source.chunks
+    start: 0u32
+    length: source.length
+  })
+}
+
+struct BytesBuilderStorage {
+  mut chunks: WasmArray<V128>
+  mut length: U32
+  mut consumed: U32
+}
+
+builtin bytes_builder_storage(value: BytesBuilder) -> BytesBuilderStorage = "ref.cast"
+builtin bytes_builder_value(value: BytesBuilderStorage) -> BytesBuilder = "ref.cast"
+
+fn bytes_storage_chunk_count(length: U32) -> U32 {
+  let whole = length >> 4u32
+  if (length & 15u32) == 0u32 {
+    whole
+  } else {
+    whole + 1u32
+  }
+}
+
+// Check all logical length arithmetic before allocating or changing storage.
+fn bytes_builder_reserve(value: BytesBuilderStorage, additional: U32) -> U32 {
+  if value.consumed != 0u32 || additional > 4294967295u32 - value.length {
+    unreachable()
+  }
+  let required_length = value.length + additional
+  let required_chunks = bytes_storage_chunk_count(required_length)
+  let capacity = wasm_array_len(value.chunks)
+  if required_chunks > capacity {
+    let doubled = if capacity > 134217728u32 {
+      268435456u32
+    } else {
+      capacity * 2u32
+    }
+    let next_capacity = if doubled < required_chunks {
+      required_chunks
+    } else {
+      doubled
+    }
+    let chunks = wasm_array_new_default::<V128>(next_capacity)
+    wasm_array_copy(chunks, 0u32, value.chunks, 0u32, bytes_storage_chunk_count(value.length))
+    value.chunks = chunks
+  }
+  required_length
+}
+
+fn bytes_storage_lane_indices() -> U8x16 {
+  let low = wasm_u64x2_splat(506097522914230528u64)
+  unsafe_bitcast::<U64x2, U8x16>(wasm_u64x2_replace_1(low, 1084818905618843912u64))
+}
+
+// The caller proves that sixteen logical bytes are available.
+fn bytes_storage_read_vector(chunks: WasmArray<V128>, index: U32) -> U8x16 {
+  let slot = index >> 4u32
+  let first = unsafe_bitcast::<V128, U8x16>(wasm_array_get(chunks, slot))
+  let offset = index & 15u32
+  if offset == 0u32 {
+    first
+  } else {
+    let indices = wasm_u8x16_add(bytes_storage_lane_indices(), wasm_u8x16_splat(offset.into()))
+    let second = unsafe_bitcast::<V128, U8x16>(wasm_array_get(chunks, slot + 1u32))
+    wasm_u8x16_or(wasm_u8x16_swizzle(first, indices), wasm_u8x16_swizzle(second, wasm_u8x16_sub(indices, wasm_u8x16_splat(16u8))))
+  }
+}
+
+// Preserve bytes outside the logical write, including zero padding at the end.
+fn bytes_storage_write_vector(chunks: WasmArray<V128>, index: U32, vector: U8x16) -> Unit {
+  let slot = index >> 4u32
+  let offset = index & 15u32
+  if offset == 0u32 {
+    wasm_array_set(chunks, slot, unsafe_bitcast::<U8x16, V128>(vector))
+  } else {
+    let lanes = bytes_storage_lane_indices()
+    let shift = wasm_u8x16_splat(offset.into())
+    let mask = wasm_u8x16_lt_u(lanes, shift)
+    let first = unsafe_bitcast::<V128, U8x16>(wasm_array_get(chunks, slot))
+    let low = wasm_u8x16_swizzle(vector, wasm_u8x16_sub(lanes, shift))
+    wasm_array_set(chunks, slot, unsafe_bitcast::<U8x16, V128>(wasm_u8x16_bitselect(first, low, mask)))
+    let second = unsafe_bitcast::<V128, U8x16>(wasm_array_get(chunks, slot + 1u32))
+    let high = wasm_u8x16_swizzle(vector, wasm_u8x16_add(lanes, wasm_u8x16_splat((16u32 - offset).into())))
+    wasm_array_set(chunks, slot + 1u32, unsafe_bitcast::<U8x16, V128>(wasm_u8x16_bitselect(high, second, mask)))
+  }
+}
+
+fn bytes_storage_write_byte(chunks: WasmArray<V128>, index: U32, byte: U8) -> Unit {
+  let slot = index >> 4u32
+  let prior = unsafe_bitcast::<V128, U8x16>(wasm_array_get(chunks, slot))
+  let mask = wasm_u8x16_eq(bytes_storage_lane_indices(), wasm_u8x16_splat((index & 15u32).into()))
+  let vector = wasm_u8x16_bitselect(wasm_u8x16_splat(byte), prior, mask)
+  wasm_array_set(chunks, slot, unsafe_bitcast::<U8x16, V128>(vector))
+}
 pub fn bytes_byte_length(value: Bytes) -> U32 {
   __dew_text_byte_length(value)
 }

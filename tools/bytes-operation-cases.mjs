@@ -66,5 +66,16 @@ export function checkBytesOperations(main) {
   }
   assert.equal(main(41), 1, "Bytes access arguments run once in source order");
   assert.equal(main(42), 1, "Bytes access preserves all byte values and vector alignments");
-  return cases.length + 33;
+  for (const [index, label] of [[43, "all source/destination alignments and copy tails"],
+    [44, "returned capacity, append, byte, and finish functions"],
+    [49, "zero-capacity growth preserves live aliases"],
+    [52, "append evaluates both arguments once in order"]]) {
+    assert.equal(main(index), 1, `BytesBuilder ${label}`);
+  }
+  for (const index of [45, 46, 47, 48, 50, 51]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `BytesBuilder rejects consumed state or length overflow before storage access: ${index}`);
+  }
+  return cases.length + 43;
 }

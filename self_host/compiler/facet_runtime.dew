@@ -10,18 +10,24 @@ open dew.std.process
 open dew.std.string
 open dew.std.wasm.intrinsics
 
-builtin self_host_facet_bytes_builder_with_capacity(
+fn self_host_facet_bytes_builder_with_capacity(
   capacity: U32,
-) -> BytesBuilder = "dew_bytes_builder_with_capacity"
+) -> BytesBuilder {
+  BytesBuilder::with_capacity(capacity)
+}
 
-builtin self_host_facet_bytes_builder_append_byte(
+fn self_host_facet_bytes_builder_append_byte(
   builder: BytesBuilder,
   byte: U8,
-) -> Unit = "dew_bytes_builder_append_byte"
+) -> Unit {
+  builder.append_byte(byte)
+}
 
-builtin self_host_facet_bytes_builder_finish(
+fn self_host_facet_bytes_builder_finish(
   builder: BytesBuilder,
-) -> Bytes = "dew_bytes_builder_finish"
+) -> Bytes {
+  builder.finish()
+}
 
 fn self_host_facet_bytes_is_valid_utf8(
   value: Bytes,

@@ -51,6 +51,7 @@ python3 tools/test_bytes_simd_library_policy.py
 python3 tools/test_bytes_length_policy.py
 python3 tools/test_bytes_view_policy.py
 python3 tools/test_bytes_access_policy.py
+python3 tools/test_bytes_builder_storage_policy.py
 python3 tools/test_builder_length_policy.py
 python3 tools/test_builder_defaults_policy.py
 python3 tools/test_text_cast_policy.py

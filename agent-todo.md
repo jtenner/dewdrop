@@ -150,6 +150,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   The preamble uses a normal private import; ordering and Facet use library
   calls. Native, integration, generated, and clean bootstrap checks pass; see the
   [byte-access log](docs/research/bytes-access-library-2026-09-09.md).
+  BytesBuilder allocation, growth, append, and finish now have Dew bodies;
+  the four native/provider runtime entries and private copying helpers are
+  removed. All 53 Bytes cases pass in both compilers, along with the library
+  and self-host hardening lanes. Integration, generated checks, and the clean
+  B/C byte-comparison checkpoint pass. Three StringBuilder runtime entries remain.
+  See the [builder storage log](docs/research/bytes-builder-storage-library-2026-09-09.md).
   Raw `struct.get N` now retains a concrete struct owner and physical field
   index in both compilers, including function-value wrappers and the native
   fragment codec. It accepts unpacked scalar fields only. Packed/reference
