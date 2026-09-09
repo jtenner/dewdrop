@@ -1,3 +1,87 @@
+test "startup direct query removes only the dead self dependency" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nlet answer = if is_unit::<I32>() {\n  answer\n} else {\n  42i64\n}\npub fn main() -> I64 {\n  answer\n}\n",
+  )
+  let module_ = lowering.modules[0u32]
+  assert(module_.initialization.diagnostics.length() == 0u32, "dead branch has no startup cycle")
+  assert(module_.initialization.dependencies.dependency_declarations.length() == 0u32, "dead read is absent from the selected startup graph")
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(
+    self_host_plan_program_specialization(lowering, false)), false)
+  assert(link.diagnostics.length() == 0u32, "direct global query reaches linking without a cycle")
+  assert(link.initializers.length() == 1u32, "selected global still has one initializer")
+}
+
+test "startup direct query preserves a selected self dependency" {
+  let lowering = self_host_physical_test_lowering(
+    b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nlet answer = if is_unit::<Unit>() {\n  answer\n} else {\n  42i64\n}\npub fn main() -> I64 {\n  answer\n}\n",
+  )
+  let initialization = lowering.modules[0u32].initialization
+  assert(initialization.dependencies.dependency_declarations.length() == 1u32, "selected self read stays in the startup graph")
+  assert(initialization.dependencies.dependency_declarations[0u32] == ((5100u64 << 32u64) | 1u64), "cycle names the selected global")
+  assert(initialization.diagnostics.length() == 1u32, "selected cycle remains a diagnostic")
+}
+
+test "startup query graph rebuild does not edit the earlier graph" {
+  let lowering = self_host_physical_test_lowering(b"let answer = answer\npub fn main() -> Unit {\n  ()\n}\n")
+  let module_ = lowering.modules[0u32]
+  let original = module_.initialization
+  assert(original.dependencies.dependency_declarations.length() == 1u32, "source fixture has a self edge")
+  assert(original.diagnostics.length() == 1u32, "source fixture has a cycle")
+  // Model the folder removing one source read. The new graph owns its arrays.
+  module_.expressions[0u32] = SelfHostPlannedExpression::{
+    kind: SelfHostPlannedExpressionKind::PlannedConsumedExpression
+    type_: module_.expressions[0u32].type_
+    shape: module_.expressions[0u32].shape
+    nominal: module_.expressions[0u32].nominal
+    flow: module_.expressions[0u32].flow
+    selection: module_.expressions[0u32].selection
+    reference: module_.expressions[0u32].reference
+    call_target: module_.expressions[0u32].call_target
+    call_type_arguments: module_.expressions[0u32].call_type_arguments
+    source_name: module_.expressions[0u32].source_name
+    member_base: module_.expressions[0u32].member_base
+    offset: module_.expressions[0u32].offset
+  }
+  let selected = self_host_compile_time_initialization(lowering, 0u32, module_)
+  assert(selected.initialization.dependencies.dependency_declarations.length() == 0u32, "selected graph loses the removed read")
+  assert(selected.initialization.diagnostics.length() == 0u32, "selected graph has no cycle")
+  assert(original.dependencies.dependency_declarations.length() == 1u32, "original graph still has its source edge")
+  assert(original.diagnostics.length() == 1u32, "original graph still has its source diagnostic")
+}
+
+test "BOD-610 query startup graph requires its source body" expect_trap "unreachable" {
+  let lowering = self_host_physical_test_lowering(b"let answer = 42i64\n")
+  let module_ = lowering.modules[0u32]
+  assert(module_.initialization.diagnostics.length() == 0u32, "fixture is valid")
+  module_.bodies.clear()
+  let _ = self_host_compile_time_initialization(lowering, 0u32, module_)
+}
+
+test "ARN-102 query startup graph checks the root before scanning" expect_trap "unreachable" {
+  let lowering = self_host_physical_test_lowering(b"let answer = 42i64\n")
+  let module_ = lowering.modules[0u32]
+  assert(module_.initialization.diagnostics.length() == 0u32, "fixture is valid")
+  let body = module_.bodies[0u32]
+  module_.bodies[0u32] = SelfHostPlannedBodyLowering::{
+    body: body.body
+    declaration: body.declaration
+    kind: body.kind
+    root: SelfHostHirBodyRoot::ExpressionBodyRoot(1u32)
+    root_type: body.root_type
+    root_shape: body.root_shape
+    result_shape: body.result_shape
+    flow: body.flow
+    expressions: body.expressions
+    blocks: body.blocks
+    locals: body.locals
+    local_initializers: body.local_initializers
+    local_assignments: body.local_assignments
+    patterns: body.patterns
+    pattern_arms: body.pattern_arms
+  }
+  let _ = self_host_compile_time_initialization(lowering, 0u32, module_)
+}
+
 fn self_host_initializer_order_fixture(inverse: Bool) -> SelfHostPlannedProgramWasmGCLink {
   let root = if inverse {
     b"open app.library\npub struct Marker {}\npub let seed = make_seed()\nfn make_seed() -> I64 {\n  40i64\n}\npub fn read_seed() -> I64 {\n  seed\n}\npub fn main() -> I64 {\n  answer\n}\n"

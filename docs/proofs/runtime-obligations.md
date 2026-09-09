@@ -54,8 +54,15 @@ postcondition requires a total duplicate-free candidate permutation and, for
 every dependency edge, a strictly smaller dependency position. Module SCC order
 is only a tie breaker. Unit initializers keep effects but no global slot. Real
 value cycles are semantic diagnostics. This does not yet prove arbitrary
-dynamic-call effects or selected direct-query module cycle expansion. See
+dynamic-call effects. See
 [the self-host startup log](../research/selfhost-startup-dependency-order-2026-09-08.md).
+
+Direct compile-time queries also fold in module-let bodies. Both compilers
+rebuild the module-local startup graph from selected owned expressions, with
+fresh dependency arrays. Source inference graphs remain unchanged. Removed
+reads cannot retain a false cycle; selected reads still produce cycle
+diagnostics. Body lookup and root membership are checked before graph scanning.
+See [the global-query log](../research/direct-global-query-initialization-2026-09-08.md).
 
 ## Arena access
 

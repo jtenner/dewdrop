@@ -46,7 +46,7 @@ shared corpora (27.904 seconds); generated checks pass (4.210 seconds). Clean
 Node bootstrap passes (188.663 seconds). Compiler B and C are byte-identical:
 `40226c46b244aaaae21fee9acb1bdd520aecebdcea54392f55c681fdc474daaa`.
 
-Follow-up: a direct type-query expression in a global initializer still reaches
+Follow-up found during this batch: a direct type-query expression in a global initializer reaches
 the old module-level cyclic-step guard although its false self-read branch
 should be removed (temporary source probe, 0.056 seconds, code 501/phase 5).
 The self-host query folding entry currently skips module-let bodies because
@@ -54,6 +54,9 @@ they have no callable record. The native folder visits them, but its source
 initialization schedule is also built before branch pruning. Execution
 schedules must use selected lowered dependencies without mutating inference
 dependency records.
+This follow-up is fixed in the
+[direct-global-query change](direct-global-query-initialization-2026-09-08.md),
+with shared execution checks and retained real-cycle tests.
 This is separate from the fixed interprocedural scheduler. Full dynamic-call
 effects and full link freeze remain open. Runs over 30 seconds are speed bugs;
 no speed work is included.

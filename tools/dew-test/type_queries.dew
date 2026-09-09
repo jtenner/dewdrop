@@ -769,6 +769,15 @@ pub fn main(case: U32) -> Bool {
     query_startup_answer == 42i64
   } else if case == 96u32 {
     query_startup_sum == 42i64
+  } else if case == 97u32 {
+    query_global_bool
+  } else if case == 98u32 {
+    query_global_width == 64u32
+  } else if case == 99u32 {
+    query_global_assert
+    true
+  } else if case == 100u32 {
+    query_global_selected == 42i64
   } else {
     false
   }
@@ -795,6 +804,15 @@ fn query_startup_value<t>() -> I64 {
 }
 
 let query_startup_sum = query_startup_value::<Unit>() + query_startup_value::<I32>()
+
+let query_global_bool = is_unit::<Unit>()
+let query_global_width = bit_width::<I64>()
+let query_global_assert = static_assert(is_unit::<Unit>(), "global Unit query")
+let query_global_selected = if is_unit::<I32>() {
+  query_global_selected
+} else {
+  42i64
+}
 
 fn query_nested_transfer(initial: I32) -> I64 {
   while initial {

@@ -73,18 +73,7 @@ fn self_host_initializer_body_dependencies(plan: SelfHostProgramSpecializationPl
       if entries.contains_key(u32_into_u64(task.specialization)) {
         continue work.pop()
       }
-      self_host_verify_lowered_body_children_in_phase(module_, body, 4294967295u32, 5u32)
-      let (span, root, tag) = match body.root {
-        SelfHostHirBodyRoot::ExpressionBodyRoot(value) => (body.expressions, value, 1u32)
-        SelfHostHirBodyRoot::BlockBodyRoot(value) => (body.blocks, value, 3u32)
-      }
-      if root < span.start || root - span.start >= span.length {
-        self_host_initializer_dependency_failure(task.declaration, task.body, if tag == 1u32 {
-          root
-        } else {
-          4294967295u32
-        }, 102u32, u32_into_u64(span.start), u32_into_u64(root), (u32_into_u64(tag) << 32u64) | u32_into_u64(span.length))
-      }
+      self_host_initializer_dependency_children_in_phase(module_, body, 5u32)
       entries.set(u32_into_u64(task.specialization), 1u32)
       while 0u32 {
         offset if offset < body.expressions.length => {

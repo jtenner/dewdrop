@@ -7,9 +7,13 @@ struct SelfHostInitializerBodyWork {
 }
 
 fn self_host_initializer_dependency_failure(declaration: U64, body: U64, expression: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  self_host_initializer_dependency_failure_in_phase(declaration, body, expression, 5u32, code, expected, actual, detail)
+}
+
+fn self_host_initializer_dependency_failure_in_phase(declaration: U64, body: U64, expression: U32, phase: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
   let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
     code: code
-    phase: 5u32
+    phase: phase
     module_id: self_host_semantic_id_module(declaration)
     declaration: declaration
     body: body
@@ -30,25 +34,44 @@ fn self_host_initializer_body_kind(kind: SelfHostHirBodyKind) -> U64 {
 }
 
 fn self_host_initializer_dependency_body(module_: SelfHostPlannedModuleLowering, task: SelfHostInitializerBodyWork) -> SelfHostPlannedBodyLowering {
+  self_host_initializer_dependency_body_in_phase(module_, task, 5u32)
+}
+
+fn self_host_initializer_dependency_children_in_phase(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, phase: U32) -> Unit {
+  self_host_verify_lowered_body_children_in_phase(module_, body, 4294967295u32, phase)
+  let (span, root, tag) = match body.root {
+    SelfHostHirBodyRoot::ExpressionBodyRoot(value) => (body.expressions, value, 1u32)
+    SelfHostHirBodyRoot::BlockBodyRoot(value) => (body.blocks, value, 3u32)
+  }
+  if root < span.start || root - span.start >= span.length {
+    self_host_initializer_dependency_failure_in_phase(body.declaration, body.body, if tag == 1u32 {
+      root
+    } else {
+      4294967295u32
+    }, phase, 102u32, u32_into_u64(span.start), u32_into_u64(root), (u32_into_u64(tag) << 32u64) | u32_into_u64(span.length))
+  }
+}
+
+fn self_host_initializer_dependency_body_in_phase(module_: SelfHostPlannedModuleLowering, task: SelfHostInitializerBodyWork, phase: U32) -> SelfHostPlannedBodyLowering {
   if self_host_semantic_id_module(task.declaration) != module_.module_id {
-    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 107u32, module_.module_id, self_host_semantic_id_module(task.declaration), 0u64)
+    self_host_initializer_dependency_failure_in_phase(task.declaration, task.body, 4294967295u32, phase, 107u32, module_.module_id, self_host_semantic_id_module(task.declaration), 0u64)
   }
   if self_host_semantic_id_module(task.body) != module_.module_id {
-    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 107u32, module_.module_id, self_host_semantic_id_module(task.body), 1u64)
+    self_host_initializer_dependency_failure_in_phase(task.declaration, task.body, 4294967295u32, phase, 107u32, module_.module_id, self_host_semantic_id_module(task.body), 1u64)
   }
   let slot = self_host_semantic_id_local(task.body)
   if slot >= module_.bodies.length() {
-    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 610u32, u32_into_u64(module_.bodies.length()), u32_into_u64(slot), 2u64)
+    self_host_initializer_dependency_failure_in_phase(task.declaration, task.body, 4294967295u32, phase, 610u32, u32_into_u64(module_.bodies.length()), u32_into_u64(slot), 2u64)
   }
   let body = module_.bodies[slot]
   if body.body != task.body {
-    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 106u32, task.body, body.body, 3u64)
+    self_host_initializer_dependency_failure_in_phase(task.declaration, task.body, 4294967295u32, phase, 106u32, task.body, body.body, 3u64)
   }
   if body.declaration != task.declaration {
-    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 106u32, task.declaration, body.declaration, 4u64)
+    self_host_initializer_dependency_failure_in_phase(task.declaration, task.body, 4294967295u32, phase, 106u32, task.declaration, body.declaration, 4u64)
   }
   if self_host_initializer_body_kind(body.kind) != self_host_initializer_body_kind(task.kind) {
-    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 106u32, self_host_initializer_body_kind(task.kind), self_host_initializer_body_kind(body.kind), 22u64)
+    self_host_initializer_dependency_failure_in_phase(task.declaration, task.body, 4294967295u32, phase, 106u32, self_host_initializer_body_kind(task.kind), self_host_initializer_body_kind(body.kind), 22u64)
   }
   body
 }

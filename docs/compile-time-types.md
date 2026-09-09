@@ -48,6 +48,11 @@ Each exact type instance gets its own selected body. Both compilers remove the
 unused branch, including in debug builds. An immutable local or captured scalar
 query value can be folded. A mutable value is not a compile-time constant.
 
+Queries also work in global initializers. Startup order uses reads left in the
+selected branch, not reads in a removed branch. A real selected startup cycle
+still reports an error. Unit assertions run at compile time and add no global
+storage.
+
 Both branches must parse and resolve names. A type-dependent check can wait for
 the exact type. A separate concrete source error must still be reported. The
 selected branch then receives normal field, operator, overload, call, and bound

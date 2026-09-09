@@ -10,6 +10,16 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "BOD-610 query startup graph requires its source body",
+    expected: [610, 3, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, 0n, 0n, 2n],
+  },
+  {
+    name: "ARN-102 query startup graph checks the root before scanning",
+    expected: [102, 3, 5100n, 5100n << 32n, 5100n << 32n,
+      1, 0n, 1n, (1n << 32n) | 1n],
+  },
   ...[
     ["LNK-502 global reads require an assigned physical slot", 502, 1n, 1n],
     ["ABI-710 global reads match their planned value type", 710, 4n, 5n],

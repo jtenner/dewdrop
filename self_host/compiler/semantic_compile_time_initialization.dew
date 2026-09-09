@@ -1,0 +1,120 @@
+// Keep source inference dependencies immutable. Runtime startup uses a new
+// graph over the selected logical IR, after direct query branches disappear.
+fn self_host_compile_time_initialization(lowering: SelfHostPlannedProgramLowering, module_index: U32, module_: SelfHostPlannedModuleLowering) -> SelfHostPlannedModuleLowering {
+  if module_index >= lowering.collected.modules.length() {
+    self_host_initializer_dependency_failure_in_phase(0u64, 0u64, 4294967295u32, 3u32, 101u32, u32_into_u64(lowering.collected.modules.length()), u32_into_u64(module_index), 29u64)
+  }
+  let collected = lowering.collected.modules.at(module_index)
+  if collected.module_id != module_.module_id {
+    self_host_initializer_dependency_failure_in_phase(0u64, 0u64, 4294967295u32, 3u32, 107u32, collected.module_id, module_.module_id, 29u64)
+  }
+  if collected.lets.length() == 0u32 {
+    return module_
+  }
+  let spans = array_new::<SelfHostHirSpan>()
+  let declarations = array_new::<U64>()
+  let value_declarations = array_new::<U64>()
+  let value_types = array_new::<I32>()
+  let indices = self_host_empty_u64_u32_map()
+  while 0u32 {
+    index if index < collected.lets.length() => {
+      let declaration = collected.lets[index].declaration
+      if indices.contains_key(declaration) {
+        self_host_initializer_dependency_failure_in_phase(declaration, 0u64, 4294967295u32, 3u32, 106u32, 1u64, 2u64, 29u64)
+      }
+      indices.set(declaration, index)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  for value in collected.lets {
+    let source = match self_host_module_value_body(collected, value.declaration) {
+      Option::Some(body) => body
+      Option::None => self_host_initializer_dependency_failure_in_phase(value.declaration, 0u64, 4294967295u32, 3u32, 610u32, 1u64, 0u64, 29u64)
+    }
+    let body = self_host_initializer_dependency_body_in_phase(module_, SelfHostInitializerBodyWork::{
+      module_index: module_index
+      declaration: value.declaration
+      body: source.id
+      kind: SelfHostHirBodyKind::ModuleLetBody
+      specialization: 4294967295u32
+    }, 3u32)
+    self_host_initializer_dependency_children_in_phase(module_, body, 3u32)
+    value_declarations.push(value.declaration)
+    // These type IDs belong to the selected merged body arena, not a separate
+    // module-value solver arena. The new initialization plan uses that arena.
+    value_types.push(body.root_type)
+    let selected = array_new::<U32>()
+    while 0u32 {
+      offset if offset < body.expressions.length => {
+        let expression = body.expressions.start + offset
+        match module_.expressions[expression].kind {
+          SelfHostPlannedExpressionKind::PlannedModuleValueGet(declaration) => if self_host_semantic_id_module(declaration) == module_.module_id {
+            let index = match indices.get(declaration) {
+              Option::Some(value) => value
+              Option::None => self_host_initializer_dependency_failure_in_phase(body.declaration, body.body, expression, 3u32, 106u32, 1u64, 0u64, declaration)
+            }
+            self_host_module_value_insert_sorted_unique(selected, index)
+          }
+          _ => {}
+        }
+        continue offset + 1u32
+      }
+      _ => break ()
+    }
+    let start = declarations.length()
+    for index in selected {
+      declarations.push(collected.lets[index].declaration)
+    }
+    spans.push(SelfHostHirSpan::{
+      start: start
+      length: declarations.length() - start
+    })
+  }
+  let (sccs, members) = self_host_find_module_value_sccs(collected, spans, declarations)
+  let values = SelfHostInferredModuleValues::{
+    module_id: module_.module_id
+    dependencies: SelfHostModuleValueDependencies::{
+      module_id: module_.module_id
+      let_dependencies: spans
+      dependency_declarations: declarations
+      sccs: sccs
+      scc_declarations: members
+    }
+    let_declarations: value_declarations
+    let_types: value_types
+    types: module_.inferred.types
+    type_arguments: module_.inferred.type_arguments
+    diagnostics: []
+  }
+  let initialization = self_host_plan_module_initialization(collected, values)
+  SelfHostPlannedModuleLowering::{
+    local_initializer_sources: module_.local_initializer_sources
+    module_id: module_.module_id
+    names: module_.names
+    name_diagnostics: module_.name_diagnostics
+    resolved_types: module_.resolved_types
+    type_layouts: module_.type_layouts
+    initialization: initialization
+    functions: module_.functions
+    bodies: module_.bodies
+    lambdas: module_.lambdas
+    locals: module_.locals
+    captures: module_.captures
+    expressions: module_.expressions
+    blocks: module_.blocks
+    block_items: module_.block_items
+    object_fields: module_.object_fields
+    named_fields: module_.named_fields
+    named_variants: module_.named_variants
+    patterns: module_.patterns
+    pattern_fields: module_.pattern_fields
+    pattern_arms: module_.pattern_arms
+    expression_children: module_.expression_children
+    pattern_children: module_.pattern_children
+    arm_children: module_.arm_children
+    inferred: module_.inferred
+    evidence: module_.evidence
+    flow_diagnostics: module_.flow_diagnostics
+  }
+}

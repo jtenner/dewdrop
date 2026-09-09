@@ -139,6 +139,7 @@ fn fold_program_compile_time_queries(
       }
     }
     fold_module_compile_time_queries(context, index, module_, bindings, None)
+    lowering.modules[index] = compile_time_initialization(context, index, module_)
   }
   { ..lowering, compile_time: Some(context), }
 }

@@ -15,7 +15,7 @@ restart them from scratch. Raw Unit array storage now passes both compilers.
 
 ### Compile-time type queries and branch removal
 
-Implementation is complete in both compilers. The shared corpus now has 98
+Implementation is complete in both compilers. The shared corpus now has 102
 execution checks. Read the [query guide](docs/compile-time-types.md) for the
 20 builtins, examples, and layout limits. The full history and measured checks
 are in the [completion log](docs/research/compile-time-query-completion-2026-09-06.md).
@@ -572,6 +572,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Direct query-folded module-value cycles, dynamic-call effects, and full link
   freeze remain. See the
   [self-host startup log](docs/research/selfhost-startup-dependency-order-2026-09-08.md).
+  Direct global queries now fold in both compilers. Startup uses a new selected
+  dependency graph without changing source inference records; removed branches
+  no longer produce false cycles. Real selected cycles still fail. See the
+  [global-query log](docs/research/direct-global-query-initialization-2026-09-08.md).
   Native plain-function lookup now checks table bounds and declaration,
   module, fragment, lambda, kind, and ABI-key identity at link completion and each
   read. Missing keys stay missing; specialization entries cannot replace plain
