@@ -139,7 +139,7 @@ test "ordinary declarations cannot resolve test-only nominal types" {
 ///|
 test "ordinary bodies cannot resolve test-only values" {
   let module_id = 963UL
-  let denied = collect_program_files(module_id, [
+  let denied = compiler_test_program_from_files(module_id, [
     ProgramFile::new(
       make_program_file_id(module_id, 0),
       b"pub fn production() -> I32 {\n  helper()\n}\n",
@@ -150,14 +150,14 @@ test "ordinary bodies cannot resolve test-only values" {
       b"fn helper() -> I32 {\n  7\n}\n",
     ),
   ])
-  let denied_names = resolve_module_names(denied)
+  let denied_names = analyze_program_semantics(denied).modules[0].names
   assert_eq(denied_names.diagnostics.length(), 1)
   match denied_names.diagnostics[0] {
     UnknownValueName(_, _, _) => ()
     _ => fail("expected test-only value to be hidden")
   }
 
-  let allowed = collect_program_files(module_id, [
+  let allowed = compiler_test_program_from_files(module_id, [
     ProgramFile::new(
       make_program_file_id(module_id, 0),
       b"pub fn production() -> I32 {\n  0\n}\n",
@@ -168,14 +168,14 @@ test "ordinary bodies cannot resolve test-only values" {
       b"fn helper() -> I32 {\n  7\n}\ntest \"test helper remains visible\" {\n  assert(helper() == 7, \"wrong helper value\")\n}\n",
     ),
   ])
-  let allowed_names = resolve_module_names(allowed)
+  let allowed_names = analyze_program_semantics(allowed).modules[0].names
   assert_eq(allowed_names.diagnostics.length(), 0)
 }
 
 ///|
 test "ordinary bodies cannot select test-only impl evidence" {
   let module_id = 964UL
-  let denied = collect_program_files(module_id, [
+  let denied = compiler_test_program_from_files(module_id, [
     ProgramFile::new(
       make_program_file_id(module_id, 0),
       b"struct Value {\n  raw: I32\n}\npub fn production(value: Value) -> I32 {\n  value.answer()\n}\n",
@@ -186,16 +186,14 @@ test "ordinary bodies cannot select test-only impl evidence" {
       b"impl Value {\n  fn answer(self) -> I32 {\n    self.raw\n  }\n}\n",
     ),
   ])
-  let denied_types = resolve_module_types(denied)
-  let denied_names = resolve_module_names(denied)
-  let denied_inference = infer_module_bodies(denied, denied_types, denied_names)
+  let denied_inference = analyze_program_semantics(denied).modules[0].inferred
   assert_eq(denied_inference.diagnostics.length(), 1)
   match denied_inference.diagnostics[0] {
     NoMatchingMethod(_, _, _) => ()
     _ => fail("expected test-only impl evidence to be hidden")
   }
 
-  let allowed = collect_program_files(module_id, [
+  let allowed = compiler_test_program_from_files(module_id, [
     ProgramFile::new(
       make_program_file_id(module_id, 0),
       b"struct Value {\n  raw: I32\n}\n",
@@ -206,11 +204,10 @@ test "ordinary bodies cannot select test-only impl evidence" {
       b"impl Value {\n  fn answer(self) -> I32 {\n    self.raw\n  }\n}\ntest \"test impl remains visible in test mode\" {\n  assert(Value::{\n    raw: 7\n  }.answer() == 7, \"wrong value\")\n}\n",
     ),
   ])
-  let allowed_types = resolve_module_types(allowed)
-  let allowed_names = resolve_module_names(allowed)
-  let allowed_inference = infer_module_bodies(
-    allowed, allowed_types, allowed_names,
-  )
+  let analyzed = analyze_program_semantics(allowed)
+  let allowed_types = analyzed.frozen.interfaces[0].resolved_types
+  let allowed_names = analyzed.modules[0].names
+  let allowed_inference = analyzed.modules[0].inferred
   assert_eq(allowed.diagnostics.length(), 0)
   assert_eq(allowed_types.diagnostics.length(), 0)
   assert_eq(allowed_names.diagnostics.length(), 0)

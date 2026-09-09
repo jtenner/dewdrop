@@ -3,11 +3,14 @@
 test "collection distinguishes qualified and open imports" {
   let module_id = 1000UL
   let file = make_program_file_id(module_id, 0)
-  let collected = collect_program_files(module_id, [
-    ProgramFile::new(
-      file, b"open dew.std.preamble\nimport dew.std.map\npub fn run() -> Unit {}\n",
-    ),
-  ])
+  let collected = collect_program_files_with_frozen_standard_imports(
+    module_id,
+    [
+      ProgramFile::new(
+        file, b"open dew.std.preamble\nimport dew.std.map\npub fn run() -> Unit {}\n",
+      ),
+    ],
+  )
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(collected.imports, [
     {
@@ -36,11 +39,14 @@ test "collection distinguishes qualified and open imports" {
 test "collection retains explicit import aliases" {
   let module_id = 1001UL
   let file = make_program_file_id(module_id, 0)
-  let collected = collect_program_files(module_id, [
-    ProgramFile::new(
-      file, b"import custom.sub.package as @custom\npub fn run() -> Unit {}\n",
-    ),
-  ])
+  let collected = collect_program_files_with_frozen_standard_imports(
+    module_id,
+    [
+      ProgramFile::new(
+        file, b"import custom.sub.package as @custom\npub fn run() -> Unit {}\n",
+      ),
+    ],
+  )
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(collected.imports, [
     {
@@ -60,9 +66,10 @@ test "collection retains explicit import aliases" {
 test "collection retains wildcard import prefixes" {
   let module_id = 1001UL
   let file = make_program_file_id(module_id, 0)
-  let collected = collect_program_files(module_id, [
-    ProgramFile::new(file, b"open dew.std.*\npub fn run() -> Unit {}\n"),
-  ])
+  let collected = collect_program_files_with_frozen_standard_imports(
+    module_id,
+    [ProgramFile::new(file, b"open dew.std.*\npub fn run() -> Unit {}\n")],
+  )
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(collected.imports, [
     {
@@ -374,7 +381,7 @@ test "module graph resolves imports and groups cycles deterministically" {
   assert_eq(graph.dependencies[0].length, 4)
   assert_eq(graph.dependencies[1].length, 4)
   assert_eq(graph.dependencies[2].length, 4)
-  assert_eq(graph.dependencies[3].length, 0)
+  assert_eq(graph.dependencies[3].length, 1)
   assert_eq(graph.dependencies[4].length, 1)
   assert_eq(graph.dependencies[5].length, 1)
   assert_eq(graph.diagnostics.length(), 1)
@@ -382,7 +389,8 @@ test "module graph resolves imports and groups cycles deterministically" {
     MissingImportedModule(1300UL, "missing.module", _, 11UL) => ()
     _ => fail("expected missing import diagnostic")
   }
-  assert_eq(graph.sccs.length(), 5)
+  // The preamble and its text/instruction dependencies form one library SCC.
+  assert_eq(graph.sccs.length(), 3)
   let mut found_cycle = false
   for scc in graph.sccs {
     if scc.length == 2 {
@@ -509,11 +517,7 @@ test "interface value inference is required only by exported lets" {
       ]),
     ]),
   )
-  assert_false(
-    frozen_module_requires_value_inference(
-      function_only.modules[0],
-    ),
-  )
+  assert_false(frozen_module_requires_value_inference(function_only.modules[0]))
   let private_value = collect_program_manifest(
     1551UL,
     ProgramManifest::new([
@@ -522,11 +526,7 @@ test "interface value inference is required only by exported lets" {
       ]),
     ]),
   )
-  assert_false(
-    frozen_module_requires_value_inference(
-      private_value.modules[0],
-    ),
-  )
+  assert_false(frozen_module_requires_value_inference(private_value.modules[0]))
   let public_value = collect_program_manifest(
     1552UL,
     ProgramManifest::new([
@@ -535,11 +535,7 @@ test "interface value inference is required only by exported lets" {
       ]),
     ]),
   )
-  assert_true(
-    frozen_module_requires_value_inference(
-      public_value.modules[0],
-    ),
-  )
+  assert_true(frozen_module_requires_value_inference(public_value.modules[0]))
   let interface_ = freeze_program_interfaces(public_value).interfaces[0]
   let mut answer_type = -1
   for declaration in interface_.declarations {
@@ -829,7 +825,7 @@ test "cyclic module interfaces resolve imported nominal signatures" {
     ]),
   )
   let frozen = freeze_program_interfaces(program)
-  assert_eq(frozen.graph.sccs.length(), 4)
+  assert_eq(frozen.graph.sccs.length(), 2)
   let mut found_cycle = false
   for scc in frozen.graph.sccs {
     if scc.length == 2 {

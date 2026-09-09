@@ -42,7 +42,6 @@ pub fn required_standard_library_source_paths(
 fn standard_dependency_selection_files(
   manifest : ProgramManifest,
   sources : StandardLibrarySources,
-  default_preamble : Bool,
 ) -> Array[ProgramFile] {
   let files : Array[ProgramFile] = []
   for module_ in manifest.modules {
@@ -53,7 +52,9 @@ fn standard_dependency_selection_files(
   for
     path in required_standard_library_source_paths(
       manifest,
-      default_preamble,
+      // Collection always includes the preamble, Option, and Result modules.
+      // The default-preamble option controls user imports, not their presence.
+      true,
       sources=Some(sources),
     ) {
     files.push(ProgramFile::from_manifest(0UL, sources.file(path)))

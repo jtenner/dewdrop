@@ -95,7 +95,7 @@ test "program link assigns stable indices inside a module cycle" {
   let lowering = plan_program_lowering(program, analyzed)
   let link = plan_program_wasmgc_link(analyzed, lowering, 0)
   assert_eq(link.diagnostics.length(), 0)
-  assert_eq(link.graph.sccs.length(), 4)
+  assert_eq(link.graph.sccs.length(), 2)
   let mut found_cycle = false
   for scc in link.graph.sccs {
     if scc.length == 2 {

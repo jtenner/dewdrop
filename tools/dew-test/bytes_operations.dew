@@ -203,6 +203,27 @@ pub fn main(case: U32) -> I32 {
     }
     let value = bytes_view_operation()(bytes_view_input(log), bytes_view_start(log), bytes_view_length(log))
     bytes_result(value == b"bc" && log.value == 123u32)
+  } else if case == 37u32 {
+    let read = bytes_access_operation()
+    let value = b"!0123456789abcdefghijklmnop?".view(1u32, 26u32)
+    bytes_result(read(value, 0u32) == 48u8 && read(value, 15u32) == 102u8 && read(value, 16u32) == 103u8 && read(value, 25u32) == 112u8)
+  } else if case == 38u32 {
+    bytes_access_operation()(b"abc", 3u32)
+    0i32
+  } else if case == 39u32 {
+    bytes_access_operation()(b"", 0u32)
+    0i32
+  } else if case == 40u32 {
+    bytes_access_operation()(b"abc", 4294967295u32)
+    0i32
+  } else if case == 41u32 {
+    let log = BytesViewLog::{
+      value: 0u32
+    }
+    let byte = bytes_access_operation()(bytes_view_input(log), bytes_view_start(log))
+    bytes_result(byte == 98u8 && log.value == 12u32)
+  } else if case == 42u32 {
+    bytes_result(bytes_access_matrix())
   } else {
     unreachable()
   }
@@ -233,6 +254,39 @@ fn bytes_view_length(log: BytesViewLog) -> U32 {
 
 fn bytes_view_operation() -> fn(Bytes, U32, U32) -> Bytes {
   bytes_view
+}
+
+fn bytes_access_operation() -> fn(Bytes, U32) -> U8 {
+  bytes_byte_at
+}
+
+fn bytes_access_matrix() -> Bool {
+  let builder = BytesBuilder::with_capacity(256u32)
+  while 0u32 {
+    index if index < 256u32 => {
+      builder.append_byte(index.into())
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let bytes = builder.finish()
+  while 0u32 {
+    offset if offset < 16u32 => {
+      let view = bytes.view(offset, 240u32)
+      while 0u32 {
+        index if index < 240u32 => {
+          if view.byte_at(index) != (offset + index).into() {
+            return false
+          }
+          continue index + 1u32
+        }
+        _ => break ()
+      }
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
+  bytes.byte_at(255u32) == 255u8
 }
 
 fn bytes_builder_default_operation() -> fn() -> BytesBuilder {

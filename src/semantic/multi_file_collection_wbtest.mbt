@@ -3,14 +3,15 @@ test "manifest ordered files share one module namespace" {
   let module_id = 997UL
   let first_file = make_program_file_id(module_id, 0)
   let second_file = make_program_file_id(module_id, 1)
-  let collected = collect_program_files(module_id, [
+  let files = [
     ProgramFile::new(
       first_file, b"fn double(value: I32) -> I32 {\n  value + value\n}\n",
     ),
     ProgramFile::new(
       second_file, b"pub fn run(value: I32) -> I32 {\n  double(value)\n}\n",
     ),
-  ])
+  ]
+  let collected = collect_program_files(module_id, files)
   let preamble_file_count = collected.files.length() - 2
   assert_eq(preamble_file_count, 12)
   for index in 0..<preamble_file_count {
@@ -47,9 +48,11 @@ test "manifest ordered files share one module namespace" {
     collected.body_location(run_body.id),
     Some({ file: second_file, offset: 0UL, }),
   )
-  let resolved = resolve_module_types(collected)
-  let names = resolve_module_names(collected)
-  let inferred = infer_module_bodies(collected, resolved, names)
+  let program = compiler_test_program_from_files(module_id, files)
+  let analyzed = analyze_program_semantics(program)
+  let resolved = analyzed.frozen.interfaces[0].resolved_types
+  let names = analyzed.modules[0].names
+  let inferred = analyzed.modules[0].inferred
   assert_eq(resolved.diagnostics.length(), 0)
   assert_eq(names.diagnostics.length(), 0)
   assert_eq(inferred.diagnostics.length(), 0)

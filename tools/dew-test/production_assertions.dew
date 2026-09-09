@@ -17,5 +17,5 @@ fn assertion_message() -> String {
 pub fn main(succeeds: Bool) -> U32 {
   @core.assert(assertion_condition(succeeds), assertion_message())
   AssertionProbe.effect(3u32)
-  7u32
+  @core.__dew_text_byte_at(b"!\xff?", 1u32).into()
 }

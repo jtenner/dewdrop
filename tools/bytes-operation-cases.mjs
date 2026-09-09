@@ -58,5 +58,13 @@ export function checkBytesOperations(main) {
     `Bytes view rejects an invalid range: ${index}`);
   }
   assert.equal(main(36), 1, "Bytes view arguments run once in source order");
-  return cases.length + 27;
+  assert.equal(main(37), 1, "Bytes returned access function preserves view offsets and lanes");
+  for (const index of [38, 39, 40]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `Bytes access rejects an invalid index: ${index}`);
+  }
+  assert.equal(main(41), 1, "Bytes access arguments run once in source order");
+  assert.equal(main(42), 1, "Bytes access preserves all byte values and vector alignments");
+  return cases.length + 33;
 }

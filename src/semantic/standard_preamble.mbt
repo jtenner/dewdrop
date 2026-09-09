@@ -224,6 +224,8 @@ fn selected_standard_modules(
             import_.path[0] == "dew" &&
             import_.path[1] == "std" {
             match import_.path[2] {
+              // Select only the runtime source; its imports supply dependencies.
+              "text_runtime" => text_mask = text_mask | 64
               "string" => {
                 text_mask = text_mask | 1
                 fixed_array = true

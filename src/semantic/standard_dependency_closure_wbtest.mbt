@@ -1,4 +1,26 @@
 ///|
+test "explicit text runtime import loads its source and instruction dependency" {
+  let manifest = ProgramManifest::new([
+    ManifestModule::new("app.main", [
+      ManifestFile::new(
+        "main.dew", b"import dew.std.text_runtime as @text\npub fn main() -> U8 {\n  @text.bytes_byte_at(b\"abc\", 1u32)\n}\n",
+      ),
+    ]),
+  ])
+  let paths = required_standard_library_source_paths(manifest, false)
+  assert_true(paths.contains("std/text_runtime.dew"))
+  assert_true(paths.contains("std/wasm/intrinsics.dew"))
+  let program = collect_program_manifest(99503UL, manifest)
+  assert_true(program.module_index("dew.std.text_runtime") is Some(_))
+  let analyzed = analyze_program_semantics(program)
+  for module_ in analyzed.modules {
+    assert_eq(module_.imports.scope.diagnostics, [])
+    assert_eq(module_.names.diagnostics, [])
+    assert_eq(module_.inferred.diagnostics, [])
+  }
+}
+
+///|
 test "standard dependency selection follows source imports through cycles" {
   let manifest = ProgramManifest::new([
     ManifestModule::new("app.main", [

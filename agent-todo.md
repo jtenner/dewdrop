@@ -146,6 +146,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   This fixes empty ranges at exact V128 array ends. Native, self-host,
   integration, generated, and clean bootstrap checks pass; see the
   [StringView log](docs/research/string-view-library-2026-09-09.md).
+  Byte access now uses declared storage and raw array/lane instructions.
+  The preamble uses a normal private import; ordering and Facet use library
+  calls. Native, integration, generated, and clean bootstrap checks pass; see the
+  [byte-access log](docs/research/bytes-access-library-2026-09-09.md).
   Raw `struct.get N` now retains a concrete struct owner and physical field
   index in both compilers, including function-value wrappers and the native
   fragment codec. It accepts unpacked scalar fields only. Packed/reference

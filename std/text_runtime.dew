@@ -73,7 +73,15 @@ pub fn bytes_byte_length(value: Bytes) -> U32 {
 }
 pub builtin bytes_to_string_unchecked(value: Bytes) -> String = "ref.cast"
 pub fn bytes_byte_at(value: Bytes, index: U32) -> U8 {
-  __dew_text_byte_at(value, index)
+  let source = bytes_view_storage(value)
+  if index >= source.length || index > 4294967295u32 - source.start {
+    unreachable()
+  }
+  let absolute = source.start + index
+  let chunk = wasm_array_get(source.chunks, absolute >> 4u32)
+  let indices = wasm_u8x16_splat((absolute & 15u32).into())
+  let lanes = unsafe_bitcast::<V128, U8x16>(chunk)
+  wasm_u8x16_extract_0(wasm_u8x16_swizzle(lanes, indices))
 }
 struct BytesViewStorage {
   chunks: WasmArray<V128>

@@ -5,24 +5,20 @@ fn index_trait_test_source() -> Bytes {
 
 ///|
 test "index get and set syntax select canonical traits" {
-  let collected = collect_program_bytes(2600UL, index_trait_test_source())
-  let resolved = resolve_module_types(collected)
-  let names = resolve_module_names(collected)
-  let inferred = infer_module_bodies(collected, resolved, names)
+  let program = compiler_test_single_module_program(
+    2600UL,
+    index_trait_test_source(),
+  )
+  let collected = program.modules[0]
+  let analyzed = analyze_program_semantics(program)
+  let resolved = analyzed.frozen.interfaces[0].resolved_types
+  let names = analyzed.modules[0].names
+  let inferred = analyzed.modules[0].inferred
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(resolved.diagnostics.length(), 0)
   assert_eq(names.diagnostics.length(), 0)
   assert_eq(inferred.diagnostics.length(), 0)
-  let layouts = plan_module_type_layouts(collected, resolved)
-  let functions = plan_module_functions(collected, resolved)
-  let initialization = plan_module_initialization(
-    collected,
-    inferred.module_values,
-  )
-  let flows = analyze_module_flows(collected, resolved, inferred)
-  let lowering = plan_module_lowering(
-    collected, resolved, layouts, initialization, functions, names, inferred, flows,
-  )
+  let lowering = plan_unoptimized_program_lowering(program, analyzed).modules[0]
   assert_eq(lowering.diagnostics.length(), 0)
   let mut gets = 0
   let mut sets = 0

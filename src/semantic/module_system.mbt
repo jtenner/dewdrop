@@ -515,7 +515,7 @@ pub fn collect_program_manifest_with_standard_sources(
   let diagnostics : Array[ManifestDiagnostic] = []
   let first_module : Map[String, Int] = Map::default()
   let selection_files = standard_dependency_selection_files(
-    manifest, standard_sources, default_preamble,
+    manifest, standard_sources,
   )
   let (
     selected_text_mask,

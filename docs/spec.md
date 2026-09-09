@@ -920,6 +920,11 @@ boundary checks in Dew. The source end is a valid boundary without a byte
 read, including an empty range at an exact V128 array end. A raw cast forms
 the StringView after these checks; it is not itself a UTF-8 validator.
 
+Byte access is also Dew code: it checks the logical range and start addition,
+reads the V128 array, selects the byte lane, and extracts it unsigned. The
+preamble reaches this library function through a normal private import;
+ordering and Facet do not use separate compiler-owned byte-access bodies.
+
 `dew.std.blake3` implements portable one-shot BLAKE3-256 over Bytes with scalar U32 compression, 64-byte blocks, 1024-byte chunks, and deterministic parent-tree reduction. `blake3` returns 32 `FixedArray<U8>` bytes; `blake3_hash32` returns the first little-endian U32 lane used for cache-pack lookup.
 
 `dew.std.integrity.sha256` implements portable one-shot SHA-256 over Bytes with scalar U32 compression and standard 64-byte padding. `sha256` returns 32 digest bytes as `FixedArray<U8>` in network byte order.

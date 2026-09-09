@@ -31,9 +31,11 @@ test "required on-disk standard paths are selective and deterministic" {
     ]),
   ])
   let scalar_paths = required_standard_library_source_paths(scalar, true)
-  assert_eq(scalar_paths.length(), 14)
+  assert_eq(scalar_paths.length(), 16)
   assert_eq(scalar_paths[0], "std/preamble/00-builtins.dew")
   assert_eq(scalar_paths[13], "std/result.dew")
+  assert_eq(scalar_paths[14], "std/text_runtime.dew")
+  assert_eq(scalar_paths[15], "std/wasm/intrinsics.dew")
   assert_eq(required_standard_library_source_paths(scalar, false), [])
 
   let wildcard = ProgramManifest::new([
@@ -513,8 +515,10 @@ test "single-module phase helper never injects optional standard sources" {
   )
   assert_eq(collected.files.length(), preamble.files.length() + 1)
   assert_eq(collected.lookup_value("string_builder_new"), None)
-  assert_eq(inferred.diagnostics.length(), 1)
-  match inferred.diagnostics[0] {
+  // Three missing-import errors belong to the embedded preamble byte helper.
+  // The requested builder still has its own missing-method diagnostic.
+  assert_eq(inferred.diagnostics.length(), 4)
+  match inferred.diagnostics[3] {
     NoMatchingMethod(_, _, _) => ()
     _ => fail("expected optional standard APIs to require frozen imports")
   }
@@ -523,12 +527,13 @@ test "single-module phase helper never injects optional standard sources" {
 ///|
 #skip("compiler integration case; run tools/test-integration-native.sh")
 test "ambient preamble resolves Fibonacci operators" {
-  let collected = collect_bytes_with_standard_preamble(
+  let program = compiler_test_single_module_program(
     996UL, b"pub fn fib(value: I32) -> I32 {\n  if value <= 1 {\n    value\n  } else {\n    fib(value - 1) + fib(value - 2)\n  }\n}\n",
   )
-  let resolved = resolve_module_types(collected)
-  let names = resolve_module_names(collected)
-  let inferred = infer_module_bodies(collected, resolved, names)
+  let collected = program.modules[0]
+  let analyzed = analyze_program_semantics(program)
+  let resolved = analyzed.frozen.interfaces[0].resolved_types
+  let inferred = analyzed.modules[0].inferred
   assert_eq(collected.diagnostics.length(), 0)
   assert_eq(resolved.diagnostics.length(), 0)
   assert_eq(inferred.impl_index.diagnostics.length(), 0)
@@ -544,8 +549,7 @@ test "ambient preamble resolves Fibonacci operators" {
         match inferred.operator_targets[expression] {
           SelectedInferredCallTarget(declaration, _) => {
             assert_true(
-              semantic_id_local(declaration) <
-              collected.preamble_declaration_count,
+              semantic_id_module(declaration) == standard_library_module_id(0),
             )
             selected += 1
           }

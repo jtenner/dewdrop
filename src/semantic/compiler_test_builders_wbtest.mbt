@@ -71,6 +71,24 @@ fn compiler_test_analyze(
 }
 
 ///|
+/// Analyze fixtures with their real import closure. A collected single module
+/// cannot resolve imported bodies from the preamble in isolation.
+fn compiler_test_program_from_files(
+  module_id : ModuleId,
+  files : Array[ProgramFile],
+) -> CollectedProgram {
+  let sources : Array[ManifestFile] = []
+  for index, file in files {
+    let path = if file.path == "" { "fixture_\{index}.dew" } else { file.path }
+    sources.push(ManifestFile::new(path, file.source))
+  }
+  collect_program_manifest(
+    module_id,
+    ProgramManifest::new([ManifestModule::new("app.main", sources)]),
+  )
+}
+
+///|
 fn compiler_test_lower(
   program : CollectedProgram,
   analyzed : AnalyzedProgramSemantics,

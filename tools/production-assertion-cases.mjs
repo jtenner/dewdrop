@@ -27,7 +27,7 @@ export function productionAssertionProbe() {
     },
     check(exports) {
       effects.length = 0;
-      assert.equal(exports.main(1), 7);
+      assert.equal(exports.main(1), 255, "preamble-only imports reach the Dew byte access body");
       assert.deepEqual(effects, [1, 2, 3], "condition and message are evaluated once, in order");
       effects.length = 0;
       assert.throws(() => exports.main(0), error =>
