@@ -303,73 +303,7 @@ fn self_host_linked_append_array_runtime_types(
   }
 }
 
-fn self_host_linked_runtime_function_index_for_carrier(
-  link: SelfHostPlannedProgramWasmGCLink,
-  name: Bytes,
-  carrier: I32,
-) -> I32 {
-  for linked in link.functions {
-    let module_ = link.fragments.modules[linked.module_index]
-    if linked.fragment_index < module_.functions.length() {
-      let function_ = module_.functions[linked.fragment_index]
-      match function_.kind {
-        SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(
-          candidate,
-        ) => if candidate.equals(name) && self_host_linked_runtime_function_carrier(
-          link,
-          linked,
-          module_,
-          function_,
-        ) == carrier {
-          return self_host_u32_to_i32(
-            self_host_linked_physical_function_index(linked.function_index),
-          )
-        }
-        _ => {}
-      }
-    }
-  }
-  -1i32
-}
 
-fn self_host_linked_runtime_function_index_for_carriers(
-  link: SelfHostPlannedProgramWasmGCLink,
-  name: Bytes,
-  carrier: I32,
-  second_carrier: I32,
-) -> I32 {
-  for linked in link.functions {
-    let module_ = link.fragments.modules[linked.module_index]
-    if linked.fragment_index < module_.functions.length() {
-      let function_ = module_.functions[linked.fragment_index]
-      match function_.kind {
-        SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(
-          candidate,
-        ) => if candidate.equals(name) {
-          let first = self_host_linked_runtime_function_carrier(
-            link,
-            linked,
-            module_,
-            function_,
-          )
-          if first == carrier && self_host_linked_runtime_second_carrier(
-            link,
-            linked,
-            module_,
-            function_,
-            first,
-          ) == second_carrier {
-            return self_host_u32_to_i32(
-              self_host_linked_physical_function_index(linked.function_index),
-            )
-          }
-        }
-        _ => {}
-      }
-    }
-  }
-  -1i32
-}
 
 fn self_host_linked_runtime_function_index(
   link: SelfHostPlannedProgramWasmGCLink,
@@ -397,33 +331,6 @@ fn self_host_linked_runtime_function_index(
   -1i32
 }
 
-fn self_host_linked_import_function_index(
-  link: SelfHostPlannedProgramWasmGCLink,
-  library: Bytes,
-  field: Bytes,
-) -> I32 {
-  for linked_function in link.functions {
-    let fragment_module = link.fragments.modules[linked_function.module_index]
-    let fragment = self_host_program_link_fragment_function(
-      fragment_module,
-      linked_function.fragment_index,
-    )
-    match fragment.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(
-        candidate_library,
-        candidate_field,
-      ) => if candidate_library.equals(library) && candidate_field.equals(field) {
-        return self_host_u32_to_i32(
-          self_host_linked_physical_function_index(
-            linked_function.function_index,
-          ),
-        )
-      }
-      _ => {}
-    }
-  }
-  -1i32
-}
 
 fn self_host_linked_append_runtime_function_name(
   builder: StarshineRuntimeFunctionBuilder,
@@ -550,15 +457,6 @@ fn self_host_linked_runtime_second_carrier(
 }
 
 
-fn self_host_linked_emitted_i32_function_index(index: I32) -> I32 {
-  if index < 0i32 {
-    index
-  } else {
-    self_host_u32_to_i32(
-      self_host_linked_emitted_function_index(self_host_i32_to_u32(index)),
-    )
-  }
-}
 
 fn self_host_linked_append_runtime_function(
   link: SelfHostPlannedProgramWasmGCLink,
@@ -621,17 +519,6 @@ fn self_host_linked_shape_name(shape: SelfHostPlannedValueShape) -> String {
   }
 }
 
-fn self_host_linked_default_conversion_target(
-  source: SelfHostPlannedValueShape,
-) -> SelfHostPlannedValueShape {
-  match self_host_physical_scalar_shape(source) {
-    SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
-    SelfHostPlannedValueShape::F64PlannedValueShape => SelfHostPlannedValueShape::F32PlannedValueShape
-    SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedValueShape::F64PlannedValueShape
-    SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedValueShape::I32PlannedValueShape
-    _ => source
-  }
-}
 
 fn self_host_linked_conversion_source_is_signed(
   shape: SelfHostPlannedValueShape,

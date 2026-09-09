@@ -290,6 +290,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Keep conversion behavior in `Into` impls where it is a type conversion.
   Include the pinned Starshine `src/ffi_bridge` runtime copies in each removal;
   text storage and SIMD storage bridges still remain.
+  Removed 46 unused private linker/body helpers, including stale collection
+  name recovery and consumed-expression recovery. This does not remove the
+  still-used text/runtime bridges. See the
+  [unused linker log](docs/research/unused-link-recovery-2026-09-09.md).
 
 ### Finish the compiler correctness audit
 

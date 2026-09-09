@@ -1402,45 +1402,6 @@ fn self_host_body_local_slot(
   4294967295u32
 }
 
-fn self_host_body_wrapped_local_get(
-  module_: SelfHostPlannedModuleLowering,
-  root: U32,
-) -> Option<U32> {
-  let mut expression = root
-  let mut depth = 0u32
-  let _ = while depth {
-    current => if current < 8u32 && expression < module_.expressions.length() {
-      match module_.expressions[expression].kind {
-        SelfHostPlannedExpressionKind::PlannedLocalGet(local_id) => return Option::Some(
-          local_id,
-        )
-        SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => {
-          let tail = self_host_body_block_tail_expression(module_, block)
-          if self_host_u32_equal(tail, 4294967295u32) {
-            return Option::None
-          }
-          expression = tail
-        }
-        SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
-          expression,
-          0u32,
-        ) {
-          expression = self_host_u32_subtract(expression, 1u32)
-        } else {
-          return Option::None
-        }
-        SelfHostPlannedExpressionKind::PlannedPrefixExpression(_, operand) => {
-          expression = operand
-        }
-        _ => return Option::None
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  Option::None
-}
 
 fn self_host_body_loop_initial_value(
   module_: SelfHostPlannedModuleLowering,
