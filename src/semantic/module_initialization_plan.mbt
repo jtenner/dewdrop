@@ -91,9 +91,9 @@ pub fn plan_module_initialization(
   collected : CollectedModule,
   inferred : InferredModuleValues,
 ) -> PlannedModuleInitialization {
-  if collected.module_id != inferred.module_id ||
-    collected.module_id != inferred.dependencies.module_id {
-    abort("module initialization inputs belong to different modules")
+  let (let_indices, source_bodies) = match check_module_initialization_inputs(collected, inferred) {
+    Ok(inputs) => inputs
+    Err(error) => abort(@debug.to_string(error))
   }
   if collected.lets.length() == 0 {
     return {
@@ -105,7 +105,6 @@ pub fn plan_module_initialization(
       diagnostics: [],
     }
   }
-  let let_indices = module_let_indices_by_declaration(collected)
   let steps : Array[PlannedModuleInitializationStep] = []
   let declaration_steps = Array::make(
     collected.declaration_locations.length(),
@@ -147,7 +146,7 @@ pub fn plan_module_initialization(
       let declaration = inferred.dependencies.scc_declarations[scc.start]
       let declaration_index = semantic_id_local(declaration)
       let let_index = let_indices[declaration_index]
-      let body = collected.body_of(declaration).unwrap()
+      let body = source_bodies[let_index]
       declaration_steps[declaration_index] = step_index
       steps.push({
         kind: PlannedInitializeModuleValue(

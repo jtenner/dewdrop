@@ -1,0 +1,55 @@
+// Each negative case changes one field of a valid startup input.
+fn self_host_initialization_contract_fixture(source: Bytes) -> (SelfHostCollectedModule, SelfHostInferredModuleValues, SelfHostPlannedModuleInitialization) {
+  let collected = self_host_collect_bytes(993u64, source)
+  assert(collected.diagnostic_count() == 0u32, "startup contract source must collect")
+  let resolved = self_host_resolve_module_types(collected)
+  let names = self_host_resolve_module_names(collected)
+  let values = self_host_infer_module_values(collected, resolved, names)
+  assert(values.diagnostics.length() == 0u32, "startup contract source must infer")
+  (collected, values, self_host_plan_module_initialization(collected, values))
+}
+
+test "LNK-501 module startup SCCs cannot omit a value" expect_trap "unreachable" {
+  let (collected, values, plan) = self_host_initialization_contract_fixture(b"let first = second\nlet second = 42i64\n")
+  assert(plan.diagnostics.length() == 0u32 && plan.steps.length() == 2u32, "valid dependency-first fixture")
+  let _ = values.dependencies.sccs.pop()
+  let _ = self_host_plan_module_initialization(collected, values)
+}
+
+test "LNK-501 module startup SCCs cannot duplicate a value" expect_trap "unreachable" {
+  let (collected, values, plan) = self_host_initialization_contract_fixture(b"let first = second\nlet second = 42i64\n")
+  assert(plan.diagnostics.length() == 0u32 && plan.steps.length() == 2u32, "valid dependency-first fixture")
+  values.dependencies.scc_declarations[1u32] = values.dependencies.scc_declarations[0u32]
+  let _ = self_host_plan_module_initialization(collected, values)
+}
+
+test "ARN-101 module startup checks SCC spans before access" expect_trap "unreachable" {
+  let (collected, values, plan) = self_host_initialization_contract_fixture(b"let first = second\nlet second = 42i64\n")
+  assert(plan.diagnostics.length() == 0u32 && plan.steps.length() == 2u32, "valid dependency-first fixture")
+  values.dependencies.sccs[0u32] = SelfHostHirSpan::{
+    start: 4294967295u32
+    length: 1u32
+  }
+  let _ = self_host_plan_module_initialization(collected, values)
+}
+
+test "ARN-103 module startup value types remain parallel" expect_trap "unreachable" {
+  let (collected, values, plan) = self_host_initialization_contract_fixture(b"let first = second\nlet second = 42i64\n")
+  assert(plan.diagnostics.length() == 0u32 && plan.steps.length() == 2u32, "valid dependency-first fixture")
+  let _ = values.let_types.pop()
+  let _ = self_host_plan_module_initialization(collected, values)
+}
+
+test "BOD-610 module startup cannot select another value's body" expect_trap "unreachable" {
+  let (collected, values, plan) = self_host_initialization_contract_fixture(b"let first = second\nlet second = 42i64\n")
+  assert(plan.diagnostics.length() == 0u32 && plan.steps.length() == 2u32, "valid dependency-first fixture")
+  let _ = collected.bodies.pop()
+  let _ = self_host_plan_module_initialization(collected, values)
+}
+
+test "LNK-501 module startup checks dependency component order" expect_trap "unreachable" {
+  let (collected, values, plan) = self_host_initialization_contract_fixture(b"let first = second\nlet second = third\nlet third = 42i64\n")
+  assert(plan.diagnostics.length() == 0u32 && plan.steps.length() == 3u32, "valid dependency-first fixture")
+  values.dependencies.dependency_declarations[1u32] = collected.lets[0u32].declaration
+  let _ = self_host_plan_module_initialization(collected, values)
+}

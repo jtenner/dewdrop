@@ -1,0 +1,120 @@
+// Validate startup inputs before any schedule or storage lookup.
+fn self_host_initialization_contract(condition: Bool, module_id: U64, declaration: U64, body: U64, code: U32, expected: U64, actual: U64, detail: U64) -> Unit {
+  let _ = self_host_assert_compiler_invariant_with_failure(condition, SelfHostInvariantFailure::{
+    code: code
+    phase: 3u32
+    module_id: module_id
+    declaration: declaration
+    body: body
+    expression: 4294967295u32
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "module startup requires owned values and a complete dependency-first SCC partition")
+}
+
+fn self_host_initialization_source_body(collected: SelfHostCollectedModule, declaration: U64) -> SelfHostHirBody {
+  let mut selected = Option::None
+  let mut index = 0u32
+  for body in collected.bodies {
+    if body.declaration == declaration {
+      self_host_initialization_contract(!(selected is Option::Some(_)), collected.module_id, declaration, body.id, 106u32, 1u64, 2u64, 13u64)
+      let expected = (collected.module_id << 32u64) | u32_into_u64(index)
+      self_host_initialization_contract(body.id == expected, collected.module_id, declaration, body.id, 106u32, expected, body.id, 14u64)
+      self_host_initialization_contract(body.kind is SelfHostHirBodyKind::ModuleLetBody, collected.module_id, declaration, body.id, 106u32, 0u64, self_host_initializer_body_kind(body.kind), 15u64)
+      selected = Option::Some(body)
+    }
+    index = index + 1u32
+  }
+  match selected {
+    Option::Some(body) => body
+    Option::None => {
+      self_host_initialization_contract(false, collected.module_id, declaration, 0u64, 610u32, 1u64, 0u64, 12u64)
+      unreachable()
+    }
+  }
+}
+
+fn self_host_initialization_value_index(collected: SelfHostCollectedModule, indices: Array<U32>, declaration: U64) -> U32 {
+  self_host_initialization_contract(self_host_semantic_id_module(declaration) == collected.module_id, collected.module_id, declaration, 0u64, 107u32, collected.module_id, self_host_semantic_id_module(declaration), 16u64)
+  let local = self_host_semantic_id_local(declaration)
+  self_host_initialization_contract(local < indices.length(), collected.module_id, declaration, 0u64, 101u32, u32_into_u64(indices.length()), u32_into_u64(local), 16u64)
+  let index = indices[local]
+  self_host_initialization_contract(index < collected.lets.length(), collected.module_id, declaration, 0u64, 106u32, u32_into_u64(collected.lets.length()), u32_into_u64(index), 16u64)
+  self_host_initialization_contract(collected.lets[index].declaration == declaration, collected.module_id, declaration, 0u64, 106u32, declaration, collected.lets[index].declaration, 16u64)
+  index
+}
+
+fn self_host_verify_module_initialization_inputs(collected: SelfHostCollectedModule, inferred: SelfHostInferredModuleValues) -> (Array<U32>, Array<SelfHostHirBody>) {
+  let dependencies = inferred.dependencies
+  let module_id = collected.module_id
+  self_host_initialization_contract(inferred.module_id == module_id, module_id, 0u64, 0u64, 107u32, module_id, inferred.module_id, 1u64)
+  self_host_initialization_contract(dependencies.module_id == module_id, module_id, 0u64, 0u64, 107u32, module_id, dependencies.module_id, 2u64)
+  let count = collected.lets.length()
+  self_host_initialization_contract(inferred.let_declarations.length() == count, module_id, 0u64, 0u64, 103u32, u32_into_u64(count), u32_into_u64(inferred.let_declarations.length()), 3u64)
+  self_host_initialization_contract(inferred.let_types.length() == count, module_id, 0u64, 0u64, 103u32, u32_into_u64(count), u32_into_u64(inferred.let_types.length()), 4u64)
+  self_host_initialization_contract(dependencies.let_dependencies.length() == count, module_id, 0u64, 0u64, 103u32, u32_into_u64(count), u32_into_u64(dependencies.let_dependencies.length()), 5u64)
+  self_host_initialization_contract(dependencies.scc_declarations.length() == count, module_id, 0u64, 0u64, 501u32, u32_into_u64(count), u32_into_u64(dependencies.scc_declarations.length()), 6u64)
+  self_host_initialization_contract(collected.declaration_files.length() == collected.declaration_locations.length(), module_id, 0u64, 0u64, 103u32, u32_into_u64(collected.declaration_locations.length()), u32_into_u64(collected.declaration_files.length()), 17u64)
+  let missing = 4294967295u32
+  let indices = self_host_initialization_u32_slots(collected.declaration_locations.length(), missing)
+  let ranks = self_host_initialization_u32_slots(count, missing)
+  let bodies = array_new::<SelfHostHirBody>()
+  let mut index = 0u32
+  for value in collected.lets {
+    let declaration = value.declaration
+    self_host_initialization_contract(self_host_semantic_id_module(declaration) == module_id, module_id, declaration, 0u64, 107u32, module_id, self_host_semantic_id_module(declaration), 18u64)
+    let local = self_host_semantic_id_local(declaration)
+    self_host_initialization_contract(local < indices.length(), module_id, declaration, 0u64, 101u32, u32_into_u64(indices.length()), u32_into_u64(local), 18u64)
+    self_host_initialization_contract(indices[local] == missing, module_id, declaration, 0u64, 106u32, 1u64, 2u64, 18u64)
+    match collected.declaration_reference(declaration) {
+      Option::Some(reference) => match reference {
+        SelfHostCollectedDeclarationReference::TopLevel(entry) => {
+          self_host_initialization_contract(entry.id == declaration, module_id, declaration, 0u64, 106u32, declaration, entry.id, 19u64)
+          self_host_initialization_contract(entry.kind is SelfHostCollectedDeclKind::LetDecl, module_id, declaration, 0u64, 106u32, 1u64, 0u64, 20u64)
+        }
+        _ => self_host_initialization_contract(false, module_id, declaration, 0u64, 106u32, 1u64, 0u64, 19u64)
+      }
+      Option::None => self_host_initialization_contract(false, module_id, declaration, 0u64, 106u32, 1u64, 0u64, 19u64)
+    }
+    self_host_initialization_contract(inferred.let_declarations[index] == declaration, module_id, declaration, 0u64, 106u32, declaration, inferred.let_declarations[index], 21u64)
+    bodies.push(self_host_initialization_source_body(collected, declaration))
+    indices[local] = index
+    index = index + 1u32
+  }
+  let mut rank = 0u32
+  let mut seen = 0u32
+  for scc in dependencies.sccs {
+    self_host_initialization_contract(self_host_array_span_is_valid(scc.start, scc.length, dependencies.scc_declarations.length()), module_id, 0u64, 0u64, 101u32, u32_into_u64(dependencies.scc_declarations.length()), u32_into_u64(scc.length), (7u64 << 32u64) | u32_into_u64(scc.start))
+    self_host_initialization_contract(scc.length > 0u32, module_id, 0u64, 0u64, 501u32, 1u64, 0u64, (10u64 << 32u64) | u32_into_u64(rank))
+    while 0u32 {
+      offset if offset < scc.length => {
+        let declaration = dependencies.scc_declarations[scc.start + offset]
+        let value = self_host_initialization_value_index(collected, indices, declaration)
+        self_host_initialization_contract(ranks[value] == missing, module_id, declaration, 0u64, 501u32, 1u64, 2u64, 9u64)
+        ranks[value] = rank
+        seen = seen + 1u32
+        continue offset + 1u32
+      }
+      _ => break ()
+    }
+    rank = rank + 1u32
+  }
+  self_host_initialization_contract(seen == count, module_id, 0u64, 0u64, 501u32, u32_into_u64(count), u32_into_u64(seen), 8u64)
+  index = 0u32
+  for edges in dependencies.let_dependencies {
+    let declaration = collected.lets[index].declaration
+    self_host_initialization_contract(self_host_array_span_is_valid(edges.start, edges.length, dependencies.dependency_declarations.length()), module_id, declaration, 0u64, 101u32, u32_into_u64(dependencies.dependency_declarations.length()), u32_into_u64(edges.length), (22u64 << 32u64) | u32_into_u64(edges.start))
+    while 0u32 {
+      offset if offset < edges.length => {
+        let dependency = dependencies.dependency_declarations[edges.start + offset]
+        let target = self_host_initialization_value_index(collected, indices, dependency)
+        self_host_initialization_contract(ranks[target] <= ranks[index], module_id, declaration, 0u64, 501u32, u32_into_u64(ranks[index]), u32_into_u64(ranks[target]), dependency)
+        continue offset + 1u32
+      }
+      _ => break ()
+    }
+    index = index + 1u32
+  }
+  (indices, bodies)
+}

@@ -115,6 +115,7 @@ fn self_host_plan_module_initialization(
   collected: SelfHostCollectedModule,
   inferred: SelfHostInferredModuleValues,
 ) -> SelfHostPlannedModuleInitialization {
+  let (let_indices, source_bodies) = self_host_verify_module_initialization_inputs(collected, inferred)
   let steps = []
   let declaration_steps = self_host_initialization_u32_slots(
     collected.declaration_locations.length(),
@@ -179,14 +180,8 @@ fn self_host_plan_module_initialization(
       )
     } else if self_host_u32_equal(scc.length, 1u32) {
       let declaration = inferred.dependencies.scc_declaration(scc.start)
-      let let_index = match self_host_module_value_let_index(collected, declaration) {
-        Option::Some(value) => value
-        Option::None => 0u32
-      }
-      let body = match self_host_module_value_body(collected, declaration) {
-        Option::Some(value) => value
-        Option::None => collected.bodies[0u32]
-      }
+      let let_index = self_host_initialization_value_index(collected, let_indices, declaration)
+      let body = source_bodies[let_index]
       declaration_steps[self_host_semantic_id_local(declaration)] = step_index
       steps.push(SelfHostPlannedModuleInitializationStep::{
         kind: SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(

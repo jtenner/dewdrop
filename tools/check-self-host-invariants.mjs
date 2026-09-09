@@ -10,6 +10,17 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["LNK-501 module startup SCCs cannot omit a value", 501, 0n, 2n, 1n, 8n],
+    ["LNK-501 module startup SCCs cannot duplicate a value", 501, (993n << 32n) | 1n, 1n, 2n, 9n],
+    ["ARN-101 module startup checks SCC spans before access", 101, 0n, 2n, 1n, (7n << 32n) | 4294967295n],
+    ["ARN-103 module startup value types remain parallel", 103, 0n, 2n, 1n, 4n],
+    ["BOD-610 module startup cannot select another value's body", 610, (993n << 32n) | 1n, 1n, 0n, 12n],
+    ["LNK-501 module startup checks dependency component order", 501, (993n << 32n) | 1n, 1n, 2n, 993n << 32n],
+  ].map(([name, code, declaration, expected, actual, detail]) => ({
+    name,
+    expected: [code, 3, 993n, declaration, 0n, 4294967295, expected, actual, detail],
+  })),
   {
     name: "BOD-610 query startup graph requires its source body",
     expected: [610, 3, 5100n, 5100n << 32n, 5100n << 32n,

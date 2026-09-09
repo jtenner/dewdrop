@@ -226,6 +226,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_capture_access_plans_test.dew \
   self_host/compiler/semantic_initializer_link_test.dew \
   self_host/compiler/semantic_initializer_schedule_test.dew \
+  self_host/compiler/semantic_module_initialization_contracts_test.dew \
   self_host/compiler/semantic_unit_globals_test.dew
 do
   test_args+=(self_host.compiler "${source#self_host/compiler/}" "$source")

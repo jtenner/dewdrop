@@ -576,6 +576,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   dependency graph without changing source inference records; removed branches
   no longer produce false cycles. Real selected cycles still fail. See the
   [global-query log](docs/research/direct-global-query-initialization-2026-09-08.md).
+  The source startup builder now checks complete, unique SCC membership and
+  dependency order before reading value/body tables. Missing lookups no longer
+  select value zero or body zero. Native and self-host negative tests compare
+  the full error record. See the
+  [startup input log](docs/research/module-startup-input-contracts-2026-09-08.md).
   Native plain-function lookup now checks table bounds and declaration,
   module, fragment, lambda, kind, and ABI-key identity at link completion and each
   read. Missing keys stay missing; specialization entries cannot replace plain

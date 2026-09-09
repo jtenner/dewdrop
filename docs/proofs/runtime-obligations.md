@@ -64,6 +64,14 @@ reads cannot retain a false cycle; selected reads still produce cycle
 diagnostics. Body lookup and root membership are checked before graph scanning.
 See [the global-query log](../research/direct-global-query-initialization-2026-09-08.md).
 
+Source startup planning also requires a complete, duplicate-free partition of
+module values into valid nonempty SCC spans. Every edge targets a known value
+in the same or an earlier component. Declaration/value tables are parallel,
+and checked body records preserve their declaration, kind, and stored ID.
+Missing bodies cannot select the first arena entry. This contract does not
+assert strong connectivity inside each component. See
+[the startup input log](../research/module-startup-input-contracts-2026-09-08.md).
+
 ## Arena access
 
 For arena \(A\) and index \(i\):
