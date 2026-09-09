@@ -96,7 +96,7 @@ test "Dew test assertions reach ordinary WASI write dependencies" {
     }
   }
   assert_false(found_assert_runtime)
-  assert_true(found_string_as_bytes)
+  assert_false(found_string_as_bytes)
   assert_false(found_wasi_write)
   assert_true(found_defined_assertion)
   assert_true(found_wasi_import)

@@ -1,3 +1,9 @@
+impl Into<Bytes> for String {
+  fn into(self) -> Bytes {
+    string_as_bytes(self)
+  }
+}
+
 impl Eq for String {
   fn eq(self, right: String) -> Bool {
     string_equals(self, right)

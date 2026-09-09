@@ -176,6 +176,13 @@ pub fn main(case: U32) -> I32 {
   } else if case == 24u32 {
     let create = string_builder_default_operation()
     string_result(create().finish() == "")
+  } else if case == 25u32 {
+    let cast = string_bytes_operation()
+    let value = "!λ😀?".view(1u32, 6u32).to_string()
+    string_result(cast(value) == b"\xce\xbb\xf0\x9f\x98\x80" && cast("") == b"" && value == "λ😀")
+  } else if case == 26u32 {
+    let bytes = string_into_bytes("λ😀")
+    string_result(bytes == b"\xce\xbb\xf0\x9f\x98\x80")
   } else {
     unreachable()
   }
@@ -187,4 +194,12 @@ fn string_builder_length_operation() -> fn(StringBuilder) -> U32 {
 
 fn string_builder_default_operation() -> fn() -> StringBuilder {
   string_builder_new
+}
+
+fn string_bytes_operation() -> fn(String) -> Bytes {
+  __dew_text_bytes
+}
+
+fn string_into_bytes(value: String) -> Bytes {
+  value.into()
 }

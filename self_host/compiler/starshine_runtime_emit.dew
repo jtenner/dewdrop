@@ -463,7 +463,7 @@ fn self_host_linked_append_runtime_function(
   functions: StarshineFunctions,
   name: Bytes,
 ) -> Bool {
-  if name == b"dew_bytes_to_string_unchecked" || name == b"dew_string_view_as_bytes" || name == b"dew_string_as_bytes" {
+  if name == b"dew_bytes_to_string_unchecked" || name == b"dew_string_view_as_bytes" {
     let target_offset = if name == b"dew_bytes_to_string_unchecked" {
       1u32
     } else {

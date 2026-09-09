@@ -139,7 +139,7 @@ pub fn __dew_debug_f64(value: F64) -> U32 {
 }
 // These are the existing text storage contracts. Keep one declaration of each
 // operation; dew.std.text_runtime exposes ordinary forwarding functions.
-pub builtin __dew_text_bytes(value: String) -> Bytes = "dew_string_as_bytes"
+pub builtin __dew_text_bytes(value: String) -> Bytes = "ref.cast"
 pub builtin __dew_text_byte_length(value: Bytes) -> U32 = "struct.get 2"
 pub builtin __dew_text_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
 

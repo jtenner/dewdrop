@@ -33,5 +33,7 @@ export function checkStringOperations(main) {
   assert.equal(main(22), 1, "StringBuilder length works through a returned function");
   assert.equal(main(23), 1, "StringBuilder default function retains aliases and grows with UTF-8 text");
   assert.equal(main(24), 1, "StringBuilder default function can finish empty");
-  return labels.length + 15;
+  assert.equal(main(25), 1, "String-to-Bytes raw function retains Unicode slices and empty values");
+  assert.equal(main(26), 1, "String Into Bytes preserves UTF-8 bytes");
+  return labels.length + 17;
 }

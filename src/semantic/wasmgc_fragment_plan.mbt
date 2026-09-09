@@ -2199,7 +2199,6 @@ fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
 
 ///|
 fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
-  name == b"dew_string_as_bytes" ||
   name == b"dew_string_view" ||
   name == b"dew_string_view_as_bytes" ||
   name == b"dew_string_view_view" ||

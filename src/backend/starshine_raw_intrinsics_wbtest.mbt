@@ -1,4 +1,40 @@
 ///|
+test "String raw cast emits one instruction with the Bytes result heap" {
+  let stages = backend_test_single_module_stages(
+    28239UL, b"builtin cast(value: String) -> Bytes = \"ref.cast\"\npub fn run(value: String) -> Bytes {\n  cast(value)\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  let mut declaration = 0UL
+  for module_ in stages.lowering.modules {
+    for callable in module_.functions.callables {
+      if callable.name == b"cast" {
+        assert_eq(declaration, 0UL)
+        declaration = callable.declaration
+      }
+    }
+  }
+  assert_true(declaration != 0UL)
+  let mut checked = 0
+  for module_ in stages.link.modules {
+    for function_ in module_.functions {
+      if function_.declaration == declaration &&
+        function_.kind is @semantic.PlannedWasmInlineHeapFunction(instruction) {
+        let actual = starshine_raw_heap_instructions(
+          instruction, module_, Some(stages.link), module_.function_value_types,
+          function_.parameters, function_.results,
+        ).unwrap()
+        let target = starshine_text_runtime_base_for_body(module_, Some(stages.link)) + 2
+        assert_eq(actual, [@lib.Instruction::ref_cast(
+          false, @lib.HeapType::new(@lib.TypeIdx::new(target.reinterpret_as_uint())),
+        )])
+        checked += 1
+      }
+    }
+  }
+  assert_eq(checked, 1)
+}
+
+///|
 test "raw reference casts retain primitive result heaps without runtime imports" {
   let stages = backend_test_single_module_stages(
     28235UL, b"builtin cast(value: Bytes) -> String = \"ref.cast\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n",

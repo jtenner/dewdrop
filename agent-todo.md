@@ -140,9 +140,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   Raw `ref.cast` now retains a concrete result heap in direct calls and returned
   functions. Both compilers reject missing targets and applied generic result
   types. Saved operand and heap mutations have exact numeric failure tests.
-  This enables text representation conversions; it does not yet remove their
-  legacy runtime entries. See the
+  This enables text representation conversions. See the
   [reference cast log](docs/research/raw-reference-casts-2026-09-09.md).
+  String-to-Bytes now uses this instruction through its existing Dew functions
+  and a new `Into<Bytes>` implementation. Both compilers and the provider have
+  removed its old runtime entry. View and Bytes-to-String entries remain. See
+  the [String conversion log](docs/research/string-bytes-cast-library-2026-09-09.md).
   Bytes length now uses that raw instruction. Ordering and Facet call the Dew
   operation; the native and pinned provider length builders are removed.
   See the [Bytes length log](docs/research/bytes-length-intrinsic-2026-09-09.md).
