@@ -790,13 +790,13 @@ fn pb_write_function_kind(
       writer.write_byte(7)
       writer.write_bytes(name)
     }
-    PlannedWasmInlineStructGetFunction(recipe) => {
+    PlannedWasmInlineHeapFunction(recipe) => {
       writer.write_byte(8)
-      pb_write_raw_struct_get(writer, recipe)
+      pb_write_raw_heap_instruction(writer, recipe)
     }
-    PlannedWasmOutlinedStructGetFunction(recipe) => {
+    PlannedWasmOutlinedHeapFunction(recipe) => {
       writer.write_byte(9)
-      pb_write_raw_struct_get(writer, recipe)
+      pb_write_raw_heap_instruction(writer, recipe)
     }
   }
 }
@@ -829,10 +829,10 @@ fn pb_read_function_kind(
         reader.read_bytes(planning_binary_maximum_text, field),
       )
     8 =>
-      PlannedWasmInlineStructGetFunction(pb_read_raw_struct_get(reader, field))
+      PlannedWasmInlineHeapFunction(pb_read_raw_heap_instruction(reader, field))
     9 =>
-      PlannedWasmOutlinedStructGetFunction(
-        pb_read_raw_struct_get(reader, field),
+      PlannedWasmOutlinedHeapFunction(
+        pb_read_raw_heap_instruction(reader, field),
       )
     _ => {
       reader.fail(field, "unknown Wasm function-kind discriminant")

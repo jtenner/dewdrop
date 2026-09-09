@@ -185,7 +185,7 @@ fn self_host_program_link_is_emitted(
   function_: SelfHostPlannedWasmFunctionFragment,
 ) -> Bool {
   match function_.kind {
-    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineStructGetFunction(_) => false
+    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(_) => false
     SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) =>
       !function_.elided && self_host_program_link_is_runtime_builtin(name)
     SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction => false
@@ -238,7 +238,7 @@ fn self_host_program_link_call_requires_function(
             self_host_u32_equal(function_.specialization, specialization) &&
             !(function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_)) {
             match function_.kind {
-              SelfHostPlannedWasmFunctionKind::PlannedWasmInlineStructGetFunction(_) => return false
+              SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(_) => return false
               SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => return self_host_program_link_is_runtime_builtin(name)
               _ => return true
             }
@@ -582,8 +582,8 @@ fn self_host_program_link_append_fragment_detail(
                 message.append("outlined builtin:")
                 message.append(bytes_to_string(name))
               }
-              SelfHostPlannedWasmFunctionKind::PlannedWasmInlineStructGetFunction(_) => message.append("raw struct.get")
-              SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedStructGetFunction(_) => message.append("outlined struct.get")
+              SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(_) => message.append("raw heap instruction")
+              SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedHeapFunction(_) => message.append("outlined heap instruction")
               SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _) => message.append("import")
               SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(_) => message.append("defined")
               SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_) => message.append("lambda")

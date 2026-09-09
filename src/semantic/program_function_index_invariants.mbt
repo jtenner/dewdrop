@@ -55,7 +55,7 @@ fn verify_program_function_indices(
   for slot, function_ in link.functions {
     let has_function = match function_.kind {
       PlannedWasmInlineBuiltinFunction(_)
-      | PlannedWasmInlineStructGetFunction(_)
+      | PlannedWasmInlineHeapFunction(_)
       | PlannedWasmSignatureOnlyFunction => false
       _ => true
     }

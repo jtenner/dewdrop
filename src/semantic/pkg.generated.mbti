@@ -2272,8 +2272,8 @@ pub enum PlannedWasmFunctionKind {
   PlannedWasmImportedFunction(WasmImportIdentity)
   PlannedWasmInlineBuiltinFunction(Bytes)
   PlannedWasmOutlinedBuiltinFunction(Bytes)
-  PlannedWasmInlineStructGetFunction(RawStructGetRecipe)
-  PlannedWasmOutlinedStructGetFunction(RawStructGetRecipe)
+  PlannedWasmInlineHeapFunction(RawHeapInstruction)
+  PlannedWasmOutlinedHeapFunction(RawHeapInstruction)
   PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmDefinedFunction(UInt64)
   PlannedWasmDefinedLambdaFunction(Int)
@@ -2508,6 +2508,23 @@ pub enum ProgramWasmGCLinkDiagnostic {
   EagerProgramInitializationCycle(UInt64, UInt64)
 } derive(Eq, @debug.Debug)
 
+pub enum RawHeapInstruction {
+  RawStructGetInstruction(RawStructGetRecipe)
+  RawRefCastInstruction(RawRefCastRecipe)
+} derive(Eq, @debug.Debug)
+pub fn RawHeapInstruction::opcode(Self) -> Bytes
+
+pub enum RawHeapOwner {
+  DeclaredRawHeapOwner(UInt64)
+  PrimitiveRawHeapOwner(PrimitiveType)
+  InvalidRawHeapOwner(Int)
+} derive(Eq, @debug.Debug)
+
+pub struct RawRefCastRecipe {
+  opcode : Bytes
+  target : RawHeapOwner
+} derive(Eq, @debug.Debug)
+
 pub enum RawReferenceOperation {
   RawRefNull
   RawRefIsNull
@@ -2516,14 +2533,8 @@ pub enum RawReferenceOperation {
 
 pub struct RawStructGetRecipe {
   opcode : Bytes
-  owner : RawStructOwner
+  owner : RawHeapOwner
   field_index : Int
-} derive(Eq, @debug.Debug)
-
-pub enum RawStructOwner {
-  DeclaredRawStructOwner(UInt64)
-  PrimitiveRawStructOwner(PrimitiveType)
-  InvalidRawStructOwner(Int)
 } derive(Eq, @debug.Debug)
 
 pub struct RawWasmIntrinsicSignature {

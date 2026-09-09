@@ -41,7 +41,7 @@ enum SelfHostPhysicalDiagnosticReason {
   RawIntrinsicCarrierMismatch
   MissingRawIntrinsicSourcePlan
   InvalidBitcastCarriers
-  RawStructInstructionContract(U32)
+  RawHeapInstructionContract(U32)
 }
 
 impl SelfHostPhysicalDiagnosticReason {
@@ -88,15 +88,15 @@ impl SelfHostPhysicalDiagnosticReason {
       SelfHostPhysicalDiagnosticReason::RawIntrinsicCarrierMismatch => 714u32
       SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicSourcePlan => 704u32
       SelfHostPhysicalDiagnosticReason::InvalidBitcastCarriers => 714u32
-      SelfHostPhysicalDiagnosticReason::RawStructInstructionContract(_) => 714u32
+      SelfHostPhysicalDiagnosticReason::RawHeapInstructionContract(_) => 714u32
     }
   }
 
   fn description(self) -> String {
     match self {
-      SelfHostPhysicalDiagnosticReason::RawStructInstructionContract(reason) => {
+      SelfHostPhysicalDiagnosticReason::RawHeapInstructionContract(reason) => {
         let message = StringBuilder::new()
-        message.append("raw struct.get contract failure ")
+        message.append("raw heap instruction contract failure ")
         message.append_u32(reason)
         message.finish()
       }

@@ -284,6 +284,16 @@ adapter casts to that exact heap before the read. This form currently supports
 only unpacked scalar fields; packed fields, reference fields, and unresolved
 generic owners are rejected. It does not infer a heap from a source name.
 
+`ref.cast` takes one reference operand and retains the concrete heap selected
+by its declared result type. Its raw instruction returns a non-null reference
+to that heap. Direct calls and function-value wrappers use the same recipe;
+an incompatible runtime value traps. The current form accepts declared struct
+and primitive text/builder result heaps. Scalar, function, array, unresolved,
+and generic result owners are rejected. A numeric heap index cannot be supplied
+through the opcode string. This is an unsafe representation operation: casting
+Bytes to String does not validate UTF-8. Checked library conversion must do that
+work before the cast. `unsafe.bitcast` remains scalar/vector-only.
+
 The implemented entry point is:
 
 ```moonbit

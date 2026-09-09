@@ -11,6 +11,15 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ABI-714 raw reference cast receiver cannot disappear", 45n],
+    ["ABI-714 raw reference cast selected heap cannot change", 45n],
+    ["ABI-714 raw reference cast result heap cannot change", 46n],
+  ].map(([name, actual]) => ({
+    name,
+    expected: [714, 7, 5100n, (5100n << 32n) | 1n, 5100n << 32n,
+      2, 0n, actual, 5100n << 32n],
+  })),
+  ...[
     ["ARN-103 linked call function arena cannot be short", 103, 1n, 0n, 1n],
     ["ARN-103 linked call next arena cannot be long", 103, 1n, 2n, 2n],
     ["ARN-105 linked call head must address an entry", 105, 1n, 99n, 0n],

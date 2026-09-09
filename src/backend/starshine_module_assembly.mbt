@@ -46,10 +46,10 @@ pub fn emit_starshine_code_section(
             Err(error) => return Err(error)
           }
         }
-      @semantic.PlannedWasmOutlinedStructGetFunction(recipe) =>
+      @semantic.PlannedWasmOutlinedHeapFunction(recipe) =>
         if !function_.elided {
           match
-            starshine_outlined_struct_get(
+            starshine_outlined_heap_instruction(
               recipe,
               planned,
               None,
@@ -74,7 +74,7 @@ pub fn emit_starshine_code_section(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmInlineBuiltinFunction(_)
-      | @semantic.PlannedWasmInlineStructGetFunction(_)
+      | @semantic.PlannedWasmInlineHeapFunction(_)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }

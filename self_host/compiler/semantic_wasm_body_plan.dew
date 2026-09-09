@@ -2112,6 +2112,30 @@ fn self_host_body_seed_expression(
     }
     Option::None => {}
   }
+  match self_host_raw_ref_cast_call(link, planned) {
+    Option::Some(call) => match self_host_linked_raw_ref_cast_recipe(link, call.declaration) {
+      Option::Some(recipe) => match self_host_raw_ref_cast_layout(link, recipe) {
+        Result::Ok(layout) => if call.arguments.length == 1u32 && self_host_array_span_is_valid(call.arguments.start, call.arguments.length, module_.expression_children.length()) {
+          receiver_expression = module_.expression_children[call.arguments.start]
+          if receiver_expression < module_.expressions.length() {
+            receiver_logical_type = module_.expressions[receiver_expression].type_
+          }
+          selected_type_index = layout.type_index
+          // Seed missing facts only. Known disagreement remains visible to
+          // the raw-instruction verifier; a cast must not erase it.
+          if physical_heap_type == 4294967295u32 {
+            physical_heap_type = layout.type_index
+          }
+          if nominal_owner == 0u64 {
+            nominal_owner = layout.nominal_owner
+          }
+        }
+        Result::Err(_) => {}
+      }
+      Option::None => {}
+    }
+    Option::None => {}
+  }
   if !planned.flow.falls_through {
     // The absence of a Wasm result does not distinguish Unit from Never.
     // Keep the proven logical control-flow fact after target ABI seeding.
@@ -6045,6 +6069,7 @@ fn self_host_verify_body_call_result(
 ) -> Unit {
   self_host_verify_body_raw_intrinsic(link, plan, module_, expression_plan, diagnostics)
   self_host_verify_body_raw_struct(link, plan, module_, expression_plan, diagnostics)
+  self_host_verify_body_raw_ref_cast(link, plan, module_, expression_plan, diagnostics)
   if expression_plan.call_function_index == 4294967295u32 {
     return
   }

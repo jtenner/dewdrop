@@ -915,9 +915,9 @@ fn starshine_finish_call(
     }
   } else {
     match function_.kind {
-      @semantic.PlannedWasmInlineStructGetFunction(recipe) =>
+      @semantic.PlannedWasmInlineHeapFunction(recipe) =>
         match
-          starshine_raw_struct_get_instructions(
+          starshine_raw_heap_instructions(
             recipe,
             planned,
             None,
@@ -937,7 +937,7 @@ fn starshine_finish_call(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
-      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
+      | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -1279,10 +1279,10 @@ fn starshine_finish_program_call(
     }
   } else {
     match function_.kind {
-      @semantic.PlannedWasmInlineStructGetFunction(recipe) => {
+      @semantic.PlannedWasmInlineHeapFunction(recipe) => {
         let owner = planned.modules[function_.module_index]
         match
-          starshine_raw_struct_get_instructions(
+          starshine_raw_heap_instructions(
             recipe,
             owner,
             Some(planned),
@@ -1303,7 +1303,7 @@ fn starshine_finish_program_call(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
-      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
+      | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)

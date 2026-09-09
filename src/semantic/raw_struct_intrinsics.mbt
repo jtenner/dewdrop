@@ -1,14 +1,14 @@
 ///|
-pub enum RawStructOwner {
-  DeclaredRawStructOwner(DeclId)
-  PrimitiveRawStructOwner(PrimitiveType)
-  InvalidRawStructOwner(Int)
+pub enum RawHeapOwner {
+  DeclaredRawHeapOwner(DeclId)
+  PrimitiveRawHeapOwner(PrimitiveType)
+  InvalidRawHeapOwner(Int)
 } derive(Eq, Debug)
 
 ///|
 pub struct RawStructGetRecipe {
   opcode : Bytes
-  owner : RawStructOwner
+  owner : RawHeapOwner
   field_index : Int
 } derive(Eq, Debug)
 
@@ -54,27 +54,35 @@ fn raw_struct_get_owner(
   resolved : ResolvedModuleTypes,
   functions : PlannedModuleFunctions,
   callable : PlannedCallable,
-) -> RawStructOwner {
+) -> RawHeapOwner {
   if callable.has_receiver ||
     callable.parameters.length != 1 ||
     callable.parameters.start < 0 ||
     callable.parameters.start >= functions.parameters.length() {
-    return InvalidRawStructOwner(1)
+    return InvalidRawHeapOwner(1)
   }
-  let mut type_ = functions.parameters[callable.parameters.start].type_
+  raw_heap_owner(resolved, functions.parameters[callable.parameters.start].type_)
+}
+
+///|
+fn raw_heap_owner(
+  resolved : ResolvedModuleTypes,
+  initial : ResolvedTypeId,
+) -> RawHeapOwner {
+  let mut type_ = initial
   // Failure stays invalid metadata, never a fabricated reference owner.
   for _ in 0..<resolved.types.length() {
     if type_ < 0 || type_ >= resolved.types.length() {
-      return InvalidRawStructOwner(2)
+      return InvalidRawHeapOwner(2)
     }
     match resolved.types[type_] {
       AppliedType(base, _) => type_ = base
-      NominalType(declaration) => return DeclaredRawStructOwner(declaration)
-      PrimitiveType(primitive) => return PrimitiveRawStructOwner(primitive)
-      _ => return InvalidRawStructOwner(3)
+      NominalType(declaration) => return DeclaredRawHeapOwner(declaration)
+      PrimitiveType(primitive) => return PrimitiveRawHeapOwner(primitive)
+      _ => return InvalidRawHeapOwner(3)
     }
   }
-  InvalidRawStructOwner(4)
+  InvalidRawHeapOwner(4)
 }
 
 ///|

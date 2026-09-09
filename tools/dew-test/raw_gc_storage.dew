@@ -10,6 +10,28 @@ struct RawCell {
 
 builtin raw_cell_value(value: RawCell) -> I64 = "struct.get 0"
 builtin raw_bytes_length(value: Bytes) -> U32 = "struct.get 2"
+builtin raw_string_length(value: String) -> U32 = "struct.get 2"
+builtin raw_bytes_as_string(value: Bytes) -> String = "ref.cast"
+builtin raw_string_as_bytes(value: String) -> Bytes = "ref.cast"
+builtin raw_cell_cast(value: RawCell) -> RawCell = "ref.cast"
+builtin raw_bytes_as_cell(value: Bytes) -> RawCell = "ref.cast"
+
+struct RawCastLog {
+  mut count: U32
+}
+
+fn raw_cast_input(log: RawCastLog) -> Bytes {
+  log.count = log.count + 1u32
+  b"\xce\xbb\xf0\x9f\x98\x80"
+}
+
+fn raw_cast_stop() -> Never {
+  unreachable()
+}
+
+fn raw_bytes_caster() -> fn(Bytes) -> String {
+  raw_bytes_as_string
+}
 
 fn raw_cell_reader() -> fn(RawCell) -> I64 {
   raw_cell_value
@@ -114,6 +136,56 @@ pub fn main(case: U32) -> I32 {
   } else if case == 10u32 {
     let read = raw_bytes_reader()
     if read(b"hello") == 5u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 11u32 {
+    let text = raw_bytes_as_string(b"\xce\xbb\xf0\x9f\x98\x80")
+    if raw_string_length(text) == 6u32 && raw_bytes_length(raw_string_as_bytes(text)) == 6u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 12u32 {
+    let cast = raw_bytes_caster()
+    if raw_string_length(cast(b"\xce\xbb\xf0\x9f\x98\x80")) == 6u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 13u32 {
+    if raw_cell_value(raw_cell_cast(RawCell::{
+      value: 4294967297i64
+    })) == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 14u32 {
+    if raw_cell_value(raw_bytes_as_cell(b"")) == 0i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 15u32 {
+    let log = RawCastLog::{
+      count: 0u32
+    }
+    let text = raw_bytes_as_string(raw_cast_input(log))
+    if log.count == 1u32 && raw_string_length(text) == 6u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 16u32 {
+    if raw_string_length(raw_bytes_as_string(raw_cast_stop())) == 0u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 17u32 {
+    if raw_string_length(raw_bytes_as_string(b"")) == 0u32 {
       1i32
     } else {
       0i32

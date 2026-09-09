@@ -30,6 +30,27 @@ test "WasmGC codec retains outlined intrinsic identity" {
 }
 
 ///|
+test "WasmGC codec retains raw reference cast targets" {
+  let stages = compiler_test_stages(23955UL, [
+    CompilerTestModule::new("cache.ref_cast", [
+      CompilerTestSource::new(
+        "main.dew", b"builtin cast(value: Bytes) -> String = \"ref.cast\"\npub fn factory() -> fn(Bytes) -> String {\n  cast\n}\n",
+      ),
+    ]),
+  ])
+  let fragments = plan_program_wasmgc_fragments(stages.analyzed, stages.lowering).modules[0]
+  match fragments.functions[0].kind {
+    PlannedWasmOutlinedHeapFunction(RawRefCastInstruction(recipe)) => {
+      assert_eq(recipe.target, PrimitiveRawHeapOwner(StringType))
+      assert_eq(recipe.opcode, b"ref.cast")
+    }
+    _ => fail("expected an outlined reference cast recipe")
+  }
+  let encoded = serialize_planned_module_wasmgc_fragments(fragments).unwrap()
+  assert_eq(deserialize_planned_module_wasmgc_fragments(encoded).unwrap(), fragments)
+}
+
+///|
 test "WasmGC codec retains raw struct owners and field immediates" {
   let stages = compiler_test_stages(23954UL, [
     CompilerTestModule::new("cache.struct_get", [
@@ -43,8 +64,8 @@ test "WasmGC codec retains raw struct owners and field immediates" {
       stages.lowering,
     ).modules[0]
   match fragments.functions[0].kind {
-    PlannedWasmOutlinedStructGetFunction(recipe) => {
-      assert_eq(recipe.owner, PrimitiveRawStructOwner(BytesType))
+    PlannedWasmOutlinedHeapFunction(RawStructGetInstruction(recipe)) => {
+      assert_eq(recipe.owner, PrimitiveRawHeapOwner(BytesType))
       assert_eq(recipe.field_index, 2)
       assert_eq(recipe.opcode, b"struct.get 2")
     }

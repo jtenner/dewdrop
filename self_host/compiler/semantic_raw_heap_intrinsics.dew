@@ -1,0 +1,141 @@
+pub struct SelfHostRawRefCastRecipe {
+  opcode: Bytes
+  target: SelfHostRawHeapOwner
+}
+
+pub enum SelfHostRawHeapInstruction {
+  RawStructGetInstruction(SelfHostRawStructGetRecipe)
+  RawRefCastInstruction(SelfHostRawRefCastRecipe)
+}
+
+impl SelfHostRawHeapInstruction {
+  fn opcode(self) -> Bytes {
+    match self {
+      SelfHostRawHeapInstruction::RawStructGetInstruction(recipe) => recipe.opcode
+      SelfHostRawHeapInstruction::RawRefCastInstruction(recipe) => recipe.opcode
+    }
+  }
+}
+
+enum SelfHostRawStructHeap {
+  PrimitiveStructHeap(U32)
+  DeclaredStructHeap(U32, U64, SelfHostPlannedModuleWasmGCFragments, SelfHostPlannedWasmPhysicalType)
+}
+
+struct SelfHostRawRefCastLayout {
+  type_index: U32
+  nominal_owner: U64
+}
+
+fn self_host_raw_struct_heap(link: SelfHostPlannedProgramWasmGCLink, owner: SelfHostRawHeapOwner) -> Result<SelfHostRawStructHeap, U32> {
+  match owner {
+    SelfHostRawHeapOwner::PrimitiveRawHeapOwner(primitive) => {
+      let offset = match primitive {
+        SelfHostPrimitiveType::StringType => 1u32
+        SelfHostPrimitiveType::BytesType => 2u32
+        SelfHostPrimitiveType::StringViewType => 3u32
+        SelfHostPrimitiveType::StringBuilderType => 4u32
+        SelfHostPrimitiveType::BytesBuilderType => 5u32
+        _ => return Result::Err(2u32)
+      }
+      Result::Ok(SelfHostRawStructHeap::PrimitiveStructHeap(self_host_linked_text_runtime_base(link) + offset))
+    }
+    SelfHostRawHeapOwner::DeclaredRawHeapOwner(declaration) => {
+      let mut selected = Option::None
+      for linked in link.types {
+        if linked.module_index >= link.fragments.modules.length() {
+          return Result::Err(5u32)
+        }
+        let module_ = link.fragments.modules[linked.module_index]
+        if linked.fragment_index >= module_.physical_types.length() {
+          return Result::Err(5u32)
+        }
+        let type_ = module_.physical_types[linked.fragment_index]
+        match type_.kind {
+          SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(candidate) => if candidate == declaration {
+            if selected is Option::Some(_) {
+              return Result::Err(6u32)
+            }
+            selected = Option::Some(SelfHostRawStructHeap::DeclaredStructHeap(linked.type_index, declaration, module_, type_))
+          }
+          _ => {}
+        }
+      }
+      match selected {
+        Option::Some(value) => Result::Ok(value)
+        Option::None => Result::Err(10u32)
+      }
+    }
+    SelfHostRawHeapOwner::InvalidRawHeapOwner(reason) => Result::Err(20u32 + reason)
+  }
+}
+
+fn self_host_raw_ref_cast_opcode(name: Bytes) -> Bool {
+  name.starts_with(b"ref.cast")
+}
+
+fn self_host_raw_ref_cast_recipe(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable, opcode: Bytes) -> SelfHostRawRefCastRecipe {
+  SelfHostRawRefCastRecipe::{
+    opcode: opcode
+    target: if callable.has_receiver || callable.parameters.length != 1u32 {
+      SelfHostRawHeapOwner::InvalidRawHeapOwner(1u32)
+    } else if callable.result_type < module_.resolved_types.types.length() &&
+      module_.resolved_types.types[callable.result_type] is SelfHostResolvedType::AppliedType(_, _) {
+      // A declaration ID alone cannot certify a specialized generic heap.
+      SelfHostRawHeapOwner::InvalidRawHeapOwner(3u32)
+    } else {
+      self_host_raw_heap_owner(module_, callable.result_type)
+    }
+  }
+}
+
+fn self_host_linked_raw_heap_instruction(link: SelfHostPlannedProgramWasmGCLink, declaration: U64) -> Option<SelfHostRawHeapInstruction> {
+  let owner = match link.fragments.specialization.lowering.index.declaration_owner(declaration) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  if owner >= link.fragments.modules.length() {
+    return Option::None
+  }
+  let module_ = link.fragments.modules[owner]
+  let index = self_host_fragment_function_index(module_, declaration)
+  if index >= module_.functions.length() {
+    return Option::None
+  }
+  let function_ = module_.functions[index]
+  if function_.declaration != declaration {
+    return Option::None
+  }
+  match function_.kind {
+    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(instruction),
+    SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedHeapFunction(instruction) => Option::Some(instruction)
+    _ => Option::None
+  }
+}
+
+fn self_host_linked_raw_ref_cast_recipe(link: SelfHostPlannedProgramWasmGCLink, declaration: U64) -> Option<SelfHostRawRefCastRecipe> {
+  match self_host_linked_raw_heap_instruction(link, declaration) {
+    Option::Some(SelfHostRawHeapInstruction::RawRefCastInstruction(recipe)) => Option::Some(recipe)
+    _ => Option::None
+  }
+}
+
+fn self_host_raw_ref_cast_layout(link: SelfHostPlannedProgramWasmGCLink, recipe: SelfHostRawRefCastRecipe) -> Result<SelfHostRawRefCastLayout, U32> {
+  if !recipe.opcode.equals(b"ref.cast") {
+    return Result::Err(40u32)
+  }
+  let heap = match self_host_raw_struct_heap(link, recipe.target) {
+    Result::Ok(value) => value
+    Result::Err(reason) => return Result::Err(50u32 + reason)
+  }
+  match heap {
+    SelfHostRawStructHeap::PrimitiveStructHeap(index) => Result::Ok(SelfHostRawRefCastLayout::{
+      type_index: index
+      nominal_owner: 0u64
+    })
+    SelfHostRawStructHeap::DeclaredStructHeap(index, declaration, _, _) => Result::Ok(SelfHostRawRefCastLayout::{
+      type_index: index
+      nominal_owner: declaration
+    })
+  }
+}

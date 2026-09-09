@@ -309,9 +309,9 @@ fn emit_starshine_program_import_section(
           )
         }
       @semantic.PlannedWasmInlineBuiltinFunction(_)
-      | @semantic.PlannedWasmInlineStructGetFunction(_)
+      | @semantic.PlannedWasmInlineHeapFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
-      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
+      | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -332,7 +332,7 @@ fn emit_starshine_program_function_section(
     match function_.kind {
       @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
-      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
+      | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmTraitAdapterFunction(_, _) =>
@@ -345,7 +345,7 @@ fn emit_starshine_program_function_section(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmInlineBuiltinFunction(_)
-      | @semantic.PlannedWasmInlineStructGetFunction(_)
+      | @semantic.PlannedWasmInlineHeapFunction(_)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }
@@ -1088,11 +1088,11 @@ fn emit_starshine_program_code_section(
             Err(error) => return Err(error)
           }
         }
-      @semantic.PlannedWasmOutlinedStructGetFunction(recipe) =>
+      @semantic.PlannedWasmOutlinedHeapFunction(recipe) =>
         if !function_.elided {
           let owner = planned.modules[function_.module_index]
           match
-            starshine_outlined_struct_get(
+            starshine_outlined_heap_instruction(
               recipe,
               owner,
               Some(planned),
@@ -1127,7 +1127,7 @@ fn emit_starshine_program_code_section(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmInlineBuiltinFunction(_)
-      | @semantic.PlannedWasmInlineStructGetFunction(_)
+      | @semantic.PlannedWasmInlineHeapFunction(_)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }

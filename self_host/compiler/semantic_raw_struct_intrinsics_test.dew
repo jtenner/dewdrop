@@ -1,8 +1,37 @@
 
+test "raw reference casts retain primitive result heaps" {
+  self_host_test_raw_struct_module(
+    b"builtin cast(value: Bytes) -> String = \"ref.cast\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n",
+  )
+}
+
+test "raw reference casts retain declared result heaps" {
+  self_host_test_raw_struct_module(
+    b"struct Record {\n  value: I64\n}\nbuiltin cast(value: Bytes) -> Record = \"ref.cast\"\npub fn run(value: Bytes) -> Record {\n  cast(value)\n}\n",
+  )
+}
+
+test "raw reference casts retain result heaps in returned function values" {
+  self_host_test_raw_struct_module(
+    b"builtin cast(value: Bytes) -> String = \"ref.cast\"\npub fn factory() -> fn(Bytes) -> String {\n  cast\n}\n",
+  )
+}
+
 fn self_host_test_raw_struct_mutation(source: SelfHostPlannedPhysicalExpressionCarrier, mutation: U32) -> SelfHostPlannedPhysicalExpressionCarrier {
   SelfHostPlannedPhysicalExpressionCarrier::{
     expression: source.expression
-    value: source.value
+    value: if mutation == 4u32 {
+      SelfHostPlannedPhysicalValueInfo::{
+        logical_type: source.value.logical_type
+        carrier: source.value.carrier
+        conflict_expected: source.value.conflict_expected
+        conflict_actual: source.value.conflict_actual
+        nominal_owner: source.value.nominal_owner
+        physical_heap_type: source.value.physical_heap_type + 1u32
+      }
+    } else {
+      source.value
+    }
     carrier: source.carrier
     conflict_expected: source.conflict_expected
     conflict_actual: source.conflict_actual
@@ -67,6 +96,52 @@ test "ABI-714 raw struct heap cannot change" expect_trap "unreachable" {
   self_host_test_raw_struct_saved_read(2u32)
 }
 
+fn self_host_test_raw_cast_saved_read(mutation: U32) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"builtin cast(value: Bytes) -> String = \"ref.cast\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, physical))
+  let plan = physical.bodies[0u32]
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = false
+  for value in plan.expressions {
+    if self_host_raw_ref_cast_call(link, module_.expressions[value.expression]) is Option::Some(_) {
+      let slot = value.expression - module_.bodies[0u32].expressions.start
+      plan.expressions[slot] = self_host_test_raw_struct_mutation(value, mutation)
+      let _ = self_host_require_emitted_raw_ref_cast(Option::Some(plan), link, module_, module_.bodies[0u32], value.expression)
+      checked = true
+    }
+  }
+  assert(checked, "fixture contains a reference cast")
+}
+
+test "raw reference cast saved reads retain their target" {
+  self_host_test_raw_cast_saved_read(3u32)
+}
+
+test "ABI-714 raw reference cast receiver cannot disappear" expect_trap "unreachable" {
+  self_host_test_raw_cast_saved_read(1u32)
+}
+
+test "ABI-714 raw reference cast selected heap cannot change" expect_trap "unreachable" {
+  self_host_test_raw_cast_saved_read(2u32)
+}
+
+test "ABI-714 raw reference cast result heap cannot change" expect_trap "unreachable" {
+  self_host_test_raw_cast_saved_read(4u32)
+}
+
+test "raw reference casts reject missing or inconsistent type contracts" {
+  self_host_test_raw_struct_rejected(b"struct Box<t> {\n  value: t\n}\nbuiltin cast(value: Bytes) -> Box<I32> = \"ref.cast\"\npub fn run(value: Bytes) -> Box<I32> {\n  cast(value)\n}\n", 73u32)
+  self_host_test_raw_struct_rejected(b"builtin cast(value: I32) -> String = \"ref.cast\"\npub fn run(value: I32) -> String {\n  cast(value)\n}\n", 42u32)
+  self_host_test_raw_struct_rejected(b"builtin cast(value: Bytes) -> I32 = \"ref.cast\"\npub fn run(value: Bytes) -> I32 {\n  cast(value)\n}\n", 52u32)
+  self_host_test_raw_struct_rejected(b"builtin cast(value: Bytes) -> String = \"ref.cast 17\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n", 40u32)
+  self_host_test_raw_struct_rejected(b"builtin cast() -> String = \"ref.cast\"\npub fn run() -> String {\n  cast()\n}\n", 71u32)
+  self_host_test_raw_struct_rejected(b"builtin cast<t>(value: Bytes) -> t = \"ref.cast\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n", 73u32)
+}
+
 fn self_host_test_raw_struct_rejected(source: Bytes, reason: U32) -> Unit {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source), false)
   self_host_physical_test_assert_clean_inference(link)
@@ -74,7 +149,7 @@ fn self_host_test_raw_struct_rejected(source: Bytes, reason: U32) -> Unit {
   let mut found = false
   for diagnostic in physical.diagnostics {
     if diagnostic.code == 714u32 {
-      assert(diagnostic.context == SelfHostPhysicalDiagnosticReason::RawStructInstructionContract(reason).description(), "exact raw struct contract reason")
+      assert(diagnostic.context == SelfHostPhysicalDiagnosticReason::RawHeapInstructionContract(reason).description(), "exact raw struct contract reason")
       found = true
     }
   }

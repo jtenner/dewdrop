@@ -1,0 +1,79 @@
+fn self_host_raw_ref_cast_call(link: SelfHostPlannedProgramWasmGCLink, source: SelfHostPlannedExpression) -> Option<SelfHostRawHeapCall> {
+  match source.kind {
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, declaration, _, arguments, _) => if self_host_raw_ref_cast_opcode(name) {
+      Option::Some(SelfHostRawHeapCall::{
+        declaration: declaration
+        arguments: arguments
+      })
+    } else {
+      Option::None
+    }
+    SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, arguments, _) => {
+      if source.selection is SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _) {
+        return Option::None
+      }
+      match self_host_linked_raw_ref_cast_recipe(link, declaration) {
+        Option::Some(_) => Option::Some(SelfHostRawHeapCall::{
+          declaration: declaration
+          arguments: arguments
+        })
+        Option::None => Option::None
+      }
+    }
+    _ => Option::None
+  }
+}
+
+fn self_host_raw_ref_cast_call_error(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, module_: SelfHostPlannedModuleLowering, expression: SelfHostPlannedPhysicalExpressionCarrier, call: SelfHostRawHeapCall) -> U32 {
+  let recipe = match self_host_linked_raw_ref_cast_recipe(link, call.declaration) {
+    Option::Some(value) => value
+    Option::None => return 48u32
+  }
+  let layout = match self_host_raw_ref_cast_layout(link, recipe) {
+    Result::Ok(value) => value
+    Result::Err(error) => return error
+  }
+  if call.arguments.length != 1u32 || !self_host_array_span_is_valid(call.arguments.start, call.arguments.length, module_.expression_children.length()) {
+    return 41u32
+  }
+  let argument = module_.expression_children[call.arguments.start]
+  if argument >= module_.expressions.length() || expression.expression >= module_.expressions.length() {
+    return 44u32
+  }
+  let value = match self_host_body_plan_expression(plan, argument) {
+    Option::Some(value) => value
+    Option::None => return 44u32
+  }
+  if expression.receiver_expression != argument || expression.selected_type_index != layout.type_index {
+    return 45u32
+  }
+  if expression.value.physical_heap_type != layout.type_index || expression.value.nominal_owner != layout.nominal_owner {
+    return 46u32
+  }
+  if value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier && !module_.expressions[argument].flow.falls_through {
+    if expression.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier && !module_.expressions[expression.expression].flow.falls_through {
+      return 0u32
+    }
+    return 47u32
+  }
+  if !(value.carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier) {
+    return 42u32
+  }
+  if !(expression.carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier) {
+    return 43u32
+  }
+  0u32
+}
+
+fn self_host_verify_body_raw_ref_cast(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, module_: SelfHostPlannedModuleLowering, expression: SelfHostPlannedPhysicalExpressionCarrier, diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>) -> Unit {
+  let call = match self_host_raw_ref_cast_call(link, module_.expressions[expression.expression]) {
+    Option::Some(value) => value
+    Option::None => return
+  }
+  let error = self_host_raw_ref_cast_call_error(link, plan, module_, expression, call)
+  if error != 0u32 {
+    self_host_body_add_diagnostic(diagnostics, plan, module_, expression.expression, call.declaration,
+      SelfHostPhysicalDiagnosticReason::RawHeapInstructionContract(error),
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, expression.carrier)
+  }
+}

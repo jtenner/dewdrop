@@ -420,9 +420,9 @@ pub fn emit_starshine_import_section(
           )
         }
       @semantic.PlannedWasmInlineBuiltinFunction(_)
-      | @semantic.PlannedWasmInlineStructGetFunction(_)
+      | @semantic.PlannedWasmInlineHeapFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
-      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
+      | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -445,7 +445,7 @@ pub fn emit_starshine_function_section(
     match function_.kind {
       @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
-      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
+      | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmTraitAdapterFunction(_, _) =>
@@ -458,7 +458,7 @@ pub fn emit_starshine_function_section(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmInlineBuiltinFunction(_)
-      | @semantic.PlannedWasmInlineStructGetFunction(_)
+      | @semantic.PlannedWasmInlineHeapFunction(_)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }

@@ -1,12 +1,12 @@
-pub enum SelfHostRawStructOwner {
-  DeclaredRawStructOwner(U64)
-  PrimitiveRawStructOwner(SelfHostPrimitiveType)
-  InvalidRawStructOwner(U32)
+pub enum SelfHostRawHeapOwner {
+  DeclaredRawHeapOwner(U64)
+  PrimitiveRawHeapOwner(SelfHostPrimitiveType)
+  InvalidRawHeapOwner(U32)
 }
 
 pub struct SelfHostRawStructGetRecipe {
   opcode: Bytes
-  owner: SelfHostRawStructOwner
+  owner: SelfHostRawHeapOwner
   field_index: U32
 }
 
@@ -18,15 +18,15 @@ struct SelfHostRawStructLayout {
   storage: SelfHostPlannedWasmStorageType
 }
 
-struct SelfHostRawStructCall {
+struct SelfHostRawHeapCall {
   declaration: U64
   arguments: SelfHostHirSpan
 }
 
-fn self_host_raw_struct_call(link: SelfHostPlannedProgramWasmGCLink, source: SelfHostPlannedExpression) -> Option<SelfHostRawStructCall> {
+fn self_host_raw_struct_call(link: SelfHostPlannedProgramWasmGCLink, source: SelfHostPlannedExpression) -> Option<SelfHostRawHeapCall> {
   match source.kind {
     SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, declaration, _, arguments, _) => if self_host_raw_struct_get_opcode(name) {
-      Option::Some(SelfHostRawStructCall::{
+      Option::Some(SelfHostRawHeapCall::{
         declaration: declaration
         arguments: arguments
       })
@@ -38,7 +38,7 @@ fn self_host_raw_struct_call(link: SelfHostPlannedProgramWasmGCLink, source: Sel
         return Option::None
       }
       match self_host_linked_raw_struct_recipe(link, declaration) {
-        Option::Some(_) => Option::Some(SelfHostRawStructCall::{
+        Option::Some(_) => Option::Some(SelfHostRawHeapCall::{
           declaration: declaration
           arguments: arguments
         })
@@ -49,7 +49,7 @@ fn self_host_raw_struct_call(link: SelfHostPlannedProgramWasmGCLink, source: Sel
   }
 }
 
-fn self_host_raw_struct_call_error(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, module_: SelfHostPlannedModuleLowering, expression: SelfHostPlannedPhysicalExpressionCarrier, call: SelfHostRawStructCall) -> U32 {
+fn self_host_raw_struct_call_error(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, module_: SelfHostPlannedModuleLowering, expression: SelfHostPlannedPhysicalExpressionCarrier, call: SelfHostRawHeapCall) -> U32 {
   let recipe = match self_host_linked_raw_struct_recipe(link, call.declaration) {
     Option::Some(value) => value
     Option::None => return 30u32
@@ -104,7 +104,7 @@ fn self_host_verify_body_raw_struct(link: SelfHostPlannedProgramWasmGCLink, plan
   let error = self_host_raw_struct_call_error(link, plan, module_, expression, call)
   if error != 0u32 {
     self_host_body_add_diagnostic(diagnostics, plan, module_, expression.expression, call.declaration,
-      SelfHostPhysicalDiagnosticReason::RawStructInstructionContract(error),
+      SelfHostPhysicalDiagnosticReason::RawHeapInstructionContract(error),
       SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, expression.carrier)
   }
 }
@@ -139,30 +139,34 @@ fn self_host_raw_struct_get_field(name: Bytes) -> U32 {
   field
 }
 
-fn self_host_raw_struct_get_owner(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable) -> SelfHostRawStructOwner {
+fn self_host_raw_struct_get_owner(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable) -> SelfHostRawHeapOwner {
   if callable.has_receiver || callable.parameters.length != 1u32 ||
     !self_host_array_span_is_valid(callable.parameters.start, callable.parameters.length, module_.functions.parameters.length()) {
-    return SelfHostRawStructOwner::InvalidRawStructOwner(1u32)
+    return SelfHostRawHeapOwner::InvalidRawHeapOwner(1u32)
   }
-  let mut type_ = module_.functions.parameters[callable.parameters.start].type_
+  self_host_raw_heap_owner(module_, module_.functions.parameters[callable.parameters.start].type_)
+}
+
+fn self_host_raw_heap_owner(module_: SelfHostPlannedModuleLowering, initial: U32) -> SelfHostRawHeapOwner {
+  let mut type_ = initial
   while 0u32 {
     hops if hops < module_.resolved_types.types.length() => {
       if type_ >= module_.resolved_types.types.length() {
-        return SelfHostRawStructOwner::InvalidRawStructOwner(2u32)
+        return SelfHostRawHeapOwner::InvalidRawHeapOwner(2u32)
       }
       match module_.resolved_types.types[type_] {
         SelfHostResolvedType::AppliedType(base, _) => {
           type_ = base
         }
-        SelfHostResolvedType::NominalType(declaration) => return SelfHostRawStructOwner::DeclaredRawStructOwner(declaration)
-        SelfHostResolvedType::PrimitiveType(primitive) => return SelfHostRawStructOwner::PrimitiveRawStructOwner(primitive)
-        _ => return SelfHostRawStructOwner::InvalidRawStructOwner(3u32)
+        SelfHostResolvedType::NominalType(declaration) => return SelfHostRawHeapOwner::DeclaredRawHeapOwner(declaration)
+        SelfHostResolvedType::PrimitiveType(primitive) => return SelfHostRawHeapOwner::PrimitiveRawHeapOwner(primitive)
+        _ => return SelfHostRawHeapOwner::InvalidRawHeapOwner(3u32)
       }
       continue hops + 1u32
     }
     _ => break ()
   }
-  SelfHostRawStructOwner::InvalidRawStructOwner(4u32)
+  SelfHostRawHeapOwner::InvalidRawHeapOwner(4u32)
 }
 
 fn self_host_raw_struct_get_recipe(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable, opcode: Bytes) -> SelfHostRawStructGetRecipe {
@@ -174,25 +178,8 @@ fn self_host_raw_struct_get_recipe(module_: SelfHostPlannedModuleLowering, calla
 }
 
 fn self_host_linked_raw_struct_recipe(link: SelfHostPlannedProgramWasmGCLink, declaration: U64) -> Option<SelfHostRawStructGetRecipe> {
-  let owner = match link.fragments.specialization.lowering.index.declaration_owner(declaration) {
-    Option::Some(value) => value
-    Option::None => return Option::None
-  }
-  if owner >= link.fragments.modules.length() {
-    return Option::None
-  }
-  let module_ = link.fragments.modules[owner]
-  let index = self_host_fragment_function_index(module_, declaration)
-  if index >= module_.functions.length() {
-    return Option::None
-  }
-  let function_ = module_.functions[index]
-  if function_.declaration != declaration {
-    return Option::None
-  }
-  match function_.kind {
-    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineStructGetFunction(recipe),
-    SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedStructGetFunction(recipe) => Option::Some(recipe)
+  match self_host_linked_raw_heap_instruction(link, declaration) {
+    Option::Some(SelfHostRawHeapInstruction::RawStructGetInstruction(recipe)) => Option::Some(recipe)
     _ => Option::None
   }
 }
@@ -201,16 +188,12 @@ fn self_host_raw_struct_layout(link: SelfHostPlannedProgramWasmGCLink, recipe: S
   if recipe.field_index == 4294967295u32 || self_host_raw_struct_get_field(recipe.opcode) != recipe.field_index {
     return Result::Err(1u32)
   }
-  match recipe.owner {
-    SelfHostRawStructOwner::PrimitiveRawStructOwner(primitive) => {
-      let offset = match primitive {
-        SelfHostPrimitiveType::StringType => 1u32
-        SelfHostPrimitiveType::BytesType => 2u32
-        SelfHostPrimitiveType::StringViewType => 3u32
-        SelfHostPrimitiveType::StringBuilderType => 4u32
-        SelfHostPrimitiveType::BytesBuilderType => 5u32
-        _ => return Result::Err(2u32)
-      }
+  let heap = match self_host_raw_struct_heap(link, recipe.owner) {
+    Result::Ok(value) => value
+    Result::Err(reason) => return Result::Err(reason)
+  }
+  match heap {
+    SelfHostRawStructHeap::PrimitiveStructHeap(index) => {
       if recipe.field_index >= 3u32 {
         return Result::Err(3u32)
       }
@@ -218,60 +201,36 @@ fn self_host_raw_struct_layout(link: SelfHostPlannedProgramWasmGCLink, recipe: S
         return Result::Err(4u32)
       }
       Result::Ok(SelfHostRawStructLayout::{
-        type_index: self_host_linked_text_runtime_base(link) + offset
+        type_index: index
         field_index: recipe.field_index
         field_declaration: 0u64
         nominal_owner: 0u64
         storage: SelfHostPlannedWasmStorageType::WasmI32Storage
       })
     }
-    SelfHostRawStructOwner::DeclaredRawStructOwner(declaration) => {
-      let mut selected = Option::None
-      for linked in link.types {
-        if linked.module_index >= link.fragments.modules.length() {
-          return Result::Err(5u32)
-        }
-        let module_ = link.fragments.modules[linked.module_index]
-        if linked.fragment_index >= module_.physical_types.length() {
-          return Result::Err(5u32)
-        }
-        let type_ = module_.physical_types[linked.fragment_index]
-        match type_.kind {
-          SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(owner) => if owner == declaration {
-            if selected is Option::Some(_) {
-              return Result::Err(6u32)
-            }
-            if !self_host_array_span_is_valid(type_.fields.start, type_.fields.length, module_.fields.length()) || recipe.field_index >= type_.fields.length {
-              return Result::Err(7u32)
-            }
-            let field = module_.fields[type_.fields.start + recipe.field_index]
-            if field.physical_index != recipe.field_index {
-              return Result::Err(8u32)
-            }
-            match field.storage {
-              SelfHostPlannedWasmStorageType::WasmI32Storage,
-              SelfHostPlannedWasmStorageType::WasmI64Storage,
-              SelfHostPlannedWasmStorageType::WasmF32Storage,
-              SelfHostPlannedWasmStorageType::WasmF64Storage,
-              SelfHostPlannedWasmStorageType::WasmV128Storage => {}
-              _ => return Result::Err(9u32)
-            }
-            selected = Option::Some(SelfHostRawStructLayout::{
-              type_index: linked.type_index
-              field_index: recipe.field_index
-              field_declaration: field.declaration
-              nominal_owner: declaration
-              storage: field.storage
-            })
-          }
-          _ => {}
-        }
+    SelfHostRawStructHeap::DeclaredStructHeap(index, declaration, module_, type_) => {
+      if !self_host_array_span_is_valid(type_.fields.start, type_.fields.length, module_.fields.length()) || recipe.field_index >= type_.fields.length {
+        return Result::Err(7u32)
       }
-      match selected {
-        Option::Some(value) => Result::Ok(value)
-        Option::None => Result::Err(10u32)
+      let field = module_.fields[type_.fields.start + recipe.field_index]
+      if field.physical_index != recipe.field_index {
+        return Result::Err(8u32)
       }
+      match field.storage {
+        SelfHostPlannedWasmStorageType::WasmI32Storage,
+        SelfHostPlannedWasmStorageType::WasmI64Storage,
+        SelfHostPlannedWasmStorageType::WasmF32Storage,
+        SelfHostPlannedWasmStorageType::WasmF64Storage,
+        SelfHostPlannedWasmStorageType::WasmV128Storage => {}
+        _ => return Result::Err(9u32)
+      }
+      Result::Ok(SelfHostRawStructLayout::{
+        type_index: index
+        field_index: recipe.field_index
+        field_declaration: field.declaration
+        nominal_owner: declaration
+        storage: field.storage
+      })
     }
-    SelfHostRawStructOwner::InvalidRawStructOwner(reason) => Result::Err(20u32 + reason)
   }
 }
