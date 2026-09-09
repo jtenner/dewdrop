@@ -154,6 +154,28 @@ pub fn main(case: U32) -> I32 {
     let builder = StringBuilder::new()
     builder.append("λ😀")
     string_result(read(builder) == 6u32)
+  } else if case == 23u32 {
+    let create = string_builder_default_operation()
+    let builder = create()
+    let alias = builder
+    if builder.byte_length() != 0u32 {
+      return 0i32
+    }
+    while 0u32 {
+      index if index < 65u32 => {
+        builder.append("λ😀")
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    if alias.byte_length() != 390u32 {
+      return 0i32
+    }
+    let result = alias.finish()
+    string_result(result.byte_length() == 390u32 && result.utf16_length() == 195u32 && result.starts_with("λ😀λ😀") && result.ends_with("λ😀λ😀"))
+  } else if case == 24u32 {
+    let create = string_builder_default_operation()
+    string_result(create().finish() == "")
   } else {
     unreachable()
   }
@@ -161,4 +183,8 @@ pub fn main(case: U32) -> I32 {
 
 fn string_builder_length_operation() -> fn(StringBuilder) -> U32 {
   string_builder_byte_length
+}
+
+fn string_builder_default_operation() -> fn() -> StringBuilder {
+  string_builder_new
 }

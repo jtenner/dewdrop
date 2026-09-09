@@ -6,7 +6,9 @@ pub fn string_as_bytes_unchecked(value: String) -> Bytes {
 pub builtin string_view(value: String, start: U32, length: U32) -> StringView = "dew_string_view"
 pub builtin string_view_as_bytes_unchecked(value: StringView) -> Bytes = "dew_string_view_as_bytes"
 pub builtin string_view_view(value: StringView, start: U32, length: U32) -> StringView = "dew_string_view_view"
-pub builtin string_builder_new() -> StringBuilder = "dew_string_builder_new"
+pub fn string_builder_new() -> StringBuilder {
+  string_builder_with_capacity_raw(64u32)
+}
 pub builtin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = "dew_string_builder_with_capacity"
 builtin string_builder_length_raw(value: StringBuilder) -> U32 = "struct.get 1"
 builtin string_builder_consumed_raw(value: StringBuilder) -> U32 = "struct.get 2"

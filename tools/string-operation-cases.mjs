@@ -31,5 +31,7 @@ export function checkStringOperations(main) {
     `StringBuilder length rejects consumed state: ${index}`);
   }
   assert.equal(main(22), 1, "StringBuilder length works through a returned function");
-  return labels.length + 13;
+  assert.equal(main(23), 1, "StringBuilder default function retains aliases and grows with UTF-8 text");
+  assert.equal(main(24), 1, "StringBuilder default function can finish empty");
+  return labels.length + 15;
 }

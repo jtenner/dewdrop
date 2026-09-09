@@ -152,6 +152,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   returned-constructor and growth test. Its separate runtime entry is removed;
   the explicit-capacity allocator remains. See the
   [default constructor log](docs/research/bytes-builder-default-library-2026-09-09.md).
+  StringBuilder defaults now also run in Dew. The allocator no longer has a
+  separate default mode. Shared checks retain Unicode lengths, aliases, and
+  growth; see the [StringBuilder default log](docs/research/string-builder-default-library-2026-09-09.md).
   The SIMD load algorithm now runs in Dew too. See the
   [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
   The pinned provider's nine old Bytes algorithms and UTF-8 validator entry
