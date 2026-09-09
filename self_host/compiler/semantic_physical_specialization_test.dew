@@ -788,6 +788,52 @@ test "erased field adapters require declared generic storage and a concrete scal
   assert(self_host_linked_erased_field_box_type(link, 18446744073709551615u64, SelfHostWasmBodyCarrier::I64BodyCarrier) is Option::None, "an unknown field cannot gain an adapter")
 }
 
+test "generic enum storage belongs to one declared payload position" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"enum Mixed<t> {\n  Value(t, I32, Unit)\n}\npub fn run(value: Mixed<I64>) -> I32 {\n  0i32\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let mut checked = 0u32
+  for fragment in link.fragments.modules {
+    for field in fragment.fields {
+      match field.role {
+        SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, index) => {
+          assert(self_host_linked_generic_variant_storage(link, field) == (index == 0u32), "only the declared generic slot permits erasure")
+          assert((self_host_linked_variant_payload_box_type(link, field, SelfHostWasmBodyCarrier::I64BodyCarrier) is Option::Some(_)) == (index == 0u32), "concrete and Unit slots cannot gain a scalar box")
+          assert(self_host_linked_variant_payload_box_type(link, field, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) is Option::None, "unknown carriers cannot gain a box")
+          assert(self_host_linked_variant_payload_box_type(link, field, SelfHostWasmBodyCarrier::ConflictingBodyCarrier) is Option::None, "carrier conflicts cannot gain a box")
+          assert(self_host_linked_variant_payload_box_type(link, field, SelfHostWasmBodyCarrier::UnitBodyCarrier) is Option::None, "Unit uses its marker not a scalar box")
+          if index == 0u32 {
+            let moved = SelfHostPlannedWasmField::{
+              role: SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, 1u32)
+              declaration: field.declaration
+              physical_index: field.physical_index
+              storage: field.storage
+              mutable_: field.mutable_
+              exact_nominal: field.exact_nominal
+              offset: field.offset
+            }
+            assert(!self_host_linked_generic_variant_storage(link, moved), "another slot cannot reuse a generic field certificate")
+            let changed = SelfHostPlannedWasmField::{
+              role: field.role
+              declaration: 18446744073709551615u64
+              physical_index: field.physical_index
+              storage: field.storage
+              mutable_: field.mutable_
+              exact_nominal: field.exact_nominal
+              offset: field.offset
+            }
+            assert(!self_host_linked_generic_variant_storage(link, changed), "stored declaration and role must agree")
+          }
+          checked = checked + 1u32
+        }
+        _ => {}
+      }
+    }
+  }
+  assert(checked == 3u32, "inspect all three payload slots")
+}
+
 test "INV-002 rejects semantic errors before specialization" {
   let valid = self_host_physical_test_fragments(b"pub fn run() -> I32 {\n  7i32\n}\n")
   assert(self_host_validate_program_inference(valid.specialization.lowering) is Option::None, "valid inference can cross the phase boundary")

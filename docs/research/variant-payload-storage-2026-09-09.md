@@ -1,5 +1,9 @@
 # Variant payload storage
 
+The scalar tuple-payload failure below is fixed by the later
+[generic enum storage change](generic-enum-payload-storage-2026-09-09.md).
+Frozen variant recipes and runtime adapter removal remain open.
+
 ## Confirmed generic enum failure
 
 The self-host compiler rejects this ordinary user enum before emission:

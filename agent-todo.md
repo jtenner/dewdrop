@@ -383,11 +383,11 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete full Wasm reference checks. Check heap type and nullability,
   not just an eqref label, for call operands, results, locals, and branches.
 - [ ] Put constructor and other temporary locals in the frozen physical plan.
-  Generic user enum payloads still fail before emission: an I64 binding inherits
-  erased reference storage. Fix variant construction and extraction together;
-  do not merely change the binding carrier. Unit payload certificates now also
-  require the field role and stored declaration to agree. See the
-  [variant storage log](docs/research/variant-payload-storage-2026-09-09.md).
+  Generic tuple enum payloads now have explicit scalar boxing and checked
+  extraction based on their exact declared payload slots. This also covers
+  nested bindings/literals, Unit readers, and mixed payloads. Tuple-variant
+  recipes still need to be frozen before emission. See the
+  [generic enum log](docs/research/generic-enum-payload-storage-2026-09-09.md).
   Named struct patterns now select struct fragments using their saved
   declaration and constructor kind; they no longer search only enum variants.
   Missing or contradictory selections have no name/type fallback. See the

@@ -125,7 +125,8 @@ fn self_host_emit_nested_pattern_bindings(
           if local_slot >= plan.local_values.length() {
             return Option::Some("nested binding local is outside the body plan")
           }
-          if !self_host_body_carrier_equal(plan.local_values[local_slot].carrier, actual) {
+          if !self_host_body_carrier_equal(plan.local_values[local_slot].carrier, actual) &&
+            !(self_host_linked_pattern_payload_box_type(link, field.type_index, field.field_index, plan.local_values[local_slot].carrier) is Option::Some(_)) {
             let message = StringBuilder::new()
             message.append("ABI-710 nested binding field and local carriers disagree body=")
             message.append_u64(body.body)
@@ -146,6 +147,7 @@ fn self_host_emit_nested_pattern_bindings(
             return Option::Some(message.finish())
           }
           self_host_emit_pattern_path(link, scratch, path, destination)
+          self_host_emit_pattern_payload_unbox(link, field.type_index, field.field_index, plan.local_values[local_slot].carrier, destination)
           StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_local_set(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(slot))))
         }
         _ => if self_host_pattern_payload_span(child).length > 0u32 {
@@ -204,6 +206,8 @@ fn self_host_emit_nested_pattern_tests(
           Option::None => {}
         }
         self_host_emit_pattern_path(link, scratch, path, predicate)
+        let selected_field = path[path.length() - 1u32]
+        self_host_emit_pattern_payload_unbox(link, selected_field.type_index, selected_field.field_index, self_host_body_carrier_from_shape(child.shape), predicate)
         match child.source {
           SelfHostHirPattern::LiteralPattern(expression, _) => {
             if expression >= module_.expressions.length() {

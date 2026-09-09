@@ -18,6 +18,14 @@ fn self_host_body_pattern_field_carrier_for_shape(
   logical_shape: SelfHostPlannedValueShape,
 ) -> SelfHostWasmBodyCarrier {
   let carrier = self_host_body_physical_field_carrier(link, type_index, field_index)
+  match self_host_linked_source_payload_field(link, type_index, field_index) {
+    Option::Some(field) => if self_host_linked_generic_variant_storage(link, field) {
+      // A storage reference is not the scalar binding value. Generic logical
+      // evidence stays unknown until specialization supplies a concrete value.
+      return self_host_body_carrier_from_shape(logical_shape)
+    }
+    Option::None => {}
+  }
   if logical_shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
     for linked_type in link.types {
       if linked_type.type_index == type_index {

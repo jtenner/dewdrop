@@ -21,6 +21,14 @@ its declaration certificate. Tuple-style variant calls, runtime trait capture,
 full reference assignability, and removal of runtime adapters remain open. See
 [the object recipe log](../research/frozen-object-constructor-recipes-2026-09-08.md).
 
+Generic tuple-variant scalar storage now requires an explicit certificate from
+the exact declared payload ordinal, matching field role/declaration IDs, and
+reference storage. Construction boxes the scalar; direct/nested pattern reads
+cast and unbox it using the binding carrier. Unit remains a storage marker.
+This closes the ordinary generic enum scalar/reference carrier mismatch, not
+the frozen tuple-variant recipe or full reference assignability obligations.
+See [the generic enum log](../research/generic-enum-payload-storage-2026-09-09.md).
+
 Global initializer link records must form an exact copy of the selected source
 schedule, in dependency order and with the retained test-inclusion mode. The
 source module, declaration, body owner, logical shape, and physical global slot

@@ -948,12 +948,9 @@ fn self_host_validate_program_representation(
                           lowering_module.resolved_types,
                           logical_type,
                         )
-                        // Runtime variants carry an explicit adapter entry.
-                        // Its shared template has a reference payload; emitted
-                        // scalar variants use the adapter's concrete types.
-                        let adapted_template = expected is SelfHostPlannedValueShape::GenericPlannedValueShape &&
-                          link.runtime_variant_adapters.get(variant_declaration) is Option::Some(_) &&
-                          physical_field.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+                        // Erased storage is certified by this exact declared
+                        // generic payload position, including ordinary enums.
+                        let adapted_template = self_host_linked_generic_variant_storage(link, physical_field)
                         if !adapted_template && !self_host_program_representation_storage_matches_shape(
                           physical_field.storage,
                           expected,

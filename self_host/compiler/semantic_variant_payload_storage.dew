@@ -1,0 +1,91 @@
+// Generic erasure is permission granted by one declared payload position.
+// A different field of the same variant does not inherit that permission.
+fn self_host_linked_declared_variant_payload_shape(
+  link: SelfHostPlannedProgramWasmGCLink,
+  field: SelfHostPlannedWasmField,
+) -> Option<SelfHostPlannedValueShape> {
+  match field.role {
+    SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, index) => {
+      if field.declaration != variant {
+        return Option::None
+      }
+      for module_ in link.fragments.specialization.lowering.modules {
+        if module_.module_id == self_host_semantic_id_module(variant) {
+          for source in module_.type_layouts.variants {
+            if source.variant == variant {
+              match source.payload {
+                SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(payload) => {
+                  if index >= payload.length || !self_host_array_span_is_valid(payload.start, payload.length, module_.type_layouts.payload_types.length()) {
+                    return Option::None
+                  }
+                  let type_ = module_.type_layouts.payload_types[payload.start + index]
+                  return Option::Some(self_host_planned_resolved_value_shape(module_.resolved_types, type_))
+                }
+                _ => return Option::None
+              }
+            }
+          }
+        }
+      }
+      Option::None
+    }
+    _ => Option::None
+  }
+}
+
+fn self_host_linked_generic_variant_storage(link: SelfHostPlannedProgramWasmGCLink, field: SelfHostPlannedWasmField) -> Bool {
+  if !(field.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage) {
+    return false
+  }
+  match self_host_linked_declared_variant_payload_shape(link, field) {
+    Option::Some(shape) => shape is SelfHostPlannedValueShape::GenericPlannedValueShape
+    Option::None => false
+  }
+}
+
+fn self_host_linked_variant_payload_box_type(link: SelfHostPlannedProgramWasmGCLink, field: SelfHostPlannedWasmField, carrier: SelfHostWasmBodyCarrier) -> Option<U32> {
+  if !self_host_linked_generic_variant_storage(link, field) {
+    return Option::None
+  }
+  self_host_linked_scalar_box_type(link, carrier)
+}
+
+fn self_host_linked_source_payload_field(link: SelfHostPlannedProgramWasmGCLink, type_index: U32, field_index: U32) -> Option<SelfHostPlannedWasmField> {
+  if type_index >= link.types.length() {
+    return Option::None
+  }
+  let linked = link.types[type_index]
+  if linked.type_index != type_index || linked.module_index >= link.fragments.modules.length() {
+    return Option::None
+  }
+  let fragment = link.fragments.modules[linked.module_index]
+  if linked.fragment_index >= fragment.physical_types.length() {
+    return Option::None
+  }
+  let physical = fragment.physical_types[linked.fragment_index]
+  if field_index >= physical.fields.length || !self_host_array_span_is_valid(physical.fields.start, physical.fields.length, fragment.fields.length()) {
+    return Option::None
+  }
+  let field = fragment.fields[physical.fields.start + field_index]
+  if field.physical_index != field_index {
+    return Option::None
+  }
+  Option::Some(field)
+}
+
+fn self_host_linked_pattern_payload_box_type(link: SelfHostPlannedProgramWasmGCLink, type_index: U32, field_index: U32, carrier: SelfHostWasmBodyCarrier) -> Option<U32> {
+  match self_host_linked_source_payload_field(link, type_index, field_index) {
+    Option::Some(field) => self_host_linked_variant_payload_box_type(link, field, carrier)
+    Option::None => Option::None
+  }
+}
+
+fn self_host_emit_pattern_payload_unbox(link: SelfHostPlannedProgramWasmGCLink, type_index: U32, field_index: U32, carrier: SelfHostWasmBodyCarrier, destination: StarshineInstructions) -> Unit {
+  match self_host_linked_pattern_payload_box_type(link, type_index, field_index, carrier) {
+    Option::Some(box_type) => {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(self_host_u32_to_i32(box_type)))
+      StarshineFfi.ffi_ffi_bridge_instructions_push(destination, self_host_linked_struct_get_instruction(link, box_type, 0u32))
+    }
+    Option::None => {}
+  }
+}

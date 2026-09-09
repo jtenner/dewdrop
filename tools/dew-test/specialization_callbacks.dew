@@ -2,6 +2,169 @@ fn identity<t>(value: t) -> t {
   value
 }
 
+enum GenericEnvelope<t> {
+  Hold(t)
+  Empty
+}
+
+fn envelope<t>(value: t) -> GenericEnvelope<t> {
+  GenericEnvelope::Hold(value)
+}
+
+pub fn generic_enum_callback(value: I64) -> I64 {
+  match envelope(value) {
+    GenericEnvelope::Hold(item) => item
+    GenericEnvelope::Empty => 0i64
+  }
+}
+
+fn read_envelope<t>(source: GenericEnvelope<t>, fallback: t) -> t {
+  match source {
+    GenericEnvelope::Hold(item) => item
+    GenericEnvelope::Empty => fallback
+  }
+}
+
+pub fn generic_enum_reader_callback(value: I64) -> I64 {
+  read_envelope(envelope(value), 0i64)
+}
+
+pub fn generic_enum_nested_callback(value: I64) -> I64 {
+  match envelope(envelope(value)) {
+    GenericEnvelope::Hold(GenericEnvelope::Hold(item)) => item
+    _ => 0i64
+  }
+}
+
+enum MixedEnvelope<a, b> {
+  Entry(I32, a, Unit, b)
+}
+
+pub fn generic_enum_mixed_callback(value: I64) -> I64 {
+  match MixedEnvelope::Entry(7i32, value, (), 9i32) {
+    MixedEnvelope::Entry(prefix, item, effect, suffix) => {
+      let _ = effect
+      if prefix == 7i32 && suffix == 9i32 {
+        item
+      } else {
+        0i64
+      }
+    }
+  }
+}
+
+pub fn generic_enum_reference_callback(value: I64) -> I64 {
+  match envelope(Item::{
+    value: value
+  }) {
+    GenericEnvelope::Hold(item) => item.value
+    GenericEnvelope::Empty => 0i64
+  }
+}
+
+pub fn generic_enum_unit_callback(value: I64) -> I64 {
+  match envelope(()) {
+    GenericEnvelope::Hold(effect) => {
+      let _ = effect
+      value
+    }
+    GenericEnvelope::Empty => 0i64
+  }
+}
+
+pub fn generic_enum_float_callback(value: I64) -> I64 {
+  match MixedEnvelope::Entry(7i32, 1.25f32, (), 2.5f64) {
+    MixedEnvelope::Entry(prefix, left, effect, right) => {
+      let _ = effect
+      if prefix == 7i32 && left == 1.25f32 && right == 2.5f64 {
+        value
+      } else {
+        0i64
+      }
+    }
+  }
+}
+
+builtin enum_vector_splat(value: I32) -> I32x4 = "i32x4.splat"
+builtin enum_vector_lane(value: I32x4) -> I32 = "i32x4.extract_lane 0"
+
+pub fn generic_enum_vector_callback(value: I64) -> I64 {
+  match envelope(enum_vector_splat(7i32)) {
+    GenericEnvelope::Hold(vector) => {
+      if enum_vector_lane(vector) == 7i32 {
+        value
+      } else {
+        0i64
+      }
+    }
+    GenericEnvelope::Empty => 0i64
+  }
+}
+
+pub fn generic_enum_function_callback(value: I64) -> I64 {
+  match envelope(reader::<I64>()) {
+    GenericEnvelope::Hold(callback) => callback(value)
+    GenericEnvelope::Empty => 0i64
+  }
+}
+
+pub fn generic_enum_literal_callback(value: I64) -> I64 {
+  match envelope(envelope(7i32)) {
+    GenericEnvelope::Hold(GenericEnvelope::Hold(7i32)) => value
+    _ => 0i64
+  }
+}
+
+pub fn generic_enum_empty_callback(value: I64) -> I64 {
+  read_envelope::<I64>(GenericEnvelope::Empty, value)
+}
+
+pub fn generic_enum_unit_reader_callback(value: I64) -> I64 {
+  let effect = read_envelope(envelope(()), ())
+  let _ = effect
+  value
+}
+
+struct EnumEvaluationTrace {
+  mut order: I32
+}
+
+fn enum_evaluation_step(trace: EnumEvaluationTrace, digit: I32) -> I32 {
+  trace.order = trace.order * 10i32 + digit
+  digit
+}
+
+fn enum_evaluation_payload(trace: EnumEvaluationTrace, value: I64) -> I64 {
+  let _ = enum_evaluation_step(trace, 2i32)
+  value
+}
+
+fn enum_evaluation_effect(trace: EnumEvaluationTrace) -> Unit {
+  let _ = enum_evaluation_step(trace, 3i32)
+}
+
+pub fn generic_enum_order_callback(value: I64) -> I64 {
+  let trace = EnumEvaluationTrace::{
+    order: 0i32
+  }
+  let payload = MixedEnvelope::Entry(
+    enum_evaluation_step(trace, 1i32),
+    enum_evaluation_payload(trace, value),
+    enum_evaluation_effect(trace),
+    enum_evaluation_step(trace, 4i32),
+  )
+  match payload {
+    MixedEnvelope::Entry(prefix, item, effect, suffix) => {
+      let _ = effect
+      if trace.order == 1234i32 && prefix == 1i32 && suffix == 4i32 {
+        item
+      } else {
+        0i64
+      }
+    }
+  }
+}
+
 fn reader<t>() -> fn(t) -> t {
   identity
 }

@@ -107,36 +107,10 @@ fn self_host_linked_variant_unit_storage(
     !(field.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage) {
     return false
   }
-  match field.role {
-    SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, index) => {
-      // The role and stored declaration are independent identity witnesses.
-      // A valid payload span cannot repair a contradictory field identity.
-      if field.declaration != variant {
-        return false
-      }
-      for module_ in link.fragments.specialization.lowering.modules {
-        if module_.module_id == self_host_semantic_id_module(variant) {
-          for source in module_.type_layouts.variants {
-            if source.variant == variant {
-              match source.payload {
-                SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(payload) => {
-                  if index >= payload.length || !self_host_array_span_is_valid(payload.start, payload.length, module_.type_layouts.payload_types.length()) {
-                    return false
-                  }
-                  let type_ = module_.type_layouts.payload_types[payload.start + index]
-                  let shape = self_host_planned_resolved_value_shape(module_.resolved_types, type_)
-                  return shape is SelfHostPlannedValueShape::UnitPlannedValueShape ||
-                    shape is SelfHostPlannedValueShape::GenericPlannedValueShape
-                }
-                _ => return false
-              }
-            }
-          }
-        }
-      }
-      false
-    }
-    _ => false
+  match self_host_linked_declared_variant_payload_shape(link, field) {
+    Option::Some(shape) => shape is SelfHostPlannedValueShape::UnitPlannedValueShape ||
+      shape is SelfHostPlannedValueShape::GenericPlannedValueShape
+    Option::None => false
   }
 }
 
@@ -144,6 +118,10 @@ fn self_host_linked_erased_field_box_type(link: SelfHostPlannedProgramWasmGCLink
   if !(link.erased_fields.get(field) is Option::Some(true)) {
     return Option::None
   }
+  self_host_linked_scalar_box_type(link, carrier)
+}
+
+fn self_host_linked_scalar_box_type(link: SelfHostPlannedProgramWasmGCLink, carrier: SelfHostWasmBodyCarrier) -> Option<U32> {
   let offset = match carrier {
     SelfHostWasmBodyCarrier::I32BodyCarrier => 0u32
     SelfHostWasmBodyCarrier::I64BodyCarrier => 1u32

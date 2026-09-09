@@ -9,6 +9,14 @@ export const specializationCallbackNames = [
   "direct_bound_callback", "closed_bound_callback",
   "nested_capture_callback", "nested_mutable_capture_callback",
   "erased_capture_callback", "packed_capture_callback",
+  "generic_enum_callback",
+  "generic_enum_reader_callback", "generic_enum_nested_callback",
+  "generic_enum_mixed_callback", "generic_enum_reference_callback",
+  "generic_enum_unit_callback",
+  "generic_enum_float_callback", "generic_enum_vector_callback",
+  "generic_enum_function_callback", "generic_enum_literal_callback",
+  "generic_enum_empty_callback", "generic_enum_unit_reader_callback",
+  "generic_enum_order_callback",
 ];
 
 export function checkSpecializationCallbacks(exports) {

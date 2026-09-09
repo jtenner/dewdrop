@@ -2598,7 +2598,8 @@ fn self_host_linked_schedule_variant_arguments(
           self_host_linked_storage_shape(physical_field.storage),
         )
         let unit_marker = self_host_linked_variant_unit_storage(link, physical_field, emitted_payload_carrier)
-        if !unit_marker && !(emitted_payload_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) && !(
+        let payload_box = self_host_linked_variant_payload_box_type(link, physical_field, emitted_payload_carrier)
+        if !unit_marker && !(payload_box is Option::Some(_)) && !(emitted_payload_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) && !(
           emitted_payload_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier
         ) && !self_host_body_carrier_equal(
           emitted_payload_carrier,
@@ -3011,6 +3012,10 @@ fn self_host_linked_schedule_variant_arguments(
             _ => {}
           }
           return Option::Some(message.finish())
+        }
+        match payload_box {
+          Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(type_, destination))
+          Option::None => {}
         }
         if source_is_unit && physical_field.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage {
           tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
@@ -19523,7 +19528,8 @@ fn self_host_emit_linked_i32_expression(
                                       logical_result_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
                                     ) && !(logical_result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) &&
                                       self_host_linked_array_carrier_from_shape(field_shape) !=
-                                        self_host_linked_array_carrier_from_shape(logical_result_shape) {
+                                        self_host_linked_array_carrier_from_shape(logical_result_shape) &&
+                                      !(self_host_linked_pattern_payload_box_type(link, variant_type, physical_child, self_host_body_carrier_from_shape(logical_result_shape)) is Option::Some(_)) {
                                       let message = StringBuilder::new()
                                       message.append("linked binding match payload/result invariant failed module=")
                                       message.append_u64(module_.module_id)
@@ -19571,7 +19577,8 @@ fn self_host_emit_linked_i32_expression(
                                       }
                                       if !(expected is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) && !(
                                         actual is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier
-                                      ) && !self_host_body_carrier_equal(expected, actual) {
+                                      ) && !self_host_body_carrier_equal(expected, actual) &&
+                                        !(self_host_linked_pattern_payload_box_type(link, variant_type, physical_child, expected) is Option::Some(_)) {
                                         let message = StringBuilder::new()
                                         message.append("linked pattern payload store invariant failed module=")
                                         message.append_u64(module_.module_id)
@@ -19623,6 +19630,8 @@ fn self_host_emit_linked_i32_expression(
                                   binding_destination,
                                   self_host_linked_struct_get_instruction(link, variant_type, physical_child),
                                 )
+                                self_host_emit_pattern_payload_unbox(link, variant_type, physical_child,
+                                  self_host_linked_canonical_local_carrier(canonical_body_plan, module_, body, local), binding_destination)
                                 StarshineFfi.ffi_ffi_bridge_instructions_push(
                                   binding_destination,
                                   StarshineFfi.ffi_lib_Instruction_local_set(
