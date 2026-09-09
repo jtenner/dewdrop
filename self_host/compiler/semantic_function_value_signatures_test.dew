@@ -101,3 +101,42 @@ test "ARN-102 callback signature targets belong to their body" expect_trap "unre
 test "ARN-101 callback signature scopes require valid spans" expect_trap "unreachable" {
   self_host_test_function_value_signature(3u32)
 }
+
+fn self_host_test_missing_signature_body(kind: U32) -> Unit {
+  let source = if kind == 1u32 {
+    b"pub fn make() -> fn() -> I64 {\n  fn() -> I64 {\n    7i64\n  }\n}\n"
+  } else if kind == 2u32 {
+    b"let answer = 42i64\n"
+  } else {
+    b"pub fn run(value: fn(I32) -> I64) -> I64 {\n  value(7i32)\n}\n"
+  }
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid linked scope before one mutation")
+  let before = self_host_function_signature_scopes(link)
+  let expected_count = if kind == 1u32 {
+    2u32
+  } else {
+    1u32
+  }
+  assert(before.length() == expected_count, "every source scope is initially present")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  if kind == 1u32 {
+    module_.lambdas.clear()
+  } else {
+    module_.bodies.clear()
+  }
+  let _ = self_host_function_signature_scopes(link)
+}
+
+test "BOD-610 callback signature scopes require defined bodies" expect_trap "unreachable" {
+  self_host_test_missing_signature_body(0u32)
+}
+
+test "BOD-610 callback signature scopes require lambda bodies" expect_trap "unreachable" {
+  self_host_test_missing_signature_body(1u32)
+}
+
+test "BOD-610 callback signature scopes require initializer bodies" expect_trap "unreachable" {
+  self_host_test_missing_signature_body(2u32)
+}

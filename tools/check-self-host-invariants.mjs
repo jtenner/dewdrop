@@ -11,6 +11,18 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "BOD-610 callback signature scopes require defined bodies",
+    expected: [610, 7, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 1n, 0n, 0n],
+  },
+  {
+    name: "BOD-610 callback signature scopes require lambda bodies",
+    expected: [610, 7, 5100n, 5100n << 32n, 18446744073709551615n, 4294967295, 1n, 0n, 0n],
+  },
+  {
+    name: "BOD-610 callback signature scopes require initializer bodies",
+    expected: [610, 7, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 1n, 0n, 1n],
+  },
+  {
     name: "ARN-102 callback signature targets belong to their body",
     expected: [102, 7, 5100n, 5100n << 32n, 5100n << 32n, 2, 3n, 4294967295n, 0n],
   },

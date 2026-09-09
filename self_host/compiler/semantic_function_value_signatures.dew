@@ -25,8 +25,24 @@ fn self_host_function_signature_scopes(link: SelfHostPlannedProgramWasmGCLink) -
     let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, function_.module_index, function_.specialization)
     let fragment = link.fragments.modules[function_.module_index].functions[function_.fragment_index]
     let body = match fragment.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(id) => self_host_linked_i32_body(module_, id)
-      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(id) => self_host_linked_lambda_body(module_, id)
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(id) => {
+        let found = self_host_linked_i32_body(module_, id)
+        if found is Option::None {
+          self_host_call_read_failure(module_.module_id, fragment.declaration, id,
+            4294967295u32, 610u32, 1u64, 0u64, 0u64)
+        }
+        found
+      }
+      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(id) => {
+        let found = self_host_linked_lambda_body(module_, id)
+        if found is Option::None {
+          // A missing lambda cannot supply a root body. Keep that absence
+          // explicit; the fragment still supplies its parent declaration.
+          self_host_call_read_failure(module_.module_id, fragment.declaration,
+            18446744073709551615u64, 4294967295u32, 610u32, 1u64, 0u64, u32_into_u64(id))
+        }
+        found
+      }
       _ => Option::None
     }
     match body {
@@ -51,7 +67,8 @@ fn self_host_function_signature_scopes(link: SelfHostPlannedProgramWasmGCLink) -
         expressions: value.expressions
       })
       Option::None => {
-        let _ = self_host_assert_compiler_invariant(false, "BOD-610 initializer signature scope has no body")
+        self_host_call_read_failure(module_.module_id, initializer.declaration, initializer.body,
+          4294967295u32, 610u32, 1u64, 0u64, 1u64)
       }
     }
   }
