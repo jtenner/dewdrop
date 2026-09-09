@@ -18,9 +18,19 @@ pub fn string_builder_byte_length(value: StringBuilder) -> U32 {
   }
   string_builder_length_raw(value)
 }
-pub builtin string_builder_append(value: StringBuilder, part: String) -> Unit = "dew_string_builder_append"
-pub builtin string_builder_append_view(value: StringBuilder, part: StringView) -> Unit = "dew_string_builder_append_view"
-pub builtin string_builder_append_ascii(value: StringBuilder, byte: U8) -> Unit = "dew_string_builder_append_ascii"
+builtin string_builder_bytes_raw(value: StringBuilder) -> BytesBuilder = "ref.cast"
+pub fn string_builder_append(value: StringBuilder, part: String) -> Unit {
+  bytes_builder_append(string_builder_bytes_raw(value), string_as_bytes_unchecked(part))
+}
+pub fn string_builder_append_view(value: StringBuilder, part: StringView) -> Unit {
+  bytes_builder_append(string_builder_bytes_raw(value), string_view_as_bytes_unchecked(part))
+}
+pub fn string_builder_append_ascii(value: StringBuilder, byte: U8) -> Unit {
+  if byte > 127u8 {
+    unreachable()
+  }
+  bytes_builder_append_byte(string_builder_bytes_raw(value), byte)
+}
 pub builtin string_builder_append_scalar(value: StringBuilder, scalar: U32) -> Unit = "dew_string_builder_append_scalar"
 pub builtin string_builder_finish(value: StringBuilder) -> String = "dew_string_builder_finish"
 pub fn bytes_builder_new() -> BytesBuilder {

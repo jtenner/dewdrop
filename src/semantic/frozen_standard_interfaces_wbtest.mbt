@@ -1,4 +1,32 @@
 ///|
+test "returned imported function values remain reachable without a direct call" {
+  let program = collect_program_manifest(
+    3901UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"open dew.std.string\nopen dew.std.string_builder\nopen dew.std.text_runtime\npub fn operation() -> fn(StringBuilder, StringView) -> Unit {\n  string_builder_append_view\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = analyze_program_semantics(program)
+  let lowering = plan_program_lowering(program, analyzed)
+  let roots = program_reachable_callable_roots(
+    analyzed, lowering, false, compile_time_demand_instances(lowering),
+  )
+  let owner = program.module_index("dew.std.text_runtime").unwrap()
+  let declaration = program.modules[owner]
+    .lookup_value("string_builder_append_view")
+    .unwrap()
+  assert_true(roots.contains(declaration))
+  let fragments = plan_program_wasmgc_fragments(analyzed, lowering)
+  assert_false(
+    fragments.modules[owner].function_of(declaration).unwrap().elided,
+  )
+}
+
+///|
 test "frozen standard runtime calls remain reachable" {
   let program = collect_program_manifest(
     3900UL,

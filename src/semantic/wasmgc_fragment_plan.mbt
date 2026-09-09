@@ -2202,9 +2202,6 @@ fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
   name == b"dew_string_view" ||
   name == b"dew_string_view_view" ||
   name == b"dew_string_builder_with_capacity" ||
-  name == b"dew_string_builder_append" ||
-  name == b"dew_string_builder_append_view" ||
-  name == b"dew_string_builder_append_ascii" ||
   name == b"dew_string_builder_append_scalar" ||
   name == b"dew_string_builder_finish" ||
   name == b"dew_bytes_builder_with_capacity" ||

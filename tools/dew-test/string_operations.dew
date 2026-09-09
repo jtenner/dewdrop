@@ -183,6 +183,55 @@ pub fn main(case: U32) -> I32 {
   } else if case == 26u32 {
     let bytes = string_into_bytes("λ😀")
     string_result(bytes == b"\xce\xbb\xf0\x9f\x98\x80")
+  } else if case == 27u32 {
+    let append = string_append_operation()
+    let builder = StringBuilder::with_capacity(0u32)
+    let source = "!λ😀?".view(1u32, 6u32).to_string()
+    append(builder, source)
+    append(builder, "")
+    append(builder, source)
+    string_result(builder.finish() == "λ😀λ😀" && source == "λ😀")
+  } else if case == 28u32 {
+    let append = string_append_view_operation()
+    let builder = StringBuilder::with_capacity(0u32)
+    let source = "!xxλ😀yy?".view(1u32, 10u32).view(2u32, 6u32)
+    append(builder, source)
+    append(builder, source.view(0u32, 0u32))
+    append(builder, source)
+    string_result(builder.finish() == "λ😀λ😀" && source.as_bytes() == b"\xce\xbb\xf0\x9f\x98\x80")
+  } else if case == 29u32 {
+    let append = string_append_ascii_operation()
+    let builder = StringBuilder::with_capacity(0u32)
+    append(builder, 0u8)
+    append(builder, 127u8)
+    string_result(builder.finish().as_bytes() == b"\x00\x7f")
+  } else if case == 30u32 {
+    let append = string_append_ascii_operation()
+    let builder = StringBuilder::new()
+    append(builder, 128u8)
+    0i32
+  } else if case == 31u32 {
+    let builder = StringBuilder::new()
+    let _ = builder.finish()
+    string_append_operation()(builder, "")
+    0i32
+  } else if case == 32u32 {
+    let builder = StringBuilder::new()
+    let _ = builder.finish()
+    string_append_view_operation()(builder, "".view(0u32, 0u32))
+    0i32
+  } else if case == 33u32 {
+    let builder = StringBuilder::new()
+    let _ = builder.finish()
+    string_append_ascii_operation()(builder, 0u8)
+    0i32
+  } else if case == 34u32 {
+    let builder = StringBuilder::new()
+    let log = StringLoadLog::{
+      order: 0u32
+    }
+    string_append_operation()(string_append_builder(log, builder), string_append_part(log))
+    string_result(log.order == 12u32 && builder.finish() == "λ")
   } else {
     unreachable()
   }
@@ -190,6 +239,28 @@ pub fn main(case: U32) -> I32 {
 
 fn string_builder_length_operation() -> fn(StringBuilder) -> U32 {
   string_builder_byte_length
+}
+
+fn string_append_operation() -> fn(StringBuilder, String) -> Unit {
+  string_builder_append
+}
+
+fn string_append_view_operation() -> fn(StringBuilder, StringView) -> Unit {
+  string_builder_append_view
+}
+
+fn string_append_ascii_operation() -> fn(StringBuilder, U8) -> Unit {
+  string_builder_append_ascii
+}
+
+fn string_append_builder(log: StringLoadLog, builder: StringBuilder) -> StringBuilder {
+  log.order = log.order * 10u32 + 1u32
+  builder
+}
+
+fn string_append_part(log: StringLoadLog) -> String {
+  log.order = log.order * 10u32 + 2u32
+  "λ"
 }
 
 fn string_builder_default_operation() -> fn() -> StringBuilder {

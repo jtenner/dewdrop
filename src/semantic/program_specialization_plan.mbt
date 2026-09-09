@@ -189,7 +189,7 @@ fn program_reachable_callable_roots(
           lowering, module_, expression, reachable, work,
         )
         let target = match
-          program_call_target_and_arguments(module_.expressions[expression]) {
+          program_evidence_target_and_arguments(module_.expressions[expression]) {
           Some((target, _)) => target
           _ => continue
         }
@@ -233,7 +233,7 @@ fn program_reachable_callable_roots(
           lowering, module_, expression, reachable, work,
         )
         let target = match
-          program_call_target_and_arguments(module_.expressions[expression]) {
+          program_evidence_target_and_arguments(module_.expressions[expression]) {
           Some((target, _)) => target
           _ => continue
         }

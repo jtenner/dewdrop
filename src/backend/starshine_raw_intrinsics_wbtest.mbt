@@ -41,6 +41,14 @@ test "String raw cast emits one instruction with the Bytes result heap" {
 }
 
 ///|
+test "StringBuilder raw cast emits one instruction with the BytesBuilder heap" {
+  backend_test_raw_text_cast_instruction(
+    b"builtin cast(value: StringBuilder) -> BytesBuilder = \"ref.cast\"\npub fn run(value: StringBuilder) -> BytesBuilder {\n  cast(value)\n}\n",
+    5,
+  )
+}
+
+///|
 test "raw reference casts retain primitive result heaps without runtime imports" {
   let stages = backend_test_single_module_stages(
     28235UL, b"builtin cast(value: Bytes) -> String = \"ref.cast\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n",

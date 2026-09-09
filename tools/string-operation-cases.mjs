@@ -35,5 +35,16 @@ export function checkStringOperations(main) {
   assert.equal(main(24), 1, "StringBuilder default function can finish empty");
   assert.equal(main(25), 1, "String-to-Bytes raw function retains Unicode slices and empty values");
   assert.equal(main(26), 1, "String Into Bytes preserves UTF-8 bytes");
-  return labels.length + 17;
+  for (const [index, label] of [[27, "returned String append preserves input"],
+    [28, "returned view append preserves nested Unicode ranges"],
+    [29, "returned ASCII append accepts both limits"],
+    [34, "append arguments run once in source order"]]) {
+    assert.equal(main(index), 1, `StringBuilder ${label}`);
+  }
+  for (const index of [30, 31, 32, 33]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `StringBuilder append rejects invalid ASCII or consumed state: ${index}`);
+  }
+  return labels.length + 25;
 }

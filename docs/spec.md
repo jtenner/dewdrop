@@ -903,6 +903,13 @@ Bodies without member syntax use shared empty member arrays, and selection stora
 
 `StringBuilder` appends every I8/I16/I32/I64/U8/U16/U32/U64 value directly as decimal text without a temporary String. Signed minima use an unsigned magnitude and do not overflow. Show uses the same integer path and provides deterministic forms for Array, FixedArray, Option, and Result under the existing depth and byte limits. `render_compiler_diagnostic` checks the exact required byte count before publishing `path:line:column: level[code]: message (byte offset)` and returns a typed limit error instead of partial output.
 
+StringBuilder's String, StringView, and ASCII append functions are ordinary Dew
+bodies. A private typed reference cast shares the mutable BytesBuilder storage
+and consumed state without allocating a replacement. ASCII range checking is
+Dew code. Byte copying, growth, capacity, scalar encoding, and finish remain
+temporary runtime support. Returned function values retain their targets and
+dependencies in the same program reachability queue as direct calls.
+
 `dew.std.blake3` implements portable one-shot BLAKE3-256 over Bytes with scalar U32 compression, 64-byte blocks, 1024-byte chunks, and deterministic parent-tree reduction. `blake3` returns 32 `FixedArray<U8>` bytes; `blake3_hash32` returns the first little-endian U32 lane used for cache-pack lookup.
 
 `dew.std.integrity.sha256` implements portable one-shot SHA-256 over Bytes with scalar U32 compression and standard 64-byte padding. `sha256` returns 32 digest bytes as `FixedArray<U8>` in network byte order.

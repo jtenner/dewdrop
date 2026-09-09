@@ -172,6 +172,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   StringBuilder defaults now also run in Dew. The allocator no longer has a
   separate default mode. Shared checks retain Unicode lengths, aliases, and
   growth; see the [StringBuilder default log](docs/research/string-builder-default-library-2026-09-09.md).
+  String, view, and ASCII builder append now have Dew bodies and a private raw
+  cast to the same BytesBuilder storage. The program reachability queue now
+  retains returned function targets as well as calls. Scalar encoding, capacity,
+  finish, and byte storage remain open. See the
+  [StringBuilder append log](docs/research/string-builder-append-library-2026-09-09.md).
   The SIMD load algorithm now runs in Dew too. See the
   [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
   The pinned provider's nine old Bytes algorithms and UTF-8 validator entry

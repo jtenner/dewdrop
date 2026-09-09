@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 export function checkRawGcStorage(main) {
-  for (const test of [...Array(14).keys(), 15, 17]) {
+  for (const test of [...Array(14).keys(), 15, 17, 18, 20]) {
     assert.equal(main(test), 1, `raw Wasm GC storage case ${test}`);
   }
   assert.throws(() => main(14), error =>
@@ -10,5 +10,8 @@ export function checkRawGcStorage(main) {
   assert.throws(() => main(16), error =>
     error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
   "raw ref.cast preserves a nonreturning operand");
-  return 18;
+  assert.throws(() => main(19), error =>
+    error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+  "builder casts retain the shared consumed state");
+  return 21;
 }

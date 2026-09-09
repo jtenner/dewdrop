@@ -1,4 +1,7 @@
 open dew.std.wasm.intrinsics
+open dew.std.string
+open dew.std.string_builder
+open dew.std.bytes_builder
 
 struct RawBacking<t> {
   mut storage: WasmArray<t>
@@ -15,6 +18,11 @@ builtin raw_bytes_as_string(value: Bytes) -> String = "ref.cast"
 builtin raw_string_as_bytes(value: String) -> Bytes = "ref.cast"
 builtin raw_cell_cast(value: RawCell) -> RawCell = "ref.cast"
 builtin raw_bytes_as_cell(value: Bytes) -> RawCell = "ref.cast"
+builtin raw_builder_as_bytes(value: StringBuilder) -> BytesBuilder = "ref.cast"
+
+fn raw_builder_caster() -> fn(StringBuilder) -> BytesBuilder {
+  raw_builder_as_bytes
+}
 
 struct RawCastLog {
   mut count: U32
@@ -186,6 +194,36 @@ pub fn main(case: U32) -> I32 {
     }
   } else if case == 17u32 {
     if raw_string_length(raw_bytes_as_string(b"")) == 0u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 18u32 {
+    let builder = StringBuilder::new()
+    let bytes = raw_builder_as_bytes(builder)
+    bytes.append_byte(65u8)
+    bytes.append(b"B")
+    if builder.byte_length() == 2u32 && builder.finish() == "AB" {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 19u32 {
+    let builder = StringBuilder::new()
+    let bytes = raw_builder_as_bytes(builder)
+    bytes.append_byte(65u8)
+    let _ = bytes.finish()
+    if builder.byte_length() == 1u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 20u32 {
+    let builder = StringBuilder::with_capacity(0u32)
+    let cast = raw_builder_caster()
+    let bytes = cast(builder)
+    bytes.append(b"\xce\xbb\xf0\x9f\x98\x80")
+    if builder.byte_length() == 6u32 && builder.finish() == "λ😀" {
       1i32
     } else {
       0i32
