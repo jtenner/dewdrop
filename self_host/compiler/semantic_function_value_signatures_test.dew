@@ -1,0 +1,103 @@
+fn self_host_test_signature_expression(source: SelfHostPlannedExpression, type_: I32, kind: SelfHostPlannedExpressionKind) -> SelfHostPlannedExpression {
+  SelfHostPlannedExpression::{
+    type_: type_
+    shape: source.shape
+    nominal: source.nominal
+    flow: source.flow
+    kind: kind
+    selection: source.selection
+    reference: source.reference
+    call_target: source.call_target
+    call_type_arguments: source.call_type_arguments
+    source_name: source.source_name
+    member_base: source.member_base
+    offset: source.offset
+  }
+}
+
+fn self_host_test_function_value_signature(mutation: U32) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn run(value: fn(I32) -> I64) -> I64 {\n  value(7i32)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 0u32, "valid callback plan before one mutation")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = 0u32
+  let mut expression_id = 0u32
+  for expression in module_.expressions {
+    match expression.kind {
+      SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, arguments, span) => {
+        if mutation == 1u32 {
+          let source = module_.expressions[target]
+          module_.expressions[target] = self_host_test_signature_expression(source, -1i32, source.kind)
+        } else if mutation == 2u32 {
+          module_.expressions[expression_id] = self_host_test_signature_expression(expression, expression.type_,
+            SelfHostPlannedExpressionKind::PlannedFunctionValueCall(4294967295u32, arguments, span))
+        }
+        checked = checked + 1u32
+      }
+      _ => {}
+    }
+    expression_id = expression_id + 1u32
+  }
+  assert(checked == 1u32, "exactly one callback target checked")
+  if mutation == 3u32 {
+    let source = module_.bodies[0u32]
+    module_.bodies[0u32] = SelfHostPlannedBodyLowering::{
+      body: source.body
+      declaration: source.declaration
+      kind: source.kind
+      root: source.root
+      root_type: source.root_type
+      root_shape: source.root_shape
+      result_shape: source.result_shape
+      flow: source.flow
+      locals: source.locals
+      local_initializers: source.local_initializers
+      local_assignments: source.local_assignments
+      expressions: SelfHostHirSpan::{
+        start: 4294967295u32
+        length: source.expressions.length
+      }
+      blocks: source.blocks
+      patterns: source.patterns
+      pattern_arms: source.pattern_arms
+    }
+  }
+  let signatures = []
+  let error = self_host_linked_append_function_value_signatures(link,
+    StarshineFfi.ffi_ffi_bridge_rec_types_new(), signatures)
+  assert(error is Option::None, "valid callback signature emits without a fallback")
+  assert(signatures.length() == 1u32, "one exact callback signature")
+}
+
+test "function value signatures use the target function type" {
+  self_host_test_function_value_signature(0u32)
+}
+
+test "lambda callback scopes retain their parent declaration" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn make(value: fn(I32) -> I64) -> fn() -> I64 {\n  fn() -> I64 {\n    value(7i32)\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let scopes = self_host_function_signature_scopes(link)
+  assert(scopes.length() == 2u32, "one function scope and one lambda scope")
+  for scope in scopes {
+    assert(scope.declaration == module_.bodies[0u32].declaration, "scope retains the exact source declaration, not an anonymous placeholder")
+    assert(scope.body == module_.bodies[0u32].body, "scope retains the root body identity")
+  }
+}
+
+test "ABI-704 missing callback types cannot be rebuilt from operands" expect_trap "unreachable" {
+  self_host_test_function_value_signature(1u32)
+}
+
+test "ARN-102 callback signature targets belong to their body" expect_trap "unreachable" {
+  self_host_test_function_value_signature(2u32)
+}
+
+test "ARN-101 callback signature scopes require valid spans" expect_trap "unreachable" {
+  self_host_test_function_value_signature(3u32)
+}

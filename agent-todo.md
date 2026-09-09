@@ -426,6 +426,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Other shape selectors still need cleanup. See the
   [call read log](docs/research/frozen-call-target-reads-2026-09-09.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
+  Callback signatures now require the target's function type; missing evidence
+  cannot be rebuilt from operands. Scope spans and target membership have exact
+  numeric checks, and lambda diagnostics retain the parent declaration. See the
+  [callback signature log](docs/research/callback-signature-targets-2026-09-09.md).
   Operator calls now use saved left-receiver/right-argument recipes and the
   full call-argument verifier. Their type-argument span is no longer read as
   expression children. Direct calls with missing targets report BOD-607 rather

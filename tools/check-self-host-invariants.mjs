@@ -10,6 +10,18 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  {
+    name: "ARN-102 callback signature targets belong to their body",
+    expected: [102, 7, 5100n, 5100n << 32n, 5100n << 32n, 2, 3n, 4294967295n, 0n],
+  },
+  {
+    name: "ARN-101 callback signature scopes require valid spans",
+    expected: [101, 7, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 3n, 3n, 4294967295n],
+  },
+  {
+    name: "ABI-704 missing callback types cannot be rebuilt from operands",
+    expected: [704, 7, 5100n, 5100n << 32n, 5100n << 32n, 2, 1n, 0n, 0n],
+  },
   ...[
     ["ABI-714 raw reference cast receiver cannot disappear", 45n],
     ["ABI-714 raw reference cast selected heap cannot change", 45n],

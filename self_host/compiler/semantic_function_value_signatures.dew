@@ -10,6 +10,8 @@ fn self_host_linked_append_specialized_signature_type(module_: SelfHostPlannedMo
 struct SelfHostFunctionSignatureScope {
   module_index: U32
   specialization: U32
+  declaration: U64
+  body: U64
   expressions: SelfHostHirSpan
 }
 
@@ -31,6 +33,8 @@ fn self_host_function_signature_scopes(link: SelfHostPlannedProgramWasmGCLink) -
       Option::Some(value) => scopes.push(SelfHostFunctionSignatureScope::{
         module_index: function_.module_index
         specialization: function_.specialization
+        declaration: fragment.declaration
+        body: value.body
         expressions: value.expressions
       })
       Option::None => {}
@@ -42,6 +46,8 @@ fn self_host_function_signature_scopes(link: SelfHostPlannedProgramWasmGCLink) -
       Option::Some(value) => scopes.push(SelfHostFunctionSignatureScope::{
         module_index: initializer.module_index
         specialization: 4294967295u32
+        declaration: value.declaration
+        body: value.body
         expressions: value.expressions
       })
       Option::None => {
@@ -61,41 +67,34 @@ fn self_host_linked_append_function_value_signatures(link: SelfHostPlannedProgra
     } else {
       Option::None
     }
-    self_host_assert_array_span(scope.expressions.start, scope.expressions.length, module_.expressions.length(), "ARN-101 function-value signature scope")
+    if !self_host_array_span_is_valid(scope.expressions.start, scope.expressions.length, module_.expressions.length()) {
+      self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+        4294967295u32, 101u32, u32_into_u64(module_.expressions.length()),
+        u32_into_u64(scope.expressions.length), u32_into_u64(scope.expressions.start))
+    }
     let _ = while 0u32 {
       relative => if relative < scope.expressions.length {
         let expression_id = scope.expressions.start + relative
         let expression = module_.expressions[expression_id]
         match expression.kind {
-          SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, arguments, _) => if self_host_linked_function_value_signature(signatures, module_.module_id, scope.specialization, expression_id) is Option::None {
+          SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, _, _) => if self_host_linked_function_value_signature(signatures, module_.module_id, scope.specialization, expression_id) is Option::None {
+            if target < scope.expressions.start || target - scope.expressions.start >= scope.expressions.length {
+              self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+                expression_id, 102u32, u32_into_u64(scope.expressions.length),
+                u32_into_u64(target), u32_into_u64(scope.expressions.start))
+            }
             let direct_parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
             let entry_parameters = StarshineFfi.ffi_ffi_bridge_val_types_new()
             let direct_results = StarshineFfi.ffi_ffi_bridge_val_types_new()
             let entry_results = StarshineFfi.ffi_ffi_bridge_val_types_new()
             StarshineFfi.ffi_ffi_bridge_val_types_push(entry_parameters, self_host_linked_eqref_value_type())
-            let target_signature = target < module_.expressions.length() && self_host_linked_append_body_function_signature(
+            let target_signature = self_host_linked_append_body_function_signature(
               module_, request, shapes, module_.expressions[target].type_, direct_parameters, entry_parameters, direct_results, entry_results,
             )
             let result_shape = self_host_lambda_request_shape(module_, request, shapes, expression.type_, self_host_linked_function_value_result_shape(link, module_, expression_id))
             if !target_signature {
-              self_host_assert_array_span(arguments.start, arguments.length, module_.expression_children.length(), "ARN-101 indirect call arguments")
-              let _ = while 0u32 {
-                index => if index < arguments.length {
-                  let child = module_.expression_children[arguments.start + index]
-                  self_host_assert_array_index(child, module_.expressions.length(), "ARN-104 indirect call operand")
-                  let shape = self_host_lambda_request_shape(module_, request, shapes, module_.expressions[child].type_, self_host_linked_function_value_argument_shape(link, module_, child))
-                  if self_host_specialization_shape_error(shape) != 0u32 {
-                    return Option::Some("ABI-704 unresolved indirect call operand")
-                  }
-                  self_host_linked_append_shape_value_types(direct_parameters, shape)
-                  self_host_linked_append_shape_value_types(entry_parameters, shape)
-                  continue index + 1u32
-                } else {
-                  break self_host_semantic_unit()
-                }
-              }
-              self_host_linked_append_shape_value_types(direct_results, result_shape)
-              self_host_linked_append_shape_value_types(entry_results, result_shape)
+              self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+                expression_id, 704u32, 1u64, 0u64, u32_into_u64(target))
             }
             let direct_type = self_host_linked_function_value_type_base(link) + signatures.length() * 2u32
             self_host_linked_append_function_value_type(rec_types, direct_parameters, direct_results)
