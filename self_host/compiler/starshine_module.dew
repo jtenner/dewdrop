@@ -8346,17 +8346,6 @@ fn self_host_linked_exact_expression_shape(
 }
 
 
-fn self_host_linked_body_parameter_offset(
-  module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
-) -> U32 {
-  let _ = module_.module_id
-  if self_host_u64_equal(body.declaration, 18446744073709551615u64) {
-    1u32
-  } else {
-    0u32
-  }
-}
 
 fn self_host_linked_i32_scratch_slot(
   canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
@@ -8369,49 +8358,6 @@ fn self_host_linked_i32_scratch_slot(
   self_host_physical_scratch_slot(canonical, module_, body, expression, 0u32)
 }
 
-fn self_host_linked_i32_local_slot(
-  canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
-  module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
-  local_id: U32,
-) -> Option<U32> {
-  match canonical {
-    Option::Some(plan) => {
-      let relative = self_host_body_local_slot(module_, body, local_id)
-      if relative < plan.local_slots.length() {
-        let slot = plan.local_slots[relative]
-        return if self_host_u32_equal(slot, 4294967295u32) {
-          Option::None
-        } else {
-          Option::Some(slot)
-        }
-      }
-      return Option::None
-    }
-    Option::None => {}
-  }
-  let mut offset = 0u32
-  let mut physical = self_host_linked_body_parameter_offset(module_, body)
-  let _ = while offset {
-    current => if current < body.locals.length {
-      let local = module_.locals[self_host_u32_add(body.locals.start, current)]
-      if self_host_u32_equal(local.local_id, local_id) {
-        return if !self_host_linked_local_is_erased(canonical, module_, body, local.local_id) {
-          Option::Some(physical)
-        } else {
-          Option::None
-        }
-      }
-      if !self_host_linked_local_is_erased(canonical, module_, body, local.local_id) {
-        physical = physical + 1u32
-      }
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  Option::None
-}
 
 fn self_host_linked_physical_function_index(function_index: U32) -> U32 {
   let _ = self_host_assert_compiler_invariant_with_failure(

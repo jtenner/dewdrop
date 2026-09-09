@@ -33,6 +33,16 @@ class LocalDeclarationPolicy(unittest.TestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, source)
 
+    def test_local_slot_reads_do_not_infer_erasure_from_shapes(self):
+        source = (COMPILER / "starshine_physical_locals.dew").read_text()
+        for forbidden in ("self_host_capture_has_value(",
+                          "self_host_linked_body_parameter_offset(",
+                          "self_host_linked_physical_local_count("):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, source)
+        self.assertIn("self_host_local_declaration_plan(canonical, module_, body)", source)
+        self.assertIn("slot < environment || slot >= limit", source)
+
 
 if __name__ == "__main__":
     unittest.main()

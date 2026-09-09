@@ -20,6 +20,12 @@ const probes = [
     ["ABI-710 emitted local count equals the saved physical count", 710, 2n, 1n, 3n],
     ["ARN-103 emitted locals require the complete carrier table", 103, 1n, 0n, 1n],
     ["BOD-610 emitted local declarations require a body plan", 610, 1n, 0n, 0n],
+    ["BOD-610 local slot reads require a frozen body plan", 610, 1n, 0n, 0n],
+    ["BOD-610 local erasure reads require a frozen body plan", 610, 1n, 0n, 0n],
+    ["ARN-103 local erasure reads cannot repair missing slots from source shapes", 103, 1n, 0n, 2n],
+    ["ARN-106 local slot reads require the requested local identity", 106, 999n, 4294967295n, 5n],
+    ["ABI-710 local slot reads reject slots beyond the frozen local count", 710, 1n, 99n, 4n << 32n],
+    ["ABI-710 a stored scalar local cannot become erased", 710, 1n, 4294967295n, 4n << 32n],
   ].map(([name, code, expected, actual, detail]) => ({
     name,
     expected: [code, 7, 5100n, 5100n << 32n, 5100n << 32n,

@@ -417,6 +417,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   body and its 13 unused helpers are removed. Full reference and remaining
   adapter checks are still open. See the
   [local declaration log](docs/research/frozen-local-declarations-2026-09-09.md).
+  Local slot and erasure reads also require the frozen plan, complete tables,
+  requested identity, concrete stored carrier, and valid physical range.
+  Missing plans cannot reconstruct slots from source shapes or counts. See the
+  [local slot log](docs/research/frozen-local-slot-reads-2026-09-09.md).
   Generic tuple enum payloads now have explicit scalar boxing and checked
   extraction based on their exact declared payload slots. This also covers
   nested bindings/literals, Unit readers, and mixed payloads. See the

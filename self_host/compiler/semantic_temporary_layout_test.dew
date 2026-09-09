@@ -109,6 +109,58 @@ test "non-returning initializers do not allocate unresolved local slots" {
   assert(checked == 1u32, "one non-returning binding checked")
 }
 
+test "BOD-610 local slot reads require a frozen body plan" expect_trap "unreachable" {
+  let (link, _) = self_host_test_frozen_local_declarations()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let _ = self_host_linked_i32_local_slot(Option::None, module_, module_.bodies[0u32], 0u32)
+}
+
+test "BOD-610 local erasure reads require a frozen body plan" expect_trap "unreachable" {
+  let (link, _) = self_host_test_frozen_local_declarations()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let _ = self_host_linked_local_is_erased(Option::None, module_, module_.bodies[0u32], 0u32)
+}
+
+test "ARN-103 local erasure reads cannot repair missing slots from source shapes" expect_trap "unreachable" {
+  let (link, plan) = self_host_test_frozen_local_declarations()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let _ = plan.local_slots.pop()
+  let _ = self_host_linked_local_is_erased(Option::Some(plan), module_, module_.bodies[0u32], 0u32)
+}
+
+test "ARN-106 local slot reads require the requested local identity" expect_trap "unreachable" {
+  let (link, plan) = self_host_test_frozen_local_declarations()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let _ = self_host_linked_i32_local_slot(Option::Some(plan), module_, module_.bodies[0u32], 999u32)
+}
+
+test "ABI-710 local slot reads reject slots beyond the frozen local count" expect_trap "unreachable" {
+  let (link, plan) = self_host_test_frozen_local_declarations()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  plan.local_slots[0u32] = 99u32
+  let _ = self_host_linked_i32_local_slot(Option::Some(plan), module_, module_.bodies[0u32], 0u32)
+}
+
+test "ABI-710 a stored scalar local cannot become erased" expect_trap "unreachable" {
+  let (link, plan) = self_host_test_frozen_local_declarations()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  plan.local_slots[0u32] = 4294967295u32
+  let _ = self_host_linked_i32_local_slot(Option::Some(plan), module_, module_.bodies[0u32], 0u32)
+}
+
+test "Unit local slot reads preserve physical erasure" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn run() -> Unit {\n  let empty = ()\n  empty\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 0u32, "valid erased local")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let plan = physical.bodies[0u32]
+  assert(self_host_linked_i32_local_slot(Option::Some(plan), module_, module_.bodies[0u32], 0u32) is Option::None, "Unit has no slot")
+  assert(self_host_linked_local_is_erased(Option::Some(plan), module_, module_.bodies[0u32], 0u32), "Unit erasure uses the saved plan")
+}
+
 test "ordinary function names do not add collection temporary locals" {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
     b"fn self_host_array_pop(value: I64) -> I64 {\n  value\n}\npub fn main() -> I64 {\n  self_host_array_pop(42i64)\n}\n",
