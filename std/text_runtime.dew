@@ -3,9 +3,29 @@ open dew.std.wasm.intrinsics
 pub fn string_as_bytes_unchecked(value: String) -> Bytes {
   __dew_text_bytes(value)
 }
-pub builtin string_view(value: String, start: U32, length: U32) -> StringView = "dew_string_view"
+pub fn string_view(value: String, start: U32, length: U32) -> StringView {
+  string_view_range(string_as_bytes_unchecked(value), start, length)
+}
 pub builtin string_view_as_bytes_unchecked(value: StringView) -> Bytes = "ref.cast"
-pub builtin string_view_view(value: StringView, start: U32, length: U32) -> StringView = "dew_string_view_view"
+pub fn string_view_view(value: StringView, start: U32, length: U32) -> StringView {
+  string_view_range(string_view_as_bytes_unchecked(value), start, length)
+}
+
+builtin string_view_range_value(value: Bytes) -> StringView = "ref.cast"
+
+fn string_view_range(value: Bytes, start: U32, length: U32) -> StringView {
+  let range = bytes_view(value, start, length)
+  let source_length = bytes_byte_length(value)
+  // The checked Bytes view proves start + length <= source_length.
+  let end = start + length
+  if start > 0u32 && start < source_length && (bytes_byte_at(value, start) & 192u8) == 128u8 {
+    unreachable()
+  }
+  if end < source_length && (bytes_byte_at(value, end) & 192u8) == 128u8 {
+    unreachable()
+  }
+  string_view_range_value(range)
+}
 pub fn string_builder_new() -> StringBuilder {
   string_builder_with_capacity_raw(64u32)
 }

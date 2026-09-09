@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Current handoff updated September 8, 2026. The older deferred backlog below
+> Current handoff updated September 9, 2026. The older deferred backlog below
 > comes from [`docs/roadmap.md`](docs/roadmap.md); it is not a claim that the whole
 > roadmap was re-audited today. Use small commits with tests, docs, and measured
 > compiler runs. Fix correctness before speed. Do not push without a new request.
@@ -142,6 +142,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   the native/provider runtime entry removed. Both compilers, integration,
   and clean bootstrap checks pass; see
   the [Bytes view log](docs/research/bytes-view-library-2026-09-09.md).
+  String/StringView slicing also uses Dew boundary checks over Bytes views.
+  This fixes empty ranges at exact V128 array ends. Native, self-host,
+  integration, generated, and clean bootstrap checks pass; see the
+  [StringView log](docs/research/string-view-library-2026-09-09.md).
   Raw `struct.get N` now retains a concrete struct owner and physical field
   index in both compilers, including function-value wrappers and the native
   fragment codec. It accepts unpacked scalar fields only. Packed/reference

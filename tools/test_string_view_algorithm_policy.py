@@ -5,7 +5,7 @@ import unittest
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {"byte_length": "byte_length", "byte_at": "byte_at", "to_string": "to_string",
+NAMES = {"byte_length": "byte_length", "byte_at": "byte_at", "to_string": "to_string", "view": "view",
          "utf16_length": "utf16_length", "equals": "equals", "hash": "hash",
          "find_raw": "find", "find_string_raw": "find_string",
          "starts_with": "starts_with", "starts_with_string": "starts_with_string",
@@ -13,6 +13,18 @@ NAMES = {"byte_length": "byte_length", "byte_at": "byte_at", "to_string": "to_st
 
 
 class StringViewAlgorithmPolicyTests(unittest.TestCase):
+    def test_string_slice_is_a_dew_function(self):
+        source = (ROOT / "std/text_runtime.dew").read_text()
+        self.assertIn("pub fn string_view(", source)
+        self.assertNotIn("pub builtin string_view(", source)
+        for path in ("src/backend/starshine_text_runtime.mbt",
+                     "starshine-mb/src/ffi_bridge/text_runtime.mbt",
+                     "src/semantic/wasmgc_fragment_plan.mbt"):
+            with self.subTest(path=path):
+                source = (ROOT / path).read_text()
+                self.assertNotIn('b"dew_string_view"', source)
+                self.assertNotIn("fn starshine_string_view_body(", source)
+
     def test_library_algorithms_have_bodies(self):
         source = (ROOT / "std/text_runtime.dew").read_text()
         for name in NAMES:

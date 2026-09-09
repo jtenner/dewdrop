@@ -915,6 +915,11 @@ and length fields. Raw reference casts preserve shared storage. Range and
 start-overflow checks run in Dew; no compiler-owned Bytes view body remains.
 Bytes views do not validate UTF-8.
 
+String and StringView slicing use the same checked Bytes storage, with UTF-8
+boundary checks in Dew. The source end is a valid boundary without a byte
+read, including an empty range at an exact V128 array end. A raw cast forms
+the StringView after these checks; it is not itself a UTF-8 validator.
+
 `dew.std.blake3` implements portable one-shot BLAKE3-256 over Bytes with scalar U32 compression, 64-byte blocks, 1024-byte chunks, and deterministic parent-tree reduction. `blake3` returns 32 `FixedArray<U8>` bytes; `blake3_hash32` returns the first little-endian U32 lane used for cache-pack lookup.
 
 `dew.std.integrity.sha256` implements portable one-shot SHA-256 over Bytes with scalar U32 compression and standard 64-byte padding. `sha256` returns 32 digest bytes as `FixedArray<U8>` in network byte order.

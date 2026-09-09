@@ -88,6 +88,40 @@ pub fn main(case: U32) -> I32 {
     view_result(cast(view) == b"\xce\xbb\xf0\x9f\x98\x80" && cast("".view(0u32, 0u32)) == b"" && view.to_string() == "λ😀")
   } else if case == 13u32 {
     view_result(view_into_bytes("!λ😀?".view(1u32, 6u32)) == b"\xce\xbb\xf0\x9f\x98\x80")
+  } else if case == 14u32 {
+    view_result("0123456789abcdef".view(16u32, 0u32).byte_length() == 0u32)
+  } else if case == 15u32 {
+    view_result("0123456789abcdef".view(0u32, 16u32).view(16u32, 0u32).byte_length() == 0u32)
+  } else if case == 16u32 {
+    view_result(string_range_operation()("0123456789abcdef0123456789abcdef", 32u32, 0u32).byte_length() == 0u32)
+  } else if case == 17u32 {
+    let view = string_range_operation()("!!λ😀??", 1u32, 8u32)
+    view_result(view_range_operation()(view, 1u32, 6u32).to_string() == "λ😀")
+  } else if case == 18u32 {
+    string_range_operation()("λ", 1u32, 1u32)
+    0i32
+  } else if case == 19u32 {
+    string_range_operation()("λ", 0u32, 1u32)
+    0i32
+  } else if case == 20u32 {
+    view_range_operation()("λ😀".view(0u32, 6u32), 3u32, 0u32)
+    0i32
+  } else if case == 21u32 {
+    string_range_operation()("x", 0u32, 2u32)
+    0i32
+  } else if case == 22u32 {
+    string_range_operation()("x", 4294967295u32, 0u32)
+    0i32
+  } else if case == 23u32 {
+    let log = StringViewLog::{
+      value: 0u32
+    }
+    let view = string_range_operation()(string_range_input(log), string_range_start(log), string_range_length(log))
+    view_result(view.to_string() == "bc" && log.value == 123u32)
+  } else if case == 24u32 {
+    view_result("".view(0u32, 0u32).view(0u32, 0u32).byte_length() == 0u32)
+  } else if case == 25u32 {
+    view_result(string_range_operation()("aaaaaaaaaaaaaaλ", 16u32, 0u32).byte_length() == 0u32)
   } else {
     unreachable()
   }
@@ -95,6 +129,33 @@ pub fn main(case: U32) -> I32 {
 
 fn view_bytes_operation() -> fn(StringView) -> Bytes {
   string_view_as_bytes_unchecked
+}
+
+fn string_range_operation() -> fn(String, U32, U32) -> StringView {
+  string_view
+}
+
+fn view_range_operation() -> fn(StringView, U32, U32) -> StringView {
+  string_view_view
+}
+
+struct StringViewLog {
+  mut value: U32
+}
+
+fn string_range_input(log: StringViewLog) -> String {
+  log.value = log.value * 10u32 + 1u32
+  "abcd"
+}
+
+fn string_range_start(log: StringViewLog) -> U32 {
+  log.value = log.value * 10u32 + 2u32
+  1u32
+}
+
+fn string_range_length(log: StringViewLog) -> U32 {
+  log.value = log.value * 10u32 + 3u32
+  2u32
 }
 
 fn view_into_bytes(value: StringView) -> Bytes {
