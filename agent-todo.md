@@ -339,6 +339,10 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Finish exact call-target checks. A second different target must report
   SPC-303, not silently keep the first. Remove remaining first-candidate and
   name-based exceptions. Verify the emitter uses the frozen target.
+  Native imported function values now use their own parameter/result records,
+  not an exported position in the full source callable table. Private helpers
+  cannot change a public function's imported type. See the
+  [import identity log](docs/research/imported-callable-identity-2026-09-09.md).
   Native replays now verify declarations, ABI keys, and hidden evidence operands;
   self-host source call records are checked before fragment planning. Both
   target disagreements have exact numeric-record tests. See the

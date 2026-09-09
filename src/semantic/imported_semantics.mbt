@@ -596,6 +596,16 @@ pub fn resolve_module_imports(
       )
       parameter_receivers.push(parameter.receiver)
     }
+    // Export filtering changes callable positions. Build the function type
+    // from this callable's imported signature, not a source-arena ordinal.
+    let result_type = importer.import_type(
+      reference.interface_index, callable.result_type,
+    )
+    let function_type = importer.intern_function(
+      Array::makei(callable.parameters.length, index =>
+        parameter_types[parameter_start + index]),
+      result_type,
+    )
     let imported_index = callables.length()
     callables.push({
       declaration: callable.declaration,
@@ -608,20 +618,14 @@ pub fn resolve_module_imports(
         start: parameter_start,
         length: parameter_types.length() - parameter_start,
       },
-      result_type: importer.import_type(
-        reference.interface_index,
-        callable.result_type,
-      ),
-      function_type: importer.import_type(
-        reference.interface_index,
-        interface_.resolved_types.callable_function_types[reference.callable_index],
-      ),
+      result_type,
+      function_type,
     })
     callable_by_declaration[callable.declaration] = imported_index
   }
   for interface_index in scope.imported_interfaces {
     let interface_ = scope.interfaces[interface_index].unwrap()
-    for callable_index, callable in interface_.callables {
+    for callable in interface_.callables {
       if callable_by_declaration.contains(callable.declaration) {
         continue
       }
@@ -659,6 +663,12 @@ pub fn resolve_module_imports(
         )
         parameter_receivers.push(parameter.receiver)
       }
+      let result_type = importer.import_type(interface_index, callable.result_type)
+      let function_type = importer.intern_function(
+        Array::makei(callable.parameters.length, index =>
+          parameter_types[parameter_start + index]),
+        result_type,
+      )
       let imported_index = callables.length()
       callables.push({
         declaration: callable.declaration,
@@ -671,11 +681,8 @@ pub fn resolve_module_imports(
           start: parameter_start,
           length: parameter_types.length() - parameter_start,
         },
-        result_type: importer.import_type(interface_index, callable.result_type),
-        function_type: importer.import_type(
-          interface_index,
-          interface_.resolved_types.callable_function_types[callable_index],
-        ),
+        result_type,
+        function_type,
       })
       callable_by_declaration[callable.declaration] = imported_index
     }
