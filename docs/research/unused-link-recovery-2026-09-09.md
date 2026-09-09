@@ -18,4 +18,6 @@ Validation: hardening passed 766 tests, 376 numeric records, and all shared
 execution checks (59.245 seconds); Dew library checks passed (26.710 seconds);
 generated-source and policy checks passed. The hardening lane exceeds the
 30-second budget and remains a timing bug; no speed work was included.
-A clean bootstrap will cover this cleanup with the next related boundary fix.
+The subsequent discard-boundary clean bootstrap also covers this cleanup:
+168.506 seconds, matching B/C bytes. See
+[frozen discard values](frozen-discard-values-2026-09-09.md).

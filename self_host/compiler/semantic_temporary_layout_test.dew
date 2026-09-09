@@ -1,3 +1,97 @@
+fn self_host_test_discard_carrier(source: SelfHostPlannedPhysicalExpressionCarrier, carrier: SelfHostWasmBodyCarrier) -> SelfHostPlannedPhysicalExpressionCarrier {
+  SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: source.expression
+    value: source.value
+    carrier: carrier
+    conflict_expected: source.conflict_expected
+    conflict_actual: source.conflict_actual
+    receiver_expression: source.receiver_expression
+    receiver_logical_type: source.receiver_logical_type
+    receiver_nominal_owner: source.receiver_nominal_owner
+    receiver_physical_heap_type: source.receiver_physical_heap_type
+    selected_field: source.selected_field
+    selected_type_index: source.selected_type_index
+    selected_field_index: source.selected_field_index
+    selected_storage: source.selected_storage
+    call_function_index: source.call_function_index
+  }
+}
+
+fn self_host_test_discard_fixture() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn run() -> I64 {\n  42i64\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid discard source")
+  let plan = program.bodies[0u32]
+  assert(plan.expressions.length() == 1u32 && plan.expressions[0u32].expression == 0u32, "one expression in the source body")
+  assert(plan.expressions[0u32].carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "known scalar before one mutation")
+  (link, plan)
+}
+
+test "discard reads use the known scalar value" {
+  let (link, plan) = self_host_test_discard_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  assert(self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32), "the scalar result must be dropped")
+}
+
+test "discard reads preserve Unit erasure" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn run() -> Unit {\n  ()\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid Unit source")
+  let plan = program.bodies[0u32]
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  assert(!self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32), "Unit has no stack value")
+}
+
+test "absent optional transfer payloads do not schedule discarded expressions" {
+  let tasks = []
+  let depths = []
+  self_host_linked_i32_schedule_discarded_expression(tasks, depths, 4294967295u32,
+    StarshineFfi.ffi_ffi_bridge_instructions_new(), 0u32)
+  assert(tasks.length() == 0u32, "the missing optional payload is not an expression")
+  assert(depths.length() == 0u32, "no source depth was added")
+}
+
+test "BOD-610 discard reads require a body plan" expect_trap "unreachable" {
+  let (link, plan) = self_host_test_discard_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+
+  let _ = self_host_linked_planned_expression_emits_value(Option::None, link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+}
+
+test "BOD-610 discard reads require expression evidence" expect_trap "unreachable" {
+  let (link, plan) = self_host_test_discard_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let _ = plan.expressions.pop()
+  let _ = self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+}
+
+test "BOD-610 discard reads reject unknown carriers" expect_trap "unreachable" {
+  let (link, plan) = self_host_test_discard_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+  let _ = self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+}
+
+test "BOD-610 discard reads reject conflicting carriers" expect_trap "unreachable" {
+  let (link, plan) = self_host_test_discard_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::ConflictingBodyCarrier)
+  let _ = self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+}
+
+test "ABI-712 discard reads require matching carrier copies" expect_trap "unreachable" {
+  let (link, plan) = self_host_test_discard_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::I32BodyCarrier)
+  let _ = self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+}
+
 fn self_host_test_frozen_local_declarations() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
     b"pub fn run() -> I64 {\n  let held = 42i64\n  held\n}\n",

@@ -1445,6 +1445,10 @@ fn self_host_linked_i32_schedule_discarded_expression(
   instructions: StarshineInstructions,
   depth: U32,
 ) -> Unit {
+  // An absent optional transfer payload is not an expression to emit or drop.
+  if expression == 4294967295u32 {
+    return
+  }
   if expression < depths.length() {
     depths[expression] = depth
   }

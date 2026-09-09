@@ -11,6 +11,17 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["BOD-610 discard reads require a body plan", 610, 1n, 0n, 0n],
+    ["BOD-610 discard reads require expression evidence", 610, 1n, 0n, 1n],
+    ["BOD-610 discard reads reject unknown carriers", 610, 1n, 0n, 2n],
+    ["BOD-610 discard reads reject conflicting carriers", 610, 1n, 1n, 2n],
+    ["ABI-712 discard reads require matching carrier copies", 712, 5n, 4n, 3n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, 5100n << 32n, 5100n << 32n,
+      0, expected, actual, detail],
+  })),
+  ...[
     ["ABI-710 emitted locals cannot replace unresolved evidence with a reference", 710, 5n, 0n, 0n],
     ["ABI-710 emitted locals cannot replace conflicting evidence with a reference", 710, 5n, 1n, 0n],
     ["ABI-710 emitted locals retain their saved scalar type", 710, 5n, 4n, 0n],

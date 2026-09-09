@@ -528,6 +528,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   [Unit pattern log](docs/research/pattern-unit-storage-2026-09-08.md).
 - [ ] Complete the emission shadow stack. Track operand types and control
   frames through each instruction, including unreachable code and adapters.
+  Discard decisions now read checked frozen carriers, not source shapes or
+  callable names. Missing/conflicting evidence is an error; an absent optional
+  transfer payload schedules no expression. This is not the full instruction
+  stack checker. See the
+  [discard log](docs/research/frozen-discard-values-2026-09-09.md).
   Native Unit branches now discard their actual emitted tail values, including
   blocks selected by compile-time queries. Self-host transfer rules keep the
   Unit parent's evidence separate from child call results. Twenty-four shared

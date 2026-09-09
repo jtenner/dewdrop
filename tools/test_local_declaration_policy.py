@@ -9,6 +9,15 @@ COMPILER = ROOT / "self_host" / "compiler"
 
 
 class LocalDeclarationPolicy(unittest.TestCase):
+    def test_discard_reads_do_not_recover_from_source_shapes_or_names(self):
+        source = (COMPILER / "starshine_physical_locals.dew").read_text()
+        for forbidden in ("self_host_linked_expression_emits_value(",
+                          "self_host_linked_callable_by_name(",
+                          "self_host_linked_function_has_result("):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, source)
+        self.assertIn("self_host_body_plan_expression(plan, expression)", source)
+
     def test_local_declarations_do_not_recover_source_shapes(self):
         source = (COMPILER / "starshine_local_declarations.dew").read_text()
         for forbidden in ("self_host_physical_scalar_shape(",

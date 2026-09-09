@@ -49,14 +49,45 @@ fn self_host_linked_local_is_erased(canonical: Option<SelfHostPlannedPhysicalBod
 
 
 fn self_host_linked_planned_expression_emits_value(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, expression: U32) -> Bool {
-  match canonical {
-    Option::Some(plan) => match self_host_body_plan_expression(plan, expression) {
-      Option::Some(value) => if value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
-        return false
-      }
-      Option::None => {}
-    }
-    Option::None => {}
+  let plan = self_host_physical_scratch_body(canonical, module_, body, expression, 0u32)
+  if plan.specialization != specialization {
+    self_host_discard_failure(module_, body, expression, 106u32,
+      u32_into_u64(specialization), u32_into_u64(plan.specialization), 4u64)
   }
-  self_host_linked_expression_emits_value(link, module_, body, specialization, expression)
+  let value = match self_host_body_plan_expression(plan, expression) {
+    Option::Some(value) => value
+    Option::None => self_host_discard_failure(module_, body, expression, 610u32, 1u64, 0u64, 1u64)
+  }
+  match value.carrier {
+    SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
+    SelfHostWasmBodyCarrier::ConflictingBodyCarrier => self_host_discard_failure(module_, body,
+      expression, 610u32, 1u64, self_host_body_carrier_code(value.carrier), 2u64)
+    _ => {}
+  }
+  if !self_host_body_carrier_equal(value.value.carrier, value.carrier) {
+    self_host_discard_failure(module_, body, expression, 712u32,
+      self_host_body_carrier_code(value.value.carrier), self_host_body_carrier_code(value.carrier), 3u64)
+  }
+  if value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+    if module_.expressions[expression].flow.falls_through {
+      self_host_discard_failure(module_, body, expression, 611u32, 0u64, 1u64, 5u64)
+    }
+    return false
+  }
+  !(value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier)
+}
+
+fn self_host_discard_failure(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: 7u32
+    module_id: module_.module_id
+    declaration: body.declaration
+    body: body.body
+    expression: expression
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "discard requires complete frozen expression evidence")
+  unreachable()
 }
