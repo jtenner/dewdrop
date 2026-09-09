@@ -156,8 +156,9 @@ fn program_initializer_dependencies(
   initializer : PlannedProgramModuleInitializer,
   initializer_lookup : Map[DeclId, Int],
   candidates : Array[PlannedProgramModuleInitializer],
+  calls : Map[ProgramSpecializedCallKey, PlannedProgramSpecializedCall],
 ) -> Array[Int] {
-  match check_program_initializer_dependencies(lowering, initializer, initializer_lookup, candidates) {
+  match check_program_initializer_dependencies(lowering, initializer, initializer_lookup, candidates, calls~) {
     Ok(values) => values
     Err(failure) => abort(@debug.to_string(failure))
   }
@@ -167,16 +168,21 @@ fn program_initializer_dependencies(
 fn program_schedule_initializers(
   lowering : PlannedProgramLowering,
   candidates : Array[PlannedProgramModuleInitializer],
+  specialized_calls : Array[PlannedProgramSpecializedCall],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Array[PlannedProgramModuleInitializer] {
   let lookup = match check_program_initializer_candidate_lookup(candidates) {
     Ok(value) => value
     Err(failure) => abort(@debug.to_string(failure))
   }
+  let calls = match check_program_initializer_call_lookup(specialized_calls) {
+    Ok(value) => value
+    Err(failure) => abort(@debug.to_string(failure))
+  }
   let dependencies : Array[Array[Int]] = []
   let remaining_dependencies = Array::make(candidates.length(), 0)
   for index, initializer in candidates {
-    let values = program_initializer_dependencies(lowering, initializer, lookup, candidates)
+    let values = program_initializer_dependencies(lowering, initializer, lookup, candidates, calls)
     dependencies.push(values)
     remaining_dependencies[index] = values.length()
   }
@@ -1666,7 +1672,7 @@ pub fn link_program_wasmgc_fragments(
     }
   }
   let scheduled_initializers = program_schedule_initializers(
-    lowering, initializer_candidates, diagnostics,
+    lowering, initializer_candidates, fragments.specialized_calls, diagnostics,
   )
   let initializers : Array[PlannedProgramModuleInitializer] = []
   let mut runtime_initializer_count = 0

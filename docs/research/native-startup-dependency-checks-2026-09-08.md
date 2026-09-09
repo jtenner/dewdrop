@@ -37,10 +37,11 @@ and C both have SHA-256
 This guards the existing direct-call dependency analysis. It does not add
 effect analysis for unresolved indirect calls or runtime trait dispatch, and
 it does not close full native global-table verification or link freeze. The
-source walk also needs a separate test for a selected generic/query instance
-whose template reads a global only in a removed branch. The current walk does
-not retain a caller specialization key; bounds checks alone cannot prove that
-it visits the correct private IR instance. Cross-module initializer order in
+source walk at this commit also lacked a caller specialization key; bounds
+checks alone could not prove that it visited the correct private IR instance.
+The follow-up [selected-body fix](selected-startup-query-bodies-2026-09-08.md)
+adds that key and tests removed query branches and distinct logical instances.
+Cross-module initializer order in
 the self-host compiler likewise needs an execution check inside a cyclic module
 component. These are follow-up candidates, not failures demonstrated by this
 batch. No speed work is included; runs above 30 seconds remain speed bugs.

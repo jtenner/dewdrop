@@ -42,6 +42,13 @@ dependency list. This proves the direct-call walk's checked access contracts,
 not complete effect analysis for indirect calls. See
 [the startup walk log](../research/native-startup-dependency-checks-2026-09-08.md).
 
+Query-sensitive startup traversal retains `(body, specialization key)` in both
+the work record and visited set. Selected call keys are functional and cached
+instance module/declaration IDs must agree. A missing query instance cannot
+select its source template. Thus removed query branches do not contribute
+startup dependencies; real selected cycles remain diagnostics. See
+[the selected startup log](../research/selected-startup-query-bodies-2026-09-08.md).
+
 ## Arena access
 
 For arena \(A\) and index \(i\):

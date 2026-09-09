@@ -765,10 +765,36 @@ pub fn main(case: U32) -> Bool {
     query_captured_guard(21i64) == 42i64
   } else if case == 94u32 {
     query_local_width(7i32) == 0i64 && query_local_width(42i64) == 42i64
+  } else if case == 95u32 {
+    query_startup_answer == 42i64
+  } else if case == 96u32 {
+    query_startup_sum == 42i64
   } else {
     false
   }
 }
+
+fn query_startup_choose<t>() -> I64 {
+  if is_unit::<t>() {
+    query_startup_answer
+  } else {
+    42i64
+  }
+}
+
+let query_startup_answer = query_startup_choose::<I32>()
+let query_startup_left = 19i64
+let query_startup_right = 23i64
+
+fn query_startup_value<t>() -> I64 {
+  if is_unit::<t>() {
+    query_startup_left
+  } else {
+    query_startup_right
+  }
+}
+
+let query_startup_sum = query_startup_value::<Unit>() + query_startup_value::<I32>()
 
 fn query_nested_transfer(initial: I32) -> I64 {
   while initial {

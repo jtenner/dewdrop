@@ -4,6 +4,7 @@ priv struct ProgramInitializerDependencyBody {
   declaration : DeclId
   body : BodyId
   kind : HirBodyKind
+  specialization_key : String
 }
 
 ///|
@@ -110,6 +111,6 @@ fn check_program_initializer_call_target(
   // Check identity even when another call edge already visited this body.
   match check_program_link_body_identity(module_, target, body) {
     Err(error) => return Err(error)
-    Ok(_) => Ok(Some({ module_index: owner, declaration: target, body, kind, }))
+    Ok(_) => Ok(Some({ module_index: owner, declaration: target, body, kind, specialization_key: "", }))
   }
 }

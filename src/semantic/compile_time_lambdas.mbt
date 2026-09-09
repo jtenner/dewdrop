@@ -12,6 +12,11 @@ fn compile_time_fragment_template(
   }
   let deferred : Map[BodyId, Bool] = {}
   for body in source.bodies {
+    // An initializer can call a query-sensitive function, but it is not a
+    // callable template and has no generic parameter list to defer.
+    if body.kind == ModuleLetBody {
+      continue
+    }
     if !context.sensitive.contains(body.declaration) {
       continue
     }

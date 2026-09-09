@@ -19,15 +19,17 @@ fn check_program_initializer_dependencies(
   initializer : PlannedProgramModuleInitializer,
   initializer_lookup : Map[DeclId, Int],
   candidates : Array[PlannedProgramModuleInitializer],
+  calls? : Map[ProgramSpecializedCallKey, PlannedProgramSpecializedCall] = {},
 ) -> Result[Array[Int], ProgramFunctionLookupFailure] {
   let dependencies : Array[Int] = []
   let seen_dependencies : Map[Int, Bool] = {}
-  let seen_bodies : Map[BodyId, Bool] = {}
+  let seen_bodies : Map[(BodyId, String), Bool] = {}
   let work : Array[ProgramInitializerDependencyBody] = [{
     module_index: initializer.module_index,
     declaration: initializer.declaration,
     body: initializer.body,
     kind: ModuleLetBody,
+    specialization_key: "",
   }]
   while work.length() > 0 {
     let task = match work.pop() {
@@ -42,7 +44,10 @@ fn check_program_initializer_dependencies(
     guard task.module_index >= 0 && task.module_index < lowering.modules.length() else {
       return Err(failure(101, lowering.modules.length().to_uint64(), task.module_index.reinterpret_as_uint().to_uint64(), 20UL))
     }
-    let module_ = lowering.modules[task.module_index]
+    let module_ = match check_program_initializer_instance(lowering, task) {
+      Ok(value) => value
+      Err(error) => return Err(error)
+    }
     let body = match check_program_link_body_identity(module_, task.declaration, task.body) {
       Ok(value) => value
       Err(error) => return Err(error)
@@ -50,12 +55,13 @@ fn check_program_initializer_dependencies(
     guard body.kind == task.kind else {
       return Err(failure(106, program_initializer_body_kind_code(task.kind), program_initializer_body_kind_code(body.kind), 22UL))
     }
-    if seen_bodies.contains(body.body) { continue }
+    let instance_key = (body.body, task.specialization_key)
+    if seen_bodies.contains(instance_key) { continue }
     match check_program_link_body_arenas(module_, body) {
       Err(error) => return Err(error)
       Ok(_) => ()
     }
-    seen_bodies[body.body] = true
+    seen_bodies[instance_key] = true
     for expression in body.expressions.start..<(body.expressions.start + body.expressions.length) {
       match module_.expressions[expression].kind {
         PlannedModuleValueGet(declaration, _) => {
@@ -86,7 +92,17 @@ fn check_program_initializer_dependencies(
           match check_program_initializer_call_target(lowering, body, expression, target) {
             Err(error) => return Err(error)
             Ok(None) => ()
-            Ok(Some(next)) => if !seen_bodies.contains(next.body) { work.push(next) }
+            Ok(Some(next)) => {
+              let selected = match check_program_initializer_selected_call(
+                body, task.specialization_key, expression, next, calls,
+              ) {
+                Ok(value) => value
+                Err(error) => return Err(error)
+              }
+              if !seen_bodies.contains((selected.body, selected.specialization_key)) {
+                work.push(selected)
+              }
+            }
           }
         }
         _ => ()

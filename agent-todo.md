@@ -15,7 +15,7 @@ restart them from scratch. Raw Unit array storage now passes both compilers.
 
 ### Compile-time type queries and branch removal
 
-Implementation is complete in both compilers. The shared corpus now has 96
+Implementation is complete in both compilers. The shared corpus now has 98
 execution checks. Read the [query guide](docs/compile-time-types.md) for the
 20 builtins, examples, and layout limits. The full history and measured checks
 are in the [completion log](docs/research/compile-time-query-completion-2026-09-06.md).
@@ -562,6 +562,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Recursive calls and repeated reads retain one dependency edge. Indirect-call
   effect analysis and full link freeze remain. See the
   [startup walk log](docs/research/native-startup-dependency-checks-2026-09-08.md).
+  Startup dependency analysis now uses the exact selected query body and keeps
+  distinct logical instances separate. Missing query instances cannot become
+  template scans; removed branches cannot cause false initialization cycles.
+  See the [selected startup log](docs/research/selected-startup-query-bodies-2026-09-08.md).
   Native plain-function lookup now checks table bounds and declaration,
   module, fragment, lambda, kind, and ABI-key identity at link completion and each
   read. Missing keys stay missing; specialization entries cannot replace plain

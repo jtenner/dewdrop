@@ -1,5 +1,6 @@
 ///|
 struct CompileTimeSpecializedBody {
+  declaration : DeclId
   module_ : PlannedModuleLowering
   types : Array[CompileTimeType]
   bindings : Map[CompileTimeBindingKey, CompileTimeType]
@@ -252,7 +253,7 @@ fn compile_time_specialization_key(
   let key = abi_key + ":logical[" + compile_time_types_key(logical_types) + "]"
   match context.instances.get(key) {
     Some(instance) => {
-      guard instance.types == logical_types else {
+      guard instance.declaration == declaration && instance.types == logical_types else {
         abort("SPC-302 logical specialization key collision")
       }
       return Some(key)
@@ -352,6 +353,7 @@ fn compile_time_specialization_key(
     declaration,
   )
   context.instances[key] = {
+    declaration,
     module_: instance,
     types: logical_types.copy(),
     bindings,
