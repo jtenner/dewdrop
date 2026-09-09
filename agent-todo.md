@@ -380,6 +380,11 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete full Wasm reference checks. Check heap type and nullability,
   not just an eqref label, for call operands, results, locals, and branches.
 - [ ] Put constructor and other temporary locals in the frozen physical plan.
+  Generic user enum payloads still fail before emission: an I64 binding inherits
+  erased reference storage. Fix variant construction and extraction together;
+  do not merely change the binding carrier. Unit payload certificates now also
+  require the field role and stored declaration to agree. See the
+  [variant storage log](docs/research/variant-payload-storage-2026-09-09.md).
   Constructor field temporary types now come from frozen source-order records;
   emission checks presence, uniqueness, source agreement, and mirrored carriers.
   Global initializers now pass through body planning, verification, and freeze.

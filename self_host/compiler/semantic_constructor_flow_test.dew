@@ -184,6 +184,31 @@ test "Unit enum payload bindings do not inherit reference marker carriers" {
   assert(checked > 0u32, "inspect a selected Unit payload field")
 }
 
+test "variant Unit storage rejects a field with another declaration identity" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"enum Payload {\n  Value(Unit)\n}\npub fn run(value: Payload) -> I32 {\n  match value {\n    Value(effect) => 42i32\n  }\n}\n",
+  ), false)
+  let mut checked = 0u32
+  for fragment in link.fragments.modules {
+    for field in fragment.fields {
+      if self_host_linked_variant_unit_storage(link, field, SelfHostWasmBodyCarrier::UnitBodyCarrier) {
+        let changed = SelfHostPlannedWasmField::{
+          role: field.role
+          declaration: 18446744073709551615u64
+          physical_index: field.physical_index
+          storage: field.storage
+          mutable_: field.mutable_
+          exact_nominal: field.exact_nominal
+          offset: field.offset
+        }
+        assert(!self_host_linked_variant_unit_storage(link, changed, SelfHostWasmBodyCarrier::UnitBodyCarrier), "the role cannot hide a different stored declaration")
+        checked = checked + 1u32
+      }
+    }
+  }
+  assert(checked == 1u32, "inspect exactly one declared Unit payload")
+}
+
 test "nonreturning constructor lowering owns its prefix and preserves source children" {
   let fragments = self_host_physical_test_fragments(
     b"enum Wrapped {\n  Value(I32, I32, I32)\n}\npub fn run() -> I32 {\n  let value = Wrapped::Value(1i32, return 42i32, 3i32)\n  0i32\n}\n",
