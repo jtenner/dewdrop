@@ -39,6 +39,21 @@ class LocalDeclarationPolicy(unittest.TestCase):
             with self.subTest(helper=name):
                 self.assertNotIn(f"self_host_linked_{name}(", source)
 
+    def test_physical_shapes_use_the_checked_carrier_reader(self):
+        source = (COMPILER / "starshine_expression_values.dew").read_text()
+        function = source.split("fn self_host_linked_planned_expression_shape(", 1)[1].split("\nfn ", 1)[0]
+        self.assertIn("self_host_linked_planned_expression_carrier(", function)
+        self.assertNotIn("inferred", function)
+        source = (COMPILER / "starshine_module.dew").read_text()
+        for name in ("canonical_or_inferred_shape", "single_nested_special_match_result_shape",
+                     "scoped_match_result_shape", "match_only_binding_falls_through",
+                     "match_direct_binding_declared_shape"):
+            with self.subTest(helper=name):
+                self.assertNotIn(f"self_host_linked_{name}(", source)
+        for name in ("inferred_final_match_result_shape", "fallback_selected_match_result_shape",
+                     "recovered_match_result_shape"):
+            self.assertNotIn(name, source)
+
     def test_local_declarations_do_not_recover_source_shapes(self):
         source = (COMPILER / "starshine_local_declarations.dew").read_text()
         for forbidden in ("self_host_physical_scalar_shape(",

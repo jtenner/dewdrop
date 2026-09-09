@@ -601,6 +601,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Their source/name recovery, eight-step unwrap scan, and six unused helpers
   are removed. Thirteen negative probes retain complete failure context; see the
   [expression read log](docs/research/emitted-expression-reads-2026-09-09.md).
+  Physical shape reads now share that checked carrier reader. Match result
+  selection cannot replace frozen evidence with inferred or binding guesses;
+  the result override chain and four unused helpers are removed. Payload hints
+  and other container/branch recovery remain open. See the
+  [shape read log](docs/research/frozen-expression-shapes-2026-09-09.md).
   Non-returning `if` conditions, `match` subjects, and `while` initial values
   now stop control emission and do not force unused branches to Never.
   Shared runtime and planner checks cover all three forms; see the

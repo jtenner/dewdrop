@@ -28,6 +28,10 @@ fn self_host_linked_planned_expression_carrier(canonical: Option<SelfHostPlanned
   value.carrier
 }
 
+fn self_host_linked_planned_expression_shape(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, expression: U32) -> SelfHostPlannedValueShape {
+  self_host_body_carrier_shape(self_host_linked_planned_expression_carrier(canonical, link, module_, body, specialization, expression))
+}
+
 fn self_host_linked_planned_expression_emits_value(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, expression: U32) -> Bool {
   let carrier = self_host_linked_planned_expression_carrier(canonical, link, module_, body, specialization, expression)
   !(carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) && !(carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier)

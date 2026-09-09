@@ -37,7 +37,7 @@ const probes = [
     name: "ABI-712 emitted lambda reads retain the parent declaration",
     expected: [712, 7, 5100n, 5100n << 32n, 5100n << 32n, 1, 5n, 4n, 3n],
   },
-  ...["emitted expression", "logical operand"].flatMap(reader => [
+  ...["emitted expression", "logical operand", "physical shape"].flatMap(reader => [
     ["BOD-610", "require a body plan", 610, 1n, 0n, 0n],
     ["BOD-610", "require expression evidence", 610, 1n, 0n, 1n],
     ["BOD-610", "reject unknown carriers", 610, 1n, 0n, 2n],

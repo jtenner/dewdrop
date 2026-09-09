@@ -1,4 +1,81 @@
-// Both emitter readers must consume the frozen plan, not recover from source.
+// Emitter readers must consume the frozen plan, not recover from source.
+fn self_host_test_frozen_shape_read(mutation: U32) -> Unit {
+  let (link, plan) = self_host_test_discard_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut canonical = Option::Some(plan)
+  let mut specialization = plan.specialization
+  if mutation == 1u32 {
+    canonical = Option::None
+  } else if mutation == 2u32 {
+    let _ = plan.expressions.pop()
+  } else if mutation == 3u32 {
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+  } else if mutation == 4u32 {
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::ConflictingBodyCarrier)
+  } else if mutation == 5u32 {
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::I32BodyCarrier)
+  } else if mutation == 6u32 {
+    specialization = 0u32
+  }
+  let shape = self_host_linked_planned_expression_shape(canonical, link, module_, module_.bodies[0u32], specialization, 0u32)
+  if mutation == 0u32 {
+    assert(shape is SelfHostPlannedValueShape::I64PlannedValueShape, "read the stored physical shape")
+  }
+}
+
+test "physical shape reads use frozen scalar evidence" {
+  self_host_test_frozen_shape_read(0u32)
+}
+
+test "BOD-610 physical shape reads require a body plan" expect_trap "unreachable" {
+  self_host_test_frozen_shape_read(1u32)
+}
+
+test "BOD-610 physical shape reads require expression evidence" expect_trap "unreachable" {
+  self_host_test_frozen_shape_read(2u32)
+}
+
+test "BOD-610 physical shape reads reject unknown carriers" expect_trap "unreachable" {
+  self_host_test_frozen_shape_read(3u32)
+}
+
+test "BOD-610 physical shape reads reject conflicting carriers" expect_trap "unreachable" {
+  self_host_test_frozen_shape_read(4u32)
+}
+
+test "ABI-712 physical shape reads require matching carrier copies" expect_trap "unreachable" {
+  self_host_test_frozen_shape_read(5u32)
+}
+
+test "ARN-106 physical shape reads require the selected specialization" expect_trap "unreachable" {
+  self_host_test_frozen_shape_read(6u32)
+}
+
+fn self_host_test_shape_read_source(source: Bytes, expression: U32) -> SelfHostPlannedValueShape {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid shape-read source")
+  let plan = program.bodies[0u32]
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  self_host_linked_planned_expression_shape(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, expression)
+}
+
+test "physical shape reads preserve Unit erasure" {
+  let shape = self_host_test_shape_read_source(b"pub fn run() -> Unit {\n  ()\n}\n", 0u32)
+  assert(shape is SelfHostPlannedValueShape::UnitPlannedValueShape, "Unit has no physical result")
+}
+
+test "physical shape reads preserve proven divergence" {
+  let shape = self_host_test_shape_read_source(b"builtin stop() -> Never = \"unreachable\"\npub fn run() -> Never {\n  stop()\n}\n", 1u32)
+  assert(shape is SelfHostPlannedValueShape::NeverPlannedValueShape, "a nonreturning call cannot become Unit or a scalar")
+}
+
+test "physical shape reads preserve reference carriers" {
+  let shape = self_host_test_shape_read_source(b"pub fn run(value: Bytes) -> Bytes {\n  value\n}\n", 0u32)
+  assert(shape is SelfHostPlannedValueShape::RefPlannedValueShape, "a reference cannot become a scalar")
+}
+
 fn self_host_test_frozen_expression_read(mutation: U32, logical: Bool) -> Unit {
   let (link, plan) = self_host_test_discard_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
