@@ -26,6 +26,7 @@ python3 tools/test_variant_lookup_policy.py
 python3 tools/test_option_layout_policy.py
 python3 tools/test_result_layout_policy.py
 python3 tools/test_global_read_policy.py
+python3 tools/test_call_target_read_policy.py
 python3 tools/test_trait_call_policy.py
 python3 tools/test_assertion_library_policy.py
 python3 tools/test_production_assertion_policy.py

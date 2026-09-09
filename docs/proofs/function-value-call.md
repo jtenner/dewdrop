@@ -11,6 +11,14 @@ plan. Source expected types add constraints; they cannot overwrite a concrete
 disagreement or make a missing target look present. A broad `eqref` label is
 not a heap-type or nullability proof.
 
+The emitter now reads only the frozen expression target and call recipe.
+It checks the linked position, declaration, specialization, and encoded
+function handle. Missing records cannot be replaced by plain-function or
+name lookup. Static-looking function-value calls use their selected target;
+other calls require a runtime value owned by the caller body. The instruction
+emitter has no method-name, runtime-name, or `into` spelling recovery. See the
+[target-read tests](../research/frozen-call-target-reads-2026-09-09.md).
+
 Address-taken raw builtins now have explicit outlined-instruction fragments
 in both compilers. They load the physical parameters and emit the declared
 instruction without host imports. Compile-time queries remain signature-only.

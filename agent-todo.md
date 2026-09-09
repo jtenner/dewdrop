@@ -364,6 +364,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   function references through a declaration/name fallback. Other callable
   name searches remain. See the
   [global read log](docs/research/global-read-identity-2026-09-09.md).
+  The emitter now requires consistent saved expression and call-recipe targets.
+  Missing plans cannot fall back to linked plain functions. Main call emission
+  no longer searches method/runtime names or implements `into` by spelling.
+  Other shape selectors still need cleanup. See the
+  [call read log](docs/research/frozen-call-target-reads-2026-09-09.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Raw builtin references now have explicit outlined physical targets in both
   compilers. The native failure required a returned function value; a local

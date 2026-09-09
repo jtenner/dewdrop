@@ -11,6 +11,17 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ABI-701 emitted target cannot change to another linked function", 701, 2n, 3n, 0n],
+    ["ABI-701 emitted calls require one saved recipe", 701, 1n, 2n, 0n],
+    ["LNK-502 emitted target must be in the linked function table", 502, 2n, 99n, 0n],
+    ["ABI-701 emitted calls retain the selected declaration", 701, (5100n << 32n) | 1n, 5100n << 32n, 2n],
+    ["ARN-102 indirect call targets belong to the caller body", 102, 1n, 0n, 3n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, (5100n << 32n) | 1n, (5100n << 32n) | 1n,
+      3, expected, actual, detail],
+  })),
+  ...[
     ["ARN-106 global read initializer keeps its selected declaration", 106, 1, 5100n << 32n, (5100n << 32n) | 1n, 0n],
     ["BOD-610 global read cannot lose its initializer", 610, 1, 1n, 0n, 5100n << 32n],
     ["BOD-610 global read requires one initializer", 610, 1, 1n, 2n, 5100n << 32n],
