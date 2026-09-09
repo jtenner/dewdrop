@@ -2138,6 +2138,7 @@ pub struct PlannedProgramWasmGCLink {
   module_runtime_function_indices : Array[Map[Bytes, Int]]
   diagnostics : Array[ProgramWasmGCLinkDiagnostic]
 }
+pub fn PlannedProgramWasmGCLink::erased_adapter_target_function(Self, PlannedProgramWasmFunction) -> PlannedProgramWasmFunction?
 pub fn PlannedProgramWasmGCLink::function_of(Self, UInt64) -> PlannedProgramWasmFunction?
 pub fn PlannedProgramWasmGCLink::function_reference_singleton_global(Self, Int, UInt64) -> Int
 pub fn PlannedProgramWasmGCLink::function_view(Self, Int) -> PlannedProgramFunctionView?
@@ -2275,6 +2276,7 @@ pub enum PlannedWasmFunctionKind {
   PlannedWasmInlineHeapFunction(RawHeapInstruction)
   PlannedWasmOutlinedHeapFunction(RawHeapInstruction)
   PlannedWasmRuntimeFunction(Bytes)
+  PlannedWasmErasedAdapterFunction
   PlannedWasmDefinedFunction(UInt64)
   PlannedWasmDefinedLambdaFunction(Int)
   PlannedWasmTraitAdapterFunction(UInt64, UInt64)

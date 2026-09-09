@@ -772,6 +772,7 @@ fn pb_write_function_kind(
       writer.write_byte(2)
       writer.write_bytes(name)
     }
+    PlannedWasmErasedAdapterFunction => writer.write_byte(10)
     PlannedWasmDefinedFunction(body) => {
       writer.write_byte(3)
       ib_write_id(writer, body)
@@ -834,6 +835,7 @@ fn pb_read_function_kind(
       PlannedWasmOutlinedHeapFunction(
         pb_read_raw_heap_instruction(reader, field),
       )
+    10 => PlannedWasmErasedAdapterFunction
     _ => {
       reader.fail(field, "unknown Wasm function-kind discriminant")
       PlannedWasmSignatureOnlyFunction
@@ -952,6 +954,9 @@ pub fn validate_cached_module_wasmgc_fragments(
     return Err("cached WasmGC fragment contains program specializations")
   }
   for function_ in value.functions {
+    if function_.kind is PlannedWasmErasedAdapterFunction {
+      return Err("cached WasmGC fragment contains a program-only erased adapter")
+    }
     if function_.specialization_shapes.length != 0 ||
       function_.specialization_evidence.length != 0 ||
       function_.specialization_abi_key != "" {

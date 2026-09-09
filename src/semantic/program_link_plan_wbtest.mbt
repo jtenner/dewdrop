@@ -308,12 +308,33 @@ test "program linker adapts exact references to erased generic fallbacks" {
     if function_.declaration == identity && function_.erased_adapter_target >= 0 {
       adapter_index = function_.function_index
       assert_eq(function_.erased_adapter_target, fallback_index)
+      assert_eq(function_.kind, PlannedWasmErasedAdapterFunction)
+      assert_true(link.erased_adapter_target_function(function_) is Some(_))
+      for missing in [-1, link.functions.length() + 500, function_.function_index] {
+        let invalid = { ..function_, erased_adapter_target: missing, }
+        assert_eq(link.erased_adapter_target_function(invalid), None)
+      }
+      let target_slot = link.functions.search_by(fn(candidate) {
+        candidate.function_index == function_.erased_adapter_target
+      }).unwrap()
+      let target = link.functions[target_slot]
+      link.functions[target_slot] = { ..target, elided: true, }
+      assert_eq(link.erased_adapter_target_function(function_), None)
+      for kind in [PlannedWasmInlineBuiltinFunction(b"i32.add"), PlannedWasmSignatureOnlyFunction] {
+        link.functions[target_slot] = { ..target, kind, }
+        assert_eq(link.erased_adapter_target_function(function_), None)
+      }
+      link.functions[target_slot] = target
+      link.functions.push(target)
+      assert_eq(link.erased_adapter_target_function(function_), None)
+      ignore(link.functions.pop())
     }
   }
   assert_true(fallback_index >= 0)
   assert_true(adapter_index >= 0)
   assert_eq(link.function_reference_singletons.length(), 1)
   assert_eq(link.function_reference_singletons[0].function_index, adapter_index)
+  assert_eq(link.runtime_function_index(b""), -1)
 }
 
 ///|

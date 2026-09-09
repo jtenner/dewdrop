@@ -61,6 +61,8 @@ pub fn emit_starshine_code_section(
             Err(error) => return Err(error)
           }
         }
+      @semantic.PlannedWasmErasedAdapterFunction =>
+        return Err(MissingFunction(function_.declaration))
       @semantic.PlannedWasmRuntimeFunction(name) =>
         if !function_.elided {
           match

@@ -375,8 +375,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   [self-host retirement log](docs/research/self-host-text-runtime-retirement-2026-09-09.md).
   Removed 46 unused private linker/body helpers, including stale collection
   name recovery and consumed-expression recovery. This does not remove the
-  remaining native/provider runtime protocol. Give erased adapters an explicit
-  function kind instead of an empty runtime name, and remove that protocol. See the
+  remaining native/provider runtime protocol. Erased adapters now have an
+  explicit function kind and unique-target checks. Native, integration,
+  generated, and clean bootstrap checks pass.
+  The old runtime kind, unused lookup maps, and provider rejection API still
+  need removal. See the [adapter kind log](docs/research/erased-adapter-function-kind-2026-09-09.md) and the
   [unused linker log](docs/research/unused-link-recovery-2026-09-09.md).
 
 ### Finish the compiler correctness audit

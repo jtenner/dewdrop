@@ -939,6 +939,7 @@ fn starshine_finish_call(
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
+      | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmTraitAdapterFunction(_, _) => {
@@ -1305,6 +1306,7 @@ fn starshine_finish_program_call(
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
+      | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmTraitAdapterFunction(_, _) => {

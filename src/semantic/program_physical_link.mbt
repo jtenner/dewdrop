@@ -1279,6 +1279,7 @@ pub fn link_program_wasmgc_fragments(
       | PlannedWasmOutlinedBuiltinFunction(_)
       | PlannedWasmOutlinedHeapFunction(_)
       | PlannedWasmRuntimeFunction(_)
+      | PlannedWasmErasedAdapterFunction
       | PlannedWasmDefinedFunction(_)
       | PlannedWasmDefinedLambdaFunction(_)
       | PlannedWasmTraitAdapterFunction(_, _)
@@ -1293,6 +1294,7 @@ pub fn link_program_wasmgc_fragments(
       | PlannedWasmOutlinedBuiltinFunction(_)
       | PlannedWasmOutlinedHeapFunction(_)
       | PlannedWasmRuntimeFunction(_)
+      | PlannedWasmErasedAdapterFunction
       | PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {
           function_.function_index = imported_function_count +
@@ -1392,7 +1394,7 @@ pub fn link_program_wasmgc_fragments(
         is_test: false,
         is_test_entry: false,
         test_name: b"",
-        kind: PlannedWasmRuntimeFunction(b""),
+        kind: PlannedWasmErasedAdapterFunction,
         direct_builtin: b"",
         elided: false,
         signature_type_index: specialization.signature_type_index,
@@ -1566,7 +1568,7 @@ pub fn link_program_wasmgc_fragments(
                         is_test: false,
                         is_test_entry: false,
                         test_name: b"",
-                        kind: PlannedWasmRuntimeFunction(b""),
+                        kind: PlannedWasmErasedAdapterFunction,
                         direct_builtin: b"",
                         elided: false,
                         signature_type_index,

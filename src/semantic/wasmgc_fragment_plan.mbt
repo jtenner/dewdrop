@@ -207,6 +207,7 @@ pub enum PlannedWasmFunctionKind {
   PlannedWasmInlineHeapFunction(RawHeapInstruction)
   PlannedWasmOutlinedHeapFunction(RawHeapInstruction)
   PlannedWasmRuntimeFunction(Bytes)
+  PlannedWasmErasedAdapterFunction
   PlannedWasmDefinedFunction(BodyId)
   PlannedWasmDefinedLambdaFunction(LambdaId)
   PlannedWasmTraitAdapterFunction(DeclId, DeclId)
@@ -3667,6 +3668,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       | PlannedWasmInlineHeapFunction(_)
       | PlannedWasmSignatureOnlyFunction => ()
       PlannedWasmDefinedLambdaFunction(_)
+      | PlannedWasmErasedAdapterFunction
       | PlannedWasmTraitAdapterFunction(_, _) =>
         abort("synthetic function appeared in callable fragment job")
     }
@@ -3720,6 +3722,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       | PlannedWasmInlineHeapFunction(_)
       | PlannedWasmSignatureOnlyFunction => -1
       PlannedWasmDefinedLambdaFunction(_)
+      | PlannedWasmErasedAdapterFunction
       | PlannedWasmTraitAdapterFunction(_, _) =>
         abort("synthetic function appeared in callable index assignment")
     }

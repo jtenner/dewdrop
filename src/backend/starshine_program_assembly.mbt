@@ -309,6 +309,7 @@ fn emit_starshine_program_import_section(
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
+      | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmTraitAdapterFunction(_, _)
@@ -331,6 +332,7 @@ fn emit_starshine_program_function_section(
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
+      | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {
           signatures.push(
@@ -1100,25 +1102,22 @@ fn emit_starshine_program_code_section(
             Err(error) => return Err(error)
           }
         }
+      @semantic.PlannedWasmErasedAdapterFunction =>
+        if !function_.elided {
+          match
+            starshine_program_erased_adapter_body(
+              lowering, planned, function_, helper_plan,
+            ) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
       @semantic.PlannedWasmRuntimeFunction(name) =>
         if !function_.elided {
-          if function_.erased_adapter_target >= 0 {
-            match
-              starshine_program_erased_adapter_body(
-                lowering, planned, function_, helper_plan,
-              ) {
-              Ok(function_body) => functions.push(function_body)
-              Err(error) => return Err(error)
-            }
-          } else {
-            match
-              emit_starshine_text_runtime_function(
-                name,
-                planned.type_count,
-              ) {
-              Some(function_body) => functions.push(function_body)
-              None => return Err(UnsupportedBuiltin(name))
-            }
+          match
+            emit_starshine_text_runtime_function(name, planned.type_count) {
+            Some(function_body) => functions.push(function_body)
+            None => return Err(UnsupportedBuiltin(name))
           }
         }
       @semantic.PlannedWasmImportedFunction(_)

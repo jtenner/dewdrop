@@ -319,6 +319,35 @@ pub fn PlannedProgramWasmGCLink::specialized_call_runtime_evidence(
 }
 
 ///|
+/// An adapter needs one emitted target, not another spelling-based fallback.
+/// Missing, duplicate, self-referential, and non-emitted targets return None.
+pub fn PlannedProgramWasmGCLink::erased_adapter_target_function(
+  self : PlannedProgramWasmGCLink,
+  adapter : PlannedProgramWasmFunction,
+) -> PlannedProgramWasmFunction? {
+  if !(adapter.kind is PlannedWasmErasedAdapterFunction) ||
+    adapter.erased_adapter_target < 0 ||
+    adapter.erased_adapter_target == adapter.function_index {
+    return None
+  }
+  let mut target = None
+  for candidate in self.functions {
+    if candidate.function_index == adapter.erased_adapter_target && !candidate.elided {
+      if candidate.kind is PlannedWasmInlineBuiltinFunction(_) ||
+        candidate.kind is PlannedWasmInlineHeapFunction(_) ||
+        candidate.kind is PlannedWasmSignatureOnlyFunction {
+        return None
+      }
+      if target is Some(_) {
+        return None
+      }
+      target = Some(candidate)
+    }
+  }
+  target
+}
+
+///|
 pub fn PlannedProgramWasmGCLink::materialized_specialization_count(
   self : PlannedProgramWasmGCLink,
 ) -> Int {

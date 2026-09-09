@@ -10,6 +10,26 @@ fn planning_codec_test_stages() -> SemanticCompilerTestStages {
 }
 
 ///|
+test "module caches reject program-only erased adapters" {
+  let (resolved, lowering) = wasmgc_test_inputs(
+    23958UL, b"pub fn run() -> I32 {\n  1\n}\n",
+  )
+  let fragments = plan_module_wasmgc_fragments(resolved, lowering)
+  assert_eq(fragments.functions.length(), 1)
+  let original = fragments.functions[0]
+  fragments.functions[0] = { ..original, kind: PlannedWasmErasedAdapterFunction, }
+  let bytes = serialize_planned_module_wasmgc_fragments(fragments).unwrap()
+  let restored = deserialize_planned_module_wasmgc_fragments(bytes).unwrap()
+  assert_eq(restored.functions[0].kind, PlannedWasmErasedAdapterFunction)
+  assert_eq(
+    validate_cached_module_wasmgc_fragments(
+      restored, fragments.module_id, WasmGCPlanningOptions::optimized_subtype_families(),
+    ),
+    Err("cached WasmGC fragment contains a program-only erased adapter"),
+  )
+}
+
+///|
 test "WasmGC codec retains outlined intrinsic identity" {
   let stages = compiler_test_stages(23953UL, [
     CompilerTestModule::new("cache.builtin", [

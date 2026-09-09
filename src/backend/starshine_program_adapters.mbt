@@ -2105,17 +2105,7 @@ fn starshine_program_erased_adapter_body(
   helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
   let target = function_.erased_adapter_target
-  if target < 0 {
-    return Err(MissingFunction(function_.declaration))
-  }
-  let mut target_function = None
-  for candidate in planned.functions {
-    if candidate.function_index == target {
-      target_function = Some(candidate)
-      break
-    }
-  }
-  let target_function = match target_function {
+  let target_function = match planned.erased_adapter_target_function(function_) {
     Some(value) => value
     None => return Err(MissingFunction(function_.declaration))
   }
