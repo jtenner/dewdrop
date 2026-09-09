@@ -104,7 +104,7 @@ test "SPC-301 initializer shape cannot remain generic" expect_trap "unreachable"
   self_host_initializer_link_mutation(8u32)
 }
 
-test "BOD-610 initializer body must be present" expect_trap "unreachable" {
+test "ARN-106 initializer body removal cannot shift stored IDs" expect_trap "unreachable" {
   let link = self_host_initializer_link_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   assert(module_.bodies[0u32].body == link.initializers[0u32].body, "first body initializes the global")
@@ -118,10 +118,26 @@ test "LNK-502 initializer links cannot outlive their source steps" expect_trap "
   let _ = self_host_validate_program_wasmgc_link(link)
 }
 
-test "LNK-502 every selected source initializer must have a link" expect_trap "unreachable" {
+test "LNK-504 source initializer declaration keys are unique" expect_trap "unreachable" {
   let link = self_host_initializer_link_fixture()
   let steps = link.fragments.specialization.lowering.modules[0u32].initialization.steps
   steps.push(steps[0u32])
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
+
+test "BOD-610 initializer body must be present" expect_trap "unreachable" {
+  let link = self_host_initializer_link_fixture()
+  link.fragments.specialization.lowering.modules[0u32].bodies.clear()
+  let _ = self_host_validate_program_wasmgc_link(link)
+}
+
+test "LNK-502 every selected Unit initializer must have a link" expect_trap "unreachable" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"let effect = ()\npub fn main() -> I64 {\n  42i64\n}\n",
+  ), false)
+  assert(link.initializers.length() == 1u32 && link.global_count == 0u32, "one erased initializer before mutation")
+  assert(self_host_validate_program_wasmgc_link(link) is Option::None, "valid Unit startup schedule")
+  link.initializers.clear()
   let _ = self_host_validate_program_wasmgc_link(link)
 }
 

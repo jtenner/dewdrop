@@ -566,6 +566,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   distinct logical instances separate. Missing query instances cannot become
   template scans; removed branches cannot cause false initialization cycles.
   See the [selected startup log](docs/research/selected-startup-query-bodies-2026-09-08.md).
+  Self-host startup now follows selected function bodies across module cycles;
+  a source probe exposed a valid Wasm program returning 2 instead of 42. The
+  new schedule verifies each dependency edge and assigns global slots afterward.
+  Direct query-folded module-value cycles, dynamic-call effects, and full link
+  freeze remain. See the
+  [self-host startup log](docs/research/selfhost-startup-dependency-order-2026-09-08.md).
   Native plain-function lookup now checks table bounds and declaration,
   module, fragment, lambda, kind, and ABI-key identity at link completion and each
   read. Missing keys stay missing; specialization entries cannot replace plain

@@ -1,0 +1,279 @@
+fn self_host_initializer_order_fixture(inverse: Bool) -> SelfHostPlannedProgramWasmGCLink {
+  let root = if inverse {
+    b"open app.library\npub struct Marker {}\npub let seed = make_seed()\nfn make_seed() -> I64 {\n  40i64\n}\npub fn read_seed() -> I64 {\n  seed\n}\npub fn main() -> I64 {\n  answer\n}\n"
+  } else {
+    b"open app.library\npub struct Marker {}\npub let answer = read_seed() + 2i64\npub fn main() -> I64 {\n  answer\n}\n"
+  }
+  let library = if inverse {
+    b"open app.root\npub let answer = read_seed() + 2i64\npub fn accept_marker(value: Marker) -> Marker {\n  value\n}\n"
+  } else {
+    b"open app.root\npub let seed = make_seed()\nfn make_seed() -> I64 {\n  40i64\n}\npub fn read_seed() -> I64 {\n  seed\n}\npub fn accept_marker(value: Marker) -> Marker {\n  value\n}\n"
+  }
+  let link = self_host_physical_test_manifest_link(SelfHostProgramManifest::{
+    modules: [
+      SelfHostManifestModule::{
+        path: "app.root"
+        files: [SelfHostManifestFile::{
+          path: "root.dew"
+          source: root
+          test_only: false
+        }]
+      },
+      SelfHostManifestModule::{
+        path: "app.library"
+        files: [SelfHostManifestFile::{
+          path: "library.dew"
+          source: library
+          test_only: false
+        }]
+      },
+    ]
+  })
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "a module import cycle is not an initializer cycle")
+  link
+}
+
+test "startup follows cross-module global reads through called functions" {
+  for inverse in [false, true] {
+    let link = self_host_initializer_order_fixture(inverse)
+    assert(link.initializers.length() == 2u32, "both global initializers remain")
+    let seed = if inverse {
+      (5500u64 << 32u64) | 1u64
+    } else {
+      5501u64 << 32u64
+    }
+    assert(link.initializers[0u32].declaration == seed, "seed must be set before the function reads it")
+    assert(self_host_validate_program_wasmgc_link(link) is Option::None, "dependency-first schedule has exact link records")
+  }
+}
+
+pub fn self_host_emit_initializer_order_probe(source: BytesBuilder) -> Bytes {
+  let selector = source.finish()
+  assert(selector.byte_length() == 1u32, "startup probe requires one direction selector")
+  let link = self_host_initializer_order_fixture(selector.byte_at(0u32) != 0u8)
+  match build_self_host_linked_i32_module(link, 5500u64) {
+    Result::Ok(bytes) => bytes
+    Result::Err(error) => {
+      assert(false, error)
+      unreachable()
+    }
+  }
+}
+
+test "startup reports a real function-mediated initialization cycle" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"fn read() -> I64 {\n  answer\n}\nlet answer = read()\npub fn main() -> I64 {\n  answer\n}\n",
+  ), false)
+  assert(link.diagnostics.length() == 1u32, "one real startup cycle")
+  match link.diagnostics[0u32] {
+    SelfHostProgramWasmGCLinkDiagnostic::EagerProgramInitializationCycle(declaration, dependency) => {
+      assert(declaration == ((5100u64 << 32u64) | 1u64), "cycle names the initializer")
+      assert(dependency == declaration, "the function reads its own caller's global")
+    }
+    _ => assert(false, "expected a startup cycle diagnostic")
+  }
+  assert(self_host_validate_program_wasmgc_link(link) is Option::Some(_), "a cycle cannot pass the emission boundary")
+}
+
+test "startup visits recursive calls once and keeps unique global edges" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"let seed = 40i64\nfn read(flag: Bool) -> I64 {\n  if flag {\n    read(false)\n  } else {\n    seed + seed - 40i64\n  }\n}\npub let answer = read(true) + 2i64\n",
+  ), false)
+  assert(link.diagnostics.length() == 0u32, "recursive calls do not loop in dependency analysis")
+  let candidates = link.initializers
+  let values = self_host_initializer_body_dependencies(link.fragments.specialization,
+    candidates[1u32], candidates, self_host_initializer_candidate_index(candidates),
+    self_host_initializer_dependency_calls(link.fragments.specialization.calls))
+  assert(values.length() == 1u32 && values[0u32] == 0u32, "repeated reads share one dependency edge")
+}
+
+test "startup keeps real cycles in selected Unit query branches" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nfn choose<t>() -> I64 {\n  if is_unit::<t>() {\n    answer\n  } else {\n    42i64\n  }\n}\nlet answer = choose::<Unit>()\npub fn main() -> I64 {\n  answer\n}\n",
+  ), false)
+  assert(link.diagnostics.length() == 1u32, "selected branch keeps its real cycle")
+  assert(link.diagnostics[0u32] is SelfHostProgramWasmGCLinkDiagnostic::EagerProgramInitializationCycle(_, _), "query cycle is a semantic diagnostic")
+}
+
+test "SPC-304 startup cannot use a generic query template without its call record" expect_trap "unreachable" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nfn choose<t>() -> I64 {\n  if is_unit::<t>() {\n    answer\n  } else {\n    42i64\n  }\n}\nlet answer = choose::<I32>()\npub fn main() -> I64 {\n  answer\n}\n",
+  ), false)
+  assert(link.diagnostics.length() == 0u32, "removed branch has no cycle before mutation")
+  link.fragments.specialization.calls.clear()
+  let candidates = link.initializers
+  let _ = self_host_initializer_body_dependencies(link.fragments.specialization,
+    candidates[0u32], candidates, self_host_initializer_candidate_index(candidates),
+    self_host_initializer_dependency_calls(link.fragments.specialization.calls))
+}
+
+fn self_host_startup_global_lookup_mutation(kind: U32) -> Unit {
+  let link = self_host_initializer_order_fixture(false)
+  let candidates = link.initializers
+  let globals = self_host_initializer_candidate_index(candidates)
+  let seed = 5501u64 << 32u64
+  assert(candidates[0u32].declaration == seed, "exact seed identity before mutation")
+  if kind == 0u32 {
+    let _ = globals.remove(seed)
+  } else {
+    globals.set(seed, if kind == 1u32 {
+      99u32
+    } else {
+      1u32
+    })
+  }
+  let _ = self_host_initializer_body_dependencies(link.fragments.specialization,
+    candidates[1u32], candidates, globals,
+    self_host_initializer_dependency_calls(link.fragments.specialization.calls))
+}
+
+test "LNK-504 startup cannot lose a global dependency lookup" expect_trap "unreachable" {
+  self_host_startup_global_lookup_mutation(0u32)
+}
+
+test "ARN-101 startup bounds a global dependency index" expect_trap "unreachable" {
+  self_host_startup_global_lookup_mutation(1u32)
+}
+
+test "ARN-106 startup checks a global dependency declaration" expect_trap "unreachable" {
+  self_host_startup_global_lookup_mutation(2u32)
+}
+
+test "ARN-106 startup called body lookup checks stored identity" expect_trap "unreachable" {
+  let link = self_host_initializer_order_fixture(false)
+  let plan = link.fragments.specialization
+  let module_ = plan.lowering.modules[1u32]
+  assert(module_.bodies[2u32].body == ((5501u64 << 32u64) | 2u64), "selected reader body before mutation")
+  let _ = module_.bodies.remove(2u32)
+  let candidates = link.initializers
+  let _ = self_host_initializer_body_dependencies(plan,
+    candidates[1u32], candidates, self_host_initializer_candidate_index(candidates),
+    self_host_initializer_dependency_calls(plan.calls))
+}
+
+fn self_host_startup_call_mutation(kind: U32) -> Unit {
+  let link = self_host_initializer_order_fixture(false)
+  let plan = link.fragments.specialization
+  assert(plan.calls.length() == 0u32, "plain calls use exact declarations without generic records")
+  match plan.lowering.modules[0u32].expressions[1u32].kind {
+    SelfHostPlannedExpressionKind::PlannedDirectCall(target, _, _, _) => {
+      assert(target == ((5501u64 << 32u64) | 2u64), "source call has the exact reader target")
+    }
+    _ => assert(false, "fixture expression is a direct call")
+  }
+  // An identical exact replay is valid for a plain call too. Seed one before
+  // mutating it; otherwise an absent optional record would not test identity.
+  plan.calls.push(SelfHostProgramSpecializedCall::{
+    caller_body: 5500u64 << 32u64
+    caller_specialization: 4294967295u32
+    expression: 1u32
+    target: (5501u64 << 32u64) | 2u64
+    target_specialization: 4294967295u32
+  })
+  let calls = self_host_initializer_dependency_calls(plan.calls)
+  let valid = self_host_initializer_body_dependencies(plan,
+    link.initializers[1u32], link.initializers,
+    self_host_initializer_candidate_index(link.initializers), calls)
+  assert(valid.length() == 1u32 && valid[0u32] == 0u32, "valid exact replay retains the seed edge before mutation")
+  let mut changed = false
+  while 0u32 {
+    index if index < plan.calls.length() => {
+      let call = plan.calls[index]
+      if call.caller_body == (5500u64 << 32u64) && call.expression == 1u32 {
+        assert(call.target == ((5501u64 << 32u64) | 2u64), "exact reader declaration before mutation")
+        assert(call.caller_specialization == 4294967295u32, "plain initializer before mutation")
+        assert(plan.requests.length() == 0u32, "plain fixture has no generic requests")
+        plan.calls[index] = SelfHostProgramSpecializedCall::{
+          caller_body: if kind == 0u32 {
+            call.caller_body + 1u64
+          } else {
+            call.caller_body
+          }
+          caller_specialization: if kind == 2u32 {
+            0u32
+          } else {
+            call.caller_specialization
+          }
+          expression: if kind == 1u32 {
+            call.expression + 1u32
+          } else {
+            call.expression
+          }
+          target: if kind == 3u32 {
+            call.target + 1u64
+          } else {
+            call.target
+          }
+          target_specialization: if kind == 4u32 {
+            99u32
+          } else {
+            call.target_specialization
+          }
+        }
+        changed = true
+        break ()
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  assert(changed, "fixture contains the caller's exact record")
+  let candidates = link.initializers
+  let _ = self_host_initializer_body_dependencies(plan,
+    candidates[1u32], candidates, self_host_initializer_candidate_index(candidates), calls)
+}
+
+test "ARN-106 startup call record keeps its caller body" expect_trap "unreachable" {
+  self_host_startup_call_mutation(0u32)
+}
+
+test "ARN-106 startup call record keeps its expression" expect_trap "unreachable" {
+  self_host_startup_call_mutation(1u32)
+}
+
+test "SPC-303 startup call record keeps its caller instance" expect_trap "unreachable" {
+  self_host_startup_call_mutation(2u32)
+}
+
+test "ARN-106 startup call record keeps its declaration" expect_trap "unreachable" {
+  self_host_startup_call_mutation(3u32)
+}
+
+test "SPC-304 startup call specialization must be present" expect_trap "unreachable" {
+  self_host_startup_call_mutation(4u32)
+}
+
+fn self_host_startup_postcondition_mutation(kind: U32) -> Unit {
+  let link = self_host_initializer_order_fixture(false)
+  let candidates = link.initializers
+  let dependencies = [array_new::<U32>(), [0u32]]
+  let output = candidates.copy()
+  self_host_verify_initializer_dependency_order(candidates, dependencies, output)
+  if kind == 0u32 {
+    dependencies[0u32] = [1u32]
+  } else if kind == 1u32 {
+    dependencies[1u32] = [99u32]
+  } else if kind == 2u32 {
+    let _ = dependencies.pop()
+  } else {
+    let _ = output.pop()
+  }
+  self_host_verify_initializer_dependency_order(candidates, dependencies, output)
+}
+
+test "LNK-501 startup verifies every dependency precedes its reader" expect_trap "unreachable" {
+  self_host_startup_postcondition_mutation(0u32)
+}
+
+test "ARN-101 startup postcondition checks dependency indices" expect_trap "unreachable" {
+  self_host_startup_postcondition_mutation(1u32)
+}
+
+test "ARN-103 startup dependency rows match candidates" expect_trap "unreachable" {
+  self_host_startup_postcondition_mutation(2u32)
+}
+
+test "ARN-103 startup output is a total candidate schedule" expect_trap "unreachable" {
+  self_host_startup_postcondition_mutation(3u32)
+}

@@ -35,7 +35,6 @@ const probes = [
     ["ARN-106 initializer body matches its source step", 106, 5100n << 32n, (5100n << 32n) + 1n, 2n],
     ["SPC-301 initializer shape cannot contain an error", 301, 0n, 2n, 3n],
     ["SPC-301 initializer shape cannot remain generic", 301, 0n, 1n, 3n],
-    ["BOD-610 initializer body must be present", 610, 1n, 0n, 13n],
     ["ABI-709 initializer shape matches its source type", 709, 1n, 0n, 4n],
     ["ARN-106 initializer test role matches its source step", 106, 0n, 1n, 5n],
     ["LNK-502 initializer global index matches its table slot", 502, 0n, 1n, 6n],
@@ -50,10 +49,72 @@ const probes = [
     expected: [502, 5, 0n, 0n, 0n, 4294967295, 0n, 1n, 9n << 32n],
   },
   {
-    name: "LNK-502 every selected source initializer must have a link",
-    expected: [502, 5, 5100n, 5100n << 32n, 5100n << 32n,
-      4294967295, 2n, 1n, (9n << 32n) | 1n],
+    name: "LNK-504 source initializer declaration keys are unique",
+    expected: [504, 5, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, 1n, 2n, (16n << 32n) | 1n],
   },
+  {
+    name: "ARN-106 initializer body removal cannot shift stored IDs",
+    expected: [106, 5, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, 5100n << 32n, (5100n << 32n) | 1n, 3n],
+  },
+  {
+    name: "BOD-610 initializer body must be present",
+    expected: [610, 5, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, 0n, 0n, 2n],
+  },
+  {
+    name: "LNK-502 every selected Unit initializer must have a link",
+    expected: [502, 5, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, 1n, 0n, 9n << 32n],
+  },
+  {
+    name: "SPC-304 startup cannot use a generic query template without its call record",
+    expected: [304, 5, 5100n, (5100n << 32n) | 1n, 5100n << 32n,
+      4294967295, 1n, 0n, 23n],
+  },
+  ...[
+    ["LNK-504 startup cannot lose a global dependency lookup", 504, 1n, 0n],
+    ["ARN-101 startup bounds a global dependency index", 101, 2n, 99n],
+    ["ARN-106 startup checks a global dependency declaration", 106, 5501n << 32n, (5500n << 32n) | 1n],
+  ].map(([name, code, expected, actual]) => ({
+    name,
+    expected: [code, 5, 5501n, (5501n << 32n) | 2n, (5501n << 32n) | 2n,
+      3, expected, actual, 5501n << 32n],
+  })),
+  {
+    name: "ARN-106 startup called body lookup checks stored identity",
+    expected: [106, 5, 5501n, (5501n << 32n) | 2n, (5501n << 32n) | 2n,
+      4294967295, (5501n << 32n) | 2n, (5501n << 32n) | 3n, 3n],
+  },
+  ...[
+    ["ARN-106 startup call record keeps its caller body", 106, 5500n << 32n, (5500n << 32n) | 1n, 25n],
+    ["ARN-106 startup call record keeps its expression", 106, 1n, 2n, 25n],
+    ["SPC-303 startup call record keeps its caller instance", 303, 4294967295n, 0n, 25n],
+    ["ARN-106 startup call record keeps its declaration", 106, (5501n << 32n) | 2n, (5501n << 32n) | 3n, 25n],
+    ["SPC-304 startup call specialization must be present", 304, 0n, 99n, (5501n << 32n) | 2n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 5, 5500n, (5500n << 32n) | 1n, 5500n << 32n,
+      1, expected, actual, detail],
+  })),
+  {
+    name: "LNK-501 startup verifies every dependency precedes its reader",
+    expected: [501, 5, 5501n, 5501n << 32n, 5501n << 32n,
+      4294967295, 0n, 1n, 27n << 32n],
+  },
+  {
+    name: "ARN-101 startup postcondition checks dependency indices",
+    expected: [101, 5, 5500n, (5500n << 32n) | 1n, 5500n << 32n,
+      4294967295, 2n, 99n, (27n << 32n) | 1n],
+  },
+  ...[
+    ["ARN-103 startup dependency rows match candidates", 27n],
+    ["ARN-103 startup output is a total candidate schedule", 28n],
+  ].map(([name, detail]) => ({
+    name,
+    expected: [103, 5, 0n, 0n, 0n, 4294967295, 2n, 1n, detail],
+  })),
   ...[
     ["ARN-103 initializer table cannot lose a global", 0n],
     ["ARN-103 initializer table cannot duplicate a global", 2n],

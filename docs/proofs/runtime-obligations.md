@@ -49,6 +49,14 @@ select its source template. Thus removed query branches do not contribute
 startup dependencies; real selected cycles remain diagnostics. See
 [the selected startup log](../research/selected-startup-query-bodies-2026-09-08.md).
 
+Self-host startup also uses exact body/instance work records. Its separate
+postcondition requires a total duplicate-free candidate permutation and, for
+every dependency edge, a strictly smaller dependency position. Module SCC order
+is only a tie breaker. Unit initializers keep effects but no global slot. Real
+value cycles are semantic diagnostics. This does not yet prove arbitrary
+dynamic-call effects or selected direct-query module cycle expansion. See
+[the self-host startup log](../research/selfhost-startup-dependency-order-2026-09-08.md).
+
 ## Arena access
 
 For arena \(A\) and index \(i\):

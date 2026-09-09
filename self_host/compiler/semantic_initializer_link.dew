@@ -41,15 +41,14 @@ fn self_host_initializer_global_count(initializers: Array<SelfHostPlannedProgram
 }
 
 // The module graph and body-owner table are checked by the caller. Walk source
-// steps in dependency order; never use an unchecked linked module/body index.
+// steps independently and compare with the selected dependency-first schedule.
 fn self_host_verify_initializer_links(link: SelfHostPlannedProgramWasmGCLink, body_owners: Map<U64, U64>) -> Unit {
   let count = link.initializers.length()
   let global_count = self_host_initializer_global_count(link.initializers)
   self_host_assert_link_fact(link.global_count == global_count, 103u32, 0u64, 0u64,
     4294967295u32, u32_into_u64(global_count), u32_into_u64(link.global_count), 720u64)
   let lowering = link.fragments.specialization.lowering
-  let mut slot = 0u32
-  let mut global_slot = 0u32
+  let mut source_slot = 0u32
   for module_index in lowering.graph.scc_modules {
     let module_ = lowering.modules[module_index]
     self_host_initializer_link_check(module_.initialization.module_id == module_.module_id,
@@ -58,69 +57,66 @@ fn self_host_verify_initializer_links(link: SelfHostPlannedProgramWasmGCLink, bo
     for step in module_.initialization.steps {
       if !step.test_only || link.emit_tests {
         match step.kind {
-          SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(declaration, body, type_) => {
-            self_host_initializer_link_check(slot < count, module_.module_id, declaration,
-              body, slot, 502u32, u32_into_u64(slot) + 1u64, u32_into_u64(count), 9u32)
-            let actual = link.initializers[slot]
-            self_host_initializer_link_check(actual.module_index == module_index,
-              module_.module_id, declaration, body, slot, 504u32,
-              u32_into_u64(module_index), u32_into_u64(actual.module_index), 0u32)
-            self_host_initializer_link_check(actual.declaration == declaration,
-              module_.module_id, declaration, body, slot, 504u32,
-              declaration, actual.declaration, 1u32)
-            self_host_initializer_link_check(actual.body == body,
-              module_.module_id, declaration, body, slot, 106u32, body, actual.body, 2u32)
-            let shape_error = self_host_specialization_shape_error(actual.shape)
-            self_host_initializer_link_check(shape_error == 0u32,
-              module_.module_id, declaration, body, slot, 301u32,
-              0u64, u32_into_u64(shape_error), 3u32)
-            let expected_shape = self_host_planned_merged_body_value_shape(
-              module_.resolved_types, module_.inferred, type_)
-            let source_error = self_host_specialization_shape_error(expected_shape)
-            self_host_initializer_link_check(source_error == 0u32,
-              module_.module_id, declaration, body, slot, 301u32,
-              0u64, u32_into_u64(source_error), 10u32)
-            let same_shape = self_host_specialization_shapes_equal(expected_shape, actual.shape)
-            self_host_initializer_link_check(same_shape,
-              module_.module_id, declaration, body, slot, 709u32,
-              1u64, self_host_body_freeze_bool(same_shape), 4u32)
-            self_host_initializer_link_check(actual.test_only == step.test_only,
-              module_.module_id, declaration, body, slot, 106u32,
-              self_host_body_freeze_bool(step.test_only), self_host_body_freeze_bool(actual.test_only), 5u32)
-            let expected_global = if self_host_initializer_has_storage(expected_shape) {
-              let result = global_slot
-              global_slot = global_slot + 1u32
-              result
-            } else {
-              4294967295u32
-            }
-            self_host_initializer_link_check(actual.global_index == expected_global,
-              module_.module_id, declaration, body, slot, 502u32,
-              u32_into_u64(expected_global), u32_into_u64(actual.global_index), 6u32)
-            self_host_initializer_link_check(actual.order == slot,
-              module_.module_id, declaration, body, slot, 502u32,
-              u32_into_u64(slot), u32_into_u64(actual.order), 7u32)
-            self_host_initializer_link_check(self_host_semantic_id_module(declaration) == module_.module_id,
-              module_.module_id, declaration, body, slot, 107u32,
-              module_.module_id, self_host_semantic_id_module(declaration), 11u32)
-            self_host_initializer_link_check(self_host_semantic_id_module(body) == module_.module_id,
-              module_.module_id, declaration, body, slot, 107u32,
-              module_.module_id, self_host_semantic_id_module(body), 12u32)
-            let owned = match body_owners.get(body) {
-              Option::Some(owner) => owner == declaration
-              Option::None => false
-            }
-            self_host_initializer_link_check(owned, module_.module_id, declaration,
-              body, slot, 610u32, 1u64, self_host_body_freeze_bool(owned), 13u32)
-            slot = slot + 1u32
+          SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(_, _, _) => {
+            source_slot = source_slot + 1u32
           }
           SelfHostPlannedModuleInitializationStepKind::PlannedCyclicModuleValues(_) => {
             self_host_initializer_link_check(false, module_.module_id, 0u64, 0u64,
-              slot, 501u32, 0u64, 1u64, 14u32)
+              source_slot, 501u32, 0u64, 1u64, 14u32)
           }
         }
       }
     }
+  }
+  let diagnostics = array_new::<SelfHostProgramWasmGCLinkDiagnostic>()
+  let expected = self_host_schedule_program_initializers(link.fragments,
+    self_host_program_link_initializers(link.fragments, link.emit_tests), diagnostics)
+  self_host_initializer_link_check(diagnostics.length() == 0u32,
+    0u64, 0u64, 0u64, 0u32, 501u32, 0u64, u32_into_u64(diagnostics.length()), 14u32)
+  let mut slot = 0u32
+  for source in expected {
+    let module_ = lowering.modules[source.module_index]
+    let declaration = source.declaration
+    let body = source.body
+    self_host_initializer_link_check(slot < count, module_.module_id, declaration,
+      body, slot, 502u32, u32_into_u64(slot) + 1u64, u32_into_u64(count), 9u32)
+    let actual = link.initializers[slot]
+    self_host_initializer_link_check(actual.module_index == source.module_index,
+      module_.module_id, declaration, body, slot, 504u32,
+      u32_into_u64(source.module_index), u32_into_u64(actual.module_index), 0u32)
+    self_host_initializer_link_check(actual.declaration == declaration,
+      module_.module_id, declaration, body, slot, 504u32,
+      declaration, actual.declaration, 1u32)
+    self_host_initializer_link_check(actual.body == body,
+      module_.module_id, declaration, body, slot, 106u32, body, actual.body, 2u32)
+    let shape_error = self_host_specialization_shape_error(actual.shape)
+    self_host_initializer_link_check(shape_error == 0u32,
+      module_.module_id, declaration, body, slot, 301u32,
+      0u64, u32_into_u64(shape_error), 3u32)
+    let source_error = self_host_specialization_shape_error(source.shape)
+    self_host_initializer_link_check(source_error == 0u32,
+      module_.module_id, declaration, body, slot, 301u32,
+      0u64, u32_into_u64(source_error), 10u32)
+    let same_shape = self_host_specialization_shapes_equal(source.shape, actual.shape)
+    self_host_initializer_link_check(same_shape,
+      module_.module_id, declaration, body, slot, 709u32,
+      1u64, self_host_body_freeze_bool(same_shape), 4u32)
+    self_host_initializer_link_check(actual.test_only == source.test_only,
+      module_.module_id, declaration, body, slot, 106u32,
+      self_host_body_freeze_bool(source.test_only), self_host_body_freeze_bool(actual.test_only), 5u32)
+    self_host_initializer_link_check(actual.global_index == source.global_index,
+      module_.module_id, declaration, body, slot, 502u32,
+      u32_into_u64(source.global_index), u32_into_u64(actual.global_index), 6u32)
+    self_host_initializer_link_check(actual.order == slot,
+      module_.module_id, declaration, body, slot, 502u32,
+      u32_into_u64(slot), u32_into_u64(actual.order), 7u32)
+    let owned = match body_owners.get(body) {
+      Option::Some(owner) => owner == declaration
+      Option::None => false
+    }
+    self_host_initializer_link_check(owned, module_.module_id, declaration,
+      body, slot, 610u32, 1u64, self_host_body_freeze_bool(owned), 13u32)
+    slot = slot + 1u32
   }
   self_host_initializer_link_check(slot == count, 0u64, 0u64, 0u64,
     slot, 502u32, u32_into_u64(slot), u32_into_u64(count), 9u32)

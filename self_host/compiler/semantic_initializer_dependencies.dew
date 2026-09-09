@@ -1,0 +1,166 @@
+struct SelfHostInitializerBodyWork {
+  module_index: U32
+  declaration: U64
+  body: U64
+  kind: SelfHostHirBodyKind
+  specialization: U32
+}
+
+fn self_host_initializer_dependency_failure(declaration: U64, body: U64, expression: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: 5u32
+    module_id: self_host_semantic_id_module(declaration)
+    declaration: declaration
+    body: body
+    expression: expression
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "startup dependencies require exact owned bodies, calls, and globals")
+  unreachable()
+}
+
+fn self_host_initializer_body_kind(kind: SelfHostHirBodyKind) -> U64 {
+  match kind {
+    SelfHostHirBodyKind::ModuleLetBody => 0u64
+    SelfHostHirBodyKind::FunctionBody => 1u64
+    SelfHostHirBodyKind::ImplMethodBody => 2u64
+  }
+}
+
+fn self_host_initializer_dependency_body(module_: SelfHostPlannedModuleLowering, task: SelfHostInitializerBodyWork) -> SelfHostPlannedBodyLowering {
+  if self_host_semantic_id_module(task.declaration) != module_.module_id {
+    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 107u32, module_.module_id, self_host_semantic_id_module(task.declaration), 0u64)
+  }
+  if self_host_semantic_id_module(task.body) != module_.module_id {
+    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 107u32, module_.module_id, self_host_semantic_id_module(task.body), 1u64)
+  }
+  let slot = self_host_semantic_id_local(task.body)
+  if slot >= module_.bodies.length() {
+    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 610u32, u32_into_u64(module_.bodies.length()), u32_into_u64(slot), 2u64)
+  }
+  let body = module_.bodies[slot]
+  if body.body != task.body {
+    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 106u32, task.body, body.body, 3u64)
+  }
+  if body.declaration != task.declaration {
+    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 106u32, task.declaration, body.declaration, 4u64)
+  }
+  if self_host_initializer_body_kind(body.kind) != self_host_initializer_body_kind(task.kind) {
+    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 106u32, self_host_initializer_body_kind(task.kind), self_host_initializer_body_kind(body.kind), 22u64)
+  }
+  body
+}
+
+fn self_host_initializer_dependency_instance(lowering: SelfHostPlannedProgramLowering, task: SelfHostInitializerBodyWork) -> SelfHostPlannedModuleLowering {
+  if task.module_index >= lowering.modules.length() {
+    self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 101u32, u32_into_u64(lowering.modules.length()), u32_into_u64(task.module_index), 20u64)
+  }
+  let source = lowering.modules[task.module_index]
+  match lowering.compile_time.instances.get(task.specialization) {
+    Option::Some(instance) => {
+      if instance.declaration != task.declaration {
+        self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 106u32, task.declaration, instance.declaration, 23u64)
+      }
+      if instance.module_.module_id != source.module_id {
+        self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 107u32, source.module_id, instance.module_.module_id, 23u64)
+      }
+      instance.module_
+    }
+    Option::None => {
+      if lowering.compile_time.sensitive.contains_key(task.declaration) {
+        match self_host_program_specialization_callable(source, task.declaration) {
+          Option::Some(callable) => if self_host_program_specialization_callable_generics(callable).length > 0u32 {
+            self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 304u32, 1u64, 0u64, 23u64)
+          }
+          Option::None => {}
+        }
+      }
+      source
+    }
+  }
+}
+
+fn self_host_initializer_dependency_calls(calls: Array<SelfHostProgramSpecializedCall>) -> Map<U64, Map<U64, U32>> {
+  self_host_program_specialization_verify_calls(calls)
+  let result = self_host_program_specialization_call_bodies()
+  while 0u32 {
+    index if index < calls.length() => {
+      let call = calls[index]
+      let entries = match result.get(call.caller_body) {
+        Option::Some(value) => value
+        Option::None => {
+          let value = self_host_empty_u64_u32_map()
+          result.set(call.caller_body, value)
+          value
+        }
+      }
+      entries.set((u32_into_u64(call.caller_specialization) << 32u64) | u32_into_u64(call.expression), index)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  result
+}
+
+fn self_host_initializer_dependency_call_target(plan: SelfHostProgramSpecializationPlan, caller: SelfHostInitializerBodyWork, expression: U32, target: U64, specialization: U32) -> Option<SelfHostInitializerBodyWork> {
+  let lowering = plan.lowering
+  let owner = match lowering.index.declaration_owner(target) {
+    Option::Some(value) => value
+    Option::None => self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 607u32, 1u64, 0u64, target)
+  }
+  if owner >= lowering.modules.length() {
+    self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 101u32, u32_into_u64(lowering.modules.length()), u32_into_u64(owner), target)
+  }
+  let module_ = lowering.modules[owner]
+  if module_.module_id != self_host_semantic_id_module(target) {
+    self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 107u32, self_host_semantic_id_module(target), module_.module_id, target)
+  }
+  let functions = module_.functions
+  if functions.module_id != module_.module_id {
+    self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 106u32, module_.module_id, functions.module_id, target)
+  }
+  let local = self_host_semantic_id_local(target)
+  if local >= functions.callable_by_declaration.length() {
+    self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 101u32, u32_into_u64(functions.callable_by_declaration.length()), u32_into_u64(local), target)
+  }
+  let index = functions.callable_by_declaration[local]
+  if index == 4294967295u32 {
+    self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 607u32, 1u64, 0u64, target)
+  }
+  if index >= functions.callables.length() {
+    self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 101u32, u32_into_u64(functions.callables.length()), u32_into_u64(index), target)
+  }
+  let callable = functions.callables[index]
+  if callable.declaration != target {
+    self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 106u32, target, callable.declaration, target)
+  }
+  if specialization != 4294967295u32 {
+    if specialization >= plan.requests.length() {
+      self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 304u32, u32_into_u64(plan.requests.length()), u32_into_u64(specialization), target)
+    }
+    if plan.requests[specialization].declaration != target {
+      self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 303u32, target, plan.requests[specialization].declaration, u32_into_u64(specialization))
+    }
+  }
+  let (body, kind) = match callable.kind {
+    SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => (body, SelfHostHirBodyKind::FunctionBody)
+    SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, body) => match body {
+      Option::Some(value) => (value, SelfHostHirBodyKind::ImplMethodBody)
+      Option::None => return Option::None
+    }
+    SelfHostPlannedCallableKind::PlannedBuiltinCallable(_),
+    SelfHostPlannedCallableKind::PlannedForeignCallable(_, _, _),
+    SelfHostPlannedCallableKind::PlannedTraitMethodCallable(_) => return Option::None
+  }
+  let task = SelfHostInitializerBodyWork::{
+    module_index: owner
+    declaration: target
+    body: body
+    kind: kind
+    specialization: specialization
+  }
+  let _ = self_host_initializer_dependency_body(module_, task)
+  Option::Some(task)
+}

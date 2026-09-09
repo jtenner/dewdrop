@@ -176,6 +176,17 @@ async function compileSource(fixture) {
 let failures = 0;
 try {
   const start = performance.now();
+  for (const inverse of [0, 1]) {
+    const exports = await compileProbeBytes(new Uint8Array([inverse]), "self_host_emit_initializer_order_probe");
+    assert.equal(exports.main(), 42n, `startup global read direction ${inverse}`);
+  }
+  console.log(`self-host startup order checks passed: 2 (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host startup order checks failed", error);
+}
+try {
+  const start = performance.now();
   const count = await checkRawArrayTemporaryFlow((source, inspect) => compileProbeBytes(
     new TextEncoder().encode(source), "self_host_emission_probe_compile_source", unusedImports, inspect,
   ));

@@ -1,0 +1,141 @@
+fn self_host_initializer_candidate_index(candidates: Array<SelfHostPlannedProgramInitializer>) -> Map<U64, U32> {
+  let lookup = self_host_empty_u64_u32_map()
+  while 0u32 {
+    index if index < candidates.length() => {
+      let candidate = candidates[index]
+      if lookup.contains_key(candidate.declaration) {
+        self_host_initializer_dependency_failure(candidate.declaration, candidate.body, 4294967295u32, 504u32, 1u64, 2u64, (16u64 << 32u64) | u32_into_u64(index))
+      }
+      lookup.set(candidate.declaration, index)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  lookup
+}
+
+// Stable dependency-first order. Module SCC order only breaks ties; a module
+// import cycle is not itself a cycle among the values that run at startup.
+fn self_host_schedule_program_initializers(fragments: SelfHostPlannedProgramWasmGCFragments, candidates: Array<SelfHostPlannedProgramInitializer>, diagnostics: Array<SelfHostProgramWasmGCLinkDiagnostic>) -> Array<SelfHostPlannedProgramInitializer> {
+  let globals = self_host_initializer_candidate_index(candidates)
+  let calls = self_host_initializer_dependency_calls(fragments.specialization.calls)
+  let dependencies = array_new::<Array<U32>>()
+  let remaining = array_new::<U32>()
+  let scheduled = array_new::<Bool>()
+  for candidate in candidates {
+    let values = self_host_initializer_body_dependencies(fragments.specialization, candidate, candidates, globals, calls)
+    dependencies.push(values)
+    remaining.push(values.length())
+    scheduled.push(false)
+  }
+  let output = array_new::<SelfHostPlannedProgramInitializer>()
+  let mut global_slot = 0u32
+  while output.length() {
+    count if count < candidates.length() => {
+      let mut selected = 4294967295u32
+      while 0u32 {
+        index if index < candidates.length() => {
+          if !scheduled[index] && remaining[index] == 0u32 {
+            selected = index
+            break ()
+          }
+          continue index + 1u32
+        }
+        _ => break ()
+      }
+      if selected == 4294967295u32 {
+        while 0u32 {
+          index if index < candidates.length() => {
+            if !scheduled[index] {
+              for dependency in dependencies[index] {
+                if !scheduled[dependency] {
+                  diagnostics.push(SelfHostProgramWasmGCLinkDiagnostic::EagerProgramInitializationCycle(candidates[index].declaration, candidates[dependency].declaration))
+                  return candidates
+                }
+              }
+              self_host_initializer_dependency_failure(candidates[index].declaration, candidates[index].body, 4294967295u32, 604u32, 0u64, u32_into_u64(remaining[index]), 26u64)
+            }
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+      }
+      if selected == 4294967295u32 {
+        self_host_initializer_dependency_failure(0u64, 0u64, 4294967295u32, 604u32, 1u64, 0u64, 26u64)
+      }
+      let candidate = candidates[selected]
+      let global = if self_host_initializer_has_storage(candidate.shape) {
+        let slot = global_slot
+        global_slot = global_slot + 1u32
+        slot
+      } else {
+        4294967295u32
+      }
+      output.push(SelfHostPlannedProgramInitializer::{
+        module_index: candidate.module_index
+        declaration: candidate.declaration
+        body: candidate.body
+        shape: candidate.shape
+        test_only: candidate.test_only
+        global_index: global
+        order: count
+      })
+      scheduled[selected] = true
+      while 0u32 {
+        index if index < candidates.length() => {
+          if !scheduled[index] {
+            for dependency in dependencies[index] {
+              if dependency == selected {
+                if remaining[index] == 0u32 {
+                  self_host_initializer_dependency_failure(candidates[index].declaration, candidates[index].body, 4294967295u32, 604u32, 1u64, 0u64, 26u64)
+                }
+                remaining[index] = remaining[index] - 1u32
+              }
+            }
+          }
+          continue index + 1u32
+        }
+        _ => break ()
+      }
+      continue output.length()
+    }
+    _ => break ()
+  }
+  self_host_verify_initializer_dependency_order(candidates, dependencies, output)
+  output
+}
+
+// Independent postcondition: every candidate occurs once, and every recorded
+// dependency precedes its reader. This does not rerun the scheduling algorithm.
+fn self_host_verify_initializer_dependency_order(candidates: Array<SelfHostPlannedProgramInitializer>, dependencies: Array<Array<U32>>, output: Array<SelfHostPlannedProgramInitializer>) -> Unit {
+  if dependencies.length() != candidates.length() {
+    self_host_initializer_dependency_failure(0u64, 0u64, 4294967295u32, 103u32, u32_into_u64(candidates.length()), u32_into_u64(dependencies.length()), 27u64)
+  }
+  if output.length() != candidates.length() {
+    self_host_initializer_dependency_failure(0u64, 0u64, 4294967295u32, 103u32, u32_into_u64(candidates.length()), u32_into_u64(output.length()), 28u64)
+  }
+  let positions = self_host_initializer_candidate_index(output)
+  while 0u32 {
+    index if index < candidates.length() => {
+      let source = candidates[index]
+      let position = match positions.get(source.declaration) {
+        Option::Some(value) => value
+        Option::None => self_host_initializer_dependency_failure(source.declaration, source.body, 4294967295u32, 504u32, 1u64, 0u64, 27u64)
+      }
+      for dependency in dependencies[index] {
+        if dependency >= candidates.length() {
+          self_host_initializer_dependency_failure(source.declaration, source.body, 4294967295u32, 101u32, u32_into_u64(candidates.length()), u32_into_u64(dependency), (27u64 << 32u64) | u32_into_u64(index))
+        }
+        let dependency_position = match positions.get(candidates[dependency].declaration) {
+          Option::Some(value) => value
+          Option::None => self_host_initializer_dependency_failure(source.declaration, source.body, 4294967295u32, 504u32, 1u64, 0u64, candidates[dependency].declaration)
+        }
+        if dependency_position >= position {
+          self_host_initializer_dependency_failure(source.declaration, source.body, 4294967295u32, 501u32, u32_into_u64(position), u32_into_u64(dependency_position), (27u64 << 32u64) | u32_into_u64(index))
+        }
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+}

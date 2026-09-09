@@ -222,16 +222,20 @@ fn self_host_lowered_child_expression_edges(context: SelfHostLoweredChildContext
 }
 
 fn self_host_verify_lowered_body_children(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, lambda: U32) -> Unit {
-  self_host_assert_physical_body_span(body, body.expressions, module_.expressions.length(), 1u32)
-  self_host_assert_physical_body_span(body, body.locals, module_.locals.length(), 2u32)
-  self_host_assert_physical_body_span(body, body.blocks, module_.blocks.length(), 3u32)
-  self_host_assert_physical_body_span(body, body.patterns, module_.patterns.length(), 4u32)
-  self_host_assert_physical_body_span(body, body.pattern_arms, module_.pattern_arms.length(), 5u32)
+  self_host_verify_lowered_body_children_in_phase(module_, body, lambda, 6u32)
+}
+
+fn self_host_verify_lowered_body_children_in_phase(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, lambda: U32, phase: U32) -> Unit {
+  self_host_assert_physical_body_span_in_phase(body, body.expressions, module_.expressions.length(), 1u32, phase)
+  self_host_assert_physical_body_span_in_phase(body, body.locals, module_.locals.length(), 2u32, phase)
+  self_host_assert_physical_body_span_in_phase(body, body.blocks, module_.blocks.length(), 3u32, phase)
+  self_host_assert_physical_body_span_in_phase(body, body.patterns, module_.patterns.length(), 4u32, phase)
+  self_host_assert_physical_body_span_in_phase(body, body.pattern_arms, module_.pattern_arms.length(), 5u32, phase)
   let context = SelfHostLoweredChildContext::{
     module_: module_
     body: body
     syntax_walk: Option::None
-    phase: 6u32
+    phase: phase
     lambda: lambda
     locals: SelfHostHirSpan::{
       start: 0u32

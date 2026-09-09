@@ -72,6 +72,7 @@ pub struct SelfHostPlannedProgramSpecializedCallLink {
 }
 
 pub enum SelfHostProgramWasmGCLinkDiagnostic {
+  EagerProgramInitializationCycle(U64, U64)
   InvalidRawArrayContract(U64, String, U32)
   MissingLinkedSpecialization(U64, U32, U64, U32, U32)
   MissingLinkedCallTarget(U64, U32, U64, U32, U32)
@@ -1014,6 +1015,12 @@ fn self_host_validate_program_wasmgc_link(
     // Body emission must not repair a missing physical call target.
     let message = StringBuilder::new()
     match link.diagnostics[0u32] {
+      SelfHostProgramWasmGCLinkDiagnostic::EagerProgramInitializationCycle(declaration, dependency) => {
+        message.append("eager program initialization cycle declaration=")
+        message.append_u64(declaration)
+        message.append(" dependency=")
+        message.append_u64(dependency)
+      }
       SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(declaration, detail, offset) => {
         message.append("ABI-714 invalid raw array contract declaration=")
         message.append_u64(declaration)
@@ -1179,7 +1186,8 @@ fn self_host_plan_program_wasmgc_link(
       break self_host_semantic_unit()
     }
   }
-  let initializers = self_host_program_link_initializers(fragments, emit_tests)
+  let initializers = self_host_schedule_program_initializers(fragments,
+    self_host_program_link_initializers(fragments, emit_tests), diagnostics)
   SelfHostPlannedProgramWasmGCLink::{
     fragments: fragments
     types: types
