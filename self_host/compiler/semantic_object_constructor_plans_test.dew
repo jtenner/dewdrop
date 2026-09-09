@@ -89,6 +89,11 @@ fn self_host_test_object_operand_change(kind: U32) -> Unit {
     } else {
       source.unit_marker
     }
+    reference_cast: if kind == 6u32 {
+      Option::Some(0u32)
+    } else {
+      source.reference_cast
+    }
   }
   self_host_assert_frozen_physical_body(frozen, plan)
 }
@@ -115,6 +120,10 @@ test "BOD-605 frozen object operands retain field indices" expect_trap "unreacha
 
 test "BOD-605 frozen object operands retain source expressions" expect_trap "unreachable" {
   self_host_test_object_operand_change(5u32)
+}
+
+test "BOD-605 frozen object operands retain reference casts" expect_trap "unreachable" {
+  self_host_test_object_operand_change(6u32)
 }
 
 test "BOD-610 object constructor recipes must be unique" expect_trap "unreachable" {
@@ -161,6 +170,7 @@ test "BOD-608 a missing constructor target cannot use result heap evidence" expe
     selected_type_index: 4294967295u32
     selected_field_index: source.selected_field_index
     selected_storage: source.selected_storage
+    selected_reference_cast: source.selected_reference_cast
     call_function_index: source.call_function_index
   }
   self_host_verify_object_constructors(link, module_, body, plan)

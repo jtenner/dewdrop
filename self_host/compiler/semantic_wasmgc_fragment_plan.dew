@@ -24,6 +24,7 @@ pub enum SelfHostPlannedWasmStorageType {
   WasmV128Storage
   WasmNullableEqRefStorage
   WasmNullableFuncRefStorage
+  WasmRawArrayRefStorage(U32)
 }
 
 pub enum SelfHostPlannedWasmPhysicalTypeKind {
@@ -35,6 +36,7 @@ pub enum SelfHostPlannedWasmPhysicalTypeKind {
   PlannedWasmClosureType
   PlannedWasmCaptureCellType(U32, U32)
   PlannedWasmLambdaClosureType(U32, U32)
+  PlannedWasmRawArrayType(SelfHostPlannedWasmStorageType)
 }
 
 pub struct SelfHostPlannedWasmPhysicalType {
@@ -277,9 +279,10 @@ fn self_host_wasmgc_plan_types(
   fields: Array<SelfHostPlannedWasmField>,
   type_lookup: Array<U32>,
 ) -> Unit {
+  let array_fields = self_host_wasmgc_plan_raw_array_fields(module_, required, raw_arrays, physical_types, fields.length())
   for layout in module_.type_layouts.layouts {
     if required.contains_key(layout.declaration) && !raw_arrays.contains_key(layout.declaration) {
-      self_host_wasmgc_plan_type(module_, layout, physical_types, fields, type_lookup)
+      self_host_wasmgc_plan_type(module_, layout, physical_types, fields, type_lookup, array_fields)
     }
   }
 }
@@ -290,6 +293,7 @@ fn self_host_wasmgc_plan_type(
   physical_types: Array<SelfHostPlannedWasmPhysicalType>,
   fields: Array<SelfHostPlannedWasmField>,
   type_lookup: Array<U32>,
+  array_fields: Map<U64, U32>,
 ) -> Unit {
   let type_index = physical_types.length()
   type_lookup[self_host_semantic_id_local(layout.declaration)] = type_index
@@ -307,7 +311,7 @@ fn self_host_wasmgc_plan_type(
             role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
             declaration: source.field
             physical_index: current
-            storage: self_host_wasmgc_field_storage_type(module_, source)
+            storage: self_host_wasmgc_exact_field_storage(module_, source, array_fields)
             mutable_: source.mutable_
             exact_nominal: false
             offset: source.offset
@@ -402,7 +406,7 @@ fn self_host_wasmgc_plan_type(
                     role: SelfHostPlannedWasmFieldRole::WasmStructField(field.field)
                     declaration: field.field
                     physical_index: payload_index
-                    storage: self_host_wasmgc_field_storage_type(module_, field)
+                    storage: self_host_wasmgc_exact_field_storage(module_, field, array_fields)
                     mutable_: field.mutable_
                     exact_nominal: false
                     offset: field.offset

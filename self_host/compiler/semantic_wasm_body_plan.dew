@@ -40,6 +40,7 @@ pub struct SelfHostPlannedPhysicalExpressionCarrier {
   selected_type_index: U32
   selected_field_index: U32
   selected_storage: Option<SelfHostPlannedWasmStorageType>
+  selected_reference_cast: Option<U32>
   call_function_index: U32
 }
 
@@ -329,6 +330,7 @@ fn self_host_body_carrier_from_storage(
     SelfHostPlannedWasmStorageType::WasmV128Storage => SelfHostWasmBodyCarrier::V128BodyCarrier
     SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage => SelfHostWasmBodyCarrier::EqRefBodyCarrier
     SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage => SelfHostWasmBodyCarrier::FuncRefBodyCarrier
+    SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(_) => SelfHostWasmBodyCarrier::EqRefBodyCarrier
   }
 }
 
@@ -1650,6 +1652,7 @@ fn self_host_body_seed_expression(
   let mut selected_type_index = 4294967295u32
   let mut selected_field_index = 4294967295u32
   let mut selected_storage = Option::None
+  let mut selected_reference_cast = Option::None
   let mut call_function_index = 4294967295u32
   let mut constructor_selection = false
   match planned.selection {
@@ -1965,8 +1968,31 @@ fn self_host_body_seed_expression(
     SelfHostPlannedExpressionKind::PlannedCaptureSet(_, _) => {
       carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
     }
-    SelfHostPlannedExpressionKind::PlannedFieldSet(_, _, _) => {
+    SelfHostPlannedExpressionKind::PlannedFieldSet(field, base, _) => {
       carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
+      receiver_expression = base
+      match self_host_body_indexed_field(indexes, field) {
+        Option::Some(target) => {
+          selected_field = target.field_declaration
+          selected_type_index = target.physical_type_index
+          selected_field_index = target.physical_field_index
+          selected_storage = Option::Some(target.storage)
+          match target.storage {
+            SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(fragment) => {
+              if selected_type_index >= link.types.length() {
+                self_host_constructor_field_failure(module_, body, expression, 6u32, 504u32, u32_into_u64(link.types.length()), u32_into_u64(selected_type_index), 227u64)
+              }
+              let owner = link.types[selected_type_index].module_index
+              selected_reference_cast = match self_host_linked_raw_array_field_type(link, owner, fragment, selected_type_index) {
+                Option::Some(index) => Option::Some(index)
+                Option::None => self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, 1u64, 0u64, 227u64)
+              }
+            }
+            _ => {}
+          }
+        }
+        Option::None => self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, field, 0u64, 227u64)
+      }
     }
     SelfHostPlannedExpressionKind::PlannedIndexSet(_, _, _, target) => {
       carrier = SelfHostWasmBodyCarrier::UnitBodyCarrier
@@ -2162,6 +2188,7 @@ fn self_host_body_seed_expression(
     selected_type_index: selected_type_index
     selected_field_index: selected_field_index
     selected_storage: selected_storage
+    selected_reference_cast: selected_reference_cast
     call_function_index: call_function_index
   }
 }
@@ -2219,6 +2246,7 @@ fn self_host_body_plan_force_expression_carrier(
     selected_type_index: source.selected_type_index
     selected_field_index: source.selected_field_index
     selected_storage: source.selected_storage
+    selected_reference_cast: source.selected_reference_cast
     call_function_index: source.call_function_index
   }
   true
@@ -2287,6 +2315,7 @@ fn self_host_body_plan_set_expression_carrier(
       selected_type_index: source.selected_type_index
       selected_field_index: source.selected_field_index
       selected_storage: source.selected_storage
+      selected_reference_cast: source.selected_reference_cast
       call_function_index: source.call_function_index
     }
     return true
@@ -2416,6 +2445,7 @@ fn self_host_body_plan_force_expression_value(
     selected_type_index: source.selected_type_index
     selected_field_index: source.selected_field_index
     selected_storage: source.selected_storage
+    selected_reference_cast: source.selected_reference_cast
     call_function_index: source.call_function_index
   }
   true
@@ -2472,6 +2502,7 @@ fn self_host_body_plan_set_expression_value(
     selected_type_index: source.selected_type_index
     selected_field_index: source.selected_field_index
     selected_storage: source.selected_storage
+    selected_reference_cast: source.selected_reference_cast
     call_function_index: source.call_function_index
   }
   true
@@ -2650,6 +2681,7 @@ fn self_host_body_plan_resolve_field(
           selected_type_index: field.physical_type_index
           selected_field_index: field.physical_field_index
           selected_storage: Option::Some(field.storage)
+          selected_reference_cast: source.selected_reference_cast
           call_function_index: source.call_function_index
         }
       }
@@ -3610,6 +3642,7 @@ fn self_host_body_empty_physical_expressions(
     selected_type_index: 4294967295u32
     selected_field_index: 4294967295u32
     selected_storage: Option::None
+    selected_reference_cast: Option::None
     call_function_index: 4294967295u32
   }]
   values.truncate(0u32)

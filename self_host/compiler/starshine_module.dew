@@ -1935,6 +1935,7 @@ fn self_host_linked_storage_shape(
     SelfHostPlannedWasmStorageType::WasmV128Storage => SelfHostPlannedValueShape::V128PlannedValueShape
     SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage => SelfHostPlannedValueShape::RefPlannedValueShape
     SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(_) => SelfHostPlannedValueShape::RefPlannedValueShape
   }
 }
 
@@ -10656,13 +10657,21 @@ fn self_host_emit_linked_i32_expression(
               field,
               base,
               value,
-            ) => match self_host_linked_struct_field(link, field) {
-              Option::Some(field_link) => {
+            ) => {
+                let saved_field = self_host_required_field_write(canonical_body_plan, link, module_, body, caller_specialization, expression, field, base)
+                let field_link = SelfHostLinkedWasmFieldLink::{
+                  type_index: saved_field.selected_type_index
+                  field_index: saved_field.selected_field_index
+                }
                 tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructSet(
                   field_link.type_index,
                   field_link.field_index,
                   destination,
                 ))
+                match saved_field.selected_reference_cast {
+                  Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefCast(type_, destination))
+                  Option::None => {}
+                }
                 let value_carrier = self_host_linked_exact_emitted_expression_carrier(canonical_body_plan, link, module_, body, caller_specialization, value)
                 if value_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
                   if !self_host_linked_physical_erased_unit_field(link, field, field_link) {
@@ -10692,10 +10701,6 @@ fn self_host_emit_linked_i32_expression(
                   destination,
                   depth,
                 )
-              }
-              Option::None => {
-                return Option::Some("linked struct field write has no physical field")
-              }
             }
             SelfHostPlannedExpressionKind::PlannedDirectCall(
               declaration,
@@ -15056,168 +15061,155 @@ fn self_host_linked_append_physical_types(
       fragment_module,
       linked_type.fragment_index,
     )
-    let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
-    let mut field = 0u32
-    let _ = while field {
-      current => if current < physical.fields.length {
-        let source_index = self_host_u32_add(physical.fields.start, current)
-        if !self_host_u32_greater(
-          self_host_linked_physical_field_count(fragment_module),
-          source_index,
-        ) {
-          return Option::Some("linked physical field is outside its arena")
+    let raw_array_emitted = match physical.kind {
+      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmRawArrayType(storage) => {
+        if physical.fields.length != 0u32 {
+          return Option::Some("raw array fragment cannot contain struct fields")
         }
-        let source = self_host_linked_physical_field_at(
-          fragment_module,
-          source_index,
-        )
-        match source.role {
-          SelfHostPlannedWasmFieldRole::WasmStructField(field_declaration) => match self_host_linked_declared_field_shape(
-            link,
-            field_declaration,
+        let value_type = match storage {
+          SelfHostPlannedWasmStorageType::WasmI64Storage => StarshineFfi.ffi_lib_ValType_i64()
+          SelfHostPlannedWasmStorageType::WasmF32Storage => StarshineFfi.ffi_lib_ValType_f32()
+          SelfHostPlannedWasmStorageType::WasmF64Storage => StarshineFfi.ffi_lib_ValType_f64()
+          SelfHostPlannedWasmStorageType::WasmV128Storage => StarshineFfi.ffi_lib_ValType_v128()
+          SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage => self_host_linked_eqref_value_type()
+          SelfHostPlannedWasmStorageType::WasmI32Storage,
+          SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage,
+          SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage => StarshineFfi.ffi_lib_ValType_i32()
+          _ => return Option::Some("raw array fragment has an invalid element storage type")
+        }
+        let component = StarshineFfi.ffi_lib_CompType_array(StarshineFfi.ffi_lib_FieldType_new(
+          self_host_field_storage_type(storage, value_type),
+          StarshineFfi.ffi_lib_Mut_var_(),
+        ))
+        StarshineFfi.ffi_ffi_bridge_rec_types_push(rec_types, StarshineFfi.ffi_lib_RecType_new(
+          StarshineFfi.ffi_lib_SubType_comp_type(component, wasm_ref_null()),
+        ))
+        true
+      }
+      _ => false
+    }
+    if !raw_array_emitted {
+      let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
+      let mut field = 0u32
+      let _ = while field {
+        current => if current < physical.fields.length {
+          let source_index = self_host_u32_add(physical.fields.start, current)
+          if !self_host_u32_greater(
+            self_host_linked_physical_field_count(fragment_module),
+            source_index,
           ) {
-            Option::Some(expected) => if !self_host_linked_field_storage_matches_shape(
+            return Option::Some("linked physical field is outside its arena")
+          }
+          let source = self_host_linked_physical_field_at(
+            fragment_module,
+            source_index,
+          )
+          match source.role {
+            SelfHostPlannedWasmFieldRole::WasmStructField(field_declaration) => match self_host_linked_declared_field_shape(
               link,
               field_declaration,
-              source.storage,
-              expected,
             ) {
-              let message = StringBuilder::new()
-              message.append("linked type emission field carrier mismatch type=")
-              message.append_u32(linked_type.type_index)
-              message.append(" field=")
-              message.append_u64(field_declaration)
-              message.append(" expected=")
-              message.append(self_host_program_representation_shape_name(expected))
-              message.append(" actual=")
-              message.append(self_host_program_representation_shape_name(
-                self_host_program_representation_storage_shape(source.storage),
-              ))
-              return Option::Some(message.finish())
+              Option::Some(expected) => if !self_host_linked_field_storage_matches_shape(
+                link,
+                field_declaration,
+                source.storage,
+                expected,
+              ) {
+                let message = StringBuilder::new()
+                message.append("linked type emission field carrier mismatch type=")
+                message.append_u32(linked_type.type_index)
+                message.append(" field=")
+                message.append_u64(field_declaration)
+                message.append(" expected=")
+                message.append(self_host_program_representation_shape_name(expected))
+                message.append(" actual=")
+                message.append(self_host_program_representation_shape_name(
+                  self_host_program_representation_storage_shape(source.storage),
+                ))
+                return Option::Some(message.finish())
+              }
+              Option::None => {}
             }
-            Option::None => {}
+            _ => {}
           }
-          _ => {}
-        }
-        let is_variant_payload = match source.role {
-          SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(_, _) => true
-          _ => false
-        }
-        let value_type = if is_variant_payload && source.exact_nominal &&
-          source.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage {
-          let nominal = self_host_linked_field_value_nominal_declaration(
-            link,
-            SelfHostLinkedWasmFieldLink::{
-              type_index: linked_type.type_index
-              field_index: source.physical_index
-            },
-          )
-          match self_host_linked_nominal_field_type_index(
-            link,
-            nominal,
-            source.exact_nominal,
-          ) {
-            Option::Some(type_index) => if type_index < linked_type.type_index {
-              self_host_linked_nominal_ref_type(type_index)
-            } else {
-              self_host_linked_eqref_value_type()
+          let is_variant_payload = match source.role {
+            SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(_, _) => true
+            _ => false
+          }
+          let array_reference = match source.storage {
+            SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(fragment) => match self_host_linked_raw_array_field_type(link, linked_type.module_index, fragment, linked_type.type_index) {
+              Option::Some(index) => Option::Some(index)
+              Option::None => return Option::Some("raw array field has no exact preceding heap type")
             }
-            Option::None => self_host_linked_eqref_value_type()
+            _ => Option::None
           }
-        } else {
-          let storage_code = self_host_program_representation_storage_code(
-            source.storage,
-          )
-          if storage_code == 1i32 {
-            StarshineFfi.ffi_lib_ValType_i64()
-          } else if storage_code == 2i32 {
-            StarshineFfi.ffi_lib_ValType_f32()
-          } else if storage_code == 3i32 {
-            StarshineFfi.ffi_lib_ValType_f64()
-          } else if storage_code == 4i32 {
-            StarshineFfi.ffi_lib_ValType_v128()
-          } else if storage_code == 5i32 {
-            self_host_linked_eqref_value_type()
-          } else if storage_code == 6i32 {
-            self_host_linked_funcref_value_type()
+          let value_type = if array_reference is Option::Some(_) {
+            match array_reference {
+              Option::Some(index) => self_host_linked_nominal_ref_type(index)
+              Option::None => return Option::Some("raw array field lost its heap certificate")
+            }
+          } else if is_variant_payload && source.exact_nominal &&
+            source.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage {
+            let nominal = self_host_linked_field_value_nominal_declaration(
+              link,
+              SelfHostLinkedWasmFieldLink::{
+                type_index: linked_type.type_index
+                field_index: source.physical_index
+              },
+            )
+            match self_host_linked_nominal_field_type_index(
+              link,
+              nominal,
+              source.exact_nominal,
+            ) {
+              Option::Some(type_index) => if type_index < linked_type.type_index {
+                self_host_linked_nominal_ref_type(type_index)
+              } else {
+                self_host_linked_eqref_value_type()
+              }
+              Option::None => self_host_linked_eqref_value_type()
+            }
           } else {
-            StarshineFfi.ffi_lib_ValType_i32()
+            let storage_code = self_host_program_representation_storage_code(
+              source.storage,
+            )
+            if storage_code == 1i32 {
+              StarshineFfi.ffi_lib_ValType_i64()
+            } else if storage_code == 2i32 {
+              StarshineFfi.ffi_lib_ValType_f32()
+            } else if storage_code == 3i32 {
+              StarshineFfi.ffi_lib_ValType_f64()
+            } else if storage_code == 4i32 {
+              StarshineFfi.ffi_lib_ValType_v128()
+            } else if storage_code == 5i32 {
+              self_host_linked_eqref_value_type()
+            } else if storage_code == 6i32 {
+              self_host_linked_funcref_value_type()
+            } else {
+              StarshineFfi.ffi_lib_ValType_i32()
+            }
           }
-        }
-        let mutable_ = if source.mutable_ {
-          StarshineFfi.ffi_lib_Mut_var_()
+          let mutable_ = if source.mutable_ {
+            StarshineFfi.ffi_lib_Mut_var_()
+          } else {
+            StarshineFfi.ffi_lib_Mut_const_()
+          }
+          StarshineFfi.ffi_ffi_bridge_field_types_push(
+            fields,
+            StarshineFfi.ffi_lib_FieldType_new(
+              self_host_field_storage_type(source.storage, value_type),
+              mutable_,
+            ),
+          )
+          continue current + 1u32
         } else {
-          StarshineFfi.ffi_lib_Mut_const_()
+          break self_host_semantic_unit()
         }
-        StarshineFfi.ffi_ffi_bridge_field_types_push(
-          fields,
-          StarshineFfi.ffi_lib_FieldType_new(
-            self_host_field_storage_type(source.storage, value_type),
-            mutable_,
-          ),
-        )
-        continue current + 1u32
-      } else {
-        break self_host_semantic_unit()
       }
-    }
-    let component = StarshineFfi.ffi_lib_CompType_struct_(fields)
-    let subtype = match physical.kind {
-      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(_) => {
-        let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
-        StarshineFfi.ffi_lib_SubType_new(
-          0i32,
-          supers,
-          component,
-          wasm_ref_null(),
-        )
-      }
-      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmClosureType => {
-        let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
-        StarshineFfi.ffi_lib_SubType_new(
-          0i32,
-          supers,
-          component,
-          wasm_ref_null(),
-        )
-      }
-      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(_, _) => match self_host_linked_closure_base_type_index(
-        link,
-        linked_type.module_index,
-      ) {
-        Option::Some(base) => {
+      let component = StarshineFfi.ffi_lib_CompType_struct_(fields)
+      let subtype = match physical.kind {
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(_) => {
           let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
-          StarshineFfi.ffi_ffi_bridge_type_indices_push(
-            supers,
-            StarshineFfi.ffi_lib_TypeIdx_new(base.into()),
-          )
-          StarshineFfi.ffi_lib_SubType_new(
-            1i32,
-            supers,
-            component,
-            wasm_ref_null(),
-          )
-        }
-        Option::None => {
-          return Option::Some("linked lambda closure has no closure base type")
-        }
-      }
-      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(
-        _,
-        _,
-        _,
-        super_fragment,
-      ) => match self_host_linked_fragment_type_index(
-        link,
-        linked_type.module_index,
-        super_fragment,
-      ) {
-        Option::Some(super_type) => {
-          let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
-          StarshineFfi.ffi_ffi_bridge_type_indices_push(
-            supers,
-            StarshineFfi.ffi_lib_TypeIdx_new(super_type.into()),
-          )
           StarshineFfi.ffi_lib_SubType_new(
             0i32,
             supers,
@@ -15225,45 +15217,99 @@ fn self_host_linked_append_physical_types(
             wasm_ref_null(),
           )
         }
-        Option::None => {
-          return Option::Some("linked enum marker has no super type")
-        }
-      }
-      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
-        declaration,
-        variant,
-        _,
-      ) => match self_host_linked_enum_marker_type_index(
-        link,
-        declaration,
-        variant,
-      ) {
-        Option::Some(base) => {
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmClosureType => {
           let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
-          StarshineFfi.ffi_ffi_bridge_type_indices_push(
-            supers,
-            StarshineFfi.ffi_lib_TypeIdx_new(base.into()),
-          )
           StarshineFfi.ffi_lib_SubType_new(
-            1i32,
+            0i32,
             supers,
             component,
             wasm_ref_null(),
           )
         }
-        Option::None => {
-          return Option::Some("linked enum subtype has no marker type")
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(_, _) => match self_host_linked_closure_base_type_index(
+          link,
+          linked_type.module_index,
+        ) {
+          Option::Some(base) => {
+            let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+            StarshineFfi.ffi_ffi_bridge_type_indices_push(
+              supers,
+              StarshineFfi.ffi_lib_TypeIdx_new(base.into()),
+            )
+            StarshineFfi.ffi_lib_SubType_new(
+              1i32,
+              supers,
+              component,
+              wasm_ref_null(),
+            )
+          }
+          Option::None => {
+            return Option::Some("linked lambda closure has no closure base type")
+          }
         }
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(
+          _,
+          _,
+          _,
+          super_fragment,
+        ) => match self_host_linked_fragment_type_index(
+          link,
+          linked_type.module_index,
+          super_fragment,
+        ) {
+          Option::Some(super_type) => {
+            let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+            StarshineFfi.ffi_ffi_bridge_type_indices_push(
+              supers,
+              StarshineFfi.ffi_lib_TypeIdx_new(super_type.into()),
+            )
+            StarshineFfi.ffi_lib_SubType_new(
+              0i32,
+              supers,
+              component,
+              wasm_ref_null(),
+            )
+          }
+          Option::None => {
+            return Option::Some("linked enum marker has no super type")
+          }
+        }
+        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
+          declaration,
+          variant,
+          _,
+        ) => match self_host_linked_enum_marker_type_index(
+          link,
+          declaration,
+          variant,
+        ) {
+          Option::Some(base) => {
+            let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
+            StarshineFfi.ffi_ffi_bridge_type_indices_push(
+              supers,
+              StarshineFfi.ffi_lib_TypeIdx_new(base.into()),
+            )
+            StarshineFfi.ffi_lib_SubType_new(
+              1i32,
+              supers,
+              component,
+              wasm_ref_null(),
+            )
+          }
+          Option::None => {
+            return Option::Some("linked enum subtype has no marker type")
+          }
+        }
+        _ => StarshineFfi.ffi_lib_SubType_comp_type(
+          component,
+          wasm_ref_null(),
+        )
       }
-      _ => StarshineFfi.ffi_lib_SubType_comp_type(
-        component,
-        wasm_ref_null(),
+      StarshineFfi.ffi_ffi_bridge_rec_types_push(
+        rec_types,
+        StarshineFfi.ffi_lib_RecType_new(subtype),
       )
     }
-    StarshineFfi.ffi_ffi_bridge_rec_types_push(
-      rec_types,
-      StarshineFfi.ffi_lib_RecType_new(subtype),
-    )
   }
   Option::None
 }

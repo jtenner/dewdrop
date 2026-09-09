@@ -39,6 +39,10 @@ fn self_host_schedule_planned_object_constructor(canonical: Option<SelfHostPlann
       let index = count - 1u32
       let operand = plan.object_constructor_operands[recipe.operands.start + index]
       let scratch = self_host_physical_scratch_slot(canonical, module_, body, expression, operand.source_ordinal)
+      match operand.reference_cast {
+        Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefCast(type_, destination))
+        Option::None => {}
+      }
       match operand.box_type {
         Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(type_, destination))
         Option::None => {}

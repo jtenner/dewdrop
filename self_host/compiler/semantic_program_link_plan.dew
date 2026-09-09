@@ -669,6 +669,7 @@ fn self_host_program_representation_storage_code(
     SelfHostPlannedWasmStorageType::WasmV128Storage => 4i32
     SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage => 5i32
     SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage => 6i32
+    SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(_) => 11i32
   }
 }
 
@@ -687,6 +688,7 @@ fn self_host_program_representation_storage_shape(
     SelfHostPlannedWasmStorageType::WasmV128Storage => SelfHostPlannedValueShape::V128PlannedValueShape
     SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage => SelfHostPlannedValueShape::RefPlannedValueShape
     SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage => SelfHostPlannedValueShape::RefPlannedValueShape
+    SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(_) => SelfHostPlannedValueShape::RefPlannedValueShape
   }
 }
 
@@ -705,7 +707,8 @@ fn self_host_program_representation_storage_matches_shape(
     SelfHostPlannedValueShape::F64PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmF64Storage
     SelfHostPlannedValueShape::V128PlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmV128Storage
     SelfHostPlannedValueShape::RefPlannedValueShape => storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage ||
-      storage is SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage
+      storage is SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage ||
+      storage is SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(_)
     SelfHostPlannedValueShape::ProductPlannedValueShape(_) => storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
     _ => false
   }

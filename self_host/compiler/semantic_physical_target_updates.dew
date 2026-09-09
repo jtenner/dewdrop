@@ -60,6 +60,7 @@ fn self_host_body_plan_set_call_function(
     selected_type_index: source.selected_type_index
     selected_field_index: source.selected_field_index
     selected_storage: source.selected_storage
+    selected_reference_cast: source.selected_reference_cast
     call_function_index: function_index
   }
   true

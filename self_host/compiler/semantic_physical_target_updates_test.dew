@@ -31,6 +31,7 @@ fn self_host_test_expression_call_target(source: SelfHostPlannedPhysicalExpressi
     selected_type_index: source.selected_type_index
     selected_field_index: source.selected_field_index
     selected_storage: source.selected_storage
+    selected_reference_cast: source.selected_reference_cast
     call_function_index: target
   }
 }

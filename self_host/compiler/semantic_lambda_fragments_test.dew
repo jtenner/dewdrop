@@ -160,6 +160,7 @@ fn self_host_test_closure_target_mutation(link: SelfHostPlannedProgramWasmGCLink
             selected_type_index: source.selected_type_index
             selected_field_index: source.selected_field_index
             selected_storage: source.selected_storage
+            selected_reference_cast: source.selected_reference_cast
             call_function_index: plan.physical_function_index - 2u32
           }
           assert(!self_host_lambda_construction_target_matches(link, plan, plan.expressions[index], lambda), "a parent function cannot replace the lambda entry")

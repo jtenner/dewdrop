@@ -11,6 +11,14 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "BOD-605 frozen field writes retain their array casts",
+    expected: [605, 7, 5100n, (5100n << 32n) | 3n, 5100n << 32n, 3, 1n, 0n, (59n << 32n) | 3n],
+  },
+  {
+    name: "BOD-605 field write emission rejects a missing array cast",
+    expected: [605, 7, 5100n, (5100n << 32n) | 3n, 5100n << 32n, 3, 1n, 0n, 228n],
+  },
+  {
     name: "ABI-709 callback signature results cannot disagree with the target",
     expected: [709, 7, 5100n, 5100n << 32n, 5100n << 32n, 2, 4n, 5n, 0n],
   },
@@ -477,6 +485,7 @@ const probes = [
     ["BOD-605 frozen object operands retain Unit markers", 605, 7, 3, 0n, 1n, 225n << 32n],
     ["BOD-605 frozen object operands retain field indices", 605, 7, 3, 0n, 1n, 222n << 32n],
     ["BOD-605 frozen object operands retain source expressions", 605, 7, 3, 3n, 4n, 219n << 32n],
+    ["BOD-605 frozen object operands retain reference casts", 605, 7, 3, 0n, 1n, 226n << 32n],
   ].map(([name, code, phase, expression, expected, actual, detail]) => ({
     name,
     expected: [code, phase, 5100n, (5100n << 32n) | 1n, 5100n << 32n,

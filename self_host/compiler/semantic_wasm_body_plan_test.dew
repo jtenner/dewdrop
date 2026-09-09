@@ -459,6 +459,7 @@ test "missing physical field identity retains exact diagnostic context" {
           selected_type_index: source.selected_type_index
           selected_field_index: source.selected_field_index
           selected_storage: source.selected_storage
+          selected_reference_cast: source.selected_reference_cast
           call_function_index: source.call_function_index
         }
         let diagnostics = []

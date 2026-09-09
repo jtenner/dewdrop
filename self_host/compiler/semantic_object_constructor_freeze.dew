@@ -46,6 +46,8 @@ fn self_host_compare_object_constructors(frozen: SelfHostPlannedPhysicalBodyCarr
       self_host_constructor_box_identity(expected.box_type), self_host_constructor_box_identity(actual.box_type))
     self_host_object_constructor_check(frozen, phase, expected.expression, 225u32, index,
       self_host_body_freeze_bool(expected.unit_marker), self_host_body_freeze_bool(actual.unit_marker))
+    self_host_object_constructor_check(frozen, phase, expected.expression, 226u32, index,
+      self_host_constructor_box_identity(expected.reference_cast), self_host_constructor_box_identity(actual.reference_cast))
     index = index + 1u32
   }
 }

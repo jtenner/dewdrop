@@ -62,6 +62,7 @@ fn self_host_body_freeze_bool(value: Bool) -> U64 {
 fn self_host_body_freeze_storage(value: Option<SelfHostPlannedWasmStorageType>) -> U64 {
   match value {
     Option::None => 0u64
+    Option::Some(SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(index)) => (12u64 << 32u64) | u32_into_u64(index)
     Option::Some(storage) => 1u64 + u32_into_u64(self_host_i32_to_u32(
       self_host_program_representation_storage_code(storage),
     ))
@@ -204,6 +205,8 @@ fn self_host_assert_frozen_physical_body(
         self_host_body_freeze_storage(expected.selected_storage), self_host_body_freeze_storage(actual.selected_storage))
       self_host_body_freeze_check(frozen, expected.expression, 58u32, index,
         u32_into_u64(expected.call_function_index), u32_into_u64(actual.call_function_index))
+      self_host_body_freeze_check(frozen, expected.expression, 59u32, index,
+        self_host_constructor_box_identity(expected.selected_reference_cast), self_host_constructor_box_identity(actual.selected_reference_cast))
       continue index + 1u32
     } else {
       break self_host_semantic_unit()

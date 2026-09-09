@@ -14,6 +14,7 @@ pub struct SelfHostPhysicalObjectConstructorOperand {
   storage: SelfHostPlannedWasmStorageType
   box_type: Option<U32>
   unit_marker: Bool
+  reference_cast: Option<U32>
 }
 
 fn self_host_populate_object_constructors(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
@@ -114,6 +115,13 @@ fn self_host_plan_object_constructor(link: SelfHostPlannedProgramWasmGCLink, mod
         storage: field.storage
         box_type: box_type
         unit_marker: unit_marker
+        reference_cast: match field.storage {
+          SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(fragment) => match self_host_linked_raw_array_field_type(link, linked.module_index, fragment, type_index) {
+            Option::Some(index) => Option::Some(index)
+            Option::None => self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, 1u64, 0u64, u32_into_u64(index))
+          }
+          _ => Option::None
+        }
       })
       continue index + 1u32
     }

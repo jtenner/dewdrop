@@ -1,3 +1,72 @@
+test "concrete raw array fields retain preceding heaps and constructor casts" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub struct Storage<t> {}\nbuiltin allocate<t>(length: U32, value: t) -> Storage<t> = \"array_new\"\nstruct Concrete {\n  storage: Storage<I64>\n}\npub fn make(value: I64) -> Concrete {\n  Concrete::{\n    storage: allocate(1u32, value)\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid declared array field")
+  let fragments = link.fragments.modules[0u32]
+  assert(fragments.physical_types[0u32].kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmRawArrayType(SelfHostPlannedWasmStorageType::WasmI64Storage), "exact I64 array precedes struct")
+  assert(fragments.fields[0u32].storage is SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(0u32), "field points to exact local heap fragment")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  assert(program.bodies.length() == 1u32, "one ordinary constructor body")
+  let plan = program.bodies[0u32]
+  assert(plan.object_constructor_operands.length() == 1u32, "one physical field operand")
+  assert(plan.object_constructor_operands[0u32].reference_cast is Option::Some(0u32), "constructor uses the saved exact array cast")
+  self_host_assert_frozen_physical_body(self_host_freeze_physical_body(plan), plan)
+}
+
+fn self_host_raw_array_write_fixture() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub struct Storage<t> {}\nbuiltin allocate<t>(length: U32, value: t) -> Storage<t> = \"array_new\"\nstruct Concrete {\n  mut storage: Storage<I64>\n}\npub fn replace(target: Concrete, value: Storage<I64>) -> Unit {\n  target.storage = value\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  let plan = program.bodies[0u32]
+  assert(plan.expressions[3u32].selected_reference_cast is Option::Some(0u32), "field write retains exact I64 array cast")
+  (link, plan)
+}
+
+fn self_host_test_raw_array_write_cast(freeze: Bool) -> Unit {
+  let (link, plan) = self_host_raw_array_write_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  let source = plan.expressions[3u32]
+  plan.expressions[3u32] = SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: source.expression
+    value: source.value
+    carrier: source.carrier
+    conflict_expected: source.conflict_expected
+    conflict_actual: source.conflict_actual
+    receiver_expression: source.receiver_expression
+    receiver_logical_type: source.receiver_logical_type
+    receiver_nominal_owner: source.receiver_nominal_owner
+    receiver_physical_heap_type: source.receiver_physical_heap_type
+    selected_field: source.selected_field
+    selected_type_index: source.selected_type_index
+    selected_field_index: source.selected_field_index
+    selected_storage: source.selected_storage
+    selected_reference_cast: Option::None
+    call_function_index: source.call_function_index
+  }
+  if freeze {
+    self_host_assert_frozen_physical_body(frozen, plan)
+  } else {
+    let module_ = link.fragments.specialization.lowering.modules[0u32]
+    let body = module_.bodies[0u32]
+    let _ = self_host_required_field_write(Option::Some(plan), link, module_, body, plan.specialization,
+      source.expression, source.selected_field, source.receiver_expression)
+  }
+}
+
+test "BOD-605 frozen field writes retain their array casts" expect_trap "unreachable" {
+  self_host_test_raw_array_write_cast(true)
+}
+
+test "BOD-605 field write emission rejects a missing array cast" expect_trap "unreachable" {
+  self_host_test_raw_array_write_cast(false)
+}
+
 fn self_host_raw_array_temporary_fixture() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
     b"pub struct Storage<t> {}\nbuiltin allocate<t>(length: U32, value: t) -> Storage<t> = \"array_new\"\nbuiltin read<t>(value: Storage<t>, index: U32) -> t = \"array_get\"\npub fn main() -> I64 {\n  let storage = allocate(1u32, 42i64)\n  read(storage, 0u32)\n}\n",

@@ -13,6 +13,7 @@ fn self_host_test_discard_carrier(source: SelfHostPlannedPhysicalExpressionCarri
     selected_type_index: source.selected_type_index
     selected_field_index: source.selected_field_index
     selected_storage: source.selected_storage
+    selected_reference_cast: source.selected_reference_cast
     call_function_index: source.call_function_index
   }
 }

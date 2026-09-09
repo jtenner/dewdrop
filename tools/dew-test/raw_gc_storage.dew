@@ -304,6 +304,16 @@ pub fn main(case: U32) -> I32 {
     } else {
       0i32
     }
+  } else if case == 26u32 {
+    let builder = BytesBuilder::new()
+    let storage = raw_builder_storage(builder)
+    storage.chunks = raw_storage_a_chunks()
+    storage.length = 1u32
+    if builder.finish() == b"A" {
+      1i32
+    } else {
+      0i32
+    }
   } else {
     0i32
   }
