@@ -40,6 +40,7 @@ python3 tools/test_bytes_algorithm_policy.py
 python3 tools/test_string_view_algorithm_policy.py
 python3 tools/test_string_algorithm_policy.py
 python3 tools/test_string_simd_library_policy.py
+python3 tools/test_bytes_simd_library_policy.py
 python3 tools/generate_self_host_numeric_builtins.py --check
 python3 tools/generate_string_std.py --check
 python3 tools/generate_wasi_std.py --check

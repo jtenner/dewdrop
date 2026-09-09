@@ -14,6 +14,10 @@ representation conversion still require their separate storage migration.
 This change does not claim that text storage is fully library-owned or that
 the existing provider conversion is allocation-free.
 
+Follow-up: the [Bytes SIMD load](bytes-simd-library-load-2026-09-08.md) now
+also runs in Dew. Its byte-storage accessors and the String-to-Bytes conversion
+remain separate storage work.
+
 The shared String corpus now has 19 cases. New checks cover aligned/unaligned
 loads from a nonzero-start logical view, once-only source-order argument
 effects, a returned function value, empty input, insufficient remaining bytes,

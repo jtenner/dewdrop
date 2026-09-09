@@ -131,8 +131,8 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Move Text, Bytes, views, and builders out of compiler-owned algorithms.
   Keep encoding, bounds, and lifetime checks in ordinary library code.
   Bytes equality, hash, searches, affixes, UTF-8 validation, and checked String
-  conversion now run in Dew. Bytes storage operations and the SIMD storage
-  bridge still need migration. See the
+  conversion now run in Dew. Bytes storage operations still need migration.
+  The SIMD load algorithm now runs in Dew too. See the
   [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
   The pinned provider's nine old Bytes algorithms and UTF-8 validator entry
   are removed too. The provider no longer accepts a validator function index.
@@ -158,9 +158,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   are removed too. Text storage remains separate work. See the
   [provider log](docs/research/string-provider-removal-2026-09-07.md).
   String SIMD access now uses an ordinary Dew conversion and the shared Bytes
-  load. The separate native/provider String SIMD entry is removed; the Bytes
-  storage bridge remains. See the
+  load. The separate native/provider String SIMD entry is removed. See the
   [SIMD access log](docs/research/string-simd-library-access-2026-09-08.md).
+  Bytes SIMD loading now checks its range and assembles sixteen lanes in Dew.
+  Both native/provider load builders are removed. The byte storage accessors
+  and builders remain. See the
+  [Bytes SIMD log](docs/research/bytes-simd-library-load-2026-09-08.md).
   String pattern inference now selects the ordinary Eq method and keeps the
   literal's String type. Lowering and specialization retain that evidence.
   Self-host physical call recipes now retain the cached subject and literal and
@@ -665,7 +668,7 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [x] Keep readable, typed Starshine FFI names through regeneration. Audit any
   remaining numbered references; test identity and signature agreement rather
   than merely renaming incompatible reference types.
-  Regeneration verifies all 474 selected signatures and keeps named carriers;
+  Regeneration verifies all 476 selected signatures and keeps named carriers;
   three unused Array algorithm exports have now been removed.
   Constructor aliases preserve nullability. Invalid identity proofs and numbered
   Dew references fail with diagnostics. The real linked FFI smoke runs in the

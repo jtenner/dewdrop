@@ -152,14 +152,6 @@ EXTRA_DECLARATIONS = [
         signature="(value: U32) -> U32",
         target="i32.popcnt",
     ),
-    IntrinsicDeclaration(
-        source="WasmGC text representation bridges",
-        name="bytes_load_u8x16",
-        alias="wasm_bytes_load_u8x16",
-        generics="",
-        signature="(value: Bytes, start: U32) -> U8x16",
-        target="dew_bytes_load_u8x16",
-    ),
 ]
 
 
@@ -265,7 +257,23 @@ def rendered_intrinsics() -> tuple[str, int, int]:
         lines.append(declaration.render())
     lines.extend([
         "",
-        "// Library conversion; only the shared Bytes storage bridge remains.",
+        "// Library algorithm; lane operations each map to one Wasm instruction.",
+        "pub fn wasm_bytes_load_u8x16(value: Bytes, start: U32) -> U8x16 {",
+        "  let length = __dew_text_byte_length(value)",
+        "  if start > length || length - start < 16u32 {",
+        "    unreachable()",
+        "  }",
+        "  let mut vector = wasm_u8x16_splat(__dew_text_byte_at(value, start))",
+    ])
+    for lane in range(1, 16):
+        lines.append(
+            f"  vector = wasm_u8x16_replace_{lane}(vector, __dew_text_byte_at(value, start + {lane}u32))"
+        )
+    lines.extend([
+        "  vector",
+        "}",
+        "",
+        "// Library conversion through the shared Bytes algorithm.",
         "pub fn wasm_string_load_u8x16(value: String, start: U32) -> U8x16 {",
         "  wasm_bytes_load_u8x16(__dew_text_bytes(value), start)",
         "}",

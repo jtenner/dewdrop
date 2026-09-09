@@ -25,5 +25,15 @@ export function checkBytesOperations(main) {
     [13, "concatenation preserves each source alignment"]]) {
     assert.equal(main(index), 1, `Bytes ${label}`);
   }
-  return cases.length + 4;
+  for (const [index, label] of [[14, "SIMD loads preserve every lane and alignment"],
+    [15, "SIMD arguments run once in source order"],
+    [16, "SIMD library access works through a returned function"]]) {
+    assert.equal(main(index), 1, `Bytes ${label}`);
+  }
+  for (const index of [17, 18, 19, 20]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `Bytes SIMD access rejects an out-of-range index: ${index}`);
+  }
+  return cases.length + 11;
 }

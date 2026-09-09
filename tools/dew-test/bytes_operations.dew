@@ -4,6 +4,7 @@ open dew.std.bytes
 open dew.std.bytes_builder
 open dew.std.option
 open dew.std.string
+open dew.std.wasm.intrinsics
 
 fn bytes_result(value: Bool) -> I32 {
   if value {
@@ -98,7 +99,93 @@ pub fn main(case: U32) -> I32 {
       _ => break ()
     }
     1i32
+  } else if case == 14u32 {
+    bytes_result(bytes_simd_view_lanes())
+  } else if case == 15u32 {
+    bytes_result(bytes_simd_effects())
+  } else if case == 16u32 {
+    let load = bytes_simd_operation()
+    let vector = load(b"0123456789abcdef!", 1u32)
+    bytes_result(wasm_u8x16_extract_0(vector) == 49u8 && wasm_u8x16_extract_15(vector) == 33u8)
+  } else if case == 17u32 {
+    wasm_bytes_load_u8x16(b"", 0u32)
+    0i32
+  } else if case == 18u32 {
+    wasm_bytes_load_u8x16(b"0123456789abcdef", 1u32)
+    0i32
+  } else if case == 19u32 {
+    wasm_bytes_load_u8x16(b"0123456789abcdef!".view(1u32, 15u32), 0u32)
+    0i32
+  } else if case == 20u32 {
+    wasm_bytes_load_u8x16(b"0123456789abcdef", 4294967295u32)
+    0i32
   } else {
     unreachable()
   }
+}
+
+fn bytes_simd_view_lanes() -> Bool {
+  let builder = BytesBuilder::new()
+  while 0u32 {
+    index if index < 128u32 => {
+      builder.append_byte(((index * 37u32) % 256u32).into())
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let backing = builder.finish()
+  while 0u32 {
+    offset if offset < 16u32 => {
+      let view = backing.view(3u32, 100u32).view(offset, 64u32)
+      while 0u32 {
+        start if start < 32u32 => {
+          let vector = wasm_bytes_load_u8x16(view, start)
+          let base = 3u32 + offset + start
+          if wasm_u8x16_extract_0(vector) != u32_into_u8((base * 37u32) % 256u32) ||
+            wasm_u8x16_extract_1(vector) != u32_into_u8(((base + 1u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_2(vector) != u32_into_u8(((base + 2u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_3(vector) != u32_into_u8(((base + 3u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_4(vector) != u32_into_u8(((base + 4u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_5(vector) != u32_into_u8(((base + 5u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_6(vector) != u32_into_u8(((base + 6u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_7(vector) != u32_into_u8(((base + 7u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_8(vector) != u32_into_u8(((base + 8u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_9(vector) != u32_into_u8(((base + 9u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_10(vector) != u32_into_u8(((base + 10u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_11(vector) != u32_into_u8(((base + 11u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_12(vector) != u32_into_u8(((base + 12u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_13(vector) != u32_into_u8(((base + 13u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_14(vector) != u32_into_u8(((base + 14u32) * 37u32) % 256u32) ||
+            wasm_u8x16_extract_15(vector) != u32_into_u8(((base + 15u32) * 37u32) % 256u32) {
+            return false
+          }
+          continue start + 1u32
+        }
+        _ => break ()
+      }
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
+  true
+}
+
+fn bytes_simd_effect_value(log: Array<I32>) -> Bytes {
+  log.push(1i32)
+  b"0123456789abcdef!"
+}
+
+fn bytes_simd_effect_start(log: Array<I32>) -> U32 {
+  log.push(2i32)
+  1u32
+}
+
+fn bytes_simd_effects() -> Bool {
+  let log = array_new::<I32>()
+  let vector = wasm_bytes_load_u8x16(bytes_simd_effect_value(log), bytes_simd_effect_start(log))
+  log.length() == 2u32 && log[0u32] == 1i32 && log[1u32] == 2i32 && wasm_u8x16_extract_0(vector) == 49u8 && wasm_u8x16_extract_15(vector) == 33u8
+}
+
+fn bytes_simd_operation() -> fn(Bytes, U32) -> U8x16 {
+  wasm_bytes_load_u8x16
 }
