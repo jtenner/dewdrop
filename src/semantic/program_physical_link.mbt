@@ -155,67 +155,12 @@ fn program_initializer_dependencies(
   lowering : PlannedProgramLowering,
   initializer : PlannedProgramModuleInitializer,
   initializer_lookup : Map[DeclId, Int],
+  candidates : Array[PlannedProgramModuleInitializer],
 ) -> Array[Int] {
-  let module_lookup = lowering.index.module_lookup
-  let dependencies : Array[Int] = []
-  let seen_dependencies : Map[Int, Bool] = Map::default()
-  let seen_bodies : Map[BodyId, Bool] = Map::default()
-  let body_modules : Array[Int] = [initializer.module_index]
-  let body_tasks : Array[BodyId] = [initializer.body]
-  while body_tasks.length() > 0 {
-    let body_id = body_tasks.pop().unwrap()
-    let module_index = body_modules.pop().unwrap()
-    if seen_bodies.contains(body_id) {
-      continue
-    }
-    seen_bodies[body_id] = true
-    let module_ = lowering.modules[module_index]
-    let body_index = semantic_id_local(body_id)
-    if body_index < 0 || body_index >= module_.bodies.length() {
-      continue
-    }
-    let body = module_.bodies[body_index]
-    for
-      expression in body.expressions.start..<(body.expressions.start +
-      body.expressions.length) {
-      match module_.expressions[expression].kind {
-        PlannedModuleValueGet(declaration, _) =>
-          match initializer_lookup.get(declaration) {
-            Some(dependency) if !seen_dependencies.contains(dependency) => {
-              seen_dependencies[dependency] = true
-              dependencies.push(dependency)
-            }
-            _ => ()
-          }
-        PlannedDirectCall(target, _, _, _)
-        | PlannedTailCall(target, _, _, _)
-        | PlannedOperatorCall(target, _, _, _, _)
-        | PlannedIndexCall(target, _, _, _)
-        | PlannedIndexSetCall(target, _, _, _, _) => {
-          let owner = match module_lookup.get(semantic_id_module(target)) {
-            Some(value) => value
-            None => continue
-          }
-          let callable = match
-            lowering.modules[owner].functions.callable_of(target) {
-            Some(value) => value
-            None => continue
-          }
-          let target_body = match callable.kind {
-            PlannedFunctionCallable(body)
-            | PlannedImplMethodCallable(_, Some(body)) => body
-            _ => continue
-          }
-          if !seen_bodies.contains(target_body) {
-            body_modules.push(owner)
-            body_tasks.push(target_body)
-          }
-        }
-        _ => ()
-      }
-    }
+  match check_program_initializer_dependencies(lowering, initializer, initializer_lookup, candidates) {
+    Ok(values) => values
+    Err(failure) => abort(@debug.to_string(failure))
   }
-  dependencies
 }
 
 ///|
@@ -224,14 +169,14 @@ fn program_schedule_initializers(
   candidates : Array[PlannedProgramModuleInitializer],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
 ) -> Array[PlannedProgramModuleInitializer] {
-  let lookup : Map[DeclId, Int] = Map::default()
-  for index, initializer in candidates {
-    lookup[initializer.declaration] = index
+  let lookup = match check_program_initializer_candidate_lookup(candidates) {
+    Ok(value) => value
+    Err(failure) => abort(@debug.to_string(failure))
   }
   let dependencies : Array[Array[Int]] = []
   let remaining_dependencies = Array::make(candidates.length(), 0)
   for index, initializer in candidates {
-    let values = program_initializer_dependencies(lowering, initializer, lookup)
+    let values = program_initializer_dependencies(lowering, initializer, lookup, candidates)
     dependencies.push(values)
     remaining_dependencies[index] = values.length()
   }

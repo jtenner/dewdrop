@@ -34,6 +34,14 @@ missing body is a numeric failure, never a skipped initializer. The independent
 startup dependency walk remains a separate obligation. See
 [the native initializer log](../research/native-initializer-source-checks-2026-09-08.md).
 
+The native startup walk uses an owned module/declaration/body/kind record for
+each pending body. Lookup and body checks occur before traversal or visited-set
+shortcuts. Global candidate keys are unique and each dependency index resolves
+back to the requested declaration. Unknown metadata cannot become an empty
+dependency list. This proves the direct-call walk's checked access contracts,
+not complete effect analysis for indirect calls. See
+[the startup walk log](../research/native-startup-dependency-checks-2026-09-08.md).
+
 ## Arena access
 
 For arena \(A\) and index \(i\):

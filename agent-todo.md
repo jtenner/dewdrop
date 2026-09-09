@@ -555,9 +555,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   [Unit global log](docs/research/unit-global-storage-2026-09-08.md).
   Native initializer candidates now require a present, owned module-let body
   and a concrete root shape. Missing bodies cannot silently remove a global.
-  Startup dependency walks and full native initializer/global lookup checks
-  remain. See the
+  Full native initializer/global table checks remain. See the
   [native initializer log](docs/research/native-initializer-source-checks-2026-09-08.md).
+  Native startup dependency walks now use one checked work record per body,
+  require exact callable/global lookups, and reject missing called bodies.
+  Recursive calls and repeated reads retain one dependency edge. Indirect-call
+  effect analysis and full link freeze remain. See the
+  [startup walk log](docs/research/native-startup-dependency-checks-2026-09-08.md).
   Native plain-function lookup now checks table bounds and declaration,
   module, fragment, lambda, kind, and ABI-key identity at link completion and each
   read. Missing keys stay missing; specialization entries cannot replace plain

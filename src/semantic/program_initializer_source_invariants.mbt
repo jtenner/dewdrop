@@ -1,5 +1,5 @@
 ///|
-fn check_program_initializer_source(
+fn check_program_link_body_identity(
   module_ : PlannedModuleLowering,
   declaration : DeclId,
   body : BodyId,
@@ -28,6 +28,26 @@ fn check_program_initializer_source(
   guard source.declaration == declaration else {
     return Err(failure(106, declaration, source.declaration, 4UL))
   }
+  Ok(source)
+}
+
+///|
+fn check_program_initializer_source(
+  module_ : PlannedModuleLowering,
+  declaration : DeclId,
+  body : BodyId,
+) -> Result[PlannedBodyLowering, ProgramFunctionLookupFailure] {
+  let source = match check_program_link_body_identity(module_, declaration, body) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let failure = fn(code, expected, actual, detail) {
+    {
+      ..program_function_lookup_failure(declaration, code, expected, actual, detail),
+      module_id: module_.module_id,
+      body,
+    }
+  }
   match program_specialization_shape_error(source.root_shape) {
     None => ()
     Some("generic") => return Err(failure(301, 0UL, 1UL, 5UL))
@@ -39,8 +59,19 @@ fn check_program_initializer_source(
     FunctionBody => return Err(failure(106, 0UL, 1UL, 6UL))
     ImplMethodBody => return Err(failure(106, 0UL, 2UL, 6UL))
   }
-  match check_planned_body_arenas(module_, source, 5) {
+  match check_program_link_body_arenas(module_, source) {
     Ok(_) => Ok(source)
+    Err(error) => Err(error)
+  }
+}
+
+///|
+fn check_program_link_body_arenas(
+  module_ : PlannedModuleLowering,
+  source : PlannedBodyLowering,
+) -> Result[Unit, ProgramFunctionLookupFailure] {
+  match check_planned_body_arenas(module_, source, 5) {
+    Ok(_) => Ok(())
     Err(error) => Err({
       code: error.code,
       phase: error.phase,
