@@ -13,5 +13,7 @@ export function checkStringViewOperations(main) {
       error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
     `StringView byte access rejects an out-of-range index: ${index}`);
   }
-  return labels.length + 3;
+  assert.equal(main(12), 1, "StringView raw cast function preserves nested UTF-8 and empty ranges");
+  assert.equal(main(13), 1, "StringView Into Bytes preserves the selected range");
+  return labels.length + 5;
 }

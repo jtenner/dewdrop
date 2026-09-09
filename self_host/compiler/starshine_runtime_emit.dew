@@ -463,12 +463,8 @@ fn self_host_linked_append_runtime_function(
   functions: StarshineFunctions,
   name: Bytes,
 ) -> Bool {
-  if name == b"dew_bytes_to_string_unchecked" || name == b"dew_string_view_as_bytes" {
-    let target_offset = if name == b"dew_bytes_to_string_unchecked" {
-      1u32
-    } else {
-      2u32
-    }
+  if name == b"dew_bytes_to_string_unchecked" {
+    let target_offset = 1u32
     let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
     StarshineFfi.ffi_ffi_bridge_instructions_push(instructions,
       StarshineFfi.ffi_lib_Instruction_local_get(StarshineFfi.ffi_lib_LocalIdx_new(0i32)),

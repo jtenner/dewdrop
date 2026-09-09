@@ -4,7 +4,7 @@ pub fn string_as_bytes_unchecked(value: String) -> Bytes {
   __dew_text_bytes(value)
 }
 pub builtin string_view(value: String, start: U32, length: U32) -> StringView = "dew_string_view"
-pub builtin string_view_as_bytes_unchecked(value: StringView) -> Bytes = "dew_string_view_as_bytes"
+pub builtin string_view_as_bytes_unchecked(value: StringView) -> Bytes = "ref.cast"
 pub builtin string_view_view(value: StringView, start: U32, length: U32) -> StringView = "dew_string_view_view"
 pub fn string_builder_new() -> StringBuilder {
   string_builder_with_capacity_raw(64u32)

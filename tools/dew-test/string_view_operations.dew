@@ -2,6 +2,7 @@ open dew.std.preamble
 open dew.std.string
 open dew.std.bytes
 open dew.std.option
+open dew.std.text_runtime
 
 fn view_result(value: Bool) -> I32 {
   if value {
@@ -81,7 +82,21 @@ pub fn main(case: U32) -> I32 {
   } else if case == 11u32 {
     "!x?".view(1u32, 0u32).byte_at(0u32)
     0i32
+  } else if case == 12u32 {
+    let cast = view_bytes_operation()
+    let view = "!!λ😀??".view(1u32, 8u32).view(1u32, 6u32)
+    view_result(cast(view) == b"\xce\xbb\xf0\x9f\x98\x80" && cast("".view(0u32, 0u32)) == b"" && view.to_string() == "λ😀")
+  } else if case == 13u32 {
+    view_result(view_into_bytes("!λ😀?".view(1u32, 6u32)) == b"\xce\xbb\xf0\x9f\x98\x80")
   } else {
     unreachable()
   }
+}
+
+fn view_bytes_operation() -> fn(StringView) -> Bytes {
+  string_view_as_bytes_unchecked
+}
+
+fn view_into_bytes(value: StringView) -> Bytes {
+  value.into()
 }

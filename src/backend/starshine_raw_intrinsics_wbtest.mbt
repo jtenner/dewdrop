@@ -1,8 +1,6 @@
 ///|
-test "String raw cast emits one instruction with the Bytes result heap" {
-  let stages = backend_test_single_module_stages(
-    28239UL, b"builtin cast(value: String) -> Bytes = \"ref.cast\"\npub fn run(value: String) -> Bytes {\n  cast(value)\n}\n",
-  )
+fn backend_test_raw_text_cast_instruction(source : Bytes) -> Unit raise {
+  let stages = backend_test_single_module_stages(28239UL, source)
   assert_eq(stages.diagnostic_count(), 0)
   let mut declaration = 0UL
   for module_ in stages.lowering.modules {
@@ -32,6 +30,13 @@ test "String raw cast emits one instruction with the Bytes result heap" {
     }
   }
   assert_eq(checked, 1)
+}
+
+///|
+test "String raw cast emits one instruction with the Bytes result heap" {
+  backend_test_raw_text_cast_instruction(
+    b"builtin cast(value: String) -> Bytes = \"ref.cast\"\npub fn run(value: String) -> Bytes {\n  cast(value)\n}\n",
+  )
 }
 
 ///|

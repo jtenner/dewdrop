@@ -298,19 +298,10 @@ test "unchecked Bytes to String is one reference cast without allocation" {
 }
 
 ///|
-test "StringView to Bytes is one reference cast without allocation" {
-  let expected = @lib.Func::new(
-    @lib.Locals::empty(),
-    @lib.Expr::new([
-      @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
-      @lib.Instruction::ref_cast(
-        false,
-        @lib.HeapType::new(@lib.TypeIdx::new(19U)),
-      ),
-    ]),
+test "StringView raw cast emits one instruction with the Bytes result heap" {
+  backend_test_raw_text_cast_instruction(
+    b"builtin cast(value: StringView) -> Bytes = \"ref.cast\"\npub fn run(value: StringView) -> Bytes {\n  cast(value)\n}\n",
   )
-  let actual = emit_starshine_text_runtime_function(b"dew_string_view_as_bytes", 17).unwrap()
-  assert_eq(actual, expected)
 }
 
 ///|

@@ -144,8 +144,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   [reference cast log](docs/research/raw-reference-casts-2026-09-09.md).
   String-to-Bytes now uses this instruction through its existing Dew functions
   and a new `Into<Bytes>` implementation. Both compilers and the provider have
-  removed its old runtime entry. View and Bytes-to-String entries remain. See
+  removed its old runtime entry. See
   the [String conversion log](docs/research/string-bytes-cast-library-2026-09-09.md).
+  StringView-to-Bytes now also uses a raw cast and `Into<Bytes>`. Its old runtime
+  entry is removed, with nested-range and returned-function coverage. The
+  Bytes-to-String compatibility entry remains; see the
+  [view conversion log](docs/research/string-view-bytes-cast-library-2026-09-09.md).
   Bytes length now uses that raw instruction. Ordering and Facet call the Dew
   operation; the native and pinned provider length builders are removed.
   See the [Bytes length log](docs/research/bytes-length-intrinsic-2026-09-09.md).
