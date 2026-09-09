@@ -28,6 +28,7 @@ python3 tools/test_result_layout_policy.py
 python3 tools/test_global_read_policy.py
 python3 tools/test_call_target_read_policy.py
 python3 tools/test_local_declaration_policy.py
+python3 tools/test_callback_signature_policy.py
 python3 tools/test_removed_link_recovery_policy.py
 python3 tools/test_trait_call_policy.py
 python3 tools/test_assertion_library_policy.py

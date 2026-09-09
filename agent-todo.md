@@ -433,6 +433,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Missing defined, lambda, and initializer bodies can no longer remove callback
   signature scopes. All three paths retain exact BOD-610 records; see the
   [scope body log](docs/research/signature-scope-bodies-2026-09-09.md).
+  Callback parameter spans now stay checked when empty, and signature result
+  metadata comes from the target. Carrier disagreement, Generic/Error results,
+  and type-ID encoding overflow retain numeric call context. The last callback
+  result-name recovery helper is removed; see the
+  [type boundary log](docs/research/callback-type-boundaries-2026-09-09.md).
   Operator calls now use saved left-receiver/right-argument recipes and the
   full call-argument verifier. Their type-argument span is no longer read as
   expression children. Direct calls with missing targets report BOD-607 rather

@@ -11,6 +11,21 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "ABI-709 callback signature results cannot disagree with the target",
+    expected: [709, 7, 5100n, 5100n << 32n, 5100n << 32n, 2, 4n, 5n, 0n],
+  },
+  ...[
+    ["ARN-101 empty resolved callback parameter spans remain checked", 101, 1n, 0n, 4294967295n],
+    ["ARN-101 empty inferred callback parameter spans remain checked", 101, 0n, 0n, 4294967295n],
+    ["SPC-301 callback result errors retain their call context", 301, 0n, 2n, 4294967296n],
+    ["SPC-301 callback generic results cannot become references", 301, 0n, 1n, 4294967296n],
+    ["SOL-207 callback resolved results cannot overflow type encoding", 207, 2147483646n, 2147483647n, 4294967296n],
+    ["ARN-101 inferred callback parameters cannot exceed their arena", 101, 0n, 1n, 0n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, 5100n << 32n, 5100n << 32n, 1, expected, actual, detail],
+  })),
+  {
     name: "ABI-712 emitted lambda reads retain the parent declaration",
     expected: [712, 7, 5100n, 5100n << 32n, 5100n << 32n, 1, 5n, 4n, 3n],
   },
