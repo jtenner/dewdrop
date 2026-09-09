@@ -359,6 +359,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   A removed exact method mapping yields BOD-607; same-carrier logical instances
   retain distinct results. Other phase selectors still need cleanup. See the
   [body recovery log](docs/research/body-target-recovery-removal-2026-09-08.md).
+  Module-value reads now require one exact initializer and check source body,
+  expression kind, and declaration identity. Missing globals cannot become
+  function references through a declaration/name fallback. Other callable
+  name searches remain. See the
+  [global read log](docs/research/global-read-identity-2026-09-09.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Raw builtin references now have explicit outlined physical targets in both
   compilers. The native failure required a returned function value; a local

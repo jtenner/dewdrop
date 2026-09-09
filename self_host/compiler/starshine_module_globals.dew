@@ -1,6 +1,53 @@
 // An erased global still has an initializer function, but no physical slot.
 // Reads use the verified body carrier and never turn Unit into a reference.
+fn self_host_global_read_failure(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: 7u32
+    module_id: module_.module_id
+    declaration: body.declaration
+    body: body.body
+    expression: expression
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "global read requires its selected initializer")
+  unreachable()
+}
+
+fn self_host_global_read_declaration(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32) -> U64 {
+  if !(self_host_checked_relative_index(expression, body.expressions, module_.expressions.length()) is Option::Some(_)) {
+    self_host_global_read_failure(module_, body, expression, 102u32,
+      u32_into_u64(body.expressions.start), u32_into_u64(expression), u32_into_u64(body.expressions.length))
+  }
+  match module_.expressions[expression].kind {
+    SelfHostPlannedExpressionKind::PlannedModuleValueGet(declaration) => declaration
+    _ => self_host_global_read_failure(module_, body, expression, 606u32, 1u64, 0u64, 0u64)
+  }
+}
+
+fn self_host_required_global_initializer(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32) -> SelfHostPlannedProgramInitializer {
+  let declaration = self_host_global_read_declaration(module_, body, expression)
+  let mut selected = Option::None
+  for initializer in link.initializers {
+    if initializer.declaration == declaration {
+      if selected is Option::Some(_) {
+        self_host_global_read_failure(module_, body, expression, 610u32, 1u64, 2u64, declaration)
+      }
+      selected = Option::Some(initializer)
+    }
+  }
+  match selected {
+    Option::Some(value) => value
+    Option::None => self_host_global_read_failure(module_, body, expression, 610u32, 1u64, 0u64, declaration)
+  }
+}
+
 fn self_host_emit_planned_global_get(link: SelfHostPlannedProgramWasmGCLink, canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, initializer: SelfHostPlannedProgramInitializer, destination: StarshineInstructions) -> Unit {
+  let declaration = self_host_global_read_declaration(module_, body, expression)
+  if initializer.declaration != declaration {
+    self_host_global_read_failure(module_, body, expression, 106u32, declaration, initializer.declaration, 0u64)
+  }
   let shape_error = self_host_specialization_shape_error(initializer.shape)
   if shape_error != 0u32 {
     self_host_physical_scratch_failure(module_, body, expression, 7u32, 301u32,

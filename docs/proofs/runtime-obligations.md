@@ -49,6 +49,12 @@ must agree before a linked module index is used. Function handle sums are
 checked in U64 and exclude the missing sentinel before narrowing. See
 [the initializer log](../research/initializer-link-records-2026-09-08.md).
 
+Global-read emission also requires the source expression to belong to its body,
+select a module value, and retain the exact initializer declaration. Initializer
+lookup requires one matching record. A missing global cannot be replaced by a
+function with a matching declaration or spelling. See
+[the read identity log](../research/global-read-identity-2026-09-09.md).
+
 An initializer's schedule position is not its physical global slot. Unit and
 Never source values have no global slot, but their initializer functions remain
 in the schedule. Count only stack-producing values when assigning global slots.

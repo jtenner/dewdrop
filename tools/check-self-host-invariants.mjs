@@ -11,6 +11,18 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ARN-106 global read initializer keeps its selected declaration", 106, 1, 5100n << 32n, (5100n << 32n) | 1n, 0n],
+    ["BOD-610 global read cannot lose its initializer", 610, 1, 1n, 0n, 5100n << 32n],
+    ["BOD-610 global read requires one initializer", 610, 1, 1n, 2n, 5100n << 32n],
+    ["BOD-610 a missing global cannot become a named function", 610, 1, 1n, 0n, (5100n << 32n) | 1n],
+    ["BOD-606 global lookup requires a module-value read", 606, 1, 1n, 0n, 0n],
+    ["ARN-102 global lookup checks source body ownership", 102, 0, 1n, 0n, 1n],
+  ].map(([name, code, expression, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, (5100n << 32n) | 1n, (5100n << 32n) | 1n,
+      expression, expected, actual, detail],
+  })),
+  ...[
     ["BOD-605 frozen variant constructor targets cannot change", 605, 7, 5, 2n, 3n, 253n << 32n],
     ["BOD-605 frozen variant operands cannot disappear", 605, 7, 4294967295, 3n, 2n, (258n << 32n) | 4294967295n],
     ["BOD-605 frozen variant constructors retain expression identities", 605, 7, 5, 5n, 6n, 251n << 32n],

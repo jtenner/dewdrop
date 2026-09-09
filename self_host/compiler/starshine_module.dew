@@ -9174,17 +9174,6 @@ fn self_host_linked_call_returns_array_element(
   false
 }
 
-fn self_host_linked_global_initializer(
-  link: SelfHostPlannedProgramWasmGCLink,
-  declaration: U64,
-) -> Option<SelfHostPlannedProgramInitializer> {
-  for initializer in link.initializers {
-    if self_host_u64_equal(initializer.declaration, declaration) {
-      return Option::Some(initializer)
-    }
-  }
-  Option::None
-}
 
 fn self_host_linked_expression_is_variant_call(
   link: SelfHostPlannedProgramWasmGCLink,
@@ -9447,33 +9436,6 @@ fn self_host_linked_callable_function_index(
   Option::None
 }
 
-fn self_host_linked_function_reference_index(
-  link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  planned: SelfHostPlannedExpression,
-  declaration: U64,
-) -> Option<U32> {
-  match self_host_linked_callable_function_index(link, declaration) {
-    Option::Some(value) => {
-      return Option::Some(value)
-    }
-    Option::None => {}
-  }
-  if planned.source_name < self_host_linked_module_name_count(module_) {
-    match self_host_linked_callable_by_name(
-      link,
-      self_host_linked_module_name_at(module_, planned.source_name),
-    ) {
-      Option::Some(callable) => self_host_linked_callable_function_index(
-        link,
-        callable.declaration,
-      )
-      Option::None => Option::None
-    }
-  } else {
-    Option::None
-  }
-}
 
 fn self_host_linked_declaration_owner_module_id(
   link: SelfHostPlannedProgramWasmGCLink,
@@ -15252,55 +15214,9 @@ fn self_host_emit_linked_i32_expression(
                 Option::None => {}
               }
             }
-            SelfHostPlannedExpressionKind::PlannedModuleValueGet(
-              declaration,
-            ) => match self_host_linked_global_initializer(link, declaration) {
-              Option::Some(initializer) => self_host_emit_planned_global_get(link,
-                canonical_body_plan, module_, body, expression, initializer, destination)
-              Option::None => match self_host_linked_function_reference_index(
-                link,
-                module_,
-                planned,
-                declaration,
-              ) {
-                Option::Some(function_index) => {
-                  let module_index = match self_host_linked_module_index_by_id(
-                    link,
-                    module_.module_id,
-                  ) {
-                    Option::Some(value) => value
-                    Option::None => {
-                      return Option::Some("linked function reference module is missing")
-                    }
-                  }
-                  let closure_type = match self_host_linked_closure_base_type_index(
-                    link,
-                    module_index,
-                  ) {
-                    Option::Some(value) => value
-                    Option::None => {
-                      return Option::Some("linked function reference has no closure type")
-                    }
-                  }
-                  StarshineFfi.ffi_ffi_bridge_instructions_push(
-                    destination,
-                    StarshineFfi.ffi_lib_Instruction_ref_func(
-                      StarshineFfi.ffi_lib_FuncIdx_new(
-                        self_host_u32_to_i32(
-                          self_host_linked_emitted_function_index(function_index),
-                        ),
-                      ),
-                    ),
-                  )
-                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(
-                    closure_type,
-                    destination,
-                  ))
-                }
-                Option::None => {
-                  return Option::Some("linked module value has no global")
-                }
-              }
+            SelfHostPlannedExpressionKind::PlannedModuleValueGet(_) => {
+              let initializer = self_host_required_global_initializer(link, module_, body, expression)
+              self_host_emit_planned_global_get(link, canonical_body_plan, module_, body, expression, initializer, destination)
             }
             SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => {
               self_host_assert_array_span(children.start, children.length, module_.expression_children.length(), "ARN-101 evaluation sequence")
