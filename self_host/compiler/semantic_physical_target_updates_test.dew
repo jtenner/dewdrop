@@ -137,6 +137,44 @@ test "BOD-607 missing emitted targets retain the caller context" expect_trap "un
   self_host_missing_emitted_call_target(module_, module_.bodies[1u32], 3u32, 1u32)
 }
 
+test "tuple call arguments retain their single physical reference" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"fn first(pair: (I64, I64)) -> I64 {\n  let (left, _) = pair\n  left\n}\npub fn run() -> I64 {\n  first((42i64, 1i64))\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 0u32, "valid tuple call before testing its recipe")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = module_.bodies[1u32]
+  let plan = physical.bodies[1u32]
+  let mut checked = 0u32
+  for expression in plan.expressions {
+    if module_.expressions[expression.expression].kind is SelfHostPlannedExpressionKind::PlannedProductNew(_) {
+      let evaluations = []
+      let operands = []
+      assert(self_host_body_plan_call_argument(module_, body, plan.expressions,
+        expression.expression, evaluations, operands,
+      ), "tuple call falls through")
+      assert(evaluations.length() == 1u32, "one logical tuple evaluation")
+      assert(operands.length() == 1u32, "a tuple is not an implicit argument spread")
+      assert(self_host_body_call_operand_expression(operands[0u32]) == expression.expression, "operand is the tuple, not a tuple field")
+      checked = checked + 1u32
+    }
+  }
+  assert(checked == 1u32, "one tuple argument checked")
+}
+
+test "BOD-610 call evaluation cannot reconstruct a missing body plan" expect_trap "unreachable" {
+  let (link, _) = self_host_test_canonical_target_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let _ = self_host_linked_i32_push_call_evaluations(Option::None, link, module_,
+    module_.bodies[1u32], 3u32, SelfHostHirSpan::{
+      start: 0u32
+      length: 0u32
+    }, 2u32, StarshineFfi.ffi_ffi_bridge_instructions_new(), [], [], 0u32, true,
+  )
+}
+
 test "call target updates allow an identical fact without mutation" {
   let (body, expressions) = self_host_test_call_target_update()
   assert(!self_host_body_plan_set_call_function(body, expressions, 3u32, 0u32), "identical target adds no fact")

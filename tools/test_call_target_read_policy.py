@@ -44,6 +44,13 @@ class CallTargetReadPolicy(unittest.TestCase):
         planner = (COMPILER / "semantic_wasm_body_plan.dew").read_text()
         self.assertNotIn("PlannedOperatorCall(_, _, _, _, values) => values", planner)
 
+    def test_self_host_calls_do_not_spread_tuple_arguments(self):
+        for filename in ("starshine_module.dew", "semantic_wasm_body_plan.dew"):
+            source = (COMPILER / filename).read_text()
+            with self.subTest(filename=filename):
+                self.assertNotIn("flatten_product", source)
+                self.assertNotIn("self_host_linked_i32_push_physical_arguments(", source)
+
 
 if __name__ == "__main__":
     unittest.main()

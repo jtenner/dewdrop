@@ -11012,67 +11012,12 @@ fn self_host_linked_i32_push_arguments(
   Option::None
 }
 
-fn self_host_linked_i32_push_physical_arguments(
-  link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  arguments: SelfHostHirSpan,
-  function_index: U32,
-  instructions: StarshineInstructions,
-  tasks: Array<SelfHostLinkedI32EmitTask>,
-  expression_depths: Array<U32>,
-  depth: U32,
-) -> Option<String> {
-  if self_host_u32_equal(arguments.length, 1u32) && self_host_u32_equal(
-    self_host_linked_physical_function_parameter_count(link, function_index),
-    2u32,
-  ) && arguments.start < module_.expression_children.length() {
-    let argument = module_.expression_children[arguments.start]
-    if argument < module_.expressions.length() {
-      match module_.expressions[argument].kind {
-        SelfHostPlannedExpressionKind::PlannedProductNew(fields) => if self_host_u32_equal(
-          fields.length,
-          2u32,
-        ) {
-          let mut field = fields.length
-          let _ = while field {
-            current => if self_host_u32_greater(current, 0u32) {
-              let previous = current - 1u32
-              let child = self_host_u32_add(fields.start, previous)
-              if child >= module_.expression_children.length() {
-                return Option::Some("linked product argument field is outside its arena")
-              }
-              self_host_linked_i32_schedule_expression(
-                tasks,
-                expression_depths,
-                module_.expression_children[child],
-                instructions,
-                depth,
-              )
-              continue previous
-            } else {
-              break self_host_semantic_unit()
-            }
-          }
-          return Option::None
-        }
-        _ => {}
-      }
-    }
-  }
-  self_host_linked_i32_push_arguments(
-    module_,
-    arguments,
-    instructions,
-    tasks,
-    expression_depths,
-    depth,
-  )
-}
 
 fn self_host_linked_i32_push_planned_arguments(
   canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
   link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
   expression: U32,
   arguments: SelfHostHirSpan,
   function_index: U32,
@@ -11081,7 +11026,7 @@ fn self_host_linked_i32_push_planned_arguments(
   expression_depths: Array<U32>,
   depth: U32,
 ) -> Option<String> {
-  self_host_linked_i32_push_call_evaluations(canonical, link, module_, expression,
+  self_host_linked_i32_push_call_evaluations(canonical, link, module_, body, expression,
     arguments, function_index, instructions, tasks, expression_depths, depth, false,
   )
 }
@@ -11090,6 +11035,7 @@ fn self_host_linked_i32_push_call_evaluations(
   canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
   link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
   expression: U32,
   arguments: SelfHostHirSpan,
   function_index: U32,
@@ -11101,16 +11047,8 @@ fn self_host_linked_i32_push_call_evaluations(
 ) -> Option<String> {
   let plan = match canonical {
     Option::Some(value) => value
-    Option::None => return self_host_linked_i32_push_physical_arguments(
-      link,
-      module_,
-      arguments,
-      function_index,
-      instructions,
-      tasks,
-      expression_depths,
-      depth,
-    )
+    Option::None => self_host_call_read_failure(module_.module_id, body.declaration, body.body,
+      expression, 610u32, 1u64, 0u64, 0u64)
   }
   let call = match self_host_body_call_plan(plan, expression) {
     Option::Some(value) => value
@@ -11121,11 +11059,6 @@ fn self_host_linked_i32_push_call_evaluations(
   if !self_host_u32_equal(call.physical_function, function_index) {
     return Option::Some("ABI-701 planned and emitted call targets differ")
   }
-  let flatten_product = self_host_u32_equal(arguments.length, 1u32) &&
-    self_host_u32_equal(
-      self_host_linked_physical_function_parameter_count(link, function_index),
-      2u32,
-    )
   let mut evaluation = call.evaluations.length
   let _ = while evaluation {
     current => if current > 0u32 {
@@ -11146,27 +11079,6 @@ fn self_host_linked_i32_push_call_evaluations(
               instructions,
               depth,
             )
-          } else if flatten_product && source_expression < module_.expressions.length() {
-            match module_.expressions[source_expression].kind {
-              SelfHostPlannedExpressionKind::PlannedProductNew(fields) => match self_host_linked_i32_push_arguments(
-                module_,
-                fields,
-                instructions,
-                tasks,
-                expression_depths,
-                depth,
-              ) {
-                Option::Some(error) => return Option::Some(error)
-                Option::None => {}
-              }
-              _ => self_host_linked_i32_schedule_expression(
-                tasks,
-                expression_depths,
-                source_expression,
-                instructions,
-                depth,
-              )
-            }
           } else {
             self_host_linked_i32_schedule_expression(
               tasks,
@@ -11230,7 +11142,7 @@ fn self_host_linked_schedule_frozen_call(
     self_host_linked_schedule_call_result_adapter(canonical, link, module_, body, specialization, expression, function_index, tasks, destination)
     tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(function_index, destination))
   }
-  self_host_linked_i32_push_call_evaluations(canonical, link, module_, expression, arguments, function_index, destination, tasks, expression_depths, depth, true)
+  self_host_linked_i32_push_call_evaluations(canonical, link, module_, body, expression, arguments, function_index, destination, tasks, expression_depths, depth, true)
 }
 
 fn self_host_linked_call_has_erased_specialization(
@@ -14206,6 +14118,7 @@ fn self_host_emit_linked_i32_expression(
                     canonical_body_plan,
                     link,
                     module_,
+                    body,
                     expression,
                     arguments,
                     function_index,

@@ -375,6 +375,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   expression children. Direct calls with missing targets report BOD-607 rather
   than emitting nothing. See the
   [operator recipe log](docs/research/operator-call-recipes-2026-09-09.md).
+  Self-host tuple arguments now remain one physical reference. Planning and
+  emission no longer split them to fit a guessed parameter count. Missing
+  evaluation body plans report a complete BOD-610 record. See the
+  [tuple call log](docs/research/tuple-call-no-spread-2026-09-09.md).
   Raw builtin references now have explicit outlined physical targets in both
   compilers. The native failure required a returned function value; a local
   reference alone became a direct call and hid it. Scalar, SIMD, memory, and

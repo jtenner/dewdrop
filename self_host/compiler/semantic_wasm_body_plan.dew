@@ -3745,7 +3745,6 @@ fn self_host_body_plan_call_argument(
   body: SelfHostPlannedBodyLowering,
   expressions: Array<SelfHostPlannedPhysicalExpressionCarrier>,
   evaluation_expression: U32,
-  flatten_product: Bool,
   call_evaluations: Array<U32>,
   call_operands: Array<SelfHostPhysicalOperandSource>,
 ) -> Bool {
@@ -3769,37 +3768,9 @@ fn self_host_body_plan_call_argument(
   if !self_host_body_carrier_emits_call_operand(planned.carrier) {
     return true
   }
-  match module_.expressions[evaluation_expression].kind {
-    SelfHostPlannedExpressionKind::PlannedProductNew(fields) => if flatten_product {
-      let mut field = 0u32
-      let _ = while field {
-        current => if current < fields.length {
-          let child = self_host_u32_add(fields.start, current)
-          if child < module_.expression_children.length() {
-            call_operands.push(
-              SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(
-                module_.expression_children[child],
-              ),
-            )
-          }
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-    } else {
-      call_operands.push(
-        SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(
-          evaluation_expression,
-        ),
-      )
-    }
-    _ => call_operands.push(
-      SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(
-        evaluation_expression,
-      ),
-    )
-  }
+  call_operands.push(
+    SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(evaluation_expression),
+  )
   true
 }
 
@@ -3849,17 +3820,12 @@ fn self_host_body_build_physical_call_plans(
             )
             if receiver != 4294967295u32 {
               emits_call = self_host_body_plan_call_argument(module_, body, expressions,
-                receiver, false, call_evaluations, call_operands,
+                receiver, call_evaluations, call_operands,
               )
               if call_operands.length() > operand_start {
                 call_operands[operand_start] = SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(receiver)
               }
             }
-            let parameter_count = self_host_linked_physical_function_parameter_count(
-              link,
-              self_host_linked_physical_function_index(target.function_index),
-            )
-            let receiver_count = call_operands.length() - operand_start
             let (index_argument, index_value) = match module_.expressions[current].kind {
               SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, _, right, _) => (right, 4294967295u32)
               SelfHostPlannedExpressionKind::PlannedIndexGet(_, index, _) => (index, 4294967295u32)
@@ -3873,8 +3839,6 @@ fn self_host_body_build_physical_call_plans(
             } else {
               arguments.length
             }
-            let flatten_product = self_host_u32_equal(arguments.length, 1u32) &&
-              self_host_u32_equal(parameter_count, receiver_count + 2u32)
             let mut argument = 0u32
             let _ = while argument {
               offset => if offset < argument_count && emits_call {
@@ -3894,7 +3858,6 @@ fn self_host_body_build_physical_call_plans(
                     body,
                     expressions,
                     source,
-                    flatten_product,
                     call_evaluations,
                     call_operands,
                   )
