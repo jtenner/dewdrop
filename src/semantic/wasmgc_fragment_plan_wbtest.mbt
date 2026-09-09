@@ -21,19 +21,17 @@ fn wasmgc_test_inputs(
 }
 
 ///|
-test "all Preview 1 builtin names select the WASI import namespace" {
-  assert_eq(
-    wasmgc_builtin_import_identity(b"wasi_snapshot_preview1.args_get"),
-    WasmImportIdentity::wasi(b"args_get"),
-  )
-  assert_eq(
-    wasmgc_builtin_import_identity(b"wasi_snapshot_preview1.sock_shutdown"),
-    WasmImportIdentity::wasi(b"sock_shutdown"),
-  )
-  assert_eq(
-    wasmgc_builtin_import_identity(b"custom.host"),
-    WasmImportIdentity::host(b"custom.host"),
-  )
+test "unknown builtin names remain intrinsic requests and never imports" {
+  for source in [
+    b"pub builtin unknown(value: I32) -> I32 = \"custom.host\"\n",
+    b"pub builtin unknown(value: I32) -> I32 = \"wasi_snapshot_preview1.args_get\"\n",
+  ] {
+    let (resolved, lowering) = wasmgc_test_inputs(9731UL, source)
+    let planned = plan_module_wasmgc_fragments(resolved, lowering)
+    assert_eq(planned.imported_function_count, 0)
+    assert_eq(planned.functions.length(), 1)
+    assert_true(planned.functions[0].kind is PlannedWasmInlineBuiltinFunction(_))
+  }
 }
 
 ///|
@@ -231,7 +229,7 @@ test "all unit enums use only their compact subtype base" {
 ///|
 test "WasmGC function slots separate imports definitions and signatures" {
   let (resolved, lowering) = wasmgc_test_inputs(
-    974UL, b"builtin host(value: I32) -> I32 = \"host\"\ntrait Read {\n  fn read(self) -> I32\n}\nfn call(value: I32) -> I32 {\n  host(value)\n}\nstruct Item {}\nimpl Item {\n  fn read(self) -> I32 {\n    1\n  }\n}\n",
+    974UL, b"foreign import \"dew\" as Host {\n  fn host(value: I32) -> I32 = \"host\"\n}\ntrait Read {\n  fn read(self) -> I32\n}\nfn call(value: I32) -> I32 {\n  Host.host(value)\n}\nstruct Item {}\nimpl Item {\n  fn read(self) -> I32 {\n    1\n  }\n}\n",
   )
   let planned = plan_module_wasmgc_fragments(resolved, lowering)
   assert_eq(planned.functions.length(), 4)
@@ -241,9 +239,9 @@ test "WasmGC function slots separate imports definitions and signatures" {
     PlannedWasmImportedFunction(identity) => {
       assert_eq(identity.module_name, b"dew")
       assert_eq(identity.field, b"host")
-      assert_eq(identity.kind, HostWasmImport)
+      assert_eq(identity.kind, ForeignHostWasmImport)
     }
-    _ => fail("expected builtin import")
+    _ => fail("expected explicit foreign import")
   }
   assert_eq(planned.functions[0].function_index, 0)
   match planned.functions[1].kind {
@@ -338,7 +336,7 @@ test "foreign libraries plan link imports with nominal marker signatures" {
 ///|
 test "WasmGC fragment merge is independent of simulated job order" {
   let (resolved, lowering) = wasmgc_test_inputs(
-    975UL, b"struct Left {\n  right: Right\n}\nstruct Right {\n  left: Left\n}\nbuiltin host(value: I32) -> I32 = \"host\"\nfn first(value: I32) -> I32 {\n  host(value)\n}\nfn second(value: I64) -> I64 {\n  value\n}\n",
+    975UL, b"struct Left {\n  right: Right\n}\nstruct Right {\n  left: Left\n}\nforeign import \"dew\" as Host {\n  fn host(value: I32) -> I32 = \"host\"\n}\nfn first(value: I32) -> I32 {\n  Host.host(value)\n}\nfn second(value: I64) -> I64 {\n  value\n}\n",
   )
   let type_count = wasmgc_physical_type_count_with_options(
     lowering.type_layouts,

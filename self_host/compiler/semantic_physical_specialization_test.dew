@@ -1,6 +1,27 @@
 open dew.std.option
 open dew.std.bytes_builder
 
+test "unknown builtin names never become host imports" {
+  let fragments = self_host_physical_test_fragments(
+    b"pub builtin unknown(value: I32) -> I32 = \"custom.host\"\npub builtin legacy(value: I32) -> I32 = \"wasi_snapshot_preview1.args_get\"\n",
+  )
+  let mut found = 0u32
+  for module_ in fragments.modules {
+    for function_ in module_.functions {
+      match function_.kind {
+        SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _) => assert(false, "a builtin cannot create a host import")
+        SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => {
+          if name == b"custom.host" || name == b"wasi_snapshot_preview1.args_get" {
+            found = found + 1u32
+          }
+        }
+        _ => self_host_semantic_unit()
+      }
+    }
+  }
+  assert(found == 2u32, "both unknown names must reach intrinsic validation unchanged")
+}
+
 test "bound calls without queries select applicable generic implementations" {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
     b"trait Read {\n  fn read(self) -> I32\n}\nstruct Wrap<t> {\n  value: t\n}\nimpl Read for I32 {\n  fn read(self) -> I32 {\n    self\n  }\n}\nimpl<t: Read> Read for Wrap<t> {\n  fn read(self) -> I32 {\n    self.value.read()\n  }\n}\nfn forward<t: Read>(value: t) -> I32 {\n  value.read()\n}\npub fn run() -> I32 {\n  forward(7i32) + forward(Wrap::{\n    value: 35i32\n  })\n}\n",

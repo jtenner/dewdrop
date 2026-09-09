@@ -2236,17 +2236,6 @@ fn wasmgc_callable_has_scalarized_signature(
 }
 
 ///|
-fn wasmgc_builtin_import_identity(name : Bytes) -> WasmImportIdentity {
-  let wasi_prefix = b"wasi_snapshot_preview1."
-  if name.length() >= wasi_prefix.length() &&
-    name[0:wasi_prefix.length()] == wasi_prefix {
-    WasmImportIdentity::wasi(name[wasi_prefix.length():].to_owned())
-  } else {
-    WasmImportIdentity::host(name)
-  }
-}
-
-///|
 fn wasmgc_append_shape_value_types(
   output : Array[PlannedWasmValueType],
   shape : PlannedValueShape,
@@ -2371,10 +2360,10 @@ fn wasmgc_plan_function_job(
         PlannedWasmInlineHeapFunction(
           RawRefCastInstruction(raw_ref_cast_recipe(resolved, callable, name)),
         )
-      } else if wasmgc_builtin_is_inline(name) {
-        PlannedWasmInlineBuiltinFunction(name)
       } else {
-        PlannedWasmImportedFunction(wasmgc_builtin_import_identity(name))
+        // Only foreign declarations create imports. Preserve unknown names
+        // for the emitter's exact UnsupportedBuiltin diagnostic.
+        PlannedWasmInlineBuiltinFunction(name)
       }
     PlannedForeignCallable(logical_name, export_name, host_import) =>
       PlannedWasmImportedFunction(
@@ -4311,6 +4300,12 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       continue
     }
     match function_jobs[callable_index].unwrap().kind {
+      PlannedWasmImportedFunction(identity) =>
+        if identity.kind is ForeignHostWasmImport ||
+          identity.kind is WasiWasmImport {
+          uses_linear_memory = true
+          break
+        }
       PlannedWasmInlineBuiltinFunction(name)
       | PlannedWasmOutlinedBuiltinFunction(name)
       | PlannedWasmRuntimeFunction(name) =>

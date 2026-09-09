@@ -119,7 +119,7 @@ test "Starshine validates emitted recursive and subtype type sections" {
 ///|
 test "Starshine callable sections keep all signatures but only definitions" {
   let planned = backend_test_plan(
-    984UL, b"builtin host(value: I32) -> I32 = \"host\"\ntrait Read {\n  fn read(self) -> I32\n}\nfn call(value: I32) -> I32 {\n  host(value)\n}\nstruct Item {}\nimpl Item {\n  fn read(self) -> I32 {\n    1\n  }\n}\n",
+    984UL, b"foreign import \"dew\" as Host {\n  fn host(value: I32) -> I32 = \"host\"\n}\ntrait Read {\n  fn read(self) -> I32\n}\nfn call(value: I32) -> I32 {\n  Host.host(value)\n}\nstruct Item {}\nimpl Item {\n  fn read(self) -> I32 {\n    1\n  }\n}\n",
   )
   let type_section = emit_starshine_type_section(planned)
   let expected_types = @lib.TypeSec::new([
