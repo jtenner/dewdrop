@@ -182,6 +182,27 @@ pub fn main(case: U32) -> I32 {
   } else if case == 30u32 {
     bytes_into_string(b"\xc0\x80")
     0i32
+  } else if case == 31u32 {
+    let view = bytes_view_operation()
+    bytes_result(view(view(b"!!\xffabc??", 2u32, 4u32), 1u32, 3u32) == b"abc")
+  } else if case == 32u32 {
+    let view = bytes_view_operation()
+    bytes_result(view(b"abc", 3u32, 0u32) == b"" && view(b"", 0u32, 0u32) == b"")
+  } else if case == 33u32 {
+    bytes_view_operation()(b"abc", 4u32, 0u32)
+    0i32
+  } else if case == 34u32 {
+    bytes_view_operation()(b"abc", 2u32, 2u32)
+    0i32
+  } else if case == 35u32 {
+    bytes_view_operation()(b"abc", 4294967295u32, 1u32)
+    0i32
+  } else if case == 36u32 {
+    let log = BytesViewLog::{
+      value: 0u32
+    }
+    let value = bytes_view_operation()(bytes_view_input(log), bytes_view_start(log), bytes_view_length(log))
+    bytes_result(value == b"bc" && log.value == 123u32)
   } else {
     unreachable()
   }
@@ -189,6 +210,29 @@ pub fn main(case: U32) -> I32 {
 
 fn bytes_builder_length_operation() -> fn(BytesBuilder) -> U32 {
   bytes_builder_byte_length
+}
+
+struct BytesViewLog {
+  mut value: U32
+}
+
+fn bytes_view_input(log: BytesViewLog) -> Bytes {
+  log.value = log.value * 10u32 + 1u32
+  b"abcd"
+}
+
+fn bytes_view_start(log: BytesViewLog) -> U32 {
+  log.value = log.value * 10u32 + 2u32
+  1u32
+}
+
+fn bytes_view_length(log: BytesViewLog) -> U32 {
+  log.value = log.value * 10u32 + 3u32
+  2u32
+}
+
+fn bytes_view_operation() -> fn(Bytes, U32, U32) -> Bytes {
+  bytes_view
 }
 
 fn bytes_builder_default_operation() -> fn() -> BytesBuilder {

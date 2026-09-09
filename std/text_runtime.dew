@@ -55,7 +55,29 @@ pub builtin bytes_to_string_unchecked(value: Bytes) -> String = "ref.cast"
 pub fn bytes_byte_at(value: Bytes, index: U32) -> U8 {
   __dew_text_byte_at(value, index)
 }
-pub builtin bytes_view(value: Bytes, start: U32, length: U32) -> Bytes = "dew_bytes_view"
+struct BytesViewStorage {
+  chunks: WasmArray<V128>
+  start: U32
+  length: U32
+}
+
+builtin bytes_view_storage(value: Bytes) -> BytesViewStorage = "ref.cast"
+builtin bytes_view_value(value: BytesViewStorage) -> Bytes = "ref.cast"
+
+pub fn bytes_view(value: Bytes, start: U32, length: U32) -> Bytes {
+  let source = bytes_view_storage(value)
+  if start > source.length || length > source.length - start {
+    unreachable()
+  }
+  if start > 4294967295u32 - source.start {
+    unreachable()
+  }
+  bytes_view_value(BytesViewStorage::{
+    chunks: source.chunks
+    start: source.start + start
+    length: length
+  })
+}
 
 pub fn bytes_concat(left: Bytes, right: Bytes) -> Bytes {
   let left_length = bytes_byte_length(left)

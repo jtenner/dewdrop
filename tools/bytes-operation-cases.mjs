@@ -50,5 +50,13 @@ export function checkBytesOperations(main) {
   assert.throws(() => main(30), error =>
     error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
   "Bytes Into String rejects invalid UTF-8 before the cast");
-  return cases.length + 21;
+  assert.equal(main(31), 1, "Bytes view function preserves nested raw ranges");
+  assert.equal(main(32), 1, "Bytes view permits an empty range at the end");
+  for (const index of [33, 34, 35]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `Bytes view rejects an invalid range: ${index}`);
+  }
+  assert.equal(main(36), 1, "Bytes view arguments run once in source order");
+  return cases.length + 27;
 }

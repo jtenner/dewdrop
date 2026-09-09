@@ -138,6 +138,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   pass the shared storage probes and clean bootstrap validation.
   Keep this row open until the library migration passes. See the
   [declared storage log](docs/research/declared-text-storage-2026-09-09.md).
+  Bytes view range checks and shared-storage construction now use Dew, with
+  the native/provider runtime entry removed. Both compilers, integration,
+  and clean bootstrap checks pass; see
+  the [Bytes view log](docs/research/bytes-view-library-2026-09-09.md).
   Raw `struct.get N` now retains a concrete struct owner and physical field
   index in both compilers, including function-value wrappers and the native
   fragment codec. It accepts unpacked scalar fields only. Packed/reference
