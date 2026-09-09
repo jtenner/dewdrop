@@ -41,7 +41,7 @@ pub builtin bytes_builder_finish(value: BytesBuilder) -> Bytes = "dew_bytes_buil
 pub fn bytes_byte_length(value: Bytes) -> U32 {
   __dew_text_byte_length(value)
 }
-pub builtin bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string_unchecked"
+pub builtin bytes_to_string_unchecked(value: Bytes) -> String = "ref.cast"
 pub fn bytes_byte_at(value: Bytes, index: U32) -> U8 {
   __dew_text_byte_at(value, index)
 }

@@ -23,6 +23,7 @@ checking exposed that test-only issue in 15.014 seconds. After correction,
 all 40 raw tests pass in 48.946 seconds. The native library lane passes in
 49.307 seconds, including 14 StringView cases. Self-host hardening passes 821
 tests, 414 exact failure records, and all shared cases in 100.455 seconds.
-Generated checks pass in 21.513 seconds. Clean bootstrap will cover this change with the following
-Bytes-to-String migration. Runs over 30 seconds remain timing defects; speed
-work is deferred.
+Generated checks pass in 21.513 seconds. The following Bytes-to-String batch
+also passes clean bootstrap in 223.598 seconds with matching B/C raw and linked
+bytes; see the [Bytes conversion log](bytes-string-cast-library-2026-09-09.md).
+Runs over 30 seconds remain timing defects; speed work is deferred.

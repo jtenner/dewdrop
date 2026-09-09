@@ -280,27 +280,18 @@ test "checked Bytes to String links the ordinary Dew UTF8 validator" {
 }
 
 ///|
-test "unchecked Bytes to String is one reference cast without allocation" {
-  let actual = emit_starshine_text_runtime_function(
-    b"dew_bytes_to_string_unchecked", 17,
-  ).unwrap()
-  let expected = @lib.Func::new(
-    @lib.Locals::empty(),
-    @lib.Expr::new([
-      @lib.Instruction::local_get(@lib.LocalIdx::new(0U)),
-      @lib.Instruction::ref_cast(
-        false,
-        @lib.HeapType::new(@lib.TypeIdx::new(18U)),
-      ),
-    ]),
+test "Bytes raw cast emits one instruction with the String result heap" {
+  backend_test_raw_text_cast_instruction(
+    b"builtin cast(value: Bytes) -> String = \"ref.cast\"\npub fn run(value: Bytes) -> String {\n  cast(value)\n}\n",
+    1,
   )
-  assert_eq(actual, expected)
 }
 
 ///|
 test "StringView raw cast emits one instruction with the Bytes result heap" {
   backend_test_raw_text_cast_instruction(
     b"builtin cast(value: StringView) -> Bytes = \"ref.cast\"\npub fn run(value: StringView) -> Bytes {\n  cast(value)\n}\n",
+    2,
   )
 }
 

@@ -173,6 +173,15 @@ pub fn main(case: U32) -> I32 {
   } else if case == 27u32 {
     let create = bytes_builder_default_operation()
     bytes_result(create().finish().byte_length() == 0u32)
+  } else if case == 28u32 {
+    let cast = bytes_string_operation()
+    let value = b"!!\xce\xbb\xf0\x9f\x98\x80??".view(1u32, 8u32).view(1u32, 6u32)
+    bytes_result(cast(value) == "λ😀" && cast(b"") == "" && cast(b"\xff").as_bytes() == b"\xff")
+  } else if case == 29u32 {
+    bytes_result(bytes_into_string(b"\xce\xbb\xf0\x9f\x98\x80") == "λ😀" && bytes_into_string(b"") == "")
+  } else if case == 30u32 {
+    bytes_into_string(b"\xc0\x80")
+    0i32
   } else {
     unreachable()
   }
@@ -184,6 +193,14 @@ fn bytes_builder_length_operation() -> fn(BytesBuilder) -> U32 {
 
 fn bytes_builder_default_operation() -> fn() -> BytesBuilder {
   bytes_builder_new
+}
+
+fn bytes_string_operation() -> fn(Bytes) -> String {
+  bytes_to_string_unchecked
+}
+
+fn bytes_into_string(value: Bytes) -> String {
+  value.into()
 }
 
 fn bytes_simd_view_lanes() -> Bool {

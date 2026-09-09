@@ -1278,19 +1278,6 @@ fn starshine_text_builder_finish_body(
   )
 }
 
-///|
-fn starshine_text_reference_cast_body(target : Int) -> @lib.Func {
-  @lib.Func::new(
-    @lib.Locals::empty(),
-    @lib.Expr::new([
-      @lib.Instruction::local_get(text_local(0)),
-      @lib.Instruction::ref_cast(
-        false,
-        @lib.HeapType::new(@lib.TypeIdx::new(target.reinterpret_as_uint())),
-      ),
-    ]),
-  )
-}
 
 ///|
 fn emit_starshine_text_runtime_function(
@@ -1321,8 +1308,6 @@ fn emit_starshine_text_runtime_function(
     Some(starshine_text_builder_append_byte_body(base, 5, false))
   } else if name == b"dew_bytes_builder_finish" {
     Some(starshine_text_builder_finish_body(base, 5, 2))
-  } else if name == b"dew_bytes_to_string_unchecked" {
-    Some(starshine_text_reference_cast_body(base + 1))
   } else if name == b"dew_bytes_byte_at" {
     Some(starshine_text_byte_at_type_body(base, 2))
   } else if name == b"dew_bytes_view" {

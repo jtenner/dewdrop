@@ -294,6 +294,11 @@ through the opcode string. This is an unsafe representation operation: casting
 Bytes to String does not validate UTF-8. Checked library conversion must do that
 work before the cast. `unsafe.bitcast` remains scalar/vector-only.
 
+The standard `Into<Bytes>` implementations for String and StringView preserve
+their byte ranges. `Into<String>` for Bytes uses the checked Dew conversion:
+invalid UTF-8 traps before the cast. The explicitly unchecked conversion does
+not validate UTF-8.
+
 The implemented entry point is:
 
 ```moonbit

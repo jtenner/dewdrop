@@ -1,5 +1,5 @@
 ///|
-fn backend_test_raw_text_cast_instruction(source : Bytes) -> Unit raise {
+fn backend_test_raw_text_cast_instruction(source : Bytes, target_offset : Int) -> Unit raise {
   let stages = backend_test_single_module_stages(28239UL, source)
   assert_eq(stages.diagnostic_count(), 0)
   let mut declaration = 0UL
@@ -21,7 +21,7 @@ fn backend_test_raw_text_cast_instruction(source : Bytes) -> Unit raise {
           instruction, module_, Some(stages.link), module_.function_value_types,
           function_.parameters, function_.results,
         ).unwrap()
-        let target = starshine_text_runtime_base_for_body(module_, Some(stages.link)) + 2
+        let target = starshine_text_runtime_base_for_body(module_, Some(stages.link)) + target_offset
         assert_eq(actual, [@lib.Instruction::ref_cast(
           false, @lib.HeapType::new(@lib.TypeIdx::new(target.reinterpret_as_uint())),
         )])
@@ -36,6 +36,7 @@ fn backend_test_raw_text_cast_instruction(source : Bytes) -> Unit raise {
 test "String raw cast emits one instruction with the Bytes result heap" {
   backend_test_raw_text_cast_instruction(
     b"builtin cast(value: String) -> Bytes = \"ref.cast\"\npub fn run(value: String) -> Bytes {\n  cast(value)\n}\n",
+    2,
   )
 }
 

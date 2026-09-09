@@ -45,5 +45,10 @@ export function checkBytesOperations(main) {
   assert.equal(main(25), 1, "BytesBuilder length works through a returned function");
   assert.equal(main(26), 1, "BytesBuilder default function retains aliases and grows past its initial capacity");
   assert.equal(main(27), 1, "BytesBuilder default function can finish empty");
-  return cases.length + 18;
+  assert.equal(main(28), 1, "unchecked Bytes raw cast preserves nested ranges, empty values, and raw bytes");
+  assert.equal(main(29), 1, "Bytes Into String accepts valid UTF-8 and empty values");
+  assert.throws(() => main(30), error =>
+    error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+  "Bytes Into String rejects invalid UTF-8 before the cast");
+  return cases.length + 21;
 }

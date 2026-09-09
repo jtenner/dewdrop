@@ -105,7 +105,7 @@ pub struct JsonWriter {
   error_payload: FixedArray<String>
 }
 
-pub builtin json_bytes_to_string_unchecked(value: Bytes) -> String = "dew_bytes_to_string_unchecked"
+pub builtin json_bytes_to_string_unchecked(value: Bytes) -> String = "ref.cast"
 
 pub fn json_unit() -> Unit {}
 

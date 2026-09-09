@@ -147,9 +147,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   removed its old runtime entry. See
   the [String conversion log](docs/research/string-bytes-cast-library-2026-09-09.md).
   StringView-to-Bytes now also uses a raw cast and `Into<Bytes>`. Its old runtime
-  entry is removed, with nested-range and returned-function coverage. The
-  Bytes-to-String compatibility entry remains; see the
+  entry is removed, with nested-range and returned-function coverage; see the
   [view conversion log](docs/research/string-view-bytes-cast-library-2026-09-09.md).
+  Bytes-to-String and its JSON declaration now also use raw casts. Checked
+  conversion and the new `Into<String>` implementation retain Dew UTF-8 checks.
+  The final conversion dispatch and rewrap helpers are removed in both
+  compilers and the provider. Storage algorithms still remain; see the
+  [Bytes conversion log](docs/research/bytes-string-cast-library-2026-09-09.md).
   Bytes length now uses that raw instruction. Ordering and Facet call the Dew
   operation; the native and pinned provider length builders are removed.
   See the [Bytes length log](docs/research/bytes-length-intrinsic-2026-09-09.md).
@@ -828,6 +832,13 @@ shared library checks, generated checks, 15 stress tests, and 10,994 pinned
 Starshine tests. Clean B/C raw and linked bytes match. This includes the
 import-signature fix and builder length/default migrations. See the
 [measured results](docs/research/linked-call-index-contracts-2026-09-09.md).
+
+The text-conversion batch passes 1,282 native tests, 270 integration tests,
+821 self-host tests with 414 exact failure records, all shared library cases,
+generated checks, and 15 stress tests. The targeted provider suite passes all
+21 tests. Clean B/C raw and linked bytes match; see the
+[conversion results](docs/research/bytes-string-cast-library-2026-09-09.md).
+These results do not close the remaining compiler and storage tasks.
 These are current batch checks, not completion of the remaining tasks above.
 
 - [ ] Run `tools/test-native.sh`, `tools/test-integration-native.sh`,

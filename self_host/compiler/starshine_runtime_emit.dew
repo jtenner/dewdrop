@@ -463,24 +463,6 @@ fn self_host_linked_append_runtime_function(
   functions: StarshineFunctions,
   name: Bytes,
 ) -> Bool {
-  if name == b"dew_bytes_to_string_unchecked" {
-    let target_offset = 1u32
-    let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
-    StarshineFfi.ffi_ffi_bridge_instructions_push(instructions,
-      StarshineFfi.ffi_lib_Instruction_local_get(StarshineFfi.ffi_lib_LocalIdx_new(0i32)),
-    )
-    StarshineFfi.ffi_ffi_bridge_instructions_push(instructions,
-      StarshineFfi.ffi_lib_Instruction_ref_cast(0i32,
-        StarshineFfi.ffi_lib_HeapType_new(StarshineFfi.ffi_lib_TypeIdx_new(
-          self_host_u32_to_i32(self_host_linked_text_runtime_base(link) + target_offset),
-        )),
-      ),
-    )
-    StarshineFfi.ffi_ffi_bridge_funcs_push(functions,
-      StarshineFfi.ffi_lib_Func_new(StarshineFfi.ffi_lib_Locals_empty(), StarshineFfi.ffi_lib_Expr_new(instructions)),
-    )
-    return true
-  }
   let builder = StarshineFfi.ffi_ffi_bridge_runtime_function_builder_new(
     self_host_u32_to_i32(self_host_linked_text_runtime_base(link)),
   )
