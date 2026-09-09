@@ -1,0 +1,64 @@
+// A lowered evaluation prefix ends at its first non-fall-through child.
+// Earlier values are evaluated and discarded; no later effect is scheduled.
+fn self_host_lowered_evaluation_sequence(context: SelfHostLoweredChildContext, expression: U32, children: SelfHostHirSpan) -> Unit {
+  self_host_lowered_child_arguments(context, expression, children)
+  if children.length == 0u32 {
+    self_host_lowered_child_failure(context, 611u32, expression, 1u64, 0u64, 0u64)
+  }
+  let source = context.module_.expressions[expression]
+  if source.flow.falls_through {
+    self_host_lowered_child_failure(context, 611u32, expression, 0u64, 1u64, 1u64)
+  }
+  let mut flow = self_host_flow_falls_through()
+  while 0u32 {
+    ordinal if ordinal < children.length => {
+      let child = context.module_.expression_children[children.start + ordinal]
+      let child_flow = context.module_.expressions[child].flow
+      let expected_fallthrough = ordinal < children.length - 1u32
+      if child_flow.falls_through != expected_fallthrough {
+        self_host_lowered_child_failure(context, 611u32, expression,
+          if expected_fallthrough {
+            1u64
+          } else {
+            0u64
+          },
+          if child_flow.falls_through {
+            1u64
+          } else {
+            0u64
+          },
+          (u32_into_u64(ordinal) << 32u64) | u32_into_u64(child))
+      }
+      flow = self_host_flow_sequence(flow, child_flow)
+      continue ordinal + 1u32
+    }
+    _ => break ()
+  }
+  let expected = self_host_flow_encode(flow)
+  let actual = self_host_flow_encode(source.flow)
+  if actual != expected {
+    self_host_lowered_child_failure(context, 611u32, expression,
+      u32_into_u64(expected), u32_into_u64(actual), 4294967295u64)
+  }
+}
+
+fn self_host_verify_emitted_evaluation_sequence(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32) -> Unit {
+  self_host_assert_physical_body_span_in_phase(body, body.expressions, module_.expressions.length(), 1u32, 7u32)
+  let context = SelfHostLoweredChildContext::{
+    module_: module_
+    body: body
+    phase: 7u32
+    lambda: 4294967295u32
+    locals: body.locals
+    lambdas: SelfHostHirSpan::{
+      start: 0u32
+      length: module_.lambdas.length()
+    }
+    syntax_walk: Option::None
+  }
+  self_host_lowered_child_owned(context, expression, body.expressions, expression, 1u32)
+  match module_.expressions[expression].kind {
+    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => self_host_lowered_evaluation_sequence(context, expression, children)
+    _ => self_host_lowered_child_failure(context, 606u32, expression, 1u64, 0u64, 0u64)
+  }
+}

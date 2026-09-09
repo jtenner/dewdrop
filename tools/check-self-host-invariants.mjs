@@ -11,6 +11,28 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["BOD-611 emitted evaluation prefixes cannot be empty", 1n, 0n, 0n],
+    ["BOD-611 emitted evaluation prefixes cannot claim fallthrough", 0n, 1n, 1n],
+    ["BOD-611 emitted evaluation prefixes stop at the first nonreturning child", 1n, 0n, 2n],
+    ["BOD-611 emitted evaluation prefixes require a nonreturning last child", 0n, 1n, 4294967300n],
+    ["BOD-611 emitted evaluation prefixes retain child return effects", 2n, 0n, 4294967295n],
+  ].map(([name, expected, actual, detail]) => ({
+    name,
+    expected: [611, 7, 5100n, (5100n << 32n) | 1n, 5100n << 32n,
+      6, expected, actual, detail],
+  })),
+  ...[
+    ["BOD-611 evaluation prefixes cannot be empty", 1n, 0n, 0n],
+    ["BOD-611 evaluation prefixes cannot claim fallthrough", 0n, 1n, 1n],
+    ["BOD-611 evaluation prefixes stop at the first nonreturning child", 1n, 0n, 2n],
+    ["BOD-611 evaluation prefixes require a nonreturning last child", 0n, 1n, 4294967300n],
+    ["BOD-611 evaluation prefixes retain child return effects", 2n, 0n, 4294967295n],
+  ].map(([name, expected, actual, detail]) => ({
+    name,
+    expected: [611, 6, 5100n, (5100n << 32n) | 1n, 5100n << 32n,
+      6, expected, actual, detail],
+  })),
+  ...[
     ["ARN-103 specialization request links cannot be shorter than requests", 103, 1n, 0n, 0n],
     ["ARN-103 specialization request links cannot be longer than requests", 103, 1n, 2n, 0n],
     ["ARN-105 specialization request heads must address requests", 105, 1n, 99n, 1n],

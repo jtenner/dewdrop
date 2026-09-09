@@ -160,7 +160,7 @@ fn self_host_lowered_child_expression_edges(context: SelfHostLoweredChildContext
       self_host_lowered_child_arms(context, parent, arms)
     }
     SelfHostPlannedExpressionKind::PlannedProductNew(arguments) => self_host_lowered_child_arguments(context, parent, arguments)
-    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(arguments) => self_host_lowered_child_arguments(context, parent, arguments)
+    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(arguments) => self_host_lowered_evaluation_sequence(context, parent, arguments)
     SelfHostPlannedExpressionKind::PlannedArrayLiteral(arguments) => self_host_lowered_child_arguments(context, parent, arguments)
     SelfHostPlannedExpressionKind::PlannedObjectNew(fields) => self_host_lowered_child_fields(context, parent, fields)
     SelfHostPlannedExpressionKind::PlannedConstruct(target, fields, _) => {

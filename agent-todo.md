@@ -533,6 +533,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   transfer payload schedules no expression. This is not the full instruction
   stack checker. See the
   [discard log](docs/research/frozen-discard-values-2026-09-09.md).
+  Early-exit evaluation sequences now stop at the first non-fall-through
+  child and retain all child flow effects. Both planning and emission check
+  the same rule with exact numeric context; anonymous sequence assertions
+  are removed. See the
+  [sequence flow log](docs/research/evaluation-sequence-flow-2026-09-09.md).
   Native Unit branches now discard their actual emitted tail values, including
   blocks selected by compile-time queries. Self-host transfer rules keep the
   Unit parent's evidence separate from child call results. Twenty-four shared

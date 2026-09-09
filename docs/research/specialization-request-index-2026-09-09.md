@@ -17,10 +17,12 @@ The baseline lane failed in 58.351 seconds. The implementation passes 781
 hardening tests and 388 complete failure records (58.861 seconds), including
 all seven mutations and the shared execution corpus. An added positive case
 walks sixteen distinct requests and reuses the oldest without adding a record.
-Final hardening passes 782 tests, 388 records, and all shared execution checks.
+Final hardening passes 782 tests, 388 records, and all shared execution checks
+(59.452 seconds).
 Library checks pass (26.660 seconds); generated-source and policy checks pass
-(4.196 seconds). Hardening remains over the 30-second budget. A clean bootstrap
-will cover this change with the next related body-flow boundary fix.
+(4.196 seconds). Hardening remains over the 30-second budget. The subsequent
+body-flow clean bootstrap covers this change too (168.663 seconds, matching
+B/C bytes). See [sequence flow](evaluation-sequence-flow-2026-09-09.md).
 
 This is the self-host request-index boundary. Other specialization work-stack
 assertions, evidence graphs, and remaining numeric-context sites remain open.

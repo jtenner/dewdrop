@@ -13464,8 +13464,7 @@ fn self_host_emit_linked_i32_expression(
               self_host_emit_planned_global_get(link, canonical_body_plan, module_, body, expression, initializer, destination)
             }
             SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => {
-              self_host_assert_array_span(children.start, children.length, module_.expression_children.length(), "ARN-101 evaluation sequence")
-              self_host_assert_compiler_invariant(!planned.flow.falls_through && children.length > 0u32, "BOD-611 evaluation sequence must not fall through")
+              self_host_verify_emitted_evaluation_sequence(module_, body, expression)
               let _ = while children.length {
                 remaining => if remaining > 0u32 {
                   let offset = remaining - 1u32
