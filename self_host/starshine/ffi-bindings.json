@@ -5,7 +5,7 @@
   "wasm_path": "starshine-mb/dist/ffi/starshine-ffi.wasm",
   "wasm_sha256": "f486406c38f2bc191d0911afbb941ea40c34f02118c59484b6fc32684eca1e44",
   "available_export_count": 4188,
-  "binding_count": 476,
+  "binding_count": 473,
   "interfaces": [
     {
       "path": "src/lib/pkg.generated.mbti",
@@ -27,7 +27,7 @@
   "fingerprint": {
     "algorithm": "blake3-256",
     "domain": "DEW_SELF_HOST_COMPILER_FINGERPRINT_V1",
-    "prefix_sha256": "884b5ea634a927259f7666e3a10cc95a00cb152844de26a2e18c69f5547972b2",
+    "prefix_sha256": "e7e037c03aae4c1c6bcd325f455025d4e0b48f5cf3e64262dd9548cd5b162c1e",
     "provider_input": "exact wasm bytes appended after the prefix"
   },
   "exports": [
@@ -237,30 +237,6 @@
       "internal_name": "ffi_ffi_bridge_funcs_push",
       "export_name": "ffi_bridge::funcs_push",
       "signature": "((ref 164), (ref 0)) -> Unit",
-      "status": "bound"
-    },
-    {
-      "ordinal": 4094,
-      "function_index": 4469,
-      "internal_name": "ffi_ffi_bridge_runtime_function_builder_new",
-      "export_name": "ffi_bridge::runtime_function_builder_new",
-      "signature": "(i32) -> (ref 2897)",
-      "status": "bound"
-    },
-    {
-      "ordinal": 4051,
-      "function_index": 4419,
-      "internal_name": "ffi_ffi_bridge_RuntimeFunctionBuilder_push_name_byte",
-      "export_name": "RuntimeFunctionBuilder::push_name_byte",
-      "signature": "((ref 2897), i32) -> Unit",
-      "status": "bound"
-    },
-    {
-      "ordinal": 4118,
-      "function_index": 4496,
-      "internal_name": "ffi_ffi_bridge_funcs_push_runtime",
-      "export_name": "ffi_bridge::funcs_push_runtime",
-      "signature": "((ref 164), (ref 2897)) -> i32",
       "status": "bound"
     },
     {

@@ -154,14 +154,6 @@ CARRIER_ASSERTIONS = (
             CarrierProbe("ffi_bridge::imports_push_builder", "parameter", 1),
         ),
     ),
-    CarrierAssertion(
-        "StarshineRuntimeFunctionBuilder",
-        (
-            CarrierProbe("ffi_bridge::runtime_function_builder_new", "result", 0),
-            CarrierProbe("RuntimeFunctionBuilder::push_name_byte", "parameter", 0),
-            CarrierProbe("ffi_bridge::funcs_push_runtime", "parameter", 1),
-        ),
-    ),
 )
 
 # Names come from the provider API, never from its current Wasm type ordering.

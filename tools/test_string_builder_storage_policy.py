@@ -1,5 +1,6 @@
 """StringBuilder construction, encoding, and finish must be Dew functions."""
 from pathlib import Path
+import json
 import re
 import unittest
 
@@ -8,6 +9,21 @@ OPERATIONS = ("with_capacity", "append_scalar", "finish")
 
 
 class StringBuilderStoragePolicy(unittest.TestCase):
+    def test_self_host_has_no_text_runtime_dispatch_bridge(self):
+        for path in ("self_host/compiler/semantic_program_link_plan.dew",
+                     "self_host/compiler/semantic_wasmgc_fragment_plan.dew",
+                     "self_host/compiler/starshine_module.dew",
+                     "self_host/compiler/starshine_runtime_emit.dew"):
+            source = (ROOT / path).read_text()
+            with self.subTest(path=path):
+                self.assertNotIn("self_host_program_link_is_runtime_builtin", source)
+                self.assertNotIn("self_host_linked_append_runtime_function", source)
+        exports = json.loads((ROOT / "self_host/starshine/ffi-used.json").read_text())["exports"]
+        for name in ("ffi_bridge::runtime_function_builder_new",
+                     "RuntimeFunctionBuilder::push_name_byte",
+                     "ffi_bridge::funcs_push_runtime"):
+            self.assertNotIn(name, exports)
+
     def test_operations_have_dew_bodies(self):
         source = (ROOT / "std/text_runtime.dew").read_text()
         for operation in OPERATIONS:

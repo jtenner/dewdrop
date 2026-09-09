@@ -620,7 +620,7 @@ fn self_host_wasmgc_append_function(
     } else {
       original_kind
     }
-    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if outlined && !self_host_program_link_is_runtime_builtin(name) {
+    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if outlined {
       SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedBuiltinFunction(name)
     } else {
       original_kind

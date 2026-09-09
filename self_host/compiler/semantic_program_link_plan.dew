@@ -119,11 +119,6 @@ fn self_host_program_link_is_imported(
   function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _)
 }
 
-fn self_host_program_link_is_runtime_builtin(name: Bytes) -> Bool {
-  name.starts_with(b"dew_string_") ||
-  name.starts_with(b"dew_bytes_")
-}
-
 fn self_host_program_link_runtime_builtin_module_id(
   fragments: SelfHostPlannedProgramWasmGCFragments,
   name: Bytes,
@@ -186,8 +181,7 @@ fn self_host_program_link_is_emitted(
 ) -> Bool {
   match function_.kind {
     SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(_) => false
-    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) =>
-      !function_.elided && self_host_program_link_is_runtime_builtin(name)
+    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(_) => false
     SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction => false
     _ => !function_.elided
   }
@@ -239,7 +233,7 @@ fn self_host_program_link_call_requires_function(
             !(function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_)) {
             match function_.kind {
               SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(_) => return false
-              SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => return self_host_program_link_is_runtime_builtin(name)
+              SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(_) => return false
               _ => return true
             }
           }

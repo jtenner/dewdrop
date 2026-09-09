@@ -1,7 +1,19 @@
-test "Array runtime aliases are not emitted library functions" {
-  for name in [b"dew_array_new", b"dew_array_clear", b"dew_array_iter_has_next"] {
-    assert(!self_host_program_link_is_runtime_builtin(name), "removed Array runtime target was selected")
+test "removed text runtime aliases do not reserve physical function slots" {
+  for source in [
+    b"builtin removed(value: I32) -> Unit = \"dew_string_builder_finish\"\npub fn main() -> Unit {\n  removed(1i32)\n}\n",
+    b"builtin removed(value: I32) -> Unit = \"dew_bytes_builder_finish\"\npub fn main() -> Unit {\n  removed(1i32)\n}\n",
+  ] {
+    let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source), false)
+    self_host_physical_test_assert_clean_inference(link)
+    for function_ in link.functions {
+      let module_ = link.fragments.modules[function_.module_index]
+      let fragment = self_host_program_link_fragment_function(module_, function_.fragment_index)
+      assert(!(fragment.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(_)), "an inline builtin must not reserve a physical function slot")
+    }
   }
+}
+
+test "Array runtime aliases are not emitted library functions" {
   let fragments = self_host_physical_test_fragments(
     b"builtin old_clear(value: I32) -> Unit = \"dew_array_clear\"\npub fn main() -> Unit {\n  old_clear(1i32)\n}\n",
   )

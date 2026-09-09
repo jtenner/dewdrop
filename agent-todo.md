@@ -369,10 +369,14 @@ Correctness comes first. Keep these timing defects visible after query completio
   requests and produce exact emission errors instead of host imports. Explicit
   foreign host calls retain real exported memory even without guest memory
   instructions. See the [builtin boundary log](docs/research/unknown-builtin-imports-2026-09-09.md).
+  Self-host text-name dispatch and its three FFI runtime-builder calls are now
+  removed. Six obsolete private helpers are deleted, and the consumer selects
+  473 APIs. Hardening, generated checks, and clean bootstrap pass; see the
+  [self-host retirement log](docs/research/self-host-text-runtime-retirement-2026-09-09.md).
   Removed 46 unused private linker/body helpers, including stale collection
   name recovery and consumed-expression recovery. This does not remove the
-  remaining runtime protocol. Give erased adapters an explicit function kind
-  instead of an empty runtime name, and remove the retired bridge. See the
+  remaining native/provider runtime protocol. Give erased adapters an explicit
+  function kind instead of an empty runtime name, and remove that protocol. See the
   [unused linker log](docs/research/unused-link-recovery-2026-09-09.md).
 
 ### Finish the compiler correctness audit
