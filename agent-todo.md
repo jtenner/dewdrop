@@ -388,6 +388,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   do not merely change the binding carrier. Unit payload certificates now also
   require the field role and stored declaration to agree. See the
   [variant storage log](docs/research/variant-payload-storage-2026-09-09.md).
+  Named struct patterns now select struct fragments using their saved
+  declaration and constructor kind; they no longer search only enum variants.
+  Missing or contradictory selections have no name/type fallback. See the
+  [struct-pattern target log](docs/research/named-struct-pattern-targets-2026-09-09.md).
   Constructor field temporary types now come from frozen source-order records;
   emission checks presence, uniqueness, source agreement, and mirrored carriers.
   Global initializers now pass through body planning, verification, and freeze.

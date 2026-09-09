@@ -221,6 +221,51 @@ fn nestedLiteralU16(value: U16) -> I32 {
 }
 
 
+struct NestedPackedStruct {
+  signed8: CellI8
+  unsigned8: CellU8
+  signed16: CellI16
+  unsigned16: CellU16
+}
+
+fn nestedStructPayload(which: U32) -> I32 {
+  let value = NestedPackedStruct::{
+    signed8: CellI8::{
+      value: bits::<I32, I8>(511i32)
+    }
+    unsigned8: CellU8::{
+      value: bits::<I32, U8>(511i32)
+    }
+    signed16: CellI16::{
+      value: bits::<I32, I16>(131071i32)
+    }
+    unsigned16: CellU16::{
+      value: bits::<I32, U16>(131071i32)
+    }
+  }
+  match value {
+    NestedPackedStruct {
+      unsigned16: CellU16 {
+        value: d
+      }
+      signed8: CellI8 {
+        value: a
+      }
+      unsigned8: CellU8 {
+        value: b
+      }
+      signed16: CellI16 {
+        value: c
+      }
+    } => match which {
+      32u32 => bits::<I8, I32>(a)
+      33u32 => bits::<U8, I32>(b)
+      34u32 => bits::<I16, I32>(c)
+      _ => bits::<U16, I32>(d)
+    }
+  }
+}
+
 pub fn main(which: U32) -> I32 {
   match which {
     0u32 => readI8(bits::<I32, I8>(511i32))
@@ -255,6 +300,10 @@ pub fn main(which: U32) -> I32 {
     29u32 => nestedLiteralI16(0i16)
     30u32 => nestedLiteralU16(65535u16)
     31u32 => nestedLiteralU16(0u16)
+    32u32 => nestedStructPayload(which)
+    33u32 => nestedStructPayload(which)
+    34u32 => nestedStructPayload(which)
+    35u32 => nestedStructPayload(which)
     _ => 0i32
   }
 }

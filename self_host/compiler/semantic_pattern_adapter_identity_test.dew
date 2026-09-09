@@ -1,5 +1,56 @@
 open dew.std.option
 
+test "named struct patterns select the physical type of their declaration" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Payload {\n  value: I32\n}\npub fn run(value: Payload) -> I32 {\n  match value {\n    Payload {\n      value: item\n    } => item\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = 0u32
+  for pattern in module_.patterns {
+    if pattern.source is SelfHostHirPattern::StructPattern(_, _, _, _, _) {
+      let declaration = self_host_pattern_constructor_declaration(module_, pattern)
+      assert(declaration != 0u64, "named struct pattern retains its selected declaration")
+      let expected = match self_host_linked_struct_type_index(link, declaration) {
+        Option::Some(value) => value
+        Option::None => {
+          assert(false, "selected struct has a linked physical type")
+          4294967295u32
+        }
+      }
+      match self_host_pattern_nested_type(link, module_, pattern) {
+        Option::Some(actual) => assert(actual == expected, "pattern uses its exact source struct")
+        Option::None => assert(false, "named struct pattern needs a physical target")
+      }
+      let missing = SelfHostPlannedPattern::{
+        elided: pattern.elided
+        type_: pattern.type_
+        shape: pattern.shape
+        source: pattern.source
+        reference: pattern.reference
+        selected_constructor: SelfHostBasicPatternConstructor::NoBasicPatternConstructor
+        offset: pattern.offset
+      }
+      assert(self_host_pattern_nested_type(link, module_, missing) is Option::None, "source spelling and logical type cannot replace a missing selection")
+      let wrong_kind = SelfHostPlannedPattern::{
+        elided: pattern.elided
+        type_: pattern.type_
+        shape: pattern.shape
+        source: pattern.source
+        reference: pattern.reference
+        selected_constructor: SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(declaration, true, SelfHostHirSpan::{
+          start: 0u32
+          length: 0u32
+        })
+        offset: pattern.offset
+      }
+      assert(self_host_pattern_nested_type(link, module_, wrong_kind) is Option::None, "a struct ID cannot satisfy an enum-variant selection")
+      checked = checked + 1u32
+    }
+  }
+  assert(checked == 1u32, "inspect one named struct pattern")
+}
+
 test "call payload evidence follows the result generic instead of slot one" {
   let link = self_host_physical_test_named_import_link(
     "dew.std.option",

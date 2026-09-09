@@ -3124,6 +3124,18 @@ fn self_host_linked_pattern_variant_type(
   payload_hint: SelfHostPlannedValueShape,
   _subject_nominal: U64,
 ) -> Option<U32> {
+  if pattern.source is SelfHostHirPattern::StructPattern(_, _, _, _, _) {
+    match pattern.selected_constructor {
+      SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(declaration, variant, _) => {
+        // Named fields can belong to a struct or an enum variant. Use the
+        // selected constructor kind, not a failed lookup or the source name.
+        if !variant {
+          return self_host_linked_struct_type_index(link, declaration)
+        }
+      }
+      _ => return Option::None
+    }
+  }
   let declaration = self_host_pattern_constructor_declaration(module_, pattern)
   let adapter = match link.runtime_variant_adapters.get(declaration) {
     Option::Some(value) => value
