@@ -164,10 +164,7 @@ struct SelfHostPhysicalBodyIndexes {
   field_by_declaration: Map<U64, SelfHostPhysicalFieldCarrier>
   function_by_declaration: Map<U64, U32>
   call_site_result_by_function: Array<Bool>
-  specialized_call_head_by_body: Map<U64, U32>
-  specialized_call_keys: Array<U64>
-  specialized_call_functions: Array<U32>
-  specialized_call_next: Array<U32>
+  call_index: SelfHostLinkedCallIndex
 }
 
 fn self_host_body_indexed_field(
@@ -565,10 +562,6 @@ fn self_host_build_physical_body_indexes(
       break self_host_semantic_unit()
     }
   }
-  let specialized_call_head_by_body = link.call_index.heads
-  let specialized_call_keys = link.call_index.keys
-  let specialized_call_functions = link.call_index.functions
-  let specialized_call_next = link.call_index.next
   for linked_type in link.types {
     let module_ = self_host_body_fragment_module(
       link,
@@ -651,10 +644,7 @@ fn self_host_build_physical_body_indexes(
     field_by_declaration: field_by_declaration
     function_by_declaration: function_by_declaration
     call_site_result_by_function: call_site_result_by_function
-    specialized_call_head_by_body: specialized_call_head_by_body
-    specialized_call_keys: specialized_call_keys
-    specialized_call_functions: specialized_call_functions
-    specialized_call_next: specialized_call_next
+    call_index: link.call_index
   }
 }
 
@@ -1125,10 +1115,7 @@ fn self_host_body_call_function(
   declaration: U64,
 ) -> U32 {
   match self_host_body_specialized_call_index_get(
-    indexes.specialized_call_head_by_body,
-    indexes.specialized_call_keys,
-    indexes.specialized_call_functions,
-    indexes.specialized_call_next,
+    indexes.call_index,
     body,
     self_host_body_call_key(specialization, expression),
   ) {

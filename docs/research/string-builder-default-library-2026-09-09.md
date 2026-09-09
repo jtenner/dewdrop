@@ -14,6 +14,8 @@ All 21 pass after removal (6.000 seconds). Provider commit `e4f42f7e8` builds in
 10.006 seconds; consumer refresh takes 4.119 seconds. Core FFI signatures are
 unchanged. The native library lane passes all 25 String and 28 Bytes checks
 in 46.457 seconds. Self-host hardening passes 801 tests, 401 exact records,
-and the shared corpora; generated checks pass. Clean bootstrap is due after
-the next call-index correctness batch. Runs over 30 seconds remain timing
-defects, with speed work deferred.
+and the shared corpora in 93.013 seconds; generated checks pass in 18.928
+seconds. The later call-index batch passes clean bootstrap in 182.686 seconds,
+with identical raw and linked B/C bytes; see its
+[validation log](linked-call-index-contracts-2026-09-09.md). Runs over 30 seconds
+remain timing defects, with speed work deferred.

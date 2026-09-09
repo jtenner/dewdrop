@@ -19,6 +19,8 @@ The native library lane passes all 28 Bytes checks in 44.212 seconds.
 Self-host hardening passes 801 tests, 401 exact records, and all shared checks
 in 87.672 seconds with the existing debug native profile. Generated checks
 pass in 18.073 seconds. The matching StringBuilder default change also passes
-both shared execution lanes; clean bootstrap is due with the next call-index batch.
+both shared execution lanes. The later call-index batch passes clean bootstrap
+in 182.686 seconds with identical B/C bytes; see its
+[validation log](linked-call-index-contracts-2026-09-09.md).
 Runs over 30 seconds remain timing defects; speed work is not part of this
 change.

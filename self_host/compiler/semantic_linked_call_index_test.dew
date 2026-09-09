@@ -1,0 +1,116 @@
+open dew.std.option
+
+fn self_host_call_index_test_fixture() -> SelfHostLinkedCallIndex {
+  let index = self_host_build_linked_call_index([], [])
+  self_host_body_specialized_call_index_append(index, 330712481809u64,
+    self_host_body_call_key(7u32, 19u32), 31u32)
+  match self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32) {
+    Option::Some(value) => assert(value == 31u32, "valid exact call before mutation")
+    Option::None => assert(false, "valid call index entry is present")
+  }
+  index
+}
+
+test "ARN-103 linked call function arena cannot be short" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  let _ = index.functions.pop()
+  let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32)
+}
+
+test "ARN-103 linked call next arena cannot be long" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  index.next.push(4294967295u32)
+  let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32)
+}
+
+test "ARN-105 linked call head must address an entry" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  index.heads.set(330712481809u64, 99u32)
+  let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32)
+}
+
+test "ARN-108 linked call chains cannot link to themselves" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  index.next[0u32] = 0u32
+  let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32)
+}
+
+test "LNK-504 linked call entries require a target" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  index.functions[0u32] = 4294967295u32
+  let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32)
+}
+
+test "ARN-103 linked call owner arena cannot be short" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  let _ = index.bodies.pop()
+  let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32)
+}
+
+test "ARN-106 linked call entries retain their body" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  index.bodies[0u32] = 330712481810u64
+  let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32)
+}
+
+test "SPC-303 linked call insertion cannot replace a target" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  self_host_body_specialized_call_index_append(index, 330712481809u64,
+    self_host_body_call_key(7u32, 19u32), 32u32)
+}
+
+test "ARN-108 linked call edges cannot point past their entry" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  index.next[0u32] = 99u32
+  let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32)
+}
+
+test "ARN-106 linked call edges cannot enter another body" expect_trap "unreachable" {
+  let index = self_host_call_index_test_fixture()
+  self_host_body_specialized_call_index_append(index, 330712481810u64,
+    self_host_body_call_key(7u32, 19u32), 32u32)
+  self_host_body_specialized_call_index_append(index, 330712481809u64,
+    self_host_body_call_key(7u32, 20u32), 33u32)
+  match self_host_linked_call_index_get(index, 330712481809u64, 7u32, 20u32) {
+    Option::Some(value) => assert(value == 33u32, "valid newest entry before mutation")
+    Option::None => assert(false, "newest entry is present")
+  }
+  index.next[2u32] = 1u32
+  let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 20u32)
+}
+
+test "linked call chains preserve independent bodies and duplicate identity" {
+  let index = self_host_call_index_test_fixture()
+  self_host_body_specialized_call_index_append(index, 330712481809u64,
+    self_host_body_call_key(7u32, 19u32), 31u32)
+  assert(index.keys.length() == 1u32 && index.bodies.length() == 1u32,
+    "identical insertion does not grow the index")
+  while 0u32 {
+    offset if offset < 16u32 => {
+      self_host_body_specialized_call_index_append(index, 330712481809u64,
+        self_host_body_call_key(7u32, 20u32 + offset), 100u32 + offset)
+      self_host_body_specialized_call_index_append(index, 330712481810u64,
+        self_host_body_call_key(7u32, 20u32 + offset), 200u32 + offset)
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
+  while 0u32 {
+    offset if offset < 16u32 => {
+      match self_host_linked_call_index_get(index, 330712481809u64, 7u32, 20u32 + offset) {
+        Option::Some(value) => assert(value == 100u32 + offset, "first body target")
+        Option::None => assert(false, "first body entry")
+      }
+      match self_host_linked_call_index_get(index, 330712481810u64, 7u32, 20u32 + offset) {
+        Option::Some(value) => assert(value == 200u32 + offset, "second body target")
+        Option::None => assert(false, "second body entry")
+      }
+      continue offset + 1u32
+    }
+    _ => break ()
+  }
+  assert(self_host_linked_call_index_get(index, 330712481809u64, 8u32, 19u32) is Option::None,
+    "another specialization remains absent")
+  assert(self_host_linked_call_index_get(index, 330712481811u64, 7u32, 19u32) is Option::None,
+    "another body remains absent")
+}

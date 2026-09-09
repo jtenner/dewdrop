@@ -11,6 +11,24 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ARN-103 linked call function arena cannot be short", 103, 1n, 0n, 1n],
+    ["ARN-103 linked call next arena cannot be long", 103, 1n, 2n, 2n],
+    ["ARN-105 linked call head must address an entry", 105, 1n, 99n, 0n],
+    ["ARN-108 linked call chains cannot link to themselves", 108, 0n, 0n, 0n],
+    ["LNK-504 linked call entries require a target", 504, 1n, 4294967295n, 0n],
+    ["ARN-103 linked call owner arena cannot be short", 103, 1n, 0n, 3n],
+    ["ARN-106 linked call entries retain their body", 106, 330712481809n, 330712481810n, 0n],
+    ["SPC-303 linked call insertion cannot replace a target", 303, 31n, 32n, 7n],
+    ["ARN-108 linked call edges cannot point past their entry", 108, 0n, 99n, 0n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 5, 77n, 0n, 330712481809n, 19, expected, actual, detail],
+  })),
+  {
+    name: "ARN-106 linked call edges cannot enter another body",
+    expected: [106, 5, 77n, 0n, 330712481809n, 20, 330712481809n, 330712481810n, 1n],
+  },
+  ...[
     ["ABI-714 raw struct storage cannot change to a packed field", 37n],
     ["ABI-714 raw struct receiver cannot disappear", 36n],
     ["ABI-714 raw struct heap cannot change", 36n],

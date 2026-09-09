@@ -354,6 +354,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   not an exported position in the full source callable table. Private helpers
   cannot change a public function's imported type. See the
   [import identity log](docs/research/imported-callable-identity-2026-09-09.md).
+  Linked call-index reads now retain body identity, check parallel arrays,
+  and require older same-body links before an exact hit can return. Insertions
+  reject different targets and ignore identical duplicates. See the
+  [call-index log](docs/research/linked-call-index-contracts-2026-09-09.md).
   Native replays now verify declarations, ABI keys, and hidden evidence operands;
   self-host source call records are checked before fragment planning. Both
   target disagreements have exact numeric-record tests. See the
@@ -800,6 +804,14 @@ self-host tests with 61 exact failure records, generated checks, 15 stress tests
 and 10,982 pinned Starshine tests. Clean B/C core and linked bytes match.
 See [measured results](docs/research/physical-link-records-2026-09-07.md).
 These are batch results; the remaining implementation tasks are still open.
+
+The September 9 linked-call-index batch passes 1,275 native tests, 270
+integration tests, 812 self-host tests with 411 exact failure records, all
+shared library checks, generated checks, 15 stress tests, and 10,994 pinned
+Starshine tests. Clean B/C raw and linked bytes match. This includes the
+import-signature fix and builder length/default migrations. See the
+[measured results](docs/research/linked-call-index-contracts-2026-09-09.md).
+These are current batch checks, not completion of the remaining tasks above.
 
 - [ ] Run `tools/test-native.sh`, `tools/test-integration-native.sh`,
   `tools/dew-test/run.sh`, `tools/test-self-host-hardening.sh`, and

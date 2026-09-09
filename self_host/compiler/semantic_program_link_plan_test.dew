@@ -91,42 +91,27 @@ test "physical body plan preserves exact generic call targets" {
 }
 
 test "physical body call index uses a flat typed chain" {
-  let heads = self_host_body_empty_u64_u32_map()
-  let keys = []
-  let functions = []
-  let next = []
+  let index = self_host_build_linked_call_index([], [])
   self_host_body_specialized_call_index_append(
-    heads,
-    keys,
-    functions,
-    next,
+    index,
     11u64,
     21u64,
     31u32,
   )
   self_host_body_specialized_call_index_append(
-    heads,
-    keys,
-    functions,
-    next,
+    index,
     11u64,
     22u64,
     32u32,
   )
   self_host_body_specialized_call_index_append(
-    heads,
-    keys,
-    functions,
-    next,
+    index,
     12u64,
     21u64,
     33u32,
   )
   match self_host_body_specialized_call_index_get(
-    heads,
-    keys,
-    functions,
-    next,
+    index,
     11u64,
     21u64,
   ) {
@@ -134,10 +119,7 @@ test "physical body call index uses a flat typed chain" {
     Option::None => assert(false, "first body call index")
   }
   match self_host_body_specialized_call_index_get(
-    heads,
-    keys,
-    functions,
-    next,
+    index,
     12u64,
     21u64,
   ) {
