@@ -131,6 +131,12 @@ test "ARN-102 indirect call targets belong to the caller body" expect_trap "unre
   self_host_require_runtime_call_target(module_, module_.bodies[1u32], 3u32, 0u32)
 }
 
+test "BOD-607 missing emitted targets retain the caller context" expect_trap "unreachable" {
+  let (link, _) = self_host_test_canonical_target_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  self_host_missing_emitted_call_target(module_, module_.bodies[1u32], 3u32, 1u32)
+}
+
 test "call target updates allow an identical fact without mutation" {
   let (body, expressions) = self_host_test_call_target_update()
   assert(!self_host_body_plan_set_call_function(body, expressions, 3u32, 0u32), "identical target adds no fact")

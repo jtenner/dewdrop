@@ -370,6 +370,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Other shape selectors still need cleanup. See the
   [call read log](docs/research/frozen-call-target-reads-2026-09-09.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
+  Operator calls now use saved left-receiver/right-argument recipes and the
+  full call-argument verifier. Their type-argument span is no longer read as
+  expression children. Direct calls with missing targets report BOD-607 rather
+  than emitting nothing. See the
+  [operator recipe log](docs/research/operator-call-recipes-2026-09-09.md).
   Raw builtin references now have explicit outlined physical targets in both
   compilers. The native failure required a returned function value; a local
   reference alone became a direct call and hid it. Scalar, SIMD, memory, and

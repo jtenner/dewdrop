@@ -1,0 +1,39 @@
+builtin trace_add(left: I32, right: I32) -> I32 = "i32.add"
+builtin trace_multiply(left: I32, right: I32) -> I32 = "i32.mul"
+
+trait Add {
+  fn add(self, right: Self) -> Self
+}
+
+struct Operand {
+  value: I64
+}
+
+struct Trace {
+  mut value: I32
+}
+
+impl Add for Operand {
+  fn add(self, right: Operand) -> Operand {
+    right
+  }
+}
+
+fn operand(trace: Trace, mark: I32, value: I64) -> Operand {
+  trace.value = trace_add(trace_multiply(trace.value, 10i32), mark)
+  Operand::{
+    value: value
+  }
+}
+
+pub fn main(value: I64) -> I64 {
+  let trace = Trace::{
+    value: 0i32
+  }
+  let result = operand(trace, 1i32, 0i64) + operand(trace, 2i32, value)
+  if trace.value == 12i32 {
+    result.value
+  } else {
+    0i64
+  }
+}

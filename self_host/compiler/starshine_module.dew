@@ -14313,7 +14313,7 @@ fn self_host_emit_linked_i32_expression(
                     Option::None => {}
                   }
                 }
-                Option::None => {}
+                Option::None => self_host_missing_emitted_call_target(module_, body, expression, target)
               }
             }
             SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right) => match operator {
@@ -15311,24 +15311,15 @@ fn self_host_emit_linked_i32_expression(
               declaration,
             ) {
               Option::Some(function_index) => {
-                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Call(
-                  function_index,
-                  destination,
-                ))
-                self_host_linked_i32_schedule_expression(
-                  tasks,
-                  expression_depths,
-                  right,
-                  destination,
-                  depth,
-                )
-                self_host_linked_i32_schedule_expression(
-                  tasks,
-                  expression_depths,
-                  left,
-                  destination,
-                  depth,
-                )
+                match self_host_linked_schedule_frozen_call(canonical_body_plan, link, module_, body,
+                  caller_specialization, expression, function_index, SelfHostHirSpan::{
+                    start: 0u32
+                    length: 0u32
+                  }, destination, tasks, expression_depths, depth,
+                ) {
+                  Option::Some(error) => return Option::Some(error)
+                  Option::None => {}
+                }
               }
               Option::None => {
                 return Option::Some("linked operator call has no physical function")

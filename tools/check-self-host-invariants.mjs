@@ -16,6 +16,7 @@ const probes = [
     ["LNK-502 emitted target must be in the linked function table", 502, 2n, 99n, 0n],
     ["ABI-701 emitted calls retain the selected declaration", 701, (5100n << 32n) | 1n, 5100n << 32n, 2n],
     ["ARN-102 indirect call targets belong to the caller body", 102, 1n, 0n, 3n],
+    ["BOD-607 missing emitted targets retain the caller context", 607, 1n, 0n, 1n],
   ].map(([name, code, expected, actual, detail]) => ({
     name,
     expected: [code, 7, 5100n, (5100n << 32n) | 1n, (5100n << 32n) | 1n,

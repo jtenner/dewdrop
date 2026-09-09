@@ -34,6 +34,16 @@ class CallTargetReadPolicy(unittest.TestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, source)
 
+    def test_operator_emission_uses_the_saved_recipe(self):
+        source = (COMPILER / "starshine_module.dew").read_text()
+        emitter = source.split("fn self_host_emit_linked_i32_expression(", 1)[1].split("\nfn ", 1)[0]
+        operator = emitter.split("            SelfHostPlannedExpressionKind::PlannedOperatorCall(", 1)[1].split("            SelfHostPlannedExpressionKind::PlannedBuiltinCall(", 1)[0]
+        self.assertIn("self_host_linked_schedule_frozen_call(", operator)
+        self.assertNotIn("EmitLinkedI32Call(", operator)
+        self.assertNotIn("self_host_linked_i32_schedule_expression(", operator)
+        planner = (COMPILER / "semantic_wasm_body_plan.dew").read_text()
+        self.assertNotIn("PlannedOperatorCall(_, _, _, _, values) => values", planner)
+
 
 if __name__ == "__main__":
     unittest.main()

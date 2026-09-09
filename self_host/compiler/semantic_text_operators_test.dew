@@ -18,6 +18,33 @@ test "StringView equality retains the selected imported trait method" {
   assert(calls == 1u32, "StringView equality must call its trait implementation")
 }
 
+test "operator call recipes use source operands rather than type arguments" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"trait Eq {\n  fn eq(self, right: Self) -> Bool\n}\nstruct Item {\n  value: I64\n}\nimpl Eq for Item {\n  fn eq(self, right: Item) -> Bool {\n    true\n  }\n}\npub fn run(left: Item, right: Item) -> Bool {\n  left == right\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 0u32, "operator ABI is valid")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = 0u32
+  for plan in physical.bodies {
+    for call in plan.calls {
+      match module_.expressions[call.expression].kind {
+        SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, left, right, types) => {
+          assert(types.length == 0u32, "concrete operator has no type arguments")
+          assert(call.evaluations.length == 2u32, "operator evaluates both source operands")
+          assert(call.operands.length == 2u32, "operator passes both physical operands")
+          assert(plan.call_evaluations[call.evaluations.start] == left, "left evaluates first")
+          assert(plan.call_evaluations[call.evaluations.start + 1u32] == right, "right evaluates second")
+          checked = checked + 1u32
+        }
+        _ => {}
+      }
+    }
+  }
+  assert(checked == 1u32, "one operator recipe checked")
+}
+
 test "reference primitive equality without an implementation is an error" {
   let link = self_host_physical_test_named_import_link(
     "app.comparison",

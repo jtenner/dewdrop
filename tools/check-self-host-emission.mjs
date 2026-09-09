@@ -176,6 +176,18 @@ async function compileSource(fixture) {
 let failures = 0;
 try {
   const start = performance.now();
+  const source = await readFile(new URL("./dew-test/operator_call_recipes.dew", import.meta.url), "utf8");
+  const main = await compileSource(source);
+  for (const value of [0n, 1n, -1n, 2147483648n, -9223372036854775808n, 9223372036854775807n]) {
+    assert.equal(main(value), value, `operator source order and result at ${value}`);
+  }
+  console.log(`self-host operator call recipe checks passed: 6 (${((performance.now() - start) / 1000).toFixed(3)} seconds)`);
+} catch (error) {
+  failures++;
+  console.error("self-host operator call recipe checks failed", error);
+}
+try {
+  const start = performance.now();
   for (const inverse of [0, 1]) {
     const exports = await compileProbeBytes(new Uint8Array([inverse]), "self_host_emit_initializer_order_probe");
     assert.equal(exports.main(), 42n, `startup global read direction ${inverse}`);

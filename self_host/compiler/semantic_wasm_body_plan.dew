@@ -3702,6 +3702,7 @@ fn self_host_body_call_receiver_expression(
     return 4294967295u32
   }
   let target = match module_.expressions[expression].kind {
+    SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, left, _, _) => return left
     SelfHostPlannedExpressionKind::PlannedIndexGet(base, _, _) => return base
     SelfHostPlannedExpressionKind::PlannedIndexSet(base, _, _, _) => return base
     SelfHostPlannedExpressionKind::PlannedDirectCall(_, value, _, _) => value
@@ -3831,7 +3832,6 @@ fn self_host_body_build_physical_call_plans(
             let arguments = match module_.expressions[current].kind {
               SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, values, _) => values
               SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, values) => values
-              SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, _, _, values) => values
               SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, values, _) => values
               _ => SelfHostHirSpan::{
                 start: 0u32
@@ -3861,6 +3861,7 @@ fn self_host_body_build_physical_call_plans(
             )
             let receiver_count = call_operands.length() - operand_start
             let (index_argument, index_value) = match module_.expressions[current].kind {
+              SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, _, right, _) => (right, 4294967295u32)
               SelfHostPlannedExpressionKind::PlannedIndexGet(_, index, _) => (index, 4294967295u32)
               SelfHostPlannedExpressionKind::PlannedIndexSet(_, index, value, _) => (index, value)
               _ => (4294967295u32, 4294967295u32)
@@ -4294,16 +4295,9 @@ fn self_host_body_build_work_graph(
             self_host_body_link_expression_work(graph, body, owner_item, left)
             self_host_body_link_expression_work(graph, body, owner_item, right)
           }
-          SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, left, right, arguments) => {
+          SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, left, right, _) => {
             self_host_body_link_expression_work(graph, body, owner_item, left)
             self_host_body_link_expression_work(graph, body, owner_item, right)
-            self_host_body_link_expression_span_work(
-              graph,
-              module_,
-              body,
-              owner_item,
-              arguments,
-            )
           }
           SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, target, arguments, _) => {
             self_host_body_link_expression_work(graph, body, owner_item, target)
@@ -7268,13 +7262,15 @@ fn self_host_verify_one_physical_body(
         expression_plan,
         diagnostics,
       )
-      SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, _, _, _) => self_host_verify_body_call_result(
-        link,
-        plan,
-        module_,
-        expression_plan,
-        diagnostics,
-      )
+      SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, _, _, _) => {
+        self_host_verify_body_call_result(link, plan, module_, expression_plan, diagnostics)
+        self_host_verify_body_call_arguments(link, plan, module_, body, expression_plan,
+          SelfHostHirSpan::{
+            start: 0u32
+            length: 0u32
+          }, diagnostics,
+        )
+      }
       SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => {
         self_host_verify_body_call_result(
           link,

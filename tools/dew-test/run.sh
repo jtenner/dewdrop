@@ -32,6 +32,7 @@ node tools/check-wasi-bytes.mjs tools/dew-test/wasi_bytes.wasm
 node tools/wasi-parity/check-staging.mjs tools/dew-test/wasi_staging.wasm
 node tools/check-product-patterns.mjs tools/dew-test/product_patterns.wasm
 node tools/check-constructor-evaluations.mjs tools/dew-test/constructor_evaluations.wasm
+node tools/check-operator-call-recipes.mjs tools/dew-test/operator_call_recipes.wasm
 node tools/check-unit-branches.mjs tools/dew-test/unit_branches.wasm
 node tools/check-raw-gc-storage.mjs tools/dew-test/raw_gc_storage.wasm
 node tools/check-raw-gc-unit.mjs tools/dew-test/raw_gc_unit.wasm

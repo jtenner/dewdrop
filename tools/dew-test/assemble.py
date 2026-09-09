@@ -82,6 +82,7 @@ def main() -> None:
         ("wasi_bytes", "app.wasi_bytes"),
         ("product_patterns", "app.product_patterns"),
         ("constructor_evaluations", "app.constructor_probes"),
+        ("operator_call_recipes", "app.operator_call_recipes"),
         ("unit_branches", "app.unit_branches"),
         ("raw_gc_storage", "app.raw_gc"),
         ("raw_gc_unit", "app.raw_gc_unit"),
