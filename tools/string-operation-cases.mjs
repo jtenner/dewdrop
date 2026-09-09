@@ -24,5 +24,12 @@ export function checkStringOperations(main) {
       error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
     `String SIMD access rejects an out-of-range index: ${index}`);
   }
-  return labels.length + 9;
+  assert.equal(main(19), 1, "StringBuilder length counts UTF-8 bytes across live aliases");
+  for (const index of [20, 21]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `StringBuilder length rejects consumed state: ${index}`);
+  }
+  assert.equal(main(22), 1, "StringBuilder length works through a returned function");
+  return labels.length + 13;
 }

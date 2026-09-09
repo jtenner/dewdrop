@@ -8,7 +8,14 @@ pub builtin string_view_as_bytes_unchecked(value: StringView) -> Bytes = "dew_st
 pub builtin string_view_view(value: StringView, start: U32, length: U32) -> StringView = "dew_string_view_view"
 pub builtin string_builder_new() -> StringBuilder = "dew_string_builder_new"
 pub builtin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = "dew_string_builder_with_capacity"
-pub builtin string_builder_byte_length(value: StringBuilder) -> U32 = "dew_string_builder_byte_length"
+builtin string_builder_length_raw(value: StringBuilder) -> U32 = "struct.get 1"
+builtin string_builder_consumed_raw(value: StringBuilder) -> U32 = "struct.get 2"
+pub fn string_builder_byte_length(value: StringBuilder) -> U32 {
+  if string_builder_consumed_raw(value) != 0u32 {
+    unreachable()
+  }
+  string_builder_length_raw(value)
+}
 pub builtin string_builder_append(value: StringBuilder, part: String) -> Unit = "dew_string_builder_append"
 pub builtin string_builder_append_view(value: StringBuilder, part: StringView) -> Unit = "dew_string_builder_append_view"
 pub builtin string_builder_append_ascii(value: StringBuilder, byte: U8) -> Unit = "dew_string_builder_append_ascii"

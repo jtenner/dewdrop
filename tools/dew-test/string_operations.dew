@@ -1,5 +1,7 @@
 open dew.std.preamble
 open dew.std.string
+open dew.std.string_builder
+open dew.std.text_runtime
 open dew.std.bytes
 open dew.std.option
 open dew.std.wasm.intrinsics
@@ -129,7 +131,34 @@ pub fn main(case: U32) -> I32 {
   } else if case == 18u32 {
     wasm_string_load_u8x16("", 0u32)
     0i32
+  } else if case == 19u32 {
+    let builder = StringBuilder::with_capacity(256u32)
+    let alias = builder
+    if builder.byte_length() != 0u32 {
+      return 0i32
+    }
+    builder.append("λ😀")
+    string_result(builder.byte_length() == 6u32 && alias.byte_length() == 6u32)
+  } else if case == 20u32 {
+    let builder = StringBuilder::new()
+    let text = builder.finish()
+    string_result(builder.byte_length() == text.byte_length())
+  } else if case == 21u32 {
+    let builder = StringBuilder::new()
+    let alias = builder
+    builder.append("λ😀")
+    let text = builder.finish()
+    string_result(alias.byte_length() == text.byte_length())
+  } else if case == 22u32 {
+    let read = string_builder_length_operation()
+    let builder = StringBuilder::new()
+    builder.append("λ😀")
+    string_result(read(builder) == 6u32)
   } else {
     unreachable()
   }
+}
+
+fn string_builder_length_operation() -> fn(StringBuilder) -> U32 {
+  string_builder_byte_length
 }

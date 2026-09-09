@@ -144,6 +144,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   scalar field reads. Both old runtime entries are removed. Shared checks
   cover live aliases, finished aliases, and a returned function. See the
   [builder length log](docs/research/bytes-builder-length-library-2026-09-09.md).
+  StringBuilder now uses the same Dew-side lifetime check with its own heap
+  identity. The last shared length builder is removed. Both changes pass a
+  clean B/C bootstrap; see the
+  [StringBuilder log](docs/research/string-builder-length-library-2026-09-09.md).
   The SIMD load algorithm now runs in Dew too. See the
   [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
   The pinned provider's nine old Bytes algorithms and UTF-8 validator entry

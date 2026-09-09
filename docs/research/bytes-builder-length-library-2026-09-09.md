@@ -24,4 +24,6 @@ checks. Self-host hardening passes all 801 tests, 401 exact records, and shared
 corpora in 86.173 seconds, using the script's existing debug native profile.
 The profile changes the host compiler build, not the emitted program checks.
 Generated checks pass in 17.833 seconds. Runs above 30 seconds remain timing
-bugs. Clean bootstrap is due after the separate StringBuilder length change.
+bugs. The later StringBuilder length batch passes clean bootstrap in 175.134
+seconds with identical B/C bytes; see its
+[validation log](string-builder-length-library-2026-09-09.md).
