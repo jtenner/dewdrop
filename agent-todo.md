@@ -383,7 +383,8 @@ Correctness comes first. Keep these timing defects visible after query completio
   Constructor field temporary types now come from frozen source-order records;
   emission checks presence, uniqueness, source agreement, and mirrored carriers.
   Global initializers now pass through body planning, verification, and freeze.
-  Constructor recipes and full reference checks remain. See the
+  Tuple-style variant recipes, closure construction, and full reference checks
+  remain. See the
   [temporary plan log](docs/research/constructor-temporary-plans-2026-09-08.md).
   The old collection temporary allocations and slot counts based on
   `self_host_array_pop`, `next`, and `push` spelling are removed. An ordinary
@@ -421,6 +422,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   The body worklist also checks that complete exact field map before changing
   carrier evidence. Source names cannot repair a field ID during propagation.
   See the [propagation log](docs/research/constructor-propagation-identities-2026-09-08.md).
+  Object construction now retains its exact target, physical field order,
+  source identities, storage, boxing, and Unit markers in the frozen plan.
+  Missing targets cannot use result-heap evidence. Emission no longer chooses
+  an object target or reconstructs its field map; its old nominal/name fallback
+  path is removed. Tuple-style variant calls, closure construction, full
+  reference checks, and runtime-adapter removal remain. See the
+  [object recipe log](docs/research/frozen-object-constructor-recipes-2026-09-08.md).
   No emitter step may invent a new carrier or overwrite conflicting evidence.
   Verify all worklist constraints at the fixed point and reject later mutation.
   Self-host body plans now retain exact freeze witnesses and check all tables

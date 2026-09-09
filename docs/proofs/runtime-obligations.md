@@ -8,10 +8,18 @@ gap.
 
 Constructor carrier propagation must validate its complete source-to-physical
 field map before its first carrier write. Field declaration IDs, not names,
-establish that map. The same checked recipe is used at emission. Failures
-retain the phase where they occur. This closes the field-name repair path;
-it does not yet prove exact constructor target selection or recipe freeze.
+establish that map. Failures retain the phase where they occur. This closes
+the field-name repair path.
 See [the propagation log](../research/constructor-propagation-identities-2026-09-08.md).
+
+Object constructors now retain their exact selected target and source/physical
+field recipe in the body freeze witness. The recipe records source identities,
+storage, boxing, and Unit markers. A missing target cannot be supplied by the
+result heap type. Emission consumes these records without nominal/name recovery.
+The existing empty-Option adapter has a checked zero-operand recipe selected by
+its declaration certificate. Tuple-style variant calls, closure construction,
+full reference assignability, and removal of runtime adapters remain open. See
+[the object recipe log](../research/frozen-object-constructor-recipes-2026-09-08.md).
 
 Global initializer link records must form an exact copy of the selected source
 schedule, in dependency order and with the retained test-inclusion mode. The

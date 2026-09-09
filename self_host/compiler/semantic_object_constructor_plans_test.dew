@@ -1,0 +1,167 @@
+test "object constructors retain exact frozen physical field recipes" {
+  let (_, plan) = self_host_constructor_scratch_fixture()
+  assert(plan.object_constructors.length() == 1u32, "one planned object constructor")
+  let recipe = plan.object_constructors[0u32]
+  assert(recipe.expression == 4u32 && recipe.physical_type == 0u32, "exact constructor and target")
+  assert(recipe.source_fields.length == 3u32 && recipe.operands.length == 3u32, "complete source and physical field spans")
+  let expected = [2u32, 1u32, 0u32]
+  while 0u32 {
+    index if index < 3u32 => {
+      let operand = plan.object_constructor_operands[recipe.operands.start + index]
+      assert(operand.source_ordinal == expected[index], "physical fields retain reversed source order")
+      assert(operand.field_index == index, "physical field position")
+      assert(operand.unit_marker == (index == 1u32), "Unit has an explicit storage marker")
+      assert(!(operand.box_type is Option::Some(_)), "concrete fields need no boxing")
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  self_host_assert_frozen_physical_body(self_host_freeze_physical_body(plan), plan)
+}
+
+test "BOD-605 frozen object constructor targets cannot change" expect_trap "unreachable" {
+  let (_, plan) = self_host_constructor_scratch_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  let source = plan.object_constructors[0u32]
+  plan.object_constructors[0u32] = SelfHostPhysicalObjectConstructorPlan::{
+    expression: source.expression
+    declaration: source.declaration
+    physical_type: source.physical_type + 1u32
+    source_fields: source.source_fields
+    operands: source.operands
+  }
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 frozen object constructor operands cannot disappear" expect_trap "unreachable" {
+  let (_, plan) = self_host_constructor_scratch_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  let _ = plan.object_constructor_operands.pop()
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-610 object constructor emission requires its exact recipe" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = match self_host_body_lookup_for_plan(module_, plan) {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  let fields = plan.object_constructors[0u32].source_fields
+  let _ = plan.object_constructors.pop()
+  let _ = self_host_required_object_constructor(plan, module_, body, 4u32, fields)
+}
+
+fn self_host_test_object_operand_change(kind: U32) -> Unit {
+  let (_, plan) = self_host_constructor_scratch_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  let source = plan.object_constructor_operands[0u32]
+  assert(source.expression == 3u32 && source.source_ordinal == 2u32, "exact original source operand")
+  plan.object_constructor_operands[0u32] = SelfHostPhysicalObjectConstructorOperand::{
+    expression: if kind == 5u32 {
+      source.expression + 1u32
+    } else {
+      source.expression
+    }
+    declaration: source.declaration
+    source_ordinal: if kind == 0u32 {
+      source.source_ordinal + 1u32
+    } else {
+      source.source_ordinal
+    }
+    field_index: if kind == 4u32 {
+      source.field_index + 1u32
+    } else {
+      source.field_index
+    }
+    storage: if kind == 1u32 {
+      SelfHostPlannedWasmStorageType::WasmI64Storage
+    } else {
+      source.storage
+    }
+    box_type: if kind == 2u32 {
+      Option::Some(0u32)
+    } else {
+      source.box_type
+    }
+    unit_marker: if kind == 3u32 {
+      !source.unit_marker
+    } else {
+      source.unit_marker
+    }
+  }
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 frozen object operands retain source order" expect_trap "unreachable" {
+  self_host_test_object_operand_change(0u32)
+}
+
+test "BOD-605 frozen object operands retain storage types" expect_trap "unreachable" {
+  self_host_test_object_operand_change(1u32)
+}
+
+test "BOD-605 frozen object operands retain boxing choices" expect_trap "unreachable" {
+  self_host_test_object_operand_change(2u32)
+}
+
+test "BOD-605 frozen object operands retain Unit markers" expect_trap "unreachable" {
+  self_host_test_object_operand_change(3u32)
+}
+
+test "BOD-605 frozen object operands retain field indices" expect_trap "unreachable" {
+  self_host_test_object_operand_change(4u32)
+}
+
+test "BOD-605 frozen object operands retain source expressions" expect_trap "unreachable" {
+  self_host_test_object_operand_change(5u32)
+}
+
+test "BOD-610 object constructor recipes must be unique" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = module_.bodies[0u32]
+  let recipe = plan.object_constructors[0u32]
+  plan.object_constructors.push(recipe)
+  let _ = self_host_required_object_constructor(plan, module_, body, 4u32, recipe.source_fields)
+}
+
+test "BOD-608 object recipe targets agree before freeze" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = module_.bodies[0u32]
+  let source = plan.object_constructors[0u32]
+  plan.object_constructors[0u32] = SelfHostPhysicalObjectConstructorPlan::{
+    expression: source.expression
+    declaration: source.declaration
+    physical_type: source.physical_type + 1u32
+    source_fields: source.source_fields
+    operands: source.operands
+  }
+  self_host_verify_object_constructors(link, module_, body, plan)
+}
+
+test "BOD-608 a missing constructor target cannot use result heap evidence" expect_trap "unreachable" {
+  let (link, plan) = self_host_constructor_scratch_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = module_.bodies[0u32]
+  let source = plan.expressions[4u32]
+  assert(source.selected_type_index == 0u32 && source.value.physical_heap_type == 0u32, "independent target and result evidence")
+  plan.expressions[4u32] = SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: source.expression
+    value: source.value
+    carrier: source.carrier
+    conflict_expected: source.conflict_expected
+    conflict_actual: source.conflict_actual
+    receiver_expression: source.receiver_expression
+    receiver_logical_type: source.receiver_logical_type
+    receiver_nominal_owner: source.receiver_nominal_owner
+    receiver_physical_heap_type: source.receiver_physical_heap_type
+    selected_field: source.selected_field
+    selected_type_index: 4294967295u32
+    selected_field_index: source.selected_field_index
+    selected_storage: source.selected_storage
+    call_function_index: source.call_function_index
+  }
+  self_host_verify_object_constructors(link, module_, body, plan)
+}

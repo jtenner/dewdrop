@@ -1,0 +1,157 @@
+pub struct SelfHostPhysicalObjectConstructorPlan {
+  expression: U32
+  declaration: U64
+  physical_type: U32
+  source_fields: SelfHostHirSpan
+  operands: SelfHostHirSpan
+}
+
+pub struct SelfHostPhysicalObjectConstructorOperand {
+  expression: U32
+  declaration: U64
+  source_ordinal: U32
+  field_index: U32
+  storage: SelfHostPlannedWasmStorageType
+  box_type: Option<U32>
+  unit_marker: Bool
+}
+
+fn self_host_populate_object_constructors(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  self_host_build_object_constructor_recipes(link, module_, body, plan, plan.object_constructors, plan.object_constructor_operands)
+}
+
+fn self_host_build_object_constructor_recipes(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, plan: SelfHostPlannedPhysicalBodyCarrierPlan, constructors: Array<SelfHostPhysicalObjectConstructorPlan>, operands: Array<SelfHostPhysicalObjectConstructorOperand>) -> Unit {
+  for expression in plan.expressions {
+    match module_.expressions[expression.expression].kind {
+      SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => self_host_plan_object_constructor(link, module_, body, plan, expression.expression, fields, constructors, operands)
+      _ => {}
+    }
+  }
+}
+
+fn self_host_verify_object_constructors(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  let constructors = array_new::<SelfHostPhysicalObjectConstructorPlan>()
+  let operands = array_new::<SelfHostPhysicalObjectConstructorOperand>()
+  self_host_build_object_constructor_recipes(link, module_, body, plan, constructors, operands)
+  self_host_compare_object_constructors(plan, constructors, operands, plan, 6u32)
+}
+
+fn self_host_plan_object_constructor(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, plan: SelfHostPlannedPhysicalBodyCarrierPlan, expression: U32, fields: SelfHostHirSpan, constructors: Array<SelfHostPhysicalObjectConstructorPlan>, operands: Array<SelfHostPhysicalObjectConstructorOperand>) -> Unit {
+  if !(self_host_checked_relative_index(expression, body.expressions, module_.expressions.length()) is Option::Some(_)) {
+    self_host_constructor_field_failure(module_, body, expression, 6u32, 102u32, u32_into_u64(body.expressions.start), u32_into_u64(expression), u32_into_u64(body.expressions.length))
+  }
+  let type_index = match self_host_body_plan_expression(plan, expression) {
+    Option::Some(value) => value.selected_type_index
+    Option::None => self_host_constructor_field_failure(module_, body, expression, 6u32, 610u32, 1u64, 0u64, 10u64)
+  }
+  if type_index == 4294967295u32 {
+    self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, 1u64, 0u64, 10u64)
+  }
+  let declaration = match module_.expressions[expression].selection {
+    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(value, _) => value
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(value, _, _) => value
+    _ => self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, 1u64, 0u64, 13u64)
+  }
+  // The existing empty-Option ABI adapter has no source fragment. Its explicit
+  // declaration certificate supplies a zero-operand recipe, not a name lookup.
+  match link.runtime_variant_adapters.get(declaration) {
+    Option::Some(adapter) => if adapter is SelfHostRuntimeVariantAdapter::RuntimeOptionNone {
+      if !self_host_array_span_is_valid(fields.start, fields.length, module_.object_fields.length()) {
+        self_host_constructor_field_failure(module_, body, expression, 6u32, 101u32, u32_into_u64(module_.object_fields.length()), u32_into_u64(fields.length), u32_into_u64(fields.start))
+      }
+      if fields.length != 0u32 {
+        self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, 0u64, u32_into_u64(fields.length), 21u64)
+      }
+      let expected = self_host_linked_array_runtime_base(link) + 10u32
+      if type_index != expected {
+        self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, u32_into_u64(expected), u32_into_u64(type_index), 22u64)
+      }
+      constructors.push(SelfHostPhysicalObjectConstructorPlan::{
+        expression: expression
+        declaration: declaration
+        physical_type: type_index
+        source_fields: fields
+        operands: self_host_empty_hir_span(operands.length())
+      })
+      return
+    }
+    Option::None => {}
+  }
+  let mut selected = Option::None
+  for linked in link.types {
+    if linked.type_index == type_index {
+      if selected is Option::Some(_) {
+        self_host_constructor_field_failure(module_, body, expression, 6u32, 502u32, 1u64, 2u64, u32_into_u64(type_index))
+      }
+      selected = Option::Some(linked)
+    }
+  }
+  let linked = match selected {
+    Option::Some(value) => value
+    Option::None => self_host_constructor_field_failure(module_, body, expression, 6u32, 504u32, 1u64, 0u64, u32_into_u64(type_index))
+  }
+  if linked.module_index >= link.fragments.modules.length() {
+    self_host_constructor_field_failure(module_, body, expression, 6u32, 101u32, u32_into_u64(link.fragments.modules.length()), u32_into_u64(linked.module_index), 11u64)
+  }
+  let physical_module = link.fragments.modules[linked.module_index]
+  if linked.fragment_index >= physical_module.physical_types.length() {
+    self_host_constructor_field_failure(module_, body, expression, 6u32, 101u32, u32_into_u64(physical_module.physical_types.length()), u32_into_u64(linked.fragment_index), 12u64)
+  }
+  let physical = physical_module.physical_types[linked.fragment_index]
+  let physical_declaration = match physical.kind {
+    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(value) => value
+    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(_, value, _) => value
+    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(_, value, _, _) => value
+    _ => self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, declaration, 0u64, 14u64)
+  }
+  if declaration != physical_declaration {
+    self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, declaration, physical_declaration, 15u64)
+  }
+  let recipe = self_host_constructor_field_recipe_in_phase(module_, body, expression, fields, physical_module, physical, type_index, 6u32)
+  let start = operands.length()
+  while 0u32 {
+    index if index < recipe.length() => {
+      let source_ordinal = recipe[index]
+      let source = module_.object_fields[fields.start + source_ordinal]
+      let field = physical_module.fields[physical.fields.start + index]
+      if !(self_host_checked_relative_index(source.value, body.expressions, module_.expressions.length()) is Option::Some(_)) {
+        self_host_constructor_field_failure(module_, body, expression, 6u32, 102u32, u32_into_u64(body.expressions.start), u32_into_u64(source.value), u32_into_u64(body.expressions.length))
+      }
+      if field.physical_index != index {
+        self_host_constructor_field_failure(module_, body, expression, 6u32, 504u32, u32_into_u64(index), u32_into_u64(field.physical_index), 20u64)
+      }
+      let carrier = match self_host_body_plan_expression(plan, source.value) {
+        Option::Some(value) => value.carrier
+        Option::None => self_host_constructor_field_failure(module_, body, expression, 6u32, 610u32, 1u64, 0u64, u32_into_u64(source.value))
+      }
+      let expected = self_host_body_carrier_from_storage(field.storage)
+      let box_type = self_host_linked_erased_field_box_type(link, field.declaration, carrier)
+      let unit_marker = self_host_linked_erased_field_unit_storage(link, field.declaration, field.storage, carrier)
+      if !unit_marker && !(box_type is Option::Some(_)) && !self_host_body_carrier_equal(carrier, expected) {
+        self_host_constructor_field_failure(module_, body, expression, 6u32, 705u32,
+          self_host_body_carrier_code(expected), self_host_body_carrier_code(carrier), u32_into_u64(index))
+      }
+      operands.push(SelfHostPhysicalObjectConstructorOperand::{
+        expression: source.value
+        declaration: field.declaration
+        source_ordinal: source_ordinal
+        field_index: index
+        storage: field.storage
+        box_type: box_type
+        unit_marker: unit_marker
+      })
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  constructors.push(SelfHostPhysicalObjectConstructorPlan::{
+    expression: expression
+    declaration: declaration
+    physical_type: type_index
+    source_fields: fields
+    operands: SelfHostHirSpan::{
+      start: start
+      length: operands.length() - start
+    }
+  })
+}

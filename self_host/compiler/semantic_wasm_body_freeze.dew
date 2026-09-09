@@ -29,6 +29,8 @@ fn self_host_freeze_physical_body(
     scratches: source.scratches.copy()
     capture_cells: source.capture_cells.copy()
     capture_accesses: source.capture_accesses.copy()
+    object_constructors: source.object_constructors.copy()
+    object_constructor_operands: source.object_constructor_operands.copy()
     calls: source.calls.copy()
     call_evaluations: source.call_evaluations.copy()
     call_operands: source.call_operands.copy()
@@ -427,6 +429,7 @@ fn self_host_assert_frozen_physical_body(
   }
   self_host_assert_frozen_capture_cells(frozen, live)
   self_host_assert_frozen_capture_accesses(frozen, live)
+  self_host_assert_frozen_object_constructors(frozen, live)
 }
 
 fn self_host_assert_frozen_body_plan(plan: SelfHostPlannedProgramWasmBodyPlan) -> Unit {

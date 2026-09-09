@@ -77,6 +77,8 @@ fn self_host_test_temporary_plan_identity(source: SelfHostPlannedPhysicalBodyCar
     scratches: source.scratches
     capture_cells: source.capture_cells
     capture_accesses: source.capture_accesses
+    object_constructors: source.object_constructors
+    object_constructor_operands: source.object_constructor_operands
     calls: source.calls
     call_evaluations: source.call_evaluations
     call_operands: source.call_operands
