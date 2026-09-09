@@ -1473,11 +1473,8 @@ pub fn link_program_wasmgc_fragments(
             if step.test_only && !fragments.modules[module_index].emit_tests {
               continue
             }
-            let body_index = semantic_id_local(body)
-            if body_index < 0 || body_index >= module_.bodies.length() {
-              continue
-            }
-            let shape = module_.bodies[body_index].root_shape
+            let source = assert_program_initializer_source(module_, declaration, body)
+            let shape = source.root_shape
             let value_global = match shape {
               UnitPlannedValueShape | NeverPlannedValueShape => -1
               _ => {
@@ -1487,7 +1484,7 @@ pub fn link_program_wasmgc_fragments(
                 index
               }
             }
-            let constant = match module_.bodies[body_index].root {
+            let constant = match source.root {
               ExpressionBodyRoot(expression) =>
                 match module_.expressions[expression].kind {
                   PlannedI8Const(_)

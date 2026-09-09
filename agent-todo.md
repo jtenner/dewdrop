@@ -553,6 +553,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Their initializer functions still run; Unit reads produce no operand, and
   scalar slots stay aligned. Both compilers share effect/order tests. See the
   [Unit global log](docs/research/unit-global-storage-2026-09-08.md).
+  Native initializer candidates now require a present, owned module-let body
+  and a concrete root shape. Missing bodies cannot silently remove a global.
+  Startup dependency walks and full native initializer/global lookup checks
+  remain. See the
+  [native initializer log](docs/research/native-initializer-source-checks-2026-09-08.md).
   Native plain-function lookup now checks table bounds and declaration,
   module, fragment, lambda, kind, and ABI-key identity at link completion and each
   read. Missing keys stay missing; specialization entries cannot replace plain

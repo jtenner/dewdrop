@@ -4,6 +4,8 @@ Formal proofs use ideal values. Compiler data uses bounded arrays, machine
 integers, mutable arenas, and linked indices. Runtime assertions guard that
 gap.
 
+## Construction and global initialization
+
 Constructor carrier propagation must validate its complete source-to-physical
 field map before its first carrier write. Field declaration IDs, not names,
 establish that map. The same checked recipe is used at emission. Failures
@@ -24,6 +26,13 @@ in the schedule. Count only stack-producing values when assigning global slots.
 Unit reads produce no operand; Never reads cannot fall through. Both compilers
 run shared side-effect and repeated-read cases. See
 [the Unit global log](../research/unit-global-storage-2026-09-08.md).
+
+Native initializer candidate construction requires exact module/body/declaration
+identity, checked body arenas/root ownership, and a concrete root shape before
+reading or assigning storage. A
+missing body is a numeric failure, never a skipped initializer. The independent
+startup dependency walk remains a separate obligation. See
+[the native initializer log](../research/native-initializer-source-checks-2026-09-08.md).
 
 ## Arena access
 
