@@ -411,6 +411,12 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete full Wasm reference checks. Check heap type and nullability,
   not just an eqref label, for call operands, results, locals, and branches.
 - [ ] Put constructor and other temporary locals in the frozen physical plan.
+  Source-local declarations now require the frozen carrier and slot tables.
+  Missing/conflicting types cannot become EqRef; FuncRef stays distinct.
+  Non-returning initializers get no physical local. The old local recovery
+  body and its 13 unused helpers are removed. Full reference and remaining
+  adapter checks are still open. See the
+  [local declaration log](docs/research/frozen-local-declarations-2026-09-09.md).
   Generic tuple enum payloads now have explicit scalar boxing and checked
   extraction based on their exact declared payload slots. This also covers
   nested bindings/literals, Unit readers, and mixed payloads. See the

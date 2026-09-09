@@ -27,7 +27,8 @@ Full reference assignability and remaining local/target recovery helpers are
 separate work. Compiler lanes above 30 seconds remain timing bugs; no speed
 work is included.
 
-The hardening, native stdlib, and generated/policy lanes pass after removing
-both recovery paths. The clean bootstrap will cover this change together
-with the following frozen-local declaration cleanup; it has not yet been
-rerun for this commit.
+The hardening lane passed 748 tests and 361 complete numeric records in
+60.950 seconds. The native stdlib lane passed in 26.778 seconds, and generated
+checks passed in 4.228 seconds. The subsequent clean bootstrap with the
+[frozen-local cleanup](frozen-local-declarations-2026-09-09.md) passed in
+170.262 seconds with identical B/C raw and linked output.

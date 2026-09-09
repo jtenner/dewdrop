@@ -1,0 +1,120 @@
+fn self_host_local_declaration_failure(plan: SelfHostPlannedPhysicalBodyCarrierPlan, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: 7u32
+    module_id: plan.module_id
+    declaration: plan.declaration
+    body: plan.body
+    expression: 4294967295u32
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "emitted local declarations require complete frozen carrier and slot evidence")
+  unreachable()
+}
+
+fn self_host_local_declaration_type(plan: SelfHostPlannedPhysicalBodyCarrierPlan, carrier: SelfHostWasmBodyCarrier, ordinal: U32) -> StarshineValue {
+  match carrier {
+    SelfHostWasmBodyCarrier::I32BodyCarrier => StarshineFfi.ffi_lib_ValType_i32()
+    SelfHostWasmBodyCarrier::I64BodyCarrier => StarshineFfi.ffi_lib_ValType_i64()
+    SelfHostWasmBodyCarrier::F32BodyCarrier => StarshineFfi.ffi_lib_ValType_f32()
+    SelfHostWasmBodyCarrier::F64BodyCarrier => StarshineFfi.ffi_lib_ValType_f64()
+    SelfHostWasmBodyCarrier::V128BodyCarrier => StarshineFfi.ffi_lib_ValType_v128()
+    SelfHostWasmBodyCarrier::EqRefBodyCarrier => self_host_linked_eqref_value_type()
+    SelfHostWasmBodyCarrier::FuncRefBodyCarrier => self_host_linked_funcref_value_type()
+    _ => self_host_local_declaration_failure(plan, 710u32, 1u64,
+      self_host_body_carrier_code(carrier), (1u64 << 32u64) | u32_into_u64(ordinal))
+  }
+}
+
+fn self_host_linked_scalar_locals(
+  link: SelfHostPlannedProgramWasmGCLink,
+  canonical_body_plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  expected_result_shape: SelfHostPlannedValueShape,
+  caller_specialization: U32,
+) -> Result<StarshineLocals, String> {
+  let plan = self_host_physical_scratch_plan(canonical_body_plan, module_, body, 4294967295u32, 0u32)
+  if plan.specialization != caller_specialization {
+    self_host_local_declaration_failure(plan, 106u32, u32_into_u64(caller_specialization),
+      u32_into_u64(plan.specialization), 4u64)
+  }
+  if !self_host_array_span_is_valid(body.locals.start, body.locals.length, module_.locals.length()) {
+    self_host_local_declaration_failure(plan, 101u32, u32_into_u64(module_.locals.length()),
+      u32_into_u64(body.locals.length), u32_into_u64(body.locals.start))
+  }
+  if plan.local_values.length() != body.locals.length {
+    self_host_local_declaration_failure(plan, 103u32, u32_into_u64(body.locals.length),
+      u32_into_u64(plan.local_values.length()), 0u64)
+  }
+  if plan.locals.length() != body.locals.length {
+    self_host_local_declaration_failure(plan, 103u32, u32_into_u64(body.locals.length),
+      u32_into_u64(plan.locals.length()), 1u64)
+  }
+  if plan.local_slots.length() != body.locals.length {
+    self_host_local_declaration_failure(plan, 103u32, u32_into_u64(body.locals.length),
+      u32_into_u64(plan.local_slots.length()), 2u64)
+  }
+  let locals = StarshineFfi.ffi_lib_Locals_empty()
+  let environment = if plan.lambda == 4294967295u32 {
+    0u32
+  } else {
+    1u32
+  }
+  let mut physical_count = 0u32
+  let mut saw_stored_local = false
+  while 0u32 {
+    ordinal if ordinal < body.locals.length => {
+      let source = module_.locals[body.locals.start + ordinal]
+      let value = plan.local_values[ordinal]
+      if !self_host_body_carrier_equal(value.carrier, plan.locals[ordinal]) {
+        self_host_local_declaration_failure(plan, 710u32, self_host_body_carrier_code(plan.locals[ordinal]),
+          self_host_body_carrier_code(value.carrier), u32_into_u64(ordinal))
+      }
+      let erased = source.elided || value.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier
+      let expected_slot = if erased {
+        4294967295u32
+      } else {
+        environment + physical_count
+      }
+      if plan.local_slots[ordinal] != expected_slot {
+        self_host_local_declaration_failure(plan, 710u32, u32_into_u64(expected_slot),
+          u32_into_u64(plan.local_slots[ordinal]), (2u64 << 32u64) | u32_into_u64(ordinal))
+      }
+      if !erased {
+        let type_ = self_host_local_declaration_type(plan, value.carrier, ordinal)
+        if source.kind is SelfHostBodyLocalKind::ParameterLocal {
+          if saw_stored_local {
+            self_host_local_declaration_failure(plan, 710u32, 0u64, 1u64,
+              (3u64 << 32u64) | u32_into_u64(ordinal))
+          }
+        } else {
+          saw_stored_local = true
+          StarshineFfi.ffi_lib_Locals_push(locals, type_)
+        }
+        physical_count = physical_count + 1u32
+      }
+      continue ordinal + 1u32
+    }
+    _ => break ()
+  }
+  if physical_count != plan.physical_local_count {
+    self_host_local_declaration_failure(plan, 710u32, u32_into_u64(plan.physical_local_count),
+      u32_into_u64(physical_count), 3u64)
+  }
+  let mut scratch_ordinal = body.locals.length
+  for scratch in plan.scratches {
+    let value = self_host_linked_physical_scratch_value(plan, module_, body, scratch)
+    StarshineFfi.ffi_lib_Locals_push(locals, self_host_local_declaration_type(plan, value.carrier, scratch_ordinal))
+    scratch_ordinal = scratch_ordinal + 1u32
+  }
+  for entry in plan.capture_cells {
+    match entry {
+      Option::Some(cell) => StarshineFfi.ffi_lib_Locals_push(locals,
+        StarshineFfi.ffi_ffi_bridge_nominal_ref_type(self_host_u32_to_i32(cell.type_index), 1i32))
+      Option::None => {}
+    }
+  }
+  Result::Ok(locals)
+}

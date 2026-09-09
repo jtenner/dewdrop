@@ -4509,7 +4509,18 @@ fn self_host_plan_physical_body_with_signature(
       let source_shape = self_host_body_specialization_shape_for_type(
         link, module_, linked_function.specialization, source.type_, source.shape,
       )
-      let local_carrier = if source_shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+      let initializer_diverges = match self_host_linked_local_initializer_expression(module_, body, source.local_id) {
+        Option::Some(initializer) => {
+          let _ = self_host_body_expression_slot(body, initializer)
+          !module_.expressions[initializer].flow.falls_through
+        }
+        Option::None => false
+      }
+      let local_carrier = if initializer_diverges {
+        // No value reaches this binding. Preserve the source flow proof;
+        // allocating a reference slot would invent a value after divergence.
+        SelfHostWasmBodyCarrier::NeverBodyCarrier
+      } else if source_shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
         SelfHostWasmBodyCarrier::UnitBodyCarrier
       } else if source_shape is SelfHostPlannedValueShape::NeverPlannedValueShape {
         SelfHostWasmBodyCarrier::NeverBodyCarrier

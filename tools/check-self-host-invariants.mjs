@@ -11,6 +11,21 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ABI-710 emitted locals cannot replace unresolved evidence with a reference", 710, 5n, 0n, 0n],
+    ["ABI-710 emitted locals cannot replace conflicting evidence with a reference", 710, 5n, 1n, 0n],
+    ["ABI-710 emitted locals retain their saved scalar type", 710, 5n, 4n, 0n],
+    ["ARN-103 emitted locals require the complete value table", 103, 1n, 0n, 0n],
+    ["ARN-103 emitted locals require the complete slot table", 103, 1n, 0n, 2n],
+    ["ABI-710 emitted local slots retain source order", 710, 0n, 1n, 2n << 32n],
+    ["ABI-710 emitted local count equals the saved physical count", 710, 2n, 1n, 3n],
+    ["ARN-103 emitted locals require the complete carrier table", 103, 1n, 0n, 1n],
+    ["BOD-610 emitted local declarations require a body plan", 610, 1n, 0n, 0n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, 5100n << 32n, 5100n << 32n,
+      4294967295, expected, actual, detail],
+  })),
+  ...[
     ["ABI-701 emitted target cannot change to another linked function", 701, 2n, 3n, 0n],
     ["ABI-701 emitted calls require one saved recipe", 701, 1n, 2n, 0n],
     ["LNK-502 emitted target must be in the linked function table", 502, 2n, 99n, 0n],
