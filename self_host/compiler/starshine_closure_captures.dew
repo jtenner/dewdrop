@@ -95,39 +95,3 @@ fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: Self
   }
   Option::None
 }
-
-fn self_host_emit_closure_capture(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, body: SelfHostPlannedBodyLowering, capture: SelfHostPlannedCapture, destination: StarshineInstructions) -> Option<String> {
-  let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, plan.module_index, plan.specialization)
-  if !self_host_capture_has_value(self_host_body_specialization_shape_for_type(link, module_, plan.specialization, capture.type_, capture.shape)) {
-    return Option::None
-  }
-  let mut index = 0u32
-  while index {
-    _ => if index < body.locals.length {
-    let local = self_host_body_planned_local_identity(module_.locals[body.locals.start + index])
-    if self_host_capture_source_is_local(capture.source, local) {
-      let slot = match (if capture.mutable_ {
-        self_host_linked_capture_cell_slot(Option::Some(plan), module_, body, local.local_id)
-      } else {
-        self_host_linked_i32_local_slot(Option::Some(plan), module_, body, local.local_id)
-      }) {
-        Option::Some(value) => value
-        Option::None => return Option::Some("closure capture has no source physical local")
-      }
-      self_host_emit_capture_local_get(slot, destination)
-      return Option::None
-    }
-    index = index + 1u32
-    continue index
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  // A nested closure can forward a capture from its enclosing environment.
-  for outer in plan.capture_accesses {
-    if self_host_lambda_capture_source_equal(outer.source, capture.source) {
-      return self_host_emit_capture_get(link, plan, outer.capture, false, destination)
-    }
-  }
-  Option::Some("closure capture source is outside its enclosing body and environment")
-}

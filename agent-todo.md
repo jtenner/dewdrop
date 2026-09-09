@@ -383,7 +383,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   Constructor field temporary types now come from frozen source-order records;
   emission checks presence, uniqueness, source agreement, and mirrored carriers.
   Global initializers now pass through body planning, verification, and freeze.
-  Tuple-style variant recipes, closure construction, and full reference checks
+  Tuple-style variant recipes and full reference checks
   remain. See the
   [temporary plan log](docs/research/constructor-temporary-plans-2026-09-08.md).
   The old collection temporary allocations and slot counts based on
@@ -426,9 +426,16 @@ Correctness comes first. Keep these timing defects visible after query completio
   source identities, storage, boxing, and Unit markers in the frozen plan.
   Missing targets cannot use result-heap evidence. Emission no longer chooses
   an object target or reconstructs its field map; its old nominal/name fallback
-  path is removed. Tuple-style variant calls, closure construction, full
+  path is removed. Tuple-style variant calls, runtime trait capture, full
   reference checks, and runtime-adapter removal remain. See the
   [object recipe log](docs/research/frozen-object-constructor-recipes-2026-09-08.md).
+  Ordinary closure construction now retains the entry, heap type, source
+  identity, erasure, storage, cell type, and each local/forwarded capture operand.
+  Emission uses those frozen records instead of searching source locals again.
+  Both compilers pass 120 callback cases, including nested shared cells, Unit
+  erasure, and signed/unsigned packed captures. Runtime trait-dictionary capture
+  and full reference checks remain. See the
+  [closure recipe log](docs/research/frozen-closure-construction-recipes-2026-09-08.md).
   No emitter step may invent a new carrier or overwrite conflicting evidence.
   Verify all worklist constraints at the fixed point and reject later mutation.
   Self-host body plans now retain exact freeze witnesses and check all tables

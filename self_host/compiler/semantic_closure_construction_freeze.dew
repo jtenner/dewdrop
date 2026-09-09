@@ -1,0 +1,83 @@
+fn self_host_closure_operand_kind(value: SelfHostPhysicalClosureOperand) -> U64 {
+  match value {
+    SelfHostPhysicalClosureOperand::ErasedClosureOperand => 0u64
+    SelfHostPhysicalClosureOperand::LocalClosureOperand(_) => 1u64
+    SelfHostPhysicalClosureOperand::ForwardedClosureOperand(_) => 2u64
+  }
+}
+
+fn self_host_closure_operand_value(value: SelfHostPhysicalClosureOperand) -> U64 {
+  match value {
+    SelfHostPhysicalClosureOperand::ErasedClosureOperand => 0u64
+    SelfHostPhysicalClosureOperand::LocalClosureOperand(slot) => u32_into_u64(slot)
+    SelfHostPhysicalClosureOperand::ForwardedClosureOperand(capture) => u32_into_u64(capture)
+  }
+}
+
+fn self_host_closure_record_check(plan: SelfHostPlannedPhysicalBodyCarrierPlan, phase: U32, expression: U32, role: U32, index: U32, expected: U64, actual: U64) -> Unit {
+  if expected != actual {
+    let code = if phase == 7u32 {
+      605u32
+    } else if role == 233u32 {
+      706u32
+    } else if role == 234u32 {
+      701u32
+    } else {
+      704u32
+    }
+    let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+      code: code
+      phase: phase
+      module_id: plan.module_id
+      declaration: plan.declaration
+      body: plan.body
+      expression: expression
+      expected: expected
+      actual: actual
+      detail: (u32_into_u64(role) << 32u64) | u32_into_u64(index)
+    }, "closure construction must retain its verified target and capture operands")
+  }
+}
+
+fn self_host_compare_closure_recipes(context: SelfHostPlannedPhysicalBodyCarrierPlan, constructors: Array<SelfHostPhysicalClosureConstructionPlan>, captures: Array<SelfHostPhysicalClosureCapturePlan>, live: SelfHostPlannedPhysicalBodyCarrierPlan, phase: U32) -> Unit {
+  self_host_closure_record_check(context, phase, 4294967295u32, 230u32, 4294967295u32, u32_into_u64(constructors.length()), u32_into_u64(live.closure_constructions.length()))
+  let mut index = 0u32
+  for expected in constructors {
+    let actual = live.closure_constructions[index]
+    self_host_closure_record_check(context, phase, expected.expression, 231u32, index, u32_into_u64(expected.expression), u32_into_u64(actual.expression))
+    self_host_closure_record_check(context, phase, expected.expression, 232u32, index, u32_into_u64(expected.lambda), u32_into_u64(actual.lambda))
+    self_host_closure_record_check(context, phase, expected.expression, 233u32, index, u32_into_u64(expected.physical_type), u32_into_u64(actual.physical_type))
+    self_host_closure_record_check(context, phase, expected.expression, 234u32, index, u32_into_u64(expected.function_index), u32_into_u64(actual.function_index))
+    self_host_closure_record_check(context, phase, expected.expression, 235u32, index, u32_into_u64(expected.captures.start), u32_into_u64(actual.captures.start))
+    self_host_closure_record_check(context, phase, expected.expression, 236u32, index, u32_into_u64(expected.captures.length), u32_into_u64(actual.captures.length))
+    index = index + 1u32
+  }
+  self_host_closure_record_check(context, phase, 4294967295u32, 237u32, 4294967295u32, u32_into_u64(captures.length()), u32_into_u64(live.closure_construction_captures.length()))
+  index = 0u32
+  for expected in captures {
+    let actual = live.closure_construction_captures[index]
+    self_host_closure_record_check(context, phase, expected.expression, 238u32, index, u32_into_u64(expected.expression), u32_into_u64(actual.expression))
+    self_host_closure_record_check(context, phase, expected.expression, 239u32, index, u32_into_u64(expected.capture), u32_into_u64(actual.capture))
+    self_host_closure_record_check(context, phase, expected.expression, 240u32, index, self_host_capture_source_kind(expected.source), self_host_capture_source_kind(actual.source))
+    self_host_closure_record_check(context, phase, expected.expression, 241u32, index, self_host_capture_source_owner(expected.source), self_host_capture_source_owner(actual.source))
+    self_host_closure_record_check(context, phase, expected.expression, 242u32, index, self_host_capture_source_id(expected.source), self_host_capture_source_id(actual.source))
+    self_host_closure_record_check(context, phase, expected.expression, 243u32, index, self_host_body_freeze_bool(expected.erased), self_host_body_freeze_bool(actual.erased))
+    self_host_closure_record_check(context, phase, expected.expression, 244u32, index, u32_into_u64(expected.field_index), u32_into_u64(actual.field_index))
+    self_host_closure_record_check(context, phase, expected.expression, 245u32, index, self_host_body_freeze_storage(expected.storage), self_host_body_freeze_storage(actual.storage))
+    self_host_closure_record_check(context, phase, expected.expression, 246u32, index, u32_into_u64(expected.cell_type), u32_into_u64(actual.cell_type))
+    self_host_closure_record_check(context, phase, expected.expression, 247u32, index, self_host_closure_operand_kind(expected.operand), self_host_closure_operand_kind(actual.operand))
+    self_host_closure_record_check(context, phase, expected.expression, 248u32, index, self_host_closure_operand_value(expected.operand), self_host_closure_operand_value(actual.operand))
+    index = index + 1u32
+  }
+}
+
+fn self_host_assert_frozen_closure_recipes(frozen: SelfHostPlannedPhysicalBodyCarrierPlan, live: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  self_host_compare_closure_recipes(frozen, frozen.closure_constructions, frozen.closure_construction_captures, live, 7u32)
+}
+
+fn self_host_verify_closure_recipes(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  let constructors = array_new::<SelfHostPhysicalClosureConstructionPlan>()
+  let captures = array_new::<SelfHostPhysicalClosureCapturePlan>()
+  self_host_build_closure_construction_recipes(link, module_, body, plan, constructors, captures)
+  self_host_compare_closure_recipes(plan, constructors, captures, plan, 6u32)
+}

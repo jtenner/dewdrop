@@ -225,6 +225,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_raw_forwarding_test.dew \
   self_host/compiler/semantic_capture_cell_plans_test.dew \
   self_host/compiler/semantic_capture_access_plans_test.dew \
+  self_host/compiler/semantic_closure_construction_plans_test.dew \
   self_host/compiler/semantic_initializer_link_test.dew \
   self_host/compiler/semantic_initializer_schedule_test.dew \
   self_host/compiler/semantic_module_initialization_contracts_test.dew \

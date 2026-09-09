@@ -7,6 +7,8 @@ export const specializationCallbackNames = [
   "callback_evaluation_order", "trait_identity_callback",
   "bound_function_callback", "bound_lambda_callback",
   "direct_bound_callback", "closed_bound_callback",
+  "nested_capture_callback", "nested_mutable_capture_callback",
+  "erased_capture_callback", "packed_capture_callback",
 ];
 
 export function checkSpecializationCallbacks(exports) {

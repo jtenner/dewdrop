@@ -1,0 +1,265 @@
+test "closure construction retains exact captured cell operands" {
+  let (link, plan) = self_host_capture_cell_plan_fixture()
+  assert(plan.closure_constructions.length() == 1u32, "one frozen closure construction")
+  let recipe = plan.closure_constructions[0u32]
+  assert(recipe.lambda == 0u32 && recipe.captures.length == 1u32, "one logical capture of the exact lambda")
+  let capture = plan.closure_construction_captures[recipe.captures.start]
+  assert(capture.capture == 0u32 && !capture.erased && capture.field_index == 1u32, "entry function precedes the captured field")
+  let cell = match plan.capture_cells[1u32] {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  assert(capture.cell_type == cell.type_index, "destination retains the source cell heap type")
+  match capture.operand {
+    SelfHostPhysicalClosureOperand::LocalClosureOperand(slot) => assert(slot == cell.local_slot, "load the frozen cell slot, not the initial scalar slot")
+    _ => assert(false, "captured mutable local requires a physical cell operand")
+  }
+  let expression = match self_host_body_plan_expression(plan, recipe.expression) {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  assert(recipe.function_index == expression.call_function_index && recipe.physical_type == expression.selected_type_index, "exact frozen function and closure type")
+  assert(self_host_lambda_construction_target_matches(link, plan, expression, recipe.lambda), "target identity agrees with linked fragments")
+}
+
+fn self_host_closure_recipe_fixture(source: Bytes, lambda: U32) -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid closure recipe source")
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, program))
+  for plan in program.bodies {
+    if plan.lambda == lambda {
+      return (link, plan)
+    }
+  }
+  unreachable()
+}
+
+test "closure recipes retain erased Unit sources without physical operands" {
+  let (_, plan) = self_host_closure_recipe_fixture(b"pub fn make(value: Unit) -> fn() -> Unit {\n  fn() -> Unit {\n    value\n  }\n}\n", 4294967295u32)
+  assert(plan.closure_constructions.length() == 1u32 && plan.closure_construction_captures.length() == 1u32, "retain the logical capture")
+  let capture = plan.closure_construction_captures[0u32]
+  assert(capture.erased && capture.field_index == 4294967295u32, "no physical closure field for Unit")
+  assert(capture.operand is SelfHostPhysicalClosureOperand::ErasedClosureOperand, "no local read for Unit")
+}
+
+test "nested closure recipes forward the exact enclosing capture" {
+  let (_, plan) = self_host_closure_recipe_fixture(b"pub fn make(seed: I64) -> fn() -> fn() -> I64 {\n  fn() -> fn() -> I64 {\n    fn() -> I64 {\n      seed\n    }\n  }\n}\n", 0u32)
+  assert(plan.closure_constructions.length() == 1u32 && plan.closure_construction_captures.length() == 1u32, "one forwarded capture")
+  let capture = plan.closure_construction_captures[0u32]
+  match capture.operand {
+    SelfHostPhysicalClosureOperand::ForwardedClosureOperand(source) => assert(source == 0u32, "exact outer capture ID")
+    _ => assert(false, "outer capture is not a body local")
+  }
+  assert(capture.cell_type == 4294967295u32, "immutable capture does not use a cell")
+}
+
+test "closure recipes retain packed capture field storage" {
+  let (_, plan) = self_host_closure_recipe_fixture(b"pub fn make(seed: I8) -> fn() -> I8 {\n  fn() -> I8 {\n    seed\n  }\n}\n", 4294967295u32)
+  let capture = plan.closure_construction_captures[0u32]
+  match capture.storage {
+    Option::Some(storage) => assert(storage is SelfHostPlannedWasmStorageType::WasmI8SignedStorage, "signed packed field")
+    Option::None => assert(false, "packed storage is required")
+  }
+  match capture.operand {
+    SelfHostPhysicalClosureOperand::LocalClosureOperand(slot) => assert(slot == 0u32, "I32 stack value comes from the source parameter")
+    _ => assert(false, "packed capture has one local operand")
+  }
+}
+
+fn self_host_simple_closure_recipe_fixture() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
+  let (link, plan) = self_host_closure_recipe_fixture(b"pub fn make(seed: I64) -> fn() -> I64 {\n  fn() -> I64 {\n    seed\n  }\n}\n", 4294967295u32)
+  assert(plan.closure_constructions.length() == 1u32 && plan.closure_construction_captures.length() == 1u32, "one valid closure and capture")
+  let recipe = plan.closure_constructions[0u32]
+  assert(recipe.expression == 0u32 && recipe.lambda == 0u32 && recipe.physical_type == 1u32 && recipe.function_index == 1u32, "stable simple closure identity")
+  self_host_assert_frozen_physical_body(self_host_freeze_physical_body(plan), plan)
+  (link, plan)
+}
+
+fn self_host_change_closure_recipe(plan: SelfHostPlannedPhysicalBodyCarrierPlan, kind: U32) -> Unit {
+  let source = plan.closure_constructions[0u32]
+  plan.closure_constructions[0u32] = SelfHostPhysicalClosureConstructionPlan::{
+    expression: if kind == 0u32 {
+      source.expression + 1u32
+    } else {
+      source.expression
+    }
+    lambda: if kind == 1u32 {
+      source.lambda + 1u32
+    } else {
+      source.lambda
+    }
+    physical_type: if kind == 2u32 {
+      source.physical_type + 1u32
+    } else {
+      source.physical_type
+    }
+    function_index: if kind == 3u32 {
+      source.function_index + 1u32
+    } else {
+      source.function_index
+    }
+    captures: SelfHostHirSpan::{
+      start: if kind == 4u32 {
+        source.captures.start + 1u32
+      } else {
+        source.captures.start
+      }
+      length: if kind == 5u32 {
+        source.captures.length - 1u32
+      } else {
+        source.captures.length
+      }
+    }
+  }
+}
+
+fn self_host_closure_recipe_freeze_mutation(kind: U32) -> Unit {
+  let (_, plan) = self_host_simple_closure_recipe_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  self_host_change_closure_recipe(plan, kind)
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+fn self_host_closure_capture_freeze_mutation(kind: U32) -> Unit {
+  let (_, plan) = self_host_simple_closure_recipe_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  let source = plan.closure_construction_captures[0u32]
+  plan.closure_construction_captures[0u32] = SelfHostPhysicalClosureCapturePlan::{
+    expression: if kind == 0u32 {
+      source.expression + 1u32
+    } else {
+      source.expression
+    }
+    capture: if kind == 1u32 {
+      source.capture + 1u32
+    } else {
+      source.capture
+    }
+    source: if kind == 2u32 {
+      SelfHostLambdaCaptureSource::LambdaLocalCapture(0u32, 0u32)
+    } else if kind == 3u32 {
+      SelfHostLambdaCaptureSource::BodyLocalCapture(plan.body + 1u64, 0u32)
+    } else if kind == 4u32 {
+      SelfHostLambdaCaptureSource::BodyLocalCapture(plan.body, 1u32)
+    } else {
+      source.source
+    }
+    erased: if kind == 5u32 {
+      !source.erased
+    } else {
+      source.erased
+    }
+    field_index: if kind == 6u32 {
+      source.field_index - 1u32
+    } else {
+      source.field_index
+    }
+    storage: if kind == 7u32 {
+      Option::Some(SelfHostPlannedWasmStorageType::WasmI32Storage)
+    } else {
+      source.storage
+    }
+    cell_type: if kind == 8u32 {
+      0u32
+    } else {
+      source.cell_type
+    }
+    operand: if kind == 9u32 {
+      SelfHostPhysicalClosureOperand::ForwardedClosureOperand(0u32)
+    } else if kind == 10u32 {
+      SelfHostPhysicalClosureOperand::LocalClosureOperand(1u32)
+    } else {
+      source.operand
+    }
+  }
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 closure recipes retain expression identity" expect_trap "unreachable" {
+  self_host_closure_recipe_freeze_mutation(0u32)
+}
+test "BOD-605 closure recipes retain lambda identity" expect_trap "unreachable" {
+  self_host_closure_recipe_freeze_mutation(1u32)
+}
+test "BOD-605 closure recipes retain physical type" expect_trap "unreachable" {
+  self_host_closure_recipe_freeze_mutation(2u32)
+}
+test "BOD-605 closure recipes retain entry function" expect_trap "unreachable" {
+  self_host_closure_recipe_freeze_mutation(3u32)
+}
+test "BOD-605 closure recipes retain capture span start" expect_trap "unreachable" {
+  self_host_closure_recipe_freeze_mutation(4u32)
+}
+test "BOD-605 closure recipes retain capture span length" expect_trap "unreachable" {
+  self_host_closure_recipe_freeze_mutation(5u32)
+}
+test "BOD-605 closure captures retain expression identity" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(0u32)
+}
+test "BOD-605 closure captures retain capture identity" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(1u32)
+}
+test "BOD-605 closure captures retain source kind" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(2u32)
+}
+test "BOD-605 closure captures retain source owner" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(3u32)
+}
+test "BOD-605 closure captures retain source local" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(4u32)
+}
+test "BOD-605 closure captures retain erasure" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(5u32)
+}
+test "BOD-605 closure captures retain field index" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(6u32)
+}
+test "BOD-605 closure captures retain field storage" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(7u32)
+}
+test "BOD-605 closure captures retain cell type" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(8u32)
+}
+test "BOD-605 closure captures retain operand kind" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(9u32)
+}
+test "BOD-605 closure captures retain operand slot" expect_trap "unreachable" {
+  self_host_closure_capture_freeze_mutation(10u32)
+}
+
+test "BOD-605 closure recipe tables cannot lose entries" expect_trap "unreachable" {
+  let (_, plan) = self_host_simple_closure_recipe_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  let _ = plan.closure_constructions.pop()
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "BOD-605 closure capture tables cannot lose entries" expect_trap "unreachable" {
+  let (_, plan) = self_host_simple_closure_recipe_fixture()
+  let frozen = self_host_freeze_physical_body(plan)
+  let _ = plan.closure_construction_captures.pop()
+  self_host_assert_frozen_physical_body(frozen, plan)
+}
+
+test "ABI-701 closure recipe entry agrees before freeze" expect_trap "unreachable" {
+  let (link, plan) = self_host_simple_closure_recipe_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  self_host_change_closure_recipe(plan, 3u32)
+  self_host_verify_closure_recipes(link, module_, body, plan)
+}
+
+test "BOD-610 closure emission requires its recipe" expect_trap "unreachable" {
+  let (link, plan) = self_host_simple_closure_recipe_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  let _ = plan.closure_constructions.pop()
+  let _ = self_host_required_closure_construction(plan, module_, body, 0u32, 0u32)
+}
+
+test "BOD-610 closure emission requires a unique recipe" expect_trap "unreachable" {
+  let (link, plan) = self_host_simple_closure_recipe_fixture()
+  let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
+  plan.closure_constructions.push(plan.closure_constructions[0u32])
+  let _ = self_host_required_closure_construction(plan, module_, body, 0u32, 0u32)
+}

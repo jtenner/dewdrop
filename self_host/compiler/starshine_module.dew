@@ -2456,58 +2456,6 @@ fn self_host_linked_schedule_call_result_adapter(
   }
 }
 
-fn self_host_linked_expression_emits_nominal_value(
-  module_: SelfHostPlannedModuleLowering,
-  expression: U32,
-) -> Bool {
-  let mut current = expression
-  let mut depth = 0u32
-  let _ = while depth {
-    level => if level < 8u32 && current < module_.expressions.length() {
-      match module_.expressions[current].kind {
-        SelfHostPlannedExpressionKind::PlannedConstruct(_, _, _) => return true
-        SelfHostPlannedExpressionKind::PlannedProductNew(_) => return true
-        SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => return true
-        SelfHostPlannedExpressionKind::PlannedLambdaClosure(_) => return true
-        SelfHostPlannedExpressionKind::PlannedObjectNew(_) => return true
-        SelfHostPlannedExpressionKind::PlannedStringConst(_) => return true
-        SelfHostPlannedExpressionKind::PlannedBytesConst(_) => return true
-        SelfHostPlannedExpressionKind::PlannedConsumedExpression => if self_host_u32_greater(
-          current,
-          0u32,
-        ) {
-          current = current - 1u32
-          continue level + 1u32
-        }
-        _ => {}
-      }
-      break self_host_semantic_unit()
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  false
-}
-
-fn self_host_linked_type_is_enum_base(
-  link: SelfHostPlannedProgramWasmGCLink,
-  type_index: U32,
-) -> Bool {
-  for linked_type in link.types {
-    if self_host_u32_equal(linked_type.type_index, type_index) {
-      let physical_module = link.fragments.modules[linked_type.module_index]
-      let physical = self_host_linked_physical_type_at(
-        physical_module,
-        linked_type.fragment_index,
-      )
-      match physical.kind {
-        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(_) => return true
-        _ => return false
-      }
-    }
-  }
-  false
-}
 
 
 fn self_host_linked_schedule_variant_arguments(
@@ -16518,65 +16466,9 @@ fn self_host_emit_linked_i32_expression(
               }
             }
             SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda_id) => {
-              let module_index = match self_host_linked_module_index_by_id(
-                link,
-                module_.module_id,
-              ) {
-                Option::Some(value) => value
-                Option::None => {
-                  return Option::Some("linked lambda module is missing")
-                }
-              }
-              let lambda_position = match self_host_linked_lambda_position(
-                module_,
-                lambda_id,
-              ) {
-                Option::Some(value) => value
-                Option::None => {
-                  return Option::Some("linked lambda lowering is missing")
-                }
-              }
-              let lambda = module_.lambdas[lambda_position]
-              let plan = match canonical_body_plan {
-                Option::Some(value) => value
-                Option::None => return Option::Some("closure creation has no frozen body plan")
-              }
-              let closure = match self_host_body_plan_expression(plan, expression) {
-                Option::Some(value) => value
-                Option::None => return Option::Some("closure creation has no frozen expression plan")
-              }
-              if !self_host_lambda_construction_target_matches(link, plan, closure, lambda_id) {
-                return Option::Some("closure construction target differs from its frozen lambda identity")
-              }
-              let type_index = closure.selected_type_index
-              let function_index = self_host_linked_physical_function_index(closure.call_function_index)
-              StarshineFfi.ffi_ffi_bridge_instructions_push(
-                destination,
-                StarshineFfi.ffi_lib_Instruction_ref_func(
-                  StarshineFfi.ffi_lib_FuncIdx_new(
-                    self_host_u32_to_i32(
-                      self_host_linked_emitted_function_index(function_index),
-                    ),
-                  ),
-                ),
-              )
-              tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(
-                type_index,
-                destination,
-              ))
-              let mut capture_index = 0u32
-              while capture_index {
-                _ => if capture_index < lambda.captures.length {
-                let capture = module_.captures[self_host_u32_add(lambda.captures.start, capture_index)]
-                match self_host_emit_closure_capture(link, plan, body, capture, destination) {
-                  Option::Some(error) => return Option::Some(error)
-                  Option::None => {}
-                }
-                capture_index = capture_index + 1u32
-                continue capture_index
-                } else {
-                  break self_host_semantic_unit()
-                }
+              match self_host_emit_planned_closure(link, canonical_body_plan, module_, body, expression, lambda_id, destination) {
+                Option::Some(error) => return Option::Some(error)
+                Option::None => {}
               }
             }
             SelfHostPlannedExpressionKind::PlannedObjectNew(_) => {

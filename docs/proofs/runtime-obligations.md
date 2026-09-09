@@ -17,7 +17,7 @@ field recipe in the body freeze witness. The recipe records source identities,
 storage, boxing, and Unit markers. A missing target cannot be supplied by the
 result heap type. Emission consumes these records without nominal/name recovery.
 The existing empty-Option adapter has a checked zero-operand recipe selected by
-its declaration certificate. Tuple-style variant calls, closure construction,
+its declaration certificate. Tuple-style variant calls, runtime trait capture,
 full reference assignability, and removal of runtime adapters remain open. See
 [the object recipe log](../research/frozen-object-constructor-recipes-2026-09-08.md).
 
@@ -592,6 +592,15 @@ frozen. Packed field reads use the retained storage type. This does not yet
 prove closure construction recipes, runtime trait evidence capture, or all
 reference assignability. See
 [the capture access log](../research/frozen-capture-accesses-2026-09-08.md).
+
+Ordinary closure construction now retains the exact entry/type and a complete
+logical capture recipe in the body freeze witness. Each source is unique and
+maps to a local slot, a forwarded enclosing capture, or explicit erasure.
+Mutable captures preserve cell identity; packed fields preserve storage width
+and signedness. Emission uses the frozen recipe, not source-name or local-scan
+recovery. Runtime trait-dictionary capture and full reference assignability
+remain open. See
+[the construction log](../research/frozen-closure-construction-recipes-2026-09-08.md).
 
 ## Physical call target updates
 

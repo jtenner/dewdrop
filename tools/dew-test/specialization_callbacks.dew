@@ -242,3 +242,80 @@ pub fn closed_bound_callback(value: I64) -> I64 {
   let callback = closed_generic_lambda::<I64>()
   callback(value)
 }
+
+fn nested_capture_reader(value: I64) -> fn() -> fn() -> I64 {
+  fn() -> fn() -> I64 {
+    fn() -> I64 {
+      value
+    }
+  }
+}
+
+pub fn nested_capture_callback(value: I64) -> I64 {
+  let outer = nested_capture_reader(value)
+  let inner = outer()
+  inner()
+}
+
+fn nested_mutable_reader(value: I64) -> fn() -> fn() -> I64 {
+  let mut held = value
+  fn() -> fn() -> I64 {
+    fn() -> I64 {
+      held = held + 1i64
+      held
+    }
+  }
+}
+
+pub fn nested_mutable_capture_callback(value: I64) -> I64 {
+  let outer = nested_mutable_reader(value)
+  let first = outer()
+  let second = outer()
+  let left = first()
+  let right = second()
+  if left == value + 1i64 && right == value + 2i64 {
+    right - 2i64
+  } else {
+    0i64
+  }
+}
+
+fn erased_capture_reader(left: I32, effect: Unit, right: I64) -> fn() -> I64 {
+  fn() -> I64 {
+    effect
+    if left == 1i32 {
+      right
+    } else {
+      0i64
+    }
+  }
+}
+
+pub fn erased_capture_callback(value: I64) -> I64 {
+  let mut order = 0i32
+  let tick = fn() -> Unit {
+    order = order + 1i32
+  }
+  let reader = erased_capture_reader(1i32, tick(), value)
+  let result = reader()
+  if order == 1i32 {
+    result
+  } else {
+    0i64
+  }
+}
+
+fn packed_capture_reader(low: I8, high: U8, value: I64) -> fn() -> I64 {
+  fn() -> I64 {
+    if low == -1i8 && high == 255u8 {
+      value
+    } else {
+      0i64
+    }
+  }
+}
+
+pub fn packed_capture_callback(value: I64) -> I64 {
+  let reader = packed_capture_reader(-1i8, 255u8, value)
+  reader()
+}
