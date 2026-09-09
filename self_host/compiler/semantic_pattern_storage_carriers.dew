@@ -71,7 +71,6 @@ fn self_host_unit_pattern_binding_has_storage(
   // identity and its exact Unit layout, not merely an eqref carrier or a name.
   let declaration = self_host_pattern_constructor_declaration(module_, pattern)
   match link.runtime_variant_adapters.get(declaration) {
-    Option::Some(SelfHostRuntimeVariantAdapter::RuntimeOptionSome),
     Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultOk),
     Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultErr) => {
       match pattern.source {

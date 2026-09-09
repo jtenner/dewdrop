@@ -1761,10 +1761,8 @@ fn self_host_linked_nominal_field_type_index(
     Option::Some(type_index) => return Option::Some(type_index)
     Option::None => {}
   }
-  if name.equals(b"Option") {
-    Option::Some(self_host_linked_array_runtime_base(link) + 9u32)
-  } else if name.equals(b"Result") {
-    Option::Some(self_host_linked_array_runtime_base(link) + 17u32)
+  if name.equals(b"Result") {
+    Option::Some(self_host_linked_result_runtime_base(link))
   } else {
     Option::None
   }
@@ -2536,14 +2534,11 @@ fn self_host_linked_schedule_variant_arguments(
       if child >= module_.expressions.length() {
         return Option::Some("linked variant constructor expression is outside its arena")
       }
-      let source_is_unit = self_host_linked_exact_emitted_expression_carrier(
-        canonical,
-        link,
-        module_,
-        body,
-        caller_specialization,
-        child,
-      ) is SelfHostWasmBodyCarrier::UnitBodyCarrier
+      let source_carrier = match self_host_body_plan_expression_from_optional(canonical, child) {
+        Option::Some(value) => value.carrier
+        Option::None => return Option::Some("BOD-610 variant operand has no frozen expression plan")
+      }
+      let source_is_unit = source_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier
       let mut physical_field_index = 4294967295u32
       let mut physical_position = 0u32
       let _ = while physical_position {
@@ -2586,14 +2581,7 @@ fn self_host_linked_schedule_variant_arguments(
           physical_module,
           physical_field_index,
         )
-        let emitted_payload_carrier = self_host_linked_exact_emitted_expression_carrier(
-          canonical,
-          link,
-          module_,
-          body,
-          caller_specialization,
-          child,
-        )
+        let emitted_payload_carrier = source_carrier
         let physical_payload_carrier = self_host_body_carrier_from_shape(
           self_host_linked_storage_shape(physical_field.storage),
         )
@@ -3151,49 +3139,6 @@ fn self_host_linked_pattern_variant_type(
     }
   }
   match adapter {
-    SelfHostRuntimeVariantAdapter::RuntimeOptionNone => {
-      Option::Some(self_host_linked_array_runtime_base(link) + 10u32)
-    }
-    SelfHostRuntimeVariantAdapter::RuntimeOptionSome => {
-      let mut carrier = if payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-        5i32
-      } else {
-        self_host_linked_array_carrier_from_shape(payload_hint)
-      }
-      if payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-      match pattern.source {
-        SelfHostHirPattern::TuplePattern(_, children, _) => if self_host_u32_greater(
-          children.length,
-          0u32,
-        ) {
-          let child_index = children.start
-          if child_index < module_.pattern_children.length() {
-            let child_pattern = module_.pattern_children[child_index]
-            if child_pattern < module_.patterns.length() {
-              let child_source = self_host_planned_pattern_at(module_.patterns, child_pattern)
-              let recovered_shape = self_host_planned_merged_body_value_shape(
-                module_.resolved_types,
-                module_.inferred,
-                child_source.type_,
-              )
-              let child_shape = if recovered_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-                child_source.shape
-              } else {
-                recovered_shape
-              }
-              if !(child_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-                carrier = self_host_linked_array_carrier_from_shape(child_shape)
-              }
-            }
-          }
-        }
-        _ => {}
-      }
-      }
-      Option::Some(
-        self_host_linked_array_runtime_base(link) + 11u32 + self_host_i32_to_u32(carrier),
-      )
-    }
     SelfHostRuntimeVariantAdapter::RuntimeResultOk, SelfHostRuntimeVariantAdapter::RuntimeResultErr => {
       let mut carrier = if payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape {
         5i32
@@ -3231,10 +3176,10 @@ fn self_host_linked_pattern_variant_type(
       }
       }
       Option::Some(
-        self_host_linked_array_runtime_base(link) + if adapter is SelfHostRuntimeVariantAdapter::RuntimeResultOk {
-          18u32
+        self_host_linked_result_runtime_base(link) + if adapter is SelfHostRuntimeVariantAdapter::RuntimeResultOk {
+          1u32
         } else {
-          24u32
+          7u32
         } + self_host_i32_to_u32(carrier),
       )
     }
@@ -3495,75 +3440,6 @@ fn self_host_linked_expression_variant_type(
     Option::None => return self_host_linked_variant_type_index(link, variant_declaration)
   }
   match adapter {
-    SelfHostRuntimeVariantAdapter::RuntimeOptionNone => {
-    Option::Some(self_host_linked_array_runtime_base(link) + 10u32)
-  }
-    SelfHostRuntimeVariantAdapter::RuntimeOptionSome => {
-    let mut carrier = match self_host_linked_type_first_argument_shape(
-      module_,
-      planned.type_,
-    ) {
-      Option::Some(shape) => self_host_linked_array_carrier_from_shape(shape)
-      Option::None => 5i32
-    }
-    match self_host_linked_variant_first_payload_expression(
-      module_,
-      planned,
-      arguments,
-    ) {
-      Option::Some(child) => {
-      if child < module_.expressions.length() {
-        let specialized_shape = self_host_linked_expression_specialized_shape(
-          link,
-          module_,
-          body,
-          caller_specialization,
-          child,
-        )
-        let exact_carrier = self_host_linked_exact_emitted_expression_carrier(
-          canonical,
-          link,
-          module_,
-          body,
-          caller_specialization,
-          child,
-        )
-        // The emitted carrier is authoritative. Generic specialization metadata
-        // can retain the unspecialized scalar shape after local recovery.
-        let payload_shape = if !(exact_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) && !(
-          exact_carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier
-        ) && !(exact_carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) {
-          self_host_body_carrier_shape(exact_carrier)
-        } else if !(specialized_shape is SelfHostPlannedValueShape::GenericPlannedValueShape) && !(
-          specialized_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-        ) && !(specialized_shape is SelfHostPlannedValueShape::UnitPlannedValueShape) && !(
-          specialized_shape is SelfHostPlannedValueShape::NeverPlannedValueShape
-        ) {
-          specialized_shape
-        } else {
-          self_host_linked_variant_payload_shape(
-            link,
-            module_,
-            body,
-            child,
-          )
-        }
-        let payload_carrier = self_host_linked_array_carrier_from_shape(
-          payload_shape,
-        )
-        if payload_carrier >= 0i32 && payload_carrier <= 5i32 {
-          carrier = payload_carrier
-        }
-      }
-      }
-      Option::None => {}
-    }
-    Option::Some(
-      self_host_linked_array_runtime_base(link) + 11u32 + self_host_i32_to_u32(
-        carrier,
-      ),
-    )
-  }
     SelfHostRuntimeVariantAdapter::RuntimeResultOk, SelfHostRuntimeVariantAdapter::RuntimeResultErr => {
     let mut carrier = 5i32
     match self_host_linked_variant_first_payload_expression(
@@ -3616,10 +3492,10 @@ fn self_host_linked_expression_variant_type(
       Option::None => {}
     }
     Option::Some(
-      self_host_linked_array_runtime_base(link) + if adapter is SelfHostRuntimeVariantAdapter::RuntimeResultOk {
-        18u32
+      self_host_linked_result_runtime_base(link) + if adapter is SelfHostRuntimeVariantAdapter::RuntimeResultOk {
+        1u32
       } else {
-        24u32
+        7u32
       } + self_host_i32_to_u32(carrier),
     )
     }
@@ -3634,12 +3510,6 @@ fn self_host_linked_zero_arity_variant_type(
   caller_specialization: U32,
   planned: SelfHostPlannedExpression,
 ) -> Option<U32> {
-  if !self_host_array_index_is_valid(
-    planned.source_name,
-    self_host_linked_module_name_count(module_),
-  ) {
-    return Option::None
-  }
   let type_index = match self_host_linked_expression_variant_type(
     link,
     canonical,
@@ -3655,9 +3525,6 @@ fn self_host_linked_zero_arity_variant_type(
   ) {
     Option::Some(value) => value
     Option::None => return Option::None
-  }
-  if self_host_u32_equal(type_index, self_host_linked_array_runtime_base(link) + 10u32) {
-    return Option::Some(type_index)
   }
   match self_host_linked_type_field_count(link, type_index) {
     Option::Some(0u32) => Option::Some(type_index)
@@ -8113,7 +7980,7 @@ fn self_host_linked_pair_type_for_shape(
       let left = self_host_linked_array_carrier_from_shape(fields[0u32])
       let right = self_host_linked_array_carrier_from_shape(fields[1u32])
       Option::Some(
-        self_host_linked_array_runtime_base(link) + 30u32 + self_host_i32_to_u32(
+        self_host_linked_pair_runtime_base(link) + self_host_i32_to_u32(
           left * 6i32 + right,
         ),
       )
@@ -8312,7 +8179,7 @@ fn self_host_linked_pair_type_for_product_new_expression(
         ),
       )
       Option::Some(
-        self_host_linked_array_runtime_base(link) + 30u32 +
+        self_host_linked_pair_runtime_base(link) +
           self_host_i32_to_u32(left * 6i32 + right),
       )
     } else {
@@ -8465,7 +8332,7 @@ fn self_host_linked_product_pair_type_for_product_new_expression(
         5i32
       }
       Option::Some(
-        self_host_linked_array_runtime_base(link) + 30u32 +
+        self_host_linked_pair_runtime_base(link) +
           self_host_i32_to_u32(left * 6i32 + right),
       )
     } else {
@@ -8728,7 +8595,7 @@ fn self_host_linked_product_pair_type_for_projection(
     5i32
   }
   Option::Some(
-    self_host_linked_array_runtime_base(link) + 30u32 + self_host_i32_to_u32(
+    self_host_linked_pair_runtime_base(link) + self_host_i32_to_u32(
       self_host_linked_array_carrier_from_shape(left_shape) * 6i32 +
         right_carrier,
     ),
@@ -8740,7 +8607,7 @@ fn self_host_linked_pair_field_shape(
   type_index: U32,
   field: U32,
 ) -> Option<SelfHostPlannedValueShape> {
-  let first = self_host_linked_array_runtime_base(link) + 30u32
+  let first = self_host_linked_pair_runtime_base(link)
   if type_index < first || type_index >= first + 36u32 || field >= 2u32 {
     return Option::None
   }
@@ -9048,7 +8915,7 @@ fn self_host_linked_pair_type_for_projection(
   }
   if left >= 0i32 && right >= 0i32 {
     Option::Some(
-      self_host_linked_array_runtime_base(link) + 30u32 + self_host_i32_to_u32(
+      self_host_linked_pair_runtime_base(link) + self_host_i32_to_u32(
         left * 6i32 + right,
       ),
     )
@@ -10748,7 +10615,7 @@ fn self_host_linked_qualified_owner_name(
         let name = self_host_linked_module_name_at(module_, source_name)
         if name == "Array" || name == "Map" ||
           name == "StringBuilder" || name == "BytesBuilder" ||
-          name == "Option" || name == "Result" {
+          name == "Result" {
           return name
         }
       }
@@ -15389,9 +15256,9 @@ fn self_host_emit_linked_i32_expression(
                       selected_type_index,
                       destination,
                     ))
-                    let result_error_first = self_host_linked_array_runtime_base(
+                    let result_error_first = self_host_linked_result_runtime_base(
                       link,
-                    ) + 24u32
+                    ) + 7u32
                     if selected_type_index >= result_error_first &&
                       selected_type_index < result_error_first + 6u32 {
                       tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedResultErrorIdentity(
@@ -16393,7 +16260,7 @@ fn self_host_emit_linked_i32_expression(
                     } else {
                       5i32
                     }
-                    let inferred_pair_type = self_host_linked_array_runtime_base(link) + 30u32 +
+                    let inferred_pair_type = self_host_linked_pair_runtime_base(link) +
                       self_host_i32_to_u32(left * 6i32 + right)
                     let pair_type = if self_host_u32_equal(children.length, 2u32) &&
                       self_host_u32_equal(current_pair, 0u32) {
@@ -16895,9 +16762,9 @@ fn self_host_emit_linked_i32_expression(
                       type_index,
                       destination,
                     ))
-                    let result_error_first = self_host_linked_array_runtime_base(
+                    let result_error_first = self_host_linked_result_runtime_base(
                       link,
-                    ) + 24u32
+                    ) + 7u32
                     if type_index >= result_error_first &&
                       type_index < result_error_first + 6u32 {
                       tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedResultErrorIdentity(
@@ -16945,7 +16812,7 @@ fn self_host_emit_linked_i32_expression(
                   module_,
                   module_.expressions[target].source_name,
                 )
-                if (name == "Ok" || name == "Err" || name == "Some" || name == "None") &&
+                if (name == "Ok" || name == "Err") &&
                   self_host_u64_equal(selected_variant_declaration, 0u64) {
                   let mut carrier = 5i32
                   if self_host_u32_greater(arguments.length, 0u32) &&
@@ -16962,14 +16829,10 @@ fn self_host_emit_linked_i32_expression(
                       )
                     }
                   }
-                  let type_index = self_host_linked_array_runtime_base(link) + if name == "None" {
-                    10u32
-                  } else if name == "Some" {
-                    11u32 + self_host_i32_to_u32(carrier)
-                  } else if name == "Ok" {
-                    18u32 + self_host_i32_to_u32(carrier)
+                  let type_index = self_host_linked_result_runtime_base(link) + if name == "Ok" {
+                    1u32 + self_host_i32_to_u32(carrier)
                   } else {
-                    24u32 + self_host_i32_to_u32(carrier)
+                    7u32 + self_host_i32_to_u32(carrier)
                   }
                   tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(
                     type_index,
@@ -17598,9 +17461,9 @@ fn self_host_emit_linked_i32_expression(
                           type_index,
                           destination,
                         ))
-                        let result_error_first = self_host_linked_array_runtime_base(
+                        let result_error_first = self_host_linked_result_runtime_base(
                           link,
-                        ) + 24u32
+                        ) + 7u32
                         if type_index >= result_error_first &&
                           type_index < result_error_first + 6u32 {
                           tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedResultErrorIdentity(
@@ -19008,18 +18871,6 @@ fn self_host_emit_linked_i32_expression(
               payload_hint
             } else {
               exact_subject_payload_hint
-            }
-          }
-          let payload_argument = match link.runtime_variant_adapters.get(self_host_pattern_constructor_declaration(module_, pattern)) {
-            Option::Some(SelfHostRuntimeVariantAdapter::RuntimeOptionSome) => 0u32
-            _ => 4294967295u32
-          }
-          if payload_argument != 4294967295u32 {
-            match self_host_body_expression_type_argument_shape(link, module_, caller_specialization, subject, payload_argument) {
-              Option::Some(shape) => {
-                canonical_payload_hint = shape
-              }
-              Option::None => {}
             }
           }
           let mut direct_binding_result = false
@@ -21244,17 +21095,11 @@ fn self_host_linked_runtime_reference_constructor(
     SelfHostPlannedExpressionKind::PlannedConstruct(_, _, _) => return true
     _ => {}
   }
-  if !self_host_u32_greater(
-    self_host_linked_module_name_count(module_),
-    planned.source_name,
-  ) {
-    return false
+  match planned.selection {
+    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(_, _),
+    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _) => true
+    _ => false
   }
-  let name = self_host_linked_module_name_at(module_, planned.source_name)
-  if name != "Some" && name != "None" && name != "Ok" && name != "Err" {
-    return false
-  }
-  true
 }
 
 fn self_host_linked_local_match_subject_reference_shape(
@@ -21286,7 +21131,7 @@ fn self_host_linked_local_match_subject_reference_shape(
                           module_,
                           self_host_planned_pattern_at(module_.patterns, pattern_index),
                         )
-                        if name == "Some" || name == "None" || name == "Ok" || name == "Err" {
+                        if name == "Ok" || name == "Err" {
                           return Option::Some(
                             SelfHostPlannedValueShape::RefPlannedValueShape,
                           )
@@ -25214,7 +25059,7 @@ fn self_host_linked_local_has_reference_receiver_use(
             _,
           ) => {
             let name = self_host_linked_declaration_name(link, declaration)
-            if name.ends_with(b"Some") || name.ends_with(b"Ok") || name.ends_with(b"Err") {
+            if name.ends_with(b"Ok") || name.ends_with(b"Err") {
               arguments
             } else {
               SelfHostHirSpan::{
@@ -25910,7 +25755,7 @@ fn self_host_linked_match_binding_use_shape(
           if pattern_index < module_.patterns.length() {
             let pattern = self_host_planned_pattern_at(module_.patterns, pattern_index)
             let name = self_host_linked_pattern_name(module_, pattern)
-            if name == "Some" || name == "Ok" || name == "Err" {
+            if name == "Ok" || name == "Err" {
               match self_host_linked_pattern_binding_use_shape(
                 link,
                 module_,
@@ -26110,7 +25955,7 @@ fn self_host_linked_match_returns_special_binding(
               source.pattern,
             )
             let name = self_host_linked_pattern_name(module_, pattern)
-            if name == "Some" || name == "Ok" || name == "Err" {
+            if name == "Ok" || name == "Err" {
               match pattern.source {
                 SelfHostHirPattern::TuplePattern(_, children, _) => if self_host_u32_greater(
                   children.length,
@@ -26523,7 +26368,7 @@ fn self_host_linked_special_match_binds_local(
                       module_,
                       self_host_planned_pattern_at(module_.patterns, pattern_index),
                     )
-                    if name == "Some" || name == "Ok" || name == "Err" {
+                    if name == "Ok" || name == "Err" {
                       return true
                     }
                   }
@@ -26704,8 +26549,7 @@ fn self_host_linked_variant_argument_expected_nominal(
   let name = self_host_linked_declaration_name(link, declaration)
   let result_argument = if name.equals(b"Err") || name.ends_with(b".Err") {
     1u32
-  } else if name.equals(b"Ok") || name.ends_with(b".Ok") ||
-    name.equals(b"Some") || name.ends_with(b".Some") {
+  } else if name.equals(b"Ok") || name.ends_with(b".Ok") {
     0u32
   } else {
     return 0u64
@@ -26762,11 +26606,9 @@ fn self_host_linked_selected_variant_field_expected_nominal(
     return 0u64
   }
   let name = self_host_linked_declaration_name(link, variant)
-  let mut is_some = name.equals(b"Some") || name.ends_with(b".Some")
   let mut result_argument = if name.equals(b"Err") || name.ends_with(b".Err") {
     1u32
-  } else if name.equals(b"Ok") || name.ends_with(b".Ok") ||
-    name.equals(b"Some") || name.ends_with(b".Some") {
+  } else if name.equals(b"Ok") || name.ends_with(b".Ok") {
     0u32
   } else {
     4294967295u32
@@ -26783,11 +26625,8 @@ fn self_host_linked_selected_variant_field_expected_nominal(
       let source = self_host_linked_module_name_at(module_, source_name)
       if source == "Err" {
         result_argument = 1u32
-      } else if source == "Ok" || source == "Some" {
+      } else if source == "Ok" {
         result_argument = 0u32
-        if source == "Some" {
-          is_some = true
-        }
       }
     }
   }
@@ -26821,10 +26660,6 @@ fn self_host_linked_selected_variant_field_expected_nominal(
     let owner_matches = if self_host_u32_equal(result_argument, 1u32) {
       result_owner_name.equals(b"Result") || result_owner_name.ends_with(
         b".Result",
-      )
-    } else if is_some {
-      result_owner_name.equals(b"Option") || result_owner_name.ends_with(
-        b".Option",
       )
     } else {
       result_owner_name.equals(b"Result") || result_owner_name.ends_with(

@@ -9,11 +9,10 @@ pub struct SelfHostRawArrayStorage {
   read: SelfHostRawArrayRead
 }
 
-// The existing synthetic text/collection prefix has 72 entries. Its five
-// erased-field boxes follow. Packed array types extend that prefix without
-// changing any existing adapter's identity. Function-value signatures follow.
+// Packed arrays follow the five scalar boxes. Derive the base from the
+// preceding type group so removing old runtime types cannot leave stale IDs.
 fn self_host_linked_packed_array_type_base(link: SelfHostPlannedProgramWasmGCLink) -> U32 {
-  self_host_linked_text_runtime_base(link) + 77u32
+  self_host_linked_scalar_box_runtime_base(link) + 5u32
 }
 
 fn self_host_linked_function_value_type_base(link: SelfHostPlannedProgramWasmGCLink) -> U32 {

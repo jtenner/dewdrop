@@ -244,6 +244,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
   must not change compiler rules.
+  Option now uses ordinary declared enum storage in the self-host compiler.
+  Its adapter tags, Some/None physical spelling recovery, and eight unused
+  runtime types are removed. Source-fragment variant operands use frozen
+  carriers, including raw array reads. Result and collection work remains.
+  See the [Option layout log](docs/research/option-declared-layout-2026-09-09.md).
   Removed three obsolete global variant-name searches and their dead fallback
   tails. Runtime variant selectors retain typed declaration adapter metadata;
   missing-pattern diagnostics no longer guess a physical type by name. Runtime

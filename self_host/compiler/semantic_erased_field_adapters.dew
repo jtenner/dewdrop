@@ -130,7 +130,7 @@ fn self_host_linked_scalar_box_type(link: SelfHostPlannedProgramWasmGCLink, carr
     SelfHostWasmBodyCarrier::V128BodyCarrier => 4u32
     _ => return Option::None
   }
-  Option::Some(self_host_linked_text_runtime_base(link) + 72u32 + offset)
+  Option::Some(self_host_linked_scalar_box_runtime_base(link) + offset)
 }
 
 fn self_host_body_field_read_carrier(

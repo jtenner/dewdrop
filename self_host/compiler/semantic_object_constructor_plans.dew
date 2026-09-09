@@ -52,31 +52,6 @@ fn self_host_plan_object_constructor(link: SelfHostPlannedProgramWasmGCLink, mod
     SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(value, _, _) => value
     _ => self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, 1u64, 0u64, 13u64)
   }
-  // The existing empty-Option ABI adapter has no source fragment. Its explicit
-  // declaration certificate supplies a zero-operand recipe, not a name lookup.
-  match link.runtime_variant_adapters.get(declaration) {
-    Option::Some(adapter) => if adapter is SelfHostRuntimeVariantAdapter::RuntimeOptionNone {
-      if !self_host_array_span_is_valid(fields.start, fields.length, module_.object_fields.length()) {
-        self_host_constructor_field_failure(module_, body, expression, 6u32, 101u32, u32_into_u64(module_.object_fields.length()), u32_into_u64(fields.length), u32_into_u64(fields.start))
-      }
-      if fields.length != 0u32 {
-        self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, 0u64, u32_into_u64(fields.length), 21u64)
-      }
-      let expected = self_host_linked_array_runtime_base(link) + 10u32
-      if type_index != expected {
-        self_host_constructor_field_failure(module_, body, expression, 6u32, 608u32, u32_into_u64(expected), u32_into_u64(type_index), 22u64)
-      }
-      constructors.push(SelfHostPhysicalObjectConstructorPlan::{
-        expression: expression
-        declaration: declaration
-        physical_type: type_index
-        source_fields: fields
-        operands: self_host_empty_hir_span(operands.length())
-      })
-      return
-    }
-    Option::None => {}
-  }
   let mut selected = Option::None
   for linked in link.types {
     if linked.type_index == type_index {

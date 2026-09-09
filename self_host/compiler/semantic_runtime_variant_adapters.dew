@@ -1,8 +1,6 @@
 open dew.std.option
 
 pub enum SelfHostRuntimeVariantAdapter {
-  RuntimeOptionNone
-  RuntimeOptionSome
   RuntimeResultOk
   RuntimeResultErr
 }
@@ -28,22 +26,14 @@ fn self_host_plan_runtime_variant_adapters(
   let _ = while module_index {
     current => if current < program.module_paths.length() {
       let path = program.module_paths[current]
-      if path == "dew.std.option" || path == "dew.std.result" {
+      if path == "dew.std.result" {
         let module_ = program.modules.at(current)
         for source in self_host_runtime_adapter_variants(module_) {
           let variant = self_host_collected_variant_identity(source)
           let owner = self_host_runtime_adapter_owner(module_, variant.declaration)
           let owner_name = module_.name(owner.name)
           let name = module_.name(variant.name)
-          let adapter = if path == "dew.std.option" && owner_name == "Option" {
-            if name == "None" {
-              Option::Some(SelfHostRuntimeVariantAdapter::RuntimeOptionNone)
-            } else if name == "Some" {
-              Option::Some(SelfHostRuntimeVariantAdapter::RuntimeOptionSome)
-            } else {
-              Option::None
-            }
-          } else if path == "dew.std.result" && owner_name == "Result" {
+          let adapter = if owner_name == "Result" {
             if name == "Ok" {
               Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultOk)
             } else if name == "Err" {
@@ -56,13 +46,8 @@ fn self_host_plan_runtime_variant_adapters(
           }
           match adapter {
             Option::Some(value) => {
-              let empty = value is SelfHostRuntimeVariantAdapter::RuntimeOptionNone
-              let valid = if empty {
-                variant.kind is SelfHostCollectedVariantKind::UnitVariantDecl
-              } else {
-                (variant.kind is SelfHostCollectedVariantKind::TupleVariantDecl) &&
-                  self_host_u32_equal(variant.payload_types.length, 1u32)
-              }
+              let valid = (variant.kind is SelfHostCollectedVariantKind::TupleVariantDecl) &&
+                self_host_u32_equal(variant.payload_types.length, 1u32)
               let _ = self_host_assert_compiler_invariant(valid, "runtime variant adapter has an invalid payload declaration")
               adapters[variant.id] = value
             }

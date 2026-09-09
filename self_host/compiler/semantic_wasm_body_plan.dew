@@ -1725,21 +1725,12 @@ fn self_host_body_seed_expression(
     ) => {
       constructor_selection = true
       carrier = SelfHostWasmBodyCarrier::EqRefBodyCarrier
-      let runtime_none = match link.runtime_variant_adapters.get(variant) {
-        Option::Some(SelfHostRuntimeVariantAdapter::RuntimeOptionNone) => true
-        _ => false
-      }
-      if runtime_none {
-        selected_type_index = self_host_linked_array_runtime_base(link) + 10u32
-        physical_heap_type = selected_type_index
-      } else {
-        match indexes.type_by_variant.get(variant) {
-          Option::Some(value) => {
-            selected_type_index = value
-            physical_heap_type = value
-          }
-          Option::None => {}
+      match indexes.type_by_variant.get(variant) {
+        Option::Some(value) => {
+          selected_type_index = value
+          physical_heap_type = value
         }
+        Option::None => {}
       }
     }
     SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _, _) => match self_host_body_indexed_field(
@@ -5806,46 +5797,7 @@ fn self_host_plan_physical_body_with_signature(
                         }
                         _ => SelfHostPlannedValueShape::ErrorPlannedValueShape
                       }
-                      let physical_payload_hint = if pattern_adapter is Option::Some(SelfHostRuntimeVariantAdapter::RuntimeOptionSome) {
-                        match self_host_linked_match_binding_use_shape(
-                          link,
-                          module_,
-                          body,
-                          linked_function.specialization,
-                          arms,
-                        ) {
-                          Option::Some(shape) => if self_host_physical_scalar_shape(
-                            shape,
-                          ) is SelfHostPlannedValueShape::RefPlannedValueShape {
-                            shape
-                          } else {
-                            match self_host_linked_match_subject_receiver_element_shape(
-                              link,
-                              module_,
-                              body,
-                              subject,
-                            ) {
-                              Option::Some(receiver_shape) => receiver_shape
-                              Option::None => if !(
-                                shape is SelfHostPlannedValueShape::ErrorPlannedValueShape
-                              ) {
-                                shape
-                              } else {
-                                generic_payload_hint
-                              }
-                            }
-                          }
-                          Option::None => match self_host_linked_match_subject_receiver_element_shape(
-                            link,
-                            module_,
-                            body,
-                            subject,
-                          ) {
-                            Option::Some(shape) => shape
-                            Option::None => generic_payload_hint
-                          }
-                        }
-                      } else if (pattern_adapter is Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultOk) || pattern_adapter is Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultErr)) && !(
+                      let physical_payload_hint = if (pattern_adapter is Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultOk) || pattern_adapter is Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultErr)) && !(
                         declared_payload_hint is SelfHostPlannedValueShape::ErrorPlannedValueShape
                       ) {
                         declared_payload_hint

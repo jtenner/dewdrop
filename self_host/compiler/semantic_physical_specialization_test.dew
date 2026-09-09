@@ -574,13 +574,16 @@ test "a pattern constructor cannot replace a different subject type" {
   assert(found, "different nominal owners must produce a type constraint diagnostic")
 }
 
-test "standard Option scalar payloads use their runtime adapter" {
+test "standard Option scalar payloads use ordinary declared enum storage" {
   let link = self_host_physical_test_named_import_link(
     "dew.std.option",
     b"pub enum Option<t> {\n  None\n  Some(t)\n}\n",
     b"open dew.std.option\npub fn run(value: Option<U32>) -> U32 {\n  match value {\n    Option::Some(index) => index\n    Option::None => 0u32\n  }\n}\n",
   )
   self_host_physical_test_assert_clean_inference(link)
+  for variant in link.fragments.specialization.lowering.modules[0u32].type_layouts.variants {
+    assert(!link.runtime_variant_adapters.contains_key(variant.variant), "Option declarations must not select a private runtime adapter")
+  }
   let plan = self_host_plan_program_wasm_bodies(link)
   assert(plan.bodies.length() == 1u32, "Option reader must be planned")
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
@@ -599,8 +602,18 @@ test "opened imported variants retain unqualified constructor identity" {
     match pattern.source {
       SelfHostHirPattern::TuplePattern(_, _, _) => {
         let declaration = self_host_pattern_constructor_declaration(module_, pattern)
-        assert(link.runtime_variant_adapters.contains_key(declaration), "unqualified Some must have a selected declaration")
-        assert(self_host_linked_pattern_variant_type(link, module_, pattern, SelfHostPlannedValueShape::U32PlannedValueShape, 0u64) is Option::Some(_), "emission must use that selected runtime adapter")
+        assert(declaration != 0u64 && !link.runtime_variant_adapters.contains_key(declaration), "unqualified Some must retain a normal declaration without an adapter")
+        let expected = match self_host_linked_variant_type_index(link, declaration) {
+          Option::Some(value) => value
+          Option::None => {
+            assert(false, "the selected source variant must have a fragment")
+            4294967295u32
+          }
+        }
+        match self_host_linked_pattern_variant_type(link, module_, pattern, SelfHostPlannedValueShape::U32PlannedValueShape, 0u64) {
+          Option::Some(actual) => assert(actual == expected, "emission uses the selected source fragment")
+          Option::None => assert(false, "selected source variant is required")
+        }
         selected = selected + 1u32
       }
       _ => {}

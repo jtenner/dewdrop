@@ -8,8 +8,7 @@ fn self_host_pattern_runtime_payload_argument(
   let declaration = self_host_pattern_constructor_declaration(module_, pattern)
   match link.runtime_variant_adapters.get(declaration) {
     Option::Some(adapter) => match adapter {
-      SelfHostRuntimeVariantAdapter::RuntimeOptionNone => Option::None
-      SelfHostRuntimeVariantAdapter::RuntimeOptionSome, SelfHostRuntimeVariantAdapter::RuntimeResultOk => Option::Some(0u32)
+      SelfHostRuntimeVariantAdapter::RuntimeResultOk => Option::Some(0u32)
       SelfHostRuntimeVariantAdapter::RuntimeResultErr => Option::Some(1u32)
     }
     Option::None => Option::None

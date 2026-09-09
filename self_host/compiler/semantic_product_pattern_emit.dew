@@ -26,7 +26,7 @@ fn self_host_product_pattern_pair_type(link: SelfHostPlannedProgramWasmGCLink, f
   } else {
     5i32
   }
-  self_host_linked_array_runtime_base(link) + 30u32 + self_host_i32_to_u32(left * 6i32 + right)
+  self_host_linked_pair_runtime_base(link) + self_host_i32_to_u32(left * 6i32 + right)
 }
 
 fn self_host_product_pattern_type(link: SelfHostPlannedProgramWasmGCLink, pattern: SelfHostPlannedPattern) -> Option<U32> {
