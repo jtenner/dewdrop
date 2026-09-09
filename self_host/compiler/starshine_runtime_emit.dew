@@ -98,12 +98,9 @@ fn self_host_linked_array_wrapper_type(
   self_host_linked_array_runtime_base(link) + 6u32
 }
 
-fn self_host_linked_result_runtime_base(link: SelfHostPlannedProgramWasmGCLink) -> U32 {
-  self_host_linked_array_runtime_base(link) + 9u32
-}
 
 fn self_host_linked_pair_runtime_base(link: SelfHostPlannedProgramWasmGCLink) -> U32 {
-  self_host_linked_result_runtime_base(link) + 13u32
+  self_host_linked_array_runtime_base(link) + 9u32
 }
 
 fn self_host_linked_scalar_box_runtime_base(link: SelfHostPlannedProgramWasmGCLink) -> U32 {
@@ -143,79 +140,7 @@ fn self_host_linked_append_array_backing_type(
   )
 }
 
-fn self_host_linked_append_runtime_variant_subtype(
-  rec_types: StarshineRecTypes,
-  base: U32,
-  value_type: Option<StarshineValue>,
-) -> Unit {
-  let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
-  match value_type {
-    Option::Some(value) => StarshineFfi.ffi_ffi_bridge_field_types_push(
-      fields,
-      StarshineFfi.ffi_lib_FieldType_new(
-        StarshineFfi.ffi_lib_StorageType_val_type(value),
-        StarshineFfi.ffi_lib_Mut_const_(),
-      ),
-    )
-    Option::None => {}
-  }
-  let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
-  StarshineFfi.ffi_ffi_bridge_type_indices_push(
-    supers,
-    StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(base)),
-  )
-  StarshineFfi.ffi_ffi_bridge_rec_types_push(
-    rec_types,
-    StarshineFfi.ffi_lib_RecType_new(
-      StarshineFfi.ffi_lib_SubType_new(
-        1i32,
-        supers,
-        StarshineFfi.ffi_lib_CompType_struct_(fields),
-        wasm_ref_null(),
-      ),
-    ),
-  )
-}
 
-fn self_host_linked_append_result_error_runtime_subtype(
-  rec_types: StarshineRecTypes,
-  base: U32,
-  value_type: StarshineValue,
-) -> Unit {
-  let fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
-  StarshineFfi.ffi_ffi_bridge_field_types_push(
-    fields,
-    StarshineFfi.ffi_lib_FieldType_new(
-      StarshineFfi.ffi_lib_StorageType_val_type(value_type),
-      StarshineFfi.ffi_lib_Mut_const_(),
-    ),
-  )
-  StarshineFfi.ffi_ffi_bridge_field_types_push(
-    fields,
-    StarshineFfi.ffi_lib_FieldType_new(
-      StarshineFfi.ffi_lib_StorageType_val_type(
-        StarshineFfi.ffi_lib_ValType_i32(),
-      ),
-      StarshineFfi.ffi_lib_Mut_const_(),
-    ),
-  )
-  let supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
-  StarshineFfi.ffi_ffi_bridge_type_indices_push(
-    supers,
-    StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(base)),
-  )
-  StarshineFfi.ffi_ffi_bridge_rec_types_push(
-    rec_types,
-    StarshineFfi.ffi_lib_RecType_new(
-      StarshineFfi.ffi_lib_SubType_new(
-        1i32,
-        supers,
-        StarshineFfi.ffi_lib_CompType_struct_(fields),
-        wasm_ref_null(),
-      ),
-    ),
-  )
-}
 
 fn self_host_linked_append_array_runtime_types(
   link: SelfHostPlannedProgramWasmGCLink,
@@ -337,80 +262,6 @@ fn self_host_linked_append_array_runtime_types(
         wasm_ref_null(),
       ),
     ),
-  )
-  let result_base = self_host_linked_result_runtime_base(link)
-  let result_base_fields = StarshineFfi.ffi_ffi_bridge_field_types_new()
-  let result_base_supers = StarshineFfi.ffi_ffi_bridge_type_indices_new()
-  StarshineFfi.ffi_ffi_bridge_rec_types_push(
-    rec_types,
-    StarshineFfi.ffi_lib_RecType_new(
-      StarshineFfi.ffi_lib_SubType_new(
-        0i32,
-        result_base_supers,
-        StarshineFfi.ffi_lib_CompType_struct_(result_base_fields),
-        wasm_ref_null(),
-      ),
-    ),
-  )
-  self_host_linked_append_runtime_variant_subtype(
-    rec_types,
-    result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_i32()),
-  )
-  self_host_linked_append_runtime_variant_subtype(
-    rec_types,
-    result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_i64()),
-  )
-  self_host_linked_append_runtime_variant_subtype(
-    rec_types,
-    result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_f32()),
-  )
-  self_host_linked_append_runtime_variant_subtype(
-    rec_types,
-    result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_f64()),
-  )
-  self_host_linked_append_runtime_variant_subtype(
-    rec_types,
-    result_base,
-    Option::Some(StarshineFfi.ffi_lib_ValType_v128()),
-  )
-  self_host_linked_append_runtime_variant_subtype(
-    rec_types,
-    result_base,
-    Option::Some(self_host_linked_eqref_value_type()),
-  )
-  self_host_linked_append_result_error_runtime_subtype(
-    rec_types,
-    result_base,
-    StarshineFfi.ffi_lib_ValType_i32(),
-  )
-  self_host_linked_append_result_error_runtime_subtype(
-    rec_types,
-    result_base,
-    StarshineFfi.ffi_lib_ValType_i64(),
-  )
-  self_host_linked_append_result_error_runtime_subtype(
-    rec_types,
-    result_base,
-    StarshineFfi.ffi_lib_ValType_f32(),
-  )
-  self_host_linked_append_result_error_runtime_subtype(
-    rec_types,
-    result_base,
-    StarshineFfi.ffi_lib_ValType_f64(),
-  )
-  self_host_linked_append_result_error_runtime_subtype(
-    rec_types,
-    result_base,
-    StarshineFfi.ffi_lib_ValType_v128(),
-  )
-  self_host_linked_append_result_error_runtime_subtype(
-    rec_types,
-    result_base,
-    self_host_linked_eqref_value_type(),
   )
   let mut pair = 0u32
   let _ = while pair {

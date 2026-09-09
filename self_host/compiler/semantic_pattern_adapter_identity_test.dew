@@ -1,5 +1,24 @@
 open dew.std.option
 
+test "variant payload parameters follow declared positions without names" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"enum Payload<a, b> {\n  Err(I32, b, a)\n}\npub fn run(value: Payload<I32, I64>) -> I64 {\n  match value {\n    Payload::Err(_, item, _) => item\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let variant = module_.type_layouts.variants[0u32].variant
+  assert(self_host_linked_variant_payload_parameter(link, variant, 0u32) is Option::None, "concrete payload is not an owner type parameter")
+  match self_host_linked_variant_payload_parameter(link, variant, 1u32) {
+    Option::Some(value) => assert(value == 1u32, "second payload uses declared parameter b")
+    Option::None => assert(false, "second payload must have a declared parameter")
+  }
+  match self_host_linked_variant_payload_parameter(link, variant, 2u32) {
+    Option::Some(value) => assert(value == 0u32, "third payload uses declared parameter a")
+    Option::None => assert(false, "third payload must have a declared parameter")
+  }
+  assert(self_host_linked_variant_payload_parameter(link, variant, 3u32) is Option::None, "missing payload has no parameter")
+}
+
 test "named struct patterns select the physical type of their declaration" {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
     b"struct Payload {\n  value: I32\n}\npub fn run(value: Payload) -> I32 {\n  match value {\n    Payload {\n      value: item\n    } => item\n  }\n}\n",
@@ -72,6 +91,22 @@ test "Result payload evidence follows reordered declared type parameters" {
   )
   self_host_physical_test_assert_clean_inference(link)
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
+  for pattern in module_.patterns {
+    if pattern.source is SelfHostHirPattern::TuplePattern(_, _, _) {
+      let declaration = self_host_pattern_constructor_declaration(module_, pattern)
+      let expected = match self_host_linked_variant_type_index(link, declaration) {
+        Option::Some(value) => value
+        Option::None => {
+          assert(false, "selected Result variant must have a source fragment")
+          4294967295u32
+        }
+      }
+      match self_host_linked_pattern_variant_type(link, module_, pattern, pattern.shape, 0u64) {
+        Option::Some(actual) => assert(actual == expected, "Result must use the selected source fragment, without an added identity field")
+        Option::None => assert(false, "Result pattern must have a physical type")
+      }
+    }
+  }
   self_host_assert_selected_call_payload(link, module_, 0u32, SelfHostWasmBodyCarrier::I64BodyCarrier)
   self_host_assert_selected_call_payload(link, module_, 1u32, SelfHostWasmBodyCarrier::I32BodyCarrier)
   let plan = self_host_plan_program_wasm_bodies(link)
@@ -108,63 +143,28 @@ fn self_host_assert_selected_call_payload(
   assert(checked == 1u32, "inspect the generic select call")
 }
 
-test "runtime payload seeding does not claim a user Some variant" {
-  let link = self_host_plan_program_wasmgc_link(
-    self_host_physical_test_fragments(
-      b"enum Local<t> {\n  Some(t)\n}\npub fn run(value: Local<U32>) -> U32 {\n  match value {\n    Local::Some(item) => item\n  }\n}\n",
-    ),
-    false,
-  )
+test "user generic payloads use their declared storage without runtime adapters" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"enum Local<t> {\n  Some(t)\n}\npub fn run(value: Local<U32>) -> U32 {\n  match value {\n    Local::Some(item) => item\n  }\n}\n",
+  ), false)
   self_host_physical_test_assert_clean_inference(link)
-  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[0u32])
-  let body = module_.bodies[0u32]
-  let indexes = self_host_build_physical_body_indexes(link)
-  let values = []
-  let carriers = []
-  let mut offset = 0u32
-  let _ = while offset {
-    current if current < body.locals.length => {
-      values.push(self_host_body_physical_value(
-        indexes,
-        module_.locals[body.locals.start + current].type_,
-        SelfHostWasmBodyCarrier::UnresolvedBodyCarrier,
-        0u64,
-      ))
-      carriers.push(SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
-      continue current + 1u32
-    }
-    _ => break self_host_semantic_unit()
-  }
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
   let mut checked = 0u32
-  let mut pattern_offset = 0u32
-  let _ = while pattern_offset {
-    current if current < body.patterns.length => {
-      let index = body.patterns.start + current
-      let pattern = module_.patterns[index]
-      if pattern.source is SelfHostHirPattern::TuplePattern(_, _, _) {
-        let declaration = self_host_pattern_constructor_declaration(module_, pattern)
-        assert(!link.runtime_variant_adapters.contains_key(declaration), "user constructor has no runtime adapter")
-        assert(!self_host_body_seed_match_payload_binding(
-          link,
-          indexes,
-          module_,
-          body,
-          index,
-          4294967295u32,
-          module_.locals[body.locals.start].type_,
-          4294967295u32,
-          4294967295u32,
-          values,
-          carriers,
-        ), "runtime adapter seeding must not use a user variant spelling")
-        checked = checked + 1u32
+  for pattern in module_.patterns {
+    if pattern.source is SelfHostHirPattern::TuplePattern(_, _, _) {
+      let declaration = self_host_pattern_constructor_declaration(module_, pattern)
+      let type_ = match self_host_linked_variant_type_index(link, declaration) {
+        Option::Some(value) => value
+        Option::None => {
+          assert(false, "user variant must have a declared physical type")
+          4294967295u32
+        }
       }
-      continue current + 1u32
+      assert(self_host_linked_pattern_payload_box_type(link, type_, 0u32, SelfHostWasmBodyCarrier::I32BodyCarrier) is Option::Some(_), "declared generic payload requires a scalar box")
+      checked = checked + 1u32
     }
-    _ => break self_host_semantic_unit()
   }
   assert(checked == 1u32, "inspect the selected user Some pattern")
-  for carrier in carriers {
-    assert(carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, "runtime adapter helper must leave user values unchanged")
-  }
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
 }

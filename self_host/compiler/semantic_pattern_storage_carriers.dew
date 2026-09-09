@@ -66,27 +66,5 @@ fn self_host_unit_pattern_binding_has_storage(
   if carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
     return true
   }
-  // These existing adapter types live outside the source fragment table. Their
-  // reference payload is a null marker for Unit. Require the selected variant
-  // identity and its exact Unit layout, not merely an eqref carrier or a name.
-  let declaration = self_host_pattern_constructor_declaration(module_, pattern)
-  match link.runtime_variant_adapters.get(declaration) {
-    Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultOk),
-    Option::Some(SelfHostRuntimeVariantAdapter::RuntimeResultErr) => {
-      match pattern.source {
-        SelfHostHirPattern::TuplePattern(_, children, _) => if children.length != 1u32 {
-          return false
-        }
-        _ => return false
-      }
-      if field_index != self_host_linked_variant_payload_field_index(link, type_index, 0u32) {
-        return false
-      }
-      match self_host_linked_pattern_variant_type(link, module_, pattern, shape, 0u64) {
-        Option::Some(expected) => expected == type_index
-        Option::None => false
-      }
-    }
-    _ => false
-  }
+  false
 }

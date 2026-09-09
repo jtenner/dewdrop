@@ -2,6 +2,148 @@ fn identity<t>(value: t) -> t {
   value
 }
 
+// This shared single-module fixture has no standard-module imports.
+// Match the public Result declaration to exercise ordinary enum storage.
+enum Result<t, e> {
+  Ok(t)
+  Err(e)
+}
+
+fn result_ok<t, e>(value: t) -> Result<t, e> {
+  Result::Ok(value)
+}
+
+fn result_err<t, e>(value: e) -> Result<t, e> {
+  Result::Err(value)
+}
+
+pub fn result_ok_callback(value: I64) -> I64 {
+  match result_ok::<I64, I32>(value) {
+    Result::Ok(item) => item
+    Result::Err(_) => 0i64
+  }
+}
+
+pub fn result_err_callback(value: I64) -> I64 {
+  match result_err::<I32, I64>(value) {
+    Result::Err(item) => item
+    Result::Ok(_) => 0i64
+  }
+}
+
+pub fn result_nested_callback(value: I64) -> I64 {
+  match result_err::<I32, Result<I64, I32>>(result_ok::<I64, I32>(value)) {
+    Result::Err(Result::Ok(item)) => item
+    _ => 0i64
+  }
+}
+
+pub fn result_unit_callback(value: I64) -> I64 {
+  let mut count = 0i32
+  let tick = fn() -> Unit {
+    count = count + 1i32
+  }
+  let first = result_ok::<Unit, I64>(tick())
+  let second = result_err::<I64, Unit>(tick())
+  match first {
+    Result::Ok(effect) => {
+      let _ = effect
+      match second {
+        Result::Err(other) => {
+          let _ = other
+          if count == 2i32 {
+            value
+          } else {
+            0i64
+          }
+        }
+        _ => 0i64
+      }
+    }
+    _ => 0i64
+  }
+}
+
+pub fn result_reference_callback(value: I64) -> I64 {
+  match result_err::<I32, Item>(Item::{
+    value: value
+  }) {
+    Result::Err(item) => item.value
+    _ => 0i64
+  }
+}
+
+pub fn result_function_callback(value: I64) -> I64 {
+  match result_err::<I32, fn(I64) -> I64>(reader::<I64>()) {
+    Result::Err(callback) => callback(value)
+    _ => 0i64
+  }
+}
+
+pub fn result_vector_callback(value: I64) -> I64 {
+  match result_err::<I64, I32x4>(enum_vector_splat(7i32)) {
+    Result::Err(vector) => {
+      if enum_vector_lane(vector) == 7i32 {
+        value
+      } else {
+        0i64
+      }
+    }
+    _ => 0i64
+  }
+}
+
+pub fn result_float_callback(value: I64) -> I64 {
+  match result_ok::<F32, F64>(1.25f32) {
+    Result::Ok(left) => {
+      match result_err::<F32, F64>(2.5f64) {
+        Result::Err(right) => {
+          if left == 1.25f32 && right == 2.5f64 {
+            value
+          } else {
+            0i64
+          }
+        }
+        _ => 0i64
+      }
+    }
+    _ => 0i64
+  }
+}
+
+enum ReorderedResult<a, b> {
+  Ok(b)
+  Err(a)
+}
+
+fn reordered_ok(value: I64) -> ReorderedResult<I32, I64> {
+  ReorderedResult::Ok(value)
+}
+
+fn reordered_err(value: I64) -> ReorderedResult<I64, I32> {
+  ReorderedResult::Err(value)
+}
+
+pub fn result_name_collision_callback(value: I64) -> I64 {
+  let first = reordered_ok(value)
+  let second = reordered_err(value)
+  match first {
+    ReorderedResult::Ok(left) => {
+      match second {
+        ReorderedResult::Err(right) => {
+          if left == right {
+            right
+          } else {
+            0i64
+          }
+        }
+        _ => 0i64
+      }
+    }
+    _ => 0i64
+  }
+}
+
 enum GenericEnvelope<t> {
   Hold(t)
   Empty

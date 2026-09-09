@@ -94,7 +94,6 @@ pub struct SelfHostPlannedProgramWasmGCLink {
   global_count: U32
   array_module_id: U64
   map_module_id: U64
-  runtime_variant_adapters: Map<U64, SelfHostRuntimeVariantAdapter>
   diagnostics: Array<SelfHostProgramWasmGCLinkDiagnostic>
 }
 
@@ -1201,7 +1200,6 @@ fn self_host_plan_program_wasmgc_link(
     global_count: self_host_initializer_global_count(initializers)
     array_module_id: array_module_id
     map_module_id: map_module_id
-    runtime_variant_adapters: self_host_plan_runtime_variant_adapters(fragments)
     diagnostics: diagnostics
   }
 }

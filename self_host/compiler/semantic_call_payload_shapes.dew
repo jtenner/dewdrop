@@ -1,19 +1,5 @@
 open dew.std.option
 
-fn self_host_pattern_runtime_payload_argument(
-  link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  pattern: SelfHostPlannedPattern,
-) -> Option<U32> {
-  let declaration = self_host_pattern_constructor_declaration(module_, pattern)
-  match link.runtime_variant_adapters.get(declaration) {
-    Option::Some(adapter) => match adapter {
-      SelfHostRuntimeVariantAdapter::RuntimeResultOk => Option::Some(0u32)
-      SelfHostRuntimeVariantAdapter::RuntimeResultErr => Option::Some(1u32)
-    }
-    Option::None => Option::None
-  }
-}
 
 fn self_host_linked_physical_result_argument_shape(
   link: SelfHostPlannedProgramWasmGCLink,

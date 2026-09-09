@@ -582,7 +582,7 @@ test "standard Option scalar payloads use ordinary declared enum storage" {
   )
   self_host_physical_test_assert_clean_inference(link)
   for variant in link.fragments.specialization.lowering.modules[0u32].type_layouts.variants {
-    assert(!link.runtime_variant_adapters.contains_key(variant.variant), "Option declarations must not select a private runtime adapter")
+    assert(self_host_linked_variant_type_index(link, variant.variant) is Option::Some(_), "Option declarations must have source fragments")
   }
   let plan = self_host_plan_program_wasm_bodies(link)
   assert(plan.bodies.length() == 1u32, "Option reader must be planned")
@@ -602,7 +602,7 @@ test "opened imported variants retain unqualified constructor identity" {
     match pattern.source {
       SelfHostHirPattern::TuplePattern(_, _, _) => {
         let declaration = self_host_pattern_constructor_declaration(module_, pattern)
-        assert(declaration != 0u64 && !link.runtime_variant_adapters.contains_key(declaration), "unqualified Some must retain a normal declaration without an adapter")
+        assert(declaration != 0u64, "unqualified Some must retain a normal declaration")
         let expected = match self_host_linked_variant_type_index(link, declaration) {
           Option::Some(value) => value
           Option::None => {

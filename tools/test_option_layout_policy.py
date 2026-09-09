@@ -12,7 +12,7 @@ COMPILER = ROOT / "self_host" / "compiler"
 class OptionLayoutPolicy(unittest.TestCase):
     def test_no_option_adapter_or_spelling_dispatch(self):
         for name in (
-            "semantic_runtime_variant_adapters.dew",
+            "semantic_pattern_constructor_identity.dew",
             "semantic_wasm_body_plan.dew",
             "semantic_pattern_storage_carriers.dew",
             "semantic_call_payload_shapes.dew",

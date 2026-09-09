@@ -247,14 +247,18 @@ Correctness comes first. Keep these timing defects visible after query completio
   Option now uses ordinary declared enum storage in the self-host compiler.
   Its adapter tags, Some/None physical spelling recovery, and eight unused
   runtime types are removed. Source-fragment variant operands use frozen
-  carriers, including raw array reads. Result and collection work remains.
+  carriers, including raw array reads.
   See the [Option layout log](docs/research/option-declared-layout-2026-09-09.md).
+  Result now uses its declared enum storage too. Its thirteen runtime types,
+  hidden error-identity operand, and the variant adapter registry are removed.
+  Selected declaration and payload position replace Ok/Err spelling recovery.
+  Collection representation and the remaining name recovery still need work.
+  See the [Result layout log](docs/research/result-declared-layout-2026-09-09.md).
   Removed three obsolete global variant-name searches and their dead fallback
-  tails. Runtime variant selectors retain typed declaration adapter metadata;
-  missing-pattern diagnostics no longer guess a physical type by name. Runtime
-  adapter layouts still remain. See the
+  tails. Missing-pattern diagnostics no longer guess a physical type by name.
+  See the
   [variant lookup log](docs/research/variant-lookup-cleanup-2026-09-08.md).
-  Active runtime payload seeding now uses selected adapter IDs. Exact call
+  The former runtime-only payload seeding is removed. Exact call
   payloads follow the declared result's substituted type arguments, not a
   fixed generic slot or a get suffix. Shared receiver recovery still remains.
   See the [payload identity log](docs/research/pattern-payload-identity-2026-09-08.md).

@@ -1,4 +1,4 @@
-"""Physical variant selection uses declarations and explicit adapter metadata."""
+"""Physical variant selection uses source declarations, not runtime adapters."""
 
 import unittest
 from pathlib import Path
@@ -17,28 +17,23 @@ class VariantLookupPolicyTests(unittest.TestCase):
                 self.assertTrue(name not in source,
                                 f"obsolete physical variant name search: {name}")
 
-    def test_runtime_constructor_adapters_do_not_dispatch_on_strings(self):
+    def test_variant_constructors_use_declared_fragments(self):
         source = SOURCE.read_text()
         start = source.index("fn self_host_linked_expression_variant_type(")
         end = source.index("\nfn ", start + 3)
         function = source[start:end]
-        self.assertTrue("let adapter = match link.runtime_variant_adapters.get(variant_declaration)" in function,
-                        "constructor adapter must retain its typed declaration metadata")
+        self.assertIn("self_host_linked_variant_type_index(link, variant_declaration)", function,
+                      "constructor must use its selected source fragment")
+        self.assertNotIn("runtime_variant_adapters", function)
         self.assertTrue("let name =" not in function,
                         "constructor adapter must not turn its identity into a spelling")
 
-    def test_body_payload_seeding_uses_adapter_identity(self):
+    def test_runtime_only_payload_seeding_is_removed(self):
         source = (ROOT / "self_host/compiler/semantic_wasm_body_plan.dew").read_text()
-        start = source.index("fn self_host_body_seed_match_payload_binding(")
-        end = source.index("\nfn ", start + 3)
-        function = source[start:end]
-        self.assertTrue("self_host_pattern_runtime_payload_argument(" in function,
-                        "runtime payload seeding requires a selected adapter")
-        for heuristic in ("self_host_linked_pattern_name(", 'ends_with(b"get")',
-                          "self_host_linked_physical_function_specialization_shape_at("):
-            with self.subTest(heuristic=heuristic):
-                self.assertTrue(heuristic not in function,
-                                f"payload seeding contains a spelling or slot guess: {heuristic}")
+        self.assertNotIn("self_host_body_seed_match_payload_binding(", source)
+        self.assertNotIn("self_host_pattern_runtime_payload_argument(", source)
+        self.assertIn("self_host_body_pattern_payload_value(", source,
+                      "ordinary source payload planning remains required")
 
     def test_missing_payload_does_not_use_a_variant_spelling(self):
         source = (ROOT / "self_host/compiler/semantic_wasm_body_plan.dew").read_text()

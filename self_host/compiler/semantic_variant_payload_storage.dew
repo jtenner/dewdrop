@@ -1,5 +1,44 @@
 // Generic erasure is permission granted by one declared payload position.
 // A different field of the same variant does not inherit that permission.
+fn self_host_linked_variant_payload_parameter(
+  link: SelfHostPlannedProgramWasmGCLink,
+  variant: U64,
+  position: U32,
+) -> Option<U32> {
+  let owner = match link.fragments.specialization.lowering.index.declaration_owner(variant) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let module_ = link.fragments.specialization.lowering.modules[owner]
+  let collected = link.fragments.specialization.lowering.collected.modules.at(owner)
+  for source in module_.type_layouts.variants {
+    if source.variant == variant {
+      let payload = match source.payload {
+        SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(value) => value
+        _ => return Option::None
+      }
+      if position >= payload.length || !self_host_array_span_is_valid(payload.start, payload.length, module_.type_layouts.payload_types.length()) {
+        return Option::None
+      }
+      let type_ = module_.type_layouts.payload_types[payload.start + position]
+      if type_ >= module_.resolved_types.types.length() {
+        return Option::None
+      }
+      let parameter = match module_.resolved_types.types[type_] {
+        SelfHostResolvedType::GenericParameterType(value) => value
+        _ => return Option::None
+      }
+      for generic in collected.generic_parameters {
+        if generic.id == parameter && generic.declaration == source.declaration {
+          return Option::Some(generic.index)
+        }
+      }
+      return Option::None
+    }
+  }
+  Option::None
+}
+
 fn self_host_linked_declared_variant_payload_shape(
   link: SelfHostPlannedProgramWasmGCLink,
   field: SelfHostPlannedWasmField,

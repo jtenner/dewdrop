@@ -19,6 +19,11 @@ result heap type. Emission consumes these records without nominal/name recovery.
 Option now uses its declared source fragments, including its zero-operand
 constructor; its private adapter and unused runtime types are removed. See
 [the Option layout log](../research/option-declared-layout-2026-09-09.md).
+Result also uses its source fragments. The runtime adapter registry, thirteen
+Result runtime types, and hidden error-identity operand are removed. Payload
+parameter lookup follows the selected declaration and payload position, not
+Ok/Err spelling. See
+[the Result layout log](../research/result-declared-layout-2026-09-09.md).
 Tuple-style variant calls, runtime trait capture, full reference assignability,
 and removal of other runtime adapters remain open. See
 [the object recipe log](../research/frozen-object-constructor-recipes-2026-09-08.md).

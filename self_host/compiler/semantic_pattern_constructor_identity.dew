@@ -1,0 +1,19 @@
+fn self_host_pattern_constructor_declaration(
+  module_: SelfHostPlannedModuleLowering,
+  pattern: SelfHostPlannedPattern,
+) -> U64 {
+  match pattern.selected_constructor {
+    SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(declaration, _, _) => return declaration
+    _ => {}
+  }
+  match pattern.source {
+    SelfHostHirPattern::TuplePattern(target, _, _) => if target < module_.patterns.length() {
+      match module_.patterns[target].selected_constructor {
+        SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(declaration, _, _) => return declaration
+        _ => {}
+      }
+    }
+    _ => {}
+  }
+  0u64
+}
