@@ -10818,6 +10818,10 @@ fn self_host_emit_linked_i32_expression(
               then_block,
               else_expression,
             ) => {
+              if !module_.expressions[condition].flow.falls_through {
+                self_host_linked_i32_schedule_expression(tasks, expression_depths, condition, destination, depth)
+                continue tasks.length()
+              }
               let consequent = StarshineFfi.ffi_ffi_bridge_instructions_new()
               let alternative = StarshineFfi.ffi_ffi_bridge_instructions_new()
               let discarded_unit_if = expression < discarded_expressions.length() && discarded_expressions[
@@ -11428,6 +11432,10 @@ fn self_host_emit_linked_i32_expression(
               value,
               arms,
             ) => {
+              if !module_.expressions[value].flow.falls_through {
+                self_host_linked_i32_schedule_expression(tasks, expression_depths, value, destination, depth)
+                continue tasks.length()
+              }
               let scratch = self_host_linked_i32_scratch_slot(
                   canonical_body_plan,
                   link,
@@ -11953,6 +11961,10 @@ fn self_host_emit_linked_i32_expression(
               initial,
               arms,
             ) => {
+              if !module_.expressions[initial].flow.falls_through {
+                self_host_linked_i32_schedule_expression(tasks, expression_depths, initial, destination, depth)
+                continue tasks.length()
+              }
               let scratch = self_host_linked_i32_scratch_slot(
                   canonical_body_plan,
                   link,

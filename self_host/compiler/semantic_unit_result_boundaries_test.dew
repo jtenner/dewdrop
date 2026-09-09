@@ -1,3 +1,32 @@
+test "Never control inputs do not constrain unused branches" {
+  for source in [
+    b"builtin stop() -> Never = \"unreachable\"\nfn truth(value: I32) -> Bool {\n  true\n}\npub fn run() -> I32 {\n  if truth(stop()) {\n    1i32\n  } else {\n    2i32\n  }\n}\n",
+    b"builtin stop() -> Never = \"unreachable\"\npub fn run() -> I32 {\n  match stop() {\n    _ => 1i32\n  }\n}\n",
+    b"builtin stop() -> Never = \"unreachable\"\npub fn run() -> I32 {\n  while stop() {\n    _ => break 1i32\n  }\n}\n",
+  ] {
+    let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source), false)
+    self_host_physical_test_assert_clean_inference(link)
+    let program = self_host_plan_program_wasm_bodies(link)
+    assert(program.diagnostics.length() == 0u32, "Never control input must not change unused branch evidence")
+    let module_ = link.fragments.specialization.lowering.modules[0u32]
+    let mut controls = 0u32
+    for body in program.bodies {
+      for expression in body.expressions {
+        match module_.expressions[expression.expression].kind {
+          SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _),
+          SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _),
+          SelfHostPlannedExpressionKind::PlannedWhileExpression(_, _, _) => {
+            assert(expression.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier, "control retains proven Never flow")
+            controls = controls + 1u32
+          }
+          _ => {}
+        }
+      }
+    }
+    assert(controls == 1u32, "one control expression checked")
+  }
+}
+
 test "Unit if boundaries retain child call carriers" {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(b"fn value() -> I64 {\n  7i64\n}\npub fn run(flag: Bool) -> I32 {\n  if flag {\n    value()\n  }\n  1\n}\n"), false)
   self_host_physical_test_assert_clean_inference(link)

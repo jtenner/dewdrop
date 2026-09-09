@@ -44,7 +44,36 @@ pub fn main(which: U32, flag: Bool) -> I32 {
     12u32 => unit_match_subject()
     13u32 => unit_loop_state()
     14u32 => unit_global_effects()
+    15u32 => never_if_condition()
+    16u32 => never_match_subject()
+    17u32 => never_loop_initial()
     _ => -1
+  }
+}
+
+builtin stop_control() -> Never = "unreachable"
+
+fn control_truth(value: I32) -> Bool {
+  true
+}
+
+fn never_if_condition() -> I32 {
+  if control_truth(stop_control()) {
+    1i32
+  } else {
+    2i32
+  }
+}
+
+fn never_match_subject() -> I32 {
+  match stop_control() {
+    _ => 1i32
+  }
+}
+
+fn never_loop_initial() -> I32 {
+  while stop_control() {
+    _ => break 1i32
   }
 }
 

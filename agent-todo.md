@@ -559,6 +559,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   [Unit pattern log](docs/research/pattern-unit-storage-2026-09-08.md).
 - [ ] Complete the emission shadow stack. Track operand types and control
   frames through each instruction, including unreachable code and adapters.
+  Non-returning `if` conditions, `match` subjects, and `while` initial values
+  now stop control emission and do not force unused branches to Never.
+  Shared runtime and planner checks cover all three forms; see the
+  [control-input log](docs/research/never-control-inputs-2026-09-09.md).
   Discard decisions now read checked frozen carriers, not source shapes or
   callable names. Missing/conflicting evidence is an error; an absent optional
   transfer payload schedules no expression. This is not the full instruction

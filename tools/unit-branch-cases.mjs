@@ -22,5 +22,11 @@ export function checkUnitBranches(exports) {
   assert.equal(exports.main(14, 0), 42, "Unit globals run their initializers and keep scalar global slots aligned");
   assert.equal(exports.main(14, 1), 42, "reading Unit globals does not run their initializers again");
   checks += 2;
+  for (const [index, name] of ["if condition", "match subject", "loop initial"].entries()) {
+    assert.throws(() => exports.main(index + 15, 0),
+      error => error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+      `Never ${name} traps before its branches run`);
+    checks++;
+  }
   return checks;
 }

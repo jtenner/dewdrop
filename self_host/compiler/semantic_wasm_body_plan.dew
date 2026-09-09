@@ -5219,10 +5219,10 @@ fn self_host_plan_physical_body_with_signature(
               }
             }
             SelfHostPlannedExpressionKind::PlannedIfExpression(
-              _,
+              condition,
               then_block,
               else_expression,
-            ) => if !self_host_body_expression_discards_result(link, module_, linked_function.specialization, current) {
+            ) => if module_.expressions[condition].flow.falls_through && !self_host_body_expression_discards_result(link, module_, linked_function.specialization, current) {
               let expected_carrier = expressions[slot].carrier
               if !(expected_carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) {
                 let then_tail = self_host_body_block_tail_expression(
@@ -5327,7 +5327,7 @@ fn self_host_plan_physical_body_with_signature(
             SelfHostPlannedExpressionKind::PlannedMatchExpression(
               subject,
               arms,
-            ) => {
+            ) => if module_.expressions[subject].flow.falls_through {
               let raw_subject_value = if subject >= body.expressions.start &&
                 subject < expression_end {
                 expressions[self_host_body_expression_slot(body, subject)].value
@@ -5671,10 +5671,15 @@ fn self_host_plan_physical_body_with_signature(
           )
         }
         SelfHostPlannedExpressionKind::PlannedWhileExpression(loop_control, initial, _) => if loop_control < control_states.length() {
+          let state_value = if module_.expressions[initial].flow.falls_through {
+            control_state_values[loop_control]
+          } else {
+            expressions[self_host_body_expression_slot(body, initial)].value
+          }
           self_host_body_add_scratch(
             scratches,
             expression_plan.expression,
-            self_host_body_marker_scratch_value(module_, body, expression_plan.expression, initial, control_state_values[loop_control]),
+            self_host_body_marker_scratch_value(module_, body, expression_plan.expression, initial, state_value),
             "loop state",
           )
         }
