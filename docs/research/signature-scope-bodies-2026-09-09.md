@@ -18,6 +18,7 @@ after correcting the test, the baseline passed 827 tests and failed the two
 missing-trap cases in 95.715 seconds. The fix passes 829 tests, 420 exact records,
 and all shared runtime checks in 95.462 seconds.
 
-The preceding callback-target commit passed clean bootstrap. This small follow-up
-has not yet had a separate clean bootstrap; the next emitter batch must include
-it. Runs above 30 seconds remain timing defects, not a reason to weaken checks.
+The following frozen-expression read batch passes clean bootstrap in 177.642
+seconds, covering this change too. Raw and linked compiler B/C outputs share
+SHA-256 `8546f30b3df6a8f9053e185a92212df600f09990cf542a074e30813f729a1383`.
+Runs above 30 seconds remain timing defects, not a reason to weaken checks.

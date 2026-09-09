@@ -11,6 +11,21 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "ABI-712 emitted lambda reads retain the parent declaration",
+    expected: [712, 7, 5100n, 5100n << 32n, 5100n << 32n, 1, 5n, 4n, 3n],
+  },
+  ...["emitted expression", "logical operand"].flatMap(reader => [
+    ["BOD-610", "require a body plan", 610, 1n, 0n, 0n],
+    ["BOD-610", "require expression evidence", 610, 1n, 0n, 1n],
+    ["BOD-610", "reject unknown carriers", 610, 1n, 0n, 2n],
+    ["BOD-610", "reject conflicting carriers", 610, 1n, 1n, 2n],
+    ["ABI-712", "require matching carrier copies", 712, 5n, 4n, 3n],
+    ["ARN-106", "require the selected specialization", 106, 0n, 4294967295n, 4n],
+  ].map(([prefix, title, code, expected, actual, detail]) => ({
+    name: `${prefix} ${reader} reads ${title}`,
+    expected: [code, 7, 5100n, 5100n << 32n, 5100n << 32n, 0, expected, actual, detail],
+  }))),
+  {
     name: "BOD-610 callback signature scopes require defined bodies",
     expected: [610, 7, 5100n, 5100n << 32n, 5100n << 32n, 4294967295, 1n, 0n, 0n],
   },

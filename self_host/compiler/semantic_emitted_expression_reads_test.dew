@@ -1,0 +1,105 @@
+// Both emitter readers must consume the frozen plan, not recover from source.
+fn self_host_test_frozen_expression_read(mutation: U32, logical: Bool) -> Unit {
+  let (link, plan) = self_host_test_discard_fixture()
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut canonical = Option::Some(plan)
+  let mut specialization = plan.specialization
+  if mutation == 1u32 {
+    canonical = Option::None
+  } else if mutation == 2u32 {
+    let _ = plan.expressions.pop()
+  } else if mutation == 3u32 {
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+  } else if mutation == 4u32 {
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::ConflictingBodyCarrier)
+  } else if mutation == 5u32 {
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::I32BodyCarrier)
+  } else if mutation == 6u32 {
+    specialization = 0u32
+  }
+  let carrier = if logical {
+    self_host_linked_logical_operand_carrier(canonical, link, module_, module_.bodies[0u32], specialization, 0u32)
+  } else {
+    self_host_linked_exact_emitted_expression_carrier(canonical, link, module_, module_.bodies[0u32], specialization, 0u32)
+  }
+  assert(carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "read the stored scalar carrier")
+}
+
+test "emitted expression reads use frozen scalar evidence" {
+  self_host_test_frozen_expression_read(0u32, false)
+  self_host_test_frozen_expression_read(0u32, true)
+}
+
+test "ABI-712 emitted lambda reads retain the parent declaration" expect_trap "unreachable" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn make() -> fn() -> I64 {\n  fn() -> I64 {\n    42i64\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid lambda plan before one mutation")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  for plan in program.bodies {
+    if plan.lambda != 4294967295u32 {
+      let body = match self_host_linked_lambda_body(module_, plan.lambda) {
+        Option::Some(value) => value
+        Option::None => {
+          assert(false, "fixture requires a lambda source body")
+          unreachable()
+        }
+      }
+      assert(plan.expressions.length() == 1u32, "one literal in the lambda")
+      let expression = plan.expressions[0u32].expression
+      assert(plan.expressions[0u32].carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "known lambda scalar before mutation")
+      plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::I32BodyCarrier)
+      let _ = self_host_linked_exact_emitted_expression_carrier(Option::Some(plan), link, module_, body, plan.specialization, expression)
+    }
+  }
+}
+
+test "BOD-610 emitted expression reads require a body plan" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(1u32, false)
+}
+
+test "BOD-610 emitted expression reads require expression evidence" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(2u32, false)
+}
+
+test "BOD-610 emitted expression reads reject unknown carriers" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(3u32, false)
+}
+
+test "BOD-610 emitted expression reads reject conflicting carriers" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(4u32, false)
+}
+
+test "ABI-712 emitted expression reads require matching carrier copies" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(5u32, false)
+}
+
+test "ARN-106 emitted expression reads require the selected specialization" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(6u32, false)
+}
+
+test "BOD-610 logical operand reads require a body plan" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(1u32, true)
+}
+
+test "BOD-610 logical operand reads require expression evidence" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(2u32, true)
+}
+
+test "BOD-610 logical operand reads reject unknown carriers" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(3u32, true)
+}
+
+test "BOD-610 logical operand reads reject conflicting carriers" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(4u32, true)
+}
+
+test "ABI-712 logical operand reads require matching carrier copies" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(5u32, true)
+}
+
+test "ARN-106 logical operand reads require the selected specialization" expect_trap "unreachable" {
+  self_host_test_frozen_expression_read(6u32, true)
+}

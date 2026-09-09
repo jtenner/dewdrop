@@ -583,6 +583,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   [Unit pattern log](docs/research/pattern-unit-storage-2026-09-08.md).
 - [ ] Complete the emission shadow stack. Track operand types and control
   frames through each instruction, including unreachable code and adapters.
+  Exact expression and logical-operand reads now use the checked frozen plan.
+  Their source/name recovery, eight-step unwrap scan, and six unused helpers
+  are removed. Thirteen negative probes retain complete failure context; see the
+  [expression read log](docs/research/emitted-expression-reads-2026-09-09.md).
   Non-returning `if` conditions, `match` subjects, and `while` initial values
   now stop control emission and do not force unused branches to Never.
   Shared runtime and planner checks cover all three forms; see the
