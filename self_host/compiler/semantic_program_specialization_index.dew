@@ -1,6 +1,26 @@
 open dew.std.map
 open dew.std.option
 
+fn self_host_specialization_index_failure(declaration: U64, caller_body: U64, expression: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
+  let context_id = if caller_body == 0u64 {
+    declaration
+  } else {
+    caller_body
+  }
+  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    code: code
+    phase: 5u32
+    module_id: self_host_semantic_id_module(context_id)
+    declaration: declaration
+    body: caller_body
+    expression: expression
+    expected: expected
+    actual: actual
+    detail: detail
+  }, "specialization request index requires valid parallel arenas and declaration-local links")
+  unreachable()
+}
+
 // This module owns specialization worklist cursors and request indexes.
 // The planner supplies arenas. These APIs keep all parallel-array checks in
 // one place and prevent callers from restarting a completed queue scan.
@@ -34,17 +54,32 @@ fn self_host_program_specialization_request_matches(
   requests_shapes: Array<SelfHostPlannedValueShape>,
   declaration: U64,
   candidates: Array<SelfHostPlannedValueShape>,
+  request_index: U32,
+  caller_body: U64,
+  expression: U32,
 ) -> Bool {
-  if !self_host_u64_equal(request.declaration, declaration) ||
-    !self_host_u32_equal(request.shapes.length, candidates.length()) {
+  if request.declaration != declaration {
+    self_host_specialization_index_failure(declaration, caller_body, expression, 302u32,
+      declaration, request.declaration, u32_into_u64(request_index))
+  }
+  if !self_host_array_span_is_valid(request.shapes.start, request.shapes.length, requests_shapes.length()) {
+    self_host_specialization_index_failure(declaration, caller_body, expression, 101u32,
+      u32_into_u64(requests_shapes.length()), u32_into_u64(request.shapes.length), u32_into_u64(request.shapes.start))
+  }
+  while 0u32 {
+    shape_index if shape_index < request.shapes.length => {
+      let error = self_host_specialization_shape_error(requests_shapes[request.shapes.start + shape_index])
+      if error != 0u32 {
+        self_host_specialization_index_failure(declaration, caller_body, expression, 301u32,
+          0u64, u32_into_u64(error), (1u64 << 32u64) | u32_into_u64(shape_index))
+      }
+      continue shape_index + 1u32
+    }
+    _ => break ()
+  }
+  if request.shapes.length != candidates.length() {
     return false
   }
-  self_host_assert_array_span(
-    request.shapes.start,
-    request.shapes.length,
-    requests_shapes.length(),
-    "compiler specialization shape span is outside the shape arena",
-  )
   let mut index = 0u32
   let _ = while index {
     current => if current < request.shapes.length {
@@ -128,6 +163,11 @@ fn self_host_program_specialization_add_request_at_call(
   caller_body: U64,
   expression: U32,
 ) -> U32 {
+  // Check before a duplicate lookup can return early or any arena is changed.
+  if request_next.length() != requests.length() {
+    self_host_specialization_index_failure(declaration, caller_body, expression, 103u32,
+      u32_into_u64(requests.length()), u32_into_u64(request_next.length()), 0u64)
+  }
   // Validate before lookup or mutation: an invalid shape must not deduplicate
   // against an earlier reference-shaped request.
   let context_id = if caller_body == 0u64 {
@@ -165,21 +205,25 @@ fn self_host_program_specialization_add_request_at_call(
   let mut request_index = previous_head
   while request_index {
     current => if !self_host_u32_equal(current, missing) {
-      self_host_assert_array_index(
-        current,
-        requests.length(),
-        "compiler specialization request index is outside the request arena",
-      )
-      self_host_assert_array_index(
-        current,
-        request_next.length(),
-        "compiler specialization request chain is shorter than the request arena",
-      )
+      if current >= requests.length() {
+        self_host_specialization_index_failure(declaration, caller_body, expression, 105u32,
+          u32_into_u64(requests.length()), u32_into_u64(current), 1u64)
+      }
+      // Appending a request can only point at an older record. Strict descent
+      // proves termination and rejects cycles even on an immediate cache hit.
+      let next = request_next[current]
+      if next != missing && next >= current {
+        self_host_specialization_index_failure(declaration, caller_body, expression, 108u32,
+          u32_into_u64(current), u32_into_u64(next), u32_into_u64(current))
+      }
       if self_host_program_specialization_request_matches(
         requests[current],
         shapes,
         declaration,
         candidates,
+        current,
+        caller_body,
+        expression,
       ) && self_host_specialization_evidence_types_equal(requests[current].evidence_types, evidence_types) {
         break current
       }
@@ -211,11 +255,10 @@ fn self_host_program_specialization_add_request_at_call(
       })
       request_next.push(previous_head)
       request_head_by_declaration.set(declaration, new_index)
-      self_host_assert_parallel_array_lengths(
-        request_next.length(),
-        requests.length(),
-        "compiler specialization request indexes must match the request arena",
-      )
+      if request_next.length() != requests.length() {
+        self_host_specialization_index_failure(declaration, caller_body, expression, 103u32,
+          u32_into_u64(requests.length()), u32_into_u64(request_next.length()), 0u64)
+      }
       break new_index
     }
   }

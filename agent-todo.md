@@ -729,6 +729,11 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete stable numeric failure records and the negative invariant tests.
   Start with a valid state, change one field, and check the exact code and source
   context. Missing data or an unexpected trap must never count as a pass.
+  Request-index lookup now checks parallel arrays, visited declaration IDs,
+  concrete shape spans, and strictly older next links before duplicate hits.
+  Seven one-mutation tests retain all nine failure fields; a sixteen-record
+  chain has a positive replay check. Other specialization helpers remain.
+  See the [request index log](docs/research/specialization-request-index-2026-09-09.md).
   Physical body errors now use 41 typed reasons with exhaustive code and text
   mappings. Field, constructor, local, flow, and raw-instruction errors no longer
   become code zero. See the

@@ -11,6 +11,19 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ARN-103 specialization request links cannot be shorter than requests", 103, 1n, 0n, 0n],
+    ["ARN-103 specialization request links cannot be longer than requests", 103, 1n, 2n, 0n],
+    ["ARN-105 specialization request heads must address requests", 105, 1n, 99n, 1n],
+    ["SPC-302 specialization chains retain declaration identity", 302, 377957122059n, 377957122060n, 0n],
+    ["ARN-101 specialization request spans are checked before shape comparison", 101, 1n, 1n, 4294967295n],
+    ["ARN-108 specialization request chains cannot link to themselves", 108, 0n, 0n, 0n],
+    ["SPC-301 stored specialization shapes remain concrete", 301, 0n, 1n, 4294967296n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 5, 77n, 377957122059n, 330712481809n,
+      19, expected, actual, detail],
+  })),
+  ...[
     ["BOD-610 discard reads require a body plan", 610, 1n, 0n, 0n],
     ["BOD-610 discard reads require expression evidence", 610, 1n, 0n, 1n],
     ["BOD-610 discard reads reject unknown carriers", 610, 1n, 0n, 2n],

@@ -103,6 +103,146 @@ test "raw array storage keeps heap width separate from signed reads" {
   }
 }
 
+
+test "ARN-103 specialization request links cannot be shorter than requests" expect_trap "unreachable" {
+  let declaration = 377957122059u64
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let initial = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 18u32,
+  )
+  assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
+  let _ = next.pop()
+  let _ = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 19u32,
+  )
+}
+
+test "ARN-103 specialization request links cannot be longer than requests" expect_trap "unreachable" {
+  let declaration = 377957122059u64
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let initial = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 18u32,
+  )
+  assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
+  next.push(4294967295u32)
+  let _ = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 19u32,
+  )
+}
+
+test "ARN-105 specialization request heads must address requests" expect_trap "unreachable" {
+  let declaration = 377957122059u64
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let initial = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 18u32,
+  )
+  assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
+  heads.set(declaration, 99u32)
+  let _ = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 19u32,
+  )
+}
+
+test "SPC-302 specialization chains retain declaration identity" expect_trap "unreachable" {
+  let declaration = 377957122059u64
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let initial = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 18u32,
+  )
+  assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
+  let original = requests[0u32]
+  requests[0u32] = SelfHostProgramSpecializationRequest::{
+    declaration: declaration + 1u64
+    shapes: original.shapes
+    evidence_types: original.evidence_types
+  }
+  let _ = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 19u32,
+  )
+}
+
+test "ARN-101 specialization request spans are checked before shape comparison" expect_trap "unreachable" {
+  let declaration = 377957122059u64
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let initial = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 18u32,
+  )
+  assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
+  let original = requests[0u32]
+  requests[0u32] = SelfHostProgramSpecializationRequest::{
+    declaration: original.declaration
+    shapes: SelfHostHirSpan::{
+      start: 4294967295u32
+      length: original.shapes.length
+    }
+    evidence_types: original.evidence_types
+  }
+  let _ = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 19u32,
+  )
+}
+
+test "ARN-108 specialization request chains cannot link to themselves" expect_trap "unreachable" {
+  let declaration = 377957122059u64
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let initial = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 18u32,
+  )
+  assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
+  next[0u32] = 0u32
+  let _ = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 19u32,
+  )
+}
+
+test "SPC-301 stored specialization shapes remain concrete" expect_trap "unreachable" {
+  let declaration = 377957122059u64
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let initial = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 18u32,
+  )
+  assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
+  shapes[0u32] = SelfHostPlannedValueShape::GenericPlannedValueShape
+  let _ = self_host_program_specialization_add_request_at_call(
+    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    [], 330712481809u64, 19u32,
+  )
+}
+
 fn self_host_invalid_specialization_request(shape: SelfHostPlannedValueShape) -> Unit {
   let requests = []
   let shapes = []
@@ -118,6 +258,28 @@ fn self_host_invalid_specialization_request(shape: SelfHostPlannedValueShape) ->
     [SelfHostPlannedValueShape::I32PlannedValueShape, shape],
     [], 330712481809u64, 19u32,
   )
+}
+
+test "specialization request chains can contain more than eight records" {
+  let requests = []
+  let shapes = []
+  let heads = self_host_empty_u64_u32_map()
+  let next = []
+  let fields = []
+  while 0u32 {
+    index if index < 16u32 => {
+      let selected = self_host_program_specialization_add_request(requests, shapes, heads, next,
+        377957122059u64, [SelfHostPlannedValueShape::ProductPlannedValueShape(fields.copy())])
+      assert(selected == index, "each distinct product adds one request")
+      fields.push(SelfHostPlannedValueShape::I32PlannedValueShape)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let selected = self_host_program_specialization_add_request(requests, shapes, heads, next,
+    377957122059u64, [SelfHostPlannedValueShape::ProductPlannedValueShape([])])
+  assert(selected == 0u32, "the last chain node remains reachable")
+  assert(requests.length() == 16u32 && next.length() == 16u32, "a replay adds no request or link")
 }
 
 test "concrete specialization normalization is idempotent and structural" {
