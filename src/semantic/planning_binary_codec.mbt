@@ -790,6 +790,14 @@ fn pb_write_function_kind(
       writer.write_byte(7)
       writer.write_bytes(name)
     }
+    PlannedWasmInlineStructGetFunction(recipe) => {
+      writer.write_byte(8)
+      pb_write_raw_struct_get(writer, recipe)
+    }
+    PlannedWasmOutlinedStructGetFunction(recipe) => {
+      writer.write_byte(9)
+      pb_write_raw_struct_get(writer, recipe)
+    }
   }
 }
 
@@ -816,9 +824,16 @@ fn pb_read_function_kind(
         ib_read_id(reader, field),
       )
     6 => PlannedWasmSignatureOnlyFunction
-    7 => PlannedWasmOutlinedBuiltinFunction(
-      reader.read_bytes(planning_binary_maximum_text, field),
-    )
+    7 =>
+      PlannedWasmOutlinedBuiltinFunction(
+        reader.read_bytes(planning_binary_maximum_text, field),
+      )
+    8 =>
+      PlannedWasmInlineStructGetFunction(pb_read_raw_struct_get(reader, field))
+    9 =>
+      PlannedWasmOutlinedStructGetFunction(
+        pb_read_raw_struct_get(reader, field),
+      )
     _ => {
       reader.fail(field, "unknown Wasm function-kind discriminant")
       PlannedWasmSignatureOnlyFunction

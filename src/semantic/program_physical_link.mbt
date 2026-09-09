@@ -1282,7 +1282,9 @@ pub fn link_program_wasmgc_fragments(
           function_.function_index = -1
         }
       PlannedWasmInlineBuiltinFunction(_)
+      | PlannedWasmInlineStructGetFunction(_)
       | PlannedWasmOutlinedBuiltinFunction(_)
+      | PlannedWasmOutlinedStructGetFunction(_)
       | PlannedWasmRuntimeFunction(_)
       | PlannedWasmDefinedFunction(_)
       | PlannedWasmDefinedLambdaFunction(_)
@@ -1296,6 +1298,7 @@ pub fn link_program_wasmgc_fragments(
       PlannedWasmDefinedFunction(_)
       | PlannedWasmDefinedLambdaFunction(_)
       | PlannedWasmOutlinedBuiltinFunction(_)
+      | PlannedWasmOutlinedStructGetFunction(_)
       | PlannedWasmRuntimeFunction(_)
       | PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {
@@ -1305,6 +1308,7 @@ pub fn link_program_wasmgc_fragments(
         }
       PlannedWasmImportedFunction(_)
       | PlannedWasmInlineBuiltinFunction(_)
+      | PlannedWasmInlineStructGetFunction(_)
       | PlannedWasmSignatureOnlyFunction => ()
     }
   }

@@ -309,7 +309,9 @@ fn emit_starshine_program_import_section(
           )
         }
       @semantic.PlannedWasmInlineBuiltinFunction(_)
+      | @semantic.PlannedWasmInlineStructGetFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
+      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -330,6 +332,7 @@ fn emit_starshine_program_function_section(
     match function_.kind {
       @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
+      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmTraitAdapterFunction(_, _) =>
@@ -342,6 +345,7 @@ fn emit_starshine_program_function_section(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmInlineBuiltinFunction(_)
+      | @semantic.PlannedWasmInlineStructGetFunction(_)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }
@@ -1072,10 +1076,30 @@ fn emit_starshine_program_code_section(
         }
       @semantic.PlannedWasmOutlinedBuiltinFunction(name) =>
         if !function_.elided {
-          match emit_starshine_outlined_builtin(
-            function_.kind, name, planned.modules[function_.module_index].function_value_types,
-            function_.parameters, function_.results,
-          ) {
+          match
+            emit_starshine_outlined_builtin(
+              function_.kind,
+              name,
+              planned.modules[function_.module_index].function_value_types,
+              function_.parameters,
+              function_.results,
+            ) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
+      @semantic.PlannedWasmOutlinedStructGetFunction(recipe) =>
+        if !function_.elided {
+          let owner = planned.modules[function_.module_index]
+          match
+            starshine_outlined_struct_get(
+              recipe,
+              owner,
+              Some(planned),
+              owner.function_value_types,
+              function_.parameters,
+              function_.results,
+            ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)
           }
@@ -1103,6 +1127,7 @@ fn emit_starshine_program_code_section(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmInlineBuiltinFunction(_)
+      | @semantic.PlannedWasmInlineStructGetFunction(_)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }

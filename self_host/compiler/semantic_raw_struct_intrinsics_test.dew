@@ -1,0 +1,125 @@
+
+fn self_host_test_raw_struct_mutation(source: SelfHostPlannedPhysicalExpressionCarrier, mutation: U32) -> SelfHostPlannedPhysicalExpressionCarrier {
+  SelfHostPlannedPhysicalExpressionCarrier::{
+    expression: source.expression
+    value: source.value
+    carrier: source.carrier
+    conflict_expected: source.conflict_expected
+    conflict_actual: source.conflict_actual
+    receiver_expression: if mutation == 1u32 {
+      4294967295u32
+    } else {
+      source.receiver_expression
+    }
+    receiver_logical_type: source.receiver_logical_type
+    receiver_nominal_owner: source.receiver_nominal_owner
+    receiver_physical_heap_type: source.receiver_physical_heap_type
+    selected_field: source.selected_field
+    selected_type_index: if mutation == 2u32 {
+      source.selected_type_index + 1u32
+    } else {
+      source.selected_type_index
+    }
+    selected_field_index: source.selected_field_index
+    selected_storage: if mutation == 0u32 {
+      Option::Some(SelfHostPlannedWasmStorageType::WasmI8SignedStorage)
+    } else {
+      source.selected_storage
+    }
+    call_function_index: source.call_function_index
+  }
+}
+
+fn self_host_test_raw_struct_saved_read(mutation: U32) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"builtin read(value: Bytes) -> U32 = \"struct.get 2\"\npub fn run(value: Bytes) -> U32 {\n  read(value)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 0u32, "valid raw struct read before one mutation")
+  let plan = physical.bodies[0u32]
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = false
+  for value in plan.expressions {
+    if self_host_raw_struct_call(link, module_.expressions[value.expression]) is Option::Some(_) {
+      let slot = value.expression - module_.bodies[0u32].expressions.start
+      plan.expressions[slot] = self_host_test_raw_struct_mutation(value, mutation)
+      let _ = self_host_require_emitted_raw_struct(Option::Some(plan), link, module_, module_.bodies[0u32], value.expression)
+      checked = true
+    }
+  }
+  assert(checked, "fixture contains a raw struct read")
+}
+
+test "raw struct saved reads retain their complete layout" {
+  self_host_test_raw_struct_saved_read(3u32)
+}
+
+test "ABI-714 raw struct storage cannot change to a packed field" expect_trap "unreachable" {
+  self_host_test_raw_struct_saved_read(0u32)
+}
+
+test "ABI-714 raw struct receiver cannot disappear" expect_trap "unreachable" {
+  self_host_test_raw_struct_saved_read(1u32)
+}
+
+test "ABI-714 raw struct heap cannot change" expect_trap "unreachable" {
+  self_host_test_raw_struct_saved_read(2u32)
+}
+
+fn self_host_test_raw_struct_rejected(source: Bytes, reason: U32) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let physical = self_host_plan_program_wasm_bodies(link)
+  let mut found = false
+  for diagnostic in physical.diagnostics {
+    if diagnostic.code == 714u32 {
+      assert(diagnostic.context == SelfHostPhysicalDiagnosticReason::RawStructInstructionContract(reason).description(), "exact raw struct contract reason")
+      found = true
+    }
+  }
+  assert(found, "invalid raw struct declaration is rejected before emission")
+}
+
+test "raw struct declarations reject invalid scalar storage contracts" {
+  self_host_test_raw_struct_rejected(b"builtin read(value: Bytes) -> U32 = \"struct.get 3\"\npub fn run(value: Bytes) -> U32 {\n  read(value)\n}\n", 3u32)
+  self_host_test_raw_struct_rejected(b"builtin read(value: Bytes) -> I64 = \"struct.get 2\"\npub fn run(value: Bytes) -> I64 {\n  read(value)\n}\n", 35u32)
+  self_host_test_raw_struct_rejected(b"builtin read(value: I32) -> I32 = \"struct.get 0\"\npub fn run(value: I32) -> I32 {\n  read(value)\n}\n", 2u32)
+  self_host_test_raw_struct_rejected(b"builtin read(value: Bytes) -> Bytes = \"struct.get 0\"\npub fn run(value: Bytes) -> Bytes {\n  read(value)\n}\n", 4u32)
+  self_host_test_raw_struct_rejected(b"struct Packed {\n  value: I8\n}\nbuiltin read(value: Packed) -> I32 = \"struct.get 0\"\npub fn run(value: Packed) -> I32 {\n  read(value)\n}\n", 9u32)
+  self_host_test_raw_struct_rejected(b"struct Item {\n  value: I64\n}\nbuiltin read(value: Item) -> I64 = \"struct.get 1\"\npub fn run(value: Item) -> I64 {\n  read(value)\n}\n", 7u32)
+  self_host_test_raw_struct_rejected(b"builtin read(value: Bytes) -> U32 = \"struct.get 02\"\npub fn run(value: Bytes) -> U32 {\n  read(value)\n}\n", 1u32)
+}
+
+fn self_host_test_raw_struct_module(source: Bytes) -> Unit {
+  let full_source = BytesBuilder::new()
+  full_source.append(source)
+  full_source.append(b"pub fn main() -> I64 {\n  0i64\n}\n")
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(full_source.finish()), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "raw struct source links without a runtime import")
+  let physical = self_host_plan_program_wasm_bodies(link)
+  assert(physical.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, physical))
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Result::Ok(bytes) => assert(bytes.byte_length() > 0u32, "raw struct program emits")
+    Result::Err(error) => assert(false, error)
+  }
+}
+
+test "raw struct reads use declared field indices" {
+  self_host_test_raw_struct_module(
+    b"struct Record {\n  first: U32\n  second: I64\n}\nbuiltin read(value: Record) -> I64 = \"struct.get 1\"\npub fn run(value: Record) -> I64 {\n  read(value)\n}\n",
+  )
+}
+
+test "raw struct reads use primitive heap identity" {
+  self_host_test_raw_struct_module(
+    b"builtin read(value: Bytes) -> U32 = \"struct.get 2\"\npub fn run(value: Bytes) -> U32 {\n  read(value)\n}\n",
+  )
+}
+
+test "raw struct function values retain their owner" {
+  self_host_test_raw_struct_module(
+    b"builtin read(value: Bytes) -> U32 = \"struct.get 2\"\npub fn reader() -> fn(Bytes) -> U32 {\n  read\n}\n",
+  )
+}

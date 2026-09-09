@@ -54,8 +54,9 @@ fn verify_program_function_indices(
   let seen = Array::make(count, false)
   for slot, function_ in link.functions {
     let has_function = match function_.kind {
-      PlannedWasmInlineBuiltinFunction(_) | PlannedWasmSignatureOnlyFunction =>
-        false
+      PlannedWasmInlineBuiltinFunction(_)
+      | PlannedWasmInlineStructGetFunction(_)
+      | PlannedWasmSignatureOnlyFunction => false
       _ => true
     }
     let emitted = !function_.elided && has_function

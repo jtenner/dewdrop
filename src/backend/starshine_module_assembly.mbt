@@ -34,9 +34,29 @@ pub fn emit_starshine_code_section(
         }
       @semantic.PlannedWasmOutlinedBuiltinFunction(name) =>
         if !function_.elided {
-          match emit_starshine_outlined_builtin(
-            function_.kind, name, planned.function_value_types, function_.parameters, function_.results,
-          ) {
+          match
+            emit_starshine_outlined_builtin(
+              function_.kind,
+              name,
+              planned.function_value_types,
+              function_.parameters,
+              function_.results,
+            ) {
+            Ok(function_body) => functions.push(function_body)
+            Err(error) => return Err(error)
+          }
+        }
+      @semantic.PlannedWasmOutlinedStructGetFunction(recipe) =>
+        if !function_.elided {
+          match
+            starshine_outlined_struct_get(
+              recipe,
+              planned,
+              None,
+              planned.function_value_types,
+              function_.parameters,
+              function_.results,
+            ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)
           }
@@ -54,6 +74,7 @@ pub fn emit_starshine_code_section(
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmInlineBuiltinFunction(_)
+      | @semantic.PlannedWasmInlineStructGetFunction(_)
       | @semantic.PlannedWasmSignatureOnlyFunction => ()
     }
   }

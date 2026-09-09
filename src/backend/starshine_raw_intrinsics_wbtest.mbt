@@ -1,4 +1,81 @@
 ///|
+test "raw struct reads use the declared owner and field index" {
+  let stages = backend_test_single_module_stages(
+    28231UL, b"struct Record {\n  first: U32\n  second: I64\n}\nbuiltin read(value: Record) -> I64 = \"struct.get 1\"\npub fn run(value: Record) -> I64 {\n  read(value)\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  assert_eq(stages.link.imported_function_count, 0)
+  assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
+}
+
+///|
+test "raw primitive struct reads do not import a runtime algorithm" {
+  let stages = backend_test_single_module_stages(
+    28232UL, b"builtin read(value: Bytes) -> U32 = \"struct.get 2\"\npub fn run(value: Bytes) -> U32 {\n  read(value)\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  assert_eq(stages.link.imported_function_count, 0)
+  assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
+}
+
+///|
+test "raw primitive struct reads retain their owner when used as function values" {
+  let stages = backend_test_single_module_stages(
+    28233UL, b"builtin read(value: Bytes) -> U32 = \"struct.get 2\"\npub fn reader() -> fn(Bytes) -> U32 {\n  read\n}\n",
+  )
+  assert_eq(stages.diagnostic_count(), 0)
+  assert_eq(stages.link.imported_function_count, 0)
+  assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
+}
+
+///|
+test "raw struct reads reject invalid field contracts before Wasm validation" {
+  for
+    case in [
+      (
+        b"builtin read(value: Bytes) -> U32 = \"struct.get 3\"\npub fn run(value: Bytes) -> U32 {\n  read(value)\n}\n",
+        "field is outside the primitive struct",
+      ),
+      (
+        b"builtin read(value: Bytes) -> I64 = \"struct.get 2\"\npub fn run(value: Bytes) -> I64 {\n  read(value)\n}\n",
+        "struct.get result carrier does not match its field",
+      ),
+      (
+        b"builtin read(value: I32) -> U32 = \"struct.get 2\"\npub fn run(value: I32) -> U32 {\n  read(value)\n}\n",
+        "struct.get operand has no reference carrier",
+      ),
+      (
+        b"builtin read(value: Bytes) -> Bytes = \"struct.get 0\"\npub fn run(value: Bytes) -> Bytes {\n  read(value)\n}\n",
+        "reference fields require a complete heap result contract",
+      ),
+      (
+        b"struct Packed {\n  value: I8\n}\nbuiltin read(value: Packed) -> I32 = \"struct.get 0\"\npub fn run(value: Packed) -> I32 {\n  read(value)\n}\n",
+        "struct.get currently requires unpacked scalar field storage",
+      ),
+      (
+        b"struct Item {\n  value: I64\n}\nbuiltin read(value: Item) -> I64 = \"struct.get 1\"\npub fn run(value: Item) -> I64 {\n  read(value)\n}\n",
+        "field is outside the declared struct",
+      ),
+      (
+        b"builtin read(value: Bytes) -> U32 = \"struct.get 02\"\npub fn run(value: Bytes) -> U32 {\n  read(value)\n}\n",
+        "invalid struct.get field immediate",
+      ),
+    ] {
+    let (source, expected) = case
+    let stages = backend_test_single_module_stages(28234UL, source)
+    assert_eq(stages.diagnostic_count(), 0)
+    match emit_starshine_program_module(stages.lowering, stages.link) {
+      Err(InvalidHeapIntrinsic(_, actual)) => assert_eq(actual, expected)
+      other =>
+        fail(
+          "expected exact raw struct contract error, got " +
+          @debug.to_string(other),
+        )
+    }
+  }
+}
+
+///|
 test "raw bit casts preserve packed scalar and vector carriers" {
   let stages = backend_test_single_module_stages(
     28201UL, b"builtin cast<a, b>(value: a) -> b = \"unsafe.bitcast\"\npub fn pack(value: U32) -> I16x2 {\n  cast(value)\n}\npub fn unpack(value: I16x2) -> U32 {\n  cast(value)\n}\npub fn wide(value: U64) -> I16x4 {\n  cast(value)\n}\npub fn vector(value: V128) -> F32x4 {\n  cast(value)\n}\n",

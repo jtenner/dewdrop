@@ -217,6 +217,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_link_invariants_test.dew \
   self_host/compiler/semantic_fragment_function_lookups_test.dew \
   self_host/compiler/semantic_builtin_functions_test.dew \
+  self_host/compiler/semantic_raw_struct_intrinsics_test.dew \
   self_host/compiler/semantic_constructor_flow_test.dew \
   self_host/compiler/semantic_constructor_scratches_test.dew \
   self_host/compiler/semantic_object_constructor_plans_test.dew \

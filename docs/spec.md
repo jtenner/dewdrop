@@ -276,6 +276,14 @@ Parameterized heap wrappers require a separate exact type recipe; a broad
 reference carrier is not such a recipe. Compile-time queries have no runtime
 function-value wrapper.
 
+`struct.get N` retains its concrete declared struct or primitive heap owner and
+its physical field index `N`. The index is a canonical decimal Wasm field
+ordinal, not a logical Dew field index. Both direct calls and function-value
+wrappers validate the selected layout and scalar result. The reference ABI
+adapter casts to that exact heap before the read. This form currently supports
+only unpacked scalar fields; packed fields, reference fields, and unresolved
+generic owners are rejected. It does not infer a heap from a source name.
+
 The implemented entry point is:
 
 ```moonbit

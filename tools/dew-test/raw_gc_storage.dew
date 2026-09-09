@@ -8,6 +8,17 @@ struct RawCell {
   value: I64
 }
 
+builtin raw_cell_value(value: RawCell) -> I64 = "struct.get 0"
+builtin raw_bytes_length(value: Bytes) -> U32 = "struct.get 2"
+
+fn raw_cell_reader() -> fn(RawCell) -> I64 {
+  raw_cell_value
+}
+
+fn raw_bytes_reader() -> fn(Bytes) -> U32 {
+  raw_bytes_length
+}
+
 fn raw_backing<t>(value: t) -> RawBacking<t> {
   RawBacking::{
     storage: wasm_array_new(1u32, value)
@@ -73,6 +84,36 @@ pub fn main(case: U32) -> I32 {
     let backing = raw_backing(1i64)
     backing.storage = wasm_array_new(2u32, 4294967297i64)
     if wasm_array_len(backing.storage) == 2u32 && raw_backing_read(backing) == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 7u32 {
+    if raw_cell_value(RawCell::{
+      value: 4294967297i64
+    }) == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 8u32 {
+    if raw_bytes_length(b"hello") == 5u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 9u32 {
+    let read = raw_cell_reader()
+    if read(RawCell::{
+      value: 4294967297i64
+    }) == 4294967297i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 10u32 {
+    let read = raw_bytes_reader()
+    if read(b"hello") == 5u32 {
       1i32
     } else {
       0i32

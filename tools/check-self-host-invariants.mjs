@@ -11,6 +11,15 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ABI-714 raw struct storage cannot change to a packed field", 37n],
+    ["ABI-714 raw struct receiver cannot disappear", 36n],
+    ["ABI-714 raw struct heap cannot change", 36n],
+  ].map(([name, actual]) => ({
+    name,
+    expected: [714, 7, 5100n, (5100n << 32n) | 1n, 5100n << 32n,
+      2, 0n, actual, 5100n << 32n],
+  })),
+  ...[
     ["BOD-611 emitted evaluation prefixes cannot be empty", 1n, 0n, 0n],
     ["BOD-611 emitted evaluation prefixes cannot claim fallthrough", 0n, 1n, 1n],
     ["BOD-611 emitted evaluation prefixes stop at the first nonreturning child", 1n, 0n, 2n],

@@ -67,6 +67,7 @@ pub enum StarshineCodeEmissionError {
   InvalidLocal(UInt64, Int)
   UnsupportedExpression(UInt64, Int)
   UnsupportedBuiltin(Bytes)
+  InvalidHeapIntrinsic(Bytes, String)
   InvalidBuiltinSignature(Bytes, Array[@semantic.PlannedWasmValueType], Array[@semantic.PlannedWasmValueType])
   InvalidFunctionBody(UInt64)
   InvalidPatternEqualitySignature(UInt64, Int, UInt64, Array[@semantic.PlannedWasmValueType], Array[@semantic.PlannedWasmValueType])

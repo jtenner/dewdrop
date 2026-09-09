@@ -147,6 +147,10 @@ pub fn program_runtime_trait_evidence_slot_parameter(PlannedModuleWasmGCFragment
 
 pub fn program_specialized_call_key(UInt64, String, Int) -> ProgramSpecializedCallKey
 
+pub fn raw_struct_get_field(Bytes) -> Int?
+
+pub fn raw_struct_get_opcode(Bytes) -> Bool
+
 pub fn raw_wasm_builtin_signature(Bytes) -> RawWasmIntrinsicSignature?
 
 pub fn raw_wasm_shuffle_immediates(Bytes) -> Array[Int]?
@@ -2268,6 +2272,8 @@ pub enum PlannedWasmFunctionKind {
   PlannedWasmImportedFunction(WasmImportIdentity)
   PlannedWasmInlineBuiltinFunction(Bytes)
   PlannedWasmOutlinedBuiltinFunction(Bytes)
+  PlannedWasmInlineStructGetFunction(RawStructGetRecipe)
+  PlannedWasmOutlinedStructGetFunction(RawStructGetRecipe)
   PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmDefinedFunction(UInt64)
   PlannedWasmDefinedLambdaFunction(Int)
@@ -2506,6 +2512,18 @@ pub enum RawReferenceOperation {
   RawRefNull
   RawRefIsNull
   RawRefAsNonNull
+} derive(Eq, @debug.Debug)
+
+pub struct RawStructGetRecipe {
+  opcode : Bytes
+  owner : RawStructOwner
+  field_index : Int
+} derive(Eq, @debug.Debug)
+
+pub enum RawStructOwner {
+  DeclaredRawStructOwner(UInt64)
+  PrimitiveRawStructOwner(PrimitiveType)
+  InvalidRawStructOwner(Int)
 } derive(Eq, @debug.Debug)
 
 pub struct RawWasmIntrinsicSignature {

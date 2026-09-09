@@ -132,6 +132,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Keep encoding, bounds, and lifetime checks in ordinary library code.
   Bytes equality, hash, searches, affixes, UTF-8 validation, and checked String
   conversion now run in Dew. Bytes storage operations still need migration.
+  Raw `struct.get N` now retains a concrete struct owner and physical field
+  index in both compilers, including function-value wrappers and the native
+  fragment codec. It accepts unpacked scalar fields only. Packed/reference
+  fields and generic owners still need full contracts. See the
+  [raw struct read log](docs/research/raw-struct-get-2026-09-09.md).
   The SIMD load algorithm now runs in Dew too. See the
   [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
   The pinned provider's nine old Bytes algorithms and UTF-8 validator entry

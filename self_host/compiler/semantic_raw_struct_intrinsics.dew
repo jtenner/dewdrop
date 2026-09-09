@@ -1,0 +1,277 @@
+pub enum SelfHostRawStructOwner {
+  DeclaredRawStructOwner(U64)
+  PrimitiveRawStructOwner(SelfHostPrimitiveType)
+  InvalidRawStructOwner(U32)
+}
+
+pub struct SelfHostRawStructGetRecipe {
+  opcode: Bytes
+  owner: SelfHostRawStructOwner
+  field_index: U32
+}
+
+struct SelfHostRawStructLayout {
+  type_index: U32
+  field_index: U32
+  field_declaration: U64
+  nominal_owner: U64
+  storage: SelfHostPlannedWasmStorageType
+}
+
+struct SelfHostRawStructCall {
+  declaration: U64
+  arguments: SelfHostHirSpan
+}
+
+fn self_host_raw_struct_call(link: SelfHostPlannedProgramWasmGCLink, source: SelfHostPlannedExpression) -> Option<SelfHostRawStructCall> {
+  match source.kind {
+    SelfHostPlannedExpressionKind::PlannedBuiltinCall(name, declaration, _, arguments, _) => if self_host_raw_struct_get_opcode(name) {
+      Option::Some(SelfHostRawStructCall::{
+        declaration: declaration
+        arguments: arguments
+      })
+    } else {
+      Option::None
+    }
+    SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, arguments, _) => {
+      if source.selection is SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _) {
+        return Option::None
+      }
+      match self_host_linked_raw_struct_recipe(link, declaration) {
+        Option::Some(_) => Option::Some(SelfHostRawStructCall::{
+          declaration: declaration
+          arguments: arguments
+        })
+        Option::None => Option::None
+      }
+    }
+    _ => Option::None
+  }
+}
+
+fn self_host_raw_struct_call_error(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, module_: SelfHostPlannedModuleLowering, expression: SelfHostPlannedPhysicalExpressionCarrier, call: SelfHostRawStructCall) -> U32 {
+  let recipe = match self_host_linked_raw_struct_recipe(link, call.declaration) {
+    Option::Some(value) => value
+    Option::None => return 30u32
+  }
+  let layout = match self_host_raw_struct_layout(link, recipe) {
+    Result::Ok(value) => value
+    Result::Err(error) => return error
+  }
+  if call.arguments.length != 1u32 || !self_host_array_span_is_valid(call.arguments.start, call.arguments.length, module_.expression_children.length()) {
+    return 31u32
+  }
+  let argument = module_.expression_children[call.arguments.start]
+  if argument >= module_.expressions.length() || expression.expression >= module_.expressions.length() {
+    return 32u32
+  }
+  let value = match self_host_body_plan_expression(plan, argument) {
+    Option::Some(value) => value
+    Option::None => return 32u32
+  }
+  // Even a nonreturning read must evaluate the saved, exact operand.
+  if expression.receiver_expression != argument || expression.selected_type_index != layout.type_index ||
+    expression.selected_field_index != layout.field_index || expression.selected_field != layout.field_declaration ||
+    expression.receiver_nominal_owner != layout.nominal_owner || expression.receiver_physical_heap_type != layout.type_index {
+    return 36u32
+  }
+  match expression.selected_storage {
+    Option::Some(storage) => if self_host_program_representation_storage_code(storage) != self_host_program_representation_storage_code(layout.storage) {
+      return 37u32
+    }
+    Option::None => return 37u32
+  }
+  if value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier && !module_.expressions[argument].flow.falls_through {
+    if expression.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier && !module_.expressions[expression.expression].flow.falls_through {
+      return 0u32
+    }
+    return 33u32
+  }
+  if !(value.carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier) {
+    return 34u32
+  }
+  if !self_host_body_carrier_equal(expression.carrier, self_host_body_carrier_from_storage(layout.storage)) {
+    return 35u32
+  }
+  0u32
+}
+
+fn self_host_verify_body_raw_struct(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, module_: SelfHostPlannedModuleLowering, expression: SelfHostPlannedPhysicalExpressionCarrier, diagnostics: Array<SelfHostPhysicalCarrierDiagnostic>) -> Unit {
+  let call = match self_host_raw_struct_call(link, module_.expressions[expression.expression]) {
+    Option::Some(value) => value
+    Option::None => return
+  }
+  let error = self_host_raw_struct_call_error(link, plan, module_, expression, call)
+  if error != 0u32 {
+    self_host_body_add_diagnostic(diagnostics, plan, module_, expression.expression, call.declaration,
+      SelfHostPhysicalDiagnosticReason::RawStructInstructionContract(error),
+      SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, expression.carrier)
+  }
+}
+
+fn self_host_raw_struct_get_opcode(name: Bytes) -> Bool {
+  name.starts_with(b"struct.get")
+}
+
+fn self_host_raw_struct_get_field(name: Bytes) -> U32 {
+  if !self_host_raw_struct_get_opcode(name) || name.byte_length() < 12u32 || name.byte_at(10u32) != 32u8 {
+    return 4294967295u32
+  }
+  if name.byte_length() > 12u32 && name.byte_at(11u32) == 48u8 {
+    return 4294967295u32
+  }
+  let mut field = 0u32
+  while 11u32 {
+    index if index < name.byte_length() => {
+      let byte = name.byte_at(index)
+      if byte < 48u8 || byte > 57u8 {
+        return 4294967295u32
+      }
+      let digit = u8_into_u32(byte) - 48u32
+      if field > (2147483647u32 - digit) / 10u32 {
+        return 4294967295u32
+      }
+      field = field * 10u32 + digit
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  field
+}
+
+fn self_host_raw_struct_get_owner(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable) -> SelfHostRawStructOwner {
+  if callable.has_receiver || callable.parameters.length != 1u32 ||
+    !self_host_array_span_is_valid(callable.parameters.start, callable.parameters.length, module_.functions.parameters.length()) {
+    return SelfHostRawStructOwner::InvalidRawStructOwner(1u32)
+  }
+  let mut type_ = module_.functions.parameters[callable.parameters.start].type_
+  while 0u32 {
+    hops if hops < module_.resolved_types.types.length() => {
+      if type_ >= module_.resolved_types.types.length() {
+        return SelfHostRawStructOwner::InvalidRawStructOwner(2u32)
+      }
+      match module_.resolved_types.types[type_] {
+        SelfHostResolvedType::AppliedType(base, _) => {
+          type_ = base
+        }
+        SelfHostResolvedType::NominalType(declaration) => return SelfHostRawStructOwner::DeclaredRawStructOwner(declaration)
+        SelfHostResolvedType::PrimitiveType(primitive) => return SelfHostRawStructOwner::PrimitiveRawStructOwner(primitive)
+        _ => return SelfHostRawStructOwner::InvalidRawStructOwner(3u32)
+      }
+      continue hops + 1u32
+    }
+    _ => break ()
+  }
+  SelfHostRawStructOwner::InvalidRawStructOwner(4u32)
+}
+
+fn self_host_raw_struct_get_recipe(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable, opcode: Bytes) -> SelfHostRawStructGetRecipe {
+  SelfHostRawStructGetRecipe::{
+    opcode: opcode
+    owner: self_host_raw_struct_get_owner(module_, callable)
+    field_index: self_host_raw_struct_get_field(opcode)
+  }
+}
+
+fn self_host_linked_raw_struct_recipe(link: SelfHostPlannedProgramWasmGCLink, declaration: U64) -> Option<SelfHostRawStructGetRecipe> {
+  let owner = match link.fragments.specialization.lowering.index.declaration_owner(declaration) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  if owner >= link.fragments.modules.length() {
+    return Option::None
+  }
+  let module_ = link.fragments.modules[owner]
+  let index = self_host_fragment_function_index(module_, declaration)
+  if index >= module_.functions.length() {
+    return Option::None
+  }
+  let function_ = module_.functions[index]
+  if function_.declaration != declaration {
+    return Option::None
+  }
+  match function_.kind {
+    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineStructGetFunction(recipe),
+    SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedStructGetFunction(recipe) => Option::Some(recipe)
+    _ => Option::None
+  }
+}
+
+fn self_host_raw_struct_layout(link: SelfHostPlannedProgramWasmGCLink, recipe: SelfHostRawStructGetRecipe) -> Result<SelfHostRawStructLayout, U32> {
+  if recipe.field_index == 4294967295u32 || self_host_raw_struct_get_field(recipe.opcode) != recipe.field_index {
+    return Result::Err(1u32)
+  }
+  match recipe.owner {
+    SelfHostRawStructOwner::PrimitiveRawStructOwner(primitive) => {
+      let offset = match primitive {
+        SelfHostPrimitiveType::StringType => 1u32
+        SelfHostPrimitiveType::BytesType => 2u32
+        SelfHostPrimitiveType::StringViewType => 3u32
+        SelfHostPrimitiveType::StringBuilderType => 4u32
+        SelfHostPrimitiveType::BytesBuilderType => 5u32
+        _ => return Result::Err(2u32)
+      }
+      if recipe.field_index >= 3u32 {
+        return Result::Err(3u32)
+      }
+      if recipe.field_index == 0u32 {
+        return Result::Err(4u32)
+      }
+      Result::Ok(SelfHostRawStructLayout::{
+        type_index: self_host_linked_text_runtime_base(link) + offset
+        field_index: recipe.field_index
+        field_declaration: 0u64
+        nominal_owner: 0u64
+        storage: SelfHostPlannedWasmStorageType::WasmI32Storage
+      })
+    }
+    SelfHostRawStructOwner::DeclaredRawStructOwner(declaration) => {
+      let mut selected = Option::None
+      for linked in link.types {
+        if linked.module_index >= link.fragments.modules.length() {
+          return Result::Err(5u32)
+        }
+        let module_ = link.fragments.modules[linked.module_index]
+        if linked.fragment_index >= module_.physical_types.length() {
+          return Result::Err(5u32)
+        }
+        let type_ = module_.physical_types[linked.fragment_index]
+        match type_.kind {
+          SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(owner) => if owner == declaration {
+            if selected is Option::Some(_) {
+              return Result::Err(6u32)
+            }
+            if !self_host_array_span_is_valid(type_.fields.start, type_.fields.length, module_.fields.length()) || recipe.field_index >= type_.fields.length {
+              return Result::Err(7u32)
+            }
+            let field = module_.fields[type_.fields.start + recipe.field_index]
+            if field.physical_index != recipe.field_index {
+              return Result::Err(8u32)
+            }
+            match field.storage {
+              SelfHostPlannedWasmStorageType::WasmI32Storage,
+              SelfHostPlannedWasmStorageType::WasmI64Storage,
+              SelfHostPlannedWasmStorageType::WasmF32Storage,
+              SelfHostPlannedWasmStorageType::WasmF64Storage,
+              SelfHostPlannedWasmStorageType::WasmV128Storage => {}
+              _ => return Result::Err(9u32)
+            }
+            selected = Option::Some(SelfHostRawStructLayout::{
+              type_index: linked.type_index
+              field_index: recipe.field_index
+              field_declaration: field.declaration
+              nominal_owner: declaration
+              storage: field.storage
+            })
+          }
+          _ => {}
+        }
+      }
+      match selected {
+        Option::Some(value) => Result::Ok(value)
+        Option::None => Result::Err(10u32)
+      }
+    }
+    SelfHostRawStructOwner::InvalidRawStructOwner(reason) => Result::Err(20u32 + reason)
+  }
+}

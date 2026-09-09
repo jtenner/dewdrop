@@ -243,6 +243,7 @@ enum SelfHostLinkedI32EmitTask {
   EmitLinkedRefNull(StarshineInstructions)
   EmitLinkedStructNew(U32, StarshineInstructions)
   EmitLinkedStructGet(U32, U32, StarshineInstructions)
+  EmitLinkedRawStructGet(U32, U32, StarshineInstructions)
   EmitLinkedRefCast(U32, StarshineInstructions)
   EmitLinkedStructSet(U32, U32, StarshineInstructions)
   EmitLinkedI32If(
@@ -8208,6 +8209,8 @@ fn self_host_linked_builtin_name(
         return Option::Some(self_host_raw_array_canonical_opcode(fragment.direct_builtin))
       }
       match fragment.kind {
+        SelfHostPlannedWasmFunctionKind::PlannedWasmInlineStructGetFunction(recipe),
+        SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedStructGetFunction(recipe) => return Option::Some(recipe.opcode)
         SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => {
           return Option::Some(self_host_raw_array_canonical_opcode(name))
         }
@@ -13697,6 +13700,14 @@ fn self_host_emit_linked_i32_expression(
               arguments,
               _,
             ) => {
+              if self_host_raw_struct_get_opcode(name) {
+                let value = self_host_require_emitted_raw_struct(canonical_body_plan, link, module_, body, expression)
+                if !(value.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier) {
+                  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRawStructGet(value.selected_type_index, value.selected_field_index, destination))
+                }
+                self_host_linked_i32_schedule_expression(tasks, expression_depths, value.receiver_expression, destination, depth)
+                continue tasks.length()
+              }
               if name.equals(b"array.new_default") {
                 if arguments.length != 1u32 || !self_host_array_span_is_valid(arguments.start, arguments.length, module_.expression_children.length()) {
                   return Option::Some("ABI-703 raw array.new_default needs one length")
@@ -14799,6 +14810,9 @@ fn self_host_emit_linked_i32_expression(
             destination,
             self_host_linked_struct_get_instruction(link, type_index, field_index),
           )
+        }
+        SelfHostLinkedI32EmitTask::EmitLinkedRawStructGet(type_index, field_index, destination) => {
+          self_host_emit_raw_struct_get(type_index, field_index, destination)
         }
         SelfHostLinkedI32EmitTask::EmitLinkedRefCast(
           type_index,
@@ -24172,6 +24186,13 @@ fn build_self_host_linked_i32_module(
               Option::None => {}
             }
           }
+          SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedStructGetFunction(recipe) => {
+            match self_host_append_outlined_raw_struct_get(link, fragment_module, fragment, recipe, functions) {
+              Option::Some(error) => return Result::Err(error)
+              Option::None => {}
+            }
+          }
+          SelfHostPlannedWasmFunctionKind::PlannedWasmInlineStructGetFunction(_) => return Result::Err("inline struct.get cannot occupy a physical function slot")
           SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => {
             if !self_host_linked_append_runtime_function(
               link,

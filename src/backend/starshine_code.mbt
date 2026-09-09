@@ -28,6 +28,7 @@ pub enum StarshineCodeEmissionError {
   InvalidLocal(@semantic.BodyId, @semantic.LocalId)
   UnsupportedExpression(@semantic.BodyId, @semantic.ExprId)
   UnsupportedBuiltin(Bytes)
+  InvalidHeapIntrinsic(Bytes, String)
   InvalidBuiltinSignature(
     Bytes,
     Array[@semantic.PlannedWasmValueType],
@@ -914,17 +915,29 @@ fn starshine_finish_call(
     }
   } else {
     match function_.kind {
-      @semantic.PlannedWasmInlineBuiltinFunction(name) =>
+      @semantic.PlannedWasmInlineStructGetFunction(recipe) =>
         match
-          starshine_inline_builtin_instructions(
-            name,
+          starshine_raw_struct_get_instructions(
+            recipe,
+            planned,
+            None,
+            planned.function_value_types,
+            function_.parameters,
+            function_.results,
           ) {
+          Ok(instructions) =>
+            append_starshine_instructions(output, instructions)
+          Err(error) => return Err(error)
+        }
+      @semantic.PlannedWasmInlineBuiltinFunction(name) =>
+        match starshine_inline_builtin_instructions(name) {
           Ok(instructions) =>
             append_starshine_instructions(output, instructions)
           Err(error) => return Err(error)
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
+      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -1266,17 +1279,31 @@ fn starshine_finish_program_call(
     }
   } else {
     match function_.kind {
-      @semantic.PlannedWasmInlineBuiltinFunction(name) =>
+      @semantic.PlannedWasmInlineStructGetFunction(recipe) => {
+        let owner = planned.modules[function_.module_index]
         match
-          starshine_inline_builtin_instructions(
-            name,
+          starshine_raw_struct_get_instructions(
+            recipe,
+            owner,
+            Some(planned),
+            owner.function_value_types,
+            function_.parameters,
+            function_.results,
           ) {
+          Ok(instructions) =>
+            append_starshine_instructions(output, instructions)
+          Err(error) => return Err(error)
+        }
+      }
+      @semantic.PlannedWasmInlineBuiltinFunction(name) =>
+        match starshine_inline_builtin_instructions(name) {
           Ok(instructions) =>
             append_starshine_instructions(output, instructions)
           Err(error) => return Err(error)
         }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
+      | @semantic.PlannedWasmOutlinedStructGetFunction(_)
       | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -2191,7 +2218,7 @@ fn starshine_general_match_pattern_instructions(
                       body.body,
                       product_ref_scratch,
                       local_shape,
-                      leaf_start=leaf_start,
+                      leaf_start~,
                     ) {
                     Ok(_) => ()
                     Err(error) => return Err(error)
@@ -3911,12 +3938,7 @@ fn starshine_body_locals(
       }
       @semantic.PlannedFixedArraySetUnchecked(_, _, value, _) => {
         let source = lowering.expressions[value]
-        let shape = starshine_specialized_shape(
-          lowering,
-          generic_specialization,
-          source.type_,
-          source.shape,
-        )
+        let shape = starshine_specialized_shape(lowering, generic_specialization, source.type_, source.shape)
         if shape is @semantic.ProductPlannedValueShape(_) &&
           match_result_local_indices[value - body.expressions.start] < 0 {
           match_result_local_indices[value - body.expressions.start] = parameter_count +
@@ -7576,7 +7598,12 @@ fn starshine_emit_body_instructions(
           _ => return Err(UnsupportedExpression(body.body, expression))
         }
         let source = lowering.expressions[scrutinee]
-        let shape = starshine_specialized_shape(lowering, generic_specialization, source.type_, source.shape)
+        let shape = starshine_specialized_shape(
+          lowering,
+          generic_specialization,
+          source.type_,
+          source.shape,
+        )
         if shape is @semantic.ProductPlannedValueShape(_) {
           let bundle = match_result_local_indices[scrutinee - body.expressions.start]
           if bundle < 0 { return Err(UnsupportedExpression(body.body, scrutinee)) }

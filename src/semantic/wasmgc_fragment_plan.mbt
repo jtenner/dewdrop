@@ -204,6 +204,8 @@ pub enum PlannedWasmFunctionKind {
   PlannedWasmImportedFunction(WasmImportIdentity)
   PlannedWasmInlineBuiltinFunction(Bytes)
   PlannedWasmOutlinedBuiltinFunction(Bytes)
+  PlannedWasmInlineStructGetFunction(RawStructGetRecipe)
+  PlannedWasmOutlinedStructGetFunction(RawStructGetRecipe)
   PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmDefinedFunction(BodyId)
   PlannedWasmDefinedLambdaFunction(LambdaId)
@@ -2387,6 +2389,10 @@ fn wasmgc_plan_function_job(
         // Queries have no runtime implementation or import. Any surviving use
         // is a planning error, never a host function with the same spelling.
         PlannedWasmSignatureOnlyFunction
+      } else if raw_struct_get_opcode(name) {
+        PlannedWasmInlineStructGetFunction(
+          raw_struct_get_recipe(resolved, functions, callable, name),
+        )
       } else if wasmgc_builtin_is_runtime(name) {
         PlannedWasmRuntimeFunction(name)
       } else if wasmgc_builtin_is_inline(name) {
@@ -3645,6 +3651,11 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
             ..job,
             kind: PlannedWasmOutlinedBuiltinFunction(name),
           })
+        PlannedWasmInlineStructGetFunction(recipe) =>
+          function_jobs[callable_index] = Some({
+            ..job,
+            kind: PlannedWasmOutlinedStructGetFunction(recipe),
+          })
         _ => ()
       }
     }
@@ -3662,6 +3673,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         PlannedWasmImportedFunction(_)
         | PlannedWasmDefinedFunction(_)
         | PlannedWasmOutlinedBuiltinFunction(_)
+        | PlannedWasmOutlinedStructGetFunction(_)
         | PlannedWasmRuntimeFunction(_) => !reachable_functions[callable_index]
         _ => false
       })
@@ -3679,13 +3691,16 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         if !elided_functions[callable_index] {
           imported_function_count += 1
         }
-      PlannedWasmDefinedFunction(_) | PlannedWasmRuntimeFunction(_)
-      | PlannedWasmOutlinedBuiltinFunction(_) =>
+      PlannedWasmDefinedFunction(_)
+      | PlannedWasmRuntimeFunction(_)
+      | PlannedWasmOutlinedBuiltinFunction(_)
+      | PlannedWasmOutlinedStructGetFunction(_) =>
         if !elided_functions[callable_index] {
           defined_function_count += 1
         }
-      PlannedWasmInlineBuiltinFunction(_) | PlannedWasmSignatureOnlyFunction =>
-        ()
+      PlannedWasmInlineBuiltinFunction(_)
+      | PlannedWasmInlineStructGetFunction(_)
+      | PlannedWasmSignatureOnlyFunction => ()
       PlannedWasmDefinedLambdaFunction(_)
       | PlannedWasmTraitAdapterFunction(_, _) =>
         abort("synthetic function appeared in callable fragment job")
@@ -3725,8 +3740,10 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           import_index += 1
           index
         }
-      PlannedWasmDefinedFunction(_) | PlannedWasmRuntimeFunction(_)
-      | PlannedWasmOutlinedBuiltinFunction(_) =>
+      PlannedWasmDefinedFunction(_)
+      | PlannedWasmRuntimeFunction(_)
+      | PlannedWasmOutlinedBuiltinFunction(_)
+      | PlannedWasmOutlinedStructGetFunction(_) =>
         if elided_functions[callable_index] {
           -1
         } else {
@@ -3734,8 +3751,9 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           defined_index += 1
           index
         }
-      PlannedWasmInlineBuiltinFunction(_) | PlannedWasmSignatureOnlyFunction =>
-        -1
+      PlannedWasmInlineBuiltinFunction(_)
+      | PlannedWasmInlineStructGetFunction(_)
+      | PlannedWasmSignatureOnlyFunction => -1
       PlannedWasmDefinedLambdaFunction(_)
       | PlannedWasmTraitAdapterFunction(_, _) =>
         abort("synthetic function appeared in callable index assignment")
@@ -3744,6 +3762,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       PlannedWasmImportedFunction(_)
       | PlannedWasmDefinedFunction(_)
       | PlannedWasmOutlinedBuiltinFunction(_)
+      | PlannedWasmOutlinedStructGetFunction(_)
       | PlannedWasmRuntimeFunction(_) => !elided_functions[callable_index]
       PlannedWasmSignatureOnlyFunction =>
         runtime_requirements.contains(callable.declaration)

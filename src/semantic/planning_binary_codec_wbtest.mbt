@@ -13,13 +13,48 @@ fn planning_codec_test_stages() -> SemanticCompilerTestStages {
 test "WasmGC codec retains outlined intrinsic identity" {
   let stages = compiler_test_stages(23953UL, [
     CompilerTestModule::new("cache.builtin", [
-      CompilerTestSource::new("main.dew", b"builtin add(a: I32, b: I32) -> I32 = \"i32.add\"\npub fn factory() -> fn(I32, I32) -> I32 {\n  add\n}\n"),
+      CompilerTestSource::new(
+        "main.dew", b"builtin add(a: I32, b: I32) -> I32 = \"i32.add\"\npub fn factory() -> fn(I32, I32) -> I32 {\n  add\n}\n",
+      ),
     ]),
   ])
-  let fragments = plan_program_wasmgc_fragments(stages.analyzed, stages.lowering).modules[0]
-  assert_true(fragments.functions[0].kind is PlannedWasmOutlinedBuiltinFunction(_))
+  let fragments = plan_program_wasmgc_fragments(
+      stages.analyzed,
+      stages.lowering,
+    ).modules[0]
+  assert_true(
+    fragments.functions[0].kind is PlannedWasmOutlinedBuiltinFunction(_),
+  )
   let encoded = serialize_planned_module_wasmgc_fragments(fragments).unwrap()
   assert_eq(deserialize_planned_module_wasmgc_fragments(encoded).unwrap(), fragments)
+}
+
+///|
+test "WasmGC codec retains raw struct owners and field immediates" {
+  let stages = compiler_test_stages(23954UL, [
+    CompilerTestModule::new("cache.struct_get", [
+      CompilerTestSource::new(
+        "main.dew", b"builtin size(value: Bytes) -> U32 = \"struct.get 2\"\npub fn factory() -> fn(Bytes) -> U32 {\n  size\n}\n",
+      ),
+    ]),
+  ])
+  let fragments = plan_program_wasmgc_fragments(
+      stages.analyzed,
+      stages.lowering,
+    ).modules[0]
+  match fragments.functions[0].kind {
+    PlannedWasmOutlinedStructGetFunction(recipe) => {
+      assert_eq(recipe.owner, PrimitiveRawStructOwner(BytesType))
+      assert_eq(recipe.field_index, 2)
+      assert_eq(recipe.opcode, b"struct.get 2")
+    }
+    _ => fail("expected an outlined struct.get recipe")
+  }
+  let encoded = serialize_planned_module_wasmgc_fragments(fragments).unwrap()
+  assert_eq(
+    deserialize_planned_module_wasmgc_fragments(encoded).unwrap(),
+    fragments,
+  )
 }
 
 ///|
