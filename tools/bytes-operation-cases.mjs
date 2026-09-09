@@ -35,5 +35,6 @@ export function checkBytesOperations(main) {
       error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
     `Bytes SIMD access rejects an out-of-range index: ${index}`);
   }
-  return cases.length + 11;
+  assert.equal(main(21), 1, "Bytes length uses the logical range, not capacity or offset");
+  return cases.length + 12;
 }

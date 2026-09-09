@@ -119,6 +119,13 @@ pub fn main(case: U32) -> I32 {
   } else if case == 20u32 {
     wasm_bytes_load_u8x16(b"0123456789abcdef", 4294967295u32)
     0i32
+  } else if case == 21u32 {
+    let builder = BytesBuilder::with_capacity(256u32)
+    builder.append(b"abcd")
+    let bytes = builder.finish()
+    bytes_result(b"".byte_length() == 0u32 && bytes.byte_length() == 4u32 &&
+      bytes.view(1u32, 3u32).view(1u32, 1u32).byte_length() == 1u32 &&
+      bytes.view(4u32, 0u32).byte_length() == 0u32)
   } else {
     unreachable()
   }

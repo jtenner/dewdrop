@@ -35,9 +35,11 @@ fn self_host_facet_bytes_to_string(
   value.to_string()
 }
 
-builtin self_host_facet_bytes_byte_length(
+fn self_host_facet_bytes_byte_length(
   value: Bytes,
-) -> U32 = "dew_bytes_byte_length"
+) -> U32 {
+  value.byte_length()
+}
 
 builtin self_host_facet_bytes_byte_at(
   value: Bytes,

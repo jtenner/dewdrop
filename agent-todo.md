@@ -137,6 +137,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   fragment codec. It accepts unpacked scalar fields only. Packed/reference
   fields and generic owners still need full contracts. See the
   [raw struct read log](docs/research/raw-struct-get-2026-09-09.md).
+  Bytes length now uses that raw instruction. Ordering and Facet call the Dew
+  operation; the native and pinned provider length builders are removed.
+  See the [Bytes length log](docs/research/bytes-length-intrinsic-2026-09-09.md).
   The SIMD load algorithm now runs in Dew too. See the
   [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
   The pinned provider's nine old Bytes algorithms and UTF-8 validator entry

@@ -54,12 +54,15 @@ check their exact diagnostic reasons. Three saved-plan mutations check code
 Scoped public-interface checks pass (3.294 and 3.292 seconds). A workspace-wide
 interface request used an unsupported backend for the platform CLI and failed
 with 17 unbound platform hooks (3.813 seconds); no platform code was changed.
-The generated-source lane passes (11.656 seconds). Its first cold run failed
+The generated-source lane passes (11.656 seconds). Its first run failed
 because Moon build warnings entered the exact CLI diagnostic comparison
-(16.781 seconds); the expected Dew diagnostic itself was unchanged. The CLI
-fixture driver still needs an explicit build step outside that comparison.
+(16.781 seconds); the expected Dew diagnostic itself was unchanged. Backend
+visibility was edited while that lane was active, so this run does not prove
+a cold-build fixture defect. Keep source stable for the whole lane, not just
+its first build step.
 
 No standard-library runtime operation has been removed by this change yet.
 Remaining text operations, generic heap wrappers, and reference contracts are
-still open. Clean bootstrap verification remains due with the next storage
-migration.
+still open. Clean bootstrap verification passes with the following
+[Bytes length migration](bytes-length-intrinsic-2026-09-09.md): 170.767 seconds,
+with identical B/C raw and linked bytes.

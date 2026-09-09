@@ -12,7 +12,9 @@ pub fn ordering_string_view_byte_length(value: StringView) -> U32 {
 pub fn ordering_string_view_byte_at(value: StringView, index: U32) -> U8 {
   value.byte_at(index)
 }
-pub builtin ordering_bytes_byte_length(value: Bytes) -> U32 = "dew_bytes_byte_length"
+pub fn ordering_bytes_byte_length(value: Bytes) -> U32 {
+  __dew_text_byte_length(value)
+}
 pub builtin ordering_bytes_byte_at(value: Bytes, index: U32) -> U8 = "dew_bytes_byte_at"
 
 pub enum Ordering {
