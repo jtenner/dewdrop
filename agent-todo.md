@@ -244,6 +244,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   dispatch. Use declaration IDs and explicit representation metadata, including
   Option variants and collection types. Names such as None, into, or RoadMap
   must not change compiler rules.
+  Nominal enum payload selection no longer has spelling exclusions for text
+  or collection names. User-defined Map and Array payloads have shared
+  execution coverage. Separate container-element heuristics remain. See the
+  [nominal payload log](docs/research/nominal-payload-name-cleanup-2026-09-09.md).
   Option now uses ordinary declared enum storage in the self-host compiler.
   Its adapter tags, Some/None physical spelling recovery, and eight unused
   runtime types are removed. Source-fragment variant operands use frozen

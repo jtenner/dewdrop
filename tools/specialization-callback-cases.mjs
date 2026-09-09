@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { checkSpecializationProducts, specializationI64Values } from "./specialization-product-cases.mjs";
 
 export const specializationCallbackNames = [
+  "named_map_payload_callback", "named_array_payload_callback",
   "mixed_scalars", "nominal_callback", "generic_nominal_callback",
   "captured_nominal_callback", "captured_generic_nominal_callback",
   "callback_evaluation_order", "trait_identity_callback",

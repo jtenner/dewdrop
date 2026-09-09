@@ -1744,12 +1744,6 @@ fn self_host_linked_nominal_field_type_index(
   if self_host_linked_is_raw_array_owner(link, declaration) {
     return Option::None
   }
-  let name = self_host_linked_declaration_name(link, declaration)
-  if name.equals(b"String") || name.equals(b"StringView") ||
-    name.equals(b"Bytes") || name.equals(b"Array") ||
-    name.equals(b"Map") {
-    return Option::None
-  }
   if allow_struct {
     match self_host_linked_struct_type_index(link, declaration) {
       Option::Some(type_index) => return Option::Some(type_index)

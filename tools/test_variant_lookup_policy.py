@@ -8,6 +8,13 @@ SOURCE = ROOT / "self_host/compiler/starshine_module.dew"
 
 
 class VariantLookupPolicyTests(unittest.TestCase):
+    def test_nominal_payloads_have_no_spelling_exemptions(self):
+        source = SOURCE.read_text().split("fn self_host_linked_nominal_field_type_index(", 1)[1].split("\nfn ", 1)[0]
+        self.assertNotIn("self_host_linked_declaration_name(", source)
+        self.assertNotIn(".equals(", source)
+        self.assertIn("self_host_linked_struct_type_index(link, declaration)", source)
+        self.assertIn("self_host_linked_enum_base_type_index(link, declaration)", source)
+
     def test_obsolete_global_variant_searches_are_removed(self):
         source = SOURCE.read_text()
         for name in ("self_host_linked_variant_type_by_name(",

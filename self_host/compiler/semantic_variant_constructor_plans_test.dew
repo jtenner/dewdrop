@@ -9,6 +9,26 @@ fn self_host_variant_recipe_fixture() -> (SelfHostPlannedProgramWasmGCLink, Self
   (link, program.bodies[0u32])
 }
 
+test "a nominal payload named Map retains its exact declared heap type" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Map {\n  value: I64\n}\nenum Payload {\n  Value(Map)\n}\npub fn main(value: I64) -> I64 {\n  match Payload::Value(Map::{\n    value: value\n  }) {\n    Payload::Value(item) => item.value\n  }\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid user-defined Map payload")
+  let declaration = 5100u64 << 32u64
+  match self_host_linked_nominal_field_type_index(link, declaration, true) {
+    Option::Some(type_) => assert(type_ == 0u32, "the selected struct is the first declared heap")
+    Option::None => assert(false, "a source name cannot erase nominal field evidence")
+  }
+  let plan = program.bodies[0u32]
+  assert(plan.variant_constructor_operands.length() == 1u32, "one declared payload operand")
+  match plan.variant_constructor_operands[0u32].reference_cast {
+    Option::Some(type_) => assert(type_ == 0u32, "the recipe retains the exact payload heap")
+    Option::None => assert(false, "the Map payload follows the ordinary nominal rule")
+  }
+}
+
 test "tuple variant constructors retain complete source operand recipes" {
   let (_, plan) = self_host_variant_recipe_fixture()
   assert(plan.variant_constructors.length() == 1u32, "one tuple constructor recipe")

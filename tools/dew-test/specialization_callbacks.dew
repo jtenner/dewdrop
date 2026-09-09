@@ -2,6 +2,37 @@ fn identity<t>(value: t) -> t {
   value
 }
 
+struct Map {
+  value: I64
+}
+
+struct Array<t> {
+  value: t
+}
+
+enum NamedPayload {
+  MapPayload(Map)
+  ArrayPayload(Array<I64>)
+}
+
+pub fn named_map_payload_callback(value: I64) -> I64 {
+  match NamedPayload::MapPayload(Map::{
+    value: value
+  }) {
+    NamedPayload::MapPayload(item) => item.value
+    _ => 0i64
+  }
+}
+
+pub fn named_array_payload_callback(value: I64) -> I64 {
+  match NamedPayload::ArrayPayload(Array::{
+    value: value
+  }) {
+    NamedPayload::ArrayPayload(item) => item.value
+    _ => 0i64
+  }
+}
+
 // This shared single-module fixture has no standard-module imports.
 // Match the public Result declaration to exercise ordinary enum storage.
 enum Result<t, e> {
