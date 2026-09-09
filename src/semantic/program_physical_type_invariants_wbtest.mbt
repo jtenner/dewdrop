@@ -158,6 +158,42 @@ fn physical_type_test_cycle() -> PlannedProgramWasmGCLink raise {
 }
 
 ///|
+fn physical_type_test_array_cycle() -> PlannedProgramWasmGCLink raise {
+  let program = collect_program_manifest(23969UL, ProgramManifest::new([
+    ManifestModule::new("cycle.a", [ManifestFile::new("a.dew", b"open cycle.b\nopen dew.std.wasm.intrinsics\npub struct A {\n  peer: B\n  chunks: WasmArray<V128>\n}\n")]),
+    ManifestModule::new("cycle.b", [ManifestFile::new("b.dew", b"open cycle.a\npub struct B {\n  peer: A\n}\n")]),
+  ]))
+  let analyzed = analyze_program_semantics(program)
+  let link = plan_program_wasmgc_link(analyzed, plan_program_lowering(program, analyzed), 0)
+  assert_eq(link.diagnostics, [])
+  assert_true(!link.program_type_groups.is_empty())
+  assert_eq(link.fixed_array_type_base, 0)
+  assert_eq(link.program_type_groups[0].first_type_index, 8)
+  assert_eq(verify_program_physical_type_fragments(link), Ok(()))
+  link
+}
+
+///|
+test "raw array type prefixes cannot move behind nominal groups" {
+  let link = physical_type_test_array_cycle()
+  assert_eq(verify_program_physical_type_fragments({ ..link, fixed_array_type_base: 1, }), Err({
+    code: 502, phase: 5, module_id: 0UL, declaration: 0UL,
+    body: 0UL, expression: 0xffffffffU, expected: 0UL, actual: 1UL, detail: 40UL << 32,
+  }))
+}
+
+///|
+test "recursive physical indices include the raw array type prefix" {
+  let link = physical_type_test_array_cycle()
+  let original = link.program_type_groups[0]
+  link.program_type_groups[0] = { ..original, first_type_index: 0, }
+  assert_eq(verify_program_physical_type_fragments(link), Err({
+    code: 504, phase: 5, module_id: 0UL, declaration: 0UL,
+    body: 0UL, expression: 0xffffffffU, expected: 8UL, actual: 0UL, detail: 19UL << 32,
+  }))
+}
+
+///|
 test "cross-module physical type nodes require a valid source module" {
   let link = physical_type_test_cycle()
   let original = link.program_physical_types[0]

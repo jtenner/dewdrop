@@ -2,6 +2,32 @@ open dew.std.wasm.intrinsics
 open dew.std.string
 open dew.std.string_builder
 open dew.std.bytes_builder
+open dew.std.bytes
+
+struct RawTextStorage {
+  chunks: WasmArray<V128>
+  start: U32
+  length: U32
+}
+
+struct RawBuilderStorage {
+  mut chunks: WasmArray<V128>
+  mut length: U32
+  mut consumed: U32
+}
+
+builtin raw_text_storage(value: Bytes) -> RawTextStorage = "ref.cast"
+builtin raw_text_bytes(value: RawTextStorage) -> Bytes = "ref.cast"
+builtin raw_builder_storage(value: BytesBuilder) -> RawBuilderStorage = "ref.cast"
+builtin raw_storage_builder(value: RawBuilderStorage) -> BytesBuilder = "ref.cast"
+
+fn raw_text_storage_caster() -> fn(Bytes) -> RawTextStorage {
+  raw_text_storage
+}
+
+fn raw_storage_a_chunks() -> WasmArray<V128> {
+  wasm_array_new(1u32, unsafe_bitcast::<U8x16, V128>(wasm_u8x16_splat(65u8)))
+}
 
 struct RawBacking<t> {
   mut storage: WasmArray<t>
@@ -224,6 +250,56 @@ pub fn main(case: U32) -> I32 {
     let bytes = cast(builder)
     bytes.append(b"\xce\xbb\xf0\x9f\x98\x80")
     if builder.byte_length() == 6u32 && builder.finish() == "λ😀" {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 21u32 {
+    let storage = raw_text_storage(b"0123456789abcdefgh")
+    if storage.start == 0u32 && storage.length == 18u32 && wasm_array_len(storage.chunks) == 2u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 22u32 {
+    let storage = RawTextStorage::{
+      chunks: raw_storage_a_chunks()
+      start: 2u32
+      length: 3u32
+    }
+    if raw_text_bytes(storage) == b"AAA" {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 23u32 {
+    let builder = BytesBuilder::with_capacity(1u32)
+    let storage = raw_builder_storage(builder)
+    wasm_array_set(storage.chunks, 0u32, unsafe_bitcast::<U8x16, V128>(wasm_u8x16_splat(65u8)))
+    storage.length = 1u32
+    let bytes = builder.finish()
+    if bytes == b"A" && storage.consumed == 1u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 24u32 {
+    let storage = RawBuilderStorage::{
+      chunks: raw_storage_a_chunks()
+      length: 3u32
+      consumed: 0u32
+    }
+    let builder = raw_storage_builder(storage)
+    builder.append_byte(66u8)
+    let bytes = builder.finish()
+    if bytes == b"AAAB" && storage.length == 4u32 && storage.consumed == 1u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 25u32 {
+    let storage = raw_text_storage_caster()(b"!abcdef?".view(1u32, 6u32).view(2u32, 3u32))
+    if storage.start == 3u32 && storage.length == 3u32 && raw_text_bytes(storage) == b"cde" {
       1i32
     } else {
       0i32

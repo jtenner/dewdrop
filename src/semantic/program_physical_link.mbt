@@ -377,6 +377,7 @@ fn program_cross_module_type_groups(
   fragments : PlannedProgramSpecializationPlan,
   module_lookup : Map[ModuleId, Int],
   diagnostics : Array[ProgramWasmGCLinkDiagnostic],
+  type_base : Int,
 ) -> (
   Array[Array[Int]],
   Array[PlannedProgramWasmRecursiveGroup],
@@ -524,11 +525,11 @@ fn program_cross_module_type_groups(
   let type_lookup : Map[DeclId, Int] = Map::default()
   let final_index_by_node = Array::make(nodes.length(), -1)
   for component in component_spans {
-    let first_type_index = physical_types.length()
+    let first_type_index = type_base + physical_types.length()
     let start = physical_types.length()
     for index in 0..<component.length {
       let node = nodes[component_members[component.start + index]]
-      let final_type_index = physical_types.length()
+      let final_type_index = type_base + physical_types.length()
       final_index_by_node[component_members[component.start + index]] = final_type_index
       module_type_indices[node.module_index][node.fragment_index] = final_type_index
       let physical = fragments.modules[node.module_index].physical_types[node.fragment_index]
@@ -963,10 +964,11 @@ pub fn link_program_wasmgc_fragments(
   }
   let program_type_groups : Array[PlannedProgramWasmRecursiveGroup] = []
   let program_physical_types : Array[PlannedProgramWasmPhysicalType] = []
-  let mut fixed_array_type_base = -1
+  let fixed_array_type_base = if uses_fixed_array_types { 0 } else { -1 }
+  let nominal_type_base = if uses_fixed_array_types { 8 } else { 0 }
   if cross_module_type_scc {
     let (cross_indices, cross_groups, cross_types, cross_lookup) = program_cross_module_type_groups(
-      fragments, module_lookup, diagnostics,
+      fragments, module_lookup, diagnostics, nominal_type_base,
     )
     for module_index in 0..<module_type_indices.length() {
       module_type_indices[module_index] = cross_indices[module_index]
@@ -980,19 +982,10 @@ pub fn link_program_wasmgc_fragments(
     for declaration, index in cross_lookup {
       type_lookup[declaration] = index
     }
-    type_count = program_physical_types.length()
-    if uses_fixed_array_types {
-      fixed_array_type_base = type_count
-      type_count += 8
-    }
+    type_count = nominal_type_base + program_physical_types.length()
   } else {
     program_link_validate_types(fragments, type_lookup, diagnostics)
-    if uses_fixed_array_types {
-      fixed_array_type_base = 0
-      type_count = 8
-    } else {
-      type_count = 0
-    }
+    type_count = nominal_type_base
   }
   let module_signature_indices : Array[Array[Int]] = []
   for module_ in fragments.modules {

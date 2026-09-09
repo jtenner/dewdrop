@@ -4,6 +4,12 @@ fn emit_starshine_program_type_section(
   helper_plan : StarshineProgramAdapterHelperPlan,
 ) -> @lib.TypeSec {
   let rec_types : Array[@lib.RecType] = []
+  // Raw array heaps are dependencies of fields inside nominal recursive groups.
+  if planned.fixed_array_type_base >= 0 {
+    for runtime_type in starshine_fixed_array_runtime_types() {
+      rec_types.push(runtime_type)
+    }
+  }
   if planned.program_type_groups.length() > 0 {
     for group in planned.program_type_groups {
       let subtypes : Array[@lib.SubType] = []
@@ -15,20 +21,10 @@ fn emit_starshine_program_type_section(
       }
       rec_types.push(@lib.RecType::group(subtypes))
     }
-    if planned.fixed_array_type_base >= 0 {
-      for runtime_type in starshine_fixed_array_runtime_types() {
-        rec_types.push(runtime_type)
-      }
-    }
     for signature in planned.program_signature_types {
       rec_types.push(starshine_program_signature_rec_type(planned, signature))
     }
   } else {
-    if planned.fixed_array_type_base >= 0 {
-      for runtime_type in starshine_fixed_array_runtime_types() {
-        rec_types.push(runtime_type)
-      }
-    }
     for scc in planned.graph.sccs {
       for member_index in 0..<scc.length {
         let module_index = planned.graph.scc_modules[scc.start + member_index]

@@ -132,6 +132,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   Keep encoding, bounds, and lifetime checks in ordinary library code.
   Bytes equality, hash, searches, affixes, UTF-8 validation, and checked String
   conversion now run in Dew. Bytes storage operations still need migration.
+  Declared text/builder storage probes now expose exact raw-array field gaps.
+  Native heap ordering and field-only reachability are fixed; the self-host
+  probe still fails on its erased array field. Keep this row open until both
+  compilers use exact storage and the library migration passes. See the
+  [declared storage log](docs/research/declared-text-storage-2026-09-09.md).
   Raw `struct.get N` now retains a concrete struct owner and physical field
   index in both compilers, including function-value wrappers and the native
   fragment codec. It accepts unpacked scalar fields only. Packed/reference

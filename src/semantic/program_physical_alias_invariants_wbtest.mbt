@@ -140,7 +140,7 @@ test "canonical signature aliases compare exact heap identity" {
 test "shared trait vtables compare their relocated method signature types" {
   let stages = compiler_test_stages(23968UL, [
     CompilerTestModule::new("alias.traits", [CompilerTestSource::new(
-      "traits.dew", b"pub trait Read {\n  fn read(self) -> I32\n}\npub fn first(value: Read) -> I32 {\n  value.read()\n}\n",
+      "traits.dew", b"open dew.std.wasm.intrinsics\npub trait Read {\n  fn read(self) -> I32\n}\npub fn first(value: Read) -> I32 {\n  value.read()\n}\npub struct ArrayField {\n  chunks: WasmArray<V128>\n}\n",
     )]),
     CompilerTestModule::new("alias.consumer", [CompilerTestSource::new(
       "consumer.dew", b"open alias.traits\npub fn second(value: Read) -> I32 {\n  value.read()\n}\n",
@@ -157,7 +157,7 @@ test "shared trait vtables compare their relocated method signature types" {
         PlannedWasmTraitVTableType(value) => value
         _ => continue
       }
-      let canonical = link.program_physical_types[link.module_type_indices[owner][local]]
+      let canonical = link.program_physical_types[link.module_type_indices[owner][local] - program_physical_nominal_type_base(link)]
       if canonical.module_index == owner { continue }
       assert_eq(type_.fields.length, 1)
       let slot = type_.fields.start

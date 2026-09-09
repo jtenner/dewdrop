@@ -4314,6 +4314,14 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       }
     }
   }
+  if !uses_fixed_array_runtime {
+    for field in fields {
+      if field.storage is WasmFixedArrayRefStorage(_) {
+        uses_fixed_array_runtime = true
+        break
+      }
+    }
+  }
   let mut uses_linear_memory = false
   for callable_index, reachable in reachable_functions {
     if !reachable {

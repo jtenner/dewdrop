@@ -172,6 +172,7 @@ pub fn verify_program_physical_type_fragments(
     }
   } else {
     let nodes = link.program_physical_types
+    let type_base = program_physical_nominal_type_base(link)
     let seen = Array::make(nodes.length(), false)
     let mut next = 0
     for group_index, group in link.program_type_groups {
@@ -180,8 +181,8 @@ pub fn verify_program_physical_type_fragments(
         span.length <= nodes.length() - span.start else {
         return Err(physical_type_failure(0UL, 0UL, 101, nodes.length().to_uint64(), program_function_span_code(span), 18UL, group_index))
       }
-      guard group.first_type_index == span.start else {
-        return Err(physical_type_failure(0UL, 0UL, 504, span.start.to_uint64(), group.first_type_index.reinterpret_as_uint().to_uint64(), 19UL, group_index))
+      guard group.first_type_index.to_uint64() == type_base.to_uint64() + span.start.to_uint64() else {
+        return Err(physical_type_failure(0UL, 0UL, 504, type_base.to_uint64() + span.start.to_uint64(), group.first_type_index.reinterpret_as_uint().to_uint64(), 19UL, group_index))
       }
       guard span.start == next else {
         return Err(physical_type_failure(0UL, 0UL, 504, next.to_uint64(), span.start.to_uint64(), 26UL, group_index))
@@ -211,17 +212,17 @@ pub fn verify_program_physical_type_fragments(
       }
       let type_ = module_.physical_types[node.fragment_index]
       let actual = link.module_type_indices[node.module_index][node.fragment_index]
-      guard actual == slot else {
-        return Err(physical_type_failure(module_.module_id, physical_type_declaration(type_.kind), 504, slot.to_uint64(), actual.to_uint64(), 23UL, slot))
+      guard actual.to_uint64() == type_base.to_uint64() + slot.to_uint64() else {
+        return Err(physical_type_failure(module_.module_id, physical_type_declaration(type_.kind), 504, type_base.to_uint64() + slot.to_uint64(), actual.to_uint64(), 23UL, slot))
       }
     }
     for module_index, module_ in link.modules {
       for local_index, actual in link.module_type_indices[module_index] {
         let type_ = module_.physical_types[local_index]
-        guard actual < nodes.length() else {
+        guard actual >= type_base && actual - type_base < nodes.length() else {
           return Err(physical_type_failure(module_.module_id, physical_type_declaration(type_.kind), 503, nodes.length().to_uint64(), actual.to_uint64(), 24UL, local_index))
         }
-        let target = nodes[actual]
+        let target = nodes[actual - type_base]
         if target.module_index == module_index && target.fragment_index == local_index {
           continue
         }

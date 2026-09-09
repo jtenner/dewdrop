@@ -152,7 +152,7 @@ fn verify_program_physical_field_aliases(
   if link.program_type_groups.is_empty() { return Ok(()) }
   for owner, module_ in link.modules {
     for local, type_ in module_.physical_types {
-      let target = link.program_physical_types[link.module_type_indices[owner][local]]
+      let target = link.program_physical_types[link.module_type_indices[owner][local] - program_physical_nominal_type_base(link)]
       if target.module_index == owner && target.fragment_index == local { continue }
       let canonical_module = link.modules[target.module_index]
       let canonical = canonical_module.physical_types[target.fragment_index]

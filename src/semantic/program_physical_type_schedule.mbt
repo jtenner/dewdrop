@@ -1,4 +1,10 @@
 ///|
+// Node-table positions exclude the raw array prefix; physical indices include it.
+fn program_physical_nominal_type_base(link : PlannedProgramWasmGCLink) -> Int {
+  if link.fixed_array_type_base >= 0 { 8 } else { 0 }
+}
+
+///|
 // Reconstruct the exact type-section prefix consumed by emission. Canonical
 // signatures may be shared by source maps, but each emitted slot occurs once.
 fn verify_program_physical_type_schedule(
@@ -34,12 +40,6 @@ fn verify_program_physical_type_schedule(
   guard link.fixed_array_type_base >= -1 else {
     return Err(physical_type_failure(0UL, 0UL, 503, 0xffffffffUL, link.fixed_array_type_base.reinterpret_as_uint().to_uint64(), 40UL, 0))
   }
-  if !link.program_type_groups.is_empty() {
-    match append(link.program_physical_types.length(), 0, 0UL, 41UL, 0) {
-      Err(error) => return Err(error)
-      Ok(_) => ()
-    }
-  }
   if link.fixed_array_type_base >= 0 {
     match append(8, link.fixed_array_type_base, 0UL, 40UL, 0) {
       Err(error) => return Err(error)
@@ -47,6 +47,10 @@ fn verify_program_physical_type_schedule(
     }
   }
   if !link.program_type_groups.is_empty() {
+    match append(link.program_physical_types.length(), program_physical_nominal_type_base(link), 0UL, 41UL, 0) {
+      Err(error) => return Err(error)
+      Ok(_) => ()
+    }
     for slot, signature in link.program_signature_types {
       match append(1, signature.type_index, link.modules[signature.module_index].module_id, 42UL, slot) {
         Err(error) => return Err(error)
