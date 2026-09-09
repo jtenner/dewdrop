@@ -2198,13 +2198,6 @@ fn wasmgc_builtin_uses_linear_memory(name : Bytes) -> Bool {
 }
 
 ///|
-fn wasmgc_builtin_is_runtime(name : Bytes) -> Bool {
-  name == b"dew_string_builder_with_capacity" ||
-  name == b"dew_string_builder_append_scalar" ||
-  name == b"dew_string_builder_finish"
-}
-
-///|
 fn wasmgc_builtin_is_inline(name : Bytes) -> Bool {
   raw_wasm_builtin_is_inline(name) ||
   name == b"unsafe.bitcast" ||
@@ -2378,8 +2371,6 @@ fn wasmgc_plan_function_job(
         PlannedWasmInlineHeapFunction(
           RawRefCastInstruction(raw_ref_cast_recipe(resolved, callable, name)),
         )
-      } else if wasmgc_builtin_is_runtime(name) {
-        PlannedWasmRuntimeFunction(name)
       } else if wasmgc_builtin_is_inline(name) {
         PlannedWasmInlineBuiltinFunction(name)
       } else {
@@ -2555,7 +2546,7 @@ fn wasmgc_direct_builtin_of(
   }
   match builtin_names.get(target) {
     Some(name) =>
-      if !wasmgc_builtin_is_runtime(name) && wasmgc_builtin_is_inline(name) {
+      if wasmgc_builtin_is_inline(name) {
         name
       } else {
         b""

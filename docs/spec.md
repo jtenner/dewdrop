@@ -906,9 +906,10 @@ Bodies without member syntax use shared empty member arrays, and selection stora
 StringBuilder's String, StringView, and ASCII append functions are ordinary Dew
 bodies. A private typed reference cast shares the mutable BytesBuilder storage
 and consumed state without allocating a replacement. ASCII range checking is
-Dew code. BytesBuilder storage operations are Dew code too; only StringBuilder
-capacity, scalar encoding, and finish remain temporary runtime support.
-Returned function values retain their targets and
+Dew code. StringBuilder capacity and finish use the same Dew BytesBuilder
+storage path. Scalar encoding rejects invalid Unicode values and reserves the
+complete encoding before writing its one-to-four UTF-8 bytes. No text or builder
+algorithm runtime bodies remain. Returned function values retain their targets and
 dependencies in the same program reachability queue as direct calls.
 
 `Bytes.view` uses an ordinary Dew function over declared V128-array, start,
@@ -1756,7 +1757,7 @@ Semantic analysis distinguishes unit and tuple constructors from qualified const
 | D-420 | Implemented | `StringBuilder` privately mutates geometrically grown V128 storage, appends String and StringView values, publishes a start-zero String with `finish()`, and traps on every use after consumption. |
 | D-421 | Implemented | Logical text operations honor nonzero starts. Dynamic two-chunk swizzle assembles unaligned logical V128 blocks for UTF validation/counting and equality, while byte access adds start and exact tails remain scalar. |
 | D-422 | Implemented | `BytesBuilder` privately mutates geometrically grown V128 storage, appends arbitrary Bytes ranges and individual U8 values, publishes a start-zero Bytes with `finish()`, and traps on every use after consumption. |
-| D-423 | Implemented | Builders retain distinct nominal types and deterministic V128 storage, exact scalar tails, and consume-on-finish checks. BytesBuilder growth and copying run in Dew; StringBuilder String/view/ASCII appends delegate to that code. StringBuilder scalar encoding, capacity, and finish remain separate runtime paths pending migration. |
+| D-423 | Implemented | Builders retain distinct nominal types and share deterministic Dew V128 storage, exact scalar tails, checked growth, and consume-on-finish checks. StringBuilder validates and encodes Unicode scalars in Dew after reserving their complete byte range. No compiler-owned text/builder algorithm bodies remain. |
 | D-424 | Implemented | `view(start, length)` is the strict checked length-based shared-range operation; String/StringView results are StringView, while Bytes returns another shared Bytes wrapper. |
 | D-425 | Implemented | `subarray(start, end)` is the strict checked end-exclusive shared-range operation, while `slice(start, end)` exact-copies the end-exclusive range into start-zero storage; all indices are U32 and invalid, reversed, or out-of-bounds ranges trap rather than clamp. |
 | D-426 | Implemented | `compact()` exact-copies the complete logical String, StringView, or Bytes range into exactly sized start-zero V128 storage to release disproportionately retained backing. |

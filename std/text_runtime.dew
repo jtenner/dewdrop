@@ -29,7 +29,10 @@ fn string_view_range(value: Bytes, start: U32, length: U32) -> StringView {
 pub fn string_builder_new() -> StringBuilder {
   string_builder_with_capacity_raw(64u32)
 }
-pub builtin string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = "dew_string_builder_with_capacity"
+pub fn string_builder_with_capacity_raw(capacity: U32) -> StringBuilder {
+  string_builder_value(bytes_builder_with_capacity_raw(capacity))
+}
+builtin string_builder_value(value: BytesBuilder) -> StringBuilder = "ref.cast"
 builtin string_builder_length_raw(value: StringBuilder) -> U32 = "struct.get 1"
 builtin string_builder_consumed_raw(value: StringBuilder) -> U32 = "struct.get 2"
 pub fn string_builder_byte_length(value: StringBuilder) -> U32 {
@@ -51,8 +54,43 @@ pub fn string_builder_append_ascii(value: StringBuilder, byte: U8) -> Unit {
   }
   bytes_builder_append_byte(string_builder_bytes_raw(value), byte)
 }
-pub builtin string_builder_append_scalar(value: StringBuilder, scalar: U32) -> Unit = "dew_string_builder_append_scalar"
-pub builtin string_builder_finish(value: StringBuilder) -> String = "dew_string_builder_finish"
+pub fn string_builder_append_scalar(value: StringBuilder, scalar: U32) -> Unit {
+  let target = bytes_builder_storage(string_builder_bytes_raw(value))
+  if scalar > 1114111u32 || (scalar >= 55296u32 && scalar <= 57343u32) {
+    unreachable()
+  }
+  let encoded_length = if scalar <= 127u32 {
+    1u32
+  } else if scalar <= 2047u32 {
+    2u32
+  } else if scalar <= 65535u32 {
+    3u32
+  } else {
+    4u32
+  }
+  let start = target.length
+  let required_length = bytes_builder_reserve(target, encoded_length)
+  // Reserve the complete encoding before writing any byte.
+  if encoded_length == 1u32 {
+    bytes_storage_write_byte(target.chunks, start, scalar.into())
+  } else if encoded_length == 2u32 {
+    bytes_storage_write_byte(target.chunks, start, ((scalar >> 6u32) | 192u32).into())
+    bytes_storage_write_byte(target.chunks, start + 1u32, ((scalar & 63u32) | 128u32).into())
+  } else if encoded_length == 3u32 {
+    bytes_storage_write_byte(target.chunks, start, ((scalar >> 12u32) | 224u32).into())
+    bytes_storage_write_byte(target.chunks, start + 1u32, (((scalar >> 6u32) & 63u32) | 128u32).into())
+    bytes_storage_write_byte(target.chunks, start + 2u32, ((scalar & 63u32) | 128u32).into())
+  } else {
+    bytes_storage_write_byte(target.chunks, start, ((scalar >> 18u32) | 240u32).into())
+    bytes_storage_write_byte(target.chunks, start + 1u32, (((scalar >> 12u32) & 63u32) | 128u32).into())
+    bytes_storage_write_byte(target.chunks, start + 2u32, (((scalar >> 6u32) & 63u32) | 128u32).into())
+    bytes_storage_write_byte(target.chunks, start + 3u32, ((scalar & 63u32) | 128u32).into())
+  }
+  target.length = required_length
+}
+pub fn string_builder_finish(value: StringBuilder) -> String {
+  bytes_to_string_unchecked(bytes_builder_finish(string_builder_bytes_raw(value)))
+}
 pub fn bytes_builder_new() -> BytesBuilder {
   bytes_builder_with_capacity_raw(64u32)
 }

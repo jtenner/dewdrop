@@ -128,15 +128,15 @@ Correctness comes first. Keep these timing defects visible after query completio
   pass in both compilers, including Unit, tuples, references, bounds, growth,
   clearing, floats, and Iter. See the
   [storage log](docs/research/circular-buffer-library-storage-2026-09-06.md).
-- [ ] Move Text, Bytes, views, and builders out of compiler-owned algorithms.
+- [x] Move Text, Bytes, views, and builders out of compiler-owned algorithms.
   Keep encoding, bounds, and lifetime checks in ordinary library code.
   Bytes equality, hash, searches, affixes, UTF-8 validation, and checked String
-  conversion now run in Dew. Bytes storage operations still need migration.
+  conversion now run in Dew. Bytes storage operations are migrated too.
   Declared text/builder storage probes now expose exact raw-array field gaps.
   Native heap ordering and field-only reachability are fixed. Self-host
   concrete array fields, constructor casts, and frozen field-write casts now
   pass the shared storage probes and clean bootstrap validation.
-  Keep this row open until the library migration passes. See the
+  The complete library migration now passes. See the
   [declared storage log](docs/research/declared-text-storage-2026-09-09.md).
   Bytes view range checks and shared-storage construction now use Dew, with
   the native/provider runtime entry removed. Both compilers, integration,
@@ -154,8 +154,14 @@ Correctness comes first. Keep these timing defects visible after query completio
   the four native/provider runtime entries and private copying helpers are
   removed. All 53 Bytes cases pass in both compilers, along with the library
   and self-host hardening lanes. Integration, generated checks, and the clean
-  B/C byte-comparison checkpoint pass. Three StringBuilder runtime entries remain.
+  B/C byte-comparison checkpoint pass.
   See the [builder storage log](docs/research/bytes-builder-storage-library-2026-09-09.md).
+  StringBuilder capacity, scalar encoding, and finish now use Dew too. All 47
+  String cases pass in both compilers. Native, integration, provider, stress,
+  generated, and clean bootstrap checks pass. No private text or
+  builder algorithm bodies remain. The obsolete runtime bridge and unknown
+  builtin import fallback still need cleanup; see the
+  [StringBuilder log](docs/research/string-builder-storage-library-2026-09-09.md).
   Raw `struct.get N` now retains a concrete struct owner and physical field
   index in both compilers, including function-value wrappers and the native
   fragment codec. It accepts unpacked scalar fields only. Packed/reference
@@ -358,10 +364,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   the opcode-or-unsafe-cast rule across every module, registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.
   Include the pinned Starshine `src/ffi_bridge` runtime copies in each removal;
-  text storage and SIMD storage bridges still remain.
+  text/builder algorithm copies are now removed. The retired runtime function
+  kind/provider protocol and unknown-builtin host-import fallback remain.
   Removed 46 unused private linker/body helpers, including stale collection
   name recovery and consumed-expression recovery. This does not remove the
-  still-used text/runtime bridges. See the
+  remaining runtime protocol. Replace its empty-name placeholders with explicit
+  missing state, remove the retired bridge, and diagnose unknown builtin names
+  instead of turning them into imports. See the
   [unused linker log](docs/research/unused-link-recovery-2026-09-09.md).
 
 ### Finish the compiler correctness audit

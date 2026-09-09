@@ -46,5 +46,16 @@ export function checkStringOperations(main) {
       error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
     `StringBuilder append rejects invalid ASCII or consumed state: ${index}`);
   }
-  return labels.length + 25;
+  for (const [index, label] of [[35, "scalar boundaries at all vector offsets"],
+    [36, "returned capacity, scalar, and finish functions"],
+    [44, "scalar arguments run once in source order"],
+    [45, "zero-capacity scalar growth preserves aliases"]]) {
+    assert.equal(main(index), 1, `StringBuilder ${label}`);
+  }
+  for (const index of [37, 38, 39, 40, 41, 42, 43, 46]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `StringBuilder rejects invalid scalars, consumed state, or length overflow: ${index}`);
+  }
+  return labels.length + 37;
 }

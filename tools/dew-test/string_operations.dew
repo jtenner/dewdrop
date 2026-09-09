@@ -1,4 +1,5 @@
 open dew.std.preamble
+open dew.std.array
 open dew.std.string
 open dew.std.string_builder
 open dew.std.text_runtime
@@ -232,9 +233,113 @@ pub fn main(case: U32) -> I32 {
     }
     string_append_operation()(string_append_builder(log, builder), string_append_part(log))
     string_result(log.order == 12u32 && builder.finish() == "λ")
+  } else if case == 35u32 {
+    string_result(string_builder_scalar_matrix())
+  } else if case == 36u32 {
+    let builder = string_builder_capacity_operation()(0u32)
+    string_builder_scalar_operation()(builder, 127757u32)
+    string_result(string_builder_finish_operation()(builder) == "🌍")
+  } else if case == 37u32 {
+    string_builder_scalar_operation()(StringBuilder::new(), 55296u32)
+    0i32
+  } else if case == 38u32 {
+    string_builder_scalar_operation()(StringBuilder::new(), 57343u32)
+    0i32
+  } else if case == 39u32 {
+    string_builder_scalar_operation()(StringBuilder::new(), 1114112u32)
+    0i32
+  } else if case == 40u32 {
+    string_builder_scalar_operation()(StringBuilder::new(), 4294967295u32)
+    0i32
+  } else if case == 41u32 {
+    let builder = StringBuilder::new()
+    let _ = builder.finish()
+    string_builder_scalar_operation()(builder, 0u32)
+    0i32
+  } else if case == 42u32 {
+    let builder = StringBuilder::new()
+    let _ = builder.finish()
+    string_builder_finish_operation()(builder)
+    0i32
+  } else if case == 43u32 {
+    string_builder_scalar_operation()(string_builder_overflow_state(4294967294u32), 2048u32)
+    0i32
+  } else if case == 44u32 {
+    let builder = StringBuilder::with_capacity(0u32)
+    let log = StringLoadLog::{
+      order: 0u32
+    }
+    string_builder_scalar_operation()(string_append_builder(log, builder), string_builder_logged_scalar(log))
+    string_result(log.order == 12u32 && builder.finish() == "λ")
+  } else if case == 45u32 {
+    let builder = string_builder_capacity_operation()(0u32)
+    let alias = builder
+    while 0u32 {
+      index if index < 257u32 => {
+        string_builder_scalar_operation()(builder, 8364u32)
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    let text = string_builder_finish_operation()(alias)
+    string_result(text.byte_length() == 771u32 && text.starts_with("€€") && text.ends_with("€€"))
+  } else if case == 46u32 {
+    string_builder_scalar_operation()(string_builder_overflow_state(4294967295u32), 0u32)
+    0i32
   } else {
     unreachable()
   }
+}
+
+struct StringBuilderTestStorage {
+  mut chunks: WasmArray<V128>
+  mut length: U32
+  mut consumed: U32
+}
+
+builtin string_builder_test_value(value: StringBuilderTestStorage) -> StringBuilder = "ref.cast"
+
+fn string_builder_overflow_state(length: U32) -> StringBuilder {
+  string_builder_test_value(StringBuilderTestStorage::{
+    chunks: wasm_array_new_default::<V128>(0u32)
+    length: length
+    consumed: 0u32
+  })
+}
+
+fn string_builder_capacity_operation() -> fn(U32) -> StringBuilder {
+  string_builder_with_capacity_raw
+}
+fn string_builder_scalar_operation() -> fn(StringBuilder, U32) -> Unit {
+  string_builder_append_scalar
+}
+fn string_builder_finish_operation() -> fn(StringBuilder) -> String {
+  string_builder_finish
+}
+fn string_builder_logged_scalar(log: StringLoadLog) -> U32 {
+  log.order = log.order * 10u32 + 2u32
+  955u32
+}
+
+fn string_builder_scalar_matrix() -> Bool {
+  let prefix_text = "abcdefghijklmnop"
+  let encoded = "\x00\x7f\xc2\x80\xdf\xbf\xe0\xa0\x80\xed\x9f\xbf\xee\x80\x80\xef\xbf\xbf\xf0\x90\x80\x80\xf4\x8f\xbf\xbf"
+  while 0u32 {
+    prefix if prefix < 16u32 => {
+      let builder = StringBuilder::with_capacity(1u32)
+      builder.append_view(prefix_text.view(0u32, prefix))
+      for scalar in [0u32, 127u32, 128u32, 2047u32, 2048u32, 55295u32, 57344u32, 65535u32, 65536u32, 1114111u32] {
+        builder.append_scalar(scalar)
+      }
+      let result = builder.finish()
+      if result.as_bytes().view(0u32, prefix) != prefix_text.as_bytes().view(0u32, prefix) || result.as_bytes().view(prefix, encoded.byte_length()) != encoded.as_bytes() || result.byte_length() != prefix + encoded.byte_length() {
+        return false
+      }
+      continue prefix + 1u32
+    }
+    _ => break ()
+  }
+  true
 }
 
 fn string_builder_length_operation() -> fn(StringBuilder) -> U32 {
