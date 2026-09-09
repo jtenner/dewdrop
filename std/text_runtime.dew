@@ -16,7 +16,14 @@ pub builtin string_builder_append_scalar(value: StringBuilder, scalar: U32) -> U
 pub builtin string_builder_finish(value: StringBuilder) -> String = "dew_string_builder_finish"
 pub builtin bytes_builder_new() -> BytesBuilder = "dew_bytes_builder_new"
 pub builtin bytes_builder_with_capacity_raw(capacity: U32) -> BytesBuilder = "dew_bytes_builder_with_capacity"
-pub builtin bytes_builder_byte_length(value: BytesBuilder) -> U32 = "dew_bytes_builder_byte_length"
+builtin bytes_builder_length_raw(value: BytesBuilder) -> U32 = "struct.get 1"
+builtin bytes_builder_consumed_raw(value: BytesBuilder) -> U32 = "struct.get 2"
+pub fn bytes_builder_byte_length(value: BytesBuilder) -> U32 {
+  if bytes_builder_consumed_raw(value) != 0u32 {
+    unreachable()
+  }
+  bytes_builder_length_raw(value)
+}
 pub builtin bytes_builder_append(value: BytesBuilder, part: Bytes) -> Unit = "dew_bytes_builder_append"
 pub builtin bytes_builder_append_byte(value: BytesBuilder, byte: U8) -> Unit = "dew_bytes_builder_append_byte"
 pub builtin bytes_builder_finish(value: BytesBuilder) -> Bytes = "dew_bytes_builder_finish"

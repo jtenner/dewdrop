@@ -1,9 +1,9 @@
 {
   "version": 1,
   "provider": "starshine",
-  "submodule_revision": "3d0f0690893dd8f69e1b1527e1726b333049bac9",
+  "submodule_revision": "c5d3d0a516e4e12d4911d6486c0e273a149d0dec",
   "wasm_path": "starshine-mb/dist/ffi/starshine-ffi.wasm",
-  "wasm_sha256": "f17084bb61cc1927d94637721e90f6867c682c22e20c78d4fdb89df296b1abc1",
+  "wasm_sha256": "72a70a4f25bd874b05f365930c71023226b97ddadd6b7ae9669fa1ac07eb1f22",
   "available_export_count": 4188,
   "binding_count": 476,
   "interfaces": [
@@ -27,7 +27,7 @@
   "fingerprint": {
     "algorithm": "blake3-256",
     "domain": "DEW_SELF_HOST_COMPILER_FINGERPRINT_V1",
-    "prefix_sha256": "f3c08f19deeb3c6aebf46f31e601a4db7d4ff4c7dce8bfba8efd12f3b7b5f99a",
+    "prefix_sha256": "aed26fc040ba91e225a6614143c1678734c329ade9e58eeaf6fa782b27a949f1",
     "provider_input": "exact wasm bytes appended after the prefix"
   },
   "exports": [

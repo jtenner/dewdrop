@@ -140,6 +140,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Bytes length now uses that raw instruction. Ordering and Facet call the Dew
   operation; the native and pinned provider length builders are removed.
   See the [Bytes length log](docs/research/bytes-length-intrinsic-2026-09-09.md).
+  BytesBuilder length and its consumed-state check now run in Dew through raw
+  scalar field reads. Both old runtime entries are removed. Shared checks
+  cover live aliases, finished aliases, and a returned function. See the
+  [builder length log](docs/research/bytes-builder-length-library-2026-09-09.md).
   The SIMD load algorithm now runs in Dew too. See the
   [Bytes log](docs/research/bytes-library-algorithms-2026-09-06.md).
   The pinned provider's nine old Bytes algorithms and UTF-8 validator entry

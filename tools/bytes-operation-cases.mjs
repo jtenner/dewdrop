@@ -36,5 +36,12 @@ export function checkBytesOperations(main) {
     `Bytes SIMD access rejects an out-of-range index: ${index}`);
   }
   assert.equal(main(21), 1, "Bytes length uses the logical range, not capacity or offset");
-  return cases.length + 12;
+  assert.equal(main(22), 1, "BytesBuilder length shares live state across aliases");
+  for (const index of [23, 24]) {
+    assert.throws(() => main(index), error =>
+      error instanceof WebAssembly.RuntimeError && /unreachable/.test(error.message),
+    `BytesBuilder length rejects consumed state: ${index}`);
+  }
+  assert.equal(main(25), 1, "BytesBuilder length works through a returned function");
+  return cases.length + 16;
 }

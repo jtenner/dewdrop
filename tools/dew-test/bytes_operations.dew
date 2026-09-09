@@ -4,6 +4,7 @@ open dew.std.bytes
 open dew.std.bytes_builder
 open dew.std.option
 open dew.std.string
+open dew.std.text_runtime
 open dew.std.wasm.intrinsics
 
 fn bytes_result(value: Bool) -> I32 {
@@ -126,9 +127,37 @@ pub fn main(case: U32) -> I32 {
     bytes_result(b"".byte_length() == 0u32 && bytes.byte_length() == 4u32 &&
       bytes.view(1u32, 3u32).view(1u32, 1u32).byte_length() == 1u32 &&
       bytes.view(4u32, 0u32).byte_length() == 0u32)
+  } else if case == 22u32 {
+    let builder = BytesBuilder::with_capacity(256u32)
+    let alias = builder
+    if builder.byte_length() != 0u32 {
+      return 0i32
+    }
+    builder.append(b"abcd")
+    builder.append_byte(255u8)
+    bytes_result(alias.byte_length() == 5u32 && builder.byte_length() == 5u32)
+  } else if case == 23u32 {
+    let builder = BytesBuilder::new()
+    let bytes = builder.finish()
+    bytes_result(builder.byte_length() == bytes.byte_length())
+  } else if case == 24u32 {
+    let builder = BytesBuilder::new()
+    let alias = builder
+    builder.append(b"abcd")
+    let bytes = builder.finish()
+    bytes_result(alias.byte_length() == bytes.byte_length())
+  } else if case == 25u32 {
+    let read = bytes_builder_length_operation()
+    let builder = BytesBuilder::new()
+    builder.append(b"abcd")
+    bytes_result(read(builder) == 4u32)
   } else {
     unreachable()
   }
+}
+
+fn bytes_builder_length_operation() -> fn(BytesBuilder) -> U32 {
+  bytes_builder_byte_length
 }
 
 fn bytes_simd_view_lanes() -> Bool {
