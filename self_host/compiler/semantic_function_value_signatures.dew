@@ -2,6 +2,7 @@ open dew.std.array
 open dew.std.option
 
 fn self_host_linked_append_signature_value(module_: SelfHostPlannedModuleLowering, request: Option<SelfHostProgramSpecializationRequest>, shapes: Array<SelfHostPlannedValueShape>, type_: I32, scope: SelfHostFunctionSignatureScope, expression: U32, position: U64, direct: StarshineValueTypes, entry: StarshineValueTypes) -> SelfHostPlannedValueShape {
+  self_host_check_callback_type_graph(module_, request, shapes, type_, scope, expression, position)
   let shape = self_host_lambda_request_shape(module_, request, shapes, type_, self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, type_))
   let error = self_host_specialization_shape_error(shape)
   if error != 0u32 {

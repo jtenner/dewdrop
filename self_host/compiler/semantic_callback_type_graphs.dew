@@ -1,0 +1,144 @@
+open dew.std.map
+
+struct SelfHostSignatureTypeVisit {
+  type_: I32
+  finish: Bool
+}
+
+fn self_host_signature_type_visit(type_: I32) -> SelfHostSignatureTypeVisit {
+  SelfHostSignatureTypeVisit::{
+    type_: type_
+    finish: false
+  }
+}
+
+// Function and applied types become references physically. Validate their
+// children first, so that this erasure cannot hide poison or structural cycles.
+// Gray nodes are active ancestors; black nodes are valid shared subgraphs.
+fn self_host_check_callback_type_graph(module_: SelfHostPlannedModuleLowering, request: Option<SelfHostProgramSpecializationRequest>, shapes: Array<SelfHostPlannedValueShape>, root: I32, scope: SelfHostFunctionSignatureScope, expression: U32, position: U64) -> Unit {
+  let states = self_host_empty_u64_u32_map()
+  let work = [self_host_signature_type_visit(root)]
+  while work.length() {
+    length if length > 0u32 => {
+      let visit = work[length - 1u32]
+      work.truncate(length - 1u32)
+      if visit.type_ == -1i32 {
+        self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+          expression, 301u32, 0u64, 2u64, position)
+      }
+      let resolved = visit.type_ < -1i32
+      let index = if resolved {
+        self_host_i32_to_u32(-(visit.type_ + 2i32))
+      } else {
+        self_host_i32_to_u32(visit.type_)
+      }
+      let limit = if resolved {
+        module_.resolved_types.types.length()
+      } else {
+        module_.inferred.types.length()
+      }
+      if index >= limit {
+        self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+          expression, 105u32, u32_into_u64(limit), u32_into_u64(index), position)
+      }
+      let key = if resolved {
+        4294967296u64 | u32_into_u64(index)
+      } else {
+        u32_into_u64(index)
+      }
+      if visit.finish {
+        states.set(key, 2u32)
+        continue work.length()
+      }
+      match states.get(key) {
+        Option::Some(1u32) => self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+          expression, 108u32, 0u64, 1u64, position)
+        Option::Some(2u32) => continue work.length()
+        _ => {}
+      }
+      states.set(key, 1u32)
+      work.push(SelfHostSignatureTypeVisit::{
+        type_: visit.type_
+        finish: true
+      })
+      if resolved {
+        let node = module_.resolved_types.types[index]
+        let error = match node {
+          SelfHostResolvedType::ErrorType => 2u32
+          SelfHostResolvedType::MemberTypeProjection(_, _, _) => 3u32
+          SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::CompileTimeTypeType) => 4u32
+          SelfHostResolvedType::GenericParameterType(_) => self_host_specialization_shape_error(
+            self_host_lambda_request_shape(module_, request, shapes, visit.type_, SelfHostPlannedValueShape::GenericPlannedValueShape))
+          _ => 0u32
+        }
+        if error != 0u32 {
+          self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+            expression, 301u32, 0u64, u32_into_u64(error), position)
+        }
+        let span = match node {
+          SelfHostResolvedType::ProductType(fields),
+          SelfHostResolvedType::AppliedType(_, fields),
+          SelfHostResolvedType::FunctionType(fields, _) => fields
+          _ => self_host_empty_hir_span(0u32)
+        }
+        self_host_signature_parameter_span(module_, scope, expression, span, module_.resolved_types.type_arguments.length())
+        let extra = match node {
+          SelfHostResolvedType::AppliedType(base, _) => Option::Some(base)
+          SelfHostResolvedType::FunctionType(_, result) => Option::Some(result)
+          _ => Option::None
+        }
+        match extra {
+          Option::Some(child) => work.push(self_host_signature_type_visit(
+            self_host_signature_resolved_encoding(module_, scope, expression, child, position)))
+          Option::None => {}
+        }
+        while span.length {
+          remaining if remaining > 0u32 => {
+            let child = module_.resolved_types.type_arguments[span.start + remaining - 1u32]
+            work.push(self_host_signature_type_visit(self_host_signature_resolved_encoding(module_, scope, expression, child, position)))
+            continue remaining - 1u32
+          }
+          _ => break ()
+        }
+      } else {
+        let node = module_.inferred.types[index]
+        let error = match node {
+          SelfHostBodyTypeTerm::BodyErrorType, SelfHostBodyTypeTerm::BodyVariableType(_) => 2u32
+          SelfHostBodyTypeTerm::BodyMemberTypeProjection(_, _, _) => 3u32
+          _ => 0u32
+        }
+        if error != 0u32 {
+          self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+            expression, 301u32, 0u64, u32_into_u64(error), position)
+        }
+        let span = match node {
+          SelfHostBodyTypeTerm::BodyProductType(fields),
+          SelfHostBodyTypeTerm::BodyAppliedType(_, fields),
+          SelfHostBodyTypeTerm::BodyFunctionType(fields, _) => fields
+          _ => self_host_empty_hir_span(0u32)
+        }
+        self_host_signature_parameter_span(module_, scope, expression, span, module_.inferred.type_arguments.length())
+        let extra = match node {
+          SelfHostBodyTypeTerm::BodyResolvedType(child) => Option::Some(
+            self_host_signature_resolved_encoding(module_, scope, expression, child, position))
+          SelfHostBodyTypeTerm::BodyAppliedType(base, _) => Option::Some(base)
+          SelfHostBodyTypeTerm::BodyFunctionType(_, result) => Option::Some(result)
+          _ => Option::None
+        }
+        match extra {
+          Option::Some(child) => work.push(self_host_signature_type_visit(child))
+          Option::None => {}
+        }
+        while span.length {
+          remaining if remaining > 0u32 => {
+            work.push(self_host_signature_type_visit(module_.inferred.type_arguments[span.start + remaining - 1u32]))
+            continue remaining - 1u32
+          }
+          _ => break ()
+        }
+      }
+      continue work.length()
+    }
+    _ => break ()
+  }
+}

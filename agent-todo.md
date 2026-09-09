@@ -340,6 +340,10 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Complete physical-boundary checks. Reject missing, Generic, Error,
   conflicting, or consumed evidence before a reachable value reaches emission.
   Extend the existing specialization checks to every fragment/storage boundary.
+  Callback signatures now validate complete inferred/resolved child graphs before
+  reference erasure. Cycles, hidden errors, unresolved leaves, bad child spans,
+  and invalid type encodings have numeric call context. Shared deep graphs remain
+  valid; see the [callback graph log](docs/research/callback-type-graphs-2026-09-09.md).
   Self-host packed struct fields, enum payloads, and immutable captures now
   retain width and signedness, with shared native/self-host execution tests.
   Mutable capture cells preserve full local values. See the

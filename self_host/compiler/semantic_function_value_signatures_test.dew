@@ -174,6 +174,10 @@ fn self_host_test_callback_signature_types(mutation: U32) -> Unit {
     module_.resolved_types.types[result] = SelfHostResolvedType::GenericParameterType(0u64)
   } else if mutation == 5u32 {
     module_.resolved_types.types[selected] = SelfHostResolvedType::FunctionType(parameters, 2147483647u32)
+  } else if mutation == 7u32 {
+    module_.resolved_types.types[result] = SelfHostResolvedType::FunctionType(parameters, module_.resolved_types.error_type)
+  } else if mutation == 8u32 {
+    module_.resolved_types.types[result] = SelfHostResolvedType::FunctionType(parameters, result)
   }
   let _ = self_host_linked_append_body_function_signature(module_, Option::None, [], body_type, scope, 1u32,
     StarshineFfi.ffi_ffi_bridge_val_types_new(), StarshineFfi.ffi_ffi_bridge_val_types_new(),
@@ -202,6 +206,98 @@ test "SOL-207 callback resolved results cannot overflow type encoding" expect_tr
 
 test "ARN-101 inferred callback parameters cannot exceed their arena" expect_trap "unreachable" {
   self_host_test_callback_signature_types(6u32)
+}
+
+test "SPC-301 nested resolved callback results cannot hide errors" expect_trap "unreachable" {
+  self_host_test_callback_signature_types(7u32)
+}
+
+test "ARN-108 nested resolved callback results cannot contain cycles" expect_trap "unreachable" {
+  self_host_test_callback_signature_types(8u32)
+}
+
+fn self_host_test_nested_inferred_callback(mutation: U32) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn run(value: fn() -> fn() -> I64) -> fn() -> I64 {\n  value()\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let scope = self_host_function_signature_scopes(link)[0u32]
+  let leaf = module_.inferred.types.length()
+  module_.inferred.types.push(SelfHostBodyTypeTerm::BodyResolvedType(module_.resolved_types.primitive(SelfHostPrimitiveType::I64Type)))
+  let nested = module_.inferred.types.length()
+  module_.inferred.types.push(SelfHostBodyTypeTerm::BodyFunctionType(self_host_empty_hir_span(0u32), self_host_u32_to_i32(leaf)))
+  let mut root = module_.inferred.types.length()
+  module_.inferred.types.push(SelfHostBodyTypeTerm::BodyFunctionType(self_host_empty_hir_span(0u32), self_host_u32_to_i32(nested)))
+  if mutation == 0u32 {
+    // Repeated parameter/result edges are shared nodes, not cycles. More than
+    // 64 nested function nodes must remain valid without a depth cutoff.
+    while 0u32 {
+      depth if depth < 65u32 => {
+        let start = module_.inferred.type_arguments.length()
+        module_.inferred.type_arguments.push(self_host_u32_to_i32(root))
+        module_.inferred.type_arguments.push(self_host_u32_to_i32(root))
+        let next = module_.inferred.types.length()
+        module_.inferred.types.push(SelfHostBodyTypeTerm::BodyFunctionType(
+          SelfHostHirSpan::{
+            start: start
+            length: 2u32
+          }, self_host_u32_to_i32(root)))
+        root = next
+        continue depth + 1u32
+      }
+      _ => break ()
+    }
+  }
+  let before = self_host_linked_append_body_function_signature(module_, Option::None, [], self_host_u32_to_i32(root), scope, 1u32,
+    StarshineFfi.ffi_ffi_bridge_val_types_new(), StarshineFfi.ffi_ffi_bridge_val_types_new(),
+    StarshineFfi.ffi_ffi_bridge_val_types_new(), StarshineFfi.ffi_ffi_bridge_val_types_new())
+  assert(before is Option::Some(SelfHostPlannedValueShape::RefPlannedValueShape), "valid structural callback result before one mutation")
+  if mutation == 1u32 {
+    module_.inferred.types[leaf] = SelfHostBodyTypeTerm::BodyErrorType
+  } else if mutation == 2u32 {
+    module_.inferred.types[nested] = SelfHostBodyTypeTerm::BodyFunctionType(self_host_empty_hir_span(0u32), self_host_u32_to_i32(nested))
+  } else if mutation == 3u32 {
+    module_.inferred.types[nested] = SelfHostBodyTypeTerm::BodyFunctionType(
+      self_host_empty_hir_span(4294967295u32), self_host_u32_to_i32(leaf))
+  } else if mutation == 4u32 {
+    module_.inferred.types[leaf] = SelfHostBodyTypeTerm::BodyResolvedType(4294967295u32)
+  } else if mutation == 5u32 {
+    module_.inferred.types[leaf] = SelfHostBodyTypeTerm::BodyMemberTypeProjection(-1i32, b"field", "field")
+  } else if mutation == 6u32 {
+    module_.inferred.types[leaf] = SelfHostBodyTypeTerm::BodyVariableType(0u32)
+  }
+  let _ = self_host_linked_append_body_function_signature(module_, Option::None, [], self_host_u32_to_i32(root), scope, 1u32,
+    StarshineFfi.ffi_ffi_bridge_val_types_new(), StarshineFfi.ffi_ffi_bridge_val_types_new(),
+    StarshineFfi.ffi_ffi_bridge_val_types_new(), StarshineFfi.ffi_ffi_bridge_val_types_new())
+}
+
+test "SPC-301 nested inferred callback results cannot hide errors" expect_trap "unreachable" {
+  self_host_test_nested_inferred_callback(1u32)
+}
+
+test "ARN-108 nested inferred callback results cannot contain cycles" expect_trap "unreachable" {
+  self_host_test_nested_inferred_callback(2u32)
+}
+
+test "callback type graphs accept deep shared signatures" {
+  self_host_test_nested_inferred_callback(0u32)
+}
+
+test "ARN-101 nested callback type spans remain checked" expect_trap "unreachable" {
+  self_host_test_nested_inferred_callback(3u32)
+}
+
+test "SOL-207 nested callback resolved links cannot overflow encoding" expect_trap "unreachable" {
+  self_host_test_nested_inferred_callback(4u32)
+}
+
+test "SPC-301 nested callback projections cannot remain unresolved" expect_trap "unreachable" {
+  self_host_test_nested_inferred_callback(5u32)
+}
+
+test "SPC-301 nested callback variables must be zonked" expect_trap "unreachable" {
+  self_host_test_nested_inferred_callback(6u32)
 }
 
 fn self_host_test_missing_signature_body(kind: U32) -> Unit {
