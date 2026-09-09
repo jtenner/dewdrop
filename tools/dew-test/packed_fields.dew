@@ -156,6 +156,71 @@ fn captureMutableU16(value: U16) -> fn() -> I32 {
   result
 }
 
+enum NestedPackedPayload {
+  NestedI8(PayloadI8)
+  NestedU8(PayloadU8)
+  NestedI16(PayloadI16)
+  NestedU16(PayloadU16)
+}
+
+fn nestedPayloadI8(value: I8) -> I32 {
+  match NestedPackedPayload::NestedI8(PayloadI8::Value(value)) {
+    NestedPackedPayload::NestedI8(PayloadI8::Value(item)) => bits::<I8, I32>(item)
+    _ => 0i32
+  }
+}
+
+fn nestedPayloadU8(value: U8) -> I32 {
+  match NestedPackedPayload::NestedU8(PayloadU8::Value(value)) {
+    NestedPackedPayload::NestedU8(PayloadU8::Value(item)) => bits::<U8, I32>(item)
+    _ => 0i32
+  }
+}
+
+fn nestedPayloadI16(value: I16) -> I32 {
+  match NestedPackedPayload::NestedI16(PayloadI16::Value(value)) {
+    NestedPackedPayload::NestedI16(PayloadI16::Value(item)) => bits::<I16, I32>(item)
+    _ => 0i32
+  }
+}
+
+fn nestedPayloadU16(value: U16) -> I32 {
+  match NestedPackedPayload::NestedU16(PayloadU16::Value(value)) {
+    NestedPackedPayload::NestedU16(PayloadU16::Value(item)) => bits::<U16, I32>(item)
+    _ => 0i32
+  }
+}
+
+
+fn nestedLiteralI8(value: I8) -> I32 {
+  match NestedPackedPayload::NestedI8(PayloadI8::Value(value)) {
+    NestedPackedPayload::NestedI8(PayloadI8::Value(127i8)) => 42i32
+    _ => 0i32
+  }
+}
+
+fn nestedLiteralU8(value: U8) -> I32 {
+  match NestedPackedPayload::NestedU8(PayloadU8::Value(value)) {
+    NestedPackedPayload::NestedU8(PayloadU8::Value(255u8)) => 42i32
+    _ => 0i32
+  }
+}
+
+fn nestedLiteralI16(value: I16) -> I32 {
+  match NestedPackedPayload::NestedI16(PayloadI16::Value(value)) {
+    NestedPackedPayload::NestedI16(PayloadI16::Value(32767i16)) => 42i32
+    _ => 0i32
+  }
+}
+
+fn nestedLiteralU16(value: U16) -> I32 {
+  match NestedPackedPayload::NestedU16(PayloadU16::Value(value)) {
+    NestedPackedPayload::NestedU16(PayloadU16::Value(65535u16)) => 42i32
+    _ => 0i32
+  }
+}
+
+
 pub fn main(which: U32) -> I32 {
   match which {
     0u32 => readI8(bits::<I32, I8>(511i32))
@@ -178,6 +243,18 @@ pub fn main(which: U32) -> I32 {
     17u32 => captureMutableU8(bits::<I32, U8>(511i32))()
     18u32 => captureMutableI16(bits::<I32, I16>(131071i32))()
     19u32 => captureMutableU16(bits::<I32, U16>(131071i32))()
+    20u32 => nestedPayloadI8(bits::<I32, I8>(511i32))
+    21u32 => nestedPayloadU8(bits::<I32, U8>(511i32))
+    22u32 => nestedPayloadI16(bits::<I32, I16>(131071i32))
+    23u32 => nestedPayloadU16(bits::<I32, U16>(131071i32))
+    24u32 => nestedLiteralI8(127i8)
+    25u32 => nestedLiteralI8(0i8)
+    26u32 => nestedLiteralU8(255u8)
+    27u32 => nestedLiteralU8(0u8)
+    28u32 => nestedLiteralI16(32767i16)
+    29u32 => nestedLiteralI16(0i16)
+    30u32 => nestedLiteralU16(65535u16)
+    31u32 => nestedLiteralU16(0u16)
     _ => 0i32
   }
 }

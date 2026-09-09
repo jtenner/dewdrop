@@ -45,7 +45,7 @@ fn self_host_emit_reference_pattern_alternatives(
               Option::Some(value) => value
               Option::None => return Option::Some("alternative binding has no physical local")
             }
-            self_host_emit_pattern_path(scratch, [], bindings)
+            self_host_emit_pattern_path(link, scratch, [], bindings)
             StarshineFfi.ffi_ffi_bridge_instructions_push(bindings, StarshineFfi.ffi_lib_Instruction_local_set(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(slot))))
           }
           _ => {}
@@ -55,7 +55,7 @@ fn self_host_emit_reference_pattern_alternatives(
           Option::Some(value) => value
           Option::None => return Option::Some("alternative has no exact reference pattern type")
         }
-        self_host_emit_pattern_path(scratch, [], predicate)
+        self_host_emit_pattern_path(link, scratch, [], predicate)
         StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_ffi_bridge_instruction_ref_test_nominal(self_host_u32_to_i32(type_index)))
         match self_host_emit_nested_pattern_tests(link, canonical, module_, pattern, type_index, scratch, [], predicate) {
           Option::Some(error) => return Option::Some(error)

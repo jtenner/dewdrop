@@ -287,6 +287,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   retain width and signedness, with shared native/self-host execution tests.
   Mutable capture cells preserve full local values. See the
   [packed field log](docs/research/packed-field-storage-2026-09-08.md).
+  Nested packed pattern paths now use those same checked reads. The shared
+  corpus also checks small-integer literal matches and non-matches. See the
+  [nested packed log](docs/research/nested-packed-patterns-2026-09-09.md).
   Declared struct/variant field and payload graphs now reject Error, unresolved
   projections, invalid runtime type values, bad child spans, and structural
   cycles in both compilers. The retained-shape/Ref error fallbacks are removed

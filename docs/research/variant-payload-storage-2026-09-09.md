@@ -58,4 +58,6 @@ The corrected red run takes 72.550 seconds. After the fix, all 703 hardening
 tests, all 328 full numeric records, and all shared execution corpora pass
 (66.868 seconds). The unused-fixture run took 61.981 seconds; it is not counted
 as the intended regression witness. These runs above 30 seconds remain speed
-defects. A clean bootstrap is still required after the next compiler batch.
+defects. The subsequent nested packed-pattern batch includes this fix in its
+passing clean bootstrap (187.826 seconds); B/C raw and linked hashes match
+`3554d36c247af3d5c0393219923ccbda5adb158c2900aece9710316a35d024c1`.
