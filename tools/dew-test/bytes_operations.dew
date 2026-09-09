@@ -151,6 +151,28 @@ pub fn main(case: U32) -> I32 {
     let builder = BytesBuilder::new()
     builder.append(b"abcd")
     bytes_result(read(builder) == 4u32)
+  } else if case == 26u32 {
+    let create = bytes_builder_default_operation()
+    let builder = create()
+    let alias = builder
+    if builder.byte_length() != 0u32 {
+      return 0i32
+    }
+    while 0u32 {
+      index if index < 129u32 => {
+        builder.append_byte(index.into())
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    if alias.byte_length() != 129u32 {
+      return 0i32
+    }
+    let bytes = alias.finish()
+    bytes_result(bytes.byte_length() == 129u32 && bytes.byte_at(0u32) == 0u8 && bytes.byte_at(63u32) == 63u8 && bytes.byte_at(64u32) == 64u8 && bytes.byte_at(128u32) == 128u8)
+  } else if case == 27u32 {
+    let create = bytes_builder_default_operation()
+    bytes_result(create().finish().byte_length() == 0u32)
   } else {
     unreachable()
   }
@@ -158,6 +180,10 @@ pub fn main(case: U32) -> I32 {
 
 fn bytes_builder_length_operation() -> fn(BytesBuilder) -> U32 {
   bytes_builder_byte_length
+}
+
+fn bytes_builder_default_operation() -> fn() -> BytesBuilder {
+  bytes_builder_new
 }
 
 fn bytes_simd_view_lanes() -> Bool {

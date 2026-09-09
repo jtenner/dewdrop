@@ -21,7 +21,9 @@ pub builtin string_builder_append_view(value: StringBuilder, part: StringView) -
 pub builtin string_builder_append_ascii(value: StringBuilder, byte: U8) -> Unit = "dew_string_builder_append_ascii"
 pub builtin string_builder_append_scalar(value: StringBuilder, scalar: U32) -> Unit = "dew_string_builder_append_scalar"
 pub builtin string_builder_finish(value: StringBuilder) -> String = "dew_string_builder_finish"
-pub builtin bytes_builder_new() -> BytesBuilder = "dew_bytes_builder_new"
+pub fn bytes_builder_new() -> BytesBuilder {
+  bytes_builder_with_capacity_raw(64u32)
+}
 pub builtin bytes_builder_with_capacity_raw(capacity: U32) -> BytesBuilder = "dew_bytes_builder_with_capacity"
 builtin bytes_builder_length_raw(value: BytesBuilder) -> U32 = "struct.get 1"
 builtin bytes_builder_consumed_raw(value: BytesBuilder) -> U32 = "struct.get 2"

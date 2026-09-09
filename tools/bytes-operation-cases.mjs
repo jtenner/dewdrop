@@ -43,5 +43,7 @@ export function checkBytesOperations(main) {
     `BytesBuilder length rejects consumed state: ${index}`);
   }
   assert.equal(main(25), 1, "BytesBuilder length works through a returned function");
-  return cases.length + 16;
+  assert.equal(main(26), 1, "BytesBuilder default function retains aliases and grows past its initial capacity");
+  assert.equal(main(27), 1, "BytesBuilder default function can finish empty");
+  return cases.length + 18;
 }
