@@ -11,6 +11,17 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["LNK-502 global reads require an assigned physical slot", 502, 1n, 1n],
+    ["ABI-710 global reads match their planned value type", 710, 4n, 5n],
+    ["LNK-502 erased global reads cannot use a physical slot", 502, 4294967295n, 0n],
+    ["SPC-301 global reads cannot emit generic shapes", 301, 0n, 1n],
+    ["SPC-301 global reads cannot emit erroneous shapes", 301, 0n, 2n],
+  ].map(([name, code, expected, actual]) => ({
+    name,
+    expected: [code, 7, 5100n, (5100n << 32n) | 1n, (5100n << 32n) | 1n,
+      1, expected, actual, 5100n << 32n],
+  })),
+  ...[
     ["LNK-502 initializer function handles cannot reach the missing sentinel", 4294967295n, 0n],
     ["LNK-502 initializer function handle addition cannot wrap", 4294967298n, 1n],
   ].map(([name, actual, slot]) => ({

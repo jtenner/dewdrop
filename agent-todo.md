@@ -451,7 +451,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   frames through each instruction, including unreachable code and adapters.
   Native Unit branches now discard their actual emitted tail values, including
   blocks selected by compile-time queries. Self-host transfer rules keep the
-  Unit parent's evidence separate from child call results. Twenty shared
+  Unit parent's evidence separate from child call results. Twenty-four shared
   execution checks preserve side effects. See the
   [branch result log](docs/research/unit-branch-results-2026-09-08.md).
 - [ ] Complete solver transaction and arena checks. Require LIFO snapshots,
@@ -549,6 +549,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   handles use checked wide arithmetic. Complete startup/adaptor recipes and
   link freeze remain. See the
   [initializer log](docs/research/initializer-link-records-2026-09-08.md).
+  Unit/Never globals now have no physical slot in the self-host compiler.
+  Their initializer functions still run; Unit reads produce no operand, and
+  scalar slots stay aligned. Both compilers share effect/order tests. See the
+  [Unit global log](docs/research/unit-global-storage-2026-09-08.md).
   Native plain-function lookup now checks table bounds and declaration,
   module, fragment, lambda, kind, and ABI-key identity at link completion and each
   read. Missing keys stay missing; specialization entries cannot replace plain

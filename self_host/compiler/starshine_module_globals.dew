@@ -1,0 +1,38 @@
+// An erased global still has an initializer function, but no physical slot.
+// Reads use the verified body carrier and never turn Unit into a reference.
+fn self_host_emit_planned_global_get(link: SelfHostPlannedProgramWasmGCLink, canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, initializer: SelfHostPlannedProgramInitializer, destination: StarshineInstructions) -> Unit {
+  let shape_error = self_host_specialization_shape_error(initializer.shape)
+  if shape_error != 0u32 {
+    self_host_physical_scratch_failure(module_, body, expression, 7u32, 301u32,
+      0u64, u32_into_u64(shape_error), initializer.declaration)
+  }
+  let plan = self_host_physical_scratch_body(canonical, module_, body, expression, 0u32)
+  let actual = match self_host_body_plan_expression(plan, expression) {
+    Option::Some(value) => value.carrier
+    Option::None => self_host_physical_scratch_failure(module_, body, expression,
+      7u32, 610u32, 1u64, 0u64, initializer.declaration)
+  }
+  let expected = self_host_body_carrier_from_shape(initializer.shape)
+  if !self_host_body_carrier_equal(actual, expected) {
+    self_host_physical_scratch_failure(module_, body, expression, 7u32, 710u32,
+      self_host_body_carrier_code(expected), self_host_body_carrier_code(actual), initializer.declaration)
+  }
+  if self_host_initializer_has_storage(initializer.shape) {
+    if initializer.global_index >= link.global_count {
+      self_host_physical_scratch_failure(module_, body, expression, 7u32, 502u32,
+        u32_into_u64(link.global_count), u32_into_u64(initializer.global_index), initializer.declaration)
+    }
+    StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+      StarshineFfi.ffi_lib_Instruction_global_get(
+        StarshineFfi.ffi_lib_GlobalIdx_new(self_host_u32_to_i32(initializer.global_index))))
+  } else {
+    if initializer.global_index != 4294967295u32 {
+      self_host_physical_scratch_failure(module_, body, expression, 7u32, 502u32,
+        4294967295u64, u32_into_u64(initializer.global_index), initializer.declaration)
+    }
+    if expected is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+      StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
+        StarshineFfi.ffi_lib_Instruction_unreachable_())
+    }
+  }
+}

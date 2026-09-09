@@ -464,6 +464,7 @@ fn self_host_program_link_initializers(
   emit_tests: Bool,
 ) -> Array<SelfHostPlannedProgramInitializer> {
   let initializers = []
+  let mut global_count = 0u32
   let mut scc_index = 0u32
   let _ = while scc_index {
     current_scc => if current_scc < fragments.specialization.lowering.graph.sccs.length() {
@@ -491,19 +492,26 @@ fn self_host_program_link_initializers(
                 declaration,
                 body,
                 type_,
-              ) => initializers.push(SelfHostPlannedProgramInitializer::{
+              ) => {
+                let shape = self_host_planned_merged_body_value_shape(
+                  module_.resolved_types, module_.inferred, type_)
+                let global_index = if self_host_initializer_has_storage(shape) {
+                  let result = global_count
+                  global_count = global_count + 1u32
+                  result
+                } else {
+                  4294967295u32
+                }
+                initializers.push(SelfHostPlannedProgramInitializer::{
                 module_index: module_index
                 declaration: declaration
                 body: body
-                shape: self_host_planned_merged_body_value_shape(
-                  module_.resolved_types,
-                  module_.inferred,
-                  type_,
-                )
+                shape: shape
                 test_only: step.test_only
-                global_index: initializers.length()
+                global_index: global_index
                 order: initializers.length()
               })
+              }
                 _ => {}
               }
             }
@@ -1185,7 +1193,7 @@ fn self_host_plan_program_wasmgc_link(
     emit_tests: emit_tests
     imported_function_count: imported_count
     defined_function_count: defined_count
-    global_count: initializers.length()
+    global_count: self_host_initializer_global_count(initializers)
     array_module_id: array_module_id
     map_module_id: map_module_id
     runtime_variant_adapters: self_host_plan_runtime_variant_adapters(fragments)

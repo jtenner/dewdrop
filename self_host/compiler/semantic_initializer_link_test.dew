@@ -152,6 +152,7 @@ test "initializer links retain test inclusion and Unit source values" {
   let testing = self_host_plan_program_wasmgc_link(fragments, true)
   assert(normal.initializers.length() == 2u32 && !normal.emit_tests, "normal Unit and scalar globals")
   assert(testing.initializers.length() == 3u32 && testing.emit_tests, "test global explicitly included")
+  assert(normal.global_count == 1u32 && testing.global_count == 2u32, "Unit globals have no physical slot")
   assert(self_host_validate_program_wasmgc_link(normal) is Option::None, "normal source schedule is complete")
   assert(self_host_validate_program_wasmgc_link(testing) is Option::None, "test source schedule is complete")
   match build_self_host_linked_i32_module(normal, 5100u64) {

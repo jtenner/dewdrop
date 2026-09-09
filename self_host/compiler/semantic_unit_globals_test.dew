@@ -1,0 +1,64 @@
+fn self_host_test_global_read_mutation(kind: U32) -> Unit {
+  let link = if kind == 2u32 {
+    self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+      b"let empty = ()\npub fn main() -> Unit {\n  empty\n}\n",
+    ), false)
+  } else {
+    self_host_initializer_link_fixture()
+  }
+  let program = self_host_plan_program_wasm_bodies(link)
+  assert(program.diagnostics.length() == 0u32, "valid global read before mutation")
+  let plan = program.bodies[0u32]
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = match self_host_body_lookup_for_plan(module_, plan) {
+    Option::Some(value) => value
+    Option::None => unreachable()
+  }
+  let original = link.initializers[0u32]
+  let changed = SelfHostPlannedProgramInitializer::{
+    module_index: original.module_index
+    declaration: original.declaration
+    body: original.body
+    shape: if kind == 1u32 {
+      SelfHostPlannedValueShape::I32PlannedValueShape
+    } else if kind == 3u32 {
+      SelfHostPlannedValueShape::GenericPlannedValueShape
+    } else if kind == 4u32 {
+      SelfHostPlannedValueShape::ErrorPlannedValueShape
+    } else {
+      original.shape
+    }
+    test_only: original.test_only
+    global_index: if kind == 0u32 {
+      1u32
+    } else if kind == 2u32 {
+      0u32
+    } else {
+      original.global_index
+    }
+    order: original.order
+  }
+  assert(plan.declaration == ((5100u64 << 32u64) | 1u64), "main body identity")
+  self_host_emit_planned_global_get(link, Option::Some(plan), module_, body,
+    1u32, changed, StarshineFfi.ffi_ffi_bridge_instructions_new())
+}
+
+test "LNK-502 global reads require an assigned physical slot" expect_trap "unreachable" {
+  self_host_test_global_read_mutation(0u32)
+}
+
+test "ABI-710 global reads match their planned value type" expect_trap "unreachable" {
+  self_host_test_global_read_mutation(1u32)
+}
+
+test "LNK-502 erased global reads cannot use a physical slot" expect_trap "unreachable" {
+  self_host_test_global_read_mutation(2u32)
+}
+
+test "SPC-301 global reads cannot emit generic shapes" expect_trap "unreachable" {
+  self_host_test_global_read_mutation(3u32)
+}
+
+test "SPC-301 global reads cannot emit erroneous shapes" expect_trap "unreachable" {
+  self_host_test_global_read_mutation(4u32)
+}

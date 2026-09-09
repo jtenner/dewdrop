@@ -10495,13 +10495,13 @@ fn self_host_linked_call_returns_array_element(
   false
 }
 
-fn self_host_linked_global_index(
+fn self_host_linked_global_initializer(
   link: SelfHostPlannedProgramWasmGCLink,
   declaration: U64,
-) -> Option<U32> {
+) -> Option<SelfHostPlannedProgramInitializer> {
   for initializer in link.initializers {
     if self_host_u64_equal(initializer.declaration, declaration) {
-      return Option::Some(initializer.global_index)
+      return Option::Some(initializer)
     }
   }
   Option::None
@@ -17149,15 +17149,9 @@ fn self_host_emit_linked_i32_expression(
             }
             SelfHostPlannedExpressionKind::PlannedModuleValueGet(
               declaration,
-            ) => match self_host_linked_global_index(link, declaration) {
-              Option::Some(global_index) => StarshineFfi.ffi_ffi_bridge_instructions_push(
-                destination,
-                StarshineFfi.ffi_lib_Instruction_global_get(
-                  StarshineFfi.ffi_lib_GlobalIdx_new(
-                    self_host_u32_to_i32(global_index),
-                  ),
-                ),
-              )
+            ) => match self_host_linked_global_initializer(link, declaration) {
+              Option::Some(initializer) => self_host_emit_planned_global_get(link,
+                canonical_body_plan, module_, body, expression, initializer, destination)
               Option::None => match self_host_linked_function_reference_index(
                 link,
                 module_,
@@ -31491,10 +31485,12 @@ fn build_self_host_linked_i32_module(
             let initializer = self_host_planned_program_initializer_identity(
               link.initializers[current],
             )
-          StarshineFfi.ffi_ffi_bridge_GlobalBuilder_push(
-            globals,
-            self_host_linked_array_carrier_from_shape(initializer.shape),
-          )
+          if self_host_initializer_has_storage(initializer.shape) {
+            StarshineFfi.ffi_ffi_bridge_GlobalBuilder_push(
+              globals,
+              self_host_linked_array_carrier_from_shape(initializer.shape),
+            )
+          }
                     continue current + 1u32
           } else {
             break self_host_semantic_unit()
@@ -31697,14 +31693,16 @@ fn build_self_host_linked_i32_module(
               }
               Option::None => {}
             }
-            StarshineFfi.ffi_ffi_bridge_instructions_push(
-              initializer_instructions,
-              StarshineFfi.ffi_lib_Instruction_global_set(
-                StarshineFfi.ffi_lib_GlobalIdx_new(
-                  self_host_u32_to_i32(initializer.global_index),
+            if self_host_initializer_has_storage(initializer.shape) {
+              StarshineFfi.ffi_ffi_bridge_instructions_push(
+                initializer_instructions,
+                StarshineFfi.ffi_lib_Instruction_global_set(
+                  StarshineFfi.ffi_lib_GlobalIdx_new(
+                    self_host_u32_to_i32(initializer.global_index),
+                  ),
                 ),
-              ),
-            )
+              )
+            }
             StarshineFfi.ffi_ffi_bridge_funcs_push(
               functions,
               StarshineFfi.ffi_lib_Func_new(

@@ -18,6 +18,13 @@ must agree before a linked module index is used. Function handle sums are
 checked in U64 and exclude the missing sentinel before narrowing. See
 [the initializer log](../research/initializer-link-records-2026-09-08.md).
 
+An initializer's schedule position is not its physical global slot. Unit and
+Never source values have no global slot, but their initializer functions remain
+in the schedule. Count only stack-producing values when assigning global slots.
+Unit reads produce no operand; Never reads cannot fall through. Both compilers
+run shared side-effect and repeated-read cases. See
+[the Unit global log](../research/unit-global-storage-2026-09-08.md).
+
 ## Arena access
 
 For arena \(A\) and index \(i\):

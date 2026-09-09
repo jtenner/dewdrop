@@ -33,6 +33,9 @@ is a separate storage defect exposed by the new initializer coverage. The test
 remains a visible failure, not an expected trap, and the next storage change
 must fix it. No new bootstrap result is claimed for this batch.
 
+Follow-up: the [Unit storage change](unit-global-storage-2026-09-08.md) fixes that
+failure. Its fresh hardening run and clean B/C bootstrap validate both batches.
+
 Complete link freeze, synthetic startup/adaptor recipes, and full reference
 types remain separate obligations. Runs above 30 seconds remain speed bugs;
 no speed work is included.

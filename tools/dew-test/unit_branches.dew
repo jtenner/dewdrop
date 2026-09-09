@@ -9,6 +9,21 @@ fn mark<t>(counter: Counter, value: t) -> t {
   value
 }
 
+let global_counter = Counter::{
+  count: 0
+}
+let first_unit = mark(global_counter, ())
+let middle_scalar = mark(global_counter, 39)
+let last_unit = mark(global_counter, ())
+let empty_unit = ()
+
+fn unit_global_effects() -> I32 {
+  first_unit
+  last_unit
+  empty_unit
+  middle_scalar + global_counter.count
+}
+
 pub fn main(which: U32, flag: Bool) -> I32 {
   match which {
     0u32 => bool_branch(flag)
@@ -28,6 +43,7 @@ pub fn main(which: U32, flag: Bool) -> I32 {
     11u32 => query_false()
     12u32 => unit_match_subject()
     13u32 => unit_loop_state()
+    14u32 => unit_global_effects()
     _ => -1
   }
 }
