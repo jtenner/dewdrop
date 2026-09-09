@@ -30,7 +30,7 @@ Exact declaration identity and zero fields are required. A unique spelling is
 still not a certificate. `Option::None` now uses its declared source fragment;
 there is no private Option runtime type group. Object-form construction also
 retains the selected target and empty operand recipe in the freeze witness.
-Payload variants require a separate, complete operand recipe.
+Payload variants now retain a separate, complete operand recipe too.
 
 ## Failure rule
 
@@ -48,6 +48,8 @@ No source-name recovery is permitted after this failure.
   each enum case directly to the merged array. It does not return the enum
   through a branch join.
 - Removed: name-based Some/None physical recovery and the private Option types.
+- Removed: emission-time zero-arity recovery from a poisoned expression.
+  Lowering must preserve the constructor; emission cannot repair poison.
 - Tested: imported qualified and unqualified Option patterns retain their
   selected declaration and use its exact source fragment. Shared Array,
   FixedArray, ring, and Unit execution cases pass with declared Option storage.
@@ -56,5 +58,6 @@ No source-name recovery is permitted after this failure.
 - Open: prove enum payload preservation for the concrete Dew lowering.
 
 See [the Option migration record](../research/option-declared-layout-2026-09-09.md)
+and [the frozen variant record](../research/frozen-variant-constructor-recipes-2026-09-09.md)
 for executable tests and bootstrap results. This note is an obligation, not a
 claim of a machine-checked proof.

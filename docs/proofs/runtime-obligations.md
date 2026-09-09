@@ -24,16 +24,22 @@ Result runtime types, and hidden error-identity operand are removed. Payload
 parameter lookup follows the selected declaration and payload position, not
 Ok/Err spelling. See
 [the Result layout log](../research/result-declared-layout-2026-09-09.md).
-Tuple-style variant calls, runtime trait capture, full reference assignability,
-and removal of other runtime adapters remain open. See
+Tuple-style variant calls now retain their exact target, source arguments,
+field positions, storage, boxing, Unit markers, and reference casts in the
+freeze witness. The emitter consumes these immutable records; it cannot choose
+another target or recover an operand carrier. Poisoned zero-arity construction
+is no longer repaired during emission. See
+[the tuple recipe log](../research/frozen-variant-constructor-recipes-2026-09-09.md).
+Runtime trait capture, full reference assignability, and removal of other
+runtime adapters remain open. See
 [the object recipe log](../research/frozen-object-constructor-recipes-2026-09-08.md).
 
 Generic tuple-variant scalar storage now requires an explicit certificate from
 the exact declared payload ordinal, matching field role/declaration IDs, and
 reference storage. Construction boxes the scalar; direct/nested pattern reads
 cast and unbox it using the binding carrier. Unit remains a storage marker.
-This closes the ordinary generic enum scalar/reference carrier mismatch, not
-the frozen tuple-variant recipe or full reference assignability obligations.
+This closes the ordinary generic enum scalar/reference carrier mismatch.
+Full reference assignability remains a separate obligation.
 See [the generic enum log](../research/generic-enum-payload-storage-2026-09-09.md).
 
 Global initializer link records must form an exact copy of the selected source

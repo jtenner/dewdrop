@@ -220,6 +220,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_constructor_flow_test.dew \
   self_host/compiler/semantic_constructor_scratches_test.dew \
   self_host/compiler/semantic_object_constructor_plans_test.dew \
+  self_host/compiler/semantic_variant_constructor_plans_test.dew \
   self_host/compiler/semantic_temporary_layout_test.dew \
   self_host/compiler/semantic_raw_array_temporaries_test.dew \
   self_host/compiler/semantic_raw_forwarding_test.dew \

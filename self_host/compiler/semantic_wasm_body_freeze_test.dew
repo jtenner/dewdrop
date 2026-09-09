@@ -136,6 +136,8 @@ test "BOD-605 frozen body identity uses the original diagnostic owner" expect_tr
     capture_accesses: source.capture_accesses
     object_constructors: source.object_constructors
     object_constructor_operands: source.object_constructor_operands
+    variant_constructors: source.variant_constructors
+    variant_constructor_operands: source.variant_constructor_operands
     closure_constructions: source.closure_constructions
     closure_construction_captures: source.closure_construction_captures
     calls: source.calls

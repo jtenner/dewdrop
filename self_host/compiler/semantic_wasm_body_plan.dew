@@ -123,6 +123,8 @@ pub struct SelfHostPlannedPhysicalBodyCarrierPlan {
   capture_accesses: Array<SelfHostPhysicalCaptureAccessPlan>
   object_constructors: Array<SelfHostPhysicalObjectConstructorPlan>
   object_constructor_operands: Array<SelfHostPhysicalObjectConstructorOperand>
+  variant_constructors: Array<SelfHostPhysicalVariantConstructorPlan>
+  variant_constructor_operands: Array<SelfHostPhysicalVariantConstructorOperand>
   closure_constructions: Array<SelfHostPhysicalClosureConstructionPlan>
   closure_construction_captures: Array<SelfHostPhysicalClosureCapturePlan>
   calls: Array<SelfHostPhysicalCallPlan>
@@ -5830,6 +5832,8 @@ fn self_host_plan_physical_body_with_signature(
     capture_accesses: capture_accesses
     object_constructors: []
     object_constructor_operands: []
+    variant_constructors: []
+    variant_constructor_operands: []
     closure_constructions: []
     closure_construction_captures: []
     calls: calls
@@ -5837,6 +5841,7 @@ fn self_host_plan_physical_body_with_signature(
     call_operands: call_operands
   }
   self_host_populate_object_constructors(link, module_, body, plan)
+  self_host_build_variant_constructor_recipes(link, module_, body, plan, plan.variant_constructors, plan.variant_constructor_operands)
   self_host_build_closure_construction_recipes(link, module_, body, plan, plan.closure_constructions, plan.closure_construction_captures)
   plan
 }
@@ -6592,16 +6597,7 @@ fn self_host_verify_body_constructor(
       variant,
       _,
       _,
-    ) => match self_host_linked_expression_variant_type(
-      link,
-      Option::Some(plan),
-      module_,
-      body,
-      plan.specialization,
-      module_.expressions[expression_plan.expression],
-      variant,
-      fields,
-    ) {
+    ) => match self_host_linked_variant_type_index(link, variant) {
       Option::Some(expected_type) => if !self_host_u32_equal(
         expected_type,
         expression_plan.selected_type_index,
@@ -7011,6 +7007,7 @@ fn self_host_verify_one_physical_body(
   self_host_verify_owned_capture_cells(link, module_, body, plan)
   self_host_verify_capture_accesses(link, module_, body, plan)
   self_host_verify_object_constructors(link, module_, body, plan)
+  self_host_verify_variant_constructors(link, module_, body, plan)
   let diagnostic_start = diagnostics.length()
   if !plan.converged {
     let stalled_expression = if plan.stalled_work_item == 4294967295u32 ||

@@ -394,9 +394,13 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [ ] Put constructor and other temporary locals in the frozen physical plan.
   Generic tuple enum payloads now have explicit scalar boxing and checked
   extraction based on their exact declared payload slots. This also covers
-  nested bindings/literals, Unit readers, and mixed payloads. Tuple-variant
-  recipes still need to be frozen before emission. See the
+  nested bindings/literals, Unit readers, and mixed payloads. See the
   [generic enum log](docs/research/generic-enum-payload-storage-2026-09-09.md).
+  Tuple-variant constructors now retain frozen targets and complete operand
+  recipes, including storage, boxing, Unit markers, and reference casts.
+  Emission uses those records without selecting a target or carrier again.
+  The old scheduler and poisoned zero-arity recovery are removed. See the
+  [tuple recipe log](docs/research/frozen-variant-constructor-recipes-2026-09-09.md).
   Named struct patterns now select struct fragments using their saved
   declaration and constructor kind; they no longer search only enum variants.
   Missing or contradictory selections have no name/type fallback. See the
@@ -404,8 +408,8 @@ Correctness comes first. Keep these timing defects visible after query completio
   Constructor field temporary types now come from frozen source-order records;
   emission checks presence, uniqueness, source agreement, and mirrored carriers.
   Global initializers now pass through body planning, verification, and freeze.
-  Tuple-style variant recipes and full reference checks
-  remain. See the
+  Full reference checks and other remaining recovery paths still need work.
+  See the
   [temporary plan log](docs/research/constructor-temporary-plans-2026-09-08.md).
   The old collection temporary allocations and slot counts based on
   `self_host_array_pop`, `next`, and `push` spelling are removed. An ordinary
@@ -424,7 +428,7 @@ Correctness comes first. Keep these timing defects visible after query completio
   Expression temporary allocation now uses the frozen record order and
   physical carrier types. Unused Unit/Never slots have explicit I32 storage;
   Unit loop initializers and continues are evaluated without empty-stack
-  stores. Closure construction and full reference checks remain. See the
+  stores. Full reference checks remain. See the
   [temporary type log](docs/research/frozen-temporary-types-2026-09-08.md).
   Owned capture cells now retain source identity, source/cell slots, selected
   heap type, stored type, and parameter role in the body freeze witness.
@@ -432,13 +436,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   [owned cell log](docs/research/owned-capture-cell-plans-2026-09-08.md).
   Lambda capture reads/writes and forwarding now retain exact source, closure
   field, cell pointee, storage, and erasure records. Packed reads use frozen
-  widths and signedness. Closure construction recipes, runtime trait evidence
-  captures, and full reference checks remain. See the
+  widths and signedness. Runtime trait evidence captures and full reference
+  checks remain. See the
   [capture access log](docs/research/frozen-capture-accesses-2026-09-08.md).
   Object constructor emission now uses a checked exact field-ID recipe, with
   separate source evaluation and physical load order. Missing or different IDs
-  cannot be repaired by names or tentative carriers. Recipe freeze and nominal
-  constructor recovery still remain. See the
+  cannot be repaired by names or tentative carriers. See the
   [constructor identity log](docs/research/constructor-field-identity-2026-09-08.md).
   The body worklist also checks that complete exact field map before changing
   carrier evidence. Source names cannot repair a field ID during propagation.
@@ -447,8 +450,8 @@ Correctness comes first. Keep these timing defects visible after query completio
   source identities, storage, boxing, and Unit markers in the frozen plan.
   Missing targets cannot use result-heap evidence. Emission no longer chooses
   an object target or reconstructs its field map; its old nominal/name fallback
-  path is removed. Tuple-style variant calls, runtime trait capture, full
-  reference checks, and runtime-adapter removal remain. See the
+  path is removed. Runtime trait capture, full reference checks, and
+  runtime-adapter removal remain. See the
   [object recipe log](docs/research/frozen-object-constructor-recipes-2026-09-08.md).
   Ordinary closure construction now retains the entry, heap type, source
   identity, erasure, storage, cell type, and each local/forwarded capture operand.

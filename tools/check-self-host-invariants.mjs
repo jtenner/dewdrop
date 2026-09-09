@@ -11,6 +11,32 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["BOD-605 frozen variant constructor targets cannot change", 605, 7, 5, 2n, 3n, 253n << 32n],
+    ["BOD-605 frozen variant operands cannot disappear", 605, 7, 4294967295, 3n, 2n, (258n << 32n) | 4294967295n],
+    ["BOD-605 frozen variant constructors retain expression identities", 605, 7, 5, 5n, 6n, 251n << 32n],
+    ["BOD-605 frozen variant constructors retain declaration identities", 605, 7, 5, 5100n << 32n, (5100n << 32n) | 1n, 252n << 32n],
+    ["BOD-605 frozen variant constructors retain argument starts", 605, 7, 5, 0n, 1n, 254n << 32n],
+    ["BOD-605 frozen variant constructors retain argument counts", 605, 7, 5, 3n, 2n, 255n << 32n],
+    ["BOD-605 frozen variant constructors retain operand starts", 605, 7, 5, 0n, 1n, 256n << 32n],
+    ["BOD-605 frozen variant constructors retain operand counts", 605, 7, 5, 3n, 2n, 257n << 32n],
+    ["BOD-605 frozen variant operands retain source expressions", 605, 7, 2, 2n, 3n, 259n << 32n],
+    ["BOD-605 frozen variant operands retain declaration identities", 605, 7, 2, 5100n << 32n, (5100n << 32n) | 1n, 260n << 32n],
+    ["BOD-605 frozen variant operands retain source order", 605, 7, 2, 0n, 1n, 261n << 32n],
+    ["BOD-605 frozen variant operands retain field indices", 605, 7, 2, 0n, 1n, 262n << 32n],
+    ["BOD-605 frozen variant operands retain storage types", 605, 7, 2, 1n, 2n, 263n << 32n],
+    ["BOD-605 frozen variant operands retain boxing choices", 605, 7, 2, 0n, 1n, 264n << 32n],
+    ["BOD-605 frozen variant operands retain Unit markers", 605, 7, 2, 0n, 1n, 265n << 32n],
+    ["BOD-605 frozen variant operands retain reference casts", 605, 7, 2, 0n, 1n, 266n << 32n],
+    ["BOD-605 frozen variant constructors cannot disappear", 605, 7, 4294967295, 1n, 0n, (250n << 32n) | 4294967295n],
+    ["BOD-608 variant recipe targets agree before freeze", 608, 6, 5, 2n, 3n, 253n << 32n],
+    ["BOD-610 variant emission requires its exact recipe", 610, 7, 5, 1n, 0n, 40n],
+    ["BOD-610 variant emission requires a unique recipe", 610, 7, 5, 1n, 2n, 40n],
+  ].map(([name, code, phase, expression, expected, actual, detail]) => ({
+    name,
+    expected: [code, phase, 5100n, (5100n << 32n) | 1n, 5100n << 32n,
+      expression, expected, actual, detail],
+  })),
+  ...[
     ["LNK-501 module startup SCCs cannot omit a value", 501, 0n, 2n, 1n, 8n],
     ["LNK-501 module startup SCCs cannot duplicate a value", 501, (993n << 32n) | 1n, 1n, 2n, 9n],
     ["ARN-101 module startup checks SCC spans before access", 101, 0n, 2n, 1n, (7n << 32n) | 4294967295n],

@@ -19,14 +19,23 @@ class VariantLookupPolicyTests(unittest.TestCase):
 
     def test_variant_constructors_use_declared_fragments(self):
         source = SOURCE.read_text()
-        start = source.index("fn self_host_linked_expression_variant_type(")
-        end = source.index("\nfn ", start + 3)
-        function = source[start:end]
-        self.assertIn("self_host_linked_variant_type_index(link, variant_declaration)", function,
-                      "constructor must use its selected source fragment")
-        self.assertNotIn("runtime_variant_adapters", function)
-        self.assertTrue("let name =" not in function,
-                        "constructor adapter must not turn its identity into a spelling")
+        self.assertNotIn("fn self_host_linked_expression_variant_type(", source)
+        self.assertNotIn("fn self_host_linked_schedule_variant_arguments(", source)
+        self.assertNotIn("fn self_host_linked_zero_arity_variant_type(", source)
+        self.assertIn("self_host_schedule_planned_variant_constructor(", source)
+        planner = (ROOT / "self_host/compiler/semantic_variant_constructor_plans.dew").read_text()
+        self.assertIn("let type_index = value.selected_type_index", planner)
+        self.assertIn("WasmVariantPayloadField(selected, ordinal)", planner)
+        self.assertNotIn("let name =", planner)
+        emitter = (ROOT / "self_host/compiler/starshine_variant_constructor_recipes.dew").read_text()
+        for forbidden in ("self_host_linked_variant_type_index(",
+                          "self_host_linked_exact_emitted_expression_carrier(",
+                          "self_host_linked_nominal_field_type_index(",
+                          "self_host_linked_variant_payload_box_type("):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, emitter)
+        self.assertIn("EmitLinkedStructNew(recipe.physical_type", emitter)
+        self.assertIn("operand.expression", emitter)
 
     def test_runtime_only_payload_seeding_is_removed(self):
         source = (ROOT / "self_host/compiler/semantic_wasm_body_plan.dew").read_text()

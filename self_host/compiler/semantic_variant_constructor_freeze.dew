@@ -1,0 +1,60 @@
+fn self_host_variant_constructor_check(plan: SelfHostPlannedPhysicalBodyCarrierPlan, phase: U32, expression: U32, role: U32, index: U32, expected: U64, actual: U64) -> Unit {
+  if expected != actual {
+    self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+      code: if phase == 7u32 {
+        605u32
+      } else {
+        608u32
+      }
+      phase: phase
+      module_id: plan.module_id
+      declaration: plan.declaration
+      body: plan.body
+      expression: expression
+      expected: expected
+      actual: actual
+      detail: (u32_into_u64(role) << 32u64) | u32_into_u64(index)
+    }, "physical variant constructor recipe must agree with its verified source")
+  }
+}
+
+fn self_host_compare_variant_constructors(context: SelfHostPlannedPhysicalBodyCarrierPlan, constructors: Array<SelfHostPhysicalVariantConstructorPlan>, operands: Array<SelfHostPhysicalVariantConstructorOperand>, live: SelfHostPlannedPhysicalBodyCarrierPlan, phase: U32) -> Unit {
+  self_host_variant_constructor_check(context, phase, 4294967295u32, 250u32, 4294967295u32, u32_into_u64(constructors.length()), u32_into_u64(live.variant_constructors.length()))
+  let mut index = 0u32
+  for expected in constructors {
+    let actual = live.variant_constructors[index]
+    self_host_variant_constructor_check(context, phase, expected.expression, 251u32, index, u32_into_u64(expected.expression), u32_into_u64(actual.expression))
+    self_host_variant_constructor_check(context, phase, expected.expression, 252u32, index, expected.declaration, actual.declaration)
+    self_host_variant_constructor_check(context, phase, expected.expression, 253u32, index, u32_into_u64(expected.physical_type), u32_into_u64(actual.physical_type))
+    self_host_variant_constructor_check(context, phase, expected.expression, 254u32, index, u32_into_u64(expected.arguments.start), u32_into_u64(actual.arguments.start))
+    self_host_variant_constructor_check(context, phase, expected.expression, 255u32, index, u32_into_u64(expected.arguments.length), u32_into_u64(actual.arguments.length))
+    self_host_variant_constructor_check(context, phase, expected.expression, 256u32, index, u32_into_u64(expected.operands.start), u32_into_u64(actual.operands.start))
+    self_host_variant_constructor_check(context, phase, expected.expression, 257u32, index, u32_into_u64(expected.operands.length), u32_into_u64(actual.operands.length))
+    index = index + 1u32
+  }
+  self_host_variant_constructor_check(context, phase, 4294967295u32, 258u32, 4294967295u32, u32_into_u64(operands.length()), u32_into_u64(live.variant_constructor_operands.length()))
+  index = 0u32
+  for expected in operands {
+    let actual = live.variant_constructor_operands[index]
+    self_host_variant_constructor_check(context, phase, expected.expression, 259u32, index, u32_into_u64(expected.expression), u32_into_u64(actual.expression))
+    self_host_variant_constructor_check(context, phase, expected.expression, 260u32, index, expected.declaration, actual.declaration)
+    self_host_variant_constructor_check(context, phase, expected.expression, 261u32, index, u32_into_u64(expected.source_ordinal), u32_into_u64(actual.source_ordinal))
+    self_host_variant_constructor_check(context, phase, expected.expression, 262u32, index, u32_into_u64(expected.field_index), u32_into_u64(actual.field_index))
+    self_host_variant_constructor_check(context, phase, expected.expression, 263u32, index, self_host_body_freeze_storage(Option::Some(expected.storage)), self_host_body_freeze_storage(Option::Some(actual.storage)))
+    self_host_variant_constructor_check(context, phase, expected.expression, 264u32, index, self_host_constructor_box_identity(expected.box_type), self_host_constructor_box_identity(actual.box_type))
+    self_host_variant_constructor_check(context, phase, expected.expression, 265u32, index, self_host_body_freeze_bool(expected.unit_marker), self_host_body_freeze_bool(actual.unit_marker))
+    self_host_variant_constructor_check(context, phase, expected.expression, 266u32, index, self_host_constructor_box_identity(expected.reference_cast), self_host_constructor_box_identity(actual.reference_cast))
+    index = index + 1u32
+  }
+}
+
+fn self_host_verify_variant_constructors(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  let constructors = array_new::<SelfHostPhysicalVariantConstructorPlan>()
+  let operands = array_new::<SelfHostPhysicalVariantConstructorOperand>()
+  self_host_build_variant_constructor_recipes(link, module_, body, plan, constructors, operands)
+  self_host_compare_variant_constructors(plan, constructors, operands, plan, 6u32)
+}
+
+fn self_host_assert_frozen_variant_constructors(frozen: SelfHostPlannedPhysicalBodyCarrierPlan, live: SelfHostPlannedPhysicalBodyCarrierPlan) -> Unit {
+  self_host_compare_variant_constructors(frozen, frozen.variant_constructors, frozen.variant_constructor_operands, live, 7u32)
+}
