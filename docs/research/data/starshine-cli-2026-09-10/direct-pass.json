@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "input_sha256": "522d380f0d0f8102187b9daca3fd4e531dc9bfb3d2105b6f3015f63f14024bdf",
+  "cpu_affinity": [
+    8,
+    10
+  ],
+  "method": "one warmup, seven rotating rounds, command wall time including process startup",
+  "binaryen_features": [
+    "--all-features",
+    "--disable-custom-descriptors"
+  ],
+  "prior_attempt": "--all-features alone emitted exact heap types requiring Node experimental custom descriptors; that attempt was excluded and repeated with custom descriptors disabled.",
+  "variants": {
+    "loop-only": {
+      "binary_sha256": "bb5d91aea38b90f7a83eba608f8bae9059331d1e40d2ab17337c3b8de2ceba83",
+      "milliseconds": [
+        8.286757001769729,
+        8.235079993028194,
+        8.135923999361694,
+        8.354001998668537,
+        8.009905010112561,
+        8.052777993725613,
+        9.378417002153583
+      ],
+      "bytes": 15519,
+      "output_sha256": "ea9e7d4182c85ed7a94769d04648ec58ddefafe72572dc59f5dd5fdccf169a84",
+      "median_ms": 8.235079993028194,
+      "validation": "passed",
+      "runtime": "legacy(1)=86; canonical(1)=86"
+    },
+    "fixed": {
+      "binary_sha256": "c12666b64811f3ed5548b28735d46d9eda85c098d81b12f3a83f57250bfcaf5f",
+      "milliseconds": [
+        20.976529995095916,
+        8.270235004602,
+        8.720479992916808,
+        8.040023007197306,
+        7.993266000994481,
+        8.165949999238364,
+        8.314578997669742
+      ],
+      "bytes": 15519,
+      "output_sha256": "ea9e7d4182c85ed7a94769d04648ec58ddefafe72572dc59f5dd5fdccf169a84",
+      "median_ms": 8.270235004602,
+      "validation": "passed",
+      "runtime": "legacy(1)=86; canonical(1)=86"
+    },
+    "binaryen131": {
+      "binary_sha256": "bad4b6524b2c8e4b27b9aa69bde1a4b9a05ec8887c77ef0d34300f5825acd97c",
+      "milliseconds": [
+        7.0786889991723,
+        5.79957700392697,
+        6.274760002270341,
+        6.731507994118147,
+        5.659504007780924,
+        6.469423999078572,
+        6.152248999569565
+      ],
+      "bytes": 12485,
+      "output_sha256": "c755b70ad6b44685d392913d8e52851e47148adaf2a2a81a796fdf90416584fb",
+      "median_ms": 6.274760002270341,
+      "validation": "passed",
+      "runtime": "legacy(1)=86; canonical(1)=86"
+    }
+  }
+}

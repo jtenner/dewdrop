@@ -322,21 +322,74 @@ fn bootstrap_compile(
   command : String,
   arguments : Array[String],
 ) -> Int {
-  let expanded = bootstrap_expand_manifest_arguments(arguments, false)
+  let optimization = bootstrap_optimization_or_fail(arguments)
+  if command == "check" && optimization.enabled() {
+    bootstrap_fail(
+      "--optimize and --starshine-pass require build, run, test, or optimize",
+    )
+  }
+  let expanded = bootstrap_expand_manifest_arguments(
+    optimization.arguments,
+    false,
+  )
   let prepared = bootstrap_prepare_compile_arguments(repository, expanded)
   let fingerprint = bootstrap_compiler_fingerprint(repository)
   @sys.set_env_var("DEW_COMPILER_FINGERPRINT", fingerprint)
   let host = repository + "/tools/run-dew-cli-host.sh"
   if command == "build" {
-    let plan = bootstrap_build_cache_plan(repository, prepared, fingerprint)
+    let binary = if optimization.enabled() {
+      bootstrap_optimizer_binary(repository)
+    } else {
+      ""
+    }
+    let build_identity = if optimization.enabled() {
+      bootstrap_optimizer_identity(fingerprint, binary, optimization)
+    } else {
+      fingerprint
+    }
+    let plan = bootstrap_build_cache_plan(repository, prepared, build_identity)
+    if optimization.enabled() && plan.emit != "wasm" {
+      bootstrap_fail(
+        "Starshine optimization requires --emit wasm or --emit wat",
+      )
+    }
     if bootstrap_build_cache_restore(plan) {
       return 0
     }
-    let result = bootstrap_run_process([host, command, ..plan.arguments])
-    if result == 0 {
-      bootstrap_build_cache_publish(plan)
+    let raw = if optimization.enabled() {
+      if plan.output == "" {
+        bootstrap_fail("dew build requires -o OUTPUT")
+      }
+      bootstrap_ensure_directory(bootstrap_dirname(plan.output))
+      plan.output + ".dew-raw-\{bootstrap_process_id()}"
+    } else {
+      plan.output
     }
-    return result
+    let compile_arguments = if optimization.enabled() {
+      bootstrap_optimizer_output_arguments(plan.arguments, raw)
+    } else {
+      plan.arguments
+    }
+    let result = bootstrap_run_process([host, command, ..compile_arguments])
+    if result != 0 {
+      return result
+    }
+    if optimization.enabled() {
+      let optimized = bootstrap_optimize_wasm(
+        binary,
+        optimization,
+        raw,
+        plan.output,
+      )
+      if optimized != 0 {
+        return optimized
+      }
+      @fs.remove_file(raw) catch {
+        _ => ()
+      }
+    }
+    bootstrap_build_cache_publish(plan)
+    return 0
   }
   bootstrap_run_process([host, command, ..prepared])
 }
@@ -532,7 +585,11 @@ fn bootstrap_test_command(
   repository : String,
   arguments : Array[String],
 ) -> Int {
-  let expanded = bootstrap_expand_manifest_arguments(arguments, true)
+  let optimization = bootstrap_optimization_or_fail(arguments)
+  let expanded = bootstrap_expand_manifest_arguments(
+    optimization.arguments,
+    true,
+  )
   let prepared = bootstrap_prepare_compile_arguments(repository, expanded)
   let modules : Array[(String, Array[String])] = []
   let runner : Array[String] = []
@@ -606,6 +663,17 @@ fn bootstrap_test_command(
   if compiled != 0 {
     return compiled
   }
+  if optimization.enabled() {
+    let optimized = bootstrap_optimize_wasm(
+      bootstrap_optimizer_binary(repository),
+      optimization,
+      wasm,
+      wasm,
+    )
+    if optimized != 0 {
+      return optimized
+    }
+  }
   let executed = bootstrap_run_process(
     [
       "node", "--no-liftoff", "tools/dew-test/run.mjs", "--wasm", wasm, "--label",
@@ -629,6 +697,35 @@ fn main {
   )
   let command = arguments[1]
   let remaining = arguments[2:].to_owned()
+  if command == "--help" || command == "help" || remaining.contains("--help") {
+    println("dew build|run|test [source files] [--optimize none|speed|O4s]")
+    println(
+      "dew optimize INPUT.wasm -o OUTPUT.wasm [--optimize speed|O4s|none]",
+    )
+    println(
+      "--starshine-pass NAME: exact ordered pass; repeat to form a custom schedule",
+    )
+    println(
+      "--print-passes: print the selected schedule as JSON without compiling",
+    )
+    println("Optimization defaults to none for builds, speed for dew optimize.")
+    return
+  }
+  if ["build", "run", "test", "optimize", "check"].contains(command) &&
+    remaining.contains("--print-passes") {
+    let selected = if command == "optimize" &&
+      !remaining.contains("--optimize") &&
+      !remaining.contains("--starshine-pass") {
+      ["--optimize", "speed", ..remaining]
+    } else {
+      remaining
+    }
+    bootstrap_print_optimization(bootstrap_optimization_or_fail(selected))
+    return
+  }
+  if command == "optimize" {
+    @sys.exit(bootstrap_optimize_command(repository, remaining))
+  }
   if command == "package-integrity" {
     if remaining.length() != 1 {
       bootstrap_fail("usage: dew package-integrity MANIFEST")
