@@ -11,6 +11,29 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ARN-101 live payload rejects invalid span", 101, 5100n, 21904333209600n, 2n, 2n, 4294967295n],
+    ["ARN-101 live payload rejects invalid span in parameter reader", 101, 5100n, 21904333209600n, 2n, 2n, 4294967295n],
+    ["ARN-101 live payload rejects invalid child", 101, 5100n, 21904333209600n, 47n, 4294967295n, 18446744073709551615n],
+    ["ARN-101 live payload rejects invalid child in parameter reader", 101, 5100n, 21904333209600n, 47n, 4294967295n, 18446744073709551615n],
+    ["ARN-103 live payload requires parallel arenas", 103, 5100n, 21904333209600n, 2n, 1n, 0n],
+    ["ARN-103 live payload requires parallel arenas in parameter reader", 103, 5100n, 21904333209600n, 2n, 1n, 0n],
+    ["SPC-301 live payload rejects Error", 301, 5100n, 21904333209600n, 0n, 1n, 0n],
+    ["SPC-301 live payload rejects Error in parameter reader", 301, 5100n, 21904333209600n, 0n, 1n, 0n],
+    ["SPC-301 live payload rejects nested Error", 301, 5100n, 21904333209600n, 0n, 1n, 201863462912n],
+    ["SPC-301 live payload rejects nested Error in parameter reader", 301, 5100n, 21904333209600n, 0n, 1n, 201863462912n],
+    ["ARN-108 live payload rejects a type cycle", 108, 5100n, 21904333209600n, 0n, 1n, 201863462959n],
+    ["ARN-108 live payload rejects a type cycle in parameter reader", 108, 5100n, 21904333209600n, 0n, 1n, 201863462959n],
+    ["ARN-106 live payload checks stored field position", 106, 5100n, 21904333209600n, 0n, 4294967295n, 2n],
+    ["ARN-106 live payload checks linked type identity", 106, 0n, 0n, 2n, 4294967295n, 0n],
+    ["ARN-101 live payload checks module index", 101, 0n, 0n, 1n, 4294967295n, 2n],
+    ["ARN-101 live payload checks fragment index", 101, 5100n, 0n, 4n, 4294967295n, 2n],
+    ["ARN-106 live payload checks physical type identity", 106, 5100n, 0n, 2n, 4294967295n, 2n],
+    ["ARN-101 live payload checks field span", 101, 5100n, 0n, 3n, 2n, 4294967295n],
+    ["ARN-106 live payload checks stored declaration", 106, 5100n, 21904333209600n, 21904333209600n, 18446744073709551615n, 0n],
+  ].map(([name, code, module, declaration, expected, actual, detail]) => ({
+    name, expected: [code, 7, module, declaration, 0n, 4294967295, expected, actual, detail],
+  })),
+  ...[
     ["ARN-108 inferred applied specialization rejects child cycles", 108, 1n, 0n, 1n, 1n],
     ["ARN-108 resolved applied specialization rejects child cycles", 108, 1n, 0n, 1n, 4294967246n],
     ["ARN-108 inferred function specialization rejects child cycles", 108, 0n, 0n, 1n, 1n],

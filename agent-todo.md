@@ -54,10 +54,15 @@ audit entries below, not completion of those larger entries.
 - [x] T10-4: Check resolved function-type child graphs during specialization.
 - [x] T10-5: Check deferred projection owner graphs before returning pending.
 - [x] T10-6: Remove unused call-payload name recovery and test the live readers.
-- [ ] T10-7: Give live variant-payload type/span/child failures numeric context.
-- [ ] T10-8: Check live payload module, field, and stored type identities.
-- [ ] T10-9: Reject erroneous declared payload types instead of treating them as absent.
+- [x] T10-7: Give live variant-payload type/span/child failures numeric context.
+- [x] T10-8: Check live payload module, field, and stored type identities.
+- [x] T10-9: Reject erroneous declared payload types instead of treating them as absent.
 - [x] T10-10: Infer unresolved method results from call types, not method names.
+
+Validation: 948 self-host tests, 504 exact failure records, 1,327 native tests,
+and 336 callback checks in both compilers pass. Clean B/C bootstrap bytes match.
+See `docs/research/ten-part-type-and-payload-audit-2026-09-10.md` for timings
+and scope. The larger audit entries remain open.
 
 ### Performance follow-up
 

@@ -1,0 +1,224 @@
+open dew.std.option
+
+fn self_host_test_live_payload_read(mutation: U32, parameter: Bool) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"enum Mixed<t> {\n  Value(t, I32)\n}\npub fn run(value: Mixed<I64>) -> I32 {\n  0i32\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid payload fixture")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let source = module_.type_layouts.variants[0u32]
+  let payload = match source.payload {
+    SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(span) => span
+    _ => {
+      assert(false, "fixture has tuple payload")
+      self_host_empty_hir_span(0u32)
+    }
+  }
+  for linked in link.types {
+    let fragment = link.fragments.modules[linked.module_index]
+    let physical = fragment.physical_types[linked.fragment_index]
+    while 0u32 {
+      offset if offset < physical.fields.length => {
+        let field_slot = physical.fields.start + offset
+        let field = fragment.fields[field_slot]
+        match field.role {
+          SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, 0u32) if variant == source.variant => {
+            assert(self_host_linked_source_payload_field(link, linked.type_index, offset) is Option::Some(_), "valid source field")
+            assert(self_host_linked_generic_variant_storage(link, field), "valid generic payload")
+            assert(self_host_linked_variant_payload_parameter(link, variant, 0u32) is Option::Some(0u32), "valid parameter position")
+            assert(self_host_linked_variant_payload_parameter(link, variant, 2u32) is Option::None, "absent parameter stays absent")
+            assert(self_host_linked_source_payload_field(link, linked.type_index, physical.fields.length) is Option::None, "absent field stays absent")
+            if mutation == 0u32 {
+              return
+            }
+            match mutation {
+              1u32 => {
+                module_.type_layouts.variants[0u32] = SelfHostPlannedVariantLayout::{
+                  variant: source.variant
+                  declaration: source.declaration
+                  tag: source.tag
+                  payload: SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(SelfHostHirSpan::{
+                    start: 4294967295u32
+                    length: payload.length
+                  })
+                  offset: source.offset
+                }
+              }
+              2u32 => {
+                module_.type_layouts.payload_types[payload.start] = 4294967295u32
+              }
+              3u32 => {
+                module_.type_layouts.payload_shapes.truncate(module_.type_layouts.payload_shapes.length() - 1u32)
+              }
+              4u32 => {
+                module_.type_layouts.payload_types[payload.start] = module_.resolved_types.error_type
+              }
+              5u32, 6u32 => {
+                let root = module_.resolved_types.types.length()
+                let result = if mutation == 5u32 {
+                  module_.resolved_types.error_type
+                } else {
+                  root
+                }
+                module_.resolved_types.types.push(SelfHostResolvedType::FunctionType(self_host_empty_hir_span(0u32), result))
+                module_.type_layouts.payload_types[payload.start] = root
+              }
+              7u32, 13u32 => {
+                fragment.fields[field_slot] = SelfHostPlannedWasmField::{
+                  role: field.role
+                  declaration: if mutation == 13u32 {
+                    18446744073709551615u64
+                  } else {
+                    field.declaration
+                  }
+                  physical_index: if mutation == 7u32 {
+                    4294967295u32
+                  } else {
+                    field.physical_index
+                  }
+                  storage: field.storage
+                  mutable_: field.mutable_
+                  exact_nominal: field.exact_nominal
+                  offset: field.offset
+                }
+              }
+              8u32, 9u32, 10u32 => {
+                link.types[linked.type_index] = SelfHostPlannedProgramWasmType::{
+                  module_index: if mutation == 9u32 {
+                    4294967295u32
+                  } else {
+                    linked.module_index
+                  }
+                  fragment_index: if mutation == 10u32 {
+                    4294967295u32
+                  } else {
+                    linked.fragment_index
+                  }
+                  type_index: if mutation == 8u32 {
+                    4294967295u32
+                  } else {
+                    linked.type_index
+                  }
+                }
+              }
+              11u32, 12u32 => {
+                fragment.physical_types[linked.fragment_index] = SelfHostPlannedWasmPhysicalType::{
+                  kind: physical.kind
+                  type_index: if mutation == 11u32 {
+                    4294967295u32
+                  } else {
+                    physical.type_index
+                  }
+                  fields: if mutation == 12u32 {
+                    SelfHostHirSpan::{
+                      start: 4294967295u32
+                      length: physical.fields.length
+                    }
+                  } else {
+                    physical.fields
+                  }
+                  offset: physical.offset
+                }
+              }
+              _ => assert(false, "unknown live payload mutation")
+            }
+            if mutation >= 7u32 {
+              let _ = self_host_linked_source_payload_field(link, linked.type_index, offset)
+            } else if parameter {
+              let _ = self_host_linked_variant_payload_parameter(link, variant, 0u32)
+            } else {
+              let _ = self_host_linked_declared_variant_payload_shape(link, field)
+            }
+            assert(false, "corrupt selected payload must report a numeric failure")
+          }
+          _ => {}
+        }
+        continue offset + 1u32
+      }
+      _ => break ()
+    }
+  }
+  assert(false, "fixture must select one payload field")
+}
+
+test "live payload readers preserve valid and absent entries" {
+  self_host_test_live_payload_read(0u32, false)
+}
+
+test "ARN-101 live payload rejects invalid span" expect_trap "unreachable" {
+  self_host_test_live_payload_read(1u32, false)
+}
+
+test "ARN-101 live payload rejects invalid child" expect_trap "unreachable" {
+  self_host_test_live_payload_read(2u32, false)
+}
+
+test "ARN-103 live payload requires parallel arenas" expect_trap "unreachable" {
+  self_host_test_live_payload_read(3u32, false)
+}
+
+test "SPC-301 live payload rejects Error" expect_trap "unreachable" {
+  self_host_test_live_payload_read(4u32, false)
+}
+
+test "SPC-301 live payload rejects nested Error" expect_trap "unreachable" {
+  self_host_test_live_payload_read(5u32, false)
+}
+
+test "ARN-108 live payload rejects a type cycle" expect_trap "unreachable" {
+  self_host_test_live_payload_read(6u32, false)
+}
+
+test "ARN-106 live payload checks stored field position" expect_trap "unreachable" {
+  self_host_test_live_payload_read(7u32, false)
+}
+
+test "ARN-106 live payload checks linked type identity" expect_trap "unreachable" {
+  self_host_test_live_payload_read(8u32, false)
+}
+
+test "ARN-101 live payload checks module index" expect_trap "unreachable" {
+  self_host_test_live_payload_read(9u32, false)
+}
+
+test "ARN-101 live payload checks fragment index" expect_trap "unreachable" {
+  self_host_test_live_payload_read(10u32, false)
+}
+
+test "ARN-106 live payload checks physical type identity" expect_trap "unreachable" {
+  self_host_test_live_payload_read(11u32, false)
+}
+
+test "ARN-101 live payload checks field span" expect_trap "unreachable" {
+  self_host_test_live_payload_read(12u32, false)
+}
+
+test "ARN-106 live payload checks stored declaration" expect_trap "unreachable" {
+  self_host_test_live_payload_read(13u32, false)
+}
+
+test "ARN-101 live payload rejects invalid span in parameter reader" expect_trap "unreachable" {
+  self_host_test_live_payload_read(1u32, true)
+}
+
+test "ARN-101 live payload rejects invalid child in parameter reader" expect_trap "unreachable" {
+  self_host_test_live_payload_read(2u32, true)
+}
+
+test "ARN-103 live payload requires parallel arenas in parameter reader" expect_trap "unreachable" {
+  self_host_test_live_payload_read(3u32, true)
+}
+
+test "SPC-301 live payload rejects Error in parameter reader" expect_trap "unreachable" {
+  self_host_test_live_payload_read(4u32, true)
+}
+
+test "SPC-301 live payload rejects nested Error in parameter reader" expect_trap "unreachable" {
+  self_host_test_live_payload_read(5u32, true)
+}
+
+test "ARN-108 live payload rejects a type cycle in parameter reader" expect_trap "unreachable" {
+  self_host_test_live_payload_read(6u32, true)
+}
+

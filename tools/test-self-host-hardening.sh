@@ -200,6 +200,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_raw_simd_test.dew \
   self_host/compiler/semantic_specialization_shapes_test.dew \
   self_host/compiler/semantic_specialization_graph_closure_test.dew \
+  self_host/compiler/semantic_live_payload_reads_test.dew \
   self_host/compiler/semantic_callable_lookup_test.dew \
   self_host/compiler/semantic_capture_inference_test.dew \
   self_host/compiler/semantic_lambda_fragments_test.dew \

@@ -1,72 +1,102 @@
-// Generic erasure is permission granted by one declared payload position.
-// A different field of the same variant does not inherit that permission.
-fn self_host_linked_variant_payload_parameter(
-  link: SelfHostPlannedProgramWasmGCLink,
-  variant: U64,
-  position: U32,
-) -> Option<U32> {
-  let owner = match link.fragments.specialization.lowering.index.declaration_owner(variant) {
+// Optional payload positions may be absent. Corrupt selected entries may not.
+struct SelfHostLinkedDeclaredPayload {
+  module_: SelfHostPlannedModuleLowering
+  owner: U32
+  declaration: U64
+  type_: U32
+}
+
+fn self_host_linked_declared_payload(link: SelfHostPlannedProgramWasmGCLink, variant: U64, position: U32) -> Option<SelfHostLinkedDeclaredPayload> {
+  let lowering = link.fragments.specialization.lowering
+  let owner = match lowering.index.declaration_owner(variant) {
     Option::Some(value) => value
     Option::None => return Option::None
   }
-  let module_ = link.fragments.specialization.lowering.modules[owner]
-  let collected = link.fragments.specialization.lowering.collected.modules.at(owner)
+  let module_id = self_host_semantic_id_module(variant)
+  if owner >= lowering.modules.length() || owner >= lowering.collected.modules.length() {
+    self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32, 101u32,
+      u32_into_u64(lowering.modules.length()), u32_into_u64(owner), u32_into_u64(position))
+  }
+  let module_ = lowering.modules[owner]
+  let collected = lowering.collected.modules.at(owner)
+  if module_.module_id != module_id {
+    self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32, 106u32, module_id, module_.module_id, u32_into_u64(owner))
+  }
+  if collected.module_id != module_id {
+    self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32, 106u32, module_id, collected.module_id, u32_into_u64(owner))
+  }
+  if module_.type_layouts.module_id != module_id {
+    self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32, 106u32, module_id, module_.type_layouts.module_id, u32_into_u64(owner))
+  }
+  if module_.resolved_types.module_id != module_id {
+    self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32, 106u32, module_id, module_.resolved_types.module_id, u32_into_u64(owner))
+  }
   for source in module_.type_layouts.variants {
     if source.variant == variant {
       let payload = match source.payload {
         SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(value) => value
         _ => return Option::None
       }
-      if position >= payload.length || !self_host_array_span_is_valid(payload.start, payload.length, module_.type_layouts.payload_types.length()) {
+      let types = module_.type_layouts.payload_types
+      if types.length() != module_.type_layouts.payload_shapes.length() {
+        self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32, 103u32,
+          u32_into_u64(types.length()), u32_into_u64(module_.type_layouts.payload_shapes.length()), u32_into_u64(position))
+      }
+      if !self_host_array_span_is_valid(payload.start, payload.length, types.length()) {
+        self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32, 101u32,
+          u32_into_u64(types.length()), u32_into_u64(payload.length), u32_into_u64(payload.start))
+      }
+      if position >= payload.length {
         return Option::None
       }
-      let type_ = module_.type_layouts.payload_types[payload.start + position]
-      if type_ >= module_.resolved_types.types.length() {
-        return Option::None
+      let type_ = types[payload.start + position]
+      match self_host_check_declared_storage_type(module_.resolved_types, variant, type_) {
+        Result::Err(failure) => self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32,
+          failure.code, failure.expected, failure.actual, failure.detail)
+        Result::Ok(_) => {}
       }
-      let parameter = match module_.resolved_types.types[type_] {
-        SelfHostResolvedType::GenericParameterType(value) => value
-        _ => return Option::None
-      }
-      for generic in collected.generic_parameters {
-        if generic.id == parameter && generic.declaration == source.declaration {
-          return Option::Some(generic.index)
-        }
-      }
-      return Option::None
+      return Option::Some(SelfHostLinkedDeclaredPayload::{
+        module_: module_
+        owner: owner
+        declaration: source.declaration
+        type_: type_
+      })
     }
   }
   Option::None
 }
 
-fn self_host_linked_declared_variant_payload_shape(
-  link: SelfHostPlannedProgramWasmGCLink,
-  field: SelfHostPlannedWasmField,
-) -> Option<SelfHostPlannedValueShape> {
+// Generic erasure is permission granted by one declared payload position.
+fn self_host_linked_variant_payload_parameter(link: SelfHostPlannedProgramWasmGCLink, variant: U64, position: U32) -> Option<U32> {
+  let selected = match self_host_linked_declared_payload(link, variant, position) {
+    Option::Some(value) => value
+    Option::None => return Option::None
+  }
+  let parameter = match selected.module_.resolved_types.types[selected.type_] {
+    SelfHostResolvedType::GenericParameterType(value) => value
+    _ => return Option::None
+  }
+  let collected = link.fragments.specialization.lowering.collected.modules.at(selected.owner)
+  for generic in collected.generic_parameters {
+    if generic.id == parameter && generic.declaration == selected.declaration {
+      return Option::Some(generic.index)
+    }
+  }
+  Option::None
+}
+
+fn self_host_linked_declared_variant_payload_shape(link: SelfHostPlannedProgramWasmGCLink, field: SelfHostPlannedWasmField) -> Option<SelfHostPlannedValueShape> {
   match field.role {
     SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, index) => {
+      // This is a candidate query. Stored table identities are checked by the
+      // source-field reader before a candidate can be used for emission.
       if field.declaration != variant {
         return Option::None
       }
-      for module_ in link.fragments.specialization.lowering.modules {
-        if module_.module_id == self_host_semantic_id_module(variant) {
-          for source in module_.type_layouts.variants {
-            if source.variant == variant {
-              match source.payload {
-                SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(payload) => {
-                  if index >= payload.length || !self_host_array_span_is_valid(payload.start, payload.length, module_.type_layouts.payload_types.length()) {
-                    return Option::None
-                  }
-                  let type_ = module_.type_layouts.payload_types[payload.start + index]
-                  return Option::Some(self_host_planned_resolved_value_shape(module_.resolved_types, type_))
-                }
-                _ => return Option::None
-              }
-            }
-          }
-        }
+      match self_host_linked_declared_payload(link, variant, index) {
+        Option::Some(selected) => Option::Some(self_host_planned_resolved_value_shape(selected.module_.resolved_types, selected.type_))
+        Option::None => Option::None
       }
-      Option::None
     }
     _ => Option::None
   }
@@ -94,20 +124,42 @@ fn self_host_linked_source_payload_field(link: SelfHostPlannedProgramWasmGCLink,
     return Option::None
   }
   let linked = link.types[type_index]
-  if linked.type_index != type_index || linked.module_index >= link.fragments.modules.length() {
-    return Option::None
+  if linked.type_index != type_index {
+    self_host_call_read_failure(0u64, 0u64, 0u64, 4294967295u32, 106u32,
+      u32_into_u64(type_index), u32_into_u64(linked.type_index), u32_into_u64(field_index))
+  }
+  if linked.module_index >= link.fragments.modules.length() {
+    self_host_call_read_failure(0u64, 0u64, 0u64, 4294967295u32, 101u32,
+      u32_into_u64(link.fragments.modules.length()), u32_into_u64(linked.module_index), u32_into_u64(type_index))
   }
   let fragment = link.fragments.modules[linked.module_index]
   if linked.fragment_index >= fragment.physical_types.length() {
-    return Option::None
+    self_host_call_read_failure(fragment.module_id, 0u64, 0u64, 4294967295u32, 101u32,
+      u32_into_u64(fragment.physical_types.length()), u32_into_u64(linked.fragment_index), u32_into_u64(type_index))
   }
   let physical = fragment.physical_types[linked.fragment_index]
-  if field_index >= physical.fields.length || !self_host_array_span_is_valid(physical.fields.start, physical.fields.length, fragment.fields.length()) {
+  if physical.type_index != linked.fragment_index {
+    self_host_call_read_failure(fragment.module_id, 0u64, 0u64, 4294967295u32, 106u32,
+      u32_into_u64(linked.fragment_index), u32_into_u64(physical.type_index), u32_into_u64(type_index))
+  }
+  if !self_host_array_span_is_valid(physical.fields.start, physical.fields.length, fragment.fields.length()) {
+    self_host_call_read_failure(fragment.module_id, 0u64, 0u64, 4294967295u32, 101u32,
+      u32_into_u64(fragment.fields.length()), u32_into_u64(physical.fields.length), u32_into_u64(physical.fields.start))
+  }
+  if field_index >= physical.fields.length {
     return Option::None
   }
   let field = fragment.fields[physical.fields.start + field_index]
   if field.physical_index != field_index {
-    return Option::None
+    self_host_call_read_failure(fragment.module_id, field.declaration, 0u64, 4294967295u32, 106u32,
+      u32_into_u64(field_index), u32_into_u64(field.physical_index), u32_into_u64(type_index))
+  }
+  match field.role {
+    SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, _) => if field.declaration != variant {
+      self_host_call_read_failure(fragment.module_id, variant, 0u64, 4294967295u32, 106u32,
+        variant, field.declaration, u32_into_u64(field_index))
+    }
+    _ => {}
   }
   Option::Some(field)
 }
