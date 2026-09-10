@@ -499,6 +499,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   report SPC-301 when consumed as result-presence evidence. All 901 self-host
   tests, 470 exact records, and 318 shared callback checks pass; see the
   [unresolved result log](docs/research/unresolved-call-result-evidence-2026-09-09.md).
+  Receiver method lookup no longer retries a global name search, drops the
+  argument-count constraint, or selects the first specialization. Generic
+  targets require the exact call-site map, including when only one is linked.
+  The stored receiver is now excluded from the explicit argument count.
+  All 906 self-host tests and 470 exact records pass; see the
+  [method lookup log](docs/research/method-lookup-contracts-2026-09-10.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Callback signatures now require the target's function type; missing evidence
   cannot be rebuilt from operands. Scope spans and target membership have exact

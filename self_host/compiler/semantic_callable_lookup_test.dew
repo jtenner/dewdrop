@@ -213,3 +213,159 @@ test "unresolved get_unchecked calls retain missing type evidence" {
 test "SPC-301 unresolved call result presence requires its type" expect_trap "unreachable" {
   self_host_test_unresolved_result_name(b"clear", 2u32)
 }
+
+fn self_host_test_method_lookup_contract(check_arity: Bool) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Reader {\n  value: I64\n}\nstruct Other {\n  value: I64\n}\nimpl Reader {\n  fn read(self) -> I64 {\n    self.value\n  }\n}\npub fn run(reader: Reader, other: Other) -> I64 {\n  let saved = other\n  reader.read()\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "method lookup fixture links")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = false
+  for body in module_.bodies {
+    let mut wrong_receiver = 4294967295u32
+    while 0u32 {
+      relative if relative < body.expressions.length => {
+        let expression = body.expressions.start + relative
+        if module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedLocalGet(1u32) {
+          wrong_receiver = expression
+        }
+        continue relative + 1u32
+      }
+      _ => break ()
+    }
+    while 0u32 {
+      relative if relative < body.expressions.length => {
+        let expression = body.expressions.start + relative
+        match module_.expressions[expression].kind {
+          SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => {
+            let receiver = module_.expressions[target].member_base
+            assert(receiver < module_.expressions.length(), "method retains receiver")
+            let valid = self_host_linked_method_call_index_for_receiver_arity(link, module_, body, receiver, "read", 0u32)
+            assert(valid is Option::Some(_), "exact receiver and arity resolve before mismatch")
+            if check_arity {
+              let absent = self_host_linked_method_call_index_for_receiver_arity(link, module_, body, receiver, "read", 1u32)
+              assert(absent is Option::None, "wrong arity cannot retry without arity")
+            } else {
+              assert(wrong_receiver < module_.expressions.length(), "fixture has the Other receiver")
+              let absent = self_host_linked_method_call_index_for_receiver(link, module_, body, wrong_receiver, "read")
+              assert(absent is Option::None, "wrong receiver cannot select a global same-name method")
+            }
+            checked = true
+          }
+          _ => {}
+        }
+        continue relative + 1u32
+      }
+      _ => break ()
+    }
+  }
+  assert(checked, "method lookup checks a real call")
+}
+
+test "method lookup keeps the wrong receiver absent" {
+  self_host_test_method_lookup_contract(false)
+}
+
+test "method lookup keeps the wrong arity absent" {
+  self_host_test_method_lookup_contract(true)
+}
+
+fn self_host_test_ambiguous_method_lookup(check_arity: Bool) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Reader<t> {\n  value: t\n}\nimpl<t> Reader<t> {\n  fn read(self) -> t {\n    self.value\n  }\n}\npub fn run(left: Reader<I64>, right: Reader<I32>) -> I64 {\n  right.read()\n  left.read()\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "two-specialization fixture links")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = 0u32
+  for body in module_.bodies {
+    while 0u32 {
+      relative if relative < body.expressions.length => {
+        let expression = body.expressions.start + relative
+        match module_.expressions[expression].kind {
+          SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, target, _, _) => {
+            let exact = self_host_linked_i32_call_index(link, body.body, 4294967295u32, expression, declaration)
+            assert(exact is Option::Some(_), "valid call has an exact specialization")
+            let mut candidates = 0u32
+            for function_ in link.functions {
+              if function_.declaration == declaration && function_.lambda == 4294967295u32 {
+                candidates = candidates + 1u32
+              }
+            }
+            assert(candidates >= 2u32, "fixture retains multiple physical specializations")
+            let receiver = module_.expressions[target].member_base
+            let fallback = if check_arity {
+              self_host_linked_method_call_index_for_receiver_arity(link, module_, body, receiver, "read", 0u32)
+            } else {
+              self_host_linked_method_call_index_for_receiver(link, module_, body, receiver, "read")
+            }
+            assert(fallback is Option::None, "name-only lookup cannot choose the first specialization")
+            checked = checked + 1u32
+          }
+          _ => {}
+        }
+        continue relative + 1u32
+      }
+      _ => break ()
+    }
+  }
+  assert(checked == 2u32, "both distinct calls were checked")
+}
+
+test "method lookup does not pick the first specialization" {
+  self_host_test_ambiguous_method_lookup(false)
+}
+
+test "method arity lookup does not pick the first specialization" {
+  self_host_test_ambiguous_method_lookup(true)
+}
+
+test "one linked generic method is not evidence for another receiver argument" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"struct Reader<t> {\n  value: t\n}\nimpl<t> Reader<t> {\n  fn read(self) -> t {\n    self.value\n  }\n}\npub fn run(reader: Reader<I32>, other: Reader<I64>) -> I32 {\n  let saved = other\n  reader.read()\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "one-specialization fixture links")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = false
+  for body in module_.bodies {
+    let mut wrong_receiver = 4294967295u32
+    while 0u32 {
+      relative if relative < body.expressions.length => {
+        let expression = body.expressions.start + relative
+        if module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedLocalGet(1u32) {
+          wrong_receiver = expression
+        }
+        continue relative + 1u32
+      }
+      _ => break ()
+    }
+    while 0u32 {
+      relative if relative < body.expressions.length => {
+        let expression = body.expressions.start + relative
+        match module_.expressions[expression].kind {
+          SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => {
+            let exact = self_host_linked_i32_call_index(link, body.body, 4294967295u32, expression, declaration)
+            assert(exact is Option::Some(_), "real I32 call has an exact mapping")
+            let mut candidates = 0u32
+            for function_ in link.functions {
+              if function_.declaration == declaration && function_.lambda == 4294967295u32 {
+                candidates = candidates + 1u32
+              }
+            }
+            assert(candidates == 1u32, "only the I32 specialization is linked")
+            assert(wrong_receiver < module_.expressions.length(), "fixture retains the I64 receiver")
+            let absent = self_host_linked_method_call_index_for_receiver_arity(link, module_, body, wrong_receiver, "read", 0u32)
+            assert(absent is Option::None, "one I32 specialization cannot prove an I64 target")
+            checked = true
+          }
+          _ => {}
+        }
+        continue relative + 1u32
+      }
+      _ => break ()
+    }
+  }
+  assert(checked, "generic receiver mismatch was checked")
+}

@@ -1,0 +1,95 @@
+open dew.std.option
+
+// Shape recovery may inspect a unique method, but it must not weaken the
+// receiver/arity constraints or use link order to select a specialization.
+// Exact call-site mappings remain the authority for emitted calls.
+fn self_host_linked_method_call_index_for_receiver(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  receiver: U32,
+  name: String,
+) -> Option<U32> {
+  self_host_linked_unique_receiver_method(link, module_, body, receiver, name, Option::None)
+}
+
+fn self_host_linked_method_call_index_for_receiver_arity(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  receiver: U32,
+  name: String,
+  explicit_argument_count: U32,
+) -> Option<U32> {
+  self_host_linked_unique_receiver_method(link, module_, body, receiver, name, Option::Some(explicit_argument_count))
+}
+
+fn self_host_linked_unique_receiver_method(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  receiver: U32,
+  name: String,
+  explicit_argument_count: Option<U32>,
+) -> Option<U32> {
+  let receiver_nominal = self_host_linked_expression_nominal_declaration(link, module_, body, receiver)
+  let receiver_primitive = if receiver < module_.expressions.length() {
+    self_host_linked_body_primitive_rank(module_, module_.expressions[receiver].type_)
+  } else {
+    0u32
+  }
+  if receiver_nominal == 0u64 && receiver_primitive == 0u32 {
+    return Option::None
+  }
+  let mut selected_declaration = 0u64
+  for candidate_module in link.fragments.specialization.lowering.modules {
+    while 0u32 {
+      index if index < self_host_program_specialization_callable_count(candidate_module) => {
+        let callable = self_host_program_specialization_callable_at(candidate_module, index)
+        let arity_matches = match explicit_argument_count {
+          // Stored logical parameters include self; explicit arguments do not.
+          Option::Some(count) => callable.parameters.length > 0u32 && callable.parameters.length - 1u32 == count
+          Option::None => true
+        }
+        if callable.has_receiver && self_host_bytes_equal_string(callable.name, name) && arity_matches {
+          let nominal = self_host_linked_resolved_nominal_declaration(candidate_module, callable.self_type)
+          let primitive = self_host_linked_resolved_primitive_rank(candidate_module, callable.self_type)
+          if (receiver_nominal != 0u64 && receiver_nominal == nominal) ||
+            (receiver_primitive != 0u32 && receiver_primitive == primitive) {
+            if selected_declaration != 0u64 && selected_declaration != callable.declaration {
+              return Option::None
+            }
+            selected_declaration = callable.declaration
+          }
+        }
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+  }
+  if selected_declaration == 0u64 {
+    return Option::None
+  }
+  let mut selected_function = 4294967295u32
+  for function_ in link.functions {
+    if self_host_linked_named_function_matches(function_, selected_declaration) {
+      // This lookup has no call-site key or logical type-argument proof. Even
+      // one linked specialization can belong to another applied receiver.
+      if function_.specialization != 4294967295u32 {
+        return Option::None
+      }
+      // A second candidate is ambiguous even when an invalid link table gives
+      // it the same physical index. Link-table verification diagnoses that
+      // corruption separately; it must not make this selection look unique.
+      if selected_function != 4294967295u32 {
+        return Option::None
+      }
+      selected_function = self_host_linked_physical_function_index(function_.function_index)
+    }
+  }
+  if selected_function == 4294967295u32 {
+    Option::None
+  } else {
+    Option::Some(selected_function)
+  }
+}
