@@ -4626,53 +4626,6 @@ fn starshine_program_append_shape_codes(
 }
 
 ///|
-fn starshine_program_append_specialized_resolved_codes(
-  lowering : @semantic.PlannedModuleLowering,
-  specialization : StarshineGenericSpecialization,
-  type_ : @semantic.ResolvedTypeId,
-  output : Array[Int],
-) -> Unit {
-  if type_ >= 0 && type_ < lowering.resolved_types.length() {
-    match lowering.resolved_types[type_] {
-      @semantic.GenericParameterType(parameter) => {
-        let parameter_index = @semantic.semantic_id_local(parameter)
-        if specialization.generic_parameters.relative_index(parameter_index)
-          is Some(relative) {
-          if relative < specialization.specialization_shapes.length {
-            starshine_program_append_shape_codes(
-              specialization.shapes[specialization.specialization_shapes.start +
-              relative],
-              output,
-            )
-            return
-          }
-        }
-      }
-      @semantic.ProductType(fields) => {
-        for index in 0..<fields.length {
-          starshine_program_append_specialized_resolved_codes(
-            lowering,
-            specialization,
-            lowering.resolved_type_arguments[fields.start + index],
-            output,
-          )
-        }
-        return
-      }
-      _ => ()
-    }
-  }
-  starshine_program_append_shape_codes(
-    @semantic.planned_value_shape_from_resolved_types(
-      lowering.resolved_types,
-      lowering.resolved_type_arguments,
-      type_,
-    ),
-    output,
-  )
-}
-
-///|
 fn starshine_program_specialized_type_code(
   lowering : @semantic.PlannedModuleLowering,
   specialization : StarshineGenericSpecialization,
@@ -4780,44 +4733,28 @@ fn starshine_program_specialized_closure_signatures(
   module_ : @semantic.PlannedModuleWasmGCFragments,
   function_type : @semantic.ResolvedTypeId,
   specialization : StarshineGenericSpecialization,
-) -> (Int, Int)? {
-  if function_type < 0 || function_type >= lowering.resolved_types.length() {
-    return None
-  }
-  let (resolved_parameters, resolved_result) = match
-    lowering.resolved_types[function_type] {
-    @semantic.FunctionType(parameters, result) => (parameters, result)
-    _ => return None
-  }
-  ignore(module_)
-  let parameter_codes : Array[Int] = []
-  for index in 0..<resolved_parameters.length {
-    starshine_program_append_specialized_resolved_codes(
+) -> (Int, Int, Int, Int)? {
+  let (entry, direct) = match
+    starshine_specialize_callback_signature(
       lowering,
+      planned,
+      module_,
+      function_type,
+      module_.function_type_by_resolved[function_type],
       specialization,
-      lowering.resolved_type_arguments[resolved_parameters.start + index],
-      parameter_codes,
-    )
+    ) {
+    Some(value) => value
+    None => return None
   }
-  let result_codes : Array[Int] = []
-  starshine_program_append_specialized_resolved_codes(
-    lowering, specialization, resolved_result, result_codes,
-  )
-  let direct = starshine_program_find_signature_by_codes(
-    planned, parameter_codes, result_codes,
-  )
-  let entry_parameters : Array[Int] = [5]
-  for code in parameter_codes {
-    entry_parameters.push(code)
-  }
-  let entry = starshine_program_find_signature_by_codes(
-    planned, entry_parameters, result_codes,
-  )
-  if direct < 0 || entry < 0 {
-    None
-  } else {
-    Some((entry, direct))
-  }
+  let (erased_entry, erased_direct) = starshine_specialize_callback_signature(
+    lowering,
+    planned,
+    module_,
+    function_type,
+    module_.erased_closure_direct_type_by_resolved[function_type],
+    specialization,
+  ).unwrap_or((entry, direct))
+  Some((entry, direct, erased_entry, erased_direct))
 }
 
 ///|
@@ -5485,11 +5422,11 @@ fn starshine_emit_body_instructions(
                     starshine_program_specialized_closure_signatures(
                       lowering, link, planned, function_type, specialization,
                     ) {
-                    Some((entry, direct)) => {
+                    Some((entry, direct, erased_entry, erased_direct)) => {
                       emitted_type = entry
                       emitted_direct_type = direct
-                      emitted_erased_entry = entry
-                      emitted_erased_direct = direct
+                      emitted_erased_entry = erased_entry
+                      emitted_erased_direct = erased_direct
                     }
                     None => ()
                   }

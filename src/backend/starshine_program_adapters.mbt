@@ -851,7 +851,7 @@ fn starshine_program_adapter_helper_plan(
         starshine_program_specialized_closure_signatures(
           module_lowering, planned, module_fragments, resolved_type, specialization,
         ) {
-        Some((entry, _)) => entry_type_index = entry
+        Some((entry, _, _, _)) => entry_type_index = entry
         None => ()
       }
     }

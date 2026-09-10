@@ -1,0 +1,25 @@
+struct Box {
+  value: I32
+}
+
+fn boxed(value: I32) -> Box {
+  Box::{
+    value: value
+  }
+}
+
+fn invoke<t>(value: t, callback: fn(t) -> Box) -> I32 {
+  let result = callback(value)
+  result.value
+}
+
+pub fn main() -> Unit {
+  assert(invoke(42, boxed) == 42, "direct callback keeps its nominal result")
+  let extra = 20
+  let captured = fn(value: I32) -> Box {
+    Box::{
+      value: value + extra
+    }
+  }
+  assert(invoke(22, captured) == 42, "captured callback keeps its nominal result")
+}

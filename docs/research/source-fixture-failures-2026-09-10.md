@@ -70,3 +70,21 @@ Walk the callable's full owned expression set, including its lambdas, for both
 ordinary roots and module initializers. A library-style private helper regression
 failed before the fix and now passes. The array mutation fixture passes in Node
 and Wago with O4s and fold-inline.
+
+## Callback function signatures
+
+Generic callback specialization matched signatures using broad carrier codes.
+That erased fixed nominal results such as `Array<t>` to `eqref` and selected a
+function type that the actual callback did not have. Preserve each fixed ABI
+slot and substitute only generic slots, including flattened products and erased
+Unit slots. Match complete Wasm value types after mapping nominal references to
+their program type indices. Keep typed and erased callback alternatives distinct.
+
+The array flat-map fixture and a new user-defined `Box` fixture both trapped
+before the repair. Both now pass in Node and Wago with both selected pipelines.
+The new fixture checks direct and captured callback results with assertions.
+The full native lane passes 1,333 tests over 229 targets; its slowest measured
+target takes 17.621 seconds. All 461 source fixtures now meet their baseline
+oracles (410 execute and 51 report expected source errors). O4s passes all 410;
+fold-inline exposes one separate Starshine recursive-type indexing bug, which
+remains visible pending its repair.
