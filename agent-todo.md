@@ -78,9 +78,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   removed. See the [algorithm log](docs/research/array-library-algorithms-2026-09-06.md).
 - [ ] Remove the old Array wrapper layout and literal shortcuts. Use declared
   fields and exact construction recipes, not a guessed three-field layout.
-  An ordinary-call lowering trial passes the native Array corpus and has exposed
-  a nested tuple specialization defect in both compilers. Self-host substitution
-  and literal lowering are still in progress; see the
+  An ordinary-call lowering trial passes the native Array corpus, but fails
+  three name-binding tests: local Array, unopened Array, and an unrelated
+  user Array. The trial is not enabled. Carry a bound constructor identity
+  into ordinary calls before removing the old emitter; see the
   [literal call trial](docs/research/array-literal-calls-2026-09-09.md).
   The tuple substitution and specialized Unit storage fixes pass 884 self-host
   tests, 463 exact records, 276 shared callback checks, and the clean B/C

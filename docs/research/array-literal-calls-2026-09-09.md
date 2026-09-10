@@ -52,3 +52,29 @@ callback checks now pass. See the
 [nested call log](nested-call-specialization-2026-09-09.md). Literal binding and
 context checks must still pass before the transformation can replace the old
 construction path.
+
+## Binding trial rejected
+
+Four new native checks cover a local value named Array, a literal without an
+open Array name, an unrelated user struct named Array, and contextual empty,
+nested, and Unit arrays. The baseline passes all four in 11.499 seconds. The
+first fixture draft also indexed without importing the index trait; its
+unsupported-expression error was corrected by making that case test literal
+creation alone.
+
+With the AST call transformation enabled, three checks fail in 11.268 seconds:
+the local captures the constructor target, the unopened type cannot resolve,
+and the unrelated Array declaration receives the qualified method lookup.
+Only the contextual empty/nested/Unit test passes. These failures show that
+a generated local name alone is not enough for hygiene: the generated callee
+also needs the language literal's bound declaration identity.
+
+The trial is removed again, not shipped with a source-spelling fallback. The
+four baseline regression tests remain. The replacement must carry the bound
+literal type/constructor into ordinary call planning, independent of lexical
+names; removing the old emitter is still open work. The earlier positive
+Array and product results do not establish this binding property.
+
+With the rejected transformation removed, all four binding regressions pass
+again in 11.755 seconds. This commit adds coverage and records the failed
+experiment; it does not change production literal semantics.
