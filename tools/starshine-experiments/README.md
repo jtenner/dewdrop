@@ -13,6 +13,8 @@ optimization, validation, and execution have a 30 second timeout. Native builds
 have a larger limit; any command above 30 seconds is marked as a performance bug.
 Failures stay in the report and make the command return a nonzero status. The
 runner continues through the other fixtures. It never updates expectations.
+A compiler crash includes its exit code, assertion text, and stack output, even
+when the fixture expects a source error.
 
 The default pipeline is `O4s`. This pinned CLI does not accept the spelling
 `-O4s`; the equivalent is `--optimize-level 4 --shrink-level 1 --optimize`.

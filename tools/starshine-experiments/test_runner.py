@@ -2,8 +2,13 @@
 
 import sys
 import unittest
+import subprocess
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
-from runner import CommandFailure, check_output, execute
+from runner import ROOT, CommandFailure, check_output, execute, snapshot_case
 
 
 class RunnerTests(unittest.TestCase):
@@ -24,6 +29,20 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(records[0]["returncode"], 1)
         self.assertIn("broken output", records[0]["stderr"])
         self.assertGreater(records[0]["seconds"], 0)
+
+    def test_compiler_crash_keeps_the_invariant_and_stack(self):
+        source = ROOT / "tests/module-snapshots/crash.dew"
+        expected = {"errors": ["expected source error"], "warnings": [], "output": None}
+        process = subprocess.CompletedProcess([], -6, "arena invariant 301", "PanicError stack")
+        with tempfile.TemporaryDirectory() as directory, \
+                patch("runner.snapshots.load_expectation", return_value=expected), \
+                patch("runner.snapshots.fixture_sources", return_value=[("snapshot.main", "fixture.dew", source)]), \
+                patch("runner.execute", return_value=process):
+            args = SimpleNamespace(output=Path(directory), from_wat=False, compiler=Path("compiler"))
+            result = snapshot_case(source, args, {})
+        self.assertEqual(result["status"], "baseline-failed")
+        self.assertIn("arena invariant 301", result["error"])
+        self.assertIn("PanicError stack", result["error"])
 
     def test_timeout_is_a_failure_with_a_record(self):
         records = []

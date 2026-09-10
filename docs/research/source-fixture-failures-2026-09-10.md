@@ -88,3 +88,11 @@ target takes 17.621 seconds. All 461 source fixtures now meet their baseline
 oracles (410 execute and 51 report expected source errors). O4s passes all 410;
 fold-inline exposes one separate Starshine recursive-type indexing bug, which
 remains visible pending its repair.
+
+## Crash reports
+
+Check for compiler aborts before comparing expected source diagnostics. The
+startup-cycle crash was retained in the raw command record, but its short report
+only said that the expected source error was missing. The short report now keeps
+the invariant and stack too. A red-first unit test checks that case; all six
+runner tests pass in 0.258 seconds.

@@ -166,11 +166,13 @@ def snapshot_case(source, args, selected):
             returncode = process.returncode
         if internals:
             raise AssertionError(f"compiler internal failure: {internals}")
+        if returncode and not errors:
+            raise AssertionError(
+                f"compiler failed without diagnostics (exit {returncode}):\n"
+                f"{process.stdout}\n{process.stderr}")
         check_output(expected["errors"], errors)
         check_output(expected["warnings"], warnings)
         if returncode:
-            if not errors:
-                raise AssertionError(f"compiler failed without diagnostics: {process.stderr}")
             check_output(expected["output"], None)
             result["status"] = "expected-compile-failure"
             return result
