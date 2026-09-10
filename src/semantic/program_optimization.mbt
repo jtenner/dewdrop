@@ -3841,6 +3841,7 @@ fn prepare_program_optimization_mutation(
         parameters: module_.functions.parameters.copy(),
       },
       bodies: module_.bodies.copy(),
+      lambdas: module_.lambdas.copy(),
       locals: module_.locals.copy(),
       blocks: module_.blocks.copy(),
       expressions: module_.expressions.copy(),
@@ -7106,8 +7107,13 @@ fn scalar_replace_program_variant_payload_match(
 fn scalar_replace_program_variant_payload_reads(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
-  for module_ in modules {
-    for expression in 0..<module_.expressions.length() {
+  for module_index, module_ in modules {
+    let expression_limit = module_.expressions.length()
+    let block_limit = module_.blocks.length()
+    let arm_limit = module_.pattern_arms.length()
+    let expression_insertions : Map[Int, Array[Int]] = {}
+    let block_insertions : Map[Int, Array[Int]] = {}
+    for expression in 0..<expression_limit {
       let scrutinee = match module_.expressions[expression].kind {
         PlannedMatchExpression(scrutinee, _) => scrutinee
         _ => continue
@@ -7118,8 +7124,8 @@ fn scalar_replace_program_variant_payload_reads(
       if module_.expressions[scrutinee].kind is PlannedVariantTupleNew(_, _, _) ||
         module_.expressions[scrutinee].kind is PlannedVariantStructNew(_, _, _) {
         ignore(
-          scalar_replace_program_variant_payload_match(
-            module_, expression, scrutinee,
+          scalar_replace_program_variant_payload_match_recorded(
+            module_, expression, scrutinee, expression_insertions, block_insertions,
           ),
         )
       }
@@ -7174,8 +7180,8 @@ fn scalar_replace_program_variant_payload_reads(
             }
           }
           if match_expression < 0 ||
-            !scalar_replace_program_variant_payload_match(
-              module_, match_expression, initializer,
+            !scalar_replace_program_variant_payload_match_recorded(
+              module_, match_expression, initializer, expression_insertions, block_insertions,
             ) {
             continue
           }
@@ -7191,6 +7197,15 @@ fn scalar_replace_program_variant_payload_reads(
         }
       }
     }
+    modules[module_index] = relocate_program_control_nodes(
+      module_,
+      expression_limit,
+      block_limit,
+      arm_limit,
+      expression_insertions,
+      block_insertions,
+      {},
+    )
   }
 }
 
@@ -7454,11 +7469,16 @@ fn program_map_variant_pattern_bindings(
 fn factor_program_variant_payload_extractions(
   modules : Array[PlannedModuleLowering],
 ) -> Unit {
-  for module_ in modules {
+  for module_index, module_ in modules {
     if module_.pattern_arms.length() != module_.arm_children.length() {
       continue
     }
     let expression_limit = module_.expressions.length()
+    let block_limit = module_.blocks.length()
+    let arm_limit = module_.pattern_arms.length()
+    let expression_insertions : Map[Int, Array[Int]] = {}
+    let block_insertions : Map[Int, Array[Int]] = {}
+    let arm_insertions : Map[Int, Array[Int]] = {}
     for expression in 0..<expression_limit {
       let arms = match module_.expressions[expression].kind {
         PlannedMatchExpression(_, arms) => arms
@@ -7575,6 +7595,8 @@ fn factor_program_variant_payload_extractions(
             _ => ()
           }
         }
+        let generated_expression_start = module_.expressions.length()
+        let generated_block_start = module_.blocks.length()
         let terminal = module_.pattern_arms[selected_arms[selected_arms.length() -
           1]]
         let mut result = terminal.body
@@ -7637,9 +7659,31 @@ fn factor_program_variant_payload_extractions(
             },
           ),
         }
+        record_program_control_nodes(
+          expression_insertions,
+          body.expressions,
+          generated_expression_start,
+          module_.expressions.length(),
+        )
+        record_program_control_nodes(
+          block_insertions,
+          body.blocks,
+          generated_block_start,
+          module_.blocks.length(),
+        )
+        record_program_control_nodes(
+          arm_insertions,
+          body.pattern_arms,
+          new_arms_start,
+          module_.pattern_arms.length(),
+        )
         break
       }
     }
+    modules[module_index] = relocate_program_control_nodes(
+      module_, expression_limit, block_limit, arm_limit, expression_insertions, block_insertions,
+      arm_insertions,
+    )
   }
 }
 
@@ -7899,6 +7943,7 @@ pub fn optimize_program_lowering(
   )
   cse_program_field_extractions(modules)
   scalar_replace_program_struct_field_reads(modules, effects)
+  compact_program_optimization_locals(modules)
   scalar_replace_program_variant_payload_reads(modules)
   factor_program_variant_payload_extractions(modules)
   mark_program_tail_calls(modules)
