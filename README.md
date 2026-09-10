@@ -773,6 +773,50 @@ tools/dew build path/to/program.dew -o program.wasm
 
 Builds deterministic, Starshine-validated Wasm.
 
+### Optimize Wasm
+
+```sh
+tools/dew build path/to/program.dew -o program.wasm --optimize speed
+tools/dew run path/to/program.dew --optimize speed
+tools/dew test path/to/program.dew path/to/program_test.dew --optimize speed
+tools/dew build --optimize speed --print-passes
+```
+
+`--optimize` selects `none`, `speed`, or `O4s`. Build, run, and test default to
+`none`. The speed profile uses a measured ordered Starshine schedule. On ten local
+benchmarks it uses 13.2% less time and 12.4% fewer encoded bytes than `O4s`;
+byte hashing and map workloads regress. See the [measurements and exact pass
+order](docs/research/compiler-cli-optimization-2026-09-10.md). `O4s`
+uses the stock schedule in the pinned Starshine version. `--print-passes`
+prints JSON with the exact order and optimization levels, without compiling.
+Optimization supports Wasm and WAT output. HIR and lowering output cannot use it.
+
+To optimize an existing module, including a compiler Wasm artifact:
+
+```sh
+tools/dew optimize input.wasm -o output.wasm
+```
+
+This command defaults to `speed`. Use `--optimize none` to copy the module.
+For an exact custom order, repeat `--starshine-pass`. Repeated passes are kept.
+A custom order cannot be combined with `--optimize`.
+
+```sh
+tools/dew build path/to/program.dew -o program.wasm \
+  --starshine-pass precompute --starshine-pass inlining \
+  --starshine-pass local-cse --starshine-pass vacuum
+```
+
+The CLI builds the pinned native Starshine optimizer when needed.
+`DEW_STARSHINE=/absolute/path/to/cmd.exe` selects another executable for local
+experiments. The build cache includes its binary contents, optimization levels,
+and ordered passes. A failed optimization keeps the last good output, prints
+the raw input path, and does not publish a successful cache entry. Test metadata
+is preserved.
+
+See [the pipeline measurements](docs/research/compiler-cli-optimization-2026-09-10.md)
+for the selected order, runtime results, size changes, and remaining pass faults.
+
 ### Run
 
 ```sh

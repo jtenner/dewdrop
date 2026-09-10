@@ -125,3 +125,27 @@ checks in `tools/module-snapshots/run.sh`. Optimized WAT is expected to differ,
 so this experiment does not compare it with the unoptimized WAT snapshots.
 
 Research and measurements: [September 2026 experiment](../../docs/research/starshine-execution-pipelines-2026-09-10.md).
+
+The compiler CLI also supports `tools/dew build --optimize speed` and
+`tools/dew optimize input.wasm -o output.wasm`. See the
+[CLI pipeline study](../../docs/research/compiler-cli-optimization-2026-09-10.md)
+for the chosen order and its measured limits. The old experiment named `speed`
+in `pipelines.json` is a retained failing trial; it is not the CLI speed profile.
+
+`testdata/wago-typed-select.wat` reduces the Wago-only typed-select fault without
+using Starshine. It selects the same struct reference for both arms, then checks
+reference identity. Parse it with `wasm-tools parse`, then use the Node and Wago
+snapshot runners. Correct execution has no output and no trap. Wago currently
+traps at `unreachable`; Node passes. The local Wago repair in
+[PR #600](https://github.com/wago-org/wago/pull/600) consumes the complete reference
+type and passes this case. This separates the runtime defect from the
+`remove-unused-brs` pass that first emits the instruction in the source case.
+
+The final `cli-speed` schedule is `fold-flat-coalesce`: precompute and inlining,
+then local CSE, repaired no-structure local simplification, coalescing, vacuum,
+module cleanup, memory packing, local reordering, and debug stripping, preceded
+by duplicate-function elimination. All 461 source fixtures pass their expected
+checks in Node and Wago under this order. The ten-workload confirmation gives
+13.24% less geometric-mean time and 12.43% fewer total encoded bytes than O4s;
+byte hashing and maps regress. The full per-workload table and retained samples
+are in the [CLI study](../../docs/research/compiler-cli-optimization-2026-09-10.md).
