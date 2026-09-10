@@ -803,6 +803,28 @@ pub fn loop_return_callback(value: I64) -> I64 {
   }
 }
 
+fn selected_envelope<a, b>(first: a, second: b) -> GenericEnvelope<a> {
+  GenericEnvelope::Hold(first)
+}
+
+pub fn selected_envelope_callback(value: I64) -> I64 {
+  match selected_envelope::<I64, I32>(value, 7i32) {
+    GenericEnvelope::Hold(item) => item
+    GenericEnvelope::Empty => 0i64
+  }
+}
+
+fn selected_result<a, b>(first: a, second: b) -> Result<b, a> {
+  Result::Err(first)
+}
+
+pub fn selected_result_callback(value: I64) -> I64 {
+  match selected_result::<I64, I32>(value, 7i32) {
+    Result::Err(item) => item
+    Result::Ok(_) => 0i64
+  }
+}
+
 // Validation-only. This export must not be invoked.
 pub fn never_loop_result() -> I64 {
   while 0u32 {

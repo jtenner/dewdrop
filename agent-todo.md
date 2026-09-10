@@ -53,11 +53,11 @@ audit entries below, not completion of those larger entries.
 - [x] T10-3: Check inferred function-type child graphs during specialization.
 - [x] T10-4: Check resolved function-type child graphs during specialization.
 - [x] T10-5: Check deferred projection owner graphs before returning pending.
-- [ ] T10-6: Remove unused call-payload name recovery and test the live readers.
+- [x] T10-6: Remove unused call-payload name recovery and test the live readers.
 - [ ] T10-7: Give live variant-payload type/span/child failures numeric context.
 - [ ] T10-8: Check live payload module, field, and stored type identities.
 - [ ] T10-9: Reject erroneous declared payload types instead of treating them as absent.
-- [ ] T10-10: Infer unresolved method results from call types, not method names.
+- [x] T10-10: Infer unresolved method results from call types, not method names.
 
 ### Performance follow-up
 

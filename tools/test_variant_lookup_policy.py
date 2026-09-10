@@ -62,15 +62,17 @@ class VariantLookupPolicyTests(unittest.TestCase):
                 self.assertFalse(heuristic in function,
                                  f"missing payload evidence uses a spelling or slot guess: {heuristic}")
 
-    def test_exact_call_payload_uses_the_declared_result(self):
+    def test_call_payload_uses_inferred_types_without_name_recovery(self):
         source = SOURCE.read_text()
-        start = source.index("fn self_host_linked_exact_call_result_payload_shape(")
+        self.assertNotIn("self_host_linked_exact_call_result_payload_shape(", source)
+        self.assertFalse((ROOT / "self_host/compiler/semantic_call_payload_shapes.dew").exists())
+        start = source.index("fn self_host_linked_unresolved_method_call_result_shape(")
         end = source.index("\nfn ", start + 3)
         function = source[start:end]
-        self.assertTrue("self_host_linked_physical_result_argument_shape(" in function,
-                        "exact call payloads require the selected result type")
-        self.assertTrue("self_host_linked_physical_function_specialization_shape_at(" not in function,
-                        "a fixed specialization slot does not prove a result payload")
+        self.assertIn("self_host_linked_inferred_call_result_shape(", function)
+        self.assertIn("caller_specialization", function)
+        self.assertNotIn("method_call_index", function)
+        self.assertNotIn("module_name", function)
 
 
 if __name__ == "__main__":

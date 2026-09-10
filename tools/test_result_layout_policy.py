@@ -17,7 +17,7 @@ class ResultLayoutPolicy(unittest.TestCase):
             "semantic_variant_payload_storage.dew",
             "semantic_wasm_body_plan.dew",
             "semantic_pattern_storage_carriers.dew",
-            "semantic_call_payload_shapes.dew",
+            "starshine_call_result_shapes.dew",
             "semantic_program_link_plan.dew",
             "starshine_module.dew",
         ):

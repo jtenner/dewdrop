@@ -15,7 +15,7 @@ class OptionLayoutPolicy(unittest.TestCase):
             "semantic_pattern_constructor_identity.dew",
             "semantic_wasm_body_plan.dew",
             "semantic_pattern_storage_carriers.dew",
-            "semantic_call_payload_shapes.dew",
+            "semantic_variant_payload_storage.dew",
             "semantic_object_constructor_plans.dew",
             "starshine_module.dew",
         ):

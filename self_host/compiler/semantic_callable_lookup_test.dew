@@ -175,6 +175,13 @@ fn self_host_test_unresolved_result_name(name: Bytes, mutation: U32) -> Unit {
               let unresolved = module_.expressions[expression]
               module_.expressions[expression] = self_host_test_signature_expression(unresolved, -1i32, unresolved.kind, unresolved.shape)
             }
+            if mutation == 3u32 {
+              match self_host_linked_unresolved_method_call_result_shape(link, module_, body, 4294967295u32, expression) {
+                Option::Some(shape) => assert(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape, "payload call result must retain Error")
+                Option::None => assert(false, "an unresolved call must retain its result evidence")
+              }
+              return
+            }
             if mutation == 1u32 {
               let shape = self_host_linked_backend_expression_shape(link, module_, body, 4294967295u32, expression)
               assert(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape, "missing unresolved result stays Error")
@@ -192,6 +199,10 @@ fn self_host_test_unresolved_result_name(name: Bytes, mutation: U32) -> Unit {
     }
   }
   assert(checked, "fixture checks the unresolved method call form")
+}
+
+test "unresolved payload calls cannot recover Error from method names" {
+  self_host_test_unresolved_result_name(b"read", 3u32)
 }
 
 test "unresolved clear calls do not erase a typed result" {

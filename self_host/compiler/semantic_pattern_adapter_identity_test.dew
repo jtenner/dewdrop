@@ -77,8 +77,6 @@ test "call payload evidence follows the result generic instead of slot one" {
     b"open dew.std.option\nfn select<a, b>(first: a, second: b) -> Option<a> {\n  Some(first)\n}\npub fn run() -> U32 {\n  match select::<U32, I64>(7u32, 9i64) {\n    Some(item) => item\n    None => 0u32\n  }\n}\n",
   )
   self_host_physical_test_assert_clean_inference(link)
-  let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
-  self_host_assert_selected_call_payload(link, module_, 0u32, SelfHostWasmBodyCarrier::I32BodyCarrier)
   let plan = self_host_plan_program_wasm_bodies(link)
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
 }
@@ -107,41 +105,10 @@ test "Result payload evidence follows reordered declared type parameters" {
       }
     }
   }
-  self_host_assert_selected_call_payload(link, module_, 0u32, SelfHostWasmBodyCarrier::I64BodyCarrier)
-  self_host_assert_selected_call_payload(link, module_, 1u32, SelfHostWasmBodyCarrier::I32BodyCarrier)
   let plan = self_host_plan_program_wasm_bodies(link)
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
 }
 
-fn self_host_assert_selected_call_payload(
-  link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  argument: U32,
-  expected: SelfHostWasmBodyCarrier,
-) -> Unit {
-  let mut checked = 0u32
-  for body in module_.bodies {
-    let mut offset = 0u32
-    let _ = while offset {
-      current if current < body.expressions.length => {
-        let index = body.expressions.start + current
-        match module_.expressions[index].kind {
-          SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => if self_host_linked_declaration_name(link, declaration) == b"select" {
-            match self_host_linked_exact_call_result_payload_shape(link, module_, body, 4294967295u32, index, argument) {
-              Option::Some(shape) => assert(self_host_body_carrier_equal(self_host_body_carrier_from_shape(shape), expected), "payload must follow its declared result parameter")
-              Option::None => assert(false, "exact call result argument must exist")
-            }
-            checked = checked + 1u32
-          }
-          _ => {}
-        }
-        continue current + 1u32
-      }
-      _ => break self_host_semantic_unit()
-    }
-  }
-  assert(checked == 1u32, "inspect the generic select call")
-}
 
 test "user generic payloads use their declared storage without runtime adapters" {
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(

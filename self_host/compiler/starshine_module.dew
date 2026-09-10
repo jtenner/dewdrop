@@ -1092,45 +1092,16 @@ fn self_host_linked_unresolved_method_call_result_shape(
   link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
+  caller_specialization: U32,
   expression: U32,
 ) -> Option<SelfHostPlannedValueShape> {
   if expression >= module_.expressions.length() {
     return Option::None
   }
   match module_.expressions[expression].kind {
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => if target < module_.expressions.length() {
-      match module_.expressions[target].kind {
-        SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name) => if name < self_host_linked_module_name_count(
-          module_,
-        ) {
-          match self_host_linked_method_call_index_for_receiver(
-            link,
-            module_,
-            body,
-            base,
-            self_host_linked_module_name_at(module_, name),
-          ) {
-            Option::Some(function_index) => {
-              let shape = self_host_linked_physical_function_result_shape(
-                link,
-                function_index,
-              )
-              if shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-                Option::None
-              } else {
-                Option::Some(shape)
-              }
-            }
-            Option::None => Option::None
-          }
-        } else {
-          Option::None
-        }
-        _ => Option::None
-      }
-    } else {
-      Option::None
-    }
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => Option::Some(
+      self_host_linked_inferred_call_result_shape(link, module_, body, caller_specialization, expression),
+    )
     _ => Option::None
   }
 }
@@ -1156,6 +1127,7 @@ fn self_host_linked_constructor_source_field_shape(
         link,
         module_,
         body,
+        caller_specialization,
         initializer,
       ) {
         Option::Some(shape) => shape
@@ -1558,6 +1530,7 @@ fn self_host_linked_variant_payload_shape(
   link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,
+  caller_specialization: U32,
   expression: U32,
 ) -> SelfHostPlannedValueShape {
   if expression >= module_.expressions.length() {
@@ -1639,6 +1612,7 @@ fn self_host_linked_variant_payload_shape(
       link,
       module_,
       body,
+      caller_specialization,
       source,
     ) {
       Option::Some(shape) => shape
@@ -2692,71 +2666,6 @@ fn self_host_linked_is_unresolved_map_get(
   }
 }
 
-fn self_host_linked_exact_call_result_payload_shape(
-  link: SelfHostPlannedProgramWasmGCLink,
-  module_: SelfHostPlannedModuleLowering,
-  body: SelfHostPlannedBodyLowering,
-  caller_specialization: U32,
-  root: U32,
-  argument: U32,
-) -> Option<SelfHostPlannedValueShape> {
-  if root >= module_.expressions.length() {
-    return Option::None
-  }
-  let call_index = match module_.expressions[root].kind {
-    SelfHostPlannedExpressionKind::PlannedDirectCall(
-      declaration,
-      _,
-      _,
-      _,
-    ) => self_host_linked_i32_call_index(
-      link,
-      body.body,
-      caller_specialization,
-      root,
-      declaration,
-    )
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => {
-      let exact_call = self_host_linked_i32_call_index(
-        link,
-        body.body,
-        caller_specialization,
-        root,
-        0u64,
-      )
-      match exact_call {
-        Option::Some(value) => Option::Some(value)
-        Option::None => if target < module_.expressions.length() {
-          match module_.expressions[target].kind {
-            SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name) => if name < self_host_linked_module_name_count(module_) {
-              self_host_linked_method_call_index_for_receiver(
-                link,
-                module_,
-                body,
-                base,
-                self_host_linked_module_name_at(module_, name),
-              )
-            } else {
-              Option::None
-            }
-            _ => Option::None
-          }
-        } else {
-          Option::None
-        }
-      }
-    }
-    _ => Option::None
-  }
-  match call_index {
-    Option::Some(function_index) => self_host_linked_physical_result_argument_shape(
-        link,
-        function_index,
-        argument,
-      )
-    Option::None => Option::None
-  }
-}
 
 fn self_host_linked_map_get_value_shape(
   link: SelfHostPlannedProgramWasmGCLink,
@@ -3104,6 +3013,7 @@ fn self_host_linked_array_push_item_expression_shape(
       link,
       module_,
       body,
+      caller_specialization,
       item,
     )
     if !(physical_item_shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) && !(
@@ -3238,6 +3148,7 @@ fn self_host_linked_array_push_item_expression_shape(
           link,
           module_,
           body,
+          caller_specialization,
           item,
         )
         if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
@@ -3249,6 +3160,7 @@ fn self_host_linked_array_push_item_expression_shape(
           link,
           module_,
           body,
+          caller_specialization,
           item,
         )
         if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
