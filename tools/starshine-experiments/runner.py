@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import importlib.util
@@ -43,7 +44,7 @@ def execute(command, records, *, timeout=30, env=None, allow_failure=False, cwd=
     start = time.perf_counter()
     record = {"command": command}
     try:
-        process = subprocess.run(command, cwd=cwd, env=env, capture_output=True,
+        process = subprocess.run(command, cwd=cwd, env=env, stdin=subprocess.DEVNULL, capture_output=True,
                                  text=True, timeout=timeout)
         record.update(returncode=process.returncode, stdout=process.stdout,
                       stderr=process.stderr, timeout=False)
@@ -73,6 +74,39 @@ def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def wasm_sizes(path):
+    """Keep metadata removal separate from code/data size changes."""
+    data = path.read_bytes()
+    if data[:8] != b"\0asm\1\0\0\0":
+        raise ValueError(f"not a version 1 Wasm module: {path}")
+    offset = 8
+    non_custom = 8
+    code = 0
+    while offset < len(data):
+        start = offset
+        section = data[offset]
+        offset += 1
+        length = 0
+        shift = 0
+        while True:
+            byte = data[offset]
+            offset += 1
+            length |= (byte & 127) << shift
+            if byte < 128:
+                break
+            shift += 7
+            if shift >= 35:
+                raise ValueError("invalid Wasm section size")
+        offset += length
+        if offset > len(data):
+            raise ValueError("truncated Wasm section")
+        if section:
+            non_custom += offset - start
+        if section == 10:
+            code += offset - start
+    return {"bytes": len(data), "non_custom_bytes": non_custom, "code_section_bytes": code}
+
+
 def write_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
@@ -100,7 +134,7 @@ def optimize(binary, output, flags, starshine, records):
     output.unlink(missing_ok=True)
     execute([starshine, *flags, binary, "-o", output], records)
     execute(["wasm-tools", "validate", "--features", "all", output], records)
-    return {"bytes": output.stat().st_size, "sha256": sha256(output)}
+    return {**wasm_sizes(output), "sha256": sha256(output)}
 
 
 def snapshot_case(source, args, selected):
@@ -167,7 +201,12 @@ def snapshot_case(source, args, selected):
 
 
 def environment(records):
-    return {"platform": platform.platform(), "cpu": platform.processor(),
+    cpu = platform.processor()
+    cpuinfo = Path("/proc/cpuinfo")
+    if cpuinfo.exists():
+        cpu = next((line.split(":", 1)[1].strip() for line in cpuinfo.read_text().splitlines() if line.startswith("model name")), cpu)
+    return {"date_utc": datetime.now(timezone.utc).isoformat(), "platform": platform.platform(), "cpu": cpu,
+            "cpu_affinity": sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None,
             "node": execute(["node", "--version"], records).stdout.strip(),
             "dewdrop_commit": execute(["git", "rev-parse", "HEAD"], records).stdout.strip(),
             "starshine_commit": execute(["git", "-C", "starshine-mb", "rev-parse", "HEAD"], records).stdout.strip(),

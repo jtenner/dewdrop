@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-const wasm = await readFile(new URL("./utf_parity.wasm", import.meta.url));
+const wasm = await readFile(process.argv[2] ?? new URL("./utf_parity.wasm", import.meta.url));
 const generated = JSON.parse(await readFile(new URL("./generated_expected.json", import.meta.url), "utf8"));
 const builderExpected = JSON.parse(
   await readFile(new URL("./generated_builder_expected.json", import.meta.url), "utf8"),

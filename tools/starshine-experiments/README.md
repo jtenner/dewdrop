@@ -25,7 +25,7 @@ python3 tools/starshine-experiments/runner.py --skip-build
 
 # Compare explicit ordered pass lists, defined in pipelines.json.
 python3 tools/starshine-experiments/runner.py --skip-build \
-  --pipeline O4s --pipeline cleanup --pipeline speed --pipeline gc-speed
+  --pipeline O4s --pipeline prune --pipeline fold-inline
 
 # Focus on one fixture. Choose one engine only when debugging that engine.
 python3 tools/starshine-experiments/runner.py --skip-build \
@@ -57,7 +57,8 @@ Measure ten workloads with fresh Node processes, warmup, a common batch size,
 rotating variant order, and a checked result for every timed batch:
 
 ```sh
-python3 tools/starshine-experiments/benchmark.py --pipeline O4s --pipeline cleanup
+python3 tools/starshine-experiments/benchmark.py \
+  --pipeline O4s --pipeline prune --pipeline fold-inline
 ```
 
 The benchmark uses source generators from the existing array, map, hash, enum,
@@ -67,7 +68,51 @@ Wasm engine compilation is recorded separately. Do not run compiler or other
 benchmark jobs at the same time as runtime measurements. Failed variants remain
 failures in the report; they do not receive speed measurements.
 
-Results and Wasm files remain in `.tmp/starshine-experiments/`. `report.json`
+The default benchmark compares O4s, prune, and fold-inline. Smaller inlining
+limits (`inline-small`, `inline-budget`) are also available. The initial
+`cleanup`, `speed`, `gc-speed`, `peephole`, `casts`, `heap`, and `heap-prune`
+trials have known failures. They remain available to reproduce those failures.
+
+Check the CLI fixtures, package and Wasm callers, Facet imports, and the UTF,
+SWAR, and WASI parity suites:
+
+```sh
+python3 tools/starshine-experiments/cli.py --pipeline O4s --pipeline fold-inline
+python3 tools/starshine-experiments/consumers.py --pipeline O4s --pipeline fold-inline
+```
+
+The consumer runner uses the normal ABI and parity checkers. Each parity checker
+also accepts an optional Wasm path as its first argument. Compiler errors and
+intentional assertion failures are checked before optimization. Facet coverage
+checks all 261 imports and executes the ABI version query with a test host; it
+does not exercise every host service. Source errors stay in the report.
+
+Locate the first pass that changes a fixture's behavior:
+
+```sh
+python3 tools/starshine-experiments/isolate.py \
+  --fixture control-flow/short-circuit-runtime --pipeline cleanup \
+  --output .tmp/starshine-prefix-check
+```
+
+This checks every prefix and keeps validation and execution failures separate.
+`testdata/repro-0.wat` and `testdata/repro-1.wat` are reduced examples of the
+terminal-return defect fixed in the pinned Starshine revision.
+
+Keep compact evidence and paired speed ratios with resampled 95% intervals:
+
+```sh
+python3 tools/starshine-experiments/summarize.py \
+  .tmp/starshine-experiments/report.json .tmp/starshine-benchmarks/report.json \
+  --output .tmp/starshine-summary
+```
+
+Supply every report wanted in `summary.json` on the same call. Fixture evidence
+uses JSONL, with one metadata line and one line per case. Benchmark evidence
+keeps every timed sample. Module bytes, bytes without custom sections, and code
+section bytes are separate, so metadata removal cannot appear as a code win.
+
+Results and Wasm files remain under `.tmp/`. `report.json`
 contains tool/source identities, commands, timings, diagnostics, sizes, binary
 hashes, and runtime results. Each fixture also has a `result.json`. Use a distinct
 `--output` directory to preserve a previous run. The default is four workers;

@@ -55,7 +55,11 @@ def main():
     report = {"version": 1, "commands": [], "pipelines": selected, "cases": []}
     report["environment"] = environment(report["commands"])
     report["binaries"] = {"compiler": sha256(args.compiler), "starshine": sha256(args.starshine)}
-    for name, module, sources, checker in cases():
+    available = cases()
+    unknown = set(args.case or []) - {row[0] for row in available}
+    if unknown:
+        parser.error(f"unknown library cases: {sorted(unknown)}")
+    for name, module, sources, checker in available:
         if args.case and name not in args.case:
             continue
         directory = args.output / name

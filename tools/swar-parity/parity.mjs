@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 const MASK32 = 0xffff_ffffn;
 const MASK64 = 0xffff_ffff_ffff_ffffn;
-const wasm = await readFile(new URL("./swar_parity.wasm", import.meta.url));
+const wasm = await readFile(process.argv[2] ?? new URL("./swar_parity.wasm", import.meta.url));
 const { instance } = await WebAssembly.instantiate(wasm, {});
 const e = instance.exports;
 

@@ -1,10 +1,7 @@
 """Tests for the runtime comparison and command failure records."""
 
-import subprocess
 import sys
-import tempfile
 import unittest
-from pathlib import Path
 
 from runner import CommandFailure, check_output, execute
 

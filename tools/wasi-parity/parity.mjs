@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 
-const wasm = await readFile(new URL("./wasi_parity.wasm", import.meta.url));
+const wasm = await readFile(process.argv[2] ?? new URL("./wasi_parity.wasm", import.meta.url));
 const module = await WebAssembly.compile(wasm);
 const imports = WebAssembly.Module.imports(module);
 assert.deepEqual(

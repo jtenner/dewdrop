@@ -5,10 +5,11 @@ import argparse
 import json
 import os
 from pathlib import Path
+import resource
 import statistics
 
 from runner import (COMPILER, STARSHINE, HERE, ROOT, CommandFailure, environment,
-                    execute, load_module, optimize, pipelines, sha256, write_json)
+                    execute, load_module, optimize, pipelines, sha256, wasm_sizes, write_json)
 
 
 def workloads():
@@ -56,14 +57,21 @@ def main():
     args = parser.parse_args()
     if args.rounds < 1 or args.samples < 5 or args.target_ms <= 0:
         parser.error("positive rounds/target and at least 5 samples required")
+    soft, hard = resource.getrlimit(resource.RLIMIT_STACK)
+    if soft != resource.RLIM_INFINITY and soft < 64 * 1024 * 1024:
+        resource.setrlimit(resource.RLIMIT_STACK, (min(64 * 1024 * 1024, hard) if hard != resource.RLIM_INFINITY else 64 * 1024 * 1024, hard))
     configured = pipelines(args.pipelines)
-    selected = {name: configured[name] for name in args.pipeline or list(configured)}
+    selected = {name: configured[name] for name in args.pipeline or ["O4s", "prune", "fold-inline"]}
     report = {"version": 1, "commands": [], "pipelines": selected, "workloads": [],
               "settings": {"rounds": args.rounds, "samples": args.samples, "target_ms": args.target_ms}}
     report["environment"] = environment(report["commands"])
     report["binaries"] = {"compiler": sha256(args.compiler), "starshine": sha256(args.starshine)}
     args.output = args.output.resolve()
-    for work in workloads():
+    available = workloads()
+    unknown = set(args.workload or []) - {work["name"] for work in available}
+    if unknown:
+        parser.error(f"unknown workloads: {sorted(unknown)}")
+    for work in available:
         if args.workload and work["name"] not in args.workload:
             continue
         directory = args.output / work["name"]
@@ -77,9 +85,12 @@ def main():
             execute([args.compiler, baseline, source], result["commands"],
                     env={**os.environ, "DEW_CACHE_DIR": str(directory / "cache")})
             execute(["wasm-tools", "validate", "--features", "all", baseline], result["commands"])
-            result["variants"]["baseline"] = {"status": "passed", "wasm": str(baseline), "bytes": baseline.stat().st_size, "sha256": sha256(baseline)}
+            result["variants"]["baseline"] = {"status": "passed", "wasm": str(baseline), **wasm_sizes(baseline), "sha256": sha256(baseline)}
         except CommandFailure as error:
             result.update(status="baseline-failed", error=str(error))
+            write_json(directory / "result.json", result)
+            write_json(args.output / "report.json", report)
+            print(f"baseline-failed: {work['name']}: {error}", flush=True)
             continue
         for name, flags in selected.items():
             variant = {"commands": []}
@@ -102,7 +113,8 @@ def main():
                 # A fresh process per round; no compiler jobs run during timing.
                 measured = execute(["node", HERE / "benchmark.mjs", directory / "spec.json",
                                     args.samples, args.target_ms], result["commands"])
-                result["rounds"].append(json.loads(measured.stdout))
+                result["rounds"].append({**json.loads(measured.stdout),
+                                         "load_average": list(os.getloadavg())})
             for name, variant in result["variants"].items():
                 if variant["status"] == "passed":
                     medians = [statistics.median(r["variants"][name]["ns_per_call"]) for r in result["rounds"]]
