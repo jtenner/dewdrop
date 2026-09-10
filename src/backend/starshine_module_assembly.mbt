@@ -63,17 +63,6 @@ pub fn emit_starshine_code_section(
         }
       @semantic.PlannedWasmErasedAdapterFunction =>
         return Err(MissingFunction(function_.declaration))
-      @semantic.PlannedWasmRuntimeFunction(name) =>
-        if !function_.elided {
-          match
-            emit_starshine_text_runtime_function(
-              name,
-              starshine_text_runtime_base(planned),
-            ) {
-            Some(function_body) => functions.push(function_body)
-            None => return Err(UnsupportedBuiltin(name))
-          }
-        }
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmInlineBuiltinFunction(_)
       | @semantic.PlannedWasmInlineHeapFunction(_)

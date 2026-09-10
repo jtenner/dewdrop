@@ -938,7 +938,6 @@ fn starshine_finish_call(
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
-      | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -1305,7 +1304,6 @@ fn starshine_finish_program_call(
       @semantic.PlannedWasmImportedFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
-      | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)

@@ -4,7 +4,9 @@ Both native adapter producers now use `PlannedWasmErasedAdapterFunction`, not
 `PlannedWasmRuntimeFunction(b"")`. The emitted signature, target field, and
 conversion recipe remain unchanged. Adapters no longer overwrite the empty
 key in the old runtime lookup maps. Those unused runtime maps and the retired
-runtime kind/provider rejection protocol remain separate cleanup work.
+runtime kind/provider rejection protocol remained separate cleanup work at
+this checkpoint. The subsequent [protocol retirement](runtime-protocol-retirement-2026-09-09.md)
+removes them.
 
 Program emission selects the adapter body by its explicit kind. A read-only
 semantic lookup supplies its unique, non-elided physical target. Missing,

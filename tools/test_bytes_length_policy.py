@@ -17,7 +17,7 @@ class BytesLengthPolicy(unittest.TestCase):
                 self.assertNotIn('"dew_bytes_byte_length"', (ROOT / relative).read_text())
 
     def test_both_runtime_builders_remove_the_old_entry_and_helper(self):
-        for relative in ("src/backend/starshine_text_runtime.mbt", "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+        for relative in ("src/backend/starshine_program_assembly.mbt", "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             with self.subTest(path=relative):
                 source = (ROOT / relative).read_text()
                 self.assertNotIn('"dew_bytes_byte_length"', source)

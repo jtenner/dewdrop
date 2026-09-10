@@ -360,12 +360,14 @@ Correctness comes first. Keep these timing defects visible after query completio
   ordinal operation switch is removed; reordered declarations retain their
   meaning. Nominal/trait identity tables still remain. See the
   [reference metadata log](docs/research/reference-intrinsic-metadata-2026-09-08.md).
-- [ ] Delete unused legacy builtin plans/builders after each migration. Enforce
-  the opcode-or-unsafe-cast rule across every module, registry, and generator.
+- [x] Delete unused legacy builtin plans/builders after each migration. Enforce
+  the instruction, unsafe-cast, or compile-time-query rule across every module,
+  registry, and generator.
   Keep conversion behavior in `Into` impls where it is a type conversion.
   Include the pinned Starshine `src/ffi_bridge` runtime copies in each removal;
   text/builder algorithm copies are now removed. The retired runtime function
-  kind/provider protocol remains. Unknown builtin names now remain intrinsic
+  kind, lookup tables, and provider protocol are removed too. All eight check
+  lanes pass, including clean B/C byte equality. Unknown builtin names remain intrinsic
   requests and produce exact emission errors instead of host imports. Explicit
   foreign host calls retain real exported memory even without guest memory
   instructions. See the [builtin boundary log](docs/research/unknown-builtin-imports-2026-09-09.md).
@@ -374,12 +376,13 @@ Correctness comes first. Keep these timing defects visible after query completio
   473 APIs. Hardening, generated checks, and clean bootstrap pass; see the
   [self-host retirement log](docs/research/self-host-text-runtime-retirement-2026-09-09.md).
   Removed 46 unused private linker/body helpers, including stale collection
-  name recovery and consumed-expression recovery. This does not remove the
-  remaining native/provider runtime protocol. Erased adapters now have an
+  name recovery and consumed-expression recovery. Erased adapters now have an
   explicit function kind and unique-target checks. Native, integration,
   generated, and clean bootstrap checks pass.
-  The old runtime kind, unused lookup maps, and provider rejection API still
-  need removal. See the [adapter kind log](docs/research/erased-adapter-function-kind-2026-09-09.md) and the
+  The final protocol removal keeps all 100 retired-name cases in 13 native
+  rejection groups and rejects retired codec tag 2. See the
+  [protocol retirement log](docs/research/runtime-protocol-retirement-2026-09-09.md),
+  [adapter kind log](docs/research/erased-adapter-function-kind-2026-09-09.md), and the
   [unused linker log](docs/research/unused-link-recovery-2026-09-09.md).
 
 ### Finish the compiler correctness audit
@@ -883,8 +886,8 @@ Correctness comes first. Keep these timing defects visible after query completio
 - [x] Keep readable, typed Starshine FFI names through regeneration. Audit any
   remaining numbered references; test identity and signature agreement rather
   than merely renaming incompatible reference types.
-  Regeneration verifies all 476 selected signatures and keeps named carriers;
-  three unused Array algorithm exports have now been removed.
+  Regeneration verifies all 473 selected signatures and keeps named carriers;
+  unused Array algorithm exports and the three runtime-builder calls are removed.
   Constructor aliases preserve nullability. Invalid identity proofs and numbered
   Dew references fail with diagnostics. The real linked FFI smoke runs in the
   hardening lane. See [FFI notes](docs/research/ffi-carrier-identity-2026-09-07.md).

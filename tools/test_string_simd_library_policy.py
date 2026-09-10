@@ -15,9 +15,9 @@ class StringSimdLibraryPolicy(unittest.TestCase):
         self.assertIn("wasm_bytes_load_u8x16(__dew_text_bytes(value), start)", source)
 
     def test_no_separate_string_simd_runtime_dispatch(self):
-        for path in ("src/backend/starshine_text_runtime.mbt",
+        for path in ("src/backend/starshine_program_assembly.mbt",
                      "src/semantic/wasmgc_fragment_plan.mbt",
-                     "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+                     "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             with self.subTest(path=path):
                 self.assertFalse('"dew_string_load_u8x16"' in (ROOT / path).read_text(),
                                  f"{path}: separate String SIMD runtime remains")

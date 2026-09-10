@@ -11,8 +11,8 @@ class WasiStagingPolicy(unittest.TestCase):
     def test_compilers_do_not_own_staging_algorithms(self):
         for relative in (
             "src/semantic/wasmgc_fragment_plan.mbt",
-            "src/backend/starshine_text_runtime.mbt",
-            "starshine-mb/src/ffi_bridge/text_runtime.mbt",
+            "src/backend/starshine_program_assembly.mbt",
+            "starshine-mb/src/ffi_bridge/ffi_bridge.mbt",
         ):
             source = (ROOT / relative).read_text()
             for operation in ("dew_bench_wasi_stage_write", "dew_bench_wasi_stage_read"):

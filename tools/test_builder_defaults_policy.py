@@ -13,9 +13,9 @@ class BuilderDefaultsPolicy(unittest.TestCase):
         self.assertNotIn("pub builtin string_builder_new", source)
 
     def test_string_builder_default_runtime_is_removed(self):
-        for relative in ("src/backend/starshine_text_runtime.mbt",
+        for relative in ("src/backend/starshine_program_assembly.mbt",
                          "src/semantic/wasmgc_fragment_plan.mbt",
-                         "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+                         "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             with self.subTest(path=relative):
                 self.assertNotIn('"dew_string_builder_new"',
                                  (ROOT / relative).read_text())
@@ -26,9 +26,9 @@ class BuilderDefaultsPolicy(unittest.TestCase):
         self.assertNotIn("pub builtin bytes_builder_new", source)
 
     def test_bytes_builder_default_runtime_is_removed(self):
-        for relative in ("src/backend/starshine_text_runtime.mbt",
+        for relative in ("src/backend/starshine_program_assembly.mbt",
                          "src/semantic/wasmgc_fragment_plan.mbt",
-                         "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+                         "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             with self.subTest(path=relative):
                 self.assertNotIn('"dew_bytes_builder_new"',
                                  (ROOT / relative).read_text())

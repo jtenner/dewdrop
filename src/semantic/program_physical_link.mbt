@@ -1278,7 +1278,6 @@ pub fn link_program_wasmgc_fragments(
       | PlannedWasmInlineHeapFunction(_)
       | PlannedWasmOutlinedBuiltinFunction(_)
       | PlannedWasmOutlinedHeapFunction(_)
-      | PlannedWasmRuntimeFunction(_)
       | PlannedWasmErasedAdapterFunction
       | PlannedWasmDefinedFunction(_)
       | PlannedWasmDefinedLambdaFunction(_)
@@ -1293,7 +1292,6 @@ pub fn link_program_wasmgc_fragments(
       | PlannedWasmDefinedLambdaFunction(_)
       | PlannedWasmOutlinedBuiltinFunction(_)
       | PlannedWasmOutlinedHeapFunction(_)
-      | PlannedWasmRuntimeFunction(_)
       | PlannedWasmErasedAdapterFunction
       | PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {
@@ -1759,11 +1757,6 @@ pub fn link_program_wasmgc_fragments(
     }
   }
   let imported_function_indices : Map[Bytes, Int] = Map::default()
-  let runtime_function_indices : Map[Bytes, Int] = Map::default()
-  let module_runtime_function_indices : Array[Map[Bytes, Int]] = []
-  for _ in fragments.modules {
-    module_runtime_function_indices.push(Map::default())
-  }
   for function_ in functions {
     if function_.elided || function_.function_index < 0 {
       continue
@@ -1771,13 +1764,6 @@ pub fn link_program_wasmgc_fragments(
     match function_.kind {
       PlannedWasmImportedFunction(identity) =>
         imported_function_indices[identity.lookup_name()] = function_.function_index
-      PlannedWasmRuntimeFunction(name) => {
-        runtime_function_indices[name] = function_.function_index
-        if function_.module_index >= 0 &&
-          function_.module_index < module_runtime_function_indices.length() {
-          module_runtime_function_indices[function_.module_index][name] = function_.function_index
-        }
-      }
       _ => ()
     }
   }
@@ -1814,8 +1800,6 @@ pub fn link_program_wasmgc_fragments(
     imported_function_count,
     defined_function_count,
     imported_function_indices,
-    runtime_function_indices,
-    module_runtime_function_indices,
     diagnostics,
   }
   if diagnostics.is_empty() {

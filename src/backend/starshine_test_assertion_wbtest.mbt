@@ -75,7 +75,8 @@ test "Dew test assertions reach ordinary WASI write dependencies" {
         if function_.declaration == assertion_declaration {
           found_defined_assertion = true
         }
-      @semantic.PlannedWasmRuntimeFunction(name) =>
+      @semantic.PlannedWasmInlineBuiltinFunction(name)
+      | @semantic.PlannedWasmOutlinedBuiltinFunction(name) =>
         if name == b"dew_test_assert" {
           found_assert_runtime = true
         } else if name == b"dew_string_as_bytes" {

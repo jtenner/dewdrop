@@ -263,7 +263,8 @@ test "checked Bytes to String links the ordinary Dew UTF8 validator" {
       conversion_reachable = true
     }
     match function_.kind {
-      @semantic.PlannedWasmRuntimeFunction(name) => {
+      @semantic.PlannedWasmInlineBuiltinFunction(name)
+      | @semantic.PlannedWasmOutlinedBuiltinFunction(name) => {
         assert_false(name == b"dew_bytes_is_valid_utf8")
         assert_false(name == b"dew_bytes_to_string")
       }

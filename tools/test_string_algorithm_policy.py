@@ -22,8 +22,8 @@ class StringAlgorithmPolicyTests(unittest.TestCase):
                 self.assertIsNotNone(re.search(rf"\bfn\s+string_{name}\(", source), f"string_{name} must have a Dew body")
 
     def test_compiler_dispatch_is_removed(self):
-        for path in ("src/backend/starshine_text_runtime.mbt",
-                     "starshine-mb/src/ffi_bridge/text_runtime.mbt",
+        for path in ("src/backend/starshine_program_assembly.mbt",
+                     "starshine-mb/src/ffi_bridge/ffi_bridge.mbt",
                      "src/semantic/wasmgc_fragment_plan.mbt"):
             source = (ROOT / path).read_text()
             for name in NAMES.values():
@@ -31,7 +31,7 @@ class StringAlgorithmPolicyTests(unittest.TestCase):
                     self.assertFalse(f'"dew_string_{name}"' in source, f"{path}: obsolete String {name} dispatch")
 
     def test_provider_does_not_keep_unused_string_wrappers(self):
-        source = (ROOT / "starshine-mb/src/ffi_bridge/text_runtime.mbt").read_text()
+        source = (ROOT / "starshine-mb/src/ffi_bridge/ffi_bridge.mbt").read_text()
         for name in ("starshine_text_concat_body", "starshine_utf16_length_body",
                      "starshine_text_equals_body", "starshine_text_length_body",
                      "starshine_text_byte_at_body"):

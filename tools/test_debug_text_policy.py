@@ -25,8 +25,8 @@ class DebugTextPolicyTests(unittest.TestCase):
 
     def test_text_runtime_entries_are_removed(self):
         for path in [
-            "src/backend/starshine_text_runtime.mbt",
-            "starshine-mb/src/ffi_bridge/text_runtime.mbt",
+            "src/backend/starshine_program_assembly.mbt",
+            "starshine-mb/src/ffi_bridge/ffi_bridge.mbt",
             "src/semantic/wasmgc_fragment_plan.mbt",
             "self_host/compiler/semantic_program_link_plan.dew",
         ]:

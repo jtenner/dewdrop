@@ -25,8 +25,8 @@ class BytesBuilderStoragePolicy(unittest.TestCase):
 
     def test_runtime_entries_are_removed(self):
         for path in ("src/semantic/wasmgc_fragment_plan.mbt",
-                     "src/backend/starshine_text_runtime.mbt",
-                     "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+                     "src/backend/starshine_program_assembly.mbt",
+                     "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             source = (ROOT / path).read_text()
             for operation in OPERATIONS:
                 with self.subTest(path=path, operation=operation):

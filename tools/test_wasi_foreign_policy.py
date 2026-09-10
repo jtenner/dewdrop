@@ -32,9 +32,11 @@ class WasiForeignPolicyTests(unittest.TestCase):
             for path in (ROOT / directory).rglob(suffix):
                 with self.subTest(path=path.relative_to(ROOT)):
                     source = path.read_text()
-                    self.assertNotIn('"dew_wasi_fd_read"', source)
+                    # Negative emission tests must name the rejected opcode.
+                    if not path.name.endswith(("_wbtest.mbt", "_test.mbt", "_test.dew")):
+                        self.assertNotIn('"dew_wasi_fd_read"', source)
                     self.assertNotIn('starshine_wasi_fd_read_body', source)
-        for path in ("starshine-mb/src/ffi_bridge/text_runtime.mbt",):
+        for path in ("starshine-mb/src/ffi_bridge/ffi_bridge.mbt",):
             with self.subTest(path=path):
                 source = (ROOT / path).read_text()
                 self.assertNotIn('"dew_wasi_fd_read"', source)

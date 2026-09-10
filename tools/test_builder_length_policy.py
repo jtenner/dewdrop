@@ -15,8 +15,8 @@ class BuilderLengthPolicy(unittest.TestCase):
         self.assertIn('builtin string_builder_consumed_raw(value: StringBuilder) -> U32 = "struct.get 2"', source)
 
     def test_string_builder_runtime_entry_and_shared_helper_are_removed(self):
-        for relative in ("src/backend/starshine_text_runtime.mbt",
-                         "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+        for relative in ("src/backend/starshine_program_assembly.mbt",
+                         "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             with self.subTest(path=relative):
                 source = (ROOT / relative).read_text()
                 self.assertNotIn('"dew_string_builder_byte_length"', source)
@@ -32,9 +32,9 @@ class BuilderLengthPolicy(unittest.TestCase):
         self.assertIn('builtin bytes_builder_consumed_raw(value: BytesBuilder) -> U32 = "struct.get 2"', source)
 
     def test_bytes_builder_runtime_entry_is_removed(self):
-        for relative in ("src/backend/starshine_text_runtime.mbt",
+        for relative in ("src/backend/starshine_program_assembly.mbt",
                          "src/semantic/wasmgc_fragment_plan.mbt",
-                         "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+                         "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             with self.subTest(path=relative):
                 self.assertNotIn('"dew_bytes_builder_byte_length"', (ROOT / relative).read_text())
 

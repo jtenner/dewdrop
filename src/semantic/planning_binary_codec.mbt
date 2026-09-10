@@ -768,10 +768,6 @@ fn pb_write_function_kind(
       writer.write_byte(1)
       writer.write_bytes(name)
     }
-    PlannedWasmRuntimeFunction(name) => {
-      writer.write_byte(2)
-      writer.write_bytes(name)
-    }
     PlannedWasmErasedAdapterFunction => writer.write_byte(10)
     PlannedWasmDefinedFunction(body) => {
       writer.write_byte(3)
@@ -811,10 +807,6 @@ fn pb_read_function_kind(
     0 => PlannedWasmImportedFunction(pb_read_import_identity(reader, field))
     1 =>
       PlannedWasmInlineBuiltinFunction(
-        reader.read_bytes(planning_binary_maximum_text, field),
-      )
-    2 =>
-      PlannedWasmRuntimeFunction(
         reader.read_bytes(planning_binary_maximum_text, field),
       )
     3 => PlannedWasmDefinedFunction(ib_read_id(reader, field))
@@ -912,11 +904,10 @@ fn pb_read_span_array(
 }
 
 ///|
-fn pb_rebuild_fragment_maps(
+fn pb_rebuild_imported_function_indices(
   functions : Array[PlannedWasmFunctionFragment],
-) -> (Map[Bytes, Int], Map[Bytes, Int]) {
+) -> Map[Bytes, Int] {
   let imported : Map[Bytes, Int] = Map::default()
-  let runtime : Map[Bytes, Int] = Map::default()
   for function_ in functions {
     if function_.elided || function_.function_index < 0 {
       continue
@@ -924,12 +915,10 @@ fn pb_rebuild_fragment_maps(
     match function_.kind {
       PlannedWasmImportedFunction(identity) =>
         imported[identity.lookup_name()] = function_.function_index
-      PlannedWasmRuntimeFunction(name) =>
-        runtime[name] = function_.function_index
       _ => ()
     }
   }
-  (imported, runtime)
+  imported
 }
 
 ///|
@@ -1411,7 +1400,7 @@ pub fn deserialize_planned_module_wasmgc_fragments(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  let (imported_function_indices, runtime_function_indices) = pb_rebuild_fragment_maps(
+  let imported_function_indices = pb_rebuild_imported_function_indices(
     functions,
   )
   let value : PlannedModuleWasmGCFragments = {
@@ -1459,7 +1448,6 @@ pub fn deserialize_planned_module_wasmgc_fragments(
     imported_function_count,
     defined_function_count,
     imported_function_indices,
-    runtime_function_indices,
     uses_text_runtime,
     uses_fixed_array_runtime,
     uses_linear_memory,

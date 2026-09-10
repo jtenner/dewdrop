@@ -17,8 +17,8 @@ class StringViewAlgorithmPolicyTests(unittest.TestCase):
         source = (ROOT / "std/text_runtime.dew").read_text()
         self.assertIn("pub fn string_view(", source)
         self.assertNotIn("pub builtin string_view(", source)
-        for path in ("src/backend/starshine_text_runtime.mbt",
-                     "starshine-mb/src/ffi_bridge/text_runtime.mbt",
+        for path in ("src/backend/starshine_program_assembly.mbt",
+                     "starshine-mb/src/ffi_bridge/ffi_bridge.mbt",
                      "src/semantic/wasmgc_fragment_plan.mbt"):
             with self.subTest(path=path):
                 source = (ROOT / path).read_text()
@@ -33,8 +33,8 @@ class StringViewAlgorithmPolicyTests(unittest.TestCase):
                 self.assertIsNotNone(re.search(rf"\bfn\s+string_view_{name}\(", source), f"string_view_{name} must have a Dew body")
 
     def test_compiler_dispatch_is_removed(self):
-        for path in ("src/backend/starshine_text_runtime.mbt",
-                     "starshine-mb/src/ffi_bridge/text_runtime.mbt",
+        for path in ("src/backend/starshine_program_assembly.mbt",
+                     "starshine-mb/src/ffi_bridge/ffi_bridge.mbt",
                      "src/semantic/wasmgc_fragment_plan.mbt"):
             source = (ROOT / path).read_text()
             for name in NAMES.values():
@@ -42,7 +42,7 @@ class StringViewAlgorithmPolicyTests(unittest.TestCase):
                     self.assertFalse(f'"dew_string_view_{name}"' in source, f"{path}: obsolete StringView {name} dispatch")
 
     def test_provider_does_not_keep_unused_text_algorithms(self):
-        source = (ROOT / "starshine-mb/src/ffi_bridge/text_runtime.mbt").read_text()
+        source = (ROOT / "starshine-mb/src/ffi_bridge/ffi_bridge.mbt").read_text()
         for name in ("starshine_utf16_length_type_body", "starshine_text_equals_type_body",
                      "starshine_text_find_body", "starshine_text_affix_body",
                      "starshine_text_hash_body", "text_verify_bytes_candidate",

@@ -22,11 +22,10 @@ class WasiWriteRuntimePolicyTests(unittest.TestCase):
     def test_no_legacy_write_dispatch_or_dependency_roots(self):
         for path in ("src/backend/starshine_module_assembly.mbt",
                      "src/backend/starshine_program_assembly.mbt",
-                     "src/backend/starshine_text_runtime.mbt",
                      "src/semantic/wasmgc_fragment_plan.mbt",
                      "src/semantic/program_specialization_plan.mbt",
                      "self_host/compiler/semantic_program_link_plan.dew",
-                     "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+                     "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             with self.subTest(path=path):
                 self.assertTrue("dew_wasi_fd_write" not in (ROOT / path).read_text(),
                                 f"legacy write dispatch remains in {path}")

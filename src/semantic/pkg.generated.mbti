@@ -1924,7 +1924,6 @@ pub struct PlannedModuleWasmGCFragments {
   imported_function_count : Int
   defined_function_count : Int
   imported_function_indices : Map[Bytes, Int]
-  runtime_function_indices : Map[Bytes, Int]
   uses_text_runtime : Bool
   uses_fixed_array_runtime : Bool
   uses_linear_memory : Bool
@@ -1934,7 +1933,6 @@ pub fn PlannedModuleWasmGCFragments::function_of(Self, UInt64) -> PlannedWasmFun
 pub fn PlannedModuleWasmGCFragments::function_view(Self, Int) -> PlannedCallSpecializationView?
 pub fn PlannedModuleWasmGCFragments::imported_function_index(Self, Bytes) -> Int
 pub fn PlannedModuleWasmGCFragments::payload_type_index_of(Self, UInt64) -> Int?
-pub fn PlannedModuleWasmGCFragments::runtime_function_index(Self, Bytes) -> Int
 pub fn PlannedModuleWasmGCFragments::type_index_of(Self, UInt64) -> Int?
 pub fn PlannedModuleWasmGCFragments::variant_declaration_of(Self, UInt64) -> UInt64?
 pub fn PlannedModuleWasmGCFragments::variant_fields_of(Self, UInt64) -> ArrayView[PlannedWasmVariantField]
@@ -2134,8 +2132,6 @@ pub struct PlannedProgramWasmGCLink {
   imported_function_count : Int
   defined_function_count : Int
   imported_function_indices : Map[Bytes, Int]
-  runtime_function_indices : Map[Bytes, Int]
-  module_runtime_function_indices : Array[Map[Bytes, Int]]
   diagnostics : Array[ProgramWasmGCLinkDiagnostic]
 }
 pub fn PlannedProgramWasmGCLink::erased_adapter_target_function(Self, PlannedProgramWasmFunction) -> PlannedProgramWasmFunction?
@@ -2144,9 +2140,7 @@ pub fn PlannedProgramWasmGCLink::function_reference_singleton_global(Self, Int, 
 pub fn PlannedProgramWasmGCLink::function_view(Self, Int) -> PlannedProgramFunctionView?
 pub fn PlannedProgramWasmGCLink::imported_function_index(Self, Bytes) -> Int
 pub fn PlannedProgramWasmGCLink::materialized_specialization_count(Self) -> Int
-pub fn PlannedProgramWasmGCLink::module_runtime_function_index(Self, Int, Bytes) -> Int
 pub fn PlannedProgramWasmGCLink::physical_type_index(Self, Int, Int) -> Int
-pub fn PlannedProgramWasmGCLink::runtime_function_index(Self, Bytes) -> Int
 pub fn PlannedProgramWasmGCLink::signature_type_index(Self, Int, Int) -> Int
 pub fn PlannedProgramWasmGCLink::specialized_call_function(Self, UInt64, String, Int) -> PlannedProgramWasmFunction?
 pub fn PlannedProgramWasmGCLink::specialized_call_runtime_evidence(Self, UInt64, String, Int) -> HirSpan?
@@ -2275,7 +2269,6 @@ pub enum PlannedWasmFunctionKind {
   PlannedWasmOutlinedBuiltinFunction(Bytes)
   PlannedWasmInlineHeapFunction(RawHeapInstruction)
   PlannedWasmOutlinedHeapFunction(RawHeapInstruction)
-  PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmErasedAdapterFunction
   PlannedWasmDefinedFunction(UInt64)
   PlannedWasmDefinedLambdaFunction(Int)

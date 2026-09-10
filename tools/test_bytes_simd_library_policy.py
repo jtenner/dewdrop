@@ -17,9 +17,9 @@ class BytesSimdLibraryPolicy(unittest.TestCase):
             self.assertIn(f"wasm_u8x16_replace_{lane}(", source)
 
     def test_compilers_and_provider_do_not_own_the_algorithm(self):
-        for relative in ("src/backend/starshine_text_runtime.mbt",
+        for relative in ("src/backend/starshine_program_assembly.mbt",
                          "src/semantic/wasmgc_fragment_plan.mbt",
-                         "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+                         "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             source = (ROOT / relative).read_text()
             with self.subTest(path=relative):
                 self.assertNotIn('"dew_bytes_load_u8x16"', source)

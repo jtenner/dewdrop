@@ -423,7 +423,6 @@ pub fn emit_starshine_import_section(
       | @semantic.PlannedWasmInlineHeapFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
-      | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -448,7 +447,6 @@ pub fn emit_starshine_function_section(
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
-      | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {

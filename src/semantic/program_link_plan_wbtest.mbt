@@ -334,7 +334,6 @@ test "program linker adapts exact references to erased generic fallbacks" {
   assert_true(adapter_index >= 0)
   assert_eq(link.function_reference_singletons.length(), 1)
   assert_eq(link.function_reference_singletons[0].function_index, adapter_index)
-  assert_eq(link.runtime_function_index(b""), -1)
 }
 
 ///|

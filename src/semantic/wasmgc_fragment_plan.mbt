@@ -206,7 +206,6 @@ pub enum PlannedWasmFunctionKind {
   PlannedWasmOutlinedBuiltinFunction(Bytes)
   PlannedWasmInlineHeapFunction(RawHeapInstruction)
   PlannedWasmOutlinedHeapFunction(RawHeapInstruction)
-  PlannedWasmRuntimeFunction(Bytes)
   PlannedWasmErasedAdapterFunction
   PlannedWasmDefinedFunction(BodyId)
   PlannedWasmDefinedLambdaFunction(LambdaId)
@@ -335,7 +334,6 @@ pub struct PlannedModuleWasmGCFragments {
   imported_function_count : Int
   defined_function_count : Int
   imported_function_indices : Map[Bytes, Int]
-  runtime_function_indices : Map[Bytes, Int]
   uses_text_runtime : Bool
   uses_fixed_array_runtime : Bool
   uses_linear_memory : Bool
@@ -347,14 +345,6 @@ pub fn PlannedModuleWasmGCFragments::imported_function_index(
   name : Bytes,
 ) -> Int {
   self.imported_function_indices.get(name).unwrap_or(-1)
-}
-
-///|
-pub fn PlannedModuleWasmGCFragments::runtime_function_index(
-  self : PlannedModuleWasmGCFragments,
-  name : Bytes,
-) -> Int {
-  self.runtime_function_indices.get(name).unwrap_or(-1)
 }
 
 ///|
@@ -3639,8 +3629,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         PlannedWasmImportedFunction(_)
         | PlannedWasmDefinedFunction(_)
         | PlannedWasmOutlinedBuiltinFunction(_)
-        | PlannedWasmOutlinedHeapFunction(_)
-        | PlannedWasmRuntimeFunction(_) => !reachable_functions[callable_index]
+        | PlannedWasmOutlinedHeapFunction(_) => !reachable_functions[callable_index]
         _ => false
       })
   }
@@ -3658,7 +3647,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           imported_function_count += 1
         }
       PlannedWasmDefinedFunction(_)
-      | PlannedWasmRuntimeFunction(_)
       | PlannedWasmOutlinedBuiltinFunction(_)
       | PlannedWasmOutlinedHeapFunction(_) =>
         if !elided_functions[callable_index] {
@@ -3708,7 +3696,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           index
         }
       PlannedWasmDefinedFunction(_)
-      | PlannedWasmRuntimeFunction(_)
       | PlannedWasmOutlinedBuiltinFunction(_)
       | PlannedWasmOutlinedHeapFunction(_) =>
         if elided_functions[callable_index] {
@@ -3730,8 +3717,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       PlannedWasmImportedFunction(_)
       | PlannedWasmDefinedFunction(_)
       | PlannedWasmOutlinedBuiltinFunction(_)
-      | PlannedWasmOutlinedHeapFunction(_)
-      | PlannedWasmRuntimeFunction(_) => !elided_functions[callable_index]
+      | PlannedWasmOutlinedHeapFunction(_) => !elided_functions[callable_index]
       PlannedWasmSignatureOnlyFunction =>
         runtime_requirements.contains(callable.declaration)
       _ => false
@@ -4136,13 +4122,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
         continue
       }
       let function_ = planned_functions[callable_index]
-      match function_.kind {
-        PlannedWasmRuntimeFunction(_) => {
-          uses_text_runtime = true
-          break
-        }
-        _ => ()
-      }
       if function_.signature_type_index >= 0 {
         for index in 0..<function_.parameters.length {
           match function_value_types[function_.parameters.start + index] {
@@ -4310,8 +4289,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
           break
         }
       PlannedWasmInlineBuiltinFunction(name)
-      | PlannedWasmOutlinedBuiltinFunction(name)
-      | PlannedWasmRuntimeFunction(name) =>
+      | PlannedWasmOutlinedBuiltinFunction(name) =>
         if wasmgc_builtin_uses_linear_memory(name) {
           uses_linear_memory = true
           break
@@ -4356,8 +4334,7 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
       } else {
         match function_.kind {
           PlannedWasmInlineBuiltinFunction(name)
-          | PlannedWasmOutlinedBuiltinFunction(name)
-          | PlannedWasmRuntimeFunction(name) => name
+          | PlannedWasmOutlinedBuiltinFunction(name) => name
           _ => b""
         }
       }
@@ -4371,7 +4348,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     }
   }
   let imported_function_indices : Map[Bytes, Int] = Map::default()
-  let runtime_function_indices : Map[Bytes, Int] = Map::default()
   for function_ in planned_functions {
     if function_.elided || function_.function_index < 0 {
       continue
@@ -4379,8 +4355,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     match function_.kind {
       PlannedWasmImportedFunction(identity) =>
         imported_function_indices[identity.lookup_name()] = function_.function_index
-      PlannedWasmRuntimeFunction(name) =>
-        runtime_function_indices[name] = function_.function_index
       _ => ()
     }
   }
@@ -4429,7 +4403,6 @@ fn plan_module_wasmgc_fragments_in_orders_with_instantiations(
     imported_function_count,
     defined_function_count,
     imported_function_indices,
-    runtime_function_indices,
     uses_text_runtime,
     uses_fixed_array_runtime,
     uses_linear_memory,

@@ -11,7 +11,8 @@ their now-unused value-type helper, and runtime append bridge. This removes
 three selected FFI calls and the RuntimeFunctionBuilder carrier assertion.
 The regenerated consumer selects 473 APIs instead of 476. The pinned provider
 is unchanged; its retired rejection API and native runtime function kind are
-separate remaining cleanup work.
+separate remaining cleanup work at this checkpoint. The subsequent
+[protocol retirement](runtime-protocol-retirement-2026-09-09.md) removes them.
 
 Five physical-planning fixtures still declared removed text builtins. They
 now declare explicit foreign signatures. Their Dew helper bodies and body

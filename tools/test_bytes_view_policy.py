@@ -13,8 +13,8 @@ class BytesViewPolicy(unittest.TestCase):
 
     def test_old_runtime_dispatch_and_body_are_removed(self):
         for file in ("src/semantic/wasmgc_fragment_plan.mbt",
-                     "src/backend/starshine_text_runtime.mbt",
-                     "starshine-mb/src/ffi_bridge/text_runtime.mbt"):
+                     "src/backend/starshine_program_assembly.mbt",
+                     "starshine-mb/src/ffi_bridge/ffi_bridge.mbt"):
             with self.subTest(file=file):
                 source = (ROOT / file).read_text()
                 self.assertNotIn('b"dew_bytes_view"', source)

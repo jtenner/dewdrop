@@ -68,25 +68,10 @@ fn emit_starshine_program_type_section(
     )
   }
   let mut uses_text = false
-  for function_ in planned.functions {
-    if function_.elided {
-      continue
-    }
-    match function_.kind {
-      @semantic.PlannedWasmRuntimeFunction(name) =>
-        if name.length() > 0 {
-          uses_text = true
-          break
-        }
-      _ => ()
-    }
-  }
-  if !uses_text {
-    for module_ in planned.modules {
-      if starshine_plan_uses_text(module_) {
-        uses_text = true
-        break
-      }
+  for module_ in planned.modules {
+    if starshine_plan_uses_text(module_) {
+      uses_text = true
+      break
     }
   }
   if uses_text {
@@ -308,7 +293,6 @@ fn emit_starshine_program_import_section(
       | @semantic.PlannedWasmInlineHeapFunction(_)
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
-      | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmDefinedFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
@@ -331,7 +315,6 @@ fn emit_starshine_program_function_section(
       | @semantic.PlannedWasmOutlinedBuiltinFunction(_)
       | @semantic.PlannedWasmOutlinedHeapFunction(_)
       | @semantic.PlannedWasmDefinedLambdaFunction(_)
-      | @semantic.PlannedWasmRuntimeFunction(_)
       | @semantic.PlannedWasmErasedAdapterFunction
       | @semantic.PlannedWasmTraitAdapterFunction(_, _) =>
         if !function_.elided {
@@ -1110,14 +1093,6 @@ fn emit_starshine_program_code_section(
             ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)
-          }
-        }
-      @semantic.PlannedWasmRuntimeFunction(name) =>
-        if !function_.elided {
-          match
-            emit_starshine_text_runtime_function(name, planned.type_count) {
-            Some(function_body) => functions.push(function_body)
-            None => return Err(UnsupportedBuiltin(name))
           }
         }
       @semantic.PlannedWasmImportedFunction(_)

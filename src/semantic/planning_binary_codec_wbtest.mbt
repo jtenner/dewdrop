@@ -10,6 +10,16 @@ fn planning_codec_test_stages() -> SemanticCompilerTestStages {
 }
 
 ///|
+test "the retired runtime function codec tag is rejected" {
+  let reader = @cache_binary.Reader::new(b"\x02\x00")
+  ignore(pb_read_function_kind(reader, "kind"))
+  assert_eq(
+    reader.finish(),
+    Err("artifact.kind at byte 1: unknown Wasm function-kind discriminant"),
+  )
+}
+
+///|
 test "module caches reject program-only erased adapters" {
   let (resolved, lowering) = wasmgc_test_inputs(
     23958UL, b"pub fn run() -> I32 {\n  1\n}\n",
