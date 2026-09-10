@@ -2460,6 +2460,7 @@ pub struct ProgramFunctionLookupFailure {
 
 pub struct ProgramIndex {
   module_lookup : Map[UInt64, Int]
+  indexed_modules : Array[PlannedModuleLowering]
 }
 pub fn ProgramIndex::body_owner(Self, UInt64) -> Int?
 pub fn ProgramIndex::declaration_owner(Self, UInt64) -> Int?

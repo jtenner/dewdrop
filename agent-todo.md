@@ -884,6 +884,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   callable. Two mutations retain exact ARN-101/106 records; 887 self-host tests
   and 465 exact records pass. See the
   [owner log](docs/research/program-callable-owner-2026-09-09.md).
+  Native module-owner reads now check the live module arena and stored identity.
+  Specialization preflights the full owner map against its actual module array
+  before direct map reads. Seven focused checks and all 1,322 routine native
+  tests pass. See the
+  [native module-index log](docs/research/native-program-module-index-2026-09-09.md).
   Physical body errors now use 41 typed reasons with exhaustive code and text
   mappings. Field, constructor, local, flow, and raw-instruction errors no longer
   become code zero. See the

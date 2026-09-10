@@ -2858,6 +2858,10 @@ fn plan_program_wasmgc_fragments_for_root(
   cached_modules : Array[PlannedModuleWasmGCFragments?],
   store_fresh : (Int, PlannedModuleWasmGCFragments) -> Unit,
 ) -> PlannedProgramSpecializationPlan {
+  match check_program_module_index_table(lowering.index, lowering.modules) {
+    Ok(_) => ()
+    Err(failure) => abort(@debug.to_string(failure))
+  }
   guard lowering.modules.length() == analyzed.modules.length() &&
     lowering.modules.length() == cached_modules.length() else {
     abort("program fragment inputs have different module counts")

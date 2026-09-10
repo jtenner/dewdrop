@@ -1,6 +1,7 @@
 ///|
 pub struct ProgramIndex {
   module_lookup : Map[ModuleId, Int]
+  indexed_modules : Array[PlannedModuleLowering]
 }
 
 ///|
@@ -12,7 +13,7 @@ fn build_program_index(modules : Array[PlannedModuleLowering]) -> ProgramIndex {
     }
     module_lookup[module_.module_id] = module_index
   }
-  { module_lookup, }
+  { module_lookup, indexed_modules: modules, }
 }
 
 ///|
@@ -20,7 +21,10 @@ pub fn ProgramIndex::module_index(
   self : ProgramIndex,
   module_id : ModuleId,
 ) -> Int? {
-  self.module_lookup.get(module_id)
+  match check_program_module_index(self, module_id) {
+    Ok(selected) => selected
+    Err(failure) => abort(@debug.to_string(failure))
+  }
 }
 
 ///|
