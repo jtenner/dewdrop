@@ -36,3 +36,16 @@ activity timer.
 The remaining failures include pattern coverage, array callback code, startup
 cycle detection, and outdated diagnostic expectations. They are still visible;
 no runtime mismatch was accepted as a new expected result in this repair.
+
+## Pattern coverage
+
+An enum with one variant and irrefutable payloads is itself irrefutable. The
+flow analyzer now uses that fact for nested patterns, including imported enums.
+A red-first test rejected a nested three-enum pattern before this fix. Existing
+refutable nested enum and guarded-arm coverage checks remain in place.
+
+The two constant-guard fixtures were not exhaustive under the language's rule:
+guarded arms do not provide unconditional coverage, even for `if true`. Add an
+unreachable fallback for the remaining variant. Keep the guard optimization and
+trap-order checks. The value fixture now asserts 42 so its return is observed.
+All three source cases pass Node and Wago before and after O4s and fold-inline.

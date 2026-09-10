@@ -525,8 +525,9 @@ fn BodyFlowAnalyzer::initialize_pattern_irrefutability(
     self.pattern_payload_irrefutable[pattern_slot] = valid_payload
     self.pattern_irrefutable[pattern_slot] = match selected {
       StructInferredPatternConstructor(_, _) => valid_payload
-      VariantInferredPatternConstructor(_, _)
-      | ErrorInferredPatternConstructor => false
+      VariantInferredPatternConstructor(variant, _) =>
+        valid_payload && self.variant_is_only_constructor(variant)
+      ErrorInferredPatternConstructor => false
       NoInferredPatternConstructor =>
         match self.collected.patterns[pattern] {
           HirWildcardPattern(_) | HirBindingPattern(_, _) | HirRestPattern(_) =>
@@ -681,6 +682,27 @@ fn BodyFlowAnalyzer::variant_span(
     { start: 0, length: 0, }
   } else {
     self.variant_spans[index]
+  }
+}
+
+///|
+fn BodyFlowAnalyzer::variant_is_only_constructor(
+  self : BodyFlowAnalyzer,
+  variant : VariantId,
+) -> Bool {
+  if semantic_id_module(variant) == self.collected.module_id {
+    let owner = self.collected.variants[semantic_id_local(variant)].declaration
+    self.variant_span(owner).length == 1
+  } else {
+    match self.imports {
+      Some(imports) =>
+        match imports.variant(variant) {
+          Some(imported) =>
+            imports.variants_of(imported.declaration).length() == 1
+          None => false
+        }
+      None => false
+    }
   }
 }
 

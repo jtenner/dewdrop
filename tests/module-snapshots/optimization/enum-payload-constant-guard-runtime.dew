@@ -7,10 +7,11 @@ fn guarded(value: I32) -> I32 {
   match Maybe::Some(value) {
     Maybe::Some(item) if false => 0
     Maybe::Some(item) if 1 < 2 => item
+    Maybe::Some(_) => unreachable()
     Maybe::None => 0
   }
 }
 
-pub fn main() -> I32 {
-  guarded(42)
+pub fn main() -> Unit {
+  assert(guarded(42) == 42, "constant guard result")
 }

@@ -232,8 +232,7 @@ test "if expressions with returning branches make later items unreachable" {
 ///|
 test "static predicate call in if keeps the ordinary completion path" {
   let (_, _, _, flows) = flow_test_module(
-    221UL,
-    b"fn predicate(flag: Bool) -> Bool {\n  flag\n}\nfn run(flag: Bool) -> I32 {\n  if predicate(flag) {\n    return 1\n  }\n  2\n}\n",
+    221UL, b"fn predicate(flag: Bool) -> Bool {\n  flag\n}\nfn run(flag: Bool) -> I32 {\n  if predicate(flag) {\n    return 1\n  }\n  2\n}\n",
   )
   assert_eq(flows.diagnostics.length(), 0)
   let body_flow = flows.bodies[1].flow
@@ -244,8 +243,7 @@ test "static predicate call in if keeps the ordinary completion path" {
 ///|
 test "static predicate call in match keeps the ordinary completion path" {
   let (_, _, _, flows) = flow_test_module(
-    222UL,
-    b"fn predicate(flag: Bool) -> Bool {\n  flag\n}\nfn run(flag: Bool) -> I32 {\n  match predicate(flag) {\n    true => return 1\n    false => 0\n  }\n  2\n}\n",
+    222UL, b"fn predicate(flag: Bool) -> Bool {\n  flag\n}\nfn run(flag: Bool) -> I32 {\n  match predicate(flag) {\n    true => return 1\n    false => 0\n  }\n  2\n}\n",
   )
   assert_eq(flows.diagnostics.length(), 0)
   let body_flow = flows.bodies[1].flow
@@ -256,8 +254,7 @@ test "static predicate call in match keeps the ordinary completion path" {
 ///|
 test "nested static call argument keeps the ordinary completion path" {
   let (_, _, _, flows) = flow_test_module(
-    223UL,
-    b"fn equal(left: U32, right: U32) -> Bool {\n  left == right\n}\nfn require(condition: Bool) -> Unit {\n  let _condition = condition\n}\nfn run(value: U32) -> Unit {\n  require(!equal(value, 4294967295u32))\n  let _after = value\n}\n",
+    223UL, b"fn equal(left: U32, right: U32) -> Bool {\n  left == right\n}\nfn require(condition: Bool) -> Unit {\n  let _condition = condition\n}\nfn run(value: U32) -> Unit {\n  require(!equal(value, 4294967295u32))\n  let _after = value\n}\n",
   )
   assert_eq(flows.diagnostics.length(), 0)
   let body_flow = flows.bodies[2].flow
@@ -352,4 +349,13 @@ test "match summaries retain return and ordinary completion paths" {
   let flow = flows.expression_flows[expression]
   assert_true(flow.may_return())
   assert_true(flow.may_fall_through())
+}
+
+///|
+test "nested single-variant payloads cover their outer variant" {
+  let (_, _, inferred, flows) = flow_test_module(
+    246UL, b"enum Leaf {\n  Value(I32)\n}\nenum Middle {\n  Wrap(Leaf)\n}\nenum Outer {\n  Wrap(Middle)\n}\nfn read(value: Outer) -> I32 {\n  match value {\n    Outer::Wrap(Middle::Wrap(Leaf::Value(result))) => result\n  }\n}\n",
+  )
+  assert_eq(inferred.diagnostics, [])
+  assert_eq(flows.diagnostics, [])
 }
