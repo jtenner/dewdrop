@@ -1,5 +1,10 @@
 # Compiler CLI optimization pipeline, 2026-09-10
 
+The [deeper study](starshine-deep-pipeline-2026-09-10.md) extends this initial
+result with 64 distinct candidate orders, a repair to SSANoMerge, 16 workloads,
+and the optional 50-pass `speed-deep` profile. The 11-pass `speed` profile and
+measurements below remain the original study's result.
+
 The CLI now supports an ordered Starshine schedule for `build`, `run`, and
 `test`, plus `optimize` for an existing Wasm artifact. The profile targets emitted
 program execution speed, with size as a second objective. This is not a claim

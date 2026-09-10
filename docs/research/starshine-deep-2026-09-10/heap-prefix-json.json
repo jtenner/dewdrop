@@ -1,0 +1,487 @@
+{
+  "fixture": "json/reader-runtime",
+  "input": "$DEWDROP/.tmp/starshine-deep-logs/discovery/snapshots/json/reader-runtime/baseline.wasm",
+  "pipeline": "speed-heap-after",
+  "prefixes": [
+    {
+      "passes": [],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.010096,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003571,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.023928,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.007744,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003555,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.023484,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.009126,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003275,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022669,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.013431,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003622,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.023866,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.013638,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003402,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.024206,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['json:reader-writer'], got ['json:reader-writerFAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.021622,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00375,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.023569,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['json:reader-writer'], got ['json:reader-writerFAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.025824,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003596,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022227,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['json:reader-writer'], got ['json:reader-writerFAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.027761,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003564,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022587,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['json:reader-writer'], got ['json:reader-writerFAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.030405,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003708,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.02246,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['json:reader-writer'], got ['json:reader-writerFAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum",
+        "remove-unused-module-elements"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.030221,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00346,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022452,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['json:reader-writer'], got ['json:reader-writerFAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum",
+        "remove-unused-module-elements",
+        "memory-packing"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.030513,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003476,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.023644,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['json:reader-writer'], got ['json:reader-writerFAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum",
+        "remove-unused-module-elements",
+        "memory-packing",
+        "reorder-locals"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.030457,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00343,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.026209,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['json:reader-writer'], got ['json:reader-writerFAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum",
+        "remove-unused-module-elements",
+        "memory-packing",
+        "reorder-locals",
+        "strip-debug"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.031097,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003559,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.026187,
+          0,
+          false
+        ]
+      ]
+    }
+  ],
+  "queue": {
+    "optimizeLevel": 4,
+    "passes": [
+      {
+        "name": "duplicate-function-elimination",
+        "ordinal": 0
+      },
+      {
+        "name": "precompute",
+        "ordinal": 1
+      },
+      {
+        "name": "inlining",
+        "ordinal": 2
+      },
+      {
+        "name": "local-cse",
+        "ordinal": 3
+      },
+      {
+        "name": "heap2local",
+        "ordinal": 4
+      },
+      {
+        "name": "simplify-locals-nostructure",
+        "ordinal": 5
+      },
+      {
+        "name": "coalesce-locals",
+        "ordinal": 6
+      },
+      {
+        "name": "vacuum",
+        "ordinal": 7
+      },
+      {
+        "name": "remove-unused-module-elements",
+        "ordinal": 8
+      },
+      {
+        "name": "memory-packing",
+        "ordinal": 9
+      },
+      {
+        "name": "reorder-locals",
+        "ordinal": 10
+      },
+      {
+        "name": "strip-debug",
+        "ordinal": 11
+      }
+    ],
+    "requested": [
+      "duplicate-function-elimination",
+      "precompute",
+      "inlining",
+      "local-cse",
+      "heap2local",
+      "simplify-locals-nostructure",
+      "coalesce-locals",
+      "vacuum",
+      "remove-unused-module-elements",
+      "memory-packing",
+      "reorder-locals",
+      "strip-debug"
+    ],
+    "schema": "starshine.optimizer-expanded-pass-queue.v1",
+    "shrinkLevel": 1
+  },
+  "version": 1
+}

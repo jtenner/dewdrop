@@ -1,0 +1,1415 @@
+{
+  "fixture": "collections/map-runtime",
+  "input": "$DEWDROP/.tmp/starshine-deep-logs/ordered-screen/snapshots/collections/map-runtime/baseline.wasm",
+  "pipeline": "deep-core",
+  "prefixes": [
+    {
+      "passes": [],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.00826,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.006778,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.040152,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.00614,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.008718,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.038208,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.005683,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.010503,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.047773,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.005317,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.009264,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.047119,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004454,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.008114,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.050967,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.006916,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.004565,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.045673,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.008407,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.01018,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.048866,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.008842,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00514,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.04388,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.010575,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.005634,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.043548,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.014534,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.006996,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.043869,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.01421,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.012481,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.048322,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.015165,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00609,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.042571,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.017337,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.012606,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.040739,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.014125,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.006535,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.046842,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.019383,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.008353,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.049363,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.021364,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.006419,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.047295,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.024087,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.010675,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.040261,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.021524,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.006649,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.047935,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.028589,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.007112,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.045773,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.027439,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.004682,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.052033,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.024941,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00928,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.044393,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.027368,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00732,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.044107,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected [], got {'trap': 'unreachable', 'stdout': []}",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.027564,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.008366,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.043166,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected [], got {'trap': 'unreachable', 'stdout': []}",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.024313,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.005403,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.043425,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected [], got {'trap': 'unreachable', 'stdout': []}",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "duplicate-function-elimination"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.0371,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00809,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.045174,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected [], got {'trap': 'unreachable', 'stdout': []}",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.032307,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.009633,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.044873,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected [], got {'trap': 'unreachable', 'stdout': []}",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.029083,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00981,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.042716,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected [], got {'trap': 'unreachable', 'stdout': []}",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing",
+        "directize"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.027778,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00861,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.041576,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected [], got {'trap': 'unreachable', 'stdout': []}",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing",
+        "directize",
+        "memory-packing"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.029977,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.007564,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.040108,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected [], got {'trap': 'unreachable', 'stdout': []}",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing",
+        "directize",
+        "memory-packing",
+        "reorder-locals"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.031396,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.006046,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.038167,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected [], got {'trap': 'unreachable', 'stdout': []}",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing",
+        "directize",
+        "memory-packing",
+        "reorder-locals",
+        "strip-debug"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.029241,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.007453,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.041462,
+          0,
+          false
+        ]
+      ]
+    }
+  ],
+  "queue": {
+    "optimizeLevel": 4,
+    "passes": [
+      {
+        "name": "duplicate-function-elimination",
+        "ordinal": 0
+      },
+      {
+        "name": "remove-unused-module-elements",
+        "ordinal": 1
+      },
+      {
+        "name": "once-reduction",
+        "ordinal": 2
+      },
+      {
+        "name": "global-refining",
+        "ordinal": 3
+      },
+      {
+        "name": "global-struct-inference",
+        "ordinal": 4
+      },
+      {
+        "name": "precompute",
+        "ordinal": 5
+      },
+      {
+        "name": "inlining",
+        "ordinal": 6
+      },
+      {
+        "name": "local-cse",
+        "ordinal": 7
+      },
+      {
+        "name": "simplify-locals-nostructure",
+        "ordinal": 8
+      },
+      {
+        "name": "dead-code-elimination",
+        "ordinal": 9
+      },
+      {
+        "name": "coalesce-locals",
+        "ordinal": 10
+      },
+      {
+        "name": "vacuum",
+        "ordinal": 11
+      },
+      {
+        "name": "code-pushing",
+        "ordinal": 12
+      },
+      {
+        "name": "code-folding",
+        "ordinal": 13
+      },
+      {
+        "name": "merge-blocks",
+        "ordinal": 14
+      },
+      {
+        "name": "remove-unused-brs",
+        "ordinal": 15
+      },
+      {
+        "name": "redundant-set-elimination",
+        "ordinal": 16
+      },
+      {
+        "name": "precompute",
+        "ordinal": 17
+      },
+      {
+        "name": "local-cse",
+        "ordinal": 18
+      },
+      {
+        "name": "simplify-locals-nostructure",
+        "ordinal": 19
+      },
+      {
+        "name": "dead-code-elimination",
+        "ordinal": 20
+      },
+      {
+        "name": "coalesce-locals",
+        "ordinal": 21
+      },
+      {
+        "name": "vacuum",
+        "ordinal": 22
+      },
+      {
+        "name": "duplicate-function-elimination",
+        "ordinal": 23
+      },
+      {
+        "name": "remove-unused-module-elements",
+        "ordinal": 24
+      },
+      {
+        "name": "simplify-globals-optimizing",
+        "ordinal": 25
+      },
+      {
+        "name": "directize",
+        "ordinal": 26
+      },
+      {
+        "name": "memory-packing",
+        "ordinal": 27
+      },
+      {
+        "name": "reorder-locals",
+        "ordinal": 28
+      },
+      {
+        "name": "strip-debug",
+        "ordinal": 29
+      }
+    ],
+    "requested": [
+      "duplicate-function-elimination",
+      "remove-unused-module-elements",
+      "once-reduction",
+      "global-refining",
+      "global-struct-inference",
+      "precompute",
+      "inlining",
+      "local-cse",
+      "simplify-locals-nostructure",
+      "dead-code-elimination",
+      "coalesce-locals",
+      "vacuum",
+      "code-pushing",
+      "code-folding",
+      "merge-blocks",
+      "remove-unused-brs",
+      "redundant-set-elimination",
+      "precompute",
+      "local-cse",
+      "simplify-locals-nostructure",
+      "dead-code-elimination",
+      "coalesce-locals",
+      "vacuum",
+      "duplicate-function-elimination",
+      "remove-unused-module-elements",
+      "simplify-globals-optimizing",
+      "directize",
+      "memory-packing",
+      "reorder-locals",
+      "strip-debug"
+    ],
+    "schema": "starshine.optimizer-expanded-pass-queue.v1",
+    "shrinkLevel": 1
+  },
+  "version": 1
+}

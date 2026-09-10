@@ -1,0 +1,439 @@
+{
+  "fixture": "modules/imported-runtime-trait",
+  "input": "$DEWDROP/.tmp/starshine-deep-logs/discovery/snapshots/modules/imported-runtime-trait/baseline.wasm",
+  "pipeline": "speed-heap-after",
+  "prefixes": [
+    {
+      "passes": [],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.003137,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003199,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.02428,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.0023,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003046,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.02417,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.002709,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.002941,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.021706,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.002885,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003194,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022302,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.003145,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003364,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022882,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "exit 1: ['wasm-tools', 'validate', '--features', 'all', '$DEWDROP/.tmp/starshine-deep-logs/heap-prefix-modules/prefix-5.wasm']\nerror: func 3 failed to validate\n\nCaused by:\n    0: uninitialized local: 26 (at offset 0x335)\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004323,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003356,
+          1,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "exit 1: ['wasm-tools', 'validate', '--features', 'all', '$DEWDROP/.tmp/starshine-deep-logs/heap-prefix-modules/prefix-6.wasm']\nerror: func 3 failed to validate\n\nCaused by:\n    0: uninitialized local: 26 (at offset 0x335)\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004382,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003446,
+          1,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "exit 1: ['wasm-tools', 'validate', '--features', 'all', '$DEWDROP/.tmp/starshine-deep-logs/heap-prefix-modules/prefix-7.wasm']\nerror: func 3 failed to validate\n\nCaused by:\n    0: uninitialized local: 26 (at offset 0x335)\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004384,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003475,
+          1,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "exit 1: ['wasm-tools', 'validate', '--features', 'all', '$DEWDROP/.tmp/starshine-deep-logs/heap-prefix-modules/prefix-8.wasm']\nerror: func 3 failed to validate\n\nCaused by:\n    0: uninitialized local: 26 (at offset 0x32c)\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004068,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003366,
+          1,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "exit 1: ['wasm-tools', 'validate', '--features', 'all', '$DEWDROP/.tmp/starshine-deep-logs/heap-prefix-modules/prefix-9.wasm']\nerror: func 3 failed to validate\n\nCaused by:\n    0: uninitialized local: 26 (at offset 0x220)\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum",
+        "remove-unused-module-elements"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004188,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003249,
+          1,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "exit 1: ['wasm-tools', 'validate', '--features', 'all', '$DEWDROP/.tmp/starshine-deep-logs/heap-prefix-modules/prefix-10.wasm']\nerror: func 3 failed to validate\n\nCaused by:\n    0: uninitialized local: 26 (at offset 0x220)\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum",
+        "remove-unused-module-elements",
+        "memory-packing"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.003987,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003346,
+          1,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "exit 1: ['wasm-tools', 'validate', '--features', 'all', '$DEWDROP/.tmp/starshine-deep-logs/heap-prefix-modules/prefix-11.wasm']\nerror: func 3 failed to validate\n\nCaused by:\n    0: uninitialized local: 17 (at offset 0x220)\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum",
+        "remove-unused-module-elements",
+        "memory-packing",
+        "reorder-locals"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004377,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003372,
+          1,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "exit 1: ['wasm-tools', 'validate', '--features', 'all', '$DEWDROP/.tmp/starshine-deep-logs/heap-prefix-modules/prefix-12.wasm']\nerror: func 3 failed to validate\n\nCaused by:\n    0: uninitialized local: 17 (at offset 0x220)\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "heap2local",
+        "simplify-locals-nostructure",
+        "coalesce-locals",
+        "vacuum",
+        "remove-unused-module-elements",
+        "memory-packing",
+        "reorder-locals",
+        "strip-debug"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004291,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003372,
+          1,
+          false
+        ]
+      ]
+    }
+  ],
+  "queue": {
+    "optimizeLevel": 4,
+    "passes": [
+      {
+        "name": "duplicate-function-elimination",
+        "ordinal": 0
+      },
+      {
+        "name": "precompute",
+        "ordinal": 1
+      },
+      {
+        "name": "inlining",
+        "ordinal": 2
+      },
+      {
+        "name": "local-cse",
+        "ordinal": 3
+      },
+      {
+        "name": "heap2local",
+        "ordinal": 4
+      },
+      {
+        "name": "simplify-locals-nostructure",
+        "ordinal": 5
+      },
+      {
+        "name": "coalesce-locals",
+        "ordinal": 6
+      },
+      {
+        "name": "vacuum",
+        "ordinal": 7
+      },
+      {
+        "name": "remove-unused-module-elements",
+        "ordinal": 8
+      },
+      {
+        "name": "memory-packing",
+        "ordinal": 9
+      },
+      {
+        "name": "reorder-locals",
+        "ordinal": 10
+      },
+      {
+        "name": "strip-debug",
+        "ordinal": 11
+      }
+    ],
+    "requested": [
+      "duplicate-function-elimination",
+      "precompute",
+      "inlining",
+      "local-cse",
+      "heap2local",
+      "simplify-locals-nostructure",
+      "coalesce-locals",
+      "vacuum",
+      "remove-unused-module-elements",
+      "memory-packing",
+      "reorder-locals",
+      "strip-debug"
+    ],
+    "schema": "starshine.optimizer-expanded-pass-queue.v1",
+    "shrinkLevel": 1
+  },
+  "version": 1
+}

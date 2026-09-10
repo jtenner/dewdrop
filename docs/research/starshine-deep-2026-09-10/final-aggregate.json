@@ -1,0 +1,102 @@
+{
+  "O4s": {
+    "time_ratio_to_cli_speed": 1.0867955611582703,
+    "time_ratio_to_O4s": 1.0,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      1.0769119542979926,
+      1.0956824984858655
+    ],
+    "total_bytes": 60515,
+    "total_code_bytes": 53807
+  },
+  "cli-speed": {
+    "time_ratio_to_cli_speed": 1.0,
+    "time_ratio_to_O4s": 0.920136257213117,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      1.0,
+      1.0
+    ],
+    "total_bytes": 52810,
+    "total_code_bytes": 50064
+  },
+  "deep-60-single-local-wave": {
+    "time_ratio_to_cli_speed": 0.9926810244838197,
+    "time_ratio_to_O4s": 0.9134018024750244,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      0.9843633493605224,
+      0.9989090604312185
+    ],
+    "total_bytes": 51913,
+    "total_code_bytes": 49167
+  },
+  "deep-both-no-coalesce": {
+    "time_ratio_to_cli_speed": 0.9928595955440465,
+    "time_ratio_to_O4s": 0.913566112182028,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      0.9841960322440261,
+      0.9998735003303549
+    ],
+    "total_bytes": 52396,
+    "total_code_bytes": 49650
+  },
+  "deep-both-single-local-wave": {
+    "time_ratio_to_cli_speed": 0.9935898056484764,
+    "time_ratio_to_O4s": 0.9142380049744975,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      0.9850087931958966,
+      1.0003949693408367
+    ],
+    "total_bytes": 51983,
+    "total_code_bytes": 49237
+  },
+  "deep-core-single-local-wave": {
+    "time_ratio_to_cli_speed": 0.9933063697820553,
+    "time_ratio_to_O4s": 0.9139772053572088,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      0.9847571792736135,
+      1.0002121095778094
+    ],
+    "total_bytes": 52061,
+    "total_code_bytes": 49315
+  },
+  "heap-early": {
+    "time_ratio_to_cli_speed": 1.0,
+    "time_ratio_to_O4s": 0.920136257213117,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      1.0,
+      1.0
+    ],
+    "total_bytes": 52810,
+    "total_code_bytes": 50064
+  },
+  "heap-ssa-early": {
+    "time_ratio_to_cli_speed": 1.0005369396531556,
+    "time_ratio_to_O4s": 0.920630314855921,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      0.999567588812913,
+      1.001515827105677
+    ],
+    "total_bytes": 52738,
+    "total_code_bytes": 49992
+  },
+  "speed-ssa-before": {
+    "time_ratio_to_cli_speed": 1.0002040286523866,
+    "time_ratio_to_O4s": 0.9203239913736881,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      0.9991716973457325,
+      1.0012559225382855
+    ],
+    "total_bytes": 52752,
+    "total_code_bytes": 50006
+  },
+  "ssa-heap-early": {
+    "time_ratio_to_cli_speed": 1.0005369396531556,
+    "time_ratio_to_O4s": 0.920630314855921,
+    "time_ratio_to_cli_speed_95pct_bootstrap": [
+      0.999567588812913,
+      1.001515827105677
+    ],
+    "total_bytes": 52738,
+    "total_code_bytes": 49992
+  }
+}

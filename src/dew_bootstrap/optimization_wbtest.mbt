@@ -51,3 +51,25 @@ test "optimizer publication replaces output arguments without changing inputs" {
     ["main.dew", "--output", "temporary.wasm", "--root", "main"],
   )
 }
+
+///|
+test "deep speed profile preserves verified local cleanup boundaries" {
+  let plan = bootstrap_parse_optimization([
+    "--optimize", "speed-deep", "--print-passes",
+  ]).unwrap()
+  assert_eq(plan.passes.length(), 50)
+  assert_eq(plan.passes[6], "heap2local")
+  assert_eq(plan.passes[7], "ssa-nomerge")
+  assert_eq(plan.passes[8], "inlining")
+  assert_eq(plan.passes[10], "simplify-locals-nostructure")
+  assert_eq(plan.passes[12], "coalesce-locals")
+  assert_eq(plan.passes[49], "strip-debug")
+  assert_eq(
+    plan.passes.filter(pass => pass == "simplify-locals-nostructure").length(),
+    1,
+  )
+  assert_eq(plan.passes.filter(pass => pass == "coalesce-locals").length(), 1)
+  assert_true(plan.enabled())
+  assert_true(plan.print_passes)
+  assert_eq(plan.arguments, [])
+}

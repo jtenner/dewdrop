@@ -40,6 +40,99 @@ def workloads():
         [{"args": [v], "expected": len(document) * v} for v in [1, 2, 3, 4]])
     add("json-canonical", source, None, "canonical",
         [{"args": [v], "expected": len(document) * v} for v in [1, 2, 3, 4]])
+    # These inputs exercise allocation removal, branch joins, and closure values.
+    # Every timed call cycles across checked, parameter-dependent results.
+    add("mutable-cell", """
+struct Cell {
+  mut value: I32
+}
+fn create(value: I32) -> Cell {
+  Cell::{
+    value: value
+  }
+}
+pub fn main(seed: I32) -> I32 {
+  let cell = create(seed)
+  while 64 {
+    0 => break cell.value
+    n => {
+      cell.value = cell.value + 3
+      continue n - 1
+    }
+  }
+}
+""", None, inputs=[{"args": [v], "expected": v + 192} for v in [0, 1, 37, 101]])
+    add("temporary-pair", """
+struct Pair {
+  left: I32
+  right: I32
+}
+fn create(value: I32) -> Pair {
+  Pair::{
+    left: value
+    right: value + 3
+  }
+}
+fn difference(pair: Pair) -> I32 {
+  pair.left * pair.right
+}
+pub fn main(seed: I32) -> I32 {
+  let mut total = seed
+  while 64 {
+    0 => break total
+    n => {
+      total = total + difference(create(n + seed))
+      continue n - 1
+    }
+  }
+}
+""", None, inputs=[{"args": [v], "expected": v + sum((n+v)*(n+v+3) for n in range(1,65))} for v in [0, 1, 37, 101]])
+    add("branch-join", """
+pub fn main(seed: I32) -> I32 {
+  let mut total = seed
+  while 128 {
+    0 => break total
+    n => {
+      let next = if (n & 1) == 0 {
+        total + seed + n
+      } else {
+        total - n
+      }
+      total = next
+      continue n - 1
+    }
+  }
+}
+""", None, inputs=[{"args": [v], "expected": v * 65 + 64} for v in [0, 1, 37, 101]])
+    add("closure-loop", """
+fn make_adder(amount: I32) -> fn(I32) -> I32 {
+  fn(value: I32) -> I32 {
+    value + amount
+  }
+}
+fn apply(callback: fn(I32) -> I32, value: I32) -> I32 {
+  callback(value)
+}
+pub fn main(seed: I32) -> I32 {
+  let callback = make_adder(seed)
+  let mut total = 0
+  while 64 {
+    0 => break total
+    n => {
+      total = total + apply(callback, n)
+      continue n - 1
+    }
+  }
+}
+""", None, inputs=[{"args": [v], "expected": 2080 + 64*v} for v in [0, 1, 37, 101]])
+    # Direct allocations let early Heap2Local fire without inlining first.
+    local_cell = next(row for row in rows if row["name"] == "mutable-cell")
+    add("local-cell", local_cell["source"].replace("let cell = create(seed)",
+        "let cell = Cell::{\n    value: seed\n  }"), None, inputs=local_cell["inputs"])
+    local_pair = next(row for row in rows if row["name"] == "temporary-pair")
+    add("local-pair", local_pair["source"].replace("total = total + difference(create(n + seed))",
+        "let pair = Pair::{\n        left: n + seed\n        right: n + seed + 3\n      }\n      total = total + pair.left * pair.right"),
+        None, inputs=local_pair["inputs"])
     return rows
 
 

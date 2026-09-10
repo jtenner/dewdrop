@@ -49,6 +49,10 @@ def main():
                                   "local-cse", "simplify-locals-nostructure", "coalesce-locals", "vacuum",
                                   "remove-unused-module-elements", "memory-packing",
                                   "reorder-locals", "strip-debug"]
+    deep_printed = json.loads(run([dew, "build", "--optimize", "speed-deep", "--print-passes"]))
+    profiles = json.loads((ROOT / "tools/starshine-experiments/pipelines.json").read_text())["pipelines"]
+    assert deep_printed["passes"] == [flag[2:] for flag in profiles["cli-speed-deep"][4:]]
+    assert deep_printed["optimizeLevel"] == 4 and deep_printed["shrinkLevel"] == 1
     custom = json.loads(run([dew, "build", "--starshine-pass", "precompute",
                              "--starshine-pass", "vacuum", "--starshine-pass", "precompute",
                              "--print-passes"]))
@@ -86,6 +90,21 @@ def main():
     run([dew, "build", source, "--emit", "wat", "--optimize", "speed", "-o", wat])
     run(["wasm-tools", "parse", wat, "-o", standalone])
     run(["node", "-e", probe, standalone])
+
+    deep = directory / "deep.wasm"
+    assert "build output cache: miss" in run([dew, "build", source, "-o", deep,
+        "--optimize", "speed-deep", "--cache-report"])
+    assert "build output cache: hit" in run([dew, "build", source, "-o", deep,
+        "--optimize", "speed-deep", "--cache-report"])
+    run(["node", "-e", probe, deep])
+    run([dew, "optimize", plain, "-o", deep, "--optimize", "speed-deep"])
+    run(["node", "-e", probe, deep])
+    deep_tests = run([dew, "test", "--manifest", ROOT / "tests/cli/test-package/dew.modules.json",
+                      "--optimize", "speed-deep"])
+    assert "Dew tests passed: 2" in deep_tests, deep_tests
+    deep_listed = run([dew, "test", "--manifest", ROOT / "tests/cli/test-package/dew.modules.json",
+                       "--optimize", "speed-deep", "--list"])
+    assert "linked answer" in deep_listed and "library answer" in deep_listed, deep_listed
 
     # A failed transform must retain the user's last artifact and must not
     # publish a successful whole-build cache entry for the failing schedule.

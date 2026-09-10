@@ -1,0 +1,508 @@
+[
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "--optimize",
+      "speed",
+      "--print-passes"
+    ],
+    "seconds": 0.03479911400063429,
+    "returncode": 0,
+    "stdout": "{\"version\":1,\"profile\":\"speed\",\"optimizeLevel\":4,\"shrinkLevel\":1,\"passes\":[\"duplicate-function-elimination\",\"precompute\",\"inlining\",\"local-cse\",\"simplify-locals-nostructure\",\"coalesce-locals\",\"vacuum\",\"remove-unused-module-elements\",\"memory-packing\",\"reorder-locals\",\"strip-debug\"]}\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "--optimize",
+      "speed-deep",
+      "--print-passes"
+    ],
+    "seconds": 0.03685342600510921,
+    "returncode": 0,
+    "stdout": "{\"version\":1,\"profile\":\"speed-deep\",\"optimizeLevel\":4,\"shrinkLevel\":1,\"passes\":[\"duplicate-function-elimination\",\"remove-unused-module-elements\",\"once-reduction\",\"global-refining\",\"global-struct-inference\",\"precompute\",\"heap2local\",\"ssa-nomerge\",\"inlining\",\"local-cse\",\"simplify-locals-nostructure\",\"dead-code-elimination\",\"coalesce-locals\",\"vacuum\",\"code-pushing\",\"code-folding\",\"merge-blocks\",\"remove-unused-brs\",\"redundant-set-elimination\",\"local-cse\",\"dead-code-elimination\",\"vacuum\",\"precompute\",\"inlining\",\"local-cse\",\"dead-code-elimination\",\"vacuum\",\"code-pushing\",\"code-folding\",\"merge-blocks\",\"remove-unused-brs\",\"redundant-set-elimination\",\"local-cse\",\"dead-code-elimination\",\"vacuum\",\"code-pushing\",\"code-folding\",\"merge-blocks\",\"remove-unused-brs\",\"redundant-set-elimination\",\"local-cse\",\"dead-code-elimination\",\"vacuum\",\"duplicate-function-elimination\",\"remove-unused-module-elements\",\"simplify-globals-optimizing\",\"directize\",\"memory-packing\",\"reorder-locals\",\"strip-debug\"]}\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "--starshine-pass",
+      "precompute",
+      "--starshine-pass",
+      "vacuum",
+      "--starshine-pass",
+      "precompute",
+      "--print-passes"
+    ],
+    "seconds": 0.03155859299295116,
+    "returncode": 0,
+    "stdout": "{\"version\":1,\"profile\":\"custom\",\"optimizeLevel\":4,\"shrinkLevel\":1,\"passes\":[\"precompute\",\"vacuum\",\"precompute\"]}\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/plain.wasm",
+      "--cache-report"
+    ],
+    "seconds": 2.7301405839971267,
+    "returncode": 0,
+    "stdout": "parse event cache: hits 0, misses 17\nstandard interface cache: hits 0, misses 5\nbody inference cache: disabled\nlayout and fragment cache: disabled\ncompilation cache pack: reads 0, hits 0, misses 19\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/plain.wasm (513 bytes)\nbuild output cache: miss 0cb2fa2f155f22689e862c2a77acba275d709902f1e8b8d89b6a9c7c3ee9e6e6\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm",
+      "--optimize",
+      "speed",
+      "--cache-report"
+    ],
+    "seconds": 0.596782512991922,
+    "returncode": 0,
+    "stdout": "parse event cache: bypassed by exact program hit\nstandard interface cache: bypassed by exact program hit\nbody inference cache: bypassed by exact program hit\nlayout and fragment cache: bypassed by exact program hit\ncompilation cache pack: exact hit, reads 1, hits 1, misses 0\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm.dew-raw-1334144 (513 bytes)\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm (Starshine speed)\nbuild output cache: miss f467686ae41178eb9a357837a5fcc66affac0fc6e464dd92baf660a3a020ce2c\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/hit.wasm",
+      "--optimize",
+      "speed",
+      "--cache-report"
+    ],
+    "seconds": 0.24090082000475377,
+    "returncode": 0,
+    "stdout": "build output cache: hit f467686ae41178eb9a357837a5fcc66affac0fc6e464dd92baf660a3a020ce2c\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/hit.wasm (422 bytes)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "wasm-tools",
+      "validate",
+      "--features",
+      "all",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/plain.wasm"
+    ],
+    "seconds": 0.005469872005051002,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "node",
+      "-e",
+      "const fs=require(\"node:fs\"),assert=require(\"node:assert/strict\");const e=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))).exports;e.__dew_init?.();assert.equal(e.main(),42);",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/plain.wasm"
+    ],
+    "seconds": 0.035385741997743025,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "wasm-tools",
+      "validate",
+      "--features",
+      "all",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm"
+    ],
+    "seconds": 0.007291653004358523,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "node",
+      "-e",
+      "const fs=require(\"node:fs\"),assert=require(\"node:assert/strict\");const e=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))).exports;e.__dew_init?.();assert.equal(e.main(),42);",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm"
+    ],
+    "seconds": 0.03198462800355628,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "wasm-tools",
+      "validate",
+      "--features",
+      "all",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/hit.wasm"
+    ],
+    "seconds": 0.0033405200083507225,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "node",
+      "-e",
+      "const fs=require(\"node:fs\"),assert=require(\"node:assert/strict\");const e=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))).exports;e.__dew_init?.();assert.equal(e.main(),42);",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/hit.wasm"
+    ],
+    "seconds": 0.02985821101174224,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "optimize",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/plain.wasm",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/standalone.wasm"
+    ],
+    "seconds": 0.0362220620008884,
+    "returncode": 0,
+    "stdout": "wrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/standalone.wasm (Starshine speed)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "node",
+      "-e",
+      "const fs=require(\"node:fs\"),assert=require(\"node:assert/strict\");const e=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))).exports;e.__dew_init?.();assert.equal(e.main(),42);",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/standalone.wasm"
+    ],
+    "seconds": 0.03143866699247155,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "optimize",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/plain.wasm",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/standalone.wasm"
+    ],
+    "seconds": 0.06284442899050191,
+    "returncode": 0,
+    "stdout": "wrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/standalone.wasm (Starshine speed)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "node",
+      "-e",
+      "const fs=require(\"node:fs\"),assert=require(\"node:assert/strict\");const e=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))).exports;e.__dew_init?.();assert.equal(e.main(),42);",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/standalone.wasm"
+    ],
+    "seconds": 0.027593674007221125,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "optimize",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/plain.wasm",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/standalone.wasm",
+      "--optimize",
+      "none"
+    ],
+    "seconds": 0.03224494800087996,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "optimize",
+      "--print-passes"
+    ],
+    "seconds": 0.03216986700135749,
+    "returncode": 0,
+    "stdout": "{\"version\":1,\"profile\":\"speed\",\"optimizeLevel\":4,\"shrinkLevel\":1,\"passes\":[\"duplicate-function-elimination\",\"precompute\",\"inlining\",\"local-cse\",\"simplify-locals-nostructure\",\"coalesce-locals\",\"vacuum\",\"remove-unused-module-elements\",\"memory-packing\",\"reorder-locals\",\"strip-debug\"]}\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "run",
+      "$DEWDROP/.tmp/cli-optimization/tests/run-pass/hello.dew",
+      "--optimize",
+      "speed"
+    ],
+    "seconds": 3.726579715992557,
+    "returncode": 0,
+    "stdout": "wrote $DEWDROP/.tmp/cli-optimization/.tmp/dew-run-1345979.wasm.dew-raw-1345979 (2319 bytes)\nrun-pass:hello\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/dew-run-1345979.wasm (Starshine speed)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "test",
+      "--manifest",
+      "$DEWDROP/.tmp/cli-optimization/tests/cli/test-package/dew.modules.json",
+      "--optimize",
+      "speed"
+    ],
+    "seconds": 0.5986447369941743,
+    "returncode": 0,
+    "stdout": "wrote self-describing Dew test module\nDew tests passed: 2\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/dew-test-1384426.wasm (Starshine speed)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "test",
+      "--manifest",
+      "$DEWDROP/.tmp/cli-optimization/tests/cli/test-package/dew.modules.json",
+      "--optimize",
+      "speed",
+      "--list"
+    ],
+    "seconds": 0.39044247899437323,
+    "returncode": 0,
+    "stdout": "wrote self-describing Dew test module\nfixture.library::tests/cli/test-package/library_test.dew::library answer\nfixture.main::tests/cli/test-package/main_test.dew::linked answer\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/dew-test-1391073.wasm (Starshine speed)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "--emit",
+      "wat",
+      "--optimize",
+      "speed",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wat"
+    ],
+    "seconds": 0.5541410599980736,
+    "returncode": 0,
+    "stdout": "wrote $DEWDROP/.tmp/cli-optimization/.tmp/dew-emit-wat-1395453.wasm.dew-raw-1395453 (513 bytes)\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/dew-emit-wat-1395453.wasm (Starshine speed)\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wat (652 bytes)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "wasm-tools",
+      "parse",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wat",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/standalone.wasm"
+    ],
+    "seconds": 0.004259626002749428,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "node",
+      "-e",
+      "const fs=require(\"node:fs\"),assert=require(\"node:assert/strict\");const e=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))).exports;e.__dew_init?.();assert.equal(e.main(),42);",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/standalone.wasm"
+    ],
+    "seconds": 0.027926943002967164,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/deep.wasm",
+      "--optimize",
+      "speed-deep",
+      "--cache-report"
+    ],
+    "seconds": 0.5728448300069431,
+    "returncode": 0,
+    "stdout": "parse event cache: bypassed by exact program hit\nstandard interface cache: bypassed by exact program hit\nbody inference cache: bypassed by exact program hit\nlayout and fragment cache: bypassed by exact program hit\ncompilation cache pack: exact hit, reads 1, hits 1, misses 0\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/deep.wasm.dew-raw-1401576 (513 bytes)\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/deep.wasm (Starshine speed-deep)\nbuild output cache: miss 1e15424d274bea22b8dbd8498dacf6060f83ca5aff783ba4708905e8970ead4e\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/deep.wasm",
+      "--optimize",
+      "speed-deep",
+      "--cache-report"
+    ],
+    "seconds": 0.21296731899201404,
+    "returncode": 0,
+    "stdout": "build output cache: hit 1e15424d274bea22b8dbd8498dacf6060f83ca5aff783ba4708905e8970ead4e\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/deep.wasm (422 bytes)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "node",
+      "-e",
+      "const fs=require(\"node:fs\"),assert=require(\"node:assert/strict\");const e=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))).exports;e.__dew_init?.();assert.equal(e.main(),42);",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/deep.wasm"
+    ],
+    "seconds": 0.032744070995249785,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "optimize",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/plain.wasm",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/deep.wasm",
+      "--optimize",
+      "speed-deep"
+    ],
+    "seconds": 0.032403559001977555,
+    "returncode": 0,
+    "stdout": "wrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/deep.wasm (Starshine speed-deep)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "node",
+      "-e",
+      "const fs=require(\"node:fs\"),assert=require(\"node:assert/strict\");const e=new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[1]))).exports;e.__dew_init?.();assert.equal(e.main(),42);",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/deep.wasm"
+    ],
+    "seconds": 0.03182781000214163,
+    "returncode": 0,
+    "stdout": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "test",
+      "--manifest",
+      "$DEWDROP/.tmp/cli-optimization/tests/cli/test-package/dew.modules.json",
+      "--optimize",
+      "speed-deep"
+    ],
+    "seconds": 0.3790761639975244,
+    "returncode": 0,
+    "stdout": "wrote self-describing Dew test module\nDew tests passed: 2\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/dew-test-1411670.wasm (Starshine speed-deep)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "test",
+      "--manifest",
+      "$DEWDROP/.tmp/cli-optimization/tests/cli/test-package/dew.modules.json",
+      "--optimize",
+      "speed-deep",
+      "--list"
+    ],
+    "seconds": 0.3785604290023912,
+    "returncode": 0,
+    "stdout": "wrote self-describing Dew test module\nfixture.library::tests/cli/test-package/library_test.dew::library answer\nfixture.main::tests/cli/test-package/main_test.dew::linked answer\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/dew-test-1416332.wasm (Starshine speed-deep)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm",
+      "--starshine-pass",
+      "unknown-dew-pass"
+    ],
+    "seconds": 0.5502181960036978,
+    "returncode": 1,
+    "stdout": "wrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm.dew-raw-1420710 (513 bytes)\nStarshine failed for passes: unknown-dew-pass\noptimizer input retained at $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm.dew-raw-1420710\n",
+    "stderr": "error: unknown pass flag: unknown-dew-pass\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm",
+      "--emit",
+      "hir",
+      "--optimize",
+      "speed"
+    ],
+    "seconds": 0.23533998799393885,
+    "returncode": 2,
+    "stdout": "dew: Starshine optimization requires --emit wasm or --emit wat\n",
+    "stderr": "",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm",
+      "--optimize",
+      "speed",
+      "--cache-report"
+    ],
+    "seconds": 0.47582113300450146,
+    "returncode": 0,
+    "stdout": "parse event cache: bypassed by exact program hit\nstandard interface cache: bypassed by exact program hit\nbody inference cache: bypassed by exact program hit\nlayout and fragment cache: bypassed by exact program hit\ncompilation cache pack: exact hit, reads 1, hits 1, misses 0\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm.dew-raw-1429029 (513 bytes)\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm (Starshine speed)\nbuild output cache: miss 09d3f3446bb6195188009d2e055eb87bf80d0b81607e32fc18965e2f6073c32e\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm",
+      "--optimize",
+      "speed",
+      "--cache-report"
+    ],
+    "seconds": 0.10924701699696016,
+    "returncode": 0,
+    "stdout": "build output cache: hit 09d3f3446bb6195188009d2e055eb87bf80d0b81607e32fc18965e2f6073c32e\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm (422 bytes)\n",
+    "performance_bug": false
+  },
+  {
+    "command": [
+      "$DEWDROP/.tmp/cli-optimization/tools/dew",
+      "build",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/main.dew",
+      "-o",
+      "$DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm",
+      "--optimize",
+      "speed",
+      "--cache-report"
+    ],
+    "seconds": 0.4699076149991015,
+    "returncode": 0,
+    "stdout": "parse event cache: bypassed by exact program hit\nstandard interface cache: bypassed by exact program hit\nbody inference cache: bypassed by exact program hit\nlayout and fragment cache: bypassed by exact program hit\ncompilation cache pack: exact hit, reads 1, hits 1, misses 0\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm.dew-raw-1435512 (513 bytes)\nwrote $DEWDROP/.tmp/cli-optimization/.tmp/cli-optimization-jsb4lb8y/fast.wasm (Starshine speed)\nbuild output cache: miss 3b0e13de7b658f1a4ec1b42c9825c143aaafc5896667354c4d831de3af63827b\n",
+    "performance_bug": false
+  }
+]
