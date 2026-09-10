@@ -79,3 +79,38 @@ cleanup removes a `return` that discards values below the result on the operand
 stack. Falling through the function leaves those values on the stack and creates
 invalid Wasm. A two-parameter, one-result function reproduces the failure. The
 regression is in the CLI final cleanup, not the public `vacuum` pass alone.
+
+## Terminal return fix
+
+Starshine commit `f56444542` fixes both unconditional removal sites: the final
+size candidate in `src/passes/pass_manager.mbt` and the final encoder cleanup in
+`src/cmd/cmd.mbt`. Each collects changed functions and validates the candidate
+fallthroughs with one shared module environment. Functions that need to discard
+extra stack values retain their return. Ordinary redundant returns still go.
+The CLI regression uses a raw instruction array because WAT parsing can
+normalize away the failing shape before the test reaches the encoder.
+
+Both regressions failed before their respective fixes. The pinned native suite
+then passed **10,985/10,985 tests**, in **334.775 seconds**. A large existing DAE
+threshold test spent minutes repeating type lookups; its saved stack is in
+`data/starshine-2026-09-10/slow-native-test.txt`. The fixed release build took
+173.200 seconds. These exceed the 30 second compiler activity target.
+`moon info starshine-mb/src/cmd starshine-mb/src/passes` passed in 3.346 seconds,
+with no public API change. The native debug generator build took 26.675 seconds.
+
+The dedicated aggregate Vacuum GenValid profile compared 10,000 cases at seed
+`0x5eed` against Binaryen 131 in 43.566 seconds. It used the explicit release
+Starshine binary and eight subprocess workers. There were 7,830 normalized
+matches and no validation, generator, or command failures. The other 2,170
+cases belong to two already documented smaller-output families: 1,080 hazard
+cases at -2 bytes and 1,090 local-set prefix cases at -1 byte. All 20 saved
+differences replay byte-identically with the original CLI. This classifies them
+as pre-existing differences; this generated lane does not prove execution.
+Total canonical bytes: Starshine 509,081; Binaryen 512,331.
+
+The fixed release passed all 405 saved modules in Node and Wago and all 68
+library modules in Node for O4s, prune, inline-prune, cse-prune,
+precompute-prune, inline-cse, inline-fold, and fold-inline. This is 3,240
+optimized fixture modules and 544 optimized library modules, each checked
+against the same baseline assertions. The source compiler failures above stay
+separate and visible.
