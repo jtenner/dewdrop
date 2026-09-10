@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "commands": [
+    {
+      "command": [
+        "moon",
+        "info",
+        "starshine-mb/src/cmd",
+        "starshine-mb/src/passes"
+      ],
+      "seconds": 3.3460687639963,
+      "returncode": 0
+    },
+    {
+      "command": [
+        "moon",
+        "build",
+        "--target",
+        "native",
+        "starshine-mb/src/fuzz"
+      ],
+      "seconds": 26.67535182100255,
+      "returncode": 0
+    }
+  ],
+  "suite": {
+    "command": "tools/test-starshine-native.sh",
+    "passed": 10985,
+    "failed": 0,
+    "seconds": 334.775,
+    "log_tail": " [0001]\n       \u256d\u2500[ $DEWDROP/starshine-mb/src/passes/pass_manager_wbtest.mbt:18960:4 ]\n       \u2502\n 18960 \u2502 fn pass_manager_test_debug_artifact_native_apply_simplify_locals_roundtrip() -> @lib.Module {\n       \u2502    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n       \u2502                                       \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_value): Unused function 'pass_manager_test_debug_artifact_native_apply_simplify_locals_roundtrip'\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f\nWarning: [0001]\n    \u256d\u2500[ $DEWDROP/starshine-mb/src/passes/remove_unused_module_elements.mbt:17:4 ]\n    \u2502\n 17 \u2502 fn rume_rewrite_instruction(\n    \u2502    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500  \n    \u2502                \u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Warning (unused_value): Unused function 'rume_rewrite_instruction'\n\u2500\u2500\u2500\u2500\u256f\nwarning: no passes specified, not doing any work\nerror: final module validate: function body result stack underflow: expected stack=[I32] actual stack=[]; body=(end)\n\nOffending function idx=(Func 0)\nfunc code[0] abs[0]\n  type_idx: (Type 0 (Func [] -> [I32]))\n  params: []\n  results: [I32]\n  locals:\n    <none>\n  body_raw:\n    (end)\n\nTotal tests: 10985, passed: 10985, failed: 0.\n"
+  },
+  "release_build_seconds": [
+    187.591,
+    176.198,
+    173.2
+  ]
+}

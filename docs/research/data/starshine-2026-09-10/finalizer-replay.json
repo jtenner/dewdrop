@@ -1,0 +1,164 @@
+[
+  {
+    "command": [
+      "$DEWDROP/_build/native/debug/build/jtenner/starshine/cmd/cmd.exe",
+      "--optimize-level",
+      "4",
+      "--shrink-level",
+      "1",
+      "--optimize",
+      "$DEWDROP/.tmp/starshine-experiments/repro-0.wat",
+      "-o",
+      "$DEWDROP/.tmp/starshine-experiments/repro-0.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.004261125999619253,
+    "stderr": "",
+    "stdout": "",
+    "timeout": false
+  },
+  {
+    "command": [
+      "wasm-tools",
+      "validate",
+      "--features",
+      "all",
+      "$DEWDROP/.tmp/starshine-experiments/repro-0.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.003310772000986617,
+    "stderr": "",
+    "stdout": "",
+    "timeout": false
+  },
+  {
+    "command": [
+      "$DEWDROP/_build/native/debug/build/jtenner/starshine/cmd/cmd.exe",
+      "--optimize-level",
+      "4",
+      "--shrink-level",
+      "1",
+      "--optimize",
+      "$DEWDROP/.tmp/starshine-experiments/repro-1.wat",
+      "-o",
+      "$DEWDROP/.tmp/starshine-experiments/repro-1.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.003912237996701151,
+    "stderr": "",
+    "stdout": "",
+    "timeout": false
+  },
+  {
+    "command": [
+      "wasm-tools",
+      "validate",
+      "--features",
+      "all",
+      "$DEWDROP/.tmp/starshine-experiments/repro-1.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.0026551840055617504,
+    "stderr": "",
+    "stdout": "",
+    "timeout": false
+  },
+  {
+    "command": [
+      "$DEWDROP/_build/native/debug/build/jtenner/starshine/cmd/cmd.exe",
+      "--optimize-level",
+      "4",
+      "--shrink-level",
+      "1",
+      "--optimize",
+      "$DEWDROP/.tmp/starshine-committed-library/probes/constructor_evaluations/baseline.wasm",
+      "-o",
+      "$DEWDROP/.tmp/starshine-experiments/constructor_evaluations.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.002941644001111854,
+    "stderr": "",
+    "stdout": "",
+    "timeout": false
+  },
+  {
+    "command": [
+      "wasm-tools",
+      "validate",
+      "--features",
+      "all",
+      "$DEWDROP/.tmp/starshine-experiments/constructor_evaluations.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.0028371529988362454,
+    "stderr": "",
+    "stdout": "",
+    "timeout": false
+  },
+  {
+    "command": [
+      "node",
+      "tools/check-constructor-evaluations.mjs",
+      "$DEWDROP/.tmp/starshine-experiments/constructor_evaluations.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.02072026999667287,
+    "stderr": "",
+    "stdout": "native constructor evaluation checks passed: 9\n",
+    "timeout": false
+  },
+  {
+    "command": [
+      "$DEWDROP/_build/native/debug/build/jtenner/starshine/cmd/cmd.exe",
+      "--optimize-level",
+      "4",
+      "--shrink-level",
+      "1",
+      "--optimize",
+      "$DEWDROP/.tmp/starshine-committed-library/probes/member_calls/baseline.wasm",
+      "-o",
+      "$DEWDROP/.tmp/starshine-experiments/member_calls.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.004208107995509636,
+    "stderr": "",
+    "stdout": "",
+    "timeout": false
+  },
+  {
+    "command": [
+      "wasm-tools",
+      "validate",
+      "--features",
+      "all",
+      "$DEWDROP/.tmp/starshine-experiments/member_calls.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.003091748003498651,
+    "stderr": "",
+    "stdout": "",
+    "timeout": false
+  },
+  {
+    "command": [
+      "node",
+      "tools/check-member-calls.mjs",
+      "$DEWDROP/.tmp/starshine-experiments/member_calls.fixed-debug.wasm"
+    ],
+    "performance_bug": false,
+    "returncode": 0,
+    "seconds": 0.02624195699900156,
+    "stderr": "",
+    "stdout": "native member/index checks passed: 10\n",
+    "timeout": false
+  }
+]

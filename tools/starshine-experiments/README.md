@@ -107,9 +107,9 @@ python3 tools/starshine-experiments/summarize.py \
   --output .tmp/starshine-summary
 ```
 
-Supply every report wanted in `summary.json` on the same call. Fixture evidence
-uses JSONL, with one metadata line and one line per case. Benchmark evidence
-keeps every timed sample. Module bytes, bytes without custom sections, and code
+Supply every report wanted in `summary.json` on the same call. Evidence uses
+JSONL, with one metadata line and one line per case or workload. Benchmark
+evidence keeps every timed sample. Module bytes, bytes without custom sections, and code
 section bytes are separate, so metadata removal cannot appear as a code win.
 
 Results and Wasm files remain under `.tmp/`. `report.json`

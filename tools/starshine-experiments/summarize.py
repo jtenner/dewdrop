@@ -103,11 +103,12 @@ def main():
         # Portable paths keep the checked-in evidence usable from another checkout.
         portable = json.loads(json.dumps(result).replace(str(ROOT), "$DEWDROP"))
         args.output.mkdir(parents=True, exist_ok=True)
-        case_key = "fixtures" if "fixtures" in portable else "cases" if "cases" in portable else None
+        case_key = next((key for key in ["fixtures", "cases", "workloads"] if key in portable), None)
         if case_key:
             cases = portable.pop(case_key)
             lines = [json.dumps({"metadata": portable}, sort_keys=True, separators=(",", ":"))]
-            lines.extend(json.dumps({"case": row}, sort_keys=True, separators=(",", ":")) for row in cases)
+            row_key = "workload" if case_key == "workloads" else "case"
+            lines.extend(json.dumps({row_key: row}, sort_keys=True, separators=(",", ":")) for row in cases)
             (args.output / f"{name}.jsonl").write_text("\n".join(lines) + "\n")
         else:
             write_json(args.output / f"{name}.json", portable)

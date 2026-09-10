@@ -1,0 +1,30 @@
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+moonbit_decref (ptr=0x4520e57bc08) at /home/jtenner/.moon/lib/runtime/runtime.c:416
+416	  if (raw_rc_is_shared(rc)) {
+#0  moonbit_decref (ptr=0x4520e57bc08) at /home/jtenner/.moon/lib/runtime/runtime.c:416
+#1  0x000055fb695293db in _M0MPC15array5Array3setGbE () at /home/jtenner/.moon/lib/core/builtin/array.mbt:267
+#2  0x000055fb688f73cd in _M0FP37jtenner9starshine6passes26dae__exposure__to__escaped () at $DEWDROP/starshine-mb/src/passes/dead_argument_elimination.mbt:6611
+#3  0x000055fb688f6a1e in _M0FP37jtenner9starshine6passes49dae__collect__current__function__analysis_2einner () at $DEWDROP/starshine-mb/src/passes/dead_argument_elimination.mbt:7035
+#4  0x000055fb688f6909 in _M0FP37jtenner9starshine6passes41dae__collect__current__function__analysis ()
+#5  0x000055fb688f6578 in _M0FP37jtenner9starshine6passes48dae__collect__module__boundary__snapshot_2einner () at $DEWDROP/starshine-mb/src/passes/dead_argument_elimination.mbt:2665
+#6  0x000055fb688f6492 in _M0FP37jtenner9starshine6passes40dae__collect__module__boundary__snapshot ()
+#7  0x000055fb688d5c83 in _M0FP37jtenner9starshine6passes42dae__current__boundary__graph__new_2einner () at $DEWDROP/starshine-mb/src/passes/dead_argument_elimination.mbt:2769
+#8  0x000055fb688d5c22 in _M0FP37jtenner9starshine6passes34dae__current__boundary__graph__new ()
+#9  0x000055fb68886e12 in _M0FP37jtenner9starshine6passes45dae__apply__unread__param__batch__transaction () at $DEWDROP/starshine-mb/src/passes/dead_argument_elimination.mbt:20771
+#10 0x000055fb68836268 in _M0FP37jtenner9starshine6passes22dae__run__core_2einner () at $DEWDROP/starshine-mb/src/passes/dead_argument_elimination.mbt:47902
+#11 0x000055fb6878af01 in _M0FP37jtenner9starshine6passes64run__hot__pipeline__apply__dae__optimizing__module__pass_2einner () at $DEWDROP/starshine-mb/src/passes/pass_manager.mbt:90670
+#12 0x000055fb6878a487 in _M0FP37jtenner9starshine6passes56run__hot__pipeline__apply__dae__optimizing__module__pass () at $DEWDROP/starshine-mb/src/passes/pass_manager.mbt:90528
+#13 0x000055fb68784116 in _M0FP37jtenner9starshine6passes39run__hot__pipeline__apply__module__pass () at $DEWDROP/starshine-mb/src/passes/pass_manager.mbt:91151
+#14 0x000055fb68780d34 in _M0FP37jtenner9starshine6passes18run__hot__pipeline () at $DEWDROP/starshine-mb/src/passes/optimize.mbt:1403
+#15 0x000055fb6877fb23 in _M0FP37jtenner9starshine6passes33pass__test__run__pipeline_2einner () at $DEWDROP/starshine-mb/src/passes/pass_test_helpers.mbt:38
+#16 0x000055fb6877faaa in _M0FP37jtenner9starshine6passes25pass__test__run__pipeline () at $DEWDROP/starshine-mb/src/passes/pass_test_helpers.mbt:36
+#17 0x000055fb676df761 in _M0FP37jtenner9starshine22passes__blackbox__test22dae__test__run_2einner () at $DEWDROP/starshine-mb/src/passes/dae_optimizing_test.mbt:119
+#18 0x000055fb67660658 in _M0FP37jtenner9starshine22passes__blackbox__test61____test__6461655f6f7074696d697a696e675f746573742e6d6274__236 () at $DEWDROP/starshine-mb/src/passes/dae_optimizing_test.mbt:12450
+#19 0x000055fb674ecb90 in _M0FP37jtenner9starshine22passes__blackbox__test71____test__6461655f6f7074696d697a696e675f746573742e6d6274__236_2edyncall ()
+#20 0x000055fb67520fd1 in _M0FP37jtenner9starshine22passes__blackbox__test45moonbit__test__driver__internal__catch__error () at $DEWDROP/starshine-mb/src/passes/__generated_driver_for_blackbox_test.mbt:432
+#21 0x000055fb67520ecd in _M0IP37jtenner9starshine22passes__blackbox__test41MoonBit__Test__Driver__Internal__No__ArgsP37jtenner9starshine22passes__blackbox__test21MoonBit__Test__Driver9run__test () at $DEWDROP/starshine-mb/src/passes/__generated_driver_for_blackbox_test.mbt:6546
+#22 0x000055fb67520349 in _M0FP37jtenner9starshine22passes__blackbox__test44moonbit__test__driver__internal__do__execute () at $DEWDROP/starshine-mb/src/passes/__generated_driver_for_blackbox_test.mbt:6719
+#23 0x000055fb69709991 in moonbit_main () at $DEWDROP/starshine-mb/src/passes/__generated_driver_for_blackbox_test.mbt:6562
+#24 0x000055fb697099f3 in main ()
+[Inferior 1 (process 1211162) detached]

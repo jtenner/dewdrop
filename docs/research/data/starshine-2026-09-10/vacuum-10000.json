@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "measurement": {
+    "command": [
+      "bun",
+      "scripts/pass-fuzz-compare.ts",
+      "--count",
+      "10000",
+      "--seed",
+      "0x5eed",
+      "--pass",
+      "vacuum",
+      "--gen-valid-profile",
+      "vacuum",
+      "--out-dir",
+      "$DEWDROP/.tmp/starshine-vacuum-10000",
+      "--jobs",
+      "auto",
+      "--max-subprocesses",
+      "8",
+      "--max-mismatch-artifacts",
+      "20",
+      "--starshine-bin",
+      "$DEWDROP/_build/native/release/build/jtenner/starshine/cmd/cmd.exe",
+      "--gen-valid-bin",
+      "$DEWDROP/_build/native/debug/build/jtenner/starshine/fuzz/fuzz.exe",
+      "--wasm-opt-bin",
+      "$DEWDROP/.tmp/starshine-binaryen-131/binaryen-version_131/bin/wasm-opt",
+      "--require-binaryen-version",
+      "131",
+      "--max-failures",
+      "10001",
+      "--keep-going-after-command-failures",
+      "--no-reduce-mismatches"
+    ],
+    "seconds": 43.566464830997575,
+    "returncode": 0
+  },
+  "toolchain": {
+    "schema": "starshine.optimizer-toolchain.v1",
+    "requiredBinaryenVersion": "131",
+    "binaryen": {
+      "command": "$DEWDROP/.tmp/starshine-binaryen-131/binaryen-version_131/bin/wasm-opt",
+      "resolvedPath": "$DEWDROP/.tmp/starshine-binaryen-131/binaryen-version_131/bin/wasm-opt",
+      "versionOutput": "wasm-opt version 131 (version_131)",
+      "version": "131",
+      "sha256": "bad4b6524b2c8e4b27b9aa69bde1a4b9a05ec8887c77ef0d34300f5825acd97c"
+    }
+  },
+  "summary": {
+    "schema": "starshine.fuzz-summary-report.v1",
+    "suite": "compare-pass",
+    "profile": "vacuum+gen-valid",
+    "seed": "0x5eed",
+    "summary": {
+      "features": {
+        "optional_input_has_call": 6661,
+        "optional_input_mutates_memory": 1080,
+        "optional_input_has_unreachable": 5568,
+        "optional_input_may_trap": 7772
+      },
+      "opcodes": {},
+      "strategies": {
+        "required_requested_cases": 10000,
+        "required_compared_cases": 10000,
+        "optional_generator_gen_valid": 10000,
+        "optional_gen_valid_selected_profile_vacuum-terminal-unreachable": 1160,
+        "optional_gen_valid_selected_profile_vacuum-constant-result-if": 1161,
+        "optional_gen_valid_selected_profile_vacuum-call-prefix-continuation": 1138,
+        "optional_gen_valid_selected_profile_vacuum-dropped-parent-effects": 1124,
+        "optional_gen_valid_selected_profile_vacuum-core": 2179,
+        "optional_gen_valid_selected_profile_vacuum-structural-wrappers": 1068,
+        "optional_gen_valid_selected_profile_vacuum-hazard-boundary": 1080,
+        "optional_gen_valid_selected_profile_vacuum-localset-prefix-preserve": 1090
+      },
+      "statuses": {
+        "match": 7830,
+        "normalized-match": 7830,
+        "mismatch": 2170
+      },
+      "failures": {
+        "mismatch": 2170
+      },
+      "timings": {},
+      "artifacts": {
+        "failure_dirs": 20,
+        "gen_valid_manifest": 1
+      }
+    }
+  },
+  "log": "Wrote pass fuzz compare artifacts to $DEWDROP/.tmp/starshine-vacuum-10000\nJobs: 8\nCompared cases: 10000/10000\nNormalized matches: 7830\nCompare-normalized matches: 0\nValidation failures: 0\nProperty failures: 0\nCache: wasm-smith 0 hits/0 misses; Binaryen 9415 hits/585 misses; Binaryen failures 0 hits/0 misses; semantic-v2 0 hits/0 misses\nGenerator failures: 0\nCommand failures: 0\nMismatches: 2170\nRaw sizes: Starshine 509081 bytes; Binaryen 512331 bytes; smaller/equal/larger 2170/7830/0\nCanonical sizes: Starshine 509081 bytes; Binaryen 512331 bytes; smaller/equal/larger 2170/7830/0\nMismatch artifacts: persisted 20; suppressed 2150; cap 20\n",
+  "original_replays": [
+    {
+      "case": "case-000019-gen-valid",
+      "seconds": 0.0023162159995990805,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000027-gen-valid",
+      "seconds": 0.0022136459956527688,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000037-gen-valid",
+      "seconds": 0.002003695997700561,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000042-gen-valid",
+      "seconds": 0.0018122600013157353,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000052-gen-valid",
+      "seconds": 0.0016375849954783916,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000055-gen-valid",
+      "seconds": 0.0017241059977095574,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000063-gen-valid",
+      "seconds": 0.0016865350044099614,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000065-gen-valid",
+      "seconds": 0.0020608510021702386,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000067-gen-valid",
+      "seconds": 0.002072964001854416,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000069-gen-valid",
+      "seconds": 0.002086189000692684,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000071-gen-valid",
+      "seconds": 0.002030566000030376,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000074-gen-valid",
+      "seconds": 0.00197850900440244,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000076-gen-valid",
+      "seconds": 0.001852503999543842,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000092-gen-valid",
+      "seconds": 0.0019995780021417886,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000096-gen-valid",
+      "seconds": 0.001792682996892836,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000101-gen-valid",
+      "seconds": 0.002138135998393409,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000105-gen-valid",
+      "seconds": 0.0019392060057725757,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000111-gen-valid",
+      "seconds": 0.0018836419985746033,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000117-gen-valid",
+      "seconds": 0.0017941460027941503,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    },
+    {
+      "case": "case-000123-gen-valid",
+      "seconds": 0.00218476200097939,
+      "returncode": 0,
+      "same_output": true,
+      "stderr": ""
+    }
+  ]
+}

@@ -1,0 +1,356 @@
+{
+  "commands": [
+    {
+      "program": "wasm-tools",
+      "seconds": 0.002521,
+      "returncode": 0
+    },
+    {
+      "program": "cmd.exe",
+      "seconds": 0.001513,
+      "returncode": 0
+    }
+  ],
+  "fixture": "control-flow/short-circuit-runtime",
+  "pipeline": "cleanup",
+  "prefixes": [
+    {
+      "commands": [
+        {
+          "program": "cmd.exe",
+          "seconds": 0.001728,
+          "returncode": 0
+        },
+        {
+          "program": "wasm-tools",
+          "seconds": 0.002926,
+          "returncode": 0
+        },
+        {
+          "program": "node",
+          "seconds": 0.021599,
+          "returncode": 0
+        }
+      ],
+      "passes": [],
+      "status": "passed"
+    },
+    {
+      "commands": [
+        {
+          "program": "cmd.exe",
+          "seconds": 0.002241,
+          "returncode": 0
+        },
+        {
+          "program": "wasm-tools",
+          "seconds": 0.003095,
+          "returncode": 0
+        },
+        {
+          "program": "node",
+          "seconds": 0.019998,
+          "returncode": 0
+        }
+      ],
+      "passes": [
+        "duplicate-function-elimination"
+      ],
+      "status": "passed"
+    },
+    {
+      "commands": [
+        {
+          "program": "cmd.exe",
+          "seconds": 0.002378,
+          "returncode": 0
+        },
+        {
+          "program": "wasm-tools",
+          "seconds": 0.003398,
+          "returncode": 0
+        },
+        {
+          "program": "node",
+          "seconds": 0.019973,
+          "returncode": 0
+        }
+      ],
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute"
+      ],
+      "status": "passed"
+    },
+    {
+      "commands": [
+        {
+          "program": "cmd.exe",
+          "seconds": 0.002865,
+          "returncode": 0
+        },
+        {
+          "program": "wasm-tools",
+          "seconds": 0.003156,
+          "returncode": 0
+        },
+        {
+          "program": "node",
+          "seconds": 0.019558,
+          "returncode": 0
+        }
+      ],
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "optimize-instructions"
+      ],
+      "status": "passed"
+    },
+    {
+      "commands": [
+        {
+          "program": "cmd.exe",
+          "seconds": 0.003821,
+          "returncode": 0
+        },
+        {
+          "program": "wasm-tools",
+          "seconds": 0.003219,
+          "returncode": 0
+        },
+        {
+          "program": "node",
+          "seconds": 2.005006,
+          "returncode": null,
+          "command": [
+            "node",
+            "$DEWDROP/tools/module-snapshots/run-main.mjs",
+            "$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-4.wasm",
+            "{}",
+            "production"
+          ],
+          "stdout": "",
+          "stderr": "",
+          "timeout": true
+        }
+      ],
+      "error": "timeout after 2s: ['node', '$DEWDROP/tools/module-snapshots/run-main.mjs', '$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-4.wasm', '{}', 'production']\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "optimize-instructions",
+        "simplify-locals"
+      ],
+      "status": "failed"
+    },
+    {
+      "commands": [
+        {
+          "program": "cmd.exe",
+          "seconds": 0.003799,
+          "returncode": 0
+        },
+        {
+          "program": "wasm-tools",
+          "seconds": 0.003246,
+          "returncode": 0
+        },
+        {
+          "program": "node",
+          "seconds": 2.00493,
+          "returncode": null,
+          "command": [
+            "node",
+            "$DEWDROP/tools/module-snapshots/run-main.mjs",
+            "$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-5.wasm",
+            "{}",
+            "production"
+          ],
+          "stdout": "",
+          "stderr": "",
+          "timeout": true
+        }
+      ],
+      "error": "timeout after 2s: ['node', '$DEWDROP/tools/module-snapshots/run-main.mjs', '$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-5.wasm', '{}', 'production']\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "optimize-instructions",
+        "simplify-locals",
+        "dead-code-elimination"
+      ],
+      "status": "failed"
+    },
+    {
+      "commands": [
+        {
+          "program": "cmd.exe",
+          "seconds": 0.003993,
+          "returncode": 0
+        },
+        {
+          "program": "wasm-tools",
+          "seconds": 0.003198,
+          "returncode": 0
+        },
+        {
+          "program": "node",
+          "seconds": 2.004711,
+          "returncode": null,
+          "command": [
+            "node",
+            "$DEWDROP/tools/module-snapshots/run-main.mjs",
+            "$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-6.wasm",
+            "{}",
+            "production"
+          ],
+          "stdout": "",
+          "stderr": "",
+          "timeout": true
+        }
+      ],
+      "error": "timeout after 2s: ['node', '$DEWDROP/tools/module-snapshots/run-main.mjs', '$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-6.wasm', '{}', 'production']\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "optimize-instructions",
+        "simplify-locals",
+        "dead-code-elimination",
+        "vacuum"
+      ],
+      "status": "failed"
+    },
+    {
+      "commands": [
+        {
+          "program": "cmd.exe",
+          "seconds": 0.004106,
+          "returncode": 0
+        },
+        {
+          "program": "wasm-tools",
+          "seconds": 0.003144,
+          "returncode": 0
+        },
+        {
+          "program": "node",
+          "seconds": 2.004906,
+          "returncode": null,
+          "command": [
+            "node",
+            "$DEWDROP/tools/module-snapshots/run-main.mjs",
+            "$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-7.wasm",
+            "{}",
+            "production"
+          ],
+          "stdout": "",
+          "stderr": "",
+          "timeout": true
+        }
+      ],
+      "error": "timeout after 2s: ['node', '$DEWDROP/tools/module-snapshots/run-main.mjs', '$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-7.wasm', '{}', 'production']\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "optimize-instructions",
+        "simplify-locals",
+        "dead-code-elimination",
+        "vacuum",
+        "reorder-locals"
+      ],
+      "status": "failed"
+    },
+    {
+      "commands": [
+        {
+          "program": "cmd.exe",
+          "seconds": 0.003898,
+          "returncode": 0
+        },
+        {
+          "program": "wasm-tools",
+          "seconds": 0.003358,
+          "returncode": 0
+        },
+        {
+          "program": "node",
+          "seconds": 2.004789,
+          "returncode": null,
+          "command": [
+            "node",
+            "$DEWDROP/tools/module-snapshots/run-main.mjs",
+            "$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-8.wasm",
+            "{}",
+            "production"
+          ],
+          "stdout": "",
+          "stderr": "",
+          "timeout": true
+        }
+      ],
+      "error": "timeout after 2s: ['node', '$DEWDROP/tools/module-snapshots/run-main.mjs', '$DEWDROP/.tmp/starshine-short-circuit-prefix/prefix-8.wasm', '{}', 'production']\n",
+      "passes": [
+        "duplicate-function-elimination",
+        "precompute",
+        "optimize-instructions",
+        "simplify-locals",
+        "dead-code-elimination",
+        "vacuum",
+        "reorder-locals",
+        "strip-debug"
+      ],
+      "status": "failed"
+    }
+  ],
+  "queue": {
+    "optimizeLevel": 4,
+    "passes": [
+      {
+        "name": "duplicate-function-elimination",
+        "ordinal": 0
+      },
+      {
+        "name": "precompute",
+        "ordinal": 1
+      },
+      {
+        "name": "optimize-instructions",
+        "ordinal": 2
+      },
+      {
+        "name": "simplify-locals",
+        "ordinal": 3
+      },
+      {
+        "name": "dead-code-elimination",
+        "ordinal": 4
+      },
+      {
+        "name": "vacuum",
+        "ordinal": 5
+      },
+      {
+        "name": "reorder-locals",
+        "ordinal": 6
+      },
+      {
+        "name": "strip-debug",
+        "ordinal": 7
+      }
+    ],
+    "requested": [
+      "duplicate-function-elimination",
+      "precompute",
+      "optimize-instructions",
+      "simplify-locals",
+      "dead-code-elimination",
+      "vacuum",
+      "reorder-locals",
+      "strip-debug"
+    ],
+    "schema": "starshine.optimizer-expanded-pass-queue.v1",
+    "shrinkLevel": 1
+  },
+  "version": 1
+}
