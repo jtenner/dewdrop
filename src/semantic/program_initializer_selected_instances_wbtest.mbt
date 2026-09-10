@@ -304,3 +304,22 @@ test "startup selected query checks all stored call identities" {
     assert_true(observed)
   }
 }
+
+///|
+test "cross module eager aliases retain their dependency cycle" {
+  let stages = compiler_test_stages(3000UL, [
+    CompilerTestModule::new("snapshot.main", [
+      CompilerTestSource::new(
+        "fixture.dew", b"open fixture.cycle\n\npub let first = second\n\npub fn main() -> I32 {\n  0\n}\n",
+      ),
+    ]),
+    CompilerTestModule::new("fixture.cycle", [
+      CompilerTestSource::new(
+        "cycle.dew", b"open snapshot.main\n\npub let second = first\n",
+      ),
+    ]),
+  ])
+  assert_eq(stages.link.diagnostics, [
+    EagerProgramInitializationCycle(12884901888000UL, 12889196855296UL),
+  ])
+}

@@ -49,3 +49,14 @@ guarded arms do not provide unconditional coverage, even for `if true`. Add an
 unreachable fallback for the remaining variant. Keep the guard optimization and
 trap-order checks. The value fixture now asserts 42 so its return is observed.
 All three source cases pass Node and Wago before and after O4s and fold-inline.
+
+## Startup cycles
+
+Cross-module aliases in a dependency cycle can have no inferred runtime type.
+Physical planning checked that type before it checked the cycle and aborted with
+invariant 301. Separate structural identity/arena checks from the runtime-carrier
+check. Check the selected startup dependency graph first; report a source cycle
+with both declarations. Require valid physical carriers when that graph has no
+cycle. The original source diagnostic is restored without changing its expected
+text. A native red-first regression and both source runs pass; existing malformed
+initializer tests continue to exercise the physical assertion.

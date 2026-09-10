@@ -6,20 +6,31 @@ fn check_program_link_body_identity(
 ) -> Result[PlannedBodyLowering, ProgramFunctionLookupFailure] {
   let failure = fn(code, expected, actual, detail) {
     {
-      ..program_function_lookup_failure(declaration, code, expected, actual, detail),
+      ..program_function_lookup_failure(
+        declaration, code, expected, actual, detail,
+      ),
       module_id: module_.module_id,
       body,
     }
   }
   guard semantic_id_module(declaration) == module_.module_id else {
-    return Err(failure(107, module_.module_id, semantic_id_module(declaration), 0UL))
+    return Err(
+      failure(107, module_.module_id, semantic_id_module(declaration), 0UL),
+    )
   }
   guard semantic_id_module(body) == module_.module_id else {
     return Err(failure(107, module_.module_id, semantic_id_module(body), 1UL))
   }
   let index = semantic_id_local(body)
   guard index >= 0 && index < module_.bodies.length() else {
-    return Err(failure(101, module_.bodies.length().to_uint64(), index.reinterpret_as_uint().to_uint64(), 2UL))
+    return Err(
+      failure(
+        101,
+        module_.bodies.length().to_uint64(),
+        index.reinterpret_as_uint().to_uint64(),
+        2UL,
+      ),
+    )
   }
   let source = module_.bodies[index]
   guard source.body == body else {
@@ -32,27 +43,24 @@ fn check_program_link_body_identity(
 }
 
 ///|
-fn check_program_initializer_source(
+fn check_program_initializer_structure(
   module_ : PlannedModuleLowering,
   declaration : DeclId,
   body : BodyId,
 ) -> Result[PlannedBodyLowering, ProgramFunctionLookupFailure] {
-  let source = match check_program_link_body_identity(module_, declaration, body) {
+  let source = match
+    check_program_link_body_identity(module_, declaration, body) {
     Ok(value) => value
     Err(error) => return Err(error)
   }
   let failure = fn(code, expected, actual, detail) {
     {
-      ..program_function_lookup_failure(declaration, code, expected, actual, detail),
+      ..program_function_lookup_failure(
+        declaration, code, expected, actual, detail,
+      ),
       module_id: module_.module_id,
       body,
     }
-  }
-  match program_specialization_shape_error(source.root_shape) {
-    None => ()
-    Some("generic") => return Err(failure(301, 0UL, 1UL, 5UL))
-    Some("error") => return Err(failure(301, 0UL, 2UL, 5UL))
-    Some(_) => return Err(failure(301, 0UL, 3UL, 5UL))
   }
   match source.kind {
     ModuleLetBody => ()
@@ -66,23 +74,55 @@ fn check_program_initializer_source(
 }
 
 ///|
+// Cyclic aliases may have no inferred value type. Check the dependency graph
+// before requiring a physical carrier; a source cycle is a user diagnostic.
+fn check_program_initializer_source(
+  module_ : PlannedModuleLowering,
+  declaration : DeclId,
+  body : BodyId,
+) -> Result[PlannedBodyLowering, ProgramFunctionLookupFailure] {
+  let source = match
+    check_program_initializer_structure(module_, declaration, body) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
+  let failure = fn(code, expected, actual, detail) {
+    {
+      ..program_function_lookup_failure(
+        declaration, code, expected, actual, detail,
+      ),
+      module_id: module_.module_id,
+      body,
+    }
+  }
+  match program_specialization_shape_error(source.root_shape) {
+    None => ()
+    Some("generic") => return Err(failure(301, 0UL, 1UL, 5UL))
+    Some("error") => return Err(failure(301, 0UL, 2UL, 5UL))
+    Some(_) => return Err(failure(301, 0UL, 3UL, 5UL))
+  }
+  Ok(source)
+}
+
+///|
 fn check_program_link_body_arenas(
   module_ : PlannedModuleLowering,
   source : PlannedBodyLowering,
 ) -> Result[Unit, ProgramFunctionLookupFailure] {
   match check_planned_body_arenas(module_, source, 5) {
     Ok(_) => Ok(())
-    Err(error) => Err({
-      code: error.code,
-      phase: error.phase,
-      module_id: error.module_id,
-      declaration: error.declaration,
-      body: error.body,
-      expression: error.expression,
-      expected: error.expected,
-      actual: error.actual,
-      detail: error.detail,
-    })
+    Err(error) =>
+      Err({
+        code: error.code,
+        phase: error.phase,
+        module_id: error.module_id,
+        declaration: error.declaration,
+        body: error.body,
+        expression: error.expression,
+        expected: error.expected,
+        actual: error.actual,
+        detail: error.detail,
+      })
   }
 }
 

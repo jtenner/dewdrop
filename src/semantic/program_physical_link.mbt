@@ -158,7 +158,14 @@ fn program_initializer_dependencies(
   candidates : Array[PlannedProgramModuleInitializer],
   calls : Map[ProgramSpecializedCallKey, PlannedProgramSpecializedCall],
 ) -> Array[Int] {
-  match check_program_initializer_dependencies(lowering, initializer, initializer_lookup, candidates, calls~) {
+  match
+    check_program_initializer_dependencies(
+      lowering,
+      initializer,
+      initializer_lookup,
+      candidates,
+      calls~,
+    ) {
     Ok(values) => values
     Err(failure) => abort(@debug.to_string(failure))
   }
@@ -182,7 +189,9 @@ fn program_schedule_initializers(
   let dependencies : Array[Array[Int]] = []
   let remaining_dependencies = Array::make(candidates.length(), 0)
   for index, initializer in candidates {
-    let values = program_initializer_dependencies(lowering, initializer, lookup, candidates, calls)
+    let values = program_initializer_dependencies(
+      lowering, initializer, lookup, candidates, calls,
+    )
     dependencies.push(values)
     remaining_dependencies[index] = values.length()
   }
@@ -1421,7 +1430,11 @@ pub fn link_program_wasmgc_fragments(
             if step.test_only && !fragments.modules[module_index].emit_tests {
               continue
             }
-            let source = assert_program_initializer_source(module_, declaration, body)
+            let source = match
+              check_program_initializer_structure(module_, declaration, body) {
+              Ok(value) => value
+              Err(failure) => abort(@debug.to_string(failure))
+            }
             let shape = source.root_shape
             let value_global = match shape {
               UnitPlannedValueShape | NeverPlannedValueShape => -1
@@ -1669,8 +1682,25 @@ pub fn link_program_wasmgc_fragments(
     }
   }
   let scheduled_initializers = program_schedule_initializers(
-    lowering, initializer_candidates, fragments.specialized_calls, diagnostics,
+    lowering,
+    initializer_candidates,
+    fragments.specialized_calls,
+    diagnostics,
   )
+  let has_cycle = diagnostics.any(fn(diagnostic) {
+    diagnostic is EagerProgramInitializationCycle(_, _)
+  })
+  if !has_cycle {
+    for initializer in scheduled_initializers {
+      ignore(
+        assert_program_initializer_source(
+          lowering.modules[initializer.module_index],
+          initializer.declaration,
+          initializer.body,
+        ),
+      )
+    }
+  }
   let initializers : Array[PlannedProgramModuleInitializer] = []
   let mut runtime_initializer_count = 0
   for initializer in scheduled_initializers {
@@ -1739,7 +1769,10 @@ pub fn link_program_wasmgc_fragments(
     if target_index >= 0 {
       match
         record_program_physical_call_target(
-          specialized_call_targets, call, target_index, functions[target_index],
+          specialized_call_targets,
+          call,
+          target_index,
+          functions[target_index],
           fragments.specialized_call_runtime_evidence_parameters,
         ) {
         Ok(_) => ()
