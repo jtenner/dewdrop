@@ -23,6 +23,13 @@ Routine Dewdrop work uses:
 tools/test-native.sh
 ```
 
+The routine lane runs semantic and backend tests one owning file at a time,
+with Moon test execution in serial order. Each target has its own timer. Use
+`DEW_NATIVE_TEST_PACKAGES=semantic tools/test-native.sh` to select packages, or
+pass a Moon test name filter such as `-f '*callback*'` for a focused run.
+The 2026-09-10 source fixture repair run passed 1,333 tests over 229 targets;
+the slowest target took 17.621 seconds.
+
 Large compiler stress tests use:
 
 ```sh
