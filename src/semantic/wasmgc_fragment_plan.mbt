@@ -516,9 +516,7 @@ fn wasmgc_reachable_defined_functions(
       continue
     }
     let body = lowering.bodies[body_index]
-    for
-      expression in body.expressions.start..<(body.expressions.start +
-      body.expressions.length) {
+    for expression in compile_time_owned_expressions(lowering, body) {
       let target = match lowering.expressions[expression].kind {
         PlannedDirectCall(declaration, _, _, _)
         | PlannedTailCall(declaration, _, _, _)
@@ -557,9 +555,7 @@ fn wasmgc_reachable_defined_functions(
       continue
     }
     let body = lowering.bodies[body_index]
-    for
-      expression in body.expressions.start..<(body.expressions.start +
-      body.expressions.length) {
+    for expression in compile_time_owned_expressions(lowering, body) {
       let target = match lowering.expressions[expression].kind {
         PlannedDirectCall(declaration, _, _, _)
         | PlannedTailCall(declaration, _, _, _)

@@ -60,3 +60,13 @@ with both declarations. Require valid physical carriers when that graph has no
 cycle. The original source diagnostic is restored without changing its expected
 text. A native red-first regression and both source runs pass; existing malformed
 initializer tests continue to exercise the physical assertion.
+
+## Callback reachability
+
+The program and module reachability walks visited named-body expressions but
+omitted their lambda bodies. A generic function called from an array callback
+could be emitted while one of its private helpers (`array_min`) was removed.
+Walk the callable's full owned expression set, including its lambdas, for both
+ordinary roots and module initializers. A library-style private helper regression
+failed before the fix and now passes. The array mutation fixture passes in Node
+and Wago with O4s and fold-inline.

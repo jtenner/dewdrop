@@ -182,9 +182,7 @@ fn program_reachable_callable_roots(
         continue
       }
       let body = module_.bodies[body_index]
-      for
-        expression in body.expressions.start..<(body.expressions.start +
-        body.expressions.length) {
+      for expression in compile_time_owned_expressions(module_, body) {
         program_enqueue_expression_evidence(
           lowering, module_, expression, reachable, work,
         )
@@ -226,9 +224,7 @@ fn program_reachable_callable_roots(
         continue
       }
       let body = module_.bodies[body_index]
-      for
-        expression in body.expressions.start..<(body.expressions.start +
-        body.expressions.length) {
+      for expression in compile_time_owned_expressions(module_, body) {
         program_enqueue_expression_evidence(
           lowering, module_, expression, reachable, work,
         )
