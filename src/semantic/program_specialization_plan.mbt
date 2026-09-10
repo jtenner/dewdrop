@@ -702,30 +702,9 @@ fn program_resolve_specialized_shape(
   type_ : BodyTypeId,
   fallback : PlannedValueShape,
 ) -> PlannedValueShape {
-  let resolved_type = if type_ < -1 {
-    -type_ - 2
-  } else if type_ >= 0 && type_ < module_.types.length() {
-    match module_.types[type_] {
-      BodyResolvedType(value) => value
-      _ => -1
-    }
-  } else {
-    -1
-  }
-  if resolved_type >= 0 && resolved_type < module_.resolved_types.length() {
-    match module_.resolved_types[resolved_type] {
-      GenericParameterType(parameter) => {
-        let parameter_local = semantic_id_local(parameter)
-        if generic_parameters.relative_index(parameter_local) is Some(relative) {
-          if relative < specialization.length {
-            return specialization_values[specialization.start + relative]
-          }
-        }
-      }
-      _ => ()
-    }
-  }
-  fallback
+  specialize_planned_body_value_shape(
+    module_, type_, fallback, generic_parameters, specialization_values, specialization,
+  )
 }
 
 ///|

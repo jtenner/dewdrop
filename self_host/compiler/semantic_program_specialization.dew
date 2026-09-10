@@ -522,33 +522,13 @@ fn self_host_program_specialization_argument_shape(
   shapes: Array<SelfHostPlannedValueShape>,
   type_: I32,
 ) -> SelfHostPlannedValueShape {
-  let fallback = self_host_planned_merged_body_value_shape(
-    module_.resolved_types,
-    module_.inferred,
-    type_,
-  )
   match caller {
-    Option::Some(callable) => {
-      let generics = self_host_program_specialization_callable_generics(callable)
-      match self_host_program_specialization_resolved_type(module_, type_) {
-        Option::Some(resolved_type) => if resolved_type < module_.resolved_types.types.length() {
-          match module_.resolved_types.types[resolved_type] {
-            SelfHostResolvedType::GenericParameterType(parameter) => {
-              match generics.slot(parameter) {
-                Option::Some(relative) => if relative < caller_shapes.length {
-                  return shapes[self_host_u32_add(caller_shapes.start, relative)]
-                }
-                Option::None => {}
-              }
-            }
-            _ => {}
-          }
-        }
-        Option::None => {}
-      }
-      fallback
-    }
-    Option::None => fallback
+    Option::Some(callable) => self_host_specialized_body_value_shape(
+      module_, callable, caller_shapes, shapes, type_,
+    )
+    Option::None => self_host_planned_merged_body_value_shape(
+      module_.resolved_types, module_.inferred, type_,
+    )
   }
 }
 

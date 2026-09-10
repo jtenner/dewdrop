@@ -1,3 +1,127 @@
+fn self_host_specialized_shape_fixture() -> SelfHostPlannedModuleLowering {
+  let lowering = self_host_physical_test_lowering(b"fn keep<t>(value: t) -> t {\n  value\n}\n")
+  let module_ = lowering.modules[0u32]
+  assert(module_.functions.callables.length() == 1u32, "one generic callable")
+  let callable = module_.functions.callables[0u32]
+  let type_ = -self_host_body_u32_to_i32(callable.result_type) - 2i32
+  let shape = self_host_specialized_body_value_shape(module_, callable,
+    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], type_)
+  assert(shape is SelfHostPlannedValueShape::I64PlannedValueShape, "valid caller substitution before mutation")
+  module_
+}
+
+fn self_host_specialized_shape_test_span() -> SelfHostHirSpan {
+  SelfHostHirSpan::{
+    start: 0u32
+    length: 1u32
+  }
+}
+
+test "specialized type work queues preserve deep shared product graphs" {
+  let module_ = self_host_specialized_shape_fixture()
+  let callable = module_.functions.callables[0u32]
+  let mut root = -self_host_body_u32_to_i32(callable.result_type) - 2i32
+  while 0u32 {
+    depth if depth < 128u32 => {
+      let start = module_.inferred.type_arguments.length()
+      module_.inferred.type_arguments.push(root)
+      module_.inferred.type_arguments.push(root)
+      root = self_host_body_u32_to_i32(module_.inferred.types.length())
+      module_.inferred.types.push(SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+        start: start
+        length: 2u32
+      }))
+      continue depth + 1u32
+    }
+    _ => break ()
+  }
+  let mut shape = self_host_specialized_body_value_shape(module_, callable,
+    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], root)
+  while 0u32 {
+    depth if depth < 128u32 => {
+      match shape {
+        SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+          assert(fields.length() == 2u32, "shared product retains both fields")
+          shape = fields[0u32]
+        }
+        _ => assert(false, "nested product was lost")
+      }
+      continue depth + 1u32
+    }
+    _ => break ()
+  }
+  assert(shape is SelfHostPlannedValueShape::I64PlannedValueShape, "deep leaf uses the caller argument")
+}
+
+test "ARN-101 specialized type substitution checks its argument span" expect_trap "unreachable" {
+  let module_ = self_host_specialized_shape_fixture()
+  let callable = module_.functions.callables[0u32]
+  let _ = self_host_specialized_body_value_shape(module_, callable,
+    SelfHostHirSpan::{
+      start: 4294967295u32
+      length: 1u32
+    }, [SelfHostPlannedValueShape::I64PlannedValueShape],
+    -self_host_body_u32_to_i32(callable.result_type) - 2i32)
+}
+
+fn self_host_specialized_product_shape_fixture() -> SelfHostPlannedModuleLowering {
+  let module_ = self_host_specialized_shape_fixture()
+  let callable = module_.functions.callables[0u32]
+  let root = module_.inferred.types.length()
+  let start = module_.inferred.type_arguments.length()
+  assert(root == 1u32 && start == 0u32, "stable owned product fixture indices")
+  module_.inferred.type_arguments.push(-self_host_body_u32_to_i32(callable.result_type) - 2i32)
+  module_.inferred.types.push(SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+    start: start
+    length: 1u32
+  }))
+  let shape = self_host_specialized_body_value_shape(module_, callable,
+    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], self_host_body_u32_to_i32(root))
+  match shape {
+    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => assert(fields[0u32] is SelfHostPlannedValueShape::I64PlannedValueShape, "valid product before changing one edge")
+    _ => assert(false, "valid product was lost")
+  }
+  module_
+}
+
+test "ARN-108 specialized type substitution rejects a product cycle" expect_trap "unreachable" {
+  let module_ = self_host_specialized_product_shape_fixture()
+  let callable = module_.functions.callables[0u32]
+  module_.inferred.type_arguments[0u32] = 1i32
+  let _ = self_host_specialized_body_value_shape(module_, callable,
+    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], 1i32)
+}
+
+test "ARN-101 specialized type substitution checks product spans" expect_trap "unreachable" {
+  let module_ = self_host_specialized_product_shape_fixture()
+  let callable = module_.functions.callables[0u32]
+  module_.inferred.types[1u32] = SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+    start: 4294967295u32
+    length: 1u32
+  })
+  let _ = self_host_specialized_body_value_shape(module_, callable,
+    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], 1i32)
+}
+
+test "ARN-101 specialized type substitution checks product child IDs" expect_trap "unreachable" {
+  let module_ = self_host_specialized_product_shape_fixture()
+  let callable = module_.functions.callables[0u32]
+  module_.inferred.type_arguments[0u32] = 2147483647i32
+  let _ = self_host_specialized_body_value_shape(module_, callable,
+    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], 1i32)
+}
+
+test "generic calls specialize nested tuple arguments through the caller" {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"fn keep<t>(value: t) -> t {\n  value\n}\nfn wrap<t>(value: t) -> (t, (t, U32)) {\n  keep((value, (value, 7u32)))\n}\npub fn run() -> (I32, (I32, U32)) {\n  wrap(21i32)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "nested generic calls link")
+  for shape in link.fragments.specialization.shapes {
+    assert(self_host_specialization_shape_error(shape) == 0u32, "every requested field is concrete")
+  }
+}
+
 test "specialization normalization retains missing and erroneous evidence" {
   let generic = SelfHostPlannedValueShape::GenericPlannedValueShape
   let error = SelfHostPlannedValueShape::ErrorPlannedValueShape

@@ -11,6 +11,16 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   ...[
+    ["ARN-101 specialized type substitution checks its argument span", 101, 1n, 1n, 4294967295n],
+    ["ARN-108 specialized type substitution rejects a product cycle", 108, 0n, 1n, 1n],
+    ["ARN-101 specialized type substitution checks product spans", 101, 1n, 1n, 4294967295n],
+    ["ARN-101 specialized type substitution checks product child IDs", 101, 2n, 2147483647n, 1n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 5, 5100n, 5100n << 32n, 0n, 4294967295,
+      expected, actual, detail],
+  })),
+  ...[
     ["ARN-105 callable lookup rejects an out-of-range selected entry", 105, 2n, 2n, 0n],
     ["ARN-106 callable lookup rejects another stored declaration", 106, 5100n << 32n, (5100n << 32n) | 1n, 1n],
   ].map(([name, code, expected, actual, detail]) => ({

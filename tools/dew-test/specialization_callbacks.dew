@@ -2,6 +2,34 @@ fn identity<t>(value: t) -> t {
   value
 }
 
+builtin nested_tuple_failure() -> Never = "unreachable"
+
+fn nested_tuple_identity<t>(value: t, depth: U32) -> t {
+  if depth == 0u32 {
+    value
+  } else {
+    nested_tuple_identity(value, depth - 1u32)
+  }
+}
+
+fn nested_tuple_forward<t>(value: t) -> (t, (t, U32)) {
+  nested_tuple_identity((value, (value, 7u32)), 1u32)
+}
+
+pub fn nested_generic_tuple_callback(value: I64) -> I64 {
+  let (_, (selected, _)) = nested_tuple_forward(value)
+  selected
+}
+
+pub fn nested_generic_unit_callback(value: I64) -> I64 {
+  let (_, (_, tag)) = nested_tuple_forward(())
+  if tag == 7u32 {
+    value
+  } else {
+    nested_tuple_failure()
+  }
+}
+
 struct Map {
   value: I64
 }
