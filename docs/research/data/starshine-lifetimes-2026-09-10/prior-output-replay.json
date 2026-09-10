@@ -1,0 +1,102 @@
+[
+  {
+    "case": "case-000001-gen-valid",
+    "identical": true,
+    "seconds": 0.003289731001132168
+  },
+  {
+    "case": "case-000002-gen-valid",
+    "identical": true,
+    "seconds": 0.002197873007389717
+  },
+  {
+    "case": "case-000003-gen-valid",
+    "identical": true,
+    "seconds": 0.0024048899940680712
+  },
+  {
+    "case": "case-000004-gen-valid",
+    "identical": true,
+    "seconds": 0.0018769199959933758
+  },
+  {
+    "case": "case-000005-gen-valid",
+    "identical": true,
+    "seconds": 0.00262260899762623
+  },
+  {
+    "case": "case-000006-gen-valid",
+    "identical": true,
+    "seconds": 0.002493267005775124
+  },
+  {
+    "case": "case-000007-gen-valid",
+    "identical": true,
+    "seconds": 0.002344355991226621
+  },
+  {
+    "case": "case-000008-gen-valid",
+    "identical": true,
+    "seconds": 0.002453411987517029
+  },
+  {
+    "case": "case-000009-gen-valid",
+    "identical": true,
+    "seconds": 0.0017277110018767416
+  },
+  {
+    "case": "case-000010-gen-valid",
+    "identical": true,
+    "seconds": 0.00247453099291306
+  },
+  {
+    "case": "case-000011-gen-valid",
+    "identical": true,
+    "seconds": 0.0017187439952977002
+  },
+  {
+    "case": "case-000012-gen-valid",
+    "identical": true,
+    "seconds": 0.0027452290087239817
+  },
+  {
+    "case": "case-000013-gen-valid",
+    "identical": true,
+    "seconds": 0.0018957260035676882
+  },
+  {
+    "case": "case-000014-gen-valid",
+    "identical": true,
+    "seconds": 0.0024923539895098656
+  },
+  {
+    "case": "case-000015-gen-valid",
+    "identical": true,
+    "seconds": 0.0024296159972436726
+  },
+  {
+    "case": "case-000016-gen-valid",
+    "identical": true,
+    "seconds": 0.0021753700129920617
+  },
+  {
+    "case": "case-000017-gen-valid",
+    "identical": true,
+    "seconds": 0.0026793049910338596
+  },
+  {
+    "case": "case-000019-gen-valid",
+    "identical": true,
+    "seconds": 0.0018582159973448142
+  },
+  {
+    "case": "case-000020-gen-valid",
+    "identical": true,
+    "seconds": 0.001934897998580709
+  },
+  {
+    "case": "case-000022-gen-valid",
+    "identical": true,
+    "seconds": 0.0014930499892216176
+  }
+]

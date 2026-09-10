@@ -48,6 +48,11 @@ The regression tests baseline execution, optimized execution, and validation.
 It checks four counter start/step choices, seven limits, and four pass variants.
 A five-second child-process timeout catches the old hang and retains artifacts.
 
+The later [local-lifetime repair](starshine-local-lifetimes-2026-09-10.md)
+supersedes the four remaining SLNS failures and the CodeFolding failure reported
+below. It also identifies and fixes the Wago-only typed-select fault separately.
+The following counts remain the historical evidence for the counter-only commit.
+
 ## Evidence and limits
 
 - The original test fails before the fix: the counter increment disappears.
