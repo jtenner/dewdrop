@@ -121,7 +121,7 @@ fn self_host_test_missing_callback_result(check_emits: Bool) -> Unit {
   let source = module_.expressions[2u32]
   assert(source.kind is SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _), "stable callback expression")
   assert(body.body == 5100u64 << 32u64 && body.declaration == 5100u64 << 32u64, "stable callback body")
-  let initial_shape = self_host_linked_inferred_callback_result_shape(link, module_, body, 4294967295u32, 2u32)
+  let initial_shape = self_host_linked_inferred_call_result_shape(link, module_, body, 4294967295u32, 2u32)
   assert(initial_shape is SelfHostPlannedValueShape::I64PlannedValueShape, "valid result before mutation")
   module_.expressions[2u32] = self_host_test_signature_expression(source, -1i32, source.kind, source.shape)
   if check_emits {
@@ -138,4 +138,78 @@ test "callback result inference preserves a missing type" {
 
 test "SPC-301 callback result presence requires concrete type evidence" expect_trap "unreachable" {
   self_host_test_missing_callback_result(true)
+}
+
+fn self_host_test_unresolved_result_name(name: Bytes, mutation: U32) -> Unit {
+  let source = BytesBuilder::new()
+  source.append(b"struct Reader {\n  value: I64\n}\nimpl Reader {\n  fn ")
+  source.append(name)
+  source.append(b"(self) -> I64 {\n    self.value + 1i64\n  }\n}\npub fn run(value: Reader) -> I64 {\n  value.")
+  source.append(name)
+  source.append(b"()\n}\n")
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source.finish()), false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "valid named method before changing call form")
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut checked = false
+  for body in module_.bodies {
+    while 0u32 {
+      relative if relative < body.expressions.length => {
+        let expression = body.expressions.start + relative
+        match module_.expressions[expression].kind {
+          SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, arguments, _) => if target < module_.expressions.length() &&
+            module_.expressions[target].source_name < self_host_linked_module_name_count(module_) &&
+            self_host_linked_module_name_at(module_, module_.expressions[target].source_name).as_bytes().equals(name) {
+            let original = module_.expressions[expression]
+            let callee = module_.expressions[target]
+            assert(original.shape is SelfHostPlannedValueShape::I64PlannedValueShape, "inference retains the I64 result")
+            assert(self_host_linked_expression_emits_value(link, module_, body, 4294967295u32, expression), "valid resolved call has a value")
+            // Lowering consumes the method-name node after selecting a call.
+            // Restore its retained syntax metadata for the unresolved form.
+            assert(callee.member_base < module_.expressions.length(), "method retains its receiver")
+            module_.expressions[target] = self_host_test_signature_expression(callee, callee.type_,
+              SelfHostPlannedExpressionKind::PlannedUnresolvedField(callee.member_base, callee.source_name), callee.shape)
+            module_.expressions[expression] = self_host_test_signature_expression(original, original.type_,
+              SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments), original.shape)
+            if mutation != 0u32 {
+              let unresolved = module_.expressions[expression]
+              module_.expressions[expression] = self_host_test_signature_expression(unresolved, -1i32, unresolved.kind, unresolved.shape)
+            }
+            if mutation == 1u32 {
+              let shape = self_host_linked_backend_expression_shape(link, module_, body, 4294967295u32, expression)
+              assert(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape, "missing unresolved result stays Error")
+              return
+            }
+            assert(self_host_linked_expression_emits_value(link, module_, body, 4294967295u32, expression),
+              "unresolved call spelling cannot erase known I64 evidence")
+            checked = true
+          }
+          _ => {}
+        }
+        continue relative + 1u32
+      }
+      _ => break ()
+    }
+  }
+  assert(checked, "fixture checks the unresolved method call form")
+}
+
+test "unresolved clear calls do not erase a typed result" {
+  self_host_test_unresolved_result_name(b"clear", 0u32)
+}
+
+test "unresolved push calls do not erase a typed result" {
+  self_host_test_unresolved_result_name(b"push", 0u32)
+}
+
+test "unresolved set_unchecked calls do not erase a typed result" {
+  self_host_test_unresolved_result_name(b"set_unchecked", 0u32)
+}
+
+test "unresolved get_unchecked calls retain missing type evidence" {
+  self_host_test_unresolved_result_name(b"get_unchecked", 1u32)
+}
+
+test "SPC-301 unresolved call result presence requires its type" expect_trap "unreachable" {
+  self_host_test_unresolved_result_name(b"clear", 2u32)
 }

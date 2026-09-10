@@ -14,6 +14,10 @@ const probes = [
     name: "SPC-301 callback result presence requires concrete type evidence",
     expected: [301, 7, 5100n, 5100n << 32n, 5100n << 32n, 2, 0n, 2n, 0n],
   },
+  {
+    name: "SPC-301 unresolved call result presence requires its type",
+    expected: [301, 7, 5100n, (5100n << 32n) | 3n, (5100n << 32n) | 1n, 6, 0n, 2n, 0n],
+  },
   ...[
     ["ARN-101 program callable lookup rejects an owner outside the module arena", 101, 1n, 1n, 0n],
     ["ARN-106 program callable lookup rejects a different stored module", 106, 5101n, 5100n, 0n],

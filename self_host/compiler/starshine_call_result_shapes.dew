@@ -1,8 +1,9 @@
 open dew.std.option
 
 // This is an inference input, not a frozen physical certificate. The ordinary
-// callback-signature verifier still checks the target and its complete ABI.
-fn self_host_linked_inferred_callback_result_shape(
+// call verifier still checks the target and its complete ABI. Neither a name
+// nor a cached carrier can replace missing logical result evidence.
+fn self_host_linked_inferred_call_result_shape(
   link: SelfHostPlannedProgramWasmGCLink,
   module_: SelfHostPlannedModuleLowering,
   body: SelfHostPlannedBodyLowering,

@@ -494,6 +494,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   become a boolean stack-value certificate. All 891 self-host tests, 466 exact
   records, and 288 shared callback checks pass; see the
   [callback result log](docs/research/callback-result-name-2026-09-09.md).
+  Unresolved call results also use inferred types, not `clear`, `push`,
+  `set_unchecked`, or `get_unchecked` spelling. Missing types stay Error and
+  report SPC-301 when consumed as result-presence evidence. All 901 self-host
+  tests, 470 exact records, and 318 shared callback checks pass; see the
+  [unresolved result log](docs/research/unresolved-call-result-evidence-2026-09-09.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Callback signatures now require the target's function type; missing evidence
   cannot be rebuilt from operands. Scope spans and target membership have exact

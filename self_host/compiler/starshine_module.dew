@@ -6673,11 +6673,12 @@ fn self_host_linked_expression_emits_value(
     return false
   }
   let planned = module_.expressions[expression]
-  if planned.kind is SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) {
+  if planned.kind is SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) ||
+    planned.kind is SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) {
     if !planned.flow.falls_through {
       return false
     }
-    let shape = self_host_linked_inferred_callback_result_shape(link, module_, body, caller_specialization, expression)
+    let shape = self_host_linked_inferred_call_result_shape(link, module_, body, caller_specialization, expression)
     let error = self_host_specialization_shape_error(shape)
     if error != 0u32 {
       self_host_call_read_failure(module_.module_id, body.declaration, body.body, expression,
@@ -6707,49 +6708,6 @@ fn self_host_linked_expression_emits_value(
           )
         }
       }
-      true
-    }
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => if target < module_.expressions.length() {
-      match module_.expressions[target].kind {
-        SelfHostPlannedExpressionKind::PlannedUnresolvedField(_, name) => if name < self_host_linked_module_name_count(
-          module_,
-        ) {
-          let method_name = self_host_linked_module_name_at(module_, name)
-          if method_name == "clear" || method_name == "push" ||
-            method_name == "set_unchecked" {
-            return false
-          }
-          let direct = self_host_linked_i32_call_index(
-            link,
-            body.body,
-            caller_specialization,
-            expression,
-            0u64,
-          )
-          let result_shape = match direct {
-            Option::Some(function_index) => self_host_linked_physical_function_result_shape(
-              link,
-              function_index,
-            )
-            Option::None => match self_host_linked_method_call_index(
-              link,
-              self_host_linked_module_name_at(module_, name),
-            ) {
-              Option::Some(function_index) => self_host_linked_physical_function_result_shape(
-                link,
-                function_index,
-              )
-              Option::None => planned.shape
-            }
-          }
-          !(result_shape is SelfHostPlannedValueShape::UnitPlannedValueShape) &&
-          !(result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape)
-        } else {
-          true
-        }
-        _ => true
-      }
-    } else {
       true
     }
     SelfHostPlannedExpressionKind::PlannedBlockExpression(block_index) => self_host_linked_block_emits_value(
@@ -20741,7 +20699,8 @@ fn self_host_linked_backend_expression_shape(
   }
   let planned = module_.expressions[expression]
   match planned.kind {
-    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) => return self_host_linked_inferred_callback_result_shape(
+    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _),
+    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _) => return self_host_linked_inferred_call_result_shape(
       link, module_, body, caller_specialization, expression,
     )
     SelfHostPlannedExpressionKind::PlannedBinaryExpression(
@@ -21038,43 +20997,6 @@ fn self_host_linked_backend_expression_shape(
         }
       }
       SelfHostPlannedValueShape::I32PlannedValueShape
-    }
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => if target < module_.expressions.length() {
-      match module_.expressions[target].kind {
-        SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name) => if base < module_.expressions.length() &&
-          name < self_host_linked_module_name_count(module_) {
-          let method_name = self_host_linked_module_name_at(module_, name)
-          if method_name == "get_unchecked" {
-            let contextual = self_host_linked_expression_expected_shape(
-              link,
-              module_,
-              body,
-              caller_specialization,
-              expression,
-            )
-            if !(contextual is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-              return contextual
-            }
-            if self_host_u64_equal(module_.expressions[base].nominal, 0u64) {
-              return SelfHostPlannedValueShape::I32PlannedValueShape
-            }
-            SelfHostPlannedValueShape::ErrorPlannedValueShape
-          } else {
-            match self_host_linked_method_call_index(link, method_name) {
-              Option::Some(function_index) => self_host_linked_physical_function_result_shape(
-                link,
-                function_index,
-              )
-              Option::None => SelfHostPlannedValueShape::ErrorPlannedValueShape
-            }
-          }
-        } else {
-          SelfHostPlannedValueShape::ErrorPlannedValueShape
-        }
-        _ => SelfHostPlannedValueShape::ErrorPlannedValueShape
-      }
-    } else {
-      SelfHostPlannedValueShape::ErrorPlannedValueShape
     }
     SelfHostPlannedExpressionKind::PlannedIndexGet(base, _, _) => if base < module_.expressions.length() {
       match self_host_linked_type_first_argument_shape(
