@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 
@@ -8,8 +9,18 @@ const samples = Number(samplesText);
 const targetMs = Number(targetText);
 assert(samples >= 5 && targetMs > 0, "invalid benchmark settings");
 const entries = [];
+const byHash = new Map();
+const variants = [];
 for (const variant of spec.variants) {
   const bytes = await readFile(variant.wasm);
+  const hash = createHash("sha256").update(bytes).digest("hex");
+  const equivalent = byHash.get(hash);
+  if (equivalent) {
+    // Equal bytes with the same export and inputs are the same experiment.
+    // Reuse its samples instead of awarding noise to one pipeline spelling.
+    variants.push({name: variant.name, entry: equivalent, equivalentTo: equivalent.name});
+    continue;
+  }
   const start = performance.now();
   const module = await WebAssembly.compile(bytes);
   const compileMs = performance.now() - start;
@@ -30,7 +41,10 @@ for (const variant of spec.variants) {
   };
   const warmupEnd = performance.now() + 150;
   while (performance.now() < warmupEnd) run(100);
-  entries.push({ name: variant.name, run, compileMs, times: [] });
+  const entry = { name: variant.name, run, compileMs, times: [] };
+  entries.push(entry);
+  byHash.set(hash, entry);
+  variants.push({name: variant.name, entry, equivalentTo: null});
 }
 // Calibrate once on the unoptimized module; every variant uses the same work.
 let batch = spec.inputs.length;
@@ -54,6 +68,8 @@ for (let sample = 0; sample < samples; sample++) {
     entry.times.push(elapsed * 1e6 / batch);
   }
 }
-console.log(JSON.stringify({batch, samples, warmup_ms_per_variant: 150, variants:
-  Object.fromEntries(entries.map(entry => [entry.name,
-    {compile_ms: entry.compileMs, ns_per_call: entry.times}]))}));
+console.log(JSON.stringify({batch, samples, warmup_ms_per_unique_module: 150,
+  unique_modules: entries.length, variants:
+  Object.fromEntries(variants.map(({name, entry, equivalentTo}) => [name,
+    {compile_ms: equivalentTo === null ? entry.compileMs : null,
+     equivalent_to: equivalentTo, ns_per_call: entry.times}]))}));

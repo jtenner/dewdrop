@@ -698,9 +698,11 @@ fn main {
   let command = arguments[1]
   let remaining = arguments[2:].to_owned()
   if command == "--help" || command == "help" || remaining.contains("--help") {
-    println("dew build|run|test [source files] [--optimize none|speed|O4s]")
     println(
-      "dew optimize INPUT.wasm -o OUTPUT.wasm [--optimize speed|O4s|none]",
+      "dew build|run|test [source files] [--optimize none|speed|speed-deep|O4s]",
+    )
+    println(
+      "dew optimize INPUT.wasm -o OUTPUT.wasm [--optimize speed|speed-deep|O4s|none]",
     )
     println(
       "--starshine-pass NAME: exact ordered pass; repeat to form a custom schedule",

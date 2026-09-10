@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "starshine_commit": "30c63c455",
+  "starshine_native_tests": {
+    "passed": 10997,
+    "failed": 0,
+    "seconds": 274.765
+  },
+  "starshine_release_build_seconds": 191.833,
+  "ssa_runtime_checks": {
+    "passed": 32,
+    "seconds": 0.323
+  },
+  "cli_unit_tests": {
+    "passed": 9,
+    "failed": 0,
+    "seconds": 0.832
+  },
+  "harness_tests": {
+    "passed": 7,
+    "failed": 0,
+    "seconds": 0.452
+  },
+  "cli_cold_seconds": 204.641,
+  "cli_warm_seconds": 12.885,
+  "cli_run_deep_seconds": 4.096,
+  "cli_wat_deep_seconds": 3.15,
+  "cli_wat_roundtrip_result": 42,
+  "compiler_source": "928eef9a",
+  "note": "Activities over 30 seconds remain recorded as performance bugs. GenValid output differences are in the separate comparison summaries."
+}

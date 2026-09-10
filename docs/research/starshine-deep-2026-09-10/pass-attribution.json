@@ -1,0 +1,338 @@
+[
+  {
+    "workload": "array-growth",
+    "commands": [],
+    "full": {
+      "bytes": 2930,
+      "sha256": "0e4bf198b097c284afb4c4adc45dc357e3affa44fdd887ee891e241d4558b448",
+      "seconds": 0.013400572002865374
+    },
+    "without-heap": {
+      "bytes": 2930,
+      "sha256": "0e4bf198b097c284afb4c4adc45dc357e3affa44fdd887ee891e241d4558b448",
+      "seconds": 0.013235339007223956
+    },
+    "without-ssa": {
+      "bytes": 2930,
+      "sha256": "0e4bf198b097c284afb4c4adc45dc357e3affa44fdd887ee891e241d4558b448",
+      "seconds": 0.013324175990419462
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "array-reserved",
+    "commands": [],
+    "full": {
+      "bytes": 2930,
+      "sha256": "7fd8bcdbb1aa532f35b5b3f1810ed115d4596ff91e9e6de034c643e5cea74a5e",
+      "seconds": 0.013496835003024898
+    },
+    "without-heap": {
+      "bytes": 2930,
+      "sha256": "7fd8bcdbb1aa532f35b5b3f1810ed115d4596ff91e9e6de034c643e5cea74a5e",
+      "seconds": 0.013342171005206183
+    },
+    "without-ssa": {
+      "bytes": 2930,
+      "sha256": "7fd8bcdbb1aa532f35b5b3f1810ed115d4596ff91e9e6de034c643e5cea74a5e",
+      "seconds": 0.012809673993615434
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "hash-map",
+    "commands": [],
+    "full": {
+      "bytes": 2448,
+      "sha256": "6005aa6b3b9f9f2ad89f5efa356277293c548cc8018c3e129411573831244c85",
+      "seconds": 0.01783914800034836
+    },
+    "without-heap": {
+      "bytes": 2448,
+      "sha256": "6005aa6b3b9f9f2ad89f5efa356277293c548cc8018c3e129411573831244c85",
+      "seconds": 0.016134593010065146
+    },
+    "without-ssa": {
+      "bytes": 2514,
+      "sha256": "1da20c090fadf498cfdab156a056bbd9123c15b9b06e501605e010073da8f23c",
+      "seconds": 0.013663990001077764
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": true
+  },
+  {
+    "workload": "ordered-map",
+    "commands": [],
+    "full": {
+      "bytes": 6398,
+      "sha256": "eb5ba4b8a68b425c902b724fe2c1443ece33a552924de1e6ca5cec7cdd12231d",
+      "seconds": 0.31970302399713546
+    },
+    "without-heap": {
+      "bytes": 6398,
+      "sha256": "eb5ba4b8a68b425c902b724fe2c1443ece33a552924de1e6ca5cec7cdd12231d",
+      "seconds": 0.31807236799795646
+    },
+    "without-ssa": {
+      "bytes": 6410,
+      "sha256": "59836e94603be82574c6b6fedd177589e997806e437a4859e03a5cb82c2c848a",
+      "seconds": 0.033319944006507285
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": true
+  },
+  {
+    "workload": "bytes-hash",
+    "commands": [],
+    "full": {
+      "bytes": 3109,
+      "sha256": "c39ee20288d4c6a53b3dc0e04a95f2df2bde4f29941bd6bb9a9ae6cc176824ea",
+      "seconds": 0.012582063005538657
+    },
+    "without-heap": {
+      "bytes": 3109,
+      "sha256": "c39ee20288d4c6a53b3dc0e04a95f2df2bde4f29941bd6bb9a9ae6cc176824ea",
+      "seconds": 0.011646211001789197
+    },
+    "without-ssa": {
+      "bytes": 3109,
+      "sha256": "c39ee20288d4c6a53b3dc0e04a95f2df2bde4f29941bd6bb9a9ae6cc176824ea",
+      "seconds": 0.011236847989493981
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "string-hash",
+    "commands": [],
+    "full": {
+      "bytes": 3153,
+      "sha256": "753761fa2eb6a05082216ceac8be122296eb0c687e59ec602b41955b1b949958",
+      "seconds": 0.012323101997026242
+    },
+    "without-heap": {
+      "bytes": 3153,
+      "sha256": "753761fa2eb6a05082216ceac8be122296eb0c687e59ec602b41955b1b949958",
+      "seconds": 0.011936693001189269
+    },
+    "without-ssa": {
+      "bytes": 3153,
+      "sha256": "753761fa2eb6a05082216ceac8be122296eb0c687e59ec602b41955b1b949958",
+      "seconds": 0.011843275002320297
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "enum-payload",
+    "commands": [],
+    "full": {
+      "bytes": 2542,
+      "sha256": "072b876849295576e145c6225455726106fd37d77f24e2c2311a5bce570b3189",
+      "seconds": 0.016127158989547752
+    },
+    "without-heap": {
+      "bytes": 2542,
+      "sha256": "072b876849295576e145c6225455726106fd37d77f24e2c2311a5bce570b3189",
+      "seconds": 0.015909026013105176
+    },
+    "without-ssa": {
+      "bytes": 2542,
+      "sha256": "072b876849295576e145c6225455726106fd37d77f24e2c2311a5bce570b3189",
+      "seconds": 0.015884791006101295
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "tail-loop",
+    "commands": [],
+    "full": {
+      "bytes": 71,
+      "sha256": "64d802e2187cf8a54c571e2d301d28e936b7c2d10bcb9c6160b71143e55ed699",
+      "seconds": 0.0025814740074565634
+    },
+    "without-heap": {
+      "bytes": 71,
+      "sha256": "64d802e2187cf8a54c571e2d301d28e936b7c2d10bcb9c6160b71143e55ed699",
+      "seconds": 0.002400270997895859
+    },
+    "without-ssa": {
+      "bytes": 71,
+      "sha256": "64d802e2187cf8a54c571e2d301d28e936b7c2d10bcb9c6160b71143e55ed699",
+      "seconds": 0.002405509992968291
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "json-roundtrip",
+    "commands": [],
+    "full": {
+      "bytes": 13747,
+      "sha256": "c041dcc0845336fdea03c6f5333ae06b77f334940964e77be99918e16348810d",
+      "seconds": 0.08741270699829329
+    },
+    "without-heap": {
+      "bytes": 13747,
+      "sha256": "c041dcc0845336fdea03c6f5333ae06b77f334940964e77be99918e16348810d",
+      "seconds": 0.08472837699810043
+    },
+    "without-ssa": {
+      "bytes": 13747,
+      "sha256": "c041dcc0845336fdea03c6f5333ae06b77f334940964e77be99918e16348810d",
+      "seconds": 0.06954978399153333
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "json-canonical",
+    "commands": [],
+    "full": {
+      "bytes": 13747,
+      "sha256": "c041dcc0845336fdea03c6f5333ae06b77f334940964e77be99918e16348810d",
+      "seconds": 0.08790451700042468
+    },
+    "without-heap": {
+      "bytes": 13747,
+      "sha256": "c041dcc0845336fdea03c6f5333ae06b77f334940964e77be99918e16348810d",
+      "seconds": 0.08276754899998195
+    },
+    "without-ssa": {
+      "bytes": 13747,
+      "sha256": "c041dcc0845336fdea03c6f5333ae06b77f334940964e77be99918e16348810d",
+      "seconds": 0.06938776699826121
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "mutable-cell",
+    "commands": [],
+    "full": {
+      "bytes": 147,
+      "sha256": "662f2ba18dcfc9823d3846a87f5ff6f817884fe3bbdc8d4ea4d9cd63c263c178",
+      "seconds": 0.004124382001464255
+    },
+    "without-heap": {
+      "bytes": 147,
+      "sha256": "662f2ba18dcfc9823d3846a87f5ff6f817884fe3bbdc8d4ea4d9cd63c263c178",
+      "seconds": 0.003375657004653476
+    },
+    "without-ssa": {
+      "bytes": 147,
+      "sha256": "662f2ba18dcfc9823d3846a87f5ff6f817884fe3bbdc8d4ea4d9cd63c263c178",
+      "seconds": 0.003375134998350404
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "temporary-pair",
+    "commands": [],
+    "full": {
+      "bytes": 147,
+      "sha256": "2b3cf021f7fd67b95bcf8a9c3a36c628b2e65536af7f6e85beb25d4137908d20",
+      "seconds": 0.003751216994714923
+    },
+    "without-heap": {
+      "bytes": 147,
+      "sha256": "2b3cf021f7fd67b95bcf8a9c3a36c628b2e65536af7f6e85beb25d4137908d20",
+      "seconds": 0.0037575269961962476
+    },
+    "without-ssa": {
+      "bytes": 147,
+      "sha256": "2b3cf021f7fd67b95bcf8a9c3a36c628b2e65536af7f6e85beb25d4137908d20",
+      "seconds": 0.0035136579972459003
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "branch-join",
+    "commands": [],
+    "full": {
+      "bytes": 110,
+      "sha256": "f722a3ad03d2832d85dddd86c55935273241103b1fd1a8f189d078bc5ca9404f",
+      "seconds": 0.0035798419994534925
+    },
+    "without-heap": {
+      "bytes": 110,
+      "sha256": "f722a3ad03d2832d85dddd86c55935273241103b1fd1a8f189d078bc5ca9404f",
+      "seconds": 0.0035397769970586523
+    },
+    "without-ssa": {
+      "bytes": 110,
+      "sha256": "f722a3ad03d2832d85dddd86c55935273241103b1fd1a8f189d078bc5ca9404f",
+      "seconds": 0.0037013220135122538
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "closure-loop",
+    "commands": [],
+    "full": {
+      "bytes": 206,
+      "sha256": "0b313af4b896e462476446f5355a0e69361800f086907e652501cb23662c8245",
+      "seconds": 0.004146824998315424
+    },
+    "without-heap": {
+      "bytes": 206,
+      "sha256": "0b313af4b896e462476446f5355a0e69361800f086907e652501cb23662c8245",
+      "seconds": 0.0034558580082375556
+    },
+    "without-ssa": {
+      "bytes": 206,
+      "sha256": "0b313af4b896e462476446f5355a0e69361800f086907e652501cb23662c8245",
+      "seconds": 0.004179926996584982
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "local-cell",
+    "commands": [],
+    "full": {
+      "bytes": 131,
+      "sha256": "f93059b9720c8d0951ecdccef5b113f771f4e81843cf372463de0a0639a70c38",
+      "seconds": 0.003983886999776587
+    },
+    "without-heap": {
+      "bytes": 131,
+      "sha256": "f93059b9720c8d0951ecdccef5b113f771f4e81843cf372463de0a0639a70c38",
+      "seconds": 0.0035482620005495846
+    },
+    "without-ssa": {
+      "bytes": 131,
+      "sha256": "f93059b9720c8d0951ecdccef5b113f771f4e81843cf372463de0a0639a70c38",
+      "seconds": 0.0038169710023794323
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  },
+  {
+    "workload": "local-pair",
+    "commands": [],
+    "full": {
+      "bytes": 97,
+      "sha256": "cd326a025031bffe7bbd3ada9bc0d0462ba9ba6594cc9b6d7ed0dc98b31718fe",
+      "seconds": 0.0038034750032238662
+    },
+    "without-heap": {
+      "bytes": 97,
+      "sha256": "cd326a025031bffe7bbd3ada9bc0d0462ba9ba6594cc9b6d7ed0dc98b31718fe",
+      "seconds": 0.004355890996521339
+    },
+    "without-ssa": {
+      "bytes": 97,
+      "sha256": "cd326a025031bffe7bbd3ada9bc0d0462ba9ba6594cc9b6d7ed0dc98b31718fe",
+      "seconds": 0.004131556997890584
+    },
+    "heap_changes_bytes": false,
+    "ssa_changes_bytes": false
+  }
+]

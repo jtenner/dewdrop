@@ -1,0 +1,1356 @@
+{
+  "fixture": "control-flow/nested-pattern-runtime",
+  "input": "$DEWDROP/.tmp/starshine-deep-logs/ordered-screen/snapshots/control-flow/nested-pattern-runtime/baseline.wasm",
+  "pipeline": "deep-core-one-coalesce",
+  "prefixes": [
+    {
+      "passes": [],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.002641,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.002923,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022584,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.002652,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.00325,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.024447,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.002345,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003293,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022714,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.002622,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003123,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022249,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.003419,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003691,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.024319,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.002569,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003388,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.02386,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.002523,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003405,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022543,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.00315,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003379,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.020935,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.002951,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003271,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.020778,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004425,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003205,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.023993,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.005094,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003561,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.02241,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004659,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003054,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022274,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.004874,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003294,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.02283,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.005662,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003136,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022705,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.005704,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003535,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.021178,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.005743,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003383,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.024386,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.007247,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003441,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022457,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.007789,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.004476,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.021648,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.007609,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003467,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.021996,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse"
+      ],
+      "status": "passed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.008139,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.004084,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022041,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.00848,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003596,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.02338,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.008163,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003876,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.021877,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "vacuum"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.008144,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003012,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022826,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "vacuum",
+        "duplicate-function-elimination"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.008904,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003139,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.023593,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.008735,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003342,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.023032,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.008998,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003403,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022392,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing",
+        "directize"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.009488,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.004213,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022836,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing",
+        "directize",
+        "memory-packing"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.009381,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003335,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.02274,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing",
+        "directize",
+        "memory-packing",
+        "reorder-locals"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.009965,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003919,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.021599,
+          0,
+          false
+        ]
+      ]
+    },
+    {
+      "error": "runtime mismatch: expected ['control:nested-patterns'], got ['FAIL']",
+      "passes": [
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "once-reduction",
+        "global-refining",
+        "global-struct-inference",
+        "precompute",
+        "inlining",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "coalesce-locals",
+        "vacuum",
+        "code-pushing",
+        "code-folding",
+        "merge-blocks",
+        "remove-unused-brs",
+        "redundant-set-elimination",
+        "precompute",
+        "local-cse",
+        "simplify-locals-nostructure",
+        "dead-code-elimination",
+        "vacuum",
+        "duplicate-function-elimination",
+        "remove-unused-module-elements",
+        "simplify-globals-optimizing",
+        "directize",
+        "memory-packing",
+        "reorder-locals",
+        "strip-debug"
+      ],
+      "status": "failed",
+      "timings": [
+        [
+          "cmd.exe",
+          0.009191,
+          0,
+          false
+        ],
+        [
+          "wasm-tools",
+          0.003877,
+          0,
+          false
+        ],
+        [
+          "node",
+          0.022154,
+          0,
+          false
+        ]
+      ]
+    }
+  ],
+  "queue": {
+    "optimizeLevel": 4,
+    "passes": [
+      {
+        "name": "duplicate-function-elimination",
+        "ordinal": 0
+      },
+      {
+        "name": "remove-unused-module-elements",
+        "ordinal": 1
+      },
+      {
+        "name": "once-reduction",
+        "ordinal": 2
+      },
+      {
+        "name": "global-refining",
+        "ordinal": 3
+      },
+      {
+        "name": "global-struct-inference",
+        "ordinal": 4
+      },
+      {
+        "name": "precompute",
+        "ordinal": 5
+      },
+      {
+        "name": "inlining",
+        "ordinal": 6
+      },
+      {
+        "name": "local-cse",
+        "ordinal": 7
+      },
+      {
+        "name": "simplify-locals-nostructure",
+        "ordinal": 8
+      },
+      {
+        "name": "dead-code-elimination",
+        "ordinal": 9
+      },
+      {
+        "name": "coalesce-locals",
+        "ordinal": 10
+      },
+      {
+        "name": "vacuum",
+        "ordinal": 11
+      },
+      {
+        "name": "code-pushing",
+        "ordinal": 12
+      },
+      {
+        "name": "code-folding",
+        "ordinal": 13
+      },
+      {
+        "name": "merge-blocks",
+        "ordinal": 14
+      },
+      {
+        "name": "remove-unused-brs",
+        "ordinal": 15
+      },
+      {
+        "name": "redundant-set-elimination",
+        "ordinal": 16
+      },
+      {
+        "name": "precompute",
+        "ordinal": 17
+      },
+      {
+        "name": "local-cse",
+        "ordinal": 18
+      },
+      {
+        "name": "simplify-locals-nostructure",
+        "ordinal": 19
+      },
+      {
+        "name": "dead-code-elimination",
+        "ordinal": 20
+      },
+      {
+        "name": "vacuum",
+        "ordinal": 21
+      },
+      {
+        "name": "duplicate-function-elimination",
+        "ordinal": 22
+      },
+      {
+        "name": "remove-unused-module-elements",
+        "ordinal": 23
+      },
+      {
+        "name": "simplify-globals-optimizing",
+        "ordinal": 24
+      },
+      {
+        "name": "directize",
+        "ordinal": 25
+      },
+      {
+        "name": "memory-packing",
+        "ordinal": 26
+      },
+      {
+        "name": "reorder-locals",
+        "ordinal": 27
+      },
+      {
+        "name": "strip-debug",
+        "ordinal": 28
+      }
+    ],
+    "requested": [
+      "duplicate-function-elimination",
+      "remove-unused-module-elements",
+      "once-reduction",
+      "global-refining",
+      "global-struct-inference",
+      "precompute",
+      "inlining",
+      "local-cse",
+      "simplify-locals-nostructure",
+      "dead-code-elimination",
+      "coalesce-locals",
+      "vacuum",
+      "code-pushing",
+      "code-folding",
+      "merge-blocks",
+      "remove-unused-brs",
+      "redundant-set-elimination",
+      "precompute",
+      "local-cse",
+      "simplify-locals-nostructure",
+      "dead-code-elimination",
+      "vacuum",
+      "duplicate-function-elimination",
+      "remove-unused-module-elements",
+      "simplify-globals-optimizing",
+      "directize",
+      "memory-packing",
+      "reorder-locals",
+      "strip-debug"
+    ],
+    "schema": "starshine.optimizer-expanded-pass-queue.v1",
+    "shrinkLevel": 1
+  },
+  "version": 1
+}

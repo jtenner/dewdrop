@@ -1,0 +1,302 @@
+{
+  "optimizeLevel": 4,
+  "passes": [
+    {
+      "name": "duplicate-function-elimination",
+      "ordinal": 0
+    },
+    {
+      "name": "remove-unused-module-elements",
+      "ordinal": 1
+    },
+    {
+      "name": "memory-packing",
+      "ordinal": 2
+    },
+    {
+      "name": "once-reduction",
+      "ordinal": 3
+    },
+    {
+      "name": "global-refining",
+      "ordinal": 4
+    },
+    {
+      "name": "remove-unused-module-elements",
+      "ordinal": 5
+    },
+    {
+      "name": "global-struct-inference",
+      "ordinal": 6
+    },
+    {
+      "name": "ssa-nomerge",
+      "ordinal": 7
+    },
+    {
+      "name": "flatten",
+      "ordinal": 8
+    },
+    {
+      "name": "simplify-locals-notee-nostructure",
+      "ordinal": 9
+    },
+    {
+      "name": "local-cse",
+      "ordinal": 10
+    },
+    {
+      "name": "dead-code-elimination",
+      "ordinal": 11
+    },
+    {
+      "name": "remove-unused-names",
+      "ordinal": 12
+    },
+    {
+      "name": "remove-unused-brs",
+      "ordinal": 13
+    },
+    {
+      "name": "remove-unused-names",
+      "ordinal": 14
+    },
+    {
+      "name": "optimize-instructions",
+      "ordinal": 15
+    },
+    {
+      "name": "heap-store-optimization",
+      "ordinal": 16
+    },
+    {
+      "name": "pick-load-signs",
+      "ordinal": 17
+    },
+    {
+      "name": "precompute-propagate",
+      "ordinal": 18
+    },
+    {
+      "name": "code-pushing",
+      "ordinal": 19
+    },
+    {
+      "name": "simplify-locals-nostructure",
+      "ordinal": 20
+    },
+    {
+      "name": "vacuum",
+      "ordinal": 21
+    },
+    {
+      "name": "reorder-locals",
+      "ordinal": 22
+    },
+    {
+      "name": "remove-unused-brs",
+      "ordinal": 23
+    },
+    {
+      "name": "heap2local",
+      "ordinal": 24
+    },
+    {
+      "name": "merge-locals",
+      "ordinal": 25
+    },
+    {
+      "name": "optimize-casts",
+      "ordinal": 26
+    },
+    {
+      "name": "local-subtyping",
+      "ordinal": 27
+    },
+    {
+      "name": "coalesce-locals",
+      "ordinal": 28
+    },
+    {
+      "name": "local-cse",
+      "ordinal": 29
+    },
+    {
+      "name": "simplify-locals",
+      "ordinal": 30
+    },
+    {
+      "name": "vacuum",
+      "ordinal": 31
+    },
+    {
+      "name": "reorder-locals",
+      "ordinal": 32
+    },
+    {
+      "name": "coalesce-locals",
+      "ordinal": 33
+    },
+    {
+      "name": "reorder-locals",
+      "ordinal": 34
+    },
+    {
+      "name": "vacuum",
+      "ordinal": 35
+    },
+    {
+      "name": "code-folding",
+      "ordinal": 36
+    },
+    {
+      "name": "merge-blocks",
+      "ordinal": 37
+    },
+    {
+      "name": "remove-unused-brs",
+      "ordinal": 38
+    },
+    {
+      "name": "remove-unused-names",
+      "ordinal": 39
+    },
+    {
+      "name": "merge-blocks",
+      "ordinal": 40
+    },
+    {
+      "name": "precompute-propagate",
+      "ordinal": 41
+    },
+    {
+      "name": "optimize-instructions",
+      "ordinal": 42
+    },
+    {
+      "name": "heap-store-optimization",
+      "ordinal": 43
+    },
+    {
+      "name": "redundant-set-elimination",
+      "ordinal": 44
+    },
+    {
+      "name": "vacuum",
+      "ordinal": 45
+    },
+    {
+      "name": "dae-optimizing",
+      "ordinal": 46
+    },
+    {
+      "name": "inlining-optimizing",
+      "ordinal": 47
+    },
+    {
+      "name": "duplicate-function-elimination",
+      "ordinal": 48
+    },
+    {
+      "name": "duplicate-import-elimination",
+      "ordinal": 49
+    },
+    {
+      "name": "simplify-globals-optimizing",
+      "ordinal": 50
+    },
+    {
+      "name": "remove-unused-module-elements",
+      "ordinal": 51
+    },
+    {
+      "name": "reorder-globals",
+      "ordinal": 52
+    },
+    {
+      "name": "directize",
+      "ordinal": 53
+    },
+    {
+      "name": "strip-debug",
+      "ordinal": 54
+    },
+    {
+      "name": "simplify-locals-nostructure",
+      "ordinal": 55
+    },
+    {
+      "name": "coalesce-locals-cfg",
+      "ordinal": 56
+    },
+    {
+      "name": "reorder-locals",
+      "ordinal": 57
+    },
+    {
+      "name": "vacuum",
+      "ordinal": 58
+    },
+    {
+      "name": "simplify-locals-nostructure",
+      "ordinal": 59
+    },
+    {
+      "name": "coalesce-locals-cfg",
+      "ordinal": 60
+    },
+    {
+      "name": "reorder-locals",
+      "ordinal": 61
+    },
+    {
+      "name": "vacuum",
+      "ordinal": 62
+    },
+    {
+      "name": "ssa-nomerge",
+      "ordinal": 63
+    },
+    {
+      "name": "simplify-locals-nostructure",
+      "ordinal": 64
+    },
+    {
+      "name": "coalesce-locals-cfg",
+      "ordinal": 65
+    },
+    {
+      "name": "reorder-locals",
+      "ordinal": 66
+    },
+    {
+      "name": "vacuum",
+      "ordinal": 67
+    },
+    {
+      "name": "ssa-nomerge",
+      "ordinal": 68
+    },
+    {
+      "name": "simplify-locals-nostructure",
+      "ordinal": 69
+    },
+    {
+      "name": "coalesce-locals-cfg",
+      "ordinal": 70
+    },
+    {
+      "name": "reorder-locals",
+      "ordinal": 71
+    },
+    {
+      "name": "vacuum",
+      "ordinal": 72
+    }
+  ],
+  "requested": [
+    "optimize"
+  ],
+  "schema": "starshine.optimizer-expanded-pass-queue.v1",
+  "shrinkLevel": 4
+}

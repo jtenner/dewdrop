@@ -55,7 +55,7 @@ The library runner shares the normal suite's probe list and Node assertion
 consumers. Each test file is compiled separately so one source failure does not
 hide the other tests. All builtin trap exports must raise a Wasm runtime trap.
 
-Measure ten workloads with fresh Node processes, warmup, a common batch size,
+Measure sixteen workloads with fresh Node processes, warmup, a common batch size,
 rotating variant order, and a checked result for every timed batch:
 
 ```sh
@@ -64,9 +64,15 @@ python3 tools/starshine-experiments/benchmark.py \
 ```
 
 The benchmark uses source generators from the existing array, map, hash, enum,
-tail-recursion, and JSON benchmarks. Default settings are five fresh processes,
+tail-recursion, and JSON benchmarks, plus checked object, mutable-local, branch,
+and closure workloads. Direct-allocation cases let early Heap2Local fire without
+inlining; the factory cases measure the different after-inlining shape. Default
+settings are five fresh processes,
 31 samples per process, and a batch calibrated to at least 3 ms on the baseline.
-Wasm engine compilation is recorded separately. Do not run compiler or other
+Identical Wasm bytes share one set of samples within each workload and process.
+Aliases name the measured variant with `equivalent_to`; their `compile_ms` is
+null because the runner did not compile another copy. Warmup is per unique
+module. Wasm engine compilation is recorded separately. Do not run compiler or other
 benchmark jobs at the same time as runtime measurements. Failed variants remain
 failures in the report; they do not receive speed measurements.
 
@@ -149,3 +155,23 @@ checks in Node and Wago under this order. The ten-workload confirmation gives
 13.24% less geometric-mean time and 12.43% fewer total encoded bytes than O4s;
 byte hashing and maps regress. The full per-workload table and retained samples
 are in the [CLI study](../../docs/research/compiler-cli-optimization-2026-09-10.md).
+
+The deeper search is in `deep-pipelines.json`. It retains rejected orders for
+replay. A named experiment is not a correctness promise. See the
+[full study](../../docs/research/starshine-deep-pipeline-2026-09-10.md) for the
+passing orders, first failing pass prefixes, size data, and runtime results.
+
+```sh
+python3 tools/starshine-experiments/runner.py --skip-build \
+  --pipelines tools/starshine-experiments/deep-pipelines.json \
+  --pipeline ssa-heap-early --pipeline deep-60-single-local-wave
+python3 tools/starshine-experiments/benchmark.py \
+  --pipelines tools/starshine-experiments/deep-pipelines.json \
+  --pipeline O4s --pipeline cli-speed --pipeline deep-60-single-local-wave \
+  --rounds 7 --samples 41 --target-ms 5
+```
+
+Use `--wago /absolute/path/to/runner` to test an explicitly built Wago runtime.
+The report hashes that binary. `--runtime-timeout 3` shortens discovery execution
+checks; optimization and compilation keep their separate 30-second limits.
+A timeout remains a failure with a diagnostic.

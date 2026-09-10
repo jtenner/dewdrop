@@ -23,13 +23,28 @@ fn bootstrap_optimization_passes(
         "simplify-locals-nostructure", "coalesce-locals", "vacuum", "remove-unused-module-elements",
         "memory-packing", "reorder-locals", "strip-debug",
       ])
+    "speed-deep" =>
+      Ok([
+        "duplicate-function-elimination", "remove-unused-module-elements", "once-reduction",
+        "global-refining", "global-struct-inference", "precompute", "heap2local",
+        "ssa-nomerge", "inlining", "local-cse", "simplify-locals-nostructure", "dead-code-elimination",
+        "coalesce-locals", "vacuum", "code-pushing", "code-folding", "merge-blocks",
+        "remove-unused-brs", "redundant-set-elimination", "local-cse", "dead-code-elimination",
+        "vacuum", "precompute", "inlining", "local-cse", "dead-code-elimination",
+        "vacuum", "code-pushing", "code-folding", "merge-blocks", "remove-unused-brs",
+        "redundant-set-elimination", "local-cse", "dead-code-elimination", "vacuum",
+        "code-pushing", "code-folding", "merge-blocks", "remove-unused-brs", "redundant-set-elimination",
+        "local-cse", "dead-code-elimination", "vacuum", "duplicate-function-elimination",
+        "remove-unused-module-elements", "simplify-globals-optimizing", "directize",
+        "memory-packing", "reorder-locals", "strip-debug",
+      ])
     "O4s" =>
       Ok([
         "duplicate-function-elimination", "vacuum", "reorder-locals", "strip-debug",
       ])
     _ =>
       Err(
-        "unknown optimization profile '\{profile}'; expected none, speed, or O4s",
+        "unknown optimization profile '\{profile}'; expected none, speed, speed-deep, or O4s",
       )
   }
 }
@@ -261,7 +276,7 @@ fn bootstrap_optimize_command(
     } else {
       if input != "" || argument.has_prefix("-") {
         bootstrap_fail(
-          "usage: dew optimize INPUT.wasm -o OUTPUT.wasm [--optimize speed|O4s|none]",
+          "usage: dew optimize INPUT.wasm -o OUTPUT.wasm [--optimize speed|speed-deep|O4s|none]",
         )
       }
       input = bootstrap_working_path(argument)

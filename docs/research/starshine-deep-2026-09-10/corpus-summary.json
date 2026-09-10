@@ -1,0 +1,308 @@
+{
+  "discovery": {
+    "fixture_status": {
+      "expected-compile-failure": 51,
+      "failed": 312,
+      "passed": 98
+    },
+    "pipelines": {
+      "O4s": {
+        "passed": 410
+      },
+      "O4z": {
+        "failed": 148,
+        "passed": 262
+      },
+      "cli-speed": {
+        "passed": 410
+      },
+      "direct-coalesce-locals-cfg": {
+        "passed": 410
+      },
+      "direct-code-folding": {
+        "passed": 410
+      },
+      "direct-code-pushing": {
+        "passed": 410
+      },
+      "direct-dae": {
+        "failed": 16,
+        "passed": 394
+      },
+      "direct-dae-optimizing": {
+        "failed": 47,
+        "passed": 363
+      },
+      "direct-dead-code-elimination": {
+        "passed": 410
+      },
+      "direct-directize": {
+        "passed": 410
+      },
+      "direct-flatten": {
+        "failed": 309,
+        "passed": 101
+      },
+      "direct-global-refining": {
+        "passed": 410
+      },
+      "direct-global-struct-inference": {
+        "passed": 410
+      },
+      "direct-heap-store-optimization": {
+        "failed": 4,
+        "passed": 406
+      },
+      "direct-heap2local": {
+        "passed": 410
+      },
+      "direct-inlining-optimizing": {
+        "failed": 120,
+        "passed": 290
+      },
+      "direct-local-subtyping": {
+        "passed": 410
+      },
+      "direct-merge-blocks": {
+        "passed": 410
+      },
+      "direct-merge-locals": {
+        "failed": 1,
+        "passed": 409
+      },
+      "direct-once-reduction": {
+        "passed": 410
+      },
+      "direct-optimize-casts": {
+        "failed": 3,
+        "passed": 407
+      },
+      "direct-optimize-instructions": {
+        "failed": 102,
+        "passed": 308
+      },
+      "direct-precompute-propagate": {
+        "failed": 2,
+        "passed": 408
+      },
+      "direct-redundant-set-elimination": {
+        "passed": 410
+      },
+      "direct-remove-unused-brs": {
+        "passed": 410
+      },
+      "direct-simplify-globals-optimizing": {
+        "passed": 410
+      },
+      "direct-simplify-locals": {
+        "failed": 1,
+        "passed": 409
+      },
+      "direct-simplify-locals-notee-nostructure": {
+        "passed": 410
+      },
+      "direct-ssa-nomerge": {
+        "failed": 3,
+        "passed": 407
+      },
+      "speed-heap-after": {
+        "failed": 3,
+        "passed": 407
+      },
+      "speed-ssa-after": {
+        "failed": 10,
+        "passed": 400
+      },
+      "speed-ssa-before": {
+        "failed": 3,
+        "passed": 407
+      }
+    },
+    "seconds": 431.1329774730111,
+    "source_fixtures": 461
+  },
+  "ordered-screen": {
+    "fixture_status": {
+      "expected-compile-failure": 51,
+      "failed": 48,
+      "passed": 362
+    },
+    "pipelines": {
+      "O4s": {
+        "passed": 410
+      },
+      "cli-speed": {
+        "passed": 410
+      },
+      "deep-60": {
+        "failed": 6,
+        "passed": 404
+      },
+      "deep-both": {
+        "failed": 6,
+        "passed": 404
+      },
+      "deep-both-no-shrink": {
+        "failed": 25,
+        "passed": 385
+      },
+      "deep-both-shrink2": {
+        "failed": 6,
+        "passed": 404
+      },
+      "deep-cfg": {
+        "failed": 8,
+        "passed": 402
+      },
+      "deep-core": {
+        "failed": 6,
+        "passed": 404
+      },
+      "deep-heap": {
+        "failed": 6,
+        "passed": 404
+      },
+      "deep-late-ssa": {
+        "failed": 15,
+        "passed": 395
+      },
+      "deep-locals": {
+        "failed": 21,
+        "passed": 389
+      },
+      "deep-ssa": {
+        "failed": 6,
+        "passed": 404
+      },
+      "deep-twice": {
+        "failed": 11,
+        "passed": 399
+      },
+      "direct-ssa-nomerge": {
+        "passed": 410
+      },
+      "heap-early": {
+        "passed": 410
+      },
+      "heap-ssa-early": {
+        "passed": 410
+      },
+      "speed-heap-after": {
+        "failed": 3,
+        "passed": 407
+      },
+      "speed-ssa-after": {
+        "failed": 2,
+        "passed": 408
+      },
+      "speed-ssa-before": {
+        "passed": 410
+      },
+      "ssa-heap-early": {
+        "passed": 410
+      }
+    },
+    "seconds": 372.8055815669941,
+    "source_fixtures": 461
+  },
+  "ordered-wave2": {
+    "fixture_status": {
+      "expected-compile-failure": 51,
+      "failed": 28,
+      "passed": 382
+    },
+    "pipelines": {
+      "deep-60-cfg-coalesce": {
+        "failed": 11,
+        "passed": 399
+      },
+      "deep-60-one-coalesce": {
+        "failed": 2,
+        "passed": 408
+      },
+      "deep-both-cfg-coalesce": {
+        "failed": 11,
+        "passed": 399
+      },
+      "deep-both-one-coalesce": {
+        "failed": 2,
+        "passed": 408
+      },
+      "deep-cfg-cfg-coalesce": {
+        "failed": 13,
+        "passed": 397
+      },
+      "deep-cfg-one-coalesce": {
+        "failed": 8,
+        "passed": 402
+      },
+      "deep-core-cfg-coalesce": {
+        "failed": 11,
+        "passed": 399
+      },
+      "deep-core-one-coalesce": {
+        "failed": 2,
+        "passed": 408
+      },
+      "deep-locals-cfg-coalesce": {
+        "failed": 23,
+        "passed": 387
+      },
+      "deep-locals-one-coalesce": {
+        "failed": 17,
+        "passed": 393
+      }
+    },
+    "seconds": 222.96997463800653,
+    "source_fixtures": 461
+  },
+  "ordered-wave3": {
+    "fixture_status": {
+      "expected-compile-failure": 51,
+      "passed": 410
+    },
+    "pipelines": {
+      "deep-60-single-local-wave": {
+        "passed": 410
+      },
+      "deep-both-single-local-wave": {
+        "passed": 410
+      },
+      "deep-core-single-local-wave": {
+        "passed": 410
+      }
+    },
+    "seconds": 115.46114433000912,
+    "source_fixtures": 461
+  },
+  "ordered-wave4": {
+    "fixture_status": {
+      "expected-compile-failure": 51,
+      "failed": 3,
+      "passed": 407
+    },
+    "pipelines": {
+      "deep-both-coalesce-first": {
+        "failed": 2,
+        "passed": 408
+      },
+      "deep-both-inline20": {
+        "failed": 2,
+        "passed": 408
+      },
+      "deep-both-inline80": {
+        "failed": 2,
+        "passed": 408
+      },
+      "deep-both-no-coalesce": {
+        "passed": 410
+      },
+      "deep-both-no-inline": {
+        "failed": 1,
+        "passed": 409
+      }
+    },
+    "seconds": 140.29305928500253,
+    "source_fixtures": 461
+  }
+}

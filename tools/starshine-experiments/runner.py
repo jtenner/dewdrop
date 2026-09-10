@@ -119,12 +119,12 @@ def pipelines(path=HERE / "pipelines.json"):
     return config["pipelines"]
 
 
-def runtime(binary, source, expected, engine, wago, records):
+def runtime(binary, source, expected, engine, wago, records, timeout=30):
     host = json.dumps(expected.get("host", {}))
     mode = snapshots.fixture_mode(source)
     command = (["node", ROOT / "tools/module-snapshots/run-main.mjs"]
                if engine == "node" else [wago])
-    process = execute([*command, binary, host, mode], records)
+    process = execute([*command, binary, host, mode], records, timeout=timeout)
     actual = snapshots.parse_runtime_result(engine, process)
     check_output(expected["output"], actual)
     return actual
@@ -181,7 +181,7 @@ def snapshot_case(source, args, selected):
         execute(["wasm-tools", "validate", "--features", "all", binary], records)
         result["baseline"] = {"bytes": binary.stat().st_size, "sha256": sha256(binary), "output": {}}
         for engine in args.runtime:
-            result["baseline"]["output"][engine] = runtime(binary, source, expected, engine, args.wago, records)
+            result["baseline"]["output"][engine] = runtime(binary, source, expected, engine, args.wago, records, args.runtime_timeout)
         result["status"] = "passed"
     except (CommandFailure, AssertionError, snapshots.SnapshotError) as error:
         result.update(status="baseline-failed", error=str(error))
@@ -194,7 +194,7 @@ def snapshot_case(source, args, selected):
             trial.update(optimize(binary, output, flags, args.starshine, trial["commands"]))
             trial["output"] = {}
             for engine in args.runtime:
-                trial["output"][engine] = runtime(output, source, expected, engine, args.wago, trial["commands"])
+                trial["output"][engine] = runtime(output, source, expected, engine, args.wago, trial["commands"], args.runtime_timeout)
             trial["status"] = "passed"
         except (CommandFailure, AssertionError, snapshots.SnapshotError) as error:
             trial.update(status="failed", error=str(error))
@@ -225,14 +225,17 @@ def main():
     parser.add_argument("--fixture", action="append", default=[])
     parser.add_argument("--runtime", choices=["node", "wago"], action="append")
     parser.add_argument("--jobs", type=int, default=4)
+    parser.add_argument("--wago", type=Path, help="use an explicitly prebuilt snapshot runner")
+    parser.add_argument("--runtime-timeout", type=float, default=30)
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument("--from-wat", action="store_true", help="use checked-in WAT as the fixed optimizer input; report compiler-error fixtures separately")
     args = parser.parse_args()
-    if args.jobs < 1:
-        parser.error("--jobs must be positive")
+    if args.jobs < 1 or args.runtime_timeout <= 0:
+        parser.error("--jobs and --runtime-timeout must be positive")
     args.output = args.output.resolve()
     args.runtime = args.runtime or ["node", "wago"]
-    args.wago = args.output / "wago-runner"
+    prebuilt_wago = args.wago is not None
+    args.wago = args.wago.resolve() if prebuilt_wago else args.output / "wago-runner"
     args.output.mkdir(parents=True, exist_ok=True)
     soft, hard = resource.getrlimit(resource.RLIMIT_STACK)
     desired = 64 * 1024 * 1024
@@ -250,9 +253,12 @@ def main():
         if not args.from_wat:
             execute(["moon", "build", "--target", "native", "--release", "src/module_snapshot_gen"], report["commands"], timeout=600)
         execute(["moon", "build", "--target", "native", "--release", "starshine-mb/src/cmd"], report["commands"], timeout=600)
-    if "wago" in args.runtime:
+    if "wago" in args.runtime and not prebuilt_wago:
         execute(["go", "-C", snapshots.WAGO_RUNNER, "build", "-o", args.wago, "."], report["commands"], timeout=120)
     report["binaries"] = {"starshine": sha256(args.starshine)}
+    if "wago" in args.runtime:
+        report["binaries"]["wago"] = sha256(args.wago)
+    report["runtime_timeout"] = args.runtime_timeout
     if not args.from_wat:
         report["binaries"]["compiler"] = sha256(args.compiler)
     sources = snapshots.fixture_paths(args.fixture)

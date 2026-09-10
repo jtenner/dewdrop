@@ -1,0 +1,250 @@
+[
+  {
+    "case": "case-000001-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 i64)",
+      "+   (local $44 i64)",
+      "-   (local $48 f32)",
+      "+   (local $45 f32)",
+      "-   (local $49 f64)",
+      "+   (local $46 f64)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000003-gen-valid",
+    "changes": [
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 i32)",
+      "-   (local $48 f64)",
+      "+   (local $45 f64)",
+      "-   (local $49 i64)",
+      "+   (local $46 i64)",
+      "-   (local $50 f32)",
+      "+   (local $47 f32)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000004-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 i64)",
+      "+   (local $44 i64)",
+      "-   (local $48 f32)",
+      "+   (local $45 f32)",
+      "-   (local $49 f64)",
+      "+   (local $46 f64)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000005-gen-valid",
+    "changes": [
+      "-     (nop)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000006-gen-valid",
+    "changes": [
+      "-     (nop)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000009-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 i64)",
+      "+   (local $44 i64)",
+      "-   (local $48 f64)",
+      "+   (local $45 f64)",
+      "-   (local $49 f64)",
+      "+   (local $46 f64)",
+      "-   (local $50 f64)",
+      "+   (local $47 f64)",
+      "-   (local $51 f32)",
+      "+   (local $48 f32)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000011-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 f64)",
+      "+   (local $44 f64)",
+      "-   (local $48 i64)",
+      "+   (local $45 i64)",
+      "-   (local $49 f32)",
+      "+   (local $46 f32)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000012-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 i64)",
+      "+   (local $44 i64)",
+      "-   (local $48 f32)",
+      "+   (local $45 f32)",
+      "-   (local $49 f64)",
+      "+   (local $46 f64)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000013-gen-valid",
+    "changes": [
+      "-     (nop)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000014-gen-valid",
+    "changes": [
+      "-     (nop)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000017-gen-valid",
+    "changes": [
+      "-   (local $46 i32)",
+      "-   (local $47 i32)",
+      "-   (local $48 i32)",
+      "-   (local $49 f64)",
+      "+   (local $46 f64)",
+      "-   (local $50 f32)",
+      "+   (local $47 f32)",
+      "-   (local $51 f32)",
+      "+   (local $48 f32)",
+      "-   (local $52 i64)",
+      "+   (local $49 i64)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000019-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 f64)",
+      "+   (local $44 f64)",
+      "-   (local $48 f64)",
+      "+   (local $45 f64)",
+      "-   (local $49 i64)",
+      "+   (local $46 i64)",
+      "-   (local $50 f32)",
+      "+   (local $47 f32)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000020-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 i64)",
+      "+   (local $44 i64)",
+      "-   (local $48 f32)",
+      "+   (local $45 f32)",
+      "-   (local $49 f64)",
+      "+   (local $46 f64)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000021-gen-valid",
+    "changes": [
+      "-     (nop)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000022-gen-valid",
+    "changes": [
+      "-     (nop)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000025-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 f64)",
+      "+   (local $44 f64)",
+      "-   (local $48 f32)",
+      "+   (local $45 f32)",
+      "-   (local $49 f32)",
+      "+   (local $46 f32)",
+      "-   (local $50 i64)",
+      "+   (local $47 i64)",
+      "-   (local $51 i64)",
+      "+   (local $48 i64)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000027-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 i64)",
+      "+   (local $44 i64)",
+      "-   (local $48 f32)",
+      "+   (local $45 f32)",
+      "-   (local $49 f64)",
+      "+   (local $46 f64)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000028-gen-valid",
+    "changes": [
+      "-   (local $44 i32)",
+      "-   (local $45 i32)",
+      "-   (local $46 i32)",
+      "-   (local $47 i64)",
+      "+   (local $44 i64)",
+      "-   (local $48 f32)",
+      "+   (local $45 f32)",
+      "-   (local $49 f64)",
+      "+   (local $46 f64)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000029-gen-valid",
+    "changes": [
+      "-     (nop)"
+    ],
+    "prior_b92_raw_identical": true
+  },
+  {
+    "case": "case-000030-gen-valid",
+    "changes": [
+      "-     (nop)"
+    ],
+    "prior_b92_raw_identical": true
+  }
+]

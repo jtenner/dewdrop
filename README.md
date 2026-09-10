@@ -782,13 +782,22 @@ tools/dew test path/to/program.dew path/to/program_test.dew --optimize speed
 tools/dew build --optimize speed --print-passes
 ```
 
-`--optimize` selects `none`, `speed`, or `O4s`. Build, run, and test default to
-`none`. The speed profile uses a measured ordered Starshine schedule. On ten local
-benchmarks it uses 13.2% less time and 12.4% fewer encoded bytes than `O4s`;
-byte hashing and map workloads regress. See the [measurements and exact pass
-order](docs/research/compiler-cli-optimization-2026-09-10.md). `O4s`
-uses the stock schedule in the pinned Starshine version. `--print-passes`
-prints JSON with the exact order and optimization levels, without compiling.
+`--optimize` selects `none`, `speed`, `speed-deep`, or `O4s`. Build, run, and test
+use `none` by default. `speed` uses 11 passes. `speed-deep` uses 50 ordered passes,
+with Heap2Local and SSANoMerge before inlining and one local cleanup phase.
+
+```sh
+tools/dew build path/to/program.dew -o program.wasm --optimize speed-deep
+tools/dew build --optimize speed-deep --print-passes
+```
+
+On 16 local benchmarks, `speed-deep` uses about 0.7% less time and 1.7% fewer bytes
+than `speed`; it uses 8.7% less time and 14.2% fewer bytes than the pinned stock
+`O4s`. The optimizer itself takes more time: about 1.18 s versus 0.12 s across the 15
+distinct input modules. Byte hashing remains slower than `O4s`. See the [full measurements, pass
+order, and remaining pass faults](docs/research/starshine-deep-pipeline-2026-09-10.md).
+`--print-passes` prints the exact order and optimization levels as JSON without
+compiling a source file.
 Optimization supports Wasm and WAT output. HIR and lowering output cannot use it.
 
 To optimize an existing module, including a compiler Wasm artifact:
