@@ -1,0 +1,78 @@
+{
+  "all-pipelines": {
+    "pipelines": {
+      "O4s": {
+        "passed": 410
+      },
+      "casts": {
+        "failed": 3,
+        "passed": 407
+      },
+      "cleanup": {
+        "failed": 123,
+        "passed": 287
+      },
+      "cse-prune": {
+        "passed": 410
+      },
+      "fold-inline": {
+        "passed": 410
+      },
+      "gc-speed": {
+        "failed": 117,
+        "passed": 293
+      },
+      "heap": {
+        "failed": 3,
+        "passed": 407
+      },
+      "heap-prune": {
+        "passed": 410
+      },
+      "inline-budget": {
+        "passed": 410
+      },
+      "inline-cse": {
+        "passed": 410
+      },
+      "inline-fold": {
+        "passed": 410
+      },
+      "inline-prune": {
+        "passed": 410
+      },
+      "inline-small": {
+        "passed": 410
+      },
+      "peephole": {
+        "failed": 102,
+        "passed": 308
+      },
+      "precompute-prune": {
+        "passed": 410
+      },
+      "prune": {
+        "passed": 410
+      },
+      "speed": {
+        "failed": 126,
+        "passed": 284
+      }
+    },
+    "status": {
+      "expected-compile-failure": 51,
+      "failed": 157,
+      "passed": 253
+    },
+    "total": 461
+  },
+  "initial": {
+    "pipelines": {
+      "O4s": {}
+    },
+    "status": {
+      "baseline-failed": 46
+    },
+    "total": 46
+  }
+}

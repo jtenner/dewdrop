@@ -86,8 +86,8 @@ The new fixture checks direct and captured callback results with assertions.
 The full native lane passes 1,333 tests over 229 targets; its slowest measured
 target takes 17.621 seconds. All 461 source fixtures now meet their baseline
 oracles (410 execute and 51 report expected source errors). O4s passes all 410;
-fold-inline exposes one separate Starshine recursive-type indexing bug, which
-remains visible pending its repair.
+fold-inline initially exposed one separate Starshine recursive-type indexing
+bug. The repair and full rerun are recorded below.
 
 ## Crash reports
 
@@ -117,3 +117,61 @@ jobs are active; retain that timing as a performance bug pending a serial check.
 [Saved validation data](data/source-fixture-fixes-2026-09-10/source-validation.json)
 includes per-target native times. The accompanying JSONL keeps every official
 snapshot command time, including all 922 source compilations.
+
+## Starshine recursive type indexing
+
+`modules/cross-module-recursive-types-runtime` first failed after plain inlining.
+The inliner used an outer recursive-group position as a flat Wasm type index.
+A two-member group shifted subsequent function signatures; an `i32` argument
+could receive an `i64` local. Count every subtype in both direct lookup and the
+signature map. Reuse Starshine's indexed module context for function summaries.
+Red-first pass, white-box, and CLI regressions now pass for plain and optimizing
+inlining, including function members inside and after recursive groups.
+
+The release CLI has SHA-256
+`efab56b63e08234a8dbcb44fd9b32f6f836072eae185b862e1b04d4d423a6a6f`.
+Both regular GenValid and aggregate `pass-inlining` match Binaryen 131 on all
+10,000 cases at seed `0x5eed`, with zero mismatches or validation, property,
+generator, or command failures. Canonical totals match; raw bytes are still
+larger than Binaryen. These are normalization checks, not extra runtime proofs.
+The two lanes took 117.969 and 217.561 seconds in total, with eight workers.
+
+## All pipeline source rerun
+
+The complete 17-pipeline sweep compiles all 461 fixtures from source: no baseline
+failures, 410 runtime cases, and 51 expected source errors. Eleven pipelines
+pass all 410 runtime cases in both Node and Wago: O4s, prune, heap-prune,
+inline-prune, cse-prune, precompute-prune, inline-cse, fold-inline, inline-fold,
+inline-small, and inline-budget. This includes every originally failing source
+fixture and the new nominal callback fixture.
+
+The retained trial pipelines still fail and are not selected:
+
+| Pipeline | Pass | Fail |
+| --- | ---: | ---: |
+| cleanup | 287 | 123 |
+| speed | 284 | 126 |
+| gc-speed | 293 | 117 |
+| peephole | 308 | 102 |
+| casts | 407 | 3 |
+| heap | 407 | 3 |
+
+The broad runner therefore correctly returns failure, with 157 fixtures failing
+at least one rejected trial. This does not conceal or reclassify those failures
+as source fixes. The source sweep took 575.901 seconds across four workers;
+the longest source compile took 10.566 seconds under concurrent validation load.
+Forty-six commands in rejected trials exceeded the 30-second optimizer limit
+(cleanup 21, speed 12, gc-speed 13); all remain explicit performance failures.
+`heap-prune`, which had failed on the old saved-WAT corpus, now passes this fresh
+source corpus. It is not a new speed recommendation without a benchmark.
+
+The cold Starshine release build took 215.782 seconds, and a cold focused native
+regression build took 51.581 seconds. Both remain build performance bugs. The
+warm CLI regression takes 0.026 seconds. No diagnostic assertion was disabled.
+
+Starshine commit `ecf316925` contains the recursive-group fix. The full pinned
+Starshine native suite passes 10,988 tests in 429.197 seconds. API generation
+passes in 3.857 seconds with no public API change. A serial repeat of the
+previously slow Dew program-link integration target passes all 41 tests in
+17.452 seconds; its earlier 31.052-second measurement included CPU contention.
+The full suite's aggregate over-budget result remains visible in the data.

@@ -1,0 +1,235 @@
+{
+  "max_source_compile_seconds": 10.56596976199944,
+  "performance_bugs": [
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.05776536600024
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.031257261987776
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.027433273004135
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.0290811570012
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.03425206000975
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.033124039007816
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.033898533001775
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.033766052001738
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.029749697991065
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.033145123001304
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.03256506701291
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.032453453997732
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.028702112991596
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.033804174992838
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.028890219007735
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.044711010006722
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.027556421991903
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.028568694993737
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.029909588003648
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.03096797200851
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.029764131992124
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.03027993500291
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.032077024006867
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.031072240992216
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.03107404000184
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.03235828501056
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.03068870700372
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.0332193570066
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.030970009000157
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.033253163011977
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.03080123300606
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.031071724006324
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.029658788000233
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.01938738200988
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.029909710006905
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.029810217005434
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.03379467499326
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.031795560003957
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.031064577997313
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.030645238002762
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.029113072989276
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.032787781005027
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.0343333940109
+    },
+    {
+      "fixture": null,
+      "phase": "cleanup",
+      "seconds": 30.03085335799551
+    },
+    {
+      "fixture": null,
+      "phase": "gc-speed",
+      "seconds": 30.012829743005568
+    },
+    {
+      "fixture": null,
+      "phase": "speed",
+      "seconds": 30.032674319998478
+    }
+  ]
+}

@@ -12,6 +12,11 @@ dominate: it saves **4.1% of total bytes**, with no useful measured speed gain.
 The full results, exact pass order, and limits are below. Compiler defaults have
 not changed; the experiment runners apply the selected pipeline explicitly.
 
+The 46 committed-source failures found below are repaired in the
+[source fixture follow-up](source-fixture-failures-2026-09-10.md). That report
+contains fresh-source checks and new measurements; the results below retain the
+original experiment state.
+
 ## Starting state
 
 - Dewdrop HEAD: `286e881b` at the start. The workspace has existing compiler and
