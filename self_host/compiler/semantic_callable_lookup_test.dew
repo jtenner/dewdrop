@@ -34,3 +34,35 @@ test "ARN-106 callable lookup rejects another stored declaration" expect_trap "u
   module_.functions.callable_by_declaration[0u32] = 1u32
   let _ = self_host_program_specialization_callable(module_, 5100u64 << 32u64)
 }
+
+fn self_host_program_callable_lookup_fixture() -> SelfHostPlannedProgramLowering {
+  let lowering = self_host_physical_test_lowering(
+    b"pub fn run() -> U32 {\n  42u32\n}\n",
+  )
+  assert(lowering.modules.length() == 1u32, "one program callable module")
+  assert(lowering.index.module_ids.length() == 1u32, "one program owner ID")
+  assert(lowering.index.module_ids[0u32] == 5100u64, "stable program owner")
+  match self_host_program_specialization_program_callable(lowering, 5100u64 << 32u64) {
+    Option::Some(value) => assert(value.declaration == 5100u64 << 32u64, "exact program callable")
+    Option::None => assert(false, "fixture program callable is present")
+  }
+  lowering
+}
+
+test "program callable lookup keeps unknown owners absent" {
+  let lowering = self_host_program_callable_lookup_fixture()
+  assert(self_host_program_specialization_program_callable(lowering, 5101u64 << 32u64) is Option::None,
+    "unknown module is not a corrupt selected module")
+}
+
+test "ARN-101 program callable lookup rejects an owner outside the module arena" expect_trap "unreachable" {
+  let lowering = self_host_program_callable_lookup_fixture()
+  lowering.index.module_ids.push(5101u64)
+  let _ = self_host_program_specialization_program_callable(lowering, 5101u64 << 32u64)
+}
+
+test "ARN-106 program callable lookup rejects a different stored module" expect_trap "unreachable" {
+  let lowering = self_host_program_callable_lookup_fixture()
+  lowering.index.module_ids[0u32] = 5101u64
+  let _ = self_host_program_specialization_program_callable(lowering, 5101u64 << 32u64)
+}

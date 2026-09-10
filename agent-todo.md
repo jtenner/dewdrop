@@ -879,6 +879,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   before lookup returns. Missing entries stay missing; corrupt entries retain
   ARN-105/106 numeric context. See the
   [callable lookup log](docs/research/callable-lookup-identity-2026-09-09.md).
+  The self-host program callable wrapper also checks its selected module index
+  and stored module identity. A corrupt owner no longer becomes a missing
+  callable. Two mutations retain exact ARN-101/106 records; 887 self-host tests
+  and 465 exact records pass. See the
+  [owner log](docs/research/program-callable-owner-2026-09-09.md).
   Physical body errors now use 41 typed reasons with exhaustive code and text
   mappings. Field, constructor, local, flow, and raw-instruction errors no longer
   become code zero. See the
