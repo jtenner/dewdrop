@@ -1,6 +1,6 @@
 # Dew Agent TODO
 
-> Current handoff updated September 9, 2026. The older deferred backlog below
+> Current handoff updated September 10, 2026. The older deferred backlog below
 > comes from [`docs/roadmap.md`](docs/roadmap.md); it is not a claim that the whole
 > roadmap was re-audited today. Use small commits with tests, docs, and measured
 > compiler runs. Fix correctness before speed. Do not push without a new request.
@@ -505,6 +505,11 @@ Correctness comes first. Keep these timing defects visible after query completio
   The stored receiver is now excluded from the explicit argument count.
   All 906 self-host tests and 470 exact records pass; see the
   [method lookup log](docs/research/method-lookup-contracts-2026-09-10.md).
+  Receiver primitive type-head lookup no longer stops after eight links.
+  It follows signed resolved links and reports cycles, invalid indices, and
+  encoding overflow with numeric context. All 910 self-host tests and 473
+  exact records pass; see the
+  [receiver type-head log](docs/research/receiver-type-head-walk-2026-09-10.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Callback signatures now require the target's function type; missing evidence
   cannot be rebuilt from operands. Scope spans and target membership have exact

@@ -7537,55 +7537,6 @@ fn self_host_linked_resolved_primitive_rank(
   }
 }
 
-fn self_host_linked_body_primitive_rank(
-  module_: SelfHostPlannedModuleLowering,
-  type_: I32,
-) -> U32 {
-  let mut current = type_
-  let mut depth = 0u32
-  let _ = while depth {
-    step => if step < 8u32 {
-      if current < -1i32 {
-        return self_host_linked_resolved_primitive_rank(
-          module_,
-          self_host_body_i32_to_u32(-current - 2i32),
-        )
-      } else if current < 0i32 {
-        return 0u32
-      }
-      let index = self_host_body_i32_to_u32(current)
-      if index >= module_.inferred.types.length() {
-        return 0u32
-      }
-      let mut resolved_type = 4294967295u32
-      let mut next_type = -1i32
-      match module_.inferred.types[index] {
-        SelfHostBodyTypeTerm::BodyResolvedType(value) => {
-          resolved_type = value
-        }
-        SelfHostBodyTypeTerm::BodyAppliedType(base, _) => {
-          next_type = base
-        }
-        _ => {}
-      }
-      if !self_host_u32_equal(resolved_type, 4294967295u32) {
-        return self_host_linked_resolved_primitive_rank(
-          module_,
-          resolved_type,
-        )
-      }
-      if next_type >= 0i32 {
-        current = next_type
-        continue step + 1u32
-      }
-      return 0u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  0u32
-}
-
 // A nonnegative result selects semantic key equality instead of carrier
 // equality. String is primitive rank 8, encoded here as rank + 1.
 

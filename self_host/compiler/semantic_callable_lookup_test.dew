@@ -369,3 +369,44 @@ test "one linked generic method is not evidence for another receiver argument" {
   }
   assert(checked, "generic receiver mismatch was checked")
 }
+
+test "receiver primitive lookup follows long type-head chains" {
+  let module_ = self_host_specialized_shape_fixture()
+  let resolved = module_.resolved_types.types.length()
+  module_.resolved_types.types.push(SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::I64Type))
+  let mut root = -self_host_body_u32_to_i32(resolved) - 2i32
+  let expected = SelfHostPrimitiveType::I64Type.rank() + 1u32
+  assert(self_host_linked_body_primitive_rank(module_, root) == expected, "direct primitive before wrappers")
+  // This is a type-head walker fixture, not a source-language application.
+  while 0u32 {
+    depth if depth < 64u32 => {
+      let next = self_host_body_u32_to_i32(module_.inferred.types.length())
+      module_.inferred.types.push(SelfHostBodyTypeTerm::BodyAppliedType(root, self_host_empty_hir_span(0u32)))
+      root = next
+      continue depth + 1u32
+    }
+    _ => break ()
+  }
+  assert(self_host_linked_body_primitive_rank(module_, root) == expected, "the chain has no eight-step cutoff")
+}
+
+test "ARN-108 receiver primitive lookup reports a type-head cycle" expect_trap "unreachable" {
+  let module_ = self_host_specialized_shape_fixture()
+  assert(module_.inferred.types.length() == 1u32, "stable type-head arena")
+  module_.inferred.types.push(SelfHostBodyTypeTerm::BodyResolvedType(module_.functions.callables[0u32].result_type))
+  assert(self_host_linked_body_primitive_rank(module_, 1i32) == 0u32, "valid generic type-head before mutation")
+  module_.inferred.types[1u32] = SelfHostBodyTypeTerm::BodyAppliedType(1i32, self_host_empty_hir_span(0u32))
+  let _ = self_host_linked_body_primitive_rank(module_, 1i32)
+}
+
+test "ARN-105 receiver primitive lookup checks body type indices" expect_trap "unreachable" {
+  let module_ = self_host_specialized_shape_fixture()
+  assert(module_.inferred.types.length() == 1u32, "stable body type limit")
+  let _ = self_host_linked_body_primitive_rank(module_, 1i32)
+}
+
+test "SOL-207 receiver primitive lookup checks resolved encoding" expect_trap "unreachable" {
+  let module_ = self_host_specialized_shape_fixture()
+  module_.inferred.types[0u32] = SelfHostBodyTypeTerm::BodyResolvedType(4294967295u32)
+  let _ = self_host_linked_body_primitive_rank(module_, 0i32)
+}

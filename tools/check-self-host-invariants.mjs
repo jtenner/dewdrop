@@ -11,6 +11,18 @@ function solverProbe(name, code, expected, actual, detail) {
 }
 const probes = [
   {
+    name: "ARN-105 receiver primitive lookup checks body type indices",
+    expected: [105, 7, 5100n, 0n, 0n, 4294967295, 1n, 1n, 1n],
+  },
+  {
+    name: "SOL-207 receiver primitive lookup checks resolved encoding",
+    expected: [207, 7, 5100n, 0n, 0n, 4294967295, 2147483646n, 4294967295n, 0n],
+  },
+  {
+    name: "ARN-108 receiver primitive lookup reports a type-head cycle",
+    expected: [108, 7, 5100n, 0n, 0n, 4294967295, 2n, 2n, 1n],
+  },
+  {
     name: "SPC-301 callback result presence requires concrete type evidence",
     expected: [301, 7, 5100n, 5100n << 32n, 5100n << 32n, 2, 0n, 2n, 0n],
   },

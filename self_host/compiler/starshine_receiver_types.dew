@@ -1,0 +1,50 @@
+// This is a type-head query, not a certificate for all type arguments.
+// A finite functional chain either terminates or repeats within arena length.
+fn self_host_linked_body_primitive_rank(
+  module_: SelfHostPlannedModuleLowering,
+  type_: I32,
+) -> U32 {
+  let mut current = type_
+  let mut hops = 0u32
+  let limit = module_.inferred.types.length()
+  let detail = u32_into_u64(self_host_body_i32_to_u32(type_))
+  while 0u32 {
+    _ => {
+      if current < -1i32 {
+        let resolved = self_host_body_i32_to_u32(-(current + 2i32))
+        if resolved >= module_.resolved_types.types.length() {
+          self_host_call_read_failure(module_.module_id, 0u64, 0u64, 4294967295u32,
+            105u32, u32_into_u64(module_.resolved_types.types.length()), u32_into_u64(resolved), detail)
+        }
+        return self_host_linked_resolved_primitive_rank(module_, resolved)
+      }
+      if current < 0i32 {
+        return 0u32
+      }
+      let index = self_host_body_i32_to_u32(current)
+      if index >= limit {
+        self_host_call_read_failure(module_.module_id, 0u64, 0u64, 4294967295u32,
+          105u32, u32_into_u64(limit), u32_into_u64(index), detail)
+      }
+      if hops >= limit {
+        self_host_call_read_failure(module_.module_id, 0u64, 0u64, 4294967295u32,
+          108u32, u32_into_u64(limit), u32_into_u64(hops), detail)
+      }
+      hops = hops + 1u32
+      match module_.inferred.types[index] {
+        SelfHostBodyTypeTerm::BodyResolvedType(resolved) => {
+          if resolved > 2147483646u32 {
+            self_host_call_read_failure(module_.module_id, 0u64, 0u64, 4294967295u32,
+              207u32, 2147483646u64, u32_into_u64(resolved), detail)
+          }
+          current = -self_host_body_u32_to_i32(resolved) - 2i32
+        }
+        SelfHostBodyTypeTerm::BodyAppliedType(base, _) => {
+          current = base
+        }
+        _ => return 0u32
+      }
+      continue 0u32
+    }
+  }
+}
