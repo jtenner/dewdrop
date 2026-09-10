@@ -6673,6 +6673,19 @@ fn self_host_linked_expression_emits_value(
     return false
   }
   let planned = module_.expressions[expression]
+  if planned.kind is SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) {
+    if !planned.flow.falls_through {
+      return false
+    }
+    let shape = self_host_linked_inferred_callback_result_shape(link, module_, body, caller_specialization, expression)
+    let error = self_host_specialization_shape_error(shape)
+    if error != 0u32 {
+      self_host_call_read_failure(module_.module_id, body.declaration, body.body, expression,
+        301u32, 0u64, u32_into_u64(error), 0u64)
+    }
+    return !(shape is SelfHostPlannedValueShape::UnitPlannedValueShape) &&
+      !(shape is SelfHostPlannedValueShape::NeverPlannedValueShape)
+  }
   if planned.shape is SelfHostPlannedValueShape::UnitPlannedValueShape ||
     planned.shape is SelfHostPlannedValueShape::NeverPlannedValueShape {
     return false
@@ -6694,38 +6707,6 @@ fn self_host_linked_expression_emits_value(
           )
         }
       }
-      true
-    }
-    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, _, _) => if target < module_.expressions.length() &&
-      self_host_u32_greater(
-        self_host_linked_module_name_count(module_),
-        module_.expressions[target].source_name,
-      ) {
-      let name = self_host_linked_module_name_at(
-        module_,
-        module_.expressions[target].source_name,
-      )
-      if name == "unreachable" || name == "string_builder_append" ||
-        name == "string_builder_append_view" || name == "string_builder_append_ascii" ||
-        name == "string_builder_append_scalar" || name == "bytes_builder_append" ||
-        name == "bytes_builder_append_byte" {
-        false
-      } else {
-        match self_host_linked_callable_by_name(link, name) {
-          Option::Some(callable) => match self_host_linked_callable_function_index(
-            link,
-            callable.declaration,
-          ) {
-            Option::Some(function_index) => self_host_linked_function_has_result(
-              link,
-              function_index,
-            )
-            Option::None => true
-          }
-          Option::None => true
-        }
-      }
-    } else {
       true
     }
     SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, _) => if target < module_.expressions.length() {
@@ -7239,33 +7220,6 @@ fn self_host_linked_module_name_at(
 ) -> String {
   module_.names[index]
 }
-
-fn self_host_linked_callable_by_name(
-  link: SelfHostPlannedProgramWasmGCLink,
-  name: String,
-) -> Option<SelfHostPlannedCallable> {
-  for candidate_module in link.fragments.specialization.lowering.modules {
-    let mut callable_index = 0u32
-    let _ = while callable_index {
-      current => if current < self_host_program_specialization_callable_count(
-        candidate_module,
-      ) {
-        let callable = self_host_program_specialization_callable_at(
-          candidate_module,
-          current,
-        )
-        if self_host_bytes_equal_string(callable.name, name) {
-          return Option::Some(callable)
-        }
-        continue current + 1u32
-      } else {
-        break self_host_semantic_unit()
-      }
-    }
-  }
-  Option::None
-}
-
 
 fn self_host_linked_callable_function_index(
   link: SelfHostPlannedProgramWasmGCLink,
@@ -20787,6 +20741,9 @@ fn self_host_linked_backend_expression_shape(
   }
   let planned = module_.expressions[expression]
   match planned.kind {
+    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) => return self_host_linked_inferred_callback_result_shape(
+      link, module_, body, caller_specialization, expression,
+    )
     SelfHostPlannedExpressionKind::PlannedBinaryExpression(
       operator,
       left,
@@ -20949,41 +20906,6 @@ fn self_host_linked_backend_expression_shape(
               name == "empty" {
               return SelfHostPlannedValueShape::RefPlannedValueShape
             }
-          }
-        }
-      }
-    }
-    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, _, _) => if target < module_.expressions.length() {
-      let mut callable_target = target
-      match module_.expressions[target].kind {
-        SelfHostPlannedExpressionKind::PlannedPrefixExpression(_, operand) => {
-          callable_target = operand
-        }
-        _ => {}
-      }
-      if callable_target < module_.expressions.length() {
-        let source_name = module_.expressions[callable_target].source_name
-        if source_name < self_host_linked_module_name_count(module_) {
-          match self_host_linked_callable_by_name(
-            link,
-            self_host_linked_module_name_at(module_, source_name),
-          ) {
-            Option::Some(callable) => match self_host_linked_callable_function_index(
-              link,
-              callable.declaration,
-            ) {
-              Option::Some(function_index) => {
-                let shape = self_host_linked_physical_function_result_shape(
-                  link,
-                  function_index,
-                )
-                if !(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape) {
-                  return shape
-                }
-              }
-              Option::None => {}
-            }
-            Option::None => {}
           }
         }
       }

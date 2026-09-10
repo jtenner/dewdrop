@@ -488,6 +488,12 @@ Correctness comes first. Keep these timing defects visible after query completio
   no longer searches method/runtime names or implements `into` by spelling.
   Other shape selectors still need cleanup. See the
   [call read log](docs/research/frozen-call-target-reads-2026-09-09.md).
+  Callback result-presence checks no longer use retired builder names, and
+  callback shapes no longer search for same-named globals. The global callable
+  name search is removed. Missing callback result types stay Error and cannot
+  become a boolean stack-value certificate. All 891 self-host tests, 466 exact
+  records, and 288 shared callback checks pass; see the
+  [callback result log](docs/research/callback-result-name-2026-09-09.md).
 - [ ] Finish call operand recipes for all call kinds and hidden arguments.
   Callback signatures now require the target's function type; missing evidence
   cannot be rebuilt from operands. Scope spans and target membership have exact

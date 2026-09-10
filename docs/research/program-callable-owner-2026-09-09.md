@@ -25,8 +25,10 @@ the selected owner before it calls the checked local lookup. The corrected
 full hardening run passes in 93.403 seconds: 887 tests, 465 exact records,
 276 shared generic callback checks, and all other shared emission/library
 and semantic probes. This change does not alter provider bindings. The clean
-bootstrap result for the preceding nested-call fix is not a new bootstrap
-check of this subsequent owner guard. Runs over 30 seconds remain timing
+bootstrap result for the preceding nested-call fix was not a new bootstrap
+check of this subsequent owner guard. The later
+[callback-result batch](callback-result-name-2026-09-09.md) now verifies this
+guard too with a fresh byte-equal B/C fixed point. Runs over 30 seconds remain timing
 defects; speed work is deferred.
 
 This is the self-host program

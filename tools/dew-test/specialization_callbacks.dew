@@ -4,6 +4,34 @@ fn identity<t>(value: t) -> t {
 
 builtin nested_tuple_failure() -> Never = "unreachable"
 
+pub fn misleading() -> F32 {
+  1.0f32
+}
+
+fn named_callback_identity(value: I64) -> I64 {
+  value
+}
+
+fn builder_named_callback(string_builder_append: fn(I64) -> I64, value: I64) -> I64 {
+  if value < 0i64 {
+    string_builder_append(value)
+  } else {
+    string_builder_append(value)
+  }
+}
+
+fn global_named_callback(misleading: fn(I64) -> I64, value: I64) -> I64 {
+  misleading(value)
+}
+
+pub fn builder_name_callback(value: I64) -> I64 {
+  builder_named_callback(named_callback_identity, value)
+}
+
+pub fn global_name_callback(value: I64) -> I64 {
+  global_named_callback(named_callback_identity, value)
+}
+
 fn nested_tuple_identity<t>(value: t, depth: U32) -> t {
   if depth == 0u32 {
     value

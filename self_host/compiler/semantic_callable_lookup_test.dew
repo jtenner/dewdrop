@@ -66,3 +66,76 @@ test "ARN-106 program callable lookup rejects a different stored module" expect_
   lowering.index.module_ids[0u32] = 5101u64
   let _ = self_host_program_specialization_program_callable(lowering, 5101u64 << 32u64)
 }
+
+fn self_host_assert_callback_result_identity(source: Bytes, check_emits: Bool) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(source), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let mut calls = 0u32
+  for body in module_.bodies {
+    while 0u32 {
+      relative if relative < body.expressions.length => {
+        let expression = body.expressions.start + relative
+        if module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) {
+          calls = calls + 1u32
+          assert(module_.expressions[expression].shape is SelfHostPlannedValueShape::I64PlannedValueShape,
+            "callback inference proves an I64 result")
+          if check_emits {
+            assert(self_host_linked_expression_emits_value(link, module_, body, 4294967295u32, expression),
+              "the callback name cannot erase its I64 result")
+          } else {
+            let shape = self_host_linked_backend_expression_shape(link, module_, body, 4294967295u32, expression)
+            assert(shape is SelfHostPlannedValueShape::I64PlannedValueShape,
+              "an unrelated function name cannot supply the callback result shape")
+          }
+        }
+        continue relative + 1u32
+      }
+      _ => break ()
+    }
+  }
+  assert(calls == 1u32, "one actual indirect callback must be tested")
+}
+
+test "callback result presence does not depend on a retired builder name" {
+  self_host_assert_callback_result_identity(
+    b"pub fn run(string_builder_append: fn(I64) -> I64) -> I64 {\n  string_builder_append(42i64)\n}\n",
+    true,
+  )
+}
+
+test "callback result shape does not come from a same-named global" {
+  self_host_assert_callback_result_identity(
+    b"pub fn misleading() -> Unit {\n  ()\n}\npub fn run(misleading: fn(I64) -> I64) -> I64 {\n  misleading(42i64)\n}\n",
+    false,
+  )
+}
+
+fn self_host_test_missing_callback_result(check_emits: Bool) -> Unit {
+  let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(
+    b"pub fn run(value: fn(I64) -> I64) -> I64 {\n  value(42i64)\n}\n",
+  ), false)
+  self_host_physical_test_assert_clean_inference(link)
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = module_.bodies[0u32]
+  let source = module_.expressions[2u32]
+  assert(source.kind is SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _), "stable callback expression")
+  assert(body.body == 5100u64 << 32u64 && body.declaration == 5100u64 << 32u64, "stable callback body")
+  let initial_shape = self_host_linked_inferred_callback_result_shape(link, module_, body, 4294967295u32, 2u32)
+  assert(initial_shape is SelfHostPlannedValueShape::I64PlannedValueShape, "valid result before mutation")
+  module_.expressions[2u32] = self_host_test_signature_expression(source, -1i32, source.kind, source.shape)
+  if check_emits {
+    let _ = self_host_linked_expression_emits_value(link, module_, body, 4294967295u32, 2u32)
+  } else {
+    let shape = self_host_linked_backend_expression_shape(link, module_, body, 4294967295u32, 2u32)
+    assert(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape, "missing result stays missing")
+  }
+}
+
+test "callback result inference preserves a missing type" {
+  self_host_test_missing_callback_result(false)
+}
+
+test "SPC-301 callback result presence requires concrete type evidence" expect_trap "unreachable" {
+  self_host_test_missing_callback_result(true)
+}

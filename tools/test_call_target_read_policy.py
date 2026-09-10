@@ -29,6 +29,7 @@ class CallTargetReadPolicy(unittest.TestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, emitter)
         for forbidden in ("self_host_linked_callable_by_name_and_result_nominal(",
+                          "self_host_linked_callable_by_name(",
                           "self_host_linked_qualified_runtime_name(",
                           "self_host_linked_unqualified_runtime_name("):
             with self.subTest(forbidden=forbidden):

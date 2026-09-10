@@ -36,8 +36,9 @@ The full routine native lane passes all 1,322 tests in 281.288 seconds:
 tests. The standard source-only package has no tests and is not counted as
 coverage. All 270 integration tests pass in 90.764 seconds. Generated-source,
 policy, metadata, and associated CLI checks pass in 19.017 seconds. Provider
-bindings are unchanged. A new clean bootstrap has not yet been run for this
-index change. Runs over 30 seconds remain
+bindings are unchanged. The subsequent callback-result batch also verifies this
+index change in a clean B/C fixed point; see the
+[callback result log](callback-result-name-2026-09-09.md). Runs over 30 seconds remain
 timing defects; speed work is deferred.
 
 This is not a claim to have replaced

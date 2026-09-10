@@ -1,0 +1,38 @@
+open dew.std.option
+
+// This is an inference input, not a frozen physical certificate. The ordinary
+// callback-signature verifier still checks the target and its complete ABI.
+fn self_host_linked_inferred_callback_result_shape(
+  link: SelfHostPlannedProgramWasmGCLink,
+  module_: SelfHostPlannedModuleLowering,
+  body: SelfHostPlannedBodyLowering,
+  specialization: U32,
+  expression: U32,
+) -> SelfHostPlannedValueShape {
+  if !self_host_array_span_is_valid(body.expressions.start, body.expressions.length, module_.expressions.length()) {
+    self_host_call_read_failure(module_.module_id, body.declaration, body.body, expression,
+      101u32, u32_into_u64(module_.expressions.length()), u32_into_u64(body.expressions.length), u32_into_u64(body.expressions.start))
+  }
+  if expression < body.expressions.start || expression - body.expressions.start >= body.expressions.length {
+    self_host_call_read_failure(module_.module_id, body.declaration, body.body, expression,
+      102u32, u32_into_u64(body.expressions.length), u32_into_u64(expression), u32_into_u64(body.expressions.start))
+  }
+  let shapes = if specialization == 4294967295u32 {
+    self_host_empty_hir_span(0u32)
+  } else {
+    if specialization >= link.fragments.specialization.requests.length() {
+      self_host_call_read_failure(module_.module_id, body.declaration, body.body, expression,
+        101u32, u32_into_u64(link.fragments.specialization.requests.length()), u32_into_u64(specialization), 0u64)
+    }
+    let request = link.fragments.specialization.requests[specialization]
+    if request.declaration != body.declaration {
+      self_host_call_read_failure(module_.module_id, body.declaration, body.body, expression,
+        106u32, body.declaration, request.declaration, u32_into_u64(specialization))
+    }
+    request.shapes
+  }
+  self_host_program_specialization_argument_shape(
+    module_, self_host_program_specialization_callable(module_, body.declaration),
+    shapes, link.fragments.specialization.shapes, module_.expressions[expression].type_,
+  )
+}
