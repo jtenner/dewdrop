@@ -27,6 +27,7 @@ fn self_host_append_outlined_raw_heap_instruction(link: SelfHostPlannedProgramWa
   match instruction {
     SelfHostRawHeapInstruction::RawStructGetInstruction(recipe) => self_host_append_outlined_raw_struct_get(link, module_, function_, recipe, functions)
     SelfHostRawHeapInstruction::RawRefCastInstruction(recipe) => self_host_append_outlined_raw_ref_cast(link, module_, function_, recipe, functions)
+    SelfHostRawHeapInstruction::RawArrayGetInstruction(recipe) => self_host_append_outlined_raw_array_get(link, module_, function_, recipe, functions)
   }
 }
 

@@ -653,6 +653,14 @@ const probes = [
     name,
     expected: [code, 7, 5100n, 5100n << 32n, 0n, 4294967295, expected, actual, detail],
   })),
+  ...[
+    ["ABI-705 raw array getter index retains I32", 705, 4n, 5n, 1n],
+    ["ABI-709 raw array getter result retains I64", 709, 5n, 4n, 0n],
+    ["SPC-301 raw array getter shape cannot become Error", 301, 1n, 0n, 0n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 7, 5100n, (5100n << 32n) | 1n, 0n, 4294967295, expected, actual, detail],
+  })),
   ...[["zero", 0n], ["reserved", 1n], ["missing", 4294967295n]].map(([kind, actual]) => ({
     name: `ARN-105 emitted function rejects ${kind} handle`,
     expected: [105, 7, 0n, 0n, 0n, 4294967295, 2n, actual, 0n],

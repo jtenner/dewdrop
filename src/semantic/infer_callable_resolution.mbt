@@ -506,10 +506,8 @@ fn BasicBodyInferencer::select_function_value_call(
   }
   let origin = call_type_origin(expression, offset)
   for index in 0..<arguments.length {
-    self.constrain(
-      self.expression_type(
-        self.collected.expression_children[arguments.start + index],
-      ),
+    self.constrain_expression_assignable(
+      self.collected.expression_children[arguments.start + index],
       signature.parameters[index],
       origin,
     )

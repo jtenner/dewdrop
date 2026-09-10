@@ -2,6 +2,91 @@ fn identity<t>(value: t) -> t {
   value
 }
 
+pub struct QuerySlots<t> {}
+builtin query_slots_new<t>(length: U32, value: t) -> QuerySlots<t> = "array.new"
+builtin query_slots_get<t>(values: QuerySlots<t>, index: U32) -> t = "array.get"
+builtin query_slot_bits<a, b>(value: a) -> b = "unsafe.bitcast"
+
+fn raw_i8_reader() -> fn(QuerySlots<I8>, U32) -> I8 {
+  query_slots_get
+}
+
+fn raw_u8_reader() -> fn(QuerySlots<U8>, U32) -> U8 {
+  query_slots_get
+}
+
+fn raw_i16_reader() -> fn(QuerySlots<I16>, U32) -> I16 {
+  query_slots_get
+}
+
+fn raw_u16_reader() -> fn(QuerySlots<U16>, U32) -> U16 {
+  query_slots_get
+}
+
+pub fn raw_array_packed_callback(value: I64) -> I64 {
+  let signed_byte = raw_i8_reader()
+  let unsigned_byte = raw_u8_reader()
+  let signed_short = raw_i16_reader()
+  let unsigned_short = raw_u16_reader()
+  let a = signed_byte(query_slots_new(1u32, query_slot_bits::<I32, I8>(255i32)), 0u32)
+  let b = unsigned_byte(query_slots_new(1u32, query_slot_bits::<I32, U8>(511i32)), 0u32)
+  let c = signed_short(query_slots_new(1u32, query_slot_bits::<I32, I16>(65535i32)), 0u32)
+  let d = unsigned_short(query_slots_new(1u32, query_slot_bits::<I32, U16>(131071i32)), 0u32)
+  if query_slot_bits::<I8, I32>(a) == -1i32 &&
+    query_slot_bits::<U8, I32>(b) == 255i32 &&
+    query_slot_bits::<I16, I32>(c) == -1i32 &&
+    query_slot_bits::<U16, I32>(d) == 65535i32 {
+    value
+  } else {
+    nested_tuple_failure()
+  }
+}
+
+fn raw_i64_reader() -> fn(QuerySlots<I64>, U32) -> I64 {
+  query_slots_get
+}
+
+fn raw_product_reader() -> fn(QuerySlots<(I64, (Unit, I64))>, U32) -> (I64, (Unit, I64)) {
+  query_slots_get
+}
+
+fn raw_unit_reader() -> fn(QuerySlots<Unit>, U32) -> Unit {
+  query_slots_get
+}
+
+pub fn raw_array_i64_callback(value: I64) -> I64 {
+  let values = query_slots_new(1u32, value)
+  let read = raw_i64_reader()
+  read(values, 0u32)
+}
+
+pub fn raw_array_product_callback(value: I64) -> I64 {
+  let values = query_slots_new(1u32, (value, ((), value)))
+  let read = raw_product_reader()
+  let (first, (_, last)) = read(values, 0u32)
+  if first == last {
+    last
+  } else {
+    nested_tuple_failure()
+  }
+}
+
+pub fn raw_array_unit_callback(value: I64) -> I64 {
+  let values = query_slots_new(1u32, ())
+  let read = raw_unit_reader()
+  read(values, 0u32)
+  value
+}
+
+pub fn raw_array_never_argument_callback(value: I64) -> I64 {
+  let read = raw_i64_reader()
+  read(if value < 0i64 {
+    return value
+  } else {
+    return value
+  }, 0u32)
+}
+
 builtin nested_tuple_failure() -> Never = "unreachable"
 
 pub fn misleading() -> F32 {

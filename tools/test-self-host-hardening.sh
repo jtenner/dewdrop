@@ -196,6 +196,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_raw_arithmetic_test.dew \
   self_host/compiler/semantic_raw_math_test.dew \
   self_host/compiler/semantic_array_runtime_test.dew \
+  self_host/compiler/semantic_raw_array_references_test.dew \
   self_host/compiler/semantic_raw_simd_test.dew \
   self_host/compiler/semantic_specialization_shapes_test.dew \
   self_host/compiler/semantic_callable_lookup_test.dew \

@@ -129,6 +129,8 @@ fn starshine_raw_heap_instructions(
       starshine_raw_ref_cast_instructions(
         recipe, caller, program, types, parameters, results,
       )
+    @semantic.RawArrayGetInstruction(recipe) =>
+      Err(InvalidHeapIntrinsic(recipe.opcode, "raw array reads require their typed operand recipe"))
   }
 }
 

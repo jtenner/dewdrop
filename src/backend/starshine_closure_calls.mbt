@@ -10,6 +10,7 @@ priv struct StarshineClosureCallPlan {
   result_shape : @semantic.PlannedValueShape
   result_local : Int
   result_cast_type : Int
+  argument_casts : Array[Array[@lib.Instruction]]
 }
 
 ///|
@@ -50,6 +51,7 @@ fn starshine_closure_call_branch(
   // erased Unit arguments still run, and cannot add physical call operands.
   for index in 1..<fragments.length() {
     append_starshine_instructions(output, fragments[index])
+    append_starshine_instructions(output, plan.argument_casts[index - 1])
   }
   starshine_append_closure_pointer(output, plan)
   output.push(starshine_match_cast(signature))
@@ -75,6 +77,7 @@ fn starshine_emit_closure_call(
   fragments : Array[Array[@lib.Instruction]],
 ) -> Result[Array[@lib.Instruction], StarshineCodeEmissionError] {
   if fragments.length() == 0 ||
+    plan.argument_casts.length() != fragments.length() - 1 ||
     plan.closure_local < 0 ||
     plan.closure_type < 0 ||
     plan.direct_type < 0 ||

@@ -10,6 +10,19 @@ fn planning_codec_test_stages() -> SemanticCompilerTestStages {
 }
 
 ///|
+test "raw array getter recipes retain element shapes in the fragment codec" {
+  for shape in [I8PlannedValueShape, U8PlannedValueShape, UnitPlannedValueShape,
+    ProductPlannedValueShape([I32PlannedValueShape, UnitPlannedValueShape, I64PlannedValueShape])] {
+    let instruction = RawArrayGetInstruction({ opcode: b"array.get", element_shape: shape, })
+    let writer = @cache_binary.Writer::new()
+    pb_write_raw_heap_instruction(writer, instruction)
+    let reader = @cache_binary.Reader::new(writer.to_bytes())
+    assert_eq(pb_read_raw_heap_instruction(reader, "getter"), instruction)
+    assert_eq(reader.finish(), Ok(()))
+  }
+}
+
+///|
 test "the retired runtime function codec tag is rejected" {
   let reader = @cache_binary.Reader::new(b"\x02\x00")
   ignore(pb_read_function_kind(reader, "kind"))

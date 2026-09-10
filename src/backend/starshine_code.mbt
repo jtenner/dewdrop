@@ -5429,6 +5429,20 @@ fn starshine_emit_body_instructions(
             tasks.push(EmitStarshineExpression(receiver))
           }
           @semantic.PlannedFunctionValueCall(target, arguments, function_type) => {
+            let evaluations = [target]
+            for index in 0..<arguments.length {
+              evaluations.push(lowering.expression_children[arguments.start + index])
+            }
+            let prefix_count = starshine_diverging_evaluation_count(lowering, evaluations)
+            if prefix_count > 0 {
+              tasks.push(FinishStarshineProduct(prefix_count))
+              let mut index = prefix_count
+              while index > 0 {
+                index -= 1
+                tasks.push(EmitStarshineExpression(evaluations[index]))
+              }
+              continue
+            }
             if function_type < 0 ||
               function_type >= planned.function_type_by_resolved.length() {
               return Err(UnsupportedExpression(body.body, expression))
@@ -5510,6 +5524,14 @@ fn starshine_emit_body_instructions(
                     result_cast_type: starshine_function_result_cast_type(
                       planned, program, program_module_index, direct_local_type,
                     ),
+                    argument_casts: match starshine_closure_argument_casts(
+                      lowering, planned, program, program_module_index,
+                      generic_specialization, body.body, expression, arguments,
+                      emitted_direct_type,
+                    ) {
+                      Ok(value) => value
+                      Err(error) => return Err(error)
+                    },
                   },
                   arguments.length + 1,
                 ),

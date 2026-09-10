@@ -522,6 +522,18 @@ Correctness comes first. Keep these timing defects visible after query completio
   unsafe-cast wrappers have a shared execution corpus. Parameterized heap
   instruction wrappers still need exact layout recipes. See the
   [outlined intrinsic log](docs/research/outlined-intrinsics-2026-09-08.md).
+  Generic `array.get` function values now retain specialized storage recipes
+  in both compilers. Native callback arguments narrow to the selected typed
+  signature. Shared execution covers I64, Unit, nested products, and packed
+  signed/unsigned reads; index/result/Error mutations have numeric checks.
+  Other parameterized heap wrappers and non-erased nominal result adapters
+  remain open. See the
+  [raw getter log](docs/research/raw-array-function-values-2026-09-09.md).
+  Native callback inference now uses the ordinary assignment rules, including
+  Never. Proven non-returning evaluations stop callback emission before later
+  arguments, signature casts, or the call instruction.
+  The clean B/C bootstrap passes; 896 self-host tests, 469 exact records,
+  318 shared callback checks in each compiler, and 270 integration tests pass.
   Check Unit receivers, non-generic Unit indexed writes, and Never arguments.
   Evaluate each source once in order; stop after a non-returning argument.
   Native direct-call trait operands now have an independent ordered copy in

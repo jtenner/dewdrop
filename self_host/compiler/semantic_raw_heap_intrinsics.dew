@@ -3,9 +3,15 @@ pub struct SelfHostRawRefCastRecipe {
   target: SelfHostRawHeapOwner
 }
 
+pub struct SelfHostRawArrayGetRecipe {
+  opcode: Bytes
+  element_shape: SelfHostPlannedValueShape
+}
+
 pub enum SelfHostRawHeapInstruction {
   RawStructGetInstruction(SelfHostRawStructGetRecipe)
   RawRefCastInstruction(SelfHostRawRefCastRecipe)
+  RawArrayGetInstruction(SelfHostRawArrayGetRecipe)
 }
 
 impl SelfHostRawHeapInstruction {
@@ -13,6 +19,7 @@ impl SelfHostRawHeapInstruction {
     match self {
       SelfHostRawHeapInstruction::RawStructGetInstruction(recipe) => recipe.opcode
       SelfHostRawHeapInstruction::RawRefCastInstruction(recipe) => recipe.opcode
+      SelfHostRawHeapInstruction::RawArrayGetInstruction(recipe) => recipe.opcode
     }
   }
 }

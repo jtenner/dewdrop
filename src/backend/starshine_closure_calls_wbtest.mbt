@@ -43,6 +43,7 @@ test "missing callback signatures report the original call expression" {
     result_shape: stages.lowering.modules[0].expressions[0].shape,
     result_local: -1,
     result_cast_type: -1,
+    argument_casts: [],
   }
   match starshine_emit_closure_call(123UL, plan, [[]]) {
     Err(UnsupportedExpression(body, expression)) => {
@@ -50,5 +51,34 @@ test "missing callback signatures report the original call expression" {
       assert_eq(expression, 42)
     }
     _ => fail("missing callback signature must report its call site")
+  }
+}
+
+///|
+test "a diverging callback argument prevents operand planning and call emission" {
+  let stages = backend_test_single_module_stages(
+    28128UL, b"builtin stop() -> Never = \"unreachable\"\nfn later() -> I32 {\n  42i32\n}\npub fn run(operation: fn(I32, I32) -> I64) -> I64 {\n  operation(stop(), later())\n}\n",
+  )
+  assert_eq(
+    @semantic.collect_compiler_source_diagnostics(
+      stages.program,
+      stages.analyzed,
+      stages.lowering,
+      stages.link,
+    ),
+    [],
+  )
+  match emit_starshine_program_module(stages.lowering, stages.link) {
+    Ok(module_) => {
+      assert_eq(@validate.validate_module(module_), Ok(()))
+      let declaration = stages.program.modules[0].lookup_value("run").unwrap()
+      let function_ = stages.link.function_of(declaration).unwrap()
+      let code = module_.pretty_print_func(
+        @lib.FuncIdx::new(function_.function_index.reinterpret_as_uint()),
+      )
+      assert_false(code.contains("(call"), msg=code)
+      assert_false(code.contains("I32(42)"), msg=code)
+    }
+    Err(error) => fail(@debug.to_string(error))
   }
 }

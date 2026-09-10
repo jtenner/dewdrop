@@ -5,9 +5,16 @@ pub struct RawRefCastRecipe {
 } derive(Eq, Debug)
 
 ///|
+pub struct RawArrayGetRecipe {
+  opcode : Bytes
+  element_shape : PlannedValueShape
+} derive(Eq, Debug)
+
+///|
 pub enum RawHeapInstruction {
   RawStructGetInstruction(RawStructGetRecipe)
   RawRefCastInstruction(RawRefCastRecipe)
+  RawArrayGetInstruction(RawArrayGetRecipe)
 } derive(Eq, Debug)
 
 ///|
@@ -15,7 +22,23 @@ pub fn RawHeapInstruction::opcode(self : RawHeapInstruction) -> Bytes {
   match self {
     RawStructGetInstruction(recipe) => recipe.opcode
     RawRefCastInstruction(recipe) => recipe.opcode
+    RawArrayGetInstruction(recipe) => recipe.opcode
   }
+}
+
+///|
+fn raw_array_get_recipe(
+  resolved : ResolvedModuleTypes,
+  functions : PlannedModuleFunctions,
+  callable : PlannedCallable,
+  opcode : Bytes,
+) -> RawArrayGetRecipe {
+  let shape = match raw_array_contract_owner(resolved, functions, callable, 2) {
+    Ok(owner) if resolved.raw_array_declarations.contains(owner) =>
+      planned_resolved_value_shape(resolved, callable.result_type)
+    _ => ErrorPlannedValueShape
+  }
+  { opcode, element_shape: shape, }
 }
 
 ///|

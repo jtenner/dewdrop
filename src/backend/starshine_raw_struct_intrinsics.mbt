@@ -135,7 +135,11 @@ fn starshine_outlined_heap_instruction(
   types : Array[@semantic.PlannedWasmValueType],
   parameters : @semantic.HirSpan,
   results : @semantic.HirSpan,
+  declaration : @semantic.DeclId,
 ) -> Result[@lib.Func, StarshineCodeEmissionError] {
+  if recipe is @semantic.RawArrayGetInstruction(array) {
+    return starshine_outlined_array_get(array, caller, program, types, parameters, results, declaration)
+  }
   let operation = match
     starshine_raw_heap_instructions(
       recipe, caller, program, types, parameters, results,

@@ -2504,9 +2504,15 @@ pub enum ProgramWasmGCLinkDiagnostic {
   EagerProgramInitializationCycle(UInt64, UInt64)
 } derive(Eq, @debug.Debug)
 
+pub struct RawArrayGetRecipe {
+  opcode : Bytes
+  element_shape : PlannedValueShape
+} derive(Eq, @debug.Debug)
+
 pub enum RawHeapInstruction {
   RawStructGetInstruction(RawStructGetRecipe)
   RawRefCastInstruction(RawRefCastRecipe)
+  RawArrayGetInstruction(RawArrayGetRecipe)
 } derive(Eq, @debug.Debug)
 pub fn RawHeapInstruction::opcode(Self) -> Bytes
 

@@ -1095,6 +1095,8 @@ fn materialize_program_generic_specialization(
     PlannedWasmDefinedFunction(_) => ()
     PlannedWasmInlineBuiltinFunction(name)
     | PlannedWasmOutlinedBuiltinFunction(name) if name == b"unsafe.bitcast" => ()
+    PlannedWasmInlineHeapFunction(RawArrayGetInstruction(_))
+    | PlannedWasmOutlinedHeapFunction(RawArrayGetInstruction(_)) => ()
     _ => return None
   }
   let selected = program_function_lowering(
@@ -1337,9 +1339,30 @@ fn materialize_program_generic_specialization(
           }
       }
   }
+  let specialized_kind = match base.kind {
+    PlannedWasmInlineHeapFunction(RawArrayGetInstruction(recipe))
+    | PlannedWasmOutlinedHeapFunction(RawArrayGetInstruction(recipe)) => {
+      let checked = raw_array_get_recipe(resolved, selected.functions, callable, recipe.opcode)
+      let element_shape = if checked.element_shape is ErrorPlannedValueShape {
+        ErrorPlannedValueShape
+      } else {
+        program_generic_parameter_shape(
+          resolved, callable.result_type, generic_parameters,
+          module_.specialization_shapes, specialization_shapes,
+        ).unwrap_or(checked.element_shape)
+      }
+      let instruction = RawArrayGetInstruction({ opcode: recipe.opcode, element_shape, })
+      match base.kind {
+        PlannedWasmOutlinedHeapFunction(_) => PlannedWasmOutlinedHeapFunction(instruction)
+        _ => PlannedWasmInlineHeapFunction(instruction)
+      }
+    }
+    _ => base.kind
+  }
   module_.functions[base_index] = { ..base, elided: true, }
   module_.functions.push({
     ..base,
+    kind: specialized_kind,
     visibility: if erased_fallback {
       Public
     } else {

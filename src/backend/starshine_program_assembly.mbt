@@ -1080,6 +1080,7 @@ fn emit_starshine_program_code_section(
               owner.function_value_types,
               function_.parameters,
               function_.results,
+              function_.declaration,
             ) {
             Ok(function_body) => functions.push(function_body)
             Err(error) => return Err(error)

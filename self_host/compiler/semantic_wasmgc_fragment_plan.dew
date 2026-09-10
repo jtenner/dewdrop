@@ -605,7 +605,20 @@ fn self_host_wasmgc_append_function(
     self_host_program_specialization_callable_generics(callable).length, 0u32,
   )
   let original_kind = match callable.kind {
-    SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if self_host_raw_struct_get_opcode(name) {
+    SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if self_host_raw_array_opcode(name) == 2u32 {
+      let shape = if self_host_raw_array_contract_owner(module_, callable, 2u32) is Option::Some(_) {
+        self_host_wasmgc_specialized_shape(module_, callable, request, shapes,
+          callable.result_type, callable.result_shape)
+      } else {
+        SelfHostPlannedValueShape::ErrorPlannedValueShape
+      }
+      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(
+        SelfHostRawHeapInstruction::RawArrayGetInstruction(SelfHostRawArrayGetRecipe::{
+          opcode: name
+          element_shape: shape
+        }),
+      )
+    } else if self_host_raw_struct_get_opcode(name) {
       SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(SelfHostRawHeapInstruction::RawStructGetInstruction(self_host_raw_struct_get_recipe(module_, callable, name)))
     } else if self_host_raw_ref_cast_opcode(name) {
       SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(SelfHostRawHeapInstruction::RawRefCastInstruction(self_host_raw_ref_cast_recipe(module_, callable, name)))

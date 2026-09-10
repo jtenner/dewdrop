@@ -2343,6 +2343,10 @@ fn wasmgc_plan_function_job(
         // Queries have no runtime implementation or import. Any surviving use
         // is a planning error, never a host function with the same spelling.
         PlannedWasmSignatureOnlyFunction
+      } else if raw_array_opcode(name) == 2 {
+        PlannedWasmInlineHeapFunction(
+          RawArrayGetInstruction(raw_array_get_recipe(resolved, functions, callable, name)),
+        )
       } else if raw_struct_get_opcode(name) {
         PlannedWasmInlineHeapFunction(
           RawStructGetInstruction(raw_struct_get_recipe(resolved, functions, callable, name)),
