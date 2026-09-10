@@ -17,7 +17,7 @@ fn self_host_specialization_index_failure(declaration: U64, caller_body: U64, ex
     expected: expected
     actual: actual
     detail: detail
-  }, "specialization request index requires valid parallel arenas and declaration-local links")
+  }, "specialization lookup requires valid arenas and exact declaration-local entries")
   unreachable()
 }
 

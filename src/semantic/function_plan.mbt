@@ -52,20 +52,40 @@ pub fn PlannedModuleFunctions::callable_of(
   self : PlannedModuleFunctions,
   declaration : DeclId,
 ) -> PlannedCallable? {
-  if semantic_id_module(declaration) != self.module_id {
-    return None
+  match check_planned_callable_lookup(self, declaration) {
+    Ok(value) => value
+    Err(error) => abort(@debug.to_string(error))
+  }
+}
+
+///|
+fn check_planned_callable_lookup(
+  functions : PlannedModuleFunctions,
+  declaration : DeclId,
+) -> Result[PlannedCallable?, ProgramPhysicalTypeFailure] {
+  if semantic_id_module(declaration) != functions.module_id {
+    return Ok(None)
   }
   let declaration_index = semantic_id_local(declaration)
   if declaration_index < 0 ||
-    declaration_index >= self.callable_by_declaration.length() {
-    return None
+    declaration_index >= functions.callable_by_declaration.length() {
+    return Ok(None)
   }
-  let callable = self.callable_by_declaration[declaration_index]
-  if callable < 0 {
-    None
-  } else {
-    Some(self.callables[callable])
+  let callable = functions.callable_by_declaration[declaration_index]
+  if callable == -1 {
+    return Ok(None)
   }
+  guard callable >= 0 && callable < functions.callables.length() else {
+    return Err(physical_type_failure(functions.module_id, declaration, 105,
+      functions.callables.length().to_uint64(), callable.reinterpret_as_uint().to_uint64(),
+      0UL, declaration_index))
+  }
+  let selected = functions.callables[callable]
+  guard selected.declaration == declaration else {
+    return Err(physical_type_failure(functions.module_id, declaration, 106,
+      declaration, selected.declaration, 0UL, callable))
+  }
+  Ok(Some(selected))
 }
 
 ///|

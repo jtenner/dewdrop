@@ -866,6 +866,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   Seven one-mutation tests retain all nine failure fields; a sixteen-record
   chain has a positive replay check. Other specialization helpers remain.
   See the [request index log](docs/research/specialization-request-index-2026-09-09.md).
+  Both compilers now check the selected callable index and stored declaration
+  before lookup returns. Missing entries stay missing; corrupt entries retain
+  ARN-105/106 numeric context. See the
+  [callable lookup log](docs/research/callable-lookup-identity-2026-09-09.md).
   Physical body errors now use 41 typed reasons with exhaustive code and text
   mappings. Field, constructor, local, flow, and raw-instruction errors no longer
   become code zero. See the
@@ -915,6 +919,14 @@ generated checks, and 15 stress tests. The targeted provider suite passes all
 [conversion results](docs/research/bytes-string-cast-library-2026-09-09.md).
 These results do not close the remaining compiler and storage tasks.
 These are current batch checks, not completion of the remaining tasks above.
+
+The runtime-protocol retirement passes all eight lanes, including 10,981
+provider tests and clean B/C equality. The subsequent callable-lookup batch
+passes 1,310 native tests, 270 integration tests, 878 self-host tests with 459
+exact failure records, library checks, generated checks, 15 stress tests, and
+clean B/C core and linked equality. The provider pin is unchanged between these
+two batches. See the [retirement results](docs/research/runtime-protocol-retirement-2026-09-09.md)
+and [lookup results](docs/research/callable-lookup-identity-2026-09-09.md).
 
 - [ ] Run `tools/test-native.sh`, `tools/test-integration-native.sh`,
   `tools/dew-test/run.sh`, `tools/test-self-host-hardening.sh`, and

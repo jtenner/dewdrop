@@ -10,6 +10,14 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["ARN-105 callable lookup rejects an out-of-range selected entry", 105, 2n, 2n, 0n],
+    ["ARN-106 callable lookup rejects another stored declaration", 106, 5100n << 32n, (5100n << 32n) | 1n, 1n],
+  ].map(([name, code, expected, actual, detail]) => ({
+    name,
+    expected: [code, 5, 5100n, 5100n << 32n, 0n, 4294967295,
+      expected, actual, detail],
+  })),
   {
     name: "BOD-605 frozen field writes retain their array casts",
     expected: [605, 7, 5100n, (5100n << 32n) | 3n, 5100n << 32n, 3, 1n, 0n, (59n << 32n) | 3n],

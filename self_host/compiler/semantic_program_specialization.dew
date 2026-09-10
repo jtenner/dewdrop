@@ -307,11 +307,16 @@ fn self_host_program_specialization_callable(
   if self_host_u32_equal(index, 4294967295u32) {
     return Option::None
   }
-  if self_host_u32_greater(functions.callables.length(), index) {
-    Option::Some(self_host_planned_callable_identity(functions.callables[index]))
-  } else {
-    Option::None
+  if index >= functions.callables.length() {
+    self_host_specialization_index_failure(declaration, 0u64, 4294967295u32, 105u32,
+      u32_into_u64(functions.callables.length()), u32_into_u64(index), u32_into_u64(local))
   }
+  let selected = self_host_planned_callable_identity(functions.callables[index])
+  if selected.declaration != declaration {
+    self_host_specialization_index_failure(declaration, 0u64, 4294967295u32, 106u32,
+      declaration, selected.declaration, u32_into_u64(index))
+  }
+  Option::Some(selected)
 }
 
 struct SelfHostCallableGenericParameters {

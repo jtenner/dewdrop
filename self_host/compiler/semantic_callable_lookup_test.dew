@@ -1,0 +1,36 @@
+fn self_host_callable_lookup_fixture() -> SelfHostPlannedModuleLowering {
+  let lowering = self_host_physical_test_lowering(
+    b"fn first() -> U32 {\n  1u32\n}\npub fn run() -> U32 {\n  first()\n}\n",
+  )
+  let module_ = lowering.modules[0u32]
+  assert(module_.module_id == 5100u64, "callable lookup owner")
+  assert(module_.functions.callables.length() == 2u32, "two distinct callables")
+  match self_host_program_specialization_callable(module_, 5100u64 << 32u64) {
+    Option::Some(value) => assert(value.declaration == 5100u64 << 32u64, "exact callable before mutation")
+    Option::None => assert(false, "missing fixture callable")
+  }
+  module_
+}
+
+test "callable lookup keeps missing and external declarations absent" {
+  let module_ = self_host_callable_lookup_fixture()
+  assert(self_host_program_specialization_callable(module_, 5101u64 << 32u64) is Option::None,
+    "another module is not a local callable")
+  assert(self_host_program_specialization_callable(module_, (5100u64 << 32u64) | 99u64) is Option::None,
+    "an unknown declaration stays missing")
+  module_.functions.callable_by_declaration[0u32] = 4294967295u32
+  assert(self_host_program_specialization_callable(module_, 5100u64 << 32u64) is Option::None,
+    "a missing callable stays missing")
+}
+
+test "ARN-105 callable lookup rejects an out-of-range selected entry" expect_trap "unreachable" {
+  let module_ = self_host_callable_lookup_fixture()
+  module_.functions.callable_by_declaration[0u32] = 2u32
+  let _ = self_host_program_specialization_callable(module_, 5100u64 << 32u64)
+}
+
+test "ARN-106 callable lookup rejects another stored declaration" expect_trap "unreachable" {
+  let module_ = self_host_callable_lookup_fixture()
+  module_.functions.callable_by_declaration[0u32] = 1u32
+  let _ = self_host_program_specialization_callable(module_, 5100u64 << 32u64)
+}
