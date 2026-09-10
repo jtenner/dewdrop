@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "pipelines": {
+    "O4s": ["--optimize-level", "4", "--shrink-level", "1", "--optimize"],
+    "cleanup": ["--optimize-level", "4", "--shrink-level", "1", "--duplicate-function-elimination", "--precompute", "--optimize-instructions", "--simplify-locals", "--dead-code-elimination", "--vacuum", "--reorder-locals", "--strip-debug"],
+    "speed": ["--optimize-level", "4", "--shrink-level", "1", "--duplicate-function-elimination", "--inlining-optimizing", "--precompute-propagate", "--optimize-instructions", "--local-cse", "--simplify-locals", "--dead-code-elimination", "--vacuum", "--reorder-locals", "--strip-debug"],
+    "gc-speed": ["--optimize-level", "4", "--shrink-level", "1", "--duplicate-function-elimination", "--heap2local", "--optimize-casts", "--inlining-optimizing", "--precompute-propagate", "--optimize-instructions", "--local-cse", "--simplify-locals", "--dead-code-elimination", "--vacuum", "--reorder-locals", "--strip-debug"],
+    "O4z": ["-O4z"]
+  }
+}

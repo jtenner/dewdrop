@@ -144,6 +144,9 @@ directization.
 
 ## Commands
 
+For runtime checks after Starshine optimization and pass-order measurements, see
+[Starshine execution experiments](../starshine-experiments/README.md).
+
 The default `tools/check.sh` full-project validation includes this suite after
 formatting, generated-source checks, all four MoonBit test targets, Dew stdlib
 tests, and SWAR/UTF/WASI parity. `tools/check.sh --quick` stops after native
