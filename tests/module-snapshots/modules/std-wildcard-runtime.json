@@ -1,6 +1,8 @@
 {
   "errors": [],
-  "warnings": [],
+  "warnings": [
+    "std/encoding/utf8.dew:7:10: warning: RedundantPatternArm(1, 127)\n  |\n7 | } derive(Eq)\n  |          ^"
+  ],
   "output": [
     "wildcard"
   ]

@@ -1,35 +1,57 @@
 (module
-  (type (;0;) (func (param i64) (result i32)))
-  (type (;1;) (func (param i32) (result i32)))
-  (type (;2;) (func (param i64) (result f64)))
-  (type (;3;) (func (param f64) (result i32)))
-  (type (;4;) (func (result i32)))
-  (export "main" (func 4))
-  (func (;0;) (type 0) (param i64) (result i32)
+  (@custom "compiler.facts" (before first) "\01\00\01\07dewdrop\050.1.0\00\01\01\01\00\07\00\01\00\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\01\00\01\00\01\02\00\01\80\80~\ff\ff\01\00\00\00\00\00\00\01\01\00\00\00\00\01\01\00\00\00\00\00\00\00\00\00\01\01\00\01\00\00\01\7f\00\01\00\01\00\01\02\00\01\80\80~\ff\ff\01\00\00\00\00\00\00\01\01\00\00\00\00\02\01\00\00\00\00\00\00\00\00\00\01\01\01\01\00\00\01\7f\00\01\00\01\00\01\02\00\01\80\80~\ff\ff\01\00\00\00\00\00\00\01\01\00\00\00\00\03\01\00\00\00\00\00\00\00\00\00\01\00\01\00\01\00\01\02\00\01\80\80~\ff\ff\01\00\00\00\00\00\01\7f\00\00\01\01\00\00\00\00\04\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\01\00\00\00\00\05\01\01\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\00\01\01\00\00\00\00\06\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\04\02\03\04\05\00\00\01\00\00\01\00\00\04\08\00\01\00\00\01\02\00\01\80\80~\ff\ff\01\00\00\00\00\00\00\09\00\01\00\00\01\02\00\01\80\80~\ff\ff\01\00\00\00\00\00\00\0d\00\01\00\00\01\02\00\01\80\80~\ff\ff\01\00\00\00\00\00\00\0e\01\00\00\01\02\00\01\80\80~\ff\ff\01\00\00\00\00\00\00\00\00\00\00\01\06\01\06\0c\00\01\01\02\80\80\80\80\80\80\80\f4?\00\01\01\04\00\00\01\01\b8\17\01\84\80\80\80\80\f7\02\01\84\80\80\80\80\f7\02\00\01\c7\01\00\00\00\00\00\00\00\00\00")
+  (type (;0;) (array (mut i32)))
+  (type (;1;) (array (mut i64)))
+  (type (;2;) (array (mut f32)))
+  (type (;3;) (array (mut f64)))
+  (type (;4;) (array (mut v128)))
+  (type (;5;) (array (mut eqref)))
+  (type (;6;) (array (mut i8)))
+  (type (;7;) (array (mut i16)))
+  (type (;8;) (func (param i64) (result i32)))
+  (type (;9;) (func (param i64) (result i32)))
+  (type (;10;) (func (param i32) (result i32)))
+  (type (;11;) (func (param i64) (result i64)))
+  (type (;12;) (func (param i32) (result i32)))
+  (type (;13;) (func (param i64) (result i32)))
+  (type (;14;) (func (param i32) (result i32)))
+  (type (;15;) (func (param i64) (result f64)))
+  (type (;16;) (func (param f64) (result i32)))
+  (type (;17;) (func (result i32)))
+  (export "main" (func 6))
+  (func (;0;) (type 8) (param i64) (result i32)
     local.get 0
     i32.wrap_i64
     i32.extend16_s
   )
-  (func (;1;) (type 1) (param i32) (result i32)
+  (func (;1;) (type 9) (param i64) (result i32)
+    local.get 0
+    call 0
+  )
+  (func (;2;) (type 13) (param i64) (result i32)
+    local.get 0
+    call 1
+  )
+  (func (;3;) (type 14) (param i32) (result i32)
     local.get 0
   )
-  (func (;2;) (type 2) (param i64) (result f64)
+  (func (;4;) (type 15) (param i64) (result f64)
     local.get 0
     f64.convert_i64_s
   )
-  (func (;3;) (type 3) (param f64) (result i32)
+  (func (;5;) (type 16) (param f64) (result i32)
     local.get 0
     i32.trunc_f64_s
   )
-  (func (;4;) (type 4) (result i32)
+  (func (;6;) (type 17) (result i32)
     i64.const 65535
-    call 0
-    call 1
-    i64.const 43
     call 2
+    call 3
+    i64.const 43
+    call 4
     f64.const 0x1.8p-1 (;=0.75;)
     f64.add
-    call 3
+    call 5
     i32.add
   )
 )

@@ -1,4 +1,5 @@
 (module
+  (@custom "compiler.facts" (before first) "\01\00\01\07dewdrop\050.1.0\00\01\01\01\00\0f\00\01\00\00\00\00\00\00\00\00\00\01\00\01\00\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\01\7f\00\01\00\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\00\01\01\00\00\00\00\01\01\00\00\00\00\00\00\00\00\00\01\01\00\01\00\00\01\7f\00\01\00\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\00\01\01\00\00\00\00\02\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\01\05\02\00\00\01\7f\01\ff\01\01\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\01\7f\00\01\00\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\00\01\01\00\00\00\00\03\01\01\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\01\ff\01\00\01\01\00\00\00\00\04\01\81\80\10\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\01\ff\01\01\00\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\00\01\01\00\00\00\00\05\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\01\01\02\00\00\01\7f\01\ff\01\01\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\01\7f\00\01\00\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\00\01\01\00\00\00\00\06\01\01\00\00\00\00\00\00\00\00\01\01\03\01\00\00\01\7f\01\ff\01\00\01\01\00\00\00\00\07\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\01\09\01\00\00\01\7f\01\ff\01\00\01\01\00\00\00\00\08\01\00\00\00\00\00\00\00\00\00\01\00\01\00\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\7f\00\01\00\01\00\01\02\01\00\01\00\01\fe\ff\ff\ff\0f\00\00\00\00\00\00\01\01\00\00\00\00\09\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\04\04\05\08\0a\01\00\00\01\7f\01\ff\01\01\00\01\00\01\02\01\00\01\00\01\fe\ff\ff\ff\0f\00\00\00\00\00\00\01\01\00\00\00\00\0a\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\01\02\02\00\00\01\7f\01\ff\01\01\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\01\7f\00\00\01\01\00\00\00\00\0b\01\01\00\00\00\00\00\00\00\00\01\01\06\01\00\00\01\7f\01\ff\01\00\01\01\00\00\00\00\0c\01\81\80\10\00\00\00\00\00\00\00\00\01\01\04\01\00\00\01\7f\01\ff\01\01\00\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\00\01\01\00\00\00\00\0d\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\01\07\01\00\00\01\7f\01\ff\01\00\01\01\00\00\00\00\0e\01\ff\ff\ff\03\00\00\00\00\00\00\00\00\01\03\0b\0c\0d\00\01\00\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\00\01\00\00\01\00\00\0a\08\01\00\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\01\00\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\00\09\00\01\00\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\00\0a\01\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\01\00\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\00\11\00\01\00\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\00\12\01\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\01\00\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\00\15\01\00\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\00\00\01\02\01\00\01\00\01\fe\ff\ff\ff\0f\00\00\00\00\00\00\16\00\01\00\00\01\02\01\00\01\00\01\fe\ff\ff\ff\0f\00\00\00\00\00\00\17\01\01\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\00\00\19\00\01\00\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\00\1b\00\01\00\00\01\02\01\00\ff\ff\ff\ff\0f\00\00\00\00\00\00\00\00\00\00\01\0e\02\0e$\00\00\00\00\00\01\01\01\01\00\00\1c\00\01\01\b8\17\01\80\80\80\80\80\f7\02\01\80\80\80\80\80\f7\02\00\01(\00\0e,\00\00\00\00\00\01\01\01\01\00\00\1e\00\01\01\b8\17\01\80\80\80\80\80\f7\02\01\80\80\80\80\80\f7\02\00\01(\00\00\00\00\00\02\0e$\00\01\1c\00\00\00\01\02\01\02\02\00\00\00\00\01\01\b8\17\01\80\80\80\80\80\f7\02\01\80\80\80\80\80\f7\02\00\01(\00\0e,\00\04\1e\00\00\00\00\00\01\01\b8\17\01\80\80\80\80\80\f7\02\01\80\80\80\80\80\f7\02\00\01(\00\00\00\00")
   (type (;0;) (array (mut i32)))
   (type (;1;) (array (mut i64)))
   (type (;2;) (array (mut f32)))
@@ -7,463 +8,579 @@
   (type (;5;) (array (mut eqref)))
   (type (;6;) (array (mut i8)))
   (type (;7;) (array (mut i16)))
-  (type (;8;) (func (param eqref) (result eqref)))
-  (type (;9;) (func (param eqref) (result i32)))
-  (type (;10;) (func (param eqref) (result i32)))
-  (type (;11;) (func (param eqref) (result eqref)))
-  (type (;12;) (func (param eqref) (result eqref)))
-  (type (;13;) (func (param eqref) (result i32)))
-  (type (;14;) (func (param eqref) (result eqref)))
-  (type (;15;) (func (result i32)))
-  (type (;16;) (array (mut v128)))
-  (type (;17;) (struct (field (ref 16)) (field i32) (field i32)))
-  (type (;18;) (struct (field (ref 16)) (field i32) (field i32)))
-  (type (;19;) (struct (field (ref 16)) (field i32) (field i32)))
-  (type (;20;) (struct (field (mut (ref 16))) (field (mut i32)) (field (mut i32))))
-  (type (;21;) (struct (field (mut (ref 16))) (field (mut i32)) (field (mut i32))))
-  (export "main" (func 7))
-  (func (;0;) (type 8) (param eqref) (result eqref)
-    (local (ref 17))
+  (type (;8;) (func (param i32) (result i32)))
+  (type (;9;) (func (param i32) (result i32)))
+  (type (;10;) (func (param eqref i32) (result i32)))
+  (type (;11;) (func (param i32) (result i32)))
+  (type (;12;) (func (param i32) (result i32)))
+  (type (;13;) (func (param i32) (result i32)))
+  (type (;14;) (func (param v128) (result v128)))
+  (type (;15;) (struct (field (ref 4)) (field i32) (field i32)))
+  (type (;16;) (func (param eqref) (result eqref)))
+  (type (;17;) (func (param eqref) (result i32)))
+  (type (;18;) (func (param eqref i32) (result i32)))
+  (type (;19;) (func (param eqref) (result eqref)))
+  (type (;20;) (func (param eqref) (result eqref)))
+  (type (;21;) (func (param i32) (result i32)))
+  (type (;22;) (func (param eqref) (result i32)))
+  (type (;23;) (func (param eqref i32) (result v128)))
+  (type (;24;) (func (param eqref) (result eqref)))
+  (type (;25;) (func (param eqref) (result i32)))
+  (type (;26;) (func (param eqref) (result eqref)))
+  (type (;27;) (func (result i32)))
+  (type (;28;) (array (mut v128)))
+  (type (;29;) (struct (field (ref 28)) (field i32) (field i32)))
+  (type (;30;) (struct (field (ref 28)) (field i32) (field i32)))
+  (type (;31;) (struct (field (ref 28)) (field i32) (field i32)))
+  (type (;32;) (struct (field (mut (ref 28))) (field (mut i32)) (field (mut i32))))
+  (type (;33;) (struct (field (mut (ref 28))) (field (mut i32)) (field (mut i32))))
+  (export "main" (func 14))
+  (func (;0;) (type 8) (param i32) (result i32)
     local.get 0
-    ref.cast (ref 17)
-    local.tee 1
-    struct.get 17 0
-    local.get 1
-    struct.get 17 1
-    local.get 1
-    struct.get 17 2
-    struct.new 18
+    i32.const 255
+    i32.and
   )
-  (func (;1;) (type 9) (param eqref) (result i32)
-    local.get 0
-    ref.cast (ref 18)
-    struct.get 18 2
-  )
-  (func (;2;) (type 10) (param eqref) (result i32)
-    (local (ref 18) (ref 16) i32 i32 i32 i32 i32 i32)
-    local.get 0
-    ref.cast (ref 18)
-    local.set 1
-    local.get 1
-    struct.get 18 0
-    local.set 2
-    local.get 1
-    struct.get 18 1
-    local.set 4
-    local.get 1
-    struct.get 18 2
-    local.get 4
-    i32.add
-    local.set 3
-    loop ;; label = @1
-      local.get 4
-      local.get 3
-      i32.ge_u
-      if ;; label = @2
-        i32.const 1
-        return
-      end
-      local.get 4
-      i32.const 15
-      i32.and
-      i32.eqz
-      local.get 4
-      i32.const 16
-      i32.add
-      local.get 3
-      i32.le_u
-      i32.and
-      if ;; label = @2
-        local.get 2
-        local.get 4
-        i32.const 4
-        i32.shr_u
-        array.get 16
-        i8x16.bitmask
-        i32.eqz
-        if ;; label = @3
-          local.get 4
-          i32.const 16
-          i32.add
-          local.set 4
-          br 2 (;@1;)
-        end
-      end
-      local.get 2
-      local.get 4
-      i32.const 4
-      i32.shr_u
-      array.get 16
-      local.get 4
-      i32.const 15
-      i32.and
-      i8x16.splat
-      i8x16.swizzle
-      i8x16.extract_lane_u 0
-      local.set 5
-      local.get 5
-      i32.const 128
-      i32.lt_u
-      if ;; label = @2
-        local.get 4
-        i32.const 1
-        i32.add
-        local.set 4
-        br 1 (;@1;)
-      end
-      local.get 5
-      i32.const 194
-      i32.lt_u
-      if ;; label = @2
-        i32.const 0
-        return
-      end
-      local.get 5
-      i32.const 224
-      i32.lt_u
-      if ;; label = @2
-        local.get 4
-        i32.const 2
-        i32.add
-        local.get 3
-        i32.gt_u
-        if ;; label = @3
-          i32.const 0
-          return
-        end
-        local.get 2
-        local.get 4
-        i32.const 1
-        i32.add
-        i32.const 4
-        i32.shr_u
-        array.get 16
-        local.get 4
-        i32.const 1
-        i32.add
-        i32.const 15
-        i32.and
-        i8x16.splat
-        i8x16.swizzle
-        i8x16.extract_lane_u 0
-        local.set 6
-        local.get 6
-        i32.const 192
-        i32.and
-        i32.const 128
-        i32.ne
-        if ;; label = @3
-          i32.const 0
-          return
-        end
-        local.get 4
-        i32.const 2
-        i32.add
-        local.set 4
-        br 1 (;@1;)
-      end
-      local.get 5
-      i32.const 240
-      i32.lt_u
-      if ;; label = @2
-        local.get 4
-        i32.const 3
-        i32.add
-        local.get 3
-        i32.gt_u
-        if ;; label = @3
-          i32.const 0
-          return
-        end
-        local.get 2
-        local.get 4
-        i32.const 1
-        i32.add
-        i32.const 4
-        i32.shr_u
-        array.get 16
-        local.get 4
-        i32.const 1
-        i32.add
-        i32.const 15
-        i32.and
-        i8x16.splat
-        i8x16.swizzle
-        i8x16.extract_lane_u 0
-        local.set 6
-        local.get 2
-        local.get 4
-        i32.const 2
-        i32.add
-        i32.const 4
-        i32.shr_u
-        array.get 16
-        local.get 4
-        i32.const 2
-        i32.add
-        i32.const 15
-        i32.and
-        i8x16.splat
-        i8x16.swizzle
-        i8x16.extract_lane_u 0
-        local.set 7
-        local.get 5
-        i32.const 224
-        i32.eq
-        if ;; label = @3
-          local.get 6
-          i32.const 160
-          i32.lt_u
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-          local.get 6
-          i32.const 191
-          i32.gt_u
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-        end
-        local.get 5
-        i32.const 237
-        i32.eq
-        if ;; label = @3
-          local.get 6
-          i32.const 128
-          i32.lt_u
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-          local.get 6
-          i32.const 159
-          i32.gt_u
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-        end
-        local.get 5
-        i32.const 224
-        i32.ne
-        local.get 5
-        i32.const 237
-        i32.ne
-        i32.and
-        if ;; label = @3
-          local.get 6
-          i32.const 192
-          i32.and
-          i32.const 128
-          i32.ne
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-        end
-        local.get 7
-        i32.const 192
-        i32.and
-        i32.const 128
-        i32.ne
-        if ;; label = @3
-          i32.const 0
-          return
-        end
-        local.get 4
-        i32.const 3
-        i32.add
-        local.set 4
-        br 1 (;@1;)
-      end
-      local.get 5
-      i32.const 244
-      i32.le_u
-      if ;; label = @2
-        local.get 4
-        i32.const 4
-        i32.add
-        local.get 3
-        i32.gt_u
-        if ;; label = @3
-          i32.const 0
-          return
-        end
-        local.get 2
-        local.get 4
-        i32.const 1
-        i32.add
-        i32.const 4
-        i32.shr_u
-        array.get 16
-        local.get 4
-        i32.const 1
-        i32.add
-        i32.const 15
-        i32.and
-        i8x16.splat
-        i8x16.swizzle
-        i8x16.extract_lane_u 0
-        local.set 6
-        local.get 2
-        local.get 4
-        i32.const 2
-        i32.add
-        i32.const 4
-        i32.shr_u
-        array.get 16
-        local.get 4
-        i32.const 2
-        i32.add
-        i32.const 15
-        i32.and
-        i8x16.splat
-        i8x16.swizzle
-        i8x16.extract_lane_u 0
-        local.set 7
-        local.get 2
-        local.get 4
-        i32.const 3
-        i32.add
-        i32.const 4
-        i32.shr_u
-        array.get 16
-        local.get 4
-        i32.const 3
-        i32.add
-        i32.const 15
-        i32.and
-        i8x16.splat
-        i8x16.swizzle
-        i8x16.extract_lane_u 0
-        local.set 8
-        local.get 5
-        i32.const 240
-        i32.eq
-        if ;; label = @3
-          local.get 6
-          i32.const 144
-          i32.lt_u
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-          local.get 6
-          i32.const 191
-          i32.gt_u
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-        end
-        local.get 5
-        i32.const 244
-        i32.eq
-        if ;; label = @3
-          local.get 6
-          i32.const 128
-          i32.lt_u
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-          local.get 6
-          i32.const 143
-          i32.gt_u
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-        end
-        local.get 5
-        i32.const 240
-        i32.ne
-        local.get 5
-        i32.const 244
-        i32.ne
-        i32.and
-        if ;; label = @3
-          local.get 6
-          i32.const 192
-          i32.and
-          i32.const 128
-          i32.ne
-          if ;; label = @4
-            i32.const 0
-            return
-          end
-        end
-        local.get 7
-        i32.const 192
-        i32.and
-        i32.const 128
-        i32.ne
-        if ;; label = @3
-          i32.const 0
-          return
-        end
-        local.get 8
-        i32.const 192
-        i32.and
-        i32.const 128
-        i32.ne
-        if ;; label = @3
-          i32.const 0
-          return
-        end
-        local.get 4
-        i32.const 4
-        i32.add
-        local.set 4
-        br 1 (;@1;)
-      end
-      i32.const 0
-      return
-      br 0 (;@1;)
-    end
-    i32.const 1
-  )
-  (func (;3;) (type 11) (param eqref) (result eqref)
-    (local (ref 18))
-    local.get 0
-    call 2
-    i32.eqz
-    if ;; label = @1
-      unreachable
-    end
-    local.get 0
-    ref.cast (ref 18)
-    local.tee 1
-    struct.get 18 0
-    local.get 1
-    struct.get 18 1
-    local.get 1
-    struct.get 18 2
-    struct.new 17
-  )
-  (func (;4;) (type 12) (param eqref) (result eqref)
+  (func (;1;) (type 9) (param i32) (result i32)
     local.get 0
     call 0
   )
-  (func (;5;) (type 13) (param eqref) (result i32)
+  (func (;2;) (type 10) (param eqref i32) (result i32)
     local.get 0
-    call 1
+    local.get 1
+    call 5
   )
-  (func (;6;) (type 14) (param eqref) (result eqref)
+  (func (;3;) (type 16) (param eqref) (result eqref)
+    local.get 0
+    ref.cast (ref 30)
+  )
+  (func (;4;) (type 17) (param eqref) (result i32)
+    local.get 0
+    ref.cast (ref 30)
+    struct.get 30 2
+  )
+  (func (;5;) (type 18) (param eqref i32) (result i32)
+    (local (ref 15) i32 v128 v128 v128)
+    local.get 0
+    ref.cast (ref 15)
+    ref.cast (ref 15)
+    local.set 2
+    local.get 1
+    local.get 2
+    ref.cast (ref 15)
+    struct.get 15 2
+    i32.ge_u
+    if (result i32) ;; label = @1
+      i32.const 1
+    else
+      local.get 1
+      i32.const -1
+      local.get 2
+      ref.cast (ref 15)
+      struct.get 15 1
+      i32.sub
+      i32.gt_u
+    end
+    if ;; label = @1
+      unreachable
+    else
+    end
+    local.get 2
+    ref.cast (ref 15)
+    struct.get 15 1
+    local.get 1
+    i32.add
+    local.set 3
+    local.get 2
+    ref.cast (ref 15)
+    struct.get 15 0
+    ref.cast (ref 4)
+    local.get 3
+    i32.const 4
+    i32.shr_u
+    array.get 4
+    local.set 4
+    local.get 3
+    i32.const 15
+    i32.and
+    call 1
+    i8x16.splat
+    local.set 5
+    local.get 4
+    local.set 6
+    local.get 6
+    local.get 5
+    i8x16.swizzle
+    i8x16.extract_lane_u 0
+  )
+  (func (;6;) (type 19) (param eqref) (result eqref)
     local.get 0
     call 3
   )
-  (func (;7;) (type 15) (result i32)
+  (func (;7;) (type 20) (param eqref) (result eqref)
+    local.get 0
+    call 9
+    i32.eqz
+    if ;; label = @1
+      unreachable
+    else
+    end
+    local.get 0
+    ref.cast (ref 29)
+  )
+  (func (;8;) (type 21) (param i32) (result i32)
+    local.get 0
+    i32.const 128
+    i32.ge_u
+    if (result i32) ;; label = @1
+      local.get 0
+      i32.const 191
+      i32.le_u
+    else
+      i32.const 0
+    end
+  )
+  (func (;9;) (type 22) (param eqref) (result i32)
+    (local i32 i32 i32 i32 i32 i32 i32 i32)
+    local.get 0
+    call 4
+    local.set 1
+    i32.const 0
+    local.set 7
+    block ;; label = @1
+      loop ;; label = @2
+        block ;; label = @3
+          i32.const 1
+          if ;; label = @4
+            local.get 7
+            local.set 2
+            local.get 2
+            local.get 1
+            i32.lt_u
+            if ;; label = @5
+              local.get 1
+              local.get 2
+              i32.sub
+              local.set 3
+              local.get 3
+              i32.const 16
+              i32.ge_u
+              if (result i32) ;; label = @6
+                local.get 0
+                local.get 2
+                call 10
+                i8x16.bitmask
+                i32.const 0
+                i32.eq
+              else
+                i32.const 0
+              end
+              if ;; label = @6
+                local.get 2
+                i32.const 16
+                i32.add
+                local.set 7
+                br 4 (;@2;)
+              else
+              end
+              local.get 0
+              local.get 2
+              call 5
+              local.set 4
+              local.get 4
+              i32.const 128
+              i32.lt_u
+              if ;; label = @6
+                local.get 2
+                i32.const 1
+                i32.add
+                local.set 7
+                br 4 (;@2;)
+              else
+              end
+              local.get 4
+              i32.const 194
+              i32.lt_u
+              if (result i32) ;; label = @6
+                i32.const 1
+              else
+                local.get 4
+                i32.const 244
+                i32.gt_u
+              end
+              if ;; label = @6
+                i32.const 0
+                return
+              else
+              end
+              local.get 4
+              i32.const 224
+              i32.lt_u
+              if ;; label = @6
+                local.get 3
+                i32.const 2
+                i32.lt_u
+                if (result i32) ;; label = @7
+                  i32.const 1
+                else
+                  local.get 0
+                  local.get 2
+                  i32.const 1
+                  i32.add
+                  call 5
+                  call 8
+                  i32.eqz
+                end
+                if ;; label = @7
+                  i32.const 0
+                  return
+                else
+                end
+                local.get 2
+                i32.const 2
+                i32.add
+                local.set 7
+                br 4 (;@2;)
+              else
+              end
+              local.get 4
+              i32.const 240
+              i32.lt_u
+              if ;; label = @6
+                local.get 3
+                i32.const 3
+                i32.lt_u
+                if ;; label = @7
+                  i32.const 0
+                  return
+                else
+                end
+                local.get 0
+                local.get 2
+                i32.const 1
+                i32.add
+                call 5
+                local.set 5
+                local.get 5
+                call 8
+                i32.eqz
+                if (result i32) ;; label = @7
+                  i32.const 1
+                else
+                  local.get 0
+                  local.get 2
+                  i32.const 2
+                  i32.add
+                  call 5
+                  call 8
+                  i32.eqz
+                end
+                if ;; label = @7
+                  i32.const 0
+                  return
+                else
+                end
+                local.get 4
+                i32.const 224
+                i32.eq
+                if (result i32) ;; label = @7
+                  local.get 5
+                  i32.const 160
+                  i32.lt_u
+                else
+                  i32.const 0
+                end
+                if (result i32) ;; label = @7
+                  i32.const 1
+                else
+                  local.get 4
+                  i32.const 237
+                  i32.eq
+                  if (result i32) ;; label = @8
+                    local.get 5
+                    i32.const 160
+                    i32.ge_u
+                  else
+                    i32.const 0
+                  end
+                end
+                if ;; label = @7
+                  i32.const 0
+                  return
+                else
+                end
+                local.get 2
+                i32.const 3
+                i32.add
+                local.set 7
+                br 4 (;@2;)
+              else
+              end
+              local.get 3
+              i32.const 4
+              i32.lt_u
+              if ;; label = @6
+                i32.const 0
+                return
+              else
+              end
+              local.get 0
+              local.get 2
+              i32.const 1
+              i32.add
+              call 5
+              local.set 6
+              local.get 6
+              call 8
+              i32.eqz
+              if (result i32) ;; label = @6
+                i32.const 1
+              else
+                local.get 0
+                local.get 2
+                i32.const 2
+                i32.add
+                call 5
+                call 8
+                i32.eqz
+              end
+              if (result i32) ;; label = @6
+                i32.const 1
+              else
+                local.get 0
+                local.get 2
+                i32.const 3
+                i32.add
+                call 5
+                call 8
+                i32.eqz
+              end
+              if ;; label = @6
+                i32.const 0
+                return
+              else
+              end
+              local.get 4
+              i32.const 240
+              i32.eq
+              if (result i32) ;; label = @6
+                local.get 6
+                i32.const 144
+                i32.lt_u
+              else
+                i32.const 0
+              end
+              if (result i32) ;; label = @6
+                i32.const 1
+              else
+                local.get 4
+                i32.const 244
+                i32.eq
+                if (result i32) ;; label = @7
+                  local.get 6
+                  i32.const 144
+                  i32.ge_u
+                else
+                  i32.const 0
+                end
+              end
+              if ;; label = @6
+                i32.const 0
+                return
+              else
+              end
+              local.get 2
+              i32.const 4
+              i32.add
+              local.set 7
+              br 3 (;@2;)
+              br 2 (;@3;)
+            end
+          end
+          i32.const 1
+          if ;; label = @4
+            i32.const 1
+            local.set 8
+            br 3 (;@1;)
+            br 1 (;@3;)
+          end
+          unreachable
+        end
+        unreachable
+      end
+      unreachable
+    end
+    local.get 8
+  )
+  (func (;10;) (type 23) (param eqref i32) (result v128)
+    (local i32 v128)
+    local.get 0
+    ref.cast (ref 30)
+    struct.get 30 2
+    local.set 2
+    local.get 1
+    local.get 2
+    i32.gt_u
+    if (result i32) ;; label = @1
+      i32.const 1
+    else
+      local.get 2
+      local.get 1
+      i32.sub
+      i32.const 16
+      i32.lt_u
+    end
+    if ;; label = @1
+      unreachable
+    else
+    end
+    local.get 0
+    local.get 1
+    call 2
+    i8x16.splat
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 1
+    i32.add
+    call 2
+    i8x16.replace_lane 1
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 2
+    i32.add
+    call 2
+    i8x16.replace_lane 2
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 3
+    i32.add
+    call 2
+    i8x16.replace_lane 3
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 4
+    i32.add
+    call 2
+    i8x16.replace_lane 4
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 5
+    i32.add
+    call 2
+    i8x16.replace_lane 5
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 6
+    i32.add
+    call 2
+    i8x16.replace_lane 6
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 7
+    i32.add
+    call 2
+    i8x16.replace_lane 7
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 8
+    i32.add
+    call 2
+    i8x16.replace_lane 8
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 9
+    i32.add
+    call 2
+    i8x16.replace_lane 9
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 10
+    i32.add
+    call 2
+    i8x16.replace_lane 10
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 11
+    i32.add
+    call 2
+    i8x16.replace_lane 11
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 12
+    i32.add
+    call 2
+    i8x16.replace_lane 12
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 13
+    i32.add
+    call 2
+    i8x16.replace_lane 13
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 14
+    i32.add
+    call 2
+    i8x16.replace_lane 14
+    local.set 3
+    local.get 3
+    local.get 0
+    local.get 1
+    i32.const 15
+    i32.add
+    call 2
+    i8x16.replace_lane 15
+    local.set 3
+    local.get 3
+  )
+  (func (;11;) (type 24) (param eqref) (result eqref)
+    local.get 0
+    call 6
+  )
+  (func (;12;) (type 25) (param eqref) (result i32)
+    local.get 0
+    call 4
+  )
+  (func (;13;) (type 26) (param eqref) (result eqref)
+    local.get 0
+    call 7
+  )
+  (func (;14;) (type 27) (result i32)
     v128.const i32x4 0x66657270 0xce207869 0xb8e420bb 0x8c95e796
     v128.const i32x4 0x8c9ff020 0x0000008d 0x00000000 0x00000000
-    array.new_fixed 16 2
+    array.new_fixed 28 2
     i32.const 0
     i32.const 21
-    struct.new 18
-    call 6
-    call 4
-    call 5
+    struct.new 30
+    call 13
+    call 11
+    call 12
   )
 )

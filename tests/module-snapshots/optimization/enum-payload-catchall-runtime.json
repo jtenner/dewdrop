@@ -1,5 +1,8 @@
 {
   "errors": [],
-  "warnings": [],
+  "warnings": [
+    "fixture.dew:9:16: warning: RedundantPatternArm(1, 150)\n  |\n9 |     Maybe::Some(left, right) => right\n  |                ^",
+    "fixture.dew:10:10: warning: RedundantPatternArm(2, 182)\n  |\n10 |     Maybe::None => 0\n  |          ^"
+  ],
   "output": []
 }

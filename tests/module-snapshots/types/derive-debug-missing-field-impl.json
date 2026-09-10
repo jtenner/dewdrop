@@ -1,6 +1,6 @@
 {
   "errors": [
-    "fixture.dew:5:10: error: NoMatchingMethod(4, 12, 62)\n  |\n5 | } derive(Debug)\n  |          ^"
+    "fixture.dew:5:10: error: UnsatisfiedTraitObligation(\n  18446462598732842269,\n  18446462598732840967,\n  18446462598732842240,\n  28,\n  62,\n)\n  |\n5 | } derive(Debug)\n  |          ^"
   ],
   "warnings": [],
   "output": null

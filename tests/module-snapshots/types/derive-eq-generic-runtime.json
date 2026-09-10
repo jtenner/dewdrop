@@ -1,7 +1,7 @@
 {
-  "errors": [
-    "StarshineProgramCodeError(UnsupportedExpression(12884901888006, 82))"
-  ],
+  "errors": [],
   "warnings": [],
-  "output": null
+  "output": [
+    "derive:eq:generic"
+  ]
 }

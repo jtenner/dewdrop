@@ -1,5 +1,7 @@
 {
   "errors": [],
-  "warnings": [],
+  "warnings": [
+    "fixture.dew:57:13: warning: RedundantPatternArm(21, 1412)\n  |\n57 |   if (point is Point {\n  |             ^"
+  ],
   "output": []
 }

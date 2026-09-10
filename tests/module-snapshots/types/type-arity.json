@@ -1,6 +1,6 @@
 {
   "errors": [
-    "fixture.dew:5:14: error: TypeArityMismatch(44, 1, 0, 12884901888001, 42)\n  |\n5 | fn make() -> Box {\n  |              ^"
+    "fixture.dew:5:14: error: TypeArityMismatch(45, 1, 0, 12884901888001, 42)\n  |\n5 | fn make() -> Box {\n  |              ^"
   ],
   "warnings": [],
   "output": null

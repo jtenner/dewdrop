@@ -1,6 +1,9 @@
 {
   "errors": [],
-  "warnings": [],
+  "warnings": [
+    "fixture.dew:17:16: warning: RedundantPatternArm(1, 245)\n  |\n17 |     Maybe::Some(first, second) => Maybe::Some(second, first)\n  |                ^",
+    "fixture.dew:18:10: warning: RedundantPatternArm(2, 300)\n  |\n18 |     Maybe::None => Maybe::None\n  |          ^"
+  ],
   "output": {
     "trap": "unreachable",
     "stdout": []

@@ -1,18 +1,37 @@
 (module
-  (type (;0;) (func (param i32) (result i64)))
-  (type (;1;) (func (param i64 i32) (result i32)))
-  (type (;2;) (func (param i64 i64) (result i64)))
-  (type (;3;) (func (param i64 i32 i32) (result i64)))
-  (type (;4;) (func (param i32) (result i64)))
-  (type (;5;) (func (param i64 i32) (result i32)))
-  (type (;6;) (func (param i64 i32 i32) (result i64)))
-  (type (;7;) (func (param i64 i64) (result i64)))
-  (type (;8;) (func (param i64 i32) (result i32)))
-  (type (;9;) (func (param i64 i32 i32) (result i64)))
-  (type (;10;) (func (param i64 i64) (result i64)))
-  (type (;11;) (func (result i32)))
-  (export "main" (func 11))
-  (func (;0;) (type 0) (param i32) (result i64)
+  (@custom "compiler.facts" (before first) "\01\00\01\07dewdrop\050.1.0\00\01\01\01\00\0d\00\01\00\00\00\00\00\00\00\00\00\01\00\01\00\00\01\7f\00\01\00\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\01\01\00\00\00\00\01\01\00\00\00\00\00\00\00\00\00\01\00\01\00\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\01\7f\00\00\01\01\00\00\00\00\02\01\80\80\80\02\00\00\00\00\00\00\00\00\01\01\00\02\00\00\01\7f\00\01\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\7f\00\01\00\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\01\01\00\00\00\00\03\01\80\80\80\02\00\00\00\00\00\00\00\00\01\00\02\00\00\01\7f\00\01\00\01\7f\00\00\01\01\00\00\00\00\04\01\80\80\80\02\00\00\00\00\00\00\00\00\01\00\03\00\00\01\7f\00\01\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\7f\00\02\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\01\7f\00\00\01\01\00\00\00\00\05\01\00\00\00\00\00\00\00\00\00\01\01\01\01\00\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\01\7f\00\00\01\01\00\00\00\00\06\01\80\80\80\02\00\00\00\00\00\00\00\00\01\01\02\02\00\00\01\7f\00\01\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\7f\00\01\00\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\01\01\00\00\00\00\07\01\80\80\80\02\00\00\00\00\00\00\00\00\01\01\04\03\00\00\01\7f\00\01\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\7f\00\02\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\01\7f\00\00\01\01\00\00\00\00\08\01\80\80\80\02\00\00\00\00\00\00\00\00\01\01\03\02\00\00\01\7f\00\01\00\01\7f\00\00\01\01\00\00\00\00\09\01\80\80\80\02\00\00\00\00\00\00\00\00\01\01\06\02\00\00\01\7f\00\01\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\7f\00\01\00\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\01\01\00\00\00\00\0a\01\80\80\80\02\00\00\00\00\00\00\00\00\01\01\07\03\00\00\01\7f\00\01\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\7f\00\02\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\01\7f\00\00\01\01\00\00\00\00\0b\01\80\80\80\02\00\00\00\00\00\00\00\00\01\01\08\02\00\00\01\7f\00\01\00\01\7f\00\00\01\01\00\00\00\00\0c\01\80\80\80\02\00\00\00\00\00\00\00\00\01\04\05\09\0a\0b\00\01\00\01\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\01\00\00\01\00\00\0a\08\00\01\00\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\09\01\00\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\00\0a\01\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\00\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\0c\02\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\02\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\00\11\01\00\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\00\12\01\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\00\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\13\02\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\02\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\00\15\01\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\01\00\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\16\02\01\00\01\02\01\00\ff\01\00\01\80\fe\ff\ff\0f\00\00\00\00\00\02\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\00\18\00\01\00\00\01\02\00\01\80\7f\ff\00\00\00\00\00\00\00\00\00\00\00\00")
+  (type (;0;) (array (mut i32)))
+  (type (;1;) (array (mut i64)))
+  (type (;2;) (array (mut f32)))
+  (type (;3;) (array (mut f64)))
+  (type (;4;) (array (mut v128)))
+  (type (;5;) (array (mut eqref)))
+  (type (;6;) (array (mut i8)))
+  (type (;7;) (array (mut i16)))
+  (type (;8;) (func (param i64) (result i32)))
+  (type (;9;) (func (param i32) (result i64)))
+  (type (;10;) (func (param i64 i32) (result i32)))
+  (type (;11;) (func (param i64 i64) (result i64)))
+  (type (;12;) (func (param i64 i32 i32) (result i64)))
+  (type (;13;) (func (param i64) (result i64)))
+  (type (;14;) (func (param i32) (result i32)))
+  (type (;15;) (func (param i32) (result i32)))
+  (type (;16;) (func (param i32) (result i32)))
+  (type (;17;) (func (param i32) (result i64)))
+  (type (;18;) (func (param i64 i32) (result i32)))
+  (type (;19;) (func (param i64 i32 i32) (result i64)))
+  (type (;20;) (func (param i64 i64) (result i64)))
+  (type (;21;) (func (param i64 i32) (result i32)))
+  (type (;22;) (func (param i64 i32 i32) (result i64)))
+  (type (;23;) (func (param i64 i64) (result i64)))
+  (type (;24;) (func (result i32)))
+  (export "main" (func 12))
+  (func (;0;) (type 8) (param i64) (result i32)
+    local.get 0
+    i32.wrap_i64
+    i32.extend8_s
+  )
+  (func (;1;) (type 9) (param i32) (result i64)
     local.get 0
     i64.extend_i32_s
     i64.const 255
@@ -20,7 +39,7 @@
     i64.const 72340172838076673
     i64.mul
   )
-  (func (;1;) (type 1) (param i64 i32) (result i32)
+  (func (;2;) (type 10) (param i64 i32) (result i32)
     (local i64)
     local.get 1
     i64.extend_i32_u
@@ -34,10 +53,9 @@
     i64.shr_u
     i64.const 255
     i64.and
-    i32.wrap_i64
-    i32.extend8_s
+    call 0
   )
-  (func (;2;) (type 2) (param i64 i64) (result i64)
+  (func (;3;) (type 11) (param i64 i64) (result i64)
     (local i64 i64)
     local.get 0
     local.set 2
@@ -57,7 +75,7 @@
     i64.and
     i64.xor
   )
-  (func (;3;) (type 3) (param i64 i32 i32) (result i64)
+  (func (;4;) (type 12) (param i64 i32 i32) (result i64)
     (local i64 i64)
     local.get 1
     i64.extend_i32_u
@@ -85,54 +103,54 @@
     local.set 3
     local.get 3
   )
-  (func (;4;) (type 4) (param i32) (result i64)
+  (func (;5;) (type 17) (param i32) (result i64)
     local.get 0
-    call 0
-  )
-  (func (;5;) (type 5) (param i64 i32) (result i32)
-    local.get 0
-    local.get 1
     call 1
   )
-  (func (;6;) (type 6) (param i64 i32 i32) (result i64)
-    local.get 0
-    local.get 1
-    local.get 2
-    call 3
-  )
-  (func (;7;) (type 7) (param i64 i64) (result i64)
+  (func (;6;) (type 18) (param i64 i32) (result i32)
     local.get 0
     local.get 1
     call 2
   )
-  (func (;8;) (type 8) (param i64 i32) (result i32)
-    local.get 0
-    local.get 1
-    call 5
-  )
-  (func (;9;) (type 9) (param i64 i32 i32) (result i64)
+  (func (;7;) (type 19) (param i64 i32 i32) (result i64)
     local.get 0
     local.get 1
     local.get 2
-    call 6
+    call 4
   )
-  (func (;10;) (type 10) (param i64 i64) (result i64)
+  (func (;8;) (type 20) (param i64 i64) (result i64)
     local.get 0
     local.get 1
+    call 3
+  )
+  (func (;9;) (type 21) (param i64 i32) (result i32)
+    local.get 0
+    local.get 1
+    call 6
+  )
+  (func (;10;) (type 22) (param i64 i32 i32) (result i64)
+    local.get 0
+    local.get 1
+    local.get 2
     call 7
   )
-  (func (;11;) (type 11) (result i32)
+  (func (;11;) (type 23) (param i64 i64) (result i64)
+    local.get 0
+    local.get 1
+    call 8
+  )
+  (func (;12;) (type 24) (result i32)
     (local i64)
     i32.const 7
-    call 4
+    call 5
     local.set 0
     local.get 0
     i32.const 0
     i32.const 9
-    call 9
-    local.get 0
     call 10
+    local.get 0
+    call 11
     i32.const 0
-    call 8
+    call 9
   )
 )

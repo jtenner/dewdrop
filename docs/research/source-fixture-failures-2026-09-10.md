@@ -96,3 +96,24 @@ startup-cycle crash was retained in the raw command record, but its short report
 only said that the expected source error was missing. The short report now keeps
 the invariant and stack too. A red-first unit test checks that case; all six
 runner tests pass in 0.258 seconds.
+
+## Source expectations and reproducible snapshots
+
+Nineteen JSON expectations were stale: eight now include real redundant-arm
+warnings, seven track current source diagnostics, and four now describe
+successful execution. Those four are hash evaluation once, generic Never match,
+imported derived methods, and generic derived equality. Their successful runtime
+results were checked before their expectations changed. No runtime failure was
+converted into expected success.
+
+The official snapshot suite passes all 461 fixtures in Node and Wago. It compiles
+every fixture twice and compares module bytes: 922 source compilations, maximum
+6.316 seconds, none above 30 seconds. Regenerate all 410 executable WAT snapshots
+from that compiler, including the new nominal callback regression. Fifty-one
+fixtures still intentionally report source errors. The complete integration lane
+passes 270 tests. Its slowest target takes 31.052 seconds while other experiment
+jobs are active; retain that timing as a performance bug pending a serial check.
+
+[Saved validation data](data/source-fixture-fixes-2026-09-10/source-validation.json)
+includes per-target native times. The accompanying JSONL keeps every official
+snapshot command time, including all 922 source compilations.
