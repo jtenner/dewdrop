@@ -10,6 +10,22 @@ function solverProbe(name, code, expected, actual, detail) {
   };
 }
 const probes = [
+  ...[
+    ["ARN-108 inferred applied specialization rejects child cycles", 108, 1n, 0n, 1n, 1n],
+    ["ARN-108 resolved applied specialization rejects child cycles", 108, 1n, 0n, 1n, 4294967246n],
+    ["ARN-108 inferred function specialization rejects child cycles", 108, 0n, 0n, 1n, 1n],
+    ["ARN-108 resolved function specialization rejects child cycles", 108, 0n, 0n, 1n, 4294967249n],
+    ["ARN-108 inferred projection specialization rejects owner cycles", 108, 0n, 0n, 1n, 1n],
+    ["ARN-108 resolved projection specialization rejects owner cycles", 108, 0n, 0n, 1n, 4294967249n],
+    ["ARN-101 inferred applied specialization checks child spans", 101, 1n, 1n, 1n, 4294967295n],
+    ["ARN-101 resolved applied specialization checks child spans", 101, 1n, 3n, 1n, 4294967295n],
+    ["ARN-101 inferred function specialization checks child spans", 101, 0n, 1n, 1n, 4294967295n],
+    ["ARN-101 resolved function specialization checks child spans", 101, 0n, 2n, 1n, 4294967295n],
+    ["ARN-108 inferred function specialization checks result cycles", 108, 0n, 0n, 1n, 1n],
+    ["ARN-108 resolved function specialization checks result cycles", 108, 0n, 0n, 1n, 4294967249n],
+  ].map(([name, code, declaration, expected, actual, detail]) => ({
+    name, expected: [code, 5, 5100n, (5100n << 32n) | declaration, 0n, 4294967295, expected, actual, detail],
+  })),
   {
     name: "ARN-105 receiver primitive lookup checks body type indices",
     expected: [105, 7, 5100n, 0n, 0n, 4294967295, 1n, 1n, 1n],

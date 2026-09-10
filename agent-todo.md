@@ -43,6 +43,22 @@ are in the [completion log](docs/research/compile-time-query-completion-2026-09-
   Starshine tests pass. The refreshed provider passes hardening and integration.
   Compiler B/C core and linked Wasm bytes match in the clean bootstrap run.
 
+### Current ten-part correctness batch
+
+These are bounded parts of the open type-boundary, call-target, and arena
+audit entries below, not completion of those larger entries.
+
+- [x] T10-1: Check inferred applied-type child graphs during specialization.
+- [x] T10-2: Check resolved applied-type child graphs during specialization.
+- [x] T10-3: Check inferred function-type child graphs during specialization.
+- [x] T10-4: Check resolved function-type child graphs during specialization.
+- [x] T10-5: Check deferred projection owner graphs before returning pending.
+- [ ] T10-6: Remove unused call-payload name recovery and test the live readers.
+- [ ] T10-7: Give live variant-payload type/span/child failures numeric context.
+- [ ] T10-8: Check live payload module, field, and stored type identities.
+- [ ] T10-9: Reject erroneous declared payload types instead of treating them as absent.
+- [ ] T10-10: Infer unresolved method results from call types, not method names.
+
 ### Performance follow-up
 
 Correctness comes first. Keep these timing defects visible after query completion.

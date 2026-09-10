@@ -1,0 +1,177 @@
+open dew.std.option
+
+// Applied and function nodes must inspect their children before reference
+// erasure. A pending projection must still inspect its owner for corruption.
+fn self_host_test_specialization_graph(kind: U32, resolved: Bool, mutation: U32) -> Unit {
+  let module_ = if kind == 0u32 {
+    self_host_physical_test_lowering(b"struct Box<t> {\n  value: t\n}\nfn keep<t>(value: Box<t>) -> Box<t> {\n  value\n}\n").modules[0u32]
+  } else {
+    self_host_specialized_shape_fixture()
+  }
+  let callable = module_.functions.callables[0u32]
+  let mut base = callable.result_type
+  let mut child = callable.result_type
+  if kind == 0u32 {
+    match module_.resolved_types.types[callable.result_type] {
+      SelfHostResolvedType::AppliedType(owner, arguments) => {
+        base = owner
+        child = module_.resolved_types.type_arguments[arguments.start]
+      }
+      _ => assert(false, "Box result has an applied type")
+    }
+  }
+  let start = if resolved {
+    module_.resolved_types.type_arguments.length()
+  } else {
+    module_.inferred.type_arguments.length()
+  }
+  let root_index = if resolved {
+    module_.resolved_types.types.length()
+  } else {
+    module_.inferred.types.length()
+  }
+  let root = if resolved {
+    -self_host_body_u32_to_i32(root_index) - 2i32
+  } else {
+    self_host_body_u32_to_i32(root_index)
+  }
+  let span = SelfHostHirSpan::{
+    start: start
+    length: 1u32
+  }
+  if resolved {
+    module_.resolved_types.type_arguments.push(child)
+    module_.resolved_types.types.push(if kind == 0u32 {
+      SelfHostResolvedType::AppliedType(base, span)
+    } else if kind == 1u32 {
+      SelfHostResolvedType::FunctionType(span, child)
+    } else {
+      SelfHostResolvedType::MemberTypeProjection(child, b"types.field_type", "value")
+    })
+  } else {
+    module_.inferred.type_arguments.push(-self_host_body_u32_to_i32(child) - 2i32)
+    module_.inferred.types.push(if kind == 0u32 {
+      SelfHostBodyTypeTerm::BodyAppliedType(-self_host_body_u32_to_i32(base) - 2i32, span)
+    } else if kind == 1u32 {
+      SelfHostBodyTypeTerm::BodyFunctionType(span, -self_host_body_u32_to_i32(child) - 2i32)
+    } else {
+      SelfHostBodyTypeTerm::BodyMemberTypeProjection(-self_host_body_u32_to_i32(child) - 2i32, b"types.field_type", "value")
+    })
+  }
+  let shape = self_host_specialized_body_value_shape(module_, callable, self_host_specialized_shape_test_span(),
+    [SelfHostPlannedValueShape::I64PlannedValueShape], root)
+  if kind == 2u32 {
+    assert(shape is SelfHostPlannedValueShape::GenericPlannedValueShape, "pending projection stays Generic")
+  } else {
+    assert(shape is SelfHostPlannedValueShape::RefPlannedValueShape, "valid applied/function graph before mutation")
+  }
+  if mutation == 0u32 {
+    return
+  }
+  if mutation == 3u32 {
+    let broken = SelfHostHirSpan::{
+      start: 4294967295u32
+      length: 1u32
+    }
+    if resolved {
+      module_.resolved_types.types[root_index] = if kind == 0u32 {
+        SelfHostResolvedType::AppliedType(base, broken)
+      } else {
+        SelfHostResolvedType::FunctionType(broken, child)
+      }
+    } else {
+      module_.inferred.types[root_index] = if kind == 0u32 {
+        SelfHostBodyTypeTerm::BodyAppliedType(-self_host_body_u32_to_i32(base) - 2i32, broken)
+      } else {
+        SelfHostBodyTypeTerm::BodyFunctionType(broken, -self_host_body_u32_to_i32(child) - 2i32)
+      }
+    }
+  } else if mutation == 5u32 {
+    if resolved {
+      module_.resolved_types.types[root_index] = SelfHostResolvedType::FunctionType(span, root_index)
+    } else {
+      module_.inferred.types[root_index] = SelfHostBodyTypeTerm::BodyFunctionType(span, root)
+    }
+  } else if kind == 2u32 {
+    if resolved {
+      module_.resolved_types.types[root_index] = SelfHostResolvedType::MemberTypeProjection(root_index, b"types.field_type", "value")
+    } else {
+      module_.inferred.types[root_index] = SelfHostBodyTypeTerm::BodyMemberTypeProjection(root, b"types.field_type", "value")
+    }
+  } else if resolved {
+    module_.resolved_types.type_arguments[start] = if mutation == 1u32 {
+      root_index
+    } else {
+      module_.resolved_types.error_type
+    }
+  } else {
+    module_.inferred.type_arguments[start] = if mutation == 1u32 {
+      root
+    } else {
+      -1i32
+    }
+  }
+  let changed = self_host_specialized_body_value_shape(module_, callable, self_host_specialized_shape_test_span(),
+    [SelfHostPlannedValueShape::I64PlannedValueShape], root)
+  if mutation == 2u32 {
+    assert(changed is SelfHostPlannedValueShape::ErrorPlannedValueShape, "an erroneous child cannot become Ref")
+  }
+}
+
+test "specialization validates applied function and projection graphs before mutation" {
+  self_host_test_specialization_graph(0u32, false, 0u32)
+  self_host_test_specialization_graph(0u32, true, 0u32)
+  self_host_test_specialization_graph(1u32, false, 0u32)
+  self_host_test_specialization_graph(1u32, true, 0u32)
+  self_host_test_specialization_graph(2u32, false, 0u32)
+  self_host_test_specialization_graph(2u32, true, 0u32)
+}
+test "ARN-108 inferred applied specialization rejects child cycles" expect_trap "unreachable" {
+    self_host_test_specialization_graph(0u32, false, 1u32)
+  }
+test "ARN-108 resolved applied specialization rejects child cycles" expect_trap "unreachable" {
+    self_host_test_specialization_graph(0u32, true, 1u32)
+  }
+test "ARN-108 inferred function specialization rejects child cycles" expect_trap "unreachable" {
+    self_host_test_specialization_graph(1u32, false, 1u32)
+  }
+test "ARN-108 resolved function specialization rejects child cycles" expect_trap "unreachable" {
+    self_host_test_specialization_graph(1u32, true, 1u32)
+  }
+test "ARN-108 inferred projection specialization rejects owner cycles" expect_trap "unreachable" {
+    self_host_test_specialization_graph(2u32, false, 1u32)
+  }
+test "ARN-108 resolved projection specialization rejects owner cycles" expect_trap "unreachable" {
+    self_host_test_specialization_graph(2u32, true, 1u32)
+  }
+test "inferred applied specialization preserves erroneous children" {
+    self_host_test_specialization_graph(0u32, false, 2u32)
+  }
+test "resolved applied specialization preserves erroneous children" {
+    self_host_test_specialization_graph(0u32, true, 2u32)
+  }
+test "inferred function specialization preserves erroneous children" {
+    self_host_test_specialization_graph(1u32, false, 2u32)
+  }
+test "resolved function specialization preserves erroneous children" {
+    self_host_test_specialization_graph(1u32, true, 2u32)
+  }
+
+test "ARN-101 inferred applied specialization checks child spans" expect_trap "unreachable" {
+  self_host_test_specialization_graph(0u32, false, 3u32)
+}
+test "ARN-101 resolved applied specialization checks child spans" expect_trap "unreachable" {
+  self_host_test_specialization_graph(0u32, true, 3u32)
+}
+test "ARN-101 inferred function specialization checks child spans" expect_trap "unreachable" {
+  self_host_test_specialization_graph(1u32, false, 3u32)
+}
+test "ARN-101 resolved function specialization checks child spans" expect_trap "unreachable" {
+  self_host_test_specialization_graph(1u32, true, 3u32)
+}
+test "ARN-108 inferred function specialization checks result cycles" expect_trap "unreachable" {
+  self_host_test_specialization_graph(1u32, false, 5u32)
+}
+test "ARN-108 resolved function specialization checks result cycles" expect_trap "unreachable" {
+  self_host_test_specialization_graph(1u32, true, 5u32)
+}
