@@ -2,232 +2,232 @@
   "max_source_compile_seconds": 10.56596976199944,
   "performance_bugs": [
     {
-      "fixture": null,
+      "fixture": "collections/array-swap-oob-trap",
       "phase": "gc-speed",
       "seconds": 30.05776536600024
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/functional-while-deep-wide-runtime",
       "phase": "cleanup",
       "seconds": 30.031257261987776
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/functional-while-deep-wide-runtime",
       "phase": "gc-speed",
       "seconds": 30.027433273004135
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/functional-while-deep-wide-runtime",
       "phase": "speed",
       "seconds": 30.0290811570012
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/functional-while-nested-runtime",
       "phase": "cleanup",
       "seconds": 30.03425206000975
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/functional-while-nested-runtime",
       "phase": "gc-speed",
       "seconds": 30.033124039007816
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/functional-while-nested-runtime",
       "phase": "speed",
       "seconds": 30.033898533001775
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/functional-while-scalar-runtime",
       "phase": "cleanup",
       "seconds": 30.033766052001738
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/pattern-matrix-runtime",
       "phase": "gc-speed",
       "seconds": 30.029749697991065
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/pattern-matrix-runtime",
       "phase": "speed",
       "seconds": 30.033145123001304
     },
     {
-      "fixture": null,
+      "fixture": "control-flow/short-circuit-runtime",
       "phase": "cleanup",
       "seconds": 30.03256506701291
     },
     {
-      "fixture": null,
+      "fixture": "json/bloom-duplicate-runtime",
       "phase": "gc-speed",
       "seconds": 30.032453453997732
     },
     {
-      "fixture": null,
+      "fixture": "json/bloom-duplicate-runtime",
       "phase": "speed",
       "seconds": 30.028702112991596
     },
     {
-      "fixture": null,
+      "fixture": "json/core-runtime",
       "phase": "gc-speed",
       "seconds": 30.033804174992838
     },
     {
-      "fixture": null,
+      "fixture": "json/core-runtime",
       "phase": "speed",
       "seconds": 30.028890219007735
     },
     {
-      "fixture": null,
+      "fixture": "json/reader-runtime",
       "phase": "gc-speed",
       "seconds": 30.044711010006722
     },
     {
-      "fixture": null,
+      "fixture": "json/reader-runtime",
       "phase": "speed",
       "seconds": 30.027556421991903
     },
     {
-      "fixture": null,
+      "fixture": "json/runtime",
       "phase": "gc-speed",
       "seconds": 30.028568694993737
     },
     {
-      "fixture": null,
+      "fixture": "json/runtime",
       "phase": "speed",
       "seconds": 30.029909588003648
     },
     {
-      "fixture": null,
+      "fixture": "numeric/math-runtime",
       "phase": "gc-speed",
       "seconds": 30.03096797200851
     },
     {
-      "fixture": null,
+      "fixture": "numeric/math-runtime",
       "phase": "speed",
       "seconds": 30.029764131992124
     },
     {
-      "fixture": null,
+      "fixture": "text/bytes-builder-runtime",
       "phase": "cleanup",
       "seconds": 30.03027993500291
     },
     {
-      "fixture": null,
+      "fixture": "text/bytes-builder",
       "phase": "cleanup",
       "seconds": 30.032077024006867
     },
     {
-      "fixture": null,
+      "fixture": "text/bytes-concat-runtime",
       "phase": "cleanup",
       "seconds": 30.031072240992216
     },
     {
-      "fixture": null,
+      "fixture": "text/compiler-diagnostic-runtime",
       "phase": "cleanup",
       "seconds": 30.03107404000184
     },
     {
-      "fixture": null,
+      "fixture": "text/concat-runtime",
       "phase": "cleanup",
       "seconds": 30.03235828501056
     },
     {
-      "fixture": null,
+      "fixture": "text/concat-view-runtime",
       "phase": "cleanup",
       "seconds": 30.03068870700372
     },
     {
-      "fixture": null,
+      "fixture": "text/concat",
       "phase": "cleanup",
       "seconds": 30.0332193570066
     },
     {
-      "fixture": null,
+      "fixture": "text/search-short-runtime",
       "phase": "cleanup",
       "seconds": 30.030970009000157
     },
     {
-      "fixture": null,
+      "fixture": "text/search",
       "phase": "cleanup",
       "seconds": 30.033253163011977
     },
     {
-      "fixture": null,
+      "fixture": "text/show-depth-limit-trap",
       "phase": "cleanup",
       "seconds": 30.03080123300606
     },
     {
-      "fixture": null,
+      "fixture": "text/show-depth-limit-trap",
       "phase": "gc-speed",
       "seconds": 30.031071724006324
     },
     {
-      "fixture": null,
+      "fixture": "text/show-depth-limit-trap",
       "phase": "speed",
       "seconds": 30.029658788000233
     },
     {
-      "fixture": null,
+      "fixture": "text/show-runtime",
       "phase": "cleanup",
       "seconds": 30.01938738200988
     },
     {
-      "fixture": null,
+      "fixture": "text/string-builder-runtime",
       "phase": "cleanup",
       "seconds": 30.029909710006905
     },
     {
-      "fixture": null,
+      "fixture": "text/string-builder-scalar-runtime",
       "phase": "cleanup",
       "seconds": 30.029810217005434
     },
     {
-      "fixture": null,
+      "fixture": "text/string-builder",
       "phase": "cleanup",
       "seconds": 30.03379467499326
     },
     {
-      "fixture": null,
+      "fixture": "text/string-compact-runtime",
       "phase": "cleanup",
       "seconds": 30.031795560003957
     },
     {
-      "fixture": null,
+      "fixture": "text/string-compact-runtime",
       "phase": "gc-speed",
       "seconds": 30.031064577997313
     },
     {
-      "fixture": null,
+      "fixture": "text/string-compact-runtime",
       "phase": "speed",
       "seconds": 30.030645238002762
     },
     {
-      "fixture": null,
+      "fixture": "text/string-slice-runtime",
       "phase": "cleanup",
       "seconds": 30.029113072989276
     },
     {
-      "fixture": null,
+      "fixture": "text/string-slice-runtime",
       "phase": "gc-speed",
       "seconds": 30.032787781005027
     },
     {
-      "fixture": null,
+      "fixture": "text/string-slice-runtime",
       "phase": "speed",
       "seconds": 30.0343333940109
     },
     {
-      "fixture": null,
+      "fixture": "types/derive-debug-runtime",
       "phase": "cleanup",
       "seconds": 30.03085335799551
     },
     {
-      "fixture": null,
+      "fixture": "types/derive-debug-runtime",
       "phase": "gc-speed",
       "seconds": 30.012829743005568
     },
     {
-      "fixture": null,
+      "fixture": "types/derive-debug-runtime",
       "phase": "speed",
       "seconds": 30.032674319998478
     }

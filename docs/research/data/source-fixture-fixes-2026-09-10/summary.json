@@ -66,6 +66,632 @@
     },
     "total": 461
   },
+  "benchmarks": {
+    "aggregate": {
+      "O4s": {
+        "code_ratio_to_O4s": 1.0,
+        "measured_workloads": 10,
+        "non_custom_ratio_to_O4s": 1.0,
+        "size_ratio_to_O4s": 1.0,
+        "time_ratio_to_O4s": 1.0,
+        "total_bytes": 59293,
+        "total_non_custom_bytes": 59084,
+        "total_workloads": 10
+      },
+      "baseline": {
+        "code_ratio_to_O4s": 1.0042646575059566,
+        "measured_workloads": 10,
+        "non_custom_ratio_to_O4s": 1.0038178159115747,
+        "size_ratio_to_O4s": 1.5888866918661648,
+        "time_ratio_to_O4s": 1.0003260523316975,
+        "total_bytes": 127010,
+        "total_non_custom_bytes": 59404,
+        "total_workloads": 10
+      },
+      "fold-inline": {
+        "code_ratio_to_O4s": 0.9682701141365946,
+        "measured_workloads": 10,
+        "non_custom_ratio_to_O4s": 0.8926483292053099,
+        "size_ratio_to_O4s": 0.7946308077730747,
+        "time_ratio_to_O4s": 0.8996355247559558,
+        "total_bytes": 53155,
+        "total_non_custom_bytes": 53155,
+        "total_workloads": 10
+      },
+      "prune": {
+        "code_ratio_to_O4s": 0.9961050555049273,
+        "measured_workloads": 10,
+        "non_custom_ratio_to_O4s": 0.9358530359157502,
+        "size_ratio_to_O4s": 0.8330914085154524,
+        "time_ratio_to_O4s": 0.9984457447269476,
+        "total_bytes": 56841,
+        "total_non_custom_bytes": 56841,
+        "total_workloads": 10
+      }
+    },
+    "workloads": {
+      "array-growth": {
+        "O4s": {
+          "bytes": 3201,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 2911,
+          "median_ns": 1331.1845703125048,
+          "non_custom_bytes": 3201,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 4082,
+          "code_ratio_to_O4s": 1.0003435245620063,
+          "code_section_bytes": 2912,
+          "median_ns": 1339.3339843749964,
+          "non_custom_bytes": 3202,
+          "non_custom_ratio_to_O4s": 1.000312402374258,
+          "size_ratio_to_O4s": 1.2752264917213372,
+          "time_ratio_95pct_bootstrap": [
+            0.9989423956867439,
+            1.01354732859634
+          ],
+          "time_ratio_to_O4s": 1.0056890276031913
+        },
+        "fold-inline": {
+          "bytes": 2946,
+          "code_ratio_to_O4s": 0.9920989350738578,
+          "code_section_bytes": 2888,
+          "median_ns": 905.846435546892,
+          "non_custom_bytes": 2946,
+          "non_custom_ratio_to_O4s": 0.9203373945641987,
+          "size_ratio_to_O4s": 0.9203373945641987,
+          "time_ratio_95pct_bootstrap": [
+            0.655764630665184,
+            0.678647874664352
+          ],
+          "time_ratio_to_O4s": 0.6674861229865916
+        },
+        "prune": {
+          "bytes": 3023,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 2911,
+          "median_ns": 1326.571533203119,
+          "non_custom_bytes": 3023,
+          "non_custom_ratio_to_O4s": 0.944392377382068,
+          "size_ratio_to_O4s": 0.944392377382068,
+          "time_ratio_95pct_bootstrap": [
+            0.9889398272565538,
+            1.0037508758019713
+          ],
+          "time_ratio_to_O4s": 0.9963246405356685
+        }
+      },
+      "array-reserved": {
+        "O4s": {
+          "bytes": 3187,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 2906,
+          "median_ns": 1316.3598632812689,
+          "non_custom_bytes": 3187,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 4085,
+          "code_ratio_to_O4s": 1.0003441156228492,
+          "code_section_bytes": 2907,
+          "median_ns": 1325.512695312503,
+          "non_custom_bytes": 3188,
+          "non_custom_ratio_to_O4s": 1.0003137747097584,
+          "size_ratio_to_O4s": 1.2817696893630373,
+          "time_ratio_95pct_bootstrap": [
+            1.001105765003068,
+            1.0112873808522873
+          ],
+          "time_ratio_to_O4s": 1.0063604044203003
+        },
+        "fold-inline": {
+          "bytes": 2944,
+          "code_ratio_to_O4s": 0.9931176875430144,
+          "code_section_bytes": 2886,
+          "median_ns": 793.8151855468867,
+          "non_custom_bytes": 2944,
+          "non_custom_ratio_to_O4s": 0.9237527455287103,
+          "size_ratio_to_O4s": 0.9237527455287103,
+          "time_ratio_95pct_bootstrap": [
+            0.5872737872273955,
+            0.6464489541990427
+          ],
+          "time_ratio_to_O4s": 0.6130216609847021
+        },
+        "prune": {
+          "bytes": 3013,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 2906,
+          "median_ns": 1312.6423339843707,
+          "non_custom_bytes": 3013,
+          "non_custom_ratio_to_O4s": 0.9454032005020395,
+          "size_ratio_to_O4s": 0.9454032005020395,
+          "time_ratio_95pct_bootstrap": [
+            0.9957480284519253,
+            1.0009482566760668
+          ],
+          "time_ratio_to_O4s": 0.9985566099799573
+        }
+      },
+      "bytes-hash": {
+        "O4s": {
+          "bytes": 3516,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 3313,
+          "median_ns": 3760.769042968737,
+          "non_custom_bytes": 3516,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 4494,
+          "code_ratio_to_O4s": 1.0036220947781467,
+          "code_section_bytes": 3325,
+          "median_ns": 3764.1494140625564,
+          "non_custom_bytes": 3528,
+          "non_custom_ratio_to_O4s": 1.0034129692832765,
+          "size_ratio_to_O4s": 1.2781569965870307,
+          "time_ratio_95pct_bootstrap": [
+            1.0002739297659318,
+            1.00138833986447
+          ],
+          "time_ratio_to_O4s": 1.0008243964602241
+        },
+        "fold-inline": {
+          "bytes": 3220,
+          "code_ratio_to_O4s": 0.952912767884093,
+          "code_section_bytes": 3157,
+          "median_ns": 5981.864257812553,
+          "non_custom_bytes": 3220,
+          "non_custom_ratio_to_O4s": 0.9158134243458476,
+          "size_ratio_to_O4s": 0.9158134243458476,
+          "time_ratio_95pct_bootstrap": [
+            1.5817058059714597,
+            1.6220894183363463
+          ],
+          "time_ratio_to_O4s": 1.5979087810329518
+        },
+        "prune": {
+          "bytes": 3433,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 3313,
+          "median_ns": 3754.355957031219,
+          "non_custom_bytes": 3433,
+          "non_custom_ratio_to_O4s": 0.9763936291240045,
+          "size_ratio_to_O4s": 0.9763936291240045,
+          "time_ratio_95pct_bootstrap": [
+            0.998606570298918,
+            0.9995120946675575
+          ],
+          "time_ratio_to_O4s": 0.9990328431039625
+        }
+      },
+      "enum-payload": {
+        "O4s": {
+          "bytes": 2833,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 2747,
+          "median_ns": 241.04861450194997,
+          "non_custom_bytes": 2833,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 5526,
+          "code_ratio_to_O4s": 1.0014561339643246,
+          "code_section_bytes": 2751,
+          "median_ns": 240.88589477539585,
+          "non_custom_bytes": 2837,
+          "non_custom_ratio_to_O4s": 1.0014119308153901,
+          "size_ratio_to_O4s": 1.9505824214613483,
+          "time_ratio_95pct_bootstrap": [
+            0.9928963945950069,
+            1.0077687731989469
+          ],
+          "time_ratio_to_O4s": 1.000070172281075
+        },
+        "fold-inline": {
+          "bytes": 2809,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 2747,
+          "median_ns": 240.346893310546,
+          "non_custom_bytes": 2809,
+          "non_custom_ratio_to_O4s": 0.9915284151076598,
+          "size_ratio_to_O4s": 0.9915284151076598,
+          "time_ratio_95pct_bootstrap": [
+            0.9921977978353078,
+            1.0062605462748289
+          ],
+          "time_ratio_to_O4s": 0.9989487550646505
+        },
+        "prune": {
+          "bytes": 2809,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 2747,
+          "median_ns": 240.41448974609915,
+          "non_custom_bytes": 2809,
+          "non_custom_ratio_to_O4s": 0.9915284151076598,
+          "size_ratio_to_O4s": 0.9915284151076598,
+          "time_ratio_95pct_bootstrap": [
+            0.9943051501197328,
+            1.006500901418669
+          ],
+          "time_ratio_to_O4s": 1.0001707015581753
+        }
+      },
+      "hash-map": {
+        "O4s": {
+          "bytes": 2977,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 2580,
+          "median_ns": 840.7489013671915,
+          "non_custom_bytes": 2977,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 5212,
+          "code_ratio_to_O4s": 1.0054263565891473,
+          "code_section_bytes": 2594,
+          "median_ns": 836.263793945316,
+          "non_custom_bytes": 2991,
+          "non_custom_ratio_to_O4s": 1.0047027208599262,
+          "size_ratio_to_O4s": 1.7507557944239167,
+          "time_ratio_95pct_bootstrap": [
+            0.9883019059788323,
+            1.0043902619642335
+          ],
+          "time_ratio_to_O4s": 0.9952559393190955
+        },
+        "fold-inline": {
+          "bytes": 2587,
+          "code_ratio_to_O4s": 0.9527131782945737,
+          "code_section_bytes": 2458,
+          "median_ns": 899.4537353515519,
+          "non_custom_bytes": 2587,
+          "non_custom_ratio_to_O4s": 0.868995633187773,
+          "size_ratio_to_O4s": 0.868995633187773,
+          "time_ratio_95pct_bootstrap": [
+            1.0630434470670103,
+            1.0963469238298853
+          ],
+          "time_ratio_to_O4s": 1.07634154589212
+        },
+        "prune": {
+          "bytes": 2771,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 2580,
+          "median_ns": 838.6437988281148,
+          "non_custom_bytes": 2771,
+          "non_custom_ratio_to_O4s": 0.9308028216325159,
+          "size_ratio_to_O4s": 0.9308028216325159,
+          "time_ratio_95pct_bootstrap": [
+            0.9911279934767047,
+            0.9997891611361152
+          ],
+          "time_ratio_to_O4s": 0.9957560392623155
+        }
+      },
+      "json-canonical": {
+        "O4s": {
+          "bytes": 16215,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 14387,
+          "median_ns": 10504.101562499813,
+          "non_custom_bytes": 16215,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 43827,
+          "code_ratio_to_O4s": 1.0060471258775283,
+          "code_section_bytes": 14474,
+          "median_ns": 10452.990234375293,
+          "non_custom_bytes": 16302,
+          "non_custom_ratio_to_O4s": 1.0053654024051804,
+          "size_ratio_to_O4s": 2.702867715078631,
+          "time_ratio_95pct_bootstrap": [
+            0.993286613738229,
+            1.0052914954870553
+          ],
+          "time_ratio_to_O4s": 0.9992073922263065
+        },
+        "fold-inline": {
+          "bytes": 14423,
+          "code_ratio_to_O4s": 0.9425870577604782,
+          "code_section_bytes": 13561,
+          "median_ns": 9422.697265625058,
+          "non_custom_bytes": 14423,
+          "non_custom_ratio_to_O4s": 0.8894850447116867,
+          "size_ratio_to_O4s": 0.8894850447116867,
+          "time_ratio_95pct_bootstrap": [
+            0.8732146193472368,
+            0.9026826433140864
+          ],
+          "time_ratio_to_O4s": 0.8906014768162399
+        },
+        "prune": {
+          "bytes": 15730,
+          "code_ratio_to_O4s": 0.9883922986029055,
+          "code_section_bytes": 14220,
+          "median_ns": 10505.11914062513,
+          "non_custom_bytes": 15730,
+          "non_custom_ratio_to_O4s": 0.9700894233734196,
+          "size_ratio_to_O4s": 0.9700894233734196,
+          "time_ratio_95pct_bootstrap": [
+            0.9957089548129232,
+            1.0056983154397747
+          ],
+          "time_ratio_to_O4s": 1.0008994544589942
+        }
+      },
+      "json-roundtrip": {
+        "O4s": {
+          "bytes": 16215,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 14387,
+          "median_ns": 10938.417968749947,
+          "non_custom_bytes": 16215,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 43827,
+          "code_ratio_to_O4s": 1.0060471258775283,
+          "code_section_bytes": 14474,
+          "median_ns": 10982.214843750171,
+          "non_custom_bytes": 16302,
+          "non_custom_ratio_to_O4s": 1.0053654024051804,
+          "size_ratio_to_O4s": 2.702867715078631,
+          "time_ratio_95pct_bootstrap": [
+            0.9977794823821009,
+            1.0051197626129051
+          ],
+          "time_ratio_to_O4s": 1.001497687506482
+        },
+        "fold-inline": {
+          "bytes": 14423,
+          "code_ratio_to_O4s": 0.9425870577604782,
+          "code_section_bytes": 13561,
+          "median_ns": 9867.601562499884,
+          "non_custom_bytes": 14423,
+          "non_custom_ratio_to_O4s": 0.8894850447116867,
+          "size_ratio_to_O4s": 0.8894850447116867,
+          "time_ratio_95pct_bootstrap": [
+            0.8962272433178337,
+            0.90308979557789
+          ],
+          "time_ratio_to_O4s": 0.8997681194916612
+        },
+        "prune": {
+          "bytes": 15730,
+          "code_ratio_to_O4s": 0.9883922986029055,
+          "code_section_bytes": 14220,
+          "median_ns": 10970.767578124985,
+          "non_custom_bytes": 15730,
+          "non_custom_ratio_to_O4s": 0.9700894233734196,
+          "size_ratio_to_O4s": 0.9700894233734196,
+          "time_ratio_95pct_bootstrap": [
+            0.9974470496356436,
+            1.0067956690743887
+          ],
+          "time_ratio_to_O4s": 1.001698568893324
+        }
+      },
+      "ordered-map": {
+        "O4s": {
+          "bytes": 7287,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 6430,
+          "median_ns": 3512.219238281156,
+          "non_custom_bytes": 7287,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 11027,
+          "code_ratio_to_O4s": 1.0158631415241057,
+          "code_section_bytes": 6532,
+          "median_ns": 3489.5703124999677,
+          "non_custom_bytes": 7389,
+          "non_custom_ratio_to_O4s": 1.013997529847674,
+          "size_ratio_to_O4s": 1.513242761081378,
+          "time_ratio_95pct_bootstrap": [
+            0.9964827833261984,
+            1.0019683202637415
+          ],
+          "time_ratio_to_O4s": 0.9992015063049117
+        },
+        "fold-inline": {
+          "bytes": 6504,
+          "code_ratio_to_O4s": 0.9637636080870917,
+          "code_section_bytes": 6197,
+          "median_ns": 3912.788085937424,
+          "non_custom_bytes": 6504,
+          "non_custom_ratio_to_O4s": 0.8925483738163853,
+          "size_ratio_to_O4s": 0.8925483738163853,
+          "time_ratio_95pct_bootstrap": [
+            1.0955684292820977,
+            1.113668151092012
+          ],
+          "time_ratio_to_O4s": 1.1042274317116756
+        },
+        "prune": {
+          "bytes": 6777,
+          "code_ratio_to_O4s": 0.9844479004665629,
+          "code_section_bytes": 6330,
+          "median_ns": 3478.328125000041,
+          "non_custom_bytes": 6777,
+          "non_custom_ratio_to_O4s": 0.9300123507616302,
+          "size_ratio_to_O4s": 0.9300123507616302,
+          "time_ratio_95pct_bootstrap": [
+            0.9922979238513651,
+            0.9988872278634174
+          ],
+          "time_ratio_to_O4s": 0.9958425726691671
+        }
+      },
+      "string-hash": {
+        "O4s": {
+          "bytes": 3558,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 3337,
+          "median_ns": 10777.10546874977,
+          "non_custom_bytes": 3558,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 4626,
+          "code_ratio_to_O4s": 1.0035960443512137,
+          "code_section_bytes": 3349,
+          "median_ns": 10752.707031250085,
+          "non_custom_bytes": 3570,
+          "non_custom_ratio_to_O4s": 1.0033726812816188,
+          "size_ratio_to_O4s": 1.300168634064081,
+          "time_ratio_95pct_bootstrap": [
+            0.9917303979592165,
+            0.9986043447641306
+          ],
+          "time_ratio_to_O4s": 0.9953345666214548
+        },
+        "fold-inline": {
+          "bytes": 3228,
+          "code_ratio_to_O4s": 0.9457596643691939,
+          "code_section_bytes": 3156,
+          "median_ns": 5991.763671874928,
+          "non_custom_bytes": 3228,
+          "non_custom_ratio_to_O4s": 0.9072512647554806,
+          "size_ratio_to_O4s": 0.9072512647554806,
+          "time_ratio_95pct_bootstrap": [
+            0.5445201562910799,
+            0.5700865647245974
+          ],
+          "time_ratio_to_O4s": 0.5581743018527411
+        },
+        "prune": {
+          "bytes": 3484,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 3337,
+          "median_ns": 10638.644531249853,
+          "non_custom_bytes": 3484,
+          "non_custom_ratio_to_O4s": 0.9792017987633502,
+          "size_ratio_to_O4s": 0.9792017987633502,
+          "time_ratio_95pct_bootstrap": [
+            0.9910940835579454,
+            1.002223838777512
+          ],
+          "time_ratio_to_O4s": 0.9962274909680189
+        }
+      },
+      "tail-loop": {
+        "O4s": {
+          "bytes": 304,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 33,
+          "median_ns": 3134.331542968716,
+          "non_custom_bytes": 95,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            1.0,
+            1.0
+          ],
+          "time_ratio_to_O4s": 1.0
+        },
+        "baseline": {
+          "bytes": 304,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 33,
+          "median_ns": 3132.1787109375164,
+          "non_custom_bytes": 95,
+          "non_custom_ratio_to_O4s": 1.0,
+          "size_ratio_to_O4s": 1.0,
+          "time_ratio_95pct_bootstrap": [
+            0.9988515829145386,
+            1.0009221219452338
+          ],
+          "time_ratio_to_O4s": 0.9998794714427373
+        },
+        "fold-inline": {
+          "bytes": 71,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 33,
+          "median_ns": 3135.667480468729,
+          "non_custom_bytes": 71,
+          "non_custom_ratio_to_O4s": 0.7473684210526316,
+          "size_ratio_to_O4s": 0.23355263157894737,
+          "time_ratio_95pct_bootstrap": [
+            0.9993395104200692,
+            1.0008913479712047
+          ],
+          "time_ratio_to_O4s": 1.000138680713405
+        },
+        "prune": {
+          "bytes": 71,
+          "code_ratio_to_O4s": 1.0,
+          "code_section_bytes": 33,
+          "median_ns": 3131.5878906250095,
+          "non_custom_bytes": 71,
+          "non_custom_ratio_to_O4s": 0.7473684210526316,
+          "size_ratio_to_O4s": 0.23355263157894737,
+          "time_ratio_95pct_bootstrap": [
+            0.9987878038671472,
+            1.0009357383343125
+          ],
+          "time_ratio_to_O4s": 0.9999714075105592
+        }
+      }
+    }
+  },
   "initial": {
     "pipelines": {
       "O4s": {}
@@ -74,5 +700,21 @@
       "baseline-failed": 46
     },
     "total": 46
+  },
+  "merged-workspace": {
+    "pipelines": {
+      "O4s": {
+        "passed": 410
+      },
+      "fold-inline": {
+        "passed": 410
+      }
+    },
+    "status": {
+      "baseline-failed": 49,
+      "expected-compile-failure": 2,
+      "passed": 410
+    },
+    "total": 461
   }
 }

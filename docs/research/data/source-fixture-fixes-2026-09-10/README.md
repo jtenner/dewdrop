@@ -6,7 +6,11 @@ See [the research note](../../source-fixture-failures-2026-09-10.md).
 - `all-pipelines.jsonl`: fresh source, all 461 fixtures, 17 explicit pipelines,
   Node and Wago. Each failed trial remains visible. Metadata records binary and
   source identities; per-case records retain sizes, outputs, timings, and errors.
-- `summary.json`: counts by pipeline and paired benchmark summaries when present.
+- `merged-workspace.jsonl`: all 461 cases after preserving the existing dirty
+  workspace; all 410 runtime cases pass, with 49 source-error protocol failures.
+- `benchmarks.jsonl`: all samples from seven fresh processes per variant,
+  ten workloads, O4s/prune/fold-inline and baseline, affinity CPUs 8 and 10.
+- `summary.json`: counts by pipeline and paired benchmark summaries.
 - `source-validation.json`: official reproducible snapshots and native test counts.
 - `snapshot-command-timings.jsonl`: all official snapshot command timings.
 - `pipeline-performance-bugs.json`: every over-budget optimizer command.

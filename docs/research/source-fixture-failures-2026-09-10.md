@@ -175,3 +175,70 @@ passes in 3.857 seconds with no public API change. A serial repeat of the
 previously slow Dew program-link integration target passes all 41 tests in
 17.452 seconds; its earlier 31.052-second measurement included CPU contention.
 The full suite's aggregate over-budget result remains visible in the data.
+
+## Merge into the existing workspace
+
+The repair commits were fast-forwarded into the main checkout. All 330 unrelated
+dirty tracked files are byte-identical to their saved pre-merge copies. Existing
+changes in the two overlapping compiler files were merged without conflict; the
+bounded native-test script was already identical to the committed repair. A
+backup patch and scoped stash are retained under `.tmp/source-failure-logs`.
+
+Fresh main-workspace compiler builds take 9.172 seconds and 10.120 seconds after
+the Starshine pin update. The full source rerun takes 80.871 seconds and passes
+all 410 runtime fixtures with O4s and fold-inline in Node and Wago. There are no
+optimizer failures in that rerun.
+
+The workspace has 49 remaining expected-error test failures and two passing
+expected-error tests. All 49 are caused by the pre-existing, uncommitted early
+return in `src/compiler_driver/compiler_driver.mbt`: it returns rendered frontend
+diagnostics as `Err(String)`, which the snapshot generator labels `DEW_INTERNAL`
+instead of its structured source-error protocol. This block is absent from the
+committed compiler, where all 51 expected-error fixtures pass. Preserve that
+separate pending work; do not rewrite expectations to accept internal failures.
+The merged-workspace evidence retains all 49 reports and the workspace diff hash.
+
+## Benchmark after the repairs
+
+Run ten checked workloads with no concurrent compiler, test, or benchmark jobs.
+Use CPU affinity `8,10`, seven fresh Node processes per variant, 41 timed samples
+per process, warmup, and a shared batch calibrated to at least 5 ms on baseline.
+Rotate variant order. Every timed batch checks its result; all 40 workload /
+variant combinations pass. Engine compile time remains separate from execution.
+
+`fold-inline` uses **10.0% less runtime** than O4s as the geometric mean of paired
+process ratios. Its total module size is **53,155 bytes versus 59,293 bytes**,
+a **10.4% reduction**. Excluding custom sections gives 53,155 versus 59,084 bytes,
+a 10.0% reduction. The geometric mean code-section ratio is 0.9683. `prune` uses
+56,841 bytes (4.1% less than O4s) and has a time ratio of 0.9984, with no useful
+overall speed gain. These results confirm the earlier recommendation, with the
+same workload limits; they do not change compiler defaults.
+
+Ratios below compare fold-inline runtime with O4s; lower is faster. The 95%
+interval resamples the seven paired process ratios 10,000 times. It measures
+repeat variation for this machine and workload, not all possible programs.
+
+| Workload | Time ratio | 95% interval | O4s bytes | Fold-inline bytes |
+| --- | ---: | ---: | ---: | ---: |
+| array-growth | 0.6675 | 0.6558–0.6786 | 3201 | 2946 |
+| array-reserved | 0.6130 | 0.5873–0.6464 | 3187 | 2944 |
+| bytes-hash | 1.5979 | 1.5817–1.6221 | 3516 | 3220 |
+| enum-payload | 0.9989 | 0.9922–1.0063 | 2833 | 2809 |
+| hash-map | 1.0763 | 1.0630–1.0963 | 2977 | 2587 |
+| json-canonical | 0.8906 | 0.8732–0.9027 | 16215 | 14423 |
+| json-roundtrip | 0.8998 | 0.8962–0.9031 | 16215 | 14423 |
+| ordered-map | 1.1042 | 1.0956–1.1137 | 7287 | 6504 |
+| string-hash | 0.5582 | 0.5445–0.5701 | 3558 | 3228 |
+| tail-loop | 1.0001 | 0.9993–1.0009 | 304 | 71 |
+
+Byte hashing takes 59.8% more time; hash maps take 7.6% more and ordered maps
+10.4% more. Use `prune` when those operations dominate. Array growth/reservation,
+string hashing, and JSON processing improve with fold-inline. Enum payloads
+and tail loops are near ties.
+
+The exact fold-inline order is duplicate-function-elimination, precompute,
+inlining, local-cse, vacuum, remove-unused-module-elements, memory-packing,
+reorder-locals, strip-debug, at optimize level 4 and shrink level 1. The longest
+benchmark source compile took 1.036 seconds; no benchmark command exceeded
+30 seconds. Raw samples, paired summaries, code/custom-section sizes, hashes,
+and command times are in the [saved evidence](data/source-fixture-fixes-2026-09-10/README.md).
