@@ -10180,6 +10180,12 @@ fn self_host_emit_linked_i32_expression(
                 block_depth: depth
                 loop_depth: self_host_u32_add(depth, 1u32)
               })
+              // Like a match, the outer block does not export an inner
+              // unreachable stack state. Retain the source divergence proof
+              // after the complete loop, not only inside its outer block.
+              if !planned.flow.falls_through {
+                tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedUnreachable(destination))
+              }
               tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32Loop(
                 destination,
                 outer_body,

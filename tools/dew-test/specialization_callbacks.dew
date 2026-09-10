@@ -796,3 +796,16 @@ pub fn packed_capture_callback(value: I64) -> I64 {
   let reader = packed_capture_reader(-1i8, 255u8, value)
   reader()
 }
+// A return-only loop cannot fall through its enclosing result expression.
+pub fn loop_return_callback(value: I64) -> I64 {
+  while 0u32 {
+    _ => return value
+  }
+}
+
+// Validation-only. This export must not be invoked.
+pub fn never_loop_result() -> I64 {
+  while 0u32 {
+    _ => continue 0u32
+  }
+}

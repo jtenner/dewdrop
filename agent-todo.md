@@ -693,6 +693,10 @@ Correctness comes first. Keep these timing defects visible after query completio
   now stop control emission and do not force unused branches to Never.
   Shared runtime and planner checks cover all three forms; see the
   [control-input log](docs/research/never-control-inputs-2026-09-09.md).
+  Proven non-fall-through loops now retain unreachable stack state after their
+  outer Wasm block, not only inside it. Shared return-only and infinite-loop
+  fixtures validate, with 324 callback checks passing in both compilers; see
+  the [loop stack log](docs/research/loop-divergence-stack-2026-09-10.md).
   Discard decisions now read checked frozen carriers, not source shapes or
   callable names. Missing/conflicting evidence is an error; an absent optional
   transfer payload schedules no expression. This is not the full instruction
