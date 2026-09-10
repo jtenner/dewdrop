@@ -1,0 +1,29 @@
+{
+  "corpus-final": {
+    "pipelines": {
+      "O4s": {
+        "passed": 410
+      },
+      "fold-coalesce": {
+        "passed": 410
+      },
+      "fold-code": {
+        "passed": 410
+      },
+      "fold-flat-coalesce": {
+        "passed": 410
+      },
+      "fold-flat-code": {
+        "passed": 410
+      },
+      "fold-flat-locals": {
+        "passed": 410
+      }
+    },
+    "status": {
+      "expected-compile-failure": 51,
+      "passed": 410
+    },
+    "total": 461
+  }
+}
