@@ -113,17 +113,28 @@ def snapshot_case(source, args, selected):
     binary = directory / "baseline.wasm"
     binary.unlink(missing_ok=True)
     try:
-        command = [args.compiler, binary, snapshots.fixture_mode(source)]
-        for module, logical, path in snapshots.fixture_sources(source):
-            command.extend([module, logical, path])
-        process = execute(command, records, allow_failure=True,
-                          env={**os.environ, "DEW_CACHE_DIR": str(directory / "cache")})
-        errors, warnings, internals = snapshots.compiler_diagnostics(process.stdout + "\n" + process.stderr)
+        if args.from_wat:
+            if expected["errors"]:
+                if source.with_suffix(".wat").exists():
+                    raise AssertionError("compile-failure fixture has a WAT snapshot")
+                result["status"] = "compile-failure-no-wat"
+                return result
+            execute(["wasm-tools", "parse", source.with_suffix(".wat"), "-o", binary], records)
+            errors, warnings, internals = [], expected["warnings"], []
+            returncode = 0
+        else:
+            command = [args.compiler, binary, snapshots.fixture_mode(source)]
+            for module, logical, path in snapshots.fixture_sources(source):
+                command.extend([module, logical, path])
+            process = execute(command, records, allow_failure=True,
+                              env={**os.environ, "DEW_CACHE_DIR": str(directory / "cache")})
+            errors, warnings, internals = snapshots.compiler_diagnostics(process.stdout + "\n" + process.stderr)
+            returncode = process.returncode
         if internals:
             raise AssertionError(f"compiler internal failure: {internals}")
         check_output(expected["errors"], errors)
         check_output(expected["warnings"], warnings)
-        if process.returncode:
+        if returncode:
             if not errors:
                 raise AssertionError(f"compiler failed without diagnostics: {process.stderr}")
             check_output(expected["output"], None)
@@ -174,6 +185,7 @@ def main():
     parser.add_argument("--runtime", choices=["node", "wago"], action="append")
     parser.add_argument("--jobs", type=int, default=4)
     parser.add_argument("--skip-build", action="store_true")
+    parser.add_argument("--from-wat", action="store_true", help="use checked-in WAT as the fixed optimizer input; report compiler-error fixtures separately")
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error("--jobs must be positive")
@@ -191,14 +203,17 @@ def main():
     if unknown:
         parser.error(f"unknown pipelines: {sorted(unknown)}")
     selected = {name: configured[name] for name in names}
-    report = {"version": 1, "pipelines": selected, "commands": [], "fixtures": []}
+    report = {"version": 1, "input": "snapshot-wat" if args.from_wat else "source", "pipelines": selected, "commands": [], "fixtures": []}
     report["environment"] = environment(report["commands"])
     if not args.skip_build:
-        execute(["moon", "build", "--target", "native", "--release", "src/module_snapshot_gen"], report["commands"], timeout=600)
+        if not args.from_wat:
+            execute(["moon", "build", "--target", "native", "--release", "src/module_snapshot_gen"], report["commands"], timeout=600)
         execute(["moon", "build", "--target", "native", "--release", "starshine-mb/src/cmd"], report["commands"], timeout=600)
     if "wago" in args.runtime:
         execute(["go", "-C", snapshots.WAGO_RUNNER, "build", "-o", args.wago, "."], report["commands"], timeout=120)
-    report["binaries"] = {"compiler": sha256(args.compiler), "starshine": sha256(args.starshine)}
+    report["binaries"] = {"starshine": sha256(args.starshine)}
+    if not args.from_wat:
+        report["binaries"]["compiler"] = sha256(args.compiler)
     sources = snapshots.fixture_paths(args.fixture)
     start = time.perf_counter()
     with ThreadPoolExecutor(max_workers=args.jobs) as executor:
@@ -208,7 +223,7 @@ def main():
             print(f"{result['status']}: {result['name']}", flush=True)
     report["seconds"] = time.perf_counter() - start
     report["summary"] = {status: sum(row["status"] == status for row in report["fixtures"])
-                         for status in ["passed", "expected-compile-failure", "baseline-failed", "failed"]}
+                         for status in ["passed", "expected-compile-failure", "compile-failure-no-wat", "baseline-failed", "failed"]}
     write_json(args.output / "report.json", report)
     print(json.dumps(report["summary"], sort_keys=True), flush=True)
     return int(any(row["status"] in ["failed", "baseline-failed"] for row in report["fixtures"]))

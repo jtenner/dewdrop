@@ -41,3 +41,41 @@ trap, command error diagnostics, and timeouts.
 The first release native snapshot compiler build took **100.993 seconds**. This
 exceeds the repository's 30 second limit and is a build performance bug. It is
 separate from individual Dew fixture compile time.
+
+## Corpus baseline and first pass sweep
+
+The current workspace source run finished with 371 passing runtime fixtures,
+one matching compiler-error fixture, and 88 baseline failures. A separate
+checkout at `f3e8fa9e` produced 371 passing runtime fixtures, 43 matching
+compiler-error fixtures, and 46 baseline failures. These include stale
+diagnostics, compiler assertions, and one baseline runtime error. Neither source
+run had a Starshine failure among the modules admitted to optimization. Source
+failures must stay visible; the experiment does not update those snapshots.
+
+The committed compiler was built in native debug mode in 13.244 seconds. Its
+test-module compiler built in 8.840 seconds. The release Starshine CLI build took
+187.591 seconds, another build performance bug.
+
+To check every optimizer input despite those compiler failures, the next run
+assembled the checked-in WAT snapshots. All 405 baseline modules passed Node and
+Wago. Stock O4s passed all 405. The 55 compiler-error fixtures have no WAT and
+are explicitly counted as such; this lane does not test their diagnostics.
+
+The first ordered candidates passed 308/405 (`cleanup`), 309/405 (`speed`), and
+321/405 (`gc-speed`). The failures include invalid output, optimizer crashes,
+30-second optimizer limits, and valid modules that loop forever at runtime.
+`control-flow/short-circuit-runtime` is one runtime-loop case for `cleanup`.
+These candidates cannot be selected on size or speed grounds.
+
+The library run compiled each of the 25 standard test files and all 43 operation
+probe modules. This found a missing `open dew.std.fixed_array` in the SHA-256
+test, hidden by imports in the aggregate test module. Adding that import makes
+the isolated SHA-256 corpus test pass before and after O4s. Builtin trap probes
+use an all-export trap checker; their intentional failing assertion is not an
+ordinary test that should return normally.
+
+The constructor operation probe found a separate O4s failure: the CLI final size
+cleanup removes a `return` that discards values below the result on the operand
+stack. Falling through the function leaves those values on the stack and creates
+invalid Wasm. A two-parameter, one-result function reproduces the failure. The
+regression is in the CLI final cleanup, not the public `vacuum` pass alone.

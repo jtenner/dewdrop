@@ -34,6 +34,39 @@ python3 tools/starshine-experiments/runner.py --skip-build \
 python3 -m unittest discover -s tools/starshine-experiments -p 'test_*.py'
 ```
 
+When current compiler errors prevent emission, also check the fixed optimizer
+corpus from the checked-in WAT files. This is a separate lane; it does not replace
+the source run or hide its errors:
+
+```sh
+python3 tools/starshine-experiments/runner.py --skip-build --from-wat
+```
+
+Run each standard-library test file and the complete exported-operation probes:
+
+```sh
+moon build --target native --release src/dew_test_gen
+python3 tools/starshine-experiments/library.py
+```
+
+The library runner shares the normal suite's probe list and Node assertion
+consumers. Each test file is compiled separately so one source failure does not
+hide the other tests. All builtin trap exports must raise a Wasm runtime trap.
+
+Measure ten workloads with fresh Node processes, warmup, a common batch size,
+rotating variant order, and a checked result for every timed batch:
+
+```sh
+python3 tools/starshine-experiments/benchmark.py --pipeline O4s --pipeline cleanup
+```
+
+The benchmark uses source generators from the existing array, map, hash, enum,
+tail-recursion, and JSON benchmarks. Default settings are five fresh processes,
+31 samples per process, and a batch calibrated to at least 3 ms on the baseline.
+Wasm engine compilation is recorded separately. Do not run compiler or other
+benchmark jobs at the same time as runtime measurements. Failed variants remain
+failures in the report; they do not receive speed measurements.
+
 Results and Wasm files remain in `.tmp/starshine-experiments/`. `report.json`
 contains tool/source identities, commands, timings, diagnostics, sizes, binary
 hashes, and runtime results. Each fixture also has a `result.json`. Use a distinct

@@ -8,6 +8,50 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+# Shared by the normal suite and the Starshine execution experiments.
+PROBE_MODULES = [
+    ("scalar_conversions", "dew.std.conversions"),
+    ("memory_operations", "dew.std.memory"),
+    ("simd-memory-operations", "app.simd_memory"),
+    ("arithmetic_operations", "dew.std.arithmetic"),
+    ("math_operations", "dew.std.math_probes"),
+    ("specialization_products", "app.specialization_probes"),
+    ("generic_query_order", "app.query_order"),
+    ("specialization_callbacks", "app.callback_probes"),
+    ("member_calls", "app.member_probes"),
+    ("debug_dispatch", "app.debug_probes"),
+    ("debug_integers", "app.debug_integers"),
+    ("debug_floats", "app.debug_floats"),
+    ("debug_vectors", "app.debug_vectors"),
+    ("debug_swar", "app.debug_swar"),
+    ("debug_unit", "app.debug_unit"),
+    ("debug_bool", "app.debug_bool"),
+    ("debug_derived", "app.debug_derived"),
+    ("debug_text", "app.debug_text"),
+    ("intrinsic_names", "app.intrinsic_names"),
+    ("intrinsic_function_reference", "app.builtin_references"),
+    ("production_assertions", "app.production_assertions"),
+    ("wasi_bytes", "app.wasi_bytes"),
+    ("product_patterns", "app.product_patterns"),
+    ("constructor_evaluations", "app.constructor_probes"),
+    ("operator_call_recipes", "app.operator_call_recipes"),
+    ("unit_branches", "app.unit_branches"),
+    ("raw_gc_storage", "app.raw_gc"),
+    ("raw_gc_unit", "app.raw_gc_unit"),
+    ("fixed_array_operations", "app.fixed_array_probes"),
+    ("raw_array_contracts", "app.raw_array_contracts"),
+    ("packed_fields", "app.packed_fields"),
+    ("array_operations", "app.array_probes"),
+    ("ring_operations", "app.ring_probes"),
+    ("map_operations", "app.map_probes"),
+    ("set_operations", "app.set_probes"),
+    ("bytes_operations", "app.bytes_probes"),
+    ("string_view_operations", "app.string_view_probes"),
+    ("string_operations", "app.string_probes"),
+    ("string_patterns", "app.string_patterns"),
+    ("type_queries", "app.type_queries"),
+]
+
 
 def main() -> None:
     paths = sorted((ROOT / "std/tests").glob("*_test.dew"))
@@ -57,48 +101,7 @@ def main() -> None:
     print(
         f"compiled {len(paths)} manifest-ordered Dew test files deterministically and builtin traps"
     )
-    for fixture, module in [
-        ("scalar_conversions", "dew.std.conversions"),
-        ("memory_operations", "dew.std.memory"),
-        ("simd-memory-operations", "app.simd_memory"),
-        ("arithmetic_operations", "dew.std.arithmetic"),
-        ("math_operations", "dew.std.math_probes"),
-        ("specialization_products", "app.specialization_probes"),
-        ("generic_query_order", "app.query_order"),
-        ("specialization_callbacks", "app.callback_probes"),
-        ("member_calls", "app.member_probes"),
-        ("debug_dispatch", "app.debug_probes"),
-        ("debug_integers", "app.debug_integers"),
-        ("debug_floats", "app.debug_floats"),
-        ("debug_vectors", "app.debug_vectors"),
-        ("debug_swar", "app.debug_swar"),
-        ("debug_unit", "app.debug_unit"),
-        ("debug_bool", "app.debug_bool"),
-        ("debug_derived", "app.debug_derived"),
-        ("debug_text", "app.debug_text"),
-        ("intrinsic_names", "app.intrinsic_names"),
-        ("intrinsic_function_reference", "app.builtin_references"),
-        ("production_assertions", "app.production_assertions"),
-        ("wasi_bytes", "app.wasi_bytes"),
-        ("product_patterns", "app.product_patterns"),
-        ("constructor_evaluations", "app.constructor_probes"),
-        ("operator_call_recipes", "app.operator_call_recipes"),
-        ("unit_branches", "app.unit_branches"),
-        ("raw_gc_storage", "app.raw_gc"),
-        ("raw_gc_unit", "app.raw_gc_unit"),
-        ("fixed_array_operations", "app.fixed_array_probes"),
-        ("raw_array_contracts", "app.raw_array_contracts"),
-        ("packed_fields", "app.packed_fields"),
-        ("array_operations", "app.array_probes"),
-        ("ring_operations", "app.ring_probes"),
-        ("map_operations", "app.map_probes"),
-        ("set_operations", "app.set_probes"),
-        ("bytes_operations", "app.bytes_probes"),
-        ("string_view_operations", "app.string_view_probes"),
-        ("string_operations", "app.string_probes"),
-        ("string_patterns", "app.string_patterns"),
-        ("type_queries", "app.type_queries"),
-    ]:
+    for fixture, module in PROBE_MODULES:
         subprocess.run(
             [
                 "moon", "run", "--target", "native", "src/dew_test_gen", "--",

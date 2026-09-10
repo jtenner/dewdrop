@@ -1,5 +1,6 @@
 open dew.std.bytes
 open dew.std.bytes_builder
+open dew.std.fixed_array
 open dew.std.integrity.sha256
 open dew.std.string
 open dew.std.string_builder
