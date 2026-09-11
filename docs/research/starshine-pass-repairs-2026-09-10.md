@@ -495,3 +495,48 @@ Evidence in `.tmp/starshine-pass-repairs/`:
 `precompute-release-short-circuit.json`, `full-replay-regression-wave18/report.json`,
 `array-runtime-wave18/`, `sl-pending-array-red.json`, `tail-recursion-wave18/`,
 and `defer-runtime-wave18/`.
+
+## Tee source order, buried stack values, and wave 19
+
+The pin advances to `aadea9dbf`. SimplifyLocals now keeps the set's source position when it forms a tee and keeps
+value order when forwarding a read. The shared lowerer also reuses an effectful
+single-result value below a later operand, moving values through typed scratch
+locals in order. The old top-only reuse check repeated an array read after a
+mutation, returning 99 instead of the saved 42. Pure values retain cheap
+rematerialization.
+
+The array test checks empty/nonempty inputs, payload, exact read/mutation order,
+final array contents, and positive conditional-result cleanup. The shared
+lowering test was red with calls [0, 1, 0] instead of [0, 1]. All 664 native IR
+and SimplifyLocals tests pass (75.734 s). Twelve release variants validate and
+run in Node and Wago, each two canonical bytes below input and Binaryen 131.
+The exact O4z hash-evaluation-once fixture passes both engines. Full wave 19
+passes 942/1000 and fails 58 (144.042 s), with one fix and no regression.
+The array and defer fixtures now first fail at the later O4z inlining prefix 48.
+
+Debug build takes 22.626 s; scoped interfaces 5.084 s; release build 261.278 s.
+Work over 30 s remains a performance bug. Release SHA-256 is
+`d5a68233c5402e62af7aa6a1b6dc12d4cb0591033608a046221344148edac1f8`.
+
+The frozen `009ad983b` CoalesceLocals generated gates also completed. Regular:
+157 canonical matches, 9,843 cleanup-normalized matches, zero residuals;
+5,019 runtime matches and 4,981 blocked originals. Aggregate: 3,750 canonical
+matches, 5,000 cleanup-normalized matches, 1,250 residuals; 8,750 runtime matches
+and 1,250 blocked originals. Neither lane has runtime mismatches, size losses,
+or generator/validator/command/property failures. Canonical bytes are
+42,099,826 / 42,129,462 (regular) and 488,125 / 502,500 (aggregate), Starshine /
+Binaryen. All 20 retained aggregate diffs remove one void loop without a
+backedge and one nop, save four bytes, and match in all three runtime runs.
+This is a size-winning cleanup classification, not a speed result. The dossier
+update is `6b6b57259`; SSA generated signoff continues.
+
+Next confirmed DAE owner: its constant-argument collector omits `return_call`
+actuals. It can replace changing recursive arguments with initial constants,
+or ignore a conflicting constant from a different tail caller. Both small
+source modules pass; the outputs loop or return the wrong value. Native
+regressions and the direct proof repair are in progress.
+
+Evidence in `.tmp/starshine-pass-repairs/`: `sl-array-order-variants/report.json`,
+`sl-release-hash-evaluation-once.json`, `sl-and-ir-native-wave19.log`,
+`full-replay-regression-wave19/report.json`, `coalesce-aggregate-loop-diff-review.json`,
+`dae-tail-counter-red.json`, and `dae-tail-mixed-callers-red.json`.
