@@ -338,3 +338,45 @@ Evidence under `.tmp/starshine-pass-repairs/`:
 `ssa-wave12-native-isolated.json`, `runtime-oracle-node-identity-red.log`,
 `runtime-oracle-process-suite.json`, `genvalid-node-process-smoke/result.json`,
 and `generated-signoff-wave11-stopped.json`.
+
+
+## SimplifyLocals conditional order and wave 15
+
+Starshine `eaad345a2` fixes the next JSON inlining failure. The first bad nested
+stage was SimplifyLocals after LocalCSE. It gave a new source order to the write
+of a conditional hash result. Lowering then ran the bucket read before the hash
+write. A third conditional that reads both values reduces the fault to a small
+module: the old output returns 0 instead of 84.
+
+All synthetic local captures in this pass now keep the source position of the
+value they store. The positive native regression checks false, positive true,
+negative true, and the exact hash/bucket call order. Nine reduced variants pass
+Node, Wago, and external validation. Stripped outputs are 11..17 bytes smaller
+than input and 7..10 bytes smaller than Binaryen 131. Speed is not established.
+The exact O4/shrink-1/strip-debug JSON inlining case now passes both engines.
+
+The full wave 15 replay passes 936/1000 and fails 64 in 157.438 seconds. It fixes
+five cases and regresses none of the earlier 931 passes: JSON inlining plus O4z
+numeric-literal match, narrow-payload match, invalid UTF-8 classes, and derived
+field prerequisites. The native SimplifyLocals family is 278/282 in 72.517 s.
+Three old exact-reference assertions conflict with the repaired input feature
+boundary; all three also fail with the earlier binary. One old pending-effects
+assertion assumes a pre-capture root layout. These checks remain open.
+
+Release build: 254.423 s, SHA-256
+`145b9829bc4d468cc54a3038da3a4e987fea0e4b28b61b196ebcd46eac1ef18e`.
+Scoped interface generation passes in 5.244 s. Compiler work over 30 seconds is
+still a performance bug. The original generated queue continues with the real
+Node runner; large gate signoff is pending. Full native and fixture coverage and
+the measured CLI speed schedule remain open.
+
+The next reduced owner is OptimizeCasts. Removing a static cast on an earlier
+pending call reverses two calls, changing an unreachable trap into integer
+division by zero in both Node and Wago. The first bad O4z prefix is pass 27 on
+`optimization/scalar-replacement-reference-components-order-trap`.
+
+Evidence under `.tmp/starshine-pass-repairs/`:
+`full-replay-regression-wave15/report.json`, `sl-conditional-order-replays/report.json`,
+`sl-release-json-bloom.json`, `sl-family-native-wave15.log`,
+`sl-nostructure-wave11-baseline.json`, and
+`h2l-component-order-wave15/direct-oc-red.json`.
