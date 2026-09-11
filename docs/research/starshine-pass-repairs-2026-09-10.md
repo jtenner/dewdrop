@@ -380,3 +380,49 @@ Evidence under `.tmp/starshine-pass-repairs/`:
 `sl-release-json-bloom.json`, `sl-family-native-wave15.log`,
 `sl-nostructure-wave11-baseline.json`, and
 `h2l-component-order-wave15/direct-oc-red.json`.
+
+
+## OptimizeCasts call order and the native SimplifyLocals gate
+
+The pin advances to `a9a69767b`. It includes `b54efdac1`, which closes the four
+stale SimplifyLocals test contracts. All 282 tests in that native family now
+pass (79.443 s including build). The typed-reference checks compare the actual
+conditional and null arm, retain positive local-carrier removal requirements,
+and keep validation checks. The sparse-effects unit builds the intended tree
+without assuming which root the lifter emits first. No test is disabled.
+
+OptimizeCasts now forwards a proven redundant cast's operand with its original
+source order. Other replacements keep their existing order rule. This fixes a
+GC pair shape with two differently trapping calls: the first call was delayed
+until after the second call and its local write. The native regression was red
+with call order [1, 0]; it now requires [0, 1] and removal of three redundant
+casts. Shared IR and OptimizeCasts native tests pass 459/459 in 83.714 s.
+
+Full wave 16 passes 937/1000 saved fixture/order pairs and fails 63 in 172.401 s.
+It fixes the O4z component-trap case and regresses none of the prior 936 passes.
+The release CLI also passes the exact O4z case in Node and Wago. Release build
+is 308.205 s, an open performance bug; binary SHA-256 is
+`8d4fe3609c6b128f30dcefef6a05ca688b51565ecd365baa43b082c26ad35fe2`.
+
+The real-Node generated CodeFolding gates completed with the frozen `009ad983b`
+binary. Regular: 10,000 canonical matches, 5,019 completed runtime matches,
+4,981 blocked originals, zero runtime mismatches. Aggregate: 6,624 canonical
+matches and 3,376 output-shape differences; all 10,000 runtime observations
+match. Aggregate Starshine output is 668,374 canonical bytes versus Binaryen's
+671,750. Both lanes have zero generator, validation, command, determinism, or
+codec failures. They take 2,191.280 s and 622.840 s. Output-shape classification
+still needs retained-diff review; these are not whole-pipeline speed results.
+The queue now tests CoalesceLocals, followed by SSANoMerge.
+
+Next reduced owners: Vacuum moves a write when removing a dropped `local.tee`
+result in the i8x8 population-count case (3 per byte instead of 4), and
+OptimizeInstructions changes a known null trap to unreachable in the nullable
+reference fixture. Those fixes and the remaining gates are still open.
+
+Evidence: `full-replay-regression-wave16/report.json`,
+`oc-pending-order-native-red.log`, `oc-and-ir-native-wave16.log`,
+`oc-release-component-trap.json`, `sl-family-native-wave16.log`,
+`genvalid-wave14-code-folding-regular/result.json`,
+`genvalid-wave14-code-folding-aggregate/result.json`,
+`i8x8-popcnt-wave16/`, and `nested-nullable-trap-wave16/` under
+`.tmp/starshine-pass-repairs/`.
