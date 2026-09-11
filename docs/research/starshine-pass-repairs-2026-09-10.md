@@ -194,3 +194,51 @@ layouts, reference facts, and bulk-memory effect order. These are active work.
 The bulk-memory checks include a real reordered-call fault, not only changed
 layouts. The full native run took 69.819 seconds; native test builds remain
 above the 30-second performance limit.
+
+
+## Full regression replay and control-scope repairs
+
+Starshine master now contains `3501cb009`. This adds four proven fixes after the
+previous pin: static-source reference-cast proof, raw SimplifyLocals read/loop
+ordering, shared HOT control-exit tracking, and CoalesceLocals capture/operand
+control analysis. The Wago fix remains in PR 606; its current pushed head is
+`8d20861e4686f8880f2bb97fc6aa3256188ccf35`.
+
+The full replay of all 1,000 original failed fixture/pass-order pairs is required:
+rerunning only remaining failures missed regressions. The complete wave 8 result
+was 825 passes and 175 failures. Wave 10 now passes 915 and fails 85 in 131.886
+seconds. It fixes 90 wave 8 cases and regresses none of that wave's passing cases.
+Both baselines and optimized outputs are checked in Node and Wago, with
+`wasm-tools validate --features all` on each optimized module. These are case
+counts, not counts of distinct compiler bugs.
+
+The shared HOT bug lost earlier branches to outer labels. A later conditional
+array load then had no consuming local stores because its live continuation was
+marked unreachable. HOT now shares the validator's block/loop/if completion
+helpers, without rescanning nested bodies. Native IR tests pass 380/380 in 8.519
+seconds; validator tests pass 1,787/1,787 in 24.134 seconds.
+
+CoalesceLocals analyzes every captured local and applies its coloring to that
+same lowered body. Its CFG now includes control flow inside root operands; a
+consumer cannot recount its already evaluated producer's local accesses. A
+live default body local also interferes with unused caller parameters. Native
+CoalesceLocals tests pass 116/116 in 47.012 seconds. The saved array-carriers
+prefix now passes Node and Wago, with a 25.203 ms pass time. The raw SimplifyLocals
+map-iterator prefix passes both engines with an 11.364 ms pass time. These are
+smoke measurements, not benchmark conclusions. The debug CLI build (31.373 s)
+and CoalesceLocals native test build remain over the 30-second performance limit.
+
+Twelve invalid inlining-optimizing cases are now traced to CodeFolding's nested
+cleanup step. It hoists a common call that reads a non-defaultable reference
+local, but keeps the local's initialization inside the two conditional arms.
+Wasm initialization proof does not leave those control scopes. A positive
+regression and transform repair are in progress; the shared call must remain
+while its reference reads stay valid. The 85 remaining failed cases, full native
+pass suite, 461-fixture coverage, release GenValid gates, ordered CLI pipeline,
+and size/speed benchmark signoff remain active work.
+
+Local evidence: `.tmp/starshine-pass-repairs/full-replay-regression-wave10/`,
+`check-local-lifetimes.json`, `hot-reachable-exit-suite.log`,
+`hot-control-validator-tests.log`, `coalesce-control-captures-native.log`, and
+`nested-inlining-wave10/report.json`. Frozen CLI snapshots preserve the exact
+source and binary used by each replay.
