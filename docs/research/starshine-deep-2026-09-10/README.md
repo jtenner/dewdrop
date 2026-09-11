@@ -6,6 +6,9 @@ paths preserve the original experiment locations. To repeat a run elsewhere,
 use the same source/compiler revision and the paths for that checkout.
 
 - `validation.json`: native tests, build, runtime regression, CLI checks, and timings.
+- `master-rebase.json`: the rebase to remote master, all 461 fixtures under the
+  three shipped/reference profiles, 48 byte-identical benchmark outputs, and
+  17 known failures that still reproduce with the rebased native build.
 - `corpus-summary.json`: all five source sweeps, complete counts, and durations.
 - `discovery.jsonl`: 32 initial orders with Starshine `48d6337ce`.
 - `ordered-screen.jsonl`: 20 orders after the SSA fix at `30c63c455`.
