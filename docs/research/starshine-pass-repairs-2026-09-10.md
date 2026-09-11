@@ -140,3 +140,57 @@ its old result was 0 instead of 7. Shared lift now captures this write dependenc
 the scalar result is 7 and the GC call variant returns 1. The map CodeFolding
 replay now gets past its illegal cast but still fails a later value assertion.
 That remaining heap/call ordering fault is not closed by the local repair.
+
+## Further repair checkpoint
+
+Starshine master now includes the repairs through `6e756520a`. Wago PR #606
+also includes `8d20861e4`, which keeps the small inline state buffer on the stack;
+Go escape analysis and the focused runtime/backend tests pass. The PR remains
+open, and all Wago changes are on its remote branch.
+
+The remaining-case replays progressed as follows. Each row only retries the
+previous row's failures; a full regression replay of all 1,000 cases is still
+required before the cumulative count is final.
+
+| Replay | Retried | Now pass | Still fail | Wall time |
+| --- | ---: | ---: | ---: | ---: |
+| Wave 3 | 122 | 10 | 112 | 156.629 s |
+| Wave 4 | 112 | 6 | 106 | 154.256 s |
+| Wave 5 | 106 | 8 | 98 | 112.694 s |
+| Wave 6 | 98 | 10 | 88 | 95.451 s |
+
+The cumulative known-case count is **912 of 1,000** passing across these
+checkpoints. The immutable binaries, engine hashes, exact commands and runtime
+results are in `.tmp/starshine-pass-repairs/full-replay-wave*/report.json`.
+The 88 remaining cases include 43 stock O4z cases, 13 optimizing-inlining
+cases, 12 `deep-both-no-shrink` cases, and 20 other ordered/direct cases. These
+are case counts, not distinct bug counts.
+
+Additional reduced faults and repairs:
+
+- Shared HOT lowering orders a pending call before a later heap/global effect
+  and caches effect masks per function. The saved map CodeFolding stage now
+  passes both engines. Source positions must survive newly allocated wrappers.
+- LocalSubtyping uses a tee's declared storage type for its stack result. A
+  struct/array two-tee case no longer emits an invalid narrowed destination.
+  All six saved closure orders now pass.
+- Flatten scalar spills retain the captured value's source position. The
+  double-cast initialization case validates, and the enum O4z prefix advanced
+  through 47 passes before exposing the nested cleanup fault below.
+- HeapStoreOptimization checks constructor operand local dependencies separately
+  from its relaxed descriptor effect masks. The reduced result changes from
+  wrong 7 to correct 42. Its native suite passes 433/433. The trait dictionary
+  inlining stage returns the required 427 instead of 77 in Node and Wago.
+- Full SimplifyLocals preserves writes before branches to enclosing blocks.
+  The reduced result changes from wrong 0 to correct 31. The saved enum nested
+  cleanup stage and the full stock O4z enum case now pass both engines.
+
+The full pinned native suite was run at the capture checkpoint. It aborted in
+an old OptimizeInstructions test that assumed a tee stayed under the first root.
+That test now executes the captured comparison for 0, 41, and -7 and passes.
+The subsequent 1,540-test focused run passes 1,519 and exposes 21 other failures:
+two SimplifyLocals checks and 19 OptimizeInstructions checks involving capture
+layouts, reference facts, and bulk-memory effect order. These are active work.
+The bulk-memory checks include a real reordered-call fault, not only changed
+layouts. The full native run took 69.819 seconds; native test builds remain
+above the 30-second performance limit.
