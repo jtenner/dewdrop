@@ -242,3 +242,44 @@ Local evidence: `.tmp/starshine-pass-repairs/full-replay-regression-wave10/`,
 `hot-control-validator-tests.log`, `coalesce-control-captures-native.log`, and
 `nested-inlining-wave10/report.json`. Frozen CLI snapshots preserve the exact
 source and binary used by each replay.
+
+
+## CodeFolding reference scopes and the next runtime failure
+
+The pin advances to Starshine `5a5f9ec6c`, already pushed to master. CodeFolding
+now repairs non-defaultable reference storage after it moves shared tails out
+of conditional arms. Only locals read outside their initialization scope become
+nullable; their original reads and tee results retain explicit non-null checks.
+Locals initialized in the enclosing scope keep their original type. The common
+call stays shared. Three positive regression cases cover these rules.
+
+All 587 IR and CodeFolding native tests pass (40.339 s). All 12 saved invalid
+CodeFolding cleanup stages now validate and execute correctly in Node and Wago.
+Pass command time ranges from 5.437 to 35.201 ms, median 7.367 ms. After removing
+custom sections, the three small outputs match Binaryen 131 byte for byte, with
+sizes 130 to 125, 84 to 78, and 140 to 136 bytes.
+
+Full wave 11 replays all 1,000 original failure cases: 926 pass and 74 fail in
+122.787 s. No wave 10 passing case regresses. The remaining failures are still
+open. The JSON bloom duplicate case gets past CodeFolding, then first fails at
+SSANoMerge in the next inlining cleanup. A reduced nested-branch join returns
+42, 41, and 9 before the pass, but 0, 0, and 9 afterward. Its repair is active.
+
+The tiny CodeFolding case is a size win, but not a speed win. Three runtime
+trials use 31 samples, 150 ms warmup, 3 ms target batches, rotated order, and
+checked parameter results. Baseline versus optimized median time is 14.599 vs
+15.544 ns/call, 12.677 vs 13.542 ns/call, and 12.647 vs 13.768 ns/call: a 6.5 to
+8.9 percent slowdown. Binaryen produces the same bytes and is deduplicated in
+these timings. This does not establish a whole-program slowdown, but prevents
+claiming CodeFolding belongs in the speed pipeline on this evidence alone.
+
+The clean release CLI build takes 176.402 s, an open build performance bug.
+Regular and aggregate GenValid gates (10,000 cases each) for CodeFolding and
+CoalesceLocals are running with this prebuilt binary and eight workers. Their
+results, the remaining native failures, complete Dew fixture coverage, and
+ordered pipeline benchmarks are not yet signed off.
+
+Local evidence: `full-replay-regression-wave11/report.json`,
+`code-folding-fixture-replays/report.json`, `code-folding-scope-canonical-size.json`,
+`code-folding-scope-benchmark.json`, `ssa-nested-branch-join-red.json`, and
+`generated-signoff-wave11-commands.json` under `.tmp/starshine-pass-repairs/`.
