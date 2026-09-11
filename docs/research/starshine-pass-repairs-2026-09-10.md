@@ -462,3 +462,36 @@ Evidence under `.tmp/starshine-pass-repairs/`:
 `full-replay-regression-wave17/report.json`,
 `code-folding-aggregate-return-diff-review.json`, and
 `precompute-loop-copy-reduced.json`.
+
+## PrecomputePropagation loop-copy repair and wave 18
+
+The pin advances to `b4c7aa407`, including the CodeFolding real-Node dossier
+update in `0a9bb82f3`. PrecomputePropagation now builds scalar reaching-write
+facts from an operand-expanded CFG. The root-only graph missed a nested
+loop-body copy and folded its later test from an older constant. The source
+exits with 9; the old optimized output loops forever.
+
+The bounded native regression covers twelve combinations of stale values and
+starting counters and checks the actual reaching copy. All 179 native
+Precompute family tests pass (36.726 s). The twelve release variants validate
+and run in Node and Wago. Each is 136 canonical bytes, from 138 input bytes,
+versus 140 for Binaryen 131. Both exact short-circuit optimizing DAE/inlining
+cases pass both engines. Full wave 18 passes 941/1000 and fails 59 (138.260 s),
+with two fixes and no regression from wave 17.
+
+Debug build takes 21.740 s; scoped interfaces 5.128 s; release build 253.354 s.
+Work over 30 s remains a performance bug. Release SHA-256 is
+`a1f870a4e102ab8f2511a70c1ccc68d6191737ef174df6f5d6cb58a680a13296`.
+Generated renewal and whole-pipeline speed results remain open.
+
+Next reduced shapes: SimplifyLocals at O4z prefix 31 delays the array-pop index
+write and pending array read past its mutation call. Optimizing DAE at prefix
+47 removes both live tail-recursion parameters and leaves an endless
+`return_call` to itself. Defer fails inside optimizing inlining at prefix 48;
+its nested owner still needs isolation.
+
+Evidence in `.tmp/starshine-pass-repairs/`:
+`precompute-family-native-wave18.log`, `precompute-loop-copy-variants/report.json`,
+`precompute-release-short-circuit.json`, `full-replay-regression-wave18/report.json`,
+`array-runtime-wave18/`, `sl-pending-array-red.json`, `tail-recursion-wave18/`,
+and `defer-runtime-wave18/`.
