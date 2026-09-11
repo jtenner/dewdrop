@@ -618,3 +618,39 @@ Evidence is in `.tmp/starshine-pass-repairs/`: `flatten-effect-release-check/`,
 `coalesce-loop-stages.json`, and `json-reader-wave23/report.json`.
 Wago conditional-GC PR [606](https://github.com/wago-org/wago/pull/606) remains
 open. Its large native-frame limit remains separate work.
+
+## Shared carried source order and wave 25
+
+Starshine `ed7ca1294` makes operand-expanded CFG construction use the same
+carried-dependency order as HOT lowering. The array-comparator fault had two
+correct stages with different orders: the CFG visited a later source-local read
+before a carried result block, while lowering emitted the carried block first.
+CoalesceLocals therefore merged reference locals 6 and 9 even though their
+emitted lifetimes overlap. The shared selector retains the stricter consumer
+bounds and continuation targets from remote master `3dc72fd2d`.
+
+The red IR assertion showed the source local dead after the carried block, and
+the transformed execution returned -8 instead of -9 for input -5. The focused
+green tests pass 2/2. Native IR, CoalesceLocals, and Precompute gates pass
+398/398, 119/119, and 179/179. The debug build took 17.717 seconds. Exact reduced
+and array-comparator outputs validate and execute correctly in Node and Wago.
+
+Full wave 25 passes **961/1000** in 106.483 seconds and leaves **39 failures**.
+Against the exact unchanged `3dc72fd2d` binary, the repair fixes
+array-comparator O4z, text-hash O4z, and JSON-reader
+`deep-both-no-shrink`. The five apparent changes from the pre-rebase wave also
+fail on that remote baseline, so this repair adds no selected failure. The
+remaining set contains 17 runtime faults, 13 optimizer assertions, seven
+30-second timeouts, and two invalid outputs. Starshine `7bf3c39cf` records the
+full fixture/profile inventory separately in `agent-todo.md`.
+
+The pre-rebase array-prefix benchmark used 20 command-level runs. The prior
+binary measured 9.9 +/- 0.8 ms and the repair measured 10.4 +/- 0.4 ms. This is
+a 0.5 ms correctness cost, not a pipeline speed gain. Fresh generated lanes and
+the full 461-source gate remain open for the next work period.
+
+Evidence is in `.tmp/starshine-pass-repairs/`:
+`cfg-source-order-{ir,coalesce,precompute}-native.log`,
+`cfg-source-order-array-benchmark.json`,
+`full-replay-regression-wave25/report.json`, and
+`remote-baseline-selected/report.json`.
