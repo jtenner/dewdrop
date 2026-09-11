@@ -283,3 +283,58 @@ Local evidence: `full-replay-regression-wave11/report.json`,
 `code-folding-fixture-replays/report.json`, `code-folding-scope-canonical-size.json`,
 `code-folding-scope-benchmark.json`, `ssa-nested-branch-join-red.json`, and
 `generated-signoff-wave11-commands.json` under `.tmp/starshine-pass-repairs/`.
+
+
+## SSA branch joins, copy chains, and a real Node oracle
+
+The pin advances to Starshine `009ad983b`, pushed to master. The preceding
+`26355e8dd` fixes the generated runtime test runner. All earlier work remains
+in these commits. Wago's tested fix remains in open PR 606.
+
+SSANoMerge has two repaired faults. Its raw suffix scan lost writes that feed
+reads after nested branch exits. LocalGraph itself retained all three sources.
+The new structured backward analysis follows branch targets, joins conditional
+and table successors, and solves loop headers to a fixed point. The small case
+now returns 42, 41, and 9 instead of 0, 0, and 9. A second cleanup used stale
+copy destinations when collapsing A to B to C; this could lose the final write,
+including a loop counter update. Cleanup now follows rewritten destinations.
+Its bounded native regression changes from wrong 0 to correct 42.
+
+Seven focused native tests pass. The last native build/test takes 49.317 s,
+still over the compiler-work budget; scoped Starshine interface generation
+passes in 2.749 s. The complete wave 13 replay passes 931/1000 original failed
+fixture/order pairs and fails 69 in 122.930 s. None of the 926 wave 11 passing
+cases regress. Four saved nested functional-while SSA stages pass. The saved
+JSON bloom SSA stage and default-level inlining pass in Node and Wago, but the
+original optimize-level-4/shrink-level-1 inlining composition still returns
+FAIL later. This distinction prevents closing the whole JSON fault too early.
+
+Isolated native SSA tests establish the baseline: 495/496 pass before the new
+analysis. One stack-carried-tee local-count assertion already fails. The more
+precise liveness also makes 50 old fresh-local/branch-copy layout assertions
+fail; they need semantic and size review before changing expectations. These
+are visible open checks, not a claimed green native suite.
+
+The generated `node-v2` oracle used host worker threads. When the harness ran
+under Bun, those observations came from Bun while reporting its emulated Node
+version. Timed-out Wasm workers also remained alive: observed threads grew from
+162 to 243 while CPU use reached about 1,500 percent. The old wave 11 generated
+queue was stopped. Its partial runtime observations are not Node signoff.
+
+The oracle now launches explicit Node children, kills timed-out processes, and
+waits for process exit before freeing a worker slot. Cache keys include the
+actual Node version and the process protocol. All 75 executor/compare-task
+tests pass in 2.128 s. A 128-case generated smoke run takes 28.256 s: all 128
+canonical outputs match Binaryen; 67 complete runtime observations match;
+61 original runs are blocked; there are no command, validation, property, or
+semantic mismatches. Blocked originals do not establish runtime equivalence.
+The large generated gates will restart with the real Node runner and a fresh
+release binary. Full fixture/native coverage and speed pipeline measurements
+remain open.
+
+Evidence under `.tmp/starshine-pass-repairs/`:
+`full-replay-regression-wave13/report.json`, `ssa-copy-chain-red.log`,
+`ssa-branch-depth-check.log`, `ssa-wave11-native-isolated.json`,
+`ssa-wave12-native-isolated.json`, `runtime-oracle-node-identity-red.log`,
+`runtime-oracle-process-suite.json`, `genvalid-node-process-smoke/result.json`,
+and `generated-signoff-wave11-stopped.json`.
