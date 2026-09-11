@@ -540,3 +540,33 @@ Evidence in `.tmp/starshine-pass-repairs/`: `sl-array-order-variants/report.json
 `sl-release-hash-evaluation-once.json`, `sl-and-ir-native-wave19.log`,
 `full-replay-regression-wave19/report.json`, `coalesce-aggregate-loop-diff-review.json`,
 `dae-tail-counter-red.json`, and `dae-tail-mixed-callers-red.json`.
+
+## DAE tail-call constant proof: wave 20
+
+Starshine `940359981` includes ordinary and tail-call actuals in both constant
+proof collectors. The reverse-exact-literal lane no longer specializes a
+changing recursive counter from only its initial call. The focused tests check
+runtime behavior with a 500-instruction limit and still require parameter
+removal when ordinary and tail callers agree.
+
+The exact release binary passes 30 reduced checks plus both direct/O4z original
+tail-recursion fixtures in Node and Wago. Full wave 20 passes **944/1000**, fails
+56, and adds no regressions (129.120 s). Both original tail-recursion failures
+are repaired. Native DAE families pass 736/790; 53 assertion follow-ups and one
+30-second definition-range timeout remain visible. Most assertions concern
+exact reference types and need review against current feature rules.
+
+Debug build: 21.957 s. Scoped interfaces: 4.181 s. Release build: 261.532 s.
+Builds above 30 seconds remain performance bugs. Release SHA-256:
+`6ac188671a7dfe1697c44e0a859c704e51c446b269cdf8954da95d7ec6af94b5`.
+Regular and aggregate generated renewal is queued for both DAE modes.
+Evidence is `.tmp/starshine-pass-repairs/dae-tail-release-check/report.json`,
+`dae-tail-actuals-family-isolated.json`, `dae-tail-actuals-whitebox.json`, and
+`full-replay-regression-wave20/report.json`.
+
+The next confirmed array owner is nested `Flatten` inside optimizing inlining.
+A carried call reads an iterator index before a GC field update. Flatten spills
+that call after the update, so the read observes the next index. A reduced
+one-field struct case passes before optimization and traps afterward. Repair
+and bounded execution coverage are in progress; the failing pipeline remains
+open.
