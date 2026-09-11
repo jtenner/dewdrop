@@ -426,3 +426,39 @@ Evidence: `full-replay-regression-wave16/report.json`,
 `genvalid-wave14-code-folding-aggregate/result.json`,
 `i8x8-popcnt-wave16/`, and `nested-nullable-trap-wave16/` under
 `.tmp/starshine-pass-repairs/`.
+
+
+## Vacuum dropped-write order and wave 17
+
+Starshine `dd692ff43` keeps the source position when replacing a dropped
+`local.tee` with `local.set`. The old fresh root let lowering run later reads
+before that write. The reduced packed-byte population-count kernel returned
+three bits per byte instead of four. Its new native execution regression uses
+an independent scalar reference and requires the drop to be removed.
+
+The four Dewdrop Vacuum regressions and all 122 bounded native Vacuum tests in
+`optimize_test.mbt` pass. The release CLI passes the exact O4z i8x8 population
+count and saturation fixtures in Node and Wago and external validation. Full
+wave 17 passes 939/1000 saved fixture/order pairs and fails 61 (157.418 s), with
+no regression from wave 16. Native regression build/run takes 71.597 s;
+isolated native execution 0.188 s; debug build 21.382 s; scoped interfaces
+5.031 s; release build 263.593 s. Work over 30 s remains a performance bug.
+Release SHA-256: `de9733f09782aae699f1f1d77b1119ddb07fc5a5f34a959a2376070d74b828be`.
+
+Review of all 20 retained CodeFolding aggregate differences is now complete.
+Each removes one final bare return, retains nested returns, and saves one
+canonical byte. Together with the 10,000 real-Node runtime matches and no size
+losses, this supports an agent classification of a size-winning final-return
+cleanup. This is not a runtime speed win. Generated renewal for the latest
+repairs and the complete native/source-fixture gates remain open.
+
+The next confirmed owner is PrecomputePropagation: a nested loop copies its
+changing counter into a local, but propagation folds the later condition using
+an older constant. The original exits with 9; the optimized module loops.
+The reduced reproducer is `precompute-loop-copy-reduced.wat`.
+
+Evidence under `.tmp/starshine-pass-repairs/`:
+`vacuum-release-fixtures.json`, `vacuum-wave17-native-isolated.json`,
+`full-replay-regression-wave17/report.json`,
+`code-folding-aggregate-return-diff-review.json`, and
+`precompute-loop-copy-reduced.json`.
