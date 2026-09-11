@@ -204,8 +204,18 @@ direct SSA failures are fixed; the before-inlining order passes every fixture.
 | Second CoalesceLocals after control cleanup | Map and set runtime failures. In the map prefix, passes 0–21 pass and slot 22 fails. CFG coalescing also fails in these longer compositions. |
 | Second SimplifyLocalsNoStructure | Nested-pattern failure at slot 20; the preceding 19 slots pass. A deep/wide functional loop exceeds 30 seconds; tracing stops inside this pass. Running the local cleanup phase once removes both failures. |
 | Smaller inlining limits | Limits 20 and 80 expose deep/wide-loop and nested-view failures in the longer order. These variants are rejected. |
-| Flatten, OptimizeInstructions, optimizing inlining, DAE variants | Some outputs require exact reference types / custom descriptors, which default Node does not support; other failures remain in the ledger. These are not all runtime semantic mismatches. |
-| Other direct faults | HeapStoreOptimization: 4 JSON runtime timeouts; MergeLocals: JSON reader; PrecomputePropagate: 2 control-flow cases; OptimizeCasts: 3 collection/show cases; full SimplifyLocals: deep/wide-loop timeout. |
+| OptimizeInstructions | 2 wrong results and 1 wrong trap, separate from 99 exact-reference feature failures. |
+| DAE / optimizing DAE | Each has 8 wrong trait-dispatch results. Optimizing DAE also has optimizer/runtime timeouts and an optimizer error. |
+| Optimizing inlining | 10 invalid outputs, 3 wrong results, 4 wrong traps, 7 optimizer timeouts, 1 runtime timeout, and 1 optimizer error, separate from 94 exact-reference feature failures. |
+| Flatten | 1 optimizer error and 2 optimizer timeouts, separate from 306 exact-reference feature failures. |
+| Other direct faults | HeapStoreOptimization: 4 JSON optimizer timeouts; MergeLocals: wrong JSON reader result; PrecomputePropagate: 1 wrong control-flow result and 1 optimizer error; OptimizeCasts: 3 wrong collection/show traps; full SimplifyLocals: deep/wide-loop optimizer timeout. |
+
+The direct-pass counts above are from the discovery revision `48d6337ce`.
+Exact reference types / custom descriptors are not enabled in the default Node
+used here. Those feature failures need separate checks and are not, by
+themselves, proof that execution semantics changed. Wrong results, wrong traps,
+invalid output, optimizer errors, and timeouts remain open defects; a passing
+selected schedule does not close the failing pass compositions.
 
 The [defect ledger](starshine-deep-2026-09-10/defects.json) contains each failing
 fixture, category, input hash, and complete diagnostic. These faults remain open;
@@ -250,3 +260,32 @@ Use the commands in the [runner guide](../../tools/starshine-experiments/README.
 to repeat a source sweep or benchmark. The fixed compiler hash above is required
 to reproduce this exact input corpus; results from other compiler revisions are
 a separate experiment.
+
+## Master rebase verification
+
+The 35 local Starshine commits were rebased onto remote master `a1d2f8895` and
+pushed directly to master at `6d17355e5`. The only manual conflict was in the
+wiki log; both entries were retained. Range review found no changed code patches.
+Dewdrop now pins that rebased commit. The release binary SHA-256 is
+`8e3b0e5a9c69993c5cb93be49a93138b913258098b049187f6201e2f365e5dd6`.
+
+Local verification passes 11,005 native tests and 32 closure execution checks.
+All 461 source fixtures pass for each of O4s, speed, and speed-deep: 410 execute
+correctly in Node and Wago, and 51 report the expected compile errors. All 48
+outputs across those three orders and the 16 benchmark workloads match the
+previously measured modules byte for byte. Optimizer cost was not benchmarked
+again; the earlier cost measurements remain tied to their original binary.
+
+Seventeen selected known failures were also replayed with this binary. Every
+unoptimized input passes both engines; all 17 optimized cases still fail. These
+cover late SSA (2), late Heap2Local (3), repeated CoalesceLocals and SLNS (1 each),
+and one case each for MergeLocals, PrecomputePropagate, OptimizeCasts,
+OptimizeInstructions, DAE, optimizing DAE, optimizing inlining,
+HeapStoreOptimization, full SimplifyLocals, and Flatten. This probe exits 1 and
+retains its diagnostics. Passing shipped profiles do not close these bugs.
+
+The native suite takes 340.450 s, release build 199.146 s, full source sweep
+76.549 s, and known-fault probe 32.168 s. All four exceed the 30-second performance
+limit. Closure checks take 0.467 s; benchmark output comparison takes 1.446 s.
+The [rebase evidence](starshine-deep-2026-09-10/master-rebase.json) retains each
+fixture result, command timings, full fault diagnostics, and output hashes.
