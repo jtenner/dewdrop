@@ -570,3 +570,51 @@ that call after the update, so the read observes the next index. A reduced
 one-field struct case passes before optimization and traps afterward. Repair
 and bounded execution coverage are in progress; the failing pipeline remains
 open.
+
+
+## Carried GC calls and dead tees: waves 22 and 23
+
+Starshine `b4f86b718` fixes Flatten's carried-call order before a GC field write.
+The cached original effect order gives spills a valid source anchor. A moved
+capture includes split-tee prerequisites, and later prelude insertion accounts
+for earlier insertions. The native IR/Flatten gate passes 924/924 in 60.146 s.
+Twenty-six release variants validate and execute in Node and Wago. The release
+build took 285.348 s; SHA-256 is
+`b2e974d057cc4fa0f7f9e8a11aa277351ba0296c9ccee6fb2fcd16a6b047f921`.
+Fresh regular and aggregate generated lanes are queued. Full wave 22 reached
+936/1000, with new failures first traced to later CoalesceLocals stages.
+
+Starshine `0abd3d19e` fixes a dead `local.tee` kept before a later overwrite.
+Tail reuse ignored that old write, but cleanup kept it, so it overwrote a live
+parameter after the two locals shared a slot. Cleanup now stops its later-read
+query at a same-scope write. Nested reads remain conservative. The reduced
+bounds-check function previously returned 22 for input 0 instead of 2. It now
+returns the right result and still removes the spare local. Both pass modes
+pass bounded execution for inputs 0, 2 and 9. The broader native family passes
+118/118; six CLI variants pass Node, Wago and external validation.
+
+Full wave 23 passes **962/1000** in 168.528 s, with **38 failures**. Against wave
+22, 27 cases are repaired and one JSON-reader O4z regression first fails in
+optimizing inlining prefix 48. These counts are not a full source or speed gate.
+The remaining array-comparator failure is CFG local-slot assignment, not the
+preceding lift or dead-write cleanup. Merging its reference locals 6 and 9
+changes execution. The CFG visits a later call's local read before a carried
+block, while lowering correctly emits the block first. A small integer/call
+case reproduces the same fault. Shared execution-order repair is next.
+
+The earlier real-Node generated SSA lanes are also complete (documentation
+`ede78d6db`): regular has 7,396 canonical matches and 2,604 smaller outputs;
+aggregate has 3,750 matches and 6,250 smaller outputs. Runtime matches are
+5,019/6,250, blocked originals 4,981/3,750; no runtime mismatches. The 40 retained
+diffs remove nops or unused declarations. Unretained parity gaps and the native
+SSA assertions remain open. OptimizeCasts renewal (`d633a98cd`) has 10,000
+canonical matches in each lane; runtime matches 5,019/10,000, blocked originals
+4,981/0. Neither pass has generated validator/command/property failures or
+size losses. These are correctness/size observations, not speed results.
+
+Evidence is in `.tmp/starshine-pass-repairs/`: `flatten-effect-release-check/`,
+`coalesce-tail-tee-runtime-check/`, `full-replay-regression-wave23/`,
+`coalesce-buried-call-control-red.json`, `array-comparator-wave22/color-groups.json`,
+`coalesce-loop-stages.json`, and `json-reader-wave23/report.json`.
+Wago conditional-GC PR [606](https://github.com/wago-org/wago/pull/606) remains
+open. Its large native-frame limit remains separate work.
