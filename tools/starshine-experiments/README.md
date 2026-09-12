@@ -16,6 +16,17 @@ runner continues through the other fixtures. It never updates expectations.
 A compiler crash includes its exit code, assertion text, and stack output, even
 when the fixture expects a source error.
 
+Baseline execution must match the snapshot exactly. Optimized execution may also
+match an explicit entry in `optimized-runtime-expectations.json`. The two current
+entries follow verified Binaryen 132: a pure known-null refinement and a pure
+fixed-array out-of-bounds access may become `unreachable`. The original trap
+remains accepted when a pipeline leaves it unchanged. Every output field must
+match, including stdout; other fixtures, other traps, successful execution,
+engine errors, and timeouts still fail. Reports retain the actual diagnostic and
+mark uses of an optimized expectation with `matched_optimized_expectation`.
+These entries do not normalize traps across the suite. The source snapshot
+expectations remain strict and unchanged.
+
 The default pipeline is `O4s`. This pinned CLI does not accept the spelling
 `-O4s`; the equivalent is `--optimize-level 4 --shrink-level 1 --optimize`.
 Its expanded pass list is duplicate-function-elimination, vacuum,
