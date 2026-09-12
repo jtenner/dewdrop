@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from runner import ROOT, CommandFailure, check_output, execute, snapshot_case
+from runner import ROOT, CommandFailure, check_output, check_runtime_output, execute, runtime, snapshot_case
 
 
 class RunnerTests(unittest.TestCase):
@@ -21,6 +21,46 @@ class RunnerTests(unittest.TestCase):
                          {"trap": "unreachable", "stdout": []})
         with self.assertRaisesRegex(AssertionError, "runtime mismatch"):
             check_output(["42"], ["43"])
+
+    def test_binaryen_trap_folding_matches_only_optimized_expectations(self):
+        cases = [("collections/fixed-array-get-oob-trap", "array-out-of-bounds"),
+                 ("wasmgc/nullable-ref-as-non-null-trap", "null-reference")]
+        folded = {"trap": "unreachable", "stdout": []}
+        for fixture, trap in cases:
+            original = {"trap": trap, "stdout": []}
+            with self.subTest(fixture=fixture):
+                self.assertTrue(check_runtime_output(fixture, original, folded, optimized=True))
+                self.assertFalse(check_runtime_output(fixture, original, original, optimized=True))
+                self.assertFalse(check_runtime_output(fixture, original, original))
+                with self.assertRaisesRegex(AssertionError, "runtime mismatch"):
+                    check_runtime_output(fixture, original, folded)
+
+    def test_optimized_expectations_reject_other_traps_and_changed_effects(self):
+        fixture = "collections/fixed-array-get-oob-trap"
+        original = {"trap": "array-out-of-bounds", "stdout": []}
+        # These observations violate the fixture's explicit contract.
+        for actual in (["success"], [], {"trap": "null-reference", "stdout": []},
+                       {"trap": "unreachable", "stdout": ["unexpected effect"]}):
+            with self.subTest(actual=actual), self.assertRaisesRegex(AssertionError, "runtime mismatch"):
+                check_runtime_output(fixture, original, actual, optimized=True)
+        for name, expected in [("unlisted/fixture", original),
+                               (fixture, {"trap": "null-reference", "stdout": []}),
+                               (fixture, {"trap": "array-out-of-bounds", "stdout": ["before"]})]:
+            with self.subTest(name=name, expected=expected), self.assertRaisesRegex(AssertionError, "runtime mismatch"):
+                check_runtime_output(name, expected, {"trap": "unreachable", "stdout": []}, optimized=True)
+
+    def test_runtime_retains_the_observed_folded_trap_and_match_record(self):
+        source = ROOT / "tests/module-snapshots/collections/fixed-array-get-oob-trap.dew"
+        expected = {"output": {"trap": "array-out-of-bounds", "stdout": []}}
+        process = subprocess.CompletedProcess([], 0, '{"output":[],"trap":"unreachable"}', "")
+        records = []
+        def executed(command, records, **kwargs):
+            records.append({"command": command, "stdout": process.stdout})
+            return process
+        with patch("runner.execute", side_effect=executed):
+            actual = runtime(Path("optimized.wasm"), source, expected, "node", None, records, optimized=True)
+        self.assertEqual(actual, {"trap": "unreachable", "stdout": []})
+        self.assertEqual(records[-1]["matched_optimized_expectation"], "collections/fixed-array-get-oob-trap")
 
     def test_process_failure_keeps_diagnostics_and_time(self):
         records = []

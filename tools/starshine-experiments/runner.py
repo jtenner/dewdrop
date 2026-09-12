@@ -20,6 +20,7 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 DEFAULT_OUT = ROOT / ".tmp/starshine-experiments"
+OPTIMIZED_RUNTIME_EXPECTATIONS = json.loads((HERE / "optimized-runtime-expectations.json").read_text())
 COMPILER = ROOT / "_build/native/release/build/jtenner/dewdrop/module_snapshot_gen/module_snapshot_gen.exe"
 STARSHINE = ROOT / "_build/native/release/build/jtenner/starshine/cmd/cmd.exe"
 
@@ -68,6 +69,16 @@ def execute(command, records, *, timeout=30, env=None, allow_failure=False, cwd=
 def check_output(expected, actual):
     if expected != actual:
         raise AssertionError(f"runtime mismatch: expected {expected!r}, got {actual!r}")
+
+
+def check_runtime_output(fixture, expected, actual, *, optimized=False):
+    if expected == actual:
+        return False
+    rule = OPTIMIZED_RUNTIME_EXPECTATIONS.get(fixture) if optimized else None
+    if rule and expected == rule["original"] and actual == rule["optimized"]:
+        return True
+    check_output(expected, actual)
+    return False
 
 
 def sha256(path):
@@ -119,14 +130,16 @@ def pipelines(path=HERE / "pipelines.json"):
     return config["pipelines"]
 
 
-def runtime(binary, source, expected, engine, wago, records, timeout=30):
+def runtime(binary, source, expected, engine, wago, records, timeout=30, *, optimized=False):
     host = json.dumps(expected.get("host", {}))
     mode = snapshots.fixture_mode(source)
     command = (["node", ROOT / "tools/module-snapshots/run-main.mjs"]
                if engine == "node" else [wago])
     process = execute([*command, binary, host, mode], records, timeout=timeout)
     actual = snapshots.parse_runtime_result(engine, process)
-    check_output(expected["output"], actual)
+    if check_runtime_output(snapshots.fixture_name(source), expected["output"], actual,
+                            optimized=optimized):
+        records[-1]["matched_optimized_expectation"] = snapshots.fixture_name(source)
     return actual
 
 
@@ -194,7 +207,7 @@ def snapshot_case(source, args, selected):
             trial.update(optimize(binary, output, flags, args.starshine, trial["commands"]))
             trial["output"] = {}
             for engine in args.runtime:
-                trial["output"][engine] = runtime(output, source, expected, engine, args.wago, trial["commands"], args.runtime_timeout)
+                trial["output"][engine] = runtime(output, source, expected, engine, args.wago, trial["commands"], args.runtime_timeout, optimized=True)
             trial["status"] = "passed"
         except (CommandFailure, AssertionError, snapshots.SnapshotError) as error:
             trial.update(status="failed", error=str(error))

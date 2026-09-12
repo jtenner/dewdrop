@@ -1,0 +1,24 @@
+{
+  "collections/fixed-array-get-oob-trap": {
+    "original": {
+      "trap": "array-out-of-bounds",
+      "stdout": []
+    },
+    "optimized": {
+      "trap": "unreachable",
+      "stdout": []
+    },
+    "reason": "Binaryen 132 folds a pure fixed-array access at index 1 of length 1 to unreachable."
+  },
+  "wasmgc/nullable-ref-as-non-null-trap": {
+    "original": {
+      "trap": "null-reference",
+      "stdout": []
+    },
+    "optimized": {
+      "trap": "unreachable",
+      "stdout": []
+    },
+    "reason": "Binaryen 132 folds a known-null ref.as_non_null to unreachable; no effects precede the trap."
+  }
+}
