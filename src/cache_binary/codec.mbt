@@ -118,12 +118,26 @@ pub struct Reader {
   end : Int
   mut offset : Int
   context : String
+  /// Tree decoders can omit long field paths on a speculative first pass.
+  detailed_paths : Bool
   mut error : String?
 }
 
 ///|
-pub fn Reader::new(bytes : Bytes, context? : String = "artifact") -> Reader {
-  { bytes, start: 0, end: bytes.length(), offset: 0, context, error: None, }
+pub fn Reader::new(
+  bytes : Bytes,
+  context? : String = "artifact",
+  detailed_paths? : Bool = true,
+) -> Reader {
+  {
+    bytes,
+    start: 0,
+    end: bytes.length(),
+    offset: 0,
+    context,
+    detailed_paths,
+    error: None,
+  }
 }
 
 ///|
@@ -133,7 +147,15 @@ fn Reader::bounded(
   end : Int,
   context : String,
 ) -> Reader {
-  { bytes, start, end, offset: start, context, error: None, }
+  {
+    bytes,
+    start,
+    end,
+    offset: start,
+    context,
+    detailed_paths: true,
+    error: None,
+  }
 }
 
 ///|
@@ -311,21 +333,27 @@ pub fn Reader::read_raw_bytes(
   maximum : Int,
   field : String,
 ) -> Bytes {
+  self.read_raw_view(length, maximum, field).to_owned()
+}
+
+///|
+fn Reader::read_raw_view(
+  self : Reader,
+  length : Int,
+  maximum : Int,
+  field : String,
+) -> BytesView {
   if length < 0 || length > maximum || length > maximum_blob_bytes {
     self.fail(field, "byte length exceeds limit")
-    return b""
+    return b""[:]
   }
   if length > self.remaining() {
     self.fail(field, "truncated byte string")
-    return b""
+    return b""[:]
   }
-  let output = Buffer(size_hint=length)
-  let end = self.offset + length
-  while self.offset < end {
-    output.write_byte(self.bytes[self.offset])
-    self.offset += 1
-  }
-  output.to_bytes()
+  let start = self.offset
+  self.offset += length
+  self.bytes[start:self.offset]
 }
 
 ///|
@@ -334,6 +362,15 @@ pub fn Reader::read_bytes(
   maximum : Int,
   field : String,
 ) -> Bytes {
+  self.read_bytes_view(maximum, field).to_owned()
+}
+
+///|
+fn Reader::read_bytes_view(
+  self : Reader,
+  maximum : Int,
+  field : String,
+) -> BytesView {
   let encoded = self.read_var_u64(field)
   let limit = if maximum < 0 || maximum > maximum_blob_bytes {
     maximum_blob_bytes
@@ -342,9 +379,9 @@ pub fn Reader::read_bytes(
   }
   if encoded > limit.to_uint64() || encoded > self.remaining().to_uint64() {
     self.fail(field, "invalid or excessive byte length")
-    return b""
+    return b""[:]
   }
-  self.read_raw_bytes(encoded.to_int(), limit, field)
+  self.read_raw_view(encoded.to_int(), limit, field)
 }
 
 ///|
@@ -353,7 +390,7 @@ pub fn Reader::read_string(
   maximum : Int,
   field : String,
 ) -> String {
-  let bytes = self.read_bytes(maximum, field)
+  let bytes = self.read_bytes_view(maximum, field)
   if self.error is Some(_) {
     return ""
   }

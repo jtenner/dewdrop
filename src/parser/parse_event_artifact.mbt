@@ -536,6 +536,7 @@ fn parse_read_type(
   field : String,
   depth : Int,
 ) -> TypeExpr {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   if depth > parse_event_maximum_depth {
     reader.fail(field, "syntax nesting exceeds limit")
     return NamedType("", 0UL)
@@ -629,6 +630,7 @@ fn parse_read_type_parameter(
   field : String,
   depth : Int,
 ) -> TypeParameter {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let name = reader.read_string(parse_event_maximum_text, field + ".name")
   let count = reader.read_count(
     parse_event_maximum_items,
@@ -658,6 +660,7 @@ fn parse_read_type_parameters(
   field : String,
   depth : Int,
 ) -> Array[TypeParameter] {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
   let values : Array[TypeParameter] = []
   for index in 0..<count {
@@ -682,6 +685,7 @@ fn parse_read_fn_parameter(
   field : String,
   depth : Int,
 ) -> FnParameter {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   {
     name: reader.read_string(parse_event_maximum_text, field + ".name"),
     type_: parse_read_type(reader, field + ".type", depth + 1),
@@ -706,6 +710,7 @@ fn parse_read_fn_parameters(
   field : String,
   depth : Int,
 ) -> Array[FnParameter] {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
   let values : Array[FnParameter] = []
   for index in 0..<count {
@@ -741,6 +746,7 @@ fn parse_read_receiver(
   field : String,
   depth : Int,
 ) -> ReceiverParameter? {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   if !reader.read_option_tag(field + ".tag") {
     return None
   }
@@ -863,6 +869,7 @@ fn parse_read_object_fields(
   field : String,
   depth : Int,
 ) -> Array[ObjectField] {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
   let values : Array[ObjectField] = []
   for index in 0..<count {
@@ -893,6 +900,7 @@ fn parse_read_exprs(
   field : String,
   depth : Int,
 ) -> Array[Expr] {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
   let values : Array[Expr] = []
   for index in 0..<count {
@@ -916,6 +924,7 @@ fn parse_read_block(
   field : String,
   depth : Int,
 ) -> Block {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(
     parse_event_maximum_items,
     field + ".item_count",
@@ -949,6 +958,7 @@ fn parse_read_optional_expr(
   field : String,
   depth : Int,
 ) -> Expr? {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   if reader.read_option_tag(field + ".tag") {
     Some(parse_read_expr(reader, field + ".value", depth + 1))
   } else {
@@ -1169,6 +1179,7 @@ fn parse_read_expr(
   field : String,
   depth : Int,
 ) -> Expr {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   if depth > parse_event_maximum_depth {
     reader.fail(field, "syntax nesting exceeds limit")
     return BoolExpr(false, 0UL)
@@ -1434,6 +1445,7 @@ fn parse_read_block_item(
   field : String,
   depth : Int,
 ) -> BlockItem {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   match reader.read_byte(field + ".tag") {
     5 =>
       TypeBindingItem(
@@ -1497,6 +1509,7 @@ fn parse_read_pattern_fields(
   field : String,
   depth : Int,
 ) -> Array[PatternField] {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
   let values : Array[PatternField] = []
   for index in 0..<count {
@@ -1527,6 +1540,7 @@ fn parse_read_patterns(
   field : String,
   depth : Int,
 ) -> Array[Pattern] {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
   let values : Array[Pattern] = []
   for index in 0..<count {
@@ -1606,6 +1620,7 @@ fn parse_read_pattern(
   field : String,
   depth : Int,
 ) -> Pattern {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   if depth > parse_event_maximum_depth {
     reader.fail(field, "syntax nesting exceeds limit")
     return WildcardPattern(0UL)
@@ -1697,6 +1712,7 @@ fn parse_read_pattern_arms(
   field : String,
   depth : Int,
 ) -> Array[PatternArm] {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
   let values : Array[PatternArm] = []
   for index in 0..<count {
@@ -1764,6 +1780,7 @@ fn parse_read_struct_fields(
   field : String,
   depth : Int,
 ) -> Array[StructField] {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
   let values : Array[StructField] = []
   for index in 0..<count {
@@ -1816,6 +1833,7 @@ fn parse_read_enum_variants(
   field : String,
   depth : Int,
 ) -> Array[EnumVariant] {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   let count = reader.read_count(parse_event_maximum_items, field + ".count")
   let values : Array[EnumVariant] = []
   for index in 0..<count {
@@ -1883,6 +1901,7 @@ fn parse_read_function(
   field : String,
   depth : Int,
 ) -> FunctionDeclaration {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   {
     visibility: parse_read_visibility(reader, field + ".visibility"),
     name: reader.read_string(parse_event_maximum_text, field + ".name"),
@@ -1925,6 +1944,7 @@ fn parse_read_foreign_library_member(
   field : String,
   depth : Int,
 ) -> ForeignLibraryMember {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   {
     visibility: parse_read_visibility(reader, field + ".visibility"),
     name: reader.read_string(parse_event_maximum_text, field + ".name"),
@@ -2101,6 +2121,7 @@ fn parse_read_declaration(
   field : String,
   depth : Int,
 ) -> Declaration {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   match reader.read_byte(field + ".tag") {
     0 => {
       let open_ = reader.read_bool(field + ".open")
@@ -2584,10 +2605,11 @@ fn parse_read_pattern_error(
     8 => UnclosedTuplePattern(parse_read_offset(reader, field + ".offset"))
     9 => UnclosedStructPattern(parse_read_offset(reader, field + ".offset"))
     10 => EmptyTuplePattern(parse_read_offset(reader, field + ".offset"))
-    12 => InvalidProductPatternArity(
-      reader.read_count(parse_event_maximum_items, field + ".arity"),
-      parse_read_offset(reader, field + ".offset"),
-    )
+    12 =>
+      InvalidProductPatternArity(
+        reader.read_count(parse_event_maximum_items, field + ".arity"),
+        parse_read_offset(reader, field + ".offset"),
+      )
     11 =>
       PatternLexicalError(
         parse_read_lex_error(reader, field + ".error"),
@@ -3119,6 +3141,7 @@ fn parse_read_declaration_error(
   field : String,
   depth : Int,
 ) -> DeclarationError {
+  let field = if reader.detailed_paths { field } else { "syntax" }
   match reader.read_byte(field + ".tag") {
     0 =>
       ExpectedDeclarationSyntax(
@@ -3256,7 +3279,23 @@ pub fn serialize_parse_events(
 pub fn deserialize_parse_events(
   payload : Bytes,
 ) -> Result[Array[ParseEvent], String] {
-  let reader = @cache_binary.Reader::new(payload, context="parse_event_payload")
+  match parse_decode_events(payload, detailed_paths=false) {
+    Ok(events) => Ok(events)
+    // Keep the original, complete error path for malformed cache entries.
+    Err(_) => parse_decode_events(payload, detailed_paths=true)
+  }
+}
+
+///|
+fn parse_decode_events(
+  payload : Bytes,
+  detailed_paths~ : Bool,
+) -> Result[Array[ParseEvent], String] {
+  let reader = @cache_binary.Reader::new(
+    payload,
+    context="parse_event_payload",
+    detailed_paths~,
+  )
   if reader.read_u32_le("version") != parse_event_payload_version {
     return Err(
       "parse_event_payload.version: unsupported parser-event payload version",

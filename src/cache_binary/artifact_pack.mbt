@@ -34,6 +34,9 @@ struct ArtifactPackIndexedEntry {
 ///|
 pub struct ArtifactPack {
   entries : Array[ArtifactPackEntry]
+  // Entries are appended by lookup and replaced by upsert. A bucket preserves
+  // the first-match rule when several stored versions have been loaded.
+  owner_entries : Map[(UInt, String), Array[Int]]
   indexed_entries : Array[ArtifactPackIndexedEntry]
   encoded : Bytes?
   footer_covered_bytes : Int
@@ -67,6 +70,7 @@ pub fn ArtifactPackEntry::new(
 pub fn ArtifactPack::empty() -> ArtifactPack {
   {
     entries: [],
+    owner_entries: {},
     indexed_entries: [],
     encoded: None,
     footer_covered_bytes: 0,
@@ -138,11 +142,7 @@ fn artifact_pack_zero_digest() -> FixedArray[Byte] {
 
 ///|
 fn artifact_pack_copy_bytes(bytes : Bytes, start : Int, length : Int) -> Bytes {
-  let output = Buffer(size_hint=length)
-  for index in 0..<length {
-    output.write_byte(bytes[start + index])
-  }
-  output.to_bytes()
+  bytes[start:start + length].to_owned()
 }
 
 ///|
@@ -172,16 +172,14 @@ fn artifact_pack_compare_digest(
 fn artifact_pack_entry_compare(
   left : ArtifactPackEntry,
   right : ArtifactPackEntry,
+  left_owner_lane : UInt,
+  right_owner_lane : UInt,
 ) -> Int {
   let kind = left.kind.compare(right.kind)
   if kind != 0 {
     return kind
   }
-  let left_owner = blake3(@utf8.encode(left.owner))
-  let right_owner = blake3(@utf8.encode(right.owner))
-  let owner_lane = artifact_pack_hash32(left_owner).compare(
-    artifact_pack_hash32(right_owner),
-  )
+  let owner_lane = left_owner_lane.compare(right_owner_lane)
   if owner_lane != 0 {
     return owner_lane
   }
@@ -242,13 +240,11 @@ pub fn ArtifactPack::upsert(
     Err(error) => return Err(error)
     Ok(_) => ()
   }
-  for index, existing in self.entries {
-    if existing.kind == entry.kind && existing.owner == entry.owner {
-      self.entries[index] = entry
-      return Ok(())
-    }
+  if self.owner_entries.get((entry.kind, entry.owner)) is Some(indices) {
+    self.entries[indices[0]] = entry
+    return Ok(())
   }
-  self.entries.push(entry)
+  self.append_loaded_entry(entry)
   Ok(())
 }
 
@@ -353,7 +349,6 @@ pub fn ArtifactPack::encode(self : ArtifactPack) -> Result[Bytes, String] {
     Ok(value) => value
     Err(error) => return Err(error)
   }
-  entries.sort_by(artifact_pack_entry_compare)
   let output = Writer::new(size_hint=4096)
   output.write_raw(artifact_pack_magic)
   let mut section_count = 0
@@ -620,7 +615,7 @@ pub fn decode_artifact_pack(bytes : Bytes) -> Result[ArtifactPack, String] {
     return Err("artifact pack FOOT section is missing")
   }
   let ordered = entries.copy()
-  ordered.sort_by(artifact_pack_entry_compare)
+  artifact_pack_sort_entries(ordered)
   if ordered != entries {
     return Err("artifact pack entries are not canonical")
   }
@@ -632,9 +627,48 @@ pub fn decode_artifact_pack(bytes : Bytes) -> Result[ArtifactPack, String] {
   }
   Ok({
     entries,
+    owner_entries: artifact_pack_owner_entries(entries),
     indexed_entries: [],
     encoded: None,
     footer_covered_bytes: 0,
     footer_digest: artifact_pack_zero_digest(),
   })
+}
+
+///|
+fn artifact_pack_sort_entries(entries : Array[ArtifactPackEntry]) -> Unit {
+  // Hash each owner once, while preserving the canonical V1 tie-break order.
+  let keyed = entries.map(fn(entry) {
+    (artifact_pack_hash32(blake3(@utf8.encode(entry.owner))), entry)
+  })
+  keyed.sort_by(fn(left, right) {
+    artifact_pack_entry_compare(left.1, right.1, left.0, right.0)
+  })
+  for index, entry in keyed {
+    entries[index] = entry.1
+  }
+}
+
+///|
+fn artifact_pack_owner_entries(entries : Array[ArtifactPackEntry]) -> Map[(UInt, String), Array[Int]] {
+  let result : Map[(UInt, String), Array[Int]] = {}
+  for index, entry in entries {
+    let key = (entry.kind, entry.owner)
+    match result.get(key) {
+      Some(indices) => indices.push(index)
+      None => result[key] = [index]
+    }
+  }
+  result
+}
+
+///|
+fn ArtifactPack::append_loaded_entry(self : ArtifactPack, entry : ArtifactPackEntry) -> Unit {
+  let index = self.entries.length()
+  self.entries.push(entry)
+  let key = (entry.kind, entry.owner)
+  match self.owner_entries.get(key) {
+    Some(indices) => indices.push(index)
+    None => self.owner_entries[key] = [index]
+  }
 }

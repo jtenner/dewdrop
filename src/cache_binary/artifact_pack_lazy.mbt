@@ -52,24 +52,31 @@ pub fn ArtifactPack::lookup_checked(
   content_digest : FixedArray[Byte],
   context_digest : FixedArray[Byte],
 ) -> Result[Bytes?, String] {
-  let owner_lane = artifact_pack_hash32(blake3(@utf8.encode(owner)))
-  let content_lane = artifact_pack_hash32(content_digest)
-  for entry in self.entries {
+  let candidates = self.owner_entries.get((kind, owner)).unwrap_or([])
+  for index in candidates {
+    let entry = self.entries[index]
     if entry.kind == kind &&
       entry.schema_version == schema_version &&
-      artifact_pack_hash32(blake3(@utf8.encode(entry.owner))) == owner_lane &&
-      artifact_pack_hash32(entry.content_digest) == content_lane &&
       entry.owner == owner &&
       artifact_pack_digest_equal(entry.content_digest, content_digest) &&
       artifact_pack_digest_equal(entry.context_digest, context_digest) {
       return Ok(Some(entry.payload))
     }
   }
-  for indexed in self.indexed_entries {
+  let owner_lane = artifact_pack_hash32(blake3(@utf8.encode(owner)))
+  let content_lane = artifact_pack_hash32(content_digest)
+  let start = artifact_pack_index_lower_bound(
+    self.indexed_entries,
+    kind,
+    owner_lane,
+    content_lane,
+  )
+  for index in start..<self.indexed_entries.length() {
+    let indexed = self.indexed_entries[index]
     if indexed.kind != kind ||
       indexed.owner_lane != owner_lane ||
       indexed.content_lane != content_lane {
-      continue
+      break
     }
     let entry = match self.decode_indexed_entry(indexed) {
       Ok(value) => value
@@ -79,7 +86,7 @@ pub fn ArtifactPack::lookup_checked(
       entry.owner == owner &&
       artifact_pack_digest_equal(entry.content_digest, content_digest) &&
       artifact_pack_digest_equal(entry.context_digest, context_digest) {
-      self.entries.push(entry)
+      self.append_loaded_entry(entry)
       return Ok(Some(entry.payload))
     }
   }
@@ -95,23 +102,22 @@ fn ArtifactPack::materialized_entries(
     Ok(_) => ()
   }
   let output = self.entries.copy()
+  let owners : Map[(UInt, String), Bool] = {}
+  for entry in output {
+    owners[(entry.kind, entry.owner)] = true
+  }
   for indexed in self.indexed_entries {
     let entry = match self.decode_indexed_entry(indexed) {
       Ok(value) => value
       Err(error) => return Err(error)
     }
-    let mut replaced = false
-    for existing in output {
-      if existing.kind == entry.kind && existing.owner == entry.owner {
-        replaced = true
-        break
-      }
-    }
-    if !replaced {
+    let key = (entry.kind, entry.owner)
+    if !owners.contains(key) {
+      owners[key] = true
       output.push(entry)
     }
   }
-  output.sort_by(artifact_pack_entry_compare)
+  artifact_pack_sort_entries(output)
   for index in 1..<output.length() {
     if output[index - 1].kind == output[index].kind &&
       output[index - 1].owner == output[index].owner {
@@ -281,9 +287,38 @@ pub fn open_artifact_pack(bytes : Bytes) -> Result[ArtifactPack, String] {
   }
   Ok({
     entries: [],
+    owner_entries: {},
     indexed_entries,
     encoded: Some(bytes),
     footer_covered_bytes,
     footer_digest,
   })
+}
+
+///|
+/// The immutable index was checked for this order by open_artifact_pack.
+fn artifact_pack_index_lower_bound(
+  entries : Array[ArtifactPackIndexedEntry],
+  kind : UInt,
+  owner_lane : UInt,
+  content_lane : UInt,
+) -> Int {
+  let mut low = 0
+  let mut high = entries.length()
+  while low < high {
+    let middle = low + (high - low) / 2
+    let entry = entries[middle]
+    if entry.kind < kind ||
+      (entry.kind == kind && entry.owner_lane < owner_lane) ||
+      (
+        entry.kind == kind &&
+        entry.owner_lane == owner_lane &&
+        entry.content_lane < content_lane
+      ) {
+      low = middle + 1
+    } else {
+      high = middle
+    }
+  }
+  low
 }
