@@ -668,6 +668,19 @@ fn core_pair_link(
     )
     .with_code_sec(@lib.CodeSec::new(functions))
     .with_data_sec(@lib.DataSec::new(datas))
+  // Function names are debug metadata, but their indices must follow linking.
+  let names : Array[@lib.Name?] = Array::make(imported_function_count + functions.length(), None)
+  core_copy_function_names(dew, dew_map.function_indices, names)
+  core_copy_function_names(guest, guest_map.function_indices, names)
+  let named : Array[@lib.NameAssoc] = []
+  for index, name in names {
+    if name is Some(value) {
+      named.push(@lib.NameAssoc::new(index.to_uint(), value))
+    }
+  }
+  if named.length() > 0 {
+    output = output.with_name_sec(@lib.NameSec::new(func_names=Some(@lib.NameMap::new(named))))
+  }
   match start {
     Some(value) => output = output.with_start_sec(value)
     None => ()
@@ -729,5 +742,21 @@ pub fn link_core_wasm_gc_modules(
   match @binary.encode_module(module_) {
     Ok(bytes) => Ok(bytes)
     Err(error) => Err(CoreWasmEncodeError(error.to_string()))
+  }
+}
+
+///|
+fn core_copy_function_names(module_ : @lib.Module, indices : Array[Int], output : Array[@lib.Name?]) -> Unit {
+  if module_.name_sec is Some(section) && section.func_names is Some(@lib.NameMap(names)) {
+    for entry in names {
+      let @lib.NameAssoc(index, name) = entry
+      // Out-of-range debug names do not make an otherwise valid module invalid.
+      if index < indices.length().to_uint() {
+        let mapped = indices[index.to_int()]
+        if mapped >= 0 && mapped < output.length() {
+          output[mapped] = Some(name)
+        }
+      }
+    }
   }
 }

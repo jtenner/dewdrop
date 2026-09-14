@@ -17,3 +17,12 @@ The A-to-B CPU profile attributes about 1.9 seconds to garbage collection.
 Function symbols are lost during linking, so the remaining hot functions need
 names before selecting a source fix. The native linker generates an 18 MB C
 translation unit; its C compilation must be timed separately from linker runtime.
+
+## Function names for profiling
+
+Preserve function names through linker index remapping and cleanup. The new native
+regression failed before this change and passes afterward; all 19 core-linker
+tests pass. Invalid debug indices remain non-semantic. The baseline compiler with
+names has identical executable sections and resolves the numeric Node samples.
+`tools/summarize-self-host-profile.py` reads those names and can verify executable
+sections against the original compiler before mapping profile samples.
