@@ -48,3 +48,21 @@ Extract the existing fingerprint loop for a native benchmark. Hashing the built
 compiler plus standard sources took 128.29 ms; the current source check took
 52.28 ms. Reject the artifact-hash variant and retain production identity behavior.
 All nine bootstrap tests pass. This does not measure a generated build-time stamp.
+
+## Shared evidence and next work
+
+The benchmark tools measure each operation. Full-build comparisons alternate
+compiler snapshots and require identical Wasm. The latest 128-module build fell
+from 2.228 to 1.559 seconds. The latest validation has 326 passing tests, and
+self-host A/B/C core bytes match the baseline; B and C reach a fixed point.
+
+- [First audit and scaling probes](compile-scaling-2026-09-14.md)
+- [Second audit and hot-path probes](compile-hotpaths-2026-09-14.md)
+- [Third audit and every self-host step](compile-imports-2026-09-14.md)
+
+Remote master diverged during this work and pins another Starshine revision.
+Publish the tested snapshot on `perf/compiler-compile-times`. Next, reconcile the
+Starshine revisions with master and rerun integration and self-host checks. Then
+profile the roughly 20-second Dew compiler executions, and address the initial
+31.446-second native linker build-plus-link. Neither is fixed by the measured
+many-module gains. These steps are future work, not completed results.

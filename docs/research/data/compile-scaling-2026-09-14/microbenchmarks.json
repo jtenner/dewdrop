@@ -1,0 +1,104 @@
+{
+  "parser": {
+    "before": [
+      "[jtenner/dewdrop] bench parser/compile_scaling_bench_test.mbt:2 (\"bench deep cached expression terms=128\") ok",
+      "  24.78 µs ± 132.43 ns    24.52 µs …  24.92 µs  in 10 ×   4039 runs",
+      "[jtenner/dewdrop] bench parser/compile_scaling_bench_test.mbt:16 (\"bench deep cached expression terms=1024\") ok",
+      " 571.95 µs ±   5.06 µs   565.91 µs … 582.35 µs  in 10 ×    176 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: parser baseline scaling benchmarks: 15.210 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench parser/compile_scaling_bench_test.mbt:2 (\"bench deep cached expression terms=128\") ok",
+      "  16.94 µs ± 145.62 ns    16.83 µs …  17.23 µs  in 10 ×   5956 runs",
+      "[jtenner/dewdrop] bench parser/compile_scaling_bench_test.mbt:21 (\"bench deep cached expression terms=1024\") ok",
+      " 132.11 µs ±   1.36 µs   129.63 µs … 133.52 µs  in 10 ×    771 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: parser updated scaling benchmarks: 14.927 seconds"
+    ]
+  },
+  "semantic": {
+    "before": [
+      "[jtenner/dewdrop] bench semantic/compile_scaling_bench_test.mbt:2 (\"bench freeze chain modules=32\") ok",
+      " 388.27 ms ±   4.83 ms   382.06 ms … 397.15 ms  in 10 ×      1 runs",
+      "[jtenner/dewdrop] bench semantic/compile_scaling_bench_test.mbt:7 (\"bench freeze chain modules=128\") ok",
+      "   1.81 s ±  12.00 ms     1.79 s …   1.83 s  in 10 ×      1 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: semantic baseline scaling benchmarks: 99.588 seconds",
+      "self-host performance bug: semantic baseline scaling benchmarks exceeded 30 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench semantic/compile_scaling_bench_test.mbt:2 (\"bench freeze chain modules=32\") ok",
+      " 366.55 ms ±   4.56 ms   360.20 ms … 372.79 ms  in 10 ×      1 runs",
+      "[jtenner/dewdrop] bench semantic/compile_scaling_bench_test.mbt:11 (\"bench freeze chain modules=128\") ok",
+      "   1.41 s ±  13.31 ms     1.39 s …   1.43 s  in 10 ×      1 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: semantic updated scaling benchmarks: 82.310 seconds",
+      "self-host performance bug: semantic updated scaling benchmarks exceeded 30 seconds"
+    ]
+  },
+  "backend": {
+    "before": [
+      "[jtenner/dewdrop] bench backend/compile_scaling_bench_test.mbt:2 (\"bench compiler facts forward chain functions=128\") ok",
+      " 443.10 µs ±   5.49 µs   434.59 µs … 450.73 µs  in 10 ×    226 runs",
+      "[jtenner/dewdrop] bench backend/compile_scaling_bench_test.mbt:21 (\"bench compiler facts forward chain functions=512\") ok",
+      "   2.49 ms ±  14.35 µs     2.46 ms …   2.51 ms  in 10 ×     41 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: backend baseline scaling benchmarks: 93.506 seconds",
+      "self-host performance bug: backend baseline scaling benchmarks exceeded 30 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench backend/compile_scaling_bench_test.mbt:2 (\"bench compiler facts forward chain functions=128\") ok",
+      " 104.35 µs ± 452.11 ns   103.97 µs … 105.53 µs  in 10 ×    960 runs",
+      "[jtenner/dewdrop] bench backend/compile_scaling_bench_test.mbt:41 (\"bench compiler facts forward chain functions=512\") ok",
+      " 433.15 µs ±   2.03 µs   430.64 µs … 438.17 µs  in 10 ×    231 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: backend updated scaling benchmarks: 88.732 seconds",
+      "self-host performance bug: backend updated scaling benchmarks exceeded 30 seconds"
+    ]
+  },
+  "cache_binary": {
+    "before": [
+      "[jtenner/dewdrop] bench cache_binary/compile_scaling_bench_test.mbt:2 (\"bench materialized pack lookup entries=128\") ok",
+      "   4.17 ms ±  26.16 µs     4.13 ms …   4.23 ms  in 10 ×     24 runs",
+      "[jtenner/dewdrop] bench cache_binary/compile_scaling_bench_test.mbt:16 (\"bench materialized pack encode entries=128\") ok",
+      "   1.50 ms ±   1.83 µs     1.50 ms …   1.50 ms  in 10 ×     67 runs",
+      "[jtenner/dewdrop] bench cache_binary/compile_scaling_bench_test.mbt:30 (\"bench materialized pack lookup entries=512\") ok",
+      "  65.25 ms ± 328.37 µs    64.99 ms …  65.87 ms  in 10 ×      2 runs",
+      "[jtenner/dewdrop] bench cache_binary/compile_scaling_bench_test.mbt:44 (\"bench materialized pack encode entries=512\") ok",
+      "   7.50 ms ±  31.83 µs     7.44 ms …   7.56 ms  in 10 ×     14 runs",
+      "Total tests: 4, passed: 4, failed: 0.",
+      "self-host timing: cache_binary baseline scaling benchmarks: 14.437 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench cache_binary/compile_scaling_bench_test.mbt:2 (\"bench materialized pack lookup entries=128\") ok",
+      "  21.52 µs ± 273.26 ns    21.32 µs …  22.18 µs  in 10 ×   4474 runs",
+      "[jtenner/dewdrop] bench cache_binary/compile_scaling_bench_test.mbt:23 (\"bench materialized pack encode entries=128\") ok",
+      " 493.82 µs ±   3.03 µs   491.54 µs … 502.14 µs  in 10 ×    204 runs",
+      "[jtenner/dewdrop] bench cache_binary/compile_scaling_bench_test.mbt:38 (\"bench materialized pack lookup entries=512\") ok",
+      " 310.20 µs ±   2.01 µs   308.61 µs … 314.48 µs  in 10 ×    324 runs",
+      "[jtenner/dewdrop] bench cache_binary/compile_scaling_bench_test.mbt:59 (\"bench materialized pack encode entries=512\") ok",
+      "   1.98 ms ±  13.34 µs     1.97 ms …   2.01 ms  in 10 ×     51 runs",
+      "Total tests: 4, passed: 4, failed: 0.",
+      "self-host timing: cache_binary updated scaling benchmarks: 13.929 seconds"
+    ]
+  },
+  "core_linker": {
+    "before": [
+      "[jtenner/dewdrop] bench core_linker/compile_scaling_bench_wbtest.mbt:2 (\"bench core type map groups=512\") ok",
+      "  60.38 µs ± 651.76 ns    59.30 µs …  61.17 µs  in 10 ×   1640 runs",
+      "[jtenner/dewdrop] bench core_linker/compile_scaling_bench_wbtest.mbt:10 (\"bench core type map groups=8192\") ok",
+      "  14.59 ms ± 129.54 µs    14.40 ms …  14.84 ms  in 10 ×      7 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: core linker baseline scaling benchmarks: 28.422 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench core_linker/compile_scaling_bench_wbtest.mbt:2 (\"bench core type map groups=512\") ok",
+      "   1.40 µs ±   8.59 ns     1.40 µs …   1.42 µs  in 10 ×  71511 runs",
+      "[jtenner/dewdrop] bench core_linker/compile_scaling_bench_wbtest.mbt:18 (\"bench core type map groups=8192\") ok",
+      "  21.55 µs ± 185.01 ns    21.40 µs …  21.92 µs  in 10 ×   4600 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: core_linker updated scaling benchmarks: 27.371 seconds"
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "import-before": [
+    "[jtenner/dewdrop] bench semantic/import_intern_bench_wbtest.mbt:2 (\"bench imported structural types count=4096\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    " 797.15 ms ±  12.52 ms   787.36 ms … 811.26 ms  in 3 ×      1 runs",
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: round3 baseline importer benchmarks: 5.925 seconds"
+  ],
+  "import-after": [
+    "[jtenner/dewdrop] bench semantic/import_intern_bench_wbtest.mbt:2 (\"bench imported structural types count=4096\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    "   2.99 ms ± 168.40 µs     2.89 ms …   3.19 ms  in 3 ×     34 runs",
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: round3 importer benchmarks: 4.413 seconds"
+  ],
+  "pack-before": [
+    "[jtenner/dewdrop] bench cache_binary/loaded_index_bench_test.mbt:12 (\"bench loaded pack upsert count=4096\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    "  26.72 ms ± 508.58 µs    26.14 ms …  27.09 ms  in 3 ×      4 runs",
+    "[jtenner/dewdrop] bench cache_binary/loaded_index_bench_test.mbt:17 (\"bench loaded pack lookup count=4096\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    "  28.65 ms ±  96.02 µs    28.58 ms …  28.76 ms  in 3 ×      4 runs",
+    "[jtenner/dewdrop] bench cache_binary/loaded_index_bench_test.mbt:29 (\"bench lazy pack materialize count=4096\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    " 143.71 ms ±   4.40 ms   140.12 ms … 148.62 ms  in 3 ×      1 runs",
+    "Total tests: 3, passed: 3, failed: 0.",
+    "self-host timing: round3 baseline loaded pack benchmarks: 9.610 seconds"
+  ],
+  "pack-after": [
+    "[jtenner/dewdrop] bench cache_binary/loaded_index_bench_test.mbt:12 (\"bench loaded pack upsert count=4096\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    " 536.00 µs ±   5.16 µs   532.16 µs … 541.87 µs  in 3 ×    185 runs",
+    "[jtenner/dewdrop] bench cache_binary/loaded_index_bench_test.mbt:17 (\"bench loaded pack lookup count=4096\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    " 487.60 µs ±   6.58 µs   482.86 µs … 495.12 µs  in 3 ×    203 runs",
+    "[jtenner/dewdrop] bench cache_binary/loaded_index_bench_test.mbt:29 (\"bench lazy pack materialize count=4096\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    " 100.74 ms ±   8.25 ms    95.42 ms … 110.24 ms  in 3 ×      1 runs",
+    "Total tests: 3, passed: 3, failed: 0.",
+    "self-host timing: round3 loaded pack benchmarks: 2.016 seconds"
+  ],
+  "fingerprint": [
+    "[jtenner/dewdrop] bench dew_bootstrap/fingerprint_bench_wbtest.mbt:2 (\"bench bootstrap source fingerprint\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    "  52.28 ms ± 228.60 µs    52.02 ms …  52.47 ms  in 3 ×      2 runs",
+    "[jtenner/dewdrop] bench dew_bootstrap/fingerprint_bench_wbtest.mbt:8 (\"bench bootstrap built artifact fingerprint experiment\") ok",
+    "time (mean ± σ)         range (min … max) ",
+    " 128.29 ms ±   8.32 ms   119.25 ms … 135.61 ms  in 3 ×      1 runs",
+    "Total tests: 2, passed: 2, failed: 0.",
+    "self-host timing: round3 bootstrap identity benchmarks: 5.301 seconds"
+  ]
+}

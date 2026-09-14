@@ -1,0 +1,30 @@
+{
+  "compile_elapsed_s": 5.763,
+  "self_time_ms": {
+    "_M0FP37jtenner7dewdrop8semantic37frozen__declaration__abi__fingerprint": 886.548,
+    "_M0MP311moonbitlang1x6crypto6SHA2569transform": 523.107,
+    "_M0MPC15array10FixedArray12unsafe__blitGyE": 473.056,
+    "_M0MPC16buffer6Buffer19write__string__utf8": 314.154,
+    "_M0MPC15array10FixedArray12unsafe__blitGRPB17UnsafeMaybeUninitGyEE": 270.325,
+    "(garbage collector)": 257.237,
+    "$makebytes": 250.216,
+    "_M0MP37jtenner7dewdrop8semantic21InterfaceTypeImporter14intern__simple": 181.5,
+    "_M0MP37jtenner7dewdrop8semantic21InterfaceTypeImporter16intern__function": 169.676,
+    "_M0IP37jtenner7dewdrop8semantic12ResolvedTypePB2Eq5equal": 153.203,
+    "_M0FP37jtenner7dewdrop8semantic24resolve__module__imports": 149.042,
+    "compileSourceTextModule": 146.095,
+    "_M0MPC15array5Array4makeGbE": 131.124,
+    "_M0MPB18UninitializedArray23unsafe__make__and__blitGyE": 101.159,
+    "_M0MPC16buffer6Buffer17write__char__utf8": 75.271,
+    "_M0IPC16uint646UInt64PB4Hash4hash": 72.078,
+    "_M0MP311moonbitlang1x6crypto6SHA25624__finalize__into_2einner": 66.294,
+    "_M0FP37jtenner7dewdrop8semantic28callable__abi__write__string": 62.554,
+    "$make_array_len_and_init": 53.28,
+    "_M0MPB7JSArray4push": 48.183,
+    "_M0IPB13StringBuilderPB6Logger13write__string": 48.146,
+    "_M0MPC15array5Array3setGiE": 41.713,
+    "_M0FP311moonbitlang1x6crypto23parse__be__u32x16__into": 37.903,
+    "_M0FP311moonbitlang1x6crypto22bytes__to__hex__stringGAyE": 32.531,
+    "": 31.84
+  }
+}

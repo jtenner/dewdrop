@@ -1,0 +1,339 @@
+{
+  "self-host-before": {
+    "timings": [
+      {
+        "step": "MoonBit time provider build",
+        "seconds": 0.004,
+        "stage": "Time provider build"
+      },
+      {
+        "step": "compiler A source build",
+        "seconds": 16.3,
+        "stage": "Build A with MoonBit"
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 31.446,
+        "stage": "Link A"
+      },
+      {
+        "step": "compiler A raw validation",
+        "seconds": 0.02,
+        "stage": "Validate A raw"
+      },
+      {
+        "step": "compiler A validation",
+        "seconds": 0.02,
+        "stage": "Validate A final"
+      },
+      {
+        "step": "compiler request build: a",
+        "seconds": 2.581,
+        "stage": "Create request for A to build B"
+      },
+      {
+        "step": "compiler execution (node-facet): a",
+        "seconds": 20.198,
+        "stage": "Run A to build B"
+      },
+      {
+        "step": "compiler B core validation",
+        "seconds": 0.01,
+        "stage": "Validate B core"
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 5.368,
+        "stage": "Link B"
+      },
+      {
+        "step": "compiler B raw validation",
+        "seconds": 0.022,
+        "stage": "Validate B raw"
+      },
+      {
+        "step": "compiler B validation",
+        "seconds": 0.021,
+        "stage": "Validate B final"
+      },
+      {
+        "step": "compiler B semantic probes",
+        "seconds": 0.06,
+        "stage": "Run B semantic probes"
+      },
+      {
+        "step": "compiler request build: b",
+        "seconds": 0.103,
+        "stage": "Create request for B to build C"
+      },
+      {
+        "step": "compiler execution (node-facet): b",
+        "seconds": 20.858,
+        "stage": "Run B to build C"
+      },
+      {
+        "step": "compiler C core validation",
+        "seconds": 0.009,
+        "stage": "Validate C core"
+      },
+      {
+        "step": "compiler output link: b",
+        "seconds": 5.445,
+        "stage": "Link C"
+      },
+      {
+        "step": "compiler C raw validation",
+        "seconds": 0.018,
+        "stage": "Validate C raw"
+      },
+      {
+        "step": "compiler C validation",
+        "seconds": 0.018,
+        "stage": "Validate C final"
+      }
+    ],
+    "proof": [
+      "self-host performance bug: compiler output link: a exceeded 30 seconds",
+      "self-host fixed point passed",
+      "compiler B raw sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler C raw sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler B sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler C sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf"
+    ]
+  },
+  "prepare-linker": {
+    "timings": [
+      {
+        "step": "prepare native self-host linker",
+        "seconds": 2.215
+      }
+    ],
+    "proof": []
+  },
+  "prepare-bootstrap": {
+    "timings": [
+      {
+        "step": "prepare native bootstrap",
+        "seconds": 3.844
+      }
+    ],
+    "proof": []
+  },
+  "self-host-after": {
+    "timings": [
+      {
+        "step": "MoonBit time provider build",
+        "seconds": 0.003,
+        "stage": "Time provider build"
+      },
+      {
+        "step": "compiler A source build",
+        "seconds": 15.899,
+        "stage": "Build A with MoonBit"
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 4.715,
+        "stage": "Link A"
+      },
+      {
+        "step": "compiler A raw validation",
+        "seconds": 0.019,
+        "stage": "Validate A raw"
+      },
+      {
+        "step": "compiler A validation",
+        "seconds": 0.023,
+        "stage": "Validate A final"
+      },
+      {
+        "step": "compiler request build: a",
+        "seconds": 2.574,
+        "stage": "Create request for A to build B"
+      },
+      {
+        "step": "compiler execution (node-facet): a",
+        "seconds": 20.055,
+        "stage": "Run A to build B"
+      },
+      {
+        "step": "compiler B core validation",
+        "seconds": 0.009,
+        "stage": "Validate B core"
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 5.452,
+        "stage": "Link B"
+      },
+      {
+        "step": "compiler B raw validation",
+        "seconds": 0.019,
+        "stage": "Validate B raw"
+      },
+      {
+        "step": "compiler B validation",
+        "seconds": 0.019,
+        "stage": "Validate B final"
+      },
+      {
+        "step": "compiler B semantic probes",
+        "seconds": 0.061,
+        "stage": "Run B semantic probes"
+      },
+      {
+        "step": "compiler request build: b",
+        "seconds": 0.1,
+        "stage": "Create request for B to build C"
+      },
+      {
+        "step": "compiler execution (node-facet): b",
+        "seconds": 20.274,
+        "stage": "Run B to build C"
+      },
+      {
+        "step": "compiler C core validation",
+        "seconds": 0.009,
+        "stage": "Validate C core"
+      },
+      {
+        "step": "compiler output link: b",
+        "seconds": 5.373,
+        "stage": "Link C"
+      },
+      {
+        "step": "compiler C raw validation",
+        "seconds": 0.019,
+        "stage": "Validate C raw"
+      },
+      {
+        "step": "compiler C validation",
+        "seconds": 0.019,
+        "stage": "Validate C final"
+      }
+    ],
+    "proof": [
+      "self-host fixed point passed",
+      "compiler B raw sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler C raw sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler B sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler C sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf"
+    ]
+  },
+  "self-host-repeat": {
+    "timings": [
+      {
+        "step": "MoonBit time provider build",
+        "seconds": 0.003,
+        "stage": "Time provider build"
+      },
+      {
+        "step": "compiler A source build",
+        "seconds": 13.311,
+        "stage": "Build A with MoonBit"
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 4.768,
+        "stage": "Link A"
+      },
+      {
+        "step": "compiler A raw validation",
+        "seconds": 0.025,
+        "stage": "Validate A raw"
+      },
+      {
+        "step": "compiler A validation",
+        "seconds": 0.021,
+        "stage": "Validate A final"
+      },
+      {
+        "step": "compiler request build: a",
+        "seconds": 0.117,
+        "stage": "Create request for A to build B"
+      },
+      {
+        "step": "compiler execution (node-facet): a",
+        "seconds": 20.73,
+        "stage": "Run A to build B"
+      },
+      {
+        "step": "compiler B core validation",
+        "seconds": 0.009,
+        "stage": "Validate B core"
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 5.485,
+        "stage": "Link B"
+      },
+      {
+        "step": "compiler B raw validation",
+        "seconds": 0.023,
+        "stage": "Validate B raw"
+      },
+      {
+        "step": "compiler B validation",
+        "seconds": 0.02,
+        "stage": "Validate B final"
+      },
+      {
+        "step": "compiler B semantic probes",
+        "seconds": 0.069,
+        "stage": "Run B semantic probes"
+      },
+      {
+        "step": "compiler request build: b",
+        "seconds": 0.109,
+        "stage": "Create request for B to build C"
+      },
+      {
+        "step": "compiler execution (node-facet): b",
+        "seconds": 20.576,
+        "stage": "Run B to build C"
+      },
+      {
+        "step": "compiler C core validation",
+        "seconds": 0.011,
+        "stage": "Validate C core"
+      },
+      {
+        "step": "compiler output link: b",
+        "seconds": 5.42,
+        "stage": "Link C"
+      },
+      {
+        "step": "compiler C raw validation",
+        "seconds": 0.019,
+        "stage": "Validate C raw"
+      },
+      {
+        "step": "compiler C validation",
+        "seconds": 0.019,
+        "stage": "Validate C final"
+      }
+    ],
+    "proof": [
+      "self-host fixed point passed",
+      "compiler B raw sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler C raw sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler B sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler C sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf"
+    ]
+  },
+  "A_core": {
+    "bytes": 2928670,
+    "before_equals_after": true,
+    "sha256": "037be951e02ab7131a199fea56f34d12e96937af5380d3f383d474c74a8fb852"
+  },
+  "B_core": {
+    "bytes": 1471680,
+    "before_equals_after": true,
+    "sha256": "c258206aed63a968c279a94ba651c92477afae30cb98fbbc64ea4b6ce6bf5cb4"
+  },
+  "C_core": {
+    "bytes": 1471680,
+    "before_equals_after": true,
+    "sha256": "c258206aed63a968c279a94ba651c92477afae30cb98fbbc64ea4b6ce6bf5cb4"
+  }
+}

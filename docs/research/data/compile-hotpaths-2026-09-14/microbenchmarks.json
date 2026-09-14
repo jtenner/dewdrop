@@ -1,0 +1,100 @@
+{
+  "byte_decode_bench_test": {
+    "before": [
+      "[jtenner/dewdrop] bench cache_binary/byte_decode_bench_test.mbt:2 (\"bench raw bytes decode bytes=4096\") ok",
+      "  13.94 µs ± 232.89 ns    13.69 µs …  14.38 µs  in 10 ×   5869 runs",
+      "[jtenner/dewdrop] bench cache_binary/byte_decode_bench_test.mbt:13 (\"bench UTF-8 string decode bytes=4096\") ok",
+      "  15.86 µs ± 192.83 ns    15.60 µs …  16.18 µs  in 10 ×   5453 runs",
+      "[jtenner/dewdrop] bench cache_binary/byte_decode_bench_test.mbt:23 (\"bench raw bytes decode bytes=1048576\") ok",
+      "   5.17 ms ± 146.95 µs     5.02 ms …   5.46 ms  in 10 ×     18 runs",
+      "[jtenner/dewdrop] bench cache_binary/byte_decode_bench_test.mbt:34 (\"bench UTF-8 string decode bytes=1048576\") ok",
+      "   4.84 ms ± 348.14 µs     4.51 ms …   5.53 ms  in 10 ×     16 runs",
+      "Total tests: 4, passed: 4, failed: 0.",
+      "self-host timing: second pass baseline byte_decode_bench_test: 5.006 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench cache_binary/byte_decode_bench_test.mbt:2 (\"bench raw bytes decode bytes=4096\") ok",
+      "   4.73 µs ±  41.75 ns     4.67 µs …   4.79 µs  in 10 ×  21419 runs",
+      "[jtenner/dewdrop] bench cache_binary/byte_decode_bench_test.mbt:16 (\"bench UTF-8 string decode bytes=4096\") ok",
+      " 397.06 ns ±  18.78 ns   370.18 ns … 421.30 ns  in 10 × 100000 runs",
+      "[jtenner/dewdrop] bench cache_binary/byte_decode_bench_test.mbt:29 (\"bench raw bytes decode bytes=1048576\") ok",
+      "   1.93 ms ±  82.59 µs     1.88 ms …   2.13 ms  in 10 ×     46 runs",
+      "[jtenner/dewdrop] bench cache_binary/byte_decode_bench_test.mbt:43 (\"bench UTF-8 string decode bytes=1048576\") ok",
+      "  98.91 µs ±  11.07 µs    80.18 µs … 113.79 µs  in 10 ×   1143 runs",
+      "Total tests: 4, passed: 4, failed: 0.",
+      "self-host timing: second pass updated byte_decode_bench_test: 5.224 seconds"
+    ]
+  },
+  "index_search_bench_test": {
+    "before": [
+      "[jtenner/dewdrop] bench cache_binary/index_search_bench_test.mbt:2 (\"bench indexed cache changed content entries=512\") ok",
+      "   1.07 ms ±   4.33 µs     1.07 ms …   1.08 ms  in 10 ×     94 runs",
+      "[jtenner/dewdrop] bench cache_binary/index_search_bench_test.mbt:23 (\"bench indexed cache changed content entries=4096\") ok",
+      "  23.03 ms ± 286.42 µs    22.82 ms …  23.68 ms  in 10 ×      5 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: second pass baseline index_search_bench_test: 10.389 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench cache_binary/index_search_bench_test.mbt:2 (\"bench indexed cache changed content entries=512\") ok",
+      " 854.53 µs ±   8.00 µs   845.87 µs … 872.57 µs  in 10 ×    119 runs",
+      "[jtenner/dewdrop] bench cache_binary/index_search_bench_test.mbt:30 (\"bench indexed cache changed content entries=4096\") ok",
+      "  10.38 ms ±   2.43 ms     7.67 ms …  13.49 ms  in 10 ×     12 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: second pass updated index_search_bench_test: 2.957 seconds"
+    ]
+  },
+  "subtype_lookup_bench_wbtest": {
+    "before": [
+      "[jtenner/dewdrop] bench core_linker/subtype_lookup_bench_wbtest.mbt:2 (\"bench marker subtype checks types=512\") ok",
+      " 100.73 µs ± 159.16 ns   100.52 µs … 101.01 µs  in 10 ×   1002 runs",
+      "[jtenner/dewdrop] bench core_linker/subtype_lookup_bench_wbtest.mbt:10 (\"bench marker subtype checks types=4096\") ok",
+      "   6.05 ms ±  23.78 µs     6.02 ms …   6.09 ms  in 10 ×     17 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: second pass baseline subtype_lookup_bench_wbtest: 5.741 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench core_linker/subtype_lookup_bench_wbtest.mbt:2 (\"bench marker subtype checks types=512\") ok",
+      "   6.32 µs ±   1.29 µs     5.08 µs …   8.07 µs  in 10 ×  12604 runs",
+      "[jtenner/dewdrop] bench core_linker/subtype_lookup_bench_wbtest.mbt:18 (\"bench marker subtype checks types=4096\") ok",
+      "  41.69 µs ±   3.72 µs    37.57 µs …  48.39 µs  in 10 ×   2307 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: second pass updated subtype_lookup_bench_wbtest: 3.653 seconds"
+    ]
+  },
+  "subtype_link_bench_test": {
+    "before": [
+      "[jtenner/dewdrop] bench core_linker/subtype_link_bench_test.mbt:20 (\"bench complete marker link imports=512 types=514\") ok",
+      " 558.25 µs ±  22.04 µs   533.17 µs … 603.34 µs  in 10 ×    174 runs",
+      "[jtenner/dewdrop] bench core_linker/subtype_link_bench_test.mbt:31 (\"bench complete marker link imports=4096 types=4098\") ok",
+      "  13.01 ms ± 438.44 µs    12.48 ms …  13.63 ms  in 10 ×      7 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "full link before benchmark activity: 3.520 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench core_linker/subtype_link_bench_test.mbt:20 (\"bench complete marker link imports=512 types=514\") ok",
+      " 395.21 µs ±  16.71 µs   371.84 µs … 426.53 µs  in 10 ×    225 runs",
+      "[jtenner/dewdrop] bench core_linker/subtype_link_bench_test.mbt:31 (\"bench complete marker link imports=4096 types=4098\") ok",
+      "   3.87 ms ± 115.99 µs     3.74 ms …   4.07 ms  in 10 ×     24 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "full link after benchmark activity: 10.634 seconds"
+    ]
+  },
+  "content_hash_bench_test": {
+    "before": [
+      "[jtenner/dewdrop] bench semantic/content_hash_bench_test.mbt:2 (\"bench content hash freeze modules=32 functions=8\") ok",
+      " 892.79 ms ±  17.44 ms   874.90 ms … 909.74 ms  in 3 ×      1 runs",
+      "[jtenner/dewdrop] bench semantic/content_hash_bench_test.mbt:7 (\"bench content hash freeze modules=128 functions=8\") ok",
+      "   3.86 s ±  35.71 ms     3.82 s …   3.89 s  in 3 ×      1 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: second pass baseline content hashes, three samples: 23.341 seconds"
+    ],
+    "after": [
+      "[jtenner/dewdrop] bench semantic/content_hash_bench_test.mbt:2 (\"bench content hash freeze modules=32 functions=8\") ok",
+      " 167.19 ms ±   8.80 ms   161.92 ms … 177.35 ms  in 3 ×      1 runs",
+      "[jtenner/dewdrop] bench semantic/content_hash_bench_test.mbt:11 (\"bench content hash freeze modules=128 functions=8\") ok",
+      " 302.68 ms ±   6.40 ms   295.53 ms … 307.87 ms  in 3 ×      1 runs",
+      "Total tests: 2, passed: 2, failed: 0.",
+      "self-host timing: second pass updated content_hash_bench_test: 6.712 seconds"
+    ]
+  }
+}

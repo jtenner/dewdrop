@@ -1,0 +1,63 @@
+{
+  "cache-tests": [
+    "Total tests: 21, passed: 21, failed: 0.",
+    "self-host timing: native src/cache_binary tests: 0.569 seconds"
+  ],
+  "import-tests": [
+    "Total tests: 2, passed: 2, failed: 0.",
+    "self-host timing: native src/semantic/import_intern_wbtest.mbt tests: 0.029 seconds"
+  ],
+  "integration": [
+    "Total tests: 7, passed: 7, failed: 0.",
+    "self-host timing: native integration src/backend/starshine_lane_types_wbtest.mbt: 19.352 seconds",
+    "Total tests: 19, passed: 19, failed: 0.",
+    "self-host timing: native integration src/backend/starshine_packed_primitives_wbtest.mbt: 6.538 seconds",
+    "Total tests: 42, passed: 42, failed: 0.",
+    "self-host timing: native integration src/backend/starshine_program_link_wbtest.mbt: 14.242 seconds",
+    "Total tests: 6, passed: 6, failed: 0.",
+    "self-host timing: native integration src/semantic/frozen_interface_cache_wbtest.mbt: 15.331 seconds",
+    "Total tests: 36, passed: 36, failed: 0.",
+    "self-host timing: native integration src/semantic/imported_semantics_wbtest.mbt: 8.018 seconds",
+    "Total tests: 26, passed: 26, failed: 0.",
+    "self-host timing: native integration src/semantic/module_system_wbtest.mbt: 7.140 seconds",
+    "Total tests: 45, passed: 45, failed: 0.",
+    "self-host timing: native integration src/semantic/program_link_plan_wbtest.mbt: 13.619 seconds",
+    "Total tests: 55, passed: 55, failed: 0.",
+    "self-host timing: native integration src/semantic/program_optimization_wbtest.mbt: 16.391 seconds",
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: native integration src/semantic/queue_wbtest.mbt: 0.403 seconds",
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: native integration src/semantic/red_black_tree_wbtest.mbt: 0.449 seconds",
+    "Total tests: 4, passed: 4, failed: 0.",
+    "self-host timing: native integration src/semantic/set_wbtest.mbt: 1.275 seconds",
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: native integration src/semantic/show_wbtest.mbt: 0.414 seconds",
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: native integration src/semantic/stack_wbtest.mbt: 0.383 seconds",
+    "Total tests: 24, passed: 24, failed: 0.",
+    "self-host timing: native integration src/semantic/standard_preamble_wbtest.mbt: 1.983 seconds",
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: native integration src/semantic/text_hash_wbtest.mbt: 0.446 seconds",
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: native integration src/semantic/text_iteration_wbtest.mbt: 0.361 seconds",
+    "Total tests: 1, passed: 1, failed: 0.",
+    "self-host timing: native integration src/semantic/text_ordering_wbtest.mbt: 0.417 seconds"
+  ],
+  "final-tests": [
+    "Total tests: 22, passed: 22, failed: 0.",
+    "self-host timing: native src/cache_binary tests: 0.561 seconds",
+    "Total tests: 19, passed: 19, failed: 0.",
+    "self-host timing: native src/standard_loader tests: 6.245 seconds",
+    "Total tests: 3, passed: 3, failed: 0.",
+    "self-host timing: native src/compiler_driver tests: 13.449 seconds",
+    "Total tests: 9, passed: 9, failed: 0.",
+    "self-host timing: native src/dew_bootstrap tests: 0.597 seconds"
+  ],
+  "check": [
+    "Finished. moon: ran 63 tasks, now up to date (718 warnings, 0 errors)",
+    "self-host timing: round3 native check: 8.963 seconds"
+  ],
+  "build-js": [
+    "self-host timing: round3 build JS compiler: 4.528 seconds"
+  ]
+}

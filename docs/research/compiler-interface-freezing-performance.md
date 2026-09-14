@@ -2,6 +2,10 @@
 
 Date: August 9, 2026
 
+The [September 14 scaling audit](compile-scaling-2026-09-14.md) removes repeated
+dependency-graph hashes during acyclic freezing and records new before/after
+measurements for the full compiler.
+
 ## Scope
 
 This audit profiled the existing release-native semantic benchmark with 64 modules and 32 public functions per module. The manifest forms a dependency chain, so it exercises imported interface construction, callable ABI hashing, nominal/content fingerprints, and transitive reachable-interface fingerprints while keeping graph construction small.
