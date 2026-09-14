@@ -207,11 +207,10 @@ fn starshine_fact_heap_type(
 ///|
 fn starshine_fact_provenance(
   lowering : @semantic.PlannedProgramLowering,
-  planned : @semantic.PlannedProgramWasmGCLink,
-  function : UInt,
+  value : @semantic.PlannedProgramWasmFunction?,
 ) -> @representation.SourceProvenance? {
-  for value in planned.functions {
-    if value.function_index == function.reinterpret_as_int() && !value.elided {
+  match value {
+    Some(value) => {
       let body = match value.kind {
         @semantic.PlannedWasmDefinedFunction(body) => Some(body)
         @semantic.PlannedWasmDefinedLambdaFunction(lambda) =>
@@ -230,8 +229,8 @@ fn starshine_fact_provenance(
         ),
       )
     }
+    None => None
   }
-  None
 }
 
 ///|
@@ -871,6 +870,7 @@ fn starshine_scan_fact_body(
   lowering : @semantic.PlannedProgramLowering,
   planned : @semantic.PlannedProgramWasmGCLink,
   function : UInt,
+  planned_function : @semantic.PlannedProgramWasmFunction?,
   sites : Array[(UInt, @lib.Instruction)],
   singleton_targets : Map[UInt, UInt],
   alias_parameter_by_function : Map[UInt, UInt],
@@ -883,7 +883,7 @@ fn starshine_scan_fact_body(
   let call_facts : Array[@representation.CallSiteFacts] = []
   let allocations : Array[@representation.AllocationSiteFacts] = []
   let local_targets : Map[UInt, UInt] = Map::default()
-  let provenance = starshine_fact_provenance(lowering, planned, function)
+  let provenance = starshine_fact_provenance(lowering, planned_function)
   let mut previous_target : UInt? = None
   for index, entry in sites {
     let offset = entry.0
@@ -1463,6 +1463,24 @@ pub fn attach_starshine_program_compiler_facts(
     }
   }
   let total_functions = planned.imported_function_count + sites.length()
+  let planned_functions : Array[@semantic.PlannedProgramWasmFunction?] = Array::make(
+    total_functions,
+    None,
+  )
+  for value in planned.functions {
+    if !value.elided && value.function_index >= 0 {
+      let index = value.function_index
+      guard index >= 0 && index < total_functions else {
+        abort(
+          "compiler facts: planned function index out of range: \{index}/\{total_functions}",
+        )
+      }
+      guard planned_functions[index] is None else {
+        abort("compiler facts: duplicate planned function index \{index}")
+      }
+      planned_functions[index] = Some(value)
+    }
+  }
   let scans : Array[StarshineFactBodyScan?] = Array::make(total_functions, None)
   for defined in 0..<sites.length() {
     let absolute = planned.imported_function_count + defined
@@ -1470,6 +1488,7 @@ pub fn attach_starshine_program_compiler_facts(
       lowering,
       planned,
       absolute.reinterpret_as_uint(),
+      planned_functions[absolute],
       sites[defined],
       singleton_targets,
       alias_parameter_by_function,
@@ -1489,30 +1508,16 @@ pub fn attach_starshine_program_compiler_facts(
       None => ()
     }
   }
-  let mut changed = true
-  while changed {
-    changed = false
-    for function in planned.imported_function_count..<total_functions {
-      match scans[function] {
-        Some(scan) => {
-          let mut next = scan.effects
-          for callee in scan.direct_callees {
-            let index = callee.reinterpret_as_int()
-            if index >= 0 && index < effects.length() {
-              next = next.union(effects[index])
-            } else {
-              next = next.union(starshine_fact_all_effects())
-            }
-          }
-          if next != effects[function] {
-            effects[function] = next
-            changed = true
-          }
-        }
-        None => ()
-      }
-    }
+  let callees : Array[Array[UInt]] = []
+  for scan in scans {
+    callees.push(
+      match scan {
+        Some(scan) => scan.direct_callees
+        None => []
+      },
+    )
   }
+  starshine_propagate_fact_effects(effects, callees)
   for function in 0..<total_functions {
     let direct = match scans[function] {
       Some(scan) =>
@@ -1523,8 +1528,8 @@ pub fn attach_starshine_program_compiler_facts(
     let taken = address_taken.contains(function.reinterpret_as_uint())
     let mut parameters : Array[@representation.ParameterFacts] = []
     let mut results : Array[@representation.ResultFacts] = []
-    for planned_function in planned.functions {
-      if planned_function.function_index == function && !planned_function.elided {
+    match planned_functions[function] {
+      Some(planned_function) => {
         parameters = starshine_fact_function_parameters(
           lowering,
           planned_function,
@@ -1539,8 +1544,8 @@ pub fn attach_starshine_program_compiler_facts(
         results = starshine_fact_function_results(
           lowering, planned_function, summary,
         )
-        break
       }
+      None => ()
     }
     builder.add_function(
       @representation.FunctionFacts::new(
@@ -1663,4 +1668,46 @@ pub fn measure_starshine_compiler_fact_size(
       payload * 10000 / core
     },
   })
+}
+
+///|
+/// Propagate each new effect bit only to callers that depend on it.
+fn starshine_propagate_fact_effects(
+  effects : Array[@representation.EffectMask],
+  callees : Array[Array[UInt]],
+) -> Unit {
+  guard effects.length() == callees.length() else {
+    abort("compiler facts: effect and call graph lengths differ")
+  }
+  let callers : Array[Array[Int]] = []
+  let pending : Array[Int] = []
+  let queued = Array::make(effects.length(), true)
+  for function in 0..<effects.length() {
+    callers.push([])
+    pending.push(function)
+  }
+  for function, targets in callees {
+    for target in targets {
+      let callee = target.reinterpret_as_int()
+      if callee >= 0 && callee < effects.length() {
+        callers[callee].push(function)
+      } else {
+        effects[function] = starshine_fact_all_effects()
+      }
+    }
+  }
+  while pending.length() > 0 {
+    let callee = pending.pop().unwrap()
+    queued[callee] = false
+    for caller in callers[callee] {
+      let next = effects[caller].union(effects[callee])
+      if next != effects[caller] {
+        effects[caller] = next
+        if !queued[caller] {
+          queued[caller] = true
+          pending.push(caller)
+        }
+      }
+    }
+  }
 }

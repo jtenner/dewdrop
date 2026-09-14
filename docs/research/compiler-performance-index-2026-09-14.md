@@ -26,3 +26,10 @@ checks. Intern imported structural types with owned keys and preserve first IDs.
 Interface freezing fell from 3.86 s to 303 ms in pass two. Imported-type creation
 fell from 797.15 to 2.99 ms in pass three. New ID and scratch-ownership tests and
 all 36 existing import tests passed.
+
+## Backend facts
+
+Propagate effects through a reverse-caller worklist. Use a direct array for
+emitted function provenance and signature facts. Exclude elided and signature-only
+functions; assert valid, unique emitted indices. Chain and inline-function
+regressions pass, as do the backend integration lanes.
