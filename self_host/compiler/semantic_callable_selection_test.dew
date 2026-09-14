@@ -27,7 +27,7 @@ fn self_host_callable_body_calls(
   let _ = while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(_, _, _) => calls.push(current)
+        CallExpr(_, _, _) => calls.push(current)
         _ => {}
       }
       continue current + 1u32
@@ -50,28 +50,28 @@ test "callable selection uses arguments and expected results" {
   let convert_calls = self_host_callable_body_calls(collected, convert_hir)
   let make_calls = self_host_callable_body_calls(collected, make_hir)
   let convert_body = match inferred.body(convert_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let make_body = match inferred.body(make_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   assert(convert_body.diagnostic_count() == 0u32, "convert diagnostics")
   assert(make_body.diagnostic_count() == 0u32, "make diagnostics")
   match convert_body.call_target(convert_hir, convert_calls[0u32]) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => assert(
+    SelectedBasicCallTarget(declaration, _) => assert(
       declaration == collected.declarations[0u32].id,
       "I32 convert overload",
     )
     _ => assert(false, "selected convert overload")
   }
   match make_body.call_target(make_hir, make_calls[0u32]) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => assert(
+    SelectedBasicCallTarget(declaration, _) => assert(
       declaration == collected.declarations[3u32].id,
       "F32 make overload",
     )
@@ -89,14 +89,14 @@ test "callable selection prefers concrete overloads" {
   let hir_body = collected.bodies[0u32]
   let calls = self_host_callable_body_calls(collected, hir_body)
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   assert(body.diagnostic_count() == 0u32, "concrete overload diagnostics")
   match body.call_target(hir_body, calls[0u32]) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+    SelectedBasicCallTarget(declaration, arguments) => {
       assert(declaration == collected.declarations[1u32].id, "concrete overload")
       assert(arguments.length == 0u32, "concrete type arguments")
     }
@@ -120,14 +120,14 @@ test "callable selection diagnoses ambiguous and missing overloads" {
   let ambiguous_hir = ambiguous_collected.bodies[0u32]
   let missing_hir = missing_collected.bodies[0u32]
   let ambiguous_body = match ambiguous.body(ambiguous_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let missing_body = match missing.body(missing_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -136,7 +136,7 @@ test "callable selection diagnoses ambiguous and missing overloads" {
   let _ = while index {
     current => if current < ambiguous_body.diagnostic_count() {
       match ambiguous_body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::AmbiguousDirectCall(_, _, _, _, _, _) => {
+        AmbiguousDirectCall(_, _, _, _, _, _) => {
           ambiguous_count = ambiguous_count + 1u32
         }
         _ => {}
@@ -151,7 +151,7 @@ test "callable selection diagnoses ambiguous and missing overloads" {
   let _ = while index {
     current => if current < missing_body.diagnostic_count() {
       match missing_body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, _) => {
+        NoMatchingDirectCall(_, _, _) => {
           missing_count = missing_count + 1u32
         }
         _ => {}

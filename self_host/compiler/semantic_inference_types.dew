@@ -33,9 +33,9 @@ pub enum SelfHostLocalInferenceDiagnostic {
 impl SelfHostLocalInferenceDiagnostic {
   fn offset(self) -> U32 {
     match self {
-      SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(_, _, origin) => origin.offset
-      SelfHostLocalInferenceDiagnostic::InfiniteLocalType(_, _, origin) => origin.offset
-      SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(_, _, origin) => origin.offset
+      LocalTypeMismatch(_, _, origin) => origin.offset
+      InfiniteLocalType(_, _, origin) => origin.offset
+      InvalidLocalMemberProjection(_, _, origin) => origin.offset
     }
   }
 }
@@ -44,8 +44,8 @@ fn self_host_expression_type_origin(
   source: U32,
   offset: U32,
 ) -> SelfHostTypeConstraintOrigin {
-  SelfHostTypeConstraintOrigin::{
-    kind: SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint
+  {
+    kind: ExpressionTypeConstraint
     source: source
     offset: offset
   }
@@ -55,8 +55,8 @@ fn self_host_pattern_type_origin(
   source: U32,
   offset: U32,
 ) -> SelfHostTypeConstraintOrigin {
-  SelfHostTypeConstraintOrigin::{
-    kind: SelfHostTypeConstraintOriginKind::PatternTypeConstraint
+  {
+    kind: PatternTypeConstraint
     source: source
     offset: offset
   }
@@ -66,8 +66,8 @@ fn self_host_local_type_origin(
   source: U32,
   offset: U32,
 ) -> SelfHostTypeConstraintOrigin {
-  SelfHostTypeConstraintOrigin::{
-    kind: SelfHostTypeConstraintOriginKind::LocalTypeConstraint
+  {
+    kind: LocalTypeConstraint
     source: source
     offset: offset
   }
@@ -77,8 +77,8 @@ fn self_host_return_type_origin(
   source: U32,
   offset: U32,
 ) -> SelfHostTypeConstraintOrigin {
-  SelfHostTypeConstraintOrigin::{
-    kind: SelfHostTypeConstraintOriginKind::ReturnTypeConstraint
+  {
+    kind: ReturnTypeConstraint
     source: source
     offset: offset
   }
@@ -88,8 +88,8 @@ fn self_host_call_type_origin(
   source: U32,
   offset: U32,
 ) -> SelfHostTypeConstraintOrigin {
-  SelfHostTypeConstraintOrigin::{
-    kind: SelfHostTypeConstraintOriginKind::CallTypeConstraint
+  {
+    kind: CallTypeConstraint
     source: source
     offset: offset
   }
@@ -99,8 +99,8 @@ fn self_host_operator_type_origin(
   source: U32,
   offset: U32,
 ) -> SelfHostTypeConstraintOrigin {
-  SelfHostTypeConstraintOrigin::{
-    kind: SelfHostTypeConstraintOriginKind::OperatorTypeConstraint
+  {
+    kind: OperatorTypeConstraint
     source: source
     offset: offset
   }
@@ -110,8 +110,8 @@ fn self_host_synthetic_type_origin(
   source: U32,
   offset: U32,
 ) -> SelfHostTypeConstraintOrigin {
-  SelfHostTypeConstraintOrigin::{
-    kind: SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+  {
+    kind: SyntheticTypeConstraint
     source: source
     offset: offset
   }
@@ -122,13 +122,13 @@ fn self_host_type_origin_equal(
   right: SelfHostTypeConstraintOrigin,
 ) -> Bool {
   let kind_equal = match left.kind {
-    SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint
-    SelfHostTypeConstraintOriginKind::PatternTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::PatternTypeConstraint
-    SelfHostTypeConstraintOriginKind::LocalTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::LocalTypeConstraint
-    SelfHostTypeConstraintOriginKind::ReturnTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::ReturnTypeConstraint
-    SelfHostTypeConstraintOriginKind::CallTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::CallTypeConstraint
-    SelfHostTypeConstraintOriginKind::OperatorTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::OperatorTypeConstraint
-    SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint => right.kind is SelfHostTypeConstraintOriginKind::SyntheticTypeConstraint
+    ExpressionTypeConstraint => right.kind is ExpressionTypeConstraint
+    PatternTypeConstraint => right.kind is PatternTypeConstraint
+    LocalTypeConstraint => right.kind is LocalTypeConstraint
+    ReturnTypeConstraint => right.kind is ReturnTypeConstraint
+    CallTypeConstraint => right.kind is CallTypeConstraint
+    OperatorTypeConstraint => right.kind is OperatorTypeConstraint
+    SyntheticTypeConstraint => right.kind is SyntheticTypeConstraint
   }
   kind_equal && left.source == right.source && left.offset == right.offset
 }

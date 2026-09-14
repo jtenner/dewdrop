@@ -1,13 +1,13 @@
 fn self_host_lowered_child_capture_source(context: SelfHostLoweredChildContext, parent: U32, index: U32, source: SelfHostLambdaCaptureSource) -> Unit {
   let (span, local, lambda) = match source {
-    SelfHostLambdaCaptureSource::BodyLocalCapture(owner, local) => {
+    BodyLocalCapture(owner, local) => {
       if !self_host_u64_equal(owner, context.body.body) {
         self_host_lowered_child_failure(context, 106u32, parent,
           context.body.body, owner, (22u64 << 32u64) | u32_into_u64(index),
         )
       }
       let body_index = self_host_semantic_id_local(owner)
-      self_host_lowered_child_index(context, parent, SelfHostHirSpan::{
+      self_host_lowered_child_index(context, parent, {
         start: 0u32
         length: context.module_.bodies.length()
       }, body_index, 22u32)
@@ -19,7 +19,7 @@ fn self_host_lowered_child_capture_source(context: SelfHostLoweredChildContext, 
       }
       (body.locals, local, 4294967295u32)
     }
-    SelfHostLambdaCaptureSource::LambdaLocalCapture(owner, local) => {
+    LambdaLocalCapture(owner, local) => {
       // Do not recursively inspect the source lambda's captures. A malformed
       // self-reference must remain a bounded ownership check.
       let lambda = self_host_lowered_child_lambda_record(context, parent, owner)
@@ -27,7 +27,7 @@ fn self_host_lowered_child_capture_source(context: SelfHostLoweredChildContext, 
     }
   }
   self_host_lowered_child_span(context, parent, span, context.module_.locals.length(), 2u32)
-  self_host_lowered_child_index(context, parent, SelfHostHirSpan::{
+  self_host_lowered_child_index(context, parent, {
     start: 0u32
     length: span.length
   }, local, 2u32)
@@ -36,8 +36,8 @@ fn self_host_lowered_child_capture_source(context: SelfHostLoweredChildContext, 
 
 fn self_host_lowered_capture_source_available(context: SelfHostLoweredChildContext, source: SelfHostLambdaCaptureSource) -> Bool {
   let direct = match source {
-    SelfHostLambdaCaptureSource::BodyLocalCapture(owner, _) => context.lambda == 4294967295u32 && self_host_u64_equal(owner, context.body.body)
-    SelfHostLambdaCaptureSource::LambdaLocalCapture(owner, _) => owner == context.lambda
+    BodyLocalCapture(owner, _) => context.lambda == 4294967295u32 && self_host_u64_equal(owner, context.body.body)
+    LambdaLocalCapture(owner, _) => owner == context.lambda
   }
   if direct {
     return true

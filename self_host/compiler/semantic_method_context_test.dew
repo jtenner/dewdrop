@@ -3,7 +3,7 @@ test "foreign host imports keep namespace metadata through physical planning" {
     b"foreign import \"link:provider\" as Host {\n  fn call() -> Unit = \"call\"\n}\n",
   )
   assert(invalid.diagnostics.length() == 1u32, "reserved host namespace must be diagnostic")
-  assert(invalid.diagnostics[0u32] is SelfHostCollectionDiagnostic::ReservedForeignHostNamespace(_, _), "host imports must not become linked providers")
+  assert(invalid.diagnostics[0u32] is ReservedForeignHostNamespace(_, _), "host imports must not become linked providers")
   let link = self_host_physical_test_named_import_link("app.host",
     b"foreign import \"custom.host\" as Host {\n  fn host_send(value: I64) -> I32 = \"send\"\n}\npub fn send(value: I64) -> I32 {\n  Host.host_send(value)\n}\n",
     b"open app.host\npub fn run() -> I32 {\n  send(7i64)\n}\n",
@@ -15,7 +15,7 @@ test "foreign host imports keep namespace metadata through physical planning" {
   for module_ in link.fragments.modules {
     for function_ in module_.functions {
       match function_.kind {
-        SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(namespace, field) => {
+        PlannedWasmImportedFunction(namespace, field) => {
           assert(namespace.equals(b"custom.host"), "host import namespace must be exact")
           assert(field.equals(b"send"), "host import field must be exact")
           found = true
@@ -40,7 +40,7 @@ test "imported method candidates accept Never and reject wrong scalar arguments"
   )
   let module_ = self_host_planned_module_lowering_identity(wrong.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "wrong argument must stay diagnostic")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _), "wrong scalar is not assignable")
+  assert(module_.inferred.diagnostics[0u32] is NoMatchingMethod(_, _, _), "wrong scalar is not assignable")
 }
 
 test "outer imported method supplies the result type of an inner conversion" {
@@ -62,5 +62,5 @@ test "retrying a method cannot hide a true result type ambiguity" {
   )
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "one unresolved ambiguity remains")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _), "both valid conversions must stay visible")
+  assert(module_.inferred.diagnostics[0u32] is AmbiguousMethod(_, _, _, _, 2u32, _), "both valid conversions must stay visible")
 }

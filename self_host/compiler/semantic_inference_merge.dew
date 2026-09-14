@@ -61,7 +61,7 @@ fn self_host_merged_module_inference_identity(
 }
 
 fn self_host_merge_span(start: U32, length: U32) -> SelfHostHirSpan {
-  SelfHostHirSpan::{
+  {
     start: start
     length: length
   }
@@ -76,7 +76,7 @@ fn self_host_merge_type(type_: I32, base: U32) -> I32 {
 }
 
 fn self_host_merge_type_span(span: SelfHostHirSpan, base: U32) -> SelfHostHirSpan {
-  SelfHostHirSpan::{
+  {
     start: self_host_u32_add(span.start, base)
     length: span.length
   }
@@ -88,20 +88,20 @@ fn self_host_merge_type_term(
   argument_base: U32,
 ) -> SelfHostBodyTypeTerm {
   match term {
-    SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => SelfHostBodyTypeTerm::BodyMemberTypeProjection(self_host_merge_type(owner, type_base), operation, selector)
-    SelfHostBodyTypeTerm::BodyErrorType => SelfHostBodyTypeTerm::BodyErrorType
-    SelfHostBodyTypeTerm::BodyResolvedType(type_) => SelfHostBodyTypeTerm::BodyResolvedType(type_)
-    SelfHostBodyTypeTerm::BodyVariableType(variable) => SelfHostBodyTypeTerm::BodyVariableType(
+    BodyMemberTypeProjection(owner, operation, selector) => BodyMemberTypeProjection(self_host_merge_type(owner, type_base), operation, selector)
+    BodyErrorType => BodyErrorType
+    BodyResolvedType(type_) => BodyResolvedType(type_)
+    BodyVariableType(variable) => BodyVariableType(
       self_host_u32_add(variable, type_base),
     )
-    SelfHostBodyTypeTerm::BodyProductType(arguments) => SelfHostBodyTypeTerm::BodyProductType(
+    BodyProductType(arguments) => BodyProductType(
       self_host_merge_type_span(arguments, argument_base),
     )
-    SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => SelfHostBodyTypeTerm::BodyAppliedType(
+    BodyAppliedType(base, arguments) => BodyAppliedType(
       self_host_merge_type(base, type_base),
       self_host_merge_type_span(arguments, argument_base),
     )
-    SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => SelfHostBodyTypeTerm::BodyFunctionType(
+    BodyFunctionType(parameters, result) => BodyFunctionType(
       self_host_merge_type_span(parameters, argument_base),
       self_host_merge_type(result, type_base),
     )
@@ -113,13 +113,13 @@ fn self_host_merge_call_target(
   argument_base: U32,
 ) -> SelfHostBasicCallTarget {
   match target {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
-      SelfHostBasicCallTarget::SelectedBasicCallTarget(
+    SelectedBasicCallTarget(declaration, arguments) => {
+      SelectedBasicCallTarget(
         declaration,
         self_host_merge_type_span(arguments, argument_base),
       )
     }
-    SelfHostBasicCallTarget::BoundTraitBasicCallTarget(requirement, parameter, bound, arguments) => SelfHostBasicCallTarget::BoundTraitBasicCallTarget(requirement, parameter, bound, self_host_merge_type_span(arguments, argument_base))
+    BoundTraitBasicCallTarget(requirement, parameter, bound, arguments) => BoundTraitBasicCallTarget(requirement, parameter, bound, self_host_merge_type_span(arguments, argument_base))
     _ => target
   }
 }
@@ -130,21 +130,21 @@ fn self_host_merge_append_expression_selection(
   argument_base: U32,
 ) -> Unit {
   match selection {
-    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+    StructConstructionBasicExpressionSelection(
       declaration,
       arguments,
     ) => target.push(
-      SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+      StructConstructionBasicExpressionSelection(
         declaration,
         self_host_merge_type_span(arguments, argument_base),
       ),
     )
-    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+    VariantConstructionBasicExpressionSelection(
       variant,
       tag,
       arguments,
     ) => target.push(
-      SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      VariantConstructionBasicExpressionSelection(
         variant,
         tag,
         self_host_merge_type_span(arguments, argument_base),
@@ -159,11 +159,11 @@ fn self_host_merge_pattern_constructor(
   argument_base: U32,
 ) -> SelfHostBasicPatternConstructor {
   match constructor {
-    SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+    SelectedBasicPatternConstructor(
       declaration,
       imported,
       arguments,
-    ) => SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+    ) => SelectedBasicPatternConstructor(
       declaration,
       imported,
       self_host_merge_type_span(arguments, argument_base),
@@ -177,16 +177,16 @@ fn self_host_merge_local_diagnostic(
   type_base: U32,
 ) -> SelfHostLocalInferenceDiagnostic {
   match diagnostic {
-    SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(type_, message, origin) => SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(self_host_merge_type(type_, type_base), message, origin)
-    SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(left, right, origin) => {
-      SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(
+    InvalidLocalMemberProjection(type_, message, origin) => InvalidLocalMemberProjection(self_host_merge_type(type_, type_base), message, origin)
+    LocalTypeMismatch(left, right, origin) => {
+      LocalTypeMismatch(
         self_host_merge_type(left, type_base),
         self_host_merge_type(right, type_base),
         origin,
       )
     }
-    SelfHostLocalInferenceDiagnostic::InfiniteLocalType(variable, type_, origin) => {
-      SelfHostLocalInferenceDiagnostic::InfiniteLocalType(
+    InfiniteLocalType(variable, type_, origin) => {
+      InfiniteLocalType(
         self_host_u32_add(variable, type_base),
         self_host_merge_type(type_, type_base),
         origin,
@@ -200,8 +200,8 @@ fn self_host_merge_diagnostic(
   type_base: U32,
 ) -> SelfHostBodyInferenceDiagnostic {
   match diagnostic {
-    SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(local) => {
-      SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(
+    BodyConstraintDiagnostic(local) => {
+      BodyConstraintDiagnostic(
         self_host_merge_local_diagnostic(local, type_base),
       )
     }
@@ -376,7 +376,7 @@ fn self_host_merge_inference_job(
       break self_host_semantic_unit()
     }
   }
-  target.jobs.push(SelfHostMergedInferenceJob::{
+  target.jobs.push({
     kind: kind
     root_type: self_host_merge_type(source.root_type, type_base)
     types: self_host_merge_span(type_base, source.types.length())
@@ -404,7 +404,7 @@ fn self_host_merge_inference_job(
 fn self_host_merge_module_inference(
   inferred: SelfHostBasicInferredModuleBodies,
 ) -> SelfHostMergedModuleInference {
-  let target = SelfHostMergedModuleInference::{
+  let target = {
     module_id: inferred.module_id
     jobs: []
     types: []
@@ -433,7 +433,7 @@ fn self_host_merge_module_inference(
       let body = inferred.bodies[current]
     self_host_merge_inference_job(
       target,
-      SelfHostMergedInferenceJobKind::MergedBodyInferenceJob(body.body),
+      MergedBodyInferenceJob(body.body),
       body,
     )
         continue current + 1u32
@@ -447,7 +447,7 @@ fn self_host_merge_module_inference(
       let lambda = inferred.lambdas[current]
     self_host_merge_inference_job(
       target,
-      SelfHostMergedInferenceJobKind::MergedLambdaInferenceJob(lambda.lambda),
+      MergedLambdaInferenceJob(lambda.lambda),
       lambda.body,
     )
         continue current + 1u32

@@ -56,7 +56,7 @@ impl SelfHostProgramLoweringIndex {
             self.module_ids[direct],
             module_id,
           ) {
-            return Option::Some(direct)
+            return Some(direct)
           }
         }
       }
@@ -65,11 +65,11 @@ impl SelfHostProgramLoweringIndex {
     while index {
       current => if current < self.module_ids.length() {
         if self_host_u64_equal(self.module_ids[current], module_id) {
-          break Option::Some(current)
+          break Some(current)
         }
         continue current + 1u32
       } else {
-        break Option::None
+        break None
       }
     }
   }
@@ -151,7 +151,7 @@ fn self_host_program_module_dependencies(
           break self_host_semantic_unit()
         }
       }
-      spans.push(SelfHostHirSpan::{
+      spans.push({
         start: start
         length: values.length() - start
       })
@@ -401,7 +401,7 @@ fn self_host_program_module_sccs(
         raw_sizes,
         raw_component,
       )
-      sccs.push(SelfHostHirSpan::{
+      sccs.push({
         start: member_start
         length: component_size
       })
@@ -452,7 +452,7 @@ fn self_host_plan_program_module_graph(
     dependencies,
     dependency_modules,
   )
-  let graph = SelfHostProgramModuleGraph::{
+  let graph = {
     dependencies: dependencies
     dependency_modules: dependency_modules
     sccs: sccs
@@ -515,18 +515,19 @@ fn self_host_program_lowering_reference_name(
   reference: SelfHostBodyNameReference,
 ) -> String {
   match reference {
-    SelfHostBodyNameReference::NoNameReference => "none"
-    SelfHostBodyNameReference::ErrorNameReference => "error"
-    SelfHostBodyNameReference::LocalNameReference(_) => "local"
-    SelfHostBodyNameReference::LambdaCaptureNameReference(_) => "capture"
-    SelfHostBodyNameReference::ModuleValueNameReference(_) => "module-value"
-    SelfHostBodyNameReference::ImportedModuleValueNameReference(_) => "imported-value"
-    SelfHostBodyNameReference::ImportedModuleNameReference(_) => "imported-module"
-    SelfHostBodyNameReference::ForeignLibraryNameReference(_) => "foreign-library"
-    SelfHostBodyNameReference::PrimitiveTypeNameReference(_) => "primitive-type"
-    SelfHostBodyNameReference::ModuleTypeNameReference(_) => "module-type"
-    SelfHostBodyNameReference::ModuleTraitNameReference(_) => "module-trait"
-    SelfHostBodyNameReference::VariantNameReference(_) => "variant"
+    NoNameReference => "none"
+    ErrorNameReference => "error"
+    LocalNameReference(_) => "local"
+    LambdaCaptureNameReference(_) => "capture"
+    ModuleValueNameReference(_) => "module-value"
+    ImportedModuleValueNameReference(_) => "imported-value"
+    ImportedModuleNameReference(_) => "imported-module"
+    ForeignLibraryNameReference(_) => "foreign-library"
+    PrimitiveTypeNameReference(_) => "primitive-type"
+    ModuleTypeNameReference(_) => "module-type"
+    ModuleTraitNameReference(_) => "module-trait"
+    VariantNameReference(_) => "variant"
+    ContextualFactoryNameReference(_) => "contextual-factory"
   }
 }
 
@@ -536,13 +537,13 @@ fn self_host_program_type_diagnostic_text(
 ) -> String {
   let message = StringBuilder::new()
   match diagnostic {
-    SelfHostTypeDiagnostic::ReservedTypeName(_, name, offset) => {
+    ReservedTypeName(_, name, offset) => {
       message.append("reserved-type name=")
       message.append(collected.name(name))
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::UnknownType(name, owner, offset) => {
+    UnknownType(name, owner, offset) => {
       message.append("unknown-type name=")
       message.append(collected.name(name))
       message.append(" owner=")
@@ -550,7 +551,7 @@ fn self_host_program_type_diagnostic_text(
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::UnknownTrait(name, owner, offset) => {
+    UnknownTrait(name, owner, offset) => {
       message.append("unknown-trait name=")
       message.append(collected.name(name))
       message.append(" owner=")
@@ -558,7 +559,7 @@ fn self_host_program_type_diagnostic_text(
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::AmbiguousImportedType(name, owner, offset) => {
+    AmbiguousImportedType(name, owner, offset) => {
       message.append("ambiguous-imported-type name=")
       message.append(collected.name(name))
       message.append(" owner=")
@@ -566,7 +567,7 @@ fn self_host_program_type_diagnostic_text(
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::AmbiguousImportedTrait(name, owner, offset) => {
+    AmbiguousImportedTrait(name, owner, offset) => {
       message.append("ambiguous-imported-trait name=")
       message.append(collected.name(name))
       message.append(" owner=")
@@ -574,13 +575,13 @@ fn self_host_program_type_diagnostic_text(
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::ExpectedTraitType(_, owner, offset) => {
+    ExpectedTraitType(_, owner, offset) => {
       message.append("expected-trait owner=")
       message.append_u64(owner)
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::TypeArityMismatch(_, expected, actual, owner, offset) => {
+    TypeArityMismatch(_, expected, actual, owner, offset) => {
       message.append("type-arity expected=")
       message.append_u32(expected)
       message.append(" actual=")
@@ -590,23 +591,23 @@ fn self_host_program_type_diagnostic_text(
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::TypeNotApplicable(_, owner, offset) => {
+    TypeNotApplicable(_, owner, offset) => {
       message.append("type-not-applicable owner=")
       message.append_u64(owner)
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::SelfOutsideContext(owner, offset) => {
+    SelfOutsideContext(owner, offset) => {
       message.append("self-outside-context owner=")
       message.append_u64(owner)
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::AliasCycle(_, offset) => {
+    AliasCycle(_, offset) => {
       message.append("alias-cycle offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::AliasExpansionLimit(owner, work, offset) => {
+    AliasExpansionLimit(owner, work, offset) => {
       message.append("alias-expansion-limit owner=")
       message.append_u64(owner)
       message.append(" work=")
@@ -614,7 +615,7 @@ fn self_host_program_type_diagnostic_text(
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostTypeDiagnostic::ComputedTypeFailure(owner, detail, offset) => {
+    ComputedTypeFailure(owner, detail, offset) => {
       message.append(detail)
       message.append(" owner=")
       message.append_u64(owner)
@@ -651,11 +652,11 @@ fn self_host_program_lowering_expression_error(
   message.append(" declaration=")
   message.append_u64(body.declaration)
   match self_host_program_specialization_callable(module_, body.declaration) {
-    Option::Some(callable) => {
+    Some(callable) => {
       message.append(" callable=")
       message.append(bytes_to_string(callable.name))
     }
-    Option::None => {}
+    None => {}
   }
   message.append(" body=")
   message.append_u64(body.body)
@@ -692,7 +693,7 @@ fn self_host_program_lowering_expression_error(
   }
   message.append(" items=")
   match body.root {
-    SelfHostHirBodyRoot::BlockBodyRoot(block) => if block < module_.blocks.length() {
+    BlockBodyRoot(block) => if block < module_.blocks.length() {
       let items = module_.blocks[block].items
       let mut item_offset = 0u32
       let _ = while item_offset {
@@ -703,13 +704,13 @@ fn self_host_program_lowering_expression_error(
               message.append(",")
             }
             match module_.block_items[item_index].kind {
-              SelfHostPlannedBlockItemKind::PlannedLetItem(local, _, value) => {
+              PlannedLetItem(local, _, value) => {
                 message.append("let:")
                 message.append_u32(local)
                 message.append(":")
                 message.append_u32(value)
               }
-              SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => {
+              PlannedExpressionItem(value) => {
                 message.append("expression:")
                 message.append_u32(value)
               }
@@ -731,20 +732,20 @@ fn self_host_validate_program_lowering(
   lowering: SelfHostPlannedProgramLowering,
 ) -> Option<String> {
   match self_host_raw_array_contract_error(lowering.raw_arrays) {
-    Option::Some(error) => return Option::Some(error)
-    Option::None => {}
+    Some(error) => return Some(error)
+    None => {}
   }
   if lowering.compile_time.diagnostics.length() > 0u32 {
-    return Option::Some(lowering.compile_time.diagnostics[0u32])
+    return Some(lowering.compile_time.diagnostics[0u32])
   }
   match self_host_validate_collected_program_storage(lowering.collected) {
-    Option::Some(error) => {
+    Some(error) => {
       let message = StringBuilder::new()
       message.append("program lowering changed collected storage: ")
       message.append(error)
-      return Option::Some(message.finish())
+      return Some(message.finish())
     }
-    Option::None => {}
+    None => {}
   }
   let mut module_index = 0u32
   let _ = while module_index {
@@ -765,7 +766,7 @@ fn self_host_validate_program_lowering(
         message.append_u32(callable_lookup_length)
         message.append(" backing=")
         message.append_u32(callable_lookup_backing)
-        return Option::Some(message.finish())
+        return Some(message.finish())
       }
       let callable_length = module_.functions.callables.length()
       let callable_backing = self_host_callable_array_backing_length(
@@ -779,7 +780,7 @@ fn self_host_validate_program_lowering(
         message.append_u32(callable_length)
         message.append(" backing=")
         message.append_u32(callable_backing)
-        return Option::Some(message.finish())
+        return Some(message.finish())
       }
       let exact_resolved = self_host_resolved_module_types_identity(
         module_.resolved_types,
@@ -809,7 +810,7 @@ fn self_host_validate_program_lowering(
                 message.append_u32(parameter_index)
                 message.append(" arena=")
                 message.append_u32(module_.functions.parameters.length())
-                return Option::Some(message.finish())
+                return Some(message.finish())
               }
               let parameter = self_host_planned_parameter_identity(
                 module_.functions.parameters[parameter_index],
@@ -831,7 +832,7 @@ fn self_host_validate_program_lowering(
                 message.append_u64(parameter.declaration)
                 message.append(" type=")
                 message.append_u32(parameter.type_)
-                return Option::Some(message.finish())
+                return Some(message.finish())
               }
               if !self_host_u32_greater(
                 exact_resolved.types.length(),
@@ -856,9 +857,9 @@ fn self_host_validate_program_lowering(
                 message.append_u32(exact_resolved.error_type)
                 message.append(" type_count=")
                 message.append_u32(exact_resolved.types.length())
-                return Option::Some(message.finish())
+                return Some(message.finish())
               }
-              if exact_resolved.types[parameter.type_] is SelfHostResolvedType::ErrorType {
+              if exact_resolved.types[parameter.type_] is ErrorType {
                 let message = StringBuilder::new()
                 message.append("program lowering callable parameter resolved to error module=")
                 message.append_u64(module_.module_id)
@@ -887,27 +888,27 @@ fn self_host_validate_program_lowering(
                       message.append_u32(source_parameter.type_)
                       if source_parameter.type_ < collected_module.type_syntax.length() {
                         match collected_module.type_syntax[source_parameter.type_] {
-                          SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => {
+                          NamedTypeSyntax(name, _) => {
                             message.append(":named:")
                             message.append(collected_module.name(name))
                           }
-                          SelfHostHirTypeSyntax::QualifiedTypeSyntax(_, name, _, _) => {
+                          QualifiedTypeSyntax(_, name, _, _) => {
                             message.append(":qualified:")
                             message.append(collected_module.name(name))
                           }
-                          SelfHostHirTypeSyntax::AppliedTypeSyntax(_, arguments, _) => {
+                          AppliedTypeSyntax(_, arguments, _) => {
                             message.append(":applied:")
                             message.append_u32(arguments.length)
                           }
-                          SelfHostHirTypeSyntax::ProductTypeSyntax(fields, _) => {
+                          ProductTypeSyntax(fields, _) => {
                             message.append(":product:")
                             message.append_u32(fields.length)
                           }
-                          SelfHostHirTypeSyntax::FunctionTypeSyntax(parameters, _, _) => {
+                          FunctionTypeSyntax(parameters, _, _) => {
                             message.append(":function:")
                             message.append_u32(parameters.length)
                           }
-                          SelfHostHirTypeSyntax::ComputedTypeSyntax(target, _, _) => {
+                          ComputedTypeSyntax(target, _, _) => {
                             message.append(":computed:")
                             message.append_u32(target)
                           }
@@ -929,7 +930,7 @@ fn self_host_validate_program_lowering(
                     exact_resolved.diagnostics[0u32],
                   ))
                   match exact_resolved.diagnostics[0u32] {
-                    SelfHostTypeDiagnostic::UnknownType(name, _, _) => {
+                    UnknownType(name, _, _) => {
                       let spelling = collected_module.name(name)
                       let debug_frozen = self_host_freeze_program_signature_interfaces(
                         lowering.collected,
@@ -937,8 +938,8 @@ fn self_host_validate_program_lowering(
                       let scope = debug_frozen.import_scopes.at(current_module)
                       message.append(" scope_lookup=")
                       match scope.lookup_type(spelling) {
-                        Option::Some(_) => message.append("found")
-                        Option::None => message.append("missing")
+                        Some(_) => message.append("found")
+                        None => message.append("missing")
                       }
                       message.append(" scope_ambiguous=")
                       if scope.type_is_ambiguous(spelling) {
@@ -974,15 +975,15 @@ fn self_host_validate_program_lowering(
                             )
                             message.append(":declares_type=")
                             match scope.lookup_module_type(interface_index, spelling) {
-                              Option::Some(_) => message.append("bound")
-                              Option::None => match debug_frozen.interfaces.at(
+                              Some(_) => message.append("bound")
+                              None => match debug_frozen.interfaces.at(
                                 interface_index,
                               ).declaration_named(
                                 spelling,
-                                SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+                                FrozenTypeDeclaration,
                               ) {
-                                Option::Some(_) => message.append("unbound")
-                                Option::None => message.append("missing")
+                                Some(_) => message.append("unbound")
+                                None => message.append("missing")
                               }
                             }
                           } else {
@@ -1018,7 +1019,7 @@ fn self_host_validate_program_lowering(
                     _ => {}
                   }
                 }
-                return Option::Some(message.finish())
+                return Some(message.finish())
               }
               continue current_parameter + 1u32
             } else {
@@ -1047,7 +1048,7 @@ fn self_host_validate_program_lowering(
             message.append_u32(callable_index)
             message.append(" length=")
             message.append_u32(callable_length)
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           if !self_host_u32_equal(callable_index, 4294967295u32) &&
             !self_host_u32_greater(callable_backing, callable_index) {
@@ -1062,7 +1063,7 @@ fn self_host_validate_program_lowering(
             message.append_u32(callable_length)
             message.append(" backing=")
             message.append_u32(callable_backing)
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           continue current_local + 1u32
         } else {
@@ -1090,7 +1091,7 @@ fn self_host_validate_program_lowering(
             message.append_u32(module_.expressions.length())
             message.append(" offset=")
             message.append_u32(field.offset)
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           continue current_field + 1u32
         } else {
@@ -1116,7 +1117,7 @@ fn self_host_validate_program_lowering(
             message.append_u32(module_.patterns.length())
             message.append(" offset=")
             message.append_u32(arm.offset)
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           if arm.body >= module_.expressions.length() {
             let message = StringBuilder::new()
@@ -1130,7 +1131,7 @@ fn self_host_validate_program_lowering(
             message.append_u32(module_.expressions.length())
             message.append(" offset=")
             message.append_u32(arm.offset)
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           if !self_host_u32_equal(arm.guard_condition, 4294967295u32) &&
             arm.guard_condition >= module_.expressions.length() {
@@ -1145,7 +1146,7 @@ fn self_host_validate_program_lowering(
             message.append_u32(module_.expressions.length())
             message.append(" offset=")
             message.append_u32(arm.offset)
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           continue current_arm + 1u32
         } else {
@@ -1164,7 +1165,7 @@ fn self_host_validate_program_lowering(
                 current_block,
               )
               if block_index >= module_.blocks.length() {
-                return Option::Some("program lowering body block is outside its arena")
+                return Some("program lowering body block is outside its arena")
               }
               let items = module_.blocks[block_index].items
               let mut item_offset = 0u32
@@ -1172,10 +1173,10 @@ fn self_host_validate_program_lowering(
                 current_item => if current_item < items.length {
                   let item_index = self_host_u32_add(items.start, current_item)
                   if item_index >= module_.block_items.length() {
-                    return Option::Some("program lowering block item is outside its arena")
+                    return Some("program lowering block item is outside its arena")
                   }
                   match module_.block_items[item_index].kind {
-                    SelfHostPlannedBlockItemKind::PlannedLetItem(
+                    PlannedLetItem(
                       local,
                       _,
                       _,
@@ -1199,7 +1200,7 @@ fn self_host_validate_program_lowering(
                       message.append_u32(body.locals.length)
                       message.append(" offset=")
                       message.append_u32(module_.block_items[item_index].offset)
-                      return Option::Some(message.finish())
+                      return Some(message.finish())
                     }
                     _ => {}
                   }
@@ -1233,7 +1234,7 @@ fn self_host_validate_program_lowering(
             message.append_u32(body.expressions.length)
             message.append(" arena=")
             message.append_u32(module_.expressions.length())
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           let mut expression = body.expressions.start
           let _ = while expression {
@@ -1243,8 +1244,8 @@ fn self_host_validate_program_lowering(
                 current_expression,
               )
               match planned.kind {
-                SelfHostPlannedExpressionKind::PlannedPoisonExpression => match planned.reference {
-                  SelfHostBodyNameReference::LocalNameReference(_) => return Option::Some(
+                PlannedPoisonExpression => match planned.reference {
+                  LocalNameReference(_) => return Some(
                     self_host_program_lowering_expression_error(
                       module_,
                       body,
@@ -1252,7 +1253,7 @@ fn self_host_validate_program_lowering(
                       "lost a local value",
                     ),
                   )
-                  SelfHostBodyNameReference::LambdaCaptureNameReference(_) => return Option::Some(
+                  LambdaCaptureNameReference(_) => return Some(
                     self_host_program_lowering_expression_error(
                       module_,
                       body,
@@ -1261,7 +1262,7 @@ fn self_host_validate_program_lowering(
                     ),
                   )
                   _ => if !self_host_u64_equal(planned.nominal, 0u64) {
-                    return Option::Some(
+                    return Some(
                       self_host_program_lowering_expression_error(
                         module_,
                         body,
@@ -1271,11 +1272,11 @@ fn self_host_validate_program_lowering(
                     )
                   }
                 }
-                SelfHostPlannedExpressionKind::PlannedUnresolvedField(
+                PlannedUnresolvedField(
                   receiver,
                   _,
                 ) => if receiver >= module_.expressions.length() {
-                  return Option::Some(
+                  return Some(
                     self_host_program_lowering_expression_error(
                       module_,
                       body,
@@ -1286,7 +1287,7 @@ fn self_host_validate_program_lowering(
                 } else if self_host_planned_expression_at(
                   module_.expressions,
                   receiver,
-                ).kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression {
+                ).kind is PlannedPoisonExpression {
                   let namespace_receiver = self_host_body_name_reference_is_namespace(
                     self_host_planned_expression_at(
                       module_.expressions,
@@ -1294,7 +1295,7 @@ fn self_host_validate_program_lowering(
                     ).reference,
                   )
                   if !namespace_receiver {
-                    return Option::Some(
+                    return Some(
                       self_host_program_lowering_expression_error(
                         module_,
                         body,
@@ -1321,7 +1322,7 @@ fn self_host_validate_program_lowering(
       break self_host_semantic_unit()
     }
   }
-  Option::None
+  None
 }
 
 // This gate checks physical collection storage before interface freezing reads it.
@@ -1356,7 +1357,7 @@ fn self_host_validate_collected_program_storage(
         message.append_u32(collected.declarations.length())
         message.append(" methods=")
         message.append_u32(collected.methods.length())
-        return Option::Some(message.finish())
+        return Some(message.finish())
       }
       let declaration_length = collected.declarations.length()
       let declaration_capacity = collected.declarations.capacity()
@@ -1378,7 +1379,7 @@ fn self_host_validate_collected_program_storage(
         message.append_u32(declaration_capacity)
         message.append(" backing=")
         message.append_u32(declaration_backing)
-        return Option::Some(message.finish())
+        return Some(message.finish())
       }
       let method_length = collected.methods.length()
       let method_capacity = collected.methods.capacity()
@@ -1397,14 +1398,14 @@ fn self_host_validate_collected_program_storage(
         message.append_u32(method_capacity)
         message.append(" backing=")
         message.append_u32(method_backing)
-        return Option::Some(message.finish())
+        return Some(message.finish())
       }
       continue current + 1u32
     } else {
       break self_host_semantic_unit()
     }
   }
-  Option::None
+  None
 }
 
 // This gate checks collected body arenas before name resolution consumes them.
@@ -1435,7 +1436,7 @@ fn self_host_validate_collected_program_bodies(
         message.append_u32(collected.declarations.length())
         message.append(" methods=")
         message.append_u32(collected.methods.length())
-        return Option::Some(message.finish())
+        return Some(message.finish())
       }
       let mut declaration_index = 0u32
       let _ = while declaration_index {
@@ -1458,7 +1459,7 @@ fn self_host_validate_collected_program_bodies(
             message.append_u32(local)
             message.append(" declaration=")
             message.append_u64(declaration.id)
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           continue current + 1u32
         } else {
@@ -1489,7 +1490,7 @@ fn self_host_validate_collected_program_bodies(
             message.append_u32(expected)
             message.append(" method=")
             message.append_u64(method.id)
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           continue current + 1u32
         } else {
@@ -1542,10 +1543,10 @@ fn self_host_validate_collected_program_bodies(
             message.append_u32(body.block_items.length)
             message.append(" item_arena=")
             message.append_u32(collected.block_items.length())
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           match body.root {
-            SelfHostHirBodyRoot::BlockBodyRoot(root) => {
+            BlockBodyRoot(root) => {
               if self_host_u32_greater(body.blocks.start, root) ||
                 !self_host_u32_greater(block_end, root) {
                 let message = StringBuilder::new()
@@ -1561,7 +1562,7 @@ fn self_host_validate_collected_program_bodies(
                 message.append_u32(body.blocks.start)
                 message.append(" block_length=")
                 message.append_u32(body.blocks.length)
-                return Option::Some(message.finish())
+                return Some(message.finish())
               }
               let mut block = body.blocks.start
               let _ = while block {
@@ -1593,7 +1594,7 @@ fn self_host_validate_collected_program_bodies(
                     message.append_u32(body.block_items.start)
                     message.append(" body_item_length=")
                     message.append_u32(body.block_items.length)
-                    return Option::Some(message.finish())
+                    return Some(message.finish())
                   }
                   let mut item = items.start
                   let _ = while item {
@@ -1647,7 +1648,7 @@ fn self_host_validate_collected_program_bodies(
                         message.append_u32(source.value)
                         message.append(" offset=")
                         message.append_u32(source.offset)
-                        return Option::Some(message.finish())
+                        return Some(message.finish())
                       }
                       continue current_item + 1u32
                     } else {
@@ -1660,7 +1661,7 @@ fn self_host_validate_collected_program_bodies(
                 }
               }
             }
-            SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => {
+            ExpressionBodyRoot(expression) => {
               if self_host_u32_greater(body.expressions.start, expression) ||
                 !self_host_u32_greater(expression_end, expression) {
                 let message = StringBuilder::new()
@@ -1676,7 +1677,7 @@ fn self_host_validate_collected_program_bodies(
                 message.append_u32(body.expressions.start)
                 message.append(" expression_length=")
                 message.append_u32(body.expressions.length)
-                return Option::Some(message.finish())
+                return Some(message.finish())
               }
             }
           }
@@ -1690,7 +1691,7 @@ fn self_host_validate_collected_program_bodies(
       break self_host_semantic_unit()
     }
   }
-  Option::None
+  None
 }
 
 fn self_host_plan_program_lowering(
@@ -1786,11 +1787,11 @@ fn self_host_plan_program_lowering(
       break self_host_semantic_unit()
     }
   }
-  let result = SelfHostPlannedProgramLowering::{
+  let result = {
     raw_arrays: self_host_bind_raw_array_contracts(modules)
     collected: frozen.collected
     modules: modules
-    index: SelfHostProgramLoweringIndex::{
+    index: {
       module_ids: module_ids
     }
     graph: graph

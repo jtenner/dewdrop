@@ -19,18 +19,18 @@ struct SelfHostBodyArenaInfo {
 
 fn self_host_body_arena_info(collected: SelfHostCollectedModule, body: SelfHostHirBody, kind: SelfHostBodyArenaKind) -> SelfHostBodyArenaInfo {
   let (span, length, tag) = match kind {
-    SelfHostBodyArenaKind::BodyExpressions => (body.expressions, collected.expressions.length(), 0u32)
-    SelfHostBodyArenaKind::BodyExpressionChildren => (body.expression_children, collected.expression_children.length(), 1u32)
-    SelfHostBodyArenaKind::BodyBlocks => (body.blocks, collected.blocks.length(), 2u32)
-    SelfHostBodyArenaKind::BodyBlockItems => (body.block_items, collected.block_items.length(), 3u32)
-    SelfHostBodyArenaKind::BodyPatterns => (body.patterns, collected.patterns.length(), 4u32)
-    SelfHostBodyArenaKind::BodyPatternChildren => (body.pattern_children, collected.pattern_children.length(), 5u32)
-    SelfHostBodyArenaKind::BodyPatternArms => (body.pattern_arms, collected.pattern_arms.length(), 6u32)
-    SelfHostBodyArenaKind::BodyArmChildren => (body.arm_children, collected.arm_children.length(), 7u32)
-    SelfHostBodyArenaKind::BodyObjectFields => (body.object_fields, collected.object_fields.length(), 8u32)
-    SelfHostBodyArenaKind::BodyPatternFields => (body.pattern_fields, collected.pattern_fields.length(), 9u32)
+    BodyExpressions => (body.expressions, collected.expressions.length(), 0u32)
+    BodyExpressionChildren => (body.expression_children, collected.expression_children.length(), 1u32)
+    BodyBlocks => (body.blocks, collected.blocks.length(), 2u32)
+    BodyBlockItems => (body.block_items, collected.block_items.length(), 3u32)
+    BodyPatterns => (body.patterns, collected.patterns.length(), 4u32)
+    BodyPatternChildren => (body.pattern_children, collected.pattern_children.length(), 5u32)
+    BodyPatternArms => (body.pattern_arms, collected.pattern_arms.length(), 6u32)
+    BodyArmChildren => (body.arm_children, collected.arm_children.length(), 7u32)
+    BodyObjectFields => (body.object_fields, collected.object_fields.length(), 8u32)
+    BodyPatternFields => (body.pattern_fields, collected.pattern_fields.length(), 9u32)
   }
-  SelfHostBodyArenaInfo::{
+  {
     span: span
     length: length
     tag: tag
@@ -39,7 +39,7 @@ fn self_host_body_arena_info(collected: SelfHostCollectedModule, body: SelfHostH
 
 // Stable arena tags occupy the high half of detail in both compilers.
 fn self_host_body_arena_failure(collected: SelfHostCollectedModule, body: SelfHostHirBody, phase: U32, code: U32, index: U32, expected: U32, actual: U32, tag: U32, detail: U32) -> SelfHostInvariantFailure {
-  SelfHostInvariantFailure::{
+  {
     code: code
     phase: phase
     module_id: collected.module_id
@@ -60,18 +60,18 @@ fn self_host_check_body_relative_index(collected: SelfHostCollectedModule, body:
   let info = self_host_body_arena_info(collected, body, kind)
   let span = info.span
   if !self_host_array_span_is_valid(span.start, span.length, info.length) {
-    return Result::Err(self_host_body_arena_failure(collected, body, phase, 101u32, index, info.length, span.start, info.tag, span.length))
+    return Err(self_host_body_arena_failure(collected, body, phase, 101u32, index, info.length, span.start, info.tag, span.length))
   }
   if index < span.start || index - span.start >= span.length {
-    return Result::Err(self_host_body_arena_failure(collected, body, phase, 102u32, index, span.length, index, info.tag, span.start))
+    return Err(self_host_body_arena_failure(collected, body, phase, 102u32, index, span.length, index, info.tag, span.start))
   }
-  Result::Ok(index - span.start)
+  Ok(index - span.start)
 }
 
 fn self_host_body_relative_index(collected: SelfHostCollectedModule, body: SelfHostHirBody, kind: SelfHostBodyArenaKind, index: U32, phase: U32) -> U32 {
   match self_host_check_body_relative_index(collected, body, kind, index, phase) {
-    Result::Ok(relative) => relative
-    Result::Err(failure) => {
+    Ok(relative) => relative
+    Err(failure) => {
       self_host_assert_compiler_invariant_with_failure(false, failure, "body arena index is invalid")
       unreachable()
     }
@@ -80,30 +80,30 @@ fn self_host_body_relative_index(collected: SelfHostCollectedModule, body: SelfH
 
 fn self_host_check_body_owned_spans(collected: SelfHostCollectedModule, body: SelfHostHirBody, phase: U32) -> Result<Unit, SelfHostInvariantFailure> {
   for kind in [
-    SelfHostBodyArenaKind::BodyExpressions,
-    SelfHostBodyArenaKind::BodyExpressionChildren,
-    SelfHostBodyArenaKind::BodyBlocks,
-    SelfHostBodyArenaKind::BodyBlockItems,
-    SelfHostBodyArenaKind::BodyPatterns,
-    SelfHostBodyArenaKind::BodyPatternChildren,
-    SelfHostBodyArenaKind::BodyPatternArms,
-    SelfHostBodyArenaKind::BodyArmChildren,
-    SelfHostBodyArenaKind::BodyObjectFields,
-    SelfHostBodyArenaKind::BodyPatternFields,
+    BodyExpressions,
+    BodyExpressionChildren,
+    BodyBlocks,
+    BodyBlockItems,
+    BodyPatterns,
+    BodyPatternChildren,
+    BodyPatternArms,
+    BodyArmChildren,
+    BodyObjectFields,
+    BodyPatternFields,
   ] {
     let info = self_host_body_arena_info(collected, body, kind)
     let span = info.span
     if !self_host_array_span_is_valid(span.start, span.length, info.length) {
-      return Result::Err(self_host_body_arena_failure(collected, body, phase, 101u32, 4294967295u32, info.length, span.start, info.tag, span.length))
+      return Err(self_host_body_arena_failure(collected, body, phase, 101u32, 4294967295u32, info.length, span.start, info.tag, span.length))
     }
   }
-  Result::Ok(self_host_semantic_unit())
+  Ok(self_host_semantic_unit())
 }
 
 fn self_host_assert_body_owned_spans(collected: SelfHostCollectedModule, body: SelfHostHirBody, phase: U32) -> Unit {
   match self_host_check_body_owned_spans(collected, body, phase) {
-    Result::Ok(_) => {}
-    Result::Err(failure) => {
+    Ok(_) => {}
+    Err(failure) => {
       let _ = self_host_assert_compiler_invariant_with_failure(false, failure, "body owned span is invalid")
     }
   }

@@ -1,0 +1,220 @@
+open dew.std.testing
+
+fn self_host_short_inference_check(source: Bytes, library: Bytes) -> Unit {
+  let fixture = self_host_imported_semantics_fixture(source, library)
+  for module_ in fixture.frozen.collected.modules.values {
+    assert(module_.diagnostics.length() == 0u32, "short inference collection")
+  }
+  assert(fixture.frozen.import_diagnostics.length() == 0u32, "short inference imports")
+  let resolved = fixture.frozen.interfaces.at(0u32).resolved_types
+  for diagnostic in resolved.diagnostics {
+    let report = StringBuilder::new()
+    report.append("short inference type resolution rank=")
+    report.append_u32(diagnostic.rank())
+    report.append(" offset=")
+    report.append_u32(diagnostic.offset())
+    match diagnostic {
+      ComputedTypeFailure(_, message, _) => report.append(message)
+      UnknownType(name, _, _) => {
+        report.append(" name=")
+        report.append(fixture.frozen.collected.modules.at(0u32).name(name))
+      }
+      _ => {}
+    }
+    assert(false, report.finish())
+  }
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  for module_ in lowering.modules {
+    for diagnostic in module_.inferred.diagnostics {
+      let report = StringBuilder::new()
+      report.append(self_host_inference_diagnostic_name(diagnostic))
+      report.append(" at ")
+      report.append_u32(diagnostic.offset())
+      assert(false, report.finish())
+    }
+  }
+  assert(self_host_validate_program_lowering(lowering) is None, "short inference valid lowering")
+}
+
+test "short inference exact imports use short constructors and patterns" {
+  self_host_short_inference_check(
+    b"import app.library as @lib\nfn make() -> @lib.Reply<I32> {\n  Ok(7i32)\n}\nfn read(value: @lib.Reply<I32>) -> I32 {\n  match value {\n    Ok(item) => item\n    Empty => 0i32\n  }\n}\n",
+    b"pub enum Reply<t> {\n  Ok(t)\n  Empty\n}\n",
+  )
+}
+
+test "short inference struct literals receive nested field context" {
+  self_host_short_inference_check(
+    b"enum Small {\n  Item(I32)\n}\nenum Wide {\n  Item(I64)\n}\nenum Box<t> {\n  Wrap(t)\n}\nstruct Holder {\n  value: Box<Small>\n}\nfn make() -> Holder {\n  {\n    value: Wrap(Item(7i32))\n  }\n}\n",
+    b"",
+  )
+}
+
+test "short inference imported struct patterns infer their owner" {
+  self_host_short_inference_check(
+    b"import app.library as @lib\nfn read(value: @lib.Pair<I32>) -> I32 {\n  match value {\n    {\n      second: _\n      first: item\n    } => item\n  }\n}\n",
+    b"pub struct Pair<t> {\n  first: t\n  second: Bool\n}\n",
+  )
+}
+
+test "short inference static factories use the expected owner" {
+  self_host_short_inference_check(
+    b"struct First {}\nstruct Second {}\nimpl First {\n  fn empty() -> First {\n    First::{}\n  }\n}\nimpl Second {\n  fn empty() -> Second {\n    Second::{}\n  }\n}\nfn run() -> First {\n  empty()\n}\n",
+    b"",
+  )
+}
+
+test "short inference method results reach patterns and constructors" {
+  self_host_short_inference_check(
+    b"enum Small {\n  Item(I32)\n}\nenum Wide {\n  Item(I64)\n}\nstruct Source {}\nimpl Source {\n  fn read(self) -> Small {\n    Item(7i32)\n  }\n  fn accept(self, value: Small) -> Unit {}\n}\nfn run(source: Source) -> I32 {\n  source.accept(Item(8i32))\n  match source.read() {\n    Item(value) => value\n  }\n}\n",
+    b"",
+  )
+}
+
+test "short inference payload types select an owner" {
+  self_host_short_inference_check(
+    b"enum Small {\n  Item(I32)\n}\nenum Wide {\n  Item(I64)\n}\nfn run() -> Unit {\n  let value = Item(7i64)\n  ()\n}\n",
+    b"",
+  )
+}
+
+test "short inference imported constructors are function values" {
+  self_host_short_inference_check(
+    b"import app.library as @lib\nfn apply(callback: fn(I32) -> @lib.Reply<I32>) -> @lib.Reply<I32> {\n  callback(7i32)\n}\nfn run() -> @lib.Reply<I32> {\n  apply(Ok)\n}\n",
+    b"pub enum Reply<t> {\n  Ok(t)\n  Empty\n}\n",
+  )
+}
+
+pub fn self_host_emit_inferred_values_probe() -> Bytes {
+  let fixture = self_host_imported_semantics_fixture(
+    b"import app.library as @lib\nfn apply(callback: fn(I32) -> @lib.Reply<I32>) -> @lib.Reply<I32> {\n  callback(40i32)\n}\nfn pair() -> @lib.Pair {\n  {\n    second: 2i32\n    first: apply(Ok)\n  }\n}\npub fn main() -> I32 {\n  match pair() {\n    {\n      second: right\n      first: Ok(left)\n    } => left + right\n  }\n}\n",
+    b"pub enum Reply<t> {\n  Ok(t)\n}\npub struct Pair {\n  first: Reply<I32>\n  second: I32\n}\n",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  match self_host_validate_program_inference(lowering) {
+    Some(error) => {
+      assert(false, error)
+      unreachable()
+    }
+    None => {}
+  }
+  assert(self_host_validate_program_lowering(lowering) is None, "inferred values lowering")
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(lowering, false)), false)
+  let plan = self_host_plan_program_wasm_bodies(link)
+  assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
+  match build_self_host_linked_root_i32_module(link, 0u32) {
+    Ok(output) => output
+    Err(error) => {
+      assert(false, error)
+      unreachable()
+    }
+  }
+}
+
+pub fn self_host_short_bytes_length(bytes: Bytes) -> U32 {
+  bytes.byte_length()
+}
+
+pub fn self_host_short_byte_at(bytes: Bytes, index: U32) -> U32 {
+  u8_into_u32(bytes.byte_at(index))
+}
+
+test "short inference exact imports disambiguate equal local type and case names" {
+  self_host_short_inference_check(b"import app.library as @lib\nenum Reply<t> {\n  Ok(t)\n}\nfn run() -> @lib.Reply<I32> {\n  Ok(7i32)\n}\n", b"pub enum Reply<t> {\n  Ok(t)\n}\n")
+}
+
+test "short inference transparent aliases supply imported owners" {
+  self_host_short_inference_check(b"import app.library as @lib\ntype Alias<t> = @lib.Reply<t>\nfn run() -> Alias<I32> {\n  Ok(7i32)\n}\n", b"pub enum Reply<t> {\n  Ok(t)\n}\n")
+}
+
+test "short inference lexical functions retain priority" {
+  self_host_short_inference_check(b"import app.library as @lib\nfn Ok(value: I32) -> I32 {\n  value\n}\nfn run() -> I32 {\n  Ok(7i32)\n}\n", b"pub enum Reply<t> {\n  Ok(t)\n}\n")
+}
+
+test "short inference named fields select a case owner" {
+  self_host_short_inference_check(b"enum First {\n  Entry {\n    first: I32\n  }\n}\nenum Second {\n  Entry {\n    second: Bool\n  }\n}\nfn run() -> Unit {\n  let value = Entry::{\n    first: 7i32\n  }\n}\n", b"")
+}
+
+test "short inference assignment supplies delayed constructor context" {
+  self_host_short_inference_check(b"enum First {\n  Item(I32)\n}\nenum Second {\n  Item(I32)\n}\nfn run() -> Unit {\n  let mut value = Item(7i32)\n  value = Second::Item(8i32)\n}\n", b"")
+}
+
+test "short inference imported static factory uses expected owner" {
+  self_host_short_inference_check(b"import app.library as @lib\nfn run() -> @lib.Cell {\n  empty()\n}\n", b"pub struct Cell {}\nimpl Cell {\n  fn empty() -> Cell {\n    Cell::{}\n  }\n}\n")
+}
+
+test "short inference generic callback signatures select among equal names" {
+  self_host_short_inference_check(b"import app.library as @lib\nenum Reply<t> {\n  Ok(t)\n}\nfn callback() -> fn(I32) -> @lib.Reply<I32> {\n  Ok\n}\n", b"pub enum Reply<t> {\n  Ok(t)\n}\n")
+}
+
+test "short inference ambiguous enum values have a diagnostic" {
+  let fixture = self_host_imported_semantics_fixture(
+    b"enum First {\n  Item(I32)\n}\nenum Second {\n  Item(I32)\n}\nfn run() -> Unit {\n  let value = Item(7i32)\n}\n", b"",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  let mut found = false
+  for diagnostic in lowering.modules[0u32].inferred.diagnostics {
+    if diagnostic is AmbiguousVariantValue(_, _, _, _, 2u32, _) {
+      found = true
+    }
+  }
+  assert(found, "equal enum cases must have an ambiguity diagnostic")
+}
+
+test "short inference enum cases keep their meaning beside trait names" {
+  self_host_short_inference_check(b"trait Add {}\nenum Operator {\n  Add\n  Other\n}\nfn read(value: Operator) -> Bool {\n  value is Add\n}\n", b"")
+}
+
+test "short inference struct values in match arms use the expected owner" {
+  self_host_short_inference_check(b"struct Cell {\n  value: I32\n}\nfn make(flag: Bool) -> Cell {\n  match flag {\n    true => ({\n      value: 1i32\n    })\n    false => ({\n      value: 2i32\n    })\n  }\n}\n", b"")
+}
+
+test "short inference compiler primitive lookup retains meaning" {
+  assert(self_host_primitive_type_from_name("I32") is Some(I32Type), "short I32 lookup")
+  assert(self_host_primitive_type_from_name("Bool") is Some(BoolType), "short Bool lookup")
+}
+
+test "short inference compiler resolver starts with clear type state" {
+  let collected = self_host_collect_bytes(7000u64, b"fn run() -> I32 {\n  1i32\n}\n")
+  let resolver = SelfHostTypeResolver::new(collected)
+  assert(resolver.computed_depth == 0u32, "new resolver computed depth")
+  for active in resolver.computed_active {
+    assert(!active, "new resolver computed state is clear")
+  }
+}
+
+pub fn self_host_emit_short_unit_patterns_probe() -> Bytes {
+  let fixture = self_host_imported_semantics_fixture(
+    b"enum Tag {\n  CompileOnly\n  Number\n}\nenum Node {\n  Primitive(Tag)\n}\nfn classify(value: Node) -> I32 {\n  match value {\n    Primitive(CompileOnly) => 1i32\n    _ => 0i32\n  }\n}\npub fn main() -> I32 {\n  classify(Primitive(Number)) * 100i32 + classify(Primitive(CompileOnly)) * 42i32\n}\n", b"",
+  )
+  let lowering = self_host_plan_program_lowering(fixture.frozen)
+  match self_host_validate_program_inference(lowering) {
+    Some(error) => {
+      assert(false, error)
+      unreachable()
+    }
+    None => {}
+  }
+  let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(lowering, false)), false)
+  match build_self_host_linked_root_i32_module(link, 0u32) {
+    Ok(output) => output
+    Err(error) => {
+      assert(false, error)
+      unreachable()
+    }
+  }
+}
+
+test "short inference index results reach alternative patterns" {
+  self_host_short_inference_check(
+    b"open app.library\nenum First {\n Item(U32)\n Other(U32)\n}\nenum Second {\n Item(U32)\n}\nstruct Holder {\n values: Array<First>\n}\nfn read(holder: Holder, index: U32) -> U32 {\n let node = holder.values[index]\n match node {\n  Item(value), Other(value) => value\n }\n}\n",
+    b"pub struct Array<t> {\n item: t\n}\npub trait IndexedGet<i, t> {\n fn indexed_get(self, index: i) -> t\n}\nimpl<t> IndexedGet<U32, t> for Array<t> {\n fn indexed_get(self, index: U32) -> t {\n  self.item\n }\n}\n",
+  )
+}
+
+test "short inference index operators wait for method pattern payloads" {
+  self_host_short_inference_check(
+    b"open app.library\nenum Reply<t> {\n Some(t)\n}\nstruct Source {\n values: Array<U32>\n}\nimpl Source {\n fn read(self) -> Reply<Array<U32>> {\n  Some(self.values)\n }\n}\nfn run(source: Source) -> U32 {\n match source.read() {\n  Some(values) => values[0u32]\n }\n}\n",
+    b"pub struct Array<t> {\n item: t\n}\npub struct Other {\n item: U32\n}\npub trait IndexedGet<i, t> {\n fn indexed_get(self, index: i) -> t\n}\nimpl<t> IndexedGet<U32, t> for Array<t> {\n fn indexed_get(self, index: U32) -> t {\n  self.item\n }\n}\nimpl IndexedGet<U32, U32> for Other {\n fn indexed_get(self, index: U32) -> U32 {\n  self.item\n }\n}\n",
+  )
+}

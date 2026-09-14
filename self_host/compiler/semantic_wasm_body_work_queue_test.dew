@@ -13,7 +13,7 @@ fn self_host_test_carrier_chain_graph() -> SelfHostBodyWorkGraph {
 
 fn self_host_test_carrier_work_queue(graph: SelfHostBodyWorkGraph, expressions: U32) -> SelfHostBodyWorkQueue {
   self_host_body_work_queue_new(graph, 5100u64, 5100u64 << 32u64, 5100u64 << 32u64,
-    SelfHostHirSpan::{
+    {
       start: 20u32
       length: expressions
     })
@@ -24,15 +24,15 @@ fn self_host_test_run_carrier_chain(graph: SelfHostBodyWorkGraph) -> SelfHostBod
   let values = self_host_body_empty_carriers()
   let _ = while 0u32 {
     item => if item < 10u32 {
-      values.push(SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+      values.push(UnresolvedBodyCarrier)
       continue item + 1u32
     } else {
       break self_host_semantic_unit()
     }
   }
-  values[0u32] = SelfHostWasmBodyCarrier::I64BodyCarrier
+  values[0u32] = I64BodyCarrier
   let _ = while self_host_body_work_queue_next(work) {
-    Option::Some(item) => {
+    Some(item) => {
       let mut changed = false
       if item > 0u32 {
         let merged = self_host_body_merge_carrier(values[item], values[item - 1u32])
@@ -42,24 +42,24 @@ fn self_host_test_run_carrier_chain(graph: SelfHostBodyWorkGraph) -> SelfHostBod
       self_host_body_work_queue_finish(work, item, changed)
       continue self_host_body_work_queue_next(work)
     }
-    Option::None => break self_host_semantic_unit()
+    None => break self_host_semantic_unit()
   }
   assert(work.complete && work.auditing && work.audited_items == 10u32, "every chain constraint has a stable audit")
-  assert(values[9u32] is SelfHostWasmBodyCarrier::I64BodyCarrier, "all ten cells have propagated")
+  assert(values[9u32] is I64BodyCarrier, "all ten cells have propagated")
   work
 }
 
 test "physical work queue audits a ten-cell propagation chain" {
   let work = self_host_test_run_carrier_chain(self_host_test_carrier_chain_graph())
   assert(work.successful_changes == 9u64, "nine strict carrier increases")
-  assert(self_host_body_work_queue_next(work) is Option::None, "completed work stays complete")
+  assert(self_host_body_work_queue_next(work) is None, "completed work stays complete")
 }
 
 test "physical work queue retains transfer self-dependencies" {
   let work = self_host_test_carrier_work_queue(self_host_body_empty_work_graph(1u32), 0u32)
   let mut state = 0u32
   let _ = while self_host_body_work_queue_next(work) {
-    Option::Some(item) => {
+    Some(item) => {
       let changed = state < 2u32
       if changed {
         state = state + 1u32
@@ -67,7 +67,7 @@ test "physical work queue retains transfer self-dependencies" {
       self_host_body_work_queue_finish(work, item, changed)
       continue self_host_body_work_queue_next(work)
     }
-    Option::None => break self_host_semantic_unit()
+    None => break self_host_semantic_unit()
   }
   assert(state == 2u32 && work.successful_changes == 2u64, "one rule can increase more than once")
   assert(work.complete && work.audited_items == 1u32, "the final self-dependent transfer is stable")
@@ -117,13 +117,13 @@ test "ARN-104 carrier graph adjacency links strictly decrease" expect_trap "unre
 
 test "BOD-604 a carrier transfer must finish before the next starts" expect_trap "unreachable" {
   let work = self_host_test_carrier_work_queue(self_host_body_empty_work_graph(1u32), 0u32)
-  assert(self_host_body_work_queue_next(work) is Option::Some(0u32), "one active transfer")
+  assert(self_host_body_work_queue_next(work) is Some(0u32), "one active transfer")
   let _ = self_host_body_work_queue_next(work)
 }
 
 test "BOD-604 carrier completion must match the active transfer" expect_trap "unreachable" {
   let work = self_host_test_carrier_work_queue(self_host_body_empty_work_graph(1u32), 0u32)
-  assert(self_host_body_work_queue_next(work) is Option::Some(0u32), "one active transfer")
+  assert(self_host_body_work_queue_next(work) is Some(0u32), "one active transfer")
   self_host_body_work_queue_finish(work, 1u32, false)
 }
 
@@ -143,12 +143,12 @@ test "BOD-604 a nonconverging carrier transfer has a resource diagnostic" expect
   let work = self_host_test_carrier_work_queue(self_host_body_empty_work_graph(1u32), 0u32)
   let mut state = false
   let _ = while self_host_body_work_queue_next(work) {
-    Option::Some(item) => {
+    Some(item) => {
       state = !state
       self_host_body_work_queue_finish(work, item, true)
       continue self_host_body_work_queue_next(work)
     }
-    Option::None => {
+    None => {
       assert(false, "a changing rule must not be accepted as complete")
       break self_host_semantic_unit()
     }

@@ -13,11 +13,11 @@ test "concrete imported binary operators select declaration evidence" {
     b"pub trait Eq {\n  fn eq(self, other: Self) -> Bool\n}\npub struct Item {}\nimpl Eq for Item {\n  fn eq(self, other: Item) -> Bool {\n    true\n  }\n}\n",
   )
   let lowering = self_host_plan_program_lowering(fixture.frozen)
-  assert(self_host_validate_program_lowering(lowering) is Option::None, "valid imported operator lowering")
+  assert(self_host_validate_program_lowering(lowering) is None, "valid imported operator lowering")
   let mut selected = 0u32
   for expression in lowering.modules[0u32].expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, _, _, _, _) => {
+      PlannedOperatorCall(declaration, _, _, _, _) => {
         assert(self_host_semantic_id_module(declaration) == 2601u64, "operator belongs to imported library")
         selected = selected + 1u32
       }
@@ -33,11 +33,11 @@ test "local implementations of imported binary traits participate" {
     b"pub trait Eq {\n  fn eq(self, other: Self) -> Bool\n}\n",
   )
   let lowering = self_host_plan_program_lowering(fixture.frozen)
-  assert(self_host_validate_program_lowering(lowering) is Option::None, "valid local operator lowering")
+  assert(self_host_validate_program_lowering(lowering) is None, "valid local operator lowering")
   let mut selected = 0u32
   for expression in lowering.modules[0u32].expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedOperatorCall(declaration, _, _, _, _) => {
+      PlannedOperatorCall(declaration, _, _, _, _) => {
         assert(self_host_semantic_id_module(declaration) == 2600u64, "operator belongs to local implementation")
         selected = selected + 1u32
       }
@@ -62,7 +62,7 @@ test "explicit call aliases retain logical Unit and integer types" {
       let type_ = resolved.explicit_call_type_arguments[index]
       assert(type_ < resolved.types.length(), "explicit argument type index")
       match resolved.types[type_] {
-        SelfHostResolvedType::PrimitiveType(primitive) => {
+        PrimitiveType(primitive) => {
           assert(primitive.rank() == expected[index], "normalized logical type")
         }
         _ => assert(false, "an explicit alias must normalize to its target")
@@ -80,22 +80,22 @@ fn self_host_imported_semantics_fixture(
 ) -> SelfHostImportedSemanticsFixture {
   let program = self_host_collect_program_manifest(
     2600u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.consumer"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "consumer.dew"
               source: consumer
               test_only: false
             },
           ]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.library"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "library.dew"
               source: library
               test_only: false
@@ -110,7 +110,7 @@ fn self_host_imported_semantics_fixture(
     frozen.interfaces.at(0u32).resolved_types,
     frozen.import_scopes.at(0u32),
   )
-  SelfHostImportedSemanticsFixture::{
+  {
     frozen: frozen
     imports: imports
   }
@@ -121,8 +121,8 @@ fn self_host_test_unwrap_declaration(
   message: String,
 ) -> U64 {
   match value {
-    Option::Some(declaration) => declaration
-    Option::None => {
+    Some(declaration) => declaration
+    None => {
       assert(false, message)
       0u64
     }
@@ -134,18 +134,18 @@ fn self_host_test_unwrap_callable(
   message: String,
 ) -> SelfHostFrozenInterfaceCallable {
   match value {
-    Option::Some(callable) => callable
-    Option::None => {
+    Some(callable) => callable
+    None => {
       assert(false, message)
-      SelfHostFrozenInterfaceCallable::{
+      {
         declaration: 0u64
         name: ""
-        kind: SelfHostFrozenInterfaceCallableKind::FrozenFunctionCallable
+        kind: FrozenFunctionCallable
         generic_parameters: self_host_empty_hir_span(0u32)
         parameters: self_host_empty_hir_span(0u32)
         result_type: 0u32
         function_type: 0u32
-        location: SelfHostSourceLocation::{
+        location: {
           file: 0u64
           offset: 0u32
         }
@@ -185,8 +185,8 @@ test "imported generic callable recipes retain bounds and canonical types" {
     "frozen identity",
   )
   let imported = match fixture.imports.callable(frozen_callable.declaration) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "imported identity")
       fixture.imports.callable_at(0u32)
     }
@@ -200,7 +200,7 @@ test "imported generic callable recipes retain bounds and canonical types" {
   match fixture.imports.resolved_type_at(
     fixture.imports.generic_bound_type(bounds.start),
   ) {
-    SelfHostResolvedType::TraitType(declaration) => assert(
+    TraitType(declaration) => assert(
       self_host_semantic_id_module(declaration) == 2601u64,
       "external trait identity",
     )
@@ -213,7 +213,7 @@ test "imported generic callable recipes retain bounds and canonical types" {
     "generic parameter and result canonicalization",
   )
   match fixture.imports.resolved_type_at(imported.function_type) {
-    SelfHostResolvedType::FunctionType(parameters, result) => {
+    FunctionType(parameters, result) => {
       assert(parameters.length == 1u32, "function parameter")
       assert(result == imported.result_type, "function result")
     }
@@ -230,14 +230,14 @@ test "imported fields preserve grouping mutability variants and payload types" {
   let box_declaration = self_host_test_unwrap_declaration(
     library.declaration_named(
       "Box",
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+      FrozenTypeDeclaration,
     ),
     "Box",
   )
   let message = self_host_test_unwrap_declaration(
     library.declaration_named(
       "Message",
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+      FrozenTypeDeclaration,
     ),
     "Message",
   )
@@ -259,14 +259,14 @@ test "imported fields preserve grouping mutability variants and payload types" {
   let variants = fixture.imports.variants_of(message)
   assert(self_host_u32_equal(variants.length, 3u32), "variant count")
   let number = match fixture.imports.variant_named(message, "Number") {
-    Option::Some(value) => value
-    Option::None => fixture.imports.variant_at(variants.start)
+    Some(value) => value
+    None => fixture.imports.variant_at(variants.start)
   }
   assert(self_host_u32_equal(number.payload_types.length, 1u32), "tuple payload")
   match fixture.imports.resolved_type_at(
     fixture.imports.variant_payload_type(number, 0u32),
   ) {
-    SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::I32Type) => {}
+    PrimitiveType(I32Type) => {}
     _ => assert(false, "Number payload type")
   }
 }
@@ -280,27 +280,27 @@ test "imported type and module value maps retain public declaration identities" 
   let item = self_host_test_unwrap_declaration(
     library.declaration_named(
       "Item",
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+      FrozenTypeDeclaration,
     ),
     "Item",
   )
   let count = self_host_test_unwrap_declaration(
     library.declaration_named(
       "Count",
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+      FrozenTypeDeclaration,
     ),
     "Count",
   )
   let answer = self_host_test_unwrap_declaration(
     library.declaration_named(
       "answer",
-      SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration,
+      FrozenValueDeclaration,
     ),
     "answer",
   )
-  assert(fixture.imports.type_declaration_type(item) is Option::Some(_), "Item type")
-  assert(fixture.imports.type_declaration_type(count) is Option::Some(_), "Count type")
-  assert(fixture.imports.module_value_type(answer) is Option::Some(_), "answer type slot")
+  assert(fixture.imports.type_declaration_type(item) is Some(_), "Item type")
+  assert(fixture.imports.type_declaration_type(count) is Some(_), "Count type")
+  assert(fixture.imports.module_value_type(answer) is Some(_), "answer type slot")
 }
 
 test "imported implementation evidence translates external trait and target types" {
@@ -311,21 +311,21 @@ test "imported implementation evidence translates external trait and target type
   assert(fixture.imports.implementation_count() == 1u32, "evidence count")
   let evidence = fixture.imports.implementation_at(0u32)
   match fixture.imports.resolved_type_at(evidence.target_type) {
-    SelfHostResolvedType::NominalType(declaration) => assert(
+    NominalType(declaration) => assert(
       self_host_semantic_id_module(declaration) == 2601u64,
       "target module",
     )
     _ => assert(false, "nominal target")
   }
   match evidence.trait_type {
-    Option::Some(type_) => match fixture.imports.resolved_type_at(type_) {
-      SelfHostResolvedType::TraitType(declaration) => assert(
+    Some(type_) => match fixture.imports.resolved_type_at(type_) {
+      TraitType(declaration) => assert(
         self_host_semantic_id_module(declaration) == 2601u64,
         "trait module",
       )
       _ => assert(false, "trait type")
     }
-    Option::None => assert(false, "trait evidence")
+    None => assert(false, "trait evidence")
   }
 }
 
@@ -356,7 +356,7 @@ test "public generic derived evidence exports prerequisites and methods" {
   let _ = while callable_index {
     current => if current < library.callable_count() {
       match library.callable_at(current).kind {
-        SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(_) => {
+        FrozenImplCallable(_) => {
           derived_methods = derived_methods + 1u32
         }
         _ => {}
@@ -372,27 +372,27 @@ test "public generic derived evidence exports prerequisites and methods" {
 test "private and test-only implementation evidence does not cross interfaces" {
   let program = self_host_collect_program_manifest(
     2700u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.consumer"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "consumer.dew"
               source: b"open app.library\npub fn run() -> I32 {\n  1\n}\n"
               test_only: false
             },
           ]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.library"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "library.dew"
               source: b"pub trait Mark {\n  fn mark(self) -> I32\n}\nstruct Hidden {}\nimpl Mark for Hidden {\n  fn mark(self) -> I32 {\n    1\n  }\n}\npub struct Item {}\n"
               test_only: false
             },
-            SelfHostManifestFile::{
+            {
               path: "evidence_test.dew"
               source: b"impl Mark for Item {\n  fn mark(self) -> I32 {\n    2\n  }\n}\n"
               test_only: true
@@ -424,8 +424,8 @@ test "imported structural function and product types are canonical" {
     "keep",
   )
   let imported = match fixture.imports.callable(callable.declaration) {
-    Option::Some(value) => value
-    Option::None => fixture.imports.callable_at(0u32)
+    Some(value) => value
+    None => fixture.imports.callable_at(0u32)
   }
   assert(
     fixture.imports.parameter_type(imported.parameters.start) ==
@@ -433,10 +433,10 @@ test "imported structural function and product types are canonical" {
     "structural canonicalization",
   )
   match fixture.imports.resolved_type_at(imported.result_type) {
-    SelfHostResolvedType::FunctionType(_, result) => match fixture.imports.resolved_type_at(
+    FunctionType(_, result) => match fixture.imports.resolved_type_at(
       result,
     ) {
-      SelfHostResolvedType::ProductType(fields) => assert(
+      ProductType(fields) => assert(
         fields.length == 2u32,
         "product fields",
       )
@@ -449,22 +449,22 @@ test "imported structural function and product types are canonical" {
 test "program import recipes retain manifest order across cyclic signatures" {
   let program = self_host_collect_program_manifest(
     2800u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "cycle.a"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "a.dew"
               source: b"open cycle.b\npub struct A {}\npub fn from_b(value: B) -> B {\n  value\n}\n"
               test_only: false
             },
           ]
         },
-        SelfHostManifestModule::{
+        {
           path: "cycle.b"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "b.dew"
               source: b"open cycle.a\npub struct B {}\npub fn from_a(value: A) -> A {\n  value\n}\n"
               test_only: false
@@ -486,32 +486,32 @@ test "program import recipes retain manifest order across cyclic signatures" {
 test "orphan implementation evidence is rejected before interface export" {
   let program = self_host_collect_program_manifest(
     2900u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.orphan"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "orphan.dew"
               source: b"open app.traits\nopen app.types\nimpl Read for Item {\n  fn read(self) -> I32 {\n    1\n  }\n}\n"
               test_only: false
             },
           ]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.traits"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "traits.dew"
               source: b"pub trait Read {\n  fn read(self) -> I32\n}\n"
               test_only: false
             },
           ]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.types"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "types.dew"
               source: b"pub struct Item {}\n"
               test_only: false

@@ -106,6 +106,7 @@ pub struct SelfHostFrozenInterfaceField {
 }
 
 pub struct SelfHostFrozenInterfaceVariant {
+  constructor: Option<U64>
   variant: U64
   declaration: U64
   kind: SelfHostCollectedVariantKind
@@ -158,7 +159,7 @@ pub struct SelfHostFrozenModuleInterface {
 fn self_host_frozen_module_interface_identity(
   value: SelfHostFrozenModuleInterface,
 ) -> SelfHostFrozenModuleInterface {
-  SelfHostFrozenModuleInterface::{
+  {
     module_id: value.module_id
     path: value.path
     resolved_types: value.resolved_types
@@ -179,7 +180,7 @@ pub struct SelfHostFrozenInterfaceList {
 
 impl SelfHostFrozenInterfaceList {
   fn new() -> SelfHostFrozenInterfaceList {
-    SelfHostFrozenInterfaceList::{
+    {
       values: []
     }
   }
@@ -283,11 +284,11 @@ impl SelfHostFrozenModuleInterface {
       current => if current < self.callable_count() {
         let callable = self.callable_at(current)
         if callable.name == name {
-          break Option::Some(callable)
+          break Some(callable)
         }
         continue current + 1u32
       } else {
-        break Option::None
+        break None
       }
     }
   }
@@ -322,11 +323,11 @@ impl SelfHostFrozenModuleInterface {
         let declaration = self.declaration_at(current)
         if self_host_interface_string_equal(declaration.name, name) &&
           self_host_frozen_kind_equal(declaration.kind, kind) {
-          break Option::Some(declaration.declaration)
+          break Some(declaration.declaration)
         }
         continue current + 1u32
       } else {
-        break Option::None
+        break None
       }
     }
   }
@@ -337,9 +338,9 @@ fn self_host_frozen_kind_equal(
   right: SelfHostFrozenInterfaceDeclarationKind,
 ) -> Bool {
   match left {
-    SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration => right is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration
-    SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration => right is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration
-    SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration => right is SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration
+    FrozenTypeDeclaration => right is FrozenTypeDeclaration
+    FrozenTraitDeclaration => right is FrozenTraitDeclaration
+    FrozenValueDeclaration => right is FrozenValueDeclaration
   }
 }
 
@@ -347,31 +348,31 @@ fn self_host_freeze_declaration_kind(
   kind: SelfHostCollectedDeclKind,
 ) -> Option<SelfHostFrozenInterfaceDeclarationKind> {
   match kind {
-    SelfHostCollectedDeclKind::StructDecl => Option::Some(
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    StructDecl => Some(
+      FrozenTypeDeclaration,
     )
-    SelfHostCollectedDeclKind::EnumDecl => Option::Some(
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    EnumDecl => Some(
+      FrozenTypeDeclaration,
     )
-    SelfHostCollectedDeclKind::TypeAliasDecl => Option::Some(
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    TypeAliasDecl => Some(
+      FrozenTypeDeclaration,
     )
-    SelfHostCollectedDeclKind::ForeignTypeDecl => Option::Some(
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+    ForeignTypeDecl => Some(
+      FrozenTypeDeclaration,
     )
-    SelfHostCollectedDeclKind::TraitDecl => Option::Some(
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration,
+    TraitDecl => Some(
+      FrozenTraitDeclaration,
     )
-    SelfHostCollectedDeclKind::BuiltinDecl => Option::Some(
-      SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration,
+    BuiltinDecl => Some(
+      FrozenValueDeclaration,
     )
-    SelfHostCollectedDeclKind::FunctionDecl => Option::Some(
-      SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration,
+    FunctionDecl => Some(
+      FrozenValueDeclaration,
     )
-    SelfHostCollectedDeclKind::LetDecl => Option::Some(
-      SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration,
+    LetDecl => Some(
+      FrozenValueDeclaration,
     )
-    _ => Option::None
+    _ => None
   }
 }
 
@@ -400,7 +401,7 @@ fn self_host_frozen_exported_declaration(
   exported: Map<U64, Bool>,
   declaration: U64,
 ) -> Bool {
-  exported.get(declaration) is Option::Some(_)
+  exported.get(declaration) is Some(_)
 }
 
 fn self_host_frozen_impl_trait_declaration(
@@ -410,11 +411,11 @@ fn self_host_frozen_impl_trait_declaration(
   let mut current = root
   while current {
     type_ => match resolved.types[type_] {
-      SelfHostResolvedType::TraitType(declaration) => break Option::Some(
+      TraitType(declaration) => break Some(
         declaration,
       )
-      SelfHostResolvedType::AppliedType(base, _) => continue base
-      _ => break Option::None
+      AppliedType(base, _) => continue base
+      _ => break None
     }
   }
 }
@@ -427,15 +428,15 @@ fn self_host_frozen_impl_target_is_owned(
   let mut current = root
   while current {
     type_ => match resolved.types[type_] {
-      SelfHostResolvedType::NominalType(declaration) => break self_host_semantic_modules_share_package(
+      NominalType(declaration) => break self_host_semantic_modules_share_package(
         owner,
         self_host_semantic_id_module(declaration),
       )
-      SelfHostResolvedType::PrimitiveType(_) => break self_host_semantic_module_is_standard_package(
+      PrimitiveType(_) => break self_host_semantic_module_is_standard_package(
         owner,
       )
-      SelfHostResolvedType::AppliedType(base, _) => continue base
-      SelfHostResolvedType::ErrorType => break true
+      AppliedType(base, _) => continue base
+      ErrorType => break true
       _ => break false
     }
   }
@@ -448,11 +449,11 @@ fn self_host_frozen_trait_impl_is_owned(
   target_type: U32,
 ) -> Bool {
   match self_host_frozen_impl_trait_declaration(resolved, trait_type) {
-    Option::Some(declaration) => self_host_semantic_modules_share_package(
+    Some(declaration) => self_host_semantic_modules_share_package(
       owner,
       self_host_semantic_id_module(declaration),
     ) || self_host_frozen_impl_target_is_owned(resolved, owner, target_type)
-    Option::None => true
+    None => true
   }
 }
 
@@ -462,7 +463,7 @@ struct SelfHostInterfaceTypeVisit {
 }
 
 fn self_host_interface_type_failure(resolved: SelfHostResolvedModuleTypes, root: U32, code: U32, expected: U32, actual: U32, detail: U32) -> SelfHostInvariantFailure {
-  SelfHostInvariantFailure::{
+  {
     code: code
     phase: 3u32
     module_id: resolved.module_id
@@ -492,56 +493,56 @@ fn self_host_check_frozen_impl_type_visible(
       work.truncate(length - 1u32)
       let type_ = visit.type_
       if type_ >= resolved.types.length() {
-        return Result::Err(self_host_interface_type_failure(resolved, root, 104u32, resolved.types.length(), type_, 0u32))
+        return Err(self_host_interface_type_failure(resolved, root, 104u32, resolved.types.length(), type_, 0u32))
       }
       if visit.finish {
         states.set(type_, 2u32)
         continue work.length()
       }
       let state = match states.get(type_) {
-        Option::Some(value) => value
-        Option::None => 0u32
+        Some(value) => value
+        None => 0u32
       }
       if state == 1u32 {
-        return Result::Err(self_host_interface_type_failure(resolved, root, 211u32, 0u32, type_, 1u32))
+        return Err(self_host_interface_type_failure(resolved, root, 211u32, 0u32, type_, 1u32))
       }
       if state == 2u32 {
         continue work.length()
       }
       states.set(type_, 1u32)
-      work.push(SelfHostInterfaceTypeVisit::{
+      work.push({
         type_: type_
         finish: true
       })
       let node = resolved.types[type_]
       let fields = match node {
-        SelfHostResolvedType::ProductType(span) => span
-        SelfHostResolvedType::AppliedType(_, span) => span
-        SelfHostResolvedType::FunctionType(span, _) => span
+        ProductType(span) => span
+        AppliedType(_, span) => span
+        FunctionType(span, _) => span
         _ => self_host_empty_hir_span(0u32)
       }
       if !self_host_array_span_is_valid(fields.start, fields.length, resolved.type_arguments.length()) {
-        return Result::Err(self_host_interface_type_failure(resolved, root, 101u32, resolved.type_arguments.length(), fields.start, fields.length))
+        return Err(self_host_interface_type_failure(resolved, root, 101u32, resolved.type_arguments.length(), fields.start, fields.length))
       }
       match node {
-        SelfHostResolvedType::ErrorType => {
+        ErrorType => {
           visible = false
         }
-        SelfHostResolvedType::NominalType(declaration) => if self_host_semantic_id_module(declaration) == resolved.module_id && !self_host_frozen_exported_declaration(exported, declaration) {
+        NominalType(declaration) => if self_host_semantic_id_module(declaration) == resolved.module_id && !self_host_frozen_exported_declaration(exported, declaration) {
           visible = false
         }
-        SelfHostResolvedType::TraitType(declaration) => if self_host_semantic_id_module(declaration) == resolved.module_id && !self_host_frozen_exported_declaration(exported, declaration) {
+        TraitType(declaration) => if self_host_semantic_id_module(declaration) == resolved.module_id && !self_host_frozen_exported_declaration(exported, declaration) {
           visible = false
         }
-        SelfHostResolvedType::AppliedType(base, _) => work.push(SelfHostInterfaceTypeVisit::{
+        AppliedType(base, _) => work.push({
           type_: base
           finish: false
         })
-        SelfHostResolvedType::FunctionType(_, result) => work.push(SelfHostInterfaceTypeVisit::{
+        FunctionType(_, result) => work.push({
           type_: result
           finish: false
         })
-        SelfHostResolvedType::MemberTypeProjection(owner, _, _) => work.push(SelfHostInterfaceTypeVisit::{
+        MemberTypeProjection(owner, _, _) => work.push({
           type_: owner
           finish: false
         })
@@ -549,7 +550,7 @@ fn self_host_check_frozen_impl_type_visible(
       }
       let _ = while fields.length {
         offset => if offset > 0u32 {
-          work.push(SelfHostInterfaceTypeVisit::{
+          work.push({
             type_: resolved.type_arguments[fields.start + offset - 1u32]
             finish: false
           })
@@ -563,7 +564,7 @@ fn self_host_check_frozen_impl_type_visible(
       break self_host_semantic_unit()
     }
   }
-  Result::Ok(visible)
+  Ok(visible)
 }
 
 fn self_host_frozen_impl_type_visible(
@@ -572,8 +573,8 @@ fn self_host_frozen_impl_type_visible(
   exported: Map<U64, Bool>,
 ) -> Bool {
   match self_host_check_frozen_impl_type_visible(resolved, root, exported) {
-    Result::Ok(visible) => visible
-    Result::Err(failure) => {
+    Ok(visible) => visible
+    Err(failure) => {
       self_host_assert_compiler_invariant_with_failure(false, failure, "interface type graph must be valid and acyclic")
       unreachable()
     }
@@ -585,24 +586,24 @@ fn self_host_frozen_callable_kind(
   declaration: U64,
 ) -> SelfHostFrozenInterfaceCallableKind {
   match collected.declaration_reference(declaration) {
-    Option::Some(reference) => match reference {
-      SelfHostCollectedDeclarationReference::Method(method) => match method.kind {
-        SelfHostCollectedMethodKind::TraitMethodDecl => SelfHostFrozenInterfaceCallableKind::FrozenTraitCallable(
+    Some(reference) => match reference {
+      Method(method) => match method.kind {
+        TraitMethodDecl => FrozenTraitCallable(
           method.parent,
         )
-        SelfHostCollectedMethodKind::ImplMethodDecl => SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(
+        ImplMethodDecl => FrozenImplCallable(
           method.parent,
         )
-        SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => SelfHostFrozenInterfaceCallableKind::FrozenFunctionCallable
+        ForeignLibraryMemberDecl => FrozenFunctionCallable
       }
-      SelfHostCollectedDeclarationReference::TopLevel(declaration_info) => {
+      TopLevel(declaration_info) => {
         let mut index = 0u32
-        let mut builtin_name = Option::None
+        let mut builtin_name = None
         let _ = while index {
           current => if current < collected.builtins.length() {
             let candidate = collected.builtins[current]
             if self_host_u64_equal(candidate.declaration, declaration_info.id) {
-              builtin_name = Option::Some(candidate.builtin_name)
+              builtin_name = Some(candidate.builtin_name)
               break self_host_semantic_unit()
             }
             continue current + 1u32
@@ -611,14 +612,14 @@ fn self_host_frozen_callable_kind(
           }
         }
         match builtin_name {
-          Option::Some(name) => SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(
+          Some(name) => FrozenBuiltinCallable(
             name,
           )
-          Option::None => SelfHostFrozenInterfaceCallableKind::FrozenFunctionCallable
+          None => FrozenFunctionCallable
         }
       }
     }
-    Option::None => SelfHostFrozenInterfaceCallableKind::FrozenFunctionCallable
+    None => FrozenFunctionCallable
   }
 }
 
@@ -711,15 +712,15 @@ fn self_host_frozen_callable_exported(
     } else {
       let method = collected.method_at(method_index)
       match method.kind {
-        SelfHostCollectedMethodKind::TraitMethodDecl => self_host_frozen_exported_declaration(
+        TraitMethodDecl => self_host_frozen_exported_declaration(
           exported_declarations,
           method.parent,
         )
-        SelfHostCollectedMethodKind::ImplMethodDecl => self_host_frozen_exported_declaration(
+        ImplMethodDecl => self_host_frozen_exported_declaration(
           exported_implementations,
           method.parent,
         )
-        SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => method.visibility is SelfHostSemanticVisibility::Public
+        ForeignLibraryMemberDecl => method.visibility is Public
       }
     }
   }
@@ -731,6 +732,7 @@ fn self_host_freeze_module_signature_interface(
   resolved: SelfHostResolvedModuleTypes,
 ) -> SelfHostFrozenModuleInterface {
   let declarations = []
+  let constructor_wrappers = collected.public_constructor_wrappers()
   let exported_declarations = self_host_empty_u64_bool_map()
   let mut declaration_index = 0u32
   let _ = while declaration_index {
@@ -738,18 +740,18 @@ fn self_host_freeze_module_signature_interface(
       let declaration = self_host_collected_declaration_identity(
         collected.declarations[current],
       )
-    if declaration.visibility is SelfHostSemanticVisibility::Public &&
+    if (declaration.visibility is Public || constructor_wrappers.contains_key(declaration.id)) &&
       !collected.declaration_is_test_only(declaration.id) &&
       !self_host_u32_equal(declaration.name, 4294967295u32) {
       match self_host_freeze_declaration_kind(declaration.kind) {
-        Option::Some(kind) => {
-          let semantic_type = if declaration.kind is SelfHostCollectedDeclKind::TypeAliasDecl {
+        Some(kind) => {
+          let semantic_type = if declaration.kind is TypeAliasDecl {
             self_host_alias_semantic_type(collected, resolved, declaration.id)
           } else {
             resolved.declaration_type(declaration.id)
           }
           exported_declarations.set(declaration.id, true)
-          declarations.push(SelfHostFrozenInterfaceDeclaration::{
+          declarations.push({
             declaration: declaration.id
             name: collected.name(declaration.name)
             kind: kind
@@ -759,7 +761,7 @@ fn self_host_freeze_module_signature_interface(
             ).length
             generic_parameters: collected.generic_parameters_of(declaration.id)
             semantic_type: semantic_type
-            location: SelfHostSourceLocation::{
+            location: {
               file: collected.declaration_files[
                 self_host_semantic_id_local(declaration.id)
               ]
@@ -767,7 +769,7 @@ fn self_host_freeze_module_signature_interface(
             }
           })
         }
-        Option::None => {}
+        None => {}
       }
     }
         continue current + 1u32
@@ -779,19 +781,19 @@ fn self_host_freeze_module_signature_interface(
   let _ = while method_index {
     current => if current < collected.methods.length() {
       let method = self_host_collected_method_identity(collected.methods[current])
-    if method.kind is SelfHostCollectedMethodKind::ForeignLibraryMemberDecl &&
-      method.visibility is SelfHostSemanticVisibility::Public &&
+    if method.kind is ForeignLibraryMemberDecl &&
+      method.visibility is Public &&
       !collected.declaration_is_test_only(method.id) &&
       !self_host_u32_equal(method.name, 4294967295u32) {
-      declarations.push(SelfHostFrozenInterfaceDeclaration::{
+      declarations.push({
         declaration: method.id
         name: collected.name(method.name)
-        kind: SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration
-        source_kind: SelfHostCollectedDeclKind::FunctionDecl
+        kind: FrozenValueDeclaration
+        source_kind: FunctionDecl
         generic_parameter_count: collected.generic_parameters_of(method.id).length
         generic_parameters: collected.generic_parameters_of(method.id)
         semantic_type: resolved.declaration_type(method.id)
-        location: SelfHostSourceLocation::{
+        location: {
           file: collected.declaration_files[self_host_semantic_id_local(method.id)]
           offset: method.offset
         }
@@ -811,14 +813,14 @@ fn self_host_freeze_module_signature_interface(
         exported_declarations,
         field.declaration,
       ) {
-        fields.push(SelfHostFrozenInterfaceField::{
+        fields.push({
           field: field.id
           declaration: field.declaration
           variant: field.variant
           mutable_: field.mutable_
           name: collected.name(field.name)
           type_: resolved.field_types[current]
-          location: SelfHostSourceLocation::{
+          location: {
             file: collected.declaration_files[
               self_host_semantic_id_local(field.declaration)
             ]
@@ -858,16 +860,17 @@ fn self_host_freeze_module_signature_interface(
           break self_host_semantic_unit()
         }
       }
-        variants.push(SelfHostFrozenInterfaceVariant::{
+        variants.push({
           variant: variant.id
+          constructor: collected.constructor_wrappers.get(variant.id)
           declaration: variant.declaration
           kind: variant.kind
           name: collected.name(variant.name)
-          payload_types: SelfHostHirSpan::{
+          payload_types: {
             start: payload_start
             length: variant_payload_types.length() - payload_start
           }
-          location: SelfHostSourceLocation::{
+          location: {
             file: collected.declaration_files[
               self_host_semantic_id_local(variant.declaration)
             ]
@@ -896,21 +899,21 @@ fn self_host_freeze_module_signature_interface(
         exported_declarations,
       ) {
       let trait_visible = match resolved.impl_trait_types[implementation_index] {
-        Option::Some(type_) => self_host_frozen_impl_type_visible(
+        Some(type_) => self_host_frozen_impl_type_visible(
           resolved,
           type_,
           exported_declarations,
         )
-        Option::None => true
+        None => true
       }
       let package_owned = match resolved.impl_trait_types[implementation_index] {
-        Option::Some(type_) => self_host_frozen_trait_impl_is_owned(
+        Some(type_) => self_host_frozen_trait_impl_is_owned(
           resolved,
           collected.module_id,
           type_,
           resolved.impl_target_types[implementation_index],
         )
-        Option::None => true
+        None => true
       }
       if trait_visible && package_owned {
         exported_implementations.set(implementation.declaration, true)
@@ -961,12 +964,12 @@ fn self_host_freeze_module_signature_interface(
           let parameter = self_host_collected_parameter_identity(
             collected.parameters[parameter_index],
           )
-          parameters.push(SelfHostFrozenInterfaceParameter::{
+          parameters.push({
             parameter: parameter.id
             name: collected.name(parameter.name)
             type_: resolved.parameter_types[parameter_index]
-            receiver: parameter.kind is SelfHostCollectedParameterKind::ReceiverParameterDecl
-            location: SelfHostSourceLocation::{
+            receiver: parameter.kind is ReceiverParameterDecl
+            location: {
               file: collected.declaration_files[
                 self_host_semantic_id_local(parameter.declaration)
               ]
@@ -986,18 +989,18 @@ fn self_host_freeze_module_signature_interface(
         collected,
         callable.declaration,
       )
-      callables.push(SelfHostFrozenInterfaceCallable::{
+      callables.push({
         declaration: callable.declaration
         name: callable_name
         kind: self_host_frozen_callable_kind(collected, callable.declaration)
         generic_parameters: collected.generic_parameters_of(callable.declaration)
-        parameters: SelfHostHirSpan::{
+        parameters: {
           start: parameter_start
           length: parameters.length() - parameter_start
         }
         result_type: resolved.callable_return_types[callable_index]
         function_type: resolved.callable_function_types[callable_index]
-        location: SelfHostSourceLocation::{
+        location: {
           file: collected.declaration_files[
             self_host_semantic_id_local(callable.declaration)
           ]
@@ -1027,14 +1030,14 @@ fn self_host_freeze_module_signature_interface(
         collected,
         implementation.declaration,
       )
-      implementations.push(SelfHostFrozenInterfaceImplementation::{
+      implementations.push({
         declaration: implementation.declaration
         generic_parameters: collected.generic_parameters_of(
           implementation.declaration,
         )
         trait_type: resolved.impl_trait_types[implementation_index]
         target_type: resolved.impl_target_types[implementation_index]
-        location: SelfHostSourceLocation::{
+        location: {
           file: collected.declaration_files[
             self_host_semantic_id_local(implementation.declaration)
           ]
@@ -1048,7 +1051,7 @@ fn self_host_freeze_module_signature_interface(
       break self_host_semantic_unit()
     }
   }
-  SelfHostFrozenModuleInterface::{
+  {
     module_id: collected.module_id
     path: path
     resolved_types: resolved
@@ -1095,15 +1098,15 @@ pub struct SelfHostModuleImportScope {
 }
 
 fn self_host_empty_u64_u32_map() -> Map<U64, U32> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_empty_u64_bool_map() -> Map<U64, Bool> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_empty_string_u32_map() -> Map<String, U32> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_interface_resolved_types(
@@ -1131,12 +1134,12 @@ fn self_host_interface_slot_declaration(
 impl SelfHostModuleImportScope {
   fn lookup_alias(self, name: String) -> Option<U32> {
     match self.alias_bindings.get(name) {
-      Option::Some(value) => if value < 4294967294u32 {
-        Option::Some(value)
+      Some(value) => if value < 4294967294u32 {
+        Some(value)
       } else {
-        Option::None
+        None
       }
-      Option::None => Option::None
+      None => None
     }
   }
 
@@ -1145,12 +1148,12 @@ impl SelfHostModuleImportScope {
     name: String,
   ) -> Option<SelfHostImportedDeclarationBinding> {
     match self.type_bindings.get(name) {
-      Option::Some(index) => if index < 4294967294u32 {
-        Option::Some(self.declarations[index])
+      Some(index) => if index < 4294967294u32 {
+        Some(self.declarations[index])
       } else {
-        Option::None
+        None
       }
-      Option::None => Option::None
+      None => None
     }
   }
 
@@ -1159,44 +1162,44 @@ impl SelfHostModuleImportScope {
     name: String,
   ) -> Option<SelfHostImportedDeclarationBinding> {
     match self.trait_bindings.get(name) {
-      Option::Some(index) => if index < 4294967294u32 {
-        Option::Some(self.declarations[index])
+      Some(index) => if index < 4294967294u32 {
+        Some(self.declarations[index])
       } else {
-        Option::None
+        None
       }
-      Option::None => Option::None
+      None => None
     }
   }
 
   fn lookup_opened_value(self, name: String) -> Option<U64> {
     match self.value_bindings.get(name) {
-      Option::Some(index) => if index < 4294967294u32 {
-        Option::Some(self.declarations[index].declaration)
+      Some(index) => if index < 4294967294u32 {
+        Some(self.declarations[index].declaration)
       } else {
-        Option::None
+        None
       }
-      Option::None => Option::None
+      None => None
     }
   }
 
   fn opened_value_is_ambiguous(self, name: String) -> Bool {
     match self.value_bindings.get(name) {
-      Option::Some(index) => index == 4294967294u32
-      Option::None => false
+      Some(index) => index == 4294967294u32
+      None => false
     }
   }
 
   fn type_is_ambiguous(self, name: String) -> Bool {
     match self.type_bindings.get(name) {
-      Option::Some(index) => index == 4294967294u32
-      Option::None => false
+      Some(index) => index == 4294967294u32
+      None => false
     }
   }
 
   fn trait_is_ambiguous(self, name: String) -> Bool {
     match self.trait_bindings.get(name) {
-      Option::Some(index) => index == 4294967294u32
-      Option::None => false
+      Some(index) => index == 4294967294u32
+      None => false
     }
   }
 
@@ -1205,8 +1208,8 @@ impl SelfHostModuleImportScope {
     declaration: U64,
   ) -> Option<SelfHostImportedDeclarationBinding> {
     match self.declaration_bindings.get(declaration) {
-      Option::Some(index) => Option::Some(self.declarations[index])
-      Option::None => Option::None
+      Some(index) => Some(self.declarations[index])
+      None => None
     }
   }
 
@@ -1217,7 +1220,7 @@ impl SelfHostModuleImportScope {
     kind: SelfHostFrozenInterfaceDeclarationKind,
   ) -> Option<SelfHostImportedDeclarationBinding> {
     if interface_index >= self.interfaces.length() {
-      Option::None
+      None
     } else {
       let mut index = 0u32
       let count = self_host_interface_slot_declaration_count(
@@ -1237,7 +1240,7 @@ impl SelfHostModuleImportScope {
           }
           continue current + 1u32
         } else {
-          break Option::None
+          break None
         }
       }
     }
@@ -1251,7 +1254,7 @@ impl SelfHostModuleImportScope {
     self.lookup_module_declaration(
       interface_index,
       name,
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+      FrozenTypeDeclaration,
     )
   }
 
@@ -1263,7 +1266,7 @@ impl SelfHostModuleImportScope {
     self.lookup_module_declaration(
       interface_index,
       name,
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration,
+      FrozenTraitDeclaration,
     )
   }
 
@@ -1275,7 +1278,7 @@ impl SelfHostModuleImportScope {
     self.lookup_module_declaration(
       interface_index,
       name,
-      SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration,
+      FrozenValueDeclaration,
     )
   }
 }
@@ -1301,7 +1304,7 @@ impl SelfHostImportScopeBuilder {
     module_paths: Array<String>,
     interfaces: SelfHostFrozenInterfaceList,
   ) -> SelfHostImportScopeBuilder {
-    SelfHostImportScopeBuilder::{
+    {
       module_id: module_id
       declarations: []
       declaration_bindings: self_host_empty_u64_u32_map()
@@ -1323,10 +1326,10 @@ impl SelfHostImportScopeBuilder {
     declaration: SelfHostFrozenInterfaceDeclaration,
   ) -> U32 {
     match self.declaration_bindings.get(declaration.declaration) {
-      Option::Some(index) => index
-      Option::None => {
+      Some(index) => index
+      None => {
         let index = self.declarations.length()
-        let binding = SelfHostImportedDeclarationBinding::{
+        let binding = {
           declaration: declaration.declaration
           source_kind: declaration.source_kind
           generic_parameter_count: declaration.generic_parameter_count
@@ -1346,56 +1349,56 @@ impl SelfHostImportScopeBuilder {
     interface_index: U32,
     declaration: SelfHostFrozenInterfaceDeclaration,
   ) -> Unit {
-    let previous_binding = if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+    let previous_binding = if declaration.kind is FrozenTraitDeclaration {
       self.trait_bindings.get(declaration.name)
-    } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
+    } else if declaration.kind is FrozenTypeDeclaration {
       self.type_bindings.get(declaration.name)
     } else {
       self.value_bindings.get(declaration.name)
     }
     let index = self.register_declaration(interface_index, declaration)
     match previous_binding {
-      Option::None => if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+      None => if declaration.kind is FrozenTraitDeclaration {
         self.trait_bindings.set(declaration.name, index)
-      } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
+      } else if declaration.kind is FrozenTypeDeclaration {
         self.type_bindings.set(declaration.name, index)
       } else {
         self.value_bindings.set(declaration.name, index)
       }
-      Option::Some(previous_index) => if previous_index < 4294967294u32 {
+      Some(previous_index) => if previous_index < 4294967294u32 {
         let previous = self.declarations[previous_index]
         if !self_host_u64_equal(
           previous.declaration,
           declaration.declaration,
         ) {
-          let previous_callable = previous.source_kind is SelfHostCollectedDeclKind::FunctionDecl || previous.source_kind is SelfHostCollectedDeclKind::BuiltinDecl
-          let current_callable = declaration.source_kind is SelfHostCollectedDeclKind::FunctionDecl || declaration.source_kind is SelfHostCollectedDeclKind::BuiltinDecl
-          let same_interface_overload = declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration && previous_callable && current_callable && self_host_u32_equal(
+          let previous_callable = previous.source_kind is FunctionDecl || previous.source_kind is BuiltinDecl
+          let current_callable = declaration.source_kind is FunctionDecl || declaration.source_kind is BuiltinDecl
+          let same_interface_overload = declaration.kind is FrozenValueDeclaration && previous_callable && current_callable && self_host_u32_equal(
             previous.interface_index,
             interface_index,
           )
           if same_interface_overload {
             return
           }
-          if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+          if declaration.kind is FrozenTraitDeclaration {
             self.trait_bindings.set(declaration.name, 4294967294u32)
-          } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
+          } else if declaration.kind is FrozenTypeDeclaration {
             self.type_bindings.set(declaration.name, 4294967294u32)
           } else {
             self.value_bindings.set(declaration.name, 4294967294u32)
           }
-          if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+          if declaration.kind is FrozenTraitDeclaration {
             self.diagnostics.push(
-              SelfHostImportScopeDiagnostic::AmbiguousImportedTrait(
+              AmbiguousImportedTrait(
                 self.module_id,
                 declaration.name,
                 previous.declaration,
                 declaration.declaration,
               ),
             )
-          } else if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration {
+          } else if declaration.kind is FrozenTypeDeclaration {
             self.diagnostics.push(
-              SelfHostImportScopeDiagnostic::AmbiguousImportedType(
+              AmbiguousImportedType(
                 self.module_id,
                 declaration.name,
                 previous.declaration,
@@ -1404,7 +1407,7 @@ impl SelfHostImportScopeBuilder {
             )
           } else {
             self.diagnostics.push(
-              SelfHostImportScopeDiagnostic::AmbiguousImportedValue(
+              AmbiguousImportedValue(
                 self.module_id,
                 declaration.name,
                 previous.declaration,
@@ -1475,11 +1478,11 @@ impl SelfHostImportScopeBuilder {
     offset: U32,
   ) -> Unit {
     match self.alias_bindings.get(alias) {
-      Option::None => self.alias_bindings.set(alias, dependency)
-      Option::Some(previous) => if previous != dependency {
+      None => self.alias_bindings.set(alias, dependency)
+      Some(previous) => if previous != dependency {
         self.alias_bindings.set(alias, 4294967295u32)
         self.diagnostics.push(
-          SelfHostImportScopeDiagnostic::DuplicateImportedAlias(
+          DuplicateImportedAlias(
             self.module_id,
             alias,
             file,
@@ -1494,7 +1497,7 @@ impl SelfHostImportScopeBuilder {
     self,
     module_paths: Array<String>,
   ) -> SelfHostModuleImportScope {
-    SelfHostModuleImportScope::{
+    {
       module_id: self.module_id
       module_paths: module_paths
       declarations: self.declarations
@@ -1557,18 +1560,18 @@ fn self_host_build_module_import_scope(
         )
         if dependency < module_paths.length() {
           match import_.import_alias {
-            Option::Some(alias) => builder.add_alias(
+            Some(alias) => builder.add_alias(
               alias,
               dependency,
               import_.file,
               import_.import_alias_offset,
             )
-            Option::None => {}
+            None => {}
           }
           builder.import_interface(dependency, import_.open_)
         } else {
           builder.diagnostics.push(
-            SelfHostImportScopeDiagnostic::UnavailableImportedInterface(
+            UnavailableImportedInterface(
               collected.module_id,
               import_path,
               import_.file,

@@ -18,13 +18,13 @@ fn self_host_capture_cell_plan_fixture() -> (SelfHostPlannedProgramWasmGCLink, S
 test "capture cell slots retain frozen layout instead of reselecting source flags" {
   let (link, plan) = self_host_capture_cell_plan_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
-  let before = match self_host_linked_capture_cell_slot(Option::Some(plan), module_, body, 1u32) {
-    Option::Some(slot) => slot
-    Option::None => unreachable()
+  let before = match self_host_linked_capture_cell_slot(Some(plan), module_, body, 1u32) {
+    Some(slot) => slot
+    None => unreachable()
   }
   let source = module_.locals[1u32]
   assert(source.local_id == 1u32 && source.mutable_, "valid source before one flag mutation")
-  module_.locals[1u32] = SelfHostPlannedLocal::{
+  module_.locals[1u32] = {
     body: source.body
     lambda: source.lambda
     local_id: source.local_id
@@ -36,28 +36,28 @@ test "capture cell slots retain frozen layout instead of reselecting source flag
     nominal: source.nominal
     offset: source.offset
   }
-  match self_host_linked_capture_cell_slot(Option::Some(plan), module_, body, 1u32) {
-    Option::Some(slot) => assert(slot == before, "the frozen cell slot cannot change")
-    Option::None => assert(false, "emission must not remove a frozen capture cell")
+  match self_host_linked_capture_cell_slot(Some(plan), module_, body, 1u32) {
+    Some(slot) => assert(slot == before, "the frozen cell slot cannot change")
+    None => assert(false, "emission must not remove a frozen capture cell")
   }
 }
 
 fn self_host_test_owned_cell(plan: SelfHostPlannedPhysicalBodyCarrierPlan) -> SelfHostPhysicalCaptureCellPlan {
   assert(plan.capture_cells.length() == 2u32, "parameter and mutable local each have a plan entry")
-  assert(plan.capture_cells[0u32] is Option::None, "ordinary parameter needs no cell")
+  assert(plan.capture_cells[0u32] is None, "ordinary parameter needs no cell")
   let cell = match plan.capture_cells[1u32] {
-    Option::Some(value) => value
-    Option::None => unreachable()
+    Some(value) => value
+    None => unreachable()
   }
   assert(cell.local_id == 1u32 && cell.local_index == 1u32 && cell.source_slot == 1u32, "stable cell source identity")
   assert(cell.local_slot == 2u32 && cell.type_index == 1u32 && !cell.parameter, "stable cell physical identity")
-  assert(cell.storage is SelfHostPlannedWasmStorageType::WasmI64Storage, "cell stores I64")
+  assert(cell.storage is WasmI64Storage, "cell stores I64")
   cell
 }
 
 fn self_host_test_change_owned_cell(plan: SelfHostPlannedPhysicalBodyCarrierPlan, field: U32, value: U32) -> Unit {
   let source = self_host_test_owned_cell(plan)
-  plan.capture_cells[1u32] = Option::Some(SelfHostPhysicalCaptureCellPlan::{
+  plan.capture_cells[1u32] = Some({
     local_id: if field == 1u32 {
       value
     } else {
@@ -84,7 +84,7 @@ fn self_host_test_change_owned_cell(plan: SelfHostPlannedPhysicalBodyCarrierPlan
       source.type_index
     }
     storage: if field == 6u32 {
-      SelfHostPlannedWasmStorageType::WasmI32Storage
+      WasmI32Storage
     } else {
       source.storage
     }
@@ -112,7 +112,7 @@ test "ARN-103 owned capture cell tables cover every logical local" expect_trap "
 test "BOD-610 a required owned capture cell cannot be omitted" expect_trap "unreachable" {
   let (link, plan) = self_host_capture_cell_plan_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
-  plan.capture_cells[1u32] = Option::None
+  plan.capture_cells[1u32] = None
   self_host_verify_owned_capture_cells(link, module_, body, plan)
 }
 
@@ -168,7 +168,7 @@ test "BOD-605 owned capture cell parameter role cannot change after freeze" expe
 test "BOD-605 owned capture cell presence cannot change after freeze" expect_trap "unreachable" {
   let (_, plan) = self_host_capture_cell_plan_fixture()
   let frozen = self_host_freeze_physical_body(plan)
-  plan.capture_cells[1u32] = Option::None
+  plan.capture_cells[1u32] = None
   self_host_assert_frozen_physical_body(frozen, plan)
 }
 

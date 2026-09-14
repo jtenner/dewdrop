@@ -7,7 +7,7 @@ fn self_host_build_erased_field_index(lowering: SelfHostPlannedProgramLowering) 
   let fields = self_host_empty_erased_field_index()
   for module_ in lowering.modules {
     for field in self_host_erased_field_layouts(module_) {
-      if self_host_planned_resolved_value_shape(module_.resolved_types, field.type_) is SelfHostPlannedValueShape::GenericPlannedValueShape {
+      if self_host_planned_resolved_value_shape(module_.resolved_types, field.type_) is GenericPlannedValueShape {
         fields.set(field.field, true)
       }
     }
@@ -21,7 +21,7 @@ fn self_host_build_unit_field_index(lowering: SelfHostPlannedProgramLowering) ->
   let fields = self_host_empty_erased_field_index()
   for module_ in lowering.modules {
     for field in self_host_erased_field_layouts(module_) {
-      if self_host_planned_resolved_value_shape(module_.resolved_types, field.type_) is SelfHostPlannedValueShape::UnitPlannedValueShape {
+      if self_host_planned_resolved_value_shape(module_.resolved_types, field.type_) is UnitPlannedValueShape {
         fields.set(field.field, true)
       }
     }
@@ -34,7 +34,7 @@ fn self_host_erased_field_layouts(module_: SelfHostPlannedModuleLowering) -> Arr
 }
 
 fn self_host_empty_erased_field_index() -> Map<U64, Bool> {
-  Map::empty()
+  empty()
 }
 
 // A reference field needs an explicit boxing contract. Generic shape evidence
@@ -45,13 +45,13 @@ fn self_host_linked_field_storage_matches_shape(
   storage: SelfHostPlannedWasmStorageType,
   shape: SelfHostPlannedValueShape,
 ) -> Bool {
-  if shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
-    return link.unit_fields.get(field) is Option::Some(true) &&
-      storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+  if shape is UnitPlannedValueShape {
+    return link.unit_fields.get(field) is Some(true) &&
+      storage is WasmNullableEqRefStorage
   }
-  if shape is SelfHostPlannedValueShape::GenericPlannedValueShape {
-    return link.erased_fields.get(field) is Option::Some(true) &&
-      storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+  if shape is GenericPlannedValueShape {
+    return link.erased_fields.get(field) is Some(true) &&
+      storage is WasmNullableEqRefStorage
   }
   self_host_program_representation_storage_matches_shape(storage, shape)
 }
@@ -62,10 +62,10 @@ fn self_host_linked_erased_field_unit_storage(
   storage: SelfHostPlannedWasmStorageType,
   carrier: SelfHostWasmBodyCarrier,
 ) -> Bool {
-  carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier &&
-    storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage &&
-    (link.erased_fields.get(field) is Option::Some(true) ||
-      link.unit_fields.get(field) is Option::Some(true))
+  carrier is UnitBodyCarrier &&
+    storage is WasmNullableEqRefStorage &&
+    (link.erased_fields.get(field) is Some(true) ||
+      link.unit_fields.get(field) is Some(true))
 }
 
 fn self_host_linked_physical_erased_unit_field(
@@ -85,7 +85,7 @@ fn self_host_linked_physical_erased_unit_field(
           let candidate = module_.fields[physical.fields.start + offset]
           if candidate.physical_index == field_link.field_index {
             return candidate.declaration == field && self_host_linked_erased_field_unit_storage(
-              link, field, candidate.storage, SelfHostWasmBodyCarrier::UnitBodyCarrier,
+              link, field, candidate.storage, UnitBodyCarrier,
             )
           }
           continue offset + 1u32
@@ -103,34 +103,34 @@ fn self_host_linked_variant_unit_storage(
   field: SelfHostPlannedWasmField,
   carrier: SelfHostWasmBodyCarrier,
 ) -> Bool {
-  if !(carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier) ||
-    !(field.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage) {
+  if !(carrier is UnitBodyCarrier) ||
+    !(field.storage is WasmNullableEqRefStorage) {
     return false
   }
   match self_host_linked_declared_variant_payload_shape(link, field) {
-    Option::Some(shape) => shape is SelfHostPlannedValueShape::UnitPlannedValueShape ||
-      shape is SelfHostPlannedValueShape::GenericPlannedValueShape
-    Option::None => false
+    Some(shape) => shape is UnitPlannedValueShape ||
+      shape is GenericPlannedValueShape
+    None => false
   }
 }
 
 fn self_host_linked_erased_field_box_type(link: SelfHostPlannedProgramWasmGCLink, field: U64, carrier: SelfHostWasmBodyCarrier) -> Option<U32> {
-  if !(link.erased_fields.get(field) is Option::Some(true)) {
-    return Option::None
+  if !(link.erased_fields.get(field) is Some(true)) {
+    return None
   }
   self_host_linked_scalar_box_type(link, carrier)
 }
 
 fn self_host_linked_scalar_box_type(link: SelfHostPlannedProgramWasmGCLink, carrier: SelfHostWasmBodyCarrier) -> Option<U32> {
   let offset = match carrier {
-    SelfHostWasmBodyCarrier::I32BodyCarrier => 0u32
-    SelfHostWasmBodyCarrier::I64BodyCarrier => 1u32
-    SelfHostWasmBodyCarrier::F32BodyCarrier => 2u32
-    SelfHostWasmBodyCarrier::F64BodyCarrier => 3u32
-    SelfHostWasmBodyCarrier::V128BodyCarrier => 4u32
-    _ => return Option::None
+    I32BodyCarrier => 0u32
+    I64BodyCarrier => 1u32
+    F32BodyCarrier => 2u32
+    F64BodyCarrier => 3u32
+    V128BodyCarrier => 4u32
+    _ => return None
   }
-  Option::Some(self_host_linked_scalar_box_runtime_base(link) + offset)
+  Some(self_host_linked_scalar_box_runtime_base(link) + offset)
 }
 
 fn self_host_body_field_read_carrier(
@@ -141,10 +141,10 @@ fn self_host_body_field_read_carrier(
   field: U64,
   storage: SelfHostPlannedWasmStorageType,
 ) -> SelfHostWasmBodyCarrier {
-  if link.unit_fields.get(field) is Option::Some(true) {
-    return SelfHostWasmBodyCarrier::UnitBodyCarrier
+  if link.unit_fields.get(field) is Some(true) {
+    return UnitBodyCarrier
   }
-  if link.erased_fields.get(field) is Option::Some(true) {
+  if link.erased_fields.get(field) is Some(true) {
     let type_ = module_.expressions[expression].type_
     let shape = self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, type_)
     return self_host_body_carrier_from_shape(self_host_body_specialization_shape_for_type(link, module_, specialization, type_, shape))

@@ -27,7 +27,7 @@ fn self_host_variant_find_call(
   while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(_, _, _) => {
+        CallExpr(_, _, _) => {
           return current
         }
         _ => {}
@@ -48,7 +48,7 @@ fn self_host_variant_find_construction(
   while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::ConstructExpr(_, _, _) => {
+        ConstructExpr(_, _, _) => {
           return current
         }
         _ => {}
@@ -69,7 +69,7 @@ fn self_host_variant_find_qualified(
   while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::QualifiedExpr(_, _, _) => {
+        QualifiedExpr(_, _, _) => {
           return current
         }
         _ => {}
@@ -89,7 +89,7 @@ fn self_host_variant_assert_primitive(
   message: String,
 ) -> Unit {
   match body.type_term(type_) {
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => assert(
+    BodyResolvedType(resolved_type) => assert(
       resolved_type == resolved.primitive(primitive),
       message,
     )
@@ -108,12 +108,12 @@ test "variant selection resolves tuple and unit constructors" {
   let none_body = inferred.bodies[1u32]
   let call = self_host_variant_find_call(collected, some_hir)
   let call_target = match collected.expressions[call] {
-    SelfHostHirExpr::CallExpr(target, _, _) => target
+    CallExpr(target, _, _) => target
     _ => 4294967295u32
   }
   match collected.expressions[call_target] {
-    SelfHostHirExpr::QualifiedExpr(base, property, _) => match names.expression_references[base] {
-      SelfHostBodyNameReference::ModuleTypeNameReference(declaration) => {
+    QualifiedExpr(base, property, _) => match names.expression_references[base] {
+      ModuleTypeNameReference(declaration) => {
         assert(
           self_host_u64_equal(collected.variants[1u32].declaration, declaration),
           "tuple variant owner",
@@ -123,7 +123,7 @@ test "variant selection resolves tuple and unit constructors" {
           "tuple variant name",
         )
       }
-      SelfHostBodyNameReference::NoNameReference => assert(false, "tuple base no reference")
+      NoNameReference => assert(false, "tuple base no reference")
       _ => assert(false, "tuple base wrong reference")
     }
     _ => assert(false, "tuple target not qualified")
@@ -132,13 +132,14 @@ test "variant selection resolves tuple and unit constructors" {
   assert(some_body.diagnostic_count() == 0u32, "tuple variant diagnostics")
   assert(none_body.diagnostic_count() == 0u32, "unit variant diagnostics")
   match some_body.call_target(some_hir, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, _) => {}
-    SelfHostBasicCallTarget::NoBasicCallTarget => assert(false, "tuple variant no call target")
-    SelfHostBasicCallTarget::ErrorBasicCallTarget => assert(false, "tuple variant error call target")
-    SelfHostBasicCallTarget::FunctionValueBasicCallTarget(_) => assert(false, "tuple variant function call target")
+    SelectedBasicCallTarget(_, _) => {}
+    BoundTraitBasicCallTarget(_, _, _, _) => assert(false, "tuple variant bound trait call target")
+    NoBasicCallTarget => assert(false, "tuple variant no call target")
+    ErrorBasicCallTarget => assert(false, "tuple variant error call target")
+    FunctionValueBasicCallTarget(_) => assert(false, "tuple variant function call target")
   }
   match some_body.expression_selection(some_hir, call) {
-    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+    VariantConstructionBasicExpressionSelection(
       variant,
       kind,
       arguments,
@@ -150,18 +151,18 @@ test "variant selection resolves tuple and unit constructors" {
         some_body,
         resolved,
         some_body.expression_type_arguments[arguments.start],
-        SelfHostPrimitiveType::I32Type,
+        I32Type,
         "Some generic I32",
       )
     }
-    SelfHostBasicExpressionSelection::NoBasicExpressionSelection => assert(false, "tuple variant no selection")
-    SelfHostBasicExpressionSelection::ErrorBasicExpressionSelection => assert(false, "tuple variant error selection")
-    SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection => assert(false, "tuple variant deferred selection")
-    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(_, _, _) => assert(false, "tuple variant field selection")
-    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(_, _) => assert(false, "tuple variant struct selection")
+    NoBasicExpressionSelection => assert(false, "tuple variant no selection")
+    ErrorBasicExpressionSelection => assert(false, "tuple variant error selection")
+    DeferredBasicExpressionSelection => assert(false, "tuple variant deferred selection")
+    FieldBasicExpressionSelection(_, _, _) => assert(false, "tuple variant field selection")
+    StructConstructionBasicExpressionSelection(_, _) => assert(false, "tuple variant struct selection")
   }
   match none_body.expression_selection(none_hir, qualified) {
-    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+    VariantConstructionBasicExpressionSelection(
       variant,
       kind,
       arguments,
@@ -173,7 +174,7 @@ test "variant selection resolves tuple and unit constructors" {
         none_body,
         resolved,
         none_body.expression_type_arguments[arguments.start],
-        SelfHostPrimitiveType::I32Type,
+        I32Type,
         "None generic I32",
       )
     }
@@ -192,20 +193,20 @@ test "variant selection infers unqualified constructors from context" {
   let wide_hir = collected.bodies[1u32]
   let read_hir = collected.bodies[2u32]
   let small_body = match inferred.body(small_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let wide_body = match inferred.body(wide_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let read_body = match inferred.body(read_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -215,7 +216,7 @@ test "variant selection infers unqualified constructors from context" {
   let small_call = self_host_variant_find_call(collected, small_hir)
   let wide_call = self_host_variant_find_call(collected, wide_hir)
   match small_body.expression_selection(small_hir, small_call) {
-    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+    VariantConstructionBasicExpressionSelection(
       variant,
       _,
       _,
@@ -223,7 +224,7 @@ test "variant selection infers unqualified constructors from context" {
     _ => assert(false, "unqualified Small selection")
   }
   match wide_body.expression_selection(wide_hir, wide_call) {
-    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+    VariantConstructionBasicExpressionSelection(
       variant,
       _,
       _,
@@ -236,7 +237,7 @@ test "variant selection infers unqualified constructors from context" {
   let _ = while pattern {
     current => if current < end {
       match read_body.pattern_constructor(read_hir, current) {
-        SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+        SelectedBasicPatternConstructor(
           variant,
           _,
           _,
@@ -266,16 +267,16 @@ test "return expressions and unqualified constructors infer from context" {
   let _ = resolved.module_id
   let _ = names.module_id
   let body = match inferred.body(collected.bodies[0u32].id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "missing inferred body")
       return
     }
   }
   assert(body.diagnostic_count() == 0u32, "return constructor diagnostics")
   let unique_body = match inferred.body(collected.bodies[1u32].id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "missing unique inferred body")
       return
     }
@@ -294,7 +295,7 @@ test "variant selection resolves struct variant construction" {
   assert(body.diagnostic_count() == 0u32, "struct variant construction diagnostics")
   let expression = self_host_variant_find_construction(collected, hir_body)
   match body.expression_selection(hir_body, expression) {
-    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+    VariantConstructionBasicExpressionSelection(
       variant,
       field_count,
       arguments,
@@ -306,7 +307,7 @@ test "variant selection resolves struct variant construction" {
         body,
         resolved,
         body.expression_type_arguments[arguments.start],
-        SelfHostPrimitiveType::I32Type,
+        I32Type,
         "struct variant I32",
       )
     }
@@ -328,7 +329,7 @@ test "variant selection resolves tuple and unit patterns" {
   let _ = while pattern {
     current => if current < end {
       match body.pattern_constructor(hir_body, current) {
-        SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+        SelectedBasicPatternConstructor(
           _,
           _,
           arguments,
@@ -339,7 +340,7 @@ test "variant selection resolves tuple and unit patterns" {
             body,
             resolved,
             body.pattern_type_arguments[arguments.start],
-            SelfHostPrimitiveType::I32Type,
+            I32Type,
             "pattern generic I32",
           )
         }
@@ -368,7 +369,7 @@ fn self_host_variant_assert_one_struct_pattern(
   let _ = while pattern {
     current => if current < end {
       match body.pattern_constructor(hir_body, current) {
-        SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+        SelectedBasicPatternConstructor(
           _,
           _,
           arguments,
@@ -379,7 +380,7 @@ fn self_host_variant_assert_one_struct_pattern(
             body,
             resolved,
             body.pattern_type_arguments[arguments.start],
-            SelfHostPrimitiveType::I32Type,
+            I32Type,
             "struct pattern I32",
           )
         }
@@ -419,8 +420,8 @@ test "variant selection diagnoses struct pattern fields" {
   let _ = names.module_id
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -429,7 +430,7 @@ test "variant selection diagnoses struct pattern fields" {
   let _ = while index {
     current => if current < body.diagnostic_count() {
       match body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::UnknownPatternField(_, _, _) => {
+        UnknownPatternField(_, _, _) => {
           count = count + 1u32
         }
         _ => {}
@@ -451,8 +452,8 @@ test "variant selection diagnoses pattern payload arity" {
   let _ = names.module_id
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -461,7 +462,7 @@ test "variant selection diagnoses pattern payload arity" {
   let _ = while index {
     current => if current < body.diagnostic_count() {
       match body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::PatternPayloadArityMismatch(_, _, _, _) => {
+        PatternPayloadArityMismatch(_, _, _, _) => {
           count = count + 1u32
         }
         _ => {}
@@ -490,14 +491,14 @@ test "variant selection diagnoses payload kind and arity" {
   let kind_hir = kind_collected.bodies[0u32]
   let arity_hir = arity_collected.bodies[0u32]
   let kind_body = match kind_mismatch.body(kind_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let arity_body = match arity_mismatch.body(arity_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -507,7 +508,7 @@ test "variant selection diagnoses payload kind and arity" {
   let _ = while index {
     current => if current < kind_body.diagnostic_count() {
       match kind_body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::ConstructionPayloadKindMismatch(_, _, _) => {
+        ConstructionPayloadKindMismatch(_, _, _) => {
           kind_count = kind_count + 1u32
         }
         _ => {}
@@ -521,7 +522,7 @@ test "variant selection diagnoses payload kind and arity" {
   let _ = while index {
     current => if current < arity_body.diagnostic_count() {
       match arity_body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::ConstructionPayloadArityMismatch(_, _, _, _, _) => {
+        ConstructionPayloadArityMismatch(_, _, _, _, _) => {
           arity_count = arity_count + 1u32
         }
         _ => {}

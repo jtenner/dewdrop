@@ -19,6 +19,7 @@ pub struct ResolvedImportedField {
 
 ///|
 pub struct ResolvedImportedVariant {
+  constructor : DeclId?
   variant : VariantId
   declaration : DeclId
   kind : CollectedVariantKind
@@ -294,13 +295,17 @@ fn InterfaceTypeImporter::intern_product(
           break
         }
       }
-      if same { return index }
+      if same {
+        return index
+      }
     }
   }
   let start = self.resolved.type_arguments.length()
-  for field in fields { self.resolved.type_arguments.push(field) }
+  for field in fields {
+    self.resolved.type_arguments.push(field)
+  }
   let result = self.resolved.types.length()
-  self.resolved.types.push(ProductType({ start, length: fields.length() }))
+  self.resolved.types.push(ProductType({ start, length: fields.length(), }))
   result
 }
 
@@ -437,7 +442,12 @@ fn InterfaceTypeImporter::import_type(
           let mut index = fields.length
           while index > 0 {
             index -= 1
-            self.push(source_interface, source.type_arguments[fields.start + index], 0, 0)
+            self.push(
+              source_interface,
+              source.type_arguments[fields.start + index],
+              0,
+              0,
+            )
           }
         }
         AppliedType(base, arguments) => {
@@ -500,7 +510,12 @@ fn InterfaceTypeImporter::import_type(
         _ => abort("imported type finish task is not a product")
       }
       self.application_scratch.clear()
-      append_int_result_range(self.results, result_start, result_start + fields.length, self.application_scratch)
+      append_int_result_range(
+        self.results,
+        result_start,
+        result_start + fields.length,
+        self.application_scratch,
+      )
       let imported = self.intern_product(self.application_scratch)
       self.memos[source_interface][source_type] = imported
       self.results.truncate(result_start)
@@ -599,11 +614,13 @@ pub fn resolve_module_imports(
     // Export filtering changes callable positions. Build the function type
     // from this callable's imported signature, not a source-arena ordinal.
     let result_type = importer.import_type(
-      reference.interface_index, callable.result_type,
+      reference.interface_index,
+      callable.result_type,
     )
     let function_type = importer.intern_function(
-      Array::makei(callable.parameters.length, index =>
-        parameter_types[parameter_start + index]),
+      Array::makei(callable.parameters.length, index => {
+        parameter_types[parameter_start + index]
+      }),
       result_type,
     )
     let imported_index = callables.length()
@@ -663,10 +680,14 @@ pub fn resolve_module_imports(
         )
         parameter_receivers.push(parameter.receiver)
       }
-      let result_type = importer.import_type(interface_index, callable.result_type)
+      let result_type = importer.import_type(
+        interface_index,
+        callable.result_type,
+      )
       let function_type = importer.intern_function(
-        Array::makei(callable.parameters.length, index =>
-          parameter_types[parameter_start + index]),
+        Array::makei(callable.parameters.length, index => {
+          parameter_types[parameter_start + index]
+        }),
         result_type,
       )
       let imported_index = callables.length()
@@ -747,6 +768,7 @@ pub fn resolve_module_imports(
             )
           }
           variants.push({
+            constructor: variant.constructor,
             variant: variant.variant,
             declaration: variant.declaration,
             kind: variant.kind,

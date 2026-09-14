@@ -8,7 +8,7 @@ test "removed text runtime aliases do not reserve physical function slots" {
     for function_ in link.functions {
       let module_ = link.fragments.modules[function_.module_index]
       let fragment = self_host_program_link_fragment_function(module_, function_.fragment_index)
-      assert(!(fragment.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(_)), "an inline builtin must not reserve a physical function slot")
+      assert(!(fragment.kind is PlannedWasmInlineBuiltinFunction(_)), "an inline builtin must not reserve a physical function slot")
     }
   }
 }
@@ -20,7 +20,7 @@ test "Array runtime aliases are not emitted library functions" {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(_) => assert(false, "removed Array runtime target was emitted")
-    Result::Err(error) => assert(error == "dew_array_clear", error)
+    Ok(_) => assert(false, "removed Array runtime target was emitted")
+    Err(error) => assert(error == "dew_array_clear", error)
   }
 }

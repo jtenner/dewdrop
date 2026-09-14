@@ -2,16 +2,16 @@ fn self_host_outlined_builtin_test_module() -> SelfHostPlannedModuleWasmGCFragme
   let fragments = self_host_physical_test_fragments(b"builtin add(a: I32, b: I32) -> I32 = \"i32.add\"\npub fn run() -> I32 {\n  let operation = add\n  operation(40i32, 2i32)\n}\n")
   let module_ = fragments.modules[0u32]
   let function_ = module_.functions[0u32]
-  assert(function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedBuiltinFunction(_), "address-taken builtin has a physical wrapper")
+  assert(function_.kind is PlannedWasmOutlinedBuiltinFunction(_), "address-taken builtin has a physical wrapper")
   assert(function_.parameters.length == 2u32 && function_.results.length == 1u32, "valid scalar wrapper signature")
   assert(module_.function_value_types.length() == 4u32, "known signature arena before mutation")
-  assert(self_host_verify_outlined_builtin(module_, function_, b"i32.add") is Option::None, "valid signature before mutation")
+  assert(self_host_verify_outlined_builtin(module_, function_, b"i32.add") is None, "valid signature before mutation")
   module_
 }
 
 fn self_host_outlined_builtin_test_spans(module_: SelfHostPlannedModuleWasmGCFragments, parameters: SelfHostHirSpan, results: SelfHostHirSpan) -> SelfHostPlannedWasmFunctionFragment {
   let original = module_.functions[0u32]
-  SelfHostPlannedWasmFunctionFragment::{
+  {
     declaration: original.declaration
     kind: original.kind
     direct_builtin: original.direct_builtin
@@ -29,7 +29,7 @@ test "outlined builtin signatures are valid before mutation" {
 
 test "ABI-703 outlined builtin parameter count must match" expect_trap "unreachable" {
   let module_ = self_host_outlined_builtin_test_module()
-  let function_ = self_host_outlined_builtin_test_spans(module_, SelfHostHirSpan::{
+  let function_ = self_host_outlined_builtin_test_spans(module_, {
     start: 0u32
     length: 1u32
   }, module_.functions[0u32].results)
@@ -38,19 +38,19 @@ test "ABI-703 outlined builtin parameter count must match" expect_trap "unreacha
 
 test "ABI-705 outlined builtin operands retain their scalar type" expect_trap "unreachable" {
   let module_ = self_host_outlined_builtin_test_module()
-  module_.function_value_types[1u32] = SelfHostPlannedWasmValueType::WasmI64Value
+  module_.function_value_types[1u32] = WasmI64Value
   let _ = self_host_verify_outlined_builtin(module_, module_.functions[0u32], b"i32.add")
 }
 
 test "ABI-709 outlined builtin result retains its scalar type" expect_trap "unreachable" {
   let module_ = self_host_outlined_builtin_test_module()
-  module_.function_value_types[2u32] = SelfHostPlannedWasmValueType::WasmI64Value
+  module_.function_value_types[2u32] = WasmI64Value
   let _ = self_host_verify_outlined_builtin(module_, module_.functions[0u32], b"i32.add")
 }
 
 test "ARN-101 outlined builtin parameter span is checked before reads" expect_trap "unreachable" {
   let module_ = self_host_outlined_builtin_test_module()
-  let function_ = self_host_outlined_builtin_test_spans(module_, SelfHostHirSpan::{
+  let function_ = self_host_outlined_builtin_test_spans(module_, {
     start: 4294967295u32
     length: 2u32
   }, module_.functions[0u32].results)
@@ -59,7 +59,7 @@ test "ARN-101 outlined builtin parameter span is checked before reads" expect_tr
 
 test "ARN-101 outlined builtin result span is checked before reads" expect_trap "unreachable" {
   let module_ = self_host_outlined_builtin_test_module()
-  let function_ = self_host_outlined_builtin_test_spans(module_, module_.functions[0u32].parameters, SelfHostHirSpan::{
+  let function_ = self_host_outlined_builtin_test_spans(module_, module_.functions[0u32].parameters, {
     start: 4u32
     length: 1u32
   })

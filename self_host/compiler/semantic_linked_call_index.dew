@@ -20,7 +20,7 @@ fn self_host_build_linked_call_index(
   functions: Array<SelfHostPlannedProgramWasmFunction>,
   calls: Array<SelfHostPlannedProgramSpecializedCallLink>,
 ) -> SelfHostLinkedCallIndex {
-  let index = SelfHostLinkedCallIndex::{
+  let index = {
     plain_functions: self_host_body_empty_u64_u32_map()
     heads: self_host_body_empty_u64_u32_map()
     keys: []
@@ -33,10 +33,10 @@ fn self_host_build_linked_call_index(
       self_host_u32_equal(function_.lambda, 4294967295u32) &&
       !self_host_u64_equal(function_.declaration, 0u64) {
       match index.plain_functions.get(function_.declaration) {
-        Option::Some(previous) => {
+        Some(previous) => {
           let _ = self_host_assert_compiler_invariant_with_failure(
             self_host_u32_equal(previous, function_.function_index),
-            SelfHostInvariantFailure::{
+            {
               code: 504u32
               phase: 5u32
               module_id: self_host_semantic_id_module(function_.declaration)
@@ -50,7 +50,7 @@ fn self_host_build_linked_call_index(
             "one declaration has two plain linked functions",
           )
         }
-        Option::None => index.plain_functions.set(function_.declaration, function_.function_index)
+        None => index.plain_functions.set(function_.declaration, function_.function_index)
       }
     }
   }

@@ -1,7 +1,7 @@
 open dew.std.option
 
 fn self_host_body_trace_seen() -> Map<U32, Bool> {
-  Map::empty()
+  empty()
 }
 
 // This report runs only after verification fails. It preserves the lowering
@@ -19,7 +19,7 @@ fn self_host_program_wasm_body_failure_report(
       seen[diagnostic.physical_function_index] = true
       count = count + 1u32
       match self_host_program_wasm_body_plan_for_function(plan, diagnostic.physical_function_index) {
-        Option::Some(body) => {
+        Some(body) => {
           let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[body.module_index])
           output.append("\ntrace body=")
           output.append_u64(body.body)
@@ -34,17 +34,17 @@ fn self_host_program_wasm_body_failure_report(
             if inference_count < 4u32 {
               output.append("\ntrace inference_error=")
               output.append(match inference_error {
-                SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
-                SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _) => "no matching method"
-                SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _) => "unsupported expression"
-                SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => "type constraint"
-                SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, _) => "unresolved expression"
+                AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
+                NoMatchingMethod(_, _, _) => "no matching method"
+                UnsupportedExpressionInference(_, _) => "unsupported expression"
+                BodyConstraintDiagnostic(_) => "type constraint"
+                UnresolvedExpressionType(_, _) => "unresolved expression"
                 _ => "other"
               })
               output.append(" offset=")
               output.append_u32(inference_error.offset())
               match inference_error {
-                SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, first, second, count, _) => {
+                AmbiguousMethod(_, _, first, second, count, _) => {
                   output.append(" first=")
                   output.append_u64(first)
                   output.append(" second=")
@@ -52,8 +52,8 @@ fn self_host_program_wasm_body_failure_report(
                   output.append(" count=")
                   output.append_u32(count)
                 }
-                SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(constraint) => match constraint {
-                  SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(left, right, _) => {
+                BodyConstraintDiagnostic(constraint) => match constraint {
+                  LocalTypeMismatch(left, right, _) => {
                     output.append(" left=")
                     output.append_i32(left)
                     output.append(" right=")
@@ -74,10 +74,10 @@ fn self_host_program_wasm_body_failure_report(
               output.append(" offset=")
               output.append_u32(name_error.offset())
               let name = match name_error {
-                SelfHostBodyResolutionDiagnostic::UnknownValueName(name, _, _) => name
-                SelfHostBodyResolutionDiagnostic::UnknownQualifiedRoot(name, _, _) => name
-                SelfHostBodyResolutionDiagnostic::AmbiguousImportedQualifiedRoot(name, _, _) => name
-                SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(name, _, _) => name
+                UnknownValueName(name, _, _) => name
+                UnknownQualifiedRoot(name, _, _) => name
+                AmbiguousImportedQualifiedRoot(name, _, _) => name
+                UnknownPatternConstructor(name, _, _) => name
                 _ => 4294967295u32
               }
               if name < module_.names.length() {
@@ -88,7 +88,7 @@ fn self_host_program_wasm_body_failure_report(
             }
           }
           match self_host_program_specialization_body(module_, body.body) {
-            Option::Some(lowered) => {
+            Some(lowered) => {
               let mut index = 0u32
               let _ = while index {
                 current => if current < lowered.patterns.length {
@@ -101,21 +101,21 @@ fn self_host_program_wasm_body_failure_report(
                   output.append(" shape=")
                   output.append(self_host_body_carrier_name(self_host_body_carrier_from_shape(pattern.shape)))
                   match pattern.selected_constructor {
-                    SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(declaration, _, _) => {
+                    SelectedBasicPatternConstructor(declaration, _, _) => {
                       output.append(" constructor=")
                       output.append_u64(declaration)
                     }
                     _ => output.append(" constructor=missing")
                   }
                   match pattern.reference {
-                    SelfHostBodyPatternReference::PatternBindingReference(local) => {
+                    PatternBindingReference(local) => {
                       output.append(" local=")
                       output.append_u32(local)
                     }
                     _ => {}
                   }
                   match pattern.source {
-                    SelfHostHirPattern::TuplePattern(target, _, _) => {
+                    TuplePattern(target, _, _) => {
                       output.append(" tuple_target=")
                       output.append_u32(target)
                     }
@@ -127,7 +127,7 @@ fn self_host_program_wasm_body_failure_report(
                 }
               }
             }
-            Option::None => {}
+            None => {}
           }
           for expression in body.expressions {
             let source = self_host_planned_expression_identity(module_.expressions[expression.expression])
@@ -146,23 +146,23 @@ fn self_host_program_wasm_body_failure_report(
             output.append(" target=")
             output.append_u32(expression.call_function_index)
             match source.call_target {
-              SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
+              SelectedBasicCallTarget(declaration, _) => {
                 output.append(" inferred_target=")
                 output.append_u64(declaration)
               }
-              SelfHostBasicCallTarget::ErrorBasicCallTarget => output.append(" inferred_target=error")
+              ErrorBasicCallTarget => output.append(" inferred_target=error")
               _ => {}
             }
             match source.kind {
-              SelfHostPlannedExpressionKind::PlannedLocalGet(local) => {
+              PlannedLocalGet(local) => {
                 output.append(" local=")
                 output.append_u32(local)
               }
-              SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => {
+              PlannedDirectCall(declaration, _, _, _) => {
                 output.append(" declaration=")
                 output.append_u64(declaration)
               }
-              SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, declaration, _, _, _) => {
+              PlannedBuiltinCall(_, declaration, _, _, _) => {
                 output.append(" declaration=")
                 output.append_u64(declaration)
               }
@@ -170,7 +170,7 @@ fn self_host_program_wasm_body_failure_report(
             }
           }
         }
-        Option::None => output.append("\ntrace missing body plan")
+        None => output.append("\ntrace missing body plan")
       }
     }
   }

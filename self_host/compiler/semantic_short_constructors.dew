@@ -1,0 +1,406 @@
+enum SelfHostConstructorCandidate {
+  LocalConstructorCandidate(U32)
+  ImportedConstructorCandidate(U32)
+}
+
+struct SelfHostConstructorIndex {
+  names: Map<U32, Array<SelfHostConstructorCandidate>>
+  owners: Map<U64, Map<U32, SelfHostConstructorCandidate>>
+}
+
+fn self_host_constructor_members() -> Map<U32, SelfHostConstructorCandidate> {
+  empty()
+}
+
+fn self_host_constructor_index(collected: SelfHostCollectedModule, imported: Array<SelfHostResolvedImportedVariant>) -> SelfHostConstructorIndex {
+  let index = {
+    names: empty()
+    owners: empty()
+  }
+  let _ = while 0u32 {
+    slot if slot < collected.variants.length() => {
+      let variant = collected.variants[slot]
+      index.add(variant.name, variant.declaration, LocalConstructorCandidate(slot))
+      continue slot + 1u32
+    }
+    _ => break ()
+  }
+  let _ = while 0u32 {
+    slot if slot < imported.length() => {
+      let variant = imported[slot]
+      match collected.find_name(variant.name) {
+        Some(name) => index.add(name, variant.declaration, ImportedConstructorCandidate(slot))
+        None => {}
+      }
+      continue slot + 1u32
+    }
+    _ => break ()
+  }
+  index
+}
+
+impl SelfHostConstructorIndex {
+  fn add(self, name: U32, owner: U64, candidate: SelfHostConstructorCandidate) -> Unit {
+    let members = match self.owners.get(owner) {
+      Some(value) => value
+      None => {
+        let value = self_host_constructor_members()
+        self.owners[owner] = value
+        value
+      }
+    }
+    if members.contains_key(name) {
+      return
+    }
+    members[name] = candidate
+    match self.names.get(name) {
+      Some(values) => values.push(candidate)
+      None => {
+        self.names[name] = [candidate]
+      }
+    }
+  }
+}
+
+impl SelfHostBasicBodyInferencer {
+  fn constructor_target(self, target: U32, expected: I32, expression: U32) -> Option<SelfHostConstructorCandidate> {
+    match self.names.expression_references[target] {
+      VariantNameReference(name) => return self.short_variant_candidate(name, expected, Some(expression))
+      _ => {}
+    }
+    match self.collected.expressions[target] {
+      QualifiedExpr(base, name, _) => match self.names.expression_references[base] {
+        ModuleTypeNameReference(owner) => match self.imported.constructor_index.owners.get(owner) {
+          Some(members) => members.get(name)
+          None => None
+        }
+        _ => None
+      }
+      _ => None
+    }
+  }
+
+  fn pattern_constructor_candidate(self, base: U32, expected: I32) -> Option<SelfHostConstructorCandidate> {
+    match self.names.pattern_references[base] {
+      PatternVariantReference(name) => return self.short_variant_candidate(name, expected, None)
+      _ => {}
+    }
+    match self.collected.patterns[base] {
+      QualifiedPattern(root, name, _) => match self.names.pattern_references[root] {
+        PatternTypeReference(owner) => match self.imported.constructor_index.owners.get(owner) {
+          Some(members) => members.get(name)
+          None => None
+        }
+        _ => None
+      }
+      _ => None
+    }
+  }
+
+  fn short_variant_candidate(self, name: U32, expected: I32, expression: Option<U32>) -> Option<SelfHostConstructorCandidate> {
+    match self.inspect_nominal_type(expected) {
+      Some(owner) => match self.imported.constructor_index.owners.get(owner) {
+        Some(members) => return members.get(name)
+        None => return None
+      }
+      None => {}
+    }
+    let candidates = match self.imported.constructor_index.names.get(name) {
+      Some(values) => values
+      None => return None
+    }
+    if candidates.length() == 1u32 {
+      return Some(candidates[0u32])
+    }
+    let mut found = None
+    let mut count = 0u32
+    for candidate in candidates {
+      let viable = match expression {
+        Some(value) => self.short_variant_viable(candidate, expected, value)
+        None => true
+      }
+      if viable {
+        found = Some(candidate)
+        count = count + 1u32
+      }
+    }
+    if count == 1u32 {
+      found
+    } else {
+      None
+    }
+  }
+
+  fn short_variant_viable(self, candidate: SelfHostConstructorCandidate, expected: I32, expression: U32) -> Bool {
+    let offset = self_host_basic_expression_offset(self.collected.expressions[expression])
+    let origin = self_host_expression_type_origin(expression, offset)
+    let snapshot = self.solver.snapshot()
+    let (instance, kind, payload, imported, variant_id) = match candidate {
+      LocalConstructorCandidate(index) => {
+        let variant = self.collected.variants[index]
+        (self.begin_fresh_nominal_instantiation(variant.declaration), variant.kind, self.resolved.variant_payloads[index], false, variant.id)
+      }
+      ImportedConstructorCandidate(index) => {
+        let variant = self.imported.variants[index]
+        (self.begin_fresh_imported_nominal_instantiation(variant.declaration), variant.kind, variant.payload_types, true, variant.variant)
+      }
+    }
+    let mut viable = self.solver.unify(expected, instance, origin)
+    match self.collected.expressions[expression] {
+      CallExpr(_, arguments, _) => {
+        viable = viable && kind is TupleVariantDecl && arguments.length == payload.length
+        if viable {
+          let _ = while 0u32 {
+            index if index < arguments.length => {
+              let source = if imported {
+                self.imported.variant_payload_types[payload.start + index]
+              } else {
+                self.resolved.signature_type_lists[payload.start + index]
+              }
+              let actual = self.expression_type(self.collected.expression_children[arguments.start + index])
+              if !self.solver.unify(actual, self.instantiate_signature_type(source), origin) {
+                viable = false
+                break ()
+              }
+              continue index + 1u32
+            }
+            _ => break ()
+          }
+        }
+      }
+      ConstructExpr(_, fields, _) => {
+        viable = viable && kind is StructVariantDecl
+        let _ = while 0u32 {
+          index if viable && index < fields.length => {
+            let field = self.collected.object_fields[fields.start + index]
+            let mut found = false
+            if imported {
+              for declared in self.imported.fields {
+                if declared.variant is Some(id) && id == variant_id && declared.name == self.collected.name(field.name) {
+                  found = true
+                  viable = self.solver.unify(self.expression_type(field.value), self.instantiate_signature_type(declared.type_), origin)
+                }
+              }
+            } else {
+              for declared in self.collected.fields {
+                if declared.variant is Some(id) && id == variant_id && declared.name == field.name {
+                  found = true
+                  viable = self.solver.unify(self.expression_type(field.value), self.instantiate_signature_type(self.resolved.field_types[self_host_semantic_id_local(declared.id)]), origin)
+                }
+              }
+            }
+            viable = viable && found
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+      }
+      _ => {
+        viable = viable && kind is UnitVariantDecl
+      }
+    }
+    self.solver.rollback(snapshot)
+    viable
+  }
+}
+
+impl SelfHostBasicBodyInferencer {
+  fn constructor_function_context(self, expression: U32) -> Bool {
+    let type_ = self.solver.representative_type(self.expression_type(expression))
+    match self.solver.type_term(type_) {
+      BodyFunctionType(_, _) => true
+      BodyResolvedType(resolved) => self.resolved.types[resolved] is FunctionType(_, _)
+      _ => false
+    }
+  }
+
+  fn constructor_function_signature(self, declaration: U64) -> U32 {
+    if self_host_semantic_id_module(declaration) == self.collected.module_id {
+      let index = match self.local_callable_index_of_declaration(declaration) {
+        Some(value) => value
+        None => {
+          self_host_assert_compiler_invariant(false, "constructor function requires its frozen signature")
+          unreachable()
+        }
+      }
+      self.begin_signature_instantiation(declaration)
+      self.resolved.callable_function_types[index]
+    } else {
+      let callable = match self.imported_callable(declaration) {
+        Some(value) => value
+        None => {
+          self_host_assert_compiler_invariant(false, "constructor function requires its frozen signature")
+          unreachable()
+        }
+      }
+      self.begin_imported_signature_instantiation(callable)
+      callable.function_type
+    }
+  }
+
+  fn constrain_constructor_function(self, expression: U32) -> Bool {
+    let (name, offset) = match self.collected.expressions[expression] {
+      NameExpr(name, offset) => (name, offset)
+      QualifiedExpr(_, name, offset) => (name, offset)
+      _ => {
+            self_host_assert_compiler_invariant(false, "constructor metadata requires an exact declaration")
+            unreachable()
+          }
+    }
+    let candidates = match self.imported.constructor_index.names.get(name) {
+      Some(values) => values
+      None => {
+          self_host_assert_compiler_invariant(false, "constructor function requires its frozen signature")
+          unreachable()
+        }
+    }
+    let origin = self_host_expression_type_origin(expression, offset)
+    let mut count = 0u32
+    let mut first = 0u64
+    let mut second = 0u64
+    for candidate in candidates {
+      let wrapper = match candidate {
+        LocalConstructorCandidate(index) => self.collected.constructor_wrappers.get(self.collected.variants[index].id)
+        ImportedConstructorCandidate(index) => self.imported.variants[index].constructor
+      }
+      match wrapper {
+        Some(declaration) => {
+          let snapshot = self.solver.snapshot()
+          let signature = self.constructor_function_signature(declaration)
+          let type_ = self.instantiate_signature_type(signature)
+          let viable = self.solver.unify(self.expression_type(expression), type_, origin)
+          self.solver.rollback(snapshot)
+          if viable {
+            count = count + 1u32
+            if count == 1u32 {
+              first = declaration
+            } else if count == 2u32 {
+              second = declaration
+            }
+          }
+        }
+        None => {}
+      }
+    }
+    if count == 1u32 {
+      let signature = self.constructor_function_signature(first)
+      let type_ = self.instantiate_signature_type(signature)
+      let _ = self.solver.unify(self.expression_type(expression), type_, origin)
+      self.record_function_reference(expression, first)
+      self.unsupported_expressions[self.expression_index(expression)] = false
+      true
+    } else if !self.final_constructors {
+      false
+    } else {
+      self.solver.poison_type(self.expression_type(expression))
+      if count == 0u32 {
+        self.diagnostics.push(NoMatchingFunctionReference(name, expression, offset))
+      } else {
+        self.diagnostics.push(AmbiguousFunctionReference(name, expression, first, second, count, offset))
+      }
+      true
+    }
+  }
+}
+
+impl SelfHostBasicBodyInferencer {
+  fn short_constructor_id(self, candidate: SelfHostConstructorCandidate) -> U64 {
+    match candidate {
+      LocalConstructorCandidate(index) => self.collected.variants[index].id
+      ImportedConstructorCandidate(index) => self.imported.variants[index].variant
+    }
+  }
+
+  fn diagnose_short_constructor(self, expression: U32) -> Unit {
+    let target = match self.collected.expressions[expression] {
+      CallExpr(target, _, _) => target
+      ConstructExpr(target, _, _) => target
+      _ => expression
+    }
+    let (name, offset) = match self.collected.expressions[target] {
+      NameExpr(name, offset) => (name, offset)
+      QualifiedExpr(_, name, offset) => (name, offset)
+      _ => {
+        self.mark_unsupported(expression)
+        return
+      }
+    }
+    let expected = self.expression_type(expression)
+    let candidates = match self.imported.constructor_index.names.get(name) {
+      Some(values) => values
+      None => []
+    }
+    let mut count = 0u32
+    let mut first = 0u64
+    let mut second = 0u64
+    for candidate in candidates {
+      if self.short_variant_viable(candidate, expected, expression) {
+        count = count + 1u32
+        if count == 1u32 {
+          first = self.short_constructor_id(candidate)
+        } else if count == 2u32 {
+          second = self.short_constructor_id(candidate)
+        }
+      }
+    }
+    match self.inspect_nominal_type(expected) {
+      Some(owner) => self.diagnostics.push(UnknownVariantForType(name, owner, expression, offset))
+      None => if count > 1u32 {
+        self.diagnostics.push(AmbiguousVariantValue(name, expression, first, second, count, offset))
+      } else {
+        self.diagnostics.push(UnknownVariantValue(name, expression, offset))
+      }
+    }
+    self.solver.poison_type(expected)
+    self.unsupported_expressions[self.expression_index(expression)] = false
+  }
+
+  fn diagnose_short_pattern(self, pattern: U32, base: U32, expected: I32, offset: U32) -> Unit {
+    let name = match self.names.pattern_references[base] {
+      PatternVariantReference(name) => name
+      _ => {
+        self.diagnostics.push(InvalidPatternConstructor(pattern, offset))
+        return
+      }
+    }
+    match self.inspect_nominal_type(expected) {
+      Some(owner) => {
+        self.diagnostics.push(UnknownVariantForType(name, owner, pattern, offset))
+        return
+      }
+      None => {}
+    }
+    let candidates = match self.imported.constructor_index.names.get(name) {
+      Some(values) => values
+      None => []
+    }
+    if candidates.length() > 1u32 {
+      self.diagnostics.push(AmbiguousPatternVariant(name, pattern, self.short_constructor_id(candidates[0u32]), self.short_constructor_id(candidates[1u32]), candidates.length(), offset))
+    } else {
+      self.diagnostics.push(InvalidPatternConstructor(pattern, offset))
+    }
+  }
+}
+
+impl SelfHostBasicBodyInferencer {
+  fn short_constructor_may_be_function(self, expression: U32) -> Bool {
+    let name = match self.collected.expressions[expression] {
+      NameExpr(name, _) => name
+      QualifiedExpr(_, name, _) => name
+      _ => return false
+    }
+    match self.imported.constructor_index.names.get(name) {
+      Some(candidates) => for candidate in candidates {
+        let callable = match candidate {
+          LocalConstructorCandidate(index) => self.collected.constructor_wrappers.contains_key(self.collected.variants[index].id)
+          ImportedConstructorCandidate(index) => self.imported.variants[index].constructor is Some(_)
+        }
+        if callable {
+          return true
+        }
+      }
+      None => {}
+    }
+    false
+  }
+}

@@ -9,8 +9,8 @@ fn self_host_assert_relative_capture_module(module_: SelfHostPlannedModuleLoweri
   let second = module_.lambdas[1u32]
   assert(self_host_u32_equal(first.captures.length, 1u32) && self_host_u32_equal(second.captures.length, 1u32), "each lambda captures one value")
   assert(self_host_u32_greater(second.captures.start, first.captures.start), "the second capture span is not at zero")
-  assert(module_.captures[first.captures.start].shape is SelfHostPlannedValueShape::I64PlannedValueShape, "first capture retains I64")
-  assert(module_.captures[second.captures.start].shape is SelfHostPlannedValueShape::I32PlannedValueShape, "second capture retains I32")
+  assert(module_.captures[first.captures.start].shape is I64PlannedValueShape, "first capture retains I64")
+  assert(module_.captures[second.captures.start].shape is I32PlannedValueShape, "second capture retains I32")
   assert(module_.captures[second.captures.start].mutable_, "the second capture retains its own mutability")
 }
 
@@ -24,7 +24,7 @@ test "later lambda capture reads and writes use relative capture IDs" {
 fn self_host_assert_immutable_capture_diagnostic(module_: SelfHostPlannedModuleLowering) -> Unit {
   let diagnostics = module_.inferred.diagnostics
   assert(diagnostics.length() == 1u32, "only the immutable capture write is invalid")
-  assert(diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, _), "the error must identify immutable assignment")
+  assert(diagnostics[0u32] is ImmutableAssignmentTarget(_, _), "the error must identify immutable assignment")
 }
 
 test "later immutable lambda capture cannot borrow earlier capture mutability" {
@@ -40,7 +40,7 @@ fn self_host_assert_lambda_body_verification(link: SelfHostPlannedProgramWasmGCL
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[0u32])
   assert(module_.lambdas.length() == 2u32, "two source lambdas")
   let removed = module_.lambdas.pop()
-  assert(removed is Option::Some(_), "remove only the second source lambda")
+  assert(removed is Some(_), "remove only the second source lambda")
   let diagnostics = []
   let mut checked = false
   for body in plan.bodies {

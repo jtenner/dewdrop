@@ -9,9 +9,9 @@ pub struct SelfHostCompileTimeBindings {
 }
 
 fn self_host_empty_compile_time_bindings() -> SelfHostCompileTimeBindings {
-  SelfHostCompileTimeBindings::{
-    parameters: Map::empty()
-    selves: Map::empty()
+  {
+    parameters: empty()
+    selves: empty()
   }
 }
 
@@ -30,7 +30,7 @@ fn self_host_read_compile_time_resolved_arena(
   bindings: SelfHostCompileTimeBindings,
   depth: U32,
 ) -> Result<SelfHostCompileTimeType, String> {
-  self_host_read_compile_time_resolved_arena_with_self(resolved, index, bindings, depth, 18446744073709551615u64, Option::None)
+  self_host_read_compile_time_resolved_arena_with_self(resolved, index, bindings, depth, 18446744073709551615u64, None)
 }
 
 fn self_host_read_compile_time_resolved_arena_with_self(
@@ -42,46 +42,46 @@ fn self_host_read_compile_time_resolved_arena_with_self(
   self_type: Option<SelfHostCompileTimeType>,
 ) -> Result<SelfHostCompileTimeType, String> {
   if depth >= 256u32 {
-    return Result::Err("CT-002 type query nesting limit exceeded")
+    return Err("CT-002 type query nesting limit exceeded")
   }
   if index >= resolved.types.length() {
-    return Result::Err("CT-002 resolved query type index is outside its arena")
+    return Err("CT-002 resolved query type index is outside its arena")
   }
   let type_ = resolved.types[index]
   let span = match type_ {
-    SelfHostResolvedType::ErrorType => return Result::Err("CT-002 erroneous type query argument")
-    SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_resolved_arena_with_self(resolved, owner, bindings, depth + 1u32, self_owner, self_type) {
-      Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::MemberProjectionCompileTimeType(value, operation, selector))
-      Result::Err(error) => Result::Err(error)
+    ErrorType => return Err("CT-002 erroneous type query argument")
+    MemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_resolved_arena_with_self(resolved, owner, bindings, depth + 1u32, self_owner, self_type) {
+      Ok(value) => Ok(MemberProjectionCompileTimeType(value, operation, selector))
+      Err(error) => Err(error)
     }
-    SelfHostResolvedType::PrimitiveType(primitive) => return Result::Ok(SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive))
-    SelfHostResolvedType::NominalType(id) => return Result::Ok(SelfHostCompileTimeType::NominalCompileTimeType(id))
-    SelfHostResolvedType::TraitType(id) => return Result::Ok(SelfHostCompileTimeType::TraitCompileTimeType(id))
-    SelfHostResolvedType::GenericParameterType(id) => return Result::Ok(match bindings.parameters.get(id) {
-      Option::Some(value) => value
-      Option::None => SelfHostCompileTimeType::ParameterCompileTimeType(id)
+    PrimitiveType(primitive) => return Ok(PrimitiveCompileTimeType(primitive))
+    NominalType(id) => return Ok(NominalCompileTimeType(id))
+    TraitType(id) => return Ok(TraitCompileTimeType(id))
+    GenericParameterType(id) => return Ok(match bindings.parameters.get(id) {
+      Some(value) => value
+      None => ParameterCompileTimeType(id)
     })
-    SelfHostResolvedType::SelfType(id) => return Result::Ok(match if id == self_owner {
+    SelfType(id) => return Ok(match if id == self_owner {
       self_type
     } else {
       bindings.selves.get(id)
     } {
-      Option::Some(value) => value
-      Option::None => SelfHostCompileTimeType::ParameterCompileTimeType(id)
+      Some(value) => value
+      None => ParameterCompileTimeType(id)
     })
-    SelfHostResolvedType::ProductType(span) => span
-    SelfHostResolvedType::AppliedType(_, span) => span
-    SelfHostResolvedType::FunctionType(span, _) => span
+    ProductType(span) => span
+    AppliedType(_, span) => span
+    FunctionType(span, _) => span
   }
   if !self_host_array_span_is_valid(span.start, span.length, resolved.type_arguments.length()) {
-    return Result::Err("CT-002 resolved query arguments are outside their arena")
+    return Err("CT-002 resolved query arguments are outside their arena")
   }
   let fields = self_host_empty_compile_time_types()
   let _ = while 0u32 {
     offset => if offset < span.length {
       match self_host_read_compile_time_resolved_arena_with_self(resolved, resolved.type_arguments[span.start + offset], bindings, depth + 1u32, self_owner, self_type) {
-        Result::Ok(value) => fields.push(value)
-        Result::Err(error) => return Result::Err(error)
+        Ok(value) => fields.push(value)
+        Err(error) => return Err(error)
       }
       continue offset + 1u32
     } else {
@@ -89,14 +89,14 @@ fn self_host_read_compile_time_resolved_arena_with_self(
     }
   }
   match type_ {
-    SelfHostResolvedType::ProductType(_) => Result::Ok(SelfHostCompileTimeType::ProductCompileTimeType(fields))
-    SelfHostResolvedType::AppliedType(base, _) => match self_host_read_compile_time_resolved_arena_with_self(resolved, base, bindings, depth + 1u32, self_owner, self_type) {
-      Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::AppliedCompileTimeType(value, fields))
-      Result::Err(error) => Result::Err(error)
+    ProductType(_) => Ok(ProductCompileTimeType(fields))
+    AppliedType(base, _) => match self_host_read_compile_time_resolved_arena_with_self(resolved, base, bindings, depth + 1u32, self_owner, self_type) {
+      Ok(value) => Ok(AppliedCompileTimeType(value, fields))
+      Err(error) => Err(error)
     }
-    SelfHostResolvedType::FunctionType(_, result) => match self_host_read_compile_time_resolved_arena_with_self(resolved, result, bindings, depth + 1u32, self_owner, self_type) {
-      Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::FunctionCompileTimeType(fields, value))
-      Result::Err(error) => Result::Err(error)
+    FunctionType(_, result) => match self_host_read_compile_time_resolved_arena_with_self(resolved, result, bindings, depth + 1u32, self_owner, self_type) {
+      Ok(value) => Ok(FunctionCompileTimeType(fields, value))
+      Err(error) => Err(error)
     }
     _ => {
       self_host_assert_compiler_invariant(false, "INV-001 resolved query type changed kind")
@@ -112,37 +112,37 @@ fn self_host_read_compile_time_type(
   depth: U32,
 ) -> Result<SelfHostCompileTimeType, String> {
   if depth >= 256u32 {
-    return Result::Err("CT-002 type query nesting limit exceeded")
+    return Err("CT-002 type query nesting limit exceeded")
   }
   if index < -1i32 {
     // Add before negation: the minimum I32 must not overflow.
     return self_host_read_compile_time_resolved_type(module_, self_host_body_i32_to_u32(-(index + 2i32)), bindings, depth + 1u32)
   }
   if index < 0i32 || self_host_body_i32_to_u32(index) >= module_.inferred.types.length() {
-    return Result::Err("CT-002 query body type is outside its arena")
+    return Err("CT-002 query body type is outside its arena")
   }
   let type_ = module_.inferred.types[self_host_body_i32_to_u32(index)]
   let span = match type_ {
-    SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_type(module_, owner, bindings, depth + 1u32) {
-      Result::Ok(owner) => Result::Ok(SelfHostCompileTimeType::MemberProjectionCompileTimeType(owner, operation, selector))
-      Result::Err(error) => Result::Err(error)
+    BodyMemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_type(module_, owner, bindings, depth + 1u32) {
+      Ok(owner) => Ok(MemberProjectionCompileTimeType(owner, operation, selector))
+      Err(error) => Err(error)
     }
-    SelfHostBodyTypeTerm::BodyErrorType => return Result::Err("CT-002 erroneous type query argument")
-    SelfHostBodyTypeTerm::BodyVariableType(_) => return Result::Ok(SelfHostCompileTimeType::UnknownCompileTimeType)
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved) => return self_host_read_compile_time_resolved_type(module_, resolved, bindings, depth + 1u32)
-    SelfHostBodyTypeTerm::BodyProductType(span) => span
-    SelfHostBodyTypeTerm::BodyAppliedType(_, span) => span
-    SelfHostBodyTypeTerm::BodyFunctionType(span, _) => span
+    BodyErrorType => return Err("CT-002 erroneous type query argument")
+    BodyVariableType(_) => return Ok(UnknownCompileTimeType)
+    BodyResolvedType(resolved) => return self_host_read_compile_time_resolved_type(module_, resolved, bindings, depth + 1u32)
+    BodyProductType(span) => span
+    BodyAppliedType(_, span) => span
+    BodyFunctionType(span, _) => span
   }
   if !self_host_array_span_is_valid(span.start, span.length, module_.inferred.type_arguments.length()) {
-    return Result::Err("CT-002 query body arguments are outside their arena")
+    return Err("CT-002 query body arguments are outside their arena")
   }
   let fields = self_host_empty_compile_time_types()
   let _ = while 0u32 {
     offset => if offset < span.length {
       match self_host_read_compile_time_type(module_, module_.inferred.type_arguments[span.start + offset], bindings, depth + 1u32) {
-        Result::Ok(value) => fields.push(value)
-        Result::Err(error) => return Result::Err(error)
+        Ok(value) => fields.push(value)
+        Err(error) => return Err(error)
       }
       continue offset + 1u32
     } else {
@@ -150,14 +150,14 @@ fn self_host_read_compile_time_type(
     }
   }
   match type_ {
-    SelfHostBodyTypeTerm::BodyProductType(_) => Result::Ok(SelfHostCompileTimeType::ProductCompileTimeType(fields))
-    SelfHostBodyTypeTerm::BodyAppliedType(base, _) => match self_host_read_compile_time_type(module_, base, bindings, depth + 1u32) {
-      Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::AppliedCompileTimeType(value, fields))
-      Result::Err(error) => Result::Err(error)
+    BodyProductType(_) => Ok(ProductCompileTimeType(fields))
+    BodyAppliedType(base, _) => match self_host_read_compile_time_type(module_, base, bindings, depth + 1u32) {
+      Ok(value) => Ok(AppliedCompileTimeType(value, fields))
+      Err(error) => Err(error)
     }
-    SelfHostBodyTypeTerm::BodyFunctionType(_, result) => match self_host_read_compile_time_type(module_, result, bindings, depth + 1u32) {
-      Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::FunctionCompileTimeType(fields, value))
-      Result::Err(error) => Result::Err(error)
+    BodyFunctionType(_, result) => match self_host_read_compile_time_type(module_, result, bindings, depth + 1u32) {
+      Ok(value) => Ok(FunctionCompileTimeType(fields, value))
+      Err(error) => Err(error)
     }
     _ => {
       self_host_assert_compiler_invariant(false, "INV-001 query body type changed kind")
@@ -168,19 +168,19 @@ fn self_host_read_compile_time_type(
 
 fn self_host_read_compile_time_arguments(module_: SelfHostPlannedModuleLowering, span: SelfHostHirSpan, bindings: SelfHostCompileTimeBindings) -> Result<Array<SelfHostCompileTimeType>, String> {
   if !self_host_array_span_is_valid(span.start, span.length, module_.inferred.call_type_arguments.length()) {
-    return Result::Err("CT-002 query call arguments are outside their arena")
+    return Err("CT-002 query call arguments are outside their arena")
   }
   let result = self_host_empty_compile_time_types()
   let _ = while 0u32 {
     offset => if offset < span.length {
       match self_host_read_compile_time_type(module_, module_.inferred.call_type_arguments[span.start + offset], bindings, 0u32) {
-        Result::Ok(value) => result.push(value)
-        Result::Err(error) => return Result::Err(error)
+        Ok(value) => result.push(value)
+        Err(error) => return Err(error)
       }
       continue offset + 1u32
     } else {
       break self_host_semantic_unit()
     }
   }
-  Result::Ok(result)
+  Ok(result)
 }

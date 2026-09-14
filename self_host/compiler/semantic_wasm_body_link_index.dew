@@ -2,7 +2,7 @@ open dew.std.map
 open dew.std.option
 
 fn self_host_call_index_failure(body: U64, key: U64, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
-  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+  self_host_assert_compiler_invariant_with_failure(false, {
     code: code
     phase: 5u32
     module_id: self_host_semantic_id_module(body)
@@ -46,19 +46,19 @@ fn self_host_body_specialized_call_index_append(
       1u64, u32_into_u64(function_index), u32_into_u64(index.keys.length()))
   }
   match self_host_body_specialized_call_index_get(index, body, key) {
-    Option::Some(previous) => {
+    Some(previous) => {
       if previous != function_index {
         self_host_call_index_failure(body, key, 303u32,
           u32_into_u64(previous), u32_into_u64(function_index), key >> 32u64)
       }
       return ()
     }
-    Option::None => {}
+    None => {}
   }
   let position = index.keys.length()
   let previous = match index.heads.get(body) {
-    Option::Some(value) => value
-    Option::None => 4294967295u32
+    Some(value) => value
+    None => 4294967295u32
   }
   index.keys.push(key)
   index.functions.push(function_index)
@@ -75,8 +75,8 @@ fn self_host_body_specialized_call_index_get(
   self_host_check_call_index_arrays(index, body, key)
   let missing = 4294967295u32
   let current = match index.heads.get(body) {
-    Option::Some(value) => value
-    Option::None => missing
+    Some(value) => value
+    None => missing
   }
   while current {
     position if position != missing => {
@@ -106,10 +106,10 @@ fn self_host_body_specialized_call_index_get(
       }
       // Validate the visited entry and its edge before an exact hit can return.
       if index.keys[position] == key {
-        break Option::Some(target)
+        break Some(target)
       }
       continue next
     }
-    _ => break Option::None
+    _ => break None
   }
 }

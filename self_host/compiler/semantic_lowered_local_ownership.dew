@@ -1,5 +1,5 @@
 fn self_host_lowered_child_local_record(context: SelfHostLoweredChildContext, parent: U32, index: U32, relative: U32, lambda: U32) -> Unit {
-  self_host_lowered_child_index(context, parent, SelfHostHirSpan::{
+  self_host_lowered_child_index(context, parent, {
     start: 0u32
     length: context.module_.locals.length()
   }, index, 2u32)

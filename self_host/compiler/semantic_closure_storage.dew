@@ -3,15 +3,15 @@ open dew.std.array
 
 fn self_host_capture_source_is_local(source: SelfHostLambdaCaptureSource, local: SelfHostPlannedLocal) -> Bool {
   match source {
-    SelfHostLambdaCaptureSource::BodyLocalCapture(body, id) =>
+    BodyLocalCapture(body, id) =>
       self_host_u32_equal(local.lambda, 4294967295u32) && self_host_u64_equal(body, local.body) && self_host_u32_equal(id, local.local_id)
-    SelfHostLambdaCaptureSource::LambdaLocalCapture(lambda, id) =>
+    LambdaLocalCapture(lambda, id) =>
       self_host_u32_equal(lambda, local.lambda) && self_host_u32_equal(id, local.local_id)
   }
 }
 
 fn self_host_capture_has_value(shape: SelfHostPlannedValueShape) -> Bool {
-  !(shape is SelfHostPlannedValueShape::UnitPlannedValueShape) && !(shape is SelfHostPlannedValueShape::NeverPlannedValueShape)
+  !(shape is UnitPlannedValueShape) && !(shape is NeverPlannedValueShape)
 }
 
 fn self_host_local_has_capture(module_: SelfHostPlannedModuleLowering, local: SelfHostPlannedLocal) -> Bool {
@@ -32,7 +32,7 @@ fn self_host_capture_source_local(module_: SelfHostPlannedModuleLowering, source
   while index {
     _ => if index < module_.locals.length() {
     if self_host_capture_source_is_local(source, module_.locals[index]) {
-      return Option::Some(index)
+      return Some(index)
     }
     index = index + 1u32
     continue index
@@ -40,5 +40,5 @@ fn self_host_capture_source_local(module_: SelfHostPlannedModuleLowering, source
       break self_host_semantic_unit()
     }
   }
-  Option::None
+  None
 }

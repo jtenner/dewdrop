@@ -7,8 +7,8 @@ struct SelfHostLoweredSyntaxWalk {
 
 fn self_host_lowered_syntax_child(context: SelfHostLoweredChildContext, parent: U32, child: U32, tag: U32) -> Unit {
   let walk = match context.syntax_walk {
-    Option::Some(value) => value
-    Option::None => return ()
+    Some(value) => value
+    None => return ()
   }
   let node = match tag {
     1u32 => child - context.body.expressions.start
@@ -59,12 +59,12 @@ fn self_host_verify_lowered_syntax_graph(context: SelfHostLoweredChildContext) -
     }
     _ => break ()
   }
-  let walk = SelfHostLoweredSyntaxWalk::{
+  let walk = {
     ends: ends
     states: states
     events: array_new::<U64>()
   }
-  context.syntax_walk = Option::Some(walk)
+  context.syntax_walk = Some(walk)
   while 0u32 {
     seed if seed < total => {
       if states[seed] == 0u32 {
@@ -75,14 +75,14 @@ fn self_host_verify_lowered_syntax_graph(context: SelfHostLoweredChildContext) -
     }
     _ => break ()
   }
-  context.syntax_walk = Option::None
+  context.syntax_walk = None
 }
 
 fn self_host_lowered_syntax_drain(context: SelfHostLoweredChildContext, walk: SelfHostLoweredSyntaxWalk) -> Unit {
   let body = context.body
   let total = walk.states.length()
   while walk.events.pop() {
-    Option::Some(event) => {
+    Some(event) => {
       let encoded_node = event >> 1u64
       if encoded_node >= u32_into_u64(total) {
         self_host_lowered_child_failure(context, 104u32, 4294967295u32, u32_into_u64(total), encoded_node, 24u64 << 32u64)
@@ -112,6 +112,6 @@ fn self_host_lowered_syntax_drain(context: SelfHostLoweredChildContext, walk: Se
       }
       continue walk.events.pop()
     }
-    Option::None => break ()
+    None => break ()
   }
 }

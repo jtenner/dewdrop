@@ -2,61 +2,71 @@ open dew.std.option
 
 fn self_host_inference_diagnostic_name(diagnostic: SelfHostBodyInferenceDiagnostic) -> String {
   match diagnostic {
-    SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
-    SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _) => "no matching method"
-    SelfHostBodyInferenceDiagnostic::TraitObligationFailure(_, _, message, _) => message
-    SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _) => "unsupported expression"
-    SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => "type constraint"
-    SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, _) => "unresolved expression"
-    SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(_) => "return outside callable"
-    SelfHostBodyInferenceDiagnostic::UnresolvedLocalType(_, _, _) => "unresolved local"
-    SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(_, _) => "invalid pattern constructor"
-    SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(_, _) => "invalid assignment target"
-    SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, _) => "immutable assignment target"
-    SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, _) => "no matching direct call"
-    SelfHostBodyInferenceDiagnostic::AmbiguousDirectCall(_, _, _, _, _, _) => "ambiguous direct call"
-    SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, _) => "call argument count"
-    SelfHostBodyInferenceDiagnostic::CallTypeArgumentCountMismatch(_, _, _, _, _) => "call type argument count"
-    SelfHostBodyInferenceDiagnostic::FieldAccessRequiresNominal(_, _) => "field requires nominal"
-    SelfHostBodyInferenceDiagnostic::UnknownFieldForType(_, _, _, _) => "unknown field"
-    SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(_, _) => "invalid construction target"
-    SelfHostBodyInferenceDiagnostic::MissingConstructionField(_, _, _, _) => "missing construction field"
-    SelfHostBodyInferenceDiagnostic::MissingImportedConstructionField(_, _, _, _) => "missing imported construction field"
-    SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, _) => "no matching operator"
-    SelfHostBodyInferenceDiagnostic::AmbiguousOperator(_, _, _, _, _) => "ambiguous operator"
-    SelfHostBodyInferenceDiagnostic::ParameterLocalHasErrorType(_, _, _, _, _) => "parameter has error type"
-    SelfHostBodyInferenceDiagnostic::InvalidParameterResolvedType(_, _, _, _, _, _) => "invalid parameter type"
-    SelfHostBodyInferenceDiagnostic::UnresolvedModuleValue(_, _) => "unresolved module value"
+    AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
+    NoMatchingMethod(_, _, _) => "no matching method"
+    TraitObligationFailure(_, _, message, _) => message
+    UnsupportedExpressionInference(_, _) => "unsupported expression"
+    BodyConstraintDiagnostic(_) => "type constraint"
+    UnresolvedExpressionType(_, _) => "unresolved expression"
+    ReturnOutsideCallable(_) => "return outside callable"
+    UnresolvedLocalType(_, _, _) => "unresolved local"
+    UnknownVariantValue(_, _, _) => "no matching enum constructor"
+    UnknownVariantForType(_, _, _, _) => "enum constructor does not belong to the expected type"
+    AmbiguousVariantValue(_, _, _, _, _, _) => "ambiguous enum constructor; supply its type"
+    AmbiguousPatternVariant(_, _, _, _, _, _) => "ambiguous enum pattern; supply its type"
+    InvalidPatternConstructor(_, _) => "invalid pattern constructor"
+    InvalidAssignmentTarget(_, _) => "invalid assignment target"
+    ImmutableAssignmentTarget(_, _) => "immutable assignment target"
+    NoMatchingFunctionReference(_, _, _) => "no matching constructor function"
+    AmbiguousFunctionReference(_, _, _, _, _, _) => "ambiguous constructor function"
+    NoMatchingDirectCall(_, _, _) => "no matching direct call"
+    AmbiguousDirectCall(_, _, _, _, _, _) => "ambiguous direct call"
+    CallArgumentCountMismatch(_, _, _, _, _) => "call argument count"
+    CallTypeArgumentCountMismatch(_, _, _, _, _) => "call type argument count"
+    FieldAccessRequiresNominal(_, _) => "field requires nominal"
+    UnknownFieldForType(_, _, _, _) => "unknown field"
+    ObjectTypeRequired(_, _) => "struct literal requires an expected type"
+    InvalidConstructionTarget(_, _) => "invalid construction target"
+    MissingConstructionField(_, _, _, _) => "missing construction field"
+    MissingImportedConstructionField(_, _, _, _) => "missing imported construction field"
+    NoMatchingOperator(_, _) => "no matching operator"
+    AmbiguousOperator(_, _, _, _, _) => "ambiguous operator"
+    ParameterLocalHasErrorType(_, _, _, _, _) => "parameter has error type"
+    InvalidParameterResolvedType(_, _, _, _, _, _) => "invalid parameter type"
+    UnresolvedModuleValue(_, _) => "unresolved module value"
     _ => "inference error"
   }
 }
 
 fn self_host_inference_diagnostic_expression(diagnostic: SelfHostBodyInferenceDiagnostic) -> Option<U32> {
   match diagnostic {
-    SelfHostBodyInferenceDiagnostic::CallTypeArgumentCountMismatch(expression, _, _, _, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(expression, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(expression, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::InvalidAssignmentTarget(expression, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(expression, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(expression, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, expression, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::TraitObligationFailure(_, expression, _, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(expression, _, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, expression, _, _, _, _) => Option::Some(expression)
-    SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(constraint) => {
+    CallTypeArgumentCountMismatch(expression, _, _, _, _) => Some(expression)
+    UnsupportedExpressionInference(expression, _) => Some(expression)
+    UnresolvedExpressionType(expression, _) => Some(expression)
+    InvalidAssignmentTarget(expression, _) => Some(expression)
+    ImmutableAssignmentTarget(expression, _) => Some(expression)
+    ObjectTypeRequired(expression, _) => Some(expression)
+    InvalidConstructionTarget(expression, _) => Some(expression)
+    NoMatchingMethod(_, expression, _) => Some(expression)
+    TraitObligationFailure(_, expression, _, _) => Some(expression)
+    NoMatchingDirectCall(expression, _, _) => Some(expression)
+    NoMatchingOperator(expression, _) => Some(expression)
+    AmbiguousOperator(expression, _, _, _, _) => Some(expression)
+    AmbiguousMethod(_, expression, _, _, _, _) => Some(expression)
+    BodyConstraintDiagnostic(constraint) => {
       let origin = match constraint {
-        SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(_, _, origin) => origin
-        SelfHostLocalInferenceDiagnostic::InfiniteLocalType(_, _, origin) => origin
-        SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(_, _, origin) => origin
+        LocalTypeMismatch(_, _, origin) => origin
+        InfiniteLocalType(_, _, origin) => origin
+        InvalidLocalMemberProjection(_, _, origin) => origin
       }
       match origin.kind {
-        SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint => Option::Some(origin.source)
-        SelfHostTypeConstraintOriginKind::CallTypeConstraint => Option::Some(origin.source)
-        SelfHostTypeConstraintOriginKind::OperatorTypeConstraint => Option::Some(origin.source)
-        _ => Option::None
+        ExpressionTypeConstraint => Some(origin.source)
+        CallTypeConstraint => Some(origin.source)
+        OperatorTypeConstraint => Some(origin.source)
+        _ => None
       }
     }
-    _ => Option::None
+    _ => None
   }
 }
 
@@ -86,13 +96,13 @@ fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering
           report.append(" offset=")
           report.append_u32(diagnostic.offset())
           match diagnostic {
-            SelfHostTypeDiagnostic::UnknownType(name, owner, _) => {
+            UnknownType(name, owner, _) => {
               report.append(" name-index=")
               report.append_u32(name)
               report.append(" owner=")
               report.append_u64(owner)
             }
-            SelfHostTypeDiagnostic::TypeArityMismatch(type_, expected, actual, owner, _) => {
+            TypeArityMismatch(type_, expected, actual, owner, _) => {
               report.append(" type=")
               report.append_u32(type_)
               report.append(" expected=")
@@ -102,7 +112,7 @@ fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering
               report.append(" owner=")
               report.append_u64(owner)
             }
-            SelfHostTypeDiagnostic::ComputedTypeFailure(owner, message, _) => {
+            ComputedTypeFailure(owner, message, _) => {
               report.append(" owner=")
               report.append_u64(owner)
               report.append(" message=")
@@ -153,14 +163,14 @@ fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering
             break current
           }
         }
-        if shown[kind_slot] < 2u32 {
+        if shown[kind_slot] < 32u32 {
           report.append("\n  ")
           report.append(self_host_inference_diagnostic_name(diagnostic))
           report.append(" offset=")
           report.append_u32(diagnostic.offset())
           match self_host_inference_diagnostic_expression(diagnostic) {
-            Option::Some(expression) => match lowering.index.module_index(module_.module_id) {
-              Option::Some(module_index) => {
+            Some(expression) => match lowering.index.module_index(module_.module_id) {
+              Some(module_index) => {
                 let collected = self_host_program_collected_module_at(lowering.collected, module_index)
                 if expression < collected.expression_files.length() {
                   let file = collected.expression_files[expression]
@@ -180,8 +190,8 @@ fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering
                   report.append(" kind=")
                   report.append(self_host_body_expression_kind_name(planned.kind))
                   match collected.expressions[expression] {
-                    SelfHostHirExpr::CallExpr(target, _, _) => match collected.expressions[target] {
-                      SelfHostHirExpr::FieldExpr(receiver, _, _) => {
+                    CallExpr(target, _, _) => match collected.expressions[target] {
+                      FieldExpr(receiver, _, _) => {
                         let value = self_host_program_specialization_expression(module_, receiver)
                         report.append(" receiver=")
                         report.append_u32(receiver)
@@ -196,13 +206,25 @@ fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering
                   }
                 }
               }
-              Option::None => {}
+              None => {}
             }
-            Option::None => {}
+            None => {}
           }
           match diagnostic {
-            SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(constraint) => match constraint {
-              SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(left, right, _) => {
+            AmbiguousVariantValue(name, _, first, second, count, _), AmbiguousPatternVariant(name, _, first, second, count, _) => {
+              report.append(" name=")
+              report.append(module_.names[name])
+              report.append(" candidates=")
+              report.append_u32(count)
+              self_host_append_variant_candidate(report, lowering.collected, first)
+              self_host_append_variant_candidate(report, lowering.collected, second)
+            }
+            UnknownVariantForType(_, owner, _, _) => {
+              report.append(" expected-owner=")
+              report.append_u64(owner)
+            }
+            BodyConstraintDiagnostic(constraint) => match constraint {
+              LocalTypeMismatch(left, right, _) => {
                 report.append(" left-type=")
                 report.append_i32(left)
                 report.append(" left-shape=")
@@ -214,7 +236,7 @@ fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering
               }
               _ => {}
             }
-            SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, first, second, count, _) => {
+            AmbiguousMethod(_, _, first, second, count, _) => {
               report.append(" first=")
               report.append_u64(first)
               report.append(" second=")
@@ -230,12 +252,39 @@ fn self_host_validate_program_inference(lowering: SelfHostPlannedProgramLowering
     }
   }
   if errors == 0u32 {
-    Option::None
+    None
   } else {
     let message = StringBuilder::new()
     message.append("INV-002: semantic diagnostics must be resolved before specialization; count=")
     message.append_u32(errors)
     message.append(report.finish())
-    Option::Some(message.finish())
+    Some(message.finish())
+  }
+}
+
+fn self_host_append_variant_candidate(report: StringBuilder, program: SelfHostCollectedProgram, variant: U64) -> Unit {
+  let _ = while 0u32 {
+    index if index < program.modules.length() => {
+      let module_ = program.modules.at(index)
+      if module_.module_id == self_host_semantic_id_module(variant) {
+        let slot = self_host_semantic_id_local(variant)
+        self_host_assert_compiler_invariant(slot < module_.variants.length(), "diagnostic variant has an exact owner")
+        let value = module_.variants[slot]
+        match module_.declaration_reference(value.declaration) {
+          Some(TopLevel(owner)) => {
+            report.append(" ")
+            report.append(program.module_paths[index])
+            report.append(".")
+            report.append(module_.name(owner.name))
+            report.append("::")
+            report.append(module_.name(value.name))
+          }
+          _ => unreachable()
+        }
+        return
+      }
+      continue index + 1u32
+    }
+    _ => break ()
   }
 }

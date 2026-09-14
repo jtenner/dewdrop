@@ -7,13 +7,13 @@ test "raw forwarding keeps declared scalar reference and Unit results" {
   let mut checked = 0u32
   for callable in module_.functions.callables {
     if callable.name.equals(b"scalar") || callable.name.equals(b"reference") || callable.name.equals(b"effect") {
-      assert(self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) is Option::None,
+      assert(self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) is None,
         "a nonreturning body cannot replace the declared result with a builtin result")
       checked = checked + 1u32
     } else if callable.name.equals(b"never") {
       match self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) {
-        Option::Some(name) => assert(name.equals(b"unreachable"), "declared Never keeps the exact opcode")
-        Option::None => assert(false, "valid Never forwarding remains supported")
+        Some(name) => assert(name.equals(b"unreachable"), "declared Never keeps the exact opcode")
+        None => assert(false, "valid Never forwarding remains supported")
       }
       checked = checked + 1u32
     }

@@ -5,69 +5,69 @@ open dew.std.result
 open dew.std.string
 
 fn self_host_empty_patterns() -> Array<SelfHostPattern> {
-  Array::new()
+  new()
 }
 
 fn self_host_empty_pattern_fields() -> Array<SelfHostPatternField> {
-  Array::new()
+  new()
 }
 
 fn self_host_no_u32() -> Option<U32> {
-  Option::None
+  None
 }
 
 fn self_host_pattern_binding(name: String, offset: U32) -> SelfHostPattern {
   if name.byte_length() > 0u32 && name.as_bytes().byte_at(0u32) == 95u8 {
-    SelfHostPattern::WildcardPattern(offset)
+    WildcardPattern(offset)
   } else {
-    SelfHostPattern::BindingPattern(name, offset)
+    BindingPattern(name, offset)
   }
 }
 
 fn self_host_token_expression(token: SelfHostToken) -> Option<SelfHostExpr> {
   match token.kind {
-    SelfHostTokenKind::I8(value) =>
-      Option::Some(SelfHostExpr::I8Expr(value, token.offset))
-    SelfHostTokenKind::I16(value) =>
-      Option::Some(SelfHostExpr::I16Expr(value, token.offset))
-    SelfHostTokenKind::I32(value) =>
-      Option::Some(SelfHostExpr::I32Expr(value, token.offset))
-    SelfHostTokenKind::I64(value) =>
-      Option::Some(SelfHostExpr::I64Expr(value, token.offset))
-    SelfHostTokenKind::U8(value) =>
-      Option::Some(SelfHostExpr::U8Expr(value, token.offset))
-    SelfHostTokenKind::U16(value) =>
-      Option::Some(SelfHostExpr::U16Expr(value, token.offset))
-    SelfHostTokenKind::U32(value) =>
-      Option::Some(SelfHostExpr::U32Expr(value, token.offset))
-    SelfHostTokenKind::U64(value) =>
-      Option::Some(SelfHostExpr::U64Expr(value, token.offset))
-    SelfHostTokenKind::F32(value) =>
-      Option::Some(SelfHostExpr::F32Expr(value, token.offset))
-    SelfHostTokenKind::F64(value) =>
-      Option::Some(SelfHostExpr::F64Expr(value, token.offset))
-    SelfHostTokenKind::StringLiteral(value) =>
-      Option::Some(SelfHostExpr::StringExpr(value, token.offset))
-    SelfHostTokenKind::MultilineString(value) =>
-      Option::Some(SelfHostExpr::StringExpr(value, token.offset))
-    SelfHostTokenKind::BytesLiteral(value) =>
-      Option::Some(SelfHostExpr::BytesExpr(value, token.offset))
-    SelfHostTokenKind::Identifier(name, _) =>
-      Option::Some(SelfHostExpr::NameExpr(name, token.offset))
-    SelfHostTokenKind::AtIdentifier(name, _, _) =>
-      Option::Some(SelfHostExpr::ImportAliasExpr(name, token.offset))
-    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 24u32 =>
-      Option::Some(SelfHostExpr::BoolExpr(true, token.offset))
-    SelfHostTokenKind::Keyword(keyword_code, _) if keyword_code == 25u32 =>
-      Option::Some(SelfHostExpr::BoolExpr(false, token.offset))
-    _ => Option::None
+    I8(value) =>
+      Some(I8Expr(value, token.offset))
+    I16(value) =>
+      Some(I16Expr(value, token.offset))
+    I32(value) =>
+      Some(I32Expr(value, token.offset))
+    I64(value) =>
+      Some(I64Expr(value, token.offset))
+    U8(value) =>
+      Some(U8Expr(value, token.offset))
+    U16(value) =>
+      Some(U16Expr(value, token.offset))
+    U32(value) =>
+      Some(U32Expr(value, token.offset))
+    U64(value) =>
+      Some(U64Expr(value, token.offset))
+    F32(value) =>
+      Some(F32Expr(value, token.offset))
+    F64(value) =>
+      Some(F64Expr(value, token.offset))
+    StringLiteral(value) =>
+      Some(StringExpr(value, token.offset))
+    MultilineString(value) =>
+      Some(StringExpr(value, token.offset))
+    BytesLiteral(value) =>
+      Some(BytesExpr(value, token.offset))
+    Identifier(name, _) =>
+      Some(NameExpr(name, token.offset))
+    AtIdentifier(name, _, _) =>
+      Some(ImportAliasExpr(name, token.offset))
+    Keyword(keyword_code, _) if keyword_code == 24u32 =>
+      Some(BoolExpr(true, token.offset))
+    Keyword(keyword_code, _) if keyword_code == 25u32 =>
+      Some(BoolExpr(false, token.offset))
+    _ => None
   }
 }
 
 fn self_host_parser_fail_pattern(parser: SelfHostParser) -> Unit {
   self_host_parser_fail(
     parser,
-    SelfHostParseError::ExpectedPattern(
+    ExpectedPattern(
       self_host_parser_peek(parser),
       self_host_parser_offset(parser),
     ),
@@ -79,75 +79,79 @@ fn self_host_parse_pattern_base(
   allow_rest: Bool,
 ) -> Option<SelfHostPattern> {
   let token = match self_host_parser_peek(parser) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       self_host_parser_fail_pattern(parser)
-      return Option::None
+      return None
     }
   }
   match token.kind {
-    SelfHostTokenKind::Identifier(name, _) => {
+    Symbol(symbol_code, _) if symbol_code == 2u32 => {
       parser.index = parser.index + 1u32
-      Option::Some(self_host_pattern_binding(name, token.offset))
+      self_host_parse_struct_pattern(parser, WildcardPattern(token.offset), token.offset)
     }
-    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 0u32 => {
+    Identifier(name, _) => {
+      parser.index = parser.index + 1u32
+      Some(self_host_pattern_binding(name, token.offset))
+    }
+    Symbol(symbol_code, _) if symbol_code == 0u32 => {
       parser.index = parser.index + 1u32
       match self_host_parse_tuple_pattern_arguments(parser, token.offset, true) {
-        Option::Some(parsed) => {
+        Some(parsed) => {
           let (arguments, has_comma) = parsed
           if arguments.length() == 1u32 && !has_comma {
             match arguments[0u32] {
-              SelfHostPattern::RestPattern(offset) => if !allow_rest {
-                self_host_parser_fail(parser, SelfHostParseError::RestPatternNotAllowed(offset))
-                return Option::None
+              RestPattern(offset) => if !allow_rest {
+                self_host_parser_fail(parser, RestPatternNotAllowed(offset))
+                return None
               }
               _ => {}
             }
-            Option::Some(arguments[0u32])
+            Some(arguments[0u32])
           } else {
             let mut explicit_count = 0u32
             for argument in arguments {
-              if !(argument is SelfHostPattern::RestPattern(_)) {
+              if !(argument is RestPattern(_)) {
                 explicit_count = explicit_count + 1u32
               }
             }
             let has_rest = explicit_count != arguments.length()
             if (!has_rest && explicit_count == 1u32) || explicit_count > 32u32 {
-              self_host_parser_fail(parser, SelfHostParseError::InvalidProductArity(explicit_count, token.offset))
-              return Option::None
+              self_host_parser_fail(parser, InvalidProductArity(explicit_count, token.offset))
+              return None
             }
-            Option::Some(SelfHostPattern::ProductPattern(arguments, token.offset))
+            Some(ProductPattern(arguments, token.offset))
           }
         }
-        Option::None => Option::None
+        None => None
       }
     }
-    SelfHostTokenKind::AtIdentifier(name, _, _) => {
+    AtIdentifier(name, _, _) => {
       parser.index = parser.index + 1u32
-      Option::Some(SelfHostPattern::ImportAliasPattern(name, token.offset))
+      Some(ImportAliasPattern(name, token.offset))
     }
-    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 28u32 => {
+    Symbol(symbol_code, _) if symbol_code == 28u32 => {
       parser.index = parser.index + 1u32
       if allow_rest {
-        Option::Some(SelfHostPattern::RestPattern(token.offset))
+        Some(RestPattern(token.offset))
       } else {
         self_host_parser_fail(
           parser,
-          SelfHostParseError::RestPatternNotAllowed(token.offset),
+          RestPatternNotAllowed(token.offset),
         )
-        Option::None
+        None
       }
     }
-    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 7u32 => {
+    Symbol(symbol_code, _) if symbol_code == 7u32 => {
       parser.index = parser.index + 1u32
       match self_host_parser_peek(parser) {
-        Option::Some(value_token) => match self_host_token_expression(value_token) {
-          Option::Some(value) => {
+        Some(value_token) => match self_host_token_expression(value_token) {
+          Some(value) => {
             parser.index = parser.index + 1u32
-            Option::Some(
-              SelfHostPattern::LiteralPattern(
-                SelfHostExpr::PrefixExpr(
-                  SelfHostPrefixOperator::Positive,
+            Some(
+              LiteralPattern(
+                PrefixExpr(
+                  Positive,
                   value,
                   token.offset,
                 ),
@@ -155,27 +159,27 @@ fn self_host_parse_pattern_base(
               ),
             )
           }
-          Option::None => {
+          None => {
             self_host_parser_fail_pattern(parser)
-            Option::None
+            None
           }
         }
-        Option::None => {
+        None => {
           self_host_parser_fail_pattern(parser)
-          Option::None
+          None
         }
       }
     }
-    SelfHostTokenKind::Symbol(symbol_code, _) if symbol_code == 8u32 => {
+    Symbol(symbol_code, _) if symbol_code == 8u32 => {
       parser.index = parser.index + 1u32
       match self_host_parser_peek(parser) {
-        Option::Some(value_token) => match self_host_token_expression(value_token) {
-          Option::Some(value) => {
+        Some(value_token) => match self_host_token_expression(value_token) {
+          Some(value) => {
             parser.index = parser.index + 1u32
-            Option::Some(
-              SelfHostPattern::LiteralPattern(
-                SelfHostExpr::PrefixExpr(
-                  SelfHostPrefixOperator::Negative,
+            Some(
+              LiteralPattern(
+                PrefixExpr(
+                  Negative,
                   value,
                   token.offset,
                 ),
@@ -183,35 +187,35 @@ fn self_host_parse_pattern_base(
               ),
             )
           }
-          Option::None => {
+          None => {
             self_host_parser_fail_pattern(parser)
-            Option::None
+            None
           }
         }
-        Option::None => {
+        None => {
           self_host_parser_fail_pattern(parser)
-          Option::None
+          None
         }
       }
     }
-    SelfHostTokenKind::Error(error) => {
+    Error(error) => {
       parser.index = parser.index + 1u32
       self_host_parser_fail(
         parser,
-        SelfHostParseError::Lexical(error, token.offset),
+        Lexical(error, token.offset),
       )
-      Option::None
+      None
     }
     _ => match self_host_token_expression(token) {
-      Option::Some(value) => {
+      Some(value) => {
         parser.index = parser.index + 1u32
-        Option::Some(
-          SelfHostPattern::LiteralPattern(value, token.offset),
+        Some(
+          LiteralPattern(value, token.offset),
         )
       }
-      Option::None => {
+      None => {
         self_host_parser_fail_pattern(parser)
-        Option::None
+        None
       }
     }
   }
@@ -228,25 +232,25 @@ fn self_host_parse_tuple_pattern_arguments(
   self_host_parser_skip_newlines(parser)
   if self_host_parser_consume_symbol(parser, 1u32) {
     if allow_empty {
-      return Option::Some((arguments, false))
+      return Some((arguments, false))
     }
     self_host_parser_fail(
       parser,
-      SelfHostParseError::EmptyTuplePattern(open_offset),
+      EmptyTuplePattern(open_offset),
     )
-    return Option::None
+    return None
   } else {
   }
   let result = while 0u32 {
     _ => match self_host_parse_pattern_context(parser, true, false) {
-      Option::Some(pattern) => {
+      Some(pattern) => {
         match pattern {
-          SelfHostPattern::RestPattern(offset) => if has_rest {
+          RestPattern(offset) => if has_rest {
             self_host_parser_fail(
               parser,
-              SelfHostParseError::DuplicateRestPattern(offset),
+              DuplicateRestPattern(offset),
             )
-            break Option::None
+            break None
           } else {
             has_rest = true
           }
@@ -255,7 +259,7 @@ fn self_host_parse_tuple_pattern_arguments(
         arguments.push(pattern)
         self_host_parser_skip_newlines(parser)
         if self_host_parser_consume_symbol(parser, 1u32) {
-          break Option::Some((arguments, has_comma))
+          break Some((arguments, has_comma))
         } else if self_host_parser_consume_symbol(
           parser,
           25u32,
@@ -266,23 +270,23 @@ fn self_host_parse_tuple_pattern_arguments(
             parser,
             1u32,
           ) {
-            break Option::Some((arguments, has_comma))
+            break Some((arguments, has_comma))
           } else {
             continue 0u32
           }
         } else {
           self_host_parser_fail(
             parser,
-            SelfHostParseError::ExpectedDelimiter(
+            ExpectedDelimiter(
               "pattern separator or )",
               self_host_parser_peek(parser),
               open_offset,
             ),
           )
-          break Option::None
+          break None
         }
       }
-      Option::None => break Option::None
+      None => break None
     }
   }
   result
@@ -296,8 +300,8 @@ fn self_host_parse_struct_pattern(
   let fields = self_host_empty_pattern_fields()
   let mut rest_offset = self_host_no_u32()
   if self_host_parser_consume_symbol(parser, 3u32) {
-    return Option::Some(
-      SelfHostPattern::StructPattern(
+    return Some(
+      StructPattern(
         target,
         fields,
         rest_offset,
@@ -309,21 +313,21 @@ fn self_host_parse_struct_pattern(
   if !self_host_parser_consume_newline(parser) {
     self_host_parser_fail(
       parser,
-      SelfHostParseError::ExpectedDelimiter(
+      ExpectedDelimiter(
         "pattern body newline",
         self_host_parser_peek(parser),
         open_offset,
       ),
     )
-    return Option::None
+    return None
   } else {
   }
   self_host_parser_skip_newlines(parser)
   let result = while 0u32 {
     _ => {
       if self_host_parser_consume_symbol(parser, 3u32) {
-        break Option::Some(
-          SelfHostPattern::StructPattern(
+        break Some(
+          StructPattern(
             target,
             fields,
             rest_offset,
@@ -333,31 +337,31 @@ fn self_host_parse_struct_pattern(
       } else {
       }
       let token = match self_host_parser_peek(parser) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           self_host_parser_fail(
             parser,
-            SelfHostParseError::UnclosedExpression(
+            UnclosedExpression(
               "struct pattern",
               open_offset,
             ),
           )
-          break Option::None
+          break None
         }
       }
       if self_host_token_kind_is_symbol(token.kind, 28u32) {
         parser.index = parser.index + 1u32
-        if rest_offset is Option::Some(_) {
+        if rest_offset is Some(_) {
           self_host_parser_fail(
             parser,
-            SelfHostParseError::DuplicateRestPattern(token.offset),
+            DuplicateRestPattern(token.offset),
           )
-          break Option::None
+          break None
         } else {
-          rest_offset = Option::Some(token.offset)
+          rest_offset = Some(token.offset)
         }
         if !self_host_parser_finish_line(parser) {
-          break Option::None
+          break None
         } else {
         }
         self_host_parser_skip_newlines(parser)
@@ -366,10 +370,10 @@ fn self_host_parse_struct_pattern(
       }
       let pair = match self_host_parser_identifier(
         parser,
-        SelfHostDeclarationExpectation::StructFieldName,
+        StructFieldName,
       ) {
-        Option::Some(value) => value
-        Option::None => break Option::None
+        Some(value) => value
+        None => break None
       }
       let (name, field_offset) = pair
       let pattern = if self_host_parser_consume_symbol(
@@ -377,19 +381,19 @@ fn self_host_parse_struct_pattern(
         13u32,
       ) {
         match self_host_parse_pattern_context(parser, false, false) {
-          Option::Some(value) => value
-          Option::None => break Option::None
+          Some(value) => value
+          None => break None
         }
       } else {
         self_host_pattern_binding(name, field_offset)
       }
-      fields.push(SelfHostPatternField::{
+      fields.push({
         name: name
         pattern: pattern
         offset: field_offset
       })
       if !self_host_parser_finish_line(parser) {
-        break Option::None
+        break None
       } else {
       }
       self_host_parser_skip_newlines(parser)
@@ -405,18 +409,18 @@ fn self_host_parse_pattern_context(
   stop_left_brace: Bool,
 ) -> Option<SelfHostPattern> {
   let mut pattern = match self_host_parse_pattern_base(parser, allow_rest) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
-  if pattern is SelfHostPattern::RestPattern(_) {
-    return Option::Some(pattern)
+  if pattern is RestPattern(_) {
+    return Some(pattern)
   } else {
   }
   let result = while 0u32 {
     _ => match self_host_parser_peek(parser) {
-      Option::Some(token) => {
+      Some(token) => {
         let exact_token = self_host_token_identity(token)
         let symbol_code = self_host_source_symbol_code(
           parser.source,
@@ -424,44 +428,44 @@ fn self_host_parse_pattern_context(
         )
         if symbol_code == 27u32 {
           match pattern {
-            SelfHostPattern::ImportAliasPattern(_, _) => {
+            ImportAliasPattern(_, _) => {
               parser.index = parser.index + 1u32
               self_host_parser_skip_newlines(parser)
               match self_host_parser_identifier(
                 parser,
-                SelfHostDeclarationExpectation::BindingName,
+                BindingName,
               ) {
-                Option::Some(pair) => {
+                Some(pair) => {
                   let (property, _property_offset) = pair
-                  pattern = SelfHostPattern::QualifiedPattern(
+                  pattern = QualifiedPattern(
                     pattern,
                     property,
                     exact_token.offset,
                   )
                   continue 0u32
                 }
-                Option::None => break Option::None
+                None => break None
               }
             }
-            _ => break Option::Some(pattern)
+            _ => break Some(pattern)
           }
         } else if symbol_code == 14u32 {
           parser.index = parser.index + 1u32
           self_host_parser_skip_newlines(parser)
           match self_host_parser_identifier(
             parser,
-            SelfHostDeclarationExpectation::BindingName,
+            BindingName,
           ) {
-            Option::Some(pair) => {
+            Some(pair) => {
               let (property, _property_offset) = pair
-              pattern = SelfHostPattern::QualifiedPattern(
+              pattern = QualifiedPattern(
                 pattern,
                 property,
                 exact_token.offset,
               )
               continue 0u32
             }
-            Option::None => break Option::None
+            None => break None
           }
         } else if symbol_code == 0u32 {
           parser.index = parser.index + 1u32
@@ -470,19 +474,19 @@ fn self_host_parse_pattern_context(
             exact_token.offset,
             false,
           ) {
-            Option::Some(parsed) => {
+            Some(parsed) => {
               let (arguments, _) = parsed
-              pattern = SelfHostPattern::TuplePattern(
+              pattern = TuplePattern(
                 pattern,
                 arguments,
                 exact_token.offset,
               )
               continue 0u32
             }
-            Option::None => break Option::None
+            None => break None
           }
         } else if symbol_code == 2u32 && stop_left_brace {
-          break Option::Some(pattern)
+          break Some(pattern)
         } else if symbol_code == 2u32 {
           parser.index = parser.index + 1u32
           match self_host_parse_struct_pattern(
@@ -490,17 +494,17 @@ fn self_host_parse_pattern_context(
             pattern,
             exact_token.offset,
           ) {
-            Option::Some(value) => {
+            Some(value) => {
               pattern = value
               continue 0u32
             }
-            Option::None => break Option::None
+            None => break None
           }
         } else {
-          break Option::Some(pattern)
+          break Some(pattern)
         }
       }
-      Option::None => break Option::Some(pattern)
+      None => break Some(pattern)
     }
   }
   result
@@ -511,12 +515,12 @@ pub fn self_host_parse_pattern_source(
 ) -> Result<SelfHostPattern, SelfHostParseError> {
   let parser = self_host_parser_new(source)
   match self_host_parse_pattern_context(parser, false, false) {
-    Option::Some(pattern) => {
+    Some(pattern) => {
       self_host_parser_skip_newlines(parser)
       if parser.index != parser.tokens.length() {
         self_host_parser_fail(
           parser,
-          SelfHostParseError::ExpectedDelimiter(
+          ExpectedDelimiter(
             "end of pattern",
             self_host_parser_peek(parser),
             self_host_parser_offset(parser),
@@ -525,14 +529,14 @@ pub fn self_host_parse_pattern_source(
       } else {
       }
       match parser.diagnostic {
-        Option::Some(diagnostic) => Result::Err(diagnostic.error)
-        Option::None => Result::Ok(pattern)
+        Some(diagnostic) => Err(diagnostic.error)
+        None => Ok(pattern)
       }
     }
-    Option::None => match parser.diagnostic {
-      Option::Some(diagnostic) => Result::Err(diagnostic.error)
-      Option::None => Result::Err(
-        SelfHostParseError::ExpectedPattern(Option::None, 0u32),
+    None => match parser.diagnostic {
+      Some(diagnostic) => Err(diagnostic.error)
+      None => Err(
+        ExpectedPattern(None, 0u32),
       )
     }
   }

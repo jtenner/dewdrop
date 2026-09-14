@@ -46,7 +46,7 @@ test "module initialization is dependency first" {
   )
   assert(plan.steps.length() == 2u32, "two steps")
   match plan.steps[0u32].kind {
-    SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(
+    PlannedInitializeModuleValue(
       declaration,
       _,
       _,
@@ -67,7 +67,7 @@ test "module initialization reports eager cycles" {
   assert(plan.cycle_declarations.length() == 2u32, "two cycle values")
   assert(plan.diagnostics.length() == 1u32, "cycle diagnostic")
   match plan.steps[0u32].kind {
-    SelfHostPlannedModuleInitializationStepKind::PlannedCyclicModuleValues(
+    PlannedCyclicModuleValues(
       members,
     ) => assert(members.length == 2u32, "cycle members")
     _ => assert(false, "cycle step")

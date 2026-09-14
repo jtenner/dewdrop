@@ -13,7 +13,7 @@ fn self_host_test_specialization_graph(kind: U32, resolved: Bool, mutation: U32)
   let mut child = callable.result_type
   if kind == 0u32 {
     match module_.resolved_types.types[callable.result_type] {
-      SelfHostResolvedType::AppliedType(owner, arguments) => {
+      AppliedType(owner, arguments) => {
         base = owner
         child = module_.resolved_types.type_arguments[arguments.start]
       }
@@ -35,68 +35,68 @@ fn self_host_test_specialization_graph(kind: U32, resolved: Bool, mutation: U32)
   } else {
     self_host_body_u32_to_i32(root_index)
   }
-  let span = SelfHostHirSpan::{
+  let span = {
     start: start
     length: 1u32
   }
   if resolved {
     module_.resolved_types.type_arguments.push(child)
     module_.resolved_types.types.push(if kind == 0u32 {
-      SelfHostResolvedType::AppliedType(base, span)
+      AppliedType(base, span)
     } else if kind == 1u32 {
-      SelfHostResolvedType::FunctionType(span, child)
+      FunctionType(span, child)
     } else {
-      SelfHostResolvedType::MemberTypeProjection(child, b"types.field_type", "value")
+      MemberTypeProjection(child, b"types.field_type", "value")
     })
   } else {
     module_.inferred.type_arguments.push(-self_host_body_u32_to_i32(child) - 2i32)
     module_.inferred.types.push(if kind == 0u32 {
-      SelfHostBodyTypeTerm::BodyAppliedType(-self_host_body_u32_to_i32(base) - 2i32, span)
+      BodyAppliedType(-self_host_body_u32_to_i32(base) - 2i32, span)
     } else if kind == 1u32 {
-      SelfHostBodyTypeTerm::BodyFunctionType(span, -self_host_body_u32_to_i32(child) - 2i32)
+      BodyFunctionType(span, -self_host_body_u32_to_i32(child) - 2i32)
     } else {
-      SelfHostBodyTypeTerm::BodyMemberTypeProjection(-self_host_body_u32_to_i32(child) - 2i32, b"types.field_type", "value")
+      BodyMemberTypeProjection(-self_host_body_u32_to_i32(child) - 2i32, b"types.field_type", "value")
     })
   }
   let shape = self_host_specialized_body_value_shape(module_, callable, self_host_specialized_shape_test_span(),
-    [SelfHostPlannedValueShape::I64PlannedValueShape], root)
+    [I64PlannedValueShape], root)
   if kind == 2u32 {
-    assert(shape is SelfHostPlannedValueShape::GenericPlannedValueShape, "pending projection stays Generic")
+    assert(shape is GenericPlannedValueShape, "pending projection stays Generic")
   } else {
-    assert(shape is SelfHostPlannedValueShape::RefPlannedValueShape, "valid applied/function graph before mutation")
+    assert(shape is RefPlannedValueShape, "valid applied/function graph before mutation")
   }
   if mutation == 0u32 {
     return
   }
   if mutation == 3u32 {
-    let broken = SelfHostHirSpan::{
+    let broken = {
       start: 4294967295u32
       length: 1u32
     }
     if resolved {
       module_.resolved_types.types[root_index] = if kind == 0u32 {
-        SelfHostResolvedType::AppliedType(base, broken)
+        AppliedType(base, broken)
       } else {
-        SelfHostResolvedType::FunctionType(broken, child)
+        FunctionType(broken, child)
       }
     } else {
       module_.inferred.types[root_index] = if kind == 0u32 {
-        SelfHostBodyTypeTerm::BodyAppliedType(-self_host_body_u32_to_i32(base) - 2i32, broken)
+        BodyAppliedType(-self_host_body_u32_to_i32(base) - 2i32, broken)
       } else {
-        SelfHostBodyTypeTerm::BodyFunctionType(broken, -self_host_body_u32_to_i32(child) - 2i32)
+        BodyFunctionType(broken, -self_host_body_u32_to_i32(child) - 2i32)
       }
     }
   } else if mutation == 5u32 {
     if resolved {
-      module_.resolved_types.types[root_index] = SelfHostResolvedType::FunctionType(span, root_index)
+      module_.resolved_types.types[root_index] = FunctionType(span, root_index)
     } else {
-      module_.inferred.types[root_index] = SelfHostBodyTypeTerm::BodyFunctionType(span, root)
+      module_.inferred.types[root_index] = BodyFunctionType(span, root)
     }
   } else if kind == 2u32 {
     if resolved {
-      module_.resolved_types.types[root_index] = SelfHostResolvedType::MemberTypeProjection(root_index, b"types.field_type", "value")
+      module_.resolved_types.types[root_index] = MemberTypeProjection(root_index, b"types.field_type", "value")
     } else {
-      module_.inferred.types[root_index] = SelfHostBodyTypeTerm::BodyMemberTypeProjection(root, b"types.field_type", "value")
+      module_.inferred.types[root_index] = BodyMemberTypeProjection(root, b"types.field_type", "value")
     }
   } else if resolved {
     module_.resolved_types.type_arguments[start] = if mutation == 1u32 {
@@ -112,9 +112,9 @@ fn self_host_test_specialization_graph(kind: U32, resolved: Bool, mutation: U32)
     }
   }
   let changed = self_host_specialized_body_value_shape(module_, callable, self_host_specialized_shape_test_span(),
-    [SelfHostPlannedValueShape::I64PlannedValueShape], root)
+    [I64PlannedValueShape], root)
   if mutation == 2u32 {
-    assert(changed is SelfHostPlannedValueShape::ErrorPlannedValueShape, "an erroneous child cannot become Ref")
+    assert(changed is ErrorPlannedValueShape, "an erroneous child cannot become Ref")
   }
 }
 

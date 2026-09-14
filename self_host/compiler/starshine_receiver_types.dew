@@ -32,14 +32,14 @@ fn self_host_linked_body_primitive_rank(
       }
       hops = hops + 1u32
       match module_.inferred.types[index] {
-        SelfHostBodyTypeTerm::BodyResolvedType(resolved) => {
+        BodyResolvedType(resolved) => {
           if resolved > 2147483646u32 {
             self_host_call_read_failure(module_.module_id, 0u64, 0u64, 4294967295u32,
               207u32, 2147483646u64, u32_into_u64(resolved), detail)
           }
           current = -self_host_body_u32_to_i32(resolved) - 2i32
         }
-        SelfHostBodyTypeTerm::BodyAppliedType(base, _) => {
+        BodyAppliedType(base, _) => {
           current = base
         }
         _ => return 0u32

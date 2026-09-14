@@ -265,6 +265,11 @@ fn BodyJobTypeImporter::import_type(
 
 ///|
 priv struct CallInferenceScratch {
+  mut constructor_index : ConstructorIndex?
+  mut final_constructors : Bool
+  mut constructor_progress : Int
+  pending_variant_calls : Array[Int]
+  pending_patterns : Array[(PatternId, BodyTypeId)]
   pending_calls : Array[ExprId]
   deferred_calls : Array[ExprId]
   pending_function_calls : Array[Int]
@@ -309,6 +314,11 @@ priv struct CallInferenceScratch {
 ///|
 fn CallInferenceScratch::new() -> CallInferenceScratch {
   {
+    constructor_index: None,
+    final_constructors: false,
+    constructor_progress: 0,
+    pending_variant_calls: [],
+    pending_patterns: [],
     pending_calls: [],
     deferred_calls: [],
     pending_function_calls: [],
@@ -353,6 +363,10 @@ fn CallInferenceScratch::new() -> CallInferenceScratch {
 
 ///|
 fn CallInferenceScratch::begin_body(self : CallInferenceScratch) -> Unit {
+  self.final_constructors = false
+  self.constructor_progress = 0
+  self.pending_variant_calls.clear()
+  self.pending_patterns.clear()
   self.pending_calls.clear()
   self.deferred_calls.clear()
   self.pending_function_calls.clear()
@@ -1834,7 +1848,7 @@ fn BasicBodyInferencer::initialize_expression_types(
               None => self.solver.error_type()
             }
           ErrorNameReference => self.solver.error_type()
-          VariantNameReference(_) => {
+          VariantNameReference(_) | ContextualFactoryNameReference(_) => {
             self.ensure_member_storage()
             self.solver.fresh_variable()
           }
@@ -2451,7 +2465,7 @@ fn BasicBodyInferencer::constrain_name_expressions(
           ImportedModuleNameReference(_) => self.mark_unsupported(expression)
           ForeignLibraryNameReference(_) => ()
           ImportedModuleValueNameReference(_) => ()
-          VariantNameReference(_) => ()
+          VariantNameReference(_) | ContextualFactoryNameReference(_) => ()
           PrimitiveTypeNameReference(_)
           | ModuleTypeNameReference(_)
           | ModuleTraitNameReference(_)
@@ -3162,9 +3176,11 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
   // that member. Finish the shared constraint queue before reporting missing
   // calls. Each successful round removes at least one pending call.
   while true {
+    let constructor_before = self.call_scratch.constructor_progress
     let before = self.call_scratch.pending_methods.length() +
       self.call_scratch.pending_operators.length() +
       self.call_scratch.pending_function_calls.length()
+    self.constrain_short_constructors()
     self.constrain_pending_function_calls(false)
     self.constrain_method_calls(false)
     self.constrain_members(false)
@@ -3177,10 +3193,14 @@ fn BasicBodyInferencer::constrain_body(self : BasicBodyInferencer) -> Unit {
     guard after <= before else {
       abort("body inference constraint queue grew during resolution")
     }
-    if after == before && !member_progress {
+    if after == before &&
+      !member_progress &&
+      self.call_scratch.constructor_progress == constructor_before {
       break
     }
   }
+  self.call_scratch.final_constructors = true
+  self.constrain_short_constructors()
   self.constrain_method_calls(true)
   self.constrain_operator_calls(true)
   self.constrain_members(true)

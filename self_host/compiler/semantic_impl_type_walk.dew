@@ -12,7 +12,7 @@ struct SelfHostImplTypePair {
 }
 
 fn self_host_impl_type_failure(resolved: SelfHostResolvedModuleTypes, root: U32, code: U32, expected: U32, actual: U32, detail: U32) -> SelfHostInvariantFailure {
-  SelfHostInvariantFailure::{
+  {
     code: code
     phase: 3u32
     module_id: resolved.module_id
@@ -27,8 +27,8 @@ fn self_host_impl_type_failure(resolved: SelfHostResolvedModuleTypes, root: U32,
 
 fn self_host_impl_type_map_get(resolved: SelfHostResolvedModuleTypes, root: U32, types: Map<U32, U32>, id: U32) -> U32 {
   match types.get(id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       self_host_assert_compiler_invariant_with_failure(false, self_host_impl_type_failure(resolved, root, 106u32, resolved.types.length(), id, 0u32), "implementation type translation must be present")
       unreachable()
     }
@@ -38,22 +38,22 @@ fn self_host_impl_type_map_get(resolved: SelfHostResolvedModuleTypes, root: U32,
 // This is one edge, not a depth-limited walk. The graph checker owns cycles.
 fn self_host_impl_substitution_step(collected: SelfHostCollectedModule, resolved: SelfHostResolvedModuleTypes, id: U32, context: SelfHostImplTypeContext) -> U32 {
   match resolved.types[id] {
-    SelfHostResolvedType::GenericParameterType(parameter) => match self_host_impl_generic_relative(collected, context.imported_parameter_ids, context.owner_parameters, parameter) {
-      Option::Some(relative) => if relative < context.owner_arguments.length {
+    GenericParameterType(parameter) => match self_host_impl_generic_relative(collected, context.imported_parameter_ids, context.owner_parameters, parameter) {
+      Some(relative) => if relative < context.owner_arguments.length {
         resolved.type_arguments[context.owner_arguments.start + relative]
       } else {
         id
       }
-      Option::None => match self_host_impl_generic_relative(collected, context.imported_parameter_ids, context.method_parameters, parameter) {
-        Option::Some(relative) => if relative < context.method_arguments.length {
+      None => match self_host_impl_generic_relative(collected, context.imported_parameter_ids, context.method_parameters, parameter) {
+        Some(relative) => if relative < context.method_arguments.length {
           resolved.generic_parameter_types[context.method_arguments.start + relative]
         } else {
           id
         }
-        Option::None => id
+        None => id
       }
     }
-    SelfHostResolvedType::SelfType(owner) => if owner == context.self_owner {
+    SelfType(owner) => if owner == context.self_owner {
       context.self_type
     } else {
       id
@@ -64,21 +64,21 @@ fn self_host_impl_substitution_step(collected: SelfHostCollectedModule, resolved
 
 fn self_host_check_impl_type_graph(collected: SelfHostCollectedModule, resolved: SelfHostResolvedModuleTypes, root: U32, context: SelfHostImplTypeContext) -> Result<Map<U32, U32>, SelfHostInvariantFailure> {
   let parameter_count = match context.imported_parameter_ids {
-    Option::Some(ids) => ids.length()
-    Option::None => collected.generic_parameters.length()
+    Some(ids) => ids.length()
+    None => collected.generic_parameters.length()
   }
   for span in [context.owner_parameters, context.method_parameters] {
     if !self_host_array_span_is_valid(span.start, span.length, parameter_count) {
-      return Result::Err(self_host_impl_type_failure(resolved, root, 101u32, parameter_count, span.start, span.length))
+      return Err(self_host_impl_type_failure(resolved, root, 101u32, parameter_count, span.start, span.length))
     }
   }
   let method_arguments = context.method_arguments
   if !self_host_array_span_is_valid(method_arguments.start, method_arguments.length, resolved.generic_parameter_types.length()) {
-    return Result::Err(self_host_impl_type_failure(resolved, root, 101u32, resolved.generic_parameter_types.length(), method_arguments.start, method_arguments.length))
+    return Err(self_host_impl_type_failure(resolved, root, 101u32, resolved.generic_parameter_types.length(), method_arguments.start, method_arguments.length))
   }
   let owner_arguments = context.owner_arguments
   if !self_host_array_span_is_valid(owner_arguments.start, owner_arguments.length, resolved.type_arguments.length()) {
-    return Result::Err(self_host_impl_type_failure(resolved, root, 101u32, resolved.type_arguments.length(), owner_arguments.start, owner_arguments.length))
+    return Err(self_host_impl_type_failure(resolved, root, 101u32, resolved.type_arguments.length(), owner_arguments.start, owner_arguments.length))
   }
   let states = Map::empty()
   let translated = Map::empty()
@@ -92,7 +92,7 @@ fn self_host_check_impl_type_graph(collected: SelfHostCollectedModule, resolved:
       work.truncate(length - 1u32)
       let id = visit.type_
       if id >= resolved.types.length() {
-        return Result::Err(self_host_impl_type_failure(resolved, root, 104u32, resolved.types.length(), id, 0u32))
+        return Err(self_host_impl_type_failure(resolved, root, 104u32, resolved.types.length(), id, 0u32))
       }
       if visit.finish {
         let next = self_host_impl_type_map_get(resolved, root, translated, id)
@@ -103,24 +103,24 @@ fn self_host_check_impl_type_graph(collected: SelfHostCollectedModule, resolved:
         continue work.length()
       }
       let state = match states.get(id) {
-        Option::Some(value) => value
-        Option::None => 0u32
+        Some(value) => value
+        None => 0u32
       }
       if state == 1u32 {
-        return Result::Err(self_host_impl_type_failure(resolved, root, 211u32, 0u32, id, 1u32))
+        return Err(self_host_impl_type_failure(resolved, root, 211u32, 0u32, id, 1u32))
       }
       if state == 2u32 {
         continue work.length()
       }
       states.set(id, 1u32)
-      work.push(SelfHostImplTypeVisit::{
+      work.push({
         type_: id
         finish: true
       })
       let next = self_host_impl_substitution_step(collected, resolved, id, context)
       translated.set(id, next)
       if next != id {
-        work.push(SelfHostImplTypeVisit::{
+        work.push({
           type_: next
           finish: false
         })
@@ -128,30 +128,30 @@ fn self_host_check_impl_type_graph(collected: SelfHostCollectedModule, resolved:
       }
       let node = resolved.types[id]
       let fields = match node {
-        SelfHostResolvedType::ProductType(span) => span
-        SelfHostResolvedType::AppliedType(_, span) => span
-        SelfHostResolvedType::FunctionType(span, _) => span
+        ProductType(span) => span
+        AppliedType(_, span) => span
+        FunctionType(span, _) => span
         _ => self_host_empty_hir_span(0u32)
       }
       if !self_host_array_span_is_valid(fields.start, fields.length, resolved.type_arguments.length()) {
-        return Result::Err(self_host_impl_type_failure(resolved, root, 101u32, resolved.type_arguments.length(), fields.start, fields.length))
+        return Err(self_host_impl_type_failure(resolved, root, 101u32, resolved.type_arguments.length(), fields.start, fields.length))
       }
       let extra = match node {
-        SelfHostResolvedType::AppliedType(base, _) => Option::Some(base)
-        SelfHostResolvedType::FunctionType(_, result) => Option::Some(result)
-        SelfHostResolvedType::MemberTypeProjection(owner, _, _) => Option::Some(owner)
-        _ => Option::None
+        AppliedType(base, _) => Some(base)
+        FunctionType(_, result) => Some(result)
+        MemberTypeProjection(owner, _, _) => Some(owner)
+        _ => None
       }
       match extra {
-        Option::Some(child) => work.push(SelfHostImplTypeVisit::{
+        Some(child) => work.push({
           type_: child
           finish: false
         })
-        Option::None => {}
+        None => {}
       }
       let _ = while fields.length {
         offset => if offset > 0u32 {
-          work.push(SelfHostImplTypeVisit::{
+          work.push({
             type_: resolved.type_arguments[fields.start + offset - 1u32]
             finish: false
           })
@@ -165,29 +165,29 @@ fn self_host_check_impl_type_graph(collected: SelfHostCollectedModule, resolved:
       break self_host_semantic_unit()
     }
   }
-  Result::Ok(translated)
+  Ok(translated)
 }
 
 fn self_host_impl_leaf_types_equal(left: SelfHostResolvedType, right: SelfHostResolvedType) -> Bool {
   match left {
-    SelfHostResolvedType::PrimitiveType(a) => match right {
-      SelfHostResolvedType::PrimitiveType(b) => a.rank() == b.rank()
+    PrimitiveType(a) => match right {
+      PrimitiveType(b) => a.rank() == b.rank()
       _ => false
     }
-    SelfHostResolvedType::GenericParameterType(a) => match right {
-      SelfHostResolvedType::GenericParameterType(b) => a == b
+    GenericParameterType(a) => match right {
+      GenericParameterType(b) => a == b
       _ => false
     }
-    SelfHostResolvedType::NominalType(a) => match right {
-      SelfHostResolvedType::NominalType(b) => a == b
+    NominalType(a) => match right {
+      NominalType(b) => a == b
       _ => false
     }
-    SelfHostResolvedType::TraitType(a) => match right {
-      SelfHostResolvedType::TraitType(b) => a == b
+    TraitType(a) => match right {
+      TraitType(b) => a == b
       _ => false
     }
-    SelfHostResolvedType::SelfType(a) => match right {
-      SelfHostResolvedType::SelfType(b) => a == b
+    SelfType(a) => match right {
+      SelfType(b) => a == b
       _ => false
     }
     _ => false
@@ -196,12 +196,12 @@ fn self_host_impl_leaf_types_equal(left: SelfHostResolvedType, right: SelfHostRe
 
 fn self_host_check_impl_signature_types_equal(collected: SelfHostCollectedModule, resolved: SelfHostResolvedModuleTypes, left_root: U32, left_context: SelfHostImplTypeContext, right_root: U32, right_context: SelfHostImplTypeContext) -> Result<Bool, SelfHostInvariantFailure> {
   let left_types = match self_host_check_impl_type_graph(collected, resolved, left_root, left_context) {
-    Result::Ok(types) => types
-    Result::Err(error) => return Result::Err(error)
+    Ok(types) => types
+    Err(error) => return Err(error)
   }
   let right_types = match self_host_check_impl_type_graph(collected, resolved, right_root, right_context) {
-    Result::Ok(types) => types
-    Result::Err(error) => return Result::Err(error)
+    Ok(types) => types
+    Err(error) => return Err(error)
   }
   let seen = Map::empty()
   let work = [SelfHostImplTypePair::{
@@ -215,71 +215,71 @@ fn self_host_check_impl_signature_types_equal(collected: SelfHostCollectedModule
       let left = self_host_impl_type_map_get(resolved, left_root, left_types, pair.left)
       let right = self_host_impl_type_map_get(resolved, right_root, right_types, pair.right)
       let key = self_host_make_semantic_id(self_host_u32_to_u64(left), right)
-      if seen.get(key) is Option::Some(_) {
+      if seen.get(key) is Some(_) {
         continue work.length()
       }
       seen.set(key, true)
       let a = resolved.types[left]
       let b = resolved.types[right]
-      if a is SelfHostResolvedType::ErrorType || b is SelfHostResolvedType::ErrorType {
+      if a is ErrorType || b is ErrorType {
         continue work.length()
       }
       let mut right_fields = self_host_empty_hir_span(0u32)
       let left_fields = match a {
-        SelfHostResolvedType::ProductType(fields_a) => match b {
-          SelfHostResolvedType::ProductType(fields_b) => {
+        ProductType(fields_a) => match b {
+          ProductType(fields_b) => {
             right_fields = fields_b
             fields_a
           }
-          _ => return Result::Ok(false)
+          _ => return Ok(false)
         }
-        SelfHostResolvedType::AppliedType(base_a, fields_a) => match b {
-          SelfHostResolvedType::AppliedType(base_b, fields_b) => {
-            work.push(SelfHostImplTypePair::{
+        AppliedType(base_a, fields_a) => match b {
+          AppliedType(base_b, fields_b) => {
+            work.push({
               left: base_a
               right: base_b
             })
             right_fields = fields_b
             fields_a
           }
-          _ => return Result::Ok(false)
+          _ => return Ok(false)
         }
-        SelfHostResolvedType::FunctionType(fields_a, result_a) => match b {
-          SelfHostResolvedType::FunctionType(fields_b, result_b) => {
-            work.push(SelfHostImplTypePair::{
+        FunctionType(fields_a, result_a) => match b {
+          FunctionType(fields_b, result_b) => {
+            work.push({
               left: result_a
               right: result_b
             })
             right_fields = fields_b
             fields_a
           }
-          _ => return Result::Ok(false)
+          _ => return Ok(false)
         }
-        SelfHostResolvedType::MemberTypeProjection(owner_a, query_a, member_a) => match b {
-          SelfHostResolvedType::MemberTypeProjection(owner_b, query_b, member_b) => {
+        MemberTypeProjection(owner_a, query_a, member_a) => match b {
+          MemberTypeProjection(owner_b, query_b, member_b) => {
             if query_a != query_b || member_a != member_b {
-              return Result::Ok(false)
+              return Ok(false)
             }
-            work.push(SelfHostImplTypePair::{
+            work.push({
               left: owner_a
               right: owner_b
             })
             continue work.length()
           }
-          _ => return Result::Ok(false)
+          _ => return Ok(false)
         }
         _ => if self_host_impl_leaf_types_equal(a, b) {
           continue work.length()
         } else {
-          return Result::Ok(false)
+          return Ok(false)
         }
       }
       if left_fields.length != right_fields.length {
-        return Result::Ok(false)
+        return Ok(false)
       }
       let _ = while left_fields.length {
         offset => if offset > 0u32 {
-          work.push(SelfHostImplTypePair::{
+          work.push({
             left: resolved.type_arguments[left_fields.start + offset - 1u32]
             right: resolved.type_arguments[right_fields.start + offset - 1u32]
           })
@@ -293,5 +293,5 @@ fn self_host_check_impl_signature_types_equal(collected: SelfHostCollectedModule
       break self_host_semantic_unit()
     }
   }
-  Result::Ok(true)
+  Ok(true)
 }

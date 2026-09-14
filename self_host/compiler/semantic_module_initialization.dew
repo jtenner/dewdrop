@@ -43,11 +43,11 @@ fn self_host_initialization_offset(
   declaration: U64,
 ) -> U32 {
   match collected.declaration_reference(declaration) {
-    Option::Some(reference) => match reference {
-      SelfHostCollectedDeclarationReference::TopLevel(value) => value.offset
-      SelfHostCollectedDeclarationReference::Method(value) => value.offset
+    Some(reference) => match reference {
+      TopLevel(value) => value.offset
+      Method(value) => value.offset
     }
-    Option::None => 0u32
+    None => 0u32
   }
 }
 
@@ -64,8 +64,8 @@ fn self_host_initialization_scc_is_cyclic(
   }
   let declaration = dependencies.scc_declaration(scc.start)
   let let_index = match self_host_module_value_let_index(collected, declaration) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return false
     }
   }
@@ -157,12 +157,12 @@ fn self_host_plan_module_initialization(
           break self_host_semantic_unit()
         }
       }
-      let members = SelfHostHirSpan::{
+      let members = {
         start: cycle_start
         length: cycle_declarations.length() - cycle_start
       }
-      steps.push(SelfHostPlannedModuleInitializationStep::{
-        kind: SelfHostPlannedModuleInitializationStepKind::PlannedCyclicModuleValues(
+      steps.push({
+        kind: PlannedCyclicModuleValues(
           members,
         )
         test_only: self_host_initialization_scc_is_test_only(
@@ -173,7 +173,7 @@ fn self_host_plan_module_initialization(
         offset: offset
       })
       diagnostics.push(
-        SelfHostModuleInitializationDiagnostic::EagerModuleInitializationCycle(
+        EagerModuleInitializationCycle(
           members,
           offset,
         ),
@@ -183,8 +183,8 @@ fn self_host_plan_module_initialization(
       let let_index = self_host_initialization_value_index(collected, let_indices, declaration)
       let body = source_bodies[let_index]
       declaration_steps[self_host_semantic_id_local(declaration)] = step_index
-      steps.push(SelfHostPlannedModuleInitializationStep::{
-        kind: SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(
+      steps.push({
+        kind: PlannedInitializeModuleValue(
           declaration,
           body.id,
           inferred.let_types[let_index],
@@ -198,7 +198,7 @@ fn self_host_plan_module_initialization(
       break self_host_semantic_unit()
     }
   }
-  SelfHostPlannedModuleInitialization::{
+  {
     module_id: collected.module_id
     dependencies: inferred.dependencies
     steps: steps

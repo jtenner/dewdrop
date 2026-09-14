@@ -138,7 +138,7 @@ fn self_host_assert_compiler_invariant(
 ) -> Bool {
   self_host_assert_compiler_invariant_with_failure(
     condition,
-    SelfHostInvariantFailure::{
+    {
       code: 1u32
       phase: 0u32
       module_id: 0u64
@@ -190,13 +190,13 @@ fn self_host_checked_relative_index(
 ) -> Option<U32> {
   if !self_host_array_span_is_valid(span.start, span.length, arena_length) ||
     index < span.start {
-    return Option::None
+    return None
   }
   let relative = index - span.start
   if relative < span.length {
-    Option::Some(relative)
+    Some(relative)
   } else {
-    Option::None
+    None
   }
 }
 

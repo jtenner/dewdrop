@@ -19,14 +19,14 @@ fn self_host_body_pattern_field_carrier_for_shape(
 ) -> SelfHostWasmBodyCarrier {
   let carrier = self_host_body_physical_field_carrier(link, type_index, field_index)
   match self_host_linked_source_payload_field(link, type_index, field_index) {
-    Option::Some(field) => if self_host_linked_generic_variant_storage(link, field) {
+    Some(field) => if self_host_linked_generic_variant_storage(link, field) {
       // A storage reference is not the scalar binding value. Generic logical
       // evidence stays unknown until specialization supplies a concrete value.
       return self_host_body_carrier_from_shape(logical_shape)
     }
-    Option::None => {}
+    None => {}
   }
-  if logical_shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+  if logical_shape is UnitPlannedValueShape {
     for linked_type in link.types {
       if linked_type.type_index == type_index {
         let fragment = link.fragments.modules[linked_type.module_index]
@@ -34,7 +34,7 @@ fn self_host_body_pattern_field_carrier_for_shape(
         self_host_assert_compiler_invariant(self_host_array_span_is_valid(physical.fields.start, physical.fields.length, fragment.fields.length()), "FRG-403 pattern payload storage span")
         if field_index < physical.fields.length {
           let field = fragment.fields[physical.fields.start + field_index]
-          let unit = SelfHostWasmBodyCarrier::UnitBodyCarrier
+          let unit = UnitBodyCarrier
           if self_host_linked_variant_unit_storage(link, field, unit) ||
             self_host_linked_erased_field_unit_storage(link, field.declaration, field.storage, unit) {
             return unit
@@ -59,11 +59,11 @@ fn self_host_unit_pattern_binding_has_storage(
     link, module_, specialization, child.type_,
     self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, child.type_),
   )
-  if !(shape is SelfHostPlannedValueShape::UnitPlannedValueShape) {
+  if !(shape is UnitPlannedValueShape) {
     return false
   }
   let carrier = self_host_body_pattern_field_carrier_for_shape(link, type_index, field_index, shape)
-  if carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
+  if carrier is UnitBodyCarrier {
     return true
   }
   false

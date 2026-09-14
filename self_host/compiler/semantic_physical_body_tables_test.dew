@@ -16,7 +16,7 @@ fn self_host_test_physical_table_plan(link: SelfHostPlannedProgramWasmGCLink) ->
 }
 
 fn self_host_test_physical_expression_id(source: SelfHostPlannedPhysicalExpressionCarrier, expression: U32) -> SelfHostPlannedPhysicalExpressionCarrier {
-  SelfHostPlannedPhysicalExpressionCarrier::{
+  {
     expression: expression
     value: source.value
     carrier: source.carrier
@@ -70,7 +70,7 @@ test "ARN-103 physical expressions cannot omit the body tail" expect_trap "unrea
 test "ARN-103 physical control states require an owning loop" expect_trap "unreachable" {
   let link = self_host_test_physical_table_link()
   let plan = self_host_test_physical_table_plan(link)
-  plan.control_states.push(SelfHostWasmBodyCarrier::UnitBodyCarrier)
+  plan.control_states.push(UnitBodyCarrier)
   self_host_verify_one_physical_body(link, plan, [])
 }
 
@@ -84,7 +84,7 @@ test "ARN-103 physical control state values require an owning loop" expect_trap 
 test "ARN-103 physical control results require an owning loop" expect_trap "unreachable" {
   let link = self_host_test_physical_table_link()
   let plan = self_host_test_physical_table_plan(link)
-  plan.control_results.push(SelfHostWasmBodyCarrier::UnitBodyCarrier)
+  plan.control_results.push(UnitBodyCarrier)
   self_host_verify_one_physical_body(link, plan, [])
 }
 

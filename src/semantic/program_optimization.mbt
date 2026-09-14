@@ -3455,6 +3455,10 @@ fn program_private_scalar_payload_match_arms_are_exact(
               return false
             }
             let child = module_.pattern_children[children.start]
+            if module_.patterns[child].selected_constructor !=
+              NoInferredPatternConstructor {
+              return false
+            }
             match module_.patterns[child].source {
               HirWildcardPattern(_) | HirBindingPattern(_, _) => ()
               _ => return false
@@ -5943,6 +5947,10 @@ fn program_pattern_is_direct_catchall(
   pattern : PatternId,
 ) -> Bool {
   if pattern < 0 || pattern >= module_.patterns.length() {
+    return false
+  }
+  if module_.patterns[pattern].selected_constructor !=
+    NoInferredPatternConstructor {
     return false
   }
   match module_.patterns[pattern].source {

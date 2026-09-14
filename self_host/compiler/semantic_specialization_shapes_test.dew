@@ -5,13 +5,13 @@ fn self_host_specialized_shape_fixture() -> SelfHostPlannedModuleLowering {
   let callable = module_.functions.callables[0u32]
   let type_ = -self_host_body_u32_to_i32(callable.result_type) - 2i32
   let shape = self_host_specialized_body_value_shape(module_, callable,
-    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], type_)
-  assert(shape is SelfHostPlannedValueShape::I64PlannedValueShape, "valid caller substitution before mutation")
+    self_host_specialized_shape_test_span(), [I64PlannedValueShape], type_)
+  assert(shape is I64PlannedValueShape, "valid caller substitution before mutation")
   module_
 }
 
 fn self_host_specialized_shape_test_span() -> SelfHostHirSpan {
-  SelfHostHirSpan::{
+  {
     start: 0u32
     length: 1u32
   }
@@ -27,7 +27,7 @@ test "specialized type work queues preserve deep shared product graphs" {
       module_.inferred.type_arguments.push(root)
       module_.inferred.type_arguments.push(root)
       root = self_host_body_u32_to_i32(module_.inferred.types.length())
-      module_.inferred.types.push(SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+      module_.inferred.types.push(BodyProductType({
         start: start
         length: 2u32
       }))
@@ -36,11 +36,11 @@ test "specialized type work queues preserve deep shared product graphs" {
     _ => break ()
   }
   let mut shape = self_host_specialized_body_value_shape(module_, callable,
-    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], root)
+    self_host_specialized_shape_test_span(), [I64PlannedValueShape], root)
   while 0u32 {
     depth if depth < 128u32 => {
       match shape {
-        SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+        ProductPlannedValueShape(fields) => {
           assert(fields.length() == 2u32, "shared product retains both fields")
           shape = fields[0u32]
         }
@@ -50,17 +50,17 @@ test "specialized type work queues preserve deep shared product graphs" {
     }
     _ => break ()
   }
-  assert(shape is SelfHostPlannedValueShape::I64PlannedValueShape, "deep leaf uses the caller argument")
+  assert(shape is I64PlannedValueShape, "deep leaf uses the caller argument")
 }
 
 test "ARN-101 specialized type substitution checks its argument span" expect_trap "unreachable" {
   let module_ = self_host_specialized_shape_fixture()
   let callable = module_.functions.callables[0u32]
   let _ = self_host_specialized_body_value_shape(module_, callable,
-    SelfHostHirSpan::{
+    {
       start: 4294967295u32
       length: 1u32
-    }, [SelfHostPlannedValueShape::I64PlannedValueShape],
+    }, [I64PlannedValueShape],
     -self_host_body_u32_to_i32(callable.result_type) - 2i32)
 }
 
@@ -71,14 +71,14 @@ fn self_host_specialized_product_shape_fixture() -> SelfHostPlannedModuleLowerin
   let start = module_.inferred.type_arguments.length()
   assert(root == 1u32 && start == 0u32, "stable owned product fixture indices")
   module_.inferred.type_arguments.push(-self_host_body_u32_to_i32(callable.result_type) - 2i32)
-  module_.inferred.types.push(SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+  module_.inferred.types.push(BodyProductType({
     start: start
     length: 1u32
   }))
   let shape = self_host_specialized_body_value_shape(module_, callable,
-    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], self_host_body_u32_to_i32(root))
+    self_host_specialized_shape_test_span(), [I64PlannedValueShape], self_host_body_u32_to_i32(root))
   match shape {
-    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => assert(fields[0u32] is SelfHostPlannedValueShape::I64PlannedValueShape, "valid product before changing one edge")
+    ProductPlannedValueShape(fields) => assert(fields[0u32] is I64PlannedValueShape, "valid product before changing one edge")
     _ => assert(false, "valid product was lost")
   }
   module_
@@ -89,18 +89,18 @@ test "ARN-108 specialized type substitution rejects a product cycle" expect_trap
   let callable = module_.functions.callables[0u32]
   module_.inferred.type_arguments[0u32] = 1i32
   let _ = self_host_specialized_body_value_shape(module_, callable,
-    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], 1i32)
+    self_host_specialized_shape_test_span(), [I64PlannedValueShape], 1i32)
 }
 
 test "ARN-101 specialized type substitution checks product spans" expect_trap "unreachable" {
   let module_ = self_host_specialized_product_shape_fixture()
   let callable = module_.functions.callables[0u32]
-  module_.inferred.types[1u32] = SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+  module_.inferred.types[1u32] = BodyProductType({
     start: 4294967295u32
     length: 1u32
   })
   let _ = self_host_specialized_body_value_shape(module_, callable,
-    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], 1i32)
+    self_host_specialized_shape_test_span(), [I64PlannedValueShape], 1i32)
 }
 
 test "ARN-101 specialized type substitution checks product child IDs" expect_trap "unreachable" {
@@ -108,7 +108,7 @@ test "ARN-101 specialized type substitution checks product child IDs" expect_tra
   let callable = module_.functions.callables[0u32]
   module_.inferred.type_arguments[0u32] = 2147483647i32
   let _ = self_host_specialized_body_value_shape(module_, callable,
-    self_host_specialized_shape_test_span(), [SelfHostPlannedValueShape::I64PlannedValueShape], 1i32)
+    self_host_specialized_shape_test_span(), [I64PlannedValueShape], 1i32)
 }
 
 test "generic calls specialize nested tuple arguments through the caller" {
@@ -123,36 +123,36 @@ test "generic calls specialize nested tuple arguments through the caller" {
 }
 
 test "specialization normalization retains missing and erroneous evidence" {
-  let generic = SelfHostPlannedValueShape::GenericPlannedValueShape
-  let error = SelfHostPlannedValueShape::ErrorPlannedValueShape
-  let reference = SelfHostPlannedValueShape::RefPlannedValueShape
-  assert(self_host_specialization_canonical_scalar(generic) is SelfHostPlannedValueShape::GenericPlannedValueShape, "generic evidence was erased")
-  assert(self_host_specialization_canonical_scalar(error) is SelfHostPlannedValueShape::ErrorPlannedValueShape, "error evidence was erased")
+  let generic = GenericPlannedValueShape
+  let error = ErrorPlannedValueShape
+  let reference = RefPlannedValueShape
+  assert(self_host_specialization_canonical_scalar(generic) is GenericPlannedValueShape, "generic evidence was erased")
+  assert(self_host_specialization_canonical_scalar(error) is ErrorPlannedValueShape, "error evidence was erased")
   assert(!self_host_specialization_shapes_equal(generic, reference), "generic is not a reference certificate")
   assert(!self_host_specialization_shapes_equal(error, reference), "error is not a reference certificate")
-  let product = self_host_specialization_canonical_shape(SelfHostPlannedValueShape::ProductPlannedValueShape([
-    SelfHostPlannedValueShape::U8PlannedValueShape,
+  let product = self_host_specialization_canonical_shape(ProductPlannedValueShape([
+    U8PlannedValueShape,
     generic,
     error,
   ]))
   match product {
-    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
-      assert(fields[0u32] is SelfHostPlannedValueShape::U8PlannedValueShape, "packed storage width and signedness survive normalization")
-      assert(fields[1u32] is SelfHostPlannedValueShape::GenericPlannedValueShape, "nested generic evidence")
-      assert(fields[2u32] is SelfHostPlannedValueShape::ErrorPlannedValueShape, "nested error evidence")
+    ProductPlannedValueShape(fields) => {
+      assert(fields[0u32] is U8PlannedValueShape, "packed storage width and signedness survive normalization")
+      assert(fields[1u32] is GenericPlannedValueShape, "nested generic evidence")
+      assert(fields[2u32] is ErrorPlannedValueShape, "nested error evidence")
     }
     _ => assert(false, "product was lost")
   }
 }
 
 test "packed storage shapes remain distinct despite a shared i32 carrier" {
-  let shapes = [SelfHostPlannedValueShape::I8PlannedValueShape,
-    SelfHostPlannedValueShape::U8PlannedValueShape,
-    SelfHostPlannedValueShape::I16PlannedValueShape,
-    SelfHostPlannedValueShape::U16PlannedValueShape,
-    SelfHostPlannedValueShape::I32PlannedValueShape]
+  let shapes = [I8PlannedValueShape,
+    U8PlannedValueShape,
+    I16PlannedValueShape,
+    U16PlannedValueShape,
+    I32PlannedValueShape]
   for left in shapes {
-    assert(self_host_physical_scalar_shape(left) is SelfHostPlannedValueShape::I32PlannedValueShape, "function carrier still erases packed width")
+    assert(self_host_physical_scalar_shape(left) is I32PlannedValueShape, "function carrier still erases packed width")
     assert(self_host_linked_shape_name(self_host_specialization_canonical_scalar(left)) == self_host_linked_shape_name(left), "packed canonical shape remains exact")
     assert(self_host_specialization_shapes_equal(left, left), "packed shape equality is reflexive")
     for right in shapes {
@@ -162,15 +162,15 @@ test "packed storage shapes remain distinct despite a shared i32 carrier" {
 }
 
 test "packed field storage preserves width and signedness without changing stack carriers" {
-  let shapes = [SelfHostPlannedValueShape::I8PlannedValueShape,
-    SelfHostPlannedValueShape::U8PlannedValueShape,
-    SelfHostPlannedValueShape::I16PlannedValueShape,
-    SelfHostPlannedValueShape::U16PlannedValueShape,
-    SelfHostPlannedValueShape::I32PlannedValueShape]
+  let shapes = [I8PlannedValueShape,
+    U8PlannedValueShape,
+    I16PlannedValueShape,
+    U16PlannedValueShape,
+    I32PlannedValueShape]
   for shape in shapes {
     let storage = self_host_wasmgc_storage_type(shape)
     assert(self_host_linked_shape_name(self_host_program_representation_storage_shape(storage)) == self_host_linked_shape_name(shape), "field storage retains its declared shape")
-    assert(self_host_body_carrier_from_storage(storage) is SelfHostWasmBodyCarrier::I32BodyCarrier, "packed fields use i32 operands")
+    assert(self_host_body_carrier_from_storage(storage) is I32BodyCarrier, "packed fields use i32 operands")
     for other in shapes {
       assert(self_host_program_representation_storage_matches_shape(storage, other) == self_host_specialization_shapes_equal(shape, other), "a different width or signedness is not a storage certificate")
     }
@@ -184,8 +184,8 @@ test "FRG-403 packed field reads require a present source field" expect_trap "un
   self_host_physical_test_assert_clean_inference(link)
   assert(link.diagnostics.length() == 0u32, "valid packed field source")
   match self_host_linked_physical_field_shape(link, 0u32, 0u32) {
-    Option::Some(shape) => assert(shape is SelfHostPlannedValueShape::I8PlannedValueShape, "valid field before changing the index")
-    Option::None => assert(false, "missing fixture field")
+    Some(shape) => assert(shape is I8PlannedValueShape, "valid field before changing the index")
+    None => assert(false, "missing fixture field")
   }
   let _ = self_host_linked_struct_get_instruction(link, 0u32, 1u32)
 }
@@ -196,34 +196,34 @@ test "raw array storage keeps heap width separate from signed reads" {
   ), false)
   self_host_physical_test_assert_clean_inference(link)
   assert(link.diagnostics.length() == 0u32, "valid storage fixture")
-  let shapes = [SelfHostPlannedValueShape::I8PlannedValueShape,
-    SelfHostPlannedValueShape::U8PlannedValueShape,
-    SelfHostPlannedValueShape::I16PlannedValueShape,
-    SelfHostPlannedValueShape::U16PlannedValueShape]
+  let shapes = [I8PlannedValueShape,
+    U8PlannedValueShape,
+    I16PlannedValueShape,
+    U16PlannedValueShape]
   while 0u32 {
     index if index < shapes.length() => {
       let storage = match self_host_linked_raw_array_storage(link, shapes[index]) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           assert(false, "a concrete packed shape must have storage")
           unreachable()
         }
       }
       assert(storage.type_index == self_host_linked_packed_array_type_base(link) + index / 2u32, "signed and unsigned reads share only the storage width")
       if index % 2u32 == 0u32 {
-        assert(storage.read is SelfHostRawArrayRead::SignedPackedRawArrayRead, "signed packed instruction")
+        assert(storage.read is SignedPackedRawArrayRead, "signed packed instruction")
       } else {
-        assert(storage.read is SelfHostRawArrayRead::UnsignedPackedRawArrayRead, "unsigned packed instruction")
+        assert(storage.read is UnsignedPackedRawArrayRead, "unsigned packed instruction")
       }
       continue index + 1u32
     }
     _ => break ()
   }
-  for invalid in [SelfHostPlannedValueShape::GenericPlannedValueShape,
-    SelfHostPlannedValueShape::ErrorPlannedValueShape,
-    SelfHostPlannedValueShape::NeverPlannedValueShape,
-    SelfHostPlannedValueShape::ProductPlannedValueShape([SelfHostPlannedValueShape::GenericPlannedValueShape])] {
-    assert(self_host_linked_raw_array_storage(link, invalid) is Option::None, "missing or invalid storage has no physical recipe")
+  for invalid in [GenericPlannedValueShape,
+    ErrorPlannedValueShape,
+    NeverPlannedValueShape,
+    ProductPlannedValueShape([GenericPlannedValueShape])] {
+    assert(self_host_linked_raw_array_storage(link, invalid) is None, "missing or invalid storage has no physical recipe")
   }
 }
 
@@ -235,13 +235,13 @@ test "ARN-103 specialization request links cannot be shorter than requests" expe
   let heads = self_host_empty_u64_u32_map()
   let next = []
   let initial = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 18u32,
   )
   assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
   let _ = next.pop()
   let _ = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 19u32,
   )
 }
@@ -253,13 +253,13 @@ test "ARN-103 specialization request links cannot be longer than requests" expec
   let heads = self_host_empty_u64_u32_map()
   let next = []
   let initial = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 18u32,
   )
   assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
   next.push(4294967295u32)
   let _ = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 19u32,
   )
 }
@@ -271,13 +271,13 @@ test "ARN-105 specialization request heads must address requests" expect_trap "u
   let heads = self_host_empty_u64_u32_map()
   let next = []
   let initial = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 18u32,
   )
   assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
   heads.set(declaration, 99u32)
   let _ = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 19u32,
   )
 }
@@ -289,18 +289,18 @@ test "SPC-302 specialization chains retain declaration identity" expect_trap "un
   let heads = self_host_empty_u64_u32_map()
   let next = []
   let initial = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 18u32,
   )
   assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
   let original = requests[0u32]
-  requests[0u32] = SelfHostProgramSpecializationRequest::{
+  requests[0u32] = {
     declaration: declaration + 1u64
     shapes: original.shapes
     evidence_types: original.evidence_types
   }
   let _ = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 19u32,
   )
 }
@@ -312,21 +312,21 @@ test "ARN-101 specialization request spans are checked before shape comparison" 
   let heads = self_host_empty_u64_u32_map()
   let next = []
   let initial = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 18u32,
   )
   assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
   let original = requests[0u32]
-  requests[0u32] = SelfHostProgramSpecializationRequest::{
+  requests[0u32] = {
     declaration: original.declaration
-    shapes: SelfHostHirSpan::{
+    shapes: {
       start: 4294967295u32
       length: original.shapes.length
     }
     evidence_types: original.evidence_types
   }
   let _ = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 19u32,
   )
 }
@@ -338,13 +338,13 @@ test "ARN-108 specialization request chains cannot link to themselves" expect_tr
   let heads = self_host_empty_u64_u32_map()
   let next = []
   let initial = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 18u32,
   )
   assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
   next[0u32] = 0u32
   let _ = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 19u32,
   )
 }
@@ -356,13 +356,13 @@ test "SPC-301 stored specialization shapes remain concrete" expect_trap "unreach
   let heads = self_host_empty_u64_u32_map()
   let next = []
   let initial = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 18u32,
   )
   assert(initial == 0u32 && requests.length() == 1u32 && next.length() == 1u32, "valid request before one mutation")
-  shapes[0u32] = SelfHostPlannedValueShape::GenericPlannedValueShape
+  shapes[0u32] = GenericPlannedValueShape
   let _ = self_host_program_specialization_add_request_at_call(
-    requests, shapes, heads, next, declaration, [SelfHostPlannedValueShape::I32PlannedValueShape],
+    requests, shapes, heads, next, declaration, [I32PlannedValueShape],
     [], 330712481809u64, 19u32,
   )
 }
@@ -374,12 +374,12 @@ fn self_host_invalid_specialization_request(shape: SelfHostPlannedValueShape) ->
   let next = []
   let _ = self_host_program_specialization_add_request_at_call(
     requests, shapes, heads, next, 377957122059u64,
-    [SelfHostPlannedValueShape::I32PlannedValueShape, SelfHostPlannedValueShape::RefPlannedValueShape],
+    [I32PlannedValueShape, RefPlannedValueShape],
     [], 330712481809u64, 18u32,
   )
   let _ = self_host_program_specialization_add_request_at_call(
     requests, shapes, heads, next, 377957122059u64,
-    [SelfHostPlannedValueShape::I32PlannedValueShape, shape],
+    [I32PlannedValueShape, shape],
     [], 330712481809u64, 19u32,
   )
 }
@@ -393,27 +393,27 @@ test "specialization request chains can contain more than eight records" {
   while 0u32 {
     index if index < 16u32 => {
       let selected = self_host_program_specialization_add_request(requests, shapes, heads, next,
-        377957122059u64, [SelfHostPlannedValueShape::ProductPlannedValueShape(fields.copy())])
+        377957122059u64, [ProductPlannedValueShape(fields.copy())])
       assert(selected == index, "each distinct product adds one request")
-      fields.push(SelfHostPlannedValueShape::I32PlannedValueShape)
+      fields.push(I32PlannedValueShape)
       continue index + 1u32
     }
     _ => break ()
   }
   let selected = self_host_program_specialization_add_request(requests, shapes, heads, next,
-    377957122059u64, [SelfHostPlannedValueShape::ProductPlannedValueShape([])])
+    377957122059u64, [ProductPlannedValueShape([])])
   assert(selected == 0u32, "the last chain node remains reachable")
   assert(requests.length() == 16u32 && next.length() == 16u32, "a replay adds no request or link")
 }
 
 test "concrete specialization normalization is idempotent and structural" {
-  let product = SelfHostPlannedValueShape::ProductPlannedValueShape([
-    SelfHostPlannedValueShape::U8PlannedValueShape,
-    SelfHostPlannedValueShape::ProductPlannedValueShape([
-      SelfHostPlannedValueShape::U64PlannedValueShape,
-      SelfHostPlannedValueShape::RefPlannedValueShape,
+  let product = ProductPlannedValueShape([
+    U8PlannedValueShape,
+    ProductPlannedValueShape([
+      U64PlannedValueShape,
+      RefPlannedValueShape,
     ]),
-    SelfHostPlannedValueShape::ProductPlannedValueShape([]),
+    ProductPlannedValueShape([]),
   ])
   let normalized = self_host_specialization_canonical_shape(product)
   assert(self_host_specialization_shapes_equal(normalized, self_host_specialization_canonical_shape(normalized)), "normalization is idempotent")
@@ -429,37 +429,37 @@ test "concrete specialization normalization is idempotent and structural" {
 }
 
 test "missing shape evidence cannot certify physical field storage" {
-  let reference = SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
-  assert(!self_host_program_representation_storage_matches_shape(reference, SelfHostPlannedValueShape::GenericPlannedValueShape), "generic needs an explicit adapter")
-  assert(!self_host_program_representation_storage_matches_shape(reference, SelfHostPlannedValueShape::ErrorPlannedValueShape), "error never grants an adapter")
+  let reference = WasmNullableEqRefStorage
+  assert(!self_host_program_representation_storage_matches_shape(reference, GenericPlannedValueShape), "generic needs an explicit adapter")
+  assert(!self_host_program_representation_storage_matches_shape(reference, ErrorPlannedValueShape), "error never grants an adapter")
   let link = self_host_plan_program_wasmgc_link(self_host_physical_test_fragments(b"pub fn run() -> I32 {\n  42\n}\n"), false)
-  assert(!self_host_linked_field_storage_matches_shape(link, 11u64, reference, SelfHostPlannedValueShape::GenericPlannedValueShape), "missing field metadata cannot permit boxing")
+  assert(!self_host_linked_field_storage_matches_shape(link, 11u64, reference, GenericPlannedValueShape), "missing field metadata cannot permit boxing")
 }
 
 test "SPC-301 generic request shape is rejected" expect_trap "unreachable" {
-  self_host_invalid_specialization_request(SelfHostPlannedValueShape::GenericPlannedValueShape)
+  self_host_invalid_specialization_request(GenericPlannedValueShape)
 }
 
 test "SPC-301 erroneous request shape is rejected" expect_trap "unreachable" {
-  self_host_invalid_specialization_request(SelfHostPlannedValueShape::ErrorPlannedValueShape)
+  self_host_invalid_specialization_request(ErrorPlannedValueShape)
 }
 
 test "SPC-301 nested generic request shape is rejected" expect_trap "unreachable" {
-  self_host_invalid_specialization_request(SelfHostPlannedValueShape::ProductPlannedValueShape([
-    SelfHostPlannedValueShape::I64PlannedValueShape,
-    SelfHostPlannedValueShape::GenericPlannedValueShape,
+  self_host_invalid_specialization_request(ProductPlannedValueShape([
+    I64PlannedValueShape,
+    GenericPlannedValueShape,
   ]))
 }
 
 test "SPC-301 nested erroneous request shape is rejected" expect_trap "unreachable" {
-  self_host_invalid_specialization_request(SelfHostPlannedValueShape::ProductPlannedValueShape([
-    SelfHostPlannedValueShape::I64PlannedValueShape,
-    SelfHostPlannedValueShape::ErrorPlannedValueShape,
+  self_host_invalid_specialization_request(ProductPlannedValueShape([
+    I64PlannedValueShape,
+    ErrorPlannedValueShape,
   ]))
 }
 
 fn self_host_source_call_identity_fixture() -> Array<SelfHostProgramSpecializedCall> {
-  [SelfHostProgramSpecializedCall::{
+  [{
     caller_body: 330712481809u64
     caller_specialization: 3u32
     expression: 19u32

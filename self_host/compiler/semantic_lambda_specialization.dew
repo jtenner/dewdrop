@@ -18,7 +18,7 @@ fn self_host_lambda_construction_target_matches(link: SelfHostPlannedProgramWasm
   for type_ in link.types {
     if self_host_u32_equal(type_.type_index, expression.selected_type_index) && self_host_u32_equal(type_.module_index, plan.module_index) {
       match fragments.physical_types[type_.fragment_index].kind {
-        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(id, request) => {
+        PlannedWasmLambdaClosureType(id, request) => {
           return self_host_u32_equal(id, lambda) && self_host_u32_equal(request, plan.specialization)
         }
         _ => return false
@@ -30,30 +30,30 @@ fn self_host_lambda_construction_target_matches(link: SelfHostPlannedProgramWasm
 
 fn self_host_lambda_owner_callable(module_: SelfHostPlannedModuleLowering, body_id: U64) -> Option<SelfHostPlannedCallable> {
   match self_host_program_specialization_body(module_, body_id) {
-    Option::Some(body) => self_host_program_specialization_callable(module_, body.declaration)
-    Option::None => Option::None
+    Some(body) => self_host_program_specialization_callable(module_, body.declaration)
+    None => None
   }
 }
 
 fn self_host_lambda_owner_is_generic(module_: SelfHostPlannedModuleLowering, body_id: U64) -> Bool {
   match self_host_lambda_owner_callable(module_, body_id) {
-    Option::Some(owner) => self_host_u32_greater(self_host_program_specialization_callable_generics(owner).length, 0u32)
-    Option::None => false
+    Some(owner) => self_host_u32_greater(self_host_program_specialization_callable_generics(owner).length, 0u32)
+    None => false
   }
 }
 
 fn self_host_lambda_request_shape(module_: SelfHostPlannedModuleLowering, request: Option<SelfHostProgramSpecializationRequest>, shapes: Array<SelfHostPlannedValueShape>, type_: I32, fallback: SelfHostPlannedValueShape) -> SelfHostPlannedValueShape {
   match request {
-    Option::Some(selected) => match self_host_program_specialization_callable(module_, selected.declaration) {
-      Option::Some(owner) => match self_host_program_specialization_resolved_type(module_, type_) {
-        Option::Some(resolved) => return self_host_wasmgc_specialized_resolved_shape(
+    Some(selected) => match self_host_program_specialization_callable(module_, selected.declaration) {
+      Some(owner) => match self_host_program_specialization_resolved_type(module_, type_) {
+        Some(resolved) => return self_host_wasmgc_specialized_resolved_shape(
           module_, resolved, self_host_program_specialization_callable_generics(owner), selected, shapes, fallback,
         )
-        Option::None => {}
+        None => {}
       }
-      Option::None => {}
+      None => {}
     }
-    Option::None => {}
+    None => {}
   }
   fallback
 }
@@ -61,12 +61,12 @@ fn self_host_lambda_request_shape(module_: SelfHostPlannedModuleLowering, reques
 fn self_host_lambda_physical_shape(module_: SelfHostPlannedModuleLowering, lambda: SelfHostPlannedLambdaLowering, shape: SelfHostPlannedValueShape, detail: U32) -> SelfHostPlannedValueShape {
   let error = self_host_specialization_shape_error(shape)
   let declaration = match self_host_lambda_owner_callable(module_, lambda.root_body) {
-    Option::Some(owner) => owner.declaration
-    Option::None => 0u64
+    Some(owner) => owner.declaration
+    None => 0u64
   }
   let _ = self_host_assert_compiler_invariant_with_failure(
     self_host_u32_equal(error, 0u32),
-    SelfHostInvariantFailure::{
+    {
       code: 301u32
       phase: 4u32
       module_id: module_.module_id
@@ -85,11 +85,11 @@ fn self_host_lambda_physical_shape(module_: SelfHostPlannedModuleLowering, lambd
 fn self_host_wasmgc_append_lambda_closure(module_: SelfHostPlannedModuleLowering, lambda: SelfHostPlannedLambdaLowering, request: Option<SelfHostProgramSpecializationRequest>, request_index: U32, shapes: Array<SelfHostPlannedValueShape>, physical_types: Array<SelfHostPlannedWasmPhysicalType>, fields: Array<SelfHostPlannedWasmField>) -> U32 {
   let type_index = physical_types.length()
   let field_start = fields.length()
-  fields.push(SelfHostPlannedWasmField::{
-    role: SelfHostPlannedWasmFieldRole::WasmClosureEntryField
+  fields.push({
+    role: WasmClosureEntryField
     declaration: 0u64
     physical_index: 0u32
-    storage: SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage
+    storage: WasmNullableFuncRefStorage
     mutable_: false
     exact_nominal: false
     offset: 0u32
@@ -102,12 +102,12 @@ fn self_host_wasmgc_append_lambda_closure(module_: SelfHostPlannedModuleLowering
         self_host_lambda_request_shape(module_, request, shapes, capture.type_, capture.shape), index,
       )
       if self_host_capture_has_value(shape) {
-        fields.push(SelfHostPlannedWasmField::{
-          role: SelfHostPlannedWasmFieldRole::WasmLambdaCaptureField(lambda.lambda, index)
+        fields.push({
+          role: WasmLambdaCaptureField(lambda.lambda, index)
           declaration: 0u64
           physical_index: fields.length() - field_start
           storage: if capture.mutable_ {
-            SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+            WasmNullableEqRefStorage
           } else {
             self_host_wasmgc_storage_type(shape)
           }
@@ -122,10 +122,10 @@ fn self_host_wasmgc_append_lambda_closure(module_: SelfHostPlannedModuleLowering
       break self_host_semantic_unit()
     }
   }
-  physical_types.push(SelfHostPlannedWasmPhysicalType::{
-    kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(lambda.lambda, request_index)
+  physical_types.push({
+    kind: PlannedWasmLambdaClosureType(lambda.lambda, request_index)
     type_index: type_index
-    fields: SelfHostHirSpan::{
+    fields: {
       start: field_start
       length: fields.length() - field_start
     }
@@ -144,15 +144,15 @@ fn self_host_wasmgc_append_specialized_lambdas(module_: SelfHostPlannedModuleLow
       let local = self_host_body_planned_local_identity(module_.locals[index])
       if self_host_local_needs_capture_cell(module_, local) {
         match self_host_lambda_owner_callable(module_, local.body) {
-          Option::Some(owner) => if self_host_u64_equal(owner.declaration, request.declaration) {
+          Some(owner) => if self_host_u64_equal(owner.declaration, request.declaration) {
             let shape = self_host_capture_cell_physical_shape(module_, local, index,
-              self_host_lambda_request_shape(module_, Option::Some(request), shapes, local.type_, local.shape),
+              self_host_lambda_request_shape(module_, Some(request), shapes, local.type_, local.shape),
             )
             if self_host_capture_has_value(shape) {
               let type_index = physical_types.length()
               let field_start = fields.length()
-              fields.push(SelfHostPlannedWasmField::{
-                role: SelfHostPlannedWasmFieldRole::WasmCaptureCellValueField(index)
+              fields.push({
+                role: WasmCaptureCellValueField(index)
                 declaration: 0u64
                 physical_index: 0u32
                 storage: self_host_wasmgc_storage_type(shape)
@@ -160,10 +160,10 @@ fn self_host_wasmgc_append_specialized_lambdas(module_: SelfHostPlannedModuleLow
                 exact_nominal: false
                 offset: local.offset
               })
-              physical_types.push(SelfHostPlannedWasmPhysicalType::{
-                kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(index, request_index)
+              physical_types.push({
+                kind: PlannedWasmCaptureCellType(index, request_index)
                 type_index: type_index
-                fields: SelfHostHirSpan::{
+                fields: {
                   start: field_start
                   length: 1u32
                 }
@@ -171,7 +171,7 @@ fn self_host_wasmgc_append_specialized_lambdas(module_: SelfHostPlannedModuleLow
               })
             }
           }
-          Option::None => {}
+          None => {}
         }
       }
       index = index + 1u32
@@ -182,11 +182,11 @@ fn self_host_wasmgc_append_specialized_lambdas(module_: SelfHostPlannedModuleLow
   }
   for lambda in module_.lambdas {
     match self_host_lambda_owner_callable(module_, lambda.root_body) {
-      Option::Some(owner) => if self_host_u64_equal(owner.declaration, request.declaration) && self_host_compile_time_lambda_is_live(module_, lambda.lambda) {
-        let _ = self_host_wasmgc_append_lambda_closure(module_, lambda, Option::Some(request), request_index, shapes, physical_types, fields)
-        self_host_wasmgc_append_lambda_function_for_request(module_, lambda, Option::Some(request), request_index, shapes, functions, value_types)
+      Some(owner) => if self_host_u64_equal(owner.declaration, request.declaration) && self_host_compile_time_lambda_is_live(module_, lambda.lambda) {
+        let _ = self_host_wasmgc_append_lambda_closure(module_, lambda, Some(request), request_index, shapes, physical_types, fields)
+        self_host_wasmgc_append_lambda_function_for_request(module_, lambda, Some(request), request_index, shapes, functions, value_types)
       }
-      Option::None => {}
+      None => {}
     }
   }
 }

@@ -919,6 +919,7 @@ fn plan_expression_kind(
         | ImportedModuleNameReference(_)
         | ForeignLibraryNameReference(_)
         | VariantNameReference(_)
+        | ContextualFactoryNameReference(_)
         | NoNameReference => PlannedConsumedExpression
       }
     HirImportAliasExpr(_, _) => PlannedConsumedExpression
@@ -1613,7 +1614,10 @@ fn plan_module_lowering_in_order(
   // A standalone module has no program-wide contract map. Derive its local
   // contracts from the same declaration metadata used by program lowering.
   let resolved = if resolved.raw_reference_operations.is_empty() {
-    { ..resolved, raw_reference_operations: collect_raw_reference_operations([collected]), }
+    {
+      ..resolved,
+      raw_reference_operations: collect_raw_reference_operations([collected]),
+    }
   } else {
     resolved
   }

@@ -1,7 +1,7 @@
 fn self_host_constructor_box_identity(value: Option<U32>) -> U64 {
   match value {
-    Option::None => 0u64
-    Option::Some(index) => 1u64 + u32_into_u64(index)
+    None => 0u64
+    Some(index) => 1u64 + u32_into_u64(index)
   }
 }
 
@@ -41,7 +41,7 @@ fn self_host_compare_object_constructors(frozen: SelfHostPlannedPhysicalBodyCarr
     self_host_object_constructor_check(frozen, phase, expected.expression, 222u32, index,
       u32_into_u64(expected.field_index), u32_into_u64(actual.field_index))
     self_host_object_constructor_check(frozen, phase, expected.expression, 223u32, index,
-      self_host_body_freeze_storage(Option::Some(expected.storage)), self_host_body_freeze_storage(Option::Some(actual.storage)))
+      self_host_body_freeze_storage(Some(expected.storage)), self_host_body_freeze_storage(Some(actual.storage)))
     self_host_object_constructor_check(frozen, phase, expected.expression, 224u32, index,
       self_host_constructor_box_identity(expected.box_type), self_host_constructor_box_identity(actual.box_type))
     self_host_object_constructor_check(frozen, phase, expected.expression, 225u32, index,
@@ -54,7 +54,7 @@ fn self_host_compare_object_constructors(frozen: SelfHostPlannedPhysicalBodyCarr
 
 fn self_host_object_constructor_check(plan: SelfHostPlannedPhysicalBodyCarrierPlan, phase: U32, expression: U32, role: U32, index: U32, expected: U64, actual: U64) -> Unit {
   if expected != actual {
-    let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    let _ = self_host_assert_compiler_invariant_with_failure(false, {
       code: if phase == 7u32 {
         605u32
       } else {

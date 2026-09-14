@@ -18,7 +18,7 @@ struct SelfHostInferenceTypeSubstitution {
 impl SelfHostInferenceTypeSubstitution {
   fn visit(self, id: U32) -> Unit {
     self_host_assert_array_index(id, self.mapping.length(), "ARN-104 source type substitution")
-    self.work.push(SelfHostInferenceTypeVisit::{
+    self.work.push({
       id: id
       finish: false
     })
@@ -63,7 +63,7 @@ impl SelfHostInferenceTypeSubstitution {
         break self_host_semantic_unit()
       }
     }
-    SelfHostHirSpan::{
+    {
       start: start
       length: span.length
     }
@@ -85,63 +85,63 @@ impl SelfHostInferenceTypeSubstitution {
             if !item.finish {
               self_host_assert_compiler_invariant(self.marks[id] == 0u32, "ARN-104 source type substitution cycle")
               self.marks[id] = 1u32
-              self.work.push(SelfHostInferenceTypeVisit::{
+              self.work.push({
                 id: id
                 finish: true
               })
               match original {
-                SelfHostResolvedType::ProductType(span) => self.visit_arguments(span)
-                SelfHostResolvedType::AppliedType(base, span) => {
+                ProductType(span) => self.visit_arguments(span)
+                AppliedType(base, span) => {
                   self.visit(base)
                   self.visit_arguments(span)
                 }
-                SelfHostResolvedType::FunctionType(span, result) => {
+                FunctionType(span, result) => {
                   self.visit(result)
                   self.visit_arguments(span)
                 }
-                SelfHostResolvedType::MemberTypeProjection(owner, _, _) => self.visit(owner)
+                MemberTypeProjection(owner, _, _) => self.visit(owner)
                 _ => {}
               }
               continue self.work.length()
             }
             let mut changed = false
             let replacement = match original {
-              SelfHostResolvedType::GenericParameterType(parameter) => {
+              GenericParameterType(parameter) => {
                 match bindings.parameters.get(parameter) {
-                  Option::Some(value) => {
+                  Some(value) => {
                     self.mapping[id] = self_host_query_append_resolved(self.instance, value)
                   }
-                  Option::None => {}
+                  None => {}
                 }
                 original
               }
-              SelfHostResolvedType::SelfType(parameter) => {
+              SelfType(parameter) => {
                 match bindings.selves.get(parameter) {
-                  Option::Some(value) => {
+                  Some(value) => {
                     self.mapping[id] = self_host_query_append_resolved(self.instance, value)
                   }
-                  Option::None => {}
+                  None => {}
                 }
                 original
               }
-              SelfHostResolvedType::ProductType(span) => {
+              ProductType(span) => {
                 let mapped = self.mapped_arguments(span)
                 changed = mapped.start != span.start
-                SelfHostResolvedType::ProductType(mapped)
+                ProductType(mapped)
               }
-              SelfHostResolvedType::AppliedType(base, span) => {
+              AppliedType(base, span) => {
                 let mapped = self.mapped_arguments(span)
                 changed = mapped.start != span.start || self.mapping[base] != base
-                SelfHostResolvedType::AppliedType(self.mapping[base], mapped)
+                AppliedType(self.mapping[base], mapped)
               }
-              SelfHostResolvedType::FunctionType(span, result) => {
+              FunctionType(span, result) => {
                 let mapped = self.mapped_arguments(span)
                 changed = mapped.start != span.start || self.mapping[result] != result
-                SelfHostResolvedType::FunctionType(mapped, self.mapping[result])
+                FunctionType(mapped, self.mapping[result])
               }
-              SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => {
+              MemberTypeProjection(owner, operation, selector) => {
                 changed = self.mapping[owner] != owner
-                SelfHostResolvedType::MemberTypeProjection(self.mapping[owner], operation, selector)
+                MemberTypeProjection(self.mapping[owner], operation, selector)
               }
               _ => original
             }

@@ -43,7 +43,7 @@ pub struct SelfHostCollectedModuleList {
 
 impl SelfHostCollectedModuleList {
   fn new() -> SelfHostCollectedModuleList {
-    SelfHostCollectedModuleList::{
+    {
       values: []
     }
   }
@@ -67,7 +67,7 @@ pub struct SelfHostImportScopeList {
 
 impl SelfHostImportScopeList {
   fn new() -> SelfHostImportScopeList {
-    SelfHostImportScopeList::{
+    {
       values: []
     }
   }
@@ -86,7 +86,7 @@ impl SelfHostImportScopeList {
 
   fn at(self, index: U32) -> SelfHostModuleImportScope {
     let value = self.values[index]
-    SelfHostModuleImportScope::{
+    {
       module_id: value.module_id
       module_paths: value.module_paths
       declarations: value.declarations
@@ -115,11 +115,11 @@ impl SelfHostCollectedProgram {
     while index {
       current => if current < self.module_paths.length() {
         if self.module_paths[current] == path {
-          break Option::Some(current)
+          break Some(current)
         }
         continue current + 1u32
       } else {
-        break Option::None
+        break None
       }
     }
   }
@@ -156,7 +156,7 @@ fn self_host_program_files_for_manifest_module(
   let _ = while index {
     current => if current < count {
       let file = self_host_manifest_module_file(module_, current)
-      files.push(SelfHostProgramFile::{
+      files.push({
         id: self_host_make_file_id(module_id, current)
         path: file.path
         source: file.source
@@ -194,18 +194,18 @@ fn self_host_manifest_with_default_preamble(
           break self_host_semantic_unit()
         }
       }
-      files.push(SelfHostManifestFile::{
+      files.push({
         path: "__dew_default_preamble.dew"
         source: b"open dew.std.preamble\n"
         test_only: false
       })
-      modules.push(SelfHostManifestModule::{
+      modules.push({
         path: module_.path
         files: files
       })
     }
   }
-  SelfHostProgramManifest::{
+  {
     modules: modules
   }
 }
@@ -223,7 +223,7 @@ fn self_host_collect_program_manifest(
     current_module => if current_module < module_count {
       let module_ = array_get_unchecked(manifest.modules, current_module)
       if module_.path.byte_length() == 0u32 {
-        diagnostics.push(SelfHostManifestDiagnostic::EmptyModulePath(
+        diagnostics.push(EmptyModulePath(
           current_module,
         ))
       }
@@ -235,7 +235,7 @@ fn self_host_collect_program_manifest(
             module_.path,
           ) {
             diagnostics.push(
-              SelfHostManifestDiagnostic::DuplicateModulePath(
+              DuplicateModulePath(
                 module_.path,
                 previous,
                 current_module,
@@ -255,7 +255,7 @@ fn self_host_collect_program_manifest(
           let file = self_host_manifest_module_file(module_, current_file)
           if file.path.byte_length() == 0u32 {
             diagnostics.push(
-              SelfHostManifestDiagnostic::EmptyFilePath(
+              EmptyFilePath(
                 current_module,
                 current_file,
               ),
@@ -267,7 +267,7 @@ fn self_host_collect_program_manifest(
               let candidate = self_host_manifest_module_file(module_, previous)
               if self_host_manifest_string_equal(candidate.path, file.path) {
                 diagnostics.push(
-                  SelfHostManifestDiagnostic::DuplicateFilePath(
+                  DuplicateFilePath(
                     file.path,
                     current_module,
                     previous,
@@ -303,7 +303,7 @@ fn self_host_collect_program_manifest(
       break self_host_semantic_unit()
     }
   }
-  SelfHostCollectedProgram::{
+  {
     module_id_base: module_id_base
     module_paths: module_paths
     modules: modules
@@ -341,7 +341,7 @@ fn self_host_collect_missing_import_diagnostics(
           }
           if !matched {
             diagnostics.push(
-              SelfHostProgramImportDiagnostic::MissingImportedModule(
+              MissingImportedModule(
                 module_.module_id,
                 self_host_wildcard_diagnostic_path(import_.path),
                 import_.file,
@@ -354,7 +354,7 @@ fn self_host_collect_missing_import_diagnostics(
             import_.path,
           ) >= program.module_paths.length() {
             diagnostics.push(
-              SelfHostProgramImportDiagnostic::MissingImportedModule(
+              MissingImportedModule(
                 module_.module_id,
                 import_.path,
                 import_.file,
@@ -378,6 +378,7 @@ fn self_host_collect_missing_import_diagnostics(
 fn self_host_freeze_program_signature_interfaces(
   program: SelfHostCollectedProgram,
 ) -> SelfHostFrozenSignatureProgram {
+  self_host_install_program_constructor_wrappers(program)
   let provisional = SelfHostFrozenInterfaceList::new()
   let mut module_index = 0u32
   while module_index {
@@ -412,7 +413,7 @@ fn self_host_freeze_program_signature_interfaces(
       break self_host_semantic_unit()
     }
   }
-  let provisional_frozen = SelfHostFrozenSignatureProgram::{
+  let provisional_frozen = {
     collected: program
     interfaces: provisional
     import_scopes: provisional_scopes
@@ -507,7 +508,7 @@ fn self_host_freeze_program_signature_interfaces(
       break self_host_semantic_unit()
     }
   }
-  SelfHostFrozenSignatureProgram::{
+  {
     collected: program
     interfaces: interfaces
     import_scopes: scopes

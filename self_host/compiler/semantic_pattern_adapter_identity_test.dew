@@ -7,16 +7,16 @@ test "variant payload parameters follow declared positions without names" {
   self_host_physical_test_assert_clean_inference(link)
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let variant = module_.type_layouts.variants[0u32].variant
-  assert(self_host_linked_variant_payload_parameter(link, variant, 0u32) is Option::None, "concrete payload is not an owner type parameter")
+  assert(self_host_linked_variant_payload_parameter(link, variant, 0u32) is None, "concrete payload is not an owner type parameter")
   match self_host_linked_variant_payload_parameter(link, variant, 1u32) {
-    Option::Some(value) => assert(value == 1u32, "second payload uses declared parameter b")
-    Option::None => assert(false, "second payload must have a declared parameter")
+    Some(value) => assert(value == 1u32, "second payload uses declared parameter b")
+    None => assert(false, "second payload must have a declared parameter")
   }
   match self_host_linked_variant_payload_parameter(link, variant, 2u32) {
-    Option::Some(value) => assert(value == 0u32, "third payload uses declared parameter a")
-    Option::None => assert(false, "third payload must have a declared parameter")
+    Some(value) => assert(value == 0u32, "third payload uses declared parameter a")
+    None => assert(false, "third payload must have a declared parameter")
   }
-  assert(self_host_linked_variant_payload_parameter(link, variant, 3u32) is Option::None, "missing payload has no parameter")
+  assert(self_host_linked_variant_payload_parameter(link, variant, 3u32) is None, "missing payload has no parameter")
 }
 
 test "named struct patterns select the physical type of their declaration" {
@@ -27,43 +27,43 @@ test "named struct patterns select the physical type of their declaration" {
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let mut checked = 0u32
   for pattern in module_.patterns {
-    if pattern.source is SelfHostHirPattern::StructPattern(_, _, _, _, _) {
+    if pattern.source is StructPattern(_, _, _, _, _) {
       let declaration = self_host_pattern_constructor_declaration(module_, pattern)
       assert(declaration != 0u64, "named struct pattern retains its selected declaration")
       let expected = match self_host_linked_struct_type_index(link, declaration) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           assert(false, "selected struct has a linked physical type")
           4294967295u32
         }
       }
       match self_host_pattern_nested_type(link, module_, pattern) {
-        Option::Some(actual) => assert(actual == expected, "pattern uses its exact source struct")
-        Option::None => assert(false, "named struct pattern needs a physical target")
+        Some(actual) => assert(actual == expected, "pattern uses its exact source struct")
+        None => assert(false, "named struct pattern needs a physical target")
       }
-      let missing = SelfHostPlannedPattern::{
+      let missing = {
         elided: pattern.elided
         type_: pattern.type_
         shape: pattern.shape
         source: pattern.source
         reference: pattern.reference
-        selected_constructor: SelfHostBasicPatternConstructor::NoBasicPatternConstructor
+        selected_constructor: NoBasicPatternConstructor
         offset: pattern.offset
       }
-      assert(self_host_pattern_nested_type(link, module_, missing) is Option::None, "source spelling and logical type cannot replace a missing selection")
-      let wrong_kind = SelfHostPlannedPattern::{
+      assert(self_host_pattern_nested_type(link, module_, missing) is None, "source spelling and logical type cannot replace a missing selection")
+      let wrong_kind = {
         elided: pattern.elided
         type_: pattern.type_
         shape: pattern.shape
         source: pattern.source
         reference: pattern.reference
-        selected_constructor: SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(declaration, true, SelfHostHirSpan::{
+        selected_constructor: SelectedBasicPatternConstructor(declaration, true, {
           start: 0u32
           length: 0u32
         })
         offset: pattern.offset
       }
-      assert(self_host_pattern_nested_type(link, module_, wrong_kind) is Option::None, "a struct ID cannot satisfy an enum-variant selection")
+      assert(self_host_pattern_nested_type(link, module_, wrong_kind) is None, "a struct ID cannot satisfy an enum-variant selection")
       checked = checked + 1u32
     }
   }
@@ -90,18 +90,18 @@ test "Result payload evidence follows reordered declared type parameters" {
   self_host_physical_test_assert_clean_inference(link)
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   for pattern in module_.patterns {
-    if pattern.source is SelfHostHirPattern::TuplePattern(_, _, _) {
+    if pattern.source is TuplePattern(_, _, _) {
       let declaration = self_host_pattern_constructor_declaration(module_, pattern)
       let expected = match self_host_linked_variant_type_index(link, declaration) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           assert(false, "selected Result variant must have a source fragment")
           4294967295u32
         }
       }
       match self_host_linked_pattern_variant_type(link, module_, pattern, pattern.shape, 0u64) {
-        Option::Some(actual) => assert(actual == expected, "Result must use the selected source fragment, without an added identity field")
-        Option::None => assert(false, "Result pattern must have a physical type")
+        Some(actual) => assert(actual == expected, "Result must use the selected source fragment, without an added identity field")
+        None => assert(false, "Result pattern must have a physical type")
       }
     }
   }
@@ -118,16 +118,16 @@ test "user generic payloads use their declared storage without runtime adapters"
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let mut checked = 0u32
   for pattern in module_.patterns {
-    if pattern.source is SelfHostHirPattern::TuplePattern(_, _, _) {
+    if pattern.source is TuplePattern(_, _, _) {
       let declaration = self_host_pattern_constructor_declaration(module_, pattern)
       let type_ = match self_host_linked_variant_type_index(link, declaration) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           assert(false, "user variant must have a declared physical type")
           4294967295u32
         }
       }
-      assert(self_host_linked_pattern_payload_box_type(link, type_, 0u32, SelfHostWasmBodyCarrier::I32BodyCarrier) is Option::Some(_), "declared generic payload requires a scalar box")
+      assert(self_host_linked_pattern_payload_box_type(link, type_, 0u32, I32BodyCarrier) is Some(_), "declared generic payload requires a scalar box")
       checked = checked + 1u32
     }
   }

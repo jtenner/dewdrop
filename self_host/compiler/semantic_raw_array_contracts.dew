@@ -44,17 +44,17 @@ fn self_host_raw_array_storage_carrier(root: SelfHostPlannedValueShape) -> Optio
   while work.length() {
     length if length > 0u32 => {
       let shape = match work.pop() {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           assert(false, "ARN-103 raw array shape work stack lost an entry")
           unreachable()
         }
       }
       match shape {
-        SelfHostPlannedValueShape::GenericPlannedValueShape => return Option::None
-        SelfHostPlannedValueShape::ErrorPlannedValueShape => return Option::None
-        SelfHostPlannedValueShape::NeverPlannedValueShape => return Option::None
-        SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+        GenericPlannedValueShape => return None
+        ErrorPlannedValueShape => return None
+        NeverPlannedValueShape => return None
+        ProductPlannedValueShape(fields) => {
           for field in fields {
             work.push(field)
           }
@@ -65,7 +65,7 @@ fn self_host_raw_array_storage_carrier(root: SelfHostPlannedValueShape) -> Optio
     }
     _ => break ()
   }
-  Option::Some(self_host_linked_array_carrier_from_shape(root))
+  Some(self_host_linked_array_carrier_from_shape(root))
 }
 
 fn self_host_raw_array_element(
@@ -73,29 +73,29 @@ fn self_host_raw_array_element(
   type_: U32,
 ) -> Option<U32> {
   if type_ >= resolved.types.length() {
-    return Option::None
+    return None
   }
   match resolved.types[type_] {
-    SelfHostResolvedType::AppliedType(base, arguments) => if arguments.length == 1u32 &&
+    AppliedType(base, arguments) => if arguments.length == 1u32 &&
       base < resolved.types.length() &&
       self_host_array_span_is_valid(arguments.start, arguments.length, resolved.type_arguments.length()) {
       match resolved.types[base] {
-        SelfHostResolvedType::NominalType(_) => Option::Some(resolved.type_arguments[arguments.start])
-        _ => Option::None
+        NominalType(_) => Some(resolved.type_arguments[arguments.start])
+        _ => None
       }
     } else {
-      Option::None
+      None
     }
-    _ => Option::None
+    _ => None
   }
 }
 
 fn self_host_raw_array_is_u32(resolved: SelfHostResolvedModuleTypes, type_: U32) -> Bool {
-  type_ < resolved.types.length() && resolved.types[type_] is SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::U32Type)
+  type_ < resolved.types.length() && resolved.types[type_] is PrimitiveType(U32Type)
 }
 
 fn self_host_raw_array_is_unit(resolved: SelfHostResolvedModuleTypes, type_: U32) -> Bool {
-  type_ < resolved.types.length() && resolved.types[type_] is SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::UnitType)
+  type_ < resolved.types.length() && resolved.types[type_] is PrimitiveType(UnitType)
 }
 
 fn self_host_raw_array_contract_owner(
@@ -114,7 +114,7 @@ fn self_host_raw_array_contract_owner(
   }
   if callable.has_receiver || callable.parameters.length != count ||
     !self_host_array_span_is_valid(callable.parameters.start, callable.parameters.length, module_.functions.parameters.length()) {
-    return Option::None
+    return None
   }
   let parameters = []
   while 0u32 {
@@ -131,8 +131,8 @@ fn self_host_raw_array_contract_owner(
   }
   let resolved = module_.resolved_types
   let element = match self_host_raw_array_element(resolved, array_type) {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   let valid = if operation == 0u32 {
     self_host_raw_array_is_u32(resolved, parameters[0u32]) && parameters[1u32] == element
@@ -150,9 +150,9 @@ fn self_host_raw_array_contract_owner(
       self_host_raw_array_is_unit(resolved, callable.result_type)
   }
   if valid {
-    Option::Some(self_host_linked_resolved_nominal_declaration(module_, array_type))
+    Some(self_host_linked_resolved_nominal_declaration(module_, array_type))
   } else {
-    Option::None
+    None
   }
 }
 
@@ -163,7 +163,7 @@ fn self_host_bind_raw_array_contracts(modules: Array<SelfHostPlannedModuleLoweri
   for module_ in modules {
     for layout in module_.type_layouts.layouts {
       match layout.kind {
-        SelfHostPlannedNominalLayoutKind::PlannedStructLayout(fields) => if fields.length == 0u32 && layout.generic_parameters.length == 1u32 {
+        PlannedStructLayout(fields) => if fields.length == 0u32 && layout.generic_parameters.length == 1u32 {
           empty_owners.set(layout.declaration, true)
         }
         _ => {}
@@ -173,16 +173,16 @@ fn self_host_bind_raw_array_contracts(modules: Array<SelfHostPlannedModuleLoweri
   for module_ in modules {
     for callable in module_.functions.callables {
       match callable.kind {
-        SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => {
+        PlannedBuiltinCallable(name) => {
           let operation = self_host_raw_array_opcode(name)
           if operation < 6u32 {
             match self_host_raw_array_contract_owner(module_, callable, operation) {
-              Option::Some(owner) => if empty_owners.contains_key(owner) {
+              Some(owner) => if empty_owners.contains_key(owner) {
                 declarations.set(owner, true)
               } else {
-                diagnostics.push(SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(callable.declaration, "raw array owner must be an empty struct with one element parameter", callable.offset))
+                diagnostics.push(InvalidRawArrayContract(callable.declaration, "raw array owner must be an empty struct with one element parameter", callable.offset))
               }
-              Option::None => diagnostics.push(SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(callable.declaration, "raw array instruction signature does not match its operands", callable.offset))
+              None => diagnostics.push(InvalidRawArrayContract(callable.declaration, "raw array instruction signature does not match its operands", callable.offset))
             }
           }
         }
@@ -193,14 +193,14 @@ fn self_host_bind_raw_array_contracts(modules: Array<SelfHostPlannedModuleLoweri
   for module_ in modules {
     for expression in module_.expressions {
       match expression.selection {
-        SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(owner, _) => if declarations.contains_key(owner) {
-          diagnostics.push(SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(owner, "raw array storage must be allocated by an array instruction, not a struct constructor", expression.offset))
+        StructConstructionBasicExpressionSelection(owner, _) => if declarations.contains_key(owner) {
+          diagnostics.push(InvalidRawArrayContract(owner, "raw array storage must be allocated by an array instruction, not a struct constructor", expression.offset))
         }
         _ => {}
       }
     }
   }
-  SelfHostRawArrayContracts::{
+  {
     declarations: declarations
     diagnostics: diagnostics
   }
@@ -208,10 +208,10 @@ fn self_host_bind_raw_array_contracts(modules: Array<SelfHostPlannedModuleLoweri
 
 fn self_host_raw_array_contract_error(contracts: SelfHostRawArrayContracts) -> Option<String> {
   if contracts.diagnostics.length() == 0u32 {
-    return Option::None
+    return None
   }
   match contracts.diagnostics[0u32] {
-    SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(declaration, detail, offset) => {
+    InvalidRawArrayContract(declaration, detail, offset) => {
       let message = StringBuilder::new()
       message.append("ABI-714 invalid raw array contract declaration=")
       message.append_u64(declaration)
@@ -219,7 +219,7 @@ fn self_host_raw_array_contract_error(contracts: SelfHostRawArrayContracts) -> O
       message.append_u32(offset)
       message.append(" ")
       message.append(detail)
-      Option::Some(message.finish())
+      Some(message.finish())
     }
     _ => {
       assert(false, "INV-001 raw array contract diagnostics contain another phase's failure")
@@ -239,11 +239,11 @@ fn self_host_raw_array_expression_element_shape(
   expression: U32,
 ) -> Option<SelfHostPlannedValueShape> {
   match self_host_body_expression_type_argument_shape(link, module_, specialization, expression, 0u32) {
-    Option::Some(shape) => match self_host_raw_array_storage_carrier(shape) {
-      Option::Some(_) => Option::Some(shape)
-      Option::None => Option::None
+    Some(shape) => match self_host_raw_array_storage_carrier(shape) {
+      Some(_) => Some(shape)
+      None => None
     }
-    Option::None => Option::None
+    None => None
   }
 }
 
@@ -255,13 +255,13 @@ fn self_host_body_expression_type_argument_shape(
   argument: U32,
 ) -> Option<SelfHostPlannedValueShape> {
   if expression >= module_.expressions.length() {
-    return Option::None
+    return None
   }
   let type_ = module_.expressions[expression].type_
   let mut element_type = -1i32
   if type_ >= 0i32 && self_host_i32_to_u32(type_) < module_.inferred.types.length() {
     match module_.inferred.types[self_host_i32_to_u32(type_)] {
-      SelfHostBodyTypeTerm::BodyAppliedType(_, arguments) => if argument < arguments.length && self_host_array_span_is_valid(arguments.start, arguments.length, module_.inferred.type_arguments.length()) {
+      BodyAppliedType(_, arguments) => if argument < arguments.length && self_host_array_span_is_valid(arguments.start, arguments.length, module_.inferred.type_arguments.length()) {
         element_type = module_.inferred.type_arguments[arguments.start + argument]
       }
       _ => {}
@@ -269,10 +269,10 @@ fn self_host_body_expression_type_argument_shape(
   }
   if element_type == -1i32 {
     match self_host_program_specialization_resolved_type(module_, type_) {
-      Option::Some(resolved) => {
+      Some(resolved) => {
         self_host_assert_compiler_invariant(resolved < module_.resolved_types.types.length(), "ARN-104 type argument owner is outside the resolved type arena")
         match module_.resolved_types.types[resolved] {
-          SelfHostResolvedType::AppliedType(_, arguments) => if argument < arguments.length && self_host_array_span_is_valid(arguments.start, arguments.length, module_.resolved_types.type_arguments.length()) {
+          AppliedType(_, arguments) => if argument < arguments.length && self_host_array_span_is_valid(arguments.start, arguments.length, module_.resolved_types.type_arguments.length()) {
             let element = module_.resolved_types.type_arguments[arguments.start + argument]
             self_host_assert_compiler_invariant(element < module_.resolved_types.types.length(), "ARN-104 type argument is outside the resolved type arena")
             self_host_assert_compiler_invariant(element <= 2147483646u32, "SOL-207 type argument does not fit the resolved type encoding")
@@ -281,16 +281,16 @@ fn self_host_body_expression_type_argument_shape(
           _ => {}
         }
       }
-      Option::None => {}
+      None => {}
     }
   }
   if element_type == -1i32 {
-    return Option::None
+    return None
   }
   let shape = self_host_body_specialization_shape_for_type(link, module_, specialization, element_type, self_host_planned_merged_body_value_shape(module_.resolved_types, module_.inferred, element_type))
-  if shape is SelfHostPlannedValueShape::GenericPlannedValueShape || shape is SelfHostPlannedValueShape::ErrorPlannedValueShape {
-    Option::None
+  if shape is GenericPlannedValueShape || shape is ErrorPlannedValueShape {
+    None
   } else {
-    Option::Some(shape)
+    Some(shape)
   }
 }

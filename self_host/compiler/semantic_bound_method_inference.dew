@@ -15,16 +15,16 @@ impl SelfHostBasicBodyInferencer {
       self.instantiation_generics
     } else {
       match self.imported.type_generic_spans.get(trait_) {
-        Option::Some(span) => span
-        Option::None => self_host_empty_hir_span(0u32)
+        Some(span) => span
+        None => self_host_empty_hir_span(0u32)
       }
     }
     let method_generics = if local {
       self.instantiation_method_generics
     } else {
       match self.imported_callable(method) {
-        Option::Some(callable) => callable.generic_parameters
-        Option::None => {
+        Some(callable) => callable.generic_parameters
+        None => {
           self_host_assert_compiler_invariant(false, "LNK-504 imported bound requirement is missing")
           unreachable()
         }
@@ -45,7 +45,7 @@ impl SelfHostBasicBodyInferencer {
     }
     self.candidate_type_arguments.clear()
     let arguments = match self.resolved.types[bound] {
-      SelfHostResolvedType::AppliedType(_, arguments) => arguments
+      AppliedType(_, arguments) => arguments
       _ => self_host_empty_hir_span(0u32)
     }
     let _ = self_host_assert_compiler_invariant(arguments.length == owner_generics.length, "declared trait bound argument count")
@@ -84,15 +84,15 @@ impl SelfHostBasicBodyInferencer {
       self.collected.parameters_of(declaration)
     } else {
       match imported {
-        Option::Some(callable) => callable.parameters
-        Option::None => return false
+        Some(callable) => callable.parameters
+        None => return false
       }
     }
     if parameters.length == 0u32 || parameters.length - 1u32 != arguments.length {
       return false
     }
     let is_receiver = if local {
-      self.collected.parameters[parameters.start].kind is SelfHostCollectedParameterKind::ReceiverParameterDecl
+      self.collected.parameters[parameters.start].kind is ReceiverParameterDecl
     } else {
       self.imported.parameter_receivers[parameters.start]
     }
@@ -103,19 +103,19 @@ impl SelfHostBasicBodyInferencer {
       self.collected.generic_parameters_of(declaration).length
     } else {
       match imported {
-        Option::Some(callable) => callable.generic_parameters.length
-        Option::None => return false
+        Some(callable) => callable.generic_parameters.length
+        None => return false
       }
     }
     let result_type = if local {
       match self.local_callable_index_of_declaration(declaration) {
-        Option::Some(callable) => self.resolved.callable_return_types[callable]
-        Option::None => return false
+        Some(callable) => self.resolved.callable_return_types[callable]
+        None => return false
       }
     } else {
       match imported {
-        Option::Some(callable) => callable.result_type
-        Option::None => return false
+        Some(callable) => callable.result_type
+        None => return false
       }
     }
     self.begin_bound_method(trait_, bound, declaration, self.expression_type(receiver))
@@ -130,7 +130,7 @@ impl SelfHostBasicBodyInferencer {
       index => if index < arguments.length {
         let actual = self.expression_type(self.collected.expression_children[arguments.start + index])
         let expected = self.instantiate_signature_type(self.bound_parameter_type(local, parameters.start + index + 1u32))
-        if !self.is_primitive(actual, SelfHostPrimitiveType::NeverType) && !self.solver.unify(actual, expected, origin) {
+        if !self.is_primitive(actual, NeverType) && !self.solver.unify(actual, expected, origin) {
           return false
         }
         continue index + 1u32
@@ -143,8 +143,8 @@ impl SelfHostBasicBodyInferencer {
 
   fn constrain_declared_bound_method(self, expression: U32, target: U32, receiver: U32, name: U32, arguments: SelfHostHirSpan, offset: U32) -> Bool {
     let parameter_id = match self.solver.type_term(self.solver.representative_type(self.expression_type(receiver))) {
-      SelfHostBodyTypeTerm::BodyResolvedType(type_) => match self.resolved.types[type_] {
-        SelfHostResolvedType::GenericParameterType(parameter) => parameter
+      BodyResolvedType(type_) => match self.resolved.types[type_] {
+        GenericParameterType(parameter) => parameter
         _ => 18446744073709551615u64
       }
       _ => 18446744073709551615u64
@@ -184,16 +184,16 @@ impl SelfHostBasicBodyInferencer {
       index => if index < candidates.length() {
         let bound = candidates[index]
         let trait_type = match self.resolved.types[bound] {
-          SelfHostResolvedType::AppliedType(base, _) => base
+          AppliedType(base, _) => base
           _ => bound
         }
         match self.resolved.types[trait_type] {
-          SelfHostResolvedType::TraitType(trait_) => if self_host_u64_equal(self_host_semantic_id_module(trait_), self.collected.module_id) {
+          TraitType(trait_) => if self_host_u64_equal(self_host_semantic_id_module(trait_), self.collected.module_id) {
             for raw_method in self.collected.methods {
               let method = self_host_collected_method_identity(raw_method)
-              if self_host_u64_equal(method.parent, trait_) && self_host_u32_equal(method.name, name) && method.kind is SelfHostCollectedMethodKind::TraitMethodDecl {
+              if self_host_u64_equal(method.parent, trait_) && self_host_u32_equal(method.name, name) && method.kind is TraitMethodDecl {
                 match self.local_callable_index_of_declaration(method.id) {
-                  Option::Some(callable) => {
+                  Some(callable) => {
                     let snapshot = self.solver.snapshot()
                     let viable = self.bound_method_signature(expression, receiver, arguments, offset, trait_, bound, method.id)
                     self.solver.rollback(snapshot)
@@ -209,14 +209,14 @@ impl SelfHostBasicBodyInferencer {
                       count = count + 1u32
                     }
                   }
-                  Option::None => {}
+                  None => {}
                 }
               }
             }
           } else {
             for method in self.imported.callables {
               let belongs = match method.kind {
-                SelfHostFrozenInterfaceCallableKind::FrozenTraitCallable(owner) => owner == trait_
+                FrozenTraitCallable(owner) => owner == trait_
                 _ => false
               }
               if belongs && method.name == self.collected.name(name) {
@@ -254,30 +254,30 @@ impl SelfHostBasicBodyInferencer {
         self.collected.generic_parameters_of(first).length
       } else {
         match self.imported_callable(first) {
-          Option::Some(callable) => callable.generic_parameters.length
-          Option::None => unreachable()
+          Some(callable) => callable.generic_parameters.length
+          None => unreachable()
         }
       }
       self.validate_selected_method_bounds(expression, first, self.candidate_type_arguments.length() - method_count, method_count, offset)
       let start = self.call_type_arguments.length()
       self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)
-      let arguments = SelfHostHirSpan::{
+      let arguments = {
         start: start
         length: self.candidate_type_arguments.length()
       }
       let target = if guarded {
-        SelfHostBasicCallTarget::SelectedBasicCallTarget(first, arguments)
+        SelectedBasicCallTarget(first, arguments)
       } else {
-        SelfHostBasicCallTarget::BoundTraitBasicCallTarget(first, parameter_id, selected_bound, arguments)
+        BoundTraitBasicCallTarget(first, parameter_id, selected_bound, arguments)
       }
       self.store_call_target(expression, target, 2u32)
     } else {
       if self.postpone_method_failure(expression) {
         return true
       }
-      self.store_call_target(expression, SelfHostBasicCallTarget::ErrorBasicCallTarget, 1u32)
+      self.store_call_target(expression, ErrorBasicCallTarget, 1u32)
       self.solver.poison_type(self.expression_type(expression))
-      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::AmbiguousMethod(name, expression, first, second, count, offset))
+      self.diagnostics.push(AmbiguousMethod(name, expression, first, second, count, offset))
     }
     self.consumed_member_roots[self.expression_index(target)] = true
     self.solver.poison_type(self.expression_type(target))

@@ -7,38 +7,38 @@ fn self_host_raw_expression_target(
   value: SelfHostPlannedExpression,
 ) -> Option<Bytes> {
   let declaration = match value.kind {
-    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, declaration, _, _, _) => declaration
-    SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => declaration
-    _ => return Option::None
+    PlannedBuiltinCall(_, declaration, _, _, _) => declaration
+    PlannedDirectCall(declaration, _, _, _) => declaration
+    _ => return None
   }
   match lowering.index.declaration_owner(declaration) {
-    Option::Some(owner) => if owner < lowering.modules.length() {
+    Some(owner) => if owner < lowering.modules.length() {
       match self_host_program_specialization_callable(lowering.modules[owner], declaration) {
-        Option::Some(callable) => if callable.has_receiver {
-          Option::None
+        Some(callable) => if callable.has_receiver {
+          None
         } else {
           match callable.kind {
-            SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => Option::Some(self_host_raw_array_canonical_opcode(name))
-            _ => Option::None
+            PlannedBuiltinCallable(name) => Some(self_host_raw_array_canonical_opcode(name))
+            _ => None
           }
         }
-        Option::None => Option::None
+        None => None
       }
     } else {
-      Option::None
+      None
     }
-    Option::None => Option::None
+    None => None
   }
 }
 
 fn self_host_raw_expression_arguments(value: SelfHostPlannedExpression) -> SelfHostHirSpan {
   match value.kind {
-    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, arguments, _) => arguments
-    SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, arguments, _) => arguments
-    _ => SelfHostHirSpan::{
+    PlannedBuiltinCall(_, _, _, arguments, _) => arguments
+    PlannedDirectCall(_, _, arguments, _) => arguments
+    _ => ({
       start: 0u32
       length: 0u32
-    }
+    })
   }
 }
 
@@ -59,10 +59,10 @@ fn self_host_raw_strip_identity_casts(
       }
       let value = module_.expressions[current]
       match self_host_raw_expression_target(lowering, value) {
-        Option::Some(name) => if !name.equals(b"unsafe.bitcast") {
+        Some(name) => if !name.equals(b"unsafe.bitcast") {
           return current
         }
-        Option::None => return current
+        None => return current
       }
       let arguments = self_host_raw_expression_arguments(value)
       if arguments.length != 1u32 || arguments.start >= module_.expression_children.length() {
@@ -74,11 +74,11 @@ fn self_host_raw_strip_identity_casts(
       }
       let carrier = self_host_body_carrier_from_shape(value.shape)
       let concrete = match carrier {
-        SelfHostWasmBodyCarrier::I32BodyCarrier => true
-        SelfHostWasmBodyCarrier::I64BodyCarrier => true
-        SelfHostWasmBodyCarrier::F32BodyCarrier => true
-        SelfHostWasmBodyCarrier::F64BodyCarrier => true
-        SelfHostWasmBodyCarrier::V128BodyCarrier => true
+        I32BodyCarrier => true
+        I64BodyCarrier => true
+        F32BodyCarrier => true
+        F64BodyCarrier => true
+        V128BodyCarrier => true
         _ => false
       }
       if !concrete || !self_host_body_carrier_equal(carrier, self_host_body_carrier_from_shape(module_.expressions[input].shape)) {
@@ -99,94 +99,94 @@ fn self_host_raw_forwarding_builtin(
   declaration: U64,
 ) -> Option<Bytes> {
   let callable = match self_host_program_specialization_callable(module_, declaration) {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   if callable.has_receiver || self_host_program_specialization_callable_generics(callable).length != 0u32 {
-    return Option::None
+    return None
   }
   let body_id = match self_host_program_specialization_callable_body(callable) {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   let index = self_host_semantic_id_local(body_id)
   if index >= module_.bodies.length() {
-    return Option::None
+    return None
   }
   let body = self_host_planned_body_lowering_identity(module_.bodies[index])
   if !self_host_u64_equal(body.body, body_id) || self_host_u32_greater(callable.parameters.length, body.locals.length) || !self_host_array_span_is_valid(body.locals.start, body.locals.length, module_.locals.length()) {
-    return Option::None
+    return None
   }
   let block = match body.root {
-    SelfHostHirBodyRoot::BlockBodyRoot(value) => value
-    _ => return Option::None
+    BlockBodyRoot(value) => value
+    _ => return None
   }
   if block >= module_.blocks.length() {
-    return Option::None
+    return None
   }
   let items = module_.blocks[block].items
   if !self_host_u32_equal(items.length, 1u32) || !self_host_u32_greater(module_.block_items.length(), items.start) {
-    return Option::None
+    return None
   }
   let expression = match module_.block_items[items.start].kind {
-    SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => value
-    _ => return Option::None
+    PlannedExpressionItem(value) => value
+    _ => return None
   }
   if expression >= module_.expressions.length() || expression < body.expressions.start || expression - body.expressions.start >= body.expressions.length {
-    return Option::None
+    return None
   }
   // A Never body is valid at any declared result type. Replacing its caller
   // with the opcode would instead replace that declared result contract.
-  if module_.expressions[expression].shape is SelfHostPlannedValueShape::NeverPlannedValueShape && !(callable.result_shape is SelfHostPlannedValueShape::NeverPlannedValueShape) {
-    return Option::None
+  if module_.expressions[expression].shape is NeverPlannedValueShape && !(callable.result_shape is NeverPlannedValueShape) {
+    return None
   }
   let unwrapped = self_host_raw_strip_identity_casts(lowering, module_, body.expressions, expression)
   if unwrapped >= module_.expressions.length() {
-    return Option::None
+    return None
   }
   let value = module_.expressions[unwrapped]
   if unwrapped != expression && callable.parameters.length == 1u32 {
     match value.kind {
-      SelfHostPlannedExpressionKind::PlannedLocalGet(0u32) => if module_.locals[body.locals.start].kind is SelfHostBodyLocalKind::ParameterLocal {
-        return Option::Some(b"unsafe.bitcast")
+      PlannedLocalGet(0u32) => if module_.locals[body.locals.start].kind is ParameterLocal {
+        return Some(b"unsafe.bitcast")
       }
       _ => {}
     }
   }
   let name = match self_host_raw_expression_target(lowering, value) {
-    Option::Some(target) => target
-    Option::None => return Option::None
+    Some(target) => target
+    None => return None
   }
-  if self_host_raw_intrinsic_signature(name) is Option::None {
-    return Option::None
+  if self_host_raw_intrinsic_signature(name) is None {
+    return None
   }
   let arguments = self_host_raw_expression_arguments(value)
   if arguments.length != callable.parameters.length || !self_host_array_span_is_valid(arguments.start, arguments.length, module_.expression_children.length()) {
-    return Option::None
+    return None
   }
   let _ = while 0u32 {
     parameter => if parameter < arguments.length {
       let source = module_.expression_children[arguments.start + parameter]
       if source < body.expressions.start || source - body.expressions.start >= body.expressions.length {
-        return Option::None
+        return None
       }
       let argument = self_host_raw_strip_identity_casts(lowering, module_, body.expressions, source)
       if argument >= module_.expressions.length() {
-        return Option::None
+        return None
       }
       match module_.expressions[argument].kind {
-        SelfHostPlannedExpressionKind::PlannedLocalGet(local) => if local != parameter {
-          return Option::None
+        PlannedLocalGet(local) => if local != parameter {
+          return None
         }
-        _ => return Option::None
+        _ => return None
       }
-      if !(module_.locals[self_host_u32_add(body.locals.start, parameter)].kind is SelfHostBodyLocalKind::ParameterLocal) {
-        return Option::None
+      if !(module_.locals[self_host_u32_add(body.locals.start, parameter)].kind is ParameterLocal) {
+        return None
       }
       continue parameter + 1u32
     } else {
       break ()
     }
   }
-  Option::Some(name)
+  Some(name)
 }

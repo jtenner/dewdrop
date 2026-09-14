@@ -9,7 +9,7 @@ fn self_host_test_live_payload_read(mutation: U32, parameter: Bool) -> Unit {
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let source = module_.type_layouts.variants[0u32]
   let payload = match source.payload {
-    SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(span) => span
+    PlannedTupleVariantLayout(span) => span
     _ => {
       assert(false, "fixture has tuple payload")
       self_host_empty_hir_span(0u32)
@@ -23,22 +23,22 @@ fn self_host_test_live_payload_read(mutation: U32, parameter: Bool) -> Unit {
         let field_slot = physical.fields.start + offset
         let field = fragment.fields[field_slot]
         match field.role {
-          SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, 0u32) if variant == source.variant => {
-            assert(self_host_linked_source_payload_field(link, linked.type_index, offset) is Option::Some(_), "valid source field")
+          WasmVariantPayloadField(variant, 0u32) if variant == source.variant => {
+            assert(self_host_linked_source_payload_field(link, linked.type_index, offset) is Some(_), "valid source field")
             assert(self_host_linked_generic_variant_storage(link, field), "valid generic payload")
-            assert(self_host_linked_variant_payload_parameter(link, variant, 0u32) is Option::Some(0u32), "valid parameter position")
-            assert(self_host_linked_variant_payload_parameter(link, variant, 2u32) is Option::None, "absent parameter stays absent")
-            assert(self_host_linked_source_payload_field(link, linked.type_index, physical.fields.length) is Option::None, "absent field stays absent")
+            assert(self_host_linked_variant_payload_parameter(link, variant, 0u32) is Some(0u32), "valid parameter position")
+            assert(self_host_linked_variant_payload_parameter(link, variant, 2u32) is None, "absent parameter stays absent")
+            assert(self_host_linked_source_payload_field(link, linked.type_index, physical.fields.length) is None, "absent field stays absent")
             if mutation == 0u32 {
               return
             }
             match mutation {
               1u32 => {
-                module_.type_layouts.variants[0u32] = SelfHostPlannedVariantLayout::{
+                module_.type_layouts.variants[0u32] = {
                   variant: source.variant
                   declaration: source.declaration
                   tag: source.tag
-                  payload: SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(SelfHostHirSpan::{
+                  payload: PlannedTupleVariantLayout({
                     start: 4294967295u32
                     length: payload.length
                   })
@@ -61,11 +61,11 @@ fn self_host_test_live_payload_read(mutation: U32, parameter: Bool) -> Unit {
                 } else {
                   root
                 }
-                module_.resolved_types.types.push(SelfHostResolvedType::FunctionType(self_host_empty_hir_span(0u32), result))
+                module_.resolved_types.types.push(FunctionType(self_host_empty_hir_span(0u32), result))
                 module_.type_layouts.payload_types[payload.start] = root
               }
               7u32, 13u32 => {
-                fragment.fields[field_slot] = SelfHostPlannedWasmField::{
+                fragment.fields[field_slot] = {
                   role: field.role
                   declaration: if mutation == 13u32 {
                     18446744073709551615u64
@@ -84,7 +84,7 @@ fn self_host_test_live_payload_read(mutation: U32, parameter: Bool) -> Unit {
                 }
               }
               8u32, 9u32, 10u32 => {
-                link.types[linked.type_index] = SelfHostPlannedProgramWasmType::{
+                link.types[linked.type_index] = {
                   module_index: if mutation == 9u32 {
                     4294967295u32
                   } else {
@@ -103,7 +103,7 @@ fn self_host_test_live_payload_read(mutation: U32, parameter: Bool) -> Unit {
                 }
               }
               11u32, 12u32 => {
-                fragment.physical_types[linked.fragment_index] = SelfHostPlannedWasmPhysicalType::{
+                fragment.physical_types[linked.fragment_index] = {
                   kind: physical.kind
                   type_index: if mutation == 11u32 {
                     4294967295u32
@@ -111,7 +111,7 @@ fn self_host_test_live_payload_read(mutation: U32, parameter: Bool) -> Unit {
                     physical.type_index
                   }
                   fields: if mutation == 12u32 {
-                    SelfHostHirSpan::{
+                    {
                       start: 4294967295u32
                       length: physical.fields.length
                     }

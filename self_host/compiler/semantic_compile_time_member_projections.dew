@@ -9,35 +9,35 @@ fn self_host_reduce_compile_time_projection_list(lowering: SelfHostPlannedProgra
   let result = self_host_empty_compile_time_types()
   for value in values {
     match self_host_reduce_compile_time_projection(lowering, value, depth) {
-      Result::Ok(value) => result.push(value)
-      Result::Err(error) => return Result::Err(error)
+      Ok(value) => result.push(value)
+      Err(error) => return Err(error)
     }
   }
-  Result::Ok(result)
+  Ok(result)
 }
 
 fn self_host_reduce_compile_time_projection(lowering: SelfHostPlannedProgramLowering, value: SelfHostCompileTimeType, depth: U32) -> Result<SelfHostCompileTimeType, String> {
   if depth >= 256u32 {
-    return Result::Err("CT-034 member projection limit exceeded")
+    return Err("CT-034 member projection limit exceeded")
   }
   match value {
-    SelfHostCompileTimeType::MemberProjectionCompileTimeType(input, operation, selector) => {
+    MemberProjectionCompileTimeType(input, operation, selector) => {
       if !self_host_computed_type_builtin(operation) {
-        return Result::Err("CT-033 invalid member projection operation")
+        return Err("CT-033 invalid member projection operation")
       }
       let input = match self_host_reduce_compile_time_projection(lowering, input, depth + 1u32) {
-        Result::Ok(value) => value
-        Result::Err(error) => return Result::Err(error)
+        Ok(value) => value
+        Err(error) => return Err(error)
       }
       match self_host_compile_time_types_concrete([input]) {
-        Result::Err(error) => return Result::Err(error)
-        Result::Ok(concrete) => if !concrete {
-          return Result::Ok(SelfHostCompileTimeType::MemberProjectionCompileTimeType(input, operation, selector))
+        Err(error) => return Err(error)
+        Ok(concrete) => if !concrete {
+          return Ok(MemberProjectionCompileTimeType(input, operation, selector))
         }
       }
       let arguments = self_host_empty_compile_time_types()
       let base = match input {
-        SelfHostCompileTimeType::AppliedCompileTimeType(base, values) => {
+        AppliedCompileTimeType(base, values) => {
           for value in values {
             arguments.push(value)
           }
@@ -46,18 +46,18 @@ fn self_host_reduce_compile_time_projection(lowering: SelfHostPlannedProgramLowe
         value => value
       }
       let declaration = match base {
-        SelfHostCompileTimeType::NominalCompileTimeType(id) => id
-        _ => return Result::Err("CT-032 member type query requires a struct or enum")
+        NominalCompileTimeType(id) => id
+        _ => return Err("CT-032 member type query requires a struct or enum")
       }
       let owner = match lowering.index.declaration_owner(declaration) {
-        Option::Some(value) => value
-        Option::None => return Result::Err("CT-032 missing member type owner module")
+        Some(value) => value
+        None => return Err("CT-032 missing member type owner module")
       }
       let collected = lowering.collected.modules.at(owner)
       let module_ = lowering.modules[owner]
       let generics = collected.generic_parameters_of(declaration)
       if generics.length != arguments.length() {
-        return Result::Err("CT-031 member owner has the wrong generic arity")
+        return Err("CT-031 member owner has the wrong generic arity")
       }
       let bindings = self_host_empty_compile_time_bindings()
       let _ = while 0u32 {
@@ -73,20 +73,20 @@ fn self_host_reduce_compile_time_projection(lowering: SelfHostPlannedProgramLowe
       for entry in collected.declarations {
         if entry.id == declaration {
           valid = if field_query {
-            entry.kind is SelfHostCollectedDeclKind::StructDecl
+            entry.kind is StructDecl
           } else {
-            entry.kind is SelfHostCollectedDeclKind::EnumDecl
+            entry.kind is EnumDecl
           }
         }
       }
       if !valid {
-        return Result::Err("CT-032 field_type requires a struct; variant_payload_types requires an enum")
+        return Err("CT-032 field_type requires a struct; variant_payload_types requires an enum")
       }
       let syntax = self_host_u32_slots(0u32, 0u32)
       let mut found = false
       if field_query {
         for field in collected.fields {
-          if field.declaration == declaration && field.variant is Option::None && collected.name(field.name) == selector {
+          if field.declaration == declaration && field.variant is None && collected.name(field.name) == selector {
             syntax.push(field.type_)
             found = true
           }
@@ -95,11 +95,11 @@ fn self_host_reduce_compile_time_projection(lowering: SelfHostPlannedProgramLowe
         for variant in collected.variants {
           if variant.declaration == declaration && collected.name(variant.name) == selector {
             found = true
-            if variant.kind is SelfHostCollectedVariantKind::StructVariantDecl {
+            if variant.kind is StructVariantDecl {
               for field in collected.fields {
                 if match field.variant {
-                  Option::Some(id) => id == variant.id
-                  Option::None => false
+                  Some(id) => id == variant.id
+                  None => false
                 } {
                   syntax.push(field.type_)
                 }
@@ -122,51 +122,51 @@ fn self_host_reduce_compile_time_projection(lowering: SelfHostPlannedProgramLowe
         let message = StringBuilder::new()
         message.append("CT-032 no such member: ")
         message.append(selector)
-        return Result::Err(message.finish())
+        return Err(message.finish())
       }
       let values = self_host_empty_compile_time_types()
       for source in syntax {
         self_host_assert_array_index(source, module_.resolved_types.syntax_types.length(), "ARN-104 deferred member syntax")
         let type_ = module_.resolved_types.syntax_types[source]
         let logical = match self_host_read_compile_time_resolved_type(module_, type_, bindings, 0u32) {
-          Result::Ok(value) => value
-          Result::Err(error) => return Result::Err(error)
+          Ok(value) => value
+          Err(error) => return Err(error)
         }
         match self_host_reduce_compile_time_projection(lowering, logical, depth + 1u32) {
-          Result::Ok(value) => values.push(value)
-          Result::Err(error) => return Result::Err(error)
+          Ok(value) => values.push(value)
+          Err(error) => return Err(error)
         }
       }
-      Result::Ok(if field_query {
+      Ok(if field_query {
         values[0u32]
       } else {
-        SelfHostCompileTimeType::ProductCompileTimeType(values)
+        ProductCompileTimeType(values)
       })
     }
-    SelfHostCompileTimeType::ProductCompileTimeType(fields) => match self_host_reduce_compile_time_projection_list(lowering, fields, depth + 1u32) {
-      Result::Ok(values) => Result::Ok(SelfHostCompileTimeType::ProductCompileTimeType(values))
-      Result::Err(error) => Result::Err(error)
+    ProductCompileTimeType(fields) => match self_host_reduce_compile_time_projection_list(lowering, fields, depth + 1u32) {
+      Ok(values) => Ok(ProductCompileTimeType(values))
+      Err(error) => Err(error)
     }
-    SelfHostCompileTimeType::AppliedCompileTimeType(base, fields) => {
+    AppliedCompileTimeType(base, fields) => {
       let base = match self_host_reduce_compile_time_projection(lowering, base, depth + 1u32) {
-        Result::Ok(value) => value
-        Result::Err(error) => return Result::Err(error)
+        Ok(value) => value
+        Err(error) => return Err(error)
       }
       match self_host_reduce_compile_time_projection_list(lowering, fields, depth + 1u32) {
-        Result::Ok(values) => Result::Ok(SelfHostCompileTimeType::AppliedCompileTimeType(base, values))
-        Result::Err(error) => Result::Err(error)
+        Ok(values) => Ok(AppliedCompileTimeType(base, values))
+        Err(error) => Err(error)
       }
     }
-    SelfHostCompileTimeType::FunctionCompileTimeType(fields, result) => {
+    FunctionCompileTimeType(fields, result) => {
       let result = match self_host_reduce_compile_time_projection(lowering, result, depth + 1u32) {
-        Result::Ok(value) => value
-        Result::Err(error) => return Result::Err(error)
+        Ok(value) => value
+        Err(error) => return Err(error)
       }
       match self_host_reduce_compile_time_projection_list(lowering, fields, depth + 1u32) {
-        Result::Ok(values) => Result::Ok(SelfHostCompileTimeType::FunctionCompileTimeType(values, result))
-        Result::Err(error) => Result::Err(error)
+        Ok(values) => Ok(FunctionCompileTimeType(values, result))
+        Err(error) => Err(error)
       }
     }
-    _ => Result::Ok(value)
+    _ => Ok(value)
   }
 }

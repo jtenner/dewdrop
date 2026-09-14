@@ -10,7 +10,7 @@ struct SelfHostLoweredChildContext {
 
 fn self_host_lowered_child_failure(context: SelfHostLoweredChildContext, code: U32, parent: U32, expected: U64, actual: U64, detail: U64) -> Unit {
   let _ = self_host_assert_compiler_invariant_with_failure(false,
-    SelfHostInvariantFailure::{
+    {
       code: code
       phase: context.phase
       module_id: context.module_.module_id
@@ -129,41 +129,41 @@ fn self_host_lowered_child_pair(context: SelfHostLoweredChildContext, parent: U3
 // not an evaluation edge, but stored source expression IDs still need ownership.
 fn self_host_lowered_child_expression_edges(context: SelfHostLoweredChildContext, parent: U32, kind: SelfHostPlannedExpressionKind) -> Unit {
   match kind {
-    SelfHostPlannedExpressionKind::PlannedLocalGet(local) => self_host_lowered_child_local(context, parent, local)
-    SelfHostPlannedExpressionKind::PlannedLocalSet(local, value) => {
+    PlannedLocalGet(local) => self_host_lowered_child_local(context, parent, local)
+    PlannedLocalSet(local, value) => {
       self_host_lowered_child_local(context, parent, local)
       self_host_lowered_child_expression(context, parent, value)
     }
-    SelfHostPlannedExpressionKind::PlannedCaptureSet(capture, value) => {
+    PlannedCaptureSet(capture, value) => {
       self_host_lowered_child_capture(context, parent, capture)
       self_host_lowered_child_expression(context, parent, value)
     }
-    SelfHostPlannedExpressionKind::PlannedReturnExpression(value) => self_host_lowered_child_optional_expression(context, parent, value)
-    SelfHostPlannedExpressionKind::PlannedBreakExpression(_, value) => self_host_lowered_child_expression(context, parent, value)
-    SelfHostPlannedExpressionKind::PlannedContinueExpression(_, value) => self_host_lowered_child_expression(context, parent, value)
-    SelfHostPlannedExpressionKind::PlannedPrefixExpression(_, value) => self_host_lowered_child_expression(context, parent, value)
-    SelfHostPlannedExpressionKind::PlannedFieldGet(_, value, _) => self_host_lowered_child_expression(context, parent, value)
-    SelfHostPlannedExpressionKind::PlannedUnresolvedField(value, _) => self_host_lowered_child_expression(context, parent, value)
-    SelfHostPlannedExpressionKind::PlannedProductField(value, _, _) => self_host_lowered_child_expression(context, parent, value)
-    SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => self_host_lowered_child_index(context, parent, context.body.blocks, block, 3u32)
-    SelfHostPlannedExpressionKind::PlannedIfExpression(condition, block, alternative) => {
+    PlannedReturnExpression(value) => self_host_lowered_child_optional_expression(context, parent, value)
+    PlannedBreakExpression(_, value) => self_host_lowered_child_expression(context, parent, value)
+    PlannedContinueExpression(_, value) => self_host_lowered_child_expression(context, parent, value)
+    PlannedPrefixExpression(_, value) => self_host_lowered_child_expression(context, parent, value)
+    PlannedFieldGet(_, value, _) => self_host_lowered_child_expression(context, parent, value)
+    PlannedUnresolvedField(value, _) => self_host_lowered_child_expression(context, parent, value)
+    PlannedProductField(value, _, _) => self_host_lowered_child_expression(context, parent, value)
+    PlannedBlockExpression(block) => self_host_lowered_child_index(context, parent, context.body.blocks, block, 3u32)
+    PlannedIfExpression(condition, block, alternative) => {
       self_host_lowered_child_expression(context, parent, condition)
       self_host_lowered_child_index(context, parent, context.body.blocks, block, 3u32)
       self_host_lowered_child_optional_expression(context, parent, alternative)
     }
-    SelfHostPlannedExpressionKind::PlannedMatchExpression(value, arms) => {
+    PlannedMatchExpression(value, arms) => {
       self_host_lowered_child_expression(context, parent, value)
       self_host_lowered_child_arms(context, parent, arms)
     }
-    SelfHostPlannedExpressionKind::PlannedWhileExpression(_, value, arms) => {
+    PlannedWhileExpression(_, value, arms) => {
       self_host_lowered_child_expression(context, parent, value)
       self_host_lowered_child_arms(context, parent, arms)
     }
-    SelfHostPlannedExpressionKind::PlannedProductNew(arguments) => self_host_lowered_child_arguments(context, parent, arguments)
-    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(arguments) => self_host_lowered_evaluation_sequence(context, parent, arguments)
-    SelfHostPlannedExpressionKind::PlannedArrayLiteral(arguments) => self_host_lowered_child_arguments(context, parent, arguments)
-    SelfHostPlannedExpressionKind::PlannedObjectNew(fields) => self_host_lowered_child_fields(context, parent, fields)
-    SelfHostPlannedExpressionKind::PlannedConstruct(target, fields, _) => {
+    PlannedProductNew(arguments) => self_host_lowered_child_arguments(context, parent, arguments)
+    PlannedEvaluationSequence(arguments) => self_host_lowered_evaluation_sequence(context, parent, arguments)
+    PlannedArrayLiteral(arguments) => self_host_lowered_child_arguments(context, parent, arguments)
+    PlannedObjectNew(fields) => self_host_lowered_child_fields(context, parent, fields)
+    PlannedConstruct(target, fields, _) => {
       // Constructor targets are source metadata, not evaluations. A unit
       // constructor can use its own ID. Still prove ownership when present.
       if target != 4294967295u32 {
@@ -171,53 +171,53 @@ fn self_host_lowered_child_expression_edges(context: SelfHostLoweredChildContext
       }
       self_host_lowered_child_fields(context, parent, fields)
     }
-    SelfHostPlannedExpressionKind::PlannedBinaryExpression(_, left, right) => self_host_lowered_child_pair(context, parent, left, right)
-    SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, left, right, _) => self_host_lowered_child_pair(context, parent, left, right)
-    SelfHostPlannedExpressionKind::PlannedIndexGet(left, right, _) => self_host_lowered_child_pair(context, parent, left, right)
-    SelfHostPlannedExpressionKind::PlannedFieldSet(_, left, right) => self_host_lowered_child_pair(context, parent, left, right)
-    SelfHostPlannedExpressionKind::PlannedIndexSet(first, second, third, _) => {
+    PlannedBinaryExpression(_, left, right) => self_host_lowered_child_pair(context, parent, left, right)
+    PlannedOperatorCall(_, _, left, right, _) => self_host_lowered_child_pair(context, parent, left, right)
+    PlannedIndexGet(left, right, _) => self_host_lowered_child_pair(context, parent, left, right)
+    PlannedFieldSet(_, left, right) => self_host_lowered_child_pair(context, parent, left, right)
+    PlannedIndexSet(first, second, third, _) => {
       self_host_lowered_child_pair(context, parent, first, second)
       self_host_lowered_child_expression(context, parent, third)
     }
-    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, receiver, arguments, _) => {
+    PlannedBuiltinCall(_, _, receiver, arguments, _) => {
       self_host_lowered_child_optional_expression(context, parent, receiver)
       self_host_lowered_child_arguments(context, parent, arguments)
     }
-    SelfHostPlannedExpressionKind::PlannedDirectCall(_, receiver, arguments, _) => {
+    PlannedDirectCall(_, receiver, arguments, _) => {
       self_host_lowered_child_optional_expression(context, parent, receiver)
       self_host_lowered_child_arguments(context, parent, arguments)
     }
-    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(receiver, arguments, _) => {
+    PlannedFunctionValueCall(receiver, arguments, _) => {
       self_host_lowered_child_expression(context, parent, receiver)
       self_host_lowered_child_arguments(context, parent, arguments)
     }
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments) => {
+    PlannedUnresolvedCall(target, arguments) => {
       self_host_lowered_child_expression(context, parent, target)
       self_host_lowered_child_arguments(context, parent, arguments)
     }
-    SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda) => self_host_lowered_child_closure(context, parent, lambda)
-    SelfHostPlannedExpressionKind::PlannedPoisonExpression => {}
-    SelfHostPlannedExpressionKind::PlannedDeferredExpression => {}
-    SelfHostPlannedExpressionKind::PlannedConsumedExpression => {}
-    SelfHostPlannedExpressionKind::PlannedDeadExpression => {}
-    SelfHostPlannedExpressionKind::PlannedUnitConst => {}
-    SelfHostPlannedExpressionKind::PlannedI8Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedI16Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedI32Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedI64Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedU8Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedU16Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedU32Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedU64Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedF32Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedF64Const(_) => {}
-    SelfHostPlannedExpressionKind::PlannedBoolConst(_) => {}
-    SelfHostPlannedExpressionKind::PlannedStringConst(_) => {}
-    SelfHostPlannedExpressionKind::PlannedStringArrayConst(_) => {}
-    SelfHostPlannedExpressionKind::PlannedBytesConst(_) => {}
-    SelfHostPlannedExpressionKind::PlannedCaptureGet(capture) => self_host_lowered_child_capture(context, parent, capture)
-    SelfHostPlannedExpressionKind::PlannedModuleValueGet(_) => {}
-    SelfHostPlannedExpressionKind::PlannedFunctionReference(_) => {}
+    PlannedLambdaClosure(lambda) => self_host_lowered_child_closure(context, parent, lambda)
+    PlannedPoisonExpression => {}
+    PlannedDeferredExpression => {}
+    PlannedConsumedExpression => {}
+    PlannedDeadExpression => {}
+    PlannedUnitConst => {}
+    PlannedI8Const(_) => {}
+    PlannedI16Const(_) => {}
+    PlannedI32Const(_) => {}
+    PlannedI64Const(_) => {}
+    PlannedU8Const(_) => {}
+    PlannedU16Const(_) => {}
+    PlannedU32Const(_) => {}
+    PlannedU64Const(_) => {}
+    PlannedF32Const(_) => {}
+    PlannedF64Const(_) => {}
+    PlannedBoolConst(_) => {}
+    PlannedStringConst(_) => {}
+    PlannedStringArrayConst(_) => {}
+    PlannedBytesConst(_) => {}
+    PlannedCaptureGet(capture) => self_host_lowered_child_capture(context, parent, capture)
+    PlannedModuleValueGet(_) => {}
+    PlannedFunctionReference(_) => {}
   }
 }
 
@@ -231,17 +231,17 @@ fn self_host_verify_lowered_body_children_in_phase(module_: SelfHostPlannedModul
   self_host_assert_physical_body_span_in_phase(body, body.blocks, module_.blocks.length(), 3u32, phase)
   self_host_assert_physical_body_span_in_phase(body, body.patterns, module_.patterns.length(), 4u32, phase)
   self_host_assert_physical_body_span_in_phase(body, body.pattern_arms, module_.pattern_arms.length(), 5u32, phase)
-  let context = SelfHostLoweredChildContext::{
+  let context = {
     module_: module_
     body: body
-    syntax_walk: Option::None
+    syntax_walk: None
     phase: phase
     lambda: lambda
-    locals: SelfHostHirSpan::{
+    locals: {
       start: 0u32
       length: body.locals.length
     }
-    lambdas: SelfHostHirSpan::{
+    lambdas: {
       start: 0u32
       length: module_.lambdas.length()
     }
@@ -267,11 +267,11 @@ fn self_host_lowered_child_block_edges(context: SelfHostLoweredChildContext, ind
   let _ = while 0u32 {
     item if item < block.items.length => {
       match module_.block_items[block.items.start + item].kind {
-        SelfHostPlannedBlockItemKind::PlannedLetItem(local, _, value) => {
+        PlannedLetItem(local, _, value) => {
           self_host_lowered_child_local(context, 4294967295u32, local)
           self_host_lowered_child_expression(context, 4294967295u32, value)
         }
-        SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => self_host_lowered_child_expression(context, 4294967295u32, value)
+        PlannedExpressionItem(value) => self_host_lowered_child_expression(context, 4294967295u32, value)
       }
       continue item + 1u32
     }
@@ -283,24 +283,24 @@ fn self_host_lowered_child_pattern_edges(context: SelfHostLoweredChildContext, i
   let module_ = context.module_
   let pattern = module_.patterns[index]
   match pattern.reference {
-    SelfHostBodyPatternReference::PatternBindingReference(local) => self_host_lowered_child_local(context, 4294967295u32, local)
+    PatternBindingReference(local) => self_host_lowered_child_local(context, 4294967295u32, local)
     _ => {}
   }
   match pattern.source {
-    SelfHostHirPattern::LiteralPattern(expression, _) => self_host_lowered_child_expression(context, 4294967295u32, expression)
-    SelfHostHirPattern::QualifiedPattern(base, _, _) => self_host_lowered_child_pattern(context, base)
-    SelfHostHirPattern::TuplePattern(base, children, _) => {
+    LiteralPattern(expression, _) => self_host_lowered_child_expression(context, 4294967295u32, expression)
+    QualifiedPattern(base, _, _) => self_host_lowered_child_pattern(context, base)
+    TuplePattern(base, children, _) => {
       if base != 4294967295u32 {
         self_host_lowered_child_pattern(context, base)
       }
       self_host_lowered_child_patterns(context, children)
     }
-    SelfHostHirPattern::ProductPattern(children, _) => self_host_lowered_child_patterns(context, children)
-    SelfHostHirPattern::AlternativePattern(base, alternatives, _) => {
+    ProductPattern(children, _) => self_host_lowered_child_patterns(context, children)
+    AlternativePattern(base, alternatives, _) => {
       self_host_lowered_child_pattern(context, base)
       self_host_lowered_child_patterns(context, alternatives)
     }
-    SelfHostHirPattern::StructPattern(base, fields, _, _, _) => {
+    StructPattern(base, fields, _, _, _) => {
       if base != 4294967295u32 {
         self_host_lowered_child_pattern(context, base)
       }
@@ -313,10 +313,10 @@ fn self_host_lowered_child_pattern_edges(context: SelfHostLoweredChildContext, i
         _ => break self_host_semantic_unit()
       }
     }
-    SelfHostHirPattern::WildcardPattern(_) => {}
-    SelfHostHirPattern::BindingPattern(_, _) => {}
-    SelfHostHirPattern::ImportAliasPattern(_, _) => {}
-    SelfHostHirPattern::RestPattern(_) => {}
+    WildcardPattern(_) => {}
+    BindingPattern(_, _) => {}
+    ImportAliasPattern(_, _) => {}
+    RestPattern(_) => {}
   }
 }
 

@@ -4,8 +4,8 @@ open dew.std.string_builder
 
 fn self_host_test_evidence_tree(result: Result<SelfHostTraitEvidenceTree, String>) -> SelfHostTraitEvidenceTree {
   match result {
-    Result::Ok(tree) => tree
-    Result::Err(error) => {
+    Ok(tree) => tree
+    Err(error) => {
       assert(false, error)
       unreachable()
     }
@@ -24,8 +24,8 @@ test "trait evidence selects imported concrete implementation" {
   )
   let implementation = index.implementations[0u32]
   let trait_type = match implementation.trait_type {
-    Option::Some(value) => value
-    Option::None => 0u32
+    Some(value) => value
+    None => 0u32
   }
   match self_host_select_trait_evidence(
     collected,
@@ -34,17 +34,17 @@ test "trait evidence selects imported concrete implementation" {
     trait_type,
     implementation.target_type,
   ) {
-    Result::Ok(selected) => match selected {
-      Option::Some(witness) => {
+    Ok(selected) => match selected {
+      Some(witness) => {
         assert(
           self_host_u64_equal(witness.implementation.declaration, implementation.declaration),
           "selected implementation",
         )
         assert(self_host_u32_equal(witness.implementation.specificity, 0u32), "specificity")
       }
-      Option::None => assert(false, "expected selected evidence")
+      None => assert(false, "expected selected evidence")
     }
-    Result::Err(error) => assert(false, error)
+    Err(error) => assert(false, error)
   }
 }
 
@@ -69,7 +69,7 @@ test "trait evidence validates recursive implementation prerequisites" {
       index,
       good_bound,
       good_target,
-    ) is Result::Ok(Option::Some(_)),
+    ) is Ok(Some(_)),
     "satisfied prerequisite",
   )
   assert(
@@ -79,7 +79,7 @@ test "trait evidence validates recursive implementation prerequisites" {
       index,
       bad_bound,
       bad_target,
-    ) is Result::Ok(Option::None),
+    ) is Ok(None),
     "missing prerequisite",
   )
 }
@@ -96,11 +96,11 @@ test "trait evidence rejects a nonmatching target" {
   )
   let implementation = index.implementations[0u32]
   let trait_type = match implementation.trait_type {
-    Option::Some(value) => value
-    Option::None => 0u32
+    Some(value) => value
+    None => 0u32
   }
   let i32_type = fixture.imports.resolved.primitive(
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
   )
   assert(
     self_host_select_trait_evidence(
@@ -109,7 +109,7 @@ test "trait evidence rejects a nonmatching target" {
       index,
       trait_type,
       i32_type,
-    ) is Result::Ok(Option::None),
+    ) is Ok(None),
     "nonmatching target",
   )
 }
@@ -134,7 +134,7 @@ test "trait evidence tree publishes recursive prerequisites" {
     target,
   ))
   match tree.root {
-    Option::Some(root) => {
+    Some(root) => {
       assert(self_host_u32_equal(root, 1u32), "postorder root")
       assert(tree.nodes.length() == 2u32, "root and prerequisite")
       let root_node = tree.nodes[root]
@@ -147,9 +147,9 @@ test "trait evidence tree publishes recursive prerequisites" {
         "prerequisite child",
       )
       assert(self_host_u32_equal(root_node.arguments.length, 1u32), "generic argument")
-      assert(tree.arguments[root_node.arguments.start] is SelfHostCompileTimeType::NominalCompileTimeType(_), "Leaf keeps logical type identity")
+      assert(tree.arguments[root_node.arguments.start] is NominalCompileTimeType(_), "Leaf keeps logical type identity")
     }
-    Option::None => assert(false, "expected evidence tree")
+    None => assert(false, "expected evidence tree")
   }
 }
 
@@ -181,7 +181,7 @@ test "trait evidence depth 65 retains only direct prerequisite children" {
   assert(index.diagnostic_count() == 0u32, "valid recursive implementation index")
   let bound = fixture.imports.resolved.generic_bound_types[0u32]
   let target = fixture.imports.resolved.parameter_types[0u32]
-  assert(self_host_select_trait_evidence(collected, fixture.imports, index, bound, target) is Result::Ok(Option::Some(_)), "depth 65 is not missing evidence")
+  assert(self_host_select_trait_evidence(collected, fixture.imports, index, bound, target) is Ok(Some(_)), "depth 65 is not missing evidence")
   let tree = self_host_test_evidence_tree(self_host_select_trait_evidence_tree(collected, fixture.imports, index, bound, target))
   assert(tree.nodes.length() == 66u32, "all prerequisite nodes")
   assert(tree.children.length() == 65u32, "exact direct edges")
@@ -210,13 +210,13 @@ test "trait evidence reports cycles instead of absence" {
   let target = fixture.imports.resolved.parameter_types[0u32]
   let search = self_host_trait_evidence_search(collected, fixture.imports, index)
   match self_host_select_trait_evidence_with_search(search, bound, target) {
-    Result::Err(error) => assert(error.equals("CT-013 cyclic trait prerequisite"), "exact cycle diagnostic")
-    Result::Ok(_) => assert(false, "cycle cannot become ordinary absence")
+    Err(error) => assert(error.equals("CT-013 cyclic trait prerequisite"), "exact cycle diagnostic")
+    Ok(_) => assert(false, "cycle cannot become ordinary absence")
   }
   assert(search.active.length() == 0u32, "active obligations unwind after failure")
   match self_host_select_trait_evidence_tree(collected, fixture.imports, index, bound, target) {
-    Result::Err(error) => assert(error.equals("CT-013 cyclic trait prerequisite"), "tree preserves cycle")
-    Result::Ok(_) => assert(false, "cycle cannot become an empty tree")
+    Err(error) => assert(error.equals("CT-013 cyclic trait prerequisite"), "tree preserves cycle")
+    Ok(_) => assert(false, "cycle cannot become an empty tree")
   }
 }
 
@@ -228,11 +228,11 @@ test "trait evidence reports resource limits as a separate result" {
   let bound = fixture.imports.resolved.generic_bound_types[0u32]
   let target = fixture.imports.resolved.parameter_types[0u32]
   let search = self_host_trait_evidence_search(collected, fixture.imports, index)
-  assert(self_host_select_trait_evidence_with_search(search, bound, target) is Result::Ok(Option::Some(_)), "valid search")
+  assert(self_host_select_trait_evidence_with_search(search, bound, target) is Ok(Some(_)), "valid search")
   search.budget.steps = 65536u32
   match self_host_select_trait_evidence_with_search(search, bound, target) {
-    Result::Err(error) => assert(error.equals("CT-012 trait evidence search limit exceeded"), "exact resource limit")
-    Result::Ok(_) => assert(false, "limit cannot become ordinary absence")
+    Err(error) => assert(error.equals("CT-012 trait evidence search limit exceeded"), "exact resource limit")
+    Ok(_) => assert(false, "limit cannot become ordinary absence")
   }
 }
 
@@ -253,7 +253,7 @@ test "trait evidence tree rolls back missing prerequisites" {
     fixture.imports.resolved.generic_bound_types[0u32],
     fixture.imports.resolved.parameter_types[0u32],
   ))
-  assert(tree.root is Option::None, "missing root")
+  assert(tree.root is None, "missing root")
   assert(tree.nodes.length() == 0u32, "rolled back nodes")
   assert(tree.children.length() == 0u32, "rolled back children")
   assert(tree.arguments.length() == 0u32, "rolled back arguments")

@@ -1,16 +1,16 @@
 fn self_host_required_closure_construction(plan: SelfHostPlannedPhysicalBodyCarrierPlan, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, lambda: U32) -> SelfHostPhysicalClosureConstructionPlan {
-  let mut selected = Option::None
+  let mut selected = None
   for recipe in plan.closure_constructions {
     if recipe.expression == expression {
-      if selected is Option::Some(_) {
+      if selected is Some(_) {
         self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 2u64, u32_into_u64(lambda))
       }
-      selected = Option::Some(recipe)
+      selected = Some(recipe)
     }
   }
   let recipe = match selected {
-    Option::Some(value) => value
-    Option::None => self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(lambda))
+    Some(value) => value
+    None => self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(lambda))
   }
   if recipe.lambda != lambda {
     self_host_physical_scratch_failure(module_, body, expression, 7u32, 106u32, u32_into_u64(lambda), u32_into_u64(recipe.lambda), 1u64)
@@ -23,8 +23,8 @@ fn self_host_required_closure_construction(plan: SelfHostPlannedPhysicalBodyCarr
 
 fn self_host_emit_planned_closure(link: SelfHostPlannedProgramWasmGCLink, canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, lambda: U32, destination: StarshineInstructions) -> Option<String> {
   let plan = match canonical {
-    Option::Some(value) => value
-    Option::None => self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(lambda))
+    Some(value) => value
+    None => self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(lambda))
   }
   let recipe = self_host_required_closure_construction(plan, module_, body, expression, lambda)
   let function_index = self_host_linked_emitted_function_index(self_host_linked_physical_function_index(recipe.function_index))
@@ -35,11 +35,11 @@ fn self_host_emit_planned_closure(link: SelfHostPlannedProgramWasmGCLink, canoni
     index if index < recipe.captures.length => {
       let capture = plan.closure_construction_captures[recipe.captures.start + index]
       match capture.operand {
-        SelfHostPhysicalClosureOperand::ErasedClosureOperand => {}
-        SelfHostPhysicalClosureOperand::LocalClosureOperand(slot) => self_host_emit_capture_local_get(slot, destination)
-        SelfHostPhysicalClosureOperand::ForwardedClosureOperand(outer) => match self_host_emit_capture_get(link, plan, outer, false, destination) {
-          Option::Some(error) => return Option::Some(error)
-          Option::None => {}
+        ErasedClosureOperand => {}
+        LocalClosureOperand(slot) => self_host_emit_capture_local_get(slot, destination)
+        ForwardedClosureOperand(outer) => match self_host_emit_capture_get(link, plan, outer, false, destination) {
+          Some(error) => return Some(error)
+          None => {}
         }
       }
       continue index + 1u32
@@ -49,5 +49,5 @@ fn self_host_emit_planned_closure(link: SelfHostPlannedProgramWasmGCLink, canoni
   StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
     StarshineFfi.ffi_lib_Instruction_struct_new(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(recipe.physical_type))),
   )
-  Option::None
+  None
 }

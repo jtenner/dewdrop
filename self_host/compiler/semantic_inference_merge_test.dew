@@ -5,7 +5,7 @@ fn self_host_merge_test_body(
   term: SelfHostBodyTypeTerm,
   target: SelfHostBasicCallTarget,
 ) -> SelfHostBasicInferredBody {
-  SelfHostBasicInferredBody::{
+  {
     body: body
     root_type: 0i32
     types: [term]
@@ -18,10 +18,10 @@ fn self_host_merge_test_body(
     control_state_types: []
     control_result_types: []
     call_targets: [target]
-    operator_targets: [SelfHostBasicCallTarget::NoBasicCallTarget]
-    expression_selections: [SelfHostBasicExpressionSelection::NoBasicExpressionSelection]
+    operator_targets: [NoBasicCallTarget]
+    expression_selections: [NoBasicExpressionSelection]
     object_field_targets: []
-    pattern_constructors: [SelfHostBasicPatternConstructor::NoBasicPatternConstructor]
+    pattern_constructors: [NoBasicPatternConstructor]
     call_type_arguments: [0i32]
     expression_type_arguments: []
     pattern_type_arguments: []
@@ -33,13 +33,13 @@ fn self_host_merge_test_body(
 test "module inference merge rebases body and lambda type graphs" {
   let body = self_host_merge_test_body(
     self_host_make_semantic_id(3000u64, 0u32),
-    SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+    BodyProductType({
       start: 0u32
       length: 1u32
     }),
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(
+    SelectedBasicCallTarget(
       7u64,
-      SelfHostHirSpan::{
+      {
         start: 0u32
         length: 1u32
       },
@@ -47,16 +47,16 @@ test "module inference merge rebases body and lambda type graphs" {
   )
   let lambda_body = self_host_merge_test_body(
     self_host_make_semantic_id(3000u64, 1u32),
-    SelfHostBodyTypeTerm::BodyAppliedType(
+    BodyAppliedType(
       -2i32,
-      SelfHostHirSpan::{
+      {
         start: 0u32
         length: 1u32
       },
     ),
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(
+    SelectedBasicCallTarget(
       8u64,
-      SelfHostHirSpan::{
+      {
         start: 0u32
         length: 1u32
       },
@@ -64,19 +64,19 @@ test "module inference merge rebases body and lambda type graphs" {
   )
   body.expression_type_arguments.push(0i32)
   lambda_body.expression_type_arguments.push(0i32)
-  lambda_body.expression_selections[0u32] = SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+  lambda_body.expression_selections[0u32] = VariantConstructionBasicExpressionSelection(
     99u64,
     2u32,
-    SelfHostHirSpan::{
+    {
       start: 0u32
       length: 1u32
     },
   )
   let merged = self_host_merge_module_inference(
-    SelfHostBasicInferredModuleBodies::{
+    {
       module_id: 3000u64
       bodies: [body]
-      lambdas: [SelfHostBasicInferredLambda::{
+      lambdas: [{
         lambda: 0u32
         body: lambda_body
       }]
@@ -89,7 +89,7 @@ test "module inference merge rebases body and lambda type graphs" {
   assert(self_host_u32_equal(self_host_body_i32_to_u32(body_root), 0u32), "body root")
   assert(self_host_u32_equal(self_host_body_i32_to_u32(lambda_root), 1u32), "lambda root rebased")
   match merged.types[1u32] {
-    SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+    BodyAppliedType(base, arguments) => {
       assert(self_host_u32_equal(self_host_body_i32_to_u32(-base - 2i32), 0u32), "rigid base")
       assert(self_host_u32_equal(arguments.start, 1u32), "argument span")
       let argument = merged.type_arguments[1u32]
@@ -98,14 +98,14 @@ test "module inference merge rebases body and lambda type graphs" {
     _ => assert(false, "applied type")
   }
   match merged.call_targets[1u32] {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => assert(
+    SelectedBasicCallTarget(_, arguments) => assert(
       self_host_u32_equal(arguments.start, 1u32),
       "call arguments rebased",
     )
     _ => assert(false, "selected call")
   }
   match merged.expression_selections[1u32] {
-    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+    VariantConstructionBasicExpressionSelection(
       variant,
       tag,
       arguments,

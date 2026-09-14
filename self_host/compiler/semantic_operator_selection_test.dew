@@ -27,7 +27,7 @@ fn self_host_operator_find_binary(
   while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::BinaryExpr(_, _, _, _) => {
+        BinaryExpr(_, _, _, _) => {
           return current
         }
         _ => {}
@@ -49,10 +49,10 @@ fn self_host_operator_find_index(
   while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::IndexExpr(_, _, _) => if !set_ {
+        IndexExpr(_, _, _) => if !set_ {
           return current
         }
-        SelfHostHirExpr::IndexSetExpr(_, _, _, _) => if set_ {
+        IndexSetExpr(_, _, _, _) => if set_ {
           return current
         }
         _ => {}
@@ -72,7 +72,7 @@ fn self_host_operator_assert_primitive(
   message: String,
 ) -> Unit {
   match body.type_term(type_) {
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => assert(
+    BodyResolvedType(resolved_type) => assert(
       resolved_type == resolved.primitive(primitive),
       message,
     )
@@ -89,15 +89,15 @@ test "operator selection resolves trait implementations" {
   let _ = names.module_id
   let hir_body = collected.bodies[1u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let operator = self_host_operator_find_binary(collected, hir_body)
   assert(body.diagnostic_count() == 0u32, "operator diagnostics")
   match body.operator_target(hir_body, operator) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+    SelectedBasicCallTarget(declaration, arguments) => {
       assert(declaration == collected.methods[1u32].id, "selected Add::add")
       assert(arguments.length == 0u32, "operator arguments")
     }
@@ -113,21 +113,21 @@ test "operator selection instantiates generic implementations" {
   let _ = names.module_id
   let hir_body = collected.bodies[1u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let operator = self_host_operator_find_binary(collected, hir_body)
   assert(body.diagnostic_count() == 0u32, "generic operator diagnostics")
   match body.operator_target(hir_body, operator) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => {
+    SelectedBasicCallTarget(_, arguments) => {
       assert(arguments.length == 1u32, "generic operator arguments")
       self_host_operator_assert_primitive(
         body,
         resolved,
         body.call_type_arguments[arguments.start],
-        SelfHostPrimitiveType::I32Type,
+        I32Type,
         "generic operator I32",
       )
     }
@@ -145,14 +145,14 @@ test "operator selection resolves index get and set traits" {
   let read_hir = collected.bodies[2u32]
   let write_hir = collected.bodies[3u32]
   let read_body = match inferred.body(read_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let write_body = match inferred.body(write_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -161,14 +161,14 @@ test "operator selection resolves index get and set traits" {
   assert(read_body.diagnostic_count() == 0u32, "index get diagnostics")
   assert(write_body.diagnostic_count() == 0u32, "index set diagnostics")
   match read_body.operator_target(read_hir, read_index) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => assert(
+    SelectedBasicCallTarget(declaration, _) => assert(
       declaration == collected.methods[2u32].id,
       "indexed_get target",
     )
     _ => assert(false, "index get target")
   }
   match write_body.operator_target(write_hir, write_index) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => assert(
+    SelectedBasicCallTarget(declaration, _) => assert(
       declaration == collected.methods[3u32].id,
       "indexed_set target",
     )
@@ -185,8 +185,8 @@ test "operator selection diagnoses missing implementations" {
   let _ = names.module_id
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -195,7 +195,7 @@ test "operator selection diagnoses missing implementations" {
   let _ = while index {
     current => if current < body.diagnostic_count() {
       match body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, _) => {
+        NoMatchingOperator(_, _) => {
           count = count + 1u32
         }
         _ => {}

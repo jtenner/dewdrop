@@ -78,9 +78,9 @@ impl SelfHostCompileRequest {
       }
     }
     if found < module_count {
-      Option::Some(found)
+      Some(found)
     } else {
-      Option::None
+      None
     }
   }
 
@@ -95,7 +95,7 @@ impl SelfHostCompileRequest {
           self_host_request_manifest_file_count(module_),
           0u32,
         ) {
-          return Option::Some(
+          return Some(
             self_host_request_manifest_file(module_, 0u32).source,
           )
         }
@@ -104,13 +104,13 @@ impl SelfHostCompileRequest {
         break self_host_unit()
       }
     }
-    Option::None
+    None
   }
 }
 
 fn self_host_reader_fail(reader: SelfHostRequestReader, message: String) -> Unit {
-  if reader.error is Option::None {
-    reader.error = Option::Some(message)
+  if reader.error is None {
+    reader.error = Some(message)
   } else {
   }
 }
@@ -216,16 +216,16 @@ fn self_host_skip_dependencies(reader: SelfHostRequestReader) -> Unit {
 
 fn self_host_read_providers(reader: SelfHostRequestReader) -> Option<Bytes> {
   let count = self_host_reader_count(reader, 64u32, "provider count")
-  let mut starshine = Option::None
+  let mut starshine = None
   while 0u32 {
     index if index < count => {
       let name = self_host_reader_string(reader, 255u32, "provider name")
       let wasm = self_host_reader_bytes(reader, 67108864u32, "provider Wasm")
       if name.equals("starshine") {
-        if starshine is Option::Some(_) {
+        if starshine is Some(_) {
           self_host_reader_fail(reader, "duplicate starshine provider")
         } else {
-          starshine = Option::Some(wasm)
+          starshine = Some(wasm)
         }
       } else {
       }
@@ -239,13 +239,13 @@ pub fn decode_self_host_compile_request(
   bytes: Bytes,
 ) -> Result<SelfHostCompileRequest, String> {
   if bytes.byte_length() > 268435456u32 {
-    return Result::Err("compile request exceeds 256 MiB")
+    return Err("compile request exceeds 256 MiB")
   } else {
   }
-  let reader = SelfHostRequestReader::{
+  let reader = {
     bytes: bytes
     offset: 0u32
-    error: Option::None
+    error: None
   }
   self_host_reader_expect(reader, 1146569554u32, "compile request magic")
   self_host_reader_expect(reader, 1u32, "compile request version")
@@ -279,7 +279,7 @@ pub fn decode_self_host_compile_request(
         file_index if file_index < file_count => {
           let logical_path = self_host_reader_string(reader, 4096u32, "logical path")
           let source = self_host_reader_bytes(reader, 16777216u32, "source")
-          manifest_files.push(SelfHostManifestFile::{
+          manifest_files.push({
             path: logical_path
             source: source
             test_only: false
@@ -288,7 +288,7 @@ pub fn decode_self_host_compile_request(
         }
         _ => break self_host_unit()
       }
-      manifest_modules.push(SelfHostManifestModule::{
+      manifest_modules.push({
         path: module_name
         files: manifest_files
       })
@@ -322,14 +322,14 @@ pub fn decode_self_host_compile_request(
   } else {
   }
   match reader.error {
-    Option::Some(error) => Result::Err(error)
-    Option::None => match starshine {
-      Option::None => Result::Err("compile request has no starshine provider")
-      Option::Some(provider) => {
-        let request = SelfHostCompileRequest::{
+    Some(error) => Err(error)
+    None => match starshine {
+      None => Err("compile request has no starshine provider")
+      Some(provider) => {
+        let request = {
           output_path: output_path
           root_module: root_module
-          manifest: SelfHostProgramManifest::{
+          manifest: {
             modules: manifest_modules
           }
           starshine_provider: provider
@@ -338,16 +338,16 @@ pub fn decode_self_host_compile_request(
           default_preamble: default_preamble
         }
         match request.root_module_index() {
-          Option::None => Result::Err("root module is missing from manifest")
-          Option::Some(module_index) => if self_host_u32_equal(
+          None => Err("root module is missing from manifest")
+          Some(module_index) => if self_host_u32_equal(
             self_host_request_manifest_file_count(
               self_host_request_manifest_module(request.manifest, module_index),
             ),
             0u32,
           ) {
-            Result::Err("root module has no source file")
+            Err("root module has no source file")
           } else {
-            Result::Ok(request)
+            Ok(request)
           }
         }
       }

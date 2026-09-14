@@ -9,50 +9,50 @@ fn self_host_simd_byte_i32(value: U8) -> I32 {
 fn self_host_raw_shuffle_immediates(name: Bytes) -> Option<Array<I32>> {
   let length = name.byte_length()
   if length < 45u32 || length > 61u32 || !name.starts_with(b"i8x16.shuffle ") {
-    return Option::None
+    return None
   }
   let indices = []
   let mut cursor = 14u32
   let _ = while 0u32 {
     slot => if slot < 16u32 {
       if cursor >= length || name.byte_at(cursor) < 48u8 || name.byte_at(cursor) > 57u8 {
-        return Option::None
+        return None
       }
       let mut value = self_host_simd_byte_i32(name.byte_at(cursor)) - 48i32
       cursor = cursor + 1u32
       if cursor < length && name.byte_at(cursor) >= 48u8 && name.byte_at(cursor) <= 57u8 {
         if value == 0i32 {
-          return Option::None
+          return None
         }
         value = value * 10i32 + self_host_simd_byte_i32(name.byte_at(cursor)) - 48i32
         cursor = cursor + 1u32
       }
       if value > 31i32 {
-        return Option::None
+        return None
       }
       indices.push(value)
       if slot < 15u32 {
         if cursor >= length || name.byte_at(cursor) != 32u8 {
-          return Option::None
+          return None
         }
         cursor = cursor + 1u32
       } else if cursor != length {
-        return Option::None
+        return None
       }
       continue slot + 1u32
     } else {
       break ()
     }
   }
-  Option::Some(indices)
+  Some(indices)
 }
 
 fn self_host_raw_shuffle_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSignature> {
   match self_host_raw_shuffle_immediates(name) {
-    Option::Some(_) => Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    Some(_) => Some({
+      inputs: [V128BodyCarrier, V128BodyCarrier]
+      result: V128BodyCarrier
     })
-    Option::None => Option::None
+    None => None
   }
 }

@@ -13,7 +13,7 @@ test "nested closure sources retain direct and forwarded locals" {
 }
 
 fn self_host_capture_test_resourced(source: SelfHostPlannedCapture, origin: SelfHostLambdaCaptureSource) -> SelfHostPlannedCapture {
-  SelfHostPlannedCapture::{
+  {
     lambda: source.lambda
     capture: source.capture
     source: origin
@@ -32,15 +32,15 @@ fn self_host_capture_test_bad_source(origin: SelfHostLambdaCaptureSource) -> Uni
 }
 
 test "ARN-106 capture sources retain their root body" expect_trap "unreachable" {
-  self_host_capture_test_bad_source(SelfHostLambdaCaptureSource::BodyLocalCapture((5100u64 << 32u64) + 1u64, 0u32))
+  self_host_capture_test_bad_source(BodyLocalCapture((5100u64 << 32u64) + 1u64, 0u32))
 }
 
 test "ARN-104 capture source locals stay in their owning span" expect_trap "unreachable" {
-  self_host_capture_test_bad_source(SelfHostLambdaCaptureSource::BodyLocalCapture(5100u64 << 32u64, 1u32))
+  self_host_capture_test_bad_source(BodyLocalCapture(5100u64 << 32u64, 1u32))
 }
 
 test "ARN-104 capture source lambdas are present" expect_trap "unreachable" {
-  self_host_capture_test_bad_source(SelfHostLambdaCaptureSource::LambdaLocalCapture(1u32, 0u32))
+  self_host_capture_test_bad_source(LambdaLocalCapture(1u32, 0u32))
 }
 
 test "ARN-106 erased captures still require their source owner" expect_trap "unreachable" {
@@ -53,9 +53,9 @@ test "ARN-106 erased captures still require their source owner" expect_trap "unr
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   assert(module_.captures.length() == 1u32, "one logical Unit capture")
   let source = module_.captures[0u32]
-  assert(source.shape is SelfHostPlannedValueShape::UnitPlannedValueShape, "the capture must be erased physically")
+  assert(source.shape is UnitPlannedValueShape, "the capture must be erased physically")
   module_.captures[0u32] = self_host_capture_test_resourced(source,
-    SelfHostLambdaCaptureSource::BodyLocalCapture((5100u64 << 32u64) + 1u64, 0u32),
+    BodyLocalCapture((5100u64 << 32u64) + 1u64, 0u32),
   )
   for plan in program.bodies {
     if plan.lambda == 0u32 {

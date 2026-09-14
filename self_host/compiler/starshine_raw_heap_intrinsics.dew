@@ -6,13 +6,13 @@ fn self_host_emit_raw_ref_cast(type_index: U32, instructions: StarshineInstructi
 fn self_host_require_emitted_raw_ref_cast(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32) -> SelfHostPlannedPhysicalExpressionCarrier {
   let plan = self_host_physical_scratch_body(canonical, module_, body, expression, 0u32)
   let value = match self_host_body_plan_expression(plan, expression) {
-    Option::Some(value) => value
-    Option::None => self_host_call_read_failure(plan.module_id, plan.declaration, plan.body,
+    Some(value) => value
+    None => self_host_call_read_failure(plan.module_id, plan.declaration, plan.body,
       expression, 610u32, 1u64, 0u64, 0u64)
   }
   let call = match self_host_raw_ref_cast_call(link, module_.expressions[expression]) {
-    Option::Some(value) => value
-    Option::None => self_host_call_read_failure(plan.module_id, plan.declaration, plan.body,
+    Some(value) => value
+    None => self_host_call_read_failure(plan.module_id, plan.declaration, plan.body,
       expression, 606u32, 1u64, 0u64, 0u64)
   }
   let error = self_host_raw_ref_cast_call_error(link, plan, module_, value, call)
@@ -25,16 +25,16 @@ fn self_host_require_emitted_raw_ref_cast(canonical: Option<SelfHostPlannedPhysi
 
 fn self_host_append_outlined_raw_heap_instruction(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleWasmGCFragments, function_: SelfHostPlannedWasmFunctionFragment, instruction: SelfHostRawHeapInstruction, functions: StarshineFunctions) -> Option<String> {
   match instruction {
-    SelfHostRawHeapInstruction::RawStructGetInstruction(recipe) => self_host_append_outlined_raw_struct_get(link, module_, function_, recipe, functions)
-    SelfHostRawHeapInstruction::RawRefCastInstruction(recipe) => self_host_append_outlined_raw_ref_cast(link, module_, function_, recipe, functions)
-    SelfHostRawHeapInstruction::RawArrayGetInstruction(recipe) => self_host_append_outlined_raw_array_get(link, module_, function_, recipe, functions)
+    RawStructGetInstruction(recipe) => self_host_append_outlined_raw_struct_get(link, module_, function_, recipe, functions)
+    RawRefCastInstruction(recipe) => self_host_append_outlined_raw_ref_cast(link, module_, function_, recipe, functions)
+    RawArrayGetInstruction(recipe) => self_host_append_outlined_raw_array_get(link, module_, function_, recipe, functions)
   }
 }
 
 fn self_host_append_outlined_raw_ref_cast(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleWasmGCFragments, function_: SelfHostPlannedWasmFunctionFragment, recipe: SelfHostRawRefCastRecipe, functions: StarshineFunctions) -> Option<String> {
   let layout = match self_host_raw_ref_cast_layout(link, recipe) {
-    Result::Ok(value) => value
-    Result::Err(reason) => return Option::Some(SelfHostPhysicalDiagnosticReason::RawHeapInstructionContract(reason).description())
+    Ok(value) => value
+    Err(reason) => return Some(RawHeapInstructionContract(reason).description())
   }
   let values = module_.function_value_types
   let parameters = function_.parameters
@@ -50,10 +50,10 @@ fn self_host_append_outlined_raw_ref_cast(link: SelfHostPlannedProgramWasmGCLink
   self_host_outlined_builtin_assert(module_, function_, results.length == 1u32,
     709u32, 1u64, u32_into_u64(results.length), 0u64)
   let input = self_host_body_carrier_from_value_type(values[parameters.start])
-  self_host_outlined_builtin_assert(module_, function_, input is SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+  self_host_outlined_builtin_assert(module_, function_, input is EqRefBodyCarrier,
     705u32, 9u64, self_host_body_carrier_code(input), 0u64)
   let output = self_host_body_carrier_from_value_type(values[results.start])
-  self_host_outlined_builtin_assert(module_, function_, output is SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+  self_host_outlined_builtin_assert(module_, function_, output is EqRefBodyCarrier,
     709u32, 9u64, self_host_body_carrier_code(output), 0u64)
   let instructions = StarshineFfi.ffi_ffi_bridge_instructions_new()
   StarshineFfi.ffi_ffi_bridge_instructions_push(instructions,
@@ -61,5 +61,5 @@ fn self_host_append_outlined_raw_ref_cast(link: SelfHostPlannedProgramWasmGCLink
   self_host_emit_raw_ref_cast(layout.type_index, instructions)
   StarshineFfi.ffi_ffi_bridge_funcs_push(functions,
     StarshineFfi.ffi_lib_Func_new(StarshineFfi.ffi_lib_Locals_empty(), StarshineFfi.ffi_lib_Expr_new(instructions)))
-  Option::None
+  None
 }

@@ -15,13 +15,13 @@ pub struct SelfHostInferredModuleValues {
 impl SelfHostInferredModuleValues {
   fn type_term(self, type_: I32) -> SelfHostBodyTypeTerm {
     if type_ < -1i32 {
-      SelfHostBodyTypeTerm::BodyResolvedType(
+      BodyResolvedType(
         self_host_body_i32_to_u32(-type_ - 2i32),
       )
     } else if type_ >= 0i32 {
       self.types[self_host_body_i32_to_u32(type_)]
     } else {
-      SelfHostBodyTypeTerm::BodyErrorType
+      BodyErrorType
     }
   }
 }
@@ -34,11 +34,11 @@ fn self_host_module_value_body_index(
   while index {
     current => if current < collected.bodies.length() {
       if self_host_u64_equal(collected.bodies[current].declaration, declaration) {
-        break Option::Some(current)
+        break Some(current)
       }
       continue current + 1u32
     } else {
-      break Option::None
+      break None
     }
   }
 }
@@ -48,23 +48,25 @@ fn self_host_module_value_declaration_offset(
   declaration: U64,
 ) -> U32 {
   match collected.declaration_reference(declaration) {
-    Option::Some(reference) => match reference {
-      SelfHostCollectedDeclarationReference::TopLevel(value) => value.offset
-      SelfHostCollectedDeclarationReference::Method(value) => value.offset
+    Some(reference) => match reference {
+      TopLevel(value) => value.offset
+      Method(value) => value.offset
     }
-    Option::None => 0u32
+    None => 0u32
   }
 }
 
 fn self_host_module_value_type_slots() -> Map<U64, I32> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_module_value_inputs_with_slots(
   imported: SelfHostBasicImportedInputs,
   local_types: Map<U64, I32>,
 ) -> SelfHostBasicImportedInputs {
-  SelfHostBasicImportedInputs::{
+  {
+    constructor_index: imported.constructor_index
+    guard_targets: imported.guard_targets
     local_initializer_sources: imported.local_initializer_sources
     resolved_imports: imported.resolved_imports
     scope: imported.scope
@@ -134,7 +136,7 @@ fn self_host_infer_module_values_with_inputs(
           self_host_u32_add(scc.start, current),
         )
         match self_host_module_value_body_index(collected, declaration) {
-          Option::Some(body_index) => {
+          Some(body_index) => {
             let body = collected.bodies[body_index]
             let inferencer = SelfHostBasicBodyInferencer::new_with_solver(
               collected,
@@ -149,8 +151,8 @@ fn self_host_infer_module_values_with_inputs(
             let _ = solver.unify(
               inferencer.result_type,
               match slots.get(declaration) {
-                Option::Some(type_) => type_
-                Option::None => solver.error_type()
+                Some(type_) => type_
+                None => solver.error_type()
               },
               self_host_synthetic_type_origin(
                 self_host_semantic_id_local(declaration),
@@ -159,7 +161,7 @@ fn self_host_infer_module_values_with_inputs(
             )
             inferencers.push(inferencer)
           }
-          Option::None => {}
+          None => {}
         }
         continue current + 1u32
       } else {
@@ -174,8 +176,8 @@ fn self_host_infer_module_values_with_inputs(
           self_host_u32_add(scc.start, current),
         )
         let slot = match slots.get(declaration) {
-          Option::Some(type_) => type_
-          Option::None => solver.error_type()
+          Some(type_) => type_
+          None => solver.error_type()
         }
         unresolved[current] = solver.has_unresolved_variable(slot)
         continue current + 1u32
@@ -190,21 +192,21 @@ fn self_host_infer_module_values_with_inputs(
           self_host_u32_add(scc.start, current),
         )
         let slot = match slots.get(declaration) {
-          Option::Some(type_) => type_
-          Option::None => solver.error_type()
+          Some(type_) => type_
+          None => solver.error_type()
         }
         if unresolved[current] {
           solver.poison_type(slot)
-          diagnostics.push(SelfHostBodyInferenceDiagnostic::UnresolvedModuleValue(
+          diagnostics.push(UnresolvedModuleValue(
             declaration,
             self_host_module_value_declaration_offset(collected, declaration),
           ))
         }
         match self_host_module_value_let_index(collected, declaration) {
-          Option::Some(let_index) => {
+          Some(let_index) => {
             let_types[let_index] = solver.zonk_type(slot)
           }
-          Option::None => {}
+          None => {}
         }
         continue current + 1u32
       } else {
@@ -220,7 +222,7 @@ fn self_host_infer_module_values_with_inputs(
   let mut solver_diagnostic = 0u32
   let _ = while solver_diagnostic {
     current => if current < solver.diagnostic_count() {
-      diagnostics.push(SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(
+      diagnostics.push(BodyConstraintDiagnostic(
         solver.diagnostic_at(current),
       ))
       continue current + 1u32
@@ -228,7 +230,7 @@ fn self_host_infer_module_values_with_inputs(
       break self_host_semantic_unit()
     }
   }
-  SelfHostInferredModuleValues::{
+  {
     module_id: collected.module_id
     dependencies: dependencies
     let_declarations: declarations
@@ -248,10 +250,12 @@ fn self_host_infer_module_values(
     collected,
     resolved,
     names,
-    SelfHostBasicImportedInputs::{
+    {
+      constructor_index: self_host_constructor_index(collected, [])
+      guard_targets: self_host_guard_builtin_target_map(collected, [])
       local_initializer_sources: self_host_query_local_sources(collected, names)
-      resolved_imports: Option::None
-      scope: Option::None
+      resolved_imports: None
+      scope: None
       callables: []
       generic_parameter_ids: []
       parameter_types: []
@@ -291,10 +295,12 @@ fn self_host_infer_module_values_with_imports(
     collected,
     resolved,
     names,
-    SelfHostBasicImportedInputs::{
+    {
+      constructor_index: self_host_constructor_index(collected, variants)
+      guard_targets: self_host_guard_builtin_target_map(collected, callables)
       local_initializer_sources: self_host_query_local_sources(collected, names)
-      resolved_imports: Option::None
-      scope: Option::None
+      resolved_imports: None
+      scope: None
       callables: callables
       generic_parameter_ids: generic_parameter_ids
       parameter_types: parameter_types

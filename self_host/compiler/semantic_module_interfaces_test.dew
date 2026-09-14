@@ -19,10 +19,10 @@ test "module path spelling cannot publish private declarations" {
       b"pub struct Visible {}\nstruct Hidden {}\npub fn shown(value: I32) -> I32 {\n  value\n}\nfn hidden(value: I32) -> I32 {\n  value\n}\n",
     )
     assert(interface_.declaration_count() == 2u32, "private declarations escaped by module spelling")
-    assert(interface_.declaration_named("Visible", SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration) is Option::Some(_), "public type missing")
-    assert(interface_.declaration_named("Hidden", SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration) is Option::None, "private type escaped")
-    assert(interface_.declaration_named("shown", SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration) is Option::Some(_), "public function missing")
-    assert(interface_.declaration_named("hidden", SelfHostFrozenInterfaceDeclarationKind::FrozenValueDeclaration) is Option::None, "private function escaped")
+    assert(interface_.declaration_named("Visible", FrozenTypeDeclaration) is Some(_), "public type missing")
+    assert(interface_.declaration_named("Hidden", FrozenTypeDeclaration) is None, "private type escaped")
+    assert(interface_.declaration_named("shown", FrozenValueDeclaration) is Some(_), "public function missing")
+    assert(interface_.declaration_named("hidden", FrozenValueDeclaration) is None, "private function escaped")
   }
 }
 
@@ -36,22 +36,22 @@ test "signature interfaces retain only public type declarations" {
   assert(
     interface_.declaration_named(
       "Item",
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
-    ) is Option::Some(_),
+      FrozenTypeDeclaration,
+    ) is Some(_),
     "Item missing",
   )
   assert(
     interface_.declaration_named(
       "Read",
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration,
-    ) is Option::Some(_),
+      FrozenTraitDeclaration,
+    ) is Some(_),
     "Read missing",
   )
   assert(
     interface_.declaration_named(
       "Hidden",
-      SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
-    ) is Option::None,
+      FrozenTypeDeclaration,
+    ) is None,
     "private type leaked",
   )
 }
@@ -83,8 +83,8 @@ test "open imports expose public types and traits" {
     interfaces,
   )
   assert(scope.diagnostics.length() == 0u32, "scope diagnostics")
-  assert(scope.lookup_type("Item") is Option::Some(_), "opened type")
-  assert(scope.lookup_trait("Read") is Option::Some(_), "opened trait")
+  assert(scope.lookup_type("Item") is Some(_), "opened type")
+  assert(scope.lookup_trait("Read") is Some(_), "opened trait")
 }
 
 test "qualified imports retain aliases without opening names" {
@@ -113,10 +113,10 @@ test "qualified imports retain aliases without opening names" {
     ["app.consumer", "app.library"],
     interfaces,
   )
-  assert(scope.lookup_alias("api") is Option::Some(1u32), "alias")
-  assert(scope.lookup_type("Item") is Option::None, "qualified import opened")
+  assert(scope.lookup_alias("api") is Some(1u32), "alias")
+  assert(scope.lookup_type("Item") is None, "qualified import opened")
   assert(
-    scope.lookup_module_type(1u32, "Item") is Option::Some(_),
+    scope.lookup_module_type(1u32, "Item") is Some(_),
     "qualified type",
   )
 }
@@ -178,16 +178,16 @@ test "opened imported signatures resolve canonical external types and traits" {
   let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
   assert(resolved.diagnostics.length() == 0u32, "type diagnostics")
   match resolved.types[resolved.parameter_types[0u32]] {
-    SelfHostResolvedType::AppliedType(base, arguments) => {
+    AppliedType(base, arguments) => {
       assert(arguments.length == 1u32, "Item argument")
       match resolved.types[base] {
-        SelfHostResolvedType::NominalType(declaration) => assert(
+        NominalType(declaration) => assert(
           declaration == match library.declaration_named(
             "Item",
-            SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+            FrozenTypeDeclaration,
           ) {
-            Option::Some(value) => value
-            Option::None => 0u64
+            Some(value) => value
+            None => 0u64
           },
           "external Item identity",
         )
@@ -197,11 +197,11 @@ test "opened imported signatures resolve canonical external types and traits" {
     _ => assert(false, "expected imported application")
   }
   match resolved.impl_trait_types[0u32] {
-    Option::Some(type_) => match resolved.types[type_] {
-      SelfHostResolvedType::TraitType(_) => {}
+    Some(type_) => match resolved.types[type_] {
+      TraitType(_) => {}
       _ => assert(false, "expected imported trait")
     }
-    Option::None => assert(false, "missing imported trait")
+    None => assert(false, "missing imported trait")
   }
 }
 
@@ -238,11 +238,11 @@ test "qualified imported signatures resolve without opening names" {
     "qualified canonical type",
   )
   match resolved.impl_trait_types[0u32] {
-    Option::Some(type_) => match resolved.types[type_] {
-      SelfHostResolvedType::TraitType(_) => {}
+    Some(type_) => match resolved.types[type_] {
+      TraitType(_) => {}
       _ => assert(false, "qualified trait type")
     }
-    Option::None => assert(false, "qualified trait missing")
+    None => assert(false, "qualified trait missing")
   }
 }
 
@@ -276,7 +276,7 @@ test "imported transparent aliases normalize consumer signatures" {
   assert(resolved.diagnostics.length() == 0u32, "alias diagnostics")
   assert(
     resolved.parameter_types[0u32] == resolved.primitive(
-      SelfHostPrimitiveType::I32Type,
+      I32Type,
     ),
     "imported alias normalization",
   )
@@ -310,16 +310,16 @@ test "imported generic aliases substitute consumer arguments" {
   let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
   assert(resolved.diagnostics.length() == 0u32, "generic alias diagnostics")
   match resolved.types[resolved.parameter_types[0u32]] {
-    SelfHostResolvedType::AppliedType(base, arguments) => {
+    AppliedType(base, arguments) => {
       assert(arguments.length == 1u32, "Box argument")
       match resolved.types[base] {
-        SelfHostResolvedType::NominalType(declaration) => assert(
+        NominalType(declaration) => assert(
           declaration == match library.declaration_named(
             "Box",
-            SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration,
+            FrozenTypeDeclaration,
           ) {
-            Option::Some(value) => value
-            Option::None => 0u64
+            Some(value) => value
+            None => 0u64
           },
           "Box identity",
         )
@@ -327,7 +327,7 @@ test "imported generic aliases substitute consumer arguments" {
       }
       assert(
         resolved.type_arguments[arguments.start] == resolved.primitive(
-          SelfHostPrimitiveType::I32Type,
+          I32Type,
         ),
         "Wrapped argument",
       )
@@ -369,7 +369,7 @@ test "imported generic aliases diagnose missing arguments" {
   let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
   assert(resolved.diagnostics.length() == 1u32, "arity diagnostic count")
   match resolved.diagnostics[0u32] {
-    SelfHostTypeDiagnostic::TypeArityMismatch(_, 1u32, 0u32, _, _) => {}
+    TypeArityMismatch(_, 1u32, 0u32, _, _) => {}
     _ => assert(false, "expected imported alias arity")
   }
 }
@@ -402,7 +402,7 @@ test "ambiguous opened imported types diagnose at use sites" {
   let resolved = self_host_resolve_module_types_with_imports(consumer, scope)
   assert(resolved.diagnostics.length() == 1u32, "ambiguity count")
   match resolved.diagnostics[0u32] {
-    SelfHostTypeDiagnostic::AmbiguousImportedType(_, _, _) => {}
+    AmbiguousImportedType(_, _, _) => {}
     _ => assert(false, "expected imported ambiguity")
   }
 }
@@ -432,6 +432,6 @@ test "wildcard imports open matching module prefixes" {
     ["app.consumer", "app.library.left", "app.library.right"],
     interfaces,
   )
-  assert(scope.lookup_type("Left") is Option::Some(_), "Left missing")
-  assert(scope.lookup_type("Right") is Option::Some(_), "Right missing")
+  assert(scope.lookup_type("Left") is Some(_), "Left missing")
+  assert(scope.lookup_type("Right") is Some(_), "Right missing")
 }

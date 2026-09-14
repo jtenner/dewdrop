@@ -7,7 +7,7 @@ fn self_host_specialization_index_failure(declaration: U64, caller_body: U64, ex
   } else {
     caller_body
   }
-  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+  self_host_assert_compiler_invariant_with_failure(false, {
     code: code
     phase: 5u32
     module_id: self_host_semantic_id_module(context_id)
@@ -130,16 +130,16 @@ fn self_host_specialization_shape_error(root: SelfHostPlannedValueShape) -> U32 
   while work.length() {
     length if length > 0u32 => {
       let shape = match work.pop() {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           self_host_assert_compiler_invariant(false, "specialization shape work stack lost an entry")
           unreachable()
         }
       }
       match shape {
-        SelfHostPlannedValueShape::GenericPlannedValueShape => return 1u32
-        SelfHostPlannedValueShape::ErrorPlannedValueShape => return 2u32
-        SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+        GenericPlannedValueShape => return 1u32
+        ErrorPlannedValueShape => return 2u32
+        ProductPlannedValueShape(fields) => {
           for field in fields {
             work.push(field)
           }
@@ -180,7 +180,7 @@ fn self_host_program_specialization_add_request_at_call(
       let error = self_host_specialization_shape_error(candidates[index])
       self_host_assert_compiler_invariant_with_failure(
         error == 0u32,
-        SelfHostInvariantFailure::{
+        {
           code: 301u32
           phase: 5u32
           module_id: self_host_semantic_id_module(context_id)
@@ -199,8 +199,8 @@ fn self_host_program_specialization_add_request_at_call(
   }
   let missing = 4294967295u32
   let previous_head = match request_head_by_declaration.get(declaration) {
-    Option::Some(index) => index
-    Option::None => missing
+    Some(index) => index
+    None => missing
   }
   let mut request_index = previous_head
   while request_index {
@@ -245,10 +245,10 @@ fn self_host_program_specialization_add_request_at_call(
       for evidence in evidence_types {
         evidence_copy.push(evidence)
       }
-      requests.push(SelfHostProgramSpecializationRequest::{
+      requests.push({
         declaration: declaration
         evidence_types: evidence_copy
-        shapes: SelfHostHirSpan::{
+        shapes: {
           start: start
           length: candidates.length()
         }

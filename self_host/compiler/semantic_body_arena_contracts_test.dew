@@ -5,18 +5,18 @@ test "body relative checks retain phase and owner context" {
   let second = collected.bodies[1u32]
   for phase in [1u32, 2u32, 3u32] {
     self_host_assert_body_owned_spans(collected, second, phase)
-    match self_host_check_body_relative_index(collected, second, SelfHostBodyArenaKind::BodyExpressions, second.expressions.start, phase) {
-      Result::Ok(relative) => assert(relative == 0u32, "first owned expression")
-      Result::Err(_) => assert(false, "valid expression must be owned")
+    match self_host_check_body_relative_index(collected, second, BodyExpressions, second.expressions.start, phase) {
+      Ok(relative) => assert(relative == 0u32, "first owned expression")
+      Err(_) => assert(false, "valid expression must be owned")
     }
-    match self_host_check_body_relative_index(collected, second, SelfHostBodyArenaKind::BodyExpressions, first.expressions.start, phase) {
-      Result::Err(failure) => {
+    match self_host_check_body_relative_index(collected, second, BodyExpressions, first.expressions.start, phase) {
+      Err(failure) => {
         assert(failure.code == 102u32 && failure.phase == phase && failure.module_id == 6044u64, "exact phase record")
         assert(failure.declaration == second.declaration && failure.body == second.id, "exact body owner")
         assert(failure.expression == first.expressions.start && failure.expected == u32_into_u64(second.expressions.length), "exact expression and length")
         assert(failure.actual == u32_into_u64(first.expressions.start) && failure.detail == u32_into_u64(second.expressions.start), "exact bad ID and span")
       }
-      Result::Ok(_) => assert(false, "expression from another body must be rejected")
+      Ok(_) => assert(false, "expression from another body must be rejected")
     }
   }
 }
@@ -24,7 +24,7 @@ test "body relative checks retain phase and owner context" {
 test "ARN-102 name resolution checks body ownership before subtraction" expect_trap "unreachable" {
   let collected = self_host_collect_bytes(6044u64, b"fn first() -> I32 {\n  1\n}\nfn second() -> I32 {\n  2\n}\n")
   assert(collected.diagnostics.length() == 0u32 && collected.bodies.length() == 2u32, "valid source fixture")
-  let resolver = SelfHostBodyNameResolver::new(collected, Option::None, collected.bodies[1u32], Map::empty())
+  let resolver = SelfHostBodyNameResolver::new(collected, None, collected.bodies[1u32], Map::empty())
   let _ = resolver.expression_index(collected.bodies[0u32].expressions.start)
 }
 
@@ -33,12 +33,12 @@ test "ARN-101 name resolution checks spans before allocating work arrays" expect
   assert(collected.diagnostics.length() == 0u32 && collected.bodies.length() == 1u32, "valid source fixture")
   let body = collected.bodies[0u32]
   self_host_assert_body_owned_spans(collected, body, 1u32)
-  let invalid = SelfHostHirBody::{
+  let invalid = {
     id: body.id
     declaration: body.declaration
     kind: body.kind
     root: body.root
-    expressions: SelfHostHirSpan::{
+    expressions: {
       start: 4294967295u32
       length: 1u32
     }
@@ -53,5 +53,5 @@ test "ARN-101 name resolution checks spans before allocating work arrays" expect
     pattern_fields: body.pattern_fields
     offset: body.offset
   }
-  let _ = SelfHostBodyNameResolver::new(collected, Option::None, invalid, Map::empty())
+  let _ = SelfHostBodyNameResolver::new(collected, None, invalid, Map::empty())
 }

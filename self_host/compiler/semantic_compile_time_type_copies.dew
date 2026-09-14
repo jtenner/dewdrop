@@ -3,21 +3,21 @@ open dew.std.array
 fn self_host_clone_query_evidence(source: SelfHostBasicModuleEvidence) -> SelfHostBasicModuleEvidence {
   let bodies = []
   for body in source.bodies {
-    bodies.push(SelfHostBasicBodyEvidence::{
+    bodies.push({
       body: body.body
       expression_evidence: body.expression_evidence.copy()
       evidence: body.evidence.copy()
       prerequisite_indices: body.prerequisite_indices.copy()
     })
   }
-  SelfHostBasicModuleEvidence::{
+  {
     module_id: source.module_id
     bodies: bodies
   }
 }
 
 fn self_host_clone_query_inferred(source: SelfHostMergedModuleInference) -> SelfHostMergedModuleInference {
-  SelfHostMergedModuleInference::{
+  {
     module_id: source.module_id
     jobs: source.jobs
     types: source.types
@@ -46,7 +46,7 @@ fn self_host_clone_query_inferred(source: SelfHostMergedModuleInference) -> Self
 // Private instance copies. Shared interfaces and unrelated plan fields stay intact.
 
 fn self_host_clone_query_resolved(source: SelfHostResolvedModuleTypes) -> SelfHostResolvedModuleTypes {
-  SelfHostResolvedModuleTypes::{
+  {
     module_id: source.module_id
     types: source.types.copy()
     type_arguments: source.type_arguments.copy()
@@ -81,7 +81,7 @@ fn self_host_clone_query_resolved(source: SelfHostResolvedModuleTypes) -> SelfHo
 }
 
 fn self_host_clone_query_functions(source: SelfHostPlannedModuleFunctions) -> SelfHostPlannedModuleFunctions {
-  SelfHostPlannedModuleFunctions::{
+  {
     module_id: source.module_id
     callables: source.callables.copy()
     callable_by_declaration: source.callable_by_declaration
@@ -90,7 +90,7 @@ fn self_host_clone_query_functions(source: SelfHostPlannedModuleFunctions) -> Se
 }
 
 fn self_host_query_expression_type(source: SelfHostPlannedExpression, module_: SelfHostPlannedModuleLowering, type_: I32) -> SelfHostPlannedExpression {
-  SelfHostPlannedExpression::{
+  {
     type_: type_
     shape: self_host_planned_resolved_value_shape(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
     nominal: self_host_lowering_resolved_nominal(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
@@ -107,7 +107,7 @@ fn self_host_query_expression_type(source: SelfHostPlannedExpression, module_: S
 }
 
 fn self_host_query_local_type(source: SelfHostPlannedLocal, module_: SelfHostPlannedModuleLowering, type_: I32) -> SelfHostPlannedLocal {
-  SelfHostPlannedLocal::{
+  {
     body: source.body
     lambda: source.lambda
     local_id: source.local_id
@@ -122,7 +122,7 @@ fn self_host_query_local_type(source: SelfHostPlannedLocal, module_: SelfHostPla
 }
 
 fn self_host_query_capture_type(source: SelfHostPlannedCapture, module_: SelfHostPlannedModuleLowering, type_: I32) -> SelfHostPlannedCapture {
-  SelfHostPlannedCapture::{
+  {
     lambda: source.lambda
     capture: source.capture
     source: source.source
@@ -135,7 +135,7 @@ fn self_host_query_capture_type(source: SelfHostPlannedCapture, module_: SelfHos
 }
 
 fn self_host_query_pattern_type(source: SelfHostPlannedPattern, module_: SelfHostPlannedModuleLowering, type_: I32) -> SelfHostPlannedPattern {
-  SelfHostPlannedPattern::{
+  {
     elided: source.elided
     type_: type_
     shape: self_host_planned_resolved_value_shape(module_.resolved_types, self_host_body_i32_to_u32(-(type_ + 2i32)))
@@ -147,7 +147,7 @@ fn self_host_query_pattern_type(source: SelfHostPlannedPattern, module_: SelfHos
 }
 
 fn self_host_query_body_type(source: SelfHostPlannedBodyLowering, type_: I32, shape: SelfHostPlannedValueShape) -> SelfHostPlannedBodyLowering {
-  SelfHostPlannedBodyLowering::{
+  {
     body: source.body
     declaration: source.declaration
     kind: source.kind
@@ -167,7 +167,7 @@ fn self_host_query_body_type(source: SelfHostPlannedBodyLowering, type_: I32, sh
 }
 
 fn self_host_query_lambda_type(source: SelfHostPlannedLambdaLowering, type_: I32, shape: SelfHostPlannedValueShape) -> SelfHostPlannedLambdaLowering {
-  SelfHostPlannedLambdaLowering::{
+  {
     lambda: source.lambda
     root_body: source.root_body
     parameter_count: source.parameter_count
@@ -188,7 +188,7 @@ fn self_host_query_lambda_type(source: SelfHostPlannedLambdaLowering, type_: I32
 }
 
 fn self_host_query_parameter_type(source: SelfHostPlannedParameter, type_: U32, shape: SelfHostPlannedValueShape) -> SelfHostPlannedParameter {
-  SelfHostPlannedParameter::{
+  {
     parameter: source.parameter
     declaration: source.declaration
     index: source.index
@@ -200,7 +200,7 @@ fn self_host_query_parameter_type(source: SelfHostPlannedParameter, type_: U32, 
 }
 
 fn self_host_query_callable_type(source: SelfHostPlannedCallable, type_: U32, shape: SelfHostPlannedValueShape) -> SelfHostPlannedCallable {
-  SelfHostPlannedCallable::{
+  {
     declaration: source.declaration
     name: source.name
     visibility: source.visibility

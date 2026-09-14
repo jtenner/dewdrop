@@ -20,19 +20,19 @@ fn self_host_empty_specialization_evidence_types() -> Array<SelfHostSpecializati
 
 fn self_host_specialization_evidence_type_equal(left: SelfHostSpecializationEvidenceType, right: SelfHostSpecializationEvidenceType) -> Bool {
   match left {
-    SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType => right is SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType
-    SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(owner) => match right {
-      SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(other) => self_host_u64_equal(owner, other)
+    UnknownSpecializationEvidenceType => right is UnknownSpecializationEvidenceType
+    NominalSpecializationEvidenceType(owner) => match right {
+      NominalSpecializationEvidenceType(other) => self_host_u64_equal(owner, other)
       _ => false
     }
-    SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(primitive) => match right {
-      SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(other) => primitive.rank() == other.rank()
+    PrimitiveSpecializationEvidenceType(primitive) => match right {
+      PrimitiveSpecializationEvidenceType(other) => primitive.rank() == other.rank()
       _ => false
     }
-    SelfHostSpecializationEvidenceType::StructuralSpecializationEvidenceType(value) => match right {
-      SelfHostSpecializationEvidenceType::StructuralSpecializationEvidenceType(other) => match self_host_compile_time_types_equal(value, other) {
-        Result::Ok(equal) => equal
-        Result::Err(message) => {
+    StructuralSpecializationEvidenceType(value) => match right {
+      StructuralSpecializationEvidenceType(other) => match self_host_compile_time_types_equal(value, other) {
+        Ok(equal) => equal
+        Err(message) => {
           self_host_assert_compiler_invariant(false, message)
           unreachable()
         }
@@ -61,31 +61,31 @@ fn self_host_specialization_evidence_types_equal(left: Array<SelfHostSpecializat
 
 fn self_host_specialization_resolved_evidence_type(module_: SelfHostPlannedModuleLowering, type_: U32) -> SelfHostSpecializationEvidenceType {
   match module_.resolved_types.types[type_] {
-    SelfHostResolvedType::NominalType(owner) => SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(owner)
-    SelfHostResolvedType::PrimitiveType(primitive) => SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(primitive)
-    _ => SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType
+    NominalType(owner) => NominalSpecializationEvidenceType(owner)
+    PrimitiveType(primitive) => PrimitiveSpecializationEvidenceType(primitive)
+    _ => UnknownSpecializationEvidenceType
   }
 }
 
 fn self_host_specialization_parameter_evidence_type(caller: Option<SelfHostPlannedCallable>, specialization: U32, requests: Array<SelfHostProgramSpecializationRequest>, parameter: U64) -> SelfHostSpecializationEvidenceType {
   if specialization < requests.length() {
     match caller {
-      Option::Some(callable) => if self_host_u64_equal(callable.declaration, requests[specialization].declaration) && self_host_u64_equal(self_host_semantic_id_module(parameter), self_host_semantic_id_module(callable.declaration)) {
+      Some(callable) => if self_host_u64_equal(callable.declaration, requests[specialization].declaration) && self_host_u64_equal(self_host_semantic_id_module(parameter), self_host_semantic_id_module(callable.declaration)) {
         let generics = self_host_program_specialization_callable_generics(callable)
         match generics.slot(parameter) {
-          Option::Some(relative) => {
+          Some(relative) => {
           let types = self_host_specialization_request_evidence_types(requests[specialization])
           if relative < types.length() {
             return types[relative]
           }
           }
-          Option::None => {}
+          None => {}
         }
       }
       _ => {}
     }
   }
-  SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType
+  UnknownSpecializationEvidenceType
 }
 
 fn self_host_program_specialization_call_evidence_types(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, caller: Option<SelfHostPlannedCallable>, specialization: U32, requests: Array<SelfHostProgramSpecializationRequest>, target: U64, arguments: SelfHostHirSpan) -> Array<SelfHostSpecializationEvidenceType> {
@@ -93,10 +93,10 @@ fn self_host_program_specialization_call_evidence_types(lowering: SelfHostPlanne
   if lowering.compile_time.sensitive.contains_key(target) {
     let bindings = self_host_compile_time_caller_bindings(caller, specialization, requests)
     match self_host_read_compile_time_arguments(module_, arguments, bindings) {
-      Result::Ok(types) => {
+      Ok(types) => {
         let reduced = match self_host_reduce_compile_time_projection_list(lowering, types, 0u32) {
-          Result::Ok(values) => values
-          Result::Err(message) => {
+          Ok(values) => values
+          Err(message) => {
             lowering.compile_time.diagnostics.push(message)
             return result
           }
@@ -105,7 +105,7 @@ fn self_host_program_specialization_call_evidence_types(lowering: SelfHostPlanne
           result.push(self_host_compile_time_to_evidence_type(type_))
         }
       }
-      Result::Err(message) => {
+      Err(message) => {
         self_host_assert_compiler_invariant(false, message)
         unreachable()
       }
@@ -113,19 +113,19 @@ fn self_host_program_specialization_call_evidence_types(lowering: SelfHostPlanne
     return result
   }
   let owner = match lowering.index.declaration_owner(target) {
-    Option::Some(owner) => owner
-    Option::None => return result
+    Some(owner) => owner
+    None => return result
   }
   let callable = match self_host_program_specialization_callable(lowering.modules[owner], target) {
-    Option::Some(callable) => callable
-    Option::None => return result
+    Some(callable) => callable
+    None => return result
   }
   let generics = self_host_program_specialization_callable_generics(callable)
   let collected = self_host_program_collected_module_at(lowering.collected, owner)
   let mut has_evidence = false
   let _ = while 0u32 {
     index => if index < arguments.length {
-      let mut identity = SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType
+      let mut identity = UnknownSpecializationEvidenceType
       if index < generics.length {
         let parameter = collected.generic_parameter_at(generics.local(index))
         let bounds = parameter.bounds
@@ -133,15 +133,15 @@ fn self_host_program_specialization_call_evidence_types(lowering: SelfHostPlanne
           has_evidence = true
           let type_ = self_host_program_specialization_call_type_argument(module_, arguments.start + index)
           match self_host_program_specialization_resolved_type(module_, type_) {
-            Option::Some(resolved) => match module_.resolved_types.types[resolved] {
-              SelfHostResolvedType::GenericParameterType(parameter) => {
+            Some(resolved) => match module_.resolved_types.types[resolved] {
+              GenericParameterType(parameter) => {
                 identity = self_host_specialization_parameter_evidence_type(caller, specialization, requests, parameter)
               }
               _ => {
                 identity = self_host_specialization_resolved_evidence_type(module_, resolved)
               }
             }
-            Option::None => {}
+            None => {}
           }
         }
       }
@@ -162,27 +162,27 @@ fn self_host_program_specialization_bound_target(lowering: SelfHostPlannedProgra
     return target
   }
   let expression = self_host_program_specialization_expression(module_, self_host_u32_add(body.expressions.start, offset))
-  if !(expression.call_target is SelfHostBasicCallTarget::BoundTraitBasicCallTarget(_, _, _, _)) {
+  if !(expression.call_target is BoundTraitBasicCallTarget(_, _, _, _)) {
     return target
   }
   let requirement = match self_host_program_specialization_program_callable(lowering, target) {
-    Option::Some(callable) => callable
-    Option::None => return target
+    Some(callable) => callable
+    None => return target
   }
   let trait_ = match requirement.kind {
-    SelfHostPlannedCallableKind::PlannedTraitMethodCallable(trait_) => trait_
+    PlannedTraitMethodCallable(trait_) => trait_
     _ => return target
   }
-  let mut receiver = SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType
+  let mut receiver = UnknownSpecializationEvidenceType
   // The lowered expression already owns its exact inference target. Re-reading
   // the parent body's job at a lambda-relative offset selects unrelated data.
   match expression.call_target {
-    SelfHostBasicCallTarget::BoundTraitBasicCallTarget(method, parameter, bound, _) => if self_host_u64_equal(method, target) && module_.resolved_types.types[bound] is SelfHostResolvedType::TraitType(_) {
+    BoundTraitBasicCallTarget(method, parameter, bound, _) => if self_host_u64_equal(method, target) && module_.resolved_types.types[bound] is TraitType(_) {
       receiver = self_host_specialization_parameter_evidence_type(caller, specialization, requests, parameter)
     }
     _ => {}
   }
-  if receiver is SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType {
+  if receiver is UnknownSpecializationEvidenceType {
     return target
   }
   let mut selected = target
@@ -198,8 +198,8 @@ fn self_host_program_specialization_bound_target(lowering: SelfHostPlannedProgra
       let index = implementation_index
       implementation_index = implementation_index + 1u32
       match candidate_module.resolved_types.impl_trait_types[index] {
-        Option::Some(type_) => match candidate_module.resolved_types.types[type_] {
-          SelfHostResolvedType::TraitType(candidate_trait) => if self_host_u64_equal(candidate_trait, trait_) {
+        Some(type_) => match candidate_module.resolved_types.types[type_] {
+          TraitType(candidate_trait) => if self_host_u64_equal(candidate_trait, trait_) {
             let generics = collected.generic_parameters_of(implementation.declaration)
             if self_host_u32_greater(generics.length, 0u32) {
               // A generic competitor requires a prerequisite proof, not a guess.
@@ -209,7 +209,7 @@ fn self_host_program_specialization_bound_target(lowering: SelfHostPlannedProgra
               for raw_method in candidate_module.functions.callables {
                 let method = self_host_planned_callable_identity(raw_method)
                 match method.kind {
-                  SelfHostPlannedCallableKind::PlannedImplMethodCallable(owner, Option::Some(_)) => if self_host_u64_equal(owner, implementation.declaration) && method.name.equals(requirement.name) {
+                  PlannedImplMethodCallable(owner, Some(_)) => if self_host_u64_equal(owner, implementation.declaration) && method.name.equals(requirement.name) {
                     if self_host_u32_greater(method.generic_parameters.length, 0u32) {
                       return target
                     }
@@ -223,7 +223,7 @@ fn self_host_program_specialization_bound_target(lowering: SelfHostPlannedProgra
           }
           _ => {}
         }
-        Option::None => {}
+        None => {}
       }
     }
   }
@@ -244,13 +244,13 @@ fn self_host_linked_bound_call_declaration_matches(link: SelfHostPlannedProgramW
   }
   let lowering = link.fragments.specialization.lowering
   let owner = match lowering.index.body_owner(caller_body) {
-    Option::Some(owner) => owner
-    Option::None => return false
+    Some(owner) => owner
+    None => return false
   }
   let module_ = self_host_planned_module_lowering_identity(lowering.modules[owner])
   let body = match self_host_program_specialization_body(module_, caller_body) {
-    Option::Some(body) => body
-    Option::None => return false
+    Some(body) => body
+    None => return false
   }
   if expression < body.expressions.start || expression - body.expressions.start >= body.expressions.length {
     return false

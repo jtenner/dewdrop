@@ -6,7 +6,7 @@ struct SelfHostSignatureTypeVisit {
 }
 
 fn self_host_signature_type_visit(type_: I32) -> SelfHostSignatureTypeVisit {
-  SelfHostSignatureTypeVisit::{
+  {
     type_: type_
     finish: false
   }
@@ -51,24 +51,24 @@ fn self_host_check_callback_type_graph(module_: SelfHostPlannedModuleLowering, r
         continue work.length()
       }
       match states.get(key) {
-        Option::Some(1u32) => self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+        Some(1u32) => self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
           expression, 108u32, 0u64, 1u64, position)
-        Option::Some(2u32) => continue work.length()
+        Some(2u32) => continue work.length()
         _ => {}
       }
       states.set(key, 1u32)
-      work.push(SelfHostSignatureTypeVisit::{
+      work.push({
         type_: visit.type_
         finish: true
       })
       if resolved {
         let node = module_.resolved_types.types[index]
         let error = match node {
-          SelfHostResolvedType::ErrorType => 2u32
-          SelfHostResolvedType::MemberTypeProjection(_, _, _) => 3u32
-          SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::CompileTimeTypeType) => 4u32
-          SelfHostResolvedType::GenericParameterType(_) => self_host_specialization_shape_error(
-            self_host_lambda_request_shape(module_, request, shapes, visit.type_, SelfHostPlannedValueShape::GenericPlannedValueShape))
+          ErrorType => 2u32
+          MemberTypeProjection(_, _, _) => 3u32
+          PrimitiveType(CompileTimeTypeType) => 4u32
+          GenericParameterType(_) => self_host_specialization_shape_error(
+            self_host_lambda_request_shape(module_, request, shapes, visit.type_, GenericPlannedValueShape))
           _ => 0u32
         }
         if error != 0u32 {
@@ -76,21 +76,21 @@ fn self_host_check_callback_type_graph(module_: SelfHostPlannedModuleLowering, r
             expression, 301u32, 0u64, u32_into_u64(error), position)
         }
         let span = match node {
-          SelfHostResolvedType::ProductType(fields),
-          SelfHostResolvedType::AppliedType(_, fields),
-          SelfHostResolvedType::FunctionType(fields, _) => fields
+          ProductType(fields),
+          AppliedType(_, fields),
+          FunctionType(fields, _) => fields
           _ => self_host_empty_hir_span(0u32)
         }
         self_host_signature_parameter_span(module_, scope, expression, span, module_.resolved_types.type_arguments.length())
         let extra = match node {
-          SelfHostResolvedType::AppliedType(base, _) => Option::Some(base)
-          SelfHostResolvedType::FunctionType(_, result) => Option::Some(result)
-          _ => Option::None
+          AppliedType(base, _) => Some(base)
+          FunctionType(_, result) => Some(result)
+          _ => None
         }
         match extra {
-          Option::Some(child) => work.push(self_host_signature_type_visit(
+          Some(child) => work.push(self_host_signature_type_visit(
             self_host_signature_resolved_encoding(module_, scope, expression, child, position)))
-          Option::None => {}
+          None => {}
         }
         while span.length {
           remaining if remaining > 0u32 => {
@@ -103,8 +103,8 @@ fn self_host_check_callback_type_graph(module_: SelfHostPlannedModuleLowering, r
       } else {
         let node = module_.inferred.types[index]
         let error = match node {
-          SelfHostBodyTypeTerm::BodyErrorType, SelfHostBodyTypeTerm::BodyVariableType(_) => 2u32
-          SelfHostBodyTypeTerm::BodyMemberTypeProjection(_, _, _) => 3u32
+          BodyErrorType, BodyVariableType(_) => 2u32
+          BodyMemberTypeProjection(_, _, _) => 3u32
           _ => 0u32
         }
         if error != 0u32 {
@@ -112,22 +112,22 @@ fn self_host_check_callback_type_graph(module_: SelfHostPlannedModuleLowering, r
             expression, 301u32, 0u64, u32_into_u64(error), position)
         }
         let span = match node {
-          SelfHostBodyTypeTerm::BodyProductType(fields),
-          SelfHostBodyTypeTerm::BodyAppliedType(_, fields),
-          SelfHostBodyTypeTerm::BodyFunctionType(fields, _) => fields
+          BodyProductType(fields),
+          BodyAppliedType(_, fields),
+          BodyFunctionType(fields, _) => fields
           _ => self_host_empty_hir_span(0u32)
         }
         self_host_signature_parameter_span(module_, scope, expression, span, module_.inferred.type_arguments.length())
         let extra = match node {
-          SelfHostBodyTypeTerm::BodyResolvedType(child) => Option::Some(
+          BodyResolvedType(child) => Some(
             self_host_signature_resolved_encoding(module_, scope, expression, child, position))
-          SelfHostBodyTypeTerm::BodyAppliedType(base, _) => Option::Some(base)
-          SelfHostBodyTypeTerm::BodyFunctionType(_, result) => Option::Some(result)
-          _ => Option::None
+          BodyAppliedType(base, _) => Some(base)
+          BodyFunctionType(_, result) => Some(result)
+          _ => None
         }
         match extra {
-          Option::Some(child) => work.push(self_host_signature_type_visit(child))
-          Option::None => {}
+          Some(child) => work.push(self_host_signature_type_visit(child))
+          None => {}
         }
         while span.length {
           remaining if remaining > 0u32 => {

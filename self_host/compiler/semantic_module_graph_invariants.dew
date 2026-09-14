@@ -11,7 +11,7 @@ fn self_host_assert_module_graph_fact(
   if !condition {
     let _ = self_host_assert_compiler_invariant_with_failure(
       false,
-      SelfHostInvariantFailure::{
+      {
         code: 501u32
         phase: 5u32
         module_id: 0u64

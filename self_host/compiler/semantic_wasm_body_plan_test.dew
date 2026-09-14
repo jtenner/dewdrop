@@ -1,18 +1,18 @@
 test "physical carrier conflicts are absorbing" {
   let conflict = self_host_body_merge_carrier(
-    SelfHostWasmBodyCarrier::I32BodyCarrier,
-    SelfHostWasmBodyCarrier::I64BodyCarrier,
+    I32BodyCarrier,
+    I64BodyCarrier,
   )
   assert(
-    conflict is SelfHostWasmBodyCarrier::ConflictingBodyCarrier,
+    conflict is ConflictingBodyCarrier,
     "different known carriers must conflict",
   )
   let later = self_host_body_merge_carrier(
     conflict,
-    SelfHostWasmBodyCarrier::I32BodyCarrier,
+    I32BodyCarrier,
   )
   assert(
-    later is SelfHostWasmBodyCarrier::ConflictingBodyCarrier,
+    later is ConflictingBodyCarrier,
     "later evidence must not erase a carrier conflict",
   )
 }
@@ -20,21 +20,21 @@ test "physical carrier conflicts are absorbing" {
 test "physical carrier diagnostic IDs are stable" {
   assert(
     self_host_u32_equal(
-      SelfHostPhysicalDiagnosticReason::CarrierConflict.code(),
+      CarrierConflict.code(),
       601u32,
     ),
     "BOD-601",
   )
   assert(
     self_host_u32_equal(
-      SelfHostPhysicalDiagnosticReason::CallOperandCarrierMismatch.code(),
+      CallOperandCarrierMismatch.code(),
       705u32,
     ),
     "ABI-705",
   )
   assert(
     self_host_u32_equal(
-      SelfHostPhysicalDiagnosticReason::CarrierAnalysisDidNotConverge.code(),
+      CarrierAnalysisDidNotConverge.code(),
       604u32,
     ),
     "BOD-604",
@@ -107,27 +107,27 @@ test "resolved negative logical type evidence is stable" {
 test "physical call operand sources keep their expression identity" {
   assert(
     self_host_body_call_operand_expression(
-      SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(7u32),
+      ExplicitArgumentPhysicalOperand(7u32),
     ) == 7u32,
     "explicit argument source",
   )
   assert(
     self_host_body_call_operand_expression(
-      SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(9u32),
+      ReceiverPhysicalOperand(9u32),
     ) == 9u32,
     "receiver source",
   )
   assert(
-    SelfHostPhysicalDiagnosticReason::CallTargetMismatch.code() ==
+    CallTargetMismatch.code() ==
       701u32,
     "ABI-701",
   )
   assert(
-    SelfHostPhysicalDiagnosticReason::CallOperandCountMismatch.code() == 703u32,
+    CallOperandCountMismatch.code() == 703u32,
     "ABI-703",
   )
   assert(
-    SelfHostPhysicalDiagnosticReason::ErasedCallOperand.code() ==
+    ErasedCallOperand.code() ==
       708u32,
     "ABI-708",
   )
@@ -136,19 +136,19 @@ test "physical call operand sources keep their expression identity" {
 test "physical call plan erases Unit and Never operands" {
   assert(
     !self_host_body_carrier_emits_call_operand(
-      SelfHostWasmBodyCarrier::UnitBodyCarrier,
+      UnitBodyCarrier,
     ),
     "Unit must not become a call operand",
   )
   assert(
     !self_host_body_carrier_emits_call_operand(
-      SelfHostWasmBodyCarrier::NeverBodyCarrier,
+      NeverBodyCarrier,
     ),
     "Never must stop call emission",
   )
   assert(
     self_host_body_carrier_emits_call_operand(
-      SelfHostWasmBodyCarrier::I64BodyCarrier,
+      I64BodyCarrier,
     ),
     "a scalar must become a call operand",
   )
@@ -157,13 +157,13 @@ test "physical call plan erases Unit and Never operands" {
 test "only a direct generic type takes a specialization carrier" {
   assert(
     self_host_wasmgc_resolved_type_is_direct_generic(
-      SelfHostResolvedType::GenericParameterType(7u64),
+      GenericParameterType(7u64),
     ),
     "direct generic type",
   )
   assert(
     !self_host_wasmgc_resolved_type_is_direct_generic(
-      SelfHostResolvedType::AppliedType(0u32, SelfHostHirSpan::{
+      AppliedType(0u32, {
         start: 0u32
         length: 1u32
       }),
@@ -172,254 +172,254 @@ test "only a direct generic type takes a specialization carrier" {
   )
   assert(
     !self_host_wasmgc_resolved_type_is_direct_generic(
-      SelfHostResolvedType::SelfType(9u64),
+      SelfType(9u64),
     ),
     "method receiver keeps its reference carrier",
   )
 }
 
 test "physical typed reason CarrierConflict retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::CarrierConflict
+  let reason = CarrierConflict
   assert(reason.code() == 601u32, "CarrierConflict")
   assert(reason.description() == "body carrier conflict", "physical reason text")
 }
 
 test "physical typed reason CarrierAnalysisDidNotConverge retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::CarrierAnalysisDidNotConverge
+  let reason = CarrierAnalysisDidNotConverge
   assert(reason.code() == 604u32, "CarrierAnalysisDidNotConverge")
   assert(reason.description() == "physical body carrier analysis did not converge", "physical reason text")
 }
 
 test "physical typed reason MissingCallTarget retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingCallTarget
+  let reason = MissingCallTarget
   assert(reason.code() == 607u32, "MissingCallTarget")
   assert(reason.description() == "call target is missing", "physical reason text")
 }
 
 test "physical typed reason CallTargetMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::CallTargetMismatch
+  let reason = CallTargetMismatch
   assert(reason.code() == 701u32, "CallTargetMismatch")
   assert(reason.description() == "planned and emitted call target differ", "physical reason text")
 }
 
 test "physical typed reason CallEvaluationScheduleMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::CallEvaluationScheduleMismatch
+  let reason = CallEvaluationScheduleMismatch
   assert(reason.code() == 702u32, "CallEvaluationScheduleMismatch")
   assert(reason.description() == "call evaluation schedule mismatch", "physical reason text")
 }
 
 test "physical typed reason CallOperandCountMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::CallOperandCountMismatch
+  let reason = CallOperandCountMismatch
   assert(reason.code() == 703u32, "CallOperandCountMismatch")
   assert(reason.description() == "call argument count mismatch", "physical reason text")
 }
 
 test "physical typed reason MissingCallOperandPlan retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingCallOperandPlan
+  let reason = MissingCallOperandPlan
   assert(reason.code() == 704u32, "MissingCallOperandPlan")
   assert(reason.description() == "call argument has no physical value plan", "physical reason text")
 }
 
 test "physical typed reason CallOperandCarrierMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::CallOperandCarrierMismatch
+  let reason = CallOperandCarrierMismatch
   assert(reason.code() == 705u32, "CallOperandCarrierMismatch")
   assert(reason.description() == "call argument carrier mismatch", "physical reason text")
 }
 
 test "physical typed reason CallReceiverCountMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::CallReceiverCountMismatch
+  let reason = CallReceiverCountMismatch
   assert(reason.code() == 707u32, "CallReceiverCountMismatch")
   assert(reason.description() == "call receiver count mismatch", "physical reason text")
 }
 
 test "physical typed reason ErasedCallOperand retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::ErasedCallOperand
+  let reason = ErasedCallOperand
   assert(reason.code() == 708u32, "ErasedCallOperand")
   assert(reason.description() == "erased call value became an operand", "physical reason text")
 }
 
 test "physical typed reason CallResultMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::CallResultMismatch
+  let reason = CallResultMismatch
   assert(reason.code() == 709u32, "CallResultMismatch")
   assert(reason.description() == "call result", "physical reason text")
 }
 
 test "physical typed reason MissingConcreteBodyRoot retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingConcreteBodyRoot
+  let reason = MissingConcreteBodyRoot
   assert(reason.code() == 612u32, "MissingConcreteBodyRoot")
   assert(reason.description() == "body root has no concrete physical value", "physical reason text")
 }
 
 test "physical typed reason MissingPhysicalBody retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingPhysicalBody
+  let reason = MissingPhysicalBody
   assert(reason.code() == 610u32, "MissingPhysicalBody")
   assert(reason.description() == "physical source body is missing", "physical reason text")
 }
 
 test "physical typed reason MissingPhysicalFieldIdentity retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingPhysicalFieldIdentity
+  let reason = MissingPhysicalFieldIdentity
   assert(reason.code() == 608u32, "MissingPhysicalFieldIdentity")
   assert(reason.description() == "field access has no exact physical field identity", "physical reason text")
 }
 
 test "physical typed reason FieldSelectionMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::FieldSelectionMismatch
+  let reason = FieldSelectionMismatch
   assert(reason.code() == 608u32, "FieldSelectionMismatch")
   assert(reason.description() == "field physical identity differs from inference selection", "physical reason text")
 }
 
 test "physical typed reason FieldOwnerMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::FieldOwnerMismatch
+  let reason = FieldOwnerMismatch
   assert(reason.code() == 608u32, "FieldOwnerMismatch")
   assert(reason.description() == "field physical owner differs from declared field owner", "physical reason text")
 }
 
 test "physical typed reason FieldReceiverOwnerMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::FieldReceiverOwnerMismatch
+  let reason = FieldReceiverOwnerMismatch
   assert(reason.code() == 608u32, "FieldReceiverOwnerMismatch")
   assert(reason.description() == "field target owner does not match receiver type", "physical reason text")
 }
 
 test "physical typed reason FieldReceiverHeapMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::FieldReceiverHeapMismatch
+  let reason = FieldReceiverHeapMismatch
   assert(reason.code() == 608u32, "FieldReceiverHeapMismatch")
   assert(reason.description() == "field receiver nominal owner or physical heap type mismatch", "physical reason text")
 }
 
 test "physical typed reason MissingConstructorType retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingConstructorType
+  let reason = MissingConstructorType
   assert(reason.code() == 608u32, "MissingConstructorType")
   assert(reason.description() == "constructor has no exact physical destination type", "physical reason text")
 }
 
 test "physical typed reason ConstructorTypeMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::ConstructorTypeMismatch
+  let reason = ConstructorTypeMismatch
   assert(reason.code() == 608u32, "ConstructorTypeMismatch")
   assert(reason.description() == "constructor selected physical type mismatch", "physical reason text")
 }
 
 test "physical typed reason MissingConstructorFieldIdentity retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingConstructorFieldIdentity
+  let reason = MissingConstructorFieldIdentity
   assert(reason.code() == 608u32, "MissingConstructorFieldIdentity")
   assert(reason.description() == "constructor destination field has no exact source FieldId", "physical reason text")
 }
 
 test "physical typed reason ConstructorArgumentCarrierMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::ConstructorArgumentCarrierMismatch
+  let reason = ConstructorArgumentCarrierMismatch
   assert(reason.code() == 608u32, "ConstructorArgumentCarrierMismatch")
   assert(reason.description() == "constructor argument carrier mismatch", "physical reason text")
 }
 
 test "physical typed reason ConstructorArgumentOwnerMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::ConstructorArgumentOwnerMismatch
+  let reason = ConstructorArgumentOwnerMismatch
   assert(reason.code() == 608u32, "ConstructorArgumentOwnerMismatch")
   assert(reason.description() == "constructor argument nominal provenance mismatch", "physical reason text")
 }
 
 test "physical typed reason MissingConstructorArgumentPlan retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingConstructorArgumentPlan
+  let reason = MissingConstructorArgumentPlan
   assert(reason.code() == 608u32, "MissingConstructorArgumentPlan")
   assert(reason.description() == "constructor argument has no physical value plan", "physical reason text")
 }
 
 test "physical typed reason PatternPayloadCarrierMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::PatternPayloadCarrierMismatch
+  let reason = PatternPayloadCarrierMismatch
   assert(reason.code() == 608u32, "PatternPayloadCarrierMismatch")
   assert(reason.description() == "pattern payload carrier mismatch", "physical reason text")
 }
 
 test "physical typed reason PatternPayloadOwnerMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::PatternPayloadOwnerMismatch
+  let reason = PatternPayloadOwnerMismatch
   assert(reason.code() == 608u32, "PatternPayloadOwnerMismatch")
   assert(reason.description() == "pattern payload nominal provenance mismatch", "physical reason text")
 }
 
 test "physical typed reason LoopBindingOwnerMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::LoopBindingOwnerMismatch
+  let reason = LoopBindingOwnerMismatch
   assert(reason.code() == 609u32, "LoopBindingOwnerMismatch")
   assert(reason.description() == "loop binding nominal provenance mismatch", "physical reason text")
 }
 
 test "physical typed reason IncorrectCallDivergence retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::IncorrectCallDivergence
+  let reason = IncorrectCallDivergence
   assert(reason.code() == 611u32, "IncorrectCallDivergence")
   assert(reason.description() == "direct call result is incorrectly marked as diverging", "physical reason text")
 }
 
 test "physical typed reason LocalAssignmentCarrierMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::LocalAssignmentCarrierMismatch
+  let reason = LocalAssignmentCarrierMismatch
   assert(reason.code() == 710u32, "LocalAssignmentCarrierMismatch")
   assert(reason.description() == "local assignment carrier mismatch", "physical reason text")
 }
 
 test "physical typed reason ReturnOperandMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::ReturnOperandMismatch
+  let reason = ReturnOperandMismatch
   assert(reason.code() == 711u32, "ReturnOperandMismatch")
   assert(reason.description() == "return operand", "physical reason text")
 }
 
 test "physical typed reason FieldLoadCarrierMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::FieldLoadCarrierMismatch
+  let reason = FieldLoadCarrierMismatch
   assert(reason.code() == 608u32, "FieldLoadCarrierMismatch")
   assert(reason.description() == "field load", "physical reason text")
 }
 
 test "physical typed reason MissingFieldLoadIdentity retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingFieldLoadIdentity
+  let reason = MissingFieldLoadIdentity
   assert(reason.code() == 608u32, "MissingFieldLoadIdentity")
   assert(reason.description() == "field load has no selected physical field", "physical reason text")
 }
 
 test "physical typed reason LocalInitializerCarrierMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::LocalInitializerCarrierMismatch
+  let reason = LocalInitializerCarrierMismatch
   assert(reason.code() == 710u32, "LocalInitializerCarrierMismatch")
   assert(reason.description() == "local initializer carrier mismatch", "physical reason text")
 }
 
 test "physical typed reason BodyResultMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::BodyResultMismatch
+  let reason = BodyResultMismatch
   assert(reason.code() == 612u32, "BodyResultMismatch")
   assert(reason.description() == "function result", "physical reason text")
 }
 
 test "physical typed reason RawIntrinsicOperandCountMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::RawIntrinsicOperandCountMismatch
+  let reason = RawIntrinsicOperandCountMismatch
   assert(reason.code() == 714u32, "RawIntrinsicOperandCountMismatch")
   assert(reason.description() == "raw intrinsic operand count does not match its opcode", "physical reason text")
 }
 
 test "physical typed reason MissingRawIntrinsicBodyPlan retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicBodyPlan
+  let reason = MissingRawIntrinsicBodyPlan
   assert(reason.code() == 610u32, "MissingRawIntrinsicBodyPlan")
   assert(reason.description() == "raw intrinsic requires a physical body plan", "physical reason text")
 }
 
 test "physical typed reason MissingRawIntrinsicResultPlan retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicResultPlan
+  let reason = MissingRawIntrinsicResultPlan
   assert(reason.code() == 610u32, "MissingRawIntrinsicResultPlan")
   assert(reason.description() == "raw intrinsic result plan is missing", "physical reason text")
 }
 
 test "physical typed reason MissingRawIntrinsicOperandPlan retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicOperandPlan
+  let reason = MissingRawIntrinsicOperandPlan
   assert(reason.code() == 704u32, "MissingRawIntrinsicOperandPlan")
   assert(reason.description() == "raw intrinsic operand plan is missing", "physical reason text")
 }
 
 test "physical typed reason RawIntrinsicCarrierMismatch retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::RawIntrinsicCarrierMismatch
+  let reason = RawIntrinsicCarrierMismatch
   assert(reason.code() == 714u32, "RawIntrinsicCarrierMismatch")
   assert(reason.description() == "raw intrinsic input or result carrier does not match its opcode", "physical reason text")
 }
 
 test "physical typed reason MissingRawIntrinsicSourcePlan retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::MissingRawIntrinsicSourcePlan
+  let reason = MissingRawIntrinsicSourcePlan
   assert(reason.code() == 704u32, "MissingRawIntrinsicSourcePlan")
   assert(reason.description() == "raw intrinsic source plan is missing", "physical reason text")
 }
 
 test "physical typed reason InvalidBitcastCarriers retains its code and text" {
-  let reason = SelfHostPhysicalDiagnosticReason::InvalidBitcastCarriers
+  let reason = InvalidBitcastCarriers
   assert(reason.code() == 714u32, "InvalidBitcastCarriers")
   assert(reason.description() == "unsafe.bitcast requires equal concrete non-reference carriers", "physical reason text")
 }
@@ -434,8 +434,8 @@ test "missing physical field identity retains exact diagnostic context" {
   for plan in program.bodies {
     let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
     let body = match self_host_body_lookup_for_plan(module_, plan) {
-      Option::Some(value) => value
-      Option::None => {
+      Some(value) => value
+      None => {
         assert(false, "source body must be present")
         unreachable()
       }
@@ -445,7 +445,7 @@ test "missing physical field identity retains exact diagnostic context" {
         let valid = []
         self_host_verify_body_field_owner(link, plan, module_, body, source, valid)
         assert(valid.length() == 0u32, "the selected field starts valid")
-        let missing = SelfHostPlannedPhysicalExpressionCarrier::{
+        let missing = {
           expression: source.expression
           value: source.value
           carrier: source.carrier
@@ -470,7 +470,7 @@ test "missing physical field identity retains exact diagnostic context" {
         assert(failure.module_id == plan.module_id && failure.declaration == plan.declaration && failure.body == plan.body, "source owner context")
         assert(failure.expression == source.expression && failure.source_offset == module_.expressions[source.expression].offset, "exact source expression and offset")
         assert(failure.physical_function_index == plan.physical_function_index && failure.specialization == plan.specialization && failure.specialization_key == plan.specialization_key, "physical target context")
-        assert(failure.expected is SelfHostWasmBodyCarrier::EqRefBodyCarrier && failure.actual is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, "expected and actual evidence")
+        assert(failure.expected is EqRefBodyCarrier && failure.actual is UnresolvedBodyCarrier, "expected and actual evidence")
         assert(failure.context == "field access has no exact physical field identity", "failure text is preserved")
         checked = checked + 1u32
       }

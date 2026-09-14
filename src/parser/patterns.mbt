@@ -302,6 +302,12 @@ fn Parser::parse_pattern_base(
     Some(token) => {
       let offset = token.offset()
       match token.kind() {
+        @tokenizer.Symbol(@tokenizer.LeftBrace) => {
+          self.consume_lookahead()
+          // A wildcard target asks inference to use the subject's struct type.
+          // Reuse the existing struct-pattern artifact and field/rest rules.
+          self.parse_struct_pattern(WildcardPattern(offset), offset)
+        }
         @tokenizer.Symbol(@tokenizer.LeftParen) => {
           self.consume_lookahead()
           let (arguments, has_comma) = match
@@ -315,10 +321,16 @@ fn Parser::parse_pattern_base(
             }
             Ok(arguments[0])
           } else {
-            let explicit_count = arguments.filter(fn(p) { !(p is RestPattern(_)) }).length()
+            let explicit_count = arguments
+              .filter(fn(p) { !(p is RestPattern(_)) })
+              .length()
             let has_rest = explicit_count != arguments.length()
             if (!has_rest && explicit_count == 1) || explicit_count > 32 {
-              return Err(pattern_failure(InvalidProductPatternArity(explicit_count, offset)))
+              return Err(
+                pattern_failure(
+                  InvalidProductPatternArity(explicit_count, offset),
+                ),
+              )
             }
             Ok(ProductPattern(arguments, offset))
           }

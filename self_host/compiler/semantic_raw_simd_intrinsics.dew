@@ -50,9 +50,9 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     name.equals(b"i32x4.trunc_sat_f32x4_u") ||
     name.equals(b"i32x4.trunc_sat_f64x2_s_zero") ||
     name.equals(b"i32x4.trunc_sat_f64x2_u_zero") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"v128.andnot") ||
@@ -171,15 +171,15 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     name.equals(b"i64x2.extmul_high_i32x4_s") ||
     name.equals(b"i64x2.extmul_low_i32x4_u") ||
     name.equals(b"i64x2.extmul_high_i32x4_u") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier, V128BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"v128.bitselect") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier, V128BodyCarrier, V128BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"v128.any_true") ||
@@ -243,9 +243,9 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     name.equals(b"i32x4.extract_lane 1") ||
     name.equals(b"i32x4.extract_lane 2") ||
     name.equals(b"i32x4.extract_lane 3") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::I32BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier]
+      result: I32BodyCarrier
     })
   }
   if name.equals(b"i8x16.splat") ||
@@ -263,27 +263,27 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     name.equals(b"v128.load32x2_u") ||
     name.equals(b"v128.load32_zero") ||
     name.equals(b"v128.load64_zero") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [I32BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"i64x2.splat") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::I64BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [I64BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"f32x4.splat") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::F32BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [F32BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"f64x2.splat") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::F64BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [F64BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"i8x16.shl") ||
@@ -326,55 +326,55 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     name.equals(b"i32x4.replace_lane 1") ||
     name.equals(b"i32x4.replace_lane 2") ||
     name.equals(b"i32x4.replace_lane 3") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::I32BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier, I32BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"i64x2.extract_lane 0") ||
     name.equals(b"i64x2.extract_lane 1") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::I64BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier]
+      result: I64BodyCarrier
     })
   }
   if name.equals(b"i64x2.replace_lane 0") ||
     name.equals(b"i64x2.replace_lane 1") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::I64BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier, I64BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"f32x4.extract_lane 0") ||
     name.equals(b"f32x4.extract_lane 1") ||
     name.equals(b"f32x4.extract_lane 2") ||
     name.equals(b"f32x4.extract_lane 3") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::F32BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier]
+      result: F32BodyCarrier
     })
   }
   if name.equals(b"f32x4.replace_lane 0") ||
     name.equals(b"f32x4.replace_lane 1") ||
     name.equals(b"f32x4.replace_lane 2") ||
     name.equals(b"f32x4.replace_lane 3") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::F32BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier, F32BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"f64x2.extract_lane 0") ||
     name.equals(b"f64x2.extract_lane 1") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::F64BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier]
+      result: F64BodyCarrier
     })
   }
   if name.equals(b"f64x2.replace_lane 0") ||
     name.equals(b"f64x2.replace_lane 1") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::V128BodyCarrier, SelfHostWasmBodyCarrier::F64BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [V128BodyCarrier, F64BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"v128.load8_lane 0") ||
@@ -407,9 +407,9 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     name.equals(b"v128.load32_lane 3") ||
     name.equals(b"v128.load64_lane 0") ||
     name.equals(b"v128.load64_lane 1") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier, SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::V128BodyCarrier
+    return Some({
+      inputs: [I32BodyCarrier, V128BodyCarrier]
+      result: V128BodyCarrier
     })
   }
   if name.equals(b"v128.store8_lane 0") ||
@@ -442,9 +442,9 @@ fn self_host_raw_simd_signature(name: Bytes) -> Option<SelfHostRawIntrinsicSigna
     name.equals(b"v128.store32_lane 3") ||
     name.equals(b"v128.store64_lane 0") ||
     name.equals(b"v128.store64_lane 1") {
-    return Option::Some(SelfHostRawIntrinsicSignature::{
-      inputs: [SelfHostWasmBodyCarrier::I32BodyCarrier, SelfHostWasmBodyCarrier::V128BodyCarrier]
-      result: SelfHostWasmBodyCarrier::UnitBodyCarrier
+    return Some({
+      inputs: [I32BodyCarrier, V128BodyCarrier]
+      result: UnitBodyCarrier
     })
   }
   self_host_raw_shuffle_signature(name)

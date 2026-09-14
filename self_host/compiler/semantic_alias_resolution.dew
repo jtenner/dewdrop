@@ -87,16 +87,16 @@ impl SelfHostTypeResolver {
           if self.visit_marks[type_] != self.visit_generation {
             self.visit_marks[type_] = self.visit_generation
             match self.interner.types[type_] {
-              SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+              NominalType(declaration) => match self.alias_indices.get(
                 declaration,
               ) {
-                Option::Some(dependency) => if self.alias_visit_marks[dependency] != self.visit_generation {
+                Some(dependency) => if self.alias_visit_marks[dependency] != self.visit_generation {
                   self.alias_visit_marks[dependency] = self.visit_generation
                   self.dependency_scratch.push(dependency)
                 }
-                Option::None => {}
+                None => {}
               }
-              SelfHostResolvedType::ProductType(fields) => {
+              ProductType(fields) => {
                 let mut index = 0u32
                 let _ = while index {
                   current => if current < fields.length {
@@ -109,10 +109,10 @@ impl SelfHostTypeResolver {
                   }
                 }
               }
-              SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
+              MemberTypeProjection(owner, _, _) => {
                 self.visit_stack.push(owner)
               }
-              SelfHostResolvedType::AppliedType(base, arguments) => {
+              AppliedType(base, arguments) => {
                 self.visit_stack.push(base)
                 let mut index = 0u32
                 let _ = while index {
@@ -126,7 +126,7 @@ impl SelfHostTypeResolver {
                   }
                 }
               }
-              SelfHostResolvedType::FunctionType(parameters, result) => {
+              FunctionType(parameters, result) => {
                 self.visit_stack.push(result)
                 let mut index = 0u32
                 let _ = while index {
@@ -165,7 +165,7 @@ impl SelfHostTypeResolver {
             break self_host_semantic_unit()
           }
         }
-        self.alias_dependencies[current_alias] = SelfHostHirSpan::{
+        self.alias_dependencies[current_alias] = {
           start: start
           length: self.alias_dependency_declarations.length() - start
         }
@@ -299,8 +299,8 @@ impl SelfHostTypeResolver {
                       self_host_u32_add(dependencies.start, next)
                     ]
                     let dependency = match self.alias_indices.get(declaration) {
-                      Option::Some(value) => value
-                      Option::None => 0u32
+                      Some(value) => value
+                      None => 0u32
                     }
                     if !visited[dependency] {
                       work_nodes.push(dependency)
@@ -388,12 +388,12 @@ impl SelfHostTypeResolver {
                 break self_host_semantic_unit()
               }
             }
-            let span = SelfHostHirSpan::{
+            let span = {
               start: cycle_start
               length: self.alias_cycle_declarations.length() - cycle_start
             }
             self.alias_cycles.push(span)
-            self.diagnose(SelfHostTypeDiagnostic::AliasCycle(span, offset))
+            self.diagnose(AliasCycle(span, offset))
           }
         }
         continue next
@@ -454,7 +454,7 @@ impl SelfHostTypeResolver {
   ) -> Option<U32> {
     let declaration = self.alias_declaration(alias_index)
     if self_host_semantic_id_module(parameter) != self.collected.module_id {
-      Option::None
+      None
     } else {
       let parameters = self.collected.generic_parameters_of(declaration)
       let local = self_host_semantic_id_local(parameter)
@@ -462,9 +462,9 @@ impl SelfHostTypeResolver {
         parameters.start,
         parameters.length,
       ) {
-        Option::None
+        None
       } else {
-        Option::Some(arguments[local - parameters.start])
+        Some(arguments[local - parameters.start])
       }
     }
   }
@@ -508,40 +508,40 @@ impl SelfHostTypeResolver {
     let _ = while self.substitution_types.length() {
       length => if length > 0u32 {
         let current = match self_host_array_pop(self.substitution_types) {
-          Option::Some(value) => value
-          Option::None => self.interner.error_type
+          Some(value) => value
+          None => self.interner.error_type
         }
         let state = match self_host_array_pop(self.substitution_states) {
-          Option::Some(value) => value
-          Option::None => 0u32
+          Some(value) => value
+          None => 0u32
         }
         let result_start = match self_host_array_pop(self.substitution_starts) {
-          Option::Some(value) => value
-          Option::None => 0u32
+          Some(value) => value
+          None => 0u32
         }
         if state == 0u32 {
           if self.substitution_marks[current] == self.substitution_generation {
             self.substitution_results.push(self.substitution_values[current])
           } else {
             match self.interner.types[current] {
-              SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
+              MemberTypeProjection(owner, _, _) => {
                 self.push_substitution_task(current, 4u32, self.substitution_results.length())
                 self.push_substitution_task(owner, 0u32, 0u32)
               }
-              SelfHostResolvedType::GenericParameterType(parameter) => {
+              GenericParameterType(parameter) => {
                 let result = match self.alias_parameter_argument(
                   alias_index,
                   parameter,
                   arguments,
                 ) {
-                  Option::Some(value) => value
-                  Option::None => current
+                  Some(value) => value
+                  None => current
                 }
                 self.substitution_marks[current] = self.substitution_generation
                 self.substitution_values[current] = result
                 self.substitution_results.push(result)
               }
-              SelfHostResolvedType::ProductType(fields) => {
+              ProductType(fields) => {
                 self.push_substitution_task(
                   current,
                   3u32,
@@ -562,7 +562,7 @@ impl SelfHostTypeResolver {
                   }
                 }
               }
-              SelfHostResolvedType::AppliedType(base, span) => {
+              AppliedType(base, span) => {
                 self.push_substitution_task(
                   current,
                   1u32,
@@ -584,7 +584,7 @@ impl SelfHostTypeResolver {
                 }
                 self.push_substitution_task(base, 0u32, 0u32)
               }
-              SelfHostResolvedType::FunctionType(parameters, result) => {
+              FunctionType(parameters, result) => {
                 self.push_substitution_task(
                   current,
                   2u32,
@@ -635,7 +635,7 @@ impl SelfHostTypeResolver {
           self.substitution_results.push(result)
         } else if state == 2u32 {
           let parameter_count = match self.interner.types[current] {
-            SelfHostResolvedType::FunctionType(parameters, _) => parameters.length
+            FunctionType(parameters, _) => parameters.length
             _ => 0u32
           }
           self.application_scratch.clear()
@@ -695,13 +695,13 @@ impl SelfHostTypeResolver {
     if self_host_semantic_id_module(parameter) != self_host_semantic_id_module(
       declaration,
     ) {
-      Option::None
+      None
     } else {
       let local = self_host_semantic_id_local(parameter)
       if local < parameters.start || local - parameters.start >= parameters.length {
-        Option::None
+        None
       } else {
-        Option::Some(arguments[local - parameters.start])
+        Some(arguments[local - parameters.start])
       }
     }
   }
@@ -724,7 +724,7 @@ impl SelfHostTypeResolver {
   ) -> U32 {
     self_host_assert_compiler_invariant_with_failure(
       parameters.length == arguments.length(),
-      SelfHostInvariantFailure::{
+      {
         code: 301u32
         phase: 2u32
         module_id: self.collected.module_id
@@ -745,35 +745,35 @@ impl SelfHostTypeResolver {
     let _ = while self.substitution_types.length() {
       length => if length > 0u32 {
         let current = match self_host_array_pop(self.substitution_types) {
-          Option::Some(value) => value
-          Option::None => self.interner.error_type
+          Some(value) => value
+          None => self.interner.error_type
         }
         let state = match self_host_array_pop(self.substitution_states) {
-          Option::Some(value) => value
-          Option::None => 0u32
+          Some(value) => value
+          None => 0u32
         }
         let result_start = match self_host_array_pop(self.substitution_starts) {
-          Option::Some(value) => value
-          Option::None => 0u32
+          Some(value) => value
+          None => 0u32
         }
         if state == 0u32 {
           match self.interner.types[current] {
-            SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
+            MemberTypeProjection(owner, _, _) => {
               self.push_substitution_task(current, 4u32, self.substitution_results.length())
               self.push_substitution_task(owner, 0u32, 0u32)
             }
-            SelfHostResolvedType::GenericParameterType(parameter) => {
+            GenericParameterType(parameter) => {
               let result = match self.declared_parameter_argument(
                 declaration, parameters,
                 parameter,
                 arguments,
               ) {
-                Option::Some(value) => value
-                Option::None => current
+                Some(value) => value
+                None => current
               }
               self.substitution_results.push(result)
             }
-            SelfHostResolvedType::ProductType(fields) => {
+            ProductType(fields) => {
               self.push_substitution_task(
                 current,
                 3u32,
@@ -794,7 +794,7 @@ impl SelfHostTypeResolver {
                 }
               }
             }
-            SelfHostResolvedType::AppliedType(base, span) => {
+            AppliedType(base, span) => {
               self.push_substitution_task(
                 current,
                 1u32,
@@ -816,7 +816,7 @@ impl SelfHostTypeResolver {
               }
               self.push_substitution_task(base, 0u32, 0u32)
             }
-            SelfHostResolvedType::FunctionType(parameters, result) => {
+            FunctionType(parameters, result) => {
               self.push_substitution_task(
                 current,
                 2u32,
@@ -859,7 +859,7 @@ impl SelfHostTypeResolver {
           self.substitution_results.push(result)
         } else if state == 2u32 {
           let parameter_count = match self.interner.types[current] {
-            SelfHostResolvedType::FunctionType(parameters, _) => parameters.length
+            FunctionType(parameters, _) => parameters.length
             _ => 0u32
           }
           self.application_scratch.clear()
@@ -924,7 +924,7 @@ impl SelfHostTypeResolver {
       if !self.alias_expansion_limited[alias_index] {
         self.alias_expansion_limited[alias_index] = true
         self.diagnose(
-          SelfHostTypeDiagnostic::AliasExpansionLimit(
+          AliasExpansionLimit(
             self.alias_declaration(alias_index),
             self.alias_expansion_limit,
             self.alias_offset(alias_index),
@@ -1049,18 +1049,18 @@ impl SelfHostTypeResolver {
     result_start: U32,
   ) -> Unit {
     let alias_index = match self.interner.types[original] {
-      SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+      NominalType(declaration) => match self.alias_indices.get(
         declaration,
       ) {
-        Option::Some(value) => value
-        Option::None => 0u32
+        Some(value) => value
+        None => 0u32
       }
-      SelfHostResolvedType::AppliedType(base, _) => match self.interner.types[base] {
-        SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+      AppliedType(base, _) => match self.interner.types[base] {
+        NominalType(declaration) => match self.alias_indices.get(
           declaration,
         ) {
-          Option::Some(value) => value
-          Option::None => 0u32
+          Some(value) => value
+          None => 0u32
         }
         _ => 0u32
       }
@@ -1136,34 +1136,34 @@ impl SelfHostTypeResolver {
             self.normalization_results.push(self.normalizations[current])
           } else {
             match self.interner.types[current] {
-              SelfHostResolvedType::ErrorType => {
+              ErrorType => {
                 self.normalizations[current] = current
                 self.normalization_results.push(current)
               }
-              SelfHostResolvedType::PrimitiveType(_) => {
+              PrimitiveType(_) => {
                 self.normalizations[current] = current
                 self.normalization_results.push(current)
               }
-              SelfHostResolvedType::GenericParameterType(_) => {
+              GenericParameterType(_) => {
                 self.normalizations[current] = current
                 self.normalization_results.push(current)
               }
-              SelfHostResolvedType::MemberTypeProjection(_, _, _) => {
+              MemberTypeProjection(_, _, _) => {
                 self.normalizations[current] = current
                 self.normalization_results.push(current)
               }
-              SelfHostResolvedType::TraitType(_) => {
+              TraitType(_) => {
                 self.normalizations[current] = current
                 self.normalization_results.push(current)
               }
-              SelfHostResolvedType::SelfType(_) => {
+              SelfType(_) => {
                 self.normalizations[current] = current
                 self.normalization_results.push(current)
               }
-              SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+              NominalType(declaration) => match self.alias_indices.get(
                 declaration,
               ) {
-                Option::Some(_) => if self.declaration_arity(declaration) == 0u32 {
+                Some(_) => if self.declaration_arity(declaration) == 0u32 {
                   self.push_normalization_task(
                     current,
                     2u32,
@@ -1173,12 +1173,12 @@ impl SelfHostTypeResolver {
                   self.normalizations[current] = current
                   self.normalization_results.push(current)
                 }
-                Option::None => {
+                None => {
                   self.normalizations[current] = current
                   self.normalization_results.push(current)
                 }
               }
-              SelfHostResolvedType::ProductType(fields) => {
+              ProductType(fields) => {
                 self.push_normalization_task(
                   current,
                   5u32,
@@ -1199,11 +1199,11 @@ impl SelfHostTypeResolver {
                   }
                 }
               }
-              SelfHostResolvedType::AppliedType(base, span) => match self.interner.types[base] {
-                SelfHostResolvedType::NominalType(declaration) => match self.alias_indices.get(
+              AppliedType(base, span) => match self.interner.types[base] {
+                NominalType(declaration) => match self.alias_indices.get(
                   declaration,
                 ) {
-                  Option::Some(_) => {
+                  Some(_) => {
                     self.push_normalization_task(
                       current,
                       2u32,
@@ -1224,7 +1224,7 @@ impl SelfHostTypeResolver {
                       }
                     }
                   }
-                  Option::None => self.push_normal_application_tasks(
+                  None => self.push_normal_application_tasks(
                     current,
                     base,
                     span,
@@ -1232,7 +1232,7 @@ impl SelfHostTypeResolver {
                 }
                 _ => self.push_normal_application_tasks(current, base, span)
               }
-              SelfHostResolvedType::FunctionType(parameters, result) => {
+              FunctionType(parameters, result) => {
                 self.push_normalization_task(
                   current,
                   4u32,
@@ -1265,7 +1265,7 @@ impl SelfHostTypeResolver {
           self.normalizations[current] = result
         } else if state == 4u32 {
           let parameter_count = match self.interner.types[current] {
-            SelfHostResolvedType::FunctionType(parameters, _) => parameters.length
+            FunctionType(parameters, _) => parameters.length
             _ => 0u32
           }
           self.finish_normal_function(current, result_start, parameter_count)
@@ -1393,8 +1393,8 @@ impl SelfHostTypeResolver {
     let _ = while index {
       current => if current < self.impl_target_types.length() {
         self.impl_trait_types[current] = match self.impl_trait_types[current] {
-          Option::Some(type_) => Option::Some(self.normalize_type(type_))
-          Option::None => Option::None
+          Some(type_) => Some(self.normalize_type(type_))
+          None => None
         }
         self.impl_target_types[current] = self.normalize_type(
           self.impl_target_types[current],
@@ -1465,8 +1465,8 @@ impl SelfHostTypeResolver {
   fn normalize_aliases(self, requested_limit: Option<U32>) -> Unit {
     let scaled = self.interner.types.length() * 64u32
     self.alias_expansion_limit = match requested_limit {
-      Option::Some(value) => value
-      Option::None => if scaled > 4096u32 {
+      Some(value) => value
+      None => if scaled > 4096u32 {
         scaled
       } else {
         4096u32
@@ -1518,7 +1518,7 @@ impl SelfHostTypeResolver {
   fn finish(self) -> SelfHostResolvedModuleTypes {
     self.validate_compile_time_storage()
     self.sort_diagnostics()
-    SelfHostResolvedModuleTypes::{
+    {
       module_id: self.collected.module_id
       types: self.interner.types
       type_arguments: self.interner.arguments
@@ -1570,7 +1570,7 @@ fn self_host_resolve_module_types(
 ) -> SelfHostResolvedModuleTypes {
   self_host_resolve_module_types_with_alias_expansion_limit(
     collected,
-    Option::None,
+    None,
   )
 }
 
@@ -1580,11 +1580,11 @@ fn self_host_resolve_module_types_with_imports(
 ) -> SelfHostResolvedModuleTypes {
   let resolver = SelfHostTypeResolver::new_with_imports(
     collected,
-    Option::Some(imports),
+    Some(imports),
   )
   resolver.resolve_signatures()
   resolver.collect_alias_dependencies()
   resolver.find_alias_cycles()
-  resolver.normalize_aliases(Option::None)
+  resolver.normalize_aliases(None)
   resolver.finish()
 }

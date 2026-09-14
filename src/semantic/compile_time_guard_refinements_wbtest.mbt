@@ -11,6 +11,18 @@ test "compile time Unit proof permits a Unit call without a hard bound" {
 }
 
 ///|
+test "compile time lambda inference keeps its enclosing Unit guard" {
+  let (program, lowering) = compile_time_evidence_test(
+    b"open dew.std.types\nfn accept(value: Unit) -> I32 {\n  7\n}\nfn guarded<t>(value: t) -> I32 {\n  if is_unit::<t>() {\n    let read = fn() -> I32 {\n      accept(value)\n    }\n    read()\n  } else {\n    0\n  }\n}\npub fn main() -> I32 {\n  guarded::<Unit>(()) + guarded::<I64>(8i64)\n}\n",
+  )
+  let plan = plan_program_wasmgc_fragments(
+    analyze_program_semantics(program),
+    lowering,
+  )
+  assert_eq(link_program_wasmgc_fragments(plan, lowering, 0).diagnostics, [])
+}
+
+///|
 test "compile time equal proof permits scalar operations and a generic return" {
   let (program, lowering) = compile_time_evidence_test(
     b"open dew.std.types\nfn guarded<t>(value: t) -> t {\n  if type_equal::<t, I32>() {\n    return value + 1i32\n  } else {\n    return value\n  }\n}\npub fn main() -> I32 {\n  guarded::<I32>(7i32)\n}\n",

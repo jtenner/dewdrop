@@ -29,7 +29,7 @@ test "ARN-101 unification checks owned spans before identity" expect_trap "unrea
   let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
   let product = solver.product_type([0i32])
   solver.assert_type_graph(product)
-  solver.types[1u32] = SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+  solver.types[1u32] = BodyProductType({
     start: 1u32
     length: 1u32
   })
@@ -38,7 +38,7 @@ test "ARN-101 unification checks owned spans before identity" expect_trap "unrea
 
 test "solver graph checks accept deep shared types and preserve a bad child" {
   let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
-  let scalar = solver.resolved_type(solver.resolved.primitive(SelfHostPrimitiveType::I32Type))
+  let scalar = solver.resolved_type(solver.resolved.primitive(I32Type))
   let root = while (0u32, scalar) {
     (depth, type_) => if depth < 1024u32 {
       continue (depth + 1u32, solver.product_type([type_, type_]))
@@ -52,10 +52,10 @@ test "solver graph checks accept deep shared types and preserve a bad child" {
   let saved = solver.type_arguments[last]
   solver.type_arguments[last] = -1i32
   match solver.check_type_graph(root) {
-    Result::Err(failure) => {
+    Err(failure) => {
       assert(failure.code == 104u32 && failure.actual == 4294967295u64, "missing child is not Error")
     }
-    Result::Ok(_) => assert(false, "missing child must be reported")
+    Ok(_) => assert(false, "missing child must be reported")
   }
   assert(solver.type_arguments[last] == -1i32, "bad child remains visible")
   solver.type_arguments[last] = saved
@@ -71,8 +71,8 @@ test "solver finishes work on both positive and negative results" {
   assert(solver.occurs_stack.length() == 0u32, "occurs work drained")
   assert(solver.has_unresolved_variable(product), "unresolved result")
   assert(solver.occurs_stack.length() == 0u32, "unresolved work drained")
-  let i32 = solver.resolved_type(solver.resolved.primitive(SelfHostPrimitiveType::I32Type))
-  let i64 = solver.resolved_type(solver.resolved.primitive(SelfHostPrimitiveType::I64Type))
+  let i32 = solver.resolved_type(solver.resolved.primitive(I32Type))
+  let i64 = solver.resolved_type(solver.resolved.primitive(I64Type))
   let left = solver.product_type([i32, i32])
   let right = solver.product_type([i64, i32])
   assert(!solver.unify(left, right, self_host_synthetic_type_origin(0u32, 0u32)), "ordinary mismatch")
@@ -89,15 +89,15 @@ test "solver preflights all undo entries without changing state" {
   let snapshot = solver.snapshot()
   solver.set_variable_binding(0u32, 0i32)
   solver.set_variable_binding(0u32, -1i32)
-  assert(solver.check_undo_restore(snapshot.undo_start) is Option::None, "valid undo range")
+  assert(solver.check_undo_restore(snapshot.undo_start) is None, "valid undo range")
   solver.undo_kinds[0u32] = 3u32
   match solver.check_undo_restore(snapshot.undo_start) {
-    Option::Some(failure) => {
+    Some(failure) => {
       assert(failure.code == 205u32 && failure.phase == 2u32, "exact failure and phase")
       assert(failure.module_id == 80u64 && failure.declaration == 0u64 && failure.body == 0u64, "exact owner")
       assert(failure.expression == 4294967295u32 && failure.expected == 2u64 && failure.actual == 3u64 && failure.detail == 0u64, "exact record context")
     }
-    Option::None => assert(false, "invalid older undo entry must fail")
+    None => assert(false, "invalid older undo entry must fail")
   }
   assert(solver.variable_bindings[0u32] == -1i32, "no newer undo write happened")
   assert(solver.undo_kinds.length() == 2u32 && solver.undo_values[1u32] == 0i32, "undo range preserved")
@@ -299,7 +299,7 @@ test "SOL-206 zonk product must have its child results" expect_trap "unreachable
 test "ARN-101 zonk argument span must belong to its arena" expect_trap "unreachable" {
   let solver = SelfHostLocalTypeSolver::new(self_host_unification_test_types().resolved)
   let _ = solver.product_type([0i32])
-  solver.push_zonk_span(SelfHostHirSpan::{
+  solver.push_zonk_span({
     start: 1u32
     length: 1u32
   })
@@ -333,7 +333,7 @@ test "solver nested committed changes restore parents sizes and bindings" {
   let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
   let a = solver.fresh_variable()
   let b = solver.fresh_variable()
-  let scalar = solver.resolved_type(fixture.resolved.primitive(SelfHostPrimitiveType::I32Type))
+  let scalar = solver.resolved_type(fixture.resolved.primitive(I32Type))
   let parents = solver.variable_parents.copy()
   let sizes = solver.variable_sizes.copy()
   let bindings = solver.variable_bindings.copy()

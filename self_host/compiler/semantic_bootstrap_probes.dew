@@ -11,7 +11,7 @@ pub fn self_host_bootstrap_primitive_probe() -> U32 {
     index => if index < interner.primitive_types.length() {
       let type_ = interner.primitive_types[index]
       match interner.types[type_] {
-        SelfHostResolvedType::PrimitiveType(primitive) => if primitive.rank() != index {
+        PrimitiveType(primitive) => if primitive.rank() != index {
           failures = failures + 1u32
         }
         _ => {
@@ -59,8 +59,8 @@ pub fn self_host_bootstrap_solver_probe() -> U32 {
   let collected = self_host_collect_bytes(80u64, b"fn accept(value: I32) -> U32 {\n  0u32\n}\n")
   let resolved = self_host_resolve_module_types(collected)
   let solver = SelfHostLocalTypeSolver::new(resolved)
-  let signed = solver.resolved_type(resolved.primitive(SelfHostPrimitiveType::I32Type))
-  let unsigned = solver.resolved_type(resolved.primitive(SelfHostPrimitiveType::U32Type))
+  let signed = solver.resolved_type(resolved.primitive(I32Type))
+  let unsigned = solver.resolved_type(resolved.primitive(U32Type))
   let origin = self_host_synthetic_type_origin(0u32, 1u32)
   let mut failures = resolved.diagnostic_count()
   if signed == unsigned || signed == -1i32 || unsigned == -1i32 {
@@ -97,19 +97,19 @@ pub fn self_host_bootstrap_import_probe() -> U32 {
 }
 
 fn self_host_bootstrap_import_check() -> SelfHostBootstrapImportCheck {
-  let collected = self_host_collect_program_manifest(5500u64, SelfHostProgramManifest::{
+  let collected = self_host_collect_program_manifest(5500u64, {
     modules: [
-      SelfHostManifestModule::{
+      {
         path: "app.types"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "types.dew"
           source: b"pub trait Into<t> {\n  fn into(self) -> t\n}\nimpl Into<U32> for U32 {\n  fn into(self) -> U32 {\n    self\n  }\n}\nimpl Into<I64> for U32 {\n  fn into(self) -> I64 {\n    1i64\n  }\n}\npub struct Pair<a, b> {}\n"
           test_only: false
         }]
       },
-      SelfHostManifestModule::{
+      {
         path: "app.main"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "main.dew"
           source: b"open app.types\nfn accept(value: Pair<I32, U32>) -> Unit {}\npub fn run(value: U32) -> I64 {\n  value.into()\n}\n"
           test_only: false
@@ -127,8 +127,8 @@ fn self_host_bootstrap_import_check() -> SelfHostBootstrapImportCheck {
   let source_types = self_host_resolved_module_types_identity(source.resolved_types)
   let destination_types = self_host_resolved_module_types_identity(destination.resolved_types)
   let importer = SelfHostInterfaceTypeImporter::new(destination_types, frozen.interfaces)
-  let imported = importer.import_type(0u32, source_types.primitive(SelfHostPrimitiveType::I32Type))
-  if imported != destination_types.primitive(SelfHostPrimitiveType::I32Type) {
+  let imported = importer.import_type(0u32, source_types.primitive(I32Type))
+  if imported != destination_types.primitive(I32Type) {
     failures = failures + 256u32
   }
   let imports = self_host_resolve_module_imports(destination_types, frozen.import_scopes.at(1u32))
@@ -137,7 +137,7 @@ fn self_host_bootstrap_import_check() -> SelfHostBootstrapImportCheck {
     let _ = raw_implementation
     let implementation = self_host_resolved_imported_implementation_at(imports.implementations, implementation_index)
     implementation_index = implementation_index + 1u32
-    if implementation.target_type != destination_types.primitive(SelfHostPrimitiveType::U32Type) {
+    if implementation.target_type != destination_types.primitive(U32Type) {
       failures = failures + 512u32
     }
   }
@@ -169,7 +169,7 @@ fn self_host_bootstrap_import_check() -> SelfHostBootstrapImportCheck {
     let module_ = self_host_planned_module_lowering_identity(raw_module)
     failures = failures + module_.resolved_types.diagnostics.length() + module_.inferred.diagnostics.length()
   }
-  SelfHostBootstrapImportCheck::{
+  {
     failures: failures
     detail: self_host_validate_program_inference(lowering)
   }

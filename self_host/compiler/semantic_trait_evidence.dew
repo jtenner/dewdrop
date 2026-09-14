@@ -9,17 +9,17 @@ fn self_host_trait_evidence_search(
   imports: SelfHostResolvedModuleImports,
   index: SelfHostModuleImplIndex,
 ) -> SelfHostCompileTimeEvidenceSearch {
-  SelfHostCompileTimeEvidenceSearch::{
-    lowering: Option::None
+  {
+    lowering: None
     collected: collected
     resolved: imports.resolved
     imports: imports
     index: index
     active: []
-    budget: SelfHostCompileTimeEvidenceBudget::{
+    budget: {
       steps: 0u32
     }
-    associated_scopes: Map::empty()
+    associated_scopes: empty()
     associated_only: false
     include_test_impls: false
   }
@@ -32,12 +32,12 @@ fn self_host_select_trait_evidence_with_search(
 ) -> Result<Option<SelfHostCompileTimeTraitWitness>, String> {
   let bindings = self_host_empty_compile_time_bindings()
   let trait_ = match search.read(trait_type, bindings) {
-    Result::Ok(value) => value
-    Result::Err(error) => return Result::Err(error)
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   let target = match search.read(target_type, bindings) {
-    Result::Ok(value) => value
-    Result::Err(error) => return Result::Err(error)
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   search.witness(target, trait_)
 }
@@ -82,8 +82,8 @@ fn self_host_append_trait_evidence_node(
     search.collected.generic_parameters_of(declaration)
   } else {
     match search.imports.implementation(declaration) {
-      Option::Some(imported) => imported.generic_bounds
-      Option::None => return Result::Err("CT-010 missing imported implementation identity")
+      Some(imported) => imported.generic_bounds
+      None => return Err("CT-010 missing imported implementation identity")
     }
   }
   let argument_start = arguments.length()
@@ -93,7 +93,7 @@ fn self_host_append_trait_evidence_node(
     search.imports.generic_parameter_ids.length()
   }
   if !self_host_array_span_is_valid(generics.start, generics.length, arena_length) {
-    return Result::Err("CT-010 invalid trait evidence generic parameter span")
+    return Err("CT-010 invalid trait evidence generic parameter span")
   }
   let _ = while 0u32 {
     offset => if offset < generics.length {
@@ -103,8 +103,8 @@ fn self_host_append_trait_evidence_node(
         search.imports.generic_parameter_ids[generics.start + offset]
       }
       match witness.bindings.parameters.get(parameter) {
-        Option::Some(type_) => arguments.push(type_)
-        Option::None => return Result::Err("CT-011 unresolved implementation type argument")
+        Some(type_) => arguments.push(type_)
+        None => return Err("CT-011 unresolved implementation type argument")
       }
       continue offset + 1u32
     } else {
@@ -114,8 +114,8 @@ fn self_host_append_trait_evidence_node(
   let direct_children = self_host_empty_semantic_ids()
   for child in witness.prerequisites {
     match self_host_append_trait_evidence_node(search, child, nodes, children, arguments) {
-      Result::Ok(node) => direct_children.push(node)
-      Result::Err(error) => return Result::Err(error)
+      Ok(node) => direct_children.push(node)
+      Err(error) => return Err(error)
     }
   }
   let prerequisite_start = children.length()
@@ -123,18 +123,18 @@ fn self_host_append_trait_evidence_node(
     children.push(child)
   }
   let node = nodes.length()
-  nodes.push(SelfHostTraitEvidenceNode::{
+  nodes.push({
     implementation: declaration
-    arguments: SelfHostHirSpan::{
+    arguments: {
       start: argument_start
       length: generics.length
     }
-    prerequisites: SelfHostHirSpan::{
+    prerequisites: {
       start: prerequisite_start
       length: direct_children.length()
     }
   })
-  Result::Ok(node)
+  Ok(node)
 }
 
 fn self_host_select_trait_evidence_tree(
@@ -146,20 +146,20 @@ fn self_host_select_trait_evidence_tree(
 ) -> Result<SelfHostTraitEvidenceTree, String> {
   let search = self_host_trait_evidence_search(collected, imports, index)
   let selected = match self_host_select_trait_evidence_with_search(search, trait_type, target_type) {
-    Result::Ok(value) => value
-    Result::Err(error) => return Result::Err(error)
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   let nodes = []
   let children = self_host_empty_semantic_ids()
   let arguments = self_host_empty_compile_time_types()
   let root = match selected {
-    Option::Some(witness) => match self_host_append_trait_evidence_node(search, witness, nodes, children, arguments) {
-      Result::Ok(node) => Option::Some(node)
-      Result::Err(error) => return Result::Err(error)
+    Some(witness) => match self_host_append_trait_evidence_node(search, witness, nodes, children, arguments) {
+      Ok(node) => Some(node)
+      Err(error) => return Err(error)
     }
-    Option::None => Option::None
+    None => None
   }
-  Result::Ok(SelfHostTraitEvidenceTree::{
+  Ok({
     root: root
     nodes: nodes
     children: children

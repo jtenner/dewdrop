@@ -265,6 +265,7 @@ pub struct CollectedTest {
 
 ///|
 pub struct CollectedModule {
+  constructor_wrappers : Map[VariantId, DeclId]
   module_id : ModuleId
   preamble_declaration_count : Int
   files : Array[FileId]

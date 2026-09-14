@@ -1,6 +1,6 @@
 fn self_host_variant_constructor_check(plan: SelfHostPlannedPhysicalBodyCarrierPlan, phase: U32, expression: U32, role: U32, index: U32, expected: U64, actual: U64) -> Unit {
   if expected != actual {
-    self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    self_host_assert_compiler_invariant_with_failure(false, {
       code: if phase == 7u32 {
         605u32
       } else {
@@ -40,7 +40,7 @@ fn self_host_compare_variant_constructors(context: SelfHostPlannedPhysicalBodyCa
     self_host_variant_constructor_check(context, phase, expected.expression, 260u32, index, expected.declaration, actual.declaration)
     self_host_variant_constructor_check(context, phase, expected.expression, 261u32, index, u32_into_u64(expected.source_ordinal), u32_into_u64(actual.source_ordinal))
     self_host_variant_constructor_check(context, phase, expected.expression, 262u32, index, u32_into_u64(expected.field_index), u32_into_u64(actual.field_index))
-    self_host_variant_constructor_check(context, phase, expected.expression, 263u32, index, self_host_body_freeze_storage(Option::Some(expected.storage)), self_host_body_freeze_storage(Option::Some(actual.storage)))
+    self_host_variant_constructor_check(context, phase, expected.expression, 263u32, index, self_host_body_freeze_storage(Some(expected.storage)), self_host_body_freeze_storage(Some(actual.storage)))
     self_host_variant_constructor_check(context, phase, expected.expression, 264u32, index, self_host_constructor_box_identity(expected.box_type), self_host_constructor_box_identity(actual.box_type))
     self_host_variant_constructor_check(context, phase, expected.expression, 265u32, index, self_host_body_freeze_bool(expected.unit_marker), self_host_body_freeze_bool(actual.unit_marker))
     self_host_variant_constructor_check(context, phase, expected.expression, 266u32, index, self_host_constructor_box_identity(expected.reference_cast), self_host_constructor_box_identity(actual.reference_cast))

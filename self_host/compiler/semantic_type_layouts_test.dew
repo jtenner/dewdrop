@@ -9,7 +9,7 @@ test "type layouts retain struct fields and shapes" {
   let layouts = self_host_plan_module_type_layouts(collected, resolved)
   assert(layouts.layouts.length() == 1u32, "one layout")
   match layouts.layouts[0u32].kind {
-    SelfHostPlannedNominalLayoutKind::PlannedStructLayout(fields) => assert(
+    PlannedStructLayout(fields) => assert(
       fields.length == 2u32,
       "two fields",
     )
@@ -18,13 +18,33 @@ test "type layouts retain struct fields and shapes" {
   assert(self_host_u32_equal(layouts.fields[0u32].index, 0u32), "first index")
   assert(self_host_u32_equal(layouts.fields[1u32].index, 1u32), "second index")
   assert(
-    layouts.fields[0u32].shape is SelfHostPlannedValueShape::I32PlannedValueShape,
+    layouts.fields[0u32].shape is I32PlannedValueShape,
     "I32 field shape",
   )
   assert(
-    layouts.fields[1u32].shape is SelfHostPlannedValueShape::GenericPlannedValueShape,
+    layouts.fields[1u32].shape is GenericPlannedValueShape,
     "generic field shape",
   )
+}
+
+test "type layout field lookup keeps exact module and slot identities" {
+  let collected = self_host_collect_bytes(
+    1000u64,
+    b"struct First {\n  value: I32\n}\nstruct Second {\n  value: I64\n}\n",
+  )
+  let layouts = self_host_plan_module_type_layouts(collected, self_host_resolve_module_types(collected))
+  let second = collected.fields[1u32]
+  match layouts.field(second.id) {
+    Some(field) => {
+      assert(field.field == second.id, "exact field identity")
+      assert(field.declaration == second.declaration, "second struct owner")
+      assert(field.index == 0u32, "field position differs from arena slot")
+      assert(field.shape is I64PlannedValueShape, "second struct field type")
+    }
+    None => assert(false, "second field lookup")
+  }
+  assert(layouts.field(self_host_make_semantic_id(1001u64, 1u32)) is None, "another module cannot reuse the slot")
+  assert(layouts.field(self_host_make_semantic_id(1000u64, 2u32)) is None, "missing field")
 }
 
 test "type layouts retain enum tags and payload shapes" {
@@ -39,17 +59,17 @@ test "type layouts retain enum tags and payload shapes" {
   assert(self_host_u32_equal(layouts.variants[1u32].tag, 1u32), "tag one")
   assert(self_host_u32_equal(layouts.variants[2u32].tag, 2u32), "tag two")
   match layouts.variants[1u32].payload {
-    SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(payload) => {
+    PlannedTupleVariantLayout(payload) => {
       assert(payload.length == 1u32, "tuple payload")
       assert(
-        layouts.payload_shapes[payload.start] is SelfHostPlannedValueShape::I32PlannedValueShape,
+        layouts.payload_shapes[payload.start] is I32PlannedValueShape,
         "payload shape",
       )
     }
     _ => assert(false, "tuple variant")
   }
   match layouts.variants[2u32].payload {
-    SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(fields) => assert(
+    PlannedStructVariantLayout(fields) => assert(
       fields.length == 1u32,
       "struct payload",
     )
@@ -65,7 +85,7 @@ test "type layouts include foreign nominal references" {
   let resolved = self_host_resolve_module_types(collected)
   let layouts = self_host_plan_module_type_layouts(collected, resolved)
   match layouts.layouts[0u32].kind {
-    SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout => {}
+    PlannedForeignTypeLayout => {}
     _ => assert(false, "foreign layout")
   }
 }

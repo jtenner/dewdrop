@@ -9,7 +9,7 @@ fn self_host_wasmgc_collect_function_references(
   while 0u32 {
     offset if offset < span.length => {
       match module_.expressions[span.start + offset].kind {
-        SelfHostPlannedExpressionKind::PlannedFunctionReference(declaration) => references.set(declaration, true)
+        PlannedFunctionReference(declaration) => references.set(declaration, true)
         _ => {}
       }
       continue offset + 1u32
@@ -23,7 +23,7 @@ fn self_host_wasmgc_referenced_builtin_declarations(
 ) -> Map<U64, Bool> {
   let references = self_host_empty_u64_bool_map()
   for module_ in specialization.lowering.modules {
-    self_host_wasmgc_collect_function_references(module_, SelfHostHirSpan::{
+    self_host_wasmgc_collect_function_references(module_, {
       start: 0u32
       length: module_.expressions.length()
     }, references)

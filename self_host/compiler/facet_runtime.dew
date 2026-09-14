@@ -75,11 +75,11 @@ struct FacetFileSystem {
 }
 
 fn facet_process() -> FacetProcess {
-  FacetProcess::{}
+  {}
 }
 
 fn facet_file_system(preopen: U32) -> FacetFileSystem {
-  FacetFileSystem::{
+  {
     preopen: preopen
   }
 }
@@ -136,11 +136,11 @@ fn facet_memory_string(
 ) -> Result<String, ProcessError> {
   let bytes = facet_memory_bytes(pointer, length)
   if self_host_facet_bytes_is_valid_utf8(bytes) {
-    Result::Ok(self_host_facet_bytes_to_string(bytes))
+    Ok(self_host_facet_bytes_to_string(bytes))
   } else {
-    Result::Err(ProcessError::{
+    Err({
       operation: operation
-      kind: ProcessErrorKind::InvalidUtf8
+      kind: InvalidUtf8
       code: 23u32
     })
   }
@@ -151,7 +151,7 @@ fn facet_process_error(
   kind: ProcessErrorKind,
   code: U32,
 ) -> ProcessError {
-  ProcessError::{
+  {
     operation: operation
     kind: kind
     code: code
@@ -162,7 +162,7 @@ fn facet_process_backend_error(
   operation: ProcessOperation,
   code: U32,
 ) -> ProcessError {
-  facet_process_error(operation, ProcessErrorKind::Backend, code)
+  facet_process_error(operation, Backend, code)
 }
 
 fn facet_process_write(
@@ -171,7 +171,7 @@ fn facet_process_write(
   value: Bytes,
 ) -> Result<U32, ProcessError> {
   if descriptor.error != 0u32 {
-    Result::Err(facet_process_backend_error(operation, descriptor.error))
+    Err(facet_process_backend_error(operation, descriptor.error))
   } else {
     let length = self_host_facet_bytes_byte_length(value)
     while 0u32 {
@@ -189,14 +189,14 @@ fn facet_process_write(
           window,
         )
         if write.error != 0u32 {
-          break Result::Err(facet_process_backend_error(operation, write.error))
+          break Err(facet_process_backend_error(operation, write.error))
         } else if write.value == 0u64 || write.value > facet_u32_to_u64(window) {
-          break Result::Err(facet_process_backend_error(operation, 3u32))
+          break Err(facet_process_backend_error(operation, 3u32))
         } else {
           continue total + facet_u64_to_u32(write.value)
         }
       }
-      _ => break Result::Ok(length)
+      _ => break Ok(length)
     }
   }
 }
@@ -205,12 +205,12 @@ impl Process for FacetProcess {
   fn arguments(self, max_count: U32, max_bytes: U32) -> Result<Array<String>, ProcessError> {
     let count = @facet_process.args_count()
     if count.error != 0u32 {
-      Result::Err(facet_process_backend_error(ProcessOperation::Arguments, count.error))
+      Err(facet_process_backend_error(Arguments, count.error))
     } else if count.value > max_count {
-      Result::Err(
+      Err(
         facet_process_error(
-          ProcessOperation::Arguments,
-          ProcessErrorKind::LimitExceeded,
+          Arguments,
+          LimitExceeded,
           17u32,
         ),
       )
@@ -221,18 +221,18 @@ impl Process for FacetProcess {
         index if index < count.value => {
           let length_result = @facet_process.args_len_i8(index, 0u32)
           if length_result.error != 0u32 {
-            break Result::Err(
+            break Err(
               facet_process_backend_error(
-                ProcessOperation::Arguments,
+                Arguments,
                 length_result.error,
               ),
             )
           } else if length_result.value > facet_u32_to_u64(max_bytes - total) ||
             length_result.value > 49152u64 {
-            break Result::Err(
+            break Err(
               facet_process_error(
-                ProcessOperation::Arguments,
-                ProcessErrorKind::LimitExceeded,
+                Arguments,
+                LimitExceeded,
                 17u32,
               ),
             )
@@ -246,9 +246,9 @@ impl Process for FacetProcess {
               length,
             )
             if read.error != 0u32 || read.value != length_result.value {
-              break Result::Err(
+              break Err(
                 facet_process_backend_error(
-                  ProcessOperation::Arguments,
+                  Arguments,
                   if read.error == 0u32 {
                     3u32
                   } else {
@@ -257,9 +257,9 @@ impl Process for FacetProcess {
                 ),
               )
             } else {
-              match facet_memory_string(16u32, length, ProcessOperation::Arguments) {
-                Result::Err(error) => break Result::Err(error)
-                Result::Ok(value) => {
+              match facet_memory_string(16u32, length, Arguments) {
+                Err(error) => break Err(error)
+                Ok(value) => {
                   total = total + length
                   output.push(value)
                   continue index + 1u32
@@ -268,7 +268,7 @@ impl Process for FacetProcess {
             }
           }
         }
-        _ => break Result::Ok(output)
+        _ => break Ok(output)
       }
     }
   }
@@ -276,20 +276,20 @@ impl Process for FacetProcess {
   fn environment(self, name: String, max_bytes: U32) -> Result<Option<String>, ProcessError> {
     let count = @facet_process.env_count()
     if count.error != 0u32 {
-      Result::Err(facet_process_backend_error(ProcessOperation::Environment, count.error))
+      Err(facet_process_backend_error(Environment, count.error))
     } else {
       while 0u32 {
         index if index < count.value => {
           let name_length = @facet_process.env_len_i8(index, 0u32, 0u32)
           if name_length.error != 0u32 {
-            break Result::Err(
-              facet_process_backend_error(ProcessOperation::Environment, name_length.error),
+            break Err(
+              facet_process_backend_error(Environment, name_length.error),
             )
           } else if name_length.value > 49152u64 {
-            break Result::Err(
+            break Err(
               facet_process_error(
-                ProcessOperation::Environment,
-                ProcessErrorKind::LimitExceeded,
+                Environment,
+                LimitExceeded,
                 17u32,
               ),
             )
@@ -304,9 +304,9 @@ impl Process for FacetProcess {
               candidate_length,
             )
             if read_name.error != 0u32 || read_name.value != name_length.value {
-              break Result::Err(
+              break Err(
                 facet_process_backend_error(
-                  ProcessOperation::Environment,
+                  Environment,
                   if read_name.error == 0u32 {
                     3u32
                   } else {
@@ -329,18 +329,18 @@ impl Process for FacetProcess {
             if equal {
               let value_length = @facet_process.env_len_i8(index, 1u32, 0u32)
               if value_length.error != 0u32 {
-                break Result::Err(
+                break Err(
                   facet_process_backend_error(
-                    ProcessOperation::Environment,
+                    Environment,
                     value_length.error,
                   ),
                 )
               } else if value_length.value > facet_u32_to_u64(max_bytes) ||
                 value_length.value > 49152u64 {
-                break Result::Err(
+                break Err(
                   facet_process_error(
-                    ProcessOperation::Environment,
-                    ProcessErrorKind::LimitExceeded,
+                    Environment,
+                    LimitExceeded,
                     17u32,
                   ),
                 )
@@ -355,9 +355,9 @@ impl Process for FacetProcess {
                   length,
                 )
                 if read_value.error != 0u32 || read_value.value != value_length.value {
-                  break Result::Err(
+                  break Err(
                     facet_process_backend_error(
-                      ProcessOperation::Environment,
+                      Environment,
                       if read_value.error == 0u32 {
                         3u32
                       } else {
@@ -366,9 +366,9 @@ impl Process for FacetProcess {
                     ),
                   )
                 } else {
-                  match facet_memory_string(16u32, length, ProcessOperation::Environment) {
-                    Result::Err(error) => break Result::Err(error)
-                    Result::Ok(value) => break Result::Ok(Option::Some(value))
+                  match facet_memory_string(16u32, length, Environment) {
+                    Err(error) => break Err(error)
+                    Ok(value) => break Ok(Some(value))
                   }
                 }
               }
@@ -377,7 +377,7 @@ impl Process for FacetProcess {
             }
           }
         }
-        _ => break Result::Ok(Option::None)
+        _ => break Ok(None)
       }
     }
   }
@@ -385,7 +385,7 @@ impl Process for FacetProcess {
   fn write_stdout(self, value: Bytes) -> Result<U32, ProcessError> {
     facet_process_write(
       @facet_process.stdio_stdout(),
-      ProcessOperation::StandardOutput,
+      StandardOutput,
       value,
     )
   }
@@ -393,7 +393,7 @@ impl Process for FacetProcess {
   fn write_stderr(self, value: Bytes) -> Result<U32, ProcessError> {
     facet_process_write(
       @facet_process.stdio_stderr(),
-      ProcessOperation::StandardError,
+      StandardError,
       value,
     )
   }
@@ -406,27 +406,27 @@ impl Process for FacetProcess {
 
 fn facet_fs_error_kind(code: U32) -> FsErrorKind {
   match code {
-    1u32 => FsErrorKind::PermissionDenied
-    2u32 => FsErrorKind::NotFound
-    7u32 => FsErrorKind::PermissionDenied
-    9u32 => FsErrorKind::AlreadyExists
-    10u32 => FsErrorKind::NotDirectory
-    11u32 => FsErrorKind::IsDirectory
-    12u32 => FsErrorKind::InvalidPath
-    13u32 => FsErrorKind::FileTooLarge
-    14u32 => FsErrorKind::NoSpace
-    15u32 => FsErrorKind::ReadOnly
-    18u32 => FsErrorKind::NotEmpty
-    20u32 => FsErrorKind::InvalidPath
-    21u32 => FsErrorKind::Unsupported
-    22u32 => FsErrorKind::FileTooLarge
-    37u32 => FsErrorKind::PermissionDenied
-    _ => FsErrorKind::Backend
+    1u32 => PermissionDenied
+    2u32 => NotFound
+    7u32 => PermissionDenied
+    9u32 => AlreadyExists
+    10u32 => NotDirectory
+    11u32 => IsDirectory
+    12u32 => InvalidPath
+    13u32 => FileTooLarge
+    14u32 => NoSpace
+    15u32 => ReadOnly
+    18u32 => NotEmpty
+    20u32 => InvalidPath
+    21u32 => Unsupported
+    22u32 => FileTooLarge
+    37u32 => PermissionDenied
+    _ => Backend
   }
 }
 
 fn facet_fs_error(operation: FsOperation, path: RelativePath, code: U32) -> FsError {
-  FsError::{
+  {
     operation: operation
     path: path.to_string()
     kind: facet_fs_error_kind(code)
@@ -446,7 +446,7 @@ impl FileSystem for FacetFileSystem {
   fn path_kind(self, path: RelativePath) -> Result<PathKind, FsError> {
     let root = facet_preopen(self)
     if root.error != 0u32 {
-      Result::Err(facet_fs_error(FsOperation::Stat, path, root.error))
+      Err(facet_fs_error(Stat, path, root.error))
     } else {
       let pointer = 128u32
       let length = facet_copy_path(path, pointer)
@@ -459,15 +459,15 @@ impl FileSystem for FacetFileSystem {
         0u32,
       )
       if stat.error == 2u32 {
-        Result::Ok(PathKind::Missing)
+        Ok(Missing)
       } else if stat.error != 0u32 {
-        Result::Err(facet_fs_error(FsOperation::Stat, path, stat.error))
+        Err(facet_fs_error(Stat, path, stat.error))
       } else {
         match stat.file_type {
-          1u32 => Result::Ok(PathKind::File)
-          2u32 => Result::Ok(PathKind::Directory)
-          3u32 => Result::Ok(PathKind::Symlink)
-          _ => Result::Ok(PathKind::Other)
+          1u32 => Ok(File)
+          2u32 => Ok(Directory)
+          3u32 => Ok(Symlink)
+          _ => Ok(Other)
         }
       }
     }
@@ -476,7 +476,7 @@ impl FileSystem for FacetFileSystem {
   fn read_file(self, path: RelativePath, max_bytes: U32) -> Result<Bytes, FsError> {
     let root = facet_preopen(self)
     if root.error != 0u32 {
-      Result::Err(facet_fs_error(FsOperation::Read, path, root.error))
+      Err(facet_fs_error(Read, path, root.error))
     } else {
       let pointer = 128u32
       let path_length = facet_copy_path(path, pointer)
@@ -490,15 +490,15 @@ impl FileSystem for FacetFileSystem {
         17u64,
       )
       if opened.error != 0u32 {
-        Result::Err(facet_fs_error(FsOperation::Read, path, opened.error))
+        Err(facet_fs_error(Read, path, opened.error))
       } else {
         let stat = @facet_fs.fd_stat(opened.value)
         if stat.error != 0u32 {
           let _closed = facet_close(opened.value)
-          Result::Err(facet_fs_error(FsOperation::Stat, path, stat.error))
+          Err(facet_fs_error(Stat, path, stat.error))
         } else if stat.size > facet_u32_to_u64(max_bytes) {
           let _closed = facet_close(opened.value)
-          Result::Err(facet_fs_error(FsOperation::Read, path, 13u32))
+          Err(facet_fs_error(Read, path, 13u32))
         } else {
           let expected = facet_u64_to_u32(stat.size)
           let builder = self_host_facet_bytes_builder_with_capacity(expected)
@@ -517,13 +517,13 @@ impl FileSystem for FacetFileSystem {
               )
               if read.error != 0u32 {
                 let _closed = facet_close(opened.value)
-                break Result::Err(facet_fs_error(FsOperation::Read, path, read.error))
+                break Err(facet_fs_error(Read, path, read.error))
               } else if read.value > facet_u32_to_u64(window) {
                 let _closed = facet_close(opened.value)
-                break Result::Err(facet_fs_error(FsOperation::Read, path, 3u32))
+                break Err(facet_fs_error(Read, path, 3u32))
               } else if read.value == 0u64 {
                 let _closed = facet_close(opened.value)
-                break Result::Ok(self_host_facet_bytes_builder_finish(builder))
+                break Ok(self_host_facet_bytes_builder_finish(builder))
               } else {
                 let count = facet_u64_to_u32(read.value)
                 while 0u32 {
@@ -542,9 +542,9 @@ impl FileSystem for FacetFileSystem {
             _ => {
               let close_error = facet_close(opened.value)
               if close_error != 0u32 {
-                break Result::Err(facet_fs_error(FsOperation::Close, path, close_error))
+                break Err(facet_fs_error(Close, path, close_error))
               } else {
-                break Result::Ok(self_host_facet_bytes_builder_finish(builder))
+                break Ok(self_host_facet_bytes_builder_finish(builder))
               }
             }
           }
@@ -556,7 +556,7 @@ impl FileSystem for FacetFileSystem {
   fn write_file(self, path: RelativePath, value: Bytes) -> Result<Unit, FsError> {
     let root = facet_preopen(self)
     if root.error != 0u32 {
-      Result::Err(facet_fs_error(FsOperation::Write, path, root.error))
+      Err(facet_fs_error(Write, path, root.error))
     } else {
       let pointer = 128u32
       let path_length = facet_copy_path(path, pointer)
@@ -570,7 +570,7 @@ impl FileSystem for FacetFileSystem {
         82u64,
       )
       if opened.error != 0u32 {
-        Result::Err(facet_fs_error(FsOperation::Write, path, opened.error))
+        Err(facet_fs_error(Write, path, opened.error))
       } else {
         let length = self_host_facet_bytes_byte_length(value)
         while 0u32 {
@@ -589,10 +589,10 @@ impl FileSystem for FacetFileSystem {
             )
             if written.error != 0u32 {
               let _closed = facet_close(opened.value)
-              break Result::Err(facet_fs_error(FsOperation::Write, path, written.error))
+              break Err(facet_fs_error(Write, path, written.error))
             } else if written.value == 0u64 || written.value > facet_u32_to_u64(window) {
               let _closed = facet_close(opened.value)
-              break Result::Err(facet_fs_error(FsOperation::Write, path, 3u32))
+              break Err(facet_fs_error(Write, path, 3u32))
             } else {
               continue total + facet_u64_to_u32(written.value)
             }
@@ -601,11 +601,11 @@ impl FileSystem for FacetFileSystem {
             let sync_error = @facet_fs.fd_sync(opened.value)
             let close_error = facet_close(opened.value)
             if sync_error != 0u32 {
-              break Result::Err(facet_fs_error(FsOperation::Sync, path, sync_error))
+              break Err(facet_fs_error(Sync, path, sync_error))
             } else if close_error != 0u32 {
-              break Result::Err(facet_fs_error(FsOperation::Close, path, close_error))
+              break Err(facet_fs_error(Close, path, close_error))
             } else {
-              break Result::Ok(facet_unit())
+              break Ok(facet_unit())
             }
           }
         }
@@ -616,7 +616,7 @@ impl FileSystem for FacetFileSystem {
   fn create_directory(self, path: RelativePath) -> Result<Unit, FsError> {
     let root = facet_preopen(self)
     if root.error != 0u32 {
-      Result::Err(facet_fs_error(FsOperation::CreateDirectory, path, root.error))
+      Err(facet_fs_error(CreateDirectory, path, root.error))
     } else {
       let pointer = 128u32
       let length = facet_copy_path(path, pointer)
@@ -628,9 +628,9 @@ impl FileSystem for FacetFileSystem {
         0u32,
       )
       if error == 0u32 || error == 9u32 {
-        Result::Ok(facet_unit())
+        Ok(facet_unit())
       } else {
-        Result::Err(facet_fs_error(FsOperation::CreateDirectory, path, error))
+        Err(facet_fs_error(CreateDirectory, path, error))
       }
     }
   }
@@ -638,7 +638,7 @@ impl FileSystem for FacetFileSystem {
   fn rename(self, source: RelativePath, destination: RelativePath) -> Result<Unit, FsError> {
     let root = facet_preopen(self)
     if root.error != 0u32 {
-      Result::Err(facet_fs_error(FsOperation::Rename, source, root.error))
+      Err(facet_fs_error(Rename, source, root.error))
     } else {
       let source_pointer = 128u32
       let source_length = facet_copy_path(source, source_pointer)
@@ -658,9 +658,9 @@ impl FileSystem for FacetFileSystem {
         1u32,
       )
       if error == 0u32 {
-        Result::Ok(facet_unit())
+        Ok(facet_unit())
       } else {
-        Result::Err(facet_fs_error(FsOperation::Rename, source, error))
+        Err(facet_fs_error(Rename, source, error))
       }
     }
   }
@@ -668,7 +668,7 @@ impl FileSystem for FacetFileSystem {
   fn remove_file(self, path: RelativePath) -> Result<Unit, FsError> {
     let root = facet_preopen(self)
     if root.error != 0u32 {
-      Result::Err(facet_fs_error(FsOperation::RemoveFile, path, root.error))
+      Err(facet_fs_error(RemoveFile, path, root.error))
     } else {
       let pointer = 128u32
       let length = facet_copy_path(path, pointer)
@@ -681,9 +681,9 @@ impl FileSystem for FacetFileSystem {
         1u32,
       )
       if error == 0u32 || error == 2u32 {
-        Result::Ok(facet_unit())
+        Ok(facet_unit())
       } else {
-        Result::Err(facet_fs_error(FsOperation::RemoveFile, path, error))
+        Err(facet_fs_error(RemoveFile, path, error))
       }
     }
   }
@@ -691,7 +691,7 @@ impl FileSystem for FacetFileSystem {
   fn remove_directory(self, path: RelativePath) -> Result<Unit, FsError> {
     let root = facet_preopen(self)
     if root.error != 0u32 {
-      Result::Err(facet_fs_error(FsOperation::RemoveDirectory, path, root.error))
+      Err(facet_fs_error(RemoveDirectory, path, root.error))
     } else {
       let pointer = 128u32
       let length = facet_copy_path(path, pointer)
@@ -704,9 +704,9 @@ impl FileSystem for FacetFileSystem {
         2u32,
       )
       if error == 0u32 || error == 2u32 {
-        Result::Ok(facet_unit())
+        Ok(facet_unit())
       } else {
-        Result::Err(facet_fs_error(FsOperation::RemoveDirectory, path, error))
+        Err(facet_fs_error(RemoveDirectory, path, error))
       }
     }
   }
@@ -718,8 +718,8 @@ impl FileSystem for FacetFileSystem {
     value: Bytes,
   ) -> Result<Unit, FsError> {
     match self.write_file(temporary, value) {
-      Result::Err(error) => Result::Err(error)
-      Result::Ok(_) => self.rename(temporary, destination)
+      Err(error) => Err(error)
+      Ok(_) => self.rename(temporary, destination)
     }
   }
 }

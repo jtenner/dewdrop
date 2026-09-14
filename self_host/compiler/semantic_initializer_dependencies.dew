@@ -11,7 +11,7 @@ fn self_host_initializer_dependency_failure(declaration: U64, body: U64, express
 }
 
 fn self_host_initializer_dependency_failure_in_phase(declaration: U64, body: U64, expression: U32, phase: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
-  let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+  let _ = self_host_assert_compiler_invariant_with_failure(false, {
     code: code
     phase: phase
     module_id: self_host_semantic_id_module(declaration)
@@ -27,9 +27,9 @@ fn self_host_initializer_dependency_failure_in_phase(declaration: U64, body: U64
 
 fn self_host_initializer_body_kind(kind: SelfHostHirBodyKind) -> U64 {
   match kind {
-    SelfHostHirBodyKind::ModuleLetBody => 0u64
-    SelfHostHirBodyKind::FunctionBody => 1u64
-    SelfHostHirBodyKind::ImplMethodBody => 2u64
+    ModuleLetBody => 0u64
+    FunctionBody => 1u64
+    ImplMethodBody => 2u64
   }
 }
 
@@ -40,8 +40,8 @@ fn self_host_initializer_dependency_body(module_: SelfHostPlannedModuleLowering,
 fn self_host_initializer_dependency_children_in_phase(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, phase: U32) -> Unit {
   self_host_verify_lowered_body_children_in_phase(module_, body, 4294967295u32, phase)
   let (span, root, tag) = match body.root {
-    SelfHostHirBodyRoot::ExpressionBodyRoot(value) => (body.expressions, value, 1u32)
-    SelfHostHirBodyRoot::BlockBodyRoot(value) => (body.blocks, value, 3u32)
+    ExpressionBodyRoot(value) => (body.expressions, value, 1u32)
+    BlockBodyRoot(value) => (body.blocks, value, 3u32)
   }
   if root < span.start || root - span.start >= span.length {
     self_host_initializer_dependency_failure_in_phase(body.declaration, body.body, if tag == 1u32 {
@@ -82,7 +82,7 @@ fn self_host_initializer_dependency_instance(lowering: SelfHostPlannedProgramLow
   }
   let source = lowering.modules[task.module_index]
   match lowering.compile_time.instances.get(task.specialization) {
-    Option::Some(instance) => {
+    Some(instance) => {
       if instance.declaration != task.declaration {
         self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 106u32, task.declaration, instance.declaration, 23u64)
       }
@@ -91,13 +91,13 @@ fn self_host_initializer_dependency_instance(lowering: SelfHostPlannedProgramLow
       }
       instance.module_
     }
-    Option::None => {
+    None => {
       if lowering.compile_time.sensitive.contains_key(task.declaration) {
         match self_host_program_specialization_callable(source, task.declaration) {
-          Option::Some(callable) => if self_host_program_specialization_callable_generics(callable).length > 0u32 {
+          Some(callable) => if self_host_program_specialization_callable_generics(callable).length > 0u32 {
             self_host_initializer_dependency_failure(task.declaration, task.body, 4294967295u32, 304u32, 1u64, 0u64, 23u64)
           }
-          Option::None => {}
+          None => {}
         }
       }
       source
@@ -112,8 +112,8 @@ fn self_host_initializer_dependency_calls(calls: Array<SelfHostProgramSpecialize
     index if index < calls.length() => {
       let call = calls[index]
       let entries = match result.get(call.caller_body) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           let value = self_host_empty_u64_u32_map()
           result.set(call.caller_body, value)
           value
@@ -130,8 +130,8 @@ fn self_host_initializer_dependency_calls(calls: Array<SelfHostProgramSpecialize
 fn self_host_initializer_dependency_call_target(plan: SelfHostProgramSpecializationPlan, caller: SelfHostInitializerBodyWork, expression: U32, target: U64, specialization: U32) -> Option<SelfHostInitializerBodyWork> {
   let lowering = plan.lowering
   let owner = match lowering.index.declaration_owner(target) {
-    Option::Some(value) => value
-    Option::None => self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 607u32, 1u64, 0u64, target)
+    Some(value) => value
+    None => self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 607u32, 1u64, 0u64, target)
   }
   if owner >= lowering.modules.length() {
     self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 101u32, u32_into_u64(lowering.modules.length()), u32_into_u64(owner), target)
@@ -168,16 +168,16 @@ fn self_host_initializer_dependency_call_target(plan: SelfHostProgramSpecializat
     }
   }
   let (body, kind) = match callable.kind {
-    SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => (body, SelfHostHirBodyKind::FunctionBody)
-    SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, body) => match body {
-      Option::Some(value) => (value, SelfHostHirBodyKind::ImplMethodBody)
-      Option::None => return Option::None
+    PlannedFunctionCallable(body) => (body, FunctionBody)
+    PlannedImplMethodCallable(_, body) => match body {
+      Some(value) => (value, ImplMethodBody)
+      None => return None
     }
-    SelfHostPlannedCallableKind::PlannedBuiltinCallable(_),
-    SelfHostPlannedCallableKind::PlannedForeignCallable(_, _, _),
-    SelfHostPlannedCallableKind::PlannedTraitMethodCallable(_) => return Option::None
+    PlannedBuiltinCallable(_),
+    PlannedForeignCallable(_, _, _),
+    PlannedTraitMethodCallable(_) => return None
   }
-  let task = SelfHostInitializerBodyWork::{
+  let task = {
     module_index: owner
     declaration: target
     body: body
@@ -185,5 +185,5 @@ fn self_host_initializer_dependency_call_target(plan: SelfHostProgramSpecializat
     specialization: specialization
   }
   let _ = self_host_initializer_dependency_body(module_, task)
-  Option::Some(task)
+  Some(task)
 }

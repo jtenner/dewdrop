@@ -3,7 +3,7 @@
 fn self_host_linked_schedule_raw_array_never_prefix(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, expression: U32, tasks: Array<SelfHostLinkedI32EmitTask>, expression_depths: Array<U32>, destination: StarshineInstructions, depth: U32) -> Bool {
   let _ = self_host_raw_array_length_expression(module_, body, expression, 7u32)
   let arguments = match module_.expressions[expression].kind {
-    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, arguments, _) => arguments
+    PlannedBuiltinCall(_, _, _, arguments, _) => arguments
     _ => unreachable()
   }
   let mut prefix = 0u32
@@ -11,7 +11,7 @@ fn self_host_linked_schedule_raw_array_never_prefix(canonical: Option<SelfHostPl
     index if index < arguments.length => {
       let source = module_.expression_children[arguments.start + index]
       let carrier = self_host_linked_exact_emitted_expression_carrier(canonical, link, module_, body, specialization, source)
-      if carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier && !module_.expressions[source].flow.falls_through {
+      if carrier is NeverBodyCarrier && !module_.expressions[source].flow.falls_through {
         prefix = index + 1u32
         break ()
       }

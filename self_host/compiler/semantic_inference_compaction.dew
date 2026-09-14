@@ -16,13 +16,13 @@ struct SelfHostBasicCompaction {
 
 impl SelfHostBasicCompaction {
   fn new(body: SelfHostBasicInferredBody) -> SelfHostBasicCompaction {
-    SelfHostBasicCompaction::{
+    {
       source_types: body.types
       source_arguments: body.type_arguments
       marks: self_host_inference_bool_slots(body.types.length())
       mapping: self_host_inference_i32_slots(body.types.length(), -1i32)
       stack: []
-      types: [SelfHostBodyTypeTerm::BodyErrorType]
+      types: [BodyErrorType]
       arguments: []
     }
   }
@@ -32,16 +32,16 @@ impl SelfHostBasicCompaction {
     let _ = while self.stack.length() {
       length => if self_host_u32_greater(length, 0u32) {
         let type_ = match self_host_array_pop(self.stack) {
-          Option::Some(value) => value
-          Option::None => 0i32
+          Some(value) => value
+          None => 0i32
         }
         if type_ > 0i32 {
           let index = self_host_body_i32_to_u32(type_)
           if index < self.marks.length() && !self.marks[index] {
             self.marks[index] = true
             match self.source_types[index] {
-              SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => self.stack.push(owner)
-              SelfHostBodyTypeTerm::BodyProductType(fields) => {
+              BodyMemberTypeProjection(owner, _, _) => self.stack.push(owner)
+              BodyProductType(fields) => {
                 let mut field = fields.length
                 let _ = while field {
                   current => if self_host_u32_greater(current, 0u32) {
@@ -57,7 +57,7 @@ impl SelfHostBasicCompaction {
                   }
                 }
               }
-              SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+              BodyAppliedType(base, arguments) => {
                 self.stack.push(base)
                 let mut argument = arguments.length
                 let _ = while argument {
@@ -74,7 +74,7 @@ impl SelfHostBasicCompaction {
                   }
                 }
               }
-              SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => {
+              BodyFunctionType(parameters, result) => {
                 self.stack.push(result)
                 let mut parameter = parameters.length
                 let _ = while parameter {
@@ -133,17 +133,17 @@ impl SelfHostBasicCompaction {
           let new_id = self_host_body_u32_to_i32(self.types.length())
           self.mapping[current] = new_id
           match self.source_types[current] {
-            SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => self.types.push(SelfHostBodyTypeTerm::BodyMemberTypeProjection(self.remap(owner), operation, selector))
-            SelfHostBodyTypeTerm::BodyErrorType => {
+            BodyMemberTypeProjection(owner, operation, selector) => self.types.push(BodyMemberTypeProjection(self.remap(owner), operation, selector))
+            BodyErrorType => {
               self.mapping[current] = 0i32
             }
-            SelfHostBodyTypeTerm::BodyResolvedType(resolved) => self.types.push(
-              SelfHostBodyTypeTerm::BodyResolvedType(resolved),
+            BodyResolvedType(resolved) => self.types.push(
+              BodyResolvedType(resolved),
             )
-            SelfHostBodyTypeTerm::BodyVariableType(variable) => self.types.push(
-              SelfHostBodyTypeTerm::BodyVariableType(variable),
+            BodyVariableType(variable) => self.types.push(
+              BodyVariableType(variable),
             )
-            SelfHostBodyTypeTerm::BodyProductType(fields) => {
+            BodyProductType(fields) => {
               let start = self.arguments.length()
               let mut index = 0u32
               let _ = while index {
@@ -160,14 +160,14 @@ impl SelfHostBasicCompaction {
                   break self_host_semantic_unit()
                 }
               }
-              self.types.push(SelfHostBodyTypeTerm::BodyProductType(
-                SelfHostHirSpan::{
+              self.types.push(BodyProductType(
+                {
                   start: start
                   length: fields.length
                 },
               ))
             }
-            SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+            BodyAppliedType(base, arguments) => {
               let start = self.arguments.length()
               let mut index = 0u32
               let _ = while index {
@@ -184,15 +184,15 @@ impl SelfHostBasicCompaction {
                   break self_host_semantic_unit()
                 }
               }
-              self.types.push(SelfHostBodyTypeTerm::BodyAppliedType(
+              self.types.push(BodyAppliedType(
                 self.remap(base),
-                SelfHostHirSpan::{
+                {
                   start: start
                   length: arguments.length
                 },
               ))
             }
-            SelfHostBodyTypeTerm::BodyFunctionType(parameters, result) => {
+            BodyFunctionType(parameters, result) => {
               let start = self.arguments.length()
               let mut index = 0u32
               let _ = while index {
@@ -209,8 +209,8 @@ impl SelfHostBasicCompaction {
                   break self_host_semantic_unit()
                 }
               }
-              self.types.push(SelfHostBodyTypeTerm::BodyFunctionType(
-                SelfHostHirSpan::{
+              self.types.push(BodyFunctionType(
+                {
                   start: start
                   length: parameters.length
                 },
@@ -261,7 +261,7 @@ fn self_host_basic_has_type_diagnostic(
   let _ = while diagnostic_index {
     current => if current < body.diagnostics.length() {
       match body.diagnostics[current] {
-        SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => {
+        BodyConstraintDiagnostic(_) => {
           return true
         }
         _ => {}
@@ -292,7 +292,7 @@ fn self_host_compact_basic_inferred_body(
   compact.mark_array(body.expression_type_arguments)
   compact.mark_array(body.pattern_type_arguments)
   compact.build()
-  SelfHostBasicInferredBody::{
+  {
     body: body.body
     root_type: compact.remap(body.root_type)
     types: compact.types
@@ -337,7 +337,7 @@ fn self_host_compact_basic_module_bodies(
   let _ = while lambda_index {
     current => if current < inferred.lambdas.length() {
       let lambda = inferred.lambdas[current]
-      lambdas.push(SelfHostBasicInferredLambda::{
+      lambdas.push({
         lambda: lambda.lambda
         body: self_host_compact_basic_inferred_body(lambda.body)
       })
@@ -346,7 +346,7 @@ fn self_host_compact_basic_module_bodies(
       break self_host_semantic_unit()
     }
   }
-  SelfHostBasicInferredModuleBodies::{
+  {
     module_id: inferred.module_id
     bodies: bodies
     lambdas: lambdas

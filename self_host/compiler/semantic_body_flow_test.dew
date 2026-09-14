@@ -20,7 +20,7 @@ fn self_host_flow_has_unreachable(
 ) -> Bool {
   for diagnostic in flow.diagnostics {
     match diagnostic {
-      SelfHostBodyFlowDiagnostic::UnreachableBlockItem(_, _, _) => {
+      UnreachableBlockItem(_, _, _) => {
         return true
       }
       _ => {}
@@ -35,7 +35,7 @@ fn self_host_flow_non_exhaustive_count(
   let mut count = 0u32
   for diagnostic in flow.diagnostics {
     match diagnostic {
-      SelfHostBodyFlowDiagnostic::NonExhaustiveMatch(_, _, _) => {
+      NonExhaustiveMatch(_, _, _) => {
         count = self_host_u32_add(count, 1u32)
       }
       _ => {}
@@ -50,7 +50,7 @@ fn self_host_flow_redundant_count(
   let mut count = 0u32
   for diagnostic in flow.diagnostics {
     match diagnostic {
-      SelfHostBodyFlowDiagnostic::RedundantPatternArm(_, _) => {
+      RedundantPatternArm(_, _) => {
         count = self_host_u32_add(count, 1u32)
       }
       _ => {}
@@ -65,7 +65,7 @@ fn self_host_flow_loop_fallthrough_count(
   let mut count = 0u32
   for diagnostic in flow.diagnostics {
     match diagnostic {
-      SelfHostBodyFlowDiagnostic::FunctionalLoopArmFallsThrough(_, _) => {
+      FunctionalLoopArmFallsThrough(_, _) => {
         count = self_host_u32_add(count, 1u32)
       }
       _ => {}
@@ -79,7 +79,7 @@ fn self_host_assert_one_missing_bool_false(
 ) -> Unit {
   assert(flow.missing_cases.length() == 1u32, "one missing Bool case")
   match flow.missing_cases[0u32] {
-    SelfHostMissingPatternCase::MissingBoolCase(false) => {}
+    MissingBoolCase(false) => {}
     _ => assert(false, "missing false case")
   }
 }
@@ -89,13 +89,13 @@ fn self_host_assert_one_missing_variant(
 ) -> Unit {
   assert(flow.missing_cases.length() == 1u32, "one missing variant")
   match flow.missing_cases[0u32] {
-    SelfHostMissingPatternCase::MissingVariantCase(_) => {}
+    MissingVariantCase(_) => {}
     _ => assert(false, "missing variant case")
   }
 }
 
 test "body flow bit flags preserve every exit kind" {
-  let source = SelfHostBodyFlowSummary::{
+  let source = {
     falls_through: true
     returns: true
     breaks: true

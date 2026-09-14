@@ -9,8 +9,8 @@ struct SelfHostLinkedDeclaredPayload {
 fn self_host_linked_declared_payload(link: SelfHostPlannedProgramWasmGCLink, variant: U64, position: U32) -> Option<SelfHostLinkedDeclaredPayload> {
   let lowering = link.fragments.specialization.lowering
   let owner = match lowering.index.declaration_owner(variant) {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   let module_id = self_host_semantic_id_module(variant)
   if owner >= lowering.modules.length() || owner >= lowering.collected.modules.length() {
@@ -34,8 +34,8 @@ fn self_host_linked_declared_payload(link: SelfHostPlannedProgramWasmGCLink, var
   for source in module_.type_layouts.variants {
     if source.variant == variant {
       let payload = match source.payload {
-        SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(value) => value
-        _ => return Option::None
+        PlannedTupleVariantLayout(value) => value
+        _ => return None
       }
       let types = module_.type_layouts.payload_types
       if types.length() != module_.type_layouts.payload_shapes.length() {
@@ -47,15 +47,15 @@ fn self_host_linked_declared_payload(link: SelfHostPlannedProgramWasmGCLink, var
           u32_into_u64(types.length()), u32_into_u64(payload.length), u32_into_u64(payload.start))
       }
       if position >= payload.length {
-        return Option::None
+        return None
       }
       let type_ = types[payload.start + position]
       match self_host_check_declared_storage_type(module_.resolved_types, variant, type_) {
-        Result::Err(failure) => self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32,
+        Err(failure) => self_host_call_read_failure(module_id, variant, 0u64, 4294967295u32,
           failure.code, failure.expected, failure.actual, failure.detail)
-        Result::Ok(_) => {}
+        Ok(_) => {}
       }
-      return Option::Some(SelfHostLinkedDeclaredPayload::{
+      return Some({
         module_: module_
         owner: owner
         declaration: source.declaration
@@ -63,65 +63,65 @@ fn self_host_linked_declared_payload(link: SelfHostPlannedProgramWasmGCLink, var
       })
     }
   }
-  Option::None
+  None
 }
 
 // Generic erasure is permission granted by one declared payload position.
 fn self_host_linked_variant_payload_parameter(link: SelfHostPlannedProgramWasmGCLink, variant: U64, position: U32) -> Option<U32> {
   let selected = match self_host_linked_declared_payload(link, variant, position) {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   let parameter = match selected.module_.resolved_types.types[selected.type_] {
-    SelfHostResolvedType::GenericParameterType(value) => value
-    _ => return Option::None
+    GenericParameterType(value) => value
+    _ => return None
   }
   let collected = link.fragments.specialization.lowering.collected.modules.at(selected.owner)
   for generic in collected.generic_parameters {
     if generic.id == parameter && generic.declaration == selected.declaration {
-      return Option::Some(generic.index)
+      return Some(generic.index)
     }
   }
-  Option::None
+  None
 }
 
 fn self_host_linked_declared_variant_payload_shape(link: SelfHostPlannedProgramWasmGCLink, field: SelfHostPlannedWasmField) -> Option<SelfHostPlannedValueShape> {
   match field.role {
-    SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, index) => {
+    WasmVariantPayloadField(variant, index) => {
       // This is a candidate query. Stored table identities are checked by the
       // source-field reader before a candidate can be used for emission.
       if field.declaration != variant {
-        return Option::None
+        return None
       }
       match self_host_linked_declared_payload(link, variant, index) {
-        Option::Some(selected) => Option::Some(self_host_planned_resolved_value_shape(selected.module_.resolved_types, selected.type_))
-        Option::None => Option::None
+        Some(selected) => Some(self_host_planned_resolved_value_shape(selected.module_.resolved_types, selected.type_))
+        None => None
       }
     }
-    _ => Option::None
+    _ => None
   }
 }
 
 fn self_host_linked_generic_variant_storage(link: SelfHostPlannedProgramWasmGCLink, field: SelfHostPlannedWasmField) -> Bool {
-  if !(field.storage is SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage) {
+  if !(field.storage is WasmNullableEqRefStorage) {
     return false
   }
   match self_host_linked_declared_variant_payload_shape(link, field) {
-    Option::Some(shape) => shape is SelfHostPlannedValueShape::GenericPlannedValueShape
-    Option::None => false
+    Some(shape) => shape is GenericPlannedValueShape
+    None => false
   }
 }
 
 fn self_host_linked_variant_payload_box_type(link: SelfHostPlannedProgramWasmGCLink, field: SelfHostPlannedWasmField, carrier: SelfHostWasmBodyCarrier) -> Option<U32> {
   if !self_host_linked_generic_variant_storage(link, field) {
-    return Option::None
+    return None
   }
   self_host_linked_scalar_box_type(link, carrier)
 }
 
 fn self_host_linked_source_payload_field(link: SelfHostPlannedProgramWasmGCLink, type_index: U32, field_index: U32) -> Option<SelfHostPlannedWasmField> {
   if type_index >= link.types.length() {
-    return Option::None
+    return None
   }
   let linked = link.types[type_index]
   if linked.type_index != type_index {
@@ -147,7 +147,7 @@ fn self_host_linked_source_payload_field(link: SelfHostPlannedProgramWasmGCLink,
       u32_into_u64(fragment.fields.length()), u32_into_u64(physical.fields.length), u32_into_u64(physical.fields.start))
   }
   if field_index >= physical.fields.length {
-    return Option::None
+    return None
   }
   let field = fragment.fields[physical.fields.start + field_index]
   if field.physical_index != field_index {
@@ -155,28 +155,28 @@ fn self_host_linked_source_payload_field(link: SelfHostPlannedProgramWasmGCLink,
       u32_into_u64(field_index), u32_into_u64(field.physical_index), u32_into_u64(type_index))
   }
   match field.role {
-    SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, _) => if field.declaration != variant {
+    WasmVariantPayloadField(variant, _) => if field.declaration != variant {
       self_host_call_read_failure(fragment.module_id, variant, 0u64, 4294967295u32, 106u32,
         variant, field.declaration, u32_into_u64(field_index))
     }
     _ => {}
   }
-  Option::Some(field)
+  Some(field)
 }
 
 fn self_host_linked_pattern_payload_box_type(link: SelfHostPlannedProgramWasmGCLink, type_index: U32, field_index: U32, carrier: SelfHostWasmBodyCarrier) -> Option<U32> {
   match self_host_linked_source_payload_field(link, type_index, field_index) {
-    Option::Some(field) => self_host_linked_variant_payload_box_type(link, field, carrier)
-    Option::None => Option::None
+    Some(field) => self_host_linked_variant_payload_box_type(link, field, carrier)
+    None => None
   }
 }
 
 fn self_host_emit_pattern_payload_unbox(link: SelfHostPlannedProgramWasmGCLink, type_index: U32, field_index: U32, carrier: SelfHostWasmBodyCarrier, destination: StarshineInstructions) -> Unit {
   match self_host_linked_pattern_payload_box_type(link, type_index, field_index, carrier) {
-    Option::Some(box_type) => {
+    Some(box_type) => {
       StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_ref_cast_nominal(self_host_u32_to_i32(box_type)))
       StarshineFfi.ffi_ffi_bridge_instructions_push(destination, self_host_linked_struct_get_instruction(link, box_type, 0u32))
     }
-    Option::None => {}
+    None => {}
   }
 }

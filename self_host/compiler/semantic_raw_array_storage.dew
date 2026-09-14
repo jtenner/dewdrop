@@ -24,32 +24,32 @@ fn self_host_linked_raw_array_storage(
   shape: SelfHostPlannedValueShape,
 ) -> Option<SelfHostRawArrayStorage> {
   let carrier = match self_host_raw_array_storage_carrier(shape) {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   let (type_index, read) = match shape {
-    SelfHostPlannedValueShape::I8PlannedValueShape => (
+    I8PlannedValueShape => (
       self_host_linked_packed_array_type_base(link),
-      SelfHostRawArrayRead::SignedPackedRawArrayRead,
+      SignedPackedRawArrayRead,
     )
-    SelfHostPlannedValueShape::U8PlannedValueShape => (
+    U8PlannedValueShape => (
       self_host_linked_packed_array_type_base(link),
-      SelfHostRawArrayRead::UnsignedPackedRawArrayRead,
+      UnsignedPackedRawArrayRead,
     )
-    SelfHostPlannedValueShape::I16PlannedValueShape => (
+    I16PlannedValueShape => (
       self_host_linked_packed_array_type_base(link) + 1u32,
-      SelfHostRawArrayRead::SignedPackedRawArrayRead,
+      SignedPackedRawArrayRead,
     )
-    SelfHostPlannedValueShape::U16PlannedValueShape => (
+    U16PlannedValueShape => (
       self_host_linked_packed_array_type_base(link) + 1u32,
-      SelfHostRawArrayRead::UnsignedPackedRawArrayRead,
+      UnsignedPackedRawArrayRead,
     )
     _ => (
       self_host_linked_array_runtime_base(link) + self_host_i32_to_u32(carrier),
-      SelfHostRawArrayRead::FullRawArrayRead,
+      FullRawArrayRead,
     )
   }
-  Option::Some(SelfHostRawArrayStorage::{
+  Some({
     type_index: type_index
     read: read
   })
@@ -62,7 +62,7 @@ fn self_host_linked_expression_raw_array_storage(
   expression: U32,
 ) -> Option<SelfHostRawArrayStorage> {
   match self_host_raw_array_expression_element_shape(link, module_, specialization, expression) {
-    Option::Some(shape) => self_host_linked_raw_array_storage(link, shape)
-    Option::None => Option::None
+    Some(shape) => self_host_linked_raw_array_storage(link, shape)
+    None => None
   }
 }

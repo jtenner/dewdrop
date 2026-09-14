@@ -7,7 +7,7 @@ fn self_host_name_ref_is_local(
   local: U32,
 ) -> Bool {
   match reference {
-    SelfHostBodyNameReference::LocalNameReference(value) => value == local
+    LocalNameReference(value) => value == local
     _ => false
   }
 }
@@ -17,25 +17,26 @@ fn self_host_name_ref_is_module_value(
   name: U32,
 ) -> Bool {
   match reference {
-    SelfHostBodyNameReference::ModuleValueNameReference(value) => value == name
+    ModuleValueNameReference(value) => value == name
     _ => false
   }
 }
 
 fn self_host_name_ref_code(reference: SelfHostBodyNameReference) -> U32 {
   match reference {
-    SelfHostBodyNameReference::NoNameReference => 0u32
-    SelfHostBodyNameReference::ErrorNameReference => 1u32
-    SelfHostBodyNameReference::LocalNameReference(local) => 10u32 + local
-    SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => 100u32 + capture
-    SelfHostBodyNameReference::ModuleValueNameReference(_) => 200u32
-    SelfHostBodyNameReference::ImportedModuleValueNameReference(_) => 201u32
-    SelfHostBodyNameReference::ImportedModuleNameReference(_) => 202u32
-    SelfHostBodyNameReference::ForeignLibraryNameReference(_) => 203u32
-    SelfHostBodyNameReference::PrimitiveTypeNameReference(_) => 204u32
-    SelfHostBodyNameReference::ModuleTypeNameReference(_) => 205u32
-    SelfHostBodyNameReference::ModuleTraitNameReference(_) => 206u32
-    SelfHostBodyNameReference::VariantNameReference(_) => 207u32
+    NoNameReference => 0u32
+    ErrorNameReference => 1u32
+    LocalNameReference(local) => 10u32 + local
+    LambdaCaptureNameReference(capture) => 100u32 + capture
+    ModuleValueNameReference(_) => 200u32
+    ImportedModuleValueNameReference(_) => 201u32
+    ImportedModuleNameReference(_) => 202u32
+    ForeignLibraryNameReference(_) => 203u32
+    PrimitiveTypeNameReference(_) => 204u32
+    ModuleTypeNameReference(_) => 205u32
+    ModuleTraitNameReference(_) => 206u32
+    VariantNameReference(_) => 207u32
+    ContextualFactoryNameReference(_) => 208u32
   }
 }
 
@@ -51,23 +52,23 @@ fn self_host_name_ref_is_capture(
   capture: U32,
 ) -> Bool {
   match reference {
-    SelfHostBodyNameReference::LambdaCaptureNameReference(value) => value == capture
+    LambdaCaptureNameReference(value) => value == capture
     _ => false
   }
 }
 
 fn self_host_empty_resolved_body_names() -> SelfHostResolvedBodyNames {
-  SelfHostResolvedBodyNames::{
+  {
     body: 0u64
-    locals: SelfHostHirSpan::{
+    locals: {
       start: 0u32
       length: 0u32
     }
-    controls: SelfHostHirSpan::{
+    controls: {
       start: 0u32
       length: 0u32
     }
-    diagnostics: SelfHostHirSpan::{
+    diagnostics: {
       start: 0u32
       length: 0u32
     }
@@ -75,21 +76,21 @@ fn self_host_empty_resolved_body_names() -> SelfHostResolvedBodyNames {
 }
 
 fn self_host_empty_resolved_lambda_names() -> SelfHostResolvedLambdaNames {
-  SelfHostResolvedLambdaNames::{
+  {
     lambda: 0u32
-    locals: SelfHostHirSpan::{
+    locals: {
       start: 0u32
       length: 0u32
     }
-    controls: SelfHostHirSpan::{
+    controls: {
       start: 0u32
       length: 0u32
     }
-    captures: SelfHostHirSpan::{
+    captures: {
       start: 0u32
       length: 0u32
     }
-    diagnostics: SelfHostHirSpan::{
+    diagnostics: {
       start: 0u32
       length: 0u32
     }
@@ -98,7 +99,7 @@ fn self_host_empty_resolved_lambda_names() -> SelfHostResolvedLambdaNames {
 
 fn self_host_body_root_block_id(body: SelfHostHirBody) -> U32 {
   match body.root {
-    SelfHostHirBodyRoot::BlockBodyRoot(block) => block
+    BlockBodyRoot(block) => block
     _ => 4294967295u32
   }
 }
@@ -113,7 +114,7 @@ fn self_host_lambda_name_expression(
   while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::NameExpr(name, _) => if collected.name(name) == spelling {
+        NameExpr(name, _) => if collected.name(name) == spelling {
           break current
         }
         _ => {}
@@ -148,8 +149,8 @@ test "body names resolve parameters sequential lets shadowing and module values"
   assert(names.diagnostics.length() == 0u32, "name diagnostics")
   let body = collected.bodies[1u32]
   let info = match names.body(body.id) {
-    Option::Some(value) => value
-    Option::None => self_host_empty_resolved_body_names()
+    Some(value) => value
+    None => self_host_empty_resolved_body_names()
   }
   assert(info.locals.length == 3u32, "local count")
   assert(names.parameter_locals[0u32] == 0u32, "parameter local")
@@ -162,14 +163,14 @@ test "body names resolve parameters sequential lets shadowing and module values"
     4294967295u32
   }
   match collected.expressions[first_initializer] {
-    SelfHostHirExpr::NameExpr(name, _) => assert(
+    NameExpr(name, _) => assert(
       collected.name(name) == "value",
       collected.name(name),
     )
     _ => assert(false, "first initializer shape")
   }
   let value_name = match collected.expressions[first_initializer] {
-    SelfHostHirExpr::NameExpr(name, _) => name
+    NameExpr(name, _) => name
     _ => 4294967295u32
   }
   let first_name = if self_host_hir_block_item_is_let(first_item) {
@@ -210,14 +211,14 @@ test "body names resolve parameters sequential lets shadowing and module values"
     final_item.value
   }
   match collected.expressions[final_expression] {
-    SelfHostHirExpr::BinaryExpr(_, local, module_value, _) => {
+    BinaryExpr(_, local, module_value, _) => {
       assert(
         self_host_name_ref_is_local(names.expression_references[local], 2u32),
         "shadow local",
       )
       let answer = match collected.find_name("answer") {
-        Option::Some(value) => value
-        Option::None => 4294967295u32
+        Some(value) => value
+        None => 4294967295u32
       }
       assert(
         self_host_name_ref_is_module_value(
@@ -234,7 +235,7 @@ test "body names resolve parameters sequential lets shadowing and module values"
 test "for iterable retains its parameter binding" {
   let collected = self_host_collect_bytes(
     3031u64,
-    b"fn visit(values: Array<I32>) -> Unit {\n  for value in values {\n  }\n}\n",
+    b"fn visit(values: Array<I32>) -> Unit {\n  for value in values {\n  }\n}\nenum Option<t> {\n  Some(t)\n  None\n}\nstruct Array<t> {\n  item: t\n}\nstruct ArrayIter<t> {\n  item: t\n  mut done: Bool\n}\nimpl<t> Array<t> {\n  fn iter(self) -> ArrayIter<t> {\n    {\n      item: self.item\n      done: false\n    }\n  }\n}\nimpl<t> ArrayIter<t> {\n  fn next(self) -> Option<t> {\n    if self.done {\n      None\n    } else {\n      self.done = true\n      Some(self.item)\n    }\n  }\n}\n",
   )
   let names = self_host_resolve_module_names(collected)
   assert(names.diagnostics.length() == 0u32, "for iterable diagnostics")
@@ -245,7 +246,7 @@ test "for iterable retains its parameter binding" {
   let _ = while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::NameExpr(name, _) => if collected.name(name) == "values" {
+        NameExpr(name, _) => if collected.name(name) == "values" {
           found = true
           assert(
             self_host_name_ref_is_local(
@@ -273,7 +274,7 @@ test "body names diagnose unknown values and preserve known names" {
   let names = self_host_resolve_module_names(collected)
   assert(names.diagnostics.length() == 1u32, "unknown count")
   match names.diagnostics[0u32] {
-    SelfHostBodyResolutionDiagnostic::UnknownValueName(name, _, _) => assert(
+    UnknownValueName(name, _, _) => assert(
       collected.name(name) == "missing",
       "unknown spelling",
     )
@@ -290,8 +291,8 @@ test "alternative patterns share bindings and diagnose mismatched sets" {
   assert(valid_names.diagnostics.length() == 0u32, "valid alternatives")
   let body = valid.bodies[0u32]
   let info = match valid_names.body(body.id) {
-    Option::Some(value) => value
-    Option::None => self_host_empty_resolved_body_names()
+    Some(value) => value
+    None => self_host_empty_resolved_body_names()
   }
   assert(info.locals.length == 2u32, "shared alternative local")
 
@@ -305,13 +306,13 @@ test "alternative patterns share bindings and diagnose mismatched sets" {
   let mut extra = 0u32
   for diagnostic in invalid_names.diagnostics {
     match diagnostic {
-      SelfHostBodyResolutionDiagnostic::DuplicatePatternBinding(_, _, _) => {
+      DuplicatePatternBinding(_, _, _) => {
         duplicate = duplicate + 1u32
       }
-      SelfHostBodyResolutionDiagnostic::AlternativeMissingBinding(_, _, _) => {
+      AlternativeMissingBinding(_, _, _) => {
         missing = missing + 1u32
       }
-      SelfHostBodyResolutionDiagnostic::AlternativeExtraBinding(_, _, _) => {
+      AlternativeExtraBinding(_, _, _) => {
         extra = extra + 1u32
       }
       _ => {}
@@ -333,7 +334,7 @@ test "functional loops resolve nearest break and continue targets" {
   let mut loop_transfers = 0u32
   for diagnostic in names.diagnostics {
     match diagnostic {
-      SelfHostBodyResolutionDiagnostic::UnknownValueName(name, _, offset) => {
+      UnknownValueName(name, _, offset) => {
         unknown_values = unknown_values + 1u32
         let builder = StringBuilder::new()
         builder.append(collected.name(name))
@@ -341,13 +342,13 @@ test "functional loops resolve nearest break and continue targets" {
         builder.append_u32(offset)
         assert(false, builder.finish())
       }
-      SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(_, _, _) => {
+      UnknownPatternConstructor(_, _, _) => {
         unknown_patterns = unknown_patterns + 1u32
       }
-      SelfHostBodyResolutionDiagnostic::BreakOutsideLoop(_, _) => {
+      BreakOutsideLoop(_, _) => {
         loop_transfers = loop_transfers + 1u32
       }
-      SelfHostBodyResolutionDiagnostic::ContinueOutsideLoop(_, _) => {
+      ContinueOutsideLoop(_, _) => {
         loop_transfers = loop_transfers + 1u32
       }
       _ => {}
@@ -357,8 +358,8 @@ test "functional loops resolve nearest break and continue targets" {
   assert(unknown_patterns == 0u32, "loop unknown patterns")
   assert(loop_transfers == 0u32, "loop transfer diagnostics")
   let info = match names.body(collected.bodies[0u32].id) {
-    Option::Some(value) => value
-    Option::None => self_host_empty_resolved_body_names()
+    Some(value) => value
+    None => self_host_empty_resolved_body_names()
   }
   assert(info.controls.length == 2u32, "loop control count")
   let mut outer = 0u32
@@ -382,21 +383,21 @@ test "lambda names resolve direct and transitive captures" {
   let names = self_host_resolve_module_names(collected)
   assert(names.diagnostics.length() == 0u32, "lambda diagnostics")
   let outer = match names.lambda(0u32) {
-    Option::Some(value) => value
-    Option::None => self_host_empty_resolved_lambda_names()
+    Some(value) => value
+    None => self_host_empty_resolved_lambda_names()
   }
   let inner = match names.lambda(1u32) {
-    Option::Some(value) => value
-    Option::None => outer
+    Some(value) => value
+    None => outer
   }
   assert(outer.captures.length == 1u32, "routed outer capture")
   assert(inner.captures.length == 2u32, "inner captures")
   let seed = match names.lambda_capture(0u32, 0u32) {
-    Option::Some(value) => value
-    Option::None => names.captures[0u32]
+    Some(value) => value
+    None => names.captures[0u32]
   }
   match seed.source {
-    SelfHostLambdaCaptureSource::BodyLocalCapture(_, local) => assert(
+    BodyLocalCapture(_, local) => assert(
       local == 0u32,
       "root seed local",
     )
@@ -444,22 +445,22 @@ test "lambda names resolve direct and transitive captures" {
 test "opened imported values and exact aliases resolve in bodies" {
   let program = self_host_collect_program_manifest(
     3010u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.consumer"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "consumer.dew"
               source: b"open app.library\nimport app.library as @api\npub fn run() -> I32 {\n  answer + @api.answer\n}\n"
               test_only: false
             },
           ]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.library"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "library.dew"
               source: b"pub let answer = 42\n"
               test_only: false
@@ -478,14 +479,14 @@ test "opened imported values and exact aliases resolve in bodies" {
   assert(names.diagnostics.length() == 0u32, "imported body diagnostics")
   let root = self_host_first_body_expression(collected, collected.bodies[0u32])
   match collected.expressions[root] {
-    SelfHostHirExpr::BinaryExpr(_, opened, qualified, _) => {
+    BinaryExpr(_, opened, qualified, _) => {
       assert(
-        names.expression_references[opened] is SelfHostBodyNameReference::ImportedModuleValueNameReference(_),
+        names.expression_references[opened] is ImportedModuleValueNameReference(_),
         "opened value reference",
       )
       match collected.expressions[qualified] {
-        SelfHostHirExpr::QualifiedExpr(alias, _, _) => assert(
-          names.expression_references[alias] is SelfHostBodyNameReference::ImportedModuleNameReference(_),
+        QualifiedExpr(alias, _, _) => assert(
+          names.expression_references[alias] is ImportedModuleNameReference(_),
           "exact alias reference",
         )
         _ => assert(false, "qualified imported value")
@@ -498,22 +499,22 @@ test "opened imported values and exact aliases resolve in bodies" {
 test "exact import aliases resolve qualified pattern roots" {
   let program = self_host_collect_program_manifest(
     3015u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.consumer"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "consumer.dew"
               source: b"import app.library as @api\npub fn read(value: @api.Message) -> I32 {\n  match value {\n    @api.Message::Value(item) => item\n  }\n}\n"
               test_only: false
             },
           ]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.library"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "library.dew"
               source: b"pub enum Message {\n  Value(I32)\n}\n"
               test_only: false
@@ -534,32 +535,32 @@ test "exact import aliases resolve qualified pattern roots" {
 test "opened imported value ambiguity is deterministic" {
   let program = self_host_collect_program_manifest(
     3020u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.consumer"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "consumer.dew"
               source: b"open app.first\nopen app.second\npub fn run() -> I32 {\n  answer\n}\n"
               test_only: false
             },
           ]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.first"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "first.dew"
               source: b"pub let answer = 1\n"
               test_only: false
             },
           ]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.second"
           files: [
-            SelfHostManifestFile::{
+            {
               path: "second.dew"
               source: b"pub let answer = 2\n"
               test_only: false
@@ -577,7 +578,7 @@ test "opened imported value ambiguity is deterministic" {
   )
   assert(names.diagnostics.length() == 1u32, "body ambiguity")
   match names.diagnostics[0u32] {
-    SelfHostBodyResolutionDiagnostic::AmbiguousImportedValueName(_, _, _) => {}
+    AmbiguousImportedValueName(_, _, _) => {}
     _ => assert(false, "ambiguous imported value diagnostic")
   }
 }
@@ -629,10 +630,10 @@ test "out of loop transfers remain diagnostics" {
   let mut continues = 0u32
   for diagnostic in names.diagnostics {
     match diagnostic {
-      SelfHostBodyResolutionDiagnostic::BreakOutsideLoop(_, _) => {
+      BreakOutsideLoop(_, _) => {
         breaks = breaks + 1u32
       }
-      SelfHostBodyResolutionDiagnostic::ContinueOutsideLoop(_, _) => {
+      ContinueOutsideLoop(_, _) => {
         continues = continues + 1u32
       }
       _ => {}
@@ -677,8 +678,8 @@ test "body name resolution remains iterative for 1024 locals" {
   let names = self_host_resolve_module_names(collected)
   assert(names.diagnostics.length() == 0u32, "deep diagnostics")
   let info = match names.body(collected.bodies[0u32].id) {
-    Option::Some(value) => value
-    Option::None => self_host_empty_resolved_body_names()
+    Some(value) => value
+    None => self_host_empty_resolved_body_names()
   }
   assert(info.locals.length == 1025u32, "deep local count")
 }

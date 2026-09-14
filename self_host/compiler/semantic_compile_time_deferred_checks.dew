@@ -15,8 +15,8 @@ impl SelfHostBasicBodyInferencer {
 
   fn live_expression(self, id: U32) -> Bool {
     match self.reachability {
-      Option::None => true
-      Option::Some(live) => {
+      None => true
+      Some(live) => {
         self_host_assert_array_index(id, live.expressions.length(), "ARN-104 selected inference expression")
         live.expressions[id]
       }
@@ -25,8 +25,8 @@ impl SelfHostBasicBodyInferencer {
 
   fn live_block(self, id: U32) -> Bool {
     match self.reachability {
-      Option::None => true
-      Option::Some(live) => {
+      None => true
+      Some(live) => {
         self_host_assert_array_index(id, live.blocks.length(), "ARN-104 selected inference block")
         live.blocks[id]
       }
@@ -35,8 +35,8 @@ impl SelfHostBasicBodyInferencer {
 
   fn live_pattern(self, id: U32) -> Bool {
     match self.reachability {
-      Option::None => true
-      Option::Some(live) => {
+      None => true
+      Some(live) => {
         self_host_assert_array_index(id, live.patterns.length(), "ARN-104 selected inference pattern")
         live.patterns[id]
       }
@@ -45,8 +45,8 @@ impl SelfHostBasicBodyInferencer {
 
   fn live_local(self, local: U32) -> Bool {
     match self.reachability {
-      Option::None => true
-      Option::Some(live) => {
+      None => true
+      Some(live) => {
         self_host_assert_array_index(local, self.name_info.locals.length, "ARN-102 selected inference local")
         let global = self.name_info.locals.start + local
         self_host_assert_array_index(global, live.locals.length(), "ARN-104 selected inference local")
@@ -57,11 +57,11 @@ impl SelfHostBasicBodyInferencer {
 
   fn source_resolved_type(self, type_: U32) -> U32 {
     match self.reachability {
-      Option::Some(live) => if live.declaration == self.body.declaration && live.type_substitutions.length() > 0u32 {
+      Some(live) => if live.declaration == self.body.declaration && live.type_substitutions.length() > 0u32 {
         self_host_assert_array_index(type_, live.type_substitutions.length(), "ARN-104 selected source type")
         return live.type_substitutions[type_]
       }
-      Option::None => {}
+      None => {}
     }
     type_
   }
@@ -76,30 +76,30 @@ impl SelfHostBasicBodyInferencer {
           self_host_assert_array_index(expression, self.collected.expressions.length(), "ARN-104 deferred guard expression")
           seen.set(expression, true)
           match self.collected.expressions[expression] {
-            SelfHostHirExpr::NameExpr(_, _) => match self.imported.local_initializer_sources.get(expression) {
-              Option::Some(initializer) => work.push(initializer)
-              Option::None => {}
+            NameExpr(_, _) => match self.imported.local_initializer_sources.get(expression) {
+              Some(initializer) => work.push(initializer)
+              None => {}
             }
-            SelfHostHirExpr::PrefixExpr(_, value, _) => work.push(value)
-            SelfHostHirExpr::BinaryExpr(_, left, right, _) => {
+            PrefixExpr(_, value, _) => work.push(value)
+            BinaryExpr(_, left, right, _) => {
               work.push(left)
               work.push(right)
             }
-            SelfHostHirExpr::FieldExpr(value, _, _) => work.push(value)
-            SelfHostHirExpr::QualifiedExpr(value, _, _) => work.push(value)
-            SelfHostHirExpr::ProductFieldExpr(value, _, _, _) => work.push(value)
-            SelfHostHirExpr::IndexExpr(left, right, _) => {
+            FieldExpr(value, _, _) => work.push(value)
+            QualifiedExpr(value, _, _) => work.push(value)
+            ProductFieldExpr(value, _, _, _) => work.push(value)
+            IndexExpr(left, right, _) => {
               work.push(left)
               work.push(right)
             }
-            SelfHostHirExpr::CallExpr(target, arguments, _) => {
+            CallExpr(target, arguments, _) => {
               self_host_assert_array_index(target, self.names.expression_references.length(), "ARN-104 deferred query target")
               let declaration = match self.names.expression_references[target] {
-                SelfHostBodyNameReference::ModuleValueNameReference(name) => match self.unique_local_callable_index(name) {
-                  Option::Some(index) => self.collected.callables[index].declaration
-                  Option::None => 18446744073709551615u64
+                ModuleValueNameReference(name) => match self.unique_local_callable_index(name) {
+                  Some(index) => self.collected.callables[index].declaration
+                  None => 18446744073709551615u64
                 }
-                SelfHostBodyNameReference::ImportedModuleValueNameReference(declaration) => declaration
+                ImportedModuleValueNameReference(declaration) => declaration
                 _ => 18446744073709551615u64
               }
               work.push(target)
@@ -140,7 +140,7 @@ impl SelfHostBasicBodyInferencer {
 
   fn has_deferred_type(self, type_: I32) -> Bool {
     let representative = self.solver.representative_type(type_)
-    if self.solver.type_term(representative) is SelfHostBodyTypeTerm::BodyVariableType(_) {
+    if self.solver.type_term(representative) is BodyVariableType(_) {
       for deferred in self.deferred_types {
         if self.solver.representative_type(deferred) == representative {
           return true
@@ -162,10 +162,10 @@ impl SelfHostBasicBodyInferencer {
         }
         seen.set(type_, type_)
         match self.solver.type_term(type_) {
-          SelfHostBodyTypeTerm::BodyResolvedType(id) => if self.guard_type_has_generic(id) {
+          BodyResolvedType(id) => if self.guard_type_has_generic(id) {
             return true
           }
-          SelfHostBodyTypeTerm::BodyProductType(arguments) => {
+          BodyProductType(arguments) => {
             self_host_assert_array_span(arguments.start, arguments.length, self.solver.type_arguments.length(), "ARN-101 deferred operand type arguments")
             let _ = while 0u32 {
               index => if index < arguments.length {
@@ -176,7 +176,7 @@ impl SelfHostBasicBodyInferencer {
               }
             }
           }
-          SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+          BodyAppliedType(base, arguments) => {
             work.push(base)
             self_host_assert_array_span(arguments.start, arguments.length, self.solver.type_arguments.length(), "ARN-101 deferred operand type arguments")
             let _ = while 0u32 {
@@ -188,7 +188,7 @@ impl SelfHostBasicBodyInferencer {
               }
             }
           }
-          SelfHostBodyTypeTerm::BodyFunctionType(arguments, result) => {
+          BodyFunctionType(arguments, result) => {
             work.push(result)
             self_host_assert_array_span(arguments.start, arguments.length, self.solver.type_arguments.length(), "ARN-101 deferred operand type arguments")
             let _ = while 0u32 {
@@ -200,7 +200,7 @@ impl SelfHostBasicBodyInferencer {
               }
             }
           }
-          SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => work.push(owner)
+          BodyMemberTypeProjection(owner, _, _) => work.push(owner)
           _ => {}
         }
         continue work.length()
@@ -215,7 +215,7 @@ impl SelfHostBasicBodyInferencer {
     if !self.can_defer_expression_check(expression, inputs) {
       return false
     }
-    self_host_store_basic_expression_selection(self.expression_selections, self.expression_index(expression), SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection)
+    self_host_store_basic_expression_selection(self.expression_selections, self.expression_index(expression), DeferredBasicExpressionSelection)
     self.deferred_types.push(self.expression_type(expression))
     true
   }
@@ -225,10 +225,10 @@ impl SelfHostBasicBodyInferencer {
       return false
     }
     match self.reachability {
-      Option::Some(live) => if live.declaration == self.body.declaration {
+      Some(live) => if live.declaration == self.body.declaration {
         return false
       }
-      Option::None => {}
+      None => {}
     }
     let mut dependent = false
     for type_ in inputs {
@@ -240,7 +240,7 @@ impl SelfHostBasicBodyInferencer {
       self.prepare_guard_scopes()
       let mut guarded = self.deferred_guard_scopes.contains_key(expression)
       match self.collected.expressions[expression] {
-        SelfHostHirExpr::IfExpr(condition, _, _, _) => {
+        IfExpr(condition, _, _, _) => {
           guarded = guarded || self.guard_condition_dependent(condition, self.guard_builtin_targets())
         }
         _ => {}

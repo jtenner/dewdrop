@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V1\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V1_SHORT_CONSTRUCTORS\x00"
 
 ///|
 fn cache_write_int(output : @cache_binary.Writer, value : Int) -> Unit {
@@ -400,6 +400,11 @@ fn cache_write_interface(
   cache_write_int(output, interface_.variants.length())
   for variant in interface_.variants {
     cache_write_u64(output, variant.variant)
+    cache_write_bool(output, variant.constructor is Some(_))
+    match variant.constructor {
+      Some(declaration) => cache_write_u64(output, declaration)
+      None => ()
+    }
     cache_write_u64(output, variant.declaration)
     cache_write_variant_kind(output, variant.kind)
     cache_write_string(output, variant.name)
@@ -902,6 +907,11 @@ fn FrozenInterfaceCacheReader::read_interface(
   for _ in 0..<variant_count {
     variants.push({
       variant: self.read_u64(),
+      constructor: if self.read_bool() {
+        Some(self.read_u64())
+      } else {
+        None
+      },
       declaration: self.read_u64(),
       kind: self.read_variant_kind(),
       name: self.read_string(),

@@ -2,18 +2,18 @@ fn self_host_required_object_constructor(plan: SelfHostPlannedPhysicalBodyCarrie
   if !self_host_array_span_is_valid(fields.start, fields.length, module_.object_fields.length()) {
     self_host_constructor_field_failure(module_, body, expression, 7u32, 101u32, u32_into_u64(module_.object_fields.length()), u32_into_u64(fields.length), u32_into_u64(fields.start))
   }
-  let mut selected = Option::None
+  let mut selected = None
   for recipe in plan.object_constructors {
     if recipe.expression == expression {
-      if selected is Option::Some(_) {
+      if selected is Some(_) {
         self_host_constructor_field_failure(module_, body, expression, 7u32, 610u32, 1u64, 2u64, 16u64)
       }
-      selected = Option::Some(recipe)
+      selected = Some(recipe)
     }
   }
   let recipe = match selected {
-    Option::Some(value) => value
-    Option::None => self_host_constructor_field_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, 16u64)
+    Some(value) => value
+    None => self_host_constructor_field_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, 16u64)
   }
   if recipe.source_fields.start != fields.start {
     self_host_constructor_field_failure(module_, body, expression, 7u32, 608u32, u32_into_u64(recipe.source_fields.start), u32_into_u64(fields.start), 17u64)
@@ -29,25 +29,25 @@ fn self_host_required_object_constructor(plan: SelfHostPlannedPhysicalBodyCarrie
 
 fn self_host_schedule_planned_object_constructor(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, fields: SelfHostHirSpan, tasks: Array<SelfHostLinkedI32EmitTask>, expression_depths: Array<U32>, destination: StarshineInstructions, depth: U32) -> Unit {
   let plan = match canonical {
-    Option::Some(value) => value
-    Option::None => self_host_constructor_field_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, 19u64)
+    Some(value) => value
+    None => self_host_constructor_field_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, 19u64)
   }
   let recipe = self_host_required_object_constructor(plan, module_, body, expression, fields)
-  tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(recipe.physical_type, destination))
+  tasks.push(EmitLinkedStructNew(recipe.physical_type, destination))
   while recipe.operands.length {
     count if count > 0u32 => {
       let index = count - 1u32
       let operand = plan.object_constructor_operands[recipe.operands.start + index]
       let scratch = self_host_physical_scratch_slot(canonical, module_, body, expression, operand.source_ordinal)
       match operand.reference_cast {
-        Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefCast(type_, destination))
-        Option::None => {}
+        Some(type_) => tasks.push(EmitLinkedRefCast(type_, destination))
+        None => {}
       }
       match operand.box_type {
-        Option::Some(type_) => tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedStructNew(type_, destination))
-        Option::None => {}
+        Some(type_) => tasks.push(EmitLinkedStructNew(type_, destination))
+        None => {}
       }
-      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedLocalGet(scratch, destination))
+      tasks.push(EmitLinkedLocalGet(scratch, destination))
       continue index
     }
     _ => break ()
@@ -57,13 +57,13 @@ fn self_host_schedule_planned_object_constructor(canonical: Option<SelfHostPlann
       let index = count - 1u32
       let child = module_.object_fields[fields.start + index].value
       let source = match self_host_body_plan_expression(plan, child) {
-        Option::Some(value) => value
-        Option::None => self_host_constructor_field_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(child))
+        Some(value) => value
+        None => self_host_constructor_field_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(child))
       }
       let scratch = self_host_physical_scratch_slot(canonical, module_, body, expression, index)
-      tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedI32LocalSet(scratch, destination))
-      if source.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier {
-        tasks.push(SelfHostLinkedI32EmitTask::EmitLinkedRefNull(destination))
+      tasks.push(EmitLinkedI32LocalSet(scratch, destination))
+      if source.carrier is UnitBodyCarrier {
+        tasks.push(EmitLinkedRefNull(destination))
       }
       self_host_linked_i32_schedule_expression(tasks, expression_depths, child, destination, depth)
       continue index

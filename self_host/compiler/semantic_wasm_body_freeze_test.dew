@@ -36,7 +36,7 @@ test "BOD-605 frozen expressions retain their source identity" expect_trap "unre
 
 test "BOD-605 frozen locals retain their scalar carrier" expect_trap "unreachable" {
   let plan = self_host_test_frozen_program()
-  plan.bodies[0u32].locals[1u32] = SelfHostWasmBodyCarrier::I32BodyCarrier
+  plan.bodies[0u32].locals[1u32] = I32BodyCarrier
   self_host_assert_frozen_body_plan(plan)
 }
 
@@ -78,7 +78,7 @@ test "BOD-605 frozen control_state_values table length cannot change" expect_tra
 
 test "BOD-605 frozen control_states table length cannot change" expect_trap "unreachable" {
   let plan = self_host_test_frozen_program()
-  plan.bodies[0u32].control_states.push(SelfHostWasmBodyCarrier::UnitBodyCarrier)
+  plan.bodies[0u32].control_states.push(UnitBodyCarrier)
   self_host_assert_frozen_body_plan(plan)
 }
 
@@ -90,7 +90,7 @@ test "BOD-605 frozen control_result_values table length cannot change" expect_tr
 
 test "BOD-605 frozen control_results table length cannot change" expect_trap "unreachable" {
   let plan = self_host_test_frozen_program()
-  plan.bodies[0u32].control_results.push(SelfHostWasmBodyCarrier::UnitBodyCarrier)
+  plan.bodies[0u32].control_results.push(UnitBodyCarrier)
   self_host_assert_frozen_body_plan(plan)
 }
 
@@ -102,14 +102,14 @@ test "BOD-605 frozen call_evaluations table length cannot change" expect_trap "u
 
 test "BOD-605 frozen call_operands table length cannot change" expect_trap "unreachable" {
   let plan = self_host_test_frozen_program()
-  plan.bodies[0u32].call_operands.push(SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(0u32))
+  plan.bodies[0u32].call_operands.push(ExplicitArgumentPhysicalOperand(0u32))
   self_host_assert_frozen_body_plan(plan)
 }
 
 test "BOD-605 frozen body identity uses the original diagnostic owner" expect_trap "unreachable" {
   let plan = self_host_test_frozen_program()
   let source = plan.bodies[0u32]
-  plan.bodies[0u32] = SelfHostPlannedPhysicalBodyCarrierPlan::{
+  plan.bodies[0u32] = {
     converged: source.converged
     stalled_work_item: source.stalled_work_item
     module_index: source.module_index
@@ -148,10 +148,10 @@ test "BOD-605 frozen body identity uses the original diagnostic owner" expect_tr
 }
 test "physical freeze retains cached pattern subject IDs" {
   assert(self_host_body_freeze_operand_value(
-    SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(7u32),
+    PatternSubjectPhysicalOperand(7u32),
   ) == 7u64, "cached subject identity is part of the witness")
   assert(self_host_body_freeze_operand_value(
-    SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(8u32),
+    PatternSubjectPhysicalOperand(8u32),
   ) == 8u64, "another cached subject remains distinct")
 }
 fn self_host_test_frozen_call_program() -> SelfHostPlannedProgramWasmBodyPlan {
@@ -181,7 +181,7 @@ test "BOD-605 frozen calls retain the selected physical target" expect_trap "unr
   let program = self_host_test_frozen_call_program()
   let caller = program.bodies[1u32]
   let original = caller.calls[0u32]
-  caller.calls[0u32] = SelfHostPhysicalCallPlan::{
+  caller.calls[0u32] = {
     expression: original.expression
     receiver_expression: original.receiver_expression
     declaration: original.declaration
@@ -202,12 +202,12 @@ test "BOD-605 frozen calls retain evaluation order" expect_trap "unreachable" {
 
 test "BOD-605 frozen calls retain operand source kind" expect_trap "unreachable" {
   let program = self_host_test_frozen_call_program()
-  program.bodies[1u32].call_operands[0u32] = SelfHostPhysicalOperandSource::ReceiverPhysicalOperand(2u32)
+  program.bodies[1u32].call_operands[0u32] = ReceiverPhysicalOperand(2u32)
   self_host_assert_frozen_body_plan(program)
 }
 
 test "BOD-605 frozen calls retain operand source identity" expect_trap "unreachable" {
   let program = self_host_test_frozen_call_program()
-  program.bodies[1u32].call_operands[0u32] = SelfHostPhysicalOperandSource::ExplicitArgumentPhysicalOperand(1u32)
+  program.bodies[1u32].call_operands[0u32] = ExplicitArgumentPhysicalOperand(1u32)
   self_host_assert_frozen_body_plan(program)
 }

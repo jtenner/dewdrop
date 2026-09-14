@@ -296,7 +296,10 @@ fn BasicBodyInferencer::infer_construct_expression(
           self.select_imported_variant_construction(
             expression, fields, variant, offset,
           )
-        NoSelectedValueVariant => self.fail_expression_selection(expression)
+        NoSelectedValueVariant =>
+          if self.call_scratch.final_constructors {
+            self.fail_expression_selection(expression)
+          }
       }
       return
     }
@@ -645,23 +648,37 @@ fn BasicBodyInferencer::constrain_members(
           !self.consumed_member_roots[self.expression_index(expression)] {
           match self.names.expression_references[expression] {
             VariantNameReference(_) =>
-              match
-                self.select_value_variant(
-                  name,
-                  self.expression_type(expression),
-                  expression,
-                  offset,
-                ) {
-                SelectedLocalValueVariant(variant_index) =>
-                  self.infer_unit_variant_value(
-                    expression, variant_index, offset,
-                  )
-                SelectedImportedValueVariant(variant) =>
-                  self.infer_imported_unit_variant_value(
-                    expression, variant, offset,
-                  )
-                NoSelectedValueVariant =>
-                  self.fail_expression_selection(expression)
+              if !self.try_constructor_function(expression, name, offset) {
+                if !self.call_scratch.final_constructors &&
+                  self.type_is_variable(self.expression_type(expression)) &&
+                  self
+                  .constructor_candidates(name)
+                  .any(fn(candidate) {
+                    self.variant_kind(self.constructor_variant_id(candidate)) ==
+                    Some(TupleVariantDecl)
+                  }) {
+                  continue
+                }
+                match
+                  self.select_value_variant(
+                    name,
+                    self.expression_type(expression),
+                    expression,
+                    offset,
+                  ) {
+                  SelectedLocalValueVariant(variant_index) =>
+                    self.infer_unit_variant_value(
+                      expression, variant_index, offset,
+                    )
+                  SelectedImportedValueVariant(variant) =>
+                    self.infer_imported_unit_variant_value(
+                      expression, variant, offset,
+                    )
+                  NoSelectedValueVariant =>
+                    if self.call_scratch.final_constructors {
+                      self.fail_expression_selection(expression)
+                    }
+                }
               }
             _ => ()
           }

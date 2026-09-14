@@ -17,11 +17,11 @@ test "source function lookup preserves missing builtin entries" {
   let link = self_host_fragment_function_lookup_fixture()
   let declaration = 5100u64 << 32u64
   match self_host_linked_builtin_name(link, declaration) {
-    Option::Some(name) => assert(name.equals(b"i32.clz"), "present builtin name")
-    Option::None => assert(false, "missing valid builtin")
+    Some(name) => assert(name.equals(b"i32.clz"), "present builtin name")
+    None => assert(false, "missing valid builtin")
   }
   link.fragments.modules[0u32].function_by_declaration[0u32] = 4294967295u32
-  assert(self_host_linked_builtin_name(link, declaration) is Option::None,
+  assert(self_host_linked_builtin_name(link, declaration) is None,
     "missing builtin entry stays missing")
 }
 
@@ -44,7 +44,7 @@ fn self_host_fragment_function_lookup_replace(
 ) -> Unit {
   let module_ = link.fragments.modules[0u32]
   let original = self_host_planned_wasm_function_fragment_identity(module_.functions[0u32])
-  module_.functions[0u32] = SelfHostPlannedWasmFunctionFragment::{
+  module_.functions[0u32] = {
     declaration: original.declaration
     kind: kind
     direct_builtin: original.direct_builtin
@@ -65,6 +65,6 @@ test "SPC-304 source function lookup cannot substitute a specialization" expect_
 test "LNK-504 source function lookup cannot substitute a lambda" expect_trap "unreachable" {
   let link = self_host_fragment_function_lookup_fixture()
   self_host_fragment_function_lookup_replace(link, 4294967295u32,
-    SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(7u32))
+    PlannedWasmDefinedLambdaFunction(7u32))
   let _ = self_host_linked_builtin_name(link, 5100u64 << 32u64)
 }

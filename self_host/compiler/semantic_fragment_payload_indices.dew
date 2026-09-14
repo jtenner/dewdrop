@@ -1,5 +1,5 @@
 fn self_host_fragment_payload_failure(layouts: SelfHostPlannedModuleTypeLayouts, owner: U64, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
-  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+  self_host_assert_compiler_invariant_with_failure(false, {
     code: code
     phase: 4u32
     module_id: layouts.module_id

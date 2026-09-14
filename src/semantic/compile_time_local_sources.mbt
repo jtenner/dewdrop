@@ -38,31 +38,66 @@ fn compile_time_local_slot(span : HirSpan, relative : Int, count : Int) -> Int {
 }
 
 ///|
+fn compile_time_source_local_scopes(
+  collected : CollectedModule,
+  names : ResolvedModuleNames,
+  body : HirBody,
+) -> Array[CompileTimeLocalScope] {
+  // A lambda inferencer carries a synthetic body with the root body's ID.
+  // Read the root span so enclosing guards and captured initializers remain visible.
+  let body = collected.bodies[semantic_id_local(body.id)]
+  let scopes : Array[CompileTimeLocalScope] = []
+  scopes.push({
+    expressions: body.expressions,
+    locals: names.body(body.id).unwrap().locals,
+    captures: { start: 0, length: 0, },
+  })
+  for index, lambda in collected.lambdas {
+    if lambda.root_body == body.id {
+      scopes.push({
+        expressions: lambda.body.expressions,
+        locals: names.lambdas[index].locals,
+        captures: names.lambdas[index].captures,
+      })
+    }
+  }
+  scopes
+}
+
+///|
 fn compile_time_source_local_initializers(
   collected : CollectedModule,
   names : ResolvedModuleNames,
+  body : HirBody,
 ) -> Map[ExprId, ExprId] {
-  let scopes : Array[CompileTimeLocalScope] = []
-  for index, body in collected.bodies {
-    scopes.push({
-      expressions: body.expressions,
-      locals: names.bodies[index].locals,
-      captures: { start: 0, length: 0, },
-    })
+  let scopes = compile_time_source_local_scopes(collected, names, body)
+  // Each inference job owns only these spans. A module-sized table here made
+  // guards in ordinary functions repeatedly scan every other function.
+  let owners : Map[ExprId, Int] = {}
+  for index, scope in scopes {
+    guard program_specialization_span_is_valid(
+      scope.expressions,
+      collected.expressions.length(),
+    ) else {
+      abort("ARN-101 query local scope")
+    }
+    for offset in 0..<scope.expressions.length {
+      let expression = scope.expressions.start + offset
+      match names.expression_references[expression] {
+        LocalNameReference(_) | LambdaCaptureNameReference(_) => ()
+        _ => continue
+      }
+      match owners.get(expression) {
+        Some(old) =>
+          if scope.expressions.length <= scopes[old].expressions.length {
+            owners[expression] = index
+          }
+        None => owners[expression] = index
+      }
+    }
   }
-  for index, lambda in collected.lambdas {
-    scopes.push({
-      expressions: lambda.body.expressions,
-      locals: names.lambdas[index].locals,
-      captures: names.lambdas[index].captures,
-    })
-  }
-  let owners = compile_time_scope_owners(scopes, collected.expressions.length())
   let result = {}
   for expression, owner in owners {
-    if owner < 0 {
-      continue
-    }
     let scope = scopes[owner]
     let slot = match names.expression_references[expression] {
       LocalNameReference(local) =>

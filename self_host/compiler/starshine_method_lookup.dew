@@ -10,7 +10,7 @@ fn self_host_linked_method_call_index_for_receiver(
   receiver: U32,
   name: String,
 ) -> Option<U32> {
-  self_host_linked_unique_receiver_method(link, module_, body, receiver, name, Option::None)
+  self_host_linked_unique_receiver_method(link, module_, body, receiver, name, None)
 }
 
 fn self_host_linked_method_call_index_for_receiver_arity(
@@ -21,7 +21,7 @@ fn self_host_linked_method_call_index_for_receiver_arity(
   name: String,
   explicit_argument_count: U32,
 ) -> Option<U32> {
-  self_host_linked_unique_receiver_method(link, module_, body, receiver, name, Option::Some(explicit_argument_count))
+  self_host_linked_unique_receiver_method(link, module_, body, receiver, name, Some(explicit_argument_count))
 }
 
 fn self_host_linked_unique_receiver_method(
@@ -39,7 +39,7 @@ fn self_host_linked_unique_receiver_method(
     0u32
   }
   if receiver_nominal == 0u64 && receiver_primitive == 0u32 {
-    return Option::None
+    return None
   }
   let mut selected_declaration = 0u64
   for candidate_module in link.fragments.specialization.lowering.modules {
@@ -48,8 +48,8 @@ fn self_host_linked_unique_receiver_method(
         let callable = self_host_program_specialization_callable_at(candidate_module, index)
         let arity_matches = match explicit_argument_count {
           // Stored logical parameters include self; explicit arguments do not.
-          Option::Some(count) => callable.parameters.length > 0u32 && callable.parameters.length - 1u32 == count
-          Option::None => true
+          Some(count) => callable.parameters.length > 0u32 && callable.parameters.length - 1u32 == count
+          None => true
         }
         if callable.has_receiver && self_host_bytes_equal_string(callable.name, name) && arity_matches {
           let nominal = self_host_linked_resolved_nominal_declaration(candidate_module, callable.self_type)
@@ -57,7 +57,7 @@ fn self_host_linked_unique_receiver_method(
           if (receiver_nominal != 0u64 && receiver_nominal == nominal) ||
             (receiver_primitive != 0u32 && receiver_primitive == primitive) {
             if selected_declaration != 0u64 && selected_declaration != callable.declaration {
-              return Option::None
+              return None
             }
             selected_declaration = callable.declaration
           }
@@ -68,7 +68,7 @@ fn self_host_linked_unique_receiver_method(
     }
   }
   if selected_declaration == 0u64 {
-    return Option::None
+    return None
   }
   let mut selected_function = 4294967295u32
   for function_ in link.functions {
@@ -76,20 +76,20 @@ fn self_host_linked_unique_receiver_method(
       // This lookup has no call-site key or logical type-argument proof. Even
       // one linked specialization can belong to another applied receiver.
       if function_.specialization != 4294967295u32 {
-        return Option::None
+        return None
       }
       // A second candidate is ambiguous even when an invalid link table gives
       // it the same physical index. Link-table verification diagnoses that
       // corruption separately; it must not make this selection look unique.
       if selected_function != 4294967295u32 {
-        return Option::None
+        return None
       }
       selected_function = self_host_linked_physical_function_index(function_.function_index)
     }
   }
   if selected_function == 4294967295u32 {
-    Option::None
+    None
   } else {
-    Option::Some(selected_function)
+    Some(selected_function)
   }
 }

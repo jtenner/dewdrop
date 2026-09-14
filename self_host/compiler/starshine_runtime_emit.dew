@@ -307,36 +307,36 @@ fn self_host_linked_array_carrier_from_shape(
   shape: SelfHostPlannedValueShape,
 ) -> I32 {
   match self_host_physical_scalar_shape(shape) {
-    SelfHostPlannedValueShape::I32PlannedValueShape => 0i32
-    SelfHostPlannedValueShape::I64PlannedValueShape => 1i32
-    SelfHostPlannedValueShape::F32PlannedValueShape => 2i32
-    SelfHostPlannedValueShape::F64PlannedValueShape => 3i32
-    SelfHostPlannedValueShape::V128PlannedValueShape => 4i32
+    I32PlannedValueShape => 0i32
+    I64PlannedValueShape => 1i32
+    F32PlannedValueShape => 2i32
+    F64PlannedValueShape => 3i32
+    V128PlannedValueShape => 4i32
     _ => 5i32
   }
 }
 
 fn self_host_linked_shape_name(shape: SelfHostPlannedValueShape) -> String {
   match shape {
-    SelfHostPlannedValueShape::ErrorPlannedValueShape => "error"
-    SelfHostPlannedValueShape::UnitPlannedValueShape => "unit"
-    SelfHostPlannedValueShape::I8PlannedValueShape => "i8"
-    SelfHostPlannedValueShape::I16PlannedValueShape => "i16"
-    SelfHostPlannedValueShape::I32PlannedValueShape => "i32"
-    SelfHostPlannedValueShape::I64PlannedValueShape => "i64"
-    SelfHostPlannedValueShape::U8PlannedValueShape => "u8"
-    SelfHostPlannedValueShape::U16PlannedValueShape => "u16"
-    SelfHostPlannedValueShape::U32PlannedValueShape => "u32"
-    SelfHostPlannedValueShape::U64PlannedValueShape => "u64"
-    SelfHostPlannedValueShape::F32PlannedValueShape => "f32"
-    SelfHostPlannedValueShape::F64PlannedValueShape => "f64"
-    SelfHostPlannedValueShape::Swar32PlannedValueShape => "swar32"
-    SelfHostPlannedValueShape::Swar64PlannedValueShape => "swar64"
-    SelfHostPlannedValueShape::V128PlannedValueShape => "v128"
-    SelfHostPlannedValueShape::RefPlannedValueShape => "ref"
-    SelfHostPlannedValueShape::GenericPlannedValueShape => "generic"
-    SelfHostPlannedValueShape::ProductPlannedValueShape(_) => "product"
-    SelfHostPlannedValueShape::NeverPlannedValueShape => "never"
+    ErrorPlannedValueShape => "error"
+    UnitPlannedValueShape => "unit"
+    I8PlannedValueShape => "i8"
+    I16PlannedValueShape => "i16"
+    I32PlannedValueShape => "i32"
+    I64PlannedValueShape => "i64"
+    U8PlannedValueShape => "u8"
+    U16PlannedValueShape => "u16"
+    U32PlannedValueShape => "u32"
+    U64PlannedValueShape => "u64"
+    F32PlannedValueShape => "f32"
+    F64PlannedValueShape => "f64"
+    Swar32PlannedValueShape => "swar32"
+    Swar64PlannedValueShape => "swar64"
+    V128PlannedValueShape => "v128"
+    RefPlannedValueShape => "ref"
+    GenericPlannedValueShape => "generic"
+    ProductPlannedValueShape(_) => "product"
+    NeverPlannedValueShape => "never"
   }
 }
 
@@ -344,10 +344,10 @@ fn self_host_linked_shape_name(shape: SelfHostPlannedValueShape) -> String {
 fn self_host_linked_conversion_source_is_signed(
   shape: SelfHostPlannedValueShape,
 ) -> Bool {
-  shape is SelfHostPlannedValueShape::I8PlannedValueShape ||
-  shape is SelfHostPlannedValueShape::I16PlannedValueShape ||
-  shape is SelfHostPlannedValueShape::I32PlannedValueShape ||
-  shape is SelfHostPlannedValueShape::I64PlannedValueShape
+  shape is I8PlannedValueShape ||
+  shape is I16PlannedValueShape ||
+  shape is I32PlannedValueShape ||
+  shape is I64PlannedValueShape
 }
 
 fn self_host_emit_linked_conversion(
@@ -355,14 +355,14 @@ fn self_host_emit_linked_conversion(
   target: SelfHostPlannedValueShape,
   destination: StarshineInstructions,
 ) -> Bool {
-  if source is SelfHostPlannedValueShape::ErrorPlannedValueShape &&
-    target is SelfHostPlannedValueShape::ErrorPlannedValueShape {
+  if source is ErrorPlannedValueShape &&
+    target is ErrorPlannedValueShape {
     return true
   }
-  if target is SelfHostPlannedValueShape::UnitPlannedValueShape {
-    if !(source is SelfHostPlannedValueShape::ErrorPlannedValueShape) &&
-      !(source is SelfHostPlannedValueShape::UnitPlannedValueShape) &&
-      !(source is SelfHostPlannedValueShape::NeverPlannedValueShape) {
+  if target is UnitPlannedValueShape {
+    if !(source is ErrorPlannedValueShape) &&
+      !(source is UnitPlannedValueShape) &&
+      !(source is NeverPlannedValueShape) {
       StarshineFfi.ffi_ffi_bridge_instructions_push(
         destination,
         StarshineFfi.ffi_lib_Instruction_drop(),
@@ -371,30 +371,30 @@ fn self_host_emit_linked_conversion(
     return true
   }
   let source_scalar = self_host_physical_scalar_shape(source)
-  if target is SelfHostPlannedValueShape::U8PlannedValueShape ||
-    target is SelfHostPlannedValueShape::U16PlannedValueShape ||
-    target is SelfHostPlannedValueShape::U32PlannedValueShape {
+  if target is U8PlannedValueShape ||
+    target is U16PlannedValueShape ||
+    target is U32PlannedValueShape {
     match source_scalar {
-      SelfHostPlannedValueShape::I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+      I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
         destination,
         StarshineFfi.ffi_lib_Instruction_i32_wrap_i64(),
       )
-      SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+      F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
         destination,
         StarshineFfi.ffi_lib_Instruction_i32_trunc_f32u(),
       )
-      SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+      F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
         destination,
         StarshineFfi.ffi_lib_Instruction_i32_trunc_f64u(),
       )
-      SelfHostPlannedValueShape::I32PlannedValueShape => {}
+      I32PlannedValueShape => {}
       _ => {
         return false
       }
     }
-    let mask = if target is SelfHostPlannedValueShape::U8PlannedValueShape {
+    let mask = if target is U8PlannedValueShape {
       255i32
-    } else if target is SelfHostPlannedValueShape::U16PlannedValueShape {
+    } else if target is U16PlannedValueShape {
       65535i32
     } else {
       -1i32
@@ -413,10 +413,10 @@ fn self_host_emit_linked_conversion(
     }
     return true
   }
-  if target is SelfHostPlannedValueShape::I64PlannedValueShape ||
-    target is SelfHostPlannedValueShape::U64PlannedValueShape {
+  if target is I64PlannedValueShape ||
+    target is U64PlannedValueShape {
     match source_scalar {
-      SelfHostPlannedValueShape::I32PlannedValueShape => {
+      I32PlannedValueShape => {
         if self_host_linked_conversion_source_is_signed(source) {
           StarshineFfi.ffi_ffi_bridge_instructions_push(
             destination,
@@ -429,8 +429,8 @@ fn self_host_emit_linked_conversion(
           )
         }
       }
-      SelfHostPlannedValueShape::F32PlannedValueShape => {
-        if target is SelfHostPlannedValueShape::I64PlannedValueShape {
+      F32PlannedValueShape => {
+        if target is I64PlannedValueShape {
           StarshineFfi.ffi_ffi_bridge_instructions_push(
             destination,
             StarshineFfi.ffi_lib_Instruction_i64_trunc_f32s(),
@@ -442,8 +442,8 @@ fn self_host_emit_linked_conversion(
           )
         }
       }
-      SelfHostPlannedValueShape::F64PlannedValueShape => {
-        if target is SelfHostPlannedValueShape::I64PlannedValueShape {
+      F64PlannedValueShape => {
+        if target is I64PlannedValueShape {
           StarshineFfi.ffi_ffi_bridge_instructions_push(
             destination,
             StarshineFfi.ffi_lib_Instruction_i64_trunc_f64s(),
@@ -455,34 +455,34 @@ fn self_host_emit_linked_conversion(
           )
         }
       }
-      SelfHostPlannedValueShape::I64PlannedValueShape => {}
+      I64PlannedValueShape => {}
       _ => {
         return false
       }
     }
     return true
   }
-  if target is SelfHostPlannedValueShape::Swar32PlannedValueShape ||
-    target is SelfHostPlannedValueShape::Swar64PlannedValueShape ||
-    target is SelfHostPlannedValueShape::V128PlannedValueShape {
+  if target is Swar32PlannedValueShape ||
+    target is Swar64PlannedValueShape ||
+    target is V128PlannedValueShape {
     return true
   }
   match target {
-    SelfHostPlannedValueShape::I8PlannedValueShape => {
+    I8PlannedValueShape => {
       match source_scalar {
-        SelfHostPlannedValueShape::I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
           destination,
           StarshineFfi.ffi_lib_Instruction_i32_wrap_i64(),
         )
-        SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
           destination,
           StarshineFfi.ffi_lib_Instruction_i32_trunc_f32s(),
         )
-        SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
           destination,
           StarshineFfi.ffi_lib_Instruction_i32_trunc_f64s(),
         )
-        SelfHostPlannedValueShape::I32PlannedValueShape => {}
+        I32PlannedValueShape => {}
         _ => {
         return false
       }
@@ -492,21 +492,21 @@ fn self_host_emit_linked_conversion(
         StarshineFfi.ffi_lib_Instruction_i32_extend8s(),
       )
     }
-    SelfHostPlannedValueShape::I16PlannedValueShape => {
+    I16PlannedValueShape => {
       match source_scalar {
-        SelfHostPlannedValueShape::I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
           destination,
           StarshineFfi.ffi_lib_Instruction_i32_wrap_i64(),
         )
-        SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
           destination,
           StarshineFfi.ffi_lib_Instruction_i32_trunc_f32s(),
         )
-        SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+        F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
           destination,
           StarshineFfi.ffi_lib_Instruction_i32_trunc_f64s(),
         )
-        SelfHostPlannedValueShape::I32PlannedValueShape => {}
+        I32PlannedValueShape => {}
         _ => {
         return false
       }
@@ -516,26 +516,26 @@ fn self_host_emit_linked_conversion(
         StarshineFfi.ffi_lib_Instruction_i32_extend16s(),
       )
     }
-    SelfHostPlannedValueShape::I32PlannedValueShape => match source_scalar {
-      SelfHostPlannedValueShape::I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+    I32PlannedValueShape => match source_scalar {
+      I64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
         destination,
         StarshineFfi.ffi_lib_Instruction_i32_wrap_i64(),
       )
-      SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+      F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
         destination,
         StarshineFfi.ffi_lib_Instruction_i32_trunc_f32s(),
       )
-      SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+      F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
         destination,
         StarshineFfi.ffi_lib_Instruction_i32_trunc_f64s(),
       )
-      SelfHostPlannedValueShape::I32PlannedValueShape => {}
+      I32PlannedValueShape => {}
       _ => {
         return false
       }
     }
-    SelfHostPlannedValueShape::F32PlannedValueShape => match source_scalar {
-      SelfHostPlannedValueShape::I32PlannedValueShape => {
+    F32PlannedValueShape => match source_scalar {
+      I32PlannedValueShape => {
         if self_host_linked_conversion_source_is_signed(source) {
           StarshineFfi.ffi_ffi_bridge_instructions_push(
             destination,
@@ -548,7 +548,7 @@ fn self_host_emit_linked_conversion(
           )
         }
       }
-      SelfHostPlannedValueShape::I64PlannedValueShape => {
+      I64PlannedValueShape => {
         if self_host_linked_conversion_source_is_signed(source) {
           StarshineFfi.ffi_ffi_bridge_instructions_push(
             destination,
@@ -561,17 +561,17 @@ fn self_host_emit_linked_conversion(
           )
         }
       }
-      SelfHostPlannedValueShape::F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+      F64PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
         destination,
         StarshineFfi.ffi_lib_Instruction_f32_demote_f64(),
       )
-      SelfHostPlannedValueShape::F32PlannedValueShape => {}
+      F32PlannedValueShape => {}
       _ => {
         return false
       }
     }
-    SelfHostPlannedValueShape::F64PlannedValueShape => match source_scalar {
-      SelfHostPlannedValueShape::I32PlannedValueShape => {
+    F64PlannedValueShape => match source_scalar {
+      I32PlannedValueShape => {
         if self_host_linked_conversion_source_is_signed(source) {
           StarshineFfi.ffi_ffi_bridge_instructions_push(
             destination,
@@ -584,7 +584,7 @@ fn self_host_emit_linked_conversion(
           )
         }
       }
-      SelfHostPlannedValueShape::I64PlannedValueShape => {
+      I64PlannedValueShape => {
         if self_host_linked_conversion_source_is_signed(source) {
           StarshineFfi.ffi_ffi_bridge_instructions_push(
             destination,
@@ -597,11 +597,11 @@ fn self_host_emit_linked_conversion(
           )
         }
       }
-      SelfHostPlannedValueShape::F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
+      F32PlannedValueShape => StarshineFfi.ffi_ffi_bridge_instructions_push(
         destination,
         StarshineFfi.ffi_lib_Instruction_f64_promote_f32(),
       )
-      SelfHostPlannedValueShape::F64PlannedValueShape => {}
+      F64PlannedValueShape => {}
       _ => {
         return false
       }

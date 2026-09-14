@@ -2,8 +2,8 @@ fn self_host_test_query_demand_is_fixed(source: Bytes, name: Bytes) -> Unit {
   let lowering = self_host_physical_test_lowering(source)
   assert(lowering.collected.modules.at(0u32).diagnostic_count() == 0u32, "valid demand fixture source")
   match self_host_validate_program_inference(lowering) {
-    Option::Some(error) => assert(false, error)
-    Option::None => {}
+    Some(error) => assert(false, error)
+    None => {}
   }
   let mut method = 0u64
   for callable in lowering.modules[0u32].functions.callables {

@@ -18,10 +18,10 @@ test "raw reference casts retain result heaps in returned function values" {
 }
 
 fn self_host_test_raw_struct_mutation(source: SelfHostPlannedPhysicalExpressionCarrier, mutation: U32) -> SelfHostPlannedPhysicalExpressionCarrier {
-  SelfHostPlannedPhysicalExpressionCarrier::{
+  {
     expression: source.expression
     value: if mutation == 4u32 {
-      SelfHostPlannedPhysicalValueInfo::{
+      {
         logical_type: source.value.logical_type
         carrier: source.value.carrier
         conflict_expected: source.value.conflict_expected
@@ -51,7 +51,7 @@ fn self_host_test_raw_struct_mutation(source: SelfHostPlannedPhysicalExpressionC
     }
     selected_field_index: source.selected_field_index
     selected_storage: if mutation == 0u32 {
-      Option::Some(SelfHostPlannedWasmStorageType::WasmI8SignedStorage)
+      Some(WasmI8SignedStorage)
     } else {
       source.selected_storage
     }
@@ -71,10 +71,10 @@ fn self_host_test_raw_struct_saved_read(mutation: U32) -> Unit {
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let mut checked = false
   for value in plan.expressions {
-    if self_host_raw_struct_call(link, module_.expressions[value.expression]) is Option::Some(_) {
+    if self_host_raw_struct_call(link, module_.expressions[value.expression]) is Some(_) {
       let slot = value.expression - module_.bodies[0u32].expressions.start
       plan.expressions[slot] = self_host_test_raw_struct_mutation(value, mutation)
-      let _ = self_host_require_emitted_raw_struct(Option::Some(plan), link, module_, module_.bodies[0u32], value.expression)
+      let _ = self_host_require_emitted_raw_struct(Some(plan), link, module_, module_.bodies[0u32], value.expression)
       checked = true
     }
   }
@@ -108,10 +108,10 @@ fn self_host_test_raw_cast_saved_read(mutation: U32) -> Unit {
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let mut checked = false
   for value in plan.expressions {
-    if self_host_raw_ref_cast_call(link, module_.expressions[value.expression]) is Option::Some(_) {
+    if self_host_raw_ref_cast_call(link, module_.expressions[value.expression]) is Some(_) {
       let slot = value.expression - module_.bodies[0u32].expressions.start
       plan.expressions[slot] = self_host_test_raw_struct_mutation(value, mutation)
-      let _ = self_host_require_emitted_raw_ref_cast(Option::Some(plan), link, module_, module_.bodies[0u32], value.expression)
+      let _ = self_host_require_emitted_raw_ref_cast(Some(plan), link, module_, module_.bodies[0u32], value.expression)
       checked = true
     }
   }
@@ -150,7 +150,7 @@ fn self_host_test_raw_struct_rejected(source: Bytes, reason: U32) -> Unit {
   let mut found = false
   for diagnostic in physical.diagnostics {
     if diagnostic.code == 714u32 {
-      assert(diagnostic.context == SelfHostPhysicalDiagnosticReason::RawHeapInstructionContract(reason).description(), "exact raw struct contract reason")
+      assert(diagnostic.context == RawHeapInstructionContract(reason).description(), "exact raw struct contract reason")
       found = true
     }
   }
@@ -177,8 +177,8 @@ fn self_host_test_raw_struct_module(source: Bytes) -> Unit {
   let physical = self_host_plan_program_wasm_bodies(link)
   assert(physical.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, physical))
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => assert(bytes.byte_length() > 0u32, "raw struct program emits")
-    Result::Err(error) => assert(false, error)
+    Ok(bytes) => assert(bytes.byte_length() > 0u32, "raw struct program emits")
+    Err(error) => assert(false, error)
   }
 }
 

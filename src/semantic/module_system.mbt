@@ -1287,7 +1287,7 @@ pub fn collect_program_manifest_with_standard_sources(
       ),
     )
   }
-  {
+  let program : CollectedProgram = {
     module_id_base,
     default_preamble,
     manifest_module_count: manifest.modules.length(),
@@ -1296,6 +1296,8 @@ pub fn collect_program_manifest_with_standard_sources(
     modules,
     diagnostics,
   }
+  install_program_constructor_wrappers(program)
+  program
 }
 
 ///|
@@ -1623,6 +1625,7 @@ pub struct FrozenInterfaceField {
 
 ///|
 pub struct FrozenInterfaceVariant {
+  constructor : DeclId?
   variant : VariantId
   declaration : DeclId
   kind : CollectedVariantKind
@@ -2757,10 +2760,14 @@ fn freeze_module_interface(
     abort("module interface inputs belong to different modules")
   }
   let declarations : Array[FrozenInterfaceDeclaration] = []
+  let constructor_wrappers = collected.public_constructor_wrappers()
   let exported_declarations : Map[DeclId, Bool] = Map::default()
   for declaration in collected.declarations {
     if semantic_id_local(declaration.id) >= collected.preamble_declaration_count &&
-      declaration.visibility == Public &&
+      (
+        declaration.visibility == Public ||
+        constructor_wrappers.contains(declaration.id)
+      ) &&
       !collected.declaration_is_test_only(declaration.id) &&
       declaration.has_name() &&
       declaration.kind != ImplDecl &&
@@ -2812,6 +2819,7 @@ fn freeze_module_interface(
       )
     }
     variants.push({
+      constructor: collected.constructor_wrappers.get(variant.id),
       variant: variant.id,
       declaration: variant.declaration,
       kind: variant.kind,
@@ -2897,7 +2905,8 @@ fn freeze_module_interface(
     }
     // Interface visibility belongs to the source declaration. Physical root
     // selection can withhold a callable without making its source API private.
-    let exported = if exported_impl_method {
+    let exported = if exported_impl_method ||
+      constructor_wrappers.contains(callable.declaration) {
       true
     } else {
       match collected.declaration(callable.declaration) {
@@ -3727,9 +3736,7 @@ pub struct FrozenProgramInterfaces {
 }
 
 ///|
-fn frozen_module_requires_value_inference(
-  collected : CollectedModule,
-) -> Bool {
+fn frozen_module_requires_value_inference(collected : CollectedModule) -> Bool {
   for declaration in collected.declarations {
     if declaration.kind == LetDecl &&
       semantic_id_local(declaration.id) >= collected.preamble_declaration_count &&
@@ -3774,6 +3781,7 @@ fn freeze_program_interfaces_with_cached_hook(
   resolve_cached_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
   on_frozen_scc : (HirSpan, Array[Int], Array[FrozenModuleInterface?]) -> Unit,
 ) -> FrozenProgramInterfaces {
+  install_program_constructor_wrappers(program)
   guard cached.length() == program.modules.length() else {
     abort("cached interface slots do not match the collected program")
   }
@@ -3783,6 +3791,7 @@ fn freeze_program_interfaces_with_cached_hook(
     None,
   )
   let cached_slots = Array::make(program.modules.length(), false)
+  let stale_constructor_slots = Array::make(program.modules.length(), false)
   for index, cached_interface in cached {
     match cached_interface {
       Some(interface_) => {
@@ -3790,8 +3799,12 @@ fn freeze_program_interfaces_with_cached_hook(
           interface_.path == program.module_paths[index] else {
           abort("cached interface identity does not match the collected module")
         }
-        slots[index] = Some(interface_)
-        cached_slots[index] = true
+        if program.modules[index].constructor_interface_matches(interface_) {
+          slots[index] = Some(interface_)
+          cached_slots[index] = true
+        } else {
+          stale_constructor_slots[index] = true
+        }
       }
       None => ()
     }
@@ -3817,8 +3830,11 @@ fn freeze_program_interfaces_with_cached_hook(
     if repeat {
       resolve_cached_scc(scc, graph.scc_modules, slots)
       let mut cached_count = 0
+      let mut stale_constructors = false
       for index in 0..<scc.length {
         let module_index = graph.scc_modules[scc.start + index]
+        stale_constructors = stale_constructors ||
+          stale_constructor_slots[module_index]
         match slots[module_index] {
           Some(interface_) => {
             guard interface_.module_id ==
@@ -3828,11 +3844,26 @@ fn freeze_program_interfaces_with_cached_hook(
                 "resolved cached SCC interface identity does not match the collected module",
               )
             }
+            if !program.modules[module_index].constructor_interface_matches(
+                interface_,
+              ) {
+              stale_constructors = true
+            }
             cached_slots[module_index] = true
             cached_count += 1
           }
           None => ()
         }
+      }
+      if stale_constructors {
+        // An SCC is one cache unit. Rebuild every member when synthesized
+        // constructor evidence changes in any member.
+        for index in 0..<scc.length {
+          let module_index = graph.scc_modules[scc.start + index]
+          slots[module_index] = None
+          cached_slots[module_index] = false
+        }
+        cached_count = 0
       }
       guard cached_count == 0 || cached_count == scc.length else {
         abort("resolved cached SCC must be complete")
@@ -3851,8 +3882,10 @@ fn freeze_program_interfaces_with_cached_hook(
                 "resolved cached interface identity does not match the collected module",
               )
             }
-            slots[module_index] = Some(interface_)
-            cached_slots[module_index] = true
+            if collected.constructor_interface_matches(interface_) {
+              slots[module_index] = Some(interface_)
+              cached_slots[module_index] = true
+            }
           }
           None => ()
         }
@@ -3862,9 +3895,7 @@ fn freeze_program_interfaces_with_cached_hook(
       if !cached_slots[module_index] {
         let resolved = resolve_module_types_with_imports(collected, imports)
         let functions = plan_module_functions(collected, resolved)
-        let module_values = if frozen_module_requires_value_inference(
-            collected,
-          ) {
+        let module_values = if frozen_module_requires_value_inference(collected) {
           Some(infer_frozen_module_values(collected, resolved, imports))
         } else {
           None
@@ -3898,9 +3929,7 @@ fn freeze_program_interfaces_with_cached_hook(
       if repeat && !cached_slots[module_index] {
         let resolved = resolve_module_types_with_imports(collected, imports)
         let functions = plan_module_functions(collected, resolved)
-        let module_values = if frozen_module_requires_value_inference(
-            collected,
-          ) {
+        let module_values = if frozen_module_requires_value_inference(collected) {
           Some(infer_frozen_module_values(collected, resolved, imports))
         } else {
           None

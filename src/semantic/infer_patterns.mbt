@@ -48,6 +48,7 @@ fn BasicBodyInferencer::record_pattern_constructor(
   constructor_id : UInt64,
   variant : Bool,
 ) -> Unit {
+  self.call_scratch.constructor_progress += 1
   let start = self.pattern_type_arguments.length()
   for type_ in self.call_scratch.candidate_type_arguments {
     self.pattern_type_arguments.push(type_)
@@ -145,6 +146,7 @@ fn BasicBodyInferencer::record_expression_selection(
   selected_id : UInt64,
   kind : Int,
 ) -> Unit {
+  self.call_scratch.constructor_progress += 1
   let start = self.expression_type_arguments.length()
   for type_ in self.call_scratch.candidate_type_arguments {
     self.expression_type_arguments.push(type_)
@@ -561,35 +563,27 @@ fn BasicBodyInferencer::select_value_variant(
   let mut first = 0UL
   let mut second = 0UL
   let mut count = 0
-  for index, variant in self.collected.variants {
-    if variant.name == name {
+  let candidates = self.constructor_candidates(name)
+  if candidates.length() == 1 {
+    return candidates[0]
+  }
+  for candidate in candidates {
+    if self.constructor_candidate_viable(
+        candidate, expression, expected, offset,
+      ) {
       count += 1
       if count == 1 {
-        selected = SelectedLocalValueVariant(index)
-        first = variant.id
+        selected = candidate
+        first = self.constructor_variant_id(candidate)
       } else if count == 2 {
-        second = variant.id
+        second = self.constructor_variant_id(candidate)
       }
     }
   }
-  match self.imports {
-    Some(imports) =>
-      for variant in imports.variants {
-        if variant.name == self.collected.name(name) &&
-          self.imported_pattern_variant_is_visible(variant.declaration) {
-          count += 1
-          if count == 1 {
-            selected = SelectedImportedValueVariant(variant)
-            first = variant.variant
-          } else if count == 2 {
-            second = variant.variant
-          }
-        }
-      }
-    None => ()
-  }
   if count == 1 {
     selected
+  } else if !self.call_scratch.final_constructors {
+    NoSelectedValueVariant
   } else if count == 0 {
     self.diagnose(UnknownVariantValue(name, expression, offset))
     NoSelectedValueVariant
@@ -646,32 +640,15 @@ fn BasicBodyInferencer::select_bare_variant(
   let mut count = 0
   let mut first = 0UL
   let mut second = 0UL
-  for variant in self.collected.variants {
-    if variant.name == name {
-      count += 1
-      if count == 1 {
-        selected = Some(variant.id)
-        first = variant.id
-      } else if count == 2 {
-        second = variant.id
-      }
+  for candidate in self.constructor_candidates(name) {
+    let variant = self.constructor_variant_id(candidate)
+    count += 1
+    if count == 1 {
+      selected = Some(variant)
+      first = variant
+    } else if count == 2 {
+      second = variant
     }
-  }
-  match self.imports {
-    Some(imports) =>
-      for variant in imports.variants {
-        if variant.name == self.collected.name(name) &&
-          self.imported_pattern_variant_is_visible(variant.declaration) {
-          count += 1
-          if count == 1 {
-            selected = Some(variant.variant)
-            first = variant.variant
-          } else if count == 2 {
-            second = variant.variant
-          }
-        }
-      }
-    None => ()
   }
   if count == 1 {
     selected
@@ -1122,7 +1099,13 @@ fn BasicBodyInferencer::infer_struct_pattern(
   offset : UInt64,
 ) -> Unit {
   self.pattern_types[self.pattern_index(base)] = expected
-  match self.names.pattern_references[base] {
+  let reference = if self.collected.patterns[base] is HirWildcardPattern(_) &&
+    self.inspect_nominal_type(expected) {
+    PatternTypeReference(self.call_scratch.nominal_declaration)
+  } else {
+    self.names.pattern_references[base]
+  }
+  match reference {
     PatternTypeReference(declaration) => {
       if declaration == standard_nullable_ref_type_declaration() {
         self.diagnose(InvalidPatternConstructor(pattern, offset))
@@ -1228,6 +1211,18 @@ fn BasicBodyInferencer::infer_pattern(
       continue
     }
     self.pattern_types[self.pattern_index(pattern)] = expected
+    let needs_owner = match self.collected.patterns[pattern] {
+      HirTuplePattern(_, _, _) | HirStructPattern(_, _, _, _, _) => true
+      HirBindingPattern(_, _) =>
+        self.names.pattern_references[pattern] is PatternVariantReference(_)
+      _ => false
+    }
+    if needs_owner &&
+      self.type_is_variable(expected) &&
+      !self.call_scratch.final_constructors {
+      self.call_scratch.pending_patterns.push((pattern, expected))
+      continue
+    }
     match self.collected.patterns[pattern] {
       HirWildcardPattern(_) => ()
       HirRestPattern(_) | HirImportAliasPattern(_, _) =>

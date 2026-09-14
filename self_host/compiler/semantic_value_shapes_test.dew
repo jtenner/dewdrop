@@ -9,29 +9,29 @@ test "resolved value shapes classify primitives references and generics" {
   assert(
     self_host_planned_resolved_value_shape(
       resolved,
-      resolved.primitive(SelfHostPrimitiveType::I32Type),
-    ) is SelfHostPlannedValueShape::I32PlannedValueShape,
+      resolved.primitive(I32Type),
+    ) is I32PlannedValueShape,
     "I32 shape",
   )
   assert(
     self_host_planned_resolved_value_shape(
       resolved,
-      resolved.primitive(SelfHostPrimitiveType::I64Type),
-    ) is SelfHostPlannedValueShape::I64PlannedValueShape,
+      resolved.primitive(I64Type),
+    ) is I64PlannedValueShape,
     "I64 shape",
   )
   assert(
     self_host_planned_resolved_value_shape(
       resolved,
       resolved.parameter_types[0u32],
-    ) is SelfHostPlannedValueShape::GenericPlannedValueShape,
+    ) is GenericPlannedValueShape,
     "generic shape",
   )
   assert(
     self_host_planned_resolved_value_shape(
       resolved,
       resolved.parameter_types[1u32],
-    ) is SelfHostPlannedValueShape::RefPlannedValueShape,
+    ) is RefPlannedValueShape,
     "nominal shape",
   )
 }
@@ -46,10 +46,10 @@ test "resolved value shapes retain product fields" {
     resolved,
     resolved.parameter_types[0u32],
   ) {
-    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+    ProductPlannedValueShape(fields) => {
       assert(fields.length() == 2u32, "two fields")
-      assert(fields[0u32] is SelfHostPlannedValueShape::I32PlannedValueShape, "I32 field")
-      assert(fields[1u32] is SelfHostPlannedValueShape::RefPlannedValueShape, "ref field")
+      assert(fields[0u32] is I32PlannedValueShape, "I32 field")
+      assert(fields[1u32] is RefPlannedValueShape, "ref field")
     }
     _ => assert(false, "product shape")
   }

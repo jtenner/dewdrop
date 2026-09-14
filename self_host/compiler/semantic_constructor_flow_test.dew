@@ -5,8 +5,8 @@ fn self_host_constructor_field_identity_link() -> SelfHostPlannedProgramWasmGCLi
   self_host_physical_test_assert_clean_inference(link)
   assert(link.diagnostics.length() == 0u32, "valid constructor identity source")
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => assert(bytes.byte_length() > 0u32, "valid constructor before mutation")
-    Result::Err(error) => assert(false, error)
+    Ok(bytes) => assert(bytes.byte_length() > 0u32, "valid constructor before mutation")
+    Err(error) => assert(false, error)
   }
   link
 }
@@ -17,15 +17,15 @@ fn self_host_constructor_field_identity_fixture(replacement: U64) -> Unit {
   assert(module_.object_fields.length() == 1u32, "one source field")
   let field = self_host_planned_object_field_at(module_.object_fields, 0u32)
   assert(field.field == 5100u64 << 32u64, "exact original field identity")
-  module_.object_fields[0u32] = SelfHostPlannedObjectField::{
+  module_.object_fields[0u32] = {
     field: replacement
     name: field.name
     value: field.value
     offset: field.offset
   }
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(_) => {}
-    Result::Err(error) => assert(false, error)
+    Ok(_) => {}
+    Err(error) => assert(false, error)
   }
 }
 
@@ -36,18 +36,18 @@ fn self_host_constructor_propagation_identity_fixture(replacement: U64) -> Unit 
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = module_.bodies[0u32]
   let field = module_.object_fields[0u32]
-  module_.object_fields[0u32] = SelfHostPlannedObjectField::{
+  module_.object_fields[0u32] = {
     field: replacement
     name: field.name
     value: field.value
     offset: field.offset
   }
   let expression = match self_host_body_plan_expression(plan, 2u32) {
-    Option::Some(value) => value
-    Option::None => unreachable()
+    Some(value) => value
+    None => unreachable()
   }
   let _ = self_host_body_force_constructor_field_carriers(link, module_, body,
-    plan.specialization, expression, SelfHostHirSpan::{
+    plan.specialization, expression, {
       start: 0u32
       length: 1u32
     }, plan.expressions)
@@ -75,23 +75,23 @@ fn self_host_constructor_field_span_fixture(kind: U32) -> Unit {
   let fragment = link.fragments.modules[0u32]
   let body = module_.bodies[0u32]
   let physical = fragment.physical_types[0u32]
-  let source = SelfHostHirSpan::{
+  let source = {
     start: 0u32
     length: 1u32
   }
   let valid = self_host_constructor_field_recipe(module_, body, 2u32, source, fragment, physical, 0u32)
   assert(valid.length() == 1u32 && valid[0u32] == 0u32, "valid field recipe before span mutation")
   if kind == 0u32 {
-    let _ = self_host_constructor_field_recipe(module_, body, 2u32, SelfHostHirSpan::{
+    let _ = self_host_constructor_field_recipe(module_, body, 2u32, {
       start: 0u32
       length: 2u32
     }, fragment, physical, 0u32)
   } else if kind == 1u32 {
     assert(fragment.fields.length() == 2u32, "two source fields without an unused closure field")
-    let changed = SelfHostPlannedWasmPhysicalType::{
+    let changed = {
       kind: physical.kind
       type_index: physical.type_index
-      fields: SelfHostHirSpan::{
+      fields: {
         start: fragment.fields.length()
         length: 1u32
       }
@@ -125,14 +125,14 @@ test "BOD-608 constructor recipes cannot use a source field twice" expect_trap "
   let fragment = link.fragments.modules[0u32]
   let body = module_.bodies[0u32]
   let physical = fragment.physical_types[0u32]
-  let fields = SelfHostHirSpan::{
+  let fields = {
     start: 0u32
     length: 2u32
   }
   let valid = self_host_constructor_field_recipe(module_, body, 3u32, fields, fragment, physical, 0u32)
   assert(valid.length() == 2u32 && valid[0u32] == 1u32 && valid[1u32] == 0u32, "physical order differs from source order")
   let second = self_host_planned_object_field_at(module_.object_fields, 1u32)
-  module_.object_fields[1u32] = SelfHostPlannedObjectField::{
+  module_.object_fields[1u32] = {
     field: module_.object_fields[0u32].field
     name: second.name
     value: second.value
@@ -154,23 +154,23 @@ test "Unit enum payload bindings do not inherit reference marker carriers" {
     let fragment = link.fragments.modules[linked_type.module_index]
     let physical = fragment.physical_types[linked_type.fragment_index]
     for pattern in module_.patterns {
-      if pattern.shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+      if pattern.shape is UnitPlannedValueShape {
         while 0u32 {
           index if index < physical.fields.length => {
             let slot = physical.fields.start + index
             let field = fragment.fields[slot]
-            if self_host_linked_variant_unit_storage(link, field, SelfHostWasmBodyCarrier::UnitBodyCarrier) {
-              assert(self_host_body_pattern_field_carrier(link, module_, linked_type.type_index, index, pattern.type_) is SelfHostWasmBodyCarrier::UnitBodyCarrier, "declared null marker is a logical Unit binding")
-              fragment.fields[slot] = SelfHostPlannedWasmField::{
+            if self_host_linked_variant_unit_storage(link, field, UnitBodyCarrier) {
+              assert(self_host_body_pattern_field_carrier(link, module_, linked_type.type_index, index, pattern.type_) is UnitBodyCarrier, "declared null marker is a logical Unit binding")
+              fragment.fields[slot] = {
                 role: field.role
                 declaration: field.declaration
                 physical_index: field.physical_index
-                storage: SelfHostPlannedWasmStorageType::WasmI64Storage
+                storage: WasmI64Storage
                 mutable_: field.mutable_
                 exact_nominal: field.exact_nominal
                 offset: field.offset
               }
-              assert(self_host_body_pattern_field_carrier(link, module_, linked_type.type_index, index, pattern.type_) is SelfHostWasmBodyCarrier::I64BodyCarrier, "wrong scalar storage must not become a valid Unit certificate")
+              assert(self_host_body_pattern_field_carrier(link, module_, linked_type.type_index, index, pattern.type_) is I64BodyCarrier, "wrong scalar storage must not become a valid Unit certificate")
               fragment.fields[slot] = field
               checked = checked + 1u32
             }
@@ -191,8 +191,8 @@ test "variant Unit storage rejects a field with another declaration identity" {
   let mut checked = 0u32
   for fragment in link.fragments.modules {
     for field in fragment.fields {
-      if self_host_linked_variant_unit_storage(link, field, SelfHostWasmBodyCarrier::UnitBodyCarrier) {
-        let changed = SelfHostPlannedWasmField::{
+      if self_host_linked_variant_unit_storage(link, field, UnitBodyCarrier) {
+        let changed = {
           role: field.role
           declaration: 18446744073709551615u64
           physical_index: field.physical_index
@@ -201,7 +201,7 @@ test "variant Unit storage rejects a field with another declaration identity" {
           exact_nominal: field.exact_nominal
           offset: field.offset
         }
-        assert(!self_host_linked_variant_unit_storage(link, changed, SelfHostWasmBodyCarrier::UnitBodyCarrier), "the role cannot hide a different stored declaration")
+        assert(!self_host_linked_variant_unit_storage(link, changed, UnitBodyCarrier), "the role cannot hide a different stored declaration")
         checked = checked + 1u32
       }
     }
@@ -219,7 +219,7 @@ fn self_host_test_evaluation_sequence_module() -> SelfHostPlannedModuleLowering 
   assert(physical.diagnostics.length() == 0u32, "valid evaluation prefix before mutation")
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   match module_.expressions[6u32].kind {
-    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => {
+    PlannedEvaluationSequence(children) => {
       assert(children.length == 2u32, "one value precedes the return")
       assert(module_.expression_children[children.start] == 2u32, "first value identity")
       assert(module_.expression_children[children.start + 1u32] == 4u32, "return identity")
@@ -233,11 +233,11 @@ test "BOD-611 evaluation prefixes cannot be empty" expect_trap "unreachable" {
   let module_ = self_host_test_evaluation_sequence_module()
   let source = module_.expressions[6u32]
   let span = match source.kind {
-    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => children
+    PlannedEvaluationSequence(children) => children
     _ => unreachable()
   }
   module_.expressions[6u32] = self_host_compile_time_replace_kind(source,
-    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(SelfHostHirSpan::{
+    PlannedEvaluationSequence({
       start: span.start
       length: 0u32
     }))
@@ -287,11 +287,11 @@ test "BOD-611 emitted evaluation prefixes cannot be empty" expect_trap "unreacha
   let module_ = self_host_test_evaluation_sequence_module()
   let source = module_.expressions[6u32]
   let span = match source.kind {
-    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => children
+    PlannedEvaluationSequence(children) => children
     _ => unreachable()
   }
   module_.expressions[6u32] = self_host_compile_time_replace_kind(source,
-    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(SelfHostHirSpan::{
+    PlannedEvaluationSequence({
       start: span.start
       length: 0u32
     }))
@@ -341,13 +341,13 @@ test "nonreturning constructor lowering owns its prefix and preserves source chi
   let mut found = 0u32
   for source in module_.expressions {
     match source.kind {
-      SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => {
+      PlannedEvaluationSequence(children) => {
         found = found + 1u32
         assert(!source.flow.falls_through, "prefix retains the flow proof")
         assert(children.length == 2u32, "later operand is excluded")
         assert(children.start >= collected.expression_children.length(), "prefix has private storage")
         let terminal = module_.expression_children[children.start + 1u32]
-        assert(module_.expressions[terminal].kind is SelfHostPlannedExpressionKind::PlannedReturnExpression(_), "prefix ends at the original return")
+        assert(module_.expressions[terminal].kind is PlannedReturnExpression(_), "prefix ends at the original return")
       }
       _ => {}
     }
@@ -360,11 +360,11 @@ test "declared Unit fields permit only a Unit marker not generic or scalar boxin
     b"struct Marker {\n  value: Unit\n}\npub fn run() -> I32 {\n  let marker = Marker::{\n    value: ()\n  }\n  marker.value\n  42i32\n}\n",
   ), false)
   let field = link.fragments.specialization.lowering.modules[0u32].type_layouts.fields[0u32].field
-  let storage = SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
-  assert(self_host_linked_erased_field_unit_storage(link, field, storage, SelfHostWasmBodyCarrier::UnitBodyCarrier), "declared Unit marker is explicit")
-  assert(self_host_linked_erased_field_box_type(link, field, SelfHostWasmBodyCarrier::I32BodyCarrier) is Option::None, "Unit does not permit boxing")
-  assert(!self_host_linked_field_storage_matches_shape(link, field, storage, SelfHostPlannedValueShape::GenericPlannedValueShape), "Unit does not permit missing generic evidence")
-  assert(!self_host_linked_field_storage_matches_shape(link, 0u64, storage, SelfHostPlannedValueShape::UnitPlannedValueShape), "missing field identity does not permit Unit storage")
+  let storage = WasmNullableEqRefStorage
+  assert(self_host_linked_erased_field_unit_storage(link, field, storage, UnitBodyCarrier), "declared Unit marker is explicit")
+  assert(self_host_linked_erased_field_box_type(link, field, I32BodyCarrier) is None, "Unit does not permit boxing")
+  assert(!self_host_linked_field_storage_matches_shape(link, field, storage, GenericPlannedValueShape), "Unit does not permit missing generic evidence")
+  assert(!self_host_linked_field_storage_matches_shape(link, 0u64, storage, UnitPlannedValueShape), "missing field identity does not permit Unit storage")
 }
 test "runtime Unit pattern storage requires the exact selected layout" {
   let link = self_host_physical_test_named_import_link("dew.std.option",
@@ -379,13 +379,13 @@ test "runtime Unit pattern storage requires the exact selected layout" {
   let mut checked = 0u32
   for pattern in module_.patterns {
     match pattern.source {
-      SelfHostHirPattern::TuplePattern(_, children, _) => if children.length == 1u32 {
+      TuplePattern(_, children, _) => if children.length == 1u32 {
         let child = module_.patterns[module_.pattern_children[children.start]]
-        if child.shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+        if child.shape is UnitPlannedValueShape {
           let type_index = match self_host_linked_pattern_variant_type(link, module_, pattern,
-            SelfHostPlannedValueShape::UnitPlannedValueShape, 0u64) {
-            Option::Some(value) => value
-            Option::None => {
+            UnitPlannedValueShape, 0u64) {
+            Some(value) => value
+            None => {
               assert(false, "selected Unit variant has a layout")
               4294967295u32
             }
@@ -397,9 +397,9 @@ test "runtime Unit pattern storage requires the exact selected layout" {
             pattern, child, type_index + 1u32, field_index), "another heap type is not the selected Unit marker")
           assert(!self_host_unit_pattern_binding_has_storage(link, module_, 4294967295u32,
             pattern, child, type_index, field_index + 1u32), "another field is not the selected payload")
-          let scalar = SelfHostPlannedPattern::{
+          let scalar = {
             elided: child.elided
-            type_: -self_host_body_u32_to_i32(module_.resolved_types.primitive(SelfHostPrimitiveType::I64Type)) - 2i32
+            type_: -self_host_body_u32_to_i32(module_.resolved_types.primitive(I64Type)) - 2i32
             shape: child.shape
             source: child.source
             reference: child.reference

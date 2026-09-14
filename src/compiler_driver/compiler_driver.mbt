@@ -136,6 +136,22 @@ pub fn compile_manifest(
     Err(error) => return Err(error)
   }
   let lowering = planned.lowering
+  // Invalid source must be reported before physical planning asserts on types.
+  let diagnostics = @semantic.collect_compiler_frontend_diagnostics(
+    program, analyzed, lowering,
+  )
+  if diagnostics.any(fn(diagnostic) {
+      diagnostic.severity is @semantic.CompilerError
+    }) {
+    let message = StringBuilder::new()
+    for diagnostic in diagnostics {
+      message.write_string(
+        @semantic.render_compiler_source_diagnostic(program, diagnostic),
+      )
+      message.write_string("\n")
+    }
+    return Err(message.to_string())
+  }
   let planning_options = match options.planning_mode {
     CompilerProductionPlanning =>
       @semantic.WasmGCPlanningOptions::optimized_subtype_families()

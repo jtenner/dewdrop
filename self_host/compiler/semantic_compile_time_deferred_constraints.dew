@@ -10,7 +10,7 @@ enum SelfHostDeferredConstraintShape {
 }
 
 fn self_host_empty_deferred_constraint_pairs() -> Map<I32, Map<I32, I32>> {
-  Map::empty()
+  empty()
 }
 
 impl SelfHostBasicBodyInferencer {
@@ -39,45 +39,45 @@ impl SelfHostBasicBodyInferencer {
 
   fn deferred_constraint_shape(self, root: I32) -> SelfHostDeferredConstraintShape {
     match self.solver.type_term(self.solver.representative_type(root)) {
-      SelfHostBodyTypeTerm::BodyVariableType(_) => SelfHostDeferredConstraintShape::UnknownDeferredConstraint
-      SelfHostBodyTypeTerm::BodyResolvedType(id) => match self.resolved.types[id] {
-        SelfHostResolvedType::GenericParameterType(_) => SelfHostDeferredConstraintShape::UnknownDeferredConstraint
-        SelfHostResolvedType::SelfType(_) => SelfHostDeferredConstraintShape::UnknownDeferredConstraint
-        SelfHostResolvedType::ProductType(span) => SelfHostDeferredConstraintShape::CompoundDeferredConstraint(0u32, self.deferred_constraint_arguments(span, true))
-        SelfHostResolvedType::AppliedType(base, span) => {
+      BodyVariableType(_) => UnknownDeferredConstraint
+      BodyResolvedType(id) => match self.resolved.types[id] {
+        GenericParameterType(_) => UnknownDeferredConstraint
+        SelfType(_) => UnknownDeferredConstraint
+        ProductType(span) => CompoundDeferredConstraint(0u32, self.deferred_constraint_arguments(span, true))
+        AppliedType(base, span) => {
           let children = self.deferred_constraint_arguments(span, true)
           children.push(self.solver.resolved_type(base))
-          SelfHostDeferredConstraintShape::CompoundDeferredConstraint(1u32, children)
+          CompoundDeferredConstraint(1u32, children)
         }
-        SelfHostResolvedType::FunctionType(span, result) => {
+        FunctionType(span, result) => {
           let children = self.deferred_constraint_arguments(span, true)
           children.push(self.solver.resolved_type(result))
-          SelfHostDeferredConstraintShape::CompoundDeferredConstraint(2u32, children)
+          CompoundDeferredConstraint(2u32, children)
         }
-        SelfHostResolvedType::MemberTypeProjection(_, _, _) => if self.guard_type_has_generic(id) {
-          SelfHostDeferredConstraintShape::UnknownDeferredConstraint
+        MemberTypeProjection(_, _, _) => if self.guard_type_has_generic(id) {
+          UnknownDeferredConstraint
         } else {
-          SelfHostDeferredConstraintShape::AtomDeferredConstraint(root)
+          AtomDeferredConstraint(root)
         }
-        _ => SelfHostDeferredConstraintShape::AtomDeferredConstraint(root)
+        _ => AtomDeferredConstraint(root)
       }
-      SelfHostBodyTypeTerm::BodyProductType(span) => SelfHostDeferredConstraintShape::CompoundDeferredConstraint(0u32, self.deferred_constraint_arguments(span, false))
-      SelfHostBodyTypeTerm::BodyAppliedType(base, span) => {
+      BodyProductType(span) => CompoundDeferredConstraint(0u32, self.deferred_constraint_arguments(span, false))
+      BodyAppliedType(base, span) => {
         let children = self.deferred_constraint_arguments(span, false)
         children.push(base)
-        SelfHostDeferredConstraintShape::CompoundDeferredConstraint(1u32, children)
+        CompoundDeferredConstraint(1u32, children)
       }
-      SelfHostBodyTypeTerm::BodyFunctionType(span, result) => {
+      BodyFunctionType(span, result) => {
         let children = self.deferred_constraint_arguments(span, false)
         children.push(result)
-        SelfHostDeferredConstraintShape::CompoundDeferredConstraint(2u32, children)
+        CompoundDeferredConstraint(2u32, children)
       }
-      SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => if self.type_depends_on_parameter(owner) {
-        SelfHostDeferredConstraintShape::UnknownDeferredConstraint
+      BodyMemberTypeProjection(owner, _, _) => if self.type_depends_on_parameter(owner) {
+        UnknownDeferredConstraint
       } else {
-        SelfHostDeferredConstraintShape::InvalidDeferredConstraint
+        InvalidDeferredConstraint
       }
-      _ => SelfHostDeferredConstraintShape::InvalidDeferredConstraint
+      _ => InvalidDeferredConstraint
     }
   }
 
@@ -97,8 +97,8 @@ impl SelfHostBasicBodyInferencer {
           continue work.length()
         }
         let rights = match seen.get(left) {
-          Option::Some(value) => value
-          Option::None => {
+          Some(value) => value
+          None => {
             let value = self_host_empty_query_type_cache()
             seen.set(left, value)
             value
@@ -110,12 +110,12 @@ impl SelfHostBasicBodyInferencer {
         rights.set(right, right)
         let a = self.deferred_constraint_shape(left)
         let b = self.deferred_constraint_shape(right)
-        if a is SelfHostDeferredConstraintShape::UnknownDeferredConstraint || b is SelfHostDeferredConstraintShape::UnknownDeferredConstraint {
+        if a is UnknownDeferredConstraint || b is UnknownDeferredConstraint {
           continue work.length()
         }
         match a {
-          SelfHostDeferredConstraintShape::AtomDeferredConstraint(left) => match b {
-            SelfHostDeferredConstraintShape::AtomDeferredConstraint(right) => {
+          AtomDeferredConstraint(left) => match b {
+            AtomDeferredConstraint(right) => {
               let snapshot = self.solver.snapshot()
               let equal = self.solver.unify(left, right, origin)
               self.solver.rollback(snapshot)
@@ -125,14 +125,14 @@ impl SelfHostBasicBodyInferencer {
             }
             _ => return false
           }
-          SelfHostDeferredConstraintShape::CompoundDeferredConstraint(kind, xs) => match b {
-            SelfHostDeferredConstraintShape::CompoundDeferredConstraint(other, ys) => {
+          CompoundDeferredConstraint(kind, xs) => match b {
+            CompoundDeferredConstraint(other, ys) => {
               if kind != other || xs.length() != ys.length() {
                 return false
               }
               let _ = while 0u32 {
                 index => if index < xs.length() {
-                  work.push(SelfHostDeferredProjectionEquation::{
+                  work.push({
                     left: xs[index]
                     right: ys[index]
                   })
@@ -156,10 +156,10 @@ impl SelfHostBasicBodyInferencer {
 
   fn defer_type_constraint(self, left: I32, right: I32, origin: SelfHostTypeConstraintOrigin) -> Bool {
     match origin.kind {
-      SelfHostTypeConstraintOriginKind::ExpressionTypeConstraint => {}
-      SelfHostTypeConstraintOriginKind::CallTypeConstraint => {}
-      SelfHostTypeConstraintOriginKind::OperatorTypeConstraint => {}
-      SelfHostTypeConstraintOriginKind::ReturnTypeConstraint => {}
+      ExpressionTypeConstraint => {}
+      CallTypeConstraint => {}
+      OperatorTypeConstraint => {}
+      ReturnTypeConstraint => {}
       _ => return false
     }
     if self.solver.snapshots.length() > 0u32 || !self.can_defer_expression_check(origin.source, [left, right]) {

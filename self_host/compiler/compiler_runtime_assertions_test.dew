@@ -28,7 +28,7 @@ test "LNK-502 function handle encoding preserves the missing sentinel" expect_tr
 
 test "invariant record keeps numeric context" {
   self_host_record_invariant_failure(
-    SelfHostInvariantFailure::{
+    {
       code: 701u32
       phase: 7u32
       module_id: 11u64
@@ -64,7 +64,7 @@ test "invariant record keeps numeric context" {
 test "INV-001 trap preserves complete numeric context" expect_trap "unreachable" {
   self_host_assert_compiler_invariant_with_failure(
     false,
-    SelfHostInvariantFailure::{
+    {
       code: 701u32
       phase: 7u32
       module_id: 11u64
@@ -81,13 +81,13 @@ test "INV-001 trap preserves complete numeric context" expect_trap "unreachable"
 
 test "specialized call index retains exact caller keys" {
   let calls = [
-    SelfHostPlannedProgramSpecializedCallLink::{
+    {
       caller_body: 17u64
       caller_specialization: 3u32
       expression: 19u32
       function_index: 23u32
     },
-    SelfHostPlannedProgramSpecializedCallLink::{
+    {
       caller_body: 17u64
       caller_specialization: 4u32
       expression: 19u32
@@ -96,35 +96,35 @@ test "specialized call index retains exact caller keys" {
   ]
   calls.push(calls[0u32])
   let index = self_host_build_linked_call_index([], calls)
-  assert(self_host_linked_call_index_get(index, 17u64, 3u32, 19u32) is Option::Some(23u32), "first exact key")
-  assert(self_host_linked_call_index_get(index, 17u64, 4u32, 19u32) is Option::Some(29u32), "different caller specialization")
-  assert(self_host_linked_call_index_get(index, 18u64, 3u32, 19u32) is Option::None, "different caller body")
-  assert(self_host_linked_call_index_get(index, 17u64, 3u32, 20u32) is Option::None, "different expression")
+  assert(self_host_linked_call_index_get(index, 17u64, 3u32, 19u32) is Some(23u32), "first exact key")
+  assert(self_host_linked_call_index_get(index, 17u64, 4u32, 19u32) is Some(29u32), "different caller specialization")
+  assert(self_host_linked_call_index_get(index, 18u64, 3u32, 19u32) is None, "different caller body")
+  assert(self_host_linked_call_index_get(index, 17u64, 3u32, 20u32) is None, "different expression")
   assert(index.keys.length() == 2u32, "an identical duplicate adds no entry")
 }
 
 test "checked relative indices reject overflow and foreign ownership" {
-  let span = SelfHostHirSpan::{
+  let span = {
     start: 5u32
     length: 3u32
   }
-  assert(self_host_checked_relative_index(5u32, span, 8u32) is Option::Some(0u32), "first slot")
-  assert(self_host_checked_relative_index(7u32, span, 8u32) is Option::Some(2u32), "last slot")
-  assert(self_host_checked_relative_index(4u32, span, 8u32) is Option::None, "below span")
-  assert(self_host_checked_relative_index(8u32, span, 8u32) is Option::None, "past span")
-  assert(self_host_checked_relative_index(5u32, span, 7u32) is Option::None, "span exceeds arena")
-  assert(self_host_checked_relative_index(4294967294u32, SelfHostHirSpan::{
+  assert(self_host_checked_relative_index(5u32, span, 8u32) is Some(0u32), "first slot")
+  assert(self_host_checked_relative_index(7u32, span, 8u32) is Some(2u32), "last slot")
+  assert(self_host_checked_relative_index(4u32, span, 8u32) is None, "below span")
+  assert(self_host_checked_relative_index(8u32, span, 8u32) is None, "past span")
+  assert(self_host_checked_relative_index(5u32, span, 7u32) is None, "span exceeds arena")
+  assert(self_host_checked_relative_index(4294967294u32, {
     start: 4294967294u32
     length: 2u32
-  }, 4294967295u32) is Option::None, "span end must not overflow")
-  assert(self_host_checked_relative_index(4294967294u32, SelfHostHirSpan::{
+  }, 4294967295u32) is None, "span end must not overflow")
+  assert(self_host_checked_relative_index(4294967294u32, {
     start: 4294967294u32
     length: 1u32
-  }, 4294967295u32) is Option::Some(0u32), "last representable arena slot")
-  assert(self_host_checked_relative_index(5u32, SelfHostHirSpan::{
+  }, 4294967295u32) is Some(0u32), "last representable arena slot")
+  assert(self_host_checked_relative_index(5u32, {
     start: 5u32
     length: 0u32
-  }, 8u32) is Option::None, "empty span has no members")
+  }, 8u32) is None, "empty span has no members")
 }
 
 fn self_host_relative_body_fixture() -> SelfHostPlannedBodyLowering {
@@ -150,7 +150,7 @@ test "ARN-102 missing expression cannot become a body slot" expect_trap "unreach
 }
 
 test "ARN-101 physical body span must fit its arena" expect_trap "unreachable" {
-  self_host_assert_physical_body_span(self_host_relative_body_fixture(), SelfHostHirSpan::{
+  self_host_assert_physical_body_span(self_host_relative_body_fixture(), {
     start: 2u32
     length: 1u32
   }, 2u32, 1u32)
@@ -158,13 +158,13 @@ test "ARN-101 physical body span must fit its arena" expect_trap "unreachable" {
 
 test "SPC-303 one call key cannot select two targets" expect_trap "unreachable" {
   let _ = self_host_build_linked_call_index([], [
-    SelfHostPlannedProgramSpecializedCallLink::{
+    {
       caller_body: 17u64
       caller_specialization: 3u32
       expression: 19u32
       function_index: 23u32
     },
-    SelfHostPlannedProgramSpecializedCallLink::{
+    {
       caller_body: 17u64
       caller_specialization: 3u32
       expression: 19u32
@@ -174,7 +174,7 @@ test "SPC-303 one call key cannot select two targets" expect_trap "unreachable" 
 }
 
 fn self_host_call_index_test_function(index: U32, lambda: U32) -> SelfHostPlannedProgramWasmFunction {
-  SelfHostPlannedProgramWasmFunction::{
+  {
     module_index: 0u32
     fragment_index: index
     declaration: self_host_make_semantic_id(77u64, 11u32)
@@ -193,8 +193,8 @@ test "linked lambdas do not enter the named function index" {
   ]
   let index = self_host_build_linked_call_index(functions, [])
   let declaration = self_host_make_semantic_id(77u64, 11u32)
-  assert(index.plain_functions.get(declaration) is Option::Some(4u32), "only the named callable owns the declaration key")
-  assert(self_host_program_link_function(functions, declaration, 4294967295u32) is Option::Some(4u32), "linear lookup also excludes lambda bodies")
+  assert(index.plain_functions.get(declaration) is Some(4u32), "only the named callable owns the declaration key")
+  assert(self_host_program_link_function(functions, declaration, 4294967295u32) is Some(4u32), "linear lookup also excludes lambda bodies")
 }
 
 test "LNK-504 two named physical functions cannot own one declaration" expect_trap "unreachable" {

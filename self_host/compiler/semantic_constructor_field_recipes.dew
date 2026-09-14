@@ -1,5 +1,5 @@
 fn self_host_constructor_field_failure(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, phase: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
-  let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+  let _ = self_host_assert_compiler_invariant_with_failure(false, {
     code: code
     phase: phase
     module_id: module_.module_id

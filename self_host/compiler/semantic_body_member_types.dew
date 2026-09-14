@@ -9,7 +9,7 @@ fn self_host_empty_member_parameters() -> Array<U64> {
 }
 
 fn self_host_empty_member_bindings() -> Map<U64, I32> {
-  Map::empty()
+  empty()
 }
 
 pub struct SelfHostBodyMemberTypeDeclaration {
@@ -29,34 +29,34 @@ struct SelfHostPendingMemberEquation {
 }
 
 fn self_host_empty_member_marks() -> Map<I32, Bool> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_empty_member_fields() -> Map<String, U32> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_empty_member_variants() -> Map<String, Array<U32>> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_empty_member_declarations() -> Map<U64, SelfHostBodyMemberTypeDeclaration> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_body_member_type_context(collected: SelfHostCollectedModule, resolved: SelfHostResolvedModuleTypes, imported: SelfHostBasicImportedInputs) -> Option<SelfHostBodyMemberTypeContext> {
   let mut needed = false
   for type_ in resolved.types {
-    if type_ is SelfHostResolvedType::MemberTypeProjection(_, _, _) {
+    if type_ is MemberTypeProjection(_, _, _) {
       needed = true
     }
   }
   if !needed {
-    return Option::None
+    return None
   }
   let declarations = self_host_empty_member_declarations()
   for entry in collected.declarations {
-    if entry.kind is SelfHostCollectedDeclKind::StructDecl || entry.kind is SelfHostCollectedDeclKind::EnumDecl {
+    if entry.kind is StructDecl || entry.kind is EnumDecl {
       let parameters = self_host_empty_member_parameters()
       let span = collected.generic_parameters_of(entry.id)
       let _ = while 0u32 {
@@ -67,7 +67,7 @@ fn self_host_body_member_type_context(collected: SelfHostCollectedModule, resolv
           break self_host_semantic_unit()
         }
       }
-      declarations.set(entry.id, SelfHostBodyMemberTypeDeclaration::{
+      declarations.set(entry.id, {
         parameters: parameters
         fields: self_host_empty_member_fields()
         variants: self_host_empty_member_variants()
@@ -77,10 +77,10 @@ fn self_host_body_member_type_context(collected: SelfHostCollectedModule, resolv
   let _ = while 0u32 {
     index => if index < collected.fields.length() {
       let field = collected.fields[index]
-      if field.variant is Option::None {
+      if field.variant is None {
         match declarations.get(field.declaration) {
-          Option::Some(owner) => owner.fields.set(collected.name(field.name), resolved.field_types[index])
-          Option::None => {}
+          Some(owner) => owner.fields.set(collected.name(field.name), resolved.field_types[index])
+          None => {}
         }
       }
       continue index + 1u32
@@ -92,13 +92,13 @@ fn self_host_body_member_type_context(collected: SelfHostCollectedModule, resolv
     index => if index < collected.variants.length() {
       let variant = collected.variants[index]
       match declarations.get(variant.declaration) {
-        Option::Some(owner) => {
+        Some(owner) => {
           let payload = self_host_u32_slots(0u32, 0u32)
-          if variant.kind is SelfHostCollectedVariantKind::StructVariantDecl {
+          if variant.kind is StructVariantDecl {
             let _ = while 0u32 {
               field_index => if field_index < collected.fields.length() {
                 let field = collected.fields[field_index]
-                if field.variant is Option::Some(id) && id == variant.id {
+                if field.variant is Some(id) && id == variant.id {
                   payload.push(resolved.field_types[field_index])
                 }
                 continue field_index + 1u32
@@ -120,7 +120,7 @@ fn self_host_body_member_type_context(collected: SelfHostCollectedModule, resolv
           }
           owner.variants.set(collected.name(variant.name), payload)
         }
-        Option::None => {}
+        None => {}
       }
       continue index + 1u32
     } else {
@@ -131,9 +131,9 @@ fn self_host_body_member_type_context(collected: SelfHostCollectedModule, resolv
   // runtime Map iterator while the bootstrap compiler builds member recipes.
   for type_ in resolved.types {
     match type_ {
-      SelfHostResolvedType::NominalType(declaration) => if !declarations.contains_key(declaration) {
+      NominalType(declaration) => if !declarations.contains_key(declaration) {
         match imported.type_generic_spans.get(declaration) {
-          Option::Some(span) => {
+          Some(span) => {
             self_host_assert_array_span(span.start, span.length, imported.generic_parameter_ids.length(), "ARN-101 imported member generic IDs")
             let parameters = self_host_empty_member_parameters()
             let _ = while 0u32 {
@@ -144,33 +144,33 @@ fn self_host_body_member_type_context(collected: SelfHostCollectedModule, resolv
                 break self_host_semantic_unit()
               }
             }
-            declarations.set(declaration, SelfHostBodyMemberTypeDeclaration::{
+            declarations.set(declaration, {
               parameters: parameters
               fields: self_host_empty_member_fields()
               variants: self_host_empty_member_variants()
             })
           }
-          Option::None => {}
+          None => {}
         }
       }
       _ => {}
     }
   }
   for field in imported.fields {
-    if field.variant is Option::None {
+    if field.variant is None {
       match declarations.get(field.declaration) {
-        Option::Some(owner) => owner.fields.set(field.name, field.type_)
-        Option::None => {}
+        Some(owner) => owner.fields.set(field.name, field.type_)
+        None => {}
       }
     }
   }
   for variant in imported.variants {
     match declarations.get(variant.declaration) {
-      Option::Some(owner) => {
+      Some(owner) => {
         let payload = self_host_u32_slots(0u32, 0u32)
-        if variant.kind is SelfHostCollectedVariantKind::StructVariantDecl {
+        if variant.kind is StructVariantDecl {
           for field in imported.fields {
-            if field.variant is Option::Some(id) && id == variant.variant {
+            if field.variant is Some(id) && id == variant.variant {
               payload.push(field.type_)
             }
           }
@@ -188,10 +188,10 @@ fn self_host_body_member_type_context(collected: SelfHostCollectedModule, resolv
         }
         owner.variants.set(variant.name, payload)
       }
-      Option::None => {}
+      None => {}
     }
   }
-  Option::Some(SelfHostBodyMemberTypeContext::{
+  Some({
     declarations: declarations
   })
 }
@@ -201,17 +201,17 @@ impl SelfHostLocalTypeSolver {
     let work = [root]
     let seen = self_host_empty_member_marks()
     let _ = while work.pop() {
-      Option::Some(source) => {
+      Some(source) => {
         let type_ = self.representative_type(source)
         if type_ <= 0i32 || seen.contains_key(type_) {
           continue work.pop()
         }
         seen.set(type_, true)
         let span = match self.type_term(type_) {
-          SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => {
+          BodyMemberTypeProjection(owner, _, _) => {
             match self.reduce_member_type(type_, 0u32) {
-              Result::Err(_) => continue work.pop()
-              Result::Ok(reduced) => if reduced != type_ {
+              Err(_) => continue work.pop()
+              Ok(reduced) => if reduced != type_ {
                 work.push(reduced)
                 continue work.pop()
               }
@@ -222,12 +222,12 @@ impl SelfHostLocalTypeSolver {
             work.push(owner)
             continue work.pop()
           }
-          SelfHostBodyTypeTerm::BodyProductType(span) => span
-          SelfHostBodyTypeTerm::BodyAppliedType(base, span) => {
+          BodyProductType(span) => span
+          BodyAppliedType(base, span) => {
             work.push(base)
             span
           }
-          SelfHostBodyTypeTerm::BodyFunctionType(span, result) => {
+          BodyFunctionType(span, result) => {
             work.push(result)
             span
           }
@@ -244,18 +244,18 @@ impl SelfHostLocalTypeSolver {
         }
         continue work.pop()
       }
-      Option::None => break self_host_semantic_unit()
+      None => break self_host_semantic_unit()
     }
     false
   }
   fn member_projection_type(self, owner: I32, operation: Bytes, selector: String) -> I32 {
     let owner = self.representative_type(owner)
     match self.type_term(owner) {
-      SelfHostBodyTypeTerm::BodyResolvedType(resolved_owner) => {
+      BodyResolvedType(resolved_owner) => {
         let _ = while 0u32 {
           index => if index < self.resolved.types.length() {
             match self.resolved.types[index] {
-              SelfHostResolvedType::MemberTypeProjection(input, op, name) => if input == resolved_owner && op == operation && name == selector {
+              MemberTypeProjection(input, op, name) => if input == resolved_owner && op == operation && name == selector {
                 return self.resolved_type(index)
               }
               _ => {}
@@ -268,51 +268,51 @@ impl SelfHostLocalTypeSolver {
       }
       _ => {}
     }
-    self.push_type_term(SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector))
+    self.push_type_term(BodyMemberTypeProjection(owner, operation, selector))
   }
 
   fn member_projection(self, type_: I32) -> Option<(I32, Bytes, String)> {
     match self.type_term(type_) {
-      SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => Option::Some((owner, operation, selector))
-      SelfHostBodyTypeTerm::BodyResolvedType(id) => match self.resolved.types[id] {
-        SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => Option::Some((self.resolved_type(owner), operation, selector))
-        _ => Option::None
+      BodyMemberTypeProjection(owner, operation, selector) => Some((owner, operation, selector))
+      BodyResolvedType(id) => match self.resolved.types[id] {
+        MemberTypeProjection(owner, operation, selector) => Some((self.resolved_type(owner), operation, selector))
+        _ => None
       }
-      _ => Option::None
+      _ => None
     }
   }
 
   fn substitute_member_type(self, type_: U32, bindings: Map<U64, I32>, depth: U32) -> Result<I32, String> {
     if depth >= 256u32 {
-      return Result::Err("CT-034 member projection limit exceeded")
+      return Err("CT-034 member projection limit exceeded")
     }
     match self.resolved.types[type_] {
-      SelfHostResolvedType::GenericParameterType(parameter) => Result::Ok(match bindings.get(parameter) {
-        Option::Some(value) => value
-        Option::None => self.resolved_type(type_)
+      GenericParameterType(parameter) => Ok(match bindings.get(parameter) {
+        Some(value) => value
+        None => self.resolved_type(type_)
       })
-      SelfHostResolvedType::SelfType(parameter) => Result::Ok(match bindings.get(parameter) {
-        Option::Some(value) => value
-        Option::None => self.resolved_type(type_)
+      SelfType(parameter) => Ok(match bindings.get(parameter) {
+        Some(value) => value
+        None => self.resolved_type(type_)
       })
-      SelfHostResolvedType::MemberTypeProjection(owner, operation, selector) => match self.substitute_member_type(owner, bindings, depth + 1u32) {
-        Result::Ok(owner) => self.reduce_member_type(self.member_projection_type(owner, operation, selector), depth + 1u32)
-        Result::Err(error) => Result::Err(error)
+      MemberTypeProjection(owner, operation, selector) => match self.substitute_member_type(owner, bindings, depth + 1u32) {
+        Ok(owner) => self.reduce_member_type(self.member_projection_type(owner, operation, selector), depth + 1u32)
+        Err(error) => Err(error)
       }
       type_term => {
         let span = match type_term {
-          SelfHostResolvedType::ProductType(span) => span
-          SelfHostResolvedType::AppliedType(_, span) => span
-          SelfHostResolvedType::FunctionType(span, _) => span
-          _ => return Result::Ok(self.resolved_type(type_))
+          ProductType(span) => span
+          AppliedType(_, span) => span
+          FunctionType(span, _) => span
+          _ => return Ok(self.resolved_type(type_))
         }
         self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.resolved.type_arguments.length()), "ARN-101 member substitution arguments")
         let values = self_host_local_empty_i32()
         let _ = while 0u32 {
           index => if index < span.length {
             match self.substitute_member_type(self.resolved.type_arguments[span.start + index], bindings, depth + 1u32) {
-              Result::Ok(value) => values.push(value)
-              Result::Err(error) => return Result::Err(error)
+              Ok(value) => values.push(value)
+              Err(error) => return Err(error)
             }
             continue index + 1u32
           } else {
@@ -320,15 +320,15 @@ impl SelfHostLocalTypeSolver {
           }
         }
         match type_term {
-          SelfHostResolvedType::AppliedType(base, _) => match self.substitute_member_type(base, bindings, depth + 1u32) {
-            Result::Ok(base) => Result::Ok(self.applied_type(base, values))
-            Result::Err(error) => Result::Err(error)
+          AppliedType(base, _) => match self.substitute_member_type(base, bindings, depth + 1u32) {
+            Ok(base) => Ok(self.applied_type(base, values))
+            Err(error) => Err(error)
           }
-          SelfHostResolvedType::FunctionType(_, result) => match self.substitute_member_type(result, bindings, depth + 1u32) {
-            Result::Ok(result) => Result::Ok(self.function_type(values, result))
-            Result::Err(error) => Result::Err(error)
+          FunctionType(_, result) => match self.substitute_member_type(result, bindings, depth + 1u32) {
+            Ok(result) => Ok(self.function_type(values, result))
+            Err(error) => Err(error)
           }
-          _ => Result::Ok(self.product_type(values))
+          _ => Ok(self.product_type(values))
         }
       }
     }
@@ -336,24 +336,24 @@ impl SelfHostLocalTypeSolver {
 
   fn reduce_member_type(self, type_: I32, depth: U32) -> Result<I32, String> {
     if depth >= 256u32 {
-      return Result::Err("CT-034 member projection limit exceeded")
+      return Err("CT-034 member projection limit exceeded")
     }
     let type_ = self.representative_type(type_)
     let projection = match self.member_projection(type_) {
-      Option::Some(value) => value
-      Option::None => return Result::Ok(type_)
+      Some(value) => value
+      None => return Ok(type_)
     }
     let (owner, operation, selector) = projection
     if !self_host_computed_type_builtin(operation) {
-      return Result::Err("CT-033 invalid member projection operation")
+      return Err("CT-033 invalid member projection operation")
     }
     let owner = match self.reduce_member_type(owner, depth + 1u32) {
-      Result::Ok(value) => value
-      Result::Err(error) => return Result::Err(error)
+      Ok(value) => value
+      Err(error) => return Err(error)
     }
     let arguments = self_host_local_empty_i32()
     let base = match self.type_term(owner) {
-      SelfHostBodyTypeTerm::BodyAppliedType(base, span) => {
+      BodyAppliedType(base, span) => {
         self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.type_arguments.length()), "ARN-101 inferred member owner arguments")
         let _ = while 0u32 {
           index => if index < span.length {
@@ -365,8 +365,8 @@ impl SelfHostLocalTypeSolver {
         }
         base
       }
-      SelfHostBodyTypeTerm::BodyResolvedType(index) => match self.resolved.types[index] {
-        SelfHostResolvedType::AppliedType(base, span) => {
+      BodyResolvedType(index) => match self.resolved.types[index] {
+        AppliedType(base, span) => {
           self_host_assert_compiler_invariant(self_host_array_span_is_valid(span.start, span.length, self.resolved.type_arguments.length()), "ARN-101 resolved member owner arguments")
           let _ = while 0u32 {
             index => if index < span.length {
@@ -383,37 +383,37 @@ impl SelfHostLocalTypeSolver {
       _ => owner
     }
     let declaration = match self.type_term(self.representative_type(base)) {
-      SelfHostBodyTypeTerm::BodyVariableType(_) => return Result::Ok(type_)
-      SelfHostBodyTypeTerm::BodyMemberTypeProjection(_, _, _) => return Result::Ok(type_)
-      SelfHostBodyTypeTerm::BodyResolvedType(index) => match self.resolved.types[index] {
-        SelfHostResolvedType::NominalType(declaration) => declaration
-        SelfHostResolvedType::GenericParameterType(_) => return Result::Ok(type_)
-        SelfHostResolvedType::SelfType(_) => return Result::Ok(type_)
-        SelfHostResolvedType::MemberTypeProjection(_, _, _) => return Result::Ok(type_)
-        _ => return Result::Err("CT-032 member type query requires a struct or enum")
+      BodyVariableType(_) => return Ok(type_)
+      BodyMemberTypeProjection(_, _, _) => return Ok(type_)
+      BodyResolvedType(index) => match self.resolved.types[index] {
+        NominalType(declaration) => declaration
+        GenericParameterType(_) => return Ok(type_)
+        SelfType(_) => return Ok(type_)
+        MemberTypeProjection(_, _, _) => return Ok(type_)
+        _ => return Err("CT-032 member type query requires a struct or enum")
       }
-      _ => return Result::Err("CT-032 member type query requires a struct or enum")
+      _ => return Err("CT-032 member type query requires a struct or enum")
     }
     let context = match self.member_types {
-      Option::Some(value) => value
-      Option::None => return Result::Err("CT-032 missing member type context")
+      Some(value) => value
+      None => return Err("CT-032 missing member type context")
     }
     let recipe = match context.declarations.get(declaration) {
-      Option::Some(value) => value
-      Option::None => return Result::Err("CT-032 missing member type declaration")
+      Some(value) => value
+      None => return Err("CT-032 missing member type declaration")
     }
     if arguments.length() != recipe.parameters.length() {
-      return Result::Err("CT-031 member owner has the wrong generic arity")
+      return Err("CT-031 member owner has the wrong generic arity")
     }
     let templates = if operation == b"types.field_type" {
       match recipe.fields.get(selector) {
-        Option::Some(value) => [value]
-        Option::None => return Result::Err("CT-032 no such field")
+        Some(value) => [value]
+        None => return Err("CT-032 no such field")
       }
     } else {
       match recipe.variants.get(selector) {
-        Option::Some(value) => value
-        Option::None => return Result::Err("CT-032 no such variant")
+        Some(value) => value
+        None => return Err("CT-032 no such variant")
       }
     }
     let bindings = self_host_empty_member_bindings()
@@ -428,11 +428,11 @@ impl SelfHostLocalTypeSolver {
     let values = self_host_local_empty_i32()
     for template in templates {
       match self.substitute_member_type(template, bindings, depth + 1u32) {
-        Result::Ok(value) => values.push(value)
-        Result::Err(error) => return Result::Err(error)
+        Ok(value) => values.push(value)
+        Err(error) => return Err(error)
       }
     }
-    Result::Ok(if operation == b"types.field_type" {
+    Ok(if operation == b"types.field_type" {
       values[0u32]
     } else {
       self.product_type(values)
@@ -441,9 +441,9 @@ impl SelfHostLocalTypeSolver {
 
   fn zonk_member_type(self, type_: I32) -> I32 {
     match self.reduce_member_type(type_, 0u32) {
-      Result::Ok(value) => value
-      Result::Err(message) => {
-        self.diagnostics.push(SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(type_, message, self_host_synthetic_type_origin(4294967295u32, 0u32)))
+      Ok(value) => value
+      Err(message) => {
+        self.diagnostics.push(InvalidLocalMemberProjection(type_, message, self_host_synthetic_type_origin(4294967295u32, 0u32)))
         self.error_type()
       }
     }

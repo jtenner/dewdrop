@@ -65,11 +65,11 @@ test "WasmGC fragments materialize specialized scalar signatures" {
   assert(self_host_u32_equal(specialized.parameters.length, 1u32), "specialized parameter")
   assert(self_host_u32_equal(specialized.results.length, 1u32), "specialized result")
   match self_host_wasmgc_function_value(module_, specialized.parameters.start) {
-    SelfHostPlannedWasmValueType::WasmI32Value => {}
+    WasmI32Value => {}
     _ => assert(false, "i32 parameter")
   }
   match self_host_wasmgc_function_value(module_, specialized.results.start) {
-    SelfHostPlannedWasmValueType::WasmI32Value => {}
+    WasmI32Value => {}
     _ => assert(false, "i32 result")
   }
 }
@@ -83,25 +83,25 @@ test "WasmGC fragments plan nominal struct and enum families" {
   assert(self_host_u32_equal(self_host_wasmgc_field_count(module_), 4u32), "struct variant and common closure fields")
   let struct_type = self_host_wasmgc_physical_type_at(module_, 0u32)
   match struct_type.kind {
-    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(_) => {}
+    PlannedWasmStructType(_) => {}
     _ => assert(false, "struct type")
   }
   match self_host_wasmgc_field_at(module_, 0u32).storage {
-    SelfHostPlannedWasmStorageType::WasmI32Storage => {}
+    WasmI32Storage => {}
     _ => assert(false, "Point.x i32 storage")
   }
   match self_host_wasmgc_field_at(module_, 1u32).storage {
-    SelfHostPlannedWasmStorageType::WasmI64Storage => {}
+    WasmI64Storage => {}
     _ => assert(false, "Point.y i64 storage")
   }
   let enum_type = self_host_wasmgc_physical_type_at(module_, 1u32)
   match enum_type.kind {
-    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(_) => {}
+    PlannedWasmEnumBaseType(_) => {}
     _ => assert(false, "enum base")
   }
   let idle_marker = self_host_wasmgc_physical_type_at(module_, 2u32)
   match idle_marker.kind {
-    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(_, _, tag, _) => assert(
+    PlannedWasmEnumMarkerType(_, _, tag, _) => assert(
       self_host_u32_equal(tag, 0u32),
       "idle marker tag",
     )
@@ -109,7 +109,7 @@ test "WasmGC fragments plan nominal struct and enum families" {
   }
   let ready_marker = self_host_wasmgc_physical_type_at(module_, 4u32)
   match ready_marker.kind {
-    SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(_, _, tag, super_) => {
+    PlannedWasmEnumMarkerType(_, _, tag, super_) => {
       assert(self_host_u32_equal(tag, 1u32), "ready marker tag")
       assert(self_host_u32_equal(super_, 2u32), "ready marker super")
     }
@@ -118,7 +118,7 @@ test "WasmGC fragments plan nominal struct and enum families" {
   let ready_type = self_host_wasmgc_physical_type_at(module_, 5u32)
   assert(self_host_u32_equal(ready_type.fields.length, 1u32), "tuple variant field span")
   match self_host_wasmgc_field_at(module_, ready_type.fields.start).role {
-    SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(_, index) => assert(
+    WasmVariantPayloadField(_, index) => assert(
       self_host_u32_equal(index, 0u32),
       "tuple variant field index",
     )
@@ -128,20 +128,20 @@ test "WasmGC fragments plan nominal struct and enum families" {
 
 test "WasmGC fragments retain imported generic specialization ownership" {
   let lowering = self_host_program_lowering_test_manifest([
-    SelfHostManifestModule::{
+    {
       path: "app.main"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "main.dew"
           source: b"open app.library\npub fn run() -> I64 {\n  identity(9i64)\n}\n"
           test_only: false
         },
       ]
     },
-    SelfHostManifestModule::{
+    {
       path: "app.library"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "library.dew"
           source: b"pub fn identity<t>(value: t) -> t {\n  value\n}\n"
           test_only: false
@@ -161,7 +161,7 @@ test "WasmGC fragments retain imported generic specialization ownership" {
     library,
     specialized.parameters.start,
   ) {
-    SelfHostPlannedWasmValueType::WasmI64Value => {}
+    WasmI64Value => {}
     _ => assert(false, "imported i64 specialization")
   }
 }
@@ -175,12 +175,24 @@ test "WasmGC fragments plan lambda closure types and entry functions" {
   assert(self_host_u32_equal(module_.lambda_closure_type_indices.length(), 1u32), "lambda type slot")
   assert(self_host_u32_equal(module_.lambda_function_indices.length(), 1u32), "lambda function slot")
   assert(self_host_u32_equal(self_host_wasmgc_physical_type_count(module_), 2u32), "closure type family")
-  assert(self_host_u32_equal(self_host_wasmgc_field_count(module_), 2u32), "entry and capture fields")
-  assert(self_host_u32_equal(self_host_wasmgc_function_count(module_), 1u32), "named function")
-  assert(
-    self_host_u32_equal(module_.lambda_function_indices[0u32], 4294967295u32),
-    "lambda entry pending",
-  )
+  let base = self_host_wasmgc_physical_type_at(module_, module_.closure_type_index)
+  let closure = self_host_wasmgc_physical_type_at(module_, module_.lambda_closure_type_indices[0u32])
+  assert(base.fields.length == 1u32, "closure base entry field")
+  assert(closure.fields.length == 2u32, "lambda entry and capture fields")
+  let entry = self_host_wasmgc_field_at(module_, closure.fields.start)
+  let capture = self_host_wasmgc_field_at(module_, closure.fields.start + 1u32)
+  assert(entry.role is WasmClosureEntryField, "lambda inherits the entry field")
+  assert(entry.physical_index == 0u32, "entry physical index")
+  assert(entry.storage is WasmNullableFuncRefStorage, "entry function reference")
+  assert(capture.role is WasmLambdaCaptureField(0u32, 0u32), "seed capture identity")
+  assert(capture.physical_index == 1u32, "capture follows the entry field")
+  assert(capture.storage is WasmI32Storage, "seed I32 storage")
+  assert(self_host_wasmgc_function_count(module_) == 2u32, "named function and lambda entry")
+  let entry_function = self_host_wasmgc_function_at(module_, module_.lambda_function_indices[0u32])
+  assert(entry_function.kind is PlannedWasmDefinedLambdaFunction(0u32), "lambda entry identity")
+  assert(entry_function.parameters.length == 2u32, "closure and I32 parameter")
+  assert(entry_function.results.length == 1u32, "lambda result")
+  assert(self_host_wasmgc_function_value(module_, entry_function.results.start) is WasmI32Value, "lambda I32 result")
 }
 
 fn self_host_wasmgc_capture_cell_count(
@@ -222,8 +234,9 @@ test "WasmGC fragments plan mutable local capture cells" {
 
 test "WasmGC fragments retain exact nominal multi-field tuple payloads" {
   let plan = self_host_wasmgc_test_plan(
-    b"struct Span {\n  start: U32\n  length: U32\n}\nenum Expr {\n  Product(Span, U32)\n}\npub fn run() -> U32 {\n  match Expr::Product(Span::{ start: 1u32, length: 2u32 }, 3u32) {\n    Expr::Product(span, _) => span.length\n  }\n}\n",
+    b"struct Span {\n  start: U32\n  length: U32\n}\nenum Expr {\n  Product(Span, U32)\n}\npub fn run() -> U32 {\n  match Expr::Product(Span::{\n    start: 1u32\n    length: 2u32\n  }, 3u32) {\n    Expr::Product(span, _) => span.length\n  }\n}\n",
   )
+  assert(self_host_validate_program_lowering(plan.specialization.lowering) is None, "tuple payload lowering")
   let module_ = plan.modules[0u32]
   let mut physical = 0u32
   let mut found = false
@@ -231,7 +244,7 @@ test "WasmGC fragments retain exact nominal multi-field tuple payloads" {
     current => if current < self_host_wasmgc_physical_type_count(module_) {
       let type_ = self_host_wasmgc_physical_type_at(module_, current)
       match type_.kind {
-        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(_, _, _) => if type_.fields.length == 2u32 {
+        PlannedWasmEnumSubtypeType(_, _, _) => if type_.fields.length == 2u32 {
           let payload = self_host_wasmgc_field_at(module_, type_.fields.start)
           assert(payload.exact_nominal, "struct payload keeps exact nominal type")
           found = true

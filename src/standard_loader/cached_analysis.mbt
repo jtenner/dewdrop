@@ -12,7 +12,7 @@ pub fn analyze_program_with_interface_bundle_cache(
     program.modules.length(),
     None,
   )
-  let key = interface_bundle_cache_key(loaded)
+  let key = interface_bundle_cache_key(loaded, program=Some(program))
   let policy = InterfaceBundlePolicy::for_compilation(loaded, root_module_index)
   let mut hits = 0
   let mut misses = 0

@@ -2,24 +2,24 @@
 fn self_host_test_frozen_shape_read(mutation: U32) -> Unit {
   let (link, plan) = self_host_test_discard_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  let mut canonical = Option::Some(plan)
+  let mut canonical = Some(plan)
   let mut specialization = plan.specialization
   if mutation == 1u32 {
-    canonical = Option::None
+    canonical = None
   } else if mutation == 2u32 {
     let _ = plan.expressions.pop()
   } else if mutation == 3u32 {
-    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], UnresolvedBodyCarrier)
   } else if mutation == 4u32 {
-    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::ConflictingBodyCarrier)
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], ConflictingBodyCarrier)
   } else if mutation == 5u32 {
-    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::I32BodyCarrier)
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], I32BodyCarrier)
   } else if mutation == 6u32 {
     specialization = 0u32
   }
   let shape = self_host_linked_planned_expression_shape(canonical, link, module_, module_.bodies[0u32], specialization, 0u32)
   if mutation == 0u32 {
-    assert(shape is SelfHostPlannedValueShape::I64PlannedValueShape, "read the stored physical shape")
+    assert(shape is I64PlannedValueShape, "read the stored physical shape")
   }
 }
 
@@ -58,39 +58,39 @@ fn self_host_test_shape_read_source(source: Bytes, expression: U32) -> SelfHostP
   assert(program.diagnostics.length() == 0u32, "valid shape-read source")
   let plan = program.bodies[0u32]
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  self_host_linked_planned_expression_shape(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, expression)
+  self_host_linked_planned_expression_shape(Some(plan), link, module_, module_.bodies[0u32], plan.specialization, expression)
 }
 
 test "physical shape reads preserve Unit erasure" {
   let shape = self_host_test_shape_read_source(b"pub fn run() -> Unit {\n  ()\n}\n", 0u32)
-  assert(shape is SelfHostPlannedValueShape::UnitPlannedValueShape, "Unit has no physical result")
+  assert(shape is UnitPlannedValueShape, "Unit has no physical result")
 }
 
 test "physical shape reads preserve proven divergence" {
   let shape = self_host_test_shape_read_source(b"builtin stop() -> Never = \"unreachable\"\npub fn run() -> Never {\n  stop()\n}\n", 1u32)
-  assert(shape is SelfHostPlannedValueShape::NeverPlannedValueShape, "a nonreturning call cannot become Unit or a scalar")
+  assert(shape is NeverPlannedValueShape, "a nonreturning call cannot become Unit or a scalar")
 }
 
 test "physical shape reads preserve reference carriers" {
   let shape = self_host_test_shape_read_source(b"pub fn run(value: Bytes) -> Bytes {\n  value\n}\n", 0u32)
-  assert(shape is SelfHostPlannedValueShape::RefPlannedValueShape, "a reference cannot become a scalar")
+  assert(shape is RefPlannedValueShape, "a reference cannot become a scalar")
 }
 
 fn self_host_test_frozen_expression_read(mutation: U32, logical: Bool) -> Unit {
   let (link, plan) = self_host_test_discard_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  let mut canonical = Option::Some(plan)
+  let mut canonical = Some(plan)
   let mut specialization = plan.specialization
   if mutation == 1u32 {
-    canonical = Option::None
+    canonical = None
   } else if mutation == 2u32 {
     let _ = plan.expressions.pop()
   } else if mutation == 3u32 {
-    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], UnresolvedBodyCarrier)
   } else if mutation == 4u32 {
-    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::ConflictingBodyCarrier)
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], ConflictingBodyCarrier)
   } else if mutation == 5u32 {
-    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::I32BodyCarrier)
+    plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], I32BodyCarrier)
   } else if mutation == 6u32 {
     specialization = 0u32
   }
@@ -99,7 +99,7 @@ fn self_host_test_frozen_expression_read(mutation: U32, logical: Bool) -> Unit {
   } else {
     self_host_linked_exact_emitted_expression_carrier(canonical, link, module_, module_.bodies[0u32], specialization, 0u32)
   }
-  assert(carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "read the stored scalar carrier")
+  assert(carrier is I64BodyCarrier, "read the stored scalar carrier")
 }
 
 test "emitted expression reads use frozen scalar evidence" {
@@ -118,17 +118,17 @@ test "ABI-712 emitted lambda reads retain the parent declaration" expect_trap "u
   for plan in program.bodies {
     if plan.lambda != 4294967295u32 {
       let body = match self_host_linked_lambda_body(module_, plan.lambda) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           assert(false, "fixture requires a lambda source body")
           unreachable()
         }
       }
       assert(plan.expressions.length() == 1u32, "one literal in the lambda")
       let expression = plan.expressions[0u32].expression
-      assert(plan.expressions[0u32].carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "known lambda scalar before mutation")
-      plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::I32BodyCarrier)
-      let _ = self_host_linked_exact_emitted_expression_carrier(Option::Some(plan), link, module_, body, plan.specialization, expression)
+      assert(plan.expressions[0u32].carrier is I64BodyCarrier, "known lambda scalar before mutation")
+      plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], I32BodyCarrier)
+      let _ = self_host_linked_exact_emitted_expression_carrier(Some(plan), link, module_, body, plan.specialization, expression)
     }
   }
 }

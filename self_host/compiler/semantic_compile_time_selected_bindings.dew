@@ -8,43 +8,43 @@ fn self_host_query_binding_error(error: String) -> Option<String> {
   let message = StringBuilder::new()
   message.append("CT-043 selected type binding: ")
   message.append(error)
-  Option::Some(message.finish())
+  Some(message.finish())
 }
 
 fn self_host_query_binding_type(collected: SelfHostCollectedModule, module_: SelfHostPlannedModuleLowering, expression: U32) -> Option<U32> {
   self_host_assert_array_index(expression, collected.expressions.length(), "ARN-104 type binding expression")
   match collected.expressions[expression] {
-    SelfHostHirExpr::TypeBindingExpr(syntax, _) => {
+    TypeBindingExpr(syntax, _) => {
       self_host_assert_array_index(syntax, module_.resolved_types.syntax_types.length(), "ARN-104 type binding syntax")
-      Option::Some(module_.resolved_types.syntax_types[syntax])
+      Some(module_.resolved_types.syntax_types[syntax])
     }
-    _ => Option::None
+    _ => None
   }
 }
 
 fn self_host_validate_query_binding(lowering: SelfHostPlannedProgramLowering, collected: SelfHostCollectedModule, module_: SelfHostPlannedModuleLowering, expression: U32, bindings: SelfHostCompileTimeBindings) -> Option<String> {
   let type_ = match self_host_query_binding_type(collected, module_, expression) {
-    Option::Some(type_) => type_
-    Option::None => return Option::None
+    Some(type_) => type_
+    None => return None
   }
   let encoded = -self_host_body_u32_to_i32(type_) - 2i32
   if !self_host_query_has_projection(module_, encoded) {
-    return Option::None
+    return None
   }
   let logical = match self_host_read_compile_time_type(module_, encoded, bindings, 0u32) {
-    Result::Ok(value) => value
-    Result::Err(error) => return self_host_query_binding_error(error)
+    Ok(value) => value
+    Err(error) => return self_host_query_binding_error(error)
   }
   let concrete = match self_host_reduce_compile_time_projection(lowering, logical, 0u32) {
-    Result::Ok(value) => value
-    Result::Err(error) => return self_host_query_binding_error(error)
+    Ok(value) => value
+    Err(error) => return self_host_query_binding_error(error)
   }
   match self_host_compile_time_types_concrete([concrete]) {
-    Result::Ok(value) => if value {
-      Option::None
+    Ok(value) => if value {
+      None
     } else {
-      Option::Some("CT-043 selected type binding remains unresolved")
+      Some("CT-043 selected type binding remains unresolved")
     }
-    Result::Err(error) => self_host_query_binding_error(error)
+    Err(error) => self_host_query_binding_error(error)
   }
 }

@@ -10,12 +10,12 @@ struct SelfHostLinkedCaptureCell {
 fn self_host_linked_local_capture_cell(link: SelfHostPlannedProgramWasmGCLink, plan: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local: U32) -> Option<SelfHostLinkedCaptureCell> {
   let _ = link
   match self_host_owned_capture_cell(plan, module_, body, local) {
-    Option::Some(cell) => Option::Some(SelfHostLinkedCaptureCell::{
+    Some(cell) => Some({
       type_index: cell.type_index
       local_slot: cell.local_slot
       storage: cell.storage
     })
-    Option::None => Option::None
+    None => None
   }
 }
 
@@ -24,7 +24,7 @@ fn self_host_emit_capture_parameters(link: SelfHostPlannedProgramWasmGCLink, pla
   let canonical = self_host_physical_scratch_plan(plan, module_, body, 4294967295u32, 0u32)
   for entry in canonical.capture_cells {
     match entry {
-      Option::Some(cell) => if cell.parameter {
+      Some(cell) => if cell.parameter {
         self_host_emit_capture_local_get(cell.source_slot, destination)
         StarshineFfi.ffi_ffi_bridge_instructions_push(destination,
           StarshineFfi.ffi_lib_Instruction_struct_new(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(cell.type_index))),
@@ -33,19 +33,19 @@ fn self_host_emit_capture_parameters(link: SelfHostPlannedProgramWasmGCLink, pla
           StarshineFfi.ffi_lib_Instruction_local_set(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(cell.local_slot))),
         )
       }
-      Option::None => {}
+      None => {}
     }
   }
-  Option::None
+  None
 }
 
 fn self_host_capture_write_type(link: SelfHostPlannedProgramWasmGCLink, plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32) -> Option<U32> {
   let _ = link
   let access = self_host_capture_access(plan, capture_id)
   if access.cell_type == 4294967295u32 {
-    Option::None
+    None
   } else {
-    Option::Some(access.cell_type)
+    Some(access.cell_type)
   }
 }
 
@@ -66,9 +66,9 @@ fn self_host_emit_capture_field_get(storage: SelfHostPlannedWasmStorageType, typ
   )
   let type_index = StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(type_))
   let instruction = match storage {
-    SelfHostPlannedWasmStorageType::WasmI8SignedStorage, SelfHostPlannedWasmStorageType::WasmI16SignedStorage =>
+    WasmI8SignedStorage, WasmI16SignedStorage =>
       StarshineFfi.ffi_lib_Instruction_struct_get_s(type_index, self_host_u32_to_i32(field))
-    SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage, SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage =>
+    WasmI8UnsignedStorage, WasmI16UnsignedStorage =>
       StarshineFfi.ffi_lib_Instruction_struct_get_u(type_index, self_host_u32_to_i32(field))
     _ => StarshineFfi.ffi_lib_Instruction_struct_get(type_index, self_host_u32_to_i32(field))
   }
@@ -77,8 +77,8 @@ fn self_host_emit_capture_field_get(storage: SelfHostPlannedWasmStorageType, typ
 
 fn self_host_linked_capture_cell_slot(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, local_id: U32) -> Option<U32> {
   match self_host_owned_capture_cell(canonical, module_, body, local_id) {
-    Option::Some(cell) => Option::Some(cell.local_slot)
-    Option::None => Option::None
+    Some(cell) => Some(cell.local_slot)
+    None => None
   }
 }
 
@@ -86,12 +86,12 @@ fn self_host_emit_capture_get(link: SelfHostPlannedProgramWasmGCLink, plan: Self
   let _ = link
   let access = self_host_capture_access(plan, capture_id)
   if access.erased {
-    return Option::None
+    return None
   }
   self_host_emit_capture_local_get(0u32, destination)
   self_host_emit_capture_field_get(self_host_capture_access_storage(plan, access, false), access.closure_type, access.field_index, destination)
   if dereference && access.cell_type != 4294967295u32 {
     self_host_emit_capture_field_get(self_host_capture_access_storage(plan, access, true), access.cell_type, 0u32, destination)
   }
-  Option::None
+  None
 }

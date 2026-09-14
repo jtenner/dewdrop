@@ -28,8 +28,8 @@ test "startup query graph rebuild does not edit the earlier graph" {
   assert(original.dependencies.dependency_declarations.length() == 1u32, "source fixture has a self edge")
   assert(original.diagnostics.length() == 1u32, "source fixture has a cycle")
   // Model the folder removing one source read. The new graph owns its arrays.
-  module_.expressions[0u32] = SelfHostPlannedExpression::{
-    kind: SelfHostPlannedExpressionKind::PlannedConsumedExpression
+  module_.expressions[0u32] = {
+    kind: PlannedConsumedExpression
     type_: module_.expressions[0u32].type_
     shape: module_.expressions[0u32].shape
     nominal: module_.expressions[0u32].nominal
@@ -62,11 +62,11 @@ test "ARN-102 query startup graph checks the root before scanning" expect_trap "
   let module_ = lowering.modules[0u32]
   assert(module_.initialization.diagnostics.length() == 0u32, "fixture is valid")
   let body = module_.bodies[0u32]
-  module_.bodies[0u32] = SelfHostPlannedBodyLowering::{
+  module_.bodies[0u32] = {
     body: body.body
     declaration: body.declaration
     kind: body.kind
-    root: SelfHostHirBodyRoot::ExpressionBodyRoot(1u32)
+    root: ExpressionBodyRoot(1u32)
     root_type: body.root_type
     root_shape: body.root_shape
     result_shape: body.result_shape
@@ -93,19 +93,19 @@ fn self_host_initializer_order_fixture(inverse: Bool) -> SelfHostPlannedProgramW
   } else {
     b"open app.root\npub let seed = make_seed()\nfn make_seed() -> I64 {\n  40i64\n}\npub fn read_seed() -> I64 {\n  seed\n}\npub fn accept_marker(value: Marker) -> Marker {\n  value\n}\n"
   }
-  let link = self_host_physical_test_manifest_link(SelfHostProgramManifest::{
+  let link = self_host_physical_test_manifest_link({
     modules: [
-      SelfHostManifestModule::{
+      {
         path: "app.root"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "root.dew"
           source: root
           test_only: false
         }]
       },
-      SelfHostManifestModule::{
+      {
         path: "app.library"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "library.dew"
           source: library
           test_only: false
@@ -128,7 +128,7 @@ test "startup follows cross-module global reads through called functions" {
       5501u64 << 32u64
     }
     assert(link.initializers[0u32].declaration == seed, "seed must be set before the function reads it")
-    assert(self_host_validate_program_wasmgc_link(link) is Option::None, "dependency-first schedule has exact link records")
+    assert(self_host_validate_program_wasmgc_link(link) is None, "dependency-first schedule has exact link records")
   }
 }
 
@@ -137,8 +137,8 @@ pub fn self_host_emit_initializer_order_probe(source: BytesBuilder) -> Bytes {
   assert(selector.byte_length() == 1u32, "startup probe requires one direction selector")
   let link = self_host_initializer_order_fixture(selector.byte_at(0u32) != 0u8)
   match build_self_host_linked_i32_module(link, 5500u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       unreachable()
     }
@@ -151,13 +151,13 @@ test "startup reports a real function-mediated initialization cycle" {
   ), false)
   assert(link.diagnostics.length() == 1u32, "one real startup cycle")
   match link.diagnostics[0u32] {
-    SelfHostProgramWasmGCLinkDiagnostic::EagerProgramInitializationCycle(declaration, dependency) => {
+    EagerProgramInitializationCycle(declaration, dependency) => {
       assert(declaration == ((5100u64 << 32u64) | 1u64), "cycle names the initializer")
       assert(dependency == declaration, "the function reads its own caller's global")
     }
     _ => assert(false, "expected a startup cycle diagnostic")
   }
-  assert(self_host_validate_program_wasmgc_link(link) is Option::Some(_), "a cycle cannot pass the emission boundary")
+  assert(self_host_validate_program_wasmgc_link(link) is Some(_), "a cycle cannot pass the emission boundary")
 }
 
 test "startup visits recursive calls once and keeps unique global edges" {
@@ -177,7 +177,7 @@ test "startup keeps real cycles in selected Unit query branches" {
     b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nfn choose<t>() -> I64 {\n  if is_unit::<t>() {\n    answer\n  } else {\n    42i64\n  }\n}\nlet answer = choose::<Unit>()\npub fn main() -> I64 {\n  answer\n}\n",
   ), false)
   assert(link.diagnostics.length() == 1u32, "selected branch keeps its real cycle")
-  assert(link.diagnostics[0u32] is SelfHostProgramWasmGCLinkDiagnostic::EagerProgramInitializationCycle(_, _), "query cycle is a semantic diagnostic")
+  assert(link.diagnostics[0u32] is EagerProgramInitializationCycle(_, _), "query cycle is a semantic diagnostic")
 }
 
 test "SPC-304 startup cannot use a generic query template without its call record" expect_trap "unreachable" {
@@ -241,14 +241,14 @@ fn self_host_startup_call_mutation(kind: U32) -> Unit {
   let plan = link.fragments.specialization
   assert(plan.calls.length() == 0u32, "plain calls use exact declarations without generic records")
   match plan.lowering.modules[0u32].expressions[1u32].kind {
-    SelfHostPlannedExpressionKind::PlannedDirectCall(target, _, _, _) => {
+    PlannedDirectCall(target, _, _, _) => {
       assert(target == ((5501u64 << 32u64) | 2u64), "source call has the exact reader target")
     }
     _ => assert(false, "fixture expression is a direct call")
   }
   // An identical exact replay is valid for a plain call too. Seed one before
   // mutating it; otherwise an absent optional record would not test identity.
-  plan.calls.push(SelfHostProgramSpecializedCall::{
+  plan.calls.push({
     caller_body: 5500u64 << 32u64
     caller_specialization: 4294967295u32
     expression: 1u32
@@ -268,7 +268,7 @@ fn self_host_startup_call_mutation(kind: U32) -> Unit {
         assert(call.target == ((5501u64 << 32u64) | 2u64), "exact reader declaration before mutation")
         assert(call.caller_specialization == 4294967295u32, "plain initializer before mutation")
         assert(plan.requests.length() == 0u32, "plain fixture has no generic requests")
-        plan.calls[index] = SelfHostProgramSpecializedCall::{
+        plan.calls[index] = {
           caller_body: if kind == 0u32 {
             call.caller_body + 1u64
           } else {

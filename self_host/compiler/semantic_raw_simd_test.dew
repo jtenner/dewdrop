@@ -4,8 +4,8 @@ test "raw SIMD bitselect checks all three operands" {
   ), false)
   self_host_physical_test_assert_clean_inference(valid)
   match build_self_host_linked_i32_module(valid, 5100u64) {
-    Result::Ok(_) => {}
-    Result::Err(error) => assert(false, error)
+    Ok(_) => {}
+    Err(error) => assert(false, error)
   }
   self_host_assert_invalid_raw_math(
     b"builtin operation(left: V128, right: V128, mask: I32) -> V128 = \"v128.bitselect\"\npub fn main(left: V128, right: V128, mask: I32) -> V128 {\n  operation(left, right, mask)\n}\n",
@@ -31,8 +31,8 @@ test "shuffle immediates are bounded and independent of library recipes" {
   let valid = match self_host_raw_shuffle_immediates(
     b"i8x16.shuffle 31 31 0 30 1 29 2 28 3 27 4 26 5 25 6 24",
   ) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "valid custom shuffle was rejected")
       []
     }
@@ -52,7 +52,7 @@ test "shuffle immediates are bounded and independent of library recipes" {
   ]
   let _ = while 0u32 {
     index => if index < invalid.length() {
-      assert(self_host_raw_intrinsic_signature(invalid[index]) is Option::None, "invalid SIMD immediate acquired a signature")
+      assert(self_host_raw_intrinsic_signature(invalid[index]) is None, "invalid SIMD immediate acquired a signature")
       let destination = StarshineFfi.ffi_ffi_bridge_instructions_new()
       assert(!self_host_emit_linked_builtin(invalid[index], destination), "invalid SIMD immediate was emitted")
       continue index + 1u32

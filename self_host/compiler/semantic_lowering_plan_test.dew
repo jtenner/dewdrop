@@ -33,16 +33,16 @@ test "lowering plans core expressions, blocks, and locals" {
   let mut saw_block = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedLocalGet(_) => {
+      PlannedLocalGet(_) => {
         saw_local = true
       }
-      SelfHostPlannedExpressionKind::PlannedBinaryExpression(_, _, _) => {
+      PlannedBinaryExpression(_, _, _) => {
         saw_binary = true
       }
-      SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _) => {
+      PlannedIfExpression(_, _, _) => {
         saw_if = true
       }
-      SelfHostPlannedExpressionKind::PlannedBlockExpression(_) => {
+      PlannedBlockExpression(_) => {
         saw_block = true
       }
       _ => {}
@@ -55,7 +55,7 @@ test "lowering plans core expressions, blocks, and locals" {
   let mut saw_let = false
   for item in planned.block_items {
     match item.kind {
-      SelfHostPlannedBlockItemKind::PlannedLetItem(_, _, _) => {
+      PlannedLetItem(_, _, _) => {
         saw_let = true
       }
       _ => {}
@@ -63,7 +63,7 @@ test "lowering plans core expressions, blocks, and locals" {
   }
   assert(saw_let, "let item")
   assert(
-    planned.bodies[0u32].root_shape is SelfHostPlannedValueShape::I32PlannedValueShape,
+    planned.bodies[0u32].root_shape is I32PlannedValueShape,
     "body shape",
   )
 }
@@ -75,10 +75,10 @@ test "lowering plans qualified unit variants as constructors" {
   let mut saw_unit_variant = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedConstruct(
+      PlannedConstruct(
         _,
         fields,
-        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+        VariantConstructionBasicExpressionSelection(
           _,
           _,
           _,
@@ -99,8 +99,8 @@ test "lowering keeps tuple variants ahead of colliding builtin ids" {
   let mut saw_variant_call = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => match expression.selection {
-        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      PlannedDirectCall(_, _, _, _) => match expression.selection {
+        VariantConstructionBasicExpressionSelection(
           _,
           _,
           _,
@@ -109,8 +109,8 @@ test "lowering keeps tuple variants ahead of colliding builtin ids" {
         }
         _ => {}
       }
-      SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, _, _) => match expression.selection {
-        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      PlannedBuiltinCall(_, _, _, _, _) => match expression.selection {
+        VariantConstructionBasicExpressionSelection(
           _,
           _,
           _,
@@ -136,18 +136,18 @@ test "lowering keeps a struct payload inside a result variant" {
     current => if current < end {
       let source = self_host_planned_expression_at(planned.expressions, current)
       match source.kind {
-        SelfHostPlannedExpressionKind::PlannedConstruct(
+        PlannedConstruct(
           _,
           fields,
-          SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+          StructConstructionBasicExpressionSelection(
             _,
             _,
           ),
         ) => if self_host_u32_equal(fields.length, 3u32) {
           saw_process_error = true
         }
-        SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, arguments, _) => match source.selection {
-          SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+        PlannedDirectCall(_, _, arguments, _) => match source.selection {
+          VariantConstructionBasicExpressionSelection(
             _,
             _,
             _,
@@ -189,7 +189,7 @@ test "body verifier indexes embedded call targets once" {
     let _ = while expression {
       current => if current < end {
         match self_host_planned_expression_at(planned.expressions, current).kind {
-          SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => {
+          PlannedDirectCall(_, target, _, _) => {
             assert(target >= body.expressions.start, "target body start")
             assert(target < end, "target body end")
             assert(targets[target - body.expressions.start], "indexed embedded target")
@@ -214,10 +214,10 @@ test "lowering plans direct calls" {
   let mut saw_consumed = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => {
+      PlannedDirectCall(_, _, _, _) => {
         saw_call = true
       }
-      SelfHostPlannedExpressionKind::PlannedConsumedExpression => {
+      PlannedConsumedExpression => {
         saw_consumed = true
       }
       _ => {}
@@ -234,7 +234,7 @@ test "lowering plans products and product fields" {
   let mut saw_product = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedProductNew(_) => {
+      PlannedProductNew(_) => {
         saw_product = true
       }
       _ => {}
@@ -250,7 +250,7 @@ test "lowering plans array literals" {
   let mut saw_array = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => {
+      PlannedArrayLiteral(_) => {
         saw_array = true
       }
       _ => {}
@@ -266,7 +266,7 @@ test "lowering plans local assignments" {
   let mut saw_set = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedLocalSet(_, _) => {
+      PlannedLocalSet(_, _) => {
         saw_set = true
       }
       _ => {}
@@ -301,7 +301,7 @@ test "lowering plans mutable field assignments" {
   let mut saw_set = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedFieldSet(_, _, _) => {
+      PlannedFieldSet(_, _, _) => {
         saw_set = true
       }
       _ => {}
@@ -317,7 +317,7 @@ test "lowering plans mutable receiver field assignments" {
   let mut saw_set = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedFieldSet(_, _, _) => {
+      PlannedFieldSet(_, _, _) => {
         saw_set = true
       }
       _ => {}
@@ -336,12 +336,19 @@ test "lowering plans patterns and functional loops" {
   assert(arm.pattern < planned.patterns.length(), "arm pattern identity")
   assert(arm.body < planned.expressions.length(), "arm body identity")
   let pattern = self_host_planned_pattern_at(planned.patterns, arm.pattern)
-  assert(pattern.type_ >= 0i32, "pattern type identity")
+  assert(
+    self_host_planned_merged_body_value_shape(
+      planned.resolved_types,
+      planned.inferred,
+      pattern.type_,
+    ) is BoolPlannedValueShape,
+    "pattern keeps its resolved Bool type",
+  )
   assert(pattern.offset == planned.patterns[arm.pattern].offset, "pattern offset identity")
   let mut saw_match = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _) => {
+      PlannedMatchExpression(_, _) => {
         saw_match = true
       }
       _ => {}
@@ -359,13 +366,13 @@ test "lowering retains functional loop control targets" {
   let mut saw_continue = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedWhileExpression(control, _, _) => {
+      PlannedWhileExpression(control, _, _) => {
         saw_loop = !self_host_u32_equal(control, 4294967295u32)
       }
-      SelfHostPlannedExpressionKind::PlannedBreakExpression(control, _) => {
+      PlannedBreakExpression(control, _) => {
         saw_break = !self_host_u32_equal(control, 4294967295u32)
       }
-      SelfHostPlannedExpressionKind::PlannedContinueExpression(control, _) => {
+      PlannedContinueExpression(control, _) => {
         saw_continue = !self_host_u32_equal(control, 4294967295u32)
       }
       _ => {}
@@ -391,10 +398,10 @@ test "lowering retains lambda locals and captures" {
   let mut saw_capture = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedLambdaClosure(_) => {
+      PlannedLambdaClosure(_) => {
         saw_closure = true
       }
-      SelfHostPlannedExpressionKind::PlannedCaptureGet(_) => {
+      PlannedCaptureGet(_) => {
         saw_capture = true
       }
       _ => {}
@@ -417,7 +424,7 @@ test "lowering retains nominal identities" {
     "object field id identity",
   )
   assert(
-    planned.bodies[0u32].root_shape is SelfHostPlannedValueShape::RefPlannedValueShape,
+    planned.bodies[0u32].root_shape is RefPlannedValueShape,
     "nominal result shape",
   )
   let mut saw_nominal = false
@@ -445,7 +452,6 @@ fn self_host_lowering_imported_test_plan(
     collected,
     resolved,
     names,
-    imports.scope,
     imports.callables,
     imports.generic_parameter_ids,
     imports.parameter_types,
@@ -503,7 +509,7 @@ test "lowering retains imported calls and nominal constructions" {
   let mut saw_imported_nominal = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => {
+      PlannedDirectCall(declaration, _, _, _) => {
         saw_imported_call = !self_host_u64_equal(
           self_host_semantic_id_module(declaration),
           planned.module_id,
@@ -529,7 +535,7 @@ test "lowering classifies builtin calls by exact identity" {
   let mut saw_builtin = false
   for expression in planned.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedBuiltinCall(
+      PlannedBuiltinCall(
         name,
         _,
         _,

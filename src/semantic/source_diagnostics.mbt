@@ -404,6 +404,7 @@ fn BodyInferenceDiagnostic::primary_location(
 fn BodyInferenceDiagnostic::secondary_labels(
   self : BodyInferenceDiagnostic,
   file : FileId,
+  program? : CollectedProgram? = None,
 ) -> Array[CompilerDiagnosticLabel] {
   let labels : Array[CompilerDiagnosticLabel] = []
   match self {
@@ -412,6 +413,18 @@ fn BodyInferenceDiagnostic::secondary_labels(
         location: { file, offset: first, },
         message: "first field is here",
       })
+    AmbiguousVariantValue(_, _, first, second, _, _)
+    | AmbiguousPatternVariant(_, _, first, second, _, _) =>
+      match program {
+        Some(program) =>
+          for variant in [first, second] {
+            match compiler_label_for_variant(program, variant) {
+              Some(label) => labels.push(label)
+              None => ()
+            }
+          }
+        None => ()
+      }
     _ => ()
   }
   labels
@@ -555,6 +568,25 @@ pub fn collect_compiler_source_diagnostics(
   analyzed : AnalyzedProgramSemantics,
   lowering : PlannedProgramLowering,
   link : PlannedProgramWasmGCLink,
+) -> Array[CompilerSourceDiagnostic] {
+  collect_compiler_phase_diagnostics(program, analyzed, lowering, Some(link))
+}
+
+///|
+pub fn collect_compiler_frontend_diagnostics(
+  program : CollectedProgram,
+  analyzed : AnalyzedProgramSemantics,
+  lowering : PlannedProgramLowering,
+) -> Array[CompilerSourceDiagnostic] {
+  collect_compiler_phase_diagnostics(program, analyzed, lowering, None)
+}
+
+///|
+fn collect_compiler_phase_diagnostics(
+  program : CollectedProgram,
+  analyzed : AnalyzedProgramSemantics,
+  lowering : PlannedProgramLowering,
+  link : PlannedProgramWasmGCLink?,
 ) -> Array[CompilerSourceDiagnostic] {
   let diagnostics : Array[CompilerSourceDiagnostic] = []
   let mut rank = 0
@@ -830,7 +862,7 @@ pub fn collect_compiler_source_diagnostics(
         index in body.diagnostics.start..<(body.diagnostics.start +
         body.diagnostics.length) {
         let diagnostic = analyzed_module.inferred.diagnostics[index]
-        let secondary = diagnostic.secondary_labels(file)
+        let secondary = diagnostic.secondary_labels(file, program=Some(program))
         let body_index = semantic_id_local(body.body)
         if body_index >= 0 && body_index < collected.bodies.length() {
           add_return_type_secondary_label(
@@ -845,7 +877,7 @@ pub fn collect_compiler_source_diagnostics(
           diagnostics,
           program,
           CompilerError,
-          @debug.to_string(diagnostic),
+          diagnostic.constructor_source_message(collected),
           diagnostic.primary_location(collected, file),
           secondary,
           rank,
@@ -866,7 +898,7 @@ pub fn collect_compiler_source_diagnostics(
         index in lambda.diagnostics.start..<(lambda.diagnostics.start +
         lambda.diagnostics.length) {
         let diagnostic = analyzed_module.inferred.diagnostics[index]
-        let secondary = diagnostic.secondary_labels(file)
+        let secondary = diagnostic.secondary_labels(file, program=Some(program))
         if lambda.lambda >= 0 && lambda.lambda < collected.lambdas.length() {
           add_return_type_secondary_label(
             diagnostic,
@@ -880,7 +912,7 @@ pub fn collect_compiler_source_diagnostics(
           diagnostics,
           program,
           CompilerError,
-          @debug.to_string(diagnostic),
+          diagnostic.constructor_source_message(collected),
           diagnostic.primary_location(collected, file),
           secondary,
           rank,
@@ -1007,7 +1039,11 @@ pub fn collect_compiler_source_diagnostics(
       }
     }
   }
-  for diagnostic in link.diagnostics {
+  let link_diagnostics = match link {
+    Some(value) => value.diagnostics
+    None => []
+  }
+  for diagnostic in link_diagnostics {
     let (module_id, declaration, offset) = match diagnostic {
       MissingProgramType(module_id, declaration) =>
         (module_id, declaration, 0UL)
@@ -1174,4 +1210,65 @@ pub fn render_compiler_source_diagnostic(
     }
   }
   @utf8.decode_lossy(output.to_bytes())
+}
+
+///|
+fn compiler_label_for_variant(
+  program : CollectedProgram,
+  variant : VariantId,
+) -> CompilerDiagnosticLabel? {
+  for index, module_ in program.modules {
+    if module_.module_id != semantic_id_module(variant) {
+      continue
+    }
+    let slot = semantic_id_local(variant)
+    if slot < 0 || slot >= module_.variants.length() {
+      return None
+    }
+    let value = module_.variants[slot]
+    let owner = match module_.declaration(value.declaration) {
+      Some(TopLevelReference(owner)) => owner
+      _ => return None
+    }
+    return Some({
+      location: {
+        file: module_.declaration_files[semantic_id_local(owner.id)],
+        offset: value.offset,
+      },
+      message: "candidate: " +
+      program.module_paths[index] +
+      "." +
+      module_.name(owner.name) +
+      "::" +
+      module_.name(value.name),
+    })
+  }
+  None
+}
+
+///|
+fn BodyInferenceDiagnostic::constructor_source_message(
+  self : BodyInferenceDiagnostic,
+  module_ : CollectedModule,
+) -> String {
+  match self {
+    ObjectTypeRequired(_, _) => "struct literal requires an expected type"
+    UnknownVariantValue(name, _, _) =>
+      "no enum constructor '" +
+      module_.name(name) +
+      "' fits this value; supply its type"
+    AmbiguousVariantValue(name, _, _, _, count, _) =>
+      "ambiguous enum constructor '" +
+      module_.name(name) +
+      "' (" +
+      count.to_string() +
+      " candidates); supply its type"
+    AmbiguousPatternVariant(name, _, _, _, count, _) =>
+      "ambiguous enum pattern '" +
+      module_.name(name) +
+      "' (" +
+      count.to_string() +
+      " candidates); supply its type"
+    _ => @debug.to_string(self)
+  }
 }

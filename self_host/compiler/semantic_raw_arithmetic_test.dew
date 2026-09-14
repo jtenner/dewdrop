@@ -3,8 +3,8 @@ fn self_host_assert_invalid_raw_arithmetic(source: Bytes) -> Unit {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(_) => assert(false, "raw arithmetic accepted a wrong carrier")
-    Result::Err(error) => assert(error.contains("raw intrinsic") && error.contains("carrier does not match its opcode"), error)
+    Ok(_) => assert(false, "raw arithmetic accepted a wrong carrier")
+    Err(error) => assert(error.contains("raw intrinsic") && error.contains("carrier does not match its opcode"), error)
   }
 }
 

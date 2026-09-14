@@ -89,7 +89,7 @@ pub struct SelfHostPlannedWasmFunctionFragment {
 fn self_host_planned_wasm_function_fragment_identity(
   fragment: SelfHostPlannedWasmFunctionFragment,
 ) -> SelfHostPlannedWasmFunctionFragment {
-  SelfHostPlannedWasmFunctionFragment::{
+  {
     declaration: fragment.declaration
     kind: fragment.kind
     direct_builtin: fragment.direct_builtin
@@ -124,14 +124,14 @@ fn self_host_wasmgc_value_type(
   shape: SelfHostPlannedValueShape,
 ) -> Option<SelfHostPlannedWasmValueType> {
   match self_host_physical_scalar_shape(shape) {
-    SelfHostPlannedValueShape::UnitPlannedValueShape => Option::None
-    SelfHostPlannedValueShape::NeverPlannedValueShape => Option::None
-    SelfHostPlannedValueShape::I32PlannedValueShape => Option::Some(SelfHostPlannedWasmValueType::WasmI32Value)
-    SelfHostPlannedValueShape::I64PlannedValueShape => Option::Some(SelfHostPlannedWasmValueType::WasmI64Value)
-    SelfHostPlannedValueShape::F32PlannedValueShape => Option::Some(SelfHostPlannedWasmValueType::WasmF32Value)
-    SelfHostPlannedValueShape::F64PlannedValueShape => Option::Some(SelfHostPlannedWasmValueType::WasmF64Value)
-    SelfHostPlannedValueShape::V128PlannedValueShape => Option::Some(SelfHostPlannedWasmValueType::WasmV128Value)
-    _ => Option::Some(SelfHostPlannedWasmValueType::WasmNullableEqRefValue)
+    UnitPlannedValueShape => None
+    NeverPlannedValueShape => None
+    I32PlannedValueShape => Some(WasmI32Value)
+    I64PlannedValueShape => Some(WasmI64Value)
+    F32PlannedValueShape => Some(WasmF32Value)
+    F64PlannedValueShape => Some(WasmF64Value)
+    V128PlannedValueShape => Some(WasmV128Value)
+    _ => Some(WasmNullableEqRefValue)
   }
 }
 
@@ -139,16 +139,16 @@ fn self_host_wasmgc_storage_type(
   shape: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedWasmStorageType {
   match self_host_specialization_canonical_scalar(shape) {
-    SelfHostPlannedValueShape::I8PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI8SignedStorage
-    SelfHostPlannedValueShape::U8PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage
-    SelfHostPlannedValueShape::I16PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI16SignedStorage
-    SelfHostPlannedValueShape::U16PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage
-    SelfHostPlannedValueShape::I32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI32Storage
-    SelfHostPlannedValueShape::I64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmI64Storage
-    SelfHostPlannedValueShape::F32PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF32Storage
-    SelfHostPlannedValueShape::F64PlannedValueShape => SelfHostPlannedWasmStorageType::WasmF64Storage
-    SelfHostPlannedValueShape::V128PlannedValueShape => SelfHostPlannedWasmStorageType::WasmV128Storage
-    _ => SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+    I8PlannedValueShape => WasmI8SignedStorage
+    U8PlannedValueShape => WasmI8UnsignedStorage
+    I16PlannedValueShape => WasmI16SignedStorage
+    U16PlannedValueShape => WasmI16UnsignedStorage
+    I32PlannedValueShape => WasmI32Storage
+    I64PlannedValueShape => WasmI64Storage
+    F32PlannedValueShape => WasmF32Storage
+    F64PlannedValueShape => WasmF64Storage
+    V128PlannedValueShape => WasmV128Storage
+    _ => WasmNullableEqRefStorage
   }
 }
 
@@ -185,12 +185,12 @@ fn self_host_wasmgc_append_shape(
   shape: SelfHostPlannedValueShape,
 ) -> Unit {
   match shape {
-    SelfHostPlannedValueShape::ProductPlannedValueShape(_) => output.push(
-      SelfHostPlannedWasmValueType::WasmNullableEqRefValue,
+    ProductPlannedValueShape(_) => output.push(
+      WasmNullableEqRefValue,
     )
     _ => match self_host_wasmgc_value_type(shape) {
-      Option::Some(value) => output.push(value)
-      Option::None => {}
+      Some(value) => output.push(value)
+      None => {}
     }
   }
 }
@@ -225,11 +225,11 @@ fn self_host_wasmgc_payload_exact_nominal(
   let type_index = self_host_fragment_payload_index(module_.type_layouts, owner, payload, payload_index)
   let resolved_type = module_.type_layouts.payload_types[type_index]
   let runtime_base = match module_.resolved_types.type_at(resolved_type) {
-    SelfHostResolvedType::PrimitiveType(_) => true
-    SelfHostResolvedType::AppliedType(base, _) => match module_.resolved_types.type_at(
+    PrimitiveType(_) => true
+    AppliedType(base, _) => match module_.resolved_types.type_at(
       base,
     ) {
-      SelfHostResolvedType::PrimitiveType(_) => true
+      PrimitiveType(_) => true
       _ => false
     }
     _ => false
@@ -257,10 +257,10 @@ fn self_host_wasmgc_payload_exact_nominal(
       )
       if self_host_u64_equal(layout.declaration, nominal) {
         return match layout.kind {
-          SelfHostPlannedNominalLayoutKind::PlannedStructLayout(fields) =>
+          PlannedStructLayout(fields) =>
             fields.length > 0u32
-          SelfHostPlannedNominalLayoutKind::PlannedEnumLayout(_) => true
-          SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout => false
+          PlannedEnumLayout(_) => true
+          PlannedForeignTypeLayout => false
         }
       }
       continue current + 1u32
@@ -298,7 +298,7 @@ fn self_host_wasmgc_plan_type(
   let type_index = physical_types.length()
   type_lookup[self_host_semantic_id_local(layout.declaration)] = type_index
   match layout.kind {
-    SelfHostPlannedNominalLayoutKind::PlannedStructLayout(field_span) => {
+    PlannedStructLayout(field_span) => {
       let start = fields.length()
       let mut field = 0u32
       let _ = while field {
@@ -307,8 +307,8 @@ fn self_host_wasmgc_plan_type(
             module_.type_layouts.fields,
             self_host_u32_add(field_span.start, current),
           )
-          fields.push(SelfHostPlannedWasmField::{
-            role: SelfHostPlannedWasmFieldRole::WasmStructField(source.field)
+          fields.push({
+            role: WasmStructField(source.field)
             declaration: source.field
             physical_index: current
             storage: self_host_wasmgc_exact_field_storage(module_, source, array_fields)
@@ -321,32 +321,32 @@ fn self_host_wasmgc_plan_type(
           break self_host_semantic_unit()
         }
       }
-      physical_types.push(SelfHostPlannedWasmPhysicalType::{
-        kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmStructType(layout.declaration)
+      physical_types.push({
+        kind: PlannedWasmStructType(layout.declaration)
         type_index: type_index
-        fields: SelfHostHirSpan::{
+        fields: {
           start: start
           length: fields.length() - start
         }
         offset: layout.offset
       })
     }
-    SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout => physical_types.push(
-      SelfHostPlannedWasmPhysicalType::{
-        kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmForeignMarkerType(layout.declaration)
+    PlannedForeignTypeLayout => physical_types.push(
+      {
+        kind: PlannedWasmForeignMarkerType(layout.declaration)
         type_index: type_index
-        fields: SelfHostHirSpan::{
+        fields: {
           start: fields.length()
           length: 0u32
         }
         offset: layout.offset
       },
     )
-    SelfHostPlannedNominalLayoutKind::PlannedEnumLayout(variants) => {
-      physical_types.push(SelfHostPlannedWasmPhysicalType::{
-        kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumBaseType(layout.declaration)
+    PlannedEnumLayout(variants) => {
+      physical_types.push({
+        kind: PlannedWasmEnumBaseType(layout.declaration)
         type_index: type_index
-        fields: SelfHostHirSpan::{
+        fields: {
           start: fields.length()
           length: 0u32
         }
@@ -361,13 +361,13 @@ fn self_host_wasmgc_plan_type(
           ]
           let field_start = fields.length()
           match source.payload {
-            SelfHostPlannedVariantPayloadLayout::PlannedUnitVariantLayout => {}
-            SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(payload) => {
+            PlannedUnitVariantLayout => {}
+            PlannedTupleVariantLayout(payload) => {
               let mut item = 0u32
               let _ = while item {
                 payload_index => if payload_index < payload.length {
-                  fields.push(SelfHostPlannedWasmField::{
-                    role: SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(
+                  fields.push({
+                    role: WasmVariantPayloadField(
                       source.variant,
                       payload_index,
                     )
@@ -394,7 +394,7 @@ fn self_host_wasmgc_plan_type(
                 }
               }
             }
-            SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(payload) => {
+            PlannedStructVariantLayout(payload) => {
               let mut item = 0u32
               let _ = while item {
                 payload_index => if payload_index < payload.length {
@@ -402,8 +402,8 @@ fn self_host_wasmgc_plan_type(
                     module_.type_layouts.fields,
                     self_host_u32_add(payload.start, payload_index),
                   )
-                  fields.push(SelfHostPlannedWasmField::{
-                    role: SelfHostPlannedWasmFieldRole::WasmStructField(field.field)
+                  fields.push({
+                    role: WasmStructField(field.field)
                     declaration: field.field
                     physical_index: payload_index
                     storage: self_host_wasmgc_exact_field_storage(module_, field, array_fields)
@@ -419,29 +419,29 @@ fn self_host_wasmgc_plan_type(
             }
           }
           let marker_index = physical_types.length()
-          physical_types.push(SelfHostPlannedWasmPhysicalType::{
-            kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumMarkerType(
+          physical_types.push({
+            kind: PlannedWasmEnumMarkerType(
               layout.declaration,
               source.variant,
               source.tag,
               marker_super,
             )
             type_index: marker_index
-            fields: SelfHostHirSpan::{
+            fields: {
               start: field_start
               length: 0u32
             }
             offset: source.offset
           })
           marker_super = marker_index
-          physical_types.push(SelfHostPlannedWasmPhysicalType::{
-            kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmEnumSubtypeType(
+          physical_types.push({
+            kind: PlannedWasmEnumSubtypeType(
               layout.declaration,
               source.variant,
               source.tag,
             )
             type_index: physical_types.length()
-            fields: SelfHostHirSpan::{
+            fields: {
               start: field_start
               length: fields.length() - field_start
             }
@@ -459,7 +459,7 @@ fn self_host_wasmgc_plan_type(
 fn self_host_wasmgc_resolved_type_is_direct_generic(
   type_: SelfHostResolvedType,
 ) -> Bool {
-  type_ is SelfHostResolvedType::GenericParameterType(_)
+  type_ is GenericParameterType(_)
 }
 
 fn self_host_wasmgc_specialized_resolved_shape(
@@ -476,15 +476,15 @@ fn self_host_wasmgc_specialized_resolved_shape(
   let resolved_type = module_.resolved_types.types[type_]
   if self_host_wasmgc_resolved_type_is_direct_generic(resolved_type) {
     match resolved_type {
-      SelfHostResolvedType::GenericParameterType(parameter) => {
+      GenericParameterType(parameter) => {
       match generic_parameters.slot(parameter) {
-        Option::Some(relative) => if relative < request.shapes.length {
+        Some(relative) => if relative < request.shapes.length {
           let shape = self_host_u32_add(request.shapes.start, relative)
           if shape < shapes.length() {
             return shapes[shape]
           }
         }
-        Option::None => {}
+        None => {}
       }
       fallback
       }
@@ -492,7 +492,7 @@ fn self_host_wasmgc_specialized_resolved_shape(
     }
   } else {
   match resolved_type {
-    SelfHostResolvedType::ProductType(fields) => {
+    ProductType(fields) => {
       if fields.start > module_.resolved_types.type_arguments.length() ||
         fields.length > module_.resolved_types.type_arguments.length() - fields.start {
         return fallback
@@ -505,7 +505,7 @@ fn self_host_wasmgc_specialized_resolved_shape(
             self_host_u32_add(fields.start, current)
           ]
           let field_fallback = match fallback {
-            SelfHostPlannedValueShape::ProductPlannedValueShape(values) => if current < values.length() {
+            ProductPlannedValueShape(values) => if current < values.length() {
               values[current]
             } else {
               self_host_planned_resolved_value_shape(
@@ -531,7 +531,7 @@ fn self_host_wasmgc_specialized_resolved_shape(
           break self_host_semantic_unit()
         }
       }
-      SelfHostPlannedValueShape::ProductPlannedValueShape(specialized)
+      ProductPlannedValueShape(specialized)
     }
     _ => fallback
   }
@@ -547,7 +547,7 @@ fn self_host_wasmgc_specialized_shape(
   shape: SelfHostPlannedValueShape,
 ) -> SelfHostPlannedValueShape {
   match request {
-    Option::Some(value) => self_host_wasmgc_specialized_resolved_shape(
+    Some(value) => self_host_wasmgc_specialized_resolved_shape(
       module_,
       type_,
       self_host_program_specialization_callable_generics(callable),
@@ -555,7 +555,7 @@ fn self_host_wasmgc_specialized_shape(
       shapes,
       shape,
     )
-    Option::None => shape
+    None => shape
   }
 }
 
@@ -563,12 +563,12 @@ fn self_host_wasmgc_function_kind(
   callable: SelfHostPlannedCallable,
 ) -> SelfHostPlannedWasmFunctionKind {
   match callable.kind {
-    SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if self_host_is_compile_time_builtin(name) {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction
+    PlannedBuiltinCallable(name) => if self_host_is_compile_time_builtin(name) {
+      PlannedWasmSignatureOnlyFunction
     } else {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name)
+      PlannedWasmInlineBuiltinFunction(name)
     }
-    SelfHostPlannedCallableKind::PlannedForeignCallable(library, field, host_import) => {
+    PlannedForeignCallable(library, field, host_import) => {
       let namespace = if host_import {
         library
       } else {
@@ -577,14 +577,14 @@ fn self_host_wasmgc_function_kind(
         name.append(library)
         name.finish()
       }
-      SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(namespace, field)
+      PlannedWasmImportedFunction(namespace, field)
     }
-    SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(body)
-    SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, body) => match body {
-      Option::Some(value) => SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(value)
-      Option::None => SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction
+    PlannedFunctionCallable(body) => PlannedWasmDefinedFunction(body)
+    PlannedImplMethodCallable(_, body) => match body {
+      Some(value) => PlannedWasmDefinedFunction(value)
+      None => PlannedWasmSignatureOnlyFunction
     }
-    _ => SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction
+    _ => PlannedWasmSignatureOnlyFunction
   }
 }
 
@@ -601,46 +601,46 @@ fn self_host_wasmgc_append_function(
   value_types: Array<SelfHostPlannedWasmValueType>,
 ) -> Unit {
   let parameter_start = value_types.length()
-  let elided = !reachable || request is Option::None && self_host_u32_greater(
+  let elided = !reachable || request is None && self_host_u32_greater(
     self_host_program_specialization_callable_generics(callable).length, 0u32,
   )
   let original_kind = match callable.kind {
-    SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if self_host_raw_array_opcode(name) == 2u32 {
-      let shape = if self_host_raw_array_contract_owner(module_, callable, 2u32) is Option::Some(_) {
+    PlannedBuiltinCallable(name) => if self_host_raw_array_opcode(name) == 2u32 {
+      let shape = if self_host_raw_array_contract_owner(module_, callable, 2u32) is Some(_) {
         self_host_wasmgc_specialized_shape(module_, callable, request, shapes,
           callable.result_type, callable.result_shape)
       } else {
-        SelfHostPlannedValueShape::ErrorPlannedValueShape
+        ErrorPlannedValueShape
       }
-      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(
-        SelfHostRawHeapInstruction::RawArrayGetInstruction(SelfHostRawArrayGetRecipe::{
+      PlannedWasmInlineHeapFunction(
+        RawArrayGetInstruction({
           opcode: name
           element_shape: shape
         }),
       )
     } else if self_host_raw_struct_get_opcode(name) {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(SelfHostRawHeapInstruction::RawStructGetInstruction(self_host_raw_struct_get_recipe(module_, callable, name)))
+      PlannedWasmInlineHeapFunction(RawStructGetInstruction(self_host_raw_struct_get_recipe(module_, callable, name)))
     } else if self_host_raw_ref_cast_opcode(name) {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(SelfHostRawHeapInstruction::RawRefCastInstruction(self_host_raw_ref_cast_recipe(module_, callable, name)))
+      PlannedWasmInlineHeapFunction(RawRefCastInstruction(self_host_raw_ref_cast_recipe(module_, callable, name)))
     } else {
       self_host_wasmgc_function_kind(callable)
     }
     _ => self_host_wasmgc_function_kind(callable)
   }
   let kind = match original_kind {
-    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineHeapFunction(recipe) => if outlined {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedHeapFunction(recipe)
+    PlannedWasmInlineHeapFunction(recipe) => if outlined {
+      PlannedWasmOutlinedHeapFunction(recipe)
     } else {
       original_kind
     }
-    SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if outlined {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedBuiltinFunction(name)
+    PlannedWasmInlineBuiltinFunction(name) => if outlined {
+      PlannedWasmOutlinedBuiltinFunction(name)
     } else {
       original_kind
     }
     _ => original_kind
   }
-  let physical_signature = !elided && !(kind is SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction)
+  let physical_signature = !elided && !(kind is PlannedWasmSignatureOnlyFunction)
   // Non-emitted templates retain their logical signature in the callable.
   // Trait requirements and compile-time declarations are logical metadata too.
   // None of these publish a fabricated reference-valued physical signature.
@@ -698,15 +698,15 @@ fn self_host_wasmgc_append_function(
       self_host_named_fragment_shape(module_, callable, result_shape, 4294967295u32),
     )
   }
-  functions.push(SelfHostPlannedWasmFunctionFragment::{
+  functions.push({
     declaration: callable.declaration
     kind: kind
     direct_builtin: direct_builtin
-    parameters: SelfHostHirSpan::{
+    parameters: {
       start: parameter_start
       length: result_start - parameter_start
     }
-    results: SelfHostHirSpan::{
+    results: {
       start: result_start
       length: value_types.length() - result_start
     }
@@ -722,7 +722,7 @@ fn self_host_wasmgc_append_lambda_function(
   functions: Array<SelfHostPlannedWasmFunctionFragment>,
   value_types: Array<SelfHostPlannedWasmValueType>,
 ) -> Unit {
-  self_host_wasmgc_append_lambda_function_for_request(module_, lambda, Option::None, 4294967295u32, [], functions, value_types)
+  self_host_wasmgc_append_lambda_function_for_request(module_, lambda, None, 4294967295u32, [], functions, value_types)
 }
 
 fn self_host_wasmgc_append_lambda_function_for_request(
@@ -735,17 +735,17 @@ fn self_host_wasmgc_append_lambda_function_for_request(
   value_types: Array<SelfHostPlannedWasmValueType>,
 ) -> Unit {
   let parameter_start = value_types.length()
-  value_types.push(SelfHostPlannedWasmValueType::WasmNullableEqRefValue)
+  value_types.push(WasmNullableEqRefValue)
   let owner = self_host_program_specialization_body(module_, lambda.root_body)
   let declaration = match owner {
-    Option::Some(body) => body.declaration
-    Option::None => 0u64
+    Some(body) => body.declaration
+    None => 0u64
   }
   let _ = self_host_assert_compiler_invariant_with_failure(
-    owner is Option::Some(_) &&
+    owner is Some(_) &&
       self_host_array_span_is_valid(lambda.locals.start, lambda.locals.length, module_.locals.length()) &&
       !self_host_u32_greater(lambda.parameter_count, lambda.locals.length),
-    SelfHostInvariantFailure::{
+    {
       code: 401u32
       phase: 4u32
       module_id: module_.module_id
@@ -764,11 +764,11 @@ fn self_host_wasmgc_append_lambda_function_for_request(
       let local_index = self_host_u32_add(lambda.locals.start, current)
       let local = self_host_body_planned_local_identity(module_.locals[local_index])
       let _ = self_host_assert_compiler_invariant_with_failure(
-        local.kind is SelfHostBodyLocalKind::ParameterLocal &&
+        local.kind is ParameterLocal &&
           self_host_u64_equal(local.body, lambda.root_body) &&
           self_host_u32_equal(local.lambda, lambda.lambda) &&
           self_host_u32_equal(local.local_id, current),
-        SelfHostInvariantFailure::{
+        {
           code: 401u32
           phase: 4u32
           module_id: module_.module_id
@@ -793,17 +793,17 @@ fn self_host_wasmgc_append_lambda_function_for_request(
   self_host_wasmgc_append_shape(value_types, self_host_lambda_physical_shape(module_, lambda,
     self_host_lambda_request_shape(module_, request, shapes, lambda.root_type, lambda.result_shape), 4294967295u32,
   ))
-  functions.push(SelfHostPlannedWasmFunctionFragment::{
+  functions.push({
     declaration: declaration
-    kind: SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(
+    kind: PlannedWasmDefinedLambdaFunction(
       lambda.lambda,
     )
     direct_builtin: b""
-    parameters: SelfHostHirSpan::{
+    parameters: {
       start: parameter_start
       length: result_start - parameter_start
     }
-    results: SelfHostHirSpan::{
+    results: {
       start: result_start
       length: value_types.length() - result_start
     }
@@ -822,19 +822,19 @@ fn self_host_wasmgc_plan_closures(
 ) -> U32 {
   let closure_index = physical_types.length()
   let closure_field = fields.length()
-  fields.push(SelfHostPlannedWasmField::{
-    role: SelfHostPlannedWasmFieldRole::WasmClosureEntryField
+  fields.push({
+    role: WasmClosureEntryField
     declaration: 0u64
     physical_index: 0u32
-    storage: SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage
+    storage: WasmNullableFuncRefStorage
     mutable_: false
     exact_nominal: false
     offset: 0u32
   })
-  physical_types.push(SelfHostPlannedWasmPhysicalType::{
-    kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmClosureType
+  physical_types.push({
+    kind: PlannedWasmClosureType
     type_index: closure_index
-    fields: SelfHostHirSpan::{
+    fields: {
       start: closure_field
       length: 1u32
     }
@@ -848,8 +848,8 @@ fn self_host_wasmgc_plan_closures(
         let shape = self_host_capture_cell_physical_shape(module_, local, current, local.shape)
         let type_index = physical_types.length()
         let field_start = fields.length()
-        fields.push(SelfHostPlannedWasmField::{
-          role: SelfHostPlannedWasmFieldRole::WasmCaptureCellValueField(current)
+        fields.push({
+          role: WasmCaptureCellValueField(current)
           declaration: 0u64
           physical_index: 0u32
           storage: self_host_wasmgc_storage_type(shape)
@@ -857,10 +857,10 @@ fn self_host_wasmgc_plan_closures(
           exact_nominal: false
           offset: local.offset
         })
-        physical_types.push(SelfHostPlannedWasmPhysicalType::{
-          kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(current, 4294967295u32)
+        physical_types.push({
+          kind: PlannedWasmCaptureCellType(current, 4294967295u32)
           type_index: type_index
-          fields: SelfHostHirSpan::{
+          fields: {
             start: field_start
             length: 1u32
           }
@@ -878,7 +878,7 @@ fn self_host_wasmgc_plan_closures(
     current => if current < module_.lambdas.length() {
       let lambda = module_.lambdas[current]
       if !self_host_lambda_owner_is_generic(module_, lambda.root_body) && self_host_compile_time_lambda_is_live(module_, lambda.lambda) {
-        lambda_type_indices[current] = self_host_wasmgc_append_lambda_closure(module_, lambda, Option::None, 4294967295u32, [], physical_types, fields)
+        lambda_type_indices[current] = self_host_wasmgc_append_lambda_closure(module_, lambda, None, 4294967295u32, [], physical_types, fields)
       }
       continue current + 1u32
     } else {
@@ -939,8 +939,8 @@ fn self_host_plan_program_wasmgc_fragments(
           source,
           callable.declaration,
         ) {
-          Option::Some(name) => name
-          Option::None => b""
+          Some(name) => name
+          None => b""
         }
         self_host_wasmgc_append_function(
           source,
@@ -948,7 +948,7 @@ fn self_host_plan_program_wasmgc_fragments(
           direct_builtin,
           reachable.contains_key(callable.declaration),
           referenced.contains_key(callable.declaration),
-          Option::None,
+          None,
           4294967295u32,
           specialization.shapes,
           functions,
@@ -983,19 +983,19 @@ fn self_host_plan_program_wasmgc_fragments(
               instance,
               selected.declaration,
             ) {
-              Option::Some(callable) => self_host_wasmgc_append_function(
+              Some(callable) => self_host_wasmgc_append_function(
                 instance,
                 callable,
                 b"",
                 true,
                 referenced.contains_key(callable.declaration),
-                Option::Some(selected),
+                Some(selected),
                 request,
                 specialization.shapes,
                 functions,
                 value_types,
               )
-              Option::None => {}
+              None => {}
             }
             self_host_wasmgc_append_specialized_lambdas(self_host_program_function_lowering(specialization.lowering, current, request), selected, request, specialization.shapes, physical_types, fields, functions, value_types)
           }
@@ -1004,7 +1004,7 @@ fn self_host_plan_program_wasmgc_fragments(
           break self_host_semantic_unit()
         }
       }
-      modules.push(SelfHostPlannedModuleWasmGCFragments::{
+      modules.push({
         module_id: source.module_id
         physical_types: physical_types
         fields: fields
@@ -1022,7 +1022,7 @@ fn self_host_plan_program_wasmgc_fragments(
       break self_host_semantic_unit()
     }
   }
-  SelfHostPlannedProgramWasmGCFragments::{
+  {
     specialization: specialization
     modules: modules
   }

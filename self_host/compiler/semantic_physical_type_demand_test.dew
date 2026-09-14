@@ -9,7 +9,7 @@ test "WasmGC type demand excludes discarded generic branches" {
     b"builtin query<t>() -> Bool = \"types.is_unit\"\nenum Dead {\n Value(I64)\n}\nstruct Unused {}\nfn choose<t>() -> I32 {\n if query::<t>() {\n 7i32\n } else {\n let value = Dead::Value(9i64)\n match value {\n Dead::Value(_) => 8i32\n }\n }\n}\npub fn run() -> I32 {\n choose::<Unit>()\n}\n",
   )
   for type_ in plan.modules[0u32].physical_types {
-    assert(type_.kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmClosureType, "discarded constructors and patterns must not demand nominal storage")
+    assert(type_.kind is PlannedWasmClosureType, "discarded constructors and patterns must not demand nominal storage")
   }
 }
 

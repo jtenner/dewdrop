@@ -87,13 +87,35 @@ prepare_compiler() {
     wasm-tools validate --features all "$compiler"
 }
 
-self_host_measure "compiler A build" tools/dew build \
-  --link-wasm starshine "$provider" \
-  --link-wasm facet "$facet_provider" \
-  --link-wasm __moonbit_time_unstable "$time_provider" \
+link_stage_output() {
+  local input=$1
+  local output=$2
+  local validation_args=()
+  if [[ "$self_host_runtime" == node-facet ]]; then
+    validation_args=(--single-validation)
+  fi
+  self_host_measure "compiler output link: $(basename "$(dirname "$input")")" \
+    moon run --target native --release src/self_host_link_fixture -- \
+      "$input" "$provider" "$facet_provider" "$time_provider" "$output" \
+      "${validation_args[@]}"
+  if wasm-tools print "$output" | grep '(import "wasi_snapshot_preview1"' >/dev/null; then
+    echo "self-host: linked compiler retains wasi_snapshot_preview1 imports" >&2
+    return 1
+  fi
+  if wasm-tools print "$output" | grep '(import "link:' >/dev/null; then
+    echo "self-host: linked compiler retains unresolved provider imports" >&2
+    return 1
+  fi
+}
+
+
+# Build the Dew core with the normal compiler host. Link each stage through the
+# same native linker; interpreting the large provider graph dominated A's build.
+self_host_measure "compiler A source build" tools/dew build \
   "${build_cache_args[@]}" \
-  -o "$work/a/compiler.raw.wasm" \
+  -o "$work/a/compiler-core.wasm" \
   "${sources[@]}"
+link_stage_output "$work/a/compiler-core.wasm" "$work/a/compiler.raw.wasm"
 prepare_compiler "$work/a/compiler.raw.wasm" "$work/a/compiler.wasm" A
 self_host_measure "compiler A validation" \
   wasm-tools validate --features all "$work/a/compiler.wasm"
@@ -118,26 +140,6 @@ run_stage() {
     self_host_run_cached_failure "$self_host_runtime" "$compiler" "$request"
 }
 
-link_stage_output() {
-  local input=$1
-  local output=$2
-  local validation_args=()
-  if [[ "$self_host_runtime" == node-facet ]]; then
-    validation_args=(--single-validation)
-  fi
-  self_host_measure "compiler output link: $(basename "$(dirname "$input")")" \
-    moon run --target native --release src/self_host_link_fixture -- \
-      "$input" "$provider" "$facet_provider" "$time_provider" "$output" \
-      "${validation_args[@]}"
-  if wasm-tools print "$output" | grep '(import "wasi_snapshot_preview1"' >/dev/null; then
-    echo "self-host: linked compiler retains wasi_snapshot_preview1 imports" >&2
-    return 1
-  fi
-  if wasm-tools print "$output" | grep '(import "link:' >/dev/null; then
-    echo "self-host: linked compiler retains unresolved provider imports" >&2
-    return 1
-  fi
-}
 
 write_request "$work/a" compiler-b-core.wasm
 run_stage "$work/a/compiler.wasm" "$work/a/request.bin"

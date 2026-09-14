@@ -1,5 +1,5 @@
 fn self_host_capture_metadata_failure(module_: SelfHostPlannedModuleLowering, body: U64, phase: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
-  let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+  let _ = self_host_assert_compiler_invariant_with_failure(false, {
     code: code
     phase: phase
     module_id: module_.module_id
@@ -31,17 +31,17 @@ fn self_host_capture_metadata_body(module_: SelfHostPlannedModuleLowering, owner
 }
 
 fn self_host_capture_metadata_context(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, phase: U32) -> SelfHostLoweredChildContext {
-  SelfHostLoweredChildContext::{
+  {
     module_: module_
     body: body
     phase: phase
-    syntax_walk: Option::None
+    syntax_walk: None
     lambda: 4294967295u32
-    locals: SelfHostHirSpan::{
+    locals: {
       start: 0u32
       length: body.locals.length
     }
-    lambdas: SelfHostHirSpan::{
+    lambdas: {
       start: 0u32
       length: module_.lambdas.length()
     }

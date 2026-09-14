@@ -23,7 +23,7 @@ struct SelfHostPhysicalCellStorage {
 
 fn self_host_capture_cell_storage_record(link: SelfHostPlannedProgramWasmGCLink, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, module_index: U32, specialization: U32, local_index: U32, carrier: SelfHostWasmBodyCarrier) -> SelfHostPhysicalCellStorage {
   let local = module_.locals[local_index]
-  let mut selected = Option::None
+  let mut selected = None
   let fragments = link.fragments.modules[module_index]
   for linked in link.types {
     if linked.module_index == module_index {
@@ -31,14 +31,14 @@ fn self_host_capture_cell_storage_record(link: SelfHostPlannedProgramWasmGCLink,
         u32_into_u64(fragments.physical_types.length()), u32_into_u64(linked.fragment_index), local.local_id)
       let physical = fragments.physical_types[linked.fragment_index]
       match physical.kind {
-        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(source, request) => if source == local_index && request == specialization {
-          self_host_capture_cell_plan_check(!(selected is Option::Some(_)), module_, body, 6u32, 504u32, 1u64, 2u64, local.local_id)
+        PlannedWasmCaptureCellType(source, request) => if source == local_index && request == specialization {
+          self_host_capture_cell_plan_check(!(selected is Some(_)), module_, body, 6u32, 504u32, 1u64, 2u64, local.local_id)
           self_host_capture_cell_plan_check(self_host_array_span_is_valid(physical.fields.start, physical.fields.length, fragments.fields.length()), module_, body, 6u32, 101u32,
             u32_into_u64(fragments.fields.length()), u32_into_u64(physical.fields.length), local.local_id)
           self_host_capture_cell_plan_check(physical.fields.length == 1u32, module_, body, 6u32, 504u32, 1u64, u32_into_u64(physical.fields.length), local.local_id)
           let field = fragments.fields[physical.fields.start]
           let role_matches = match field.role {
-            SelfHostPlannedWasmFieldRole::WasmCaptureCellValueField(source) => source == local_index
+            WasmCaptureCellValueField(source) => source == local_index
             _ => false
           }
           self_host_capture_cell_plan_check(role_matches && field.mutable_ && field.physical_index == 0u32, module_, body, 6u32, 504u32,
@@ -48,8 +48,8 @@ fn self_host_capture_cell_storage_record(link: SelfHostPlannedProgramWasmGCLink,
             self_host_body_carrier_code(expected), self_host_body_carrier_code(carrier), local.local_id)
           let expected_storage = self_host_wasmgc_storage_type(self_host_body_carrier_shape(carrier))
           self_host_capture_cell_plan_check(self_host_program_representation_storage_code(expected_storage) == self_host_program_representation_storage_code(field.storage), module_, body, 6u32, 710u32,
-            self_host_body_freeze_storage(Option::Some(expected_storage)), self_host_body_freeze_storage(Option::Some(field.storage)), local.local_id)
-          selected = Option::Some(SelfHostPhysicalCellStorage::{
+            self_host_body_freeze_storage(Some(expected_storage)), self_host_body_freeze_storage(Some(field.storage)), local.local_id)
+          selected = Some({
             type_index: linked.type_index
             storage: field.storage
           })
@@ -59,8 +59,8 @@ fn self_host_capture_cell_storage_record(link: SelfHostPlannedProgramWasmGCLink,
     }
   }
   match selected {
-    Option::Some(cell) => cell
-    Option::None => self_host_physical_scratch_failure(module_, body, 4294967295u32, 6u32, 610u32, 1u64, 0u64, u32_into_u64(local.local_id))
+    Some(cell) => cell
+    None => self_host_physical_scratch_failure(module_, body, 4294967295u32, 6u32, 610u32, 1u64, 0u64, u32_into_u64(local.local_id))
   }
 }
 
@@ -80,18 +80,18 @@ fn self_host_plan_owned_capture_cells(link: SelfHostPlannedProgramWasmGCLink, mo
     if source_slot != 4294967295u32 && self_host_local_needs_capture_cell(module_, local) {
       self_host_capture_cell_plan_check(next < 4294967295u64, module_, body, 6u32, 710u32, 4294967294u64, next, local.local_id)
       let storage = self_host_capture_cell_storage_record(link, module_, body, module_index, specialization, index, value.carrier)
-      result.push(Option::Some(SelfHostPhysicalCaptureCellPlan::{
+      result.push(Some({
         local_id: local.local_id
         local_index: index
         source_slot: source_slot
         local_slot: u64_into_u32(next)
         type_index: storage.type_index
         storage: storage.storage
-        parameter: local.kind is SelfHostBodyLocalKind::ParameterLocal
+        parameter: local.kind is ParameterLocal
       }))
       next = next + 1u64
     } else {
-      result.push(Option::None)
+      result.push(None)
     }
     relative = relative + 1u32
   }
@@ -107,10 +107,10 @@ fn self_host_verify_owned_capture_cells(link: SelfHostPlannedProgramWasmGCLink, 
     let actual = plan.capture_cells[index]
     let local = module_.locals[body.locals.start + index].local_id
     match entry {
-      Option::None => self_host_capture_cell_plan_check(actual is Option::None, module_, body, 6u32, 610u32, 0u64, 1u64, local)
-      Option::Some(cell) => match actual {
-        Option::None => self_host_capture_cell_plan_check(false, module_, body, 6u32, 610u32, 1u64, 0u64, local)
-        Option::Some(value) => {
+      None => self_host_capture_cell_plan_check(actual is None, module_, body, 6u32, 610u32, 0u64, 1u64, local)
+      Some(cell) => match actual {
+        None => self_host_capture_cell_plan_check(false, module_, body, 6u32, 610u32, 1u64, 0u64, local)
+        Some(value) => {
           self_host_capture_cell_plan_check(value.local_id == cell.local_id, module_, body, 6u32, 106u32, u32_into_u64(cell.local_id), u32_into_u64(value.local_id), local)
           self_host_capture_cell_plan_check(value.local_index == cell.local_index, module_, body, 6u32, 106u32, u32_into_u64(cell.local_index), u32_into_u64(value.local_index), local)
           self_host_capture_cell_plan_check(value.source_slot == cell.source_slot, module_, body, 6u32, 710u32, u32_into_u64(cell.source_slot), u32_into_u64(value.source_slot), local)
@@ -135,13 +135,13 @@ fn self_host_owned_capture_cell(canonical: Option<SelfHostPlannedPhysicalBodyCar
   let relative = self_host_body_local_slot(module_, body, local)
   let entry = plan.capture_cells[relative]
   match entry {
-    Option::Some(cell) => {
+    Some(cell) => {
       self_host_capture_cell_plan_check(cell.local_id == local, module_, body, 7u32, 106u32,
         u32_into_u64(local), u32_into_u64(cell.local_id), local)
       self_host_capture_cell_plan_check(cell.local_index == body.locals.start + relative, module_, body, 7u32, 106u32,
         u32_into_u64(body.locals.start + relative), u32_into_u64(cell.local_index), local)
     }
-    Option::None => {}
+    None => {}
   }
   entry
 }

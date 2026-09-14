@@ -7,7 +7,7 @@ struct SelfHostDeclaredStorageVisit {
 }
 
 fn self_host_declared_storage_failure(resolved: SelfHostResolvedModuleTypes, owner: U64, root: U32, type_: U32, code: U32, expected: U32, actual: U32) -> SelfHostInvariantFailure {
-  SelfHostInvariantFailure::{
+  {
     code: code
     phase: 4u32
     module_id: resolved.module_id
@@ -35,7 +35,7 @@ fn self_host_check_declared_storage_type(resolved: SelfHostResolvedModuleTypes, 
       work.truncate(length - 1u32)
       let id = visit.type_
       if id >= resolved.types.length() {
-        return Result::Err(self_host_declared_storage_failure(resolved, owner, root, id,
+        return Err(self_host_declared_storage_failure(resolved, owner, root, id,
           101u32, resolved.types.length(), id))
       }
       if visit.finish {
@@ -43,48 +43,48 @@ fn self_host_check_declared_storage_type(resolved: SelfHostResolvedModuleTypes, 
         continue work.length()
       }
       match states.get(id) {
-        Option::Some(1u32) => return Result::Err(self_host_declared_storage_failure(resolved, owner, root, id, 108u32, 0u32, 1u32))
-        Option::Some(2u32) => continue work.length()
+        Some(1u32) => return Err(self_host_declared_storage_failure(resolved, owner, root, id, 108u32, 0u32, 1u32))
+        Some(2u32) => continue work.length()
         _ => {}
       }
       let node = resolved.types[id]
       let error = match node {
-        SelfHostResolvedType::ErrorType => 1u32
-        SelfHostResolvedType::MemberTypeProjection(_, _, _) => 2u32
-        SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::CompileTimeTypeType) => 3u32
+        ErrorType => 1u32
+        MemberTypeProjection(_, _, _) => 2u32
+        PrimitiveType(CompileTimeTypeType) => 3u32
         _ => 0u32
       }
       if error != 0u32 {
-        return Result::Err(self_host_declared_storage_failure(resolved, owner, root, id, 301u32, 0u32, error))
+        return Err(self_host_declared_storage_failure(resolved, owner, root, id, 301u32, 0u32, error))
       }
       states.set(id, 1u32)
-      work.push(SelfHostDeclaredStorageVisit::{
+      work.push({
         type_: id
         finish: true
       })
       let span = match node {
-        SelfHostResolvedType::ProductType(fields), SelfHostResolvedType::AppliedType(_, fields), SelfHostResolvedType::FunctionType(fields, _) => fields
+        ProductType(fields), AppliedType(_, fields), FunctionType(fields, _) => fields
         _ => self_host_empty_hir_span(0u32)
       }
       if !self_host_array_span_is_valid(span.start, span.length, resolved.type_arguments.length()) {
-        return Result::Err(self_host_declared_storage_failure(resolved, owner, root, id,
+        return Err(self_host_declared_storage_failure(resolved, owner, root, id,
           101u32, resolved.type_arguments.length(), span.length))
       }
       let extra = match node {
-        SelfHostResolvedType::AppliedType(base, _) => Option::Some(base)
-        SelfHostResolvedType::FunctionType(_, result) => Option::Some(result)
-        _ => Option::None
+        AppliedType(base, _) => Some(base)
+        FunctionType(_, result) => Some(result)
+        _ => None
       }
       match extra {
-        Option::Some(child) => work.push(SelfHostDeclaredStorageVisit::{
+        Some(child) => work.push({
           type_: child
           finish: false
         })
-        Option::None => {}
+        None => {}
       }
       while span.length {
         remaining if remaining > 0u32 => {
-          work.push(SelfHostDeclaredStorageVisit::{
+          work.push({
             type_: resolved.type_arguments[span.start + remaining - 1u32]
             finish: false
           })
@@ -96,13 +96,13 @@ fn self_host_check_declared_storage_type(resolved: SelfHostResolvedModuleTypes, 
     }
     _ => break ()
   }
-  Result::Ok(())
+  Ok(())
 }
 
 fn self_host_assert_declared_storage_type(resolved: SelfHostResolvedModuleTypes, owner: U64, root: U32) -> Unit {
   match self_host_check_declared_storage_type(resolved, owner, root) {
-    Result::Ok(_) => {}
-    Result::Err(failure) => {
+    Ok(_) => {}
+    Err(failure) => {
       let _ = self_host_assert_compiler_invariant_with_failure(false, failure,
         "declared physical storage requires a valid logical type graph")
     }

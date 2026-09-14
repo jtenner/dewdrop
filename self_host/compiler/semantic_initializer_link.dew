@@ -1,6 +1,6 @@
 fn self_host_initializer_link_check(condition: Bool, module_id: U64, declaration: U64, body: U64, slot: U32, code: U32, expected: U64, actual: U64, role: U32) -> Unit {
   if !condition {
-    let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    let _ = self_host_assert_compiler_invariant_with_failure(false, {
       code: code
       phase: 5u32
       module_id: module_id
@@ -24,8 +24,8 @@ fn self_host_initializer_function_index(module_id: U64, initializer: SelfHostPla
 
 fn self_host_initializer_has_storage(shape: SelfHostPlannedValueShape) -> Bool {
   match shape {
-    SelfHostPlannedValueShape::UnitPlannedValueShape,
-    SelfHostPlannedValueShape::NeverPlannedValueShape => false
+    UnitPlannedValueShape,
+    NeverPlannedValueShape => false
     _ => true
   }
 }
@@ -57,10 +57,10 @@ fn self_host_verify_initializer_links(link: SelfHostPlannedProgramWasmGCLink, bo
     for step in module_.initialization.steps {
       if !step.test_only || link.emit_tests {
         match step.kind {
-          SelfHostPlannedModuleInitializationStepKind::PlannedInitializeModuleValue(_, _, _) => {
+          PlannedInitializeModuleValue(_, _, _) => {
             source_slot = source_slot + 1u32
           }
-          SelfHostPlannedModuleInitializationStepKind::PlannedCyclicModuleValues(_) => {
+          PlannedCyclicModuleValues(_) => {
             self_host_initializer_link_check(false, module_.module_id, 0u64, 0u64,
               source_slot, 501u32, 0u64, 1u64, 14u32)
           }
@@ -111,8 +111,8 @@ fn self_host_verify_initializer_links(link: SelfHostPlannedProgramWasmGCLink, bo
       module_.module_id, declaration, body, slot, 502u32,
       u32_into_u64(slot), u32_into_u64(actual.order), 7u32)
     let owned = match body_owners.get(body) {
-      Option::Some(owner) => owner == declaration
-      Option::None => false
+      Some(owner) => owner == declaration
+      None => false
     }
     self_host_initializer_link_check(owned, module_.module_id, declaration,
       body, slot, 610u32, 1u64, self_host_body_freeze_bool(owned), 13u32)

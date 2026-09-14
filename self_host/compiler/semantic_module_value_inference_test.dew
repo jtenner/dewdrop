@@ -25,7 +25,7 @@ fn self_host_assert_imported_body_primitive(
   message: String,
 ) -> Unit {
   match body.type_term(type_) {
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => assert(
+    BodyResolvedType(resolved_type) => assert(
       resolved_type == resolved.primitive(primitive),
       message,
     )
@@ -41,7 +41,7 @@ fn self_host_assert_module_value_primitive(
   message: String,
 ) -> Unit {
   match values.type_term(type_) {
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => assert(
+    BodyResolvedType(resolved_type) => assert(
       resolved_type == resolved.primitive(primitive),
       message,
     )
@@ -64,7 +64,7 @@ test "module value inference resolves dependency-first references" {
       values,
       resolved,
       type_,
-      SelfHostPrimitiveType::I32Type,
+      I32Type,
       "I32 value",
     )
   }
@@ -81,14 +81,14 @@ test "module value inference shares one solver across a cycle" {
     values,
     resolved,
     values.let_types[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "first I32",
   )
   self_host_assert_module_value_primitive(
     values,
     resolved,
     values.let_types[1u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "second I32",
   )
 }
@@ -102,7 +102,7 @@ test "unconstrained module value cycles are diagnosed" {
   let found = [false, false, false]
   for diagnostic in values.diagnostics {
     match diagnostic {
-      SelfHostBodyInferenceDiagnostic::UnresolvedModuleValue(declaration, _) => {
+      UnresolvedModuleValue(declaration, _) => {
         unresolved = self_host_u32_add(unresolved, 1u32)
         let mut index = 0u32
         let _ = while index {
@@ -126,7 +126,7 @@ test "unconstrained module value cycles are diagnosed" {
   message.append(" declarations ")
   for diagnostic in values.diagnostics {
     match diagnostic {
-      SelfHostBodyInferenceDiagnostic::UnresolvedModuleValue(declaration, _) => {
+      UnresolvedModuleValue(declaration, _) => {
         message.append_u32(self_host_semantic_id_local(declaration))
         message.append(" ")
       }
@@ -180,7 +180,7 @@ test "frozen module value types import into function solvers" {
     body,
     resolved,
     body.root_type,
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "function result I32",
   )
 }
@@ -190,7 +190,7 @@ fn self_host_assert_applied_imported_body(
 ) -> Unit {
   assert(body.diagnostics.length() == 0u32, "applied function diagnostics")
   match body.type_term(body.root_type) {
-    SelfHostBodyTypeTerm::BodyAppliedType(_, arguments) => assert(
+    BodyAppliedType(_, arguments) => assert(
       arguments.length == 1u32,
       "one applied argument",
     )
@@ -220,7 +220,7 @@ test "module value inference remains iterative for 1024 dependencies" {
     values,
     resolved,
     values.let_types[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "chain head I32",
   )
 }

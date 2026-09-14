@@ -7,7 +7,7 @@ fn self_host_assert_link_fact(
 ) -> Unit {
   if !condition {
     let _ = self_host_assert_compiler_invariant_with_failure(false,
-      SelfHostInvariantFailure::{
+      {
         code: code
         phase: 5u32
         module_id: module_id
@@ -29,7 +29,7 @@ fn self_host_link_body_owners(link: SelfHostPlannedProgramWasmGCLink) -> Map<U64
   let owners = self_host_link_empty_body_owners()
   for module_ in link.fragments.specialization.lowering.modules {
     for body in module_.bodies {
-      self_host_assert_link_fact(owners.get(body.body) is Option::None,
+      self_host_assert_link_fact(owners.get(body.body) is None,
         504u32, module_.module_id, body.declaration, 4294967295u32,
         0u64, body.body, 12u64)
       owners.set(body.body, body.declaration)
@@ -39,7 +39,7 @@ fn self_host_link_body_owners(link: SelfHostPlannedProgramWasmGCLink) -> Map<U64
 }
 
 fn self_host_link_empty_body_owners() -> Map<U64, U64> {
-  Map::empty()
+  empty()
 }
 
 // Verify source identity and table position before consumers build lookup maps.
@@ -113,7 +113,7 @@ fn self_host_verify_link_records(link: SelfHostPlannedProgramWasmGCLink) -> Unit
       504u32, module_.module_id, function_.declaration, slot,
       u32_into_u64(fragment.specialization), u32_into_u64(function_.specialization), 7u64)
     let lambda = match fragment.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(value) => value
+      PlannedWasmDefinedLambdaFunction(value) => value
       _ => missing
     }
     self_host_assert_link_fact(function_.lambda == lambda,
@@ -124,7 +124,7 @@ fn self_host_verify_link_records(link: SelfHostPlannedProgramWasmGCLink) -> Unit
       502u32, module_.module_id, function_.declaration, slot,
       u32_into_u64(link.imported_function_count), u32_into_u64(slot), 5u64)
     let fragment_key = (u32_into_u64(function_.module_index) << 32u64) | u32_into_u64(function_.fragment_index)
-    self_host_assert_link_fact(seen_fragments.get(fragment_key) is Option::None,
+    self_host_assert_link_fact(seen_fragments.get(fragment_key) is None,
       504u32, module_.module_id, function_.declaration, slot,
       0u64, fragment_key, 9u64)
     seen_fragments.set(fragment_key, u32_into_u64(slot))
@@ -137,10 +137,10 @@ fn self_host_verify_link_records(link: SelfHostPlannedProgramWasmGCLink) -> Unit
       u32_into_u64(module_.function_value_types.length()), u32_into_u64(fragment.results.start),
       (11u64 << 32u64) | u32_into_u64(fragment.results.length))
     match fragment.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(body) => {
+      PlannedWasmDefinedFunction(body) => {
         let present = match bodies.get(body) {
-          Option::Some(owner) => owner == function_.declaration
-          Option::None => false
+          Some(owner) => owner == function_.declaration
+          None => false
         }
         self_host_assert_link_fact(present,
           610u32, module_.module_id, function_.declaration, slot, body, 0u64, 0u64)

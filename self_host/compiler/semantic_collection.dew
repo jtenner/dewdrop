@@ -41,7 +41,7 @@ fn self_host_collection_type_parameter_at(
     unreachable()
   }
   let parameter = parameters[index]
-  SelfHostTypeParameter::{
+  {
     name: parameter.name
     bounds: parameter.bounds
     offset: parameter.offset
@@ -56,7 +56,7 @@ fn self_host_collection_parameter_at(
     unreachable()
   }
   let parameter = parameters[index]
-  SelfHostFnParameter::{
+  {
     name: parameter.name
     type_: parameter.type_
     offset: parameter.offset
@@ -138,11 +138,11 @@ fn self_host_collection_string_at(
 }
 
 fn self_host_empty_name_lookup() -> Map<String, U32> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_empty_id_lookup() -> Map<U32, U64> {
-  Map::empty()
+  empty()
 }
 
 struct SelfHostCollectedDeriveSeen {
@@ -151,7 +151,7 @@ struct SelfHostCollectedDeriveSeen {
 }
 
 fn self_host_empty_derive_seen() -> SelfHostCollectedDeriveSeen {
-  SelfHostCollectedDeriveSeen::{
+  {
     names: []
     offsets: []
   }
@@ -168,11 +168,11 @@ impl SelfHostCollectedDeriveSeen {
     while index {
       current => if current < self.names.length() {
         if self.names[current] == name {
-          break Option::Some(self.offsets[current])
+          break Some(self.offsets[current])
         }
         continue current + 1u32
       } else {
-        break Option::None
+        break None
       }
     }
   }
@@ -347,8 +347,8 @@ pub struct SelfHostCollectionBuilder {
 
 impl SelfHostCollectionBuilder {
   fn new(module_id: U64) -> SelfHostCollectionBuilder {
-    SelfHostCollectionBuilder::{
-      state: SelfHostCollectionBuilderState::{
+    {
+      state: {
         module_id: module_id
         current_file: self_host_make_file_id(module_id, 0u32)
         current_file_test_only: false
@@ -456,7 +456,7 @@ impl SelfHostCollectionBuilder {
       if !self_host_u32_equal(id, self.state.value_bindings.length()) {
         // Every interned name must have one value-binding slot.
         self.state.diagnostics.push(
-          SelfHostCollectionDiagnostic::ValueBindingArenaMismatch(
+          ValueBindingArenaMismatch(
             id,
             self.names.length(),
             self.state.value_bindings.length(),
@@ -465,7 +465,7 @@ impl SelfHostCollectionBuilder {
         return 4294967295u32
       }
       self.names.push(name)
-      self.state.value_bindings.push(Option::None)
+      self.state.value_bindings.push(None)
       self.state.name_lookup.set(name, id)
       id
     }
@@ -484,7 +484,7 @@ impl SelfHostCollectionBuilder {
     self.parameter_spans.push(
       self_host_empty_hir_span(self.parameters.length()),
     )
-    self.body_by_declaration.push(Option::None)
+    self.body_by_declaration.push(None)
     id
   }
 
@@ -510,8 +510,8 @@ impl SelfHostCollectionBuilder {
     duplicate_offset: U32,
   ) -> Unit {
     self.state.diagnostics.push(
-      SelfHostCollectionDiagnostic::DuplicateName(
-        SelfHostDuplicateNameDiagnostic::{
+      DuplicateName(
+        {
           space: space
           name: name
           first: first
@@ -534,10 +534,10 @@ impl SelfHostCollectionBuilder {
   ) -> SelfHostCollectedDeclaration {
     let id = self.next_declaration_id()
     let name_id = match name {
-      Option::Some(value) => self.intern(value)
-      Option::None => 4294967295u32
+      Some(value) => self.intern(value)
+      None => 4294967295u32
     }
-    let declaration = SelfHostCollectedDeclaration::{
+    let declaration = {
       id: id
       kind: kind
       name: name_id
@@ -558,7 +558,7 @@ impl SelfHostCollectionBuilder {
     visibility: SelfHostSemanticVisibility,
     offset: U32,
   ) -> SelfHostCollectedMethod {
-    let method = SelfHostCollectedMethod::{
+    let method = {
       id: self.next_declaration_id()
       parent: parent
       kind: kind
@@ -581,7 +581,7 @@ impl SelfHostCollectionBuilder {
     offset: U32,
   ) -> Unit {
     match bindings.get(name) {
-      Option::Some(first) => self.record_duplicate(
+      Some(first) => self.record_duplicate(
         space,
         name,
         first,
@@ -590,7 +590,7 @@ impl SelfHostCollectionBuilder {
         declaration,
         offset,
       )
-      Option::None => bindings.set(name, declaration)
+      None => bindings.set(name, declaration)
     }
   }
 
@@ -604,7 +604,7 @@ impl SelfHostCollectionBuilder {
     if name >= self.state.value_bindings.length() {
       // A value binding must use an interned name slot.
       self.state.diagnostics.push(
-        SelfHostCollectionDiagnostic::ValueBindingArenaMismatch(
+        ValueBindingArenaMismatch(
           name,
           self.names.length(),
           self.state.value_bindings.length(),
@@ -613,23 +613,22 @@ impl SelfHostCollectionBuilder {
       return
     }
     match self.state.value_bindings[name] {
-      Option::Some(binding) => {
-        let binding = self_host_value_binding_identity(binding)
-        if kind is SelfHostCollectedDeclKind::BuiltinDecl &&
-          binding.kind is SelfHostCollectedDeclKind::BuiltinDecl {
+      Some(binding) => {
+        if kind is BuiltinDecl &&
+          binding.kind is BuiltinDecl {
           let candidate = self.state.value_binding_candidates.length()
-          self.state.value_binding_candidates[binding.tail].next = Option::Some(candidate)
+          self.state.value_binding_candidates[binding.tail].next = Some(candidate)
           self.state.value_binding_candidates.push(
-            SelfHostValueBindingCandidate::{
+            {
               declaration: declaration
-              next: Option::None
+              next: None
             },
           )
           binding.tail = candidate
         } else {
           let first = self.state.value_binding_candidates[binding.head].declaration
           self.record_duplicate(
-            SelfHostBindingSpace::ModuleValue,
+            ModuleValue,
             name,
             first,
             self.declaration_files[self_host_semantic_id_local(first)],
@@ -639,16 +638,16 @@ impl SelfHostCollectionBuilder {
           )
         }
       }
-      Option::None => {
+      None => {
         let candidate = self.state.value_binding_candidates.length()
         self.state.value_binding_candidates.push(
-          SelfHostValueBindingCandidate::{
+          {
             declaration: declaration
-            next: Option::None
+            next: None
           },
         )
-        self.state.value_bindings[name] = Option::Some(
-          SelfHostValueBinding::{
+        self.state.value_bindings[name] = Some(
+          {
             head: candidate
             tail: candidate
             kind: kind
@@ -690,24 +689,24 @@ impl SelfHostCollectionBuilder {
         starts.truncate(start_index)
         if state == 0u32 {
           match source {
-            SelfHostTypeExpr::NamedType(name, offset) => {
+            NamedType(name, offset) => {
               let found = while self.state.local_type_bindings.length() {
                 index => if index > 0u32 {
                   let binding = self.state.local_type_bindings[index - 1u32]
                   if binding.name == name {
-                    break Option::Some(binding.syntax)
+                    break Some(binding.syntax)
                   }
                   continue index - 1u32
                 } else {
-                  break Option::None
+                  break None
                 }
               }
-              if found is Option::Some(syntax) {
+              if found is Some(syntax) {
                 results.push(syntax)
               } else {
               let id = self.type_syntax.length()
               self.type_syntax.push(
-                SelfHostHirTypeSyntax::NamedTypeSyntax(
+                NamedTypeSyntax(
                   self.intern(name),
                   offset,
                 ),
@@ -716,10 +715,10 @@ impl SelfHostCollectionBuilder {
               results.push(id)
               }
             }
-            SelfHostTypeExpr::QualifiedType(alias, name, offset, name_offset) => {
+            QualifiedType(alias, name, offset, name_offset) => {
               let id = self.type_syntax.length()
               self.type_syntax.push(
-                SelfHostHirTypeSyntax::QualifiedTypeSyntax(
+                QualifiedTypeSyntax(
                   self.intern(alias),
                   self.intern(name),
                   offset,
@@ -729,7 +728,7 @@ impl SelfHostCollectionBuilder {
               self.type_syntax_files.push(self.state.current_file)
               results.push(id)
             }
-            SelfHostTypeExpr::ProductType(fields, _) => {
+            ProductType(fields, _) => {
               sources.push(source)
               states.push(1u32)
               starts.push(results.length())
@@ -743,7 +742,7 @@ impl SelfHostCollectionBuilder {
                 }
               }
             }
-            SelfHostTypeExpr::ComputedType(target, _, _) => {
+            ComputedType(target, _, _) => {
               sources.push(source)
               states.push(1u32)
               starts.push(results.length())
@@ -751,7 +750,7 @@ impl SelfHostCollectionBuilder {
               states.push(0u32)
               starts.push(0u32)
             }
-            SelfHostTypeExpr::AppliedType(base, arguments, _) => {
+            AppliedType(base, arguments, _) => {
               sources.push(source)
               states.push(1u32)
               starts.push(results.length())
@@ -768,7 +767,7 @@ impl SelfHostCollectionBuilder {
               states.push(0u32)
               starts.push(0u32)
             }
-            SelfHostTypeExpr::FunctionType(parameters, result, _) => {
+            FunctionType(parameters, result, _) => {
               sources.push(source)
               states.push(1u32)
               starts.push(results.length())
@@ -788,16 +787,16 @@ impl SelfHostCollectionBuilder {
           }
         } else {
           match source {
-            SelfHostTypeExpr::ComputedType(_, selector, offset) => {
+            ComputedType(_, selector, offset) => {
               let id = self.type_syntax.length()
-              self.type_syntax.push(SelfHostHirTypeSyntax::ComputedTypeSyntax(
+              self.type_syntax.push(ComputedTypeSyntax(
                 results[result_start], selector, offset,
               ))
               self.type_syntax_files.push(self.state.current_file)
               results.truncate(result_start)
               results.push(id)
             }
-            SelfHostTypeExpr::ProductType(fields, offset) => {
+            ProductType(fields, offset) => {
               let argument_start = self.type_arguments.length()
               let _ = while 0u32 {
                 index => if index < fields.length() {
@@ -809,8 +808,8 @@ impl SelfHostCollectionBuilder {
               }
               let id = self.type_syntax.length()
               self.type_syntax.push(
-                SelfHostHirTypeSyntax::ProductTypeSyntax(
-                  SelfHostHirSpan::{
+                ProductTypeSyntax(
+                  {
                     start: argument_start
                     length: fields.length()
                   },
@@ -821,7 +820,7 @@ impl SelfHostCollectionBuilder {
               results.truncate(result_start)
               results.push(id)
             }
-            SelfHostTypeExpr::AppliedType(_, arguments, offset) => {
+            AppliedType(_, arguments, offset) => {
               let base = results[result_start]
               let argument_start = self.type_arguments.length()
               let _ = while 0u32 {
@@ -834,9 +833,9 @@ impl SelfHostCollectionBuilder {
               }
               let id = self.type_syntax.length()
               self.type_syntax.push(
-                SelfHostHirTypeSyntax::AppliedTypeSyntax(
+                AppliedTypeSyntax(
                   base,
-                  SelfHostHirSpan::{
+                  {
                     start: argument_start
                     length: arguments.length()
                   },
@@ -847,7 +846,7 @@ impl SelfHostCollectionBuilder {
               results.truncate(result_start)
               results.push(id)
             }
-            SelfHostTypeExpr::FunctionType(parameters, _, offset) => {
+            FunctionType(parameters, _, offset) => {
               let parameter_start = self.type_arguments.length()
               let _ = while 0u32 {
                 index => if index < parameters.length() {
@@ -860,8 +859,8 @@ impl SelfHostCollectionBuilder {
               let result = results[result_start + parameters.length()]
               let id = self.type_syntax.length()
               self.type_syntax.push(
-                SelfHostHirTypeSyntax::FunctionTypeSyntax(
-                  SelfHostHirSpan::{
+                FunctionTypeSyntax(
+                  {
                     start: parameter_start
                     length: parameters.length()
                   },
@@ -908,7 +907,7 @@ impl SelfHostCollectionBuilder {
         break self_host_semantic_unit()
       }
     }
-    SelfHostHirSpan::{
+    {
       start: start
       length: lowered.length()
     }
@@ -935,10 +934,10 @@ impl SelfHostCollectionBuilder {
         self.generic_parameters.length(),
       )
       match self.first_generic_parameter_index(declaration, name) {
-        Option::Some(previous) => {
+        Some(previous) => {
           let candidate = self.generic_parameters[previous]
           self.record_duplicate(
-            SelfHostBindingSpace::GenericParameter,
+            GenericParameter,
             name,
             candidate.id,
             self.state.current_file,
@@ -947,7 +946,7 @@ impl SelfHostCollectionBuilder {
             self_host_collection_type_parameter_offset(parameter),
           )
         }
-        Option::None => {}
+        None => {}
       }
       let bound_start = self.generic_bounds.length()
       let _ = while 0u32 {
@@ -967,12 +966,12 @@ impl SelfHostCollectionBuilder {
           break self_host_semantic_unit()
         }
       }
-      let collected_parameter = SelfHostCollectedGenericParameter::{
+      let collected_parameter = {
         id: id
         declaration: declaration
         index: current
         name: name
-        bounds: SelfHostHirSpan::{
+        bounds: {
           start: bound_start
           length: self.generic_bounds.length() - bound_start
         }
@@ -986,7 +985,7 @@ impl SelfHostCollectionBuilder {
     }
     self.generic_parameter_spans[
       self_host_semantic_id_local(declaration)
-    ] = SelfHostHirSpan::{
+    ] = {
       start: start
       length: self.generic_parameters.length() - start
     }
@@ -1001,26 +1000,26 @@ impl SelfHostCollectionBuilder {
     let start = self.parameters.length()
     let mut parameter_index = 0u32
     match receiver {
-      Option::Some(value) => {
-        let collected_receiver = SelfHostCollectedParameter::{
+      Some(value) => {
+        let collected_receiver = {
           id: self_host_make_semantic_id(
             self.state.module_id,
             self.parameters.length(),
           )
           declaration: declaration
           index: parameter_index
-          kind: SelfHostCollectedParameterKind::ReceiverParameterDecl
+          kind: ReceiverParameterDecl
           name: self.intern("self")
           type_: match value.explicit_type {
-            Option::Some(type_) => self.lower_type(type_)
-            Option::None => 4294967295u32
+            Some(type_) => self.lower_type(type_)
+            None => 4294967295u32
           }
           offset: value.offset
         }
         self.parameters.push(collected_receiver)
         parameter_index = parameter_index + 1u32
       }
-      Option::None => {}
+      None => {}
     }
     let mut source_parameter_index = 0u32
     let _ = while source_parameter_index {
@@ -1034,10 +1033,10 @@ impl SelfHostCollectionBuilder {
         self.parameters.length(),
       )
       match self.first_parameter_index(declaration, name) {
-        Option::Some(previous) => {
+        Some(previous) => {
           let candidate = self.parameters[previous]
           self.record_duplicate(
-            SelfHostBindingSpace::Parameter,
+            Parameter,
             name,
             candidate.id,
             self.state.current_file,
@@ -1046,13 +1045,13 @@ impl SelfHostCollectionBuilder {
             self_host_collection_parameter_offset(parameter),
           )
         }
-        Option::None => {}
+        None => {}
       }
-      let collected_parameter = SelfHostCollectedParameter::{
+      let collected_parameter = {
         id: id
         declaration: declaration
         index: parameter_index
-        kind: SelfHostCollectedParameterKind::ValueParameterDecl
+        kind: ValueParameterDecl
         name: name
         type_: self.lower_type(
           self_host_collection_parameter_type(parameter),
@@ -1068,7 +1067,7 @@ impl SelfHostCollectionBuilder {
     }
     self.parameter_spans[
       self_host_semantic_id_local(declaration)
-    ] = SelfHostHirSpan::{
+    ] = {
       start: start
       length: self.parameters.length() - start
     }
@@ -1091,7 +1090,7 @@ impl SelfHostCollectionBuilder {
         )
       let id = self_host_make_semantic_id(self.state.module_id, self.fields.length())
       match self.first_field_index(start, name) {
-        Option::Some(previous) => {
+        Some(previous) => {
           let candidate = self.fields[previous]
           self.record_duplicate(
             space,
@@ -1103,10 +1102,10 @@ impl SelfHostCollectionBuilder {
             self_host_collection_struct_field_offset(field),
           )
         }
-        Option::None => {}
+        None => {}
       }
         self.fields.push(
-          SelfHostCollectedField::{
+          {
             id: id
             declaration: declaration
             variant: variant
@@ -1138,7 +1137,7 @@ impl SelfHostCollectionBuilder {
         )
         if self_host_u64_equal(candidate.declaration, declaration) {
           if self_host_u32_equal(candidate.name, name) {
-            return Option::Some(current)
+            return Some(current)
           }
         }
         continue current + 1u32
@@ -1146,7 +1145,7 @@ impl SelfHostCollectionBuilder {
         break self_host_semantic_unit()
       }
     }
-    Option::None
+    None
   }
 
   fn first_parameter_index(
@@ -1162,7 +1161,7 @@ impl SelfHostCollectionBuilder {
         )
         if self_host_u64_equal(candidate.declaration, declaration) {
           if self_host_u32_equal(candidate.name, name) {
-            return Option::Some(current)
+            return Some(current)
           }
         }
         continue current + 1u32
@@ -1170,7 +1169,7 @@ impl SelfHostCollectionBuilder {
         break self_host_semantic_unit()
       }
     }
-    Option::None
+    None
   }
 
   fn first_field_index(self, start: U32, name: U32) -> Option<U32> {
@@ -1179,14 +1178,14 @@ impl SelfHostCollectionBuilder {
       current => if current < self.fields.length() {
         let candidate = self_host_collected_field_identity(self.fields[current])
         if self_host_u32_equal(candidate.name, name) {
-          return Option::Some(current)
+          return Some(current)
         }
         continue current + 1u32
       } else {
         break self_host_semantic_unit()
       }
     }
-    Option::None
+    None
   }
 
   fn first_variant_index(
@@ -1200,7 +1199,7 @@ impl SelfHostCollectionBuilder {
         let candidate = self_host_collected_variant_identity(self.variants[current])
         if self_host_u64_equal(candidate.declaration, declaration) {
           if self_host_u32_equal(candidate.name, name) {
-            return Option::Some(current)
+            return Some(current)
           }
         }
         continue current + 1u32
@@ -1208,7 +1207,7 @@ impl SelfHostCollectionBuilder {
         break self_host_semantic_unit()
       }
     }
-    Option::None
+    None
   }
 
   fn first_method_name(
@@ -1224,7 +1223,7 @@ impl SelfHostCollectionBuilder {
         if self_host_u64_equal(candidate.parent, parent) {
           if self_host_u32_equal(candidate.name, name) {
             if self_host_u64_not_equal(candidate.id, exclude) {
-              return Option::Some(current)
+              return Some(current)
             }
           }
         }
@@ -1233,33 +1232,33 @@ impl SelfHostCollectionBuilder {
         break self_host_semantic_unit()
       }
     }
-    Option::None
+    None
   }
 
   fn collect_builtin(self, value: SelfHostBuiltinDeclaration) -> Unit {
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::BuiltinDecl,
-      Option::Some(value.name),
+      BuiltinDecl,
+      Some(value.name),
       self_host_semantic_visibility(value.visibility),
       value.offset,
     )
     self.bind_value_name(
-      SelfHostCollectedDeclKind::BuiltinDecl,
+      BuiltinDecl,
       declaration.name,
       declaration.id,
       value.name_offset,
     )
     self.collect_generic_parameters(declaration.id, value.type_parameters)
-    self.collect_parameters(declaration.id, Option::None, value.parameters)
+    self.collect_parameters(declaration.id, None, value.parameters)
     self.callables.push(
-      SelfHostCollectedCallable::{
+      {
         declaration: declaration.id
         return_type: self.lower_type(value.return_type)
         is_main: false
       },
     )
     self.builtins.push(
-      SelfHostCollectedBuiltin::{
+      {
         declaration: declaration.id
         builtin_name: value.builtin_name
       },
@@ -1268,26 +1267,26 @@ impl SelfHostCollectionBuilder {
 
   fn collect_let(self, value: SelfHostLetDeclaration) -> Unit {
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::LetDecl,
-      Option::Some(value.name),
+      LetDecl,
+      Some(value.name),
       self_host_semantic_visibility(value.visibility),
       value.offset,
     )
     self.bind_value_name(
-      SelfHostCollectedDeclKind::LetDecl,
+      LetDecl,
       declaration.name,
       declaration.id,
       value.name_offset,
     )
     self.lets.push(
-      SelfHostCollectedLet::{
+      {
         declaration: declaration.id
         mutable_: value.mutable_
       },
     )
     self.lower_expression_body(
       declaration.id,
-      SelfHostHirBodyKind::ModuleLetBody,
+      ModuleLetBody,
       value.value,
       value.offset,
     )
@@ -1295,13 +1294,13 @@ impl SelfHostCollectionBuilder {
 
   fn collect_trait(self, value: SelfHostTraitDeclaration) -> Unit {
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::TraitDecl,
-      Option::Some(value.name),
+      TraitDecl,
+      Some(value.name),
       self_host_semantic_visibility(value.visibility),
       value.offset,
     )
     self.bind_unique_module_name(
-      SelfHostBindingSpace::ModuleTrait,
+      ModuleTrait,
       self.state.trait_bindings,
       declaration.name,
       declaration.id,
@@ -1314,9 +1313,9 @@ impl SelfHostCollectionBuilder {
         let source_method = value.methods[current]
       let method = self.add_method(
         declaration.id,
-        SelfHostCollectedMethodKind::TraitMethodDecl,
+        TraitMethodDecl,
         source_method.name,
-        SelfHostSemanticVisibility::ModuleVisible,
+        ModuleVisible,
         source_method.offset,
       )
       match self.first_method_name(
@@ -1324,10 +1323,10 @@ impl SelfHostCollectionBuilder {
         method.name,
         method.id,
       ) {
-        Option::Some(first_index) => {
+        Some(first_index) => {
           let first = self.methods[first_index]
           self.record_duplicate(
-            SelfHostBindingSpace::TraitMethod,
+            TraitMethod,
             method.name,
             first.id,
             self.state.current_file,
@@ -1336,7 +1335,7 @@ impl SelfHostCollectionBuilder {
             source_method.name_offset,
           )
         }
-        Option::None => {}
+        None => {}
       }
       self.collect_generic_parameters(method.id, source_method.type_parameters)
       self.collect_parameters(
@@ -1345,7 +1344,7 @@ impl SelfHostCollectionBuilder {
         source_method.parameters,
       )
       self.callables.push(
-        SelfHostCollectedCallable::{
+        {
           declaration: method.id
           return_type: self.lower_type(source_method.return_type)
           is_main: false
@@ -1365,13 +1364,13 @@ impl SelfHostCollectionBuilder {
   ) -> Unit {
     let exact_value = self_host_function_declaration_identity(value)
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::FunctionDecl,
-      Option::Some(exact_value.name),
+      FunctionDecl,
+      Some(exact_value.name),
       self_host_semantic_visibility(exact_value.visibility),
       exact_value.offset,
     )
     self.bind_value_name(
-      SelfHostCollectedDeclKind::FunctionDecl,
+      FunctionDecl,
       declaration.name,
       declaration.id,
       exact_value.name_offset,
@@ -1383,7 +1382,7 @@ impl SelfHostCollectionBuilder {
       exact_value.parameters,
     )
     self.callables.push(
-      SelfHostCollectedCallable::{
+      {
         declaration: declaration.id
         return_type: self.lower_type(exact_value.return_type)
         is_main: exact_value.is_main
@@ -1391,7 +1390,7 @@ impl SelfHostCollectionBuilder {
     )
     self.lower_block_body(
       declaration.id,
-      SelfHostHirBodyKind::FunctionBody,
+      FunctionBody,
       exact_value.body,
       exact_value.offset,
     )
@@ -1400,28 +1399,28 @@ impl SelfHostCollectionBuilder {
   fn collect_test(self, value: SelfHostTestDeclaration) -> Unit {
     if !self.state.current_file_test_only {
       self.state.diagnostics.push(
-        SelfHostCollectionDiagnostic::TestDeclarationOutsideTestFile(
+        TestDeclarationOutsideTestFile(
           self.state.current_file,
           value.offset,
         ),
       )
     }
     match value.expected_trap {
-      Option::Some(expected) => if self_host_bytes_not_equal(expected, b"unreachable") &&
+      Some(expected) => if self_host_bytes_not_equal(expected, b"unreachable") &&
         self_host_bytes_not_equal(expected, b"memory-out-of-bounds") &&
         self_host_bytes_not_equal(expected, b"array-out-of-bounds") &&
         self_host_bytes_not_equal(expected, b"integer-divide-by-zero") &&
         self_host_bytes_not_equal(expected, b"integer-overflow") &&
         self_host_bytes_not_equal(expected, b"invalid-conversion-to-integer") {
         self.state.diagnostics.push(
-          SelfHostCollectionDiagnostic::InvalidExpectedTestTrap(
+          InvalidExpectedTestTrap(
             self.state.current_file,
             expected,
             value.offset,
           ),
         )
       }
-      Option::None => {}
+      None => {}
     }
     let mut test_index = 0u32
     let _ = while test_index {
@@ -1430,8 +1429,8 @@ impl SelfHostCollectionBuilder {
       if self_host_u64_equal(test_.file, self.state.current_file) &&
         self_host_bytes_equal(test_.display_name, value.name) {
         self.state.diagnostics.push(
-          SelfHostCollectionDiagnostic::DuplicateTestIdentity(
-            SelfHostDuplicateTestIdentityDiagnostic::{
+          DuplicateTestIdentity(
+            {
               file: self.state.current_file
               display_name: value.name
               first_offset: test_.offset
@@ -1446,20 +1445,20 @@ impl SelfHostCollectionBuilder {
       }
     }
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::TestDecl,
-      Option::Some(self_host_test_declaration_name(self.tests.length())),
-      SelfHostSemanticVisibility::ModuleVisible,
+      TestDecl,
+      Some(self_host_test_declaration_name(self.tests.length())),
+      ModuleVisible,
       value.offset,
     )
     self.callables.push(
-      SelfHostCollectedCallable::{
+      {
         declaration: declaration.id
         return_type: self.lower_type(value.return_type)
         is_main: false
       },
     )
     self.tests.push(
-      SelfHostCollectedTest::{
+      {
         declaration: declaration.id
         display_name: value.name
         expected_trap: value.expected_trap
@@ -1469,7 +1468,7 @@ impl SelfHostCollectionBuilder {
     )
     self.lower_block_body(
       declaration.id,
-      SelfHostHirBodyKind::FunctionBody,
+      FunctionBody,
       value.body,
       value.offset,
     )
@@ -1477,20 +1476,20 @@ impl SelfHostCollectionBuilder {
 
   fn collect_foreign_type(self, value: SelfHostForeignTypeDeclaration) -> Unit {
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::ForeignTypeDecl,
-      Option::Some(value.name),
+      ForeignTypeDecl,
+      Some(value.name),
       self_host_semantic_visibility(value.visibility),
       value.offset,
     )
     self.bind_unique_module_name(
-      SelfHostBindingSpace::ModuleType,
+      ModuleType,
       self.state.type_bindings,
       declaration.name,
       declaration.id,
       value.name_offset,
     )
     self.foreign_types.push(
-      SelfHostCollectedForeignType::{
+      {
         declaration: declaration.id
       },
     )
@@ -1501,20 +1500,20 @@ impl SelfHostCollectionBuilder {
     value: SelfHostForeignLibraryDeclaration,
   ) -> Unit {
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::ForeignLibraryDecl,
-      Option::Some(value.namespace_alias),
-      SelfHostSemanticVisibility::ModuleVisible,
+      ForeignLibraryDecl,
+      Some(value.namespace_alias),
+      ModuleVisible,
       value.offset,
     )
     self.bind_value_name(
-      SelfHostCollectedDeclKind::ForeignLibraryDecl,
+      ForeignLibraryDecl,
       declaration.name,
       declaration.id,
       value.alias_offset,
     )
     match self.state.foreign_library_by_alias.get(declaration.name) {
-      Option::Some(first) => self.record_duplicate(
-        SelfHostBindingSpace::ModuleValue,
+      Some(first) => self.record_duplicate(
+        ModuleValue,
         declaration.name,
         first,
         self.declaration_files[self_host_semantic_id_local(first)],
@@ -1522,20 +1521,20 @@ impl SelfHostCollectionBuilder {
         declaration.id,
         value.alias_offset,
       )
-      Option::None => self.state.foreign_library_by_alias.set(
+      None => self.state.foreign_library_by_alias.set(
         declaration.name,
         declaration.id,
       )
     }
     if self_host_bytes_empty(value.logical_name) {
       self.state.diagnostics.push(
-        SelfHostCollectionDiagnostic::EmptyForeignLogicalName(
+        EmptyForeignLogicalName(
           self.state.current_file,
           value.logical_name_offset,
         ),
       )
     } else if value.host_import && value.logical_name.starts_with(b"link:") {
-      self.state.diagnostics.push(SelfHostCollectionDiagnostic::ReservedForeignHostNamespace(
+      self.state.diagnostics.push(ReservedForeignHostNamespace(
         self.state.current_file, value.logical_name_offset,
       ))
     }
@@ -1546,7 +1545,7 @@ impl SelfHostCollectionBuilder {
         let source_member = value.members[current]
       let method = self.add_method(
         declaration.id,
-        SelfHostCollectedMethodKind::ForeignLibraryMemberDecl,
+        ForeignLibraryMemberDecl,
         source_member.name,
         self_host_semantic_visibility(source_member.visibility),
         source_member.offset,
@@ -1556,10 +1555,10 @@ impl SelfHostCollectionBuilder {
         method.name,
         method.id,
       ) {
-        Option::Some(first_index) => {
+        Some(first_index) => {
           let first = self.methods[first_index]
           self.record_duplicate(
-            SelfHostBindingSpace::ForeignLibraryMember,
+            ForeignLibraryMember,
             method.name,
             first.id,
             self.state.current_file,
@@ -1568,11 +1567,11 @@ impl SelfHostCollectionBuilder {
             source_member.name_offset,
           )
         }
-        Option::None => {}
+        None => {}
       }
-      self.collect_parameters(method.id, Option::None, source_member.parameters)
+      self.collect_parameters(method.id, None, source_member.parameters)
       self.callables.push(
-        SelfHostCollectedCallable::{
+        {
           declaration: method.id
           return_type: self.lower_type(source_member.return_type)
           is_main: false
@@ -1580,14 +1579,14 @@ impl SelfHostCollectionBuilder {
       )
       if self_host_bytes_empty(source_member.export_name) {
         self.state.diagnostics.push(
-          SelfHostCollectionDiagnostic::EmptyForeignExportName(
+          EmptyForeignExportName(
             self.state.current_file,
             source_member.export_name_offset,
           ),
         )
       }
       self.foreign_functions.push(
-        SelfHostCollectedForeignFunction::{
+        {
           declaration: method.id
           library: declaration.id
           export_name: source_member.export_name
@@ -1600,12 +1599,12 @@ impl SelfHostCollectionBuilder {
       }
     }
     self.foreign_libraries.push(
-      SelfHostCollectedForeignLibrary::{
+      {
         host_import: value.host_import
         declaration: declaration.id
         logical_name: value.logical_name
         logical_name_offset: value.logical_name_offset
-        members: SelfHostHirSpan::{
+        members: {
           start: member_start
           length: self.foreign_functions.length() - member_start
         }
@@ -1615,18 +1614,18 @@ impl SelfHostCollectionBuilder {
 
   fn collect_impl(self, value: SelfHostImplDeclaration) -> Unit {
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::ImplDecl,
-      Option::None,
-      SelfHostSemanticVisibility::ModuleVisible,
+      ImplDecl,
+      None,
+      ModuleVisible,
       value.offset,
     )
     self.collect_generic_parameters(declaration.id, value.type_parameters)
     let trait_type = match value.trait_type {
-      Option::Some(type_) => Option::Some(self.lower_type(type_))
-      Option::None => Option::None
+      Some(type_) => Some(self.lower_type(type_))
+      None => None
     }
     let target_type = self.lower_type(value.target_type)
-    let collected_impl = SelfHostCollectedImpl::{
+    let collected_impl = {
       declaration: declaration.id
       foreign_: value.foreign_
       trait_type: trait_type
@@ -1639,9 +1638,9 @@ impl SelfHostCollectionBuilder {
         let source_method = value.methods[current]
       let method = self.add_method(
         declaration.id,
-        SelfHostCollectedMethodKind::ImplMethodDecl,
+        ImplMethodDecl,
         source_method.name,
-        SelfHostSemanticVisibility::ModuleVisible,
+        ModuleVisible,
         source_method.offset,
       )
       match self.first_method_name(
@@ -1649,10 +1648,10 @@ impl SelfHostCollectionBuilder {
         method.name,
         method.id,
       ) {
-        Option::Some(first_index) => {
+        Some(first_index) => {
           let first = self.methods[first_index]
           self.record_duplicate(
-            SelfHostBindingSpace::ImplMethod,
+            ImplMethod,
             method.name,
             first.id,
             self.state.current_file,
@@ -1661,7 +1660,7 @@ impl SelfHostCollectionBuilder {
             source_method.name_offset,
           )
         }
-        Option::None => {}
+        None => {}
       }
       self.collect_generic_parameters(method.id, source_method.type_parameters)
       self.collect_parameters(
@@ -1670,7 +1669,7 @@ impl SelfHostCollectionBuilder {
         source_method.parameters,
       )
       let return_type = self.lower_type(source_method.return_type)
-      let callable = SelfHostCollectedCallable::{
+      let callable = {
         declaration: method.id
         return_type: return_type
         is_main: false
@@ -1678,7 +1677,7 @@ impl SelfHostCollectionBuilder {
       self.callables.push(callable)
       self.lower_block_body(
         method.id,
-        SelfHostHirBodyKind::ImplMethodBody,
+        ImplMethodBody,
         source_method.body,
         source_method.offset,
       )
@@ -1695,32 +1694,32 @@ impl SelfHostCollectionBuilder {
     derives: Array<SelfHostDeriveRequest>,
   ) -> SelfHostCollectedDeriveOffsets {
     let seen = self_host_empty_derive_seen()
-    let mut eq = Option::None
-    let mut debug = Option::None
-    let mut hash = Option::None
-    let mut show = Option::None
+    let mut eq = None
+    let mut debug = None
+    let mut hash = None
+    let mut show = None
     let mut derive_index = 0u32
     let _ = while derive_index {
       current => if current < derives.length() {
       let derive_offset = self_host_derive_request_offset_at(derives, current)
       let derive_name = self_host_derive_request_name_at(derives, current)
       match seen.get(derive_name) {
-        Option::Some(first) => self.state.diagnostics.push(
-          SelfHostCollectionDiagnostic::DuplicateDerivedTrait(
+        Some(first) => self.state.diagnostics.push(
+          DuplicateDerivedTrait(
             derive_name,
             self.state.current_file,
             first,
             derive_offset,
           ),
         )
-        Option::None => {
+        None => {
           seen.set(derive_name, derive_offset)
           if self_host_string_not_equal(derive_name, "Eq") &&
             self_host_string_not_equal(derive_name, "Debug") &&
             self_host_string_not_equal(derive_name, "Hash") &&
             self_host_string_not_equal(derive_name, "Show") {
             self.state.diagnostics.push(
-              SelfHostCollectionDiagnostic::UnknownDerivedTrait(
+              UnknownDerivedTrait(
                 derive_name,
                 self.state.current_file,
                 derive_offset,
@@ -1728,20 +1727,20 @@ impl SelfHostCollectionBuilder {
             )
           } else {
             self.derives.push(
-              SelfHostCollectedDeriveRequest::{
+              {
                 declaration: declaration
                 trait_name: derive_name
                 offset: derive_offset
               },
             )
             if !self_host_string_not_equal(derive_name, "Eq") {
-              eq = Option::Some(derive_offset)
+              eq = Some(derive_offset)
             } else if !self_host_string_not_equal(derive_name, "Debug") {
-              debug = Option::Some(derive_offset)
+              debug = Some(derive_offset)
             } else if !self_host_string_not_equal(derive_name, "Hash") {
-              hash = Option::Some(derive_offset)
+              hash = Some(derive_offset)
             } else {
-              show = Option::Some(derive_offset)
+              show = Some(derive_offset)
             }
           }
         }
@@ -1751,7 +1750,7 @@ impl SelfHostCollectionBuilder {
         break self_host_semantic_unit()
       }
     }
-    SelfHostCollectedDeriveOffsets::{
+    {
       eq: eq
       debug: debug
       hash: hash
@@ -1761,13 +1760,13 @@ impl SelfHostCollectionBuilder {
 
   fn collect_struct(self, value: SelfHostStructDeclaration) -> Unit {
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::StructDecl,
-      Option::Some(value.name),
+      StructDecl,
+      Some(value.name),
       self_host_semantic_visibility(value.visibility),
       value.offset,
     )
     self.bind_unique_module_name(
-      SelfHostBindingSpace::ModuleType,
+      ModuleType,
       self.state.type_bindings,
       declaration.name,
       declaration.id,
@@ -1776,13 +1775,13 @@ impl SelfHostCollectionBuilder {
     self.collect_generic_parameters(declaration.id, value.type_parameters)
     self.collect_named_fields(
       declaration.id,
-      Option::None,
+      None,
       value.fields,
-      SelfHostBindingSpace::StructField,
+      StructField,
     )
     let derives = self.collect_derives(declaration.id, value.derives)
     match derives.eq {
-      Option::Some(offset) => {
+      Some(offset) => {
         let implementations = self_host_derived_struct_eq_impls(value, offset)
         let mut implementation_index = 0u32
         let _ = while implementation_index {
@@ -1794,37 +1793,37 @@ impl SelfHostCollectionBuilder {
           }
         }
       }
-      Option::None => {}
+      None => {}
     }
     match derives.debug {
-      Option::Some(offset) => self.collect_impl(
+      Some(offset) => self.collect_impl(
         self_host_derived_struct_debug_impl(value, offset),
       )
-      Option::None => {}
+      None => {}
     }
     match derives.hash {
-      Option::Some(offset) => self.collect_impl(
+      Some(offset) => self.collect_impl(
         self_host_derived_struct_hash_impl(value, offset),
       )
-      Option::None => {}
+      None => {}
     }
     match derives.show {
-      Option::Some(offset) => self.collect_impl(
+      Some(offset) => self.collect_impl(
         self_host_derived_struct_show_impl(value, offset),
       )
-      Option::None => {}
+      None => {}
     }
   }
 
   fn collect_enum(self, value: SelfHostEnumDeclaration) -> Unit {
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::EnumDecl,
-      Option::Some(value.name),
+      EnumDecl,
+      Some(value.name),
       self_host_semantic_visibility(value.visibility),
       value.offset,
     )
     self.bind_unique_module_name(
-      SelfHostBindingSpace::ModuleType,
+      ModuleType,
       self.state.type_bindings,
       declaration.name,
       declaration.id,
@@ -1837,34 +1836,34 @@ impl SelfHostCollectionBuilder {
       current => if current < value.variants.length() {
         let source_variant = value.variants[current]
       let name = match source_variant {
-        SelfHostEnumVariant::UnitVariant(name, _, _) => name
-        SelfHostEnumVariant::TupleVariant(name, _, _, _) => name
-        SelfHostEnumVariant::StructVariant(name, _, _, _) => name
+        UnitVariant(name, _, _) => name
+        TupleVariant(name, _, _, _) => name
+        StructVariant(name, _, _, _) => name
       }
       let offset = match source_variant {
-        SelfHostEnumVariant::UnitVariant(_, offset, _) => offset
-        SelfHostEnumVariant::TupleVariant(_, _, offset, _) => offset
-        SelfHostEnumVariant::StructVariant(_, _, offset, _) => offset
+        UnitVariant(_, offset, _) => offset
+        TupleVariant(_, _, offset, _) => offset
+        StructVariant(_, _, offset, _) => offset
       }
       let variant_kind = match source_variant {
-        SelfHostEnumVariant::UnitVariant(_, _, kind) => kind
-        SelfHostEnumVariant::TupleVariant(_, _, _, kind) => kind
-        SelfHostEnumVariant::StructVariant(_, _, _, kind) => kind
+        UnitVariant(_, _, kind) => kind
+        TupleVariant(_, _, _, kind) => kind
+        StructVariant(_, _, _, kind) => kind
       }
       let kind = if variant_kind == 0u32 {
-        SelfHostCollectedVariantKind::UnitVariantDecl
+        UnitVariantDecl
       } else if variant_kind == 1u32 {
-        SelfHostCollectedVariantKind::TupleVariantDecl
+        TupleVariantDecl
       } else {
-        SelfHostCollectedVariantKind::StructVariantDecl
+        StructVariantDecl
       }
       let name_id = self.intern(name)
       let id = self_host_make_semantic_id(self.state.module_id, self.variants.length())
       match self.first_variant_index(declaration.id, name_id) {
-        Option::Some(previous) => {
+        Some(previous) => {
           let candidate = self.variants[previous]
           self.record_duplicate(
-            SelfHostBindingSpace::EnumVariant,
+            EnumVariant,
             name_id,
             candidate.id,
             self.state.current_file,
@@ -1873,21 +1872,21 @@ impl SelfHostCollectionBuilder {
             offset,
           )
         }
-        Option::None => {}
+        None => {}
       }
       let mut payload = self_host_empty_hir_span(
         self.type_arguments.length(),
       )
       if variant_kind == 1u32 {
         match source_variant {
-          SelfHostEnumVariant::TupleVariant(_, types, _, _) => {
+          TupleVariant(_, types, _, _) => {
             payload = self.lower_type_list(types)
           }
           _ => {}
         }
       }
       self.variants.push(
-        SelfHostCollectedVariant::{
+        {
           id: id
           declaration: declaration.id
           kind: kind
@@ -1898,11 +1897,11 @@ impl SelfHostCollectionBuilder {
       )
       if variant_kind == 2u32 {
         match source_variant {
-          SelfHostEnumVariant::StructVariant(_, fields, _, _) => self.collect_named_fields(
+          StructVariant(_, fields, _, _) => self.collect_named_fields(
             declaration.id,
-            Option::Some(id),
+            Some(id),
             fields,
-            SelfHostBindingSpace::VariantField,
+            VariantField,
           )
           _ => {}
         }
@@ -1914,7 +1913,7 @@ impl SelfHostCollectionBuilder {
     }
     let derives = self.collect_derives(declaration.id, value.derives)
     match derives.eq {
-      Option::Some(offset) => {
+      Some(offset) => {
         let implementations = self_host_derived_enum_eq_impls(value, offset)
         let mut implementation_index = 0u32
         let _ = while implementation_index {
@@ -1926,37 +1925,37 @@ impl SelfHostCollectionBuilder {
           }
         }
       }
-      Option::None => {}
+      None => {}
     }
     match derives.debug {
-      Option::Some(offset) => self.collect_impl(
+      Some(offset) => self.collect_impl(
         self_host_derived_enum_debug_impl(value, offset),
       )
-      Option::None => {}
+      None => {}
     }
     match derives.hash {
-      Option::Some(offset) => self.collect_impl(
+      Some(offset) => self.collect_impl(
         self_host_derived_enum_hash_impl(value, offset),
       )
-      Option::None => {}
+      None => {}
     }
     match derives.show {
-      Option::Some(offset) => self.collect_impl(
+      Some(offset) => self.collect_impl(
         self_host_derived_enum_show_impl(value, offset),
       )
-      Option::None => {}
+      None => {}
     }
   }
 
   fn collect_type_alias(self, value: SelfHostTypeAliasDeclaration) -> Unit {
     let declaration = self.add_declaration(
-      SelfHostCollectedDeclKind::TypeAliasDecl,
-      Option::Some(value.name),
+      TypeAliasDecl,
+      Some(value.name),
       self_host_semantic_visibility(value.visibility),
       value.offset,
     )
     self.bind_unique_module_name(
-      SelfHostBindingSpace::ModuleType,
+      ModuleType,
       self.state.type_bindings,
       declaration.name,
       declaration.id,
@@ -1964,7 +1963,7 @@ impl SelfHostCollectionBuilder {
     )
     self.collect_generic_parameters(declaration.id, value.type_parameters)
     self.aliases.push(
-      SelfHostCollectedAlias::{
+      {
         declaration: declaration.id
         target: self.lower_type(value.target)
       },
@@ -1973,15 +1972,15 @@ impl SelfHostCollectionBuilder {
 
   fn collect_import(self, value: SelfHostImportDeclaration) -> Unit {
     let alias = if value.wildcard || value.open_ {
-      Option::None
+      None
     } else {
       match value.import_alias {
-        Option::Some(name) => Option::Some(name)
-        Option::None => Option::Some(value.default_alias)
+        Some(name) => Some(name)
+        None => Some(value.default_alias)
       }
     }
     self.imports.push(
-      SelfHostCollectedImport::{
+      {
         path: value.joined_path
         path_segments: value.path
         open_: value.open_
@@ -2002,62 +2001,62 @@ impl SelfHostCollectionBuilder {
   ) -> Unit {
     if kind == 0u32 {
       match declaration {
-        SelfHostDeclaration::Import(value) => self.collect_import(value)
+        Import(value) => self.collect_import(value)
         _ => {}
       }
     } else if kind == 1u32 {
       match declaration {
-        SelfHostDeclaration::Builtin(value) => self.collect_builtin(value)
+        Builtin(value) => self.collect_builtin(value)
         _ => {}
       }
     } else if kind == 2u32 {
       match declaration {
-        SelfHostDeclaration::Let(value) => self.collect_let(value)
+        Let(value) => self.collect_let(value)
         _ => {}
       }
     } else if kind == 3u32 {
       match declaration {
-        SelfHostDeclaration::Trait(value) => self.collect_trait(value)
+        Trait(value) => self.collect_trait(value)
         _ => {}
       }
     } else if kind == 4u32 {
       match declaration {
-        SelfHostDeclaration::Function(value) => self.collect_function(value, source)
+        Function(value) => self.collect_function(value, source)
         _ => {}
       }
     } else if kind == 5u32 {
       match declaration {
-        SelfHostDeclaration::Test(value) => self.collect_test(value)
+        Test(value) => self.collect_test(value)
         _ => {}
       }
     } else if kind == 6u32 {
       match declaration {
-        SelfHostDeclaration::Impl(value) => self.collect_impl(value)
+        Impl(value) => self.collect_impl(value)
         _ => {}
       }
     } else if kind == 7u32 {
       match declaration {
-        SelfHostDeclaration::ForeignType(value) => self.collect_foreign_type(value)
+        ForeignType(value) => self.collect_foreign_type(value)
         _ => {}
       }
     } else if kind == 8u32 {
       match declaration {
-        SelfHostDeclaration::ForeignLibrary(value) => self.collect_foreign_library(value)
+        ForeignLibrary(value) => self.collect_foreign_library(value)
         _ => {}
       }
     } else if kind == 9u32 {
       match declaration {
-        SelfHostDeclaration::Struct(value) => self.collect_struct(value)
+        Struct(value) => self.collect_struct(value)
         _ => {}
       }
     } else if kind == 10u32 {
       match declaration {
-        SelfHostDeclaration::Enum(value) => self.collect_enum(value)
+        Enum(value) => self.collect_enum(value)
         _ => {}
       }
     } else if kind == 11u32 {
       match declaration {
-        SelfHostDeclaration::TypeAlias(value) => self.collect_type_alias(value)
+        TypeAlias(value) => self.collect_type_alias(value)
         _ => {}
       }
     }
@@ -2081,15 +2080,15 @@ impl SelfHostCollectionBuilder {
       current => if current < parsed.events.length() {
         let event = parsed.events[current]
       match event {
-        SelfHostParseEvent::Declaration(declaration, kind) => self.collect_declaration(
+        Declaration(declaration, kind) => self.collect_declaration(
           declaration,
           kind,
           file.source,
         )
-        SelfHostParseEvent::Diagnostic(severity, error, kind, offset, token_code, token_text) => self.state.diagnostics.push(
-          SelfHostCollectionDiagnostic::ParseDiagnostic(
+        Diagnostic(severity, error, kind, offset, token_code, token_text) => self.state.diagnostics.push(
+          ParseDiagnostic(
             self.state.current_file,
-            SelfHostParseDiagnostic::{
+            {
               severity: severity
               error: error
             },
@@ -2108,7 +2107,7 @@ impl SelfHostCollectionBuilder {
   }
 
   fn finish(self) -> SelfHostCollectedModule {
-    SelfHostCollectedModule::{
+    let module_ = {
       module_id: self.state.module_id
       files: self.files
       file_paths: self.file_paths
@@ -2122,6 +2121,7 @@ impl SelfHostCollectionBuilder {
       declaration_locations: self.declaration_locations
       fields: self.fields
       variants: self.variants
+      constructor_wrappers: empty()
       generic_parameters: self.generic_parameters
       parameters: self.parameters
       generic_parameter_spans: self.generic_parameter_spans
@@ -2173,6 +2173,8 @@ impl SelfHostCollectionBuilder {
       value_binding_candidates: self.state.value_binding_candidates
       foreign_library_by_alias: self.state.foreign_library_by_alias
     }
+    module_.install_constructor_wrappers(self_host_constructor_value_names(module_))
+    module_
   }
 }
 
@@ -2199,7 +2201,7 @@ fn self_host_collect_bytes(
   source: Bytes,
 ) -> SelfHostCollectedModule {
   self_host_collect_files(module_id, [
-    SelfHostProgramFile::{
+    {
       id: self_host_make_file_id(module_id, 0u32)
       path: ""
       source: source

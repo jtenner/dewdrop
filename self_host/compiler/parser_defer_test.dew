@@ -2,7 +2,7 @@ open dew.std.testing
 
 fn self_host_defer_has_diagnostic(module_: SelfHostParsedModule) -> Bool {
   for event in module_.events {
-    if event is SelfHostParseEvent::Diagnostic(_, _, _, _, _, _) {
+    if event is Diagnostic(_, _, _, _, _, _) {
       return true
     } else {
     }

@@ -4,7 +4,7 @@ open dew.std.option
 open dew.std.result
 
 fn self_host_guard_call_expression(source: SelfHostPlannedExpression, kind: SelfHostPlannedExpressionKind, target: U64, arguments: SelfHostHirSpan) -> SelfHostPlannedExpression {
-  SelfHostPlannedExpression::{
+  {
     type_: source.type_
     shape: source.shape
     nominal: source.nominal
@@ -12,7 +12,7 @@ fn self_host_guard_call_expression(source: SelfHostPlannedExpression, kind: Self
     kind: kind
     selection: source.selection
     reference: source.reference
-    call_target: SelfHostBasicCallTarget::SelectedBasicCallTarget(target, arguments)
+    call_target: SelectedBasicCallTarget(target, arguments)
     call_type_arguments: arguments
     source_name: source.source_name
     member_base: source.member_base
@@ -36,9 +36,9 @@ fn self_host_guard_witness_node(evidence: SelfHostBasicBodyEvidence, witness: Se
   for root in roots {
     evidence.prerequisite_indices.push(root)
   }
-  SelfHostBasicTraitEvidence::{
+  {
     implementation: witness.implementation.declaration
-    prerequisites: SelfHostHirSpan::{
+    prerequisites: {
       start: start
       length: roots.length()
     }
@@ -47,8 +47,8 @@ fn self_host_guard_witness_node(evidence: SelfHostBasicBodyEvidence, witness: Se
 
 fn self_host_guard_store_evidence(lowering: SelfHostPlannedProgramLowering, specialization: U32, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, witnesses: Array<SelfHostCompileTimeTraitWitness>) -> Unit {
   match lowering.compile_time.instances.get(specialization) {
-    Option::Some(instance) => instance.guarded_evidence.set(expression, witnesses)
-    Option::None => {
+    Some(instance) => instance.guarded_evidence.set(expression, witnesses)
+    None => {
       self_host_assert_compiler_invariant(false, "SPC-303 guarded proof has no selected instance")
       unreachable()
     }
@@ -65,7 +65,7 @@ fn self_host_guard_store_evidence(lowering: SelfHostPlannedProgramLowering, spec
     unreachable()
   }
   match module_.evidence.evidence_body(body.declaration) {
-    Option::Some(evidence) => {
+    Some(evidence) => {
       let roots = []
       for witness in witnesses {
         roots.push(self_host_guard_witness_node(evidence, witness))
@@ -75,12 +75,12 @@ fn self_host_guard_store_evidence(lowering: SelfHostPlannedProgramLowering, spec
         evidence.evidence.push(root)
       }
       self_host_assert_compiler_invariant(expression >= body.expressions.start && expression - body.expressions.start < evidence.expression_evidence.length(), "ARN-102 guarded evidence expression ownership")
-      evidence.expression_evidence[expression - body.expressions.start] = SelfHostHirSpan::{
+      evidence.expression_evidence[expression - body.expressions.start] = {
         start: start
         length: roots.length()
       }
     }
-    Option::None => {
+    None => {
       let _ = self_host_assert_compiler_invariant(witnesses.length() == 0u32, "EVD-212 guarded call has no evidence body")
     }
   }
@@ -88,29 +88,29 @@ fn self_host_guard_store_evidence(lowering: SelfHostPlannedProgramLowering, spec
 
 fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, expression: U32, source: SelfHostPlannedExpression, callable: SelfHostPlannedCallable, trait_: U64, bindings: SelfHostCompileTimeBindings, search: SelfHostCompileTimeEvidenceSearch) -> Result<SelfHostPlannedExpression, String> {
   let receiver = match source.kind {
-    SelfHostPlannedExpressionKind::PlannedDirectCall(_, callee, _, _) => {
+    PlannedDirectCall(_, callee, _, _) => {
       if callee >= module_.expressions.length() {
-        return Result::Err("CT-040 guarded trait call has no callee")
+        return Err("CT-040 guarded trait call has no callee")
       }
       module_.expressions[callee].member_base
     }
-    SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, receiver, _, _) => receiver
-    _ => return Result::Err("CT-040 guarded call has no direct recipe")
+    PlannedOperatorCall(_, _, receiver, _, _) => receiver
+    _ => return Err("CT-040 guarded call has no direct recipe")
   }
   if receiver >= module_.expressions.length() {
-    return Result::Err("CT-040 guarded trait call has no receiver")
+    return Err("CT-040 guarded trait call has no receiver")
   }
   let target = match self_host_read_compile_time_type(module_, module_.expressions[receiver].type_, bindings, 0u32) {
-    Result::Ok(value) => value
-    Result::Err(error) => return Result::Err(error)
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   let arguments = match self_host_read_compile_time_arguments(module_, source.call_type_arguments, bindings) {
-    Result::Ok(value) => value
-    Result::Err(error) => return Result::Err(error)
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   let trait_count = callable.owner_generic_parameters.length
   if arguments.length() != trait_count + callable.generic_parameters.length {
-    return Result::Err("CT-040 guarded trait argument count mismatch")
+    return Err("CT-040 guarded trait argument count mismatch")
   }
   let trait_arguments = self_host_empty_compile_time_types()
   let _ = while 0u32 {
@@ -122,17 +122,17 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
     }
   }
   let trait_type = if trait_count == 0u32 {
-    SelfHostCompileTimeType::TraitCompileTimeType(trait_)
+    TraitCompileTimeType(trait_)
   } else {
-    SelfHostCompileTimeType::AppliedCompileTimeType(SelfHostCompileTimeType::TraitCompileTimeType(trait_), trait_arguments)
+    AppliedCompileTimeType(TraitCompileTimeType(trait_), trait_arguments)
   }
   search.budget.steps = 0u32
   let witness = match search.witness(target, trait_type) {
-    Result::Ok(value) => match value {
-      Option::Some(witness) => witness
-      Option::None => return Result::Err("CT-040 selected branch has no trait implementation")
+    Ok(value) => match value {
+      Some(witness) => witness
+      None => return Err("CT-040 selected branch has no trait implementation")
     }
-    Result::Err(error) => return Result::Err(error)
+    Err(error) => return Err(error)
   }
   let methods = witness.implementation.methods
   self_host_assert_compiler_invariant(self_host_array_span_is_valid(methods.start, methods.length, witness.index.methods.length()), "ARN-101 guarded implementation methods")
@@ -141,13 +141,13 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
     index => if index < methods.length {
       let candidate = witness.index.methods[methods.start + index]
       match candidate.requirement {
-        Option::Some(requirement) => if requirement == callable.declaration {
+        Some(requirement) => if requirement == callable.declaration {
           if method != 18446744073709551615u64 {
-            return Result::Err("CT-015 ambiguous guarded implementation method")
+            return Err("CT-015 ambiguous guarded implementation method")
           }
           method = candidate.declaration
         }
-        Option::None => {}
+        None => {}
       }
       continue index + 1u32
     } else {
@@ -155,26 +155,26 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
     }
   }
   if method == 18446744073709551615u64 {
-    return Result::Err("CT-040 trait implementation has no required method")
+    return Err("CT-040 trait implementation has no required method")
   }
   let owner = match lowering.index.declaration_owner(method) {
-    Option::Some(value) => value
-    Option::None => return Result::Err("CT-040 guarded method has no module")
+    Some(value) => value
+    None => return Err("CT-040 guarded method has no module")
   }
   let collected = lowering.collected.modules.at(owner)
   let method_module = lowering.modules[owner]
   let implementation_callable = match self_host_program_specialization_callable(method_module, method) {
-    Option::Some(value) => value
-    Option::None => return Result::Err("CT-040 guarded method has no callable")
+    Some(value) => value
+    None => return Err("CT-040 guarded method has no callable")
   }
   if implementation_callable.parameters.length != callable.parameters.length ||
     implementation_callable.has_receiver != callable.has_receiver ||
     implementation_callable.generic_parameters.length != callable.generic_parameters.length {
-    return Result::Err("CT-040 guarded implementation signature mismatch")
+    return Err("CT-040 guarded implementation signature mismatch")
   }
   let required_owner = match lowering.index.declaration_owner(callable.declaration) {
-    Option::Some(value) => value
-    Option::None => return Result::Err("CT-040 guarded requirement has no module")
+    Some(value) => value
+    None => return Err("CT-040 guarded requirement has no module")
   }
   let required_collected = lowering.collected.modules.at(required_owner)
   let requirement_module = lowering.modules[required_owner]
@@ -210,16 +210,16 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
       } else {
         method_module.functions.parameters[implementation_callable.parameters.start + offset].type_
       }
-      let expected = match self_host_read_compile_time_resolved_arena_with_self(requirement_module.resolved_types, expected_type, expected_bindings, 0u32, trait_, Option::Some(target)) {
-        Result::Ok(value) => value
-        Result::Err(_) => return Result::Err("CT-040 invalid guarded requirement signature")
+      let expected = match self_host_read_compile_time_resolved_arena_with_self(requirement_module.resolved_types, expected_type, expected_bindings, 0u32, trait_, Some(target)) {
+        Ok(value) => value
+        Err(_) => return Err("CT-040 invalid guarded requirement signature")
       }
-      let actual = match self_host_read_compile_time_resolved_arena_with_self(method_module.resolved_types, actual_type, actual_bindings, 0u32, witness.implementation.declaration, Option::Some(target)) {
-        Result::Ok(value) => value
-        Result::Err(_) => return Result::Err("CT-040 invalid guarded implementation signature")
+      let actual = match self_host_read_compile_time_resolved_arena_with_self(method_module.resolved_types, actual_type, actual_bindings, 0u32, witness.implementation.declaration, Some(target)) {
+        Ok(value) => value
+        Err(_) => return Err("CT-040 invalid guarded implementation signature")
       }
       match self_host_compile_time_types_equal(actual, expected) {
-        Result::Ok(equal) => if !equal {
+        Ok(equal) => if !equal {
           let detail = StringBuilder::new()
           detail.append("CT-040 guarded implementation signature mismatch slot=")
           detail.append_u32(offset)
@@ -228,22 +228,22 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
           detail.append(" actual_type=")
           detail.append_u32(actual_type)
           match expected {
-            SelfHostCompileTimeType::ParameterCompileTimeType(id) => {
+            ParameterCompileTimeType(id) => {
               detail.append(" expected_parameter=")
               detail.append_u64(id)
             }
             _ => {}
           }
           match actual {
-            SelfHostCompileTimeType::ParameterCompileTimeType(id) => {
+            ParameterCompileTimeType(id) => {
               detail.append(" actual_parameter=")
               detail.append_u64(id)
             }
             _ => {}
           }
-          return Result::Err(detail.finish())
+          return Err(detail.finish())
         }
-        Result::Err(error) => return Result::Err(error)
+        Err(error) => return Err(error)
       }
       continue offset + 1u32
     }
@@ -258,8 +258,8 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
     index => if index < generics.length {
       let parameter = collected.generic_parameters[generics.start + index].id
       match witness.bindings.parameters.get(parameter) {
-        Option::Some(type_) => self_host_guard_append_argument(module_, type_)
-        Option::None => return Result::Err("CT-011 unresolved guarded implementation parameter")
+        Some(type_) => self_host_guard_append_argument(module_, type_)
+        None => return Err("CT-011 unresolved guarded implementation parameter")
       }
       continue index + 1u32
     } else {
@@ -274,7 +274,7 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
       break self_host_semantic_unit()
     }
   }
-  let span = SelfHostHirSpan::{
+  let span = {
     start: start
     length: module_.inferred.call_type_arguments.length() - start
   }
@@ -282,35 +282,35 @@ fn self_host_resolve_guarded_call(lowering: SelfHostPlannedProgramLowering, modu
   // its bound proofs are children, not alternate call-target roots.
   self_host_guard_store_evidence(lowering, specialization, module_, body, expression, [witness])
   let kind = match source.kind {
-    SelfHostPlannedExpressionKind::PlannedDirectCall(_, receiver, arguments, _) => SelfHostPlannedExpressionKind::PlannedDirectCall(method, receiver, arguments, span)
-    SelfHostPlannedExpressionKind::PlannedOperatorCall(_, operator, left, right, _) => SelfHostPlannedExpressionKind::PlannedOperatorCall(method, operator, left, right, span)
+    PlannedDirectCall(_, receiver, arguments, _) => PlannedDirectCall(method, receiver, arguments, span)
+    PlannedOperatorCall(_, operator, left, right, _) => PlannedOperatorCall(method, operator, left, right, span)
     _ => {
       self_host_assert_compiler_invariant(false, "INV-001 guarded call changed during resolution")
       unreachable()
     }
   }
-  Result::Ok(self_host_guard_call_expression(source, kind, method, span))
+  Ok(self_host_guard_call_expression(source, kind, method, span))
 }
 
 fn self_host_resolve_guarded_calls(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: SelfHostCompileTimeBindings, owned: Array<U32>, live: Array<Bool>) -> Unit {
-  let mut search = Option::None
+  let mut search = None
   for expression in owned {
     if live[expression] {
       let source = module_.expressions[expression]
       let requirement = match source.call_target {
-        SelfHostBasicCallTarget::SelectedBasicCallTarget(target, _) => Option::Some(target)
-        SelfHostBasicCallTarget::BoundTraitBasicCallTarget(target, _, _, _) => Option::Some(target)
-        _ => Option::None
+        SelectedBasicCallTarget(target, _) => Some(target)
+        BoundTraitBasicCallTarget(target, _, _, _) => Some(target)
+        _ => None
       }
       match requirement {
-        Option::Some(requirement) => match lowering.index.declaration_owner(requirement) {
-          Option::Some(owner) => match self_host_program_specialization_callable(lowering.modules[owner], requirement) {
-            Option::Some(callable) => match callable.kind {
-              SelfHostPlannedCallableKind::PlannedTraitMethodCallable(trait_) => {
-                if search is Option::None {
+        Some(requirement) => match lowering.index.declaration_owner(requirement) {
+          Some(owner) => match self_host_program_specialization_callable(lowering.modules[owner], requirement) {
+            Some(callable) => match callable.kind {
+              PlannedTraitMethodCallable(trait_) => {
+                if search is None {
                   let caller_owner = match lowering.index.declaration_owner(body.declaration) {
-                    Option::Some(value) => value
-                    Option::None => {
+                    Some(value) => value
+                    None => {
                       self_host_assert_compiler_invariant(false, "LNK-504 guarded caller has no module")
                       unreachable()
                     }
@@ -318,40 +318,40 @@ fn self_host_resolve_guarded_calls(lowering: SelfHostPlannedProgramLowering, mod
                   let collected = lowering.collected.modules.at(caller_owner)
                   let context = lowering.compile_time
                   let imports = self_host_resolve_module_imports(context.frozen.interfaces.at(caller_owner).resolved_types, context.frozen.import_scopes.at(caller_owner))
-                  search = Option::Some(SelfHostCompileTimeEvidenceSearch::{
-                    lowering: Option::Some(lowering)
+                  search = Some({
+                    lowering: Some(lowering)
                     collected: collected
                     resolved: module_.resolved_types
                     imports: imports
                     index: self_host_index_module_implementations_with_imports(collected, imports)
                     active: []
-                    budget: SelfHostCompileTimeEvidenceBudget::{
+                    budget: {
                       steps: 0u32
                     }
-                    associated_scopes: Map::empty()
+                    associated_scopes: empty()
                     associated_only: false
                     include_test_impls: collected.declaration_is_test_only(body.declaration)
                   })
                 }
                 match search {
-                  Option::Some(evidence) => match self_host_resolve_guarded_call(lowering, module_, body, specialization, expression, source, callable, trait_, bindings, evidence) {
-                    Result::Ok(replacement) => {
+                  Some(evidence) => match self_host_resolve_guarded_call(lowering, module_, body, specialization, expression, source, callable, trait_, bindings, evidence) {
+                    Ok(replacement) => {
                       module_.expressions[expression] = replacement
                     }
-                    Result::Err(message) => self_host_compile_time_diagnose(lowering, module_, body, specialization, expression, message)
+                    Err(message) => self_host_compile_time_diagnose(lowering, module_, body, specialization, expression, message)
                   }
-                  Option::None => unreachable()
+                  None => unreachable()
                 }
               }
               // Ordinary calls retain the target's precomputed demand. Being
               // generic alone does not require a private query instance.
               _ => {}
             }
-            Option::None => {}
+            None => {}
           }
-          Option::None => {}
+          None => {}
         }
-        Option::None => {}
+        None => {}
       }
     }
   }

@@ -25,7 +25,7 @@ fn self_host_resolved_imported_implementation_at(
     unreachable()
   }
   let implementation = implementations[index]
-  SelfHostResolvedImportedImplementation::{
+  {
     declaration: implementation.declaration
     generic_parameters: implementation.generic_parameters
     generic_bounds: implementation.generic_bounds
@@ -45,6 +45,7 @@ pub struct SelfHostResolvedImportedField {
 }
 
 pub struct SelfHostResolvedImportedVariant {
+  constructor: Option<U64>
   variant: U64
   declaration: U64
   kind: SelfHostCollectedVariantKind
@@ -60,7 +61,8 @@ fn self_host_resolved_imported_variant_at(
     unreachable()
   }
   let variant = variants[index]
-  SelfHostResolvedImportedVariant::{
+  {
+    constructor: variant.constructor
     variant: variant.variant
     declaration: variant.declaration
     kind: variant.kind
@@ -90,7 +92,7 @@ fn self_host_resolved_imported_callable_at(
     unreachable()
   }
   let callable = callables[index]
-  SelfHostResolvedImportedCallable::{
+  {
     declaration: callable.declaration
     name: callable.name
     kind: callable.kind
@@ -144,8 +146,8 @@ impl SelfHostResolvedModuleImports {
     declaration: U64,
   ) -> Option<SelfHostResolvedImportedCallable> {
     match self.callable_by_declaration.get(declaration) {
-      Option::Some(index) => Option::Some(self.callables[index])
-      Option::None => Option::None
+      Some(index) => Some(self.callables[index])
+      None => None
     }
   }
 
@@ -165,8 +167,8 @@ impl SelfHostResolvedModuleImports {
     declaration: U64,
   ) -> Option<SelfHostResolvedImportedImplementation> {
     match self.implementation_by_declaration.get(declaration) {
-      Option::Some(index) => Option::Some(self.implementations[index])
-      Option::None => Option::None
+      Some(index) => Some(self.implementations[index])
+      None => None
     }
   }
 
@@ -176,8 +178,8 @@ impl SelfHostResolvedModuleImports {
 
   fn type_generic_span(self, declaration: U64) -> SelfHostHirSpan {
     match self.type_generic_spans.get(declaration) {
-      Option::Some(span) => span
-      Option::None => self_host_empty_hir_span(0u32)
+      Some(span) => span
+      None => self_host_empty_hir_span(0u32)
     }
   }
 
@@ -187,8 +189,8 @@ impl SelfHostResolvedModuleImports {
 
   fn fields_of(self, declaration: U64) -> SelfHostHirSpan {
     match self.field_spans.get(declaration) {
-      Option::Some(span) => span
-      Option::None => self_host_empty_hir_span(0u32)
+      Some(span) => span
+      None => self_host_empty_hir_span(0u32)
     }
   }
 
@@ -198,8 +200,8 @@ impl SelfHostResolvedModuleImports {
 
   fn variants_of(self, declaration: U64) -> SelfHostHirSpan {
     match self.variant_spans.get(declaration) {
-      Option::Some(span) => span
-      Option::None => self_host_empty_hir_span(0u32)
+      Some(span) => span
+      None => self_host_empty_hir_span(0u32)
     }
   }
 
@@ -218,11 +220,11 @@ impl SelfHostResolvedModuleImports {
       current => if current < span.length {
         let variant = self.variants[self_host_u32_add(span.start, current)]
         if variant.name == name {
-          break Option::Some(variant)
+          break Some(variant)
         }
         continue current + 1u32
       } else {
-        break Option::None
+        break None
       }
     }
   }
@@ -236,11 +238,11 @@ impl SelfHostResolvedModuleImports {
       current => if current < self.variants.length() {
         let candidate = self.variants[current]
         if self_host_u64_equal(candidate.variant, variant) {
-          break Option::Some(candidate)
+          break Some(candidate)
         }
         continue current + 1u32
       } else {
-        break Option::None
+        break None
       }
     }
   }
@@ -277,7 +279,7 @@ impl SelfHostResolvedModuleImports {
 }
 
 fn self_host_empty_u64_span_map() -> Map<U64, SelfHostHirSpan> {
-  Map::empty()
+  empty()
 }
 
 struct SelfHostInterfaceImportMemo {
@@ -286,7 +288,7 @@ struct SelfHostInterfaceImportMemo {
 
 impl SelfHostInterfaceImportMemo {
   fn new() -> SelfHostInterfaceImportMemo {
-    SelfHostInterfaceImportMemo::{
+    {
       values: []
     }
   }
@@ -319,7 +321,7 @@ struct SelfHostInterfaceImportMemoList {
 
 impl SelfHostInterfaceImportMemoList {
   fn new(length: U32) -> SelfHostInterfaceImportMemoList {
-    let result = SelfHostInterfaceImportMemoList::{
+    let result = {
       values: []
     }
     let _ = while 0u32 {
@@ -355,7 +357,7 @@ impl SelfHostInterfaceTypeImporter {
     resolved: SelfHostResolvedModuleTypes,
     interfaces: SelfHostFrozenInterfaceList,
   ) -> SelfHostInterfaceTypeImporter {
-    SelfHostInterfaceTypeImporter::{
+    {
       resolved: resolved
       interfaces: interfaces
       memos: SelfHostInterfaceImportMemoList::new(interfaces.length())
@@ -374,34 +376,34 @@ impl SelfHostInterfaceTypeImporter {
     right: SelfHostResolvedType,
   ) -> Bool {
     match left {
-      SelfHostResolvedType::ErrorType => right is SelfHostResolvedType::ErrorType
-      SelfHostResolvedType::PrimitiveType(value) => match right {
-        SelfHostResolvedType::PrimitiveType(other) => value.rank() == other.rank()
+      ErrorType => right is ErrorType
+      PrimitiveType(value) => match right {
+        PrimitiveType(other) => value.rank() == other.rank()
         _ => false
       }
-      SelfHostResolvedType::GenericParameterType(value) => match right {
-        SelfHostResolvedType::GenericParameterType(other) => self_host_u64_equal(
+      GenericParameterType(value) => match right {
+        GenericParameterType(other) => self_host_u64_equal(
           value,
           other,
         )
         _ => false
       }
-      SelfHostResolvedType::NominalType(value) => match right {
-        SelfHostResolvedType::NominalType(other) => self_host_u64_equal(
+      NominalType(value) => match right {
+        NominalType(other) => self_host_u64_equal(
           value,
           other,
         )
         _ => false
       }
-      SelfHostResolvedType::TraitType(value) => match right {
-        SelfHostResolvedType::TraitType(other) => self_host_u64_equal(
+      TraitType(value) => match right {
+        TraitType(other) => self_host_u64_equal(
           value,
           other,
         )
         _ => false
       }
-      SelfHostResolvedType::SelfType(value) => match right {
-        SelfHostResolvedType::SelfType(other) => self_host_u64_equal(value, other)
+      SelfType(value) => match right {
+        SelfType(other) => self_host_u64_equal(value, other)
         _ => false
       }
       _ => false
@@ -410,10 +412,10 @@ impl SelfHostInterfaceTypeImporter {
 
   fn intern_imported_simple(self, type_: SelfHostResolvedType) -> U32 {
     match type_ {
-      SelfHostResolvedType::ErrorType => {
+      ErrorType => {
         return self.resolved.error_type
       }
-      SelfHostResolvedType::PrimitiveType(primitive) => {
+      PrimitiveType(primitive) => {
         return self.resolved.primitive(primitive)
       }
       _ => {}
@@ -463,7 +465,7 @@ impl SelfHostInterfaceTypeImporter {
     while index {
       current => if current < self.resolved.types.length() {
         match self.resolved.types[current] {
-          SelfHostResolvedType::ProductType(span) => if self.span_matches(
+          ProductType(span) => if self.span_matches(
             span,
             fields,
           ) {
@@ -485,7 +487,7 @@ impl SelfHostInterfaceTypeImporter {
           }
         }
         self.resolved.types.push(
-          SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+          ProductType({
             start: start
             length: field_count
           }),
@@ -501,7 +503,7 @@ impl SelfHostInterfaceTypeImporter {
     while index {
       current => if current < self.resolved.types.length() {
         match self.resolved.types[current] {
-          SelfHostResolvedType::AppliedType(existing_base, span) => if existing_base == base && self.span_matches(
+          AppliedType(existing_base, span) => if existing_base == base && self.span_matches(
             span,
             arguments,
           ) {
@@ -523,9 +525,9 @@ impl SelfHostInterfaceTypeImporter {
           }
         }
         self.resolved.types.push(
-          SelfHostResolvedType::AppliedType(
+          AppliedType(
             base,
-            SelfHostHirSpan::{
+            {
               start: start
               length: argument_count
             },
@@ -546,7 +548,7 @@ impl SelfHostInterfaceTypeImporter {
     while index {
       current => if current < self.resolved.types.length() {
         match self.resolved.types[current] {
-          SelfHostResolvedType::FunctionType(span, existing_result) => if existing_result == result && self.span_matches(
+          FunctionType(span, existing_result) => if existing_result == result && self.span_matches(
             span,
             parameters,
           ) {
@@ -568,8 +570,8 @@ impl SelfHostInterfaceTypeImporter {
           }
         }
         self.resolved.types.push(
-          SelfHostResolvedType::FunctionType(
-            SelfHostHirSpan::{
+          FunctionType(
+            {
               start: start
               length: parameter_count
             },
@@ -656,7 +658,7 @@ impl SelfHostInterfaceTypeImporter {
         }
         if state == 0u32 {
           match source.resolved_type_at(source_type) {
-            SelfHostResolvedType::ProductType(fields) => {
+            ProductType(fields) => {
               self.push_task(
                 source_interface,
                 source_type,
@@ -681,7 +683,7 @@ impl SelfHostInterfaceTypeImporter {
                 }
               }
             }
-            SelfHostResolvedType::AppliedType(base, arguments) => {
+            AppliedType(base, arguments) => {
               self.push_task(
                 source_interface,
                 source_type,
@@ -707,7 +709,7 @@ impl SelfHostInterfaceTypeImporter {
               }
               self.push_task(source_interface, base, 0u32, 0u32)
             }
-            SelfHostResolvedType::FunctionType(parameters, result) => {
+            FunctionType(parameters, result) => {
               self.push_task(
                 source_interface,
                 source_type,
@@ -744,7 +746,7 @@ impl SelfHostInterfaceTypeImporter {
         if state == 1u32 {
           let mut arguments = self_host_empty_hir_span(0u32)
           match source.resolved_type_at(source_type) {
-            SelfHostResolvedType::AppliedType(_, span) => {
+            AppliedType(_, span) => {
               arguments = span
             }
             _ => {}
@@ -773,7 +775,7 @@ impl SelfHostInterfaceTypeImporter {
         if state == 2u32 {
           let mut parameters = self_host_empty_hir_span(0u32)
           match source.resolved_type_at(source_type) {
-            SelfHostResolvedType::FunctionType(span, _) => {
+            FunctionType(span, _) => {
               parameters = span
             }
             _ => {}
@@ -803,7 +805,7 @@ impl SelfHostInterfaceTypeImporter {
         }
         let mut fields = self_host_empty_hir_span(0u32)
           match source.resolved_type_at(source_type) {
-            SelfHostResolvedType::ProductType(span) => {
+            ProductType(span) => {
               fields = span
             }
             _ => {}
@@ -860,7 +862,7 @@ impl SelfHostImportedRecipeBuilder {
     resolved: SelfHostResolvedModuleTypes,
     scope: SelfHostModuleImportScope,
   ) -> SelfHostImportedRecipeBuilder {
-    SelfHostImportedRecipeBuilder::{
+    {
       importer: SelfHostInterfaceTypeImporter::new(resolved, scope.interfaces)
       scope: scope
       callables: []
@@ -915,7 +917,7 @@ impl SelfHostImportedRecipeBuilder {
           source_index,
         )
         match interface_.resolved_type_at(source_type) {
-          SelfHostResolvedType::GenericParameterType(parameter) => self.generic_parameter_ids.push(
+          GenericParameterType(parameter) => self.generic_parameter_ids.push(
             parameter,
           )
           _ => self.generic_parameter_ids.push(0u64)
@@ -938,7 +940,7 @@ impl SelfHostImportedRecipeBuilder {
             break self_host_semantic_unit()
           }
         }
-        self.generic_parameter_bounds.push(SelfHostHirSpan::{
+        self.generic_parameter_bounds.push({
           start: bound_start
           length: self.generic_bound_types.length() - bound_start
         })
@@ -948,11 +950,11 @@ impl SelfHostImportedRecipeBuilder {
       }
     }
     (
-      SelfHostHirSpan::{
+      {
         start: parameter_start
         length: self.generic_parameter_ids.length() - parameter_start
       },
-      SelfHostHirSpan::{
+      {
         start: bound_span_start
         length: self.generic_parameter_bounds.length() - bound_span_start
       },
@@ -964,7 +966,7 @@ impl SelfHostImportedRecipeBuilder {
     interface_index: U32,
     callable: SelfHostFrozenInterfaceCallable,
   ) -> Unit {
-    if self.callable_by_declaration.get(callable.declaration) is Option::Some(_) {
+    if self.callable_by_declaration.get(callable.declaration) is Some(_) {
       return
     }
     let (generic_parameters, generic_bounds) = self.copy_generic_parameters(
@@ -1007,14 +1009,14 @@ impl SelfHostImportedRecipeBuilder {
       result_type,
     )
     let imported_index = self.callables.length()
-    self.callables.push(SelfHostResolvedImportedCallable::{
+    self.callables.push({
       declaration: callable.declaration
       name: callable.name
       kind: callable.kind
       generic_parameters: generic_parameters
       generic_bounds: generic_bounds
       requires_evidence: self.imported_generics_require_evidence(generic_bounds)
-      parameters: SelfHostHirSpan::{
+      parameters: {
         start: parameter_start
         length: self.parameter_types.length() - parameter_start
       }
@@ -1030,8 +1032,8 @@ impl SelfHostImportedRecipeBuilder {
     let _ = while declaration_index {
       current => if current < interface_.declaration_count() {
         let declaration = interface_.declaration_at(current)
-        if declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTypeDeclaration ||
-          declaration.kind is SelfHostFrozenInterfaceDeclarationKind::FrozenTraitDeclaration {
+        if declaration.kind is FrozenTypeDeclaration ||
+          declaration.kind is FrozenTraitDeclaration {
           let (generic_parameters, _generic_parameter_bounds) = self.copy_generic_parameters(
             interface_index,
             declaration.generic_parameters,
@@ -1047,7 +1049,7 @@ impl SelfHostImportedRecipeBuilder {
               declaration.semantic_type,
             ),
           )
-        } else if declaration.source_kind is SelfHostCollectedDeclKind::LetDecl {
+        } else if declaration.source_kind is LetDecl {
           self.module_value_types.set(
             declaration.declaration,
             self.importer.import_type(
@@ -1074,8 +1076,8 @@ impl SelfHostImportedRecipeBuilder {
     let _ = while declaration_index {
       current => if current < interface_.declaration_count() {
         let declaration = interface_.declaration_at(current)
-        if declaration.source_kind is SelfHostCollectedDeclKind::StructDecl ||
-          declaration.source_kind is SelfHostCollectedDeclKind::EnumDecl {
+        if declaration.source_kind is StructDecl ||
+          declaration.source_kind is EnumDecl {
           let field_start = self.fields.length()
           let mut field_index = 0u32
           let _ = while field_index {
@@ -1085,7 +1087,7 @@ impl SelfHostImportedRecipeBuilder {
                 field.declaration,
                 declaration.declaration,
               ) {
-                self.fields.push(SelfHostResolvedImportedField::{
+                self.fields.push({
                   field: field.field
                   declaration: field.declaration
                   variant: field.variant
@@ -1101,12 +1103,12 @@ impl SelfHostImportedRecipeBuilder {
           }
           self.field_spans.set(
             declaration.declaration,
-            SelfHostHirSpan::{
+            {
               start: field_start
               length: self.fields.length() - field_start
             },
           )
-          if declaration.source_kind is SelfHostCollectedDeclKind::EnumDecl {
+          if declaration.source_kind is EnumDecl {
             let variant_start = self.variants.length()
             let mut variant_index = 0u32
             let _ = while variant_index {
@@ -1136,12 +1138,13 @@ impl SelfHostImportedRecipeBuilder {
                       break self_host_semantic_unit()
                     }
                   }
-                  self.variants.push(SelfHostResolvedImportedVariant::{
+                  self.variants.push({
+                    constructor: variant.constructor
                     variant: variant.variant
                     declaration: variant.declaration
                     kind: variant.kind
                     name: variant.name
-                    payload_types: SelfHostHirSpan::{
+                    payload_types: {
                       start: payload_start
                       length: self.variant_payload_types.length() - payload_start
                     }
@@ -1154,7 +1157,7 @@ impl SelfHostImportedRecipeBuilder {
             }
             self.variant_spans.set(
               declaration.declaration,
-              SelfHostHirSpan::{
+              {
                 start: variant_start
                 length: self.variants.length() - variant_start
               },
@@ -1175,16 +1178,16 @@ impl SelfHostImportedRecipeBuilder {
           implementation.generic_parameters,
         )
         let imported_index = self.implementations.length()
-        self.implementations.push(SelfHostResolvedImportedImplementation::{
+        self.implementations.push({
           declaration: implementation.declaration
           generic_parameters: generic_parameters
           generic_bounds: generic_bounds
           requires_evidence: self.imported_generics_require_evidence(generic_bounds)
           trait_type: match implementation.trait_type {
-            Option::Some(type_) => Option::Some(
+            Some(type_) => Some(
               self.importer.import_type(interface_index, type_),
             )
-            Option::None => Option::None
+            None => None
           }
           target_type: self.importer.import_type(
             interface_index,
@@ -1203,7 +1206,7 @@ impl SelfHostImportedRecipeBuilder {
   }
 
   fn finish(self) -> SelfHostResolvedModuleImports {
-    SelfHostResolvedModuleImports::{
+    {
       module_id: self.importer.resolved.module_id
       resolved: self.importer.resolved
       scope: self.scope
@@ -1253,7 +1256,7 @@ pub struct SelfHostResolvedModuleImportList {
 
 impl SelfHostResolvedModuleImportList {
   fn new() -> SelfHostResolvedModuleImportList {
-    SelfHostResolvedModuleImportList::{
+    {
       values: []
     }
   }

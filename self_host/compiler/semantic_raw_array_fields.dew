@@ -15,30 +15,30 @@ fn self_host_wasmgc_plan_raw_array_fields(
       self_host_assert_declared_storage_type(module_.resolved_types, field.field, field.type_)
       let resolved = module_.resolved_types
       match resolved.types[field.type_] {
-        SelfHostResolvedType::AppliedType(base, arguments) => match resolved.types[base] {
-          SelfHostResolvedType::NominalType(owner) => if raw_arrays.contains_key(owner) && arguments.length == 1u32 {
+        AppliedType(base, arguments) => match resolved.types[base] {
+          NominalType(owner) => if raw_arrays.contains_key(owner) && arguments.length == 1u32 {
             let element = resolved.type_arguments[arguments.start]
             let shape = self_host_planned_resolved_value_shape(resolved, element)
-            if !(shape is SelfHostPlannedValueShape::GenericPlannedValueShape) {
+            if !(shape is GenericPlannedValueShape) {
               let _ = self_host_assert_compiler_invariant_with_failure(
-                self_host_raw_array_storage_carrier(shape) is Option::Some(_),
+                self_host_raw_array_storage_carrier(shape) is Some(_),
                 self_host_declared_storage_failure(resolved, field.field, field.type_, element, 301u32, 0u32, 4u32),
                 "raw array field requires a concrete element storage type",
               )
               let storage = match self_host_wasmgc_storage_type(shape) {
-                SelfHostPlannedWasmStorageType::WasmI8SignedStorage => SelfHostPlannedWasmStorageType::WasmI8UnsignedStorage
-                SelfHostPlannedWasmStorageType::WasmI16SignedStorage => SelfHostPlannedWasmStorageType::WasmI16UnsignedStorage
+                WasmI8SignedStorage => WasmI8UnsignedStorage
+                WasmI16SignedStorage => WasmI16UnsignedStorage
                 value => value
               }
               let code = self_host_program_representation_storage_code(storage)
               let index = match heaps.get(code) {
-                Option::Some(value) => value
-                Option::None => {
+                Some(value) => value
+                None => {
                   let index = physical.length()
-                  physical.push(SelfHostPlannedWasmPhysicalType::{
-                    kind: SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmRawArrayType(storage)
+                  physical.push({
+                    kind: PlannedWasmRawArrayType(storage)
                     type_index: index
-                    fields: SelfHostHirSpan::{
+                    fields: {
                       start: field_start
                       length: 0u32
                     }
@@ -62,8 +62,8 @@ fn self_host_wasmgc_plan_raw_array_fields(
 
 fn self_host_wasmgc_exact_field_storage(module_: SelfHostPlannedModuleLowering, field: SelfHostPlannedFieldLayout, arrays: Map<U64, U32>) -> SelfHostPlannedWasmStorageType {
   match arrays.get(field.field) {
-    Option::Some(index) => SelfHostPlannedWasmStorageType::WasmRawArrayRefStorage(index)
-    Option::None => self_host_wasmgc_field_storage_type(module_, field)
+    Some(index) => WasmRawArrayRefStorage(index)
+    None => self_host_wasmgc_field_storage_type(module_, field)
   }
 }
 
@@ -71,24 +71,24 @@ fn self_host_wasmgc_exact_field_storage(module_: SelfHostPlannedModuleLowering, 
 // wrong-kind targets cannot become an ordinary eqref field.
 fn self_host_linked_raw_array_field_type(link: SelfHostPlannedProgramWasmGCLink, owner: U32, fragment: U32, before: U32) -> Option<U32> {
   if owner >= link.fragments.modules.length() {
-    return Option::None
+    return None
   }
   let module_ = link.fragments.modules[owner]
   if fragment >= module_.physical_types.length() {
-    return Option::None
+    return None
   }
   let physical = module_.physical_types[fragment]
   if physical.type_index != fragment || physical.fields.length != 0u32 ||
-    !(physical.kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmRawArrayType(_)) {
-    return Option::None
+    !(physical.kind is PlannedWasmRawArrayType(_)) {
+    return None
   }
-  let mut selected = Option::None
+  let mut selected = None
   for linked in link.types {
     if linked.module_index == owner && linked.fragment_index == fragment {
-      if selected is Option::Some(_) || linked.type_index >= before || linked.type_index >= link.types.length() {
-        return Option::None
+      if selected is Some(_) || linked.type_index >= before || linked.type_index >= link.types.length() {
+        return None
       }
-      selected = Option::Some(linked.type_index)
+      selected = Some(linked.type_index)
     }
   }
   selected

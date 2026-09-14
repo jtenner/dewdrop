@@ -16,7 +16,7 @@ fn self_host_query_local_sources(collected: SelfHostCollectedModule, names: Self
   let initializers = self_host_u32_slots(names.locals.length(), 4294967295u32)
   let mut index = 0u32
   for local in names.locals {
-    if local.kind is SelfHostBodyLocalKind::LetLocal && !local.mutable_ {
+    if local.kind is LetLocal && !local.mutable_ {
       self_host_assert_array_index(local.source, collected.block_items.length(), "ARN-104 query local initializer")
       let item = collected.block_items[local.source]
       self_host_assert_compiler_invariant(item.kind == 0u32, "ARN-106 query local source")
@@ -28,21 +28,21 @@ fn self_host_query_local_sources(collected: SelfHostCollectedModule, names: Self
   index = 0u32
   for capture in names.captures {
     let locals = match capture.source {
-      SelfHostLambdaCaptureSource::BodyLocalCapture(body, _) => match names.body(body) {
-        Option::Some(body) => body.locals
-        Option::None => {
+      BodyLocalCapture(body, _) => match names.body(body) {
+        Some(body) => body.locals
+        None => {
           self_host_assert_compiler_invariant(false, "ARN-106 query capture body")
           unreachable()
         }
       }
-      SelfHostLambdaCaptureSource::LambdaLocalCapture(lambda, _) => {
+      LambdaLocalCapture(lambda, _) => {
         self_host_assert_array_index(lambda, names.lambdas.length(), "ARN-104 query capture lambda")
         names.lambdas[lambda].locals
       }
     }
     let relative = match capture.source {
-      SelfHostLambdaCaptureSource::BodyLocalCapture(_, local) => local
-      SelfHostLambdaCaptureSource::LambdaLocalCapture(_, local) => local
+      BodyLocalCapture(_, local) => local
+      LambdaLocalCapture(_, local) => local
     }
     self_host_assert_array_span(locals.start, locals.length, initializers.length(), "ARN-101 query capture locals")
     self_host_assert_array_index(relative, locals.length, "ARN-102 query captured local")
@@ -54,7 +54,7 @@ fn self_host_query_local_sources(collected: SelfHostCollectedModule, names: Self
   let scopes = self_host_empty_query_local_scopes()
   index = 0u32
   for body in collected.bodies {
-    scopes.push(SelfHostQueryLocalScope::{
+    scopes.push({
       expressions: body.expressions
       locals: names.bodies[index].locals
       captures: self_host_empty_hir_span(0u32)
@@ -63,7 +63,7 @@ fn self_host_query_local_sources(collected: SelfHostCollectedModule, names: Self
   }
   index = 0u32
   for lambda in collected.lambdas {
-    scopes.push(SelfHostQueryLocalScope::{
+    scopes.push({
       expressions: lambda.body.expressions
       locals: names.lambdas[index].locals
       captures: names.lambdas[index].captures
@@ -96,12 +96,12 @@ fn self_host_query_local_sources(collected: SelfHostCollectedModule, names: Self
     if owner != 4294967295u32 {
       let scope = scopes[owner]
       let source = match names.expression_references[index] {
-        SelfHostBodyNameReference::LocalNameReference(local) => {
+        LocalNameReference(local) => {
           self_host_assert_array_span(scope.locals.start, scope.locals.length, initializers.length(), "ARN-101 query local arena")
           self_host_assert_array_index(local, scope.locals.length, "ARN-102 query local reference")
           initializers[scope.locals.start + local]
         }
-        SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => {
+        LambdaCaptureNameReference(capture) => {
           self_host_assert_array_span(scope.captures.start, scope.captures.length, capture_initializers.length(), "ARN-101 query capture arena")
           self_host_assert_array_index(capture, scope.captures.length, "ARN-102 query capture reference")
           capture_initializers[scope.captures.start + capture]

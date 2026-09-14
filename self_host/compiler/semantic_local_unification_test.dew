@@ -9,19 +9,19 @@ test "projection equations wait for owners and restore their snapshot" {
   let declaration = collected.declaration_at(0u32).id
   let declarations = self_host_empty_member_declarations()
   let fields = self_host_empty_member_fields()
-  fields.set("item", resolved.primitive(SelfHostPrimitiveType::I64Type))
-  declarations.set(declaration, SelfHostBodyMemberTypeDeclaration::{
+  fields.set("item", resolved.primitive(I64Type))
+  declarations.set(declaration, {
     parameters: []
     fields: fields
     variants: self_host_empty_member_variants()
   })
   let solver = SelfHostLocalTypeSolver::new(resolved)
-  solver.member_types = Option::Some(SelfHostBodyMemberTypeContext::{
+  solver.member_types = Some({
     declarations: declarations
   })
   let owner = solver.fresh_variable()
   let projection = solver.member_projection_type(owner, b"types.field_type", "item")
-  let scalar = solver.resolved_type(resolved.primitive(SelfHostPrimitiveType::I64Type))
+  let scalar = solver.resolved_type(resolved.primitive(I64Type))
   let record = solver.resolved_type(resolved.declaration_type(declaration))
   let left = solver.product_type([projection, owner])
   let right = solver.product_type([scalar, record])
@@ -35,8 +35,8 @@ test "projection equations wait for owners and restore their snapshot" {
   assert(solver.unify(left, right, origin), "later owner resolves the earlier projection")
   assert(solver.representative_type(owner) == record, "exact owner")
   match solver.reduce_member_type(projection, 0u32) {
-    Result::Ok(value) => assert(value == scalar, "exact field type")
-    Result::Err(_) => assert(false, "field projection must resolve")
+    Ok(value) => assert(value == scalar, "exact field type")
+    Err(_) => assert(false, "field projection must resolve")
   }
   assert(solver.diagnostic_count() == 0u32, "no deferred diagnostic")
   solver.rollback(snapshot)
@@ -60,7 +60,7 @@ fn self_host_unification_test_types() -> SelfHostUnificationTestTypes {
     80u64,
     b"struct Pair<a, b> {}\nstruct List<t> {}\nfn accept(value: Pair<I32, String>) -> Unit {}\n",
   )
-  SelfHostUnificationTestTypes::{
+  {
     collected: collected
     resolved: self_host_resolve_module_types(collected)
   }
@@ -72,7 +72,7 @@ test "local unification binds and unions body-local variables" {
   let first = solver.fresh_variable()
   let second = solver.fresh_variable()
   let i32 = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+    fixture.resolved.primitive(I32Type),
   )
   let origin = self_host_synthetic_type_origin(0u32, 1u32)
   assert(solver.unify(first, second, origin), "union variables")
@@ -104,13 +104,13 @@ test "local unification decomposes resolved and inferred applications" {
   )
   assert(
     solver.representative_type(first) == solver.resolved_type(
-      fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+      fixture.resolved.primitive(I32Type),
     ),
     "first application argument",
   )
   assert(
     solver.representative_type(second) == solver.resolved_type(
-      fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+      fixture.resolved.primitive(StringType),
     ),
     "second application argument",
   )
@@ -138,13 +138,13 @@ test "local unification decomposes resolved applications on the left" {
   )
   assert(
     solver.representative_type(first) == solver.resolved_type(
-      fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+      fixture.resolved.primitive(I32Type),
     ),
     "reverse first application argument",
   )
   assert(
     solver.representative_type(second) == solver.resolved_type(
-      fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+      fixture.resolved.primitive(StringType),
     ),
     "reverse second application argument",
   )
@@ -157,10 +157,10 @@ test "local unification decomposes products and functions" {
   let right = solver.fresh_variable()
   let result = solver.fresh_variable()
   let i32 = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+    fixture.resolved.primitive(I32Type),
   )
   let string = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+    fixture.resolved.primitive(StringType),
   )
   let body_product = solver.product_type([left, right])
   let expected_product = solver.product_type([i32, string])
@@ -190,10 +190,10 @@ test "local unification reports one mismatch and poisons its variable" {
   let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
   let variable = solver.fresh_variable()
   let i32 = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+    fixture.resolved.primitive(I32Type),
   )
   let string = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+    fixture.resolved.primitive(StringType),
   )
   let origin = self_host_synthetic_type_origin(4u32, 5u32)
   assert(solver.unify(variable, i32, origin), "initial binding")
@@ -204,7 +204,7 @@ test "local unification reports one mismatch and poisons its variable" {
   )
   assert(solver.diagnostic_count() == 1u32, "mismatch count")
   match solver.diagnostic_at(0u32) {
-    SelfHostLocalInferenceDiagnostic::LocalTypeMismatch(
+    LocalTypeMismatch(
       actual,
       expected,
       diagnostic_origin,
@@ -227,11 +227,11 @@ test "local unification keeps missing IDs distinct from Error terms" {
   let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
   let variable = solver.fresh_variable()
   match solver.check_type_graph(-1i32) {
-    Result::Err(failure) => {
+    Err(failure) => {
       assert(failure.code == 104u32 && failure.phase == 2u32, "missing ID diagnostic")
       assert(failure.expected == 2u64 && failure.actual == 4294967295u64 && failure.detail == 0u64, "exact missing ID")
     }
-    Result::Ok(_) => assert(false, "the missing sentinel must not become Error")
+    Ok(_) => assert(false, "the missing sentinel must not become Error")
   }
   assert(
     solver.unify(
@@ -266,7 +266,7 @@ test "local unification rejects infinite types with iterative occurs checking" {
   )
   assert(solver.diagnostic_count() == 1u32, "infinite diagnostic")
   match solver.diagnostic_at(0u32) {
-    SelfHostLocalInferenceDiagnostic::InfiniteLocalType(
+    InfiniteLocalType(
       _,
       type_,
       diagnostic_origin,
@@ -286,10 +286,10 @@ test "inference snapshots roll back bindings allocations and diagnostics" {
   let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
   let variable = solver.fresh_variable()
   let i32 = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+    fixture.resolved.primitive(I32Type),
   )
   let string = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+    fixture.resolved.primitive(StringType),
   )
   let origin = self_host_synthetic_type_origin(6u32, 7u32)
   let type_count = solver.type_count()
@@ -312,7 +312,7 @@ test "nested inference snapshots commit and roll back in LIFO order" {
   let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
   let first = solver.fresh_variable()
   let i32 = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+    fixture.resolved.primitive(I32Type),
   )
   let outer = solver.snapshot()
   assert(
@@ -353,10 +353,10 @@ test "zonking freezes bound applications and propagates poison" {
   )
   let inferred = solver.applied_type(pair, [first, second])
   let i32 = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+    fixture.resolved.primitive(I32Type),
   )
   let string = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::StringType),
+    fixture.resolved.primitive(StringType),
   )
   assert(
     solver.unify(
@@ -377,7 +377,7 @@ test "zonking freezes bound applications and propagates poison" {
   let frozen = solver.zonk_type(inferred)
   assert(!solver.has_unresolved_variable(frozen), "unresolved frozen type")
   match solver.type_term(frozen) {
-    SelfHostBodyTypeTerm::BodyAppliedType(base, arguments) => {
+    BodyAppliedType(base, arguments) => {
       assert(base == pair, "frozen base")
       assert(solver.type_argument(arguments.start) == i32, "frozen first")
       assert(
@@ -446,7 +446,7 @@ test "union-find remains iterative for 1024 equivalent variables" {
     }
   }
   let i32 = solver.resolved_type(
-    fixture.resolved.primitive(SelfHostPrimitiveType::I32Type),
+    fixture.resolved.primitive(I32Type),
   )
   assert(
     solver.unify(variables[variables.length() - 1u32], i32, origin),

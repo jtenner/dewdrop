@@ -1,9 +1,9 @@
 fn self_host_named_fragment_failure(module_: SelfHostPlannedModuleLowering, callable: SelfHostPlannedCallable, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
   let body = match self_host_program_specialization_callable_body(callable) {
-    Option::Some(value) => value
-    Option::None => 0u64
+    Some(value) => value
+    None => 0u64
   }
-  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+  self_host_assert_compiler_invariant_with_failure(false, {
     code: code
     phase: 4u32
     module_id: module_.module_id

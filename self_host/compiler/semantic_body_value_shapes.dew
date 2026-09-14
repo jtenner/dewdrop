@@ -8,7 +8,7 @@ enum SelfHostBodyShapeTask {
 // These helpers keep each work array on its exact source type.
 // The backend uses these types as compile-time proof for Array pop carriers.
 fn self_host_body_shape_tasks(root: I32) -> Array<SelfHostBodyShapeTask> {
-  [SelfHostBodyShapeTask::VisitBodyShapeType(root)]
+  [VisitBodyShapeType(root)]
 }
 
 fn self_host_body_shape_results() -> Array<SelfHostPlannedValueShape> {
@@ -30,11 +30,11 @@ fn self_host_planned_merged_body_value_shape(
   let _ = while tasks.length() {
     length => if self_host_u32_greater(length, 0u32) {
       let task = match self_host_array_pop(tasks) {
-        Option::Some(value) => value
-        Option::None => SelfHostBodyShapeTask::VisitBodyShapeType(-1i32)
+        Some(value) => value
+        None => VisitBodyShapeType(-1i32)
       }
       match task {
-        SelfHostBodyShapeTask::VisitBodyShapeType(type_) => if type_ < -1i32 {
+        VisitBodyShapeType(type_) => if type_ < -1i32 {
           results.push(
             self_host_planned_resolved_value_shape(
               resolved,
@@ -42,37 +42,37 @@ fn self_host_planned_merged_body_value_shape(
             ),
           )
         } else if type_ < 0i32 {
-          results.push(SelfHostPlannedValueShape::ErrorPlannedValueShape)
+          results.push(ErrorPlannedValueShape)
         } else {
           let index = self_host_body_i32_to_u32(type_)
           if index >= exact_inferred.types.length() {
-            results.push(SelfHostPlannedValueShape::ErrorPlannedValueShape)
+            results.push(ErrorPlannedValueShape)
           } else {
             match exact_inferred.types[index] {
-              SelfHostBodyTypeTerm::BodyErrorType => results.push(
-                SelfHostPlannedValueShape::ErrorPlannedValueShape,
+              BodyErrorType => results.push(
+                ErrorPlannedValueShape,
               )
-              SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => results.push(
+              BodyResolvedType(resolved_type) => results.push(
                 self_host_planned_resolved_value_shape(resolved, resolved_type),
               )
-              SelfHostBodyTypeTerm::BodyVariableType(_) => results.push(
-                SelfHostPlannedValueShape::ErrorPlannedValueShape,
+              BodyVariableType(_) => results.push(
+                ErrorPlannedValueShape,
               )
-              SelfHostBodyTypeTerm::BodyMemberTypeProjection(_, _, _) => results.push(SelfHostPlannedValueShape::GenericPlannedValueShape)
-              SelfHostBodyTypeTerm::BodyFunctionType(_, _) => results.push(
-                SelfHostPlannedValueShape::RefPlannedValueShape,
+              BodyMemberTypeProjection(_, _, _) => results.push(GenericPlannedValueShape)
+              BodyFunctionType(_, _) => results.push(
+                RefPlannedValueShape,
               )
-              SelfHostBodyTypeTerm::BodyAppliedType(base, _) => tasks.push(
-                SelfHostBodyShapeTask::VisitBodyShapeType(base),
+              BodyAppliedType(base, _) => tasks.push(
+                VisitBodyShapeType(base),
               )
-              SelfHostBodyTypeTerm::BodyProductType(fields) => {
+              BodyProductType(fields) => {
                 let start = results.length()
-                tasks.push(SelfHostBodyShapeTask::FinishBodyProductShape(start))
+                tasks.push(FinishBodyProductShape(start))
                 let mut field = fields.length
                 let _ = while field {
                   current => if self_host_u32_greater(current, 0u32) {
                     let previous = current - 1u32
-                    tasks.push(SelfHostBodyShapeTask::VisitBodyShapeType(
+                    tasks.push(VisitBodyShapeType(
                       exact_inferred.type_arguments[
                         self_host_u32_add(fields.start, previous)
                       ],
@@ -86,7 +86,7 @@ fn self_host_planned_merged_body_value_shape(
             }
           }
         }
-        SelfHostBodyShapeTask::FinishBodyProductShape(start) => {
+        FinishBodyProductShape(start) => {
           let fields = self_host_body_shape_fields()
           let end = results.length()
           let mut index = start
@@ -99,7 +99,7 @@ fn self_host_planned_merged_body_value_shape(
             }
           }
           results.truncate(start)
-          results.push(SelfHostPlannedValueShape::ProductPlannedValueShape(fields))
+          results.push(ProductPlannedValueShape(fields))
         }
       }
       continue tasks.length()
@@ -108,7 +108,7 @@ fn self_host_planned_merged_body_value_shape(
     }
   }
   match self_host_array_pop(results) {
-    Option::Some(shape) => shape
-    Option::None => SelfHostPlannedValueShape::ErrorPlannedValueShape
+    Some(shape) => shape
+    None => ErrorPlannedValueShape
   }
 }

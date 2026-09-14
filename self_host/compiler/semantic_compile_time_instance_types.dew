@@ -6,12 +6,12 @@ open dew.std.string_builder
 
 fn self_host_query_module_has_projections(module_: SelfHostPlannedModuleLowering) -> Bool {
   for type_ in module_.resolved_types.types {
-    if type_ is SelfHostResolvedType::MemberTypeProjection(_, _, _) {
+    if type_ is MemberTypeProjection(_, _, _) {
       return true
     }
   }
   for type_ in module_.inferred.types {
-    if type_ is SelfHostBodyTypeTerm::BodyMemberTypeProjection(_, _, _) {
+    if type_ is BodyMemberTypeProjection(_, _, _) {
       return true
     }
   }
@@ -20,8 +20,8 @@ fn self_host_query_module_has_projections(module_: SelfHostPlannedModuleLowering
 
 fn self_host_compile_time_has_member_type(value: SelfHostCompileTimeType) -> Bool {
   match value {
-    SelfHostCompileTimeType::MemberProjectionCompileTimeType(_, _, _) => true
-    SelfHostCompileTimeType::ProductCompileTimeType(fields) => {
+    MemberProjectionCompileTimeType(_, _, _) => true
+    ProductCompileTimeType(fields) => {
       for field in fields {
         if self_host_compile_time_has_member_type(field) {
           return true
@@ -29,7 +29,7 @@ fn self_host_compile_time_has_member_type(value: SelfHostCompileTimeType) -> Boo
       }
       false
     }
-    SelfHostCompileTimeType::AppliedCompileTimeType(base, fields) => {
+    AppliedCompileTimeType(base, fields) => {
       if self_host_compile_time_has_member_type(base) {
         return true
       }
@@ -40,7 +40,7 @@ fn self_host_compile_time_has_member_type(value: SelfHostCompileTimeType) -> Boo
       }
       false
     }
-    SelfHostCompileTimeType::FunctionCompileTimeType(fields, result) => {
+    FunctionCompileTimeType(fields, result) => {
       if self_host_compile_time_has_member_type(result) {
         return true
       }
@@ -57,8 +57,8 @@ fn self_host_compile_time_has_member_type(value: SelfHostCompileTimeType) -> Boo
 
 fn self_host_query_has_projection(module_: SelfHostPlannedModuleLowering, root: I32) -> Bool {
   match self_host_read_compile_time_type(module_, root, self_host_empty_compile_time_bindings(), 0u32) {
-    Result::Ok(type_) => self_host_compile_time_has_member_type(type_)
-    Result::Err(_) => false
+    Ok(type_) => self_host_compile_time_has_member_type(type_)
+    Err(_) => false
   }
 }
 
@@ -86,12 +86,12 @@ fn self_host_query_projected_signature(module_: SelfHostPlannedModuleLowering, c
 fn self_host_query_append_resolved(module_: SelfHostPlannedModuleLowering, value: SelfHostCompileTimeType) -> U32 {
   // Reuse canonical leaves. Solver identity is stronger than ABI equality.
   match value {
-    SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive) => return module_.resolved_types.primitive(primitive)
-    SelfHostCompileTimeType::NominalCompileTimeType(declaration) => {
+    PrimitiveCompileTimeType(primitive) => return module_.resolved_types.primitive(primitive)
+    NominalCompileTimeType(declaration) => {
       let _ = while 0u32 {
         index => if index < module_.resolved_types.types.length() {
           match module_.resolved_types.types[index] {
-            SelfHostResolvedType::NominalType(candidate) => if candidate == declaration {
+            NominalType(candidate) => if candidate == declaration {
               return index
             }
             _ => {}
@@ -102,11 +102,11 @@ fn self_host_query_append_resolved(module_: SelfHostPlannedModuleLowering, value
         }
       }
     }
-    SelfHostCompileTimeType::TraitCompileTimeType(declaration) => {
+    TraitCompileTimeType(declaration) => {
       let _ = while 0u32 {
         index => if index < module_.resolved_types.types.length() {
           match module_.resolved_types.types[index] {
-            SelfHostResolvedType::TraitType(candidate) => if candidate == declaration {
+            TraitType(candidate) => if candidate == declaration {
               return index
             }
             _ => {}
@@ -120,14 +120,14 @@ fn self_host_query_append_resolved(module_: SelfHostPlannedModuleLowering, value
     _ => {}
   }
   let node = match value {
-    SelfHostCompileTimeType::PrimitiveCompileTimeType(value) => SelfHostResolvedType::PrimitiveType(value)
-    SelfHostCompileTimeType::NominalCompileTimeType(value) => SelfHostResolvedType::NominalType(value)
-    SelfHostCompileTimeType::TraitCompileTimeType(value) => SelfHostResolvedType::TraitType(value)
+    PrimitiveCompileTimeType(value) => PrimitiveType(value)
+    NominalCompileTimeType(value) => NominalType(value)
+    TraitCompileTimeType(value) => TraitType(value)
     value => {
       let fields = match value {
-        SelfHostCompileTimeType::ProductCompileTimeType(fields) => fields
-        SelfHostCompileTimeType::AppliedCompileTimeType(_, fields) => fields
-        SelfHostCompileTimeType::FunctionCompileTimeType(fields, _) => fields
+        ProductCompileTimeType(fields) => fields
+        AppliedCompileTimeType(_, fields) => fields
+        FunctionCompileTimeType(fields, _) => fields
         _ => {
           self_host_assert_compiler_invariant(false, "SPC-301 instance member type is not concrete")
           unreachable()
@@ -138,22 +138,22 @@ fn self_host_query_append_resolved(module_: SelfHostPlannedModuleLowering, value
         children.push(self_host_query_append_resolved(module_, field))
       }
       let base = match value {
-        SelfHostCompileTimeType::AppliedCompileTimeType(base, _) => self_host_query_append_resolved(module_, base)
-        SelfHostCompileTimeType::FunctionCompileTimeType(_, result) => self_host_query_append_resolved(module_, result)
+        AppliedCompileTimeType(base, _) => self_host_query_append_resolved(module_, base)
+        FunctionCompileTimeType(_, result) => self_host_query_append_resolved(module_, result)
         _ => 0u32
       }
       let start = module_.resolved_types.type_arguments.length()
       for child in children {
         module_.resolved_types.type_arguments.push(child)
       }
-      let span = SelfHostHirSpan::{
+      let span = {
         start: start
         length: children.length()
       }
       match value {
-        SelfHostCompileTimeType::ProductCompileTimeType(_) => SelfHostResolvedType::ProductType(span)
-        SelfHostCompileTimeType::AppliedCompileTimeType(_, _) => SelfHostResolvedType::AppliedType(base, span)
-        _ => SelfHostResolvedType::FunctionType(span, base)
+        ProductCompileTimeType(_) => ProductType(span)
+        AppliedCompileTimeType(_, _) => AppliedType(base, span)
+        _ => FunctionType(span, base)
       }
     }
   }
@@ -174,7 +174,7 @@ struct SelfHostQueryInstanceTypeContext {
 }
 
 fn self_host_empty_query_type_cache() -> Map<I32, I32> {
-  Map::empty()
+  empty()
 }
 
 impl SelfHostQueryInstanceTypeContext {
@@ -194,29 +194,29 @@ impl SelfHostQueryInstanceTypeContext {
 
   fn materialize(self, root: I32, offset: U32) -> I32 {
     match self.cache.get(root) {
-      Option::Some(value) => return value
-      Option::None => {}
+      Some(value) => return value
+      None => {}
     }
     if !self_host_query_has_projection(self.source, root) {
       self.cache.set(root, root)
       return root
     }
     let logical = match self_host_read_compile_time_type(self.source, root, self.bindings, 0u32) {
-      Result::Ok(value) => value
-      Result::Err(error) => {
+      Ok(value) => value
+      Err(error) => {
         self.diagnose(error, offset)
         return root
       }
     }
     let concrete = match self_host_reduce_compile_time_projection(self.lowering, logical, 0u32) {
-      Result::Ok(value) => value
-      Result::Err(error) => {
+      Ok(value) => value
+      Err(error) => {
         self.diagnose(error, offset)
         return root
       }
     }
     match self_host_compile_time_types_concrete([concrete]) {
-      Result::Ok(true) => {}
+      Ok(true) => {}
       _ => {
         self.diagnose("CT-033 unresolved instance member type", offset)
         return root
@@ -315,7 +315,7 @@ fn self_host_materialize_query_instance_types(lowering: SelfHostPlannedProgramLo
       if body.declaration == declaration {
         for id in self_host_compile_time_owned_expressions(instance, body) {
           let expression = instance.expressions[id]
-          if !(expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedDeadExpression) {
+          if !(expression.kind is PlannedPoisonExpression) && !(expression.kind is PlannedConsumedExpression) && !(expression.kind is PlannedDeadExpression) {
             let type_ = context.materialize(expression.type_, expression.offset)
             if type_ != expression.type_ {
               instance.expressions[id] = self_host_query_expression_type(expression, instance, type_)

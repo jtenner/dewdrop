@@ -2,15 +2,15 @@ open dew.std.testing
 
 fn self_host_body_root_expression(body: SelfHostHirBody) -> U32 {
   match body.root {
-    SelfHostHirBodyRoot::ExpressionBodyRoot(value) => value
-    SelfHostHirBodyRoot::BlockBodyRoot(_) => 4294967295u32
+    ExpressionBodyRoot(value) => value
+    BlockBodyRoot(_) => 4294967295u32
   }
 }
 
 fn self_host_body_root_block(body: SelfHostHirBody) -> U32 {
   match body.root {
-    SelfHostHirBodyRoot::BlockBodyRoot(value) => value
-    SelfHostHirBodyRoot::ExpressionBodyRoot(_) => 4294967295u32
+    BlockBodyRoot(value) => value
+    ExpressionBodyRoot(_) => 4294967295u32
   }
 }
 
@@ -30,15 +30,15 @@ test "semantic body HIR assigns stable source-order body IDs" {
     "last body ID",
   )
   assert(
-    collected.bodies[0u32].kind is SelfHostHirBodyKind::ModuleLetBody,
+    collected.bodies[0u32].kind is ModuleLetBody,
     "let body kind",
   )
   assert(
-    collected.bodies[1u32].kind is SelfHostHirBodyKind::FunctionBody,
+    collected.bodies[1u32].kind is FunctionBody,
     "function body kind",
   )
   assert(
-    collected.bodies[2u32].kind is SelfHostHirBodyKind::ImplMethodBody,
+    collected.bodies[2u32].kind is ImplMethodBody,
     "impl body kind",
   )
 }
@@ -50,8 +50,8 @@ test "semantic body HIR emits expression children before parents" {
   )
   let root = self_host_body_root_expression(collected.bodies[0u32])
   match collected.expressions[root] {
-    SelfHostHirExpr::BinaryExpr(
-      SelfHostHirBinaryOperator::Add,
+    BinaryExpr(
+      Add,
       left,
       multiply,
       _,
@@ -59,8 +59,8 @@ test "semantic body HIR emits expression children before parents" {
       assert(left < root, "left child order")
       assert(multiply < root, "right child order")
       match collected.expressions[multiply] {
-        SelfHostHirExpr::BinaryExpr(
-          SelfHostHirBinaryOperator::Multiply,
+        BinaryExpr(
+          Multiply,
           right,
           literal,
           _,
@@ -121,7 +121,7 @@ test "semantic function blocks lower contiguous let and return items" {
   ]
   assert(!self_host_hir_block_item_is_let(return_item), "missing return expression item")
   match collected.expressions[return_item.value] {
-    SelfHostHirExpr::ReturnExpr(value, _) => assert(
+    ReturnExpr(value, _) => assert(
       value < 4294967295u32,
       "return value",
     )
@@ -141,13 +141,13 @@ test "semantic wildcard lets preserve initializer effects as expression items" {
   let while_item = collected.block_items[items.start]
   assert(!self_host_hir_block_item_is_let(while_item), "wildcard let created a local binding")
   match collected.expressions[while_item.value] {
-    SelfHostHirExpr::WhileExpr(_, _, _) => {}
+    WhileExpr(_, _, _) => {}
     _ => assert(false, "wildcard let initializer is not while")
   }
   let discard_item = collected.block_items[items.start + 1u32]
   assert(!self_host_hir_block_item_is_let(discard_item), "wildcard let discard created a local binding")
   match collected.expressions[discard_item.value] {
-    SelfHostHirExpr::BlockExpr(block) => assert(
+    BlockExpr(block, _) => assert(
       collected.blocks[block].items.length == 0u32,
       "wildcard let discard is not Unit",
     )
@@ -162,7 +162,7 @@ test "semantic match and while expressions share pattern arm arenas" {
   )
   let match_root = self_host_body_root_expression(collected.bodies[0u32])
   match collected.expressions[match_root] {
-    SelfHostHirExpr::MatchExpr(_, arms, _) => assert(
+    MatchExpr(_, arms, _) => assert(
       arms.length == 2u32,
       "match arm count",
     )
@@ -170,7 +170,7 @@ test "semantic match and while expressions share pattern arm arenas" {
   }
   let while_root = self_host_body_root_expression(collected.bodies[1u32])
   match collected.expressions[while_root] {
-    SelfHostHirExpr::WhileExpr(_, arms, _) => {
+    WhileExpr(_, arms, _) => {
       assert(arms.length == 2u32, "while arm count")
       let first = collected.pattern_arms[
         collected.arm_children[arms.start]
@@ -179,11 +179,11 @@ test "semantic match and while expressions share pattern arm arenas" {
         collected.arm_children[arms.start + 1u32]
       ]
       match collected.expressions[first.body] {
-        SelfHostHirExpr::ContinueExpr(_, _) => {}
+        ContinueExpr(_, _) => {}
         _ => assert(false, "missing continue")
       }
       match collected.expressions[second.body] {
-        SelfHostHirExpr::BreakExpr(_, _) => {}
+        BreakExpr(_, _) => {}
         _ => assert(false, "missing break")
       }
     }
@@ -200,7 +200,7 @@ test "semantic body HIR preserves literals objects calls and indexes" {
   match collected.expressions[
     self_host_body_root_expression(collected.bodies[0u32])
   ] {
-    SelfHostHirExpr::ObjectExpr(fields, _) => assert(
+    ObjectExpr(fields, _) => assert(
       fields.length == 3u32,
       "object field count",
     )
@@ -209,7 +209,7 @@ test "semantic body HIR preserves literals objects calls and indexes" {
   match collected.expressions[
     self_host_body_root_expression(collected.bodies[1u32])
   ] {
-    SelfHostHirExpr::CallExpr(_, arguments, _) => assert(
+    CallExpr(_, arguments, _) => assert(
       arguments.length == 1u32,
       "call argument count",
     )
@@ -218,8 +218,8 @@ test "semantic body HIR preserves literals objects calls and indexes" {
   match collected.expressions[
     self_host_body_root_expression(collected.bodies[2u32])
   ] {
-    SelfHostHirExpr::IndexExpr(_, index, _) => match collected.expressions[index] {
-      SelfHostHirExpr::BinaryExpr(SelfHostHirBinaryOperator::Add, _, _, _) => {}
+    IndexExpr(_, index, _) => match collected.expressions[index] {
+      BinaryExpr(Add, _, _, _) => {}
       _ => assert(false, "missing binary index")
     }
     _ => assert(false, "missing index")

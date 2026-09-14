@@ -7,7 +7,7 @@ open dew.std.string
 open dew.std.string_builder
 
 fn self_host_compile_time_error_map() -> Map<U32, String> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_compile_time_static_callee(module_: SelfHostPlannedModuleLowering, callee: U32, declaration: U64) -> Bool {
@@ -18,28 +18,28 @@ fn self_host_compile_time_static_callee(module_: SelfHostPlannedModuleLowering, 
     return false
   }
   match module_.expressions[callee].kind {
-    SelfHostPlannedExpressionKind::PlannedFunctionReference(target) => target == declaration
-    SelfHostPlannedExpressionKind::PlannedModuleValueGet(target) => {
+    PlannedFunctionReference(target) => target == declaration
+    PlannedModuleValueGet(target) => {
       if target == declaration {
         return true
       }
       // A generic callable name is not a module initializer. Its selected
       // declaration lives on the call, while the callee keeps its name binding.
       match module_.expressions[callee].reference {
-        SelfHostBodyNameReference::ModuleValueNameReference(name) => {
+        ModuleValueNameReference(name) => {
           if name >= module_.names.length() {
             return false
           }
           match self_host_program_specialization_callable(module_, declaration) {
-            Option::Some(callable) => callable.name == module_.names[name].as_bytes()
-            Option::None => false
+            Some(callable) => callable.name == module_.names[name].as_bytes()
+            None => false
           }
         }
-        SelfHostBodyNameReference::ImportedModuleValueNameReference(target) => target == declaration
+        ImportedModuleValueNameReference(target) => target == declaration
         _ => false
       }
     }
-    SelfHostPlannedExpressionKind::PlannedConsumedExpression => true
+    PlannedConsumedExpression => true
     _ => false
   }
 }
@@ -75,25 +75,25 @@ fn self_host_compile_time_diagnose(lowering: SelfHostPlannedProgramLowering, mod
 
 fn self_host_compile_time_name_query(lowering: SelfHostPlannedProgramLowering, name: Bytes, types: Array<SelfHostCompileTimeType>) -> Result<Option<SelfHostCompileTimeConstant>, String> {
   if types.length() != 1u32 {
-    return Result::Err("CT-002 wrong names query arity")
+    return Err("CT-002 wrong names query arity")
   }
   match self_host_compile_time_types_concrete(types) {
-    Result::Err(error) => return Result::Err(error)
-    Result::Ok(concrete) => if !concrete {
-      return Result::Ok(Option::None)
+    Err(error) => return Err(error)
+    Ok(concrete) => if !concrete {
+      return Ok(None)
     }
   }
   let base = match types[0u32] {
-    SelfHostCompileTimeType::AppliedCompileTimeType(base, _) => base
+    AppliedCompileTimeType(base, _) => base
     value => value
   }
   let declaration = match base {
-    SelfHostCompileTimeType::NominalCompileTimeType(declaration) => declaration
-    _ => return Result::Err("CT-002 names query requires a nominal declaration")
+    NominalCompileTimeType(declaration) => declaration
+    _ => return Err("CT-002 names query requires a nominal declaration")
   }
   let owner = match lowering.index.declaration_owner(declaration) {
-    Option::Some(owner) => owner
-    Option::None => return Result::Err("CT-002 names query declaration is missing")
+    Some(owner) => owner
+    None => return Err("CT-002 names query declaration is missing")
   }
   let collected = lowering.collected.modules.at(owner)
   let fields = name == b"types.field_names"
@@ -101,20 +101,20 @@ fn self_host_compile_time_name_query(lowering: SelfHostPlannedProgramLowering, n
   for entry in collected.declarations {
     if entry.id == declaration {
       valid = if fields {
-        entry.kind is SelfHostCollectedDeclKind::StructDecl
+        entry.kind is StructDecl
       } else {
-        entry.kind is SelfHostCollectedDeclKind::EnumDecl
+        entry.kind is EnumDecl
       }
     }
   }
   if !valid {
-    return Result::Err("CT-002 field_names requires a struct; variant_names requires an enum")
+    return Err("CT-002 field_names requires a struct; variant_names requires an enum")
   }
   let names = [b""]
   names.clear()
   if fields {
     for field in collected.fields {
-      if field.declaration == declaration && field.variant is Option::None {
+      if field.declaration == declaration && field.variant is None {
         names.push(collected.name(field.name).as_bytes())
       }
     }
@@ -125,25 +125,25 @@ fn self_host_compile_time_name_query(lowering: SelfHostPlannedProgramLowering, n
       }
     }
   }
-  Result::Ok(Option::Some(SelfHostCompileTimeConstant::NamesCompileTimeConstant(names)))
+  Ok(Some(NamesCompileTimeConstant(names)))
 }
 
 fn self_host_compile_time_result_type(lowering: SelfHostPlannedProgramLowering, constant: SelfHostCompileTimeConstant) -> Result<SelfHostCompileTimeType, String> {
   match constant {
-    SelfHostCompileTimeConstant::BoolCompileTimeConstant(_) => Result::Ok(SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::BoolType))
-    SelfHostCompileTimeConstant::U32CompileTimeConstant(_) => Result::Ok(SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::U32Type))
-    SelfHostCompileTimeConstant::NamesCompileTimeConstant(_) => {
+    BoolCompileTimeConstant(_) => Ok(PrimitiveCompileTimeType(BoolType))
+    U32CompileTimeConstant(_) => Ok(PrimitiveCompileTimeType(U32Type))
+    NamesCompileTimeConstant(_) => {
       let owner = match lowering.collected.module_index("dew.std.array") {
-        Option::Some(owner) => owner
-        Option::None => return Result::Err("CT-003 names query requires the declared Array<String> result")
+        Some(owner) => owner
+        None => return Err("CT-003 names query requires the declared Array<String> result")
       }
       let declaration = match lowering.collected.modules.at(owner).lookup_type("Array") {
-        Option::Some(declaration) => declaration
-        Option::None => return Result::Err("CT-003 names query Array declaration is missing")
+        Some(declaration) => declaration
+        None => return Err("CT-003 names query Array declaration is missing")
       }
-      Result::Ok(SelfHostCompileTimeType::AppliedCompileTimeType(
-        SelfHostCompileTimeType::NominalCompileTimeType(declaration),
-        [SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::StringType)],
+      Ok(AppliedCompileTimeType(
+        NominalCompileTimeType(declaration),
+        [PrimitiveCompileTimeType(StringType)],
       ))
     }
   }
@@ -151,22 +151,22 @@ fn self_host_compile_time_result_type(lowering: SelfHostPlannedProgramLowering, 
 
 fn self_host_fold_compile_time_call(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, source: SelfHostPlannedExpression, name: Bytes, bindings: SelfHostCompileTimeBindings, caller: U64) -> Result<Option<SelfHostPlannedExpression>, String> {
   if self_host_computed_type_builtin(name) {
-    return Result::Err("CT-036 a type-producing query must be used in a type position")
+    return Err("CT-036 a type-producing query must be used in a type position")
   }
   let operands = match source.kind {
-    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, target, receiver, arguments, _) => {
+    PlannedBuiltinCall(_, target, receiver, arguments, _) => {
       if !self_host_compile_time_static_callee(module_, receiver, target) {
-        return Result::Err(self_host_compile_time_callee_error(module_, receiver))
+        return Err(self_host_compile_time_callee_error(module_, receiver))
       }
       arguments
     }
-    SelfHostPlannedExpressionKind::PlannedDirectCall(target, receiver, arguments, _) => {
+    PlannedDirectCall(target, receiver, arguments, _) => {
       if !self_host_compile_time_static_callee(module_, receiver, target) {
-        return Result::Err(self_host_compile_time_callee_error(module_, receiver))
+        return Err(self_host_compile_time_callee_error(module_, receiver))
       }
       arguments
     }
-    _ => return Result::Err("CT-001 invalid type-query call kind")
+    _ => return Err("CT-001 invalid type-query call kind")
   }
   let field_offset = name == b"types.field_offset"
   let operand_count = if field_offset {
@@ -175,28 +175,28 @@ fn self_host_fold_compile_time_call(lowering: SelfHostPlannedProgramLowering, mo
     0u32
   }
   if operands.length != operand_count {
-    return Result::Err("CT-001 wrong type-query operand count")
+    return Err("CT-001 wrong type-query operand count")
   }
   let types = match self_host_read_compile_time_arguments(module_, source.call_type_arguments, bindings) {
-    Result::Ok(types) => types
-    Result::Err(error) => return Result::Err(error)
+    Ok(types) => types
+    Err(error) => return Err(error)
   }
   let types = match self_host_reduce_compile_time_projection_list(lowering, types, 0u32) {
-    Result::Ok(values) => values
-    Result::Err(error) => return Result::Err(error)
+    Ok(values) => values
+    Err(error) => return Err(error)
   }
   let evaluated = if field_offset {
     self_host_assert_array_span(operands.start, operands.length, module_.expression_children.length(), "ARN-101 field_offset operand span")
     let operand = module_.expression_children[operands.start]
     self_host_assert_array_index(operand, module_.expressions.length(), "ARN-104 field_offset operand expression")
     let index = match module_.expressions[operand].kind {
-      SelfHostPlannedExpressionKind::PlannedU32Const(value) => {
+      PlannedU32Const(value) => {
         if value > 4294967295u64 {
-          return Result::Err("CT-020 field_offset requires a constant U32 field index")
+          return Err("CT-020 field_offset requires a constant U32 field index")
         }
         value.into()
       }
-      _ => return Result::Err("CT-020 field_offset requires a constant U32 field index")
+      _ => return Err("CT-020 field_offset requires a constant U32 field index")
     }
     self_host_evaluate_compile_time_field_offset(types, index)
   } else if name == b"types.field_names" || name == b"types.variant_names" {
@@ -207,116 +207,116 @@ fn self_host_fold_compile_time_call(lowering: SelfHostPlannedProgramLowering, mo
     self_host_evaluate_compile_time_query(name, types)
   }
   let constant = match evaluated {
-    Result::Ok(value) => match value {
-      Option::Some(constant) => constant
-      Option::None => return Result::Ok(Option::None)
+    Ok(value) => match value {
+      Some(constant) => constant
+      None => return Ok(None)
     }
-    Result::Err(error) => return Result::Err(error)
+    Err(error) => return Err(error)
   }
   let expected = match self_host_compile_time_result_type(lowering, constant) {
-    Result::Ok(value) => value
-    Result::Err(error) => return Result::Err(error)
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   let actual = match self_host_read_compile_time_type(module_, source.type_, bindings, 0u32) {
-    Result::Ok(value) => value
-    Result::Err(error) => return Result::Err(error)
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   match self_host_compile_time_types_equal(expected, actual) {
-    Result::Err(error) => return Result::Err(error)
-    Result::Ok(equal) => if !equal {
-      return Result::Err("CT-003 query declaration has the wrong result type")
+    Err(error) => return Err(error)
+    Ok(equal) => if !equal {
+      return Err("CT-003 query declaration has the wrong result type")
     }
   }
   let kind = match constant {
-    SelfHostCompileTimeConstant::BoolCompileTimeConstant(value) => SelfHostPlannedExpressionKind::PlannedBoolConst(value)
-    SelfHostCompileTimeConstant::U32CompileTimeConstant(value) => SelfHostPlannedExpressionKind::PlannedU32Const(u32_into_u64(value))
-    SelfHostCompileTimeConstant::NamesCompileTimeConstant(values) => SelfHostPlannedExpressionKind::PlannedStringArrayConst(values)
+    BoolCompileTimeConstant(value) => PlannedBoolConst(value)
+    U32CompileTimeConstant(value) => PlannedU32Const(u32_into_u64(value))
+    NamesCompileTimeConstant(values) => PlannedStringArrayConst(values)
   }
-  Result::Ok(Option::Some(self_host_compile_time_replace_kind(source, kind)))
+  Ok(Some(self_host_compile_time_replace_kind(source, kind)))
 }
 
 fn self_host_fold_compile_time_assertion(module_: SelfHostPlannedModuleLowering, source: SelfHostPlannedExpression, bindings: SelfHostCompileTimeBindings) -> Result<SelfHostPlannedExpression, String> {
   let operands = match source.kind {
-    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, target, receiver, arguments, _) => {
+    PlannedBuiltinCall(_, target, receiver, arguments, _) => {
       if !self_host_compile_time_static_callee(module_, receiver, target) {
-        return Result::Err(self_host_compile_time_callee_error(module_, receiver))
+        return Err(self_host_compile_time_callee_error(module_, receiver))
       }
       arguments
     }
-    SelfHostPlannedExpressionKind::PlannedDirectCall(target, receiver, arguments, _) => {
+    PlannedDirectCall(target, receiver, arguments, _) => {
       if !self_host_compile_time_static_callee(module_, receiver, target) {
-        return Result::Err(self_host_compile_time_callee_error(module_, receiver))
+        return Err(self_host_compile_time_callee_error(module_, receiver))
       }
       arguments
     }
-    _ => return Result::Err("CT-001 invalid static_assert call kind")
+    _ => return Err("CT-001 invalid static_assert call kind")
   }
   if operands.length != 2u32 || source.call_type_arguments.length != 0u32 || !self_host_array_span_is_valid(operands.start, operands.length, module_.expression_children.length()) {
-    return Result::Err("CT-001 static_assert requires a condition and message, with no type arguments")
+    return Err("CT-001 static_assert requires a condition and message, with no type arguments")
   }
   match self_host_read_compile_time_type(module_, source.type_, bindings, 0u32) {
-    Result::Ok(type_) => match type_ {
-      SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive) if primitive is SelfHostPrimitiveType::UnitType => {}
-      _ => return Result::Err("CT-003 static_assert must return Unit")
+    Ok(type_) => match type_ {
+      PrimitiveCompileTimeType(primitive) if primitive is UnitType => {}
+      _ => return Err("CT-003 static_assert must return Unit")
     }
-    Result::Err(error) => return Result::Err(error)
+    Err(error) => return Err(error)
   }
   let condition = module_.expression_children[operands.start]
   let message = module_.expression_children[operands.start + 1u32]
   let text = match module_.expressions[message].kind {
-    SelfHostPlannedExpressionKind::PlannedStringConst(text) => text
-    _ => return Result::Err("CT-020 static_assert message must be a compile-time string")
+    PlannedStringConst(text) => text
+    _ => return Err("CT-020 static_assert message must be a compile-time string")
   }
   match module_.expressions[condition].kind {
-    SelfHostPlannedExpressionKind::PlannedBoolConst(value) => if !value {
+    PlannedBoolConst(value) => if !value {
       let error = StringBuilder::new()
       error.append("CT-021 static assertion failed: ")
       error.append(bytes_to_string(text))
-      return Result::Err(error.finish())
+      return Err(error.finish())
     }
-    _ => return Result::Err("CT-022 static_assert condition is not a compile-time Boolean")
+    _ => return Err("CT-022 static_assert condition is not a compile-time Boolean")
   }
-  Result::Ok(self_host_compile_time_replace_kind(source, SelfHostPlannedExpressionKind::PlannedUnitConst))
+  Ok(self_host_compile_time_replace_kind(source, PlannedUnitConst))
 }
 
 fn self_host_compile_time_bool_binary(module_: SelfHostPlannedModuleLowering, operator: SelfHostHirBinaryOperator, left: U32, right: U32) -> Option<Bool> {
   match module_.expressions[left].kind {
-    SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
-      if (operator is SelfHostHirBinaryOperator::LogicalOr && value) || (operator is SelfHostHirBinaryOperator::LogicalAnd && !value) {
-        return Option::Some(value)
+    PlannedBoolConst(value) => {
+      if (operator is LogicalOr && value) || (operator is LogicalAnd && !value) {
+        return Some(value)
       }
     }
     _ => {}
   }
   match module_.expressions[left].kind {
-    SelfHostPlannedExpressionKind::PlannedBoolConst(a) => match module_.expressions[right].kind {
-      SelfHostPlannedExpressionKind::PlannedBoolConst(b) => match operator {
-        SelfHostHirBinaryOperator::LogicalAnd => Option::Some(a && b)
-        SelfHostHirBinaryOperator::LogicalOr => Option::Some(a || b)
-        SelfHostHirBinaryOperator::Equal => Option::Some(a == b)
-        SelfHostHirBinaryOperator::NotEqual => Option::Some(a != b)
-        _ => Option::None
+    PlannedBoolConst(a) => match module_.expressions[right].kind {
+      PlannedBoolConst(b) => match operator {
+        LogicalAnd => Some(a && b)
+        LogicalOr => Some(a || b)
+        Equal => Some(a == b)
+        NotEqual => Some(a != b)
+        _ => None
       }
-      _ => Option::None
+      _ => None
     }
-    SelfHostPlannedExpressionKind::PlannedU32Const(a) => match module_.expressions[right].kind {
-      SelfHostPlannedExpressionKind::PlannedU32Const(b) => match operator {
-        SelfHostHirBinaryOperator::Equal => Option::Some(a == b)
-        SelfHostHirBinaryOperator::NotEqual => Option::Some(a != b)
-        SelfHostHirBinaryOperator::Less => Option::Some(a < b)
-        SelfHostHirBinaryOperator::Greater => Option::Some(a > b)
-        SelfHostHirBinaryOperator::LessEqual => Option::Some(a <= b)
-        SelfHostHirBinaryOperator::GreaterEqual => Option::Some(a >= b)
-        _ => Option::None
+    PlannedU32Const(a) => match module_.expressions[right].kind {
+      PlannedU32Const(b) => match operator {
+        Equal => Some(a == b)
+        NotEqual => Some(a != b)
+        Less => Some(a < b)
+        Greater => Some(a > b)
+        LessEqual => Some(a <= b)
+        GreaterEqual => Some(a >= b)
+        _ => None
       }
-      _ => Option::None
+      _ => None
     }
-    _ => Option::None
+    _ => None
   }
 }
 
 fn self_host_fold_compile_time_body(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: SelfHostCompileTimeBindings) -> Unit {
-  self_host_fold_compile_time_body_with_conditions(lowering, module_, body, specialization, bindings, Option::None)
+  self_host_fold_compile_time_body_with_conditions(lowering, module_, body, specialization, bindings, None)
 }
 
 fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedProgramLowering, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, specialization: U32, bindings: SelfHostCompileTimeBindings, conditions: Option<Map<U32, Bool>>) -> Unit {
@@ -327,21 +327,21 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
       let index = owned[offset]
       let source = module_.expressions[index]
       match self_host_program_specialization_call_recipe(source) {
-        Option::Some(recipe) => match lowering.compile_time.targets.get(recipe.target) {
-          Option::Some(name) => if name != b"types.static_assert" {
+        Some(recipe) => match lowering.compile_time.targets.get(recipe.target) {
+          Some(name) => if name != b"types.static_assert" {
             match self_host_fold_compile_time_call(lowering, module_, source, name, bindings, body.declaration) {
-              Result::Ok(value) => match value {
-                Option::Some(replacement) => {
+              Ok(value) => match value {
+                Some(replacement) => {
                   module_.expressions[index] = replacement
                 }
-                Option::None => errors.set(index, "CT-004 type query remains unresolved in a concrete instance")
+                None => errors.set(index, "CT-004 type query remains unresolved in a concrete instance")
               }
-              Result::Err(error) => errors.set(index, error)
+              Err(error) => errors.set(index, error)
             }
           }
-          Option::None => {}
+          None => {}
         }
-        Option::None => {}
+        None => {}
       }
       continue offset + 1u32
     } else {
@@ -355,41 +355,41 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
       let index = owned[offset]
       let source = module_.expressions[index]
       match self_host_compile_time_local_constant(module_, index) {
-        Option::Some(kind) => {
+        Some(kind) => {
           module_.expressions[index] = self_host_compile_time_replace_kind(source, kind)
         }
-        Option::None => {}
+        None => {}
       }
       match source.kind {
-        SelfHostPlannedExpressionKind::PlannedPrefixExpression(operator, operand) => if operator is SelfHostHirPrefixOperator::LogicalNot {
+        PlannedPrefixExpression(operator, operand) => if operator is LogicalNot {
           match module_.expressions[operand].kind {
-            SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
-              module_.expressions[index] = self_host_compile_time_replace_kind(source, SelfHostPlannedExpressionKind::PlannedBoolConst(!value))
+            PlannedBoolConst(value) => {
+              module_.expressions[index] = self_host_compile_time_replace_kind(source, PlannedBoolConst(!value))
             }
             _ => {}
           }
         }
-        SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right) => match self_host_compile_time_bool_binary(module_, operator, left, right) {
-          Option::Some(value) => {
-            module_.expressions[index] = self_host_compile_time_replace_kind(source, SelfHostPlannedExpressionKind::PlannedBoolConst(value))
+        PlannedBinaryExpression(operator, left, right) => match self_host_compile_time_bool_binary(module_, operator, left, right) {
+          Some(value) => {
+            module_.expressions[index] = self_host_compile_time_replace_kind(source, PlannedBoolConst(value))
           }
-          Option::None => {}
+          None => {}
         }
-        SelfHostPlannedExpressionKind::PlannedOperatorCall(target, operator, left, right, _) => match self_host_program_specialization_program_callable(lowering, target) {
-          Option::Some(callable) => match callable.kind {
-            SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if
-              (name == b"i32.eq" && operator is SelfHostHirBinaryOperator::Equal) ||
-              (name == b"i32.ne" && operator is SelfHostHirBinaryOperator::NotEqual) {
+        PlannedOperatorCall(target, operator, left, right, _) => match self_host_program_specialization_program_callable(lowering, target) {
+          Some(callable) => match callable.kind {
+            PlannedBuiltinCallable(name) => if
+              (name == b"i32.eq" && operator is Equal) ||
+              (name == b"i32.ne" && operator is NotEqual) {
               match self_host_compile_time_bool_binary(module_, operator, left, right) {
-                Option::Some(value) => {
-                  module_.expressions[index] = self_host_compile_time_replace_kind(source, SelfHostPlannedExpressionKind::PlannedBoolConst(value))
+                Some(value) => {
+                  module_.expressions[index] = self_host_compile_time_replace_kind(source, PlannedBoolConst(value))
                 }
-                Option::None => {}
+                None => {}
               }
             }
             _ => {}
           }
-          Option::None => {}
+          None => {}
         }
         _ => {}
       }
@@ -399,22 +399,22 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
     }
   }
   match conditions {
-    Option::Some(selected) => for index in owned {
+    Some(selected) => for index in owned {
       match module_.expressions[index].kind {
-        SelfHostPlannedExpressionKind::PlannedIfExpression(condition, _, _) => match module_.expressions[condition].kind {
-          SelfHostPlannedExpressionKind::PlannedBoolConst(value) => selected.set(index, value)
+        PlannedIfExpression(condition, _, _) => match module_.expressions[condition].kind {
+          PlannedBoolConst(value) => selected.set(index, value)
           _ => {}
         }
         _ => {}
       }
     }
-    Option::None => {}
+    None => {}
   }
   let live = self_host_prune_compile_time_body(module_, body)
   self_host_resolve_guarded_calls(lowering, module_, body, specialization, bindings, owned, live)
   let owner = match lowering.index.declaration_owner(body.declaration) {
-    Option::Some(owner) => owner
-    Option::None => {
+    Some(owner) => owner
+    None => {
       self_host_assert_compiler_invariant(false, "LNK-504 type binding body owner")
       unreachable()
     }
@@ -426,24 +426,24 @@ fn self_host_fold_compile_time_body_with_conditions(lowering: SelfHostPlannedPro
       if live[index] {
         let source = module_.expressions[index]
         match self_host_validate_query_binding(lowering, collected, module_, index, bindings) {
-          Option::Some(message) => errors.set(index, message)
-          Option::None => {}
+          Some(message) => errors.set(index, message)
+          None => {}
         }
         match errors.get(index) {
-          Option::Some(error) => self_host_compile_time_diagnose(lowering, module_, body, specialization, index, error)
-          Option::None => match self_host_program_specialization_call_recipe(source) {
-            Option::Some(recipe) => match lowering.compile_time.targets.get(recipe.target) {
-              Option::Some(name) => if name == b"types.static_assert" {
+          Some(error) => self_host_compile_time_diagnose(lowering, module_, body, specialization, index, error)
+          None => match self_host_program_specialization_call_recipe(source) {
+            Some(recipe) => match lowering.compile_time.targets.get(recipe.target) {
+              Some(name) => if name == b"types.static_assert" {
                 match self_host_fold_compile_time_assertion(module_, source, bindings) {
-                  Result::Ok(replacement) => {
+                  Ok(replacement) => {
                     module_.expressions[index] = replacement
                   }
-                  Result::Err(error) => self_host_compile_time_diagnose(lowering, module_, body, specialization, index, error)
+                  Err(error) => self_host_compile_time_diagnose(lowering, module_, body, specialization, index, error)
                 }
               }
-              Option::None => {}
+              None => {}
             }
-            Option::None => {}
+            None => {}
           }
         }
       }
@@ -464,26 +464,26 @@ fn self_host_fold_program_compile_time_queries(lowering: SelfHostPlannedProgramL
   for module_ in lowering.modules {
     for body in module_.bodies {
       if lowering.compile_time.sensitive.contains_key(body.declaration) {
-        if body.kind is SelfHostHirBodyKind::ModuleLetBody {
+        if body.kind is ModuleLetBody {
           self_host_fold_compile_time_body(lowering, module_, body, 4294967295u32,
             self_host_empty_compile_time_bindings())
         }
         match self_host_program_specialization_callable(module_, body.declaration) {
-          Option::Some(callable) => if self_host_program_specialization_callable_generics(callable).length == 0u32 {
+          Some(callable) => if self_host_program_specialization_callable_generics(callable).length == 0u32 {
             let bindings = self_host_empty_compile_time_bindings()
             match callable.kind {
-              SelfHostPlannedCallableKind::PlannedImplMethodCallable(implementation, _) => {
+              PlannedImplMethodCallable(implementation, _) => {
                 self_host_assert_array_index(callable.self_type, module_.resolved_types.types.length(), "LNK-504 concrete implementation Self type")
                 match self_host_read_compile_time_type(module_, -self_host_body_u32_to_i32(callable.self_type) - 2i32, bindings, 0u32) {
-                  Result::Ok(self_type) => {
+                  Ok(self_type) => {
                     let concrete = match self_host_compile_time_types_concrete([self_type]) {
-                      Result::Ok(value) => value
-                      Result::Err(_) => false
+                      Ok(value) => value
+                      Err(_) => false
                     }
                     self_host_assert_compiler_invariant(concrete, "SPC-301 concrete implementation Self type is unresolved")
                     bindings.selves.set(implementation, self_type)
                   }
-                  Result::Err(_) => {
+                  Err(_) => {
                     self_host_assert_compiler_invariant(false, "SPC-301 concrete implementation Self type could not be read")
                     unreachable()
                   }
@@ -493,7 +493,7 @@ fn self_host_fold_program_compile_time_queries(lowering: SelfHostPlannedProgramL
             }
             self_host_fold_compile_time_body(lowering, module_, body, 4294967295u32, bindings)
           }
-          Option::None => {}
+          None => {}
         }
       }
     }

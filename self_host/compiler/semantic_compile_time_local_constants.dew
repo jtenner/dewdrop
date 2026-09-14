@@ -3,17 +3,17 @@ open dew.std.option
 fn self_host_compile_time_local_constant(module_: SelfHostPlannedModuleLowering, expression: U32) -> Option<SelfHostPlannedExpressionKind> {
   let initializer = module_.local_initializer_sources.get(expression)
   match initializer {
-    Option::Some(initializer) => {
+    Some(initializer) => {
       let kind = module_.expressions[initializer].kind
       match kind {
-        SelfHostPlannedExpressionKind::PlannedBoolConst(_) => Option::Some(kind)
-        SelfHostPlannedExpressionKind::PlannedI32Const(_) => Option::Some(kind)
-        SelfHostPlannedExpressionKind::PlannedU32Const(_) => Option::Some(kind)
-        SelfHostPlannedExpressionKind::PlannedI64Const(_) => Option::Some(kind)
-        SelfHostPlannedExpressionKind::PlannedU64Const(_) => Option::Some(kind)
-        _ => Option::None
+        PlannedBoolConst(_) => Some(kind)
+        PlannedI32Const(_) => Some(kind)
+        PlannedU32Const(_) => Some(kind)
+        PlannedI64Const(_) => Some(kind)
+        PlannedU64Const(_) => Some(kind)
+        _ => None
       }
     }
-    Option::None => Option::None
+    None => None
   }
 }

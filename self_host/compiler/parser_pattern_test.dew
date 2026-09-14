@@ -4,8 +4,8 @@ open dew.std.string_builder
 
 test "self-host parser parses constructor patterns" {
   match self_host_parse_pattern_source(b"Option::Some(value)") {
-    Result::Ok(SelfHostPattern::TuplePattern(
-      SelfHostPattern::QualifiedPattern(_, "Some", _),
+    Ok(TuplePattern(
+      QualifiedPattern(_, "Some", _),
       arguments,
       _,
     )) => assert(arguments.length() == 1u32, "wrong tuple pattern arity")
@@ -15,9 +15,9 @@ test "self-host parser parses constructor patterns" {
 
 test "self-host parser parses rest patterns" {
   match self_host_parse_pattern_source(b"List::Cons(head, ...)") {
-    Result::Ok(SelfHostPattern::TuplePattern(_, arguments, _)) => {
+    Ok(TuplePattern(_, arguments, _)) => {
       assert(arguments.length() == 2u32, "wrong rest pattern arity")
-      assert(arguments.get_unchecked(1u32) is SelfHostPattern::RestPattern(_), "missing rest pattern")
+      assert(arguments.get_unchecked(1u32) is RestPattern(_), "missing rest pattern")
     }
     _ => assert(false, "rest pattern failed")
   }
@@ -25,7 +25,7 @@ test "self-host parser parses rest patterns" {
 
 test "self-host parser parses multiline struct patterns" {
   match self_host_parse_pattern_source(b"Message::Data {\n  value\n  ...\n}") {
-    Result::Ok(SelfHostPattern::StructPattern(_, fields, Option::Some(_), _)) =>
+    Ok(StructPattern(_, fields, Some(_), _)) =>
       assert(fields.length() == 1u32, "wrong struct field count")
     _ => assert(false, "struct pattern failed")
   }
@@ -33,24 +33,24 @@ test "self-host parser parses multiline struct patterns" {
 
 test "self-host parser rejects bare rest patterns" {
   assert(
-    self_host_parse_pattern_source(b"...") is Result::Err(_),
+    self_host_parse_pattern_source(b"...") is Err(_),
     "accepted bare rest pattern",
   )
 }
 test "anonymous tuple patterns nest in constructor payloads" {
   for source in [b"Some((left, right))", b"((left, right), tail)", b"(value)", b"()", b"(left, ..., right)"] {
-    assert(self_host_parse_pattern_source(source) is Result::Ok(_), "anonymous tuple pattern must parse")
+    assert(self_host_parse_pattern_source(source) is Ok(_), "anonymous tuple pattern must parse")
   }
 }
 
 test "product patterns preserve grouping and reject singleton products" {
-  assert(self_host_parse_pattern_source(b"(value)") is Result::Ok(SelfHostPattern::BindingPattern(_, 1u32)), "grouping changed pattern")
-  assert(self_host_parse_pattern_source(b"(value,)") is Result::Err(SelfHostParseError::InvalidProductArity(1u32, 0u32)), "singleton product must fail with arity")
+  assert(self_host_parse_pattern_source(b"(value)") is Ok(BindingPattern(_, 1u32)), "grouping changed pattern")
+  assert(self_host_parse_pattern_source(b"(value,)") is Err(InvalidProductArity(1u32, 0u32)), "singleton product must fail with arity")
   match self_host_parse_pattern_source(b"(left, right)") {
-    Result::Ok(SelfHostPattern::ProductPattern(fields, 0u32)) => {
+    Ok(ProductPattern(fields, 0u32)) => {
       assert(fields.length() == 2u32, "product pattern field count")
-      assert(fields[0u32] is SelfHostPattern::BindingPattern(_, 1u32), "first product pattern field")
-      assert(fields[1u32] is SelfHostPattern::BindingPattern(_, 7u32), "second product pattern field")
+      assert(fields[0u32] is BindingPattern(_, 1u32), "first product pattern field")
+      assert(fields[1u32] is BindingPattern(_, 7u32), "second product pattern field")
     }
     _ => assert(false, "product pattern must parse")
   }
@@ -74,9 +74,9 @@ test "product pattern arity limit is 32 logical fields" {
     source.append(")")
     let result = self_host_parse_pattern_source(source.finish().as_bytes())
     if count == 32u32 {
-      assert(result is Result::Ok(SelfHostPattern::ProductPattern(_, _)), "32 product fields must parse")
+      assert(result is Ok(ProductPattern(_, _)), "32 product fields must parse")
     } else {
-      assert(result is Result::Err(SelfHostParseError::InvalidProductArity(33u32, 0u32)), "33 product fields must report their arity")
+      assert(result is Err(InvalidProductArity(33u32, 0u32)), "33 product fields must report their arity")
     }
   }
 }

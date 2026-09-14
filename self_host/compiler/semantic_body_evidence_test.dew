@@ -21,8 +21,8 @@ test "body evidence publishes selected trait implementations" {
   )
   let hir_body = collected.bodies[1u32]
   let body = match published.evidence_body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -62,8 +62,8 @@ test "body evidence does not publish inherent methods as trait evidence" {
   )
   let hir_body = collected.bodies[1u32]
   let body = match published.evidence_body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }

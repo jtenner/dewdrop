@@ -5,14 +5,14 @@ fn self_host_initializer_link_fixture() -> SelfHostPlannedProgramWasmGCLink {
   self_host_physical_test_assert_clean_inference(link)
   assert(link.diagnostics.length() == 0u32, "valid global initializer source")
   assert(link.initializers.length() == 1u32, "one linked initializer")
-  assert(self_host_validate_program_wasmgc_link(link) is Option::None, "valid link before mutation")
+  assert(self_host_validate_program_wasmgc_link(link) is None, "valid link before mutation")
   link
 }
 
 fn self_host_initializer_link_mutation(kind: U32) -> Unit {
   let link = self_host_initializer_link_fixture()
   let original = link.initializers[0u32]
-  link.initializers[0u32] = SelfHostPlannedProgramInitializer::{
+  link.initializers[0u32] = {
     module_index: if kind == 0u32 {
       99u32
     } else {
@@ -29,11 +29,11 @@ fn self_host_initializer_link_mutation(kind: U32) -> Unit {
       original.body
     }
     shape: if kind == 3u32 {
-      SelfHostPlannedValueShape::ErrorPlannedValueShape
+      ErrorPlannedValueShape
     } else if kind == 4u32 {
-      SelfHostPlannedValueShape::I32PlannedValueShape
+      I32PlannedValueShape
     } else if kind == 8u32 {
-      SelfHostPlannedValueShape::GenericPlannedValueShape
+      GenericPlannedValueShape
     } else {
       original.shape
     }
@@ -136,23 +136,23 @@ test "LNK-502 every selected Unit initializer must have a link" expect_trap "unr
     b"let effect = ()\npub fn main() -> I64 {\n  42i64\n}\n",
   ), false)
   assert(link.initializers.length() == 1u32 && link.global_count == 0u32, "one erased initializer before mutation")
-  assert(self_host_validate_program_wasmgc_link(link) is Option::None, "valid Unit startup schedule")
+  assert(self_host_validate_program_wasmgc_link(link) is None, "valid Unit startup schedule")
   link.initializers.clear()
   let _ = self_host_validate_program_wasmgc_link(link)
 }
 
 test "initializer links retain test inclusion and Unit source values" {
-  let manifest = SelfHostProgramManifest::{
+  let manifest = {
     modules: [
-    SelfHostManifestModule::{
+    {
       path: "app.initializers"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "main.dew"
           source: b"let effect = ()\nlet answer = 42i64\npub fn main() -> I64 {\n  answer\n}\n"
           test_only: false
         },
-        SelfHostManifestFile::{
+        {
           path: "extra_test.dew"
           source: b"let extra = 7i64\n"
           test_only: true
@@ -169,11 +169,11 @@ test "initializer links retain test inclusion and Unit source values" {
   assert(normal.initializers.length() == 2u32 && !normal.emit_tests, "normal Unit and scalar globals")
   assert(testing.initializers.length() == 3u32 && testing.emit_tests, "test global explicitly included")
   assert(normal.global_count == 1u32 && testing.global_count == 2u32, "Unit globals have no physical slot")
-  assert(self_host_validate_program_wasmgc_link(normal) is Option::None, "normal source schedule is complete")
-  assert(self_host_validate_program_wasmgc_link(testing) is Option::None, "test source schedule is complete")
+  assert(self_host_validate_program_wasmgc_link(normal) is None, "normal source schedule is complete")
+  assert(self_host_validate_program_wasmgc_link(testing) is None, "test source schedule is complete")
   match build_self_host_linked_i32_module(normal, 5100u64) {
-    Result::Ok(bytes) => assert(bytes.byte_length() > 0u32, "Unit and scalar initializers emit valid Wasm")
-    Result::Err(error) => assert(false, error)
+    Ok(bytes) => assert(bytes.byte_length() > 0u32, "Unit and scalar initializers emit valid Wasm")
+    Err(error) => assert(false, error)
   }
 }
 

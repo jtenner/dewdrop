@@ -5,7 +5,7 @@ fn self_host_lowered_child_capture(context: SelfHostLoweredChildContext, parent:
   } else {
     context.module_.lambdas[context.lambda].captures.length
   }
-  self_host_lowered_child_index(context, parent, SelfHostHirSpan::{
+  self_host_lowered_child_index(context, parent, {
     start: 0u32
     length: length
   }, capture, 17u32)

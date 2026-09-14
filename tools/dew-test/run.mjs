@@ -13,6 +13,7 @@ options:
   --wasm PATH     read the compiled test module from PATH
   --builtin-traps PATH  additionally validate every exported trap probe
   --label TEXT    summary label (default: Dew tests)
+  --allow-unused-host-imports  trap if a test calls an otherwise unlinked host function
   --list          list selected test identities without executing
   --help          show this help`);
 }
@@ -26,12 +27,17 @@ const options = {
   builtinTraps: null,
   label: "Dew tests",
   list: false,
+  allowUnusedHostImports: false,
 };
 for (let index = 2; index < process.argv.length; index++) {
   const argument = process.argv[index];
   if (argument === "--help") {
     usage();
     process.exit(0);
+  }
+  if (argument === "--allow-unused-host-imports") {
+    options.allowUnusedHostImports = true;
+    continue;
   }
   if (argument === "--list") {
     options.list = true;
@@ -146,6 +152,17 @@ async function instantiateWithWasi(module) {
       },
     },
   };
+  if (options.allowUnusedHostImports) {
+    for (const entry of WebAssembly.Module.imports(module)) {
+      if (entry.kind !== "function") {
+        throw new Error(`Unsupported host import ${entry.module}.${entry.name}: ${entry.kind}`);
+      }
+      imports[entry.module] ??= Object.create(null);
+      imports[entry.module][entry.name] ??= () => {
+        throw new Error(`Unexpected host call ${entry.module}.${entry.name}`);
+      };
+    }
+  }
   instance = await WebAssembly.instantiate(module, imports);
   if (typeof instance.exports.__dew_init === "function") {
     instance.exports.__dew_init();

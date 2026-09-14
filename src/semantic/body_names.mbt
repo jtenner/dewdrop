@@ -36,6 +36,7 @@ pub enum BodyNameReference {
   ModuleTypeNameReference(DeclId)
   ModuleTraitNameReference(DeclId)
   VariantNameReference(NameId)
+  ContextualFactoryNameReference(NameId)
 } derive(Eq, Debug)
 
 ///|

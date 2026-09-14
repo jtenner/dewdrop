@@ -4,45 +4,45 @@ open dew.std.result
 impl SelfHostBasicBodyInferencer {
   fn obligation_search(self) -> SelfHostCompileTimeEvidenceSearch {
     match self.trait_obligation_search {
-      Option::Some(search) => return search
-      Option::None => {}
+      Some(search) => return search
+      None => {}
     }
     let scope = match self.imported.scope {
-      Option::Some(scope) => scope
-      Option::None => self_host_build_module_import_scope(self.collected, 0u32, [], SelfHostFrozenInterfaceList::new())
+      Some(scope) => scope
+      None => self_host_build_module_import_scope(self.collected, 0u32, [], SelfHostFrozenInterfaceList::new())
     }
     let imports = match self.imported.resolved_imports {
-      Option::Some(imports) => imports
-      Option::None => self_host_resolve_module_imports(self.resolved, scope)
+      Some(imports) => imports
+      None => self_host_resolve_module_imports(self.resolved, scope)
     }
-    let search = SelfHostCompileTimeEvidenceSearch::{
-      lowering: Option::None
+    let search = {
+      lowering: None
       collected: self.collected
       resolved: self.resolved
       imports: imports
       index: self_host_index_module_implementations_with_imports(self.collected, imports)
       active: []
-      budget: SelfHostCompileTimeEvidenceBudget::{
+      budget: {
         steps: 0u32
       }
-      associated_scopes: Map::empty()
+      associated_scopes: empty()
       associated_only: false
       include_test_impls: self.collected.declaration_is_test_only(self.body.declaration)
     }
-    self.trait_obligation_search = Option::Some(search)
+    self.trait_obligation_search = Some(search)
     search
   }
 
   fn check_inference_trait_obligation(self, expression: U32, target: I32, bound: I32) -> Result<Bool, String> {
     let bindings = self_host_empty_compile_time_bindings()
     let expected = match self_host_read_compile_time_solver_type(self.solver, bound, bindings, 0u32) {
-      Result::Ok(value) => value
-      Result::Err(error) => return Result::Err(error)
+      Ok(value) => value
+      Err(error) => return Err(error)
     }
     let proofs = self.guarded_trait_bounds(expression, target)
     match self.solver.type_term(self.solver.representative_type(target)) {
-      SelfHostBodyTypeTerm::BodyResolvedType(type_) => match self.resolved.types[type_] {
-        SelfHostResolvedType::GenericParameterType(parameter) => if self_host_semantic_id_module(parameter) == self.collected.module_id {
+      BodyResolvedType(type_) => match self.resolved.types[type_] {
+        GenericParameterType(parameter) => if self_host_semantic_id_module(parameter) == self.collected.module_id {
           let span = self.collected.generic_parameter_at(self_host_semantic_id_local(parameter)).bounds
           self_host_assert_array_span(span.start, span.length, self.resolved.generic_bound_types.length(), "ARN-101 declared obligation bounds")
           let _ = while 0u32 {
@@ -60,25 +60,25 @@ impl SelfHostBasicBodyInferencer {
     }
     for proof in proofs {
       let actual = match self_host_read_compile_time_resolved_arena(self.resolved, proof, bindings, 0u32) {
-        Result::Ok(value) => value
-        Result::Err(error) => return Result::Err(error)
+        Ok(value) => value
+        Err(error) => return Err(error)
       }
       match self_host_compile_time_types_equal(actual, expected) {
-        Result::Ok(equal) => if equal {
-          return Result::Ok(true)
+        Ok(equal) => if equal {
+          return Ok(true)
         }
-        Result::Err(error) => return Result::Err(error)
+        Err(error) => return Err(error)
       }
     }
     let actual = match self_host_read_compile_time_solver_type(self.solver, target, bindings, 0u32) {
-      Result::Ok(value) => value
-      Result::Err(error) => return Result::Err(error)
+      Ok(value) => value
+      Err(error) => return Err(error)
     }
     match self_host_compile_time_types_concrete([actual, expected]) {
-      Result::Ok(concrete) => if !concrete {
-        return Result::Ok(false)
+      Ok(concrete) => if !concrete {
+        return Ok(false)
       }
-      Result::Err(error) => return Result::Err(error)
+      Err(error) => return Err(error)
     }
     let search = self.obligation_search()
     self_host_assert_compiler_invariant(search.active.length() == 0u32, "INV-001 completed inference trait search")
@@ -92,8 +92,8 @@ impl SelfHostBasicBodyInferencer {
       self.local_generics_require_evidence(declaration)
     } else {
       match self.imported_callable(declaration) {
-        Option::Some(callable) => callable.requires_evidence
-        Option::None => false
+        Some(callable) => callable.requires_evidence
+        None => false
       }
     }
     if !required {
@@ -104,8 +104,8 @@ impl SelfHostBasicBodyInferencer {
       self.collected.generic_parameters_of(declaration)
     } else {
       match search.imports.callable(declaration) {
-        Option::Some(callable) => callable.generic_bounds
-        Option::None => {
+        Some(callable) => callable.generic_bounds
+        None => {
           self_host_assert_compiler_invariant(false, "LNK-504 method obligation declaration missing")
           unreachable()
         }
@@ -131,16 +131,16 @@ impl SelfHostBasicBodyInferencer {
           bound_index => if bound_index < bounds.length {
             let bound = self.instantiate_signature_type(types[bounds.start + bound_index])
             let message = match self.check_inference_trait_obligation(expression, target, bound) {
-              Result::Ok(valid) => if valid || self.defer_expression_check(expression, [target, bound]) {
-                Option::None
+              Ok(valid) => if valid || self.defer_expression_check(expression, [target, bound]) {
+                None
               } else {
-                Option::Some("EVD-214 unsatisfied method trait bound")
+                Some("EVD-214 unsatisfied method trait bound")
               }
-              Result::Err(error) => Option::Some(error)
+              Err(error) => Some(error)
             }
             match message {
-              Option::Some(message) => self.diagnostics.push(SelfHostBodyInferenceDiagnostic::TraitObligationFailure(declaration, expression, message, offset))
-              Option::None => {}
+              Some(message) => self.diagnostics.push(TraitObligationFailure(declaration, expression, message, offset))
+              None => {}
             }
             continue bound_index + 1u32
           } else {
@@ -162,7 +162,7 @@ fn self_host_read_compile_time_solver_type(
   depth: U32,
 ) -> Result<SelfHostCompileTimeType, String> {
   if depth >= 256u32 {
-    return Result::Err("CT-002 type query nesting limit exceeded")
+    return Err("CT-002 type query nesting limit exceeded")
   }
   let index = solver.representative_type(index)
   if index < -1i32 {
@@ -170,30 +170,30 @@ fn self_host_read_compile_time_solver_type(
     return self_host_read_compile_time_resolved_arena(solver.resolved, self_host_body_i32_to_u32(-(index + 2i32)), bindings, depth + 1u32)
   }
   if index < 0i32 || self_host_body_i32_to_u32(index) >= solver.types.length() {
-    return Result::Err("CT-002 query body type is outside its arena")
+    return Err("CT-002 query body type is outside its arena")
   }
   let type_ = solver.types[self_host_body_i32_to_u32(index)]
   let span = match type_ {
-    SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_solver_type(solver, owner, bindings, depth + 1u32) {
-      Result::Ok(owner) => Result::Ok(SelfHostCompileTimeType::MemberProjectionCompileTimeType(owner, operation, selector))
-      Result::Err(error) => Result::Err(error)
+    BodyMemberTypeProjection(owner, operation, selector) => return match self_host_read_compile_time_solver_type(solver, owner, bindings, depth + 1u32) {
+      Ok(owner) => Ok(MemberProjectionCompileTimeType(owner, operation, selector))
+      Err(error) => Err(error)
     }
-    SelfHostBodyTypeTerm::BodyErrorType => return Result::Err("CT-002 erroneous type query argument")
-    SelfHostBodyTypeTerm::BodyVariableType(_) => return Result::Ok(SelfHostCompileTimeType::UnknownCompileTimeType)
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved) => return self_host_read_compile_time_resolved_arena(solver.resolved, resolved, bindings, depth + 1u32)
-    SelfHostBodyTypeTerm::BodyProductType(span) => span
-    SelfHostBodyTypeTerm::BodyAppliedType(_, span) => span
-    SelfHostBodyTypeTerm::BodyFunctionType(span, _) => span
+    BodyErrorType => return Err("CT-002 erroneous type query argument")
+    BodyVariableType(_) => return Ok(UnknownCompileTimeType)
+    BodyResolvedType(resolved) => return self_host_read_compile_time_resolved_arena(solver.resolved, resolved, bindings, depth + 1u32)
+    BodyProductType(span) => span
+    BodyAppliedType(_, span) => span
+    BodyFunctionType(span, _) => span
   }
   if !self_host_array_span_is_valid(span.start, span.length, solver.type_arguments.length()) {
-    return Result::Err("CT-002 query body arguments are outside their arena")
+    return Err("CT-002 query body arguments are outside their arena")
   }
   let fields = self_host_empty_compile_time_types()
   let _ = while 0u32 {
     offset => if offset < span.length {
       match self_host_read_compile_time_solver_type(solver, solver.type_arguments[span.start + offset], bindings, depth + 1u32) {
-        Result::Ok(value) => fields.push(value)
-        Result::Err(error) => return Result::Err(error)
+        Ok(value) => fields.push(value)
+        Err(error) => return Err(error)
       }
       continue offset + 1u32
     } else {
@@ -201,14 +201,14 @@ fn self_host_read_compile_time_solver_type(
     }
   }
   match type_ {
-    SelfHostBodyTypeTerm::BodyProductType(_) => Result::Ok(SelfHostCompileTimeType::ProductCompileTimeType(fields))
-    SelfHostBodyTypeTerm::BodyAppliedType(base, _) => match self_host_read_compile_time_solver_type(solver, base, bindings, depth + 1u32) {
-      Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::AppliedCompileTimeType(value, fields))
-      Result::Err(error) => Result::Err(error)
+    BodyProductType(_) => Ok(ProductCompileTimeType(fields))
+    BodyAppliedType(base, _) => match self_host_read_compile_time_solver_type(solver, base, bindings, depth + 1u32) {
+      Ok(value) => Ok(AppliedCompileTimeType(value, fields))
+      Err(error) => Err(error)
     }
-    SelfHostBodyTypeTerm::BodyFunctionType(_, result) => match self_host_read_compile_time_solver_type(solver, result, bindings, depth + 1u32) {
-      Result::Ok(value) => Result::Ok(SelfHostCompileTimeType::FunctionCompileTimeType(fields, value))
-      Result::Err(error) => Result::Err(error)
+    BodyFunctionType(_, result) => match self_host_read_compile_time_solver_type(solver, result, bindings, depth + 1u32) {
+      Ok(value) => Ok(FunctionCompileTimeType(fields, value))
+      Err(error) => Err(error)
     }
     _ => {
       self_host_assert_compiler_invariant(false, "INV-001 query body type changed kind")

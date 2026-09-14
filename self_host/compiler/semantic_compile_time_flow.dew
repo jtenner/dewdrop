@@ -1,7 +1,7 @@
 open dew.std.array
 
 fn self_host_compile_time_with_flow(source: SelfHostPlannedExpression, flow: SelfHostBodyFlowSummary) -> SelfHostPlannedExpression {
-  SelfHostPlannedExpression::{
+  {
     type_: source.type_
     shape: source.shape
     nominal: source.nominal
@@ -24,8 +24,8 @@ fn self_host_refresh_compile_time_block_flow(module_: SelfHostPlannedModuleLower
   let _ = while length {
     index => if index < source.items.length && flow.falls_through {
       let value = match module_.block_items[source.items.start + index].kind {
-        SelfHostPlannedBlockItemKind::PlannedLetItem(_, _, value) => value
-        SelfHostPlannedBlockItemKind::PlannedExpressionItem(value) => value
+        PlannedLetItem(_, _, value) => value
+        PlannedExpressionItem(value) => value
       }
       flow = self_host_flow_sequence(flow, module_.expressions[value].flow)
       length = index + 1u32
@@ -34,8 +34,8 @@ fn self_host_refresh_compile_time_block_flow(module_: SelfHostPlannedModuleLower
       break self_host_semantic_unit()
     }
   }
-  module_.blocks[block] = SelfHostPlannedBlock::{
-    items: SelfHostHirSpan::{
+  module_.blocks[block] = {
+    items: {
       start: source.items.start
       length: length
     }
@@ -47,10 +47,10 @@ fn self_host_refresh_compile_time_block_flow(module_: SelfHostPlannedModuleLower
 fn self_host_refresh_compile_time_expression_flow(module_: SelfHostPlannedModuleLowering, expression: U32) -> Unit {
   let source = module_.expressions[expression]
   let control_input = match source.kind {
-    SelfHostPlannedExpressionKind::PlannedIfExpression(input, _, _) => input
-    SelfHostPlannedExpressionKind::PlannedMatchExpression(input, _) => input
-    SelfHostPlannedExpressionKind::PlannedWhileExpression(_, input, _) => input
-    SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, input, _) => if operator is SelfHostHirBinaryOperator::LogicalAnd || operator is SelfHostHirBinaryOperator::LogicalOr {
+    PlannedIfExpression(input, _, _) => input
+    PlannedMatchExpression(input, _) => input
+    PlannedWhileExpression(_, input, _) => input
+    PlannedBinaryExpression(operator, input, _) => if operator is LogicalAnd || operator is LogicalOr {
       input
     } else {
       4294967295u32
@@ -60,7 +60,7 @@ fn self_host_refresh_compile_time_expression_flow(module_: SelfHostPlannedModule
   if control_input != 4294967295u32 && !module_.expressions[control_input].flow.falls_through {
     let start = module_.expression_children.length()
     module_.expression_children.push(control_input)
-    let replacement = self_host_compile_time_replace_kind(source, SelfHostPlannedExpressionKind::PlannedEvaluationSequence(SelfHostHirSpan::{
+    let replacement = self_host_compile_time_replace_kind(source, PlannedEvaluationSequence({
       start: start
       length: 1u32
     }))
@@ -68,12 +68,12 @@ fn self_host_refresh_compile_time_expression_flow(module_: SelfHostPlannedModule
     return
   }
   let flow = match source.kind {
-    SelfHostPlannedExpressionKind::PlannedPoisonExpression => return
-    SelfHostPlannedExpressionKind::PlannedDeadExpression => return
-    SelfHostPlannedExpressionKind::PlannedConsumedExpression => return
-    SelfHostPlannedExpressionKind::PlannedLambdaClosure(_) => self_host_flow_falls_through()
-    SelfHostPlannedExpressionKind::PlannedBlockExpression(block) => module_.blocks[block].flow
-    SelfHostPlannedExpressionKind::PlannedIfExpression(condition, block, alternative) => self_host_flow_sequence(
+    PlannedPoisonExpression => return
+    PlannedDeadExpression => return
+    PlannedConsumedExpression => return
+    PlannedLambdaClosure(_) => self_host_flow_falls_through()
+    PlannedBlockExpression(block) => module_.blocks[block].flow
+    PlannedIfExpression(condition, block, alternative) => self_host_flow_sequence(
       module_.expressions[condition].flow,
       self_host_flow_union(module_.blocks[block].flow, if alternative == 4294967295u32 {
         self_host_flow_falls_through()
@@ -81,9 +81,9 @@ fn self_host_refresh_compile_time_expression_flow(module_: SelfHostPlannedModule
         module_.expressions[alternative].flow
       }),
     )
-    SelfHostPlannedExpressionKind::PlannedMatchExpression(initial, arms) => self_host_refresh_compile_time_arm_flow(module_, initial, arms, false)
-    SelfHostPlannedExpressionKind::PlannedWhileExpression(_, initial, arms) => self_host_refresh_compile_time_arm_flow(module_, initial, arms, true)
-    SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right) => if operator is SelfHostHirBinaryOperator::LogicalAnd || operator is SelfHostHirBinaryOperator::LogicalOr {
+    PlannedMatchExpression(initial, arms) => self_host_refresh_compile_time_arm_flow(module_, initial, arms, false)
+    PlannedWhileExpression(_, initial, arms) => self_host_refresh_compile_time_arm_flow(module_, initial, arms, true)
+    PlannedBinaryExpression(operator, left, right) => if operator is LogicalAnd || operator is LogicalOr {
       self_host_flow_sequence(module_.expressions[left].flow, self_host_flow_union(self_host_flow_falls_through(), module_.expressions[right].flow))
     } else {
       self_host_refresh_compile_time_strict_flow(module_, expression)
@@ -99,19 +99,19 @@ fn self_host_refresh_compile_time_expression_flow(module_: SelfHostPlannedModule
 
 fn self_host_refresh_compile_time_strict_flow(module_: SelfHostPlannedModuleLowering, expression: U32) -> Unit {
   let source = module_.expressions[expression]
-  let edges = [SelfHostCompileTimeReachTask::BlockCompileTimeReach(0u32)]
+  let edges = [BlockCompileTimeReach(0u32)]
   edges.clear()
   // A constructor's namespace is a semantic target, not an evaluation. In
   // particular a consumed qualified variant target must not expose its type
   // name as a runtime receiver when building a non-returning prefix.
   match source.kind {
-    SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => self_host_compile_time_push_fields(module_, fields, edges)
-    SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, arguments, _) => if source.selection is SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _) {
+    PlannedConstruct(_, fields, _) => self_host_compile_time_push_fields(module_, fields, edges)
+    PlannedDirectCall(_, _, arguments, _) => if source.selection is VariantConstructionBasicExpressionSelection(_, _, _) {
       self_host_compile_time_push_children(module_, arguments, edges)
     } else {
       self_host_compile_time_push_expression(module_, source.kind, edges)
     }
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, arguments) => if source.selection is SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _) {
+    PlannedUnresolvedCall(_, arguments) => if source.selection is VariantConstructionBasicExpressionSelection(_, _, _) {
       self_host_compile_time_push_children(module_, arguments, edges)
     } else {
       self_host_compile_time_push_expression(module_, source.kind, edges)
@@ -122,15 +122,15 @@ fn self_host_refresh_compile_time_strict_flow(module_: SelfHostPlannedModuleLowe
   let mut flow = self_host_flow_falls_through()
   for edge in edges {
     match edge {
-      SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(input) => if input != 4294967295u32 && flow.falls_through {
+      ExpressionCompileTimeReach(input) => if input != 4294967295u32 && flow.falls_through {
         let mut child = input
         let mut runtime = true
         match module_.expressions[child].kind {
-          SelfHostPlannedExpressionKind::PlannedConsumedExpression => {
+          PlannedConsumedExpression => {
             child = module_.expressions[child].member_base
             runtime = child != 4294967295u32
           }
-          SelfHostPlannedExpressionKind::PlannedFunctionReference(_) => {
+          PlannedFunctionReference(_) => {
             runtime = false
           }
           _ => {}
@@ -144,7 +144,7 @@ fn self_host_refresh_compile_time_strict_flow(module_: SelfHostPlannedModuleLowe
     }
   }
   if !flow.falls_through {
-    if source.kind is SelfHostPlannedExpressionKind::PlannedEvaluationSequence(_) {
+    if source.kind is PlannedEvaluationSequence(_) {
       module_.expressions[expression] = self_host_compile_time_with_flow(source, flow)
       return
     }
@@ -152,7 +152,7 @@ fn self_host_refresh_compile_time_strict_flow(module_: SelfHostPlannedModuleLowe
     for value in values {
       module_.expression_children.push(value)
     }
-    let replacement = self_host_compile_time_replace_kind(source, SelfHostPlannedExpressionKind::PlannedEvaluationSequence(SelfHostHirSpan::{
+    let replacement = self_host_compile_time_replace_kind(source, PlannedEvaluationSequence({
       start: start
       length: values.length()
     }))
@@ -160,10 +160,10 @@ fn self_host_refresh_compile_time_strict_flow(module_: SelfHostPlannedModuleLowe
     return
   }
   let terminal = match source.kind {
-    SelfHostPlannedExpressionKind::PlannedReturnExpression(_) => self_host_flow_returns()
-    SelfHostPlannedExpressionKind::PlannedBreakExpression(_, _) => self_host_flow_breaks()
-    SelfHostPlannedExpressionKind::PlannedContinueExpression(_, _) => self_host_flow_continues()
-    _ => if source.shape is SelfHostPlannedValueShape::NeverPlannedValueShape {
+    PlannedReturnExpression(_) => self_host_flow_returns()
+    PlannedBreakExpression(_, _) => self_host_flow_breaks()
+    PlannedContinueExpression(_, _) => self_host_flow_continues()
+    _ => if source.shape is NeverPlannedValueShape {
       self_host_flow_diverges()
     } else {
       self_host_flow_falls_through()
@@ -173,7 +173,7 @@ fn self_host_refresh_compile_time_strict_flow(module_: SelfHostPlannedModuleLowe
 }
 
 fn self_host_refresh_compile_time_arm_flow(module_: SelfHostPlannedModuleLowering, initial: U32, arms: SelfHostHirSpan, loop_: Bool) -> SelfHostBodyFlowSummary {
-  let mut branches = SelfHostBodyFlowSummary::{
+  let mut branches = {
     falls_through: false
     returns: false
     breaks: false
@@ -191,7 +191,7 @@ fn self_host_refresh_compile_time_arm_flow(module_: SelfHostPlannedModuleLowerin
         module_.expressions[arm.guard_condition].flow
       }
       let flow = self_host_flow_sequence(guard, module_.expressions[arm.body].flow)
-      module_.pattern_arms[id] = SelfHostPlannedPatternArm::{
+      module_.pattern_arms[id] = {
         pattern: arm.pattern
         guard_condition: arm.guard_condition
         body: arm.body
@@ -205,7 +205,7 @@ fn self_host_refresh_compile_time_arm_flow(module_: SelfHostPlannedModuleLowerin
     }
   }
   if loop_ {
-    branches = SelfHostBodyFlowSummary::{
+    branches = {
       falls_through: branches.breaks
       returns: branches.returns
       breaks: false
@@ -218,15 +218,15 @@ fn self_host_refresh_compile_time_arm_flow(module_: SelfHostPlannedModuleLowerin
 
 fn self_host_compile_time_root_flow(module_: SelfHostPlannedModuleLowering, root: SelfHostHirBodyRoot) -> SelfHostBodyFlowSummary {
   match root {
-    SelfHostHirBodyRoot::ExpressionBodyRoot(value) => module_.expressions[value].flow
-    SelfHostHirBodyRoot::BlockBodyRoot(block) => module_.blocks[block].flow
+    ExpressionBodyRoot(value) => module_.expressions[value].flow
+    BlockBodyRoot(block) => module_.blocks[block].flow
   }
 }
 
 fn self_host_refresh_compile_time_body_flow(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering) -> Unit {
   let index = self_host_semantic_id_local(body.body)
   self_host_assert_array_index(index, module_.bodies.length(), "ARN-104 refreshed body flow")
-  module_.bodies[index] = SelfHostPlannedBodyLowering::{
+  module_.bodies[index] = {
     body: body.body
     declaration: body.declaration
     kind: body.kind
@@ -247,7 +247,7 @@ fn self_host_refresh_compile_time_body_flow(module_: SelfHostPlannedModuleLoweri
     index => if index < module_.lambdas.length() {
       let lambda = module_.lambdas[index]
       if lambda.root_body == body.body && self_host_compile_time_lambda_is_live(module_, lambda.lambda) {
-        module_.lambdas[index] = SelfHostPlannedLambdaLowering::{
+        module_.lambdas[index] = {
           lambda: lambda.lambda
           root_body: lambda.root_body
           parameter_count: lambda.parameter_count

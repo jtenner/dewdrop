@@ -1318,3 +1318,40 @@ test "program emitter includes unreferenced aggregate type groups" {
   let module_ = emit_starshine_program_module(lowering, link).unwrap()
   assert_eq(@validate.validate_module(module_), Ok(()))
 }
+
+///|
+#skip("compiler integration case; run tools/test-integration-native.sh")
+test "short inference imported callbacks and anonymous struct values emit" {
+  let program = @semantic.collect_program_manifest(
+    2480UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"import app.library as @lib\nfn apply(callback: fn(I32) -> @lib.Reply<I32>) -> @lib.Reply<I32> {\n  callback(40i32)\n}\nfn pair() -> @lib.Pair {\n  {\n    second: 2i32\n    first: apply(Ok)\n  }\n}\npub fn main() -> I32 {\n  match pair() {\n    {\n      second: right\n      first: Ok(left)\n    } => left + right\n  }\n}\n",
+        ),
+      ]),
+      @semantic.ManifestModule::new("app.library", [
+        @semantic.ManifestFile::new(
+          "library.dew", b"pub enum Reply<t> {\n  Ok(t)\n}\npub struct Pair {\n  first: Reply<I32>\n  second: I32\n}\n",
+        ),
+      ]),
+    ]),
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  for module_ in program.modules {
+    assert_eq(module_.diagnostics, [])
+  }
+  assert_eq(analyzed.frozen.import_diagnostics, [])
+  for module_ in analyzed.modules {
+    assert_eq(module_.names.diagnostics, [])
+    assert_eq(module_.inferred.diagnostics, [])
+  }
+  for interface_ in analyzed.frozen.interfaces {
+    assert_eq(interface_.resolved_types.diagnostics, [])
+  }
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  assert_eq(link.diagnostics, [])
+  let module_ = emit_starshine_program_module(lowering, link).unwrap()
+  assert_eq(@validate.validate_module(module_), Ok(()))
+}

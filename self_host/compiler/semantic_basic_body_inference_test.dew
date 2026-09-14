@@ -34,7 +34,7 @@ fn self_host_assert_basic_primitive(
   message: String,
 ) -> Unit {
   match body.type_term(type_) {
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => assert(
+    BodyResolvedType(resolved_type) => assert(
       resolved_type == resolved.primitive(primitive),
       message,
     )
@@ -56,7 +56,7 @@ test "basic body inference resolves literals parameters lets and returns" {
     body,
     resolved,
     body.root_type,
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "root I32",
   )
   assert(body.local_types.length() == 2u32, "parameter and let locals")
@@ -64,7 +64,7 @@ test "basic body inference resolves literals parameters lets and returns" {
     body,
     resolved,
     body.local_types[1u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "let I32",
   )
 }
@@ -72,7 +72,7 @@ test "basic body inference resolves literals parameters lets and returns" {
 test "loop item fields keep their exact declaration identity" {
   let (collected, resolved, names, inferred) = self_host_basic_infer_source(
     811u64,
-    b"struct Recipe {\n  declaration: U64\n  builtin_name: Bytes\n}\nfn find(recipes: Array<Recipe>, declaration: U64) -> Option<Bytes> {\n  for recipe in recipes {\n    if recipe.declaration == declaration {\n      return Option::Some(recipe.builtin_name)\n    }\n  }\n  Option::None\n}\n",
+    b"struct Recipe {\n  declaration: U64\n  builtin_name: Bytes\n}\nfn find(recipes: Array<Recipe>, declaration: U64) -> Option<Bytes> {\n  for recipe in recipes {\n    if recipe.declaration == declaration {\n      return Some(recipe.builtin_name)\n    }\n  }\n  None\n}\nenum Option<t> {\n  Some(t)\n  None\n}\nstruct Array<t> {\n  item: t\n}\nstruct ArrayIter<t> {\n  item: t\n  mut done: Bool\n}\nimpl<t> Array<t> {\n  fn iter(self) -> ArrayIter<t> {\n    {\n      item: self.item\n      done: false\n    }\n  }\n}\nimpl<t> ArrayIter<t> {\n  fn next(self) -> Option<t> {\n    if self.done {\n      None\n    } else {\n      self.done = true\n      Some(self.item)\n    }\n  }\n}\n",
   )
   assert(collected.diagnostics.length() == 0u32, "collection diagnostics")
   assert(resolved.diagnostics.length() == 0u32, "type diagnostics")
@@ -93,7 +93,7 @@ test "loop item fields keep their exact declaration identity" {
   let mut found_builtin_name = false
   for selection in body.expression_selections {
     match selection {
-      SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(
+      FieldBasicExpressionSelection(
         field,
         _,
         owner,
@@ -132,7 +132,7 @@ test "basic body inference handles products destructuring and branches" {
     body,
     resolved,
     body.root_type,
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "branch result I32",
   )
 }
@@ -149,7 +149,7 @@ test "basic body inference constrains function-value calls" {
       body,
       resolved,
       body.root_type,
-      SelfHostPrimitiveType::I32Type,
+      I32Type,
       "call result I32",
     )
   }
@@ -164,7 +164,7 @@ test "basic body inference selects non-generic direct calls" {
   let body = inferred.bodies[1u32]
   assert(body.diagnostics.length() == 0u32, "direct call diagnostics")
   let call = match hir_body.root {
-    SelfHostHirBodyRoot::BlockBodyRoot(block) => {
+    BlockBodyRoot(block) => {
       let item = collected.block_items[collected.blocks[block].items.start]
       if self_host_hir_block_item_is_let(item) {
         4294967295u32
@@ -172,10 +172,10 @@ test "basic body inference selects non-generic direct calls" {
         item.value
       }
     }
-    SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => expression
+    ExpressionBodyRoot(expression) => expression
   }
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, type_arguments) => {
+    SelectedBasicCallTarget(declaration, type_arguments) => {
       assert(
         declaration == collected.callables[0u32].declaration,
         "selected inc",
@@ -188,7 +188,7 @@ test "basic body inference selects non-generic direct calls" {
     body,
     resolved,
     body.root_type,
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "direct call result",
   )
 }
@@ -205,14 +205,14 @@ test "basic body inference instantiates generic direct calls freshly" {
     body,
     resolved,
     body.call_type_arguments[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "first generic call argument",
   )
   self_host_assert_basic_primitive(
     body,
     resolved,
     body.call_type_arguments[1u32],
-    SelfHostPrimitiveType::BoolType,
+    BoolType,
     "second generic call argument",
   )
 }
@@ -229,7 +229,7 @@ test "basic body inference instantiates applied signatures" {
     body,
     resolved,
     body.call_type_arguments[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "application generic I32",
   )
 }
@@ -246,7 +246,7 @@ test "basic body inference instantiates product signatures" {
     body,
     resolved,
     body.call_type_arguments[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "product generic I32",
   )
 }
@@ -263,7 +263,7 @@ test "basic body inference instantiates function signatures" {
     body,
     resolved,
     body.call_type_arguments[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "function generic I32",
   )
 }
@@ -279,7 +279,7 @@ test "basic body inference reports direct call arity mismatches" {
   let _ = while index {
     current => if current < self_host_basic_inference_diagnostic_count(body) {
       match self_host_basic_inference_diagnostic_at(body, current) {
-        SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, _) => {
+        CallArgumentCountMismatch(_, _, _, _, _) => {
           arity = arity + 1u32
         }
         _ => {}
@@ -300,18 +300,18 @@ test "basic body inference constrains typed array literals" {
   let body = inferred.bodies[0u32]
   assert(body.diagnostics.length() == 0u32, "array diagnostics")
   match body.type_term(body.root_type) {
-    SelfHostBodyTypeTerm::BodyAppliedType(_, arguments) => {
+    BodyAppliedType(_, arguments) => {
       assert(arguments.length == 1u32, "array argument count")
       self_host_assert_basic_primitive(
         body,
         resolved,
         body.type_arguments[arguments.start],
-        SelfHostPrimitiveType::I32Type,
+        I32Type,
         "array element I32",
       )
     }
-    SelfHostBodyTypeTerm::BodyResolvedType(type_) => match resolved.types[type_] {
-      SelfHostResolvedType::AppliedType(_, arguments) => assert(
+    BodyResolvedType(type_) => match resolved.types[type_] {
+      AppliedType(_, arguments) => assert(
         arguments.length == 1u32,
         "resolved array argument count",
       )
@@ -333,7 +333,7 @@ test "basic body inference constrains match patterns and guards" {
     body,
     resolved,
     body.root_type,
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "match result I32",
   )
 }
@@ -350,14 +350,14 @@ test "basic body inference constrains functional loop state and result" {
     body,
     resolved,
     body.control_state_types[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "loop state I32",
   )
   self_host_assert_basic_primitive(
     body,
     resolved,
     body.control_result_types[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "loop result I32",
   )
 }
@@ -420,7 +420,7 @@ test "generic signature instantiation remains iterative at depth 1024" {
     body,
     resolved,
     body.call_type_arguments[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "deep generic I32",
   )
 }
@@ -464,7 +464,7 @@ test "basic body inference remains iterative for 1024 sequential locals" {
     body,
     resolved,
     body.root_type,
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "deep root I32",
   )
 }
@@ -482,13 +482,13 @@ test "basic body inference reports mismatches bounds and mutability" {
   let _ = while diagnostic_index {
     current => if current < self_host_basic_inference_diagnostic_count(body) {
       match self_host_basic_inference_diagnostic_at(body, current) {
-        SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => {
+        BodyConstraintDiagnostic(_) => {
           mismatch = mismatch + 1u32
         }
-        SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, _) => {
+        ImmutableAssignmentTarget(_, _) => {
           immutable = immutable + 1u32
         }
-        SelfHostBodyInferenceDiagnostic::NumericLiteralOutOfRange(_, _, _) => {
+        NumericLiteralOutOfRange(_, _, _) => {
           range = range + 1u32
         }
         _ => {}
@@ -513,14 +513,14 @@ fn self_host_assert_capture_free_lambda(
     body,
     resolved,
     body.root_type,
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "lambda result I32",
   )
   self_host_assert_basic_primitive(
     body,
     resolved,
     body.local_types[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "lambda parameter I32",
   )
 }
@@ -545,7 +545,7 @@ fn self_host_assert_lambda_capture_type(
     body,
     resolved,
     body.capture_types[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "capture I32",
   )
 }

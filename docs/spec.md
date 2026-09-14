@@ -825,6 +825,61 @@ The final expression item is a block's value; earlier expression values may be d
 
 Basic inference initially defers members, qualification, constructors, objects, indexing, matches, and functional loops. Subsequent immutable inference phases now resolve every listed form, including indexing and indexed setting through the ambient `IndexedGet<key, value>` and `IndexedSet<key, value>` traits; failed boundaries poison their outer expression and coalesce dependent diagnostics. Final zonking detects unresolved supported expressions and locals. Reachability compaction discards solver-only variables and applications before body fragments merge. A worker-local solver is reset and reused across sequential jobs, preserving capacity without sharing mutable state between workers. Full details, optimization history, and benchmarks are recorded in `docs/research/basic-body-type-inference.md`.
 
+### 3.8.1 Contextual constructor names
+
+Local and imported enums participate in short constructor lookup. An exact
+`import app.reply as @reply` registers public constructor identities without
+opening the type name. With a result type of `@reply.Result<I32, String>`, a
+function can return `Ok(value)` or `Err(message)`. The same rule applies to
+unit, tuple, and named-field cases in expressions and patterns. Transparent
+aliases use their normalized owner.
+
+Ordinary lexical values and functions retain priority in expressions. Short
+constructor names form a separate candidate set. Pattern bindings reserve
+known constructor names; an expected enum selects its own case, including
+when a trait has the same short name. A constructor used with an unrelated
+subject type is an error, not a new binding or a catch-all.
+
+The solver carries context from parameters, returns, assignments, enclosing
+constructors, fields, branches, arrays, method results, and pattern subjects.
+Unresolved choices are retried with member, method, and index/operator
+constraints. Every alternative pattern receives its subject type. When no
+owner is known, enum candidates can be rejected by payload kind, arity, field
+names, and payload types under rollback snapshots. More than one viable
+candidate remains an error; source order does not break ties.
+
+A struct value may omit its target when context supplies the exact nominal
+type: `{ value: item }` (with the usual field newlines). A struct pattern may
+likewise omit its target: `{ value: item ... }`. Field identities and storage
+order remain those of the selected declaration. Field names alone do not
+select a nominal struct. A local value with no type context still needs an
+explicit construction target. Dew's local-let grammar does not add a type
+annotation as part of this change.
+
+Object-valued match and functional-loop arms retain the one-token grammar:
+write `Case => ({ ... })`. A direct brace after `=>` remains a block. Nested
+short unit cases such as `Primitive(CompileOnly)` test the selected case;
+optimizers and emitters must not treat their binding-shaped syntax as a
+catch-all.
+
+A tuple case can be a function value when a function type is supplied, such
+as `apply(Ok)`. Its parameter and result types select the enum and generic
+arguments. Collection creates an ordinary private wrapper for each demanded
+case; frozen variant metadata carries its exact callable identity to importers.
+The wrapper follows normal inference, specialization, and emission. It adds
+no runtime name lookup and is not a public export.
+
+An unresolved static call such as `empty()` can use the expected result owner
+to select an ordinary implementation member. Instance methods are excluded
+from this form. Lexical functions keep priority, and signature, generic, and
+bound checks remain the same as qualified calls.
+
+Constructor indexes are shared across body jobs for one module. Exact
+constructor, field, function, and generic identities are frozen before physical
+planning. Interface and body cache provenance includes the new semantics;
+producer cache keys also include demanded constructor wrappers. Codecs remain
+version 1. The compiler driver reports source errors before physical planning.
+
 ### 3.9 Direct, generic, and overloaded calls
 
 A call whose target is a module value name reads the frozen source-ordered value binding. One callable declaration selects directly. Function types are structurally resolved. Unambiguous non-generic local/imported functions may be selected as values. Non-generic overload sets are deferred until argument, return, assignment, or other constraints provide a fully determined structural function type; exact signature matching must leave one candidate. Calls through function-typed locals/module values are checked against their structural parameter and result types. Direct named calls retain the direct Wasm signature. First-class function values use the closure ABI below, with structurally coalesced direct and environment-first entry signatures across program links. Field and qualified call targets defer to the later implementation/member phase described in Section 3.14.

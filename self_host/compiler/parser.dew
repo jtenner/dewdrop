@@ -8,19 +8,19 @@ fn self_host_parser_u64_to_i32(value: U64) -> I32 {
 
 fn self_host_smoke_body_value(body: SelfHostBlock) -> Result<I32, String> {
   if body.items.length() != 1u32 {
-    Result::Err("smoke parser expected one positive I32 literal body")
+    Err("smoke parser expected one positive I32 literal body")
   } else {
     let item = body.items.get_unchecked(0u32)
     if !self_host_u32_equal(item.kind, 3u32) {
-      Result::Err("smoke parser expected one positive I32 literal body")
+      Err("smoke parser expected one positive I32 literal body")
     } else {
       match item.value {
-        SelfHostExpr::I32Expr(value, _) => if value <= 2147483647u64 {
-          Result::Ok(self_host_parser_u64_to_i32(value))
+        I32Expr(value, _) => if value <= 2147483647u64 {
+          Ok(self_host_parser_u64_to_i32(value))
         } else {
-          Result::Err("smoke parser positive I32 literal is out of range")
+          Err("smoke parser positive I32 literal is out of range")
         }
-        _ => Result::Err("smoke parser expected one positive I32 literal body")
+        _ => Err("smoke parser expected one positive I32 literal body")
       }
     }
   }
@@ -29,37 +29,37 @@ fn self_host_smoke_body_value(body: SelfHostBlock) -> Result<I32, String> {
 fn self_host_smoke_function_value(
   function: SelfHostFunctionDeclaration,
 ) -> Result<I32, String> {
-  if !(function.visibility is SelfHostDeclarationVisibility::Public) {
-    return Result::Err("smoke parser expected public main")
+  if !(function.visibility is Public) {
+    return Err("smoke parser expected public main")
   } else if !function.name.equals("main") {
-    return Result::Err("smoke parser expected main")
+    return Err("smoke parser expected main")
   } else if function.type_parameters.length() != 0u32 {
-    return Result::Err("smoke parser main must not be generic")
-  } else if function.receiver is Option::Some(_) {
-    return Result::Err("smoke parser main must not have a receiver")
+    return Err("smoke parser main must not be generic")
+  } else if function.receiver is Some(_) {
+    return Err("smoke parser main must not have a receiver")
   } else if function.parameters.length() != 0u32 {
-    return Result::Err("smoke parser main must not have parameters")
+    return Err("smoke parser main must not have parameters")
   } else {
   }
   match function.return_type {
-    SelfHostTypeExpr::NamedType(name, _) if name.equals("I32") =>
+    NamedType(name, _) if name.equals("I32") =>
       self_host_smoke_body_value(function.body)
-    _ => Result::Err("smoke parser expected I32 return type")
+    _ => Err("smoke parser expected I32 return type")
   }
 }
 
 pub fn parse_self_host_i32_source(source: Bytes) -> Result<I32, String> {
   let module_ = self_host_parse_module(source)
   if module_.events.length() != 1u32 {
-    Result::Err("smoke parser requires one complete main function")
+    Err("smoke parser requires one complete main function")
   } else {
     match module_.events.get_unchecked(0u32) {
-      SelfHostParseEvent::Diagnostic(_, _, _, _, _, _) =>
-        Result::Err("smoke parser received a parser diagnostic")
-      SelfHostParseEvent::Declaration(declaration, _) => match declaration {
-        SelfHostDeclaration::Function(function) =>
+      Diagnostic(_, _, _, _, _, _) =>
+        Err("smoke parser received a parser diagnostic")
+      Declaration(declaration, _) => match declaration {
+        Function(function) =>
           self_host_smoke_function_value(function)
-        _ => Result::Err("smoke parser expected one function declaration")
+        _ => Err("smoke parser expected one function declaration")
       }
     }
   }

@@ -33,17 +33,17 @@ fn self_host_emit_reference_pattern_alternatives(
       let predicate = StarshineFfi.ffi_ffi_bridge_instructions_new()
       let bindings = StarshineFfi.ffi_ffi_bridge_instructions_new()
       let trivial = match pattern.source {
-        SelfHostHirPattern::WildcardPattern(_) => true
-        SelfHostHirPattern::ProductPattern(children, _) => children.length == 0u32
+        WildcardPattern(_) => true
+        ProductPattern(children, _) => children.length == 0u32
         _ => false
       }
-      if trivial || pattern.reference is SelfHostBodyPatternReference::PatternBindingReference(_) {
+      if trivial || pattern.reference is PatternBindingReference(_) {
         StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(1i32)))
         match pattern.reference {
-          SelfHostBodyPatternReference::PatternBindingReference(local) => if !(pattern.shape is SelfHostPlannedValueShape::UnitPlannedValueShape) {
+          PatternBindingReference(local) => if !(pattern.shape is UnitPlannedValueShape) {
             let slot = match self_host_linked_i32_local_slot(canonical, module_, body, local) {
-              Option::Some(value) => value
-              Option::None => return Option::Some("alternative binding has no physical local")
+              Some(value) => value
+              None => return Some("alternative binding has no physical local")
             }
             self_host_emit_pattern_path(link, scratch, [], bindings)
             StarshineFfi.ffi_ffi_bridge_instructions_push(bindings, StarshineFfi.ffi_lib_Instruction_local_set(StarshineFfi.ffi_lib_LocalIdx_new(self_host_u32_to_i32(slot))))
@@ -52,28 +52,28 @@ fn self_host_emit_reference_pattern_alternatives(
         }
       } else {
         let type_index = match self_host_pattern_nested_type(link, module_, pattern) {
-          Option::Some(value) => value
-          Option::None => return Option::Some("alternative has no exact reference pattern type")
+          Some(value) => value
+          None => return Some("alternative has no exact reference pattern type")
         }
         self_host_emit_pattern_path(link, scratch, [], predicate)
         StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_ffi_bridge_instruction_ref_test_nominal(self_host_u32_to_i32(type_index)))
         match self_host_emit_nested_pattern_tests(link, canonical, module_, pattern, type_index, scratch, [], predicate) {
-          Option::Some(error) => return Option::Some(error)
-          Option::None => {}
+          Some(error) => return Some(error)
+          None => {}
         }
         match self_host_emit_nested_pattern_bindings(link, module_, body, canonical, pattern, type_index, scratch, [], bindings, true) {
-          Option::Some(error) => return Option::Some(error)
-          Option::None => {}
+          Some(error) => return Some(error)
+          None => {}
         }
       }
       StarshineFfi.ffi_ffi_bridge_instructions_push(bindings, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(1i32)))
-      StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_ffi_bridge_instruction_if(self_host_linked_block_type(SelfHostPlannedValueShape::I32PlannedValueShape), bindings, tail))
+      StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_ffi_bridge_instruction_if(self_host_linked_block_type(I32PlannedValueShape), bindings, tail))
       tail = predicate
       continue index
     } else {
       break self_host_semantic_unit()
     }
   }
-  StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_block(self_host_linked_block_type(SelfHostPlannedValueShape::I32PlannedValueShape), StarshineFfi.ffi_lib_Expr_new(tail)))
-  Option::None
+  StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_block(self_host_linked_block_type(I32PlannedValueShape), StarshineFfi.ffi_lib_Expr_new(tail)))
+  None
 }

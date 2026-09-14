@@ -51,17 +51,17 @@ fn self_host_function_signature_scopes(link: SelfHostPlannedProgramWasmGCLink) -
     let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, function_.module_index, function_.specialization)
     let fragment = link.fragments.modules[function_.module_index].functions[function_.fragment_index]
     let body = match fragment.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(id) => {
+      PlannedWasmDefinedFunction(id) => {
         let found = self_host_linked_i32_body(module_, id)
-        if found is Option::None {
+        if found is None {
           self_host_call_read_failure(module_.module_id, fragment.declaration, id,
             4294967295u32, 610u32, 1u64, 0u64, 0u64)
         }
         found
       }
-      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(id) => {
+      PlannedWasmDefinedLambdaFunction(id) => {
         let found = self_host_linked_lambda_body(module_, id)
-        if found is Option::None {
+        if found is None {
           // A missing lambda cannot supply a root body. Keep that absence
           // explicit; the fragment still supplies its parent declaration.
           self_host_call_read_failure(module_.module_id, fragment.declaration,
@@ -69,30 +69,30 @@ fn self_host_function_signature_scopes(link: SelfHostPlannedProgramWasmGCLink) -
         }
         found
       }
-      _ => Option::None
+      _ => None
     }
     match body {
-      Option::Some(value) => scopes.push(SelfHostFunctionSignatureScope::{
+      Some(value) => scopes.push({
         module_index: function_.module_index
         specialization: function_.specialization
         declaration: fragment.declaration
         body: value.body
         expressions: value.expressions
       })
-      Option::None => {}
+      None => {}
     }
   }
   for initializer in link.initializers {
     let module_ = self_host_linked_lowering_module_at(link, initializer.module_index)
     match self_host_linked_i32_body(module_, initializer.body) {
-      Option::Some(value) => scopes.push(SelfHostFunctionSignatureScope::{
+      Some(value) => scopes.push({
         module_index: initializer.module_index
         specialization: 4294967295u32
         declaration: value.declaration
         body: value.body
         expressions: value.expressions
       })
-      Option::None => {
+      None => {
         self_host_call_read_failure(module_.module_id, initializer.declaration, initializer.body,
           4294967295u32, 610u32, 1u64, 0u64, 1u64)
       }
@@ -106,9 +106,9 @@ fn self_host_linked_append_function_value_signatures(link: SelfHostPlannedProgra
   for scope in self_host_function_signature_scopes(link) {
     let module_ = self_host_program_function_lowering(link.fragments.specialization.lowering, scope.module_index, scope.specialization)
     let request = if scope.specialization < link.fragments.specialization.requests.length() {
-      Option::Some(link.fragments.specialization.requests[scope.specialization])
+      Some(link.fragments.specialization.requests[scope.specialization])
     } else {
-      Option::None
+      None
     }
     if !self_host_array_span_is_valid(scope.expressions.start, scope.expressions.length, module_.expressions.length()) {
       self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
@@ -120,7 +120,7 @@ fn self_host_linked_append_function_value_signatures(link: SelfHostPlannedProgra
         let expression_id = scope.expressions.start + relative
         let expression = module_.expressions[expression_id]
         match expression.kind {
-          SelfHostPlannedExpressionKind::PlannedFunctionValueCall(target, _, _) => if self_host_linked_function_value_signature(signatures, module_.module_id, scope.specialization, expression_id) is Option::None {
+          PlannedFunctionValueCall(target, _, _) => if self_host_linked_function_value_signature(signatures, module_.module_id, scope.specialization, expression_id) is None {
             if target < scope.expressions.start || target - scope.expressions.start >= scope.expressions.length {
               self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
                 expression_id, 102u32, u32_into_u64(scope.expressions.length),
@@ -135,8 +135,8 @@ fn self_host_linked_append_function_value_signatures(link: SelfHostPlannedProgra
               module_, request, shapes, module_.expressions[target].type_, scope, expression_id,
               direct_parameters, entry_parameters, direct_results, entry_results,
             ) {
-              Option::Some(value) => value
-              Option::None => self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
+              Some(value) => value
+              None => self_host_call_read_failure(module_.module_id, scope.declaration, scope.body,
                 expression_id, 704u32, 1u64, 0u64, u32_into_u64(target))
             }
             // A diverging evaluation never reaches this call. Otherwise its
@@ -159,7 +159,7 @@ fn self_host_linked_append_function_value_signatures(link: SelfHostPlannedProgra
             let direct_type = self_host_linked_function_value_type_base(link) + signatures.length() * 2u32
             self_host_linked_append_function_value_type(rec_types, direct_parameters, direct_results)
             self_host_linked_append_function_value_type(rec_types, entry_parameters, entry_results)
-            signatures.push(SelfHostLinkedFunctionValueSignature::{
+            signatures.push({
               module_id: module_.module_id
               specialization: scope.specialization
               expression: expression_id
@@ -176,7 +176,7 @@ fn self_host_linked_append_function_value_signatures(link: SelfHostPlannedProgra
       }
     }
   }
-  Option::None
+  None
 }
 
 fn self_host_linked_function_value_signature(
@@ -189,10 +189,10 @@ fn self_host_linked_function_value_signature(
     if self_host_u64_equal(signature.module_id, module_id) &&
       self_host_u32_equal(signature.specialization, specialization) &&
       self_host_u32_equal(signature.expression, expression) {
-      return Option::Some(signature)
+      return Some(signature)
     }
   }
-  Option::None
+  None
 }
 
 fn self_host_linked_append_resolved_function_signature(
@@ -208,10 +208,10 @@ fn self_host_linked_append_resolved_function_signature(
   entry_results: StarshineValueTypes,
 ) -> Option<SelfHostPlannedValueShape> {
   if resolved_type >= module_.resolved_types.types.length() {
-    return Option::None
+    return None
   }
   match module_.resolved_types.types[resolved_type] {
-    SelfHostResolvedType::FunctionType(parameter_types, result_type) => {
+    FunctionType(parameter_types, result_type) => {
       self_host_signature_parameter_span(module_, scope, expression, parameter_types, module_.resolved_types.type_arguments.length())
       while 0u32 {
         current if current < parameter_types.length => {
@@ -224,10 +224,10 @@ fn self_host_linked_append_resolved_function_signature(
         _ => break ()
       }
       let encoded = self_host_signature_resolved_encoding(module_, scope, expression, result_type, 4294967296u64)
-      Option::Some(self_host_linked_append_signature_value(module_, request, shapes, encoded, scope, expression,
+      Some(self_host_linked_append_signature_value(module_, request, shapes, encoded, scope, expression,
         4294967296u64, direct_results, entry_results))
     }
-    _ => Option::None
+    _ => None
   }
 }
 
@@ -249,17 +249,17 @@ fn self_host_linked_append_body_function_signature(
       direct_parameters, entry_parameters, direct_results, entry_results)
   }
   if body_type < 0i32 {
-    return Option::None
+    return None
   }
   let type_index = self_host_i32_to_u32(body_type)
   if type_index >= module_.inferred.types.length() {
-    return Option::None
+    return None
   }
   match module_.inferred.types[type_index] {
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => self_host_linked_append_resolved_function_signature(
+    BodyResolvedType(resolved_type) => self_host_linked_append_resolved_function_signature(
       module_, request, shapes, resolved_type, scope, expression,
       direct_parameters, entry_parameters, direct_results, entry_results)
-    SelfHostBodyTypeTerm::BodyFunctionType(parameter_types, result_type) => {
+    BodyFunctionType(parameter_types, result_type) => {
       self_host_signature_parameter_span(module_, scope, expression, parameter_types, module_.inferred.type_arguments.length())
       while 0u32 {
         current if current < parameter_types.length => {
@@ -270,10 +270,10 @@ fn self_host_linked_append_body_function_signature(
         }
         _ => break ()
       }
-      Option::Some(self_host_linked_append_signature_value(module_, request, shapes, result_type, scope, expression,
+      Some(self_host_linked_append_signature_value(module_, request, shapes, result_type, scope, expression,
         4294967296u64, direct_results, entry_results))
     }
-    _ => Option::None
+    _ => None
   }
 }
 

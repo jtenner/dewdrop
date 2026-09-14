@@ -5,8 +5,8 @@ fn self_host_named_fragment_shape_test(shape: SelfHostPlannedValueShape) -> Unit
   assert(callable.parameters.length == 1u32, "one valid named parameter")
   let slot = callable.parameters.start
   let source = module_.functions.parameters[slot]
-  assert(source.shape is SelfHostPlannedValueShape::I64PlannedValueShape, "valid scalar before mutation")
-  module_.functions.parameters[slot] = SelfHostPlannedParameter::{
+  assert(source.shape is I64PlannedValueShape, "valid scalar before mutation")
+  module_.functions.parameters[slot] = {
     parameter: source.parameter
     declaration: source.declaration
     index: source.index
@@ -17,25 +17,25 @@ fn self_host_named_fragment_shape_test(shape: SelfHostPlannedValueShape) -> Unit
   }
   let functions = []
   let values = []
-  self_host_wasmgc_append_function(module_, callable, b"", true, false, Option::None, 4294967295u32, [], functions, values)
-  if shape is SelfHostPlannedValueShape::I64PlannedValueShape {
+  self_host_wasmgc_append_function(module_, callable, b"", true, false, None, 4294967295u32, [], functions, values)
+  if shape is I64PlannedValueShape {
     assert(functions.length() == 1u32 && values.length() == 2u32, "one concrete signature")
-    assert(values[0u32] is SelfHostPlannedWasmValueType::WasmI64Value && values[1u32] is SelfHostPlannedWasmValueType::WasmI64Value, "parameter and result retain I64")
+    assert(values[0u32] is WasmI64Value && values[1u32] is WasmI64Value, "parameter and result retain I64")
   }
 }
 
 test "SPC-301 named physical parameters cannot use Generic evidence" expect_trap "unreachable" {
-  self_host_named_fragment_shape_test(SelfHostPlannedValueShape::GenericPlannedValueShape)
+  self_host_named_fragment_shape_test(GenericPlannedValueShape)
 }
 
 test "SPC-301 named physical parameters cannot use Error evidence" expect_trap "unreachable" {
-  self_host_named_fragment_shape_test(SelfHostPlannedValueShape::ErrorPlannedValueShape)
+  self_host_named_fragment_shape_test(ErrorPlannedValueShape)
 }
 
 test "SPC-301 named physical products cannot hide Error evidence" expect_trap "unreachable" {
-  self_host_named_fragment_shape_test(SelfHostPlannedValueShape::ProductPlannedValueShape([
-    SelfHostPlannedValueShape::I64PlannedValueShape,
-    SelfHostPlannedValueShape::ErrorPlannedValueShape,
+  self_host_named_fragment_shape_test(ProductPlannedValueShape([
+    I64PlannedValueShape,
+    ErrorPlannedValueShape,
   ]))
 }
 
@@ -48,8 +48,8 @@ test "program representation accepts omitted non-emitted signatures" {
   let lowered = link.fragments.specialization.lowering.modules[0u32]
   let omitted_functions = []
   let omitted_values = []
-  self_host_wasmgc_append_function(lowered, lowered.functions.callables[0u32], b"", false, false, Option::None, 4294967295u32, [], omitted_functions, omitted_values)
-  self_host_wasmgc_append_function(lowered, lowered.functions.callables[1u32], b"", false, false, Option::None, 4294967295u32, [], omitted_functions, omitted_values)
+  self_host_wasmgc_append_function(lowered, lowered.functions.callables[0u32], b"", false, false, None, 4294967295u32, [], omitted_functions, omitted_values)
+  self_host_wasmgc_append_function(lowered, lowered.functions.callables[1u32], b"", false, false, None, 4294967295u32, [], omitted_functions, omitted_values)
   link.fragments.modules[0u32].functions[0u32] = omitted_functions[0u32]
   link.fragments.modules[0u32].functions[1u32] = omitted_functions[1u32]
   let mut omitted = 0u32
@@ -61,30 +61,30 @@ test "program representation accepts omitted non-emitted signatures" {
   }
   assert(omitted >= 2u32, "unused intrinsic and function are elided")
   match self_host_validate_program_representation(link) {
-    Option::Some(message) => assert(false, message)
-    Option::None => {}
+    Some(message) => assert(false, message)
+    None => {}
   }
   let module_ = link.fragments.modules[0u32]
   let emitted = module_.functions[2u32]
   assert(!emitted.elided && emitted.results.length == 1u32, "run has an emitted result")
-  module_.function_value_types[emitted.results.start] = SelfHostPlannedWasmValueType::WasmNullableEqRefValue
+  module_.function_value_types[emitted.results.start] = WasmNullableEqRefValue
   match self_host_validate_program_representation(link) {
-    Option::Some(message) => assert(message.starts_with("program representation function result carrier mismatch"), "retained function still has its result checked")
-    Option::None => assert(false, "wrong emitted result must remain an error")
+    Some(message) => assert(message.starts_with("program representation function result carrier mismatch"), "retained function still has its result checked")
+    None => assert(false, "wrong emitted result must remain an error")
   }
 }
 
 test "named physical signatures accept concrete evidence" {
-  self_host_named_fragment_shape_test(SelfHostPlannedValueShape::I64PlannedValueShape)
-  self_host_named_result_shape_test(SelfHostPlannedValueShape::I64PlannedValueShape)
+  self_host_named_fragment_shape_test(I64PlannedValueShape)
+  self_host_named_result_shape_test(I64PlannedValueShape)
 }
 
 fn self_host_named_result_shape_test(shape: SelfHostPlannedValueShape) -> Unit {
   let lowering = self_host_physical_test_lowering(b"pub fn run(value: I64) -> I64 {\n  value\n}\n")
   let module_ = lowering.modules[0u32]
   let source = module_.functions.callables[0u32]
-  assert(source.result_shape is SelfHostPlannedValueShape::I64PlannedValueShape, "valid result before mutation")
-  let callable = SelfHostPlannedCallable::{
+  assert(source.result_shape is I64PlannedValueShape, "valid result before mutation")
+  let callable = {
     declaration: source.declaration
     name: source.name
     visibility: source.visibility
@@ -107,25 +107,25 @@ fn self_host_named_result_shape_test(shape: SelfHostPlannedValueShape) -> Unit {
   }
   let functions = []
   let values = []
-  self_host_wasmgc_append_function(module_, callable, b"", true, false, Option::None, 4294967295u32, [], functions, values)
-  if shape is SelfHostPlannedValueShape::I64PlannedValueShape {
+  self_host_wasmgc_append_function(module_, callable, b"", true, false, None, 4294967295u32, [], functions, values)
+  if shape is I64PlannedValueShape {
     assert(functions.length() == 1u32 && values.length() == 2u32, "one concrete result signature")
-    assert(values[1u32] is SelfHostPlannedWasmValueType::WasmI64Value, "result retains I64")
+    assert(values[1u32] is WasmI64Value, "result retains I64")
   }
 }
 
 test "SPC-301 named physical results cannot use Generic evidence" expect_trap "unreachable" {
-  self_host_named_result_shape_test(SelfHostPlannedValueShape::GenericPlannedValueShape)
+  self_host_named_result_shape_test(GenericPlannedValueShape)
 }
 
 test "SPC-301 named physical results cannot use Error evidence" expect_trap "unreachable" {
-  self_host_named_result_shape_test(SelfHostPlannedValueShape::ErrorPlannedValueShape)
+  self_host_named_result_shape_test(ErrorPlannedValueShape)
 }
 
 test "SPC-301 named physical products cannot hide Generic evidence" expect_trap "unreachable" {
-  self_host_named_result_shape_test(SelfHostPlannedValueShape::ProductPlannedValueShape([
-    SelfHostPlannedValueShape::I64PlannedValueShape,
-    SelfHostPlannedValueShape::GenericPlannedValueShape,
+  self_host_named_result_shape_test(ProductPlannedValueShape([
+    I64PlannedValueShape,
+    GenericPlannedValueShape,
   ]))
 }
 
@@ -144,7 +144,7 @@ test "elided generic templates publish no physical signature" {
       } else {
         assert(!function_.elided && function_.parameters.length == 1u32 && function_.results.length == 1u32, "concrete instance keeps its signature")
         let values = fragments.modules[0u32].function_value_types
-        assert(values[function_.parameters.start] is SelfHostPlannedWasmValueType::WasmI64Value && values[function_.results.start] is SelfHostPlannedWasmValueType::WasmI64Value, "concrete instance uses I64")
+        assert(values[function_.parameters.start] is WasmI64Value && values[function_.results.start] is WasmI64Value, "concrete instance uses I64")
         instances = instances + 1u32
       }
     }
@@ -157,7 +157,7 @@ test "ARN-101 named physical parameter spans are checked before reads" expect_tr
   let module_ = lowering.modules[0u32]
   let callable = module_.functions.callables[0u32]
   let _ = module_.functions.parameters.pop()
-  self_host_wasmgc_append_function(module_, callable, b"", true, false, Option::None, 4294967295u32, [], [], [])
+  self_host_wasmgc_append_function(module_, callable, b"", true, false, None, 4294967295u32, [], [], [])
 }
 
 test "trait requirements retain logical but not physical signatures" {
@@ -165,11 +165,11 @@ test "trait requirements retain logical but not physical signatures" {
   let module_ = fragments.specialization.lowering.modules[0u32]
   let mut checked = 0u32
   for function_ in fragments.modules[0u32].functions {
-    if function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmSignatureOnlyFunction {
+    if function_.kind is PlannedWasmSignatureOnlyFunction {
       assert(function_.parameters.length == 0u32 && function_.results.length == 0u32, "trait declaration is not a physical ABI")
       let callable = match self_host_program_specialization_callable(module_, function_.declaration) {
-        Option::Some(value) => value
-        Option::None => unreachable()
+        Some(value) => value
+        None => unreachable()
       }
       assert(callable.parameters.length == 1u32, "logical receiver remains available to evidence selection")
       checked = checked + 1u32

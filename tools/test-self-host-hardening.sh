@@ -211,6 +211,7 @@ for source in "${compiler_sources[@]}" \
   self_host/compiler/semantic_trait_evidence_test.dew \
   self_host/compiler/semantic_interface_type_walk_test.dew \
   self_host/compiler/semantic_imported_semantics_test.dew \
+  self_host/compiler/semantic_short_inference_test.dew \
   self_host/compiler/semantic_module_interfaces_test.dew \
   self_host/compiler/semantic_standard_module_ids_test.dew \
   self_host/compiler/semantic_compile_time_types_test.dew \
@@ -259,6 +260,8 @@ self_host_measure 'hardening invariant records' \
   node tools/check-self-host-invariants.mjs "$work/tests.wasm" || test_status=1
 self_host_measure 'hardening host record decoder' \
   node --test tools/self-host-invariant-record.test.mjs || test_status=1
+self_host_measure 'hardening short inference emission' \
+  node tools/check-short-inference-emission.mjs "$work/tests.wasm" || test_status=1
 self_host_measure 'hardening emission probes' \
   node tools/check-self-host-emission.mjs "$work/tests.wasm" || test_status=1
 self_host_measure 'hardening semantic probes' \

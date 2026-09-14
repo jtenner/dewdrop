@@ -13,19 +13,19 @@ fn self_host_capture_access_fixture() -> (SelfHostPlannedProgramWasmGCLink, Self
 test "capture writes retain frozen cell types instead of reselecting linked fragments" {
   let (link, plan) = self_host_capture_access_fixture()
   let before = match self_host_capture_write_type(link, plan, 0u32) {
-    Option::Some(value) => value
-    Option::None => unreachable()
+    Some(value) => value
+    None => unreachable()
   }
   assert(before == 1u32, "stable original cell type")
   let source = link.types[before]
-  link.types[before] = SelfHostPlannedProgramWasmType::{
+  link.types[before] = {
     module_index: source.module_index
     fragment_index: 0u32
     type_index: source.type_index
   }
   match self_host_capture_write_type(link, plan, 0u32) {
-    Option::Some(value) => assert(value == before, "capture write target must remain frozen")
-    Option::None => assert(false, "capture write must not lose its frozen pointee type")
+    Some(value) => assert(value == before, "capture write target must remain frozen")
+    None => assert(false, "capture write must not lose its frozen pointee type")
   }
 }
 
@@ -41,18 +41,18 @@ fn self_host_test_capture_access(plan: SelfHostPlannedPhysicalBodyCarrierPlan) -
 
 fn self_host_test_change_capture_access(plan: SelfHostPlannedPhysicalBodyCarrierPlan, field: U32) -> Unit {
   let source = self_host_test_capture_access(plan)
-  plan.capture_accesses[0u32] = SelfHostPhysicalCaptureAccessPlan::{
+  plan.capture_accesses[0u32] = {
     capture: if field == 1u32 {
       1u32
     } else {
       source.capture
     }
     source: if field == 2u32 {
-      SelfHostLambdaCaptureSource::LambdaLocalCapture(0u32, 1u32)
+      LambdaLocalCapture(0u32, 1u32)
     } else if field == 3u32 {
-      SelfHostLambdaCaptureSource::BodyLocalCapture((5100u64 << 32u64) + 1u64, 1u32)
+      BodyLocalCapture((5100u64 << 32u64) + 1u64, 1u32)
     } else if field == 4u32 {
-      SelfHostLambdaCaptureSource::BodyLocalCapture(5100u64 << 32u64, 0u32)
+      BodyLocalCapture(5100u64 << 32u64, 0u32)
     } else {
       source.source
     }
@@ -72,9 +72,9 @@ fn self_host_test_change_capture_access(plan: SelfHostPlannedPhysicalBodyCarrier
       source.field_index
     }
     field_storage: if field == 8u32 {
-      Option::Some(SelfHostPlannedWasmStorageType::WasmI32Storage)
+      Some(WasmI32Storage)
     } else if field == 11u32 {
-      Option::None
+      None
     } else {
       source.field_storage
     }
@@ -84,9 +84,9 @@ fn self_host_test_change_capture_access(plan: SelfHostPlannedPhysicalBodyCarrier
       source.cell_type
     }
     cell_storage: if field == 10u32 {
-      Option::Some(SelfHostPlannedWasmStorageType::WasmI32Storage)
+      Some(WasmI32Storage)
     } else if field == 12u32 {
-      Option::None
+      None
     } else {
       source.cell_storage
     }

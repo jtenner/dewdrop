@@ -7,7 +7,7 @@ pub struct SelfHostHirSpan {
 }
 
 fn self_host_hir_span_identity(span: SelfHostHirSpan) -> SelfHostHirSpan {
-  SelfHostHirSpan::{
+  {
     start: span.start
     length: span.length
   }
@@ -26,7 +26,7 @@ fn self_host_hir_span_at(
 }
 
 fn self_host_empty_hir_span(at: U32) -> SelfHostHirSpan {
-  SelfHostHirSpan::{
+  {
     start: at
     length: 0u32
   }
@@ -44,12 +44,12 @@ pub enum SelfHostHirTypeSyntax {
 impl SelfHostHirTypeSyntax {
   fn offset(self) -> U32 {
     match self {
-      SelfHostHirTypeSyntax::NamedTypeSyntax(_, offset) => offset
-      SelfHostHirTypeSyntax::QualifiedTypeSyntax(_, _, offset, _) => offset
-      SelfHostHirTypeSyntax::ProductTypeSyntax(_, offset) => offset
-      SelfHostHirTypeSyntax::AppliedTypeSyntax(_, _, offset) => offset
-      SelfHostHirTypeSyntax::FunctionTypeSyntax(_, _, offset) => offset
-      SelfHostHirTypeSyntax::ComputedTypeSyntax(_, _, offset) => offset
+      NamedTypeSyntax(_, offset) => offset
+      QualifiedTypeSyntax(_, _, offset, _) => offset
+      ProductTypeSyntax(_, offset) => offset
+      AppliedTypeSyntax(_, _, offset) => offset
+      FunctionTypeSyntax(_, _, offset) => offset
+      ComputedTypeSyntax(_, _, offset) => offset
     }
   }
 }
@@ -123,7 +123,7 @@ pub struct SelfHostHirObjectField {
 fn self_host_hir_object_field_identity(
   field: SelfHostHirObjectField,
 ) -> SelfHostHirObjectField {
-  SelfHostHirObjectField::{
+  {
     name: field.name
     value: field.value
     offset: field.offset
@@ -155,7 +155,7 @@ pub struct SelfHostHirBlockItem {
 fn self_host_hir_block_item_identity(
   item: SelfHostHirBlockItem,
 ) -> SelfHostHirBlockItem {
-  SelfHostHirBlockItem::{
+  {
     kind: item.kind
     mutable_: item.mutable_
     source_name: item.source_name
@@ -173,7 +173,7 @@ fn self_host_hir_let_item(
   value: U32,
   offset: U32,
 ) -> SelfHostHirBlockItem {
-  SelfHostHirBlockItem::{
+  {
     kind: 0u32
     mutable_: mutable_
     source_name: name
@@ -188,7 +188,7 @@ fn self_host_hir_expression_item(
   value: U32,
   offset: U32,
 ) -> SelfHostHirBlockItem {
-  SelfHostHirBlockItem::{
+  {
     kind: 1u32
     mutable_: false
     source_name: 4294967295u32
@@ -204,7 +204,7 @@ fn self_host_hir_discarded_let_item(
   value: U32,
   offset: U32,
 ) -> SelfHostHirBlockItem {
-  SelfHostHirBlockItem::{
+  {
     kind: 1u32
     mutable_: false
     source_name: name
@@ -233,7 +233,7 @@ pub struct SelfHostHirPatternField {
 fn self_host_hir_pattern_field_identity(
   field: SelfHostHirPatternField,
 ) -> SelfHostHirPatternField {
-  SelfHostHirPatternField::{
+  {
     name: field.name
     pattern: field.pattern
     offset: field.offset
@@ -279,9 +279,9 @@ fn self_host_hir_prefix_operator(
   operator: SelfHostPrefixOperator,
 ) -> SelfHostHirPrefixOperator {
   match operator {
-    SelfHostPrefixOperator::Positive => SelfHostHirPrefixOperator::Positive
-    SelfHostPrefixOperator::Negative => SelfHostHirPrefixOperator::Negative
-    SelfHostPrefixOperator::LogicalNot => SelfHostHirPrefixOperator::LogicalNot
+    Positive => Positive
+    Negative => Negative
+    LogicalNot => LogicalNot
   }
 }
 
@@ -289,25 +289,25 @@ fn self_host_hir_binary_operator(
   operator: SelfHostBinaryOperator,
 ) -> SelfHostHirBinaryOperator {
   match operator {
-    SelfHostBinaryOperator::LogicalOr => SelfHostHirBinaryOperator::LogicalOr
-    SelfHostBinaryOperator::LogicalAnd => SelfHostHirBinaryOperator::LogicalAnd
-    SelfHostBinaryOperator::BitOr => SelfHostHirBinaryOperator::BitOr
-    SelfHostBinaryOperator::BitXor => SelfHostHirBinaryOperator::BitXor
-    SelfHostBinaryOperator::BitAnd => SelfHostHirBinaryOperator::BitAnd
-    SelfHostBinaryOperator::Equal => SelfHostHirBinaryOperator::Equal
-    SelfHostBinaryOperator::NotEqual => SelfHostHirBinaryOperator::NotEqual
-    SelfHostBinaryOperator::Less => SelfHostHirBinaryOperator::Less
-    SelfHostBinaryOperator::LessEqual => SelfHostHirBinaryOperator::LessEqual
-    SelfHostBinaryOperator::Greater => SelfHostHirBinaryOperator::Greater
-    SelfHostBinaryOperator::GreaterEqual => SelfHostHirBinaryOperator::GreaterEqual
-    SelfHostBinaryOperator::ShiftLeft => SelfHostHirBinaryOperator::ShiftLeft
-    SelfHostBinaryOperator::ShiftRight => SelfHostHirBinaryOperator::ShiftRight
-    SelfHostBinaryOperator::Add => SelfHostHirBinaryOperator::Add
-    SelfHostBinaryOperator::Subtract => SelfHostHirBinaryOperator::Subtract
-    SelfHostBinaryOperator::Multiply => SelfHostHirBinaryOperator::Multiply
-    SelfHostBinaryOperator::Divide => SelfHostHirBinaryOperator::Divide
-    SelfHostBinaryOperator::Remainder => SelfHostHirBinaryOperator::Remainder
-    SelfHostBinaryOperator::Exponentiate => SelfHostHirBinaryOperator::Exponentiate
+    LogicalOr => LogicalOr
+    LogicalAnd => LogicalAnd
+    BitOr => BitOr
+    BitXor => BitXor
+    BitAnd => BitAnd
+    Equal => Equal
+    NotEqual => NotEqual
+    Less => Less
+    LessEqual => LessEqual
+    Greater => Greater
+    GreaterEqual => GreaterEqual
+    ShiftLeft => ShiftLeft
+    ShiftRight => ShiftRight
+    Add => Add
+    Subtract => Subtract
+    Multiply => Multiply
+    Divide => Divide
+    Remainder => Remainder
+    Exponentiate => Exponentiate
   }
 }
 
@@ -354,43 +354,43 @@ pub enum SelfHostHirExpr {
 impl SelfHostHirExpr {
   fn offset(self) -> U32 {
     match self {
-      SelfHostHirExpr::I8Expr(_, offset) => offset
-      SelfHostHirExpr::I16Expr(_, offset) => offset
-      SelfHostHirExpr::I32Expr(_, offset) => offset
-      SelfHostHirExpr::I64Expr(_, offset) => offset
-      SelfHostHirExpr::U8Expr(_, offset) => offset
-      SelfHostHirExpr::U16Expr(_, offset) => offset
-      SelfHostHirExpr::U32Expr(_, offset) => offset
-      SelfHostHirExpr::U64Expr(_, offset) => offset
-      SelfHostHirExpr::F32Expr(_, offset) => offset
-      SelfHostHirExpr::F64Expr(_, offset) => offset
-      SelfHostHirExpr::BoolExpr(_, offset) => offset
-      SelfHostHirExpr::StringExpr(_, offset) => offset
-      SelfHostHirExpr::BytesExpr(_, offset) => offset
-      SelfHostHirExpr::NameExpr(_, offset) => offset
-      SelfHostHirExpr::ImportAliasExpr(_, offset) => offset
-      SelfHostHirExpr::ProductExpr(_, offset) => offset
-      SelfHostHirExpr::TypeBindingExpr(_, offset) => offset
-      SelfHostHirExpr::ArrayExpr(_, offset) => offset
-      SelfHostHirExpr::LambdaExpr(_, offset) => offset
-      SelfHostHirExpr::ObjectExpr(_, offset) => offset
-      SelfHostHirExpr::ConstructExpr(_, _, offset) => offset
-      SelfHostHirExpr::BlockExpr(_, offset) => offset
-      SelfHostHirExpr::IfExpr(_, _, _, offset) => offset
-      SelfHostHirExpr::MatchExpr(_, _, offset) => offset
-      SelfHostHirExpr::WhileExpr(_, _, offset) => offset
-      SelfHostHirExpr::ReturnExpr(_, offset) => offset
-      SelfHostHirExpr::BreakExpr(_, offset) => offset
-      SelfHostHirExpr::ContinueExpr(_, offset) => offset
-      SelfHostHirExpr::PrefixExpr(_, _, offset) => offset
-      SelfHostHirExpr::BinaryExpr(_, _, _, offset) => offset
-      SelfHostHirExpr::CallExpr(_, _, offset) => offset
-      SelfHostHirExpr::FieldExpr(_, _, offset) => offset
-      SelfHostHirExpr::QualifiedExpr(_, _, offset) => offset
-      SelfHostHirExpr::ProductFieldExpr(_, _, _, offset) => offset
-      SelfHostHirExpr::IndexExpr(_, _, offset) => offset
-      SelfHostHirExpr::AssignmentExpr(_, _, offset) => offset
-      SelfHostHirExpr::IndexSetExpr(_, _, _, offset) => offset
+      I8Expr(_, offset) => offset
+      I16Expr(_, offset) => offset
+      I32Expr(_, offset) => offset
+      I64Expr(_, offset) => offset
+      U8Expr(_, offset) => offset
+      U16Expr(_, offset) => offset
+      U32Expr(_, offset) => offset
+      U64Expr(_, offset) => offset
+      F32Expr(_, offset) => offset
+      F64Expr(_, offset) => offset
+      BoolExpr(_, offset) => offset
+      StringExpr(_, offset) => offset
+      BytesExpr(_, offset) => offset
+      NameExpr(_, offset) => offset
+      ImportAliasExpr(_, offset) => offset
+      ProductExpr(_, offset) => offset
+      TypeBindingExpr(_, offset) => offset
+      ArrayExpr(_, offset) => offset
+      LambdaExpr(_, offset) => offset
+      ObjectExpr(_, offset) => offset
+      ConstructExpr(_, _, offset) => offset
+      BlockExpr(_, offset) => offset
+      IfExpr(_, _, _, offset) => offset
+      MatchExpr(_, _, offset) => offset
+      WhileExpr(_, _, offset) => offset
+      ReturnExpr(_, offset) => offset
+      BreakExpr(_, offset) => offset
+      ContinueExpr(_, offset) => offset
+      PrefixExpr(_, _, offset) => offset
+      BinaryExpr(_, _, _, offset) => offset
+      CallExpr(_, _, offset) => offset
+      FieldExpr(_, _, offset) => offset
+      QualifiedExpr(_, _, offset) => offset
+      ProductFieldExpr(_, _, _, offset) => offset
+      IndexExpr(_, _, offset) => offset
+      AssignmentExpr(_, _, offset) => offset
+      IndexSetExpr(_, _, _, offset) => offset
     }
   }
 }
@@ -411,16 +411,16 @@ pub enum SelfHostHirPattern {
 impl SelfHostHirPattern {
   fn offset(self) -> U32 {
     match self {
-      SelfHostHirPattern::WildcardPattern(offset) => offset
-      SelfHostHirPattern::BindingPattern(_, offset) => offset
-      SelfHostHirPattern::ImportAliasPattern(_, offset) => offset
-      SelfHostHirPattern::RestPattern(offset) => offset
-      SelfHostHirPattern::LiteralPattern(_, offset) => offset
-      SelfHostHirPattern::QualifiedPattern(_, _, offset) => offset
-      SelfHostHirPattern::TuplePattern(_, _, offset) => offset
-      SelfHostHirPattern::ProductPattern(_, offset) => offset
-      SelfHostHirPattern::StructPattern(_, _, _, _, offset) => offset
-      SelfHostHirPattern::AlternativePattern(_, _, offset) => offset
+      WildcardPattern(offset) => offset
+      BindingPattern(_, offset) => offset
+      ImportAliasPattern(_, offset) => offset
+      RestPattern(offset) => offset
+      LiteralPattern(_, offset) => offset
+      QualifiedPattern(_, _, offset) => offset
+      TuplePattern(_, _, offset) => offset
+      ProductPattern(_, offset) => offset
+      StructPattern(_, _, _, _, offset) => offset
+      AlternativePattern(_, _, offset) => offset
     }
   }
 }

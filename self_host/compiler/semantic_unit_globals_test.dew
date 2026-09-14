@@ -11,20 +11,20 @@ fn self_host_test_global_read_mutation(kind: U32) -> Unit {
   let plan = program.bodies[0u32]
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = match self_host_body_lookup_for_plan(module_, plan) {
-    Option::Some(value) => value
-    Option::None => unreachable()
+    Some(value) => value
+    None => unreachable()
   }
   let original = link.initializers[0u32]
-  let changed = SelfHostPlannedProgramInitializer::{
+  let changed = {
     module_index: original.module_index
     declaration: original.declaration
     body: original.body
     shape: if kind == 1u32 {
-      SelfHostPlannedValueShape::I32PlannedValueShape
+      I32PlannedValueShape
     } else if kind == 3u32 {
-      SelfHostPlannedValueShape::GenericPlannedValueShape
+      GenericPlannedValueShape
     } else if kind == 4u32 {
-      SelfHostPlannedValueShape::ErrorPlannedValueShape
+      ErrorPlannedValueShape
     } else {
       original.shape
     }
@@ -39,7 +39,7 @@ fn self_host_test_global_read_mutation(kind: U32) -> Unit {
     order: original.order
   }
   assert(plan.declaration == ((5100u64 << 32u64) | 1u64), "main body identity")
-  self_host_emit_planned_global_get(link, Option::Some(plan), module_, body,
+  self_host_emit_planned_global_get(link, Some(plan), module_, body,
     1u32, changed, StarshineFfi.ffi_ffi_bridge_instructions_new())
 }
 
@@ -69,11 +69,11 @@ test "ARN-106 global read initializer keeps its selected declaration" expect_tra
   let plan = program.bodies[0u32]
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = match self_host_body_lookup_for_plan(module_, plan) {
-    Option::Some(value) => value
-    Option::None => unreachable()
+    Some(value) => value
+    None => unreachable()
   }
   let original = link.initializers[0u32]
-  let changed = SelfHostPlannedProgramInitializer::{
+  let changed = {
     module_index: original.module_index
     declaration: original.declaration + 1u64
     body: original.body
@@ -82,7 +82,7 @@ test "ARN-106 global read initializer keeps its selected declaration" expect_tra
     global_index: original.global_index
     order: original.order
   }
-  self_host_emit_planned_global_get(link, Option::Some(plan), module_, body,
+  self_host_emit_planned_global_get(link, Some(plan), module_, body,
     1u32, changed, StarshineFfi.ffi_ffi_bridge_instructions_new())
 }
 
@@ -92,8 +92,8 @@ test "global read lookup retains its exact initializer" {
   let program = self_host_plan_program_wasm_bodies(link)
   let plan = program.bodies[0u32]
   let body = match self_host_body_lookup_for_plan(module_, plan) {
-    Option::Some(value) => value
-    Option::None => unreachable()
+    Some(value) => value
+    None => unreachable()
   }
   let selected = self_host_required_global_initializer(link, module_, body, 1u32)
   assert(selected.declaration == link.initializers[0u32].declaration, "exact global declaration")
@@ -106,25 +106,25 @@ fn self_host_test_global_lookup_mutation(kind: U32) -> Unit {
   let plan = program.bodies[0u32]
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = match self_host_body_lookup_for_plan(module_, plan) {
-    Option::Some(value) => value
-    Option::None => unreachable()
+    Some(value) => value
+    None => unreachable()
   }
   if kind == 0u32 {
     let _ = link.initializers.pop()
   } else if kind == 1u32 {
     link.initializers.push(link.initializers[0u32])
   } else if kind == 2u32 || kind == 3u32 {
-    assert(self_host_linked_callable_function_index(link, plan.declaration) is Option::Some(_), "the named function exists but is not a global")
+    assert(self_host_linked_callable_function_index(link, plan.declaration) is Some(_), "the named function exists but is not a global")
     let source = module_.expressions[1u32]
-    module_.expressions[1u32] = SelfHostPlannedExpression::{
+    module_.expressions[1u32] = {
       type_: source.type_
       shape: source.shape
       nominal: source.nominal
       flow: source.flow
       kind: if kind == 2u32 {
-        SelfHostPlannedExpressionKind::PlannedModuleValueGet(plan.declaration)
+        PlannedModuleValueGet(plan.declaration)
       } else {
-        SelfHostPlannedExpressionKind::PlannedUnitConst
+        PlannedUnitConst
       }
       selection: source.selection
       reference: source.reference

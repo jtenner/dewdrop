@@ -645,28 +645,9 @@ fn BasicBodyInferencer::prepare_call(
             ) {
             self.call_scratch.pending_function_calls.push(call_slot)
           }
-        VariantNameReference(_) => {
+        VariantNameReference(_) | ContextualFactoryNameReference(_) => {
           self.consume_member_root(target)
-          match
-            self.select_value_variant(
-              name,
-              self.expression_type(expression),
-              expression,
-              offset,
-            ) {
-            SelectedLocalValueVariant(variant_index) =>
-              self.infer_tuple_variant_call(
-                call_slot, expression, arguments, variant_index, offset,
-              )
-            SelectedImportedValueVariant(variant) =>
-              self.infer_imported_tuple_variant_call(
-                call_slot, expression, arguments, variant, offset,
-              )
-            NoSelectedValueVariant => {
-              self.call_targets[call_slot] = ErrorInferredCallTarget
-              self.fail_expression_selection(expression)
-            }
-          }
+          self.call_scratch.pending_variant_calls.push(call_slot)
         }
         _ => self.record_invalid_call(call_slot, expression, offset)
       }

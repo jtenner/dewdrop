@@ -7,7 +7,7 @@ fn self_host_fragment_function_lookup_failure(
   role: U64,
   index: U32,
 ) -> Never {
-  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+  self_host_assert_compiler_invariant_with_failure(false, {
     code: code
     phase: 5u32
     module_id: module_.module_id
@@ -52,7 +52,7 @@ fn self_host_fragment_function_index(
       4294967295u64, u32_into_u64(fragment.specialization), 73u64, index)
   }
   match fragment.kind {
-    SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_) => {
+    PlannedWasmDefinedLambdaFunction(_) => {
       self_host_fragment_function_lookup_failure(module_, declaration, 504u32,
         0u64, 1u64, 74u64, index)
     }

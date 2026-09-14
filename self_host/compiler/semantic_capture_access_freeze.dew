@@ -1,21 +1,21 @@
 fn self_host_capture_source_kind(source: SelfHostLambdaCaptureSource) -> U64 {
   match source {
-    SelfHostLambdaCaptureSource::BodyLocalCapture(_, _) => 0u64
-    SelfHostLambdaCaptureSource::LambdaLocalCapture(_, _) => 1u64
+    BodyLocalCapture(_, _) => 0u64
+    LambdaLocalCapture(_, _) => 1u64
   }
 }
 
 fn self_host_capture_source_owner(source: SelfHostLambdaCaptureSource) -> U64 {
   match source {
-    SelfHostLambdaCaptureSource::BodyLocalCapture(body, _) => body
-    SelfHostLambdaCaptureSource::LambdaLocalCapture(lambda, _) => u32_into_u64(lambda)
+    BodyLocalCapture(body, _) => body
+    LambdaLocalCapture(lambda, _) => u32_into_u64(lambda)
   }
 }
 
 fn self_host_capture_source_id(source: SelfHostLambdaCaptureSource) -> U64 {
   match source {
-    SelfHostLambdaCaptureSource::BodyLocalCapture(_, local) => u32_into_u64(local)
-    SelfHostLambdaCaptureSource::LambdaLocalCapture(_, local) => u32_into_u64(local)
+    BodyLocalCapture(_, local) => u32_into_u64(local)
+    LambdaLocalCapture(_, local) => u32_into_u64(local)
   }
 }
 

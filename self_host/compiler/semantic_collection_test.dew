@@ -1,3 +1,4 @@
+open dew.std.string_builder
 open dew.std.option
 open dew.std.testing
 
@@ -11,7 +12,6 @@ test "semantic U64 equality preserves large declaration identities" {
     "different declaration identities",
   )
 }
-open dew.std.string_builder
 
 fn self_host_collection_has_duplicate(
   collected: SelfHostCollectedModule,
@@ -19,20 +19,20 @@ fn self_host_collection_has_duplicate(
 ) -> Bool {
   for diagnostic in collected.diagnostics {
     match diagnostic {
-      SelfHostCollectionDiagnostic::DuplicateName(value) => match space {
-        SelfHostBindingSpace::ModuleType => if value.space is SelfHostBindingSpace::ModuleType {
+      DuplicateName(value) => match space {
+        ModuleType => if value.space is ModuleType {
           return true
         }
-        SelfHostBindingSpace::ModuleTrait => if value.space is SelfHostBindingSpace::ModuleTrait {
+        ModuleTrait => if value.space is ModuleTrait {
           return true
         }
-        SelfHostBindingSpace::ModuleValue => if value.space is SelfHostBindingSpace::ModuleValue {
+        ModuleValue => if value.space is ModuleValue {
           return true
         }
-        SelfHostBindingSpace::GenericParameter => if value.space is SelfHostBindingSpace::GenericParameter {
+        GenericParameter => if value.space is GenericParameter {
           return true
         }
-        SelfHostBindingSpace::Parameter => if value.space is SelfHostBindingSpace::Parameter {
+        Parameter => if value.space is Parameter {
           return true
         }
         _ => {}
@@ -79,12 +79,12 @@ test "semantic collection interns repeated names once" {
     b"struct Pair<t> {\n  first: t\n  second: t\n}\nfn first<t>(first: t) -> t {\n  first\n}\n",
   )
   let first = match collected.find_name("first") {
-    Option::Some(value) => value
-    Option::None => 4294967295u32
+    Some(value) => value
+    None => 4294967295u32
   }
   let t = match collected.find_name("t") {
-    Option::Some(value) => value
-    Option::None => 4294967295u32
+    Some(value) => value
+    None => 4294967295u32
   }
   assert(collected.name(first) == "first", "first name")
   assert(collected.name(t) == "t", "generic name")
@@ -107,9 +107,9 @@ test "semantic collection lowers nested signature types child first" {
   )
   let target = alias.target
   match collected.type_syntax[target] {
-    SelfHostHirTypeSyntax::AppliedTypeSyntax(base, arguments, _) => {
+    AppliedTypeSyntax(base, arguments, _) => {
       match collected.type_syntax[base] {
-        SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => assert(
+        NamedTypeSyntax(name, _) => assert(
           collected.name(name) == "Result",
           "outer type",
         )
@@ -118,9 +118,9 @@ test "semantic collection lowers nested signature types child first" {
       assert(arguments.length == 1u32, "outer argument count")
       let list = collected.type_arguments[arguments.start]
       match collected.type_syntax[list] {
-        SelfHostHirTypeSyntax::AppliedTypeSyntax(list_base, list_arguments, _) => {
+        AppliedTypeSyntax(list_base, list_arguments, _) => {
           match collected.type_syntax[list_base] {
-            SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => assert(
+            NamedTypeSyntax(name, _) => assert(
               collected.name(name) == "List",
               "inner type",
             )
@@ -140,19 +140,19 @@ test "semantic collection keeps module namespaces separate" {
     3u64,
     b"struct Item {}\ntrait Item {}\nfn Item() -> Unit {}\nstruct Item {}\ntrait Item {}\nlet Item = 1\n",
   )
-  assert(collected.lookup_type("Item") is Option::Some(_), "type lookup")
-  assert(collected.lookup_trait("Item") is Option::Some(_), "trait lookup")
-  assert(collected.lookup_value("Item") is Option::Some(_), "value lookup")
+  assert(collected.lookup_type("Item") is Some(_), "type lookup")
+  assert(collected.lookup_trait("Item") is Some(_), "trait lookup")
+  assert(collected.lookup_value("Item") is Some(_), "value lookup")
   assert(
-    self_host_collection_has_duplicate(collected, SelfHostBindingSpace::ModuleType),
+    self_host_collection_has_duplicate(collected, ModuleType),
     "type duplicate",
   )
   assert(
-    self_host_collection_has_duplicate(collected, SelfHostBindingSpace::ModuleTrait),
+    self_host_collection_has_duplicate(collected, ModuleTrait),
     "trait duplicate",
   )
   assert(
-    self_host_collection_has_duplicate(collected, SelfHostBindingSpace::ModuleValue),
+    self_host_collection_has_duplicate(collected, ModuleValue),
     "value duplicate",
   )
 }
@@ -160,23 +160,25 @@ test "semantic collection keeps module namespaces separate" {
 test "semantic collection keeps builtin overloads in source order" {
   let collected = self_host_collect_bytes(
     4u64,
-    b"builtin convert(value: I32) -> I64 = \"i32_to_i64\"\nbuiltin convert(value: F32) -> F64 = \"f32_to_f64\"\n",
+    b"builtin convert(value: I32) -> I64 = \"i64.extend_i32_s\"\nbuiltin convert(value: F32) -> F64 = \"f64.promote_f32\"\nbuiltin convert(value: I64) -> I32 = \"i32.wrap_i64\"\n",
   )
+  assert(collected.diagnostics.length() == 0u32, "overload diagnostic")
   let name = match collected.find_name("convert") {
-    Option::Some(value) => value
-    Option::None => 4294967295u32
+    Some(value) => value
+    None => {
+      assert(false, "overload name missing")
+      4294967295u32
+    }
   }
   let binding = match collected.value_binding(name) {
-    Option::Some(value) => value
-    Option::None => SelfHostValueBinding::{
-      head: 0u32
-      tail: 0u32
-      kind: SelfHostCollectedDeclKind::BuiltinDecl
-      offset: 0u32
+    Some(value) => value
+    None => {
+      assert(false, "overload binding missing")
+      return
     }
   }
   assert(binding.head == 0u32, "overload head")
-  assert(binding.tail == 1u32, "overload tail")
+  assert(binding.tail == 2u32, "overload tail")
   assert(
     self_host_u64_equal(
       collected.value_binding_candidates[0u32].declaration,
@@ -185,10 +187,11 @@ test "semantic collection keeps builtin overloads in source order" {
     "first overload",
   )
   assert(
-    collected.value_binding_candidates[0u32].next is Option::Some(1u32),
+    collected.value_binding_candidates[0u32].next is Some(1u32),
     "overload link",
   )
-  assert(collected.diagnostics.length() == 0u32, "overload diagnostic")
+  assert(collected.value_binding_candidates[1u32].next is Some(2u32), "second overload link")
+  assert(collected.value_binding_candidates[2u32].next is None, "last overload ends the chain")
 }
 
 test "semantic collection preserves parser diagnostics and recovers" {
@@ -198,8 +201,8 @@ test "semantic collection preserves parser diagnostics and recovers" {
   )
   assert(collected.declarations.length() == 2u32, "recovered declaration count")
   assert(collected.diagnostics.length() == 1u32, "parse diagnostic count")
-  assert(collected.lookup_type("Before") is Option::Some(_), "Before missing")
-  assert(collected.lookup_type("After") is Option::Some(_), "After missing")
+  assert(collected.lookup_type("Before") is Some(_), "Before missing")
+  assert(collected.lookup_type("After") is Some(_), "After missing")
 }
 
 test "semantic collection lowers bodies patterns assignments and lambdas" {
@@ -219,13 +222,13 @@ test "semantic collection lowers bodies patterns assignments and lambdas" {
 test "semantic collection shares one namespace across ordered files" {
   let module_id = 9u64
   let collected = self_host_collect_files(module_id, [
-    SelfHostProgramFile::{
+    {
       id: self_host_make_file_id(module_id, 0u32)
       path: "first.dew"
       source: b"fn double(value: I32) -> I32 {\n  value + value\n}\n"
       test_only: false
     },
-    SelfHostProgramFile::{
+    {
       id: self_host_make_file_id(module_id, 1u32)
       path: "second.dew"
       source: b"pub fn run(value: I32) -> I32 {\n  double(value)\n}\n"
@@ -302,7 +305,7 @@ test "semantic collection records foreign declarations" {
   assert(collected.foreign_libraries.length() == 1u32, "foreign library")
   assert(collected.foreign_functions.length() == 1u32, "foreign function")
   assert(
-    collected.methods[0u32].visibility is SelfHostSemanticVisibility::Public,
+    collected.methods[0u32].visibility is Public,
     "public foreign function visibility",
   )
   assert(collected.diagnostics.length() == 0u32, "foreign diagnostics")
@@ -323,7 +326,7 @@ test "semantic collection retains explicit call type arguments" {
 test "semantic collection validates tests and derive requests" {
   let module_id = 10u64
   let collected = self_host_collect_files(module_id, [
-    SelfHostProgramFile::{
+    {
       id: self_host_make_file_id(module_id, 0u32)
       path: "value_test.dew"
       source: b"struct Value {} derive(Eq, Eq, Unknown)\ntest \"same\" expect_trap \"bad-trap\" {}\ntest \"same\" {}\n"

@@ -18,10 +18,10 @@ test "trait method signatures compare substituted tuple fields" {
   let mut results = 0u32
   for diagnostic in invalid.diagnostics {
     match diagnostic {
-      SelfHostImplIndexDiagnostic::TraitMethodParameterTypeMismatch(_, _, _, _) => {
+      TraitMethodParameterTypeMismatch(_, _, _, _) => {
         parameters = parameters + 1u32
       }
-      SelfHostImplIndexDiagnostic::TraitMethodReturnTypeMismatch(_, _, _) => {
+      TraitMethodReturnTypeMismatch(_, _, _) => {
         results = results + 1u32
       }
       _ => assert(false, "unexpected tuple signature diagnostic")
@@ -61,7 +61,7 @@ test "implementation index diagnoses equivalent generic overlap" {
   let mut overlap = 0u32
   for diagnostic in index.diagnostics {
     match diagnostic {
-      SelfHostImplIndexDiagnostic::OverlappingTraitImpl(_, _, _, _, _) => {
+      OverlappingTraitImpl(_, _, _, _, _) => {
         overlap = overlap + 1u32
       }
       _ => {}
@@ -81,7 +81,7 @@ test "implementation index diagnoses duplicate inherent methods" {
   let _ = while diagnostic {
     current => if current < index.diagnostic_count() {
       match index.diagnostic_at(current) {
-        SelfHostImplIndexDiagnostic::DuplicateInherentMethod(_, _, _, _) => {
+        DuplicateInherentMethod(_, _, _, _) => {
           duplicate = duplicate + 1u32
         }
         _ => {}
@@ -104,7 +104,7 @@ test "implementation index diagnoses missing and unknown trait methods" {
   let mut missing_count = 0u32
   for diagnostic in missing.diagnostics {
     match diagnostic {
-      SelfHostImplIndexDiagnostic::MissingTraitMethod(_, _, _) => {
+      MissingTraitMethod(_, _, _) => {
         missing_count = missing_count + 1u32
       }
       _ => {}
@@ -113,7 +113,7 @@ test "implementation index diagnoses missing and unknown trait methods" {
   let mut unknown_count = 0u32
   for diagnostic in unknown.diagnostics {
     match diagnostic {
-      SelfHostImplIndexDiagnostic::UnknownTraitImplMethod(_, _, _) => {
+      UnknownTraitImplMethod(_, _, _) => {
         unknown_count = unknown_count + 1u32
       }
       _ => {}
@@ -131,10 +131,10 @@ test "implementation index diagnoses trait method shape mismatches" {
   let mut arity = 0u32
   for diagnostic in index.diagnostics {
     match diagnostic {
-      SelfHostImplIndexDiagnostic::TraitMethodReceiverMismatch(_, _, _) => {
+      TraitMethodReceiverMismatch(_, _, _) => {
         receiver = receiver + 1u32
       }
-      SelfHostImplIndexDiagnostic::TraitMethodParameterCountMismatch(_, _, _, _, _) => {
+      TraitMethodParameterCountMismatch(_, _, _, _, _) => {
         arity = arity + 1u32
       }
       _ => {}
@@ -155,10 +155,10 @@ test "implementation index validates substituted trait method signatures" {
   let mut return_mismatch = 0u32
   for diagnostic in mismatch.diagnostics {
     match diagnostic {
-      SelfHostImplIndexDiagnostic::TraitMethodParameterTypeMismatch(_, _, _, _) => {
+      TraitMethodParameterTypeMismatch(_, _, _, _) => {
         parameter_mismatch = parameter_mismatch + 1u32
       }
-      SelfHostImplIndexDiagnostic::TraitMethodReturnTypeMismatch(_, _, _) => {
+      TraitMethodReturnTypeMismatch(_, _, _) => {
         return_mismatch = return_mismatch + 1u32
       }
       _ => {}
@@ -178,7 +178,7 @@ test "implementation index publishes coherent method dispatch" {
   assert(index.method_dispatch.length() == 2u32, "method dispatch")
   assert(index.trait_method_dispatch.length() == 1u32, "trait dispatch")
   assert(
-    index.methods[index.trait_method_dispatch[0u32].method_index].requirement is Option::Some(_),
+    index.methods[index.trait_method_dispatch[0u32].method_index].requirement is Some(_),
     "trait requirement",
   )
 }
@@ -221,7 +221,7 @@ test "implementation index diagnoses orphan imported trait implementations" {
   let _ = while diagnostic {
     current => if current < index.diagnostic_count() {
       match index.diagnostic_at(current) {
-        SelfHostImplIndexDiagnostic::OrphanTraitImpl(_, _, _, _) => {
+        OrphanTraitImpl(_, _, _, _) => {
           orphan = orphan + 1u32
         }
         _ => {}
@@ -243,7 +243,7 @@ test "implementation index rejects invalid target heads" {
   let _ = while diagnostic {
     current => if current < index.diagnostic_count() {
       match index.diagnostic_at(current) {
-        SelfHostImplIndexDiagnostic::InvalidImplTargetHead(_, _) => {
+        InvalidImplTargetHead(_, _) => {
           invalid = invalid + 1u32
         }
         _ => {}

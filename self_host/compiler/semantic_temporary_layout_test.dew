@@ -1,5 +1,5 @@
 fn self_host_test_discard_carrier(source: SelfHostPlannedPhysicalExpressionCarrier, carrier: SelfHostWasmBodyCarrier) -> SelfHostPlannedPhysicalExpressionCarrier {
-  SelfHostPlannedPhysicalExpressionCarrier::{
+  {
     expression: source.expression
     value: source.value
     carrier: carrier
@@ -27,14 +27,14 @@ fn self_host_test_discard_fixture() -> (SelfHostPlannedProgramWasmGCLink, SelfHo
   assert(program.diagnostics.length() == 0u32, "valid discard source")
   let plan = program.bodies[0u32]
   assert(plan.expressions.length() == 1u32 && plan.expressions[0u32].expression == 0u32, "one expression in the source body")
-  assert(plan.expressions[0u32].carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "known scalar before one mutation")
+  assert(plan.expressions[0u32].carrier is I64BodyCarrier, "known scalar before one mutation")
   (link, plan)
 }
 
 test "discard reads use the known scalar value" {
   let (link, plan) = self_host_test_discard_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  assert(self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32), "the scalar result must be dropped")
+  assert(self_host_linked_planned_expression_emits_value(Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32), "the scalar result must be dropped")
 }
 
 test "discard reads preserve Unit erasure" {
@@ -46,7 +46,7 @@ test "discard reads preserve Unit erasure" {
   assert(program.diagnostics.length() == 0u32, "valid Unit source")
   let plan = program.bodies[0u32]
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  assert(!self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32), "Unit has no stack value")
+  assert(!self_host_linked_planned_expression_emits_value(Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32), "Unit has no stack value")
 }
 
 test "absent optional transfer payloads do not schedule discarded expressions" {
@@ -62,35 +62,35 @@ test "BOD-610 discard reads require a body plan" expect_trap "unreachable" {
   let (link, plan) = self_host_test_discard_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
 
-  let _ = self_host_linked_planned_expression_emits_value(Option::None, link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+  let _ = self_host_linked_planned_expression_emits_value(None, link, module_, module_.bodies[0u32], plan.specialization, 0u32)
 }
 
 test "BOD-610 discard reads require expression evidence" expect_trap "unreachable" {
   let (link, plan) = self_host_test_discard_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let _ = plan.expressions.pop()
-  let _ = self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+  let _ = self_host_linked_planned_expression_emits_value(Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
 }
 
 test "BOD-610 discard reads reject unknown carriers" expect_trap "unreachable" {
   let (link, plan) = self_host_test_discard_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
-  let _ = self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+  plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], UnresolvedBodyCarrier)
+  let _ = self_host_linked_planned_expression_emits_value(Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
 }
 
 test "BOD-610 discard reads reject conflicting carriers" expect_trap "unreachable" {
   let (link, plan) = self_host_test_discard_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::ConflictingBodyCarrier)
-  let _ = self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+  plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], ConflictingBodyCarrier)
+  let _ = self_host_linked_planned_expression_emits_value(Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
 }
 
 test "ABI-712 discard reads require matching carrier copies" expect_trap "unreachable" {
   let (link, plan) = self_host_test_discard_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], SelfHostWasmBodyCarrier::I32BodyCarrier)
-  let _ = self_host_linked_planned_expression_emits_value(Option::Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
+  plan.expressions[0u32] = self_host_test_discard_carrier(plan.expressions[0u32], I32BodyCarrier)
+  let _ = self_host_linked_planned_expression_emits_value(Some(plan), link, module_, module_.bodies[0u32], plan.specialization, 0u32)
 }
 
 fn self_host_test_frozen_local_declarations() -> (SelfHostPlannedProgramWasmGCLink, SelfHostPlannedPhysicalBodyCarrierPlan) {
@@ -108,27 +108,27 @@ fn self_host_test_frozen_local_declarations() -> (SelfHostPlannedProgramWasmGCLi
 test "ABI-710 emitted locals cannot replace unresolved evidence with a reference" expect_trap "unreachable" {
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  plan.local_values[0u32] = self_host_body_value_with_carrier(plan.local_values[0u32], SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
-  let _ = self_host_linked_scalar_locals(link, Option::Some(plan), module_, module_.bodies[0u32],
-    SelfHostPlannedValueShape::I64PlannedValueShape, plan.specialization,
+  plan.local_values[0u32] = self_host_body_value_with_carrier(plan.local_values[0u32], UnresolvedBodyCarrier)
+  let _ = self_host_linked_scalar_locals(link, Some(plan), module_, module_.bodies[0u32],
+    I64PlannedValueShape, plan.specialization,
   )
 }
 
 test "ABI-710 emitted locals cannot replace conflicting evidence with a reference" expect_trap "unreachable" {
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  plan.local_values[0u32] = self_host_body_value_with_carrier(plan.local_values[0u32], SelfHostWasmBodyCarrier::ConflictingBodyCarrier)
-  let _ = self_host_linked_scalar_locals(link, Option::Some(plan), module_, module_.bodies[0u32],
-    SelfHostPlannedValueShape::I64PlannedValueShape, plan.specialization,
+  plan.local_values[0u32] = self_host_body_value_with_carrier(plan.local_values[0u32], ConflictingBodyCarrier)
+  let _ = self_host_linked_scalar_locals(link, Some(plan), module_, module_.bodies[0u32],
+    I64PlannedValueShape, plan.specialization,
   )
 }
 
 test "ABI-710 emitted locals retain their saved scalar type" expect_trap "unreachable" {
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  plan.local_values[0u32] = self_host_body_value_with_carrier(plan.local_values[0u32], SelfHostWasmBodyCarrier::I32BodyCarrier)
-  let _ = self_host_linked_scalar_locals(link, Option::Some(plan), module_, module_.bodies[0u32],
-    SelfHostPlannedValueShape::I64PlannedValueShape, plan.specialization,
+  plan.local_values[0u32] = self_host_body_value_with_carrier(plan.local_values[0u32], I32BodyCarrier)
+  let _ = self_host_linked_scalar_locals(link, Some(plan), module_, module_.bodies[0u32],
+    I64PlannedValueShape, plan.specialization,
   )
 }
 
@@ -136,8 +136,8 @@ test "ARN-103 emitted locals require the complete value table" expect_trap "unre
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let _ = plan.local_values.pop()
-  let _ = self_host_linked_scalar_locals(link, Option::Some(plan), module_, module_.bodies[0u32],
-    SelfHostPlannedValueShape::I64PlannedValueShape, plan.specialization,
+  let _ = self_host_linked_scalar_locals(link, Some(plan), module_, module_.bodies[0u32],
+    I64PlannedValueShape, plan.specialization,
   )
 }
 
@@ -145,8 +145,8 @@ test "ARN-103 emitted locals require the complete slot table" expect_trap "unrea
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let _ = plan.local_slots.pop()
-  let _ = self_host_linked_scalar_locals(link, Option::Some(plan), module_, module_.bodies[0u32],
-    SelfHostPlannedValueShape::I64PlannedValueShape, plan.specialization,
+  let _ = self_host_linked_scalar_locals(link, Some(plan), module_, module_.bodies[0u32],
+    I64PlannedValueShape, plan.specialization,
   )
 }
 
@@ -154,8 +154,8 @@ test "ABI-710 emitted local slots retain source order" expect_trap "unreachable"
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   plan.local_slots[0u32] = 1u32
-  let _ = self_host_linked_scalar_locals(link, Option::Some(plan), module_, module_.bodies[0u32],
-    SelfHostPlannedValueShape::I64PlannedValueShape, plan.specialization,
+  let _ = self_host_linked_scalar_locals(link, Some(plan), module_, module_.bodies[0u32],
+    I64PlannedValueShape, plan.specialization,
   )
 }
 
@@ -163,8 +163,8 @@ test "ABI-710 emitted local count equals the saved physical count" expect_trap "
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let changed = self_host_test_temporary_plan_identity(plan, plan.module_id, plan.body, 2u32)
-  let _ = self_host_linked_scalar_locals(link, Option::Some(changed), module_, module_.bodies[0u32],
-    SelfHostPlannedValueShape::I64PlannedValueShape, plan.specialization,
+  let _ = self_host_linked_scalar_locals(link, Some(changed), module_, module_.bodies[0u32],
+    I64PlannedValueShape, plan.specialization,
   )
 }
 
@@ -172,16 +172,16 @@ test "ARN-103 emitted locals require the complete carrier table" expect_trap "un
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let _ = plan.locals.pop()
-  let _ = self_host_linked_scalar_locals(link, Option::Some(plan), module_, module_.bodies[0u32],
-    SelfHostPlannedValueShape::I64PlannedValueShape, plan.specialization,
+  let _ = self_host_linked_scalar_locals(link, Some(plan), module_, module_.bodies[0u32],
+    I64PlannedValueShape, plan.specialization,
   )
 }
 
 test "BOD-610 emitted local declarations require a body plan" expect_trap "unreachable" {
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  let _ = self_host_linked_scalar_locals(link, Option::None, module_, module_.bodies[0u32],
-    SelfHostPlannedValueShape::I64PlannedValueShape, plan.specialization,
+  let _ = self_host_linked_scalar_locals(link, None, module_, module_.bodies[0u32],
+    I64PlannedValueShape, plan.specialization,
   )
 }
 
@@ -195,7 +195,7 @@ test "non-returning initializers do not allocate unresolved local slots" {
   let mut checked = 0u32
   for plan in physical.bodies {
     if plan.local_values.length() == 1u32 {
-      assert(plan.local_values[0u32].carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier, "source flow proves that the binding receives no value")
+      assert(plan.local_values[0u32].carrier is NeverBodyCarrier, "source flow proves that the binding receives no value")
       assert(plan.local_slots[0u32] == 4294967295u32, "there is no local slot after divergence")
       assert(plan.physical_local_count == 0u32, "no fabricated reference local")
       checked = checked + 1u32
@@ -207,40 +207,40 @@ test "non-returning initializers do not allocate unresolved local slots" {
 test "BOD-610 local slot reads require a frozen body plan" expect_trap "unreachable" {
   let (link, _) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  let _ = self_host_linked_i32_local_slot(Option::None, module_, module_.bodies[0u32], 0u32)
+  let _ = self_host_linked_i32_local_slot(None, module_, module_.bodies[0u32], 0u32)
 }
 
 test "BOD-610 local erasure reads require a frozen body plan" expect_trap "unreachable" {
   let (link, _) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  let _ = self_host_linked_local_is_erased(Option::None, module_, module_.bodies[0u32], 0u32)
+  let _ = self_host_linked_local_is_erased(None, module_, module_.bodies[0u32], 0u32)
 }
 
 test "ARN-103 local erasure reads cannot repair missing slots from source shapes" expect_trap "unreachable" {
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let _ = plan.local_slots.pop()
-  let _ = self_host_linked_local_is_erased(Option::Some(plan), module_, module_.bodies[0u32], 0u32)
+  let _ = self_host_linked_local_is_erased(Some(plan), module_, module_.bodies[0u32], 0u32)
 }
 
 test "ARN-106 local slot reads require the requested local identity" expect_trap "unreachable" {
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  let _ = self_host_linked_i32_local_slot(Option::Some(plan), module_, module_.bodies[0u32], 999u32)
+  let _ = self_host_linked_i32_local_slot(Some(plan), module_, module_.bodies[0u32], 999u32)
 }
 
 test "ABI-710 local slot reads reject slots beyond the frozen local count" expect_trap "unreachable" {
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   plan.local_slots[0u32] = 99u32
-  let _ = self_host_linked_i32_local_slot(Option::Some(plan), module_, module_.bodies[0u32], 0u32)
+  let _ = self_host_linked_i32_local_slot(Some(plan), module_, module_.bodies[0u32], 0u32)
 }
 
 test "ABI-710 a stored scalar local cannot become erased" expect_trap "unreachable" {
   let (link, plan) = self_host_test_frozen_local_declarations()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   plan.local_slots[0u32] = 4294967295u32
-  let _ = self_host_linked_i32_local_slot(Option::Some(plan), module_, module_.bodies[0u32], 0u32)
+  let _ = self_host_linked_i32_local_slot(Some(plan), module_, module_.bodies[0u32], 0u32)
 }
 
 test "Unit local slot reads preserve physical erasure" {
@@ -252,8 +252,8 @@ test "Unit local slot reads preserve physical erasure" {
   assert(physical.diagnostics.length() == 0u32, "valid erased local")
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let plan = physical.bodies[0u32]
-  assert(self_host_linked_i32_local_slot(Option::Some(plan), module_, module_.bodies[0u32], 0u32) is Option::None, "Unit has no slot")
-  assert(self_host_linked_local_is_erased(Option::Some(plan), module_, module_.bodies[0u32], 0u32), "Unit erasure uses the saved plan")
+  assert(self_host_linked_i32_local_slot(Some(plan), module_, module_.bodies[0u32], 0u32) is None, "Unit has no slot")
+  assert(self_host_linked_local_is_erased(Some(plan), module_, module_.bodies[0u32], 0u32), "Unit erasure uses the saved plan")
 }
 
 test "ordinary function names do not add collection temporary locals" {
@@ -268,16 +268,16 @@ test "ordinary function names do not add collection temporary locals" {
   for plan in program.bodies {
     let module_ = link.fragments.specialization.lowering.modules[plan.module_index]
     let body = match self_host_body_lookup_for_plan(module_, plan) {
-      Option::Some(value) => value
-      Option::None => unreachable()
+      Some(value) => value
+      None => unreachable()
     }
     for expression in plan.expressions {
-      if module_.expressions[expression.expression].kind is SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) {
+      if module_.expressions[expression.expression].kind is PlannedDirectCall(_, _, _, _) {
         calls = calls + 1u32
       }
     }
     assert(plan.scratches.length() == 0u32, "no planned expression temporaries")
-    assert(self_host_linked_i32_scratch_count(Option::Some(plan), module_, body) == 0u32, "ordinary calls must not add compiler collection locals")
+    assert(self_host_linked_i32_scratch_count(Some(plan), module_, body) == 0u32, "ordinary calls must not add compiler collection locals")
   }
   assert(calls == 1u32, "one ordinary direct call")
 }
@@ -285,32 +285,32 @@ test "ordinary function names do not add collection temporary locals" {
 test "BOD-610 temporary slot lookup requires a body plan" expect_trap "unreachable" {
   let (link, plan) = self_host_raw_array_temporary_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
-  let _ = self_host_linked_i32_scratch_slot(Option::None, link, module_, body, 3u32)
+  let _ = self_host_linked_i32_scratch_slot(None, link, module_, body, 3u32)
 }
 
 test "BOD-610 temporary slot lookup cannot invent a missing slot" expect_trap "unreachable" {
   let (link, plan) = self_host_raw_array_temporary_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
   let _ = plan.scratches.pop()
-  let _ = self_host_linked_i32_scratch_slot(Option::Some(plan), link, module_, body, 3u32)
+  let _ = self_host_linked_i32_scratch_slot(Some(plan), link, module_, body, 3u32)
 }
 
 test "BOD-610 temporary slot lookup rejects duplicate slots" expect_trap "unreachable" {
   let (link, plan) = self_host_raw_array_temporary_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
   plan.scratches.push(plan.scratches[0u32])
-  let _ = self_host_linked_i32_scratch_slot(Option::Some(plan), link, module_, body, 3u32)
+  let _ = self_host_linked_i32_scratch_slot(Some(plan), link, module_, body, 3u32)
 }
 
 test "temporary slots start after frozen source locals" {
   let (link, plan) = self_host_raw_array_temporary_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
   assert(plan.lambda == 4294967295u32, "ordinary function has no closure environment")
-  assert(self_host_linked_i32_scratch_slot(Option::Some(plan), link, module_, body, 3u32) == plan.physical_local_count, "first temporary follows physical source locals")
+  assert(self_host_linked_i32_scratch_slot(Some(plan), link, module_, body, 3u32) == plan.physical_local_count, "first temporary follows physical source locals")
 }
 
 fn self_host_test_temporary_plan_identity(source: SelfHostPlannedPhysicalBodyCarrierPlan, module_id: U64, body_id: U64, local_count: U32) -> SelfHostPlannedPhysicalBodyCarrierPlan {
-  SelfHostPlannedPhysicalBodyCarrierPlan::{
+  {
     converged: source.converged
     stalled_work_item: source.stalled_work_item
     module_index: source.module_index
@@ -351,21 +351,21 @@ test "ARN-106 temporary slots require the selected module" expect_trap "unreacha
   let (link, plan) = self_host_raw_array_temporary_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
   let changed = self_host_test_temporary_plan_identity(plan, 5101u64, plan.body, plan.physical_local_count)
-  let _ = self_host_linked_i32_scratch_slot(Option::Some(changed), link, module_, body, 3u32)
+  let _ = self_host_linked_i32_scratch_slot(Some(changed), link, module_, body, 3u32)
 }
 
 test "ARN-106 temporary slots require the selected body" expect_trap "unreachable" {
   let (link, plan) = self_host_raw_array_temporary_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
   let changed = self_host_test_temporary_plan_identity(plan, plan.module_id, plan.body + 1u64, plan.physical_local_count)
-  let _ = self_host_linked_i32_scratch_slot(Option::Some(changed), link, module_, body, 3u32)
+  let _ = self_host_linked_i32_scratch_slot(Some(changed), link, module_, body, 3u32)
 }
 
 test "ABI-710 temporary slots cannot use the missing sentinel" expect_trap "unreachable" {
   let (link, plan) = self_host_raw_array_temporary_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
   let changed = self_host_test_temporary_plan_identity(plan, plan.module_id, plan.body, 4294967295u32)
-  let _ = self_host_linked_i32_scratch_slot(Option::Some(changed), link, module_, body, 3u32)
+  let _ = self_host_linked_i32_scratch_slot(Some(changed), link, module_, body, 3u32)
 }
 
 test "constructor temporary ordinals use exact frozen slots" {
@@ -373,10 +373,10 @@ test "constructor temporary ordinals use exact frozen slots" {
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
   assert(plan.scratches.length() == 3u32, "three source-order constructor temporaries")
   for scratch in plan.scratches {
-    let slot = self_host_physical_scratch_slot(Option::Some(plan), module_, body, scratch.expression, scratch.ordinal)
+    let slot = self_host_physical_scratch_slot(Some(plan), module_, body, scratch.expression, scratch.ordinal)
     assert(slot == plan.physical_local_count + scratch.ordinal, "each field ordinal has its own slot")
   }
-  assert(self_host_linked_i32_scratch_count(Option::Some(plan), module_, body) == 3u32, "frozen records define the temporary count")
+  assert(self_host_linked_i32_scratch_count(Some(plan), module_, body) == 3u32, "frozen records define the temporary count")
 }
 
 test "lambda temporary slots include the closure environment" {
@@ -393,7 +393,7 @@ test "lambda temporary slots include the closure environment" {
       let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
       assert(plan.scratches.length() == 1u32, "one lambda allocation temporary")
       let scratch = plan.scratches[0u32]
-      let slot = self_host_physical_scratch_slot(Option::Some(plan), module_, body, scratch.expression, scratch.ordinal)
+      let slot = self_host_physical_scratch_slot(Some(plan), module_, body, scratch.expression, scratch.ordinal)
       assert(slot == 1u32 + plan.physical_local_count, "environment precedes source locals and temporaries")
       checked = checked + 1u32
     }
@@ -412,15 +412,15 @@ test "Unit control temporaries retain explicit physical marker types" {
   let mut checked = 0u32
   for plan in program.bodies {
     for scratch in plan.scratches {
-      assert(scratch.value.carrier is SelfHostWasmBodyCarrier::I32BodyCarrier, "Unit control storage needs an explicit I32 marker, not a Unit carrier")
-      assert(scratch.carrier is SelfHostWasmBodyCarrier::I32BodyCarrier, "marker carrier copies agree")
+      assert(scratch.value.carrier is I32BodyCarrier, "Unit control storage needs an explicit I32 marker, not a Unit carrier")
+      assert(scratch.carrier is I32BodyCarrier, "marker carrier copies agree")
       checked = checked + 1u32
     }
   }
   assert(checked == 2u32, "match subject and loop state markers")
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => assert(bytes.byte_length() > 0u32, "Unit control marker slots validate")
-    Result::Err(error) => assert(false, error)
+    Ok(bytes) => assert(bytes.byte_length() > 0u32, "Unit control marker slots validate")
+    Err(error) => assert(false, error)
   }
 }
 
@@ -428,31 +428,31 @@ fn self_host_test_invalid_marker_carrier(carrier: SelfHostWasmBodyCarrier) -> Un
   let (link, plan) = self_host_raw_array_temporary_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
   let source = match self_host_body_plan_expression(plan, 1u32) {
-    Option::Some(value) => value.value
-    Option::None => unreachable()
+    Some(value) => value.value
+    None => unreachable()
   }
-  assert(source.carrier is SelfHostWasmBodyCarrier::I32BodyCarrier, "valid source before one carrier mutation")
+  assert(source.carrier is I32BodyCarrier, "valid source before one carrier mutation")
   let changed = self_host_body_value_with_carrier(source, carrier)
   let _ = self_host_body_marker_scratch_value(module_, body, 3u32, 1u32, changed)
 }
 
 test "BOD-610 marker storage cannot hide unknown evidence" expect_trap "unreachable" {
-  self_host_test_invalid_marker_carrier(SelfHostWasmBodyCarrier::UnresolvedBodyCarrier)
+  self_host_test_invalid_marker_carrier(UnresolvedBodyCarrier)
 }
 
 test "BOD-610 marker storage cannot hide conflicting evidence" expect_trap "unreachable" {
-  self_host_test_invalid_marker_carrier(SelfHostWasmBodyCarrier::ConflictingBodyCarrier)
+  self_host_test_invalid_marker_carrier(ConflictingBodyCarrier)
 }
 
 test "BOD-611 Never marker storage requires divergent source flow" expect_trap "unreachable" {
-  self_host_test_invalid_marker_carrier(SelfHostWasmBodyCarrier::NeverBodyCarrier)
+  self_host_test_invalid_marker_carrier(NeverBodyCarrier)
 }
 
 test "FRG-403 single temporary instructions reject another ordinal" expect_trap "unreachable" {
   let (link, plan) = self_host_raw_array_temporary_fixture()
   let (module_, body) = self_host_test_raw_array_temporary_source(link, plan)
   let source = plan.scratches[0u32]
-  let changed = SelfHostPlannedPhysicalScratchCarrier::{
+  let changed = {
     expression: source.expression
     ordinal: 1u32
     value: source.value

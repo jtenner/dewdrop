@@ -6,7 +6,7 @@ impl SelfHostBasicBodyInferencer {
     let expected = self.pattern_type(pattern)
     let origin = self_host_pattern_type_origin(pattern, offset)
     if children.length == 0u32 {
-      self.constrain(expected, self.primitive(SelfHostPrimitiveType::UnitType), origin)
+      self.constrain(expected, self.primitive(UnitType), origin)
       return
     }
     let mut rest = children.length
@@ -14,7 +14,7 @@ impl SelfHostBasicBodyInferencer {
     let _ = while 0u32 {
       index => if index < children.length {
         let child = self.collected.pattern_children[children.start + index]
-        if self.collected.patterns[child] is SelfHostHirPattern::RestPattern(_) {
+        if self.collected.patterns[child] is RestPattern(_) {
           rest = index
         } else {
           explicit_count = explicit_count + 1u32
@@ -28,7 +28,7 @@ impl SelfHostBasicBodyInferencer {
     let term = self.solver.type_term(self.solver.representative_type(expected))
     let mut valid = true
     match term {
-      SelfHostBodyTypeTerm::BodyProductType(span) => {
+      BodyProductType(span) => {
         self_host_assert_array_span(span.start, span.length, self.solver.type_arguments.length(), "ARN-101 product pattern body fields")
         let _ = while 0u32 {
           index => if index < span.length {
@@ -39,8 +39,8 @@ impl SelfHostBasicBodyInferencer {
           }
         }
       }
-      SelfHostBodyTypeTerm::BodyResolvedType(type_) => match self.resolved.types[type_] {
-        SelfHostResolvedType::ProductType(span) => {
+      BodyResolvedType(type_) => match self.resolved.types[type_] {
+        ProductType(span) => {
           self_host_assert_array_span(span.start, span.length, self.resolved.type_arguments.length(), "ARN-101 product pattern resolved fields")
           let _ = while 0u32 {
             index => if index < span.length {
@@ -55,7 +55,7 @@ impl SelfHostBasicBodyInferencer {
           valid = false
         }
       }
-      SelfHostBodyTypeTerm::BodyVariableType(_) => if rest == children.length {
+      BodyVariableType(_) => if rest == children.length {
         let _ = while 0u32 {
           index => if index < children.length {
             fields.push(self.pattern_type(self.collected.pattern_children[children.start + index]))
@@ -73,12 +73,12 @@ impl SelfHostBasicBodyInferencer {
       }
     }
     if !valid {
-      if !(term is SelfHostBodyTypeTerm::BodyErrorType) {
-        self.diagnostics.push(SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(pattern, offset))
+      if !(term is BodyErrorType) {
+        self.diagnostics.push(InvalidPatternConstructor(pattern, offset))
       }
       self.fail_pattern_constructor(pattern)
     } else if (rest == children.length && explicit_count != fields.length()) || explicit_count > fields.length() {
-      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::PatternPayloadArityMismatch(pattern, fields.length(), explicit_count, offset))
+      self.diagnostics.push(PatternPayloadArityMismatch(pattern, fields.length(), explicit_count, offset))
       self.fail_pattern_constructor(pattern)
       valid = false
     }

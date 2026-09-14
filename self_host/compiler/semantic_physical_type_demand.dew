@@ -17,11 +17,11 @@ struct SelfHostPhysicalTypeDemandScope {
 }
 
 fn self_host_physical_type_demand_seen() -> Map<I32, Bool> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_physical_type_demand_scope(module_: SelfHostPlannedModuleLowering, bindings: SelfHostCompileTimeBindings) -> SelfHostPhysicalTypeDemandScope {
-  SelfHostPhysicalTypeDemandScope::{
+  {
     module_: module_
     bindings: bindings
     seen: self_host_physical_type_demand_seen()
@@ -43,17 +43,17 @@ fn self_host_physical_type_demand_logical(demand: SelfHostPhysicalTypeDemand, ro
       let value = work[length - 1u32]
       work.truncate(length - 1u32)
       match value {
-        SelfHostCompileTimeType::NominalCompileTimeType(declaration) => self_host_physical_type_demand_add(demand, declaration)
-        SelfHostCompileTimeType::AppliedCompileTimeType(base, arguments) => {
+        NominalCompileTimeType(declaration) => self_host_physical_type_demand_add(demand, declaration)
+        AppliedCompileTimeType(base, arguments) => {
           work.push(base)
           for argument in arguments {
             work.push(argument)
           }
         }
-        SelfHostCompileTimeType::ProductCompileTimeType(fields) => for field in fields {
+        ProductCompileTimeType(fields) => for field in fields {
           work.push(field)
         }
-        SelfHostCompileTimeType::FunctionCompileTimeType(parameters, result) => {
+        FunctionCompileTimeType(parameters, result) => {
           work.push(result)
           for parameter in parameters {
             work.push(parameter)
@@ -88,27 +88,27 @@ fn self_host_physical_type_demand_drain(demand: SelfHostPhysicalTypeDemand, scop
           self_host_assert_array_index(index, module_.resolved_types.types.length(), "ARN-104 physical resolved type demand")
           let value = module_.resolved_types.types[index]
           match value {
-            SelfHostResolvedType::NominalType(declaration) => self_host_physical_type_demand_add(demand, declaration)
-            SelfHostResolvedType::GenericParameterType(parameter) => match scope.bindings.parameters.get(parameter) {
-              Option::Some(value) => self_host_physical_type_demand_logical(demand, value)
-              Option::None => {}
+            NominalType(declaration) => self_host_physical_type_demand_add(demand, declaration)
+            GenericParameterType(parameter) => match scope.bindings.parameters.get(parameter) {
+              Some(value) => self_host_physical_type_demand_logical(demand, value)
+              None => {}
             }
-            SelfHostResolvedType::SelfType(parameter) => match scope.bindings.selves.get(parameter) {
-              Option::Some(value) => self_host_physical_type_demand_logical(demand, value)
-              Option::None => {}
+            SelfType(parameter) => match scope.bindings.selves.get(parameter) {
+              Some(value) => self_host_physical_type_demand_logical(demand, value)
+              None => {}
             }
-            SelfHostResolvedType::AppliedType(base, _) => self_host_physical_type_demand_resolved(scope, base)
-            SelfHostResolvedType::FunctionType(_, result) => self_host_physical_type_demand_resolved(scope, result)
+            AppliedType(base, _) => self_host_physical_type_demand_resolved(scope, base)
+            FunctionType(_, result) => self_host_physical_type_demand_resolved(scope, result)
             _ => {}
           }
           let span = match value {
-            SelfHostResolvedType::ProductType(fields) => fields
-            SelfHostResolvedType::AppliedType(_, arguments) => arguments
-            SelfHostResolvedType::FunctionType(parameters, _) => parameters
-            _ => SelfHostHirSpan::{
+            ProductType(fields) => fields
+            AppliedType(_, arguments) => arguments
+            FunctionType(parameters, _) => parameters
+            _ => ({
               start: 0u32
               length: 0u32
-            }
+            })
           }
           self_host_assert_array_span(span.start, span.length, module_.resolved_types.type_arguments.length(), "ARN-101 physical resolved type arguments")
           let _ = while 0u32 {
@@ -125,19 +125,19 @@ fn self_host_physical_type_demand_drain(demand: SelfHostPhysicalTypeDemand, scop
           self_host_assert_array_index(index, module_.inferred.types.length(), "ARN-104 physical body type demand")
           let value = module_.inferred.types[index]
           match value {
-            SelfHostBodyTypeTerm::BodyResolvedType(resolved) => self_host_physical_type_demand_resolved(scope, resolved)
-            SelfHostBodyTypeTerm::BodyAppliedType(base, _) => scope.work.push(base)
-            SelfHostBodyTypeTerm::BodyFunctionType(_, result) => scope.work.push(result)
+            BodyResolvedType(resolved) => self_host_physical_type_demand_resolved(scope, resolved)
+            BodyAppliedType(base, _) => scope.work.push(base)
+            BodyFunctionType(_, result) => scope.work.push(result)
             _ => {}
           }
           let span = match value {
-            SelfHostBodyTypeTerm::BodyProductType(fields) => fields
-            SelfHostBodyTypeTerm::BodyAppliedType(_, arguments) => arguments
-            SelfHostBodyTypeTerm::BodyFunctionType(parameters, _) => parameters
-            _ => SelfHostHirSpan::{
+            BodyProductType(fields) => fields
+            BodyAppliedType(_, arguments) => arguments
+            BodyFunctionType(parameters, _) => parameters
+            _ => ({
               start: 0u32
               length: 0u32
-            }
+            })
           }
           self_host_assert_array_span(span.start, span.length, module_.inferred.type_arguments.length(), "ARN-101 physical body type arguments")
           let _ = while 0u32 {
@@ -165,7 +165,7 @@ fn self_host_physical_type_demand_body(scope: SelfHostPhysicalTypeDemandScope, e
   let _ = while 0u32 {
     offset => if offset < expressions.length {
       let expression = module_.expressions[expressions.start + offset]
-      if !(expression.kind is SelfHostPlannedExpressionKind::PlannedPoisonExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedConsumedExpression) && !(expression.kind is SelfHostPlannedExpressionKind::PlannedDeadExpression) {
+      if !(expression.kind is PlannedPoisonExpression) && !(expression.kind is PlannedConsumedExpression) && !(expression.kind is PlannedDeadExpression) {
         scope.work.push(expression.type_)
       }
       continue offset + 1u32
@@ -213,10 +213,10 @@ fn self_host_physical_type_demand_callable(scope: SelfHostPhysicalTypeDemandScop
     }
   }
   let body_id = match callable.kind {
-    SelfHostPlannedCallableKind::PlannedFunctionCallable(body) => body
-    SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, body) => match body {
-      Option::Some(value) => value
-      Option::None => return
+    PlannedFunctionCallable(body) => body
+    PlannedImplMethodCallable(_, body) => match body {
+      Some(value) => value
+      None => return
     }
     _ => return
   }
@@ -273,8 +273,8 @@ fn self_host_program_physical_type_demand(plan: SelfHostProgramSpecializationPla
     index => if index < plan.requests.length() {
       let request = plan.requests[index]
       let owner = match plan.lowering.index.declaration_owner(request.declaration) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           self_host_assert_compiler_invariant(false, "LNK-504 requested type demand owner")
           unreachable()
         }
@@ -283,8 +283,8 @@ fn self_host_program_physical_type_demand(plan: SelfHostProgramSpecializationPla
       let callable = self_host_program_specialization_callable(module_, request.declaration)
       let scope = self_host_physical_type_demand_scope(module_, self_host_compile_time_caller_bindings(callable, index, plan.requests))
       match callable {
-        Option::Some(value) => self_host_physical_type_demand_callable(scope, value)
-        Option::None => {
+        Some(value) => self_host_physical_type_demand_callable(scope, value)
+        None => {
           let _ = self_host_assert_compiler_invariant(false, "LNK-504 requested type demand callable")
         }
       }
@@ -298,8 +298,8 @@ fn self_host_program_physical_type_demand(plan: SelfHostProgramSpecializationPla
     cursor => if cursor < demand.work.length() {
       let declaration = demand.work[cursor]
       let owner = match plan.lowering.index.declaration_owner(declaration) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           self_host_assert_compiler_invariant(false, "LNK-504 nominal type demand owner")
           unreachable()
         }
@@ -313,15 +313,15 @@ fn self_host_program_physical_type_demand(plan: SelfHostProgramSpecializationPla
       let layout = layouts.layouts[index]
       self_host_assert_compiler_invariant(layout.declaration == declaration, "ARN-106 nominal demand identity")
       match layout.kind {
-        SelfHostPlannedNominalLayoutKind::PlannedStructLayout(fields) => self_host_physical_type_demand_fields(scope, fields)
-        SelfHostPlannedNominalLayoutKind::PlannedEnumLayout(variants) => {
+        PlannedStructLayout(fields) => self_host_physical_type_demand_fields(scope, fields)
+        PlannedEnumLayout(variants) => {
           self_host_assert_array_span(variants.start, variants.length, layouts.variants.length(), "ARN-101 physical variant demand")
           let _ = while 0u32 {
             offset => if offset < variants.length {
               match layouts.variants[variants.start + offset].payload {
-                SelfHostPlannedVariantPayloadLayout::PlannedUnitVariantLayout => {}
-                SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(fields) => self_host_physical_type_demand_fields(scope, fields)
-                SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(types) => {
+                PlannedUnitVariantLayout => {}
+                PlannedStructVariantLayout(fields) => self_host_physical_type_demand_fields(scope, fields)
+                PlannedTupleVariantLayout(types) => {
                   self_host_assert_array_span(types.start, types.length, layouts.payload_types.length(), "ARN-101 physical payload demand")
                   let _ = while 0u32 {
                     field => if field < types.length {
@@ -339,7 +339,7 @@ fn self_host_program_physical_type_demand(plan: SelfHostProgramSpecializationPla
             }
           }
         }
-        SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout => {}
+        PlannedForeignTypeLayout => {}
       }
       self_host_physical_type_demand_drain(demand, scope)
       continue cursor + 1u32

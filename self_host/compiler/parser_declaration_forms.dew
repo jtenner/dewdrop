@@ -4,23 +4,23 @@ open dew.std.option
 open dew.std.string
 
 fn self_host_empty_derives() -> Array<SelfHostDeriveRequest> {
-  Array::new()
+  new()
 }
 
 fn self_host_empty_struct_fields() -> Array<SelfHostStructField> {
-  Array::new()
+  new()
 }
 
 fn self_host_empty_enum_variants() -> Array<SelfHostEnumVariant> {
-  Array::new()
+  new()
 }
 
 fn self_host_empty_functions() -> Array<SelfHostFunctionDeclaration> {
-  Array::new()
+  new()
 }
 
 fn self_host_empty_trait_methods() -> Array<SelfHostTraitMethod> {
-  Array::new()
+  new()
 }
 
 fn self_host_parse_optional_derives(
@@ -28,24 +28,24 @@ fn self_host_parse_optional_derives(
 ) -> Option<Array<SelfHostDeriveRequest>> {
   let requests = self_host_empty_derives()
   match self_host_parser_peek(parser) {
-    Option::Some(token) => match token.kind {
-      SelfHostTokenKind::Identifier(name, _) if name.equals("derive") => {
+    Some(token) => match token.kind {
+      Identifier(name, _) if name.equals("derive") => {
         parser.index = parser.index + 1u32
       }
       _ => {
-        return Option::Some(requests)
+        return Some(requests)
       }
     }
-    Option::None => {
-      return Option::Some(requests)
+    None => {
+      return Some(requests)
     }
   }
   if !self_host_parser_expect_symbol(
     parser,
     0u32,
-    SelfHostDeclarationExpectation::LeftParen,
+    LeftParen,
   ) {
-    return Option::None
+    return None
   } else {
   }
   self_host_parser_skip_newlines(parser)
@@ -53,19 +53,19 @@ fn self_host_parse_optional_derives(
     _ => {
       let pair = match self_host_parser_identifier(
         parser,
-        SelfHostDeclarationExpectation::DeriveName,
+        DeriveName,
       ) {
-        Option::Some(value) => value
-        Option::None => break Option::None
+        Some(value) => value
+        None => break None
       }
       let (name, offset) = pair
-      requests.push(SelfHostDeriveRequest::{
+      requests.push({
         name: name
         offset: offset
       })
       self_host_parser_skip_newlines(parser)
       if self_host_parser_consume_symbol(parser, 1u32) {
-        break Option::Some(requests)
+        break Some(requests)
       } else if self_host_parser_consume_symbol(
         parser,
         25u32,
@@ -75,16 +75,16 @@ fn self_host_parse_optional_derives(
           parser,
           1u32,
         ) {
-          break Option::Some(requests)
+          break Some(requests)
         } else {
           continue 0u32
         }
       } else {
         self_host_parser_fail_expected(
           parser,
-          SelfHostDeclarationExpectation::DeriveSeparatorOrClose,
+          DeriveSeparatorOrClose,
         )
-        break Option::None
+        break None
       }
     }
   }
@@ -98,71 +98,71 @@ fn self_host_parse_function_after_keyword(
 ) -> Option<SelfHostFunctionDeclaration> {
   let pair = match self_host_parser_identifier(
     parser,
-    SelfHostDeclarationExpectation::FunctionName,
+    FunctionName,
   ) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   let (name, name_offset) = pair
   let type_parameters = match self_host_parse_optional_type_parameters(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   if !self_host_parser_expect_symbol(
     parser,
     0u32,
-    SelfHostDeclarationExpectation::LeftParen,
+    LeftParen,
   ) {
-    return Option::None
+    return None
   } else {
   }
   let parsed_parameters = match self_host_parse_function_parameters(
     parser,
     true,
   ) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   let (receiver, parameters) = parsed_parameters
   if !self_host_parser_expect_symbol(
     parser,
     31u32,
-    SelfHostDeclarationExpectation::Arrow,
+    Arrow,
   ) {
-    return Option::None
+    return None
   } else {
   }
   let return_type = match self_host_parse_type(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   let body_offset = self_host_parser_offset(parser)
   if !self_host_parser_expect_symbol(
     parser,
     2u32,
-    SelfHostDeclarationExpectation::LeftBrace,
+    LeftBrace,
   ) {
-    return Option::None
+    return None
   } else {
   }
   let body = match self_host_parse_block_after_left(parser, body_offset) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   if !self_host_parser_finish_line(parser) {
-    Option::None
+    None
   } else {
-    Option::Some(SelfHostFunctionDeclaration::{
+    Some({
       visibility: visibility
       name: name
       name_offset: name_offset
@@ -182,82 +182,82 @@ fn self_host_parse_test_after_keyword(
   declaration_offset: U32,
 ) -> Option<SelfHostTestDeclaration> {
   let name_token = match self_host_parser_peek(parser) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       self_host_parser_fail_expected(
         parser,
-        SelfHostDeclarationExpectation::TestName,
+        TestName,
       )
-      return Option::None
+      return None
     }
   }
   let name = match name_token.kind {
-    SelfHostTokenKind::StringLiteral(value) => {
+    StringLiteral(value) => {
       parser.index = parser.index + 1u32
       value
     }
     _ => {
       self_host_parser_fail_expected(
         parser,
-        SelfHostDeclarationExpectation::TestName,
+        TestName,
       )
-      return Option::None
+      return None
     }
   }
   let expected_trap = match self_host_parser_peek(parser) {
-    Option::Some(token) => match token.kind {
-      SelfHostTokenKind::Identifier(identifier, _) if identifier.equals("expect_trap") => {
+    Some(token) => match token.kind {
+      Identifier(identifier, _) if identifier.equals("expect_trap") => {
         parser.index = parser.index + 1u32
         match self_host_parser_peek(parser) {
-          Option::Some(value_token) => match value_token.kind {
-            SelfHostTokenKind::StringLiteral(value) => {
+          Some(value_token) => match value_token.kind {
+            StringLiteral(value) => {
               parser.index = parser.index + 1u32
-              Option::Some(value)
+              Some(value)
             }
             _ => {
               self_host_parser_fail_expected(
                 parser,
-                SelfHostDeclarationExpectation::TestExpectedTrap,
+                TestExpectedTrap,
               )
-              return Option::None
+              return None
             }
           }
-          Option::None => {
+          None => {
             self_host_parser_fail_expected(
               parser,
-              SelfHostDeclarationExpectation::TestExpectedTrap,
+              TestExpectedTrap,
             )
-            return Option::None
+            return None
           }
         }
       }
-      _ => Option::None
+      _ => None
     }
-    Option::None => Option::None
+    None => None
   }
   let body_offset = self_host_parser_offset(parser)
   if !self_host_parser_expect_symbol(
     parser,
     2u32,
-    SelfHostDeclarationExpectation::LeftBrace,
+    LeftBrace,
   ) {
-    return Option::None
+    return None
   } else {
   }
   let body = match self_host_parse_block_after_left(parser, body_offset) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   if !self_host_parser_finish_line(parser) {
-    Option::None
+    None
   } else {
-    Option::Some(SelfHostTestDeclaration::{
+    Some({
       name: name
       name_offset: name_token.offset
       expected_trap: expected_trap
-      return_type: SelfHostTypeExpr::NamedType("Unit", declaration_offset)
+      return_type: NamedType("Unit", declaration_offset)
       body: body
       offset: declaration_offset
     })
@@ -270,15 +270,15 @@ fn self_host_parse_impl_after_keyword(
   declaration_offset: U32,
 ) -> Option<SelfHostImplDeclaration> {
   let type_parameters = match self_host_parse_optional_type_parameters(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   let first_type = match self_host_parse_type(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   let mut trait_type = self_host_no_type()
@@ -286,11 +286,11 @@ fn self_host_parse_impl_after_keyword(
     parser,
     7u32,
   ) {
-    trait_type = Option::Some(first_type)
+    trait_type = Some(first_type)
     match self_host_parse_type(parser) {
-      Option::Some(value) => value
-      Option::None => {
-      return Option::None
+      Some(value) => value
+      None => {
+      return None
     }
     }
   } else if self_host_parser_at_symbol(
@@ -300,34 +300,34 @@ fn self_host_parse_impl_after_keyword(
     if foreign_ {
       self_host_parser_fail(
         parser,
-        SelfHostParseError::ForeignImplRequiresTrait(declaration_offset),
+        ForeignImplRequiresTrait(declaration_offset),
       )
-      return Option::None
+      return None
     } else {
       first_type
     }
   } else {
     self_host_parser_fail_expected(
       parser,
-      SelfHostDeclarationExpectation::ForOrLeftBrace,
+      ForOrLeftBrace,
     )
-    return Option::None
+    return None
   }
   if !self_host_parser_expect_symbol(
     parser,
     2u32,
-    SelfHostDeclarationExpectation::LeftBrace,
+    LeftBrace,
   ) {
-    return Option::None
+    return None
   } else {
   }
   let methods = self_host_empty_functions()
   if !self_host_parser_consume_symbol(parser, 3u32) {
     if !self_host_parser_expect_newline(
       parser,
-      SelfHostDeclarationExpectation::FunctionBodyNewline,
+      FunctionBodyNewline,
     ) {
-      return Option::None
+      return None
     } else {
     }
     self_host_parser_skip_newlines(parser)
@@ -344,33 +344,33 @@ fn self_host_parse_impl_after_keyword(
         if !self_host_parser_expect_keyword(
           parser,
           0u32,
-          SelfHostDeclarationExpectation::ImplMemberKeyword,
+          ImplMemberKeyword,
         ) {
           break false
         } else {
         }
         match self_host_parse_function_after_keyword(
           parser,
-          SelfHostDeclarationVisibility::ModuleVisible,
+          ModuleVisible,
           method_offset,
         ) {
-          Option::Some(value) => methods.push(value)
-          Option::None => break false
+          Some(value) => methods.push(value)
+          None => break false
         }
         self_host_parser_skip_newlines(parser)
         continue 0u32
       }
     }
     if !parsed {
-      return Option::None
+      return None
     } else {
     }
   } else {
   }
   if !self_host_parser_finish_line(parser) {
-    Option::None
+    None
   } else {
-    Option::Some(SelfHostImplDeclaration::{
+    Some({
       foreign_: foreign_
       type_parameters: type_parameters
       trait_type: trait_type
@@ -388,35 +388,35 @@ fn self_host_parse_struct_after_keyword(
 ) -> Option<SelfHostStructDeclaration> {
   let pair = match self_host_parser_identifier(
     parser,
-    SelfHostDeclarationExpectation::StructName,
+    StructName,
   ) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   let (name, name_offset) = pair
   let type_parameters = match self_host_parse_optional_type_parameters(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   if !self_host_parser_expect_symbol(
     parser,
     2u32,
-    SelfHostDeclarationExpectation::LeftBrace,
+    LeftBrace,
   ) {
-    return Option::None
+    return None
   } else {
   }
   let fields = self_host_empty_struct_fields()
   if !self_host_parser_consume_symbol(parser, 3u32) {
     if !self_host_parser_expect_newline(
       parser,
-      SelfHostDeclarationExpectation::StructBodyNewline,
+      StructBodyNewline,
     ) {
-      return Option::None
+      return None
     } else {
     }
     self_host_parser_skip_newlines(parser)
@@ -435,28 +435,28 @@ fn self_host_parse_struct_after_keyword(
         )
         let field_pair = match self_host_parser_identifier(
           parser,
-          SelfHostDeclarationExpectation::StructFieldName,
+          StructFieldName,
         ) {
-          Option::Some(value) => value
-          Option::None => break false
+          Some(value) => value
+          None => break false
         }
         let (field_name, field_offset) = field_pair
         if !self_host_parser_expect_symbol(
           parser,
           13u32,
-          SelfHostDeclarationExpectation::Colon,
+          Colon,
         ) {
           break false
         } else {
         }
         match self_host_parse_type(parser) {
-          Option::Some(type_) => fields.push(SelfHostStructField::{
+          Some(type_) => fields.push({
             mutable_: mutable_
             name: field_name
             type_: type_
             offset: field_offset
           })
-          Option::None => break false
+          None => break false
         }
         if !self_host_parser_finish_line(parser) {
           break false
@@ -467,21 +467,21 @@ fn self_host_parse_struct_after_keyword(
       }
     }
     if !parsed {
-      return Option::None
+      return None
     } else {
     }
   } else {
   }
   let derives = match self_host_parse_optional_derives(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   if !self_host_parser_finish_line(parser) {
-    Option::None
+    None
   } else {
-    Option::Some(SelfHostStructDeclaration::{
+    Some({
       visibility: visibility
       name: name
       name_offset: name_offset
@@ -500,35 +500,35 @@ fn self_host_parse_enum_after_keyword(
 ) -> Option<SelfHostEnumDeclaration> {
   let pair = match self_host_parser_identifier(
     parser,
-    SelfHostDeclarationExpectation::EnumName,
+    EnumName,
   ) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   let (name, name_offset) = pair
   let type_parameters = match self_host_parse_optional_type_parameters(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   if !self_host_parser_expect_symbol(
     parser,
     2u32,
-    SelfHostDeclarationExpectation::LeftBrace,
+    LeftBrace,
   ) {
-    return Option::None
+    return None
   } else {
   }
   let variants = self_host_empty_enum_variants()
   if !self_host_parser_consume_symbol(parser, 3u32) {
     if !self_host_parser_expect_newline(
       parser,
-      SelfHostDeclarationExpectation::EnumBodyNewline,
+      EnumBodyNewline,
     ) {
-      return Option::None
+      return None
     } else {
     }
     self_host_parser_skip_newlines(parser)
@@ -543,10 +543,10 @@ fn self_host_parse_enum_after_keyword(
         }
         let variant_pair = match self_host_parser_identifier(
           parser,
-          SelfHostDeclarationExpectation::EnumVariantName,
+          EnumVariantName,
         ) {
-          Option::Some(value) => value
-          Option::None => break false
+          Some(value) => value
+          None => break false
         }
         let (variant_name, variant_offset) = variant_pair
         if self_host_parser_consume_symbol(
@@ -561,14 +561,14 @@ fn self_host_parse_enum_after_keyword(
           ) {
             self_host_parser_fail(
               parser,
-              SelfHostParseError::EmptyTupleVariant(variant_offset),
+              EmptyTupleVariant(variant_offset),
             )
             break false
           } else {
           }
           let tuple_ok = while 0u32 {
             _ => match self_host_parse_type(parser) {
-              Option::Some(type_) => {
+              Some(type_) => {
                 types.push(type_)
                 self_host_parser_skip_newlines(parser)
                 if self_host_parser_consume_symbol(
@@ -592,19 +592,19 @@ fn self_host_parse_enum_after_keyword(
                 } else {
                   self_host_parser_fail_expected(
                     parser,
-                    SelfHostDeclarationExpectation::VariantTypeSeparatorOrClose,
+                    VariantTypeSeparatorOrClose,
                   )
                   break false
                 }
               }
-              Option::None => break false
+              None => break false
             }
           }
           if !tuple_ok {
             break false
           } else {
             variants.push(
-              SelfHostEnumVariant::TupleVariant(
+              TupleVariant(
                 variant_name,
                 types,
                 variant_offset,
@@ -623,7 +623,7 @@ fn self_host_parse_enum_after_keyword(
           ) {
             if !self_host_parser_expect_newline(
               parser,
-              SelfHostDeclarationExpectation::EnumVariantBodyNewline,
+              EnumVariantBodyNewline,
             ) {
               break false
             } else {
@@ -640,28 +640,28 @@ fn self_host_parse_enum_after_keyword(
                 }
                 let field_pair = match self_host_parser_identifier(
                   parser,
-                  SelfHostDeclarationExpectation::EnumVariantFieldName,
+                  EnumVariantFieldName,
                 ) {
-                  Option::Some(value) => value
-                  Option::None => break false
+                  Some(value) => value
+                  None => break false
                 }
                 let (field_name, field_offset) = field_pair
                 if !self_host_parser_expect_symbol(
                   parser,
                   13u32,
-                  SelfHostDeclarationExpectation::Colon,
+                  Colon,
                 ) {
                   break false
                 } else {
                 }
                 match self_host_parse_type(parser) {
-                  Option::Some(type_) => fields.push(SelfHostStructField::{
+                  Some(type_) => fields.push({
                     mutable_: false
                     name: field_name
                     type_: type_
                     offset: field_offset
                   })
-                  Option::None => break false
+                  None => break false
                 }
                 if !self_host_parser_finish_line(parser) {
                   break false
@@ -678,7 +678,7 @@ fn self_host_parse_enum_after_keyword(
           } else {
           }
           variants.push(
-            SelfHostEnumVariant::StructVariant(
+            StructVariant(
               variant_name,
               fields,
               variant_offset,
@@ -687,7 +687,7 @@ fn self_host_parse_enum_after_keyword(
           )
         } else if self_host_parser_consume_newline(parser) {
           variants.push(
-            SelfHostEnumVariant::UnitVariant(
+            UnitVariant(
               variant_name,
               variant_offset,
               0u32,
@@ -698,7 +698,7 @@ fn self_host_parse_enum_after_keyword(
         } else {
           self_host_parser_fail_expected(
             parser,
-            SelfHostDeclarationExpectation::EnumVariantPayloadOrLineEnd,
+            EnumVariantPayloadOrLineEnd,
           )
           break false
         }
@@ -711,21 +711,21 @@ fn self_host_parse_enum_after_keyword(
       }
     }
     if !parsed {
-      return Option::None
+      return None
     } else {
     }
   } else {
   }
   let derives = match self_host_parse_optional_derives(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   if !self_host_parser_finish_line(parser) {
-    Option::None
+    None
   } else {
-    Option::Some(SelfHostEnumDeclaration::{
+    Some({
       visibility: visibility
       name: name
       name_offset: name_offset
@@ -744,39 +744,39 @@ fn self_host_parse_type_alias_after_keyword(
 ) -> Option<SelfHostTypeAliasDeclaration> {
   let pair = match self_host_parser_identifier(
     parser,
-    SelfHostDeclarationExpectation::TypeAliasName,
+    TypeAliasName,
   ) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   let (name, name_offset) = pair
   let type_parameters = match self_host_parse_optional_type_parameters(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   if !self_host_parser_expect_symbol(
     parser,
     15u32,
-    SelfHostDeclarationExpectation::Equal,
+    Equal,
   ) {
-    return Option::None
+    return None
   } else {
   }
   self_host_parser_skip_newlines(parser)
   let target = match self_host_parse_type(parser) {
-    Option::Some(value) => value
-    Option::None => {
-      return Option::None
+    Some(value) => value
+    None => {
+      return None
     }
   }
   if !self_host_parser_finish_line(parser) {
-    Option::None
+    None
   } else {
-    Option::Some(SelfHostTypeAliasDeclaration::{
+    Some({
       visibility: visibility
       name: name
       name_offset: name_offset

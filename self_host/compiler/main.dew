@@ -68,7 +68,7 @@ fn self_host_compile_request_root_diagnostic(
   let message = StringBuilder::new()
   message.append("compile request root parse diagnostic")
   match diagnostic {
-    SelfHostCollectionDiagnostic::ParseDiagnostic(
+    ParseDiagnostic(
       file_id,
       parse_diagnostic,
       kind,
@@ -87,47 +87,47 @@ fn self_host_compile_request_root_diagnostic(
       message.append(" token=")
       message.append(token_text)
       match parse_diagnostic.error {
-        SelfHostParseError::Lexical(error, error_offset) => {
+        Lexical(error, error_offset) => {
           message.append(" error_offset=")
           message.append_u32(error_offset)
           match error {
-            SelfHostLexError::UnexpectedUnit(unit) => {
+            UnexpectedUnit(unit) => {
               message.append(" lexical=unexpected_unit unit=")
               message.append_u32(unit)
             }
-            SelfHostLexError::InvalidAtIdentifier =>
+            InvalidAtIdentifier =>
               message.append(" lexical=invalid_at_identifier")
-            SelfHostLexError::InvalidInteger(text) => {
+            InvalidInteger(text) => {
               message.append(" lexical=invalid_integer text=")
               message.append(text)
             }
-            SelfHostLexError::InvalidFloat(text) => {
+            InvalidFloat(text) => {
               message.append(" lexical=invalid_float text=")
               message.append(text)
             }
-            SelfHostLexError::InvalidEscape(unit) => {
+            InvalidEscape(unit) => {
               message.append(" lexical=invalid_escape unit=")
               message.append_u32(unit)
             }
-            SelfHostLexError::UnterminatedString =>
+            UnterminatedString =>
               message.append(" lexical=unterminated_string")
           }
         }
-        SelfHostParseError::ExpectedDeclaration(expectation, _, error_offset) => {
+        ExpectedDeclaration(expectation, _, error_offset) => {
           message.append(" error_offset=")
           message.append_u32(error_offset)
           match expectation {
-            SelfHostDeclarationExpectation::TypeArgumentSeparatorOrClose =>
+            TypeArgumentSeparatorOrClose =>
               message.append(" expectation=type_argument_separator_or_close")
-            SelfHostDeclarationExpectation::LeftBrace =>
+            LeftBrace =>
               message.append(" expectation=left_brace")
-            SelfHostDeclarationExpectation::Type =>
+            Type =>
               message.append(" expectation=type")
-            SelfHostDeclarationExpectation::Arrow =>
+            Arrow =>
               message.append(" expectation=arrow")
-            SelfHostDeclarationExpectation::LineEnd =>
+            LineEnd =>
               message.append(" expectation=line_end")
-            SelfHostDeclarationExpectation::DeclarationKeyword =>
+            DeclarationKeyword =>
               message.append(" expectation=declaration_keyword")
             _ => message.append(" expectation=other_declaration")
           }
@@ -135,7 +135,7 @@ fn self_host_compile_request_root_diagnostic(
         _ => message.append(" error=non_declaration")
       }
     }
-    SelfHostCollectionDiagnostic::DuplicateName(diagnostic) => {
+    DuplicateName(diagnostic) => {
       message.append(" kind=duplicate_name name=")
       message.append_u32(diagnostic.name)
       message.append(" first=")
@@ -151,13 +151,13 @@ fn self_host_compile_request_root_diagnostic(
       message.append(" duplicate_offset=")
       message.append_u32(diagnostic.duplicate_offset)
     }
-    SelfHostCollectionDiagnostic::DuplicateTestIdentity(diagnostic) => {
+    DuplicateTestIdentity(diagnostic) => {
       message.append(" kind=duplicate_test file=")
       message.append_u64(diagnostic.file)
       message.append(" name=")
       message.append(bytes_to_string(diagnostic.display_name))
     }
-    SelfHostCollectionDiagnostic::InvalidExpectedTestTrap(file, trap, offset) => {
+    InvalidExpectedTestTrap(file, trap, offset) => {
       message.append(" kind=invalid_test_trap file=")
       message.append_u64(file)
       message.append(" trap=")
@@ -165,13 +165,13 @@ fn self_host_compile_request_root_diagnostic(
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostCollectionDiagnostic::TestDeclarationOutsideTestFile(file, offset) => {
+    TestDeclarationOutsideTestFile(file, offset) => {
       message.append(" kind=test_outside_test_file file=")
       message.append_u64(file)
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostCollectionDiagnostic::ValueBindingArenaMismatch(
+    ValueBindingArenaMismatch(
       names,
       bindings,
       candidates,
@@ -183,7 +183,7 @@ fn self_host_compile_request_root_diagnostic(
       message.append(" candidates=")
       message.append_u32(candidates)
     }
-    SelfHostCollectionDiagnostic::UnknownDerivedTrait(name, file, offset) => {
+    UnknownDerivedTrait(name, file, offset) => {
       message.append(" kind=unknown_derived_trait name=")
       message.append(name)
       message.append(" file=")
@@ -191,7 +191,7 @@ fn self_host_compile_request_root_diagnostic(
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostCollectionDiagnostic::DuplicateDerivedTrait(name, file, first, duplicate) => {
+    DuplicateDerivedTrait(name, file, first, duplicate) => {
       message.append(" kind=duplicate_derived_trait name=")
       message.append(name)
       message.append(" file=")
@@ -201,19 +201,19 @@ fn self_host_compile_request_root_diagnostic(
       message.append(" duplicate=")
       message.append_u32(duplicate)
     }
-    SelfHostCollectionDiagnostic::EmptyForeignLogicalName(file, offset) => {
+    EmptyForeignLogicalName(file, offset) => {
       message.append(" kind=empty_foreign_logical_name file=")
       message.append_u64(file)
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostCollectionDiagnostic::EmptyForeignExportName(file, offset) => {
+    EmptyForeignExportName(file, offset) => {
       message.append(" kind=empty_foreign_export_name file=")
       message.append_u64(file)
       message.append(" offset=")
       message.append_u32(offset)
     }
-    SelfHostCollectionDiagnostic::ReservedForeignHostNamespace(file, offset) => {
+    ReservedForeignHostNamespace(file, offset) => {
       message.append(" kind=reserved_foreign_host_namespace file=")
       message.append_u64(file)
       message.append(" offset=")
@@ -228,35 +228,35 @@ fn self_host_compile_request_semantic_plan(
 ) -> Result<SelfHostPlannedProgramWasmGCLink, String> {
   // This canary protects nominal identity comparisons before body planning.
   if !self_host_u64_equal(31022548779538u64, 31022548779538u64) {
-    return Result::Err("compile request U64 helper equality contract failed")
+    return Err("compile request U64 helper equality contract failed")
   }
   if self_host_u64_equal(31022548779538u64, 31022548779539u64) {
-    return Result::Err("compile request U64 helper inequality contract failed")
+    return Err("compile request U64 helper inequality contract failed")
   }
   if 31022548779538u64 != 31022548779538u64 {
-    return Result::Err("compile request U64 direct equality contract failed")
+    return Err("compile request U64 direct equality contract failed")
   }
   if 31022548779538u64 == 31022548779539u64 {
-    return Result::Err("compile request U64 direct inequality contract failed")
+    return Err("compile request U64 direct inequality contract failed")
   }
   let collected = self_host_collect_program_manifest(
     7200u64,
     self_host_manifest_with_default_preamble(request.manifest, request.default_preamble),
   )
   if self_host_u32_greater(collected.diagnostics.length(), 0u32) {
-    return Result::Err("compile request manifest is invalid")
+    return Err("compile request manifest is invalid")
   }
   if !self_host_main_has_module_path(
     collected.module_paths,
     "dew.std.preamble",
   ) {
-    return Result::Err("compile request manifest path lookup failed")
+    return Err("compile request manifest path lookup failed")
   }
   match request.root_module_index() {
-    Option::Some(root_module_index) => {
+    Some(root_module_index) => {
       let root_module = collected.modules.at(root_module_index)
       if root_module.diagnostic_count() > 0u32 {
-        return Result::Err(
+        return Err(
           self_host_compile_request_root_diagnostic(
             root_module.diagnostic_at(0u32),
           ),
@@ -268,106 +268,106 @@ fn self_host_compile_request_semantic_plan(
           "self_host.compiler",
         ) {
           if root_module.file_count() == 0u32 {
-            return Result::Err("compile request collected compiler root has no files")
+            return Err("compile request collected compiler root has no files")
           } else if root_module.first_source_byte_length() == 0u32 {
-            return Result::Err("compile request collected compiler root has empty source")
+            return Err("compile request collected compiler root has empty source")
           } else if root_module.diagnostic_count() > 0u32 {
             match root_module.diagnostic_at(0u32) {
-              SelfHostCollectionDiagnostic::ParseDiagnostic(_, _, kind, offset, token_code, token_text) => {
+              ParseDiagnostic(_, _, kind, offset, token_code, token_text) => {
                 if kind == 0u32 && offset == 0u32 {
-                  return Result::Err("compile request compiler root expected a declaration at source start")
+                  return Err("compile request compiler root expected a declaration at source start")
                 } else if kind == 0u32 && token_code == 0u32 {
-                  return Result::Err("compile request compiler root rejected an fn declaration")
+                  return Err("compile request compiler root rejected an fn declaration")
                 } else if kind == 0u32 && token_code == 2u32 {
-                  return Result::Err("compile request compiler root rejected a pub declaration")
+                  return Err("compile request compiler root rejected a pub declaration")
                 } else if kind == 0u32 && token_code == 3u32 {
-                  return Result::Err("compile request compiler root rejected a builtin declaration")
+                  return Err("compile request compiler root rejected a builtin declaration")
                 } else if kind == 0u32 && token_code < 33u32 {
-                  return Result::Err("compile request compiler root rejected another keyword declaration")
+                  return Err("compile request compiler root rejected another keyword declaration")
                 } else if kind == 0u32 && token_code == 500u32 {
-                  return Result::Err("compile request compiler root tokenized fn as an identifier")
+                  return Err("compile request compiler root tokenized fn as an identifier")
                 } else if kind == 0u32 && token_code == 502u32 {
-                  return Result::Err("compile request compiler root tokenized pub as an identifier")
+                  return Err("compile request compiler root tokenized pub as an identifier")
                 } else if kind == 0u32 && token_code == 503u32 {
-                  return Result::Err("compile request compiler root tokenized builtin as an identifier")
+                  return Err("compile request compiler root tokenized builtin as an identifier")
                 } else if kind == 0u32 && token_code >= 500u32 && token_code < 533u32 {
-                  return Result::Err("compile request compiler root tokenized another keyword as an identifier")
+                  return Err("compile request compiler root tokenized another keyword as an identifier")
                 } else if kind == 0u32 && token_code == 100u32 {
-                  return Result::Err(token_text)
+                  return Err(token_text)
                 } else if kind == 0u32 {
-                  return Result::Err("compile request compiler root expected a declaration after source start")
+                  return Err("compile request compiler root expected a declaration after source start")
                 } else if kind == 1u32 {
-                  return Result::Err("compile request compiler root expected an expression")
+                  return Err("compile request compiler root expected an expression")
                 } else if kind == 2u32 {
-                  return Result::Err("compile request compiler root expected a pattern")
+                  return Err("compile request compiler root expected a pattern")
                 } else if kind == 3u32 {
-                  return Result::Err("compile request compiler root has a lexical error")
+                  return Err("compile request compiler root has a lexical error")
                 } else if kind == 4u32 {
-                  return Result::Err("compile request compiler root has an import after a declaration")
+                  return Err("compile request compiler root has an import after a declaration")
                 }
-                return Result::Err("compile request compiler root has another parse error")
+                return Err("compile request compiler root has another parse error")
               }
-              SelfHostCollectionDiagnostic::DuplicateName(_) =>
-                return Result::Err("compile request collected compiler root has a duplicate name")
-              SelfHostCollectionDiagnostic::DuplicateTestIdentity(_) =>
-                return Result::Err("compile request collected compiler root has a duplicate test")
-              SelfHostCollectionDiagnostic::InvalidExpectedTestTrap(_, _, _) =>
-                return Result::Err("compile request collected compiler root has an invalid test trap")
+              DuplicateName(_) =>
+                return Err("compile request collected compiler root has a duplicate name")
+              DuplicateTestIdentity(_) =>
+                return Err("compile request collected compiler root has a duplicate test")
+              InvalidExpectedTestTrap(_, _, _) =>
+                return Err("compile request collected compiler root has an invalid test trap")
               _ =>
-                return Result::Err("compile request collected compiler root has diagnostics")
+                return Err("compile request collected compiler root has diagnostics")
             }
-            return Result::Err("compile request collected compiler root has diagnostics")
+            return Err("compile request collected compiler root has diagnostics")
           } else if root_module.declaration_count() == 0u32 {
-            return Result::Err("compile request collected compiler root has source but no declarations")
+            return Err("compile request collected compiler root has source but no declarations")
           }
-          return Result::Err("compile request collected compiler root has declarations but no callables")
+          return Err("compile request collected compiler root has declarations but no callables")
         }
-        return Result::Err(
+        return Err(
           array_get_unchecked(collected.module_paths, root_module_index),
         )
       }
     }
-    Option::None => return Result::Err("compile request root module is missing")
+    None => return Err("compile request root module is missing")
   }
   match self_host_validate_collected_program_storage(collected) {
-    Option::Some(error) => return Result::Err(error)
-    Option::None => {}
+    Some(error) => return Err(error)
+    None => {}
   }
   let frozen = self_host_freeze_program_signature_interfaces(collected)
   if self_host_u32_greater(frozen.import_diagnostics.length(), 0u32) {
     let diagnostic = frozen.import_diagnostics[0u32]
     match diagnostic {
-      SelfHostImportScopeDiagnostic::UnavailableImportedInterface(_, path, _, _) =>
-        return Result::Err(path)
-      SelfHostImportScopeDiagnostic::DuplicateImportedAlias(_, name, _, _) =>
-        return Result::Err(name)
-      SelfHostImportScopeDiagnostic::AmbiguousImportedType(_, name, _, _) =>
-        return Result::Err(name)
-      SelfHostImportScopeDiagnostic::AmbiguousImportedTrait(_, name, _, _) =>
-        return Result::Err(name)
-      SelfHostImportScopeDiagnostic::AmbiguousImportedValue(_, name, _, _) =>
-        return Result::Err(name)
+      UnavailableImportedInterface(_, path, _, _) =>
+        return Err(path)
+      DuplicateImportedAlias(_, name, _, _) =>
+        return Err(name)
+      AmbiguousImportedType(_, name, _, _) =>
+        return Err(name)
+      AmbiguousImportedTrait(_, name, _, _) =>
+        return Err(name)
+      AmbiguousImportedValue(_, name, _, _) =>
+        return Err(name)
     }
-    return Result::Err("compile request import scopes are invalid")
+    return Err("compile request import scopes are invalid")
   } else if self_host_u32_greater(frozen.path_diagnostics.length(), 0u32) {
     match frozen.path_diagnostics[0u32] {
-      SelfHostProgramImportDiagnostic::MissingImportedModule(_, path, _, _) =>
-        return Result::Err(path)
+      MissingImportedModule(_, path, _, _) =>
+        return Err(path)
     }
-    return Result::Err("compile request import paths are invalid")
+    return Err("compile request import paths are invalid")
   }
   match self_host_validate_collected_program_bodies(frozen) {
-    Option::Some(error) => return Result::Err(error)
-    Option::None => {}
+    Some(error) => return Err(error)
+    None => {}
   }
   let lowering = self_host_plan_program_lowering(frozen)
   match self_host_validate_program_inference(lowering) {
-    Option::Some(error) => return Result::Err(error)
-    Option::None => {}
+    Some(error) => return Err(error)
+    None => {}
   }
   match self_host_validate_program_lowering(lowering) {
-    Option::Some(error) => return Result::Err(error)
-    Option::None => {}
+    Some(error) => return Err(error)
+    None => {}
   }
   let link = self_host_plan_program_wasmgc_link(
     self_host_plan_program_wasmgc_fragments(
@@ -376,10 +376,10 @@ fn self_host_compile_request_semantic_plan(
     request.test_mode,
   )
   match self_host_validate_program_representation(link) {
-    Option::Some(error) => Result::Err(error)
-    Option::None => match self_host_validate_program_wasmgc_link(link) {
-      Option::Some(error) => Result::Err(error)
-      Option::None => Result::Ok(link)
+    Some(error) => Err(error)
+    None => match self_host_validate_program_wasmgc_link(link) {
+      Some(error) => Err(error)
+      None => Ok(link)
     }
   }
 }
@@ -424,7 +424,7 @@ pub fn _start() -> Never {
 pub fn main() -> U32 {
   let process = facet_process()
   match process.arguments(8u32, 4096u32) {
-    Result::Err(error) => if self_host_u32_equal(error.code, 17u32) {
+    Err(error) => if self_host_u32_equal(error.code, 17u32) {
       self_host_error(process, "cannot read process arguments: limit exceeded")
     } else if self_host_u32_equal(error.code, 23u32) {
       self_host_error(process, "cannot read process arguments: invalid UTF-8")
@@ -433,7 +433,7 @@ pub fn main() -> U32 {
     } else {
       self_host_error(process, "cannot read process arguments: backend error")
     }
-    Result::Ok(arguments) => {
+    Ok(arguments) => {
       if arguments.length() != 2u32 {
         self_host_error(process, "usage: COMPILER REQUEST")
       } else {
@@ -459,21 +459,21 @@ pub fn main() -> U32 {
           report.append(" bodies=")
           report.append_u32(bodies)
           match import_check.detail {
-            Option::Some(detail) => report.append(detail)
-            Option::None => {}
+            Some(detail) => report.append(detail)
+            None => {}
           }
           return self_host_error(process, report.finish())
         }
         match relative_path(arguments.get_unchecked(1u32)) {
-          Result::Err(_) => self_host_error(process, "request path is not relative")
-          Result::Ok(request_path) => {
+          Err(_) => self_host_error(process, "request path is not relative")
+          Ok(request_path) => {
             let filesystem = facet_file_system(0u32)
             match fs_read_file(filesystem, request_path, 268435456u32) {
-              Result::Err(_) => self_host_error(process, "cannot read compile request")
-              Result::Ok(request_bytes) =>
+              Err(_) => self_host_error(process, "cannot read compile request")
+              Ok(request_bytes) =>
                 match decode_self_host_compile_request(request_bytes) {
-                  Result::Err(error) => self_host_error(process, error)
-                  Result::Ok(request) => {
+                  Err(error) => self_host_error(process, error)
+                  Ok(request) => {
                     let fingerprint = starshine_compiler_fingerprint(
                       request.starshine_provider,
                     )
@@ -484,29 +484,29 @@ pub fn main() -> U32 {
                       self_host_error(process, "compiler fingerprint mismatch")
                     } else {
                       match self_host_compile_request_semantic_plan(request) {
-                        Result::Err(error) => self_host_error(process, error)
-                        Result::Ok(plan) => match request.root_module_index() {
-                          Option::None => self_host_error(process, "root module is missing")
-                          Option::Some(root_index) => match build_self_host_linked_root_i32_module(
+                        Err(error) => self_host_error(process, error)
+                        Ok(plan) => match request.root_module_index() {
+                          None => self_host_error(process, "root module is missing")
+                          Some(root_index) => match build_self_host_linked_root_i32_module(
                             plan,
                             root_index,
                           ) {
-                            Result::Err(error) => self_host_error(process, error)
-                            Result::Ok(output) => match relative_path(request.output_path) {
-                              Result::Err(_) => self_host_error(
+                            Err(error) => self_host_error(process, error)
+                            Ok(output) => match relative_path(request.output_path) {
+                              Err(_) => self_host_error(
                                 process,
                                 "output path is not relative",
                               )
-                              Result::Ok(output_path) => match fs_write_file(
+                              Ok(output_path) => match fs_write_file(
                                 filesystem,
                                 output_path,
                                 output,
                               ) {
-                                Result::Err(_) => self_host_error(
+                                Err(_) => self_host_error(
                                   process,
                                   "cannot write output module",
                                 )
-                                Result::Ok(_) => 0u32
+                                Ok(_) => 0u32
                               }
                             }
                           }

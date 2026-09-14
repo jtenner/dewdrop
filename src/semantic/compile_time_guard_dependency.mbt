@@ -24,6 +24,7 @@ fn BasicBodyInferencer::guard_condition_dependent(
             let value = compile_time_source_local_initializers(
               self.collected,
               self.names,
+              self.body,
             )
             self.guard_local_sources = Some(value)
             value

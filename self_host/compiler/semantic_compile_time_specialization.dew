@@ -11,7 +11,7 @@ pub struct SelfHostCompileTimeInstance {
 }
 
 fn self_host_empty_guarded_evidence() -> Map<U32, Array<SelfHostCompileTimeTraitWitness>> {
-  Map::empty()
+  empty()
 }
 
 pub struct SelfHostCompileTimeProgramContext {
@@ -23,15 +23,15 @@ pub struct SelfHostCompileTimeProgramContext {
 }
 
 fn self_host_compile_time_target_map() -> Map<U64, Bytes> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_compile_time_caller_map() -> Map<U64, Array<U64>> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_compile_time_instance_map() -> Map<U32, SelfHostCompileTimeInstance> {
-  Map::empty()
+  empty()
 }
 
 // Request indices belong to one specialization run. Frozen source facts may be
@@ -47,14 +47,14 @@ fn self_host_compile_time_planning_lowering(lowering: SelfHostPlannedProgramLowe
       }
     }
   }
-  let context = SelfHostCompileTimeProgramContext::{
+  let context = {
     frozen: source.frozen
     targets: source.targets
     sensitive: sensitive
     instances: self_host_compile_time_instance_map()
     diagnostics: diagnostics
   }
-  SelfHostPlannedProgramLowering::{
+  {
     raw_arrays: lowering.raw_arrays
     collected: lowering.collected
     modules: lowering.modules
@@ -70,7 +70,7 @@ fn self_host_empty_compile_time_owners() -> Array<U64> {
 }
 
 fn self_host_is_compile_time_builtin(name: Bytes) -> Bool {
-  self_host_compile_time_type_query_arity(name) is Option::Some(_) ||
+  self_host_compile_time_type_query_arity(name) is Some(_) ||
   self_host_computed_type_builtin(name) || name == b"types.static_assert"
 }
 
@@ -86,7 +86,7 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
     // neither caller nor callee contains an explicit compile-time query.
     for body in module_.bodies {
       for expression in self_host_compile_time_owned_expressions(module_, body) {
-        if module_.expressions[expression].call_target is SelfHostBasicCallTarget::BoundTraitBasicCallTarget(_, _, _, _) && !sensitive.contains_key(body.declaration) {
+        if module_.expressions[expression].call_target is BoundTraitBasicCallTarget(_, _, _, _) && !sensitive.contains_key(body.declaration) {
           sensitive.set(body.declaration, true)
           work.push(body.declaration)
         }
@@ -97,11 +97,11 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
       for body in module_.bodies {
         for expression in self_host_compile_time_owned_expressions(module_, body) {
           match self_host_query_binding_type(collected, module_, expression) {
-            Option::Some(type_) => if self_host_query_has_projection(module_, -self_host_body_u32_to_i32(type_) - 2i32) && !sensitive.contains_key(body.declaration) {
+            Some(type_) => if self_host_query_has_projection(module_, -self_host_body_u32_to_i32(type_) - 2i32) && !sensitive.contains_key(body.declaration) {
               sensitive.set(body.declaration, true)
               work.push(body.declaration)
             }
-            Option::None => {}
+            None => {}
           }
         }
       }
@@ -112,7 +112,7 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
         work.push(callable.declaration)
       }
       match callable.kind {
-        SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => if self_host_is_compile_time_builtin(name) {
+        PlannedBuiltinCallable(name) => if self_host_is_compile_time_builtin(name) {
           targets.set(callable.declaration, name)
         }
         _ => {}
@@ -133,17 +133,17 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
               work.push(body.declaration)
             }
             match self_host_program_specialization_call_recipe(expression) {
-              Option::Some(recipe) => {
+              Some(recipe) => {
                 if targets.contains_key(recipe.target) && !sensitive.contains_key(body.declaration) {
                   sensitive.set(body.declaration, true)
                   work.push(body.declaration)
                 }
                 match callers.get(recipe.target) {
-                  Option::Some(values) => values.push(body.declaration)
-                  Option::None => callers.set(recipe.target, [body.declaration])
+                  Some(values) => values.push(body.declaration)
+                  None => callers.set(recipe.target, [body.declaration])
                 }
               }
-              Option::None => {}
+              None => {}
             }
             continue offset + 1u32
           } else {
@@ -154,7 +154,7 @@ fn self_host_compile_time_program_context(frozen: SelfHostFrozenSignatureProgram
     }
   }
   self_host_compile_time_mark_callers(callers, sensitive, work)
-  SelfHostCompileTimeProgramContext::{
+  {
     frozen: frozen
     targets: targets
     sensitive: sensitive
@@ -169,13 +169,13 @@ fn self_host_compile_time_mark_callers(callers: Map<U64, Array<U64>>, sensitive:
       let target = work[length - 1u32]
       work.truncate(length - 1u32)
       match callers.get(target) {
-        Option::Some(values) => for caller in values {
+        Some(values) => for caller in values {
           if !sensitive.contains_key(caller) {
             sensitive.set(caller, true)
             work.push(caller)
           }
         }
-        Option::None => {}
+        None => {}
       }
       continue work.length()
     } else {
@@ -186,18 +186,18 @@ fn self_host_compile_time_mark_callers(callers: Map<U64, Array<U64>>, sensitive:
 
 fn self_host_compile_time_evidence_type(value: SelfHostSpecializationEvidenceType) -> SelfHostCompileTimeType {
   match value {
-    SelfHostSpecializationEvidenceType::UnknownSpecializationEvidenceType => SelfHostCompileTimeType::UnknownCompileTimeType
-    SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(value) => SelfHostCompileTimeType::PrimitiveCompileTimeType(value)
-    SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(value) => SelfHostCompileTimeType::NominalCompileTimeType(value)
-    SelfHostSpecializationEvidenceType::StructuralSpecializationEvidenceType(value) => value
+    UnknownSpecializationEvidenceType => UnknownCompileTimeType
+    PrimitiveSpecializationEvidenceType(value) => PrimitiveCompileTimeType(value)
+    NominalSpecializationEvidenceType(value) => NominalCompileTimeType(value)
+    StructuralSpecializationEvidenceType(value) => value
   }
 }
 
 fn self_host_compile_time_to_evidence_type(value: SelfHostCompileTimeType) -> SelfHostSpecializationEvidenceType {
   match value {
-    SelfHostCompileTimeType::PrimitiveCompileTimeType(value) => SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(value)
-    SelfHostCompileTimeType::NominalCompileTimeType(value) => SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(value)
-    _ => SelfHostSpecializationEvidenceType::StructuralSpecializationEvidenceType(value)
+    PrimitiveCompileTimeType(value) => PrimitiveSpecializationEvidenceType(value)
+    NominalCompileTimeType(value) => NominalSpecializationEvidenceType(value)
+    _ => StructuralSpecializationEvidenceType(value)
   }
 }
 
@@ -206,7 +206,7 @@ fn self_host_compile_time_caller_bindings(caller: Option<SelfHostPlannedCallable
   if specialization < requests.length() {
     let request = requests[specialization]
     match caller {
-      Option::Some(callable) => if callable.declaration == request.declaration {
+      Some(callable) => if callable.declaration == request.declaration {
         let parameters = self_host_program_specialization_callable_generics(callable)
         let _ = while 0u32 {
           offset => if offset < parameters.length && offset < request.evidence_types.length() {
@@ -217,7 +217,7 @@ fn self_host_compile_time_caller_bindings(caller: Option<SelfHostPlannedCallable
           }
         }
       }
-      Option::None => {}
+      None => {}
     }
   }
   bindings

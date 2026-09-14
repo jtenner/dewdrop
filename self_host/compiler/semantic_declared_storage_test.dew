@@ -1,7 +1,7 @@
 fn self_host_assert_declared_storage_error(module_: SelfHostPlannedModuleLowering, field: SelfHostPlannedFieldLayout, code: U32, expected: U64, actual: U64, bad: U32) -> Unit {
   match self_host_check_declared_storage_type(module_.resolved_types, field.field, field.type_) {
-    Result::Ok(_) => assert(false, "invalid declared storage was accepted")
-    Result::Err(error) => {
+    Ok(_) => assert(false, "invalid declared storage was accepted")
+    Err(error) => {
       assert(error.code == code && error.phase == 4u32, "exact declared storage failure code and phase")
       assert(error.module_id == 5100u64 && error.declaration == field.field, "exact source field identity")
       assert(error.body == 0u64 && error.expression == 4294967295u32, "field failure has no body expression")
@@ -14,7 +14,7 @@ fn self_host_assert_declared_storage_error(module_: SelfHostPlannedModuleLowerin
 test "declared storage accepts generic adapters and complete reference graphs" {
   let module_ = self_host_declared_storage_fixture()
   for field in module_.type_layouts.fields {
-    assert(self_host_check_declared_storage_type(module_.resolved_types, field.field, field.type_) is Result::Ok(_), "valid declared field graph")
+    assert(self_host_check_declared_storage_type(module_.resolved_types, field.field, field.type_) is Ok(_), "valid declared field graph")
   }
 }
 
@@ -23,21 +23,21 @@ test "declared storage distinguishes invalid leaves, cycles, and arena errors" {
     let module_ = self_host_declared_storage_fixture()
     let field = self_host_planned_field_layout_identity(module_.type_layouts.fields[1u32])
     if kind == 0u32 {
-      module_.resolved_types.types[field.type_] = SelfHostResolvedType::MemberTypeProjection(field.type_, b"types.field_type", "value")
+      module_.resolved_types.types[field.type_] = MemberTypeProjection(field.type_, b"types.field_type", "value")
       self_host_assert_declared_storage_error(module_, field, 301u32, 0u64, 2u64, field.type_)
     } else if kind == 1u32 {
-      module_.resolved_types.types[field.type_] = SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::CompileTimeTypeType)
+      module_.resolved_types.types[field.type_] = PrimitiveType(CompileTimeTypeType)
       self_host_assert_declared_storage_error(module_, field, 301u32, 0u64, 3u64, field.type_)
     } else if kind == 2u32 {
-      module_.resolved_types.types[field.type_] = SelfHostResolvedType::AppliedType(field.type_, self_host_empty_hir_span(0u32))
+      module_.resolved_types.types[field.type_] = AppliedType(field.type_, self_host_empty_hir_span(0u32))
       self_host_assert_declared_storage_error(module_, field, 108u32, 0u64, 1u64, field.type_)
     } else if kind == 3u32 {
       let missing = module_.resolved_types.types.length()
-      module_.resolved_types.types[field.type_] = SelfHostResolvedType::AppliedType(missing, self_host_empty_hir_span(0u32))
+      module_.resolved_types.types[field.type_] = AppliedType(missing, self_host_empty_hir_span(0u32))
       self_host_assert_declared_storage_error(module_, field, 101u32, u32_into_u64(missing), u32_into_u64(missing), missing)
     } else {
       let length = module_.resolved_types.type_arguments.length()
-      module_.resolved_types.types[field.type_] = SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+      module_.resolved_types.types[field.type_] = ProductType({
         start: 0u32
         length: length + 1u32
       })
@@ -50,13 +50,13 @@ test "declared product storage cannot hide an erroneous leaf" {
   let module_ = self_host_declared_storage_fixture()
   let field = self_host_planned_field_layout_identity(module_.type_layouts.fields[4u32])
   let bad = match module_.resolved_types.types[field.type_] {
-    SelfHostResolvedType::ProductType(fields) => module_.resolved_types.type_arguments[fields.start + 1u32]
+    ProductType(fields) => module_.resolved_types.type_arguments[fields.start + 1u32]
     _ => {
       assert(false, "fixture requires a product field")
       unreachable()
     }
   }
-  module_.resolved_types.types[bad] = SelfHostResolvedType::ErrorType
+  module_.resolved_types.types[bad] = ErrorType
   self_host_assert_declared_storage_error(module_, field, 301u32, 0u64, 1u64, bad)
 }
 
@@ -67,23 +67,23 @@ fn self_host_declared_storage_fixture() -> SelfHostPlannedModuleLowering {
   let module_ = lowering.modules[0u32]
   assert(module_.inferred.diagnostics.length() == 0u32, "valid declared storage fixture")
   assert(module_.type_layouts.fields.length() == 5u32, "one generic and four concrete fields")
-  assert(self_host_wasmgc_field_storage_type(module_, module_.type_layouts.fields[1u32]) is SelfHostPlannedWasmStorageType::WasmI32Storage, "valid scalar before mutation")
+  assert(self_host_wasmgc_field_storage_type(module_, module_.type_layouts.fields[1u32]) is WasmI32Storage, "valid scalar before mutation")
   module_
 }
 
 test "SPC-301 declared field errors cannot use retained shape evidence" expect_trap "unreachable" {
   let module_ = self_host_declared_storage_fixture()
   let field = self_host_planned_field_layout_identity(module_.type_layouts.fields[1u32])
-  module_.resolved_types.types[field.type_] = SelfHostResolvedType::ErrorType
+  module_.resolved_types.types[field.type_] = ErrorType
   let _ = self_host_wasmgc_field_storage_type(module_, field)
 }
 
 test "SPC-301 declared payload errors cannot use retained shape evidence" expect_trap "unreachable" {
   let module_ = self_host_declared_storage_fixture()
   let type_ = module_.type_layouts.payload_types[0u32]
-  module_.resolved_types.types[type_] = SelfHostResolvedType::ErrorType
+  module_.resolved_types.types[type_] = ErrorType
   let _ = self_host_wasmgc_payload_storage_type(module_, module_.type_layouts.variants[0u32].variant,
-    SelfHostHirSpan::{
+    {
       start: 0u32
       length: 1u32
     }, 0u32)
@@ -93,13 +93,13 @@ test "SPC-301 reference fields cannot hide erroneous type arguments" expect_trap
   let module_ = self_host_declared_storage_fixture()
   let field = self_host_planned_field_layout_identity(module_.type_layouts.fields[2u32])
   let type_ = match module_.resolved_types.types[field.type_] {
-    SelfHostResolvedType::AppliedType(_, arguments) => module_.resolved_types.type_arguments[arguments.start]
+    AppliedType(_, arguments) => module_.resolved_types.type_arguments[arguments.start]
     _ => {
       assert(false, "fixture requires applied field type")
       unreachable()
     }
   }
-  module_.resolved_types.types[type_] = SelfHostResolvedType::ErrorType
+  module_.resolved_types.types[type_] = ErrorType
   let _ = self_host_wasmgc_field_storage_type(module_, field)
 }
 
@@ -107,12 +107,12 @@ test "SPC-301 callback fields cannot hide erroneous result types" expect_trap "u
   let module_ = self_host_declared_storage_fixture()
   let field = self_host_planned_field_layout_identity(module_.type_layouts.fields[3u32])
   let type_ = match module_.resolved_types.types[field.type_] {
-    SelfHostResolvedType::FunctionType(_, result) => result
+    FunctionType(_, result) => result
     _ => {
       assert(false, "fixture requires function field type")
       unreachable()
     }
   }
-  module_.resolved_types.types[type_] = SelfHostResolvedType::ErrorType
+  module_.resolved_types.types[type_] = ErrorType
   let _ = self_host_wasmgc_field_storage_type(module_, field)
 }

@@ -1,7 +1,7 @@
 open dew.std.testing
 
 test "compiler fingerprint comparison accepts equal bytes and rejects differences" {
-  let expected: FixedArray<U8> = FixedArray::make(32u32, 0u8)
+  let expected = FixedArray::make(32u32, 0u8)
   expected.set_unchecked(31u32, 4u8)
   assert(
     self_host_fingerprint_matches(

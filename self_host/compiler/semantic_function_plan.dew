@@ -64,7 +64,7 @@ pub struct SelfHostPlannedModuleFunctions {
 fn self_host_planned_module_functions_identity(
   value: SelfHostPlannedModuleFunctions,
 ) -> SelfHostPlannedModuleFunctions {
-  SelfHostPlannedModuleFunctions::{
+  {
     module_id: value.module_id
     callables: value.callables
     callable_by_declaration: value.callable_by_declaration
@@ -96,14 +96,14 @@ fn self_host_function_plan_body(
     current => if current < limit {
       let body = array_get_unchecked(collected.bodies, current)
       if self_host_u64_equal(body.declaration, declaration) {
-        return Option::Some(body.id)
+        return Some(body.id)
       }
       continue current + 1u32
     } else {
       break self_host_semantic_unit()
     }
   }
-  Option::None
+  None
 }
 
 fn self_host_function_plan_builtin(
@@ -231,7 +231,7 @@ fn self_host_function_plan_representation_type(
   let mut current = root
   while current {
     type_ => match resolved.types[type_] {
-      SelfHostResolvedType::SelfType(owner) => if self_host_u64_equal(
+      SelfType(owner) => if self_host_u64_equal(
         owner,
         self_owner,
       ) && !self_host_u32_equal(self_type, resolved.error_type) {
@@ -239,7 +239,7 @@ fn self_host_function_plan_representation_type(
       } else {
         break type_
       }
-      SelfHostResolvedType::AppliedType(base, _) => continue base
+      AppliedType(base, _) => continue base
       _ => break type_
     }
   }
@@ -283,12 +283,12 @@ fn self_host_plan_callable_parameters(
         exact_resolved,
         representation,
       )
-      let receiver = source.kind is SelfHostCollectedParameterKind::ReceiverParameterDecl
+      let receiver = source.kind is ReceiverParameterDecl
       if receiver {
         has_receiver = true
         receiver_type = representation
       }
-      parameters.push(SelfHostPlannedParameter::{
+      parameters.push({
         parameter: source.id
         declaration: declaration
         index: source.index
@@ -302,8 +302,8 @@ fn self_host_plan_callable_parameters(
       break self_host_semantic_unit()
     }
   }
-  SelfHostPlannedParameterSummary::{
-    span: SelfHostHirSpan::{
+  {
+    span: {
       start: parameter_start
       length: parameters.length() - parameter_start
     }
@@ -339,7 +339,7 @@ fn self_host_push_planned_callable(
       parameter_summary.receiver_type,
     )
   } else {
-    SelfHostPlannedValueShape::ErrorPlannedValueShape
+    ErrorPlannedValueShape
   }
   let compiler_owned = self_host_semantic_id_module(declaration) >= 4294901760u64
   let main_code = self_host_name_main_code(name)
@@ -349,12 +349,12 @@ fn self_host_push_planned_callable(
     declaration,
   )
   let planned_visibility = if compiler_owned {
-    SelfHostSemanticVisibility::ModuleVisible
+    ModuleVisible
   } else {
     visibility
   }
   callable_by_declaration[self_host_semantic_id_local(declaration)] = callables.length()
-  callables.push(SelfHostPlannedCallable::{
+  callables.push({
     declaration: declaration
     name: name.as_bytes()
     visibility: planned_visibility
@@ -447,19 +447,19 @@ fn self_host_plan_top_level_callable(
         collected.declarations[current],
       )
       if self_host_u64_equal(value.id, declaration) {
-      let kind = if value.kind is SelfHostCollectedDeclKind::BuiltinDecl {
-        SelfHostPlannedCallableKind::PlannedBuiltinCallable(
+      let kind = if value.kind is BuiltinDecl {
+        PlannedBuiltinCallable(
           self_host_function_plan_builtin(collected, declaration),
         )
       } else {
-        SelfHostPlannedCallableKind::PlannedFunctionCallable(
+        PlannedFunctionCallable(
           match self_host_function_plan_body(collected, declaration) {
-            Option::Some(body) => body
-            Option::None => 0u64
+            Some(body) => body
+            None => 0u64
           },
         )
       }
-      let owner_generics = SelfHostHirSpan::{
+      let owner_generics = {
         start: 0u32
         length: 0u32
       }
@@ -494,7 +494,7 @@ fn self_host_plan_method_callable(
       if self_host_u64_equal(value.id, declaration) {
       let owner_generics = collected.generic_parameters_of(value.parent)
       match value.kind {
-        SelfHostCollectedMethodKind::ForeignLibraryMemberDecl => {
+        ForeignLibraryMemberDecl => {
           let (library, export_name, host_import) = self_host_function_plan_foreign_identity(
             collected,
             declaration,
@@ -502,7 +502,7 @@ fn self_host_plan_method_callable(
           self_host_append_planned_callable(
             collected, resolved, callables, parameters, lookup, callable_index,
             declaration, collected.name(value.name), value.visibility,
-            SelfHostPlannedCallableKind::PlannedForeignCallable(
+            PlannedForeignCallable(
               library,
               export_name,
               host_import,
@@ -510,15 +510,15 @@ fn self_host_plan_method_callable(
             value.parent, owner_generics, resolved.error_type, value.offset,
           )
         }
-        SelfHostCollectedMethodKind::TraitMethodDecl => {
+        TraitMethodDecl => {
           self_host_append_planned_callable(
             collected, resolved, callables, parameters, lookup, callable_index,
             declaration, collected.name(value.name), value.visibility,
-            SelfHostPlannedCallableKind::PlannedTraitMethodCallable(value.parent),
+            PlannedTraitMethodCallable(value.parent),
             value.parent, owner_generics, resolved.error_type, value.offset,
           )
         }
-        SelfHostCollectedMethodKind::ImplMethodDecl => {
+        ImplMethodDecl => {
           let target = self_host_function_plan_impl_target(
             collected,
             resolved,
@@ -527,7 +527,7 @@ fn self_host_plan_method_callable(
           self_host_append_planned_callable(
             collected, resolved, callables, parameters, lookup, callable_index,
             declaration, collected.name(value.name), value.visibility,
-            SelfHostPlannedCallableKind::PlannedImplMethodCallable(
+            PlannedImplMethodCallable(
               value.parent,
               self_host_function_plan_body(collected, declaration),
             ),
@@ -571,7 +571,7 @@ fn self_host_plan_module_functions(
       break self_host_semantic_unit()
     }
   }
-  SelfHostPlannedModuleFunctions::{
+  {
     module_id: collected.module_id
     callables: callables
     callable_by_declaration: lookup

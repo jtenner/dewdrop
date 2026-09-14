@@ -17,7 +17,7 @@ fn self_host_test_call_target_update() -> (SelfHostPlannedBodyLowering, Array<Se
 }
 
 fn self_host_test_expression_call_target(source: SelfHostPlannedPhysicalExpressionCarrier, target: U32) -> SelfHostPlannedPhysicalExpressionCarrier {
-  SelfHostPlannedPhysicalExpressionCarrier::{
+  {
     expression: source.expression
     value: source.value
     carrier: source.carrier
@@ -51,9 +51,9 @@ test "canonical target lookup uses the saved call target" {
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = module_.bodies[1u32]
   let plan = program.bodies[1u32]
-  match self_host_linked_canonical_call_index(Option::Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration) {
-    Option::Some(value) => assert(value == 2u32, "exact saved callee uses the encoded function handle")
-    Option::None => assert(false, "valid call has a saved target")
+  match self_host_linked_canonical_call_index(Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration) {
+    Some(value) => assert(value == 2u32, "exact saved callee uses the encoded function handle")
+    None => assert(false, "valid call has a saved target")
   }
 }
 
@@ -62,7 +62,7 @@ test "canonical target lookup cannot replace a missing body plan" {
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = module_.bodies[1u32]
   let plan = program.bodies[1u32]
-  assert(self_host_linked_canonical_call_index(Option::None, link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration) is Option::None, "link metadata cannot replace the missing body plan")
+  assert(self_host_linked_canonical_call_index(None, link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration) is None, "link metadata cannot replace the missing body plan")
 }
 
 test "canonical target lookup cannot replace a missing expression target" {
@@ -71,7 +71,7 @@ test "canonical target lookup cannot replace a missing expression target" {
   let body = module_.bodies[1u32]
   let plan = program.bodies[1u32]
   plan.expressions[2u32] = self_host_test_expression_call_target(plan.expressions[2u32], 4294967295u32)
-  assert(self_host_linked_canonical_call_index(Option::Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration) is Option::None, "the link table must not repair a missing frozen target")
+  assert(self_host_linked_canonical_call_index(Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration) is None, "the link table must not repair a missing frozen target")
 }
 
 test "canonical target lookup cannot replace a missing call recipe" {
@@ -80,7 +80,7 @@ test "canonical target lookup cannot replace a missing call recipe" {
   let body = module_.bodies[1u32]
   let plan = program.bodies[1u32]
   let _ = plan.calls.pop()
-  assert(self_host_linked_canonical_call_index(Option::Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration) is Option::None, "a target without a recipe cannot emit")
+  assert(self_host_linked_canonical_call_index(Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration) is None, "a target without a recipe cannot emit")
 }
 
 test "canonical target lookup rejects the wrong caller specialization" {
@@ -88,7 +88,7 @@ test "canonical target lookup rejects the wrong caller specialization" {
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = module_.bodies[1u32]
   let plan = program.bodies[1u32]
-  assert(self_host_linked_canonical_call_index(Option::Some(plan), link, body, 0u32, 3u32, module_.bodies[0u32].declaration) is Option::None, "caller specialization is part of the saved identity")
+  assert(self_host_linked_canonical_call_index(Some(plan), link, body, 0u32, 3u32, module_.bodies[0u32].declaration) is None, "caller specialization is part of the saved identity")
 }
 
 test "ABI-701 emitted target cannot change to another linked function" expect_trap "unreachable" {
@@ -97,7 +97,7 @@ test "ABI-701 emitted target cannot change to another linked function" expect_tr
   let body = module_.bodies[1u32]
   let plan = program.bodies[1u32]
   plan.expressions[2u32] = self_host_test_expression_call_target(plan.expressions[2u32], 1u32)
-  let _ = self_host_linked_canonical_call_index(Option::Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration)
+  let _ = self_host_linked_canonical_call_index(Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration)
 }
 
 test "ABI-701 emitted calls require one saved recipe" expect_trap "unreachable" {
@@ -106,7 +106,7 @@ test "ABI-701 emitted calls require one saved recipe" expect_trap "unreachable" 
   let body = module_.bodies[1u32]
   let plan = program.bodies[1u32]
   plan.calls.push(plan.calls[0u32])
-  let _ = self_host_linked_canonical_call_index(Option::Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration)
+  let _ = self_host_linked_canonical_call_index(Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration)
 }
 
 test "LNK-502 emitted target must be in the linked function table" expect_trap "unreachable" {
@@ -115,7 +115,7 @@ test "LNK-502 emitted target must be in the linked function table" expect_trap "
   let body = module_.bodies[1u32]
   let plan = program.bodies[1u32]
   plan.expressions[2u32] = self_host_test_expression_call_target(plan.expressions[2u32], 99u32)
-  let _ = self_host_linked_canonical_call_index(Option::Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration)
+  let _ = self_host_linked_canonical_call_index(Some(plan), link, body, plan.specialization, 3u32, module_.bodies[0u32].declaration)
 }
 
 test "ABI-701 emitted calls retain the selected declaration" expect_trap "unreachable" {
@@ -123,7 +123,7 @@ test "ABI-701 emitted calls retain the selected declaration" expect_trap "unreac
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = module_.bodies[1u32]
   let plan = program.bodies[1u32]
-  let _ = self_host_linked_canonical_call_index(Option::Some(plan), link, body, plan.specialization, 3u32, body.declaration)
+  let _ = self_host_linked_canonical_call_index(Some(plan), link, body, plan.specialization, 3u32, body.declaration)
 }
 
 test "ARN-102 indirect call targets belong to the caller body" expect_trap "unreachable" {
@@ -150,7 +150,7 @@ test "tuple call arguments retain their single physical reference" {
   let plan = physical.bodies[1u32]
   let mut checked = 0u32
   for expression in plan.expressions {
-    if module_.expressions[expression.expression].kind is SelfHostPlannedExpressionKind::PlannedProductNew(_) {
+    if module_.expressions[expression.expression].kind is PlannedProductNew(_) {
       let evaluations = []
       let operands = []
       assert(self_host_body_plan_call_argument(module_, body, plan.expressions,
@@ -168,8 +168,8 @@ test "tuple call arguments retain their single physical reference" {
 test "BOD-610 call evaluation cannot reconstruct a missing body plan" expect_trap "unreachable" {
   let (link, _) = self_host_test_canonical_target_fixture()
   let module_ = link.fragments.specialization.lowering.modules[0u32]
-  let _ = self_host_linked_i32_push_call_evaluations(Option::None, link, module_,
-    module_.bodies[1u32], 3u32, SelfHostHirSpan::{
+  let _ = self_host_linked_i32_push_call_evaluations(None, link, module_,
+    module_.bodies[1u32], 3u32, {
       start: 0u32
       length: 0u32
     }, 2u32, StarshineFfi.ffi_ffi_bridge_instructions_new(), [], [], 0u32, true,
@@ -246,7 +246,7 @@ test "a missing generic method mapping cannot be repaired from its receiver" {
     if plan.body == call.caller_body && plan.specialization == call.caller_specialization {
       let diagnostics = []
       self_host_verify_body_call_arguments(link, plan, module_, body, missing,
-        SelfHostHirSpan::{
+        {
           start: 0u32
           length: 0u32
         }, diagnostics,
@@ -257,7 +257,7 @@ test "a missing generic method mapping cannot be repaired from its receiver" {
       assert(failure.module_id == plan.module_id && failure.declaration == plan.declaration && failure.body == plan.body, "exact caller identity")
       assert(failure.expression == call.expression && failure.source_offset == module_.expressions[call.expression].offset, "exact call expression and source offset")
       assert(failure.physical_function_index == plan.physical_function_index && failure.specialization == plan.specialization && failure.specialization_key == plan.specialization_key, "exact physical caller")
-      assert(failure.entity == 0u64 && failure.expected is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier && failure.actual is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, "missing evidence is not fabricated")
+      assert(failure.entity == 0u64 && failure.expected is UnresolvedBodyCarrier && failure.actual is UnresolvedBodyCarrier, "missing evidence is not fabricated")
       checked = checked + 1u32
     }
   }

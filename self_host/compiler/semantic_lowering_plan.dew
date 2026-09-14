@@ -91,7 +91,7 @@ pub struct SelfHostPlannedExpression {
 fn self_host_planned_expression_identity(
   expression: SelfHostPlannedExpression,
 ) -> SelfHostPlannedExpression {
-  SelfHostPlannedExpression::{
+  {
     type_: expression.type_
     shape: expression.shape
     nominal: expression.nominal
@@ -165,7 +165,7 @@ pub struct SelfHostPlannedPattern {
 fn self_host_planned_pattern_identity(
   pattern: SelfHostPlannedPattern,
 ) -> SelfHostPlannedPattern {
-  SelfHostPlannedPattern::{
+  {
     elided: pattern.elided
     type_: pattern.type_
     shape: pattern.shape
@@ -204,7 +204,7 @@ pub struct SelfHostPlannedPatternArm {
 fn self_host_planned_pattern_arm_identity(
   arm: SelfHostPlannedPatternArm,
 ) -> SelfHostPlannedPatternArm {
-  SelfHostPlannedPatternArm::{
+  {
     pattern: arm.pattern
     guard_condition: arm.guard_condition
     body: arm.body
@@ -318,7 +318,7 @@ pub struct SelfHostPlannedModuleLowering {
 fn self_host_planned_object_field_identity(
   field: SelfHostPlannedObjectField,
 ) -> SelfHostPlannedObjectField {
-  SelfHostPlannedObjectField::{
+  {
     field: field.field
     name: field.name
     value: field.value
@@ -365,12 +365,12 @@ fn self_host_lowering_module_value_declaration(
   name: U32,
 ) -> U64 {
   match collected.value_binding(name) {
-    Option::Some(binding) => if binding.kind is SelfHostCollectedDeclKind::LetDecl {
+    Some(binding) => if binding.kind is LetDecl {
       collected.value_binding_candidates[binding.head].declaration
     } else {
       0u64
     }
-    Option::None => 0u64
+    None => 0u64
   }
 }
 
@@ -383,11 +383,11 @@ fn self_host_lowering_builtin_name(
     current => if current < recipes.length() {
       let recipe = recipes[current]
       if self_host_u64_equal(recipe.declaration, declaration) {
-        break Option::Some(self_host_raw_array_canonical_opcode(recipe.builtin_name))
+        break Some(self_host_raw_array_canonical_opcode(recipe.builtin_name))
       }
       continue current + 1u32
     } else {
-      break Option::None
+      break None
     }
   }
 }
@@ -427,20 +427,20 @@ fn self_host_lowering_unique_mutable_field(
       )
       if self_host_u32_equal(field.name, name) && field.mutable_ {
         match field.variant {
-          Option::None => if found {
-            break Option::None
+          None => if found {
+            break None
           } else {
             selected = field.id
             found = true
           }
-          Option::Some(_) => {}
+          Some(_) => {}
         }
       }
       continue current + 1u32
     } else if found {
-      break Option::Some(selected)
+      break Some(selected)
     } else {
-      break Option::None
+      break None
     }
   }
 }
@@ -461,19 +461,19 @@ fn self_host_lowering_expression_kind(
   let selection = inferred.expression_selections[
     self_host_u32_add(job.expression_selections.start, relative)
   ]
-  if selection is SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection {
-    if !(collected.expressions[expression] is SelfHostHirExpr::IfExpr(_, _, _, _)) {
-      return SelfHostPlannedExpressionKind::PlannedDeferredExpression
+  if selection is DeferredBasicExpressionSelection {
+    if !(collected.expressions[expression] is IfExpr(_, _, _, _)) {
+      return PlannedDeferredExpression
     }
   }
   let operator_target = inferred.operator_targets[
     self_host_u32_add(job.operator_targets.start, relative)
   ]
-  if collected.expressions[expression] is SelfHostHirExpr::NameExpr(_, _) {
+  if collected.expressions[expression] is NameExpr(_, _) {
     match selection {
-      SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, 2u32, _) => return SelfHostPlannedExpressionKind::PlannedConstruct(
+      VariantConstructionBasicExpressionSelection(_, 2u32, _) => return PlannedConstruct(
         expression,
-        SelfHostHirSpan::{
+        {
           start: 0u32
           length: 0u32
         },
@@ -482,61 +482,61 @@ fn self_host_lowering_expression_kind(
       _ => {}
     }
     match call_target {
-      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => return SelfHostPlannedExpressionKind::PlannedFunctionReference(declaration)
+      SelectedBasicCallTarget(declaration, _) => return PlannedFunctionReference(declaration)
       _ => {}
     }
   }
   match collected.expressions[expression] {
-    SelfHostHirExpr::I8Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI8Const(value)
-    SelfHostHirExpr::I16Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI16Const(value)
-    SelfHostHirExpr::I32Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI32Const(value)
-    SelfHostHirExpr::I64Expr(value, _) => SelfHostPlannedExpressionKind::PlannedI64Const(value)
-    SelfHostHirExpr::U8Expr(value, _) => SelfHostPlannedExpressionKind::PlannedU8Const(value)
-    SelfHostHirExpr::U16Expr(value, _) => SelfHostPlannedExpressionKind::PlannedU16Const(value)
-    SelfHostHirExpr::U32Expr(value, _) => SelfHostPlannedExpressionKind::PlannedU32Const(value)
-    SelfHostHirExpr::U64Expr(value, _) => SelfHostPlannedExpressionKind::PlannedU64Const(value)
-    SelfHostHirExpr::F32Expr(value, _) => SelfHostPlannedExpressionKind::PlannedF32Const(value)
-    SelfHostHirExpr::F64Expr(value, _) => SelfHostPlannedExpressionKind::PlannedF64Const(value)
-    SelfHostHirExpr::BoolExpr(value, _) => SelfHostPlannedExpressionKind::PlannedBoolConst(value)
-    SelfHostHirExpr::StringExpr(value, _) => SelfHostPlannedExpressionKind::PlannedStringConst(value)
-    SelfHostHirExpr::BytesExpr(value, _) => SelfHostPlannedExpressionKind::PlannedBytesConst(value)
-    SelfHostHirExpr::NameExpr(_, _) => match names.expression_references[expression] {
-      SelfHostBodyNameReference::LocalNameReference(local) => SelfHostPlannedExpressionKind::PlannedLocalGet(local)
-      SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => SelfHostPlannedExpressionKind::PlannedCaptureGet(capture)
-      SelfHostBodyNameReference::ModuleValueNameReference(name) => SelfHostPlannedExpressionKind::PlannedModuleValueGet(
+    I8Expr(value, _) => PlannedI8Const(value)
+    I16Expr(value, _) => PlannedI16Const(value)
+    I32Expr(value, _) => PlannedI32Const(value)
+    I64Expr(value, _) => PlannedI64Const(value)
+    U8Expr(value, _) => PlannedU8Const(value)
+    U16Expr(value, _) => PlannedU16Const(value)
+    U32Expr(value, _) => PlannedU32Const(value)
+    U64Expr(value, _) => PlannedU64Const(value)
+    F32Expr(value, _) => PlannedF32Const(value)
+    F64Expr(value, _) => PlannedF64Const(value)
+    BoolExpr(value, _) => PlannedBoolConst(value)
+    StringExpr(value, _) => PlannedStringConst(value)
+    BytesExpr(value, _) => PlannedBytesConst(value)
+    NameExpr(_, _) => match names.expression_references[expression] {
+      LocalNameReference(local) => PlannedLocalGet(local)
+      LambdaCaptureNameReference(capture) => PlannedCaptureGet(capture)
+      ModuleValueNameReference(name) => PlannedModuleValueGet(
         self_host_lowering_module_value_declaration(collected, name),
       )
-      SelfHostBodyNameReference::ImportedModuleValueNameReference(declaration) => SelfHostPlannedExpressionKind::PlannedModuleValueGet(declaration)
-      _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+      ImportedModuleValueNameReference(declaration) => PlannedModuleValueGet(declaration)
+      _ => PlannedPoisonExpression
     }
-    SelfHostHirExpr::ImportAliasExpr(_, _) => SelfHostPlannedExpressionKind::PlannedPoisonExpression
-    SelfHostHirExpr::ProductExpr(children, _) => SelfHostPlannedExpressionKind::PlannedProductNew(children)
-    SelfHostHirExpr::TypeBindingExpr(_, _) => SelfHostPlannedExpressionKind::PlannedUnitConst
-    SelfHostHirExpr::ArrayExpr(children, _) => SelfHostPlannedExpressionKind::PlannedArrayLiteral(children)
-    SelfHostHirExpr::LambdaExpr(lambda, _) => SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda)
-    SelfHostHirExpr::ObjectExpr(fields, _) => SelfHostPlannedExpressionKind::PlannedObjectNew(fields)
-    SelfHostHirExpr::ConstructExpr(target, fields, _) => SelfHostPlannedExpressionKind::PlannedConstruct(target, fields, selection)
-    SelfHostHirExpr::BlockExpr(block, _) => SelfHostPlannedExpressionKind::PlannedBlockExpression(block)
-    SelfHostHirExpr::IfExpr(condition, then_block, else_expression, _) => SelfHostPlannedExpressionKind::PlannedIfExpression(condition, then_block, else_expression)
-    SelfHostHirExpr::MatchExpr(value, arms, _) => SelfHostPlannedExpressionKind::PlannedMatchExpression(value, arms)
-    SelfHostHirExpr::WhileExpr(initial, arms, _) => SelfHostPlannedExpressionKind::PlannedWhileExpression(
+    ImportAliasExpr(_, _) => PlannedPoisonExpression
+    ProductExpr(children, _) => PlannedProductNew(children)
+    TypeBindingExpr(_, _) => PlannedUnitConst
+    ArrayExpr(children, _) => PlannedArrayLiteral(children)
+    LambdaExpr(lambda, _) => PlannedLambdaClosure(lambda)
+    ObjectExpr(fields, _) => PlannedObjectNew(fields)
+    ConstructExpr(target, fields, _) => PlannedConstruct(target, fields, selection)
+    BlockExpr(block, _) => PlannedBlockExpression(block)
+    IfExpr(condition, then_block, else_expression, _) => PlannedIfExpression(condition, then_block, else_expression)
+    MatchExpr(value, arms, _) => PlannedMatchExpression(value, arms)
+    WhileExpr(initial, arms, _) => PlannedWhileExpression(
       names.expression_controls[expression],
       initial,
       arms,
     )
-    SelfHostHirExpr::ReturnExpr(value, _) => SelfHostPlannedExpressionKind::PlannedReturnExpression(value)
-    SelfHostHirExpr::BreakExpr(value, _) => SelfHostPlannedExpressionKind::PlannedBreakExpression(
+    ReturnExpr(value, _) => PlannedReturnExpression(value)
+    BreakExpr(value, _) => PlannedBreakExpression(
       names.transfer_targets[expression],
       value,
     )
-    SelfHostHirExpr::ContinueExpr(value, _) => SelfHostPlannedExpressionKind::PlannedContinueExpression(
+    ContinueExpr(value, _) => PlannedContinueExpression(
       names.transfer_targets[expression],
       value,
     )
-    SelfHostHirExpr::PrefixExpr(operator, operand, _) => SelfHostPlannedExpressionKind::PlannedPrefixExpression(operator, operand)
-    SelfHostHirExpr::BinaryExpr(operator, left, right, _) => match operator_target {
-      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
-        SelfHostPlannedExpressionKind::PlannedOperatorCall(
+    PrefixExpr(operator, operand, _) => PlannedPrefixExpression(operator, operand)
+    BinaryExpr(operator, left, right, _) => match operator_target {
+      SelectedBasicCallTarget(declaration, arguments) => {
+        PlannedOperatorCall(
           declaration,
           operator,
           left,
@@ -544,18 +544,18 @@ fn self_host_lowering_expression_kind(
           arguments,
         )
       }
-      _ => SelfHostPlannedExpressionKind::PlannedBinaryExpression(operator, left, right)
+      _ => PlannedBinaryExpression(operator, left, right)
     }
-    SelfHostHirExpr::CallExpr(target, arguments, _) => match call_target {
+    CallExpr(target, arguments, _) => match call_target {
       // Keep the requirement identity. It has no physical body: a live call
       // still needs implementation evidence before physical target lookup.
-      SelfHostBasicCallTarget::BoundTraitBasicCallTarget(requirement, _, _, type_arguments) => SelfHostPlannedExpressionKind::PlannedDirectCall(requirement, target, arguments, type_arguments)
-      SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, type_arguments) => match selection {
-        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+      BoundTraitBasicCallTarget(requirement, _, _, type_arguments) => PlannedDirectCall(requirement, target, arguments, type_arguments)
+      SelectedBasicCallTarget(declaration, type_arguments) => match selection {
+        VariantConstructionBasicExpressionSelection(
           _,
           _,
           _,
-        ) => SelfHostPlannedExpressionKind::PlannedDirectCall(
+        ) => PlannedDirectCall(
           declaration,
           target,
           arguments,
@@ -565,14 +565,14 @@ fn self_host_lowering_expression_kind(
           builtin_recipes,
           declaration,
         ) {
-          Option::Some(builtin_name) => SelfHostPlannedExpressionKind::PlannedBuiltinCall(
+          Some(builtin_name) => PlannedBuiltinCall(
             builtin_name,
             declaration,
             target,
             arguments,
             type_arguments,
           )
-          Option::None => SelfHostPlannedExpressionKind::PlannedDirectCall(
+          None => PlannedDirectCall(
             declaration,
             target,
             arguments,
@@ -580,7 +580,7 @@ fn self_host_lowering_expression_kind(
           )
         }
       }
-      SelfHostBasicCallTarget::FunctionValueBasicCallTarget(_) => SelfHostPlannedExpressionKind::PlannedFunctionValueCall(
+      FunctionValueBasicCallTarget(_) => PlannedFunctionValueCall(
         target,
         arguments,
         self_host_lowering_function_value_type(
@@ -590,54 +590,54 @@ fn self_host_lowering_expression_kind(
           target,
         ),
       )
-      _ => SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments)
+      _ => PlannedUnresolvedCall(target, arguments)
     }
-    SelfHostHirExpr::FieldExpr(base, name, _) => match selection {
-      SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, mutable_, _) => SelfHostPlannedExpressionKind::PlannedFieldGet(field, base, mutable_)
-      _ => SelfHostPlannedExpressionKind::PlannedUnresolvedField(base, name)
+    FieldExpr(base, name, _) => match selection {
+      FieldBasicExpressionSelection(field, mutable_, _) => PlannedFieldGet(field, base, mutable_)
+      _ => PlannedUnresolvedField(base, name)
     }
-    SelfHostHirExpr::QualifiedExpr(base, _, _) => match selection {
-      SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+    QualifiedExpr(base, _, _) => match selection {
+      VariantConstructionBasicExpressionSelection(
         _,
         _,
         _,
-      ) => SelfHostPlannedExpressionKind::PlannedConstruct(
+      ) => PlannedConstruct(
         base,
-        SelfHostHirSpan::{
+        {
           start: 0u32
           length: 0u32
         },
         selection,
       )
-      _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+      _ => PlannedPoisonExpression
     }
-    SelfHostHirExpr::ProductFieldExpr(base, index, count, _) => SelfHostPlannedExpressionKind::PlannedProductField(base, index, count)
-    SelfHostHirExpr::IndexExpr(base, index, _) => SelfHostPlannedExpressionKind::PlannedIndexGet(base, index, operator_target)
-    SelfHostHirExpr::AssignmentExpr(target, value, _) => match collected.expressions[target] {
-      SelfHostHirExpr::NameExpr(_, _) => match names.expression_references[target] {
-        SelfHostBodyNameReference::LocalNameReference(local) => SelfHostPlannedExpressionKind::PlannedLocalSet(local, value)
-        SelfHostBodyNameReference::LambdaCaptureNameReference(capture) => SelfHostPlannedExpressionKind::PlannedCaptureSet(capture, value)
-        _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+    ProductFieldExpr(base, index, count, _) => PlannedProductField(base, index, count)
+    IndexExpr(base, index, _) => PlannedIndexGet(base, index, operator_target)
+    AssignmentExpr(target, value, _) => match collected.expressions[target] {
+      NameExpr(_, _) => match names.expression_references[target] {
+        LocalNameReference(local) => PlannedLocalSet(local, value)
+        LambdaCaptureNameReference(capture) => PlannedCaptureSet(capture, value)
+        _ => PlannedPoisonExpression
       }
-      SelfHostHirExpr::FieldExpr(base, name, _) => match inferred.expression_selections[
+      FieldExpr(base, name, _) => match inferred.expression_selections[
         self_host_u32_add(
           job.expression_selections.start,
           target - source_expression_start,
         )
       ] {
-        SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, _, _) => SelfHostPlannedExpressionKind::PlannedFieldSet(field, base, value)
+        FieldBasicExpressionSelection(field, _, _) => PlannedFieldSet(field, base, value)
         _ => match self_host_lowering_unique_mutable_field(collected, name) {
-          Option::Some(field) => SelfHostPlannedExpressionKind::PlannedFieldSet(
+          Some(field) => PlannedFieldSet(
             field,
             base,
             value,
           )
-          Option::None => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+          None => PlannedPoisonExpression
         }
       }
-      _ => SelfHostPlannedExpressionKind::PlannedPoisonExpression
+      _ => PlannedPoisonExpression
     }
-    SelfHostHirExpr::IndexSetExpr(base, index, value, _) => SelfHostPlannedExpressionKind::PlannedIndexSet(base, index, value, operator_target)
+    IndexSetExpr(base, index, value, _) => PlannedIndexSet(base, index, value, operator_target)
   }
 }
 
@@ -645,26 +645,26 @@ fn self_host_lowering_target_type_arguments(
   target: SelfHostBasicCallTarget,
 ) -> SelfHostHirSpan {
   match target {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => arguments
-    SelfHostBasicCallTarget::BoundTraitBasicCallTarget(_, _, _, arguments) => arguments
-    _ => SelfHostHirSpan::{
+    SelectedBasicCallTarget(_, arguments) => arguments
+    BoundTraitBasicCallTarget(_, _, _, arguments) => arguments
+    _ => ({
       start: 0u32
       length: 0u32
-    }
+    })
   }
 }
 
 fn self_host_lowering_error_expression() -> SelfHostPlannedExpression {
-  SelfHostPlannedExpression::{
+  {
     type_: -1i32
-    shape: SelfHostPlannedValueShape::ErrorPlannedValueShape
+    shape: ErrorPlannedValueShape
     nominal: 0u64
     flow: self_host_flow_empty()
-    kind: SelfHostPlannedExpressionKind::PlannedPoisonExpression
-    selection: SelfHostBasicExpressionSelection::NoBasicExpressionSelection
-    reference: SelfHostBodyNameReference::NoNameReference
-    call_target: SelfHostBasicCallTarget::NoBasicCallTarget
-    call_type_arguments: SelfHostHirSpan::{
+    kind: PlannedPoisonExpression
+    selection: NoBasicExpressionSelection
+    reference: NoNameReference
+    call_target: NoBasicCallTarget
+    call_type_arguments: {
       start: 0u32
       length: 0u32
     }
@@ -705,10 +705,10 @@ fn self_host_lowering_plan_expressions(
     current => if current < source.length {
       let expression = self_host_u32_add(source.start, current)
       match reachability {
-        Option::Some(live) => if !live.expressions[expression] {
+        Some(live) => if !live.expressions[expression] {
           continue current + 1u32
         }
-        Option::None => {}
+        None => {}
       }
       let type_ = inferred.expression_types[
         self_host_u32_add(job.expression_types.start, current)
@@ -722,13 +722,13 @@ fn self_host_lowering_plan_expressions(
       ]
       let selected_target = match source_expression {
         // An implicit pattern comparison owns call evidence, not a Bool value.
-        SelfHostHirExpr::StringExpr(_, _) => operator_target
-        SelfHostHirExpr::BinaryExpr(_, _, _, _) => operator_target
-        SelfHostHirExpr::IndexExpr(_, _, _) => operator_target
-        SelfHostHirExpr::IndexSetExpr(_, _, _, _) => operator_target
+        StringExpr(_, _) => operator_target
+        BinaryExpr(_, _, _, _) => operator_target
+        IndexExpr(_, _, _) => operator_target
+        IndexSetExpr(_, _, _, _) => operator_target
         _ => call_target
       }
-      output[expression] = SelfHostPlannedExpression::{
+      output[expression] = {
         type_: type_
         shape: self_host_planned_merged_body_value_shape(
           resolved,
@@ -760,14 +760,14 @@ fn self_host_lowering_plan_expressions(
           selected_target,
         )
         source_name: match source_expression {
-          SelfHostHirExpr::NameExpr(name, _) => name
-          SelfHostHirExpr::FieldExpr(_, name, _) => name
-          SelfHostHirExpr::QualifiedExpr(_, name, _) => name
+          NameExpr(name, _) => name
+          FieldExpr(_, name, _) => name
+          QualifiedExpr(_, name, _) => name
           _ => 4294967295u32
         }
         member_base: match source_expression {
-          SelfHostHirExpr::FieldExpr(base, _, _) => base
-          SelfHostHirExpr::QualifiedExpr(base, _, _) => base
+          FieldExpr(base, _, _) => base
+          QualifiedExpr(base, _, _) => base
           _ => 4294967295u32
         }
         offset: self_host_basic_expression_offset(source_expression)
@@ -784,8 +784,8 @@ fn self_host_lowering_plan_block_item(
   local: U32,
 ) -> SelfHostPlannedBlockItem {
   if self_host_hir_block_item_is_let(source) {
-    SelfHostPlannedBlockItem::{
-      kind: SelfHostPlannedBlockItemKind::PlannedLetItem(
+    {
+      kind: PlannedLetItem(
         local,
         source.mutable_,
         source.value,
@@ -793,8 +793,8 @@ fn self_host_lowering_plan_block_item(
       offset: source.offset
     }
   } else {
-    SelfHostPlannedBlockItem::{
-      kind: SelfHostPlannedBlockItemKind::PlannedExpressionItem(source.value)
+    {
+      kind: PlannedExpressionItem(source.value)
       offset: source.offset
     }
   }
@@ -822,7 +822,7 @@ fn self_host_lowering_plan_job_structures(
     current => if current < source_blocks.length {
       let index = self_host_u32_add(source_blocks.start, current)
       let source = collected.blocks[index]
-      blocks[index] = SelfHostPlannedBlock::{
+      blocks[index] = {
         items: source.items
         flow: self_host_lowering_flow_at(block_flows, current)
         offset: source.offset
@@ -853,7 +853,7 @@ fn self_host_lowering_plan_job_structures(
         self_host_u32_add(job.pattern_types.start, current)
       ]
       let source_pattern = collected.patterns[index]
-      patterns[index] = SelfHostPlannedPattern::{
+      patterns[index] = {
         elided: false
         type_: type_
         shape: self_host_planned_merged_body_value_shape(
@@ -878,7 +878,7 @@ fn self_host_lowering_plan_job_structures(
     current => if current < source_pattern_arms.length {
       let index = self_host_u32_add(source_pattern_arms.start, current)
       let source = collected.pattern_arms[index]
-      pattern_arms[index] = SelfHostPlannedPatternArm::{
+      pattern_arms[index] = {
         pattern: source.pattern
         guard_condition: source.guard_condition
         body: source.body
@@ -897,8 +897,8 @@ fn self_host_lowering_block_slots(length: U32) -> Array<SelfHostPlannedBlock> {
   let mut index = 0u32
   let _ = while index {
     current => if current < length {
-      values.push(SelfHostPlannedBlock::{
-        items: SelfHostHirSpan::{
+      values.push({
+        items: {
           start: 0u32
           length: 0u32
         }
@@ -918,8 +918,8 @@ fn self_host_lowering_block_item_slots(length: U32) -> Array<SelfHostPlannedBloc
   let mut index = 0u32
   let _ = while index {
     current => if current < length {
-      values.push(SelfHostPlannedBlockItem::{
-        kind: SelfHostPlannedBlockItemKind::PlannedExpressionItem(0u32)
+      values.push({
+        kind: PlannedExpressionItem(0u32)
         offset: 0u32
       })
       continue current + 1u32
@@ -935,13 +935,13 @@ fn self_host_lowering_pattern_slots(length: U32) -> Array<SelfHostPlannedPattern
   let mut index = 0u32
   let _ = while index {
     current => if current < length {
-      values.push(SelfHostPlannedPattern::{
+      values.push({
         elided: false
         type_: -1i32
-        shape: SelfHostPlannedValueShape::ErrorPlannedValueShape
-        source: SelfHostHirPattern::WildcardPattern(0u32)
-        reference: SelfHostBodyPatternReference::NoPatternReference
-        selected_constructor: SelfHostBasicPatternConstructor::NoBasicPatternConstructor
+        shape: ErrorPlannedValueShape
+        source: WildcardPattern(0u32)
+        reference: NoPatternReference
+        selected_constructor: NoBasicPatternConstructor
         offset: 0u32
       })
       continue current + 1u32
@@ -957,7 +957,7 @@ fn self_host_lowering_arm_slots(length: U32) -> Array<SelfHostPlannedPatternArm>
   let mut index = 0u32
   let _ = while index {
     current => if current < length {
-      values.push(SelfHostPlannedPatternArm::{
+      values.push({
         pattern: 0u32
         guard_condition: 0u32
         body: 0u32
@@ -977,7 +977,7 @@ fn self_host_lowering_object_field_slots(length: U32) -> Array<SelfHostPlannedOb
   let mut index = 0u32
   let _ = while index {
     current => if current < length {
-      values.push(SelfHostPlannedObjectField::{
+      values.push({
         field: 0u64
         name: 4294967295u32
         value: 0u32
@@ -1005,11 +1005,11 @@ fn self_host_lowering_plan_object_fields(
       let field = match inferred.object_field_targets[
         self_host_u32_add(job.object_field_targets.start, current)
       ] {
-        SelfHostBasicObjectFieldTarget::SelectedBasicObjectFieldTarget(value) => value
+        SelectedBasicObjectFieldTarget(value) => value
         _ => 0u64
       }
       let source_field = collected.object_fields[index]
-      output[index] = SelfHostPlannedObjectField::{
+      output[index] = {
         field: field
         name: source_field.name
         value: source_field.value
@@ -1043,12 +1043,12 @@ fn self_host_lowering_consume_expression_target(
 ) -> Unit {
   if target < expressions.length() {
     let source = expressions[target]
-    expressions[target] = SelfHostPlannedExpression::{
+    expressions[target] = {
       type_: source.type_
       shape: source.shape
       nominal: source.nominal
       flow: source.flow
-      kind: SelfHostPlannedExpressionKind::PlannedConsumedExpression
+      kind: PlannedConsumedExpression
       selection: source.selection
       reference: source.reference
       call_target: source.call_target
@@ -1067,10 +1067,10 @@ fn self_host_lowering_directize_targets(
   let _ = while index {
     current => if current < expressions.length() {
       match expressions[current].kind {
-        SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => {
+        PlannedDirectCall(_, target, _, _) => {
           self_host_lowering_consume_expression_target(expressions, target)
         }
-        SelfHostPlannedExpressionKind::PlannedConstruct(target, _, _) => {
+        PlannedConstruct(target, _, _) => {
           if target != current {
             self_host_lowering_consume_expression_target(expressions, target)
           }
@@ -1096,7 +1096,7 @@ fn self_host_plan_module_lowering_with_builtin_recipes(
   evidence: SelfHostBasicModuleEvidence,
   flows: SelfHostAnalyzedModuleFlows,
 ) -> SelfHostPlannedModuleLowering {
-  self_host_plan_module_lowering_with_reachability(collected, resolved, type_layouts, initialization, functions, names, builtin_recipes, inferred, evidence, flows, Option::None)
+  self_host_plan_module_lowering_with_reachability(collected, resolved, type_layouts, initialization, functions, names, builtin_recipes, inferred, evidence, flows, None)
 }
 
 fn self_host_plan_module_lowering_with_reachability(
@@ -1195,7 +1195,7 @@ fn self_host_plan_module_lowering_with_reachability(
         inferred,
         job.root_type,
       )
-      bodies.push(SelfHostPlannedBodyLowering::{
+      bodies.push({
         body: source.id
         declaration: source.declaration
         kind: source.kind
@@ -1295,11 +1295,11 @@ fn self_host_plan_module_lowering_with_reachability(
         inferred,
         job.root_type,
       )
-      lambdas.push(SelfHostPlannedLambdaLowering::{
+      lambdas.push({
         lambda: source.id
         root_body: source.root_body
         parameter_count: source.parameters.length
-        root: SelfHostHirBodyRoot::BlockBodyRoot(source.body.root)
+        root: BlockBodyRoot(source.body.root)
         root_type: job.root_type
         root_shape: root_shape
         result_shape: root_shape
@@ -1327,7 +1327,7 @@ fn self_host_plan_module_lowering_with_reachability(
   let _ = while named_field_index {
     current => if current < collected.fields.length() {
       let field = self_host_collected_field_identity(collected.fields[current])
-      named_fields.push(SelfHostPlannedNamedField::{
+      named_fields.push({
         declaration: field.id
         name: collected.name(field.name)
       })
@@ -1341,7 +1341,7 @@ fn self_host_plan_module_lowering_with_reachability(
   let _ = while named_variant_index {
     current => if current < collected.variants.length() {
       let variant = self_host_collected_variant_identity(collected.variants[current])
-      named_variants.push(SelfHostPlannedNamedVariant::{
+      named_variants.push({
         declaration: variant.id
         name: collected.name(variant.name)
       })
@@ -1357,7 +1357,7 @@ fn self_host_plan_module_lowering_with_reachability(
       let field = self_host_hir_pattern_field_identity(
         collected.pattern_fields[current],
       )
-      pattern_fields.push(SelfHostPlannedPatternField::{
+      pattern_fields.push({
         name: collected.name(field.name)
         pattern: field.pattern
         offset: field.offset
@@ -1368,7 +1368,7 @@ fn self_host_plan_module_lowering_with_reachability(
     }
   }
   self_host_lowering_directize_targets(expressions)
-  let module_ = SelfHostPlannedModuleLowering::{
+  let module_ = {
     local_initializer_sources: self_host_query_local_sources(collected, names)
     module_id: collected.module_id
     names: collected.names
@@ -1426,7 +1426,7 @@ fn self_host_lowering_local_sources(
       let item_index = self_host_u32_add(block_item_span.start, current)
       if item_index < block_items.length() {
         match block_items[item_index].kind {
-          SelfHostPlannedBlockItemKind::PlannedLetItem(
+          PlannedLetItem(
             local_id,
             _,
             initializer,
@@ -1450,7 +1450,7 @@ fn self_host_lowering_local_sources(
     current => if current < expression_end {
       if current < expressions.length() {
         match self_host_planned_expression_at(expressions, current).kind {
-          SelfHostPlannedExpressionKind::PlannedLocalSet(local_id, value) => if local_id < local_count {
+          PlannedLocalSet(local_id, value) => if local_id < local_count {
             if self_host_u32_equal(
               self_host_lowering_u32_at(assignments, local_id),
               4294967295u32,
@@ -1490,7 +1490,7 @@ fn self_host_lowering_plan_locals(
       let type_ = exact_inferred.local_types[
         self_host_u32_add(job.local_types.start, current)
       ]
-      output.push(SelfHostPlannedLocal::{
+      output.push({
         body: body
         lambda: lambda
         local_id: source_local.id
@@ -1515,7 +1515,7 @@ fn self_host_lowering_plan_locals(
       break self_host_semantic_unit()
     }
   }
-  SelfHostHirSpan::{
+  {
     start: start
     length: output.length() - start
   }
@@ -1540,7 +1540,7 @@ fn self_host_lowering_plan_captures(
       let type_ = inferred.capture_types[
         self_host_u32_add(job.capture_types.start, current)
       ]
-      output.push(SelfHostPlannedCapture::{
+      output.push({
         lambda: lambda
         capture: current
         source: source_capture.source
@@ -1563,7 +1563,7 @@ fn self_host_lowering_plan_captures(
       break self_host_semantic_unit()
     }
   }
-  SelfHostHirSpan::{
+  {
     start: start
     length: output.length() - start
   }
@@ -1576,8 +1576,8 @@ fn self_host_lowering_resolved_nominal(
   let mut current = root
   while current {
     type_ => match resolved.types[type_] {
-      SelfHostResolvedType::NominalType(declaration) => break declaration
-      SelfHostResolvedType::AppliedType(base, _) => continue base
+      NominalType(declaration) => break declaration
+      AppliedType(base, _) => continue base
       _ => break 0u64
     }
   }
@@ -1604,8 +1604,8 @@ fn self_host_lowering_body_nominal(
         break 0u64
       }
       match exact_inferred.types[index] {
-        SelfHostBodyTypeTerm::BodyAppliedType(base, _) => continue base
-        SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => break self_host_lowering_resolved_nominal(
+        BodyAppliedType(base, _) => continue base
+        BodyResolvedType(resolved_type) => break self_host_lowering_resolved_nominal(
           resolved,
           resolved_type,
         )
@@ -1623,7 +1623,7 @@ fn self_host_lowering_local_builtin_recipes(
   let _ = while builtin_index {
     current => if current < collected.builtins.length() {
       let value = self_host_collected_builtin_identity(collected.builtins[current])
-      recipes.push(SelfHostLoweringBuiltinRecipe::{
+      recipes.push({
         declaration: value.declaration
         builtin_name: value.builtin_name
       })
@@ -1648,8 +1648,8 @@ fn self_host_lowering_imported_builtin_recipes(
         current,
       )
       match callable.kind {
-        SelfHostFrozenInterfaceCallableKind::FrozenBuiltinCallable(name) => {
-          recipes.push(SelfHostLoweringBuiltinRecipe::{
+        FrozenBuiltinCallable(name) => {
+          recipes.push({
             declaration: callable.declaration
             builtin_name: name
           })

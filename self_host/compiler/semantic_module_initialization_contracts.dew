@@ -1,6 +1,6 @@
 // Validate startup inputs before any schedule or storage lookup.
 fn self_host_initialization_contract(condition: Bool, module_id: U64, declaration: U64, body: U64, code: U32, expected: U64, actual: U64, detail: U64) -> Unit {
-  let _ = self_host_assert_compiler_invariant_with_failure(condition, SelfHostInvariantFailure::{
+  let _ = self_host_assert_compiler_invariant_with_failure(condition, {
     code: code
     phase: 3u32
     module_id: module_id
@@ -14,21 +14,21 @@ fn self_host_initialization_contract(condition: Bool, module_id: U64, declaratio
 }
 
 fn self_host_initialization_source_body(collected: SelfHostCollectedModule, declaration: U64) -> SelfHostHirBody {
-  let mut selected = Option::None
+  let mut selected = None
   let mut index = 0u32
   for body in collected.bodies {
     if body.declaration == declaration {
-      self_host_initialization_contract(!(selected is Option::Some(_)), collected.module_id, declaration, body.id, 106u32, 1u64, 2u64, 13u64)
+      self_host_initialization_contract(!(selected is Some(_)), collected.module_id, declaration, body.id, 106u32, 1u64, 2u64, 13u64)
       let expected = (collected.module_id << 32u64) | u32_into_u64(index)
       self_host_initialization_contract(body.id == expected, collected.module_id, declaration, body.id, 106u32, expected, body.id, 14u64)
-      self_host_initialization_contract(body.kind is SelfHostHirBodyKind::ModuleLetBody, collected.module_id, declaration, body.id, 106u32, 0u64, self_host_initializer_body_kind(body.kind), 15u64)
-      selected = Option::Some(body)
+      self_host_initialization_contract(body.kind is ModuleLetBody, collected.module_id, declaration, body.id, 106u32, 0u64, self_host_initializer_body_kind(body.kind), 15u64)
+      selected = Some(body)
     }
     index = index + 1u32
   }
   match selected {
-    Option::Some(body) => body
-    Option::None => {
+    Some(body) => body
+    None => {
       self_host_initialization_contract(false, collected.module_id, declaration, 0u64, 610u32, 1u64, 0u64, 12u64)
       unreachable()
     }
@@ -68,14 +68,14 @@ fn self_host_verify_module_initialization_inputs(collected: SelfHostCollectedMod
     self_host_initialization_contract(local < indices.length(), module_id, declaration, 0u64, 101u32, u32_into_u64(indices.length()), u32_into_u64(local), 18u64)
     self_host_initialization_contract(indices[local] == missing, module_id, declaration, 0u64, 106u32, 1u64, 2u64, 18u64)
     match collected.declaration_reference(declaration) {
-      Option::Some(reference) => match reference {
-        SelfHostCollectedDeclarationReference::TopLevel(entry) => {
+      Some(reference) => match reference {
+        TopLevel(entry) => {
           self_host_initialization_contract(entry.id == declaration, module_id, declaration, 0u64, 106u32, declaration, entry.id, 19u64)
-          self_host_initialization_contract(entry.kind is SelfHostCollectedDeclKind::LetDecl, module_id, declaration, 0u64, 106u32, 1u64, 0u64, 20u64)
+          self_host_initialization_contract(entry.kind is LetDecl, module_id, declaration, 0u64, 106u32, 1u64, 0u64, 20u64)
         }
         _ => self_host_initialization_contract(false, module_id, declaration, 0u64, 106u32, 1u64, 0u64, 19u64)
       }
-      Option::None => self_host_initialization_contract(false, module_id, declaration, 0u64, 106u32, 1u64, 0u64, 19u64)
+      None => self_host_initialization_contract(false, module_id, declaration, 0u64, 106u32, 1u64, 0u64, 19u64)
     }
     self_host_initialization_contract(inferred.let_declarations[index] == declaration, module_id, declaration, 0u64, 106u32, declaration, inferred.let_declarations[index], 21u64)
     bodies.push(self_host_initialization_source_body(collected, declaration))

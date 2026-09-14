@@ -17,11 +17,11 @@ fn self_host_body_name_fail() -> Unit {
 }
 
 fn self_host_empty_u32_u32_map() -> Map<U32, U32> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_empty_u32_bool_map() -> Map<U32, Bool> {
-  Map::empty()
+  empty()
 }
 
 let self_host_name_expect_value = 0u32
@@ -51,7 +51,7 @@ fn self_host_lambda_visible_binding_at(
     unreachable()
   }
   let binding = bindings[index]
-  SelfHostLambdaVisibleBinding::{
+  {
     binding_name: binding.binding_name
     capture_source: binding.capture_source
     binding_mutable: binding.binding_mutable
@@ -75,13 +75,13 @@ impl SelfHostLambdaEnvironmentSlots {
     while index {
       current => if current < length {
         values.push(
-          SelfHostLambdaLexicalEnvironment::{
+          {
             bindings: []
           },
         )
         continue current + 1u32
       } else {
-        break SelfHostLambdaEnvironmentSlots::{
+        break {
           present: present
           values: values
         }
@@ -280,7 +280,7 @@ impl SelfHostBodyNameResolver {
       self_host_body_arena_failure(collected, body, 1u32, 101u32, 4294967295u32, parameter_count, parameter_span.start, 10u32, parameter_span.length),
       "body parameter span is invalid",
     )
-    SelfHostBodyNameResolver::{
+    {
       collected: collected
       imports: imports
       body: body
@@ -347,7 +347,7 @@ impl SelfHostBodyNameResolver {
       body,
       4294967295u32,
       collected.parameters_of(body.declaration),
-      SelfHostLambdaLexicalEnvironment::{
+      {
         bindings: []
       },
       variant_names,
@@ -362,11 +362,11 @@ impl SelfHostBodyNameResolver {
     variant_names: Map<U32, Bool>,
   ) -> SelfHostBodyNameResolver {
     let root = collected.bodies[self_host_semantic_id_local(lambda.root_body)]
-    let body = SelfHostHirBody::{
+    let body = {
       id: lambda.root_body
       declaration: root.declaration
       kind: root.kind
-      root: SelfHostHirBodyRoot::BlockBodyRoot(lambda.body.root)
+      root: BlockBodyRoot(lambda.body.root)
       expressions: lambda.body.expressions
       expression_children: lambda.body.expression_children
       blocks: lambda.body.blocks
@@ -391,15 +391,15 @@ impl SelfHostBodyNameResolver {
   }
 
   fn expression_index(self, expression: U32) -> U32 {
-    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyExpressions, expression, 1u32)
+    self_host_body_relative_index(self.collected, self.body, BodyExpressions, expression, 1u32)
   }
 
   fn pattern_index(self, pattern: U32) -> U32 {
-    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyPatterns, pattern, 1u32)
+    self_host_body_relative_index(self.collected, self.body, BodyPatterns, pattern, 1u32)
   }
 
   fn block_item_index(self, item: U32) -> U32 {
-    self_host_body_relative_index(self.collected, self.body, SelfHostBodyArenaKind::BodyBlockItems, item, 1u32)
+    self_host_body_relative_index(self.collected, self.body, BodyBlockItems, item, 1u32)
   }
 
   fn diagnose(self, diagnostic: SelfHostBodyResolutionDiagnostic) -> Unit {
@@ -407,7 +407,7 @@ impl SelfHostBodyNameResolver {
   }
 
   fn push_task(self, kind: U32, first: U32, second: U32) -> Unit {
-    let task = SelfHostBodyNameTask::{
+    let task = {
       kind: kind
       first: first
       second: second
@@ -475,7 +475,7 @@ impl SelfHostBodyNameResolver {
     offset: U32,
   ) -> U32 {
     let id = self.locals.length()
-    let local = SelfHostBodyLocal::{
+    let local = {
       id: id
       name: name
       kind: kind
@@ -504,7 +504,7 @@ impl SelfHostBodyNameResolver {
         }
         let local = self.allocate_local(
           name,
-          SelfHostBodyLocalKind::ParameterLocal,
+          ParameterLocal,
           false,
           parameter_index,
           offset,
@@ -541,7 +541,7 @@ impl SelfHostBodyNameResolver {
 
   fn module_value_visible(self, name: U32) -> Bool {
     match self.collected.value_binding(name) {
-      Option::Some(binding) => {
+      Some(binding) => {
         let mut candidate = binding.head
         while candidate {
           current => if current < self.collected.value_binding_candidates.length() {
@@ -550,15 +550,15 @@ impl SelfHostBodyNameResolver {
               break true
             }
             match value.next {
-              Option::Some(next) => continue next
-              Option::None => break false
+              Some(next) => continue next
+              None => break false
             }
           } else {
             break false
           }
         }
       }
-      Option::None => false
+      None => false
     }
   }
 
@@ -578,10 +578,10 @@ impl SelfHostBodyNameResolver {
         let binding = self.outer_environment.bindings[next]
         if self_host_u32_equal(binding.binding_name, name) {
           let capture = match self.capture_lookup.get(name) {
-            Option::Some(existing) => existing
-            Option::None => {
+            Some(existing) => existing
+            None => {
               let id = self.captures.length()
-              let value = SelfHostLambdaCapture::{
+              let value = {
                 id: id
                 lambda: self.lambda
                 name: name
@@ -596,7 +596,7 @@ impl SelfHostBodyNameResolver {
           }
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::LambdaCaptureNameReference(capture),
+            LambdaCaptureNameReference(capture),
           )
           break true
         }
@@ -629,11 +629,11 @@ impl SelfHostBodyNameResolver {
         let local = self.scope_locals[current]
         let info = self.locals[local]
         let source = if self.lambda == 4294967295u32 {
-          SelfHostLambdaCaptureSource::BodyLocalCapture(self.body.id, local)
+          BodyLocalCapture(self.body.id, local)
         } else {
-          SelfHostLambdaCaptureSource::LambdaLocalCapture(self.lambda, local)
+          LambdaLocalCapture(self.lambda, local)
         }
-        let binding = SelfHostLambdaVisibleBinding::{
+        let binding = {
           binding_name: self.scope_names[current]
           capture_source: source
           binding_mutable: info.mutable_
@@ -646,7 +646,7 @@ impl SelfHostBodyNameResolver {
     }
     self.lambda_environment_ids.push(lambda)
     self.lambda_environments.push(
-      SelfHostLambdaLexicalEnvironment::{
+      {
         bindings: bindings
       },
     )
@@ -681,7 +681,7 @@ impl SelfHostBodyNameResolver {
         ) {
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::LocalNameReference(
+            LocalNameReference(
               self_host_body_name_u32_at(self.scope_locals, previous),
             ),
           )
@@ -700,95 +700,95 @@ impl SelfHostBodyNameResolver {
     }
     if expectation == self_host_name_expect_qualified_root {
       match self.collected.type_bindings.get(name) {
-        Option::Some(declaration) => if self.declaration_visible(declaration) {
+        Some(declaration) => if self.declaration_visible(declaration) {
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::ModuleTypeNameReference(declaration),
+            ModuleTypeNameReference(declaration),
           )
           return
         }
-        Option::None => {}
+        None => {}
       }
       match self.collected.trait_bindings.get(name) {
-        Option::Some(declaration) => if self.declaration_visible(declaration) {
+        Some(declaration) => if self.declaration_visible(declaration) {
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::ModuleTraitNameReference(declaration),
+            ModuleTraitNameReference(declaration),
           )
           return
         }
-        Option::None => {}
+        None => {}
       }
       match self.collected.foreign_library_by_alias.get(name) {
-        Option::Some(declaration) => if self.declaration_visible(declaration) {
+        Some(declaration) => if self.declaration_visible(declaration) {
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::ForeignLibraryNameReference(declaration),
+            ForeignLibraryNameReference(declaration),
           )
           return
         }
-        Option::None => {}
+        None => {}
       }
       if self.module_value_visible(name) {
         self.set_expression_reference(
           expression,
-          SelfHostBodyNameReference::ModuleValueNameReference(name),
+          ModuleValueNameReference(name),
         )
         return
       }
       match self_host_primitive_type_from_name(spelling) {
-        Option::Some(primitive) => {
+        Some(primitive) => {
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::PrimitiveTypeNameReference(primitive),
+            PrimitiveTypeNameReference(primitive),
           )
           return
         }
-        Option::None => {}
+        None => {}
       }
       match self.imports {
-        Option::Some(imports) => {
+        Some(imports) => {
           match imports.lookup_type(spelling) {
-            Option::Some(binding) => {
+            Some(binding) => {
               self.set_expression_reference(
                 expression,
-                SelfHostBodyNameReference::ModuleTypeNameReference(
+                ModuleTypeNameReference(
                   binding.declaration,
                 ),
               )
               return
             }
-            Option::None => {}
+            None => {}
           }
           match imports.lookup_trait(spelling) {
-            Option::Some(binding) => {
+            Some(binding) => {
               self.set_expression_reference(
                 expression,
-                SelfHostBodyNameReference::ModuleTraitNameReference(
+                ModuleTraitNameReference(
                   binding.declaration,
                 ),
               )
               return
             }
-            Option::None => {}
+            None => {}
           }
           match imports.lookup_opened_value(spelling) {
-            Option::Some(declaration) => {
+            Some(declaration) => {
               self.set_expression_reference(
                 expression,
-                SelfHostBodyNameReference::ImportedModuleValueNameReference(
+                ImportedModuleValueNameReference(
                   declaration,
                 ),
               )
               return
             }
-            Option::None => {}
+            None => {}
           }
           if imports.opened_value_is_ambiguous(spelling) ||
             imports.type_is_ambiguous(spelling) ||
             imports.trait_is_ambiguous(spelling) {
             self.diagnose(
-              SelfHostBodyResolutionDiagnostic::AmbiguousImportedQualifiedRoot(
+              AmbiguousImportedQualifiedRoot(
                 name,
                 expression,
                 offset,
@@ -796,22 +796,22 @@ impl SelfHostBodyNameResolver {
             )
             self.set_expression_reference(
               expression,
-              SelfHostBodyNameReference::ErrorNameReference,
+              ErrorNameReference,
             )
             return
           }
         }
-        Option::None => {}
+        None => {}
       }
       if self.variant_names.contains_key(name) {
         self.set_expression_reference(
           expression,
-          SelfHostBodyNameReference::VariantNameReference(name),
+          VariantNameReference(name),
         )
         return
       }
       self.diagnose(
-        SelfHostBodyResolutionDiagnostic::UnknownQualifiedRoot(
+        UnknownQualifiedRoot(
           name,
           expression,
           offset,
@@ -819,44 +819,44 @@ impl SelfHostBodyNameResolver {
       )
       self.set_expression_reference(
         expression,
-        SelfHostBodyNameReference::ErrorNameReference,
+        ErrorNameReference,
       )
       return
     }
     match self.collected.foreign_library_by_alias.get(name) {
-      Option::Some(declaration) => if self.declaration_visible(declaration) {
+      Some(declaration) => if self.declaration_visible(declaration) {
         self.set_expression_reference(
           expression,
-          SelfHostBodyNameReference::ForeignLibraryNameReference(declaration),
+          ForeignLibraryNameReference(declaration),
         )
         return
       }
-      Option::None => {}
+      None => {}
     }
     if self.module_value_visible(name) {
       self.set_expression_reference(
         expression,
-        SelfHostBodyNameReference::ModuleValueNameReference(name),
+        ModuleValueNameReference(name),
       )
       return
     }
     match self.imports {
-      Option::Some(imports) => {
+      Some(imports) => {
         match imports.lookup_opened_value(spelling) {
-          Option::Some(declaration) => {
+          Some(declaration) => {
             self.set_expression_reference(
               expression,
-              SelfHostBodyNameReference::ImportedModuleValueNameReference(
+              ImportedModuleValueNameReference(
                 declaration,
               ),
             )
             return
           }
-          Option::None => {}
+          None => {}
         }
         if imports.opened_value_is_ambiguous(spelling) {
           self.diagnose(
-            SelfHostBodyResolutionDiagnostic::AmbiguousImportedValueName(
+            AmbiguousImportedValueName(
               name,
               expression,
               offset,
@@ -864,73 +864,77 @@ impl SelfHostBodyNameResolver {
           )
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::ErrorNameReference,
+            ErrorNameReference,
           )
           return
         }
       }
-      Option::None => {}
+      None => {}
     }
     if expectation == self_host_name_expect_call_target {
       match self.collected.type_bindings.get(name) {
-        Option::Some(declaration) => if self.declaration_visible(declaration) {
+        Some(declaration) => if self.declaration_visible(declaration) {
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::ModuleTypeNameReference(declaration),
+            ModuleTypeNameReference(declaration),
           )
           return
         }
-        Option::None => {}
+        None => {}
       }
       match self.collected.trait_bindings.get(name) {
-        Option::Some(declaration) => if self.declaration_visible(declaration) {
+        Some(declaration) => if self.declaration_visible(declaration) {
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::ModuleTraitNameReference(declaration),
+            ModuleTraitNameReference(declaration),
           )
           return
         }
-        Option::None => {}
+        None => {}
       }
       match self.imports {
-        Option::Some(imports) => {
+        Some(imports) => {
           match imports.lookup_type(spelling) {
-            Option::Some(binding) => {
+            Some(binding) => {
               self.set_expression_reference(
                 expression,
-                SelfHostBodyNameReference::ModuleTypeNameReference(
+                ModuleTypeNameReference(
                   binding.declaration,
                 ),
               )
               return
             }
-            Option::None => {}
+            None => {}
           }
           match imports.lookup_trait(spelling) {
-            Option::Some(binding) => {
+            Some(binding) => {
               self.set_expression_reference(
                 expression,
-                SelfHostBodyNameReference::ModuleTraitNameReference(
+                ModuleTraitNameReference(
                   binding.declaration,
                 ),
               )
               return
             }
-            Option::None => {}
+            None => {}
           }
         }
-        Option::None => {}
+        None => {}
       }
     }
     if self.variant_names.contains_key(name) {
       self.set_expression_reference(
         expression,
-        SelfHostBodyNameReference::VariantNameReference(name),
+        VariantNameReference(name),
       )
       return
     }
+    if expectation == self_host_name_expect_call_target && self.known_factory_name(name) {
+      self.set_expression_reference(expression, ContextualFactoryNameReference(name))
+      return
+    }
     self.diagnose(
-      SelfHostBodyResolutionDiagnostic::UnknownValueName(
+      UnknownValueName(
         name,
         expression,
         offset,
@@ -938,8 +942,38 @@ impl SelfHostBodyNameResolver {
     )
     self.set_expression_reference(
       expression,
-      SelfHostBodyNameReference::ErrorNameReference,
+      ErrorNameReference,
     )
+  }
+
+  fn known_factory_name(self, name: U32) -> Bool {
+    for method in self.collected.methods {
+      if method.kind is ImplMethodDecl && method.name == name && self.declaration_visible(method.id) {
+        let parameters = self.collected.parameters_of(method.id)
+        if parameters.length == 0u32 || !(self.collected.parameters[parameters.start].kind is ReceiverParameterDecl) {
+          return true
+        }
+      }
+    }
+    match self.imports {
+      Some(imports) => for index in imports.imported_interfaces {
+        let interface_ = imports.interfaces.at(index)
+        let _ = while 0u32 {
+          slot if slot < interface_.callable_count() => {
+            let callable = interface_.callable_at(slot)
+            if callable.kind is FrozenImplCallable(_) && callable.name == self.collected.name(name) {
+              if callable.parameters.length == 0u32 || !interface_.parameter_at(callable.parameters.start).receiver {
+                return true
+              }
+            }
+            continue slot + 1u32
+          }
+          _ => break ()
+        }
+      }
+      None => {}
+    }
+    false
   }
 
   fn known_pattern_constructor(self, name: U32) -> Bool {
@@ -950,9 +984,9 @@ impl SelfHostBodyNameResolver {
     }
     let spelling = self.collected.name(name)
     match self.imports {
-      Option::Some(imports) => imports.lookup_type(spelling) is Option::Some(_) ||
-        imports.lookup_trait(spelling) is Option::Some(_)
-      Option::None => false
+      Some(imports) => imports.lookup_type(spelling) is Some(_) ||
+        imports.lookup_trait(spelling) is Some(_)
+      None => false
     }
   }
 
@@ -963,63 +997,63 @@ impl SelfHostBodyNameResolver {
     offset: U32,
   ) -> Unit {
     match self.collected.type_bindings.get(name) {
-      Option::Some(declaration) => {
+      Some(declaration) => {
         self.set_pattern_reference(
           pattern,
-          SelfHostBodyPatternReference::PatternTypeReference(declaration),
+          PatternTypeReference(declaration),
         )
         return
       }
-      Option::None => {}
+      None => {}
     }
     match self.collected.trait_bindings.get(name) {
-      Option::Some(declaration) => {
+      Some(declaration) => {
         self.set_pattern_reference(
           pattern,
-          SelfHostBodyPatternReference::PatternTraitReference(declaration),
+          PatternTraitReference(declaration),
         )
         return
       }
-      Option::None => {}
+      None => {}
     }
     let spelling = self.collected.name(name)
     match self.imports {
-      Option::Some(imports) => {
+      Some(imports) => {
         match imports.lookup_type(spelling) {
-          Option::Some(binding) => {
+          Some(binding) => {
             self.set_pattern_reference(
               pattern,
-              SelfHostBodyPatternReference::PatternTypeReference(
+              PatternTypeReference(
                 binding.declaration,
               ),
             )
             return
           }
-          Option::None => {}
+          None => {}
         }
         match imports.lookup_trait(spelling) {
-          Option::Some(binding) => {
+          Some(binding) => {
             self.set_pattern_reference(
               pattern,
-              SelfHostBodyPatternReference::PatternTraitReference(
+              PatternTraitReference(
                 binding.declaration,
               ),
             )
             return
           }
-          Option::None => {}
+          None => {}
         }
       }
-      Option::None => {}
+      None => {}
     }
     if self.variant_names.contains_key(name) {
       self.set_pattern_reference(
         pattern,
-        SelfHostBodyPatternReference::PatternVariantReference(name),
+        PatternVariantReference(name),
       )
     } else {
       self.diagnose(
-        SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(
+        UnknownPatternConstructor(
           name,
           pattern,
           offset,
@@ -1027,7 +1061,7 @@ impl SelfHostBodyNameResolver {
       )
       self.set_pattern_reference(
         pattern,
-        SelfHostBodyPatternReference::ErrorPatternReference,
+        ErrorPatternReference,
       )
     }
   }
@@ -1059,21 +1093,21 @@ impl SelfHostBodyNameResolver {
         self.pattern_stack.truncate(length - 1u32)
         self.pattern_contexts.truncate(length - 1u32)
         match self.collected.patterns[pattern] {
-          SelfHostHirPattern::WildcardPattern(_) => {}
-          SelfHostHirPattern::RestPattern(_) => {}
-          SelfHostHirPattern::ImportAliasPattern(name, offset) => match self.imports {
-            Option::Some(imports) => match imports.lookup_alias(
+          WildcardPattern(_) => {}
+          RestPattern(_) => {}
+          ImportAliasPattern(name, offset) => match self.imports {
+            Some(imports) => match imports.lookup_alias(
               self.collected.name(name),
             ) {
-              Option::Some(interface_index) => self.set_pattern_reference(
+              Some(interface_index) => self.set_pattern_reference(
                 pattern,
-                SelfHostBodyPatternReference::PatternImportedModuleReference(
+                PatternImportedModuleReference(
                   interface_index,
                 ),
               )
-              Option::None => {
+              None => {
                 self.diagnose(
-                  SelfHostBodyResolutionDiagnostic::UnknownPatternImportAlias(
+                  UnknownPatternImportAlias(
                     name,
                     pattern,
                     offset,
@@ -1081,13 +1115,13 @@ impl SelfHostBodyNameResolver {
                 )
                 self.set_pattern_reference(
                   pattern,
-                  SelfHostBodyPatternReference::ErrorPatternReference,
+                  ErrorPatternReference,
                 )
               }
             }
-            Option::None => {
+            None => {
               self.diagnose(
-                SelfHostBodyResolutionDiagnostic::UnknownPatternImportAlias(
+                UnknownPatternImportAlias(
                   name,
                   pattern,
                   offset,
@@ -1095,50 +1129,51 @@ impl SelfHostBodyNameResolver {
               )
               self.set_pattern_reference(
                 pattern,
-                SelfHostBodyPatternReference::ErrorPatternReference,
+                ErrorPatternReference,
               )
             }
           }
-          SelfHostHirPattern::BindingPattern(name, offset) => if !binding_context ||
-            self.known_pattern_constructor(name) {
+          BindingPattern(name, offset) => if binding_context && self.variant_names.contains_key(name) {
+            self.set_pattern_reference(pattern, PatternVariantReference(name))
+          } else if !binding_context || self.known_pattern_constructor(name) {
             self.resolve_pattern_constructor(pattern, name, offset)
           } else {
             self.binding_names.push(name)
             self.binding_patterns.push(pattern)
             self.binding_offsets.push(offset)
           }
-          SelfHostHirPattern::LiteralPattern(expression, _) => self.pattern_literal_expressions.push(
+          LiteralPattern(expression, _) => self.pattern_literal_expressions.push(
             expression,
           )
-          SelfHostHirPattern::QualifiedPattern(base, property, offset) => {
+          QualifiedPattern(base, property, offset) => {
             match self.collected.patterns[base] {
-              SelfHostHirPattern::ImportAliasPattern(alias_name, _) => match self.imports {
-                Option::Some(imports) => match imports.lookup_alias(
+              ImportAliasPattern(alias_name, _) => match self.imports {
+                Some(imports) => match imports.lookup_alias(
                   self.collected.name(alias_name),
                 ) {
-                  Option::Some(interface_index) => match imports.lookup_module_type(
+                  Some(interface_index) => match imports.lookup_module_type(
                     interface_index,
                     self.collected.name(property),
                   ) {
-                    Option::Some(binding) => self.set_pattern_reference(
+                    Some(binding) => self.set_pattern_reference(
                       pattern,
-                      SelfHostBodyPatternReference::PatternTypeReference(
+                      PatternTypeReference(
                         binding.declaration,
                       ),
                     )
-                    Option::None => match imports.lookup_module_trait(
+                    None => match imports.lookup_module_trait(
                       interface_index,
                       self.collected.name(property),
                     ) {
-                      Option::Some(binding) => self.set_pattern_reference(
+                      Some(binding) => self.set_pattern_reference(
                         pattern,
-                        SelfHostBodyPatternReference::PatternTraitReference(
+                        PatternTraitReference(
                           binding.declaration,
                         ),
                       )
-                      Option::None => {
+                      None => {
                         self.diagnose(
-                          SelfHostBodyResolutionDiagnostic::UnknownPatternConstructor(
+                          UnknownPatternConstructor(
                             property,
                             pattern,
                             offset,
@@ -1146,24 +1181,24 @@ impl SelfHostBodyNameResolver {
                         )
                         self.set_pattern_reference(
                           pattern,
-                          SelfHostBodyPatternReference::ErrorPatternReference,
+                          ErrorPatternReference,
                         )
                       }
                     }
                   }
-                  Option::None => self.set_pattern_reference(
+                  None => self.set_pattern_reference(
                     pattern,
-                    SelfHostBodyPatternReference::ErrorPatternReference,
+                    ErrorPatternReference,
                   )
                 }
-                Option::None => self.set_pattern_reference(
+                None => self.set_pattern_reference(
                   pattern,
-                  SelfHostBodyPatternReference::ErrorPatternReference,
+                  ErrorPatternReference,
                 )
               }
               _ => self.set_pattern_reference(
                 pattern,
-                SelfHostBodyPatternReference::PatternQualifiedReference(
+                PatternQualifiedReference(
                   property,
                 ),
               )
@@ -1171,7 +1206,7 @@ impl SelfHostBodyNameResolver {
             self.pattern_stack.push(base)
             self.pattern_contexts.push(false)
           }
-          SelfHostHirPattern::TuplePattern(base, arguments, _) => {
+          TuplePattern(base, arguments, _) => {
             let mut index = arguments.length
             while index {
               current => if current > 0u32 {
@@ -1188,7 +1223,7 @@ impl SelfHostBodyNameResolver {
             self.pattern_stack.push(base)
             self.pattern_contexts.push(false)
           }
-          SelfHostHirPattern::ProductPattern(arguments, _) => {
+          ProductPattern(arguments, _) => {
             self_host_assert_array_span(arguments.start, arguments.length, self.collected.pattern_children.length(), "ARN-101 product pattern children")
             let _ = while arguments.length {
               index => if index > 0u32 {
@@ -1201,7 +1236,7 @@ impl SelfHostBodyNameResolver {
               }
             }
           }
-          SelfHostHirPattern::StructPattern(base, fields, _, _, _) => {
+          StructPattern(base, fields, _, _, _) => {
             let mut index = fields.length
             while index {
               current => if current > 0u32 {
@@ -1218,7 +1253,7 @@ impl SelfHostBodyNameResolver {
             self.pattern_stack.push(base)
             self.pattern_contexts.push(false)
           }
-          SelfHostHirPattern::AlternativePattern(first, remaining, _) => {
+          AlternativePattern(first, remaining, _) => {
             let mut index = remaining.length
             while index {
               current => if current > 0u32 {
@@ -1279,7 +1314,7 @@ impl SelfHostBodyNameResolver {
         let first = self.binding_first_index(current, name)
         if first != 4294967295u32 {
           self.diagnose(
-            SelfHostBodyResolutionDiagnostic::DuplicatePatternBinding(
+            DuplicatePatternBinding(
               name,
               self.binding_offsets[first],
               self.binding_offsets[current],
@@ -1287,12 +1322,12 @@ impl SelfHostBodyNameResolver {
           )
           self.set_pattern_reference(
             self.binding_patterns[current],
-            SelfHostBodyPatternReference::ErrorPatternReference,
+            ErrorPatternReference,
           )
         } else {
           let local = self.allocate_local(
             name,
-            SelfHostBodyLocalKind::PatternLocal,
+            PatternLocal,
             false,
             self.binding_patterns[current],
             self.binding_offsets[current],
@@ -1302,7 +1337,7 @@ impl SelfHostBodyNameResolver {
           self.canonical_offsets.push(self.binding_offsets[current])
           self.set_pattern_reference(
             self.binding_patterns[current],
-            SelfHostBodyPatternReference::PatternBindingReference(local),
+            PatternBindingReference(local),
           )
         }
         continue current + 1u32
@@ -1333,7 +1368,7 @@ impl SelfHostBodyNameResolver {
         let first = self.binding_first_index(current, name)
         if first != 4294967295u32 {
           self.diagnose(
-            SelfHostBodyResolutionDiagnostic::DuplicatePatternBinding(
+            DuplicatePatternBinding(
               name,
               self.binding_offsets[first],
               self.binding_offsets[current],
@@ -1341,13 +1376,13 @@ impl SelfHostBodyNameResolver {
           )
           self.set_pattern_reference(
             self.binding_patterns[current],
-            SelfHostBodyPatternReference::ErrorPatternReference,
+            ErrorPatternReference,
           )
         } else {
           let canonical = self.canonical_index(name)
           if canonical == 4294967295u32 {
             self.diagnose(
-              SelfHostBodyResolutionDiagnostic::AlternativeExtraBinding(
+              AlternativeExtraBinding(
                 name,
                 alternative,
                 self.binding_offsets[current],
@@ -1355,13 +1390,13 @@ impl SelfHostBodyNameResolver {
             )
             self.set_pattern_reference(
               self.binding_patterns[current],
-              SelfHostBodyPatternReference::ErrorPatternReference,
+              ErrorPatternReference,
             )
           } else {
             self.alternative_seen[canonical] = true
             self.set_pattern_reference(
               self.binding_patterns[current],
-              SelfHostBodyPatternReference::PatternBindingReference(
+              PatternBindingReference(
                 self.canonical_locals[canonical],
               ),
             )
@@ -1377,7 +1412,7 @@ impl SelfHostBodyNameResolver {
       current => if current < self.canonical_names.length() {
         if !self.alternative_seen[current] {
           self.diagnose(
-            SelfHostBodyResolutionDiagnostic::AlternativeMissingBinding(
+            AlternativeMissingBinding(
               self.canonical_names[current],
               alternative,
               self_host_hir_pattern_offset(
@@ -1399,7 +1434,7 @@ impl SelfHostBodyNameResolver {
     self.canonical_offsets.clear()
     self.pattern_literal_expressions.clear()
     match self.collected.patterns[root] {
-      SelfHostHirPattern::AlternativePattern(first, remaining, _) => {
+      AlternativePattern(first, remaining, _) => {
         self.collect_pattern_alternative(first)
         self.install_canonical_pattern_bindings()
         let mut index = 0u32
@@ -1480,48 +1515,48 @@ impl SelfHostBodyNameResolver {
       return
     }
     match self.collected.expressions[expression] {
-      SelfHostHirExpr::I8Expr(_, _) => {}
-      SelfHostHirExpr::I16Expr(_, _) => {}
-      SelfHostHirExpr::I32Expr(_, _) => {}
-      SelfHostHirExpr::I64Expr(_, _) => {}
-      SelfHostHirExpr::U8Expr(_, _) => {}
-      SelfHostHirExpr::U16Expr(_, _) => {}
-      SelfHostHirExpr::U32Expr(_, _) => {}
-      SelfHostHirExpr::U64Expr(_, _) => {}
-      SelfHostHirExpr::F32Expr(_, _) => {}
-      SelfHostHirExpr::F64Expr(_, _) => {}
-      SelfHostHirExpr::BoolExpr(_, _) => {}
-      SelfHostHirExpr::StringExpr(_, _) => {}
-      SelfHostHirExpr::BytesExpr(_, _) => {}
-      SelfHostHirExpr::TypeBindingExpr(_, _) => {}
-      SelfHostHirExpr::LambdaExpr(lambda, _) => self.snapshot_lambda_environment(
+      I8Expr(_, _) => {}
+      I16Expr(_, _) => {}
+      I32Expr(_, _) => {}
+      I64Expr(_, _) => {}
+      U8Expr(_, _) => {}
+      U16Expr(_, _) => {}
+      U32Expr(_, _) => {}
+      U64Expr(_, _) => {}
+      F32Expr(_, _) => {}
+      F64Expr(_, _) => {}
+      BoolExpr(_, _) => {}
+      StringExpr(_, _) => {}
+      BytesExpr(_, _) => {}
+      TypeBindingExpr(_, _) => {}
+      LambdaExpr(lambda, _) => self.snapshot_lambda_environment(
         lambda,
       )
-      SelfHostHirExpr::NameExpr(name, offset) => self.resolve_expression_name(
+      NameExpr(name, offset) => self.resolve_expression_name(
         expression,
         name,
         offset,
         expectation,
       )
-      SelfHostHirExpr::ProductExpr(elements, _) => self.schedule_expression_span(
+      ProductExpr(elements, _) => self.schedule_expression_span(
         elements,
       )
-      SelfHostHirExpr::ArrayExpr(elements, _) => self.schedule_expression_span(
+      ArrayExpr(elements, _) => self.schedule_expression_span(
         elements,
       )
-      SelfHostHirExpr::ImportAliasExpr(name, offset) => match self.imports {
-        Option::Some(imports) => match imports.lookup_alias(
+      ImportAliasExpr(name, offset) => match self.imports {
+        Some(imports) => match imports.lookup_alias(
           self.collected.name(name),
         ) {
-          Option::Some(interface_index) => self.set_expression_reference(
+          Some(interface_index) => self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::ImportedModuleNameReference(
+            ImportedModuleNameReference(
               interface_index,
             ),
           )
-          Option::None => {
+          None => {
             self.diagnose(
-              SelfHostBodyResolutionDiagnostic::UnknownImportAlias(
+              UnknownImportAlias(
                 name,
                 expression,
                 offset,
@@ -1529,13 +1564,13 @@ impl SelfHostBodyNameResolver {
             )
             self.set_expression_reference(
               expression,
-              SelfHostBodyNameReference::ErrorNameReference,
+              ErrorNameReference,
             )
           }
         }
-        Option::None => {
+        None => {
           self.diagnose(
-            SelfHostBodyResolutionDiagnostic::UnknownImportAlias(
+            UnknownImportAlias(
               name,
               expression,
               offset,
@@ -1543,11 +1578,11 @@ impl SelfHostBodyNameResolver {
           )
           self.set_expression_reference(
             expression,
-            SelfHostBodyNameReference::ErrorNameReference,
+            ErrorNameReference,
           )
         }
       }
-      SelfHostHirExpr::ObjectExpr(fields, _) => {
+      ObjectExpr(fields, _) => {
         let mut index = fields.length
         while index {
           current => if current > 0u32 {
@@ -1563,7 +1598,7 @@ impl SelfHostBodyNameResolver {
           }
         }
       }
-      SelfHostHirExpr::ConstructExpr(target, fields, _) => {
+      ConstructExpr(target, fields, _) => {
         let mut index = fields.length
         while index {
           current => if current > 0u32 {
@@ -1584,8 +1619,8 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_qualified_root,
         )
       }
-      SelfHostHirExpr::BlockExpr(block, _) => self.schedule_block(block)
-      SelfHostHirExpr::IfExpr(condition, block, alternative, _) => {
+      BlockExpr(block, _) => self.schedule_block(block)
+      IfExpr(condition, block, alternative, _) => {
         if alternative != 4294967295u32 {
           self.push_task(
             self_host_name_task_visit_expression,
@@ -1600,7 +1635,7 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::MatchExpr(scrutinee, arms, _) => {
+      MatchExpr(scrutinee, arms, _) => {
         self.push_task(
           self_host_name_task_visit_arm_list,
           arms.start,
@@ -1612,11 +1647,11 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::WhileExpr(initial, arms, offset) => {
+      WhileExpr(initial, arms, offset) => {
         let control = self.controls.length()
-        let info = SelfHostBodyControl::{
+        let info = {
           id: control
-          kind: SelfHostBodyControlKind::FunctionalWhileControl
+          kind: FunctionalWhileControl
           expression: expression
           offset: offset
         }
@@ -1635,19 +1670,19 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::ReturnExpr(value, _) => if value != 4294967295u32 {
+      ReturnExpr(value, _) => if value != 4294967295u32 {
         self.push_task(
           self_host_name_task_visit_expression,
           value,
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::BreakExpr(value, offset) => {
+      BreakExpr(value, offset) => {
         let target = if self.control_stack.length() > 0u32 {
           self.control_stack[self.control_stack.length() - 1u32]
         } else {
           self.diagnose(
-            SelfHostBodyResolutionDiagnostic::BreakOutsideLoop(
+            BreakOutsideLoop(
               expression,
               offset,
             ),
@@ -1661,12 +1696,12 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::ContinueExpr(value, offset) => {
+      ContinueExpr(value, offset) => {
         let target = if self.control_stack.length() > 0u32 {
           self.control_stack[self.control_stack.length() - 1u32]
         } else {
           self.diagnose(
-            SelfHostBodyResolutionDiagnostic::ContinueOutsideLoop(
+            ContinueOutsideLoop(
               expression,
               offset,
             ),
@@ -1680,51 +1715,51 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::PrefixExpr(_, value, _) => self.push_task(
+      PrefixExpr(_, value, _) => self.push_task(
         self_host_name_task_visit_expression,
         value,
         self_host_name_expect_value,
       )
-      SelfHostHirExpr::FieldExpr(value, _, _) => self.push_task(
+      FieldExpr(value, _, _) => self.push_task(
         self_host_name_task_visit_expression,
         value,
         self_host_name_expect_value,
       )
-      SelfHostHirExpr::ProductFieldExpr(value, _, _, _) => self.push_task(
+      ProductFieldExpr(value, _, _, _) => self.push_task(
         self_host_name_task_visit_expression,
         value,
         self_host_name_expect_value,
       )
-      SelfHostHirExpr::QualifiedExpr(value, property, offset) => {
+      QualifiedExpr(value, property, offset) => {
         if expectation == self_host_name_expect_qualified_root {
           match self.collected.expressions[value] {
-            SelfHostHirExpr::ImportAliasExpr(alias_name, _) => match self.imports {
-              Option::Some(imports) => match imports.lookup_alias(
+            ImportAliasExpr(alias_name, _) => match self.imports {
+              Some(imports) => match imports.lookup_alias(
                 self.collected.name(alias_name),
               ) {
-                Option::Some(interface_index) => match imports.lookup_module_type(
+                Some(interface_index) => match imports.lookup_module_type(
                   interface_index,
                   self.collected.name(property),
                 ) {
-                  Option::Some(binding) => self.set_expression_reference(
+                  Some(binding) => self.set_expression_reference(
                     expression,
-                    SelfHostBodyNameReference::ModuleTypeNameReference(
+                    ModuleTypeNameReference(
                       binding.declaration,
                     ),
                   )
-                  Option::None => match imports.lookup_module_trait(
+                  None => match imports.lookup_module_trait(
                     interface_index,
                     self.collected.name(property),
                   ) {
-                    Option::Some(binding) => self.set_expression_reference(
+                    Some(binding) => self.set_expression_reference(
                       expression,
-                      SelfHostBodyNameReference::ModuleTraitNameReference(
+                      ModuleTraitNameReference(
                         binding.declaration,
                       ),
                     )
-                    Option::None => {
+                    None => {
                       self.diagnose(
-                        SelfHostBodyResolutionDiagnostic::UnknownQualifiedRoot(
+                        UnknownQualifiedRoot(
                           property,
                           expression,
                           offset,
@@ -1732,14 +1767,14 @@ impl SelfHostBodyNameResolver {
                       )
                       self.set_expression_reference(
                         expression,
-                        SelfHostBodyNameReference::ErrorNameReference,
+                        ErrorNameReference,
                       )
                     }
                   }
                 }
-                Option::None => {}
+                None => {}
               }
-              Option::None => {}
+              None => {}
             }
             _ => {}
           }
@@ -1750,7 +1785,7 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_qualified_root,
         )
       }
-      SelfHostHirExpr::BinaryExpr(_, left, right, _) => {
+      BinaryExpr(_, left, right, _) => {
         self.push_task(
           self_host_name_task_visit_expression,
           right,
@@ -1762,7 +1797,7 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::IndexExpr(left, right, _) => {
+      IndexExpr(left, right, _) => {
         self.push_task(
           self_host_name_task_visit_expression,
           right,
@@ -1774,7 +1809,7 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::AssignmentExpr(target, value, _) => {
+      AssignmentExpr(target, value, _) => {
         self.push_task(
           self_host_name_task_visit_expression,
           value,
@@ -1786,7 +1821,7 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::IndexSetExpr(base, index, value, _) => {
+      IndexSetExpr(base, index, value, _) => {
         self.push_task(
           self_host_name_task_visit_expression,
           value,
@@ -1803,7 +1838,7 @@ impl SelfHostBodyNameResolver {
           self_host_name_expect_value,
         )
       }
-      SelfHostHirExpr::CallExpr(target, arguments, _) => {
+      CallExpr(target, arguments, _) => {
         let mut index = arguments.length
         while index {
           current => if current > 0u32 {
@@ -1894,7 +1929,7 @@ impl SelfHostBodyNameResolver {
     }
     let local = self.allocate_local(
       source.name,
-      SelfHostBodyLocalKind::LetLocal,
+      LetLocal,
       source.mutable_,
       item,
       source.name_offset,
@@ -2006,12 +2041,12 @@ impl SelfHostBodyNameResolver {
     self.enter_scope()
     self.bind_parameters()
     match self.body.root {
-      SelfHostHirBodyRoot::ExpressionBodyRoot(expression) => self.push_task(
+      ExpressionBodyRoot(expression) => self.push_task(
         self_host_name_task_visit_expression,
         expression,
         self_host_name_expect_value,
       )
-      SelfHostHirBodyRoot::BlockBodyRoot(block) => self.schedule_block(block)
+      BlockBodyRoot(block) => self.schedule_block(block)
     }
     while self.tasks.length() {
       length => if length > 0u32 {
@@ -2031,7 +2066,7 @@ impl SelfHostBodyNameResolver {
       self_host_body_name_fail()
     }
     self.sort_diagnostics()
-    SelfHostBodyNameJobResult::{
+    {
       locals: self.locals
       controls: self.controls
       captures: self.captures
@@ -2067,33 +2102,18 @@ fn self_host_body_variant_names(
     }
   }
   match imports {
-    Option::Some(scope) => {
-      let visible_owners = self_host_empty_u64_bool_map()
+    Some(scope) => {
       for interface_index in scope.imported_interfaces {
         let interface_ = scope.interfaces.at(interface_index)
         let mut index = 0u32
         let _ = while index {
-          current => if current < interface_.declaration_count() {
-            let declaration = interface_.declaration_at(current)
-            match scope.lookup_type(declaration.name) {
-              Option::Some(binding) => if self_host_u64_equal(binding.declaration, declaration.declaration) {
-                visible_owners[declaration.declaration] = true
-              }
-              Option::None => {}
-            }
-            continue current + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-        index = 0u32
-        let _ = while index {
           current => if current < interface_.variant_count() {
             let variant = interface_.variant_at(current)
-            if visible_owners.contains_key(variant.declaration) {
+            // Exact imports provide type identities without opening names.
+            if scope.declaration_bindings.contains_key(variant.declaration) {
               match collected.find_name(variant.name) {
-                Option::Some(name) => names.set(name, true)
-                Option::None => {}
+                Some(name) => names.set(name, true)
+                None => {}
               }
             }
             continue current + 1u32
@@ -2103,7 +2123,7 @@ fn self_host_body_variant_names(
         }
       }
     }
-    Option::None => {}
+    None => {}
   }
   names
 }
@@ -2131,8 +2151,8 @@ fn self_host_capture_source_owned_by(
   lambda: U32,
 ) -> Bool {
   match source {
-    SelfHostLambdaCaptureSource::LambdaLocalCapture(owner, _) => owner == lambda
-    SelfHostLambdaCaptureSource::BodyLocalCapture(_, _) => false
+    LambdaLocalCapture(owner, _) => owner == lambda
+    BodyLocalCapture(_, _) => false
   }
 }
 
@@ -2155,7 +2175,7 @@ struct SelfHostBodyNameMergeBuilder {
 
 impl SelfHostBodyNameMergeBuilder {
   fn new(collected: SelfHostCollectedModule) -> SelfHostBodyNameMergeBuilder {
-    SelfHostBodyNameMergeBuilder::{
+    {
       collected: collected
       bodies: []
       lambdas: []
@@ -2304,17 +2324,17 @@ impl SelfHostBodyNameMergeBuilder {
         break self_host_semantic_unit()
       }
     }
-    let info = SelfHostResolvedBodyNames::{
+    let info = {
       body: body.id
-      locals: SelfHostHirSpan::{
+      locals: {
         start: local_start
         length: self.locals.length() - local_start
       }
-      controls: SelfHostHirSpan::{
+      controls: {
         start: control_start
         length: self.controls.length() - control_start
       }
-      diagnostics: SelfHostHirSpan::{
+      diagnostics: {
         start: diagnostic_start
         length: self.diagnostics.length() - diagnostic_start
       }
@@ -2364,7 +2384,7 @@ impl SelfHostBodyNameMergeBuilder {
       current => if current < pending_owners.length() {
         if pending_owners[current] == lambda.id {
           let source = pending_captures[current]
-          let capture = SelfHostLambdaCapture::{
+          let capture = {
             id: self.captures.length() - capture_start
             lambda: lambda.id
             name: source.name
@@ -2442,21 +2462,21 @@ impl SelfHostBodyNameMergeBuilder {
         break self_host_semantic_unit()
       }
     }
-    let info = SelfHostResolvedLambdaNames::{
+    let info = {
       lambda: lambda.id
-      locals: SelfHostHirSpan::{
+      locals: {
         start: local_start
         length: self.locals.length() - local_start
       }
-      controls: SelfHostHirSpan::{
+      controls: {
         start: control_start
         length: self.controls.length() - control_start
       }
-      captures: SelfHostHirSpan::{
+      captures: {
         start: capture_start
         length: self.captures.length() - capture_start
       }
-      diagnostics: SelfHostHirSpan::{
+      diagnostics: {
         start: diagnostic_start
         length: self.diagnostics.length() - diagnostic_start
       }
@@ -2479,7 +2499,7 @@ impl SelfHostBodyNameMergeBuilder {
     let transfer_targets = self.transfer_targets
     let expression_controls = self.expression_controls
     let diagnostics = self.diagnostics
-    SelfHostResolvedModuleNames::{
+    {
       module_id: module_id
       bodies: bodies
       lambdas: lambdas
@@ -2652,7 +2672,7 @@ fn self_host_resolve_module_names_in_order(
 ) -> SelfHostResolvedModuleNames {
   self_host_resolve_module_names_with_optional_imports_in_order(
     collected,
-    Option::None,
+    None,
     order,
   )
 }
@@ -2676,7 +2696,7 @@ fn self_host_resolve_module_names_with_imports(
   }
   self_host_resolve_module_names_with_optional_imports_in_order(
     collected,
-    Option::Some(imports),
+    Some(imports),
     order,
   )
 }

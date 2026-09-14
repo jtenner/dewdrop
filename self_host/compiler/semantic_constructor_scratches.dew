@@ -1,7 +1,7 @@
 fn self_host_constructor_scratch_carrier(carrier: SelfHostWasmBodyCarrier) -> SelfHostWasmBodyCarrier {
-  if carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier || carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier {
+  if carrier is UnitBodyCarrier || carrier is NeverBodyCarrier {
     // Constructors store an explicit null marker for an erased source value.
-    SelfHostWasmBodyCarrier::EqRefBodyCarrier
+    EqRefBodyCarrier
   } else {
     carrier
   }
@@ -18,7 +18,7 @@ fn self_host_plan_constructor_scratches(module_: SelfHostPlannedModuleLowering, 
       let child = module_.object_fields[fields.start + ordinal].value
       let source = expressions[self_host_body_expression_slot(body, child)].value
       let value = self_host_body_value_with_carrier(source, self_host_constructor_scratch_carrier(source.carrier))
-      scratches.push(SelfHostPlannedPhysicalScratchCarrier::{
+      scratches.push({
         expression: expression
         ordinal: ordinal
         value: value
@@ -34,7 +34,7 @@ fn self_host_plan_constructor_scratches(module_: SelfHostPlannedModuleLowering, 
 fn self_host_constructor_scratch_value(canonical: Option<SelfHostPlannedPhysicalBodyCarrierPlan>, module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, ordinal: U32) -> SelfHostPlannedPhysicalValueInfo {
   let plan = self_host_physical_scratch_body(canonical, module_, body, expression, ordinal)
   let fields = match module_.expressions[expression].kind {
-    SelfHostPlannedExpressionKind::PlannedConstruct(_, fields, _) => fields
+    PlannedConstruct(_, fields, _), PlannedObjectNew(fields) => fields
     _ => self_host_physical_scratch_failure(module_, body, expression, 7u32, 606u32, 1u64, 0u64, u32_into_u64(ordinal))
   }
   if !self_host_array_span_is_valid(fields.start, fields.length, module_.object_fields.length()) {
@@ -48,8 +48,8 @@ fn self_host_constructor_scratch_value(canonical: Option<SelfHostPlannedPhysical
   let child = module_.object_fields[fields.start + ordinal].value
   let _ = self_host_body_expression_slot(body, child)
   let source = match self_host_body_plan_expression(plan, child) {
-    Option::Some(value) => value
-    Option::None => self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(ordinal))
+    Some(value) => value
+    None => self_host_physical_scratch_failure(module_, body, expression, 7u32, 610u32, 1u64, 0u64, u32_into_u64(ordinal))
   }
   let expected = self_host_constructor_scratch_carrier(source.carrier)
   self_host_require_physical_scratch(plan, module_, body, expression, ordinal, expected)

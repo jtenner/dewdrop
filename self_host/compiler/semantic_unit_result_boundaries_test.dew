@@ -13,10 +13,10 @@ test "Never control inputs do not constrain unused branches" {
     for body in program.bodies {
       for expression in body.expressions {
         match module_.expressions[expression.expression].kind {
-          SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _),
-          SelfHostPlannedExpressionKind::PlannedMatchExpression(_, _),
-          SelfHostPlannedExpressionKind::PlannedWhileExpression(_, _, _) => {
-            assert(expression.carrier is SelfHostWasmBodyCarrier::NeverBodyCarrier, "control retains proven Never flow")
+          PlannedIfExpression(_, _, _),
+          PlannedMatchExpression(_, _),
+          PlannedWhileExpression(_, _, _) => {
+            assert(expression.carrier is NeverBodyCarrier, "control retains proven Never flow")
             controls = controls + 1u32
           }
           _ => {}
@@ -38,12 +38,12 @@ test "Unit if boundaries retain child call carriers" {
   for body in program.bodies {
     for expression in body.expressions {
       match module_.expressions[expression.expression].kind {
-        SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _) => {
-          assert(expression.carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier, "parent remains Unit")
+        PlannedIfExpression(_, _, _) => {
+          assert(expression.carrier is UnitBodyCarrier, "parent remains Unit")
           branches = branches + 1u32
         }
-        SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => {
-          assert(expression.carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "child retains physical I64")
+        PlannedDirectCall(_, _, _, _) => {
+          assert(expression.carrier is I64BodyCarrier, "child retains physical I64")
           calls = calls + 1u32
         }
         _ => {}

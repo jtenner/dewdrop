@@ -7,8 +7,8 @@ fn self_host_verify_outlined_raw_array_get(
   self_host_outlined_builtin_assert(module_, function_, self_host_raw_array_opcode(recipe.opcode) == 2u32,
     714u32, 2u64, u32_into_u64(self_host_raw_array_opcode(recipe.opcode)), 0u64)
   let storage = match self_host_linked_raw_array_storage(link, recipe.element_shape) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       self_host_outlined_builtin_assert(module_, function_, false, 301u32,
         1u64, 0u64, 0u64)
       unreachable()
@@ -26,12 +26,12 @@ fn self_host_verify_outlined_raw_array_get(
   self_host_outlined_builtin_assert(module_, function_, parameters.length == 2u32,
     703u32, 2u64, u32_into_u64(parameters.length), 0u64)
   let array = self_host_body_carrier_from_value_type(values[parameters.start])
-  self_host_outlined_builtin_assert(module_, function_, array is SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+  self_host_outlined_builtin_assert(module_, function_, array is EqRefBodyCarrier,
     705u32, 9u64, self_host_body_carrier_code(array), 0u64)
   let index = self_host_body_carrier_from_value_type(values[parameters.start + 1u32])
-  self_host_outlined_builtin_assert(module_, function_, index is SelfHostWasmBodyCarrier::I32BodyCarrier,
+  self_host_outlined_builtin_assert(module_, function_, index is I32BodyCarrier,
     705u32, 4u64, self_host_body_carrier_code(index), 1u64)
-  let unit = recipe.element_shape is SelfHostPlannedValueShape::UnitPlannedValueShape
+  let unit = recipe.element_shape is UnitPlannedValueShape
   let result_count = if unit {
     0u32
   } else {
@@ -65,12 +65,12 @@ fn self_host_append_outlined_raw_array_get(
   StarshineFfi.ffi_ffi_bridge_instructions_push(instructions,
     StarshineFfi.ffi_lib_Instruction_local_get(StarshineFfi.ffi_lib_LocalIdx_new(1i32)))
   self_host_emit_raw_array_get(storage, instructions)
-  if recipe.element_shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+  if recipe.element_shape is UnitPlannedValueShape {
     StarshineFfi.ffi_ffi_bridge_instructions_push(instructions,
       StarshineFfi.ffi_lib_Instruction_drop())
   }
   // Products already use the self-host boxed ABI and need no unboxing here.
   StarshineFfi.ffi_ffi_bridge_funcs_push(functions,
     StarshineFfi.ffi_lib_Func_new(StarshineFfi.ffi_lib_Locals_empty(), StarshineFfi.ffi_lib_Expr_new(instructions)))
-  Option::None
+  None
 }

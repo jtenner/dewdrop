@@ -22,11 +22,11 @@ fn self_host_specialized_shape_values() -> Array<SelfHostSpecializedShapeValue> 
 }
 
 fn self_host_specialized_shape_active() -> Map<I32, Bool> {
-  Map::empty()
+  empty()
 }
 
 fn self_host_specialized_shape_cache() -> Map<I32, SelfHostSpecializedShapeValue> {
-  Map::empty()
+  empty()
 }
 
 // One substitution environment per walk. Cache shared nodes and keep active
@@ -43,21 +43,21 @@ fn self_host_specialized_body_value_shape(
       u32_into_u64(shapes.length()), u32_into_u64(caller_shapes.length), u32_into_u64(caller_shapes.start))
   }
   let generics = self_host_program_specialization_callable_generics(callable)
-  let tasks = [SelfHostSpecializedBodyShapeTask::VisitSpecializedBodyShape(root)]
+  let tasks = [VisitSpecializedBodyShape(root)]
   let results = self_host_specialized_shape_values()
   let active = self_host_specialized_shape_active()
   let completed = self_host_specialized_shape_cache()
   while tasks.length() {
     length if length > 0u32 => {
       let task = match tasks.pop() {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           self_host_specialization_index_failure(callable.declaration, 0u64, 4294967295u32, 103u32, 1u64, 0u64, 0u64)
           unreachable()
         }
       }
       match task {
-        SelfHostSpecializedBodyShapeTask::FinishSpecializedBodyShape(type_, start, count, projection) => {
+        FinishSpecializedBodyShape(type_, start, count, projection) => {
           if start > results.length() || count != results.length() - start {
             self_host_specialization_index_failure(callable.declaration, 0u64, 4294967295u32, 103u32,
               u32_into_u64(count), u32_into_u64(results.length()), u32_into_u64(start))
@@ -69,7 +69,7 @@ fn self_host_specialized_body_value_shape(
             index if index < count => {
               let value = results[start + index]
               erroneous = erroneous || value.erroneous
-              if projection is SelfHostSpecializedShapeProjection::ProductSpecializedShapeProjection {
+              if projection is ProductSpecializedShapeProjection {
                 fields.push(value.shape)
               }
               continue index + 1u32
@@ -77,39 +77,39 @@ fn self_host_specialized_body_value_shape(
             _ => break ()
           }
           let shape = match projection {
-            SelfHostSpecializedShapeProjection::ProductSpecializedShapeProjection => SelfHostPlannedValueShape::ProductPlannedValueShape(fields)
-            SelfHostSpecializedShapeProjection::FirstSpecializedShapeProjection => {
+            ProductSpecializedShapeProjection => ProductPlannedValueShape(fields)
+            FirstSpecializedShapeProjection => {
               if count == 0u32 {
                 self_host_specialization_index_failure(callable.declaration, 0u64, 4294967295u32, 103u32, 1u64, 0u64, u32_into_u64(start))
               }
               if erroneous {
-                SelfHostPlannedValueShape::ErrorPlannedValueShape
+                ErrorPlannedValueShape
               } else {
                 results[start].shape
               }
             }
-            SelfHostSpecializedShapeProjection::FixedSpecializedShapeProjection(shape) => if erroneous {
-              SelfHostPlannedValueShape::ErrorPlannedValueShape
+            FixedSpecializedShapeProjection(shape) => if erroneous {
+              ErrorPlannedValueShape
             } else {
               shape
             }
           }
-          let value = SelfHostSpecializedShapeValue::{
+          let value = {
             shape: shape
-            erroneous: erroneous || (shape is SelfHostPlannedValueShape::ErrorPlannedValueShape)
+            erroneous: erroneous || (shape is ErrorPlannedValueShape)
           }
           results.truncate(start)
           results.push(value)
           let _ = active.remove(type_)
           completed.set(type_, value)
         }
-        SelfHostSpecializedBodyShapeTask::VisitSpecializedBodyShape(type_) => {
+        VisitSpecializedBodyShape(type_) => {
           match completed.get(type_) {
-            Option::Some(shape) => {
+            Some(shape) => {
               results.push(shape)
               continue tasks.length()
             }
-            Option::None => {}
+            None => {}
           }
           if active.contains_key(type_) {
             self_host_specialization_index_failure(callable.declaration, 0u64, 4294967295u32, 108u32,
@@ -117,8 +117,8 @@ fn self_host_specialized_body_value_shape(
           }
           active.set(type_, true)
           let children = self_host_local_empty_i32()
-          let mut projection = SelfHostSpecializedShapeProjection::FirstSpecializedShapeProjection
-          let mut shape = SelfHostPlannedValueShape::ErrorPlannedValueShape
+          let mut projection = FirstSpecializedShapeProjection
+          let mut shape = ErrorPlannedValueShape
           if type_ < -1i32 {
             let resolved = self_host_body_i32_to_u32(-(type_ + 2i32))
             if resolved >= module_.resolved_types.types.length() {
@@ -126,17 +126,17 @@ fn self_host_specialized_body_value_shape(
                 u32_into_u64(module_.resolved_types.types.length()), u32_into_u64(resolved), 0u64)
             }
             match module_.resolved_types.types[resolved] {
-              SelfHostResolvedType::GenericParameterType(parameter) => {
-                shape = SelfHostPlannedValueShape::GenericPlannedValueShape
+              GenericParameterType(parameter) => {
+                shape = GenericPlannedValueShape
                 match generics.slot(parameter) {
-                  Option::Some(slot) => if slot < caller_shapes.length {
+                  Some(slot) => if slot < caller_shapes.length {
                     shape = shapes[caller_shapes.start + slot]
                   }
-                  Option::None => {}
+                  None => {}
                 }
               }
-              SelfHostResolvedType::ProductType(fields) => {
-                projection = SelfHostSpecializedShapeProjection::ProductSpecializedShapeProjection
+              ProductType(fields) => {
+                projection = ProductSpecializedShapeProjection
                 if !self_host_array_span_is_valid(fields.start, fields.length, module_.resolved_types.type_arguments.length()) {
                   self_host_specialization_index_failure(callable.declaration, 0u64, 4294967295u32, 101u32,
                     u32_into_u64(module_.resolved_types.type_arguments.length()), u32_into_u64(fields.length), u32_into_u64(fields.start))
@@ -154,7 +154,7 @@ fn self_host_specialized_body_value_shape(
                   _ => break ()
                 }
               }
-              SelfHostResolvedType::AppliedType(base, fields) => {
+              AppliedType(base, fields) => {
                 if base > 2147483646u32 {
                   self_host_specialization_index_failure(callable.declaration, 0u64, 4294967295u32, 207u32,
                     2147483646u64, u32_into_u64(base), u32_into_u64(resolved))
@@ -162,13 +162,13 @@ fn self_host_specialized_body_value_shape(
                 children.push(-self_host_body_u32_to_i32(base) - 2i32)
                 self_host_specialized_shape_children(module_, callable, children, fields, true, resolved)
               }
-              SelfHostResolvedType::FunctionType(fields, result) => {
-                projection = SelfHostSpecializedShapeProjection::FixedSpecializedShapeProjection(SelfHostPlannedValueShape::RefPlannedValueShape)
+              FunctionType(fields, result) => {
+                projection = FixedSpecializedShapeProjection(RefPlannedValueShape)
                 children.push(self_host_specialized_shape_resolved_child(callable, result, resolved))
                 self_host_specialized_shape_children(module_, callable, children, fields, true, resolved)
               }
-              SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
-                projection = SelfHostSpecializedShapeProjection::FixedSpecializedShapeProjection(SelfHostPlannedValueShape::GenericPlannedValueShape)
+              MemberTypeProjection(owner, _, _) => {
+                projection = FixedSpecializedShapeProjection(GenericPlannedValueShape)
                 children.push(self_host_specialized_shape_resolved_child(callable, owner, resolved))
               }
               _ => {
@@ -182,28 +182,28 @@ fn self_host_specialized_body_value_shape(
                 u32_into_u64(module_.inferred.types.length()), u32_into_u64(index), 1u64)
             }
             match module_.inferred.types[index] {
-              SelfHostBodyTypeTerm::BodyResolvedType(resolved) => {
+              BodyResolvedType(resolved) => {
                 if resolved > 2147483646u32 {
                   self_host_specialization_index_failure(callable.declaration, 0u64, 4294967295u32, 207u32,
                     2147483646u64, u32_into_u64(resolved), u32_into_u64(index))
                 }
                 children.push(-self_host_body_u32_to_i32(resolved) - 2i32)
               }
-              SelfHostBodyTypeTerm::BodyAppliedType(base, fields) => {
+              BodyAppliedType(base, fields) => {
                 children.push(base)
                 self_host_specialized_shape_children(module_, callable, children, fields, false, index)
               }
-              SelfHostBodyTypeTerm::BodyFunctionType(fields, result) => {
-                projection = SelfHostSpecializedShapeProjection::FixedSpecializedShapeProjection(SelfHostPlannedValueShape::RefPlannedValueShape)
+              BodyFunctionType(fields, result) => {
+                projection = FixedSpecializedShapeProjection(RefPlannedValueShape)
                 children.push(result)
                 self_host_specialized_shape_children(module_, callable, children, fields, false, index)
               }
-              SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, _, _) => {
-                projection = SelfHostSpecializedShapeProjection::FixedSpecializedShapeProjection(SelfHostPlannedValueShape::GenericPlannedValueShape)
+              BodyMemberTypeProjection(owner, _, _) => {
+                projection = FixedSpecializedShapeProjection(GenericPlannedValueShape)
                 children.push(owner)
               }
-              SelfHostBodyTypeTerm::BodyProductType(fields) => {
-                projection = SelfHostSpecializedShapeProjection::ProductSpecializedShapeProjection
+              BodyProductType(fields) => {
+                projection = ProductSpecializedShapeProjection
                 if !self_host_array_span_is_valid(fields.start, fields.length, module_.inferred.type_arguments.length()) {
                   self_host_specialization_index_failure(callable.declaration, 0u64, 4294967295u32, 101u32,
                     u32_into_u64(module_.inferred.type_arguments.length()), u32_into_u64(fields.length), u32_into_u64(fields.start))
@@ -221,17 +221,17 @@ fn self_host_specialized_body_value_shape(
               }
             }
           }
-          if (projection is SelfHostSpecializedShapeProjection::ProductSpecializedShapeProjection) || children.length() > 0u32 {
-            tasks.push(SelfHostSpecializedBodyShapeTask::FinishSpecializedBodyShape(type_, results.length(), children.length(), projection))
+          if (projection is ProductSpecializedShapeProjection) || children.length() > 0u32 {
+            tasks.push(FinishSpecializedBodyShape(type_, results.length(), children.length(), projection))
             while children.length() {
               count if count > 0u32 => {
-                tasks.push(SelfHostSpecializedBodyShapeTask::VisitSpecializedBodyShape(children[count - 1u32]))
+                tasks.push(VisitSpecializedBodyShape(children[count - 1u32]))
                 continue count - 1u32
               }
               _ => break ()
             }
           } else {
-            let value = SelfHostSpecializedShapeValue::{
+            let value = {
               shape: shape
               erroneous: self_host_specialization_shape_error(shape) == 2u32
             }

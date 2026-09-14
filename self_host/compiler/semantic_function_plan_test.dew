@@ -10,16 +10,16 @@ test "function plans retain callable ABI shapes" {
   let functions = self_host_plan_module_functions(collected, resolved)
   assert(functions.callables.length() == 2u32, "two callables")
   match functions.callables[0u32].kind {
-    SelfHostPlannedCallableKind::PlannedBuiltinCallable(name) => assert(
+    PlannedBuiltinCallable(name) => assert(
       name == b"identity",
       "builtin name",
     )
     _ => assert(false, "builtin")
   }
-  assert(functions.parameters[0u32].shape is SelfHostPlannedValueShape::GenericPlannedValueShape, "generic parameter")
-  assert(functions.callables[0u32].result_shape is SelfHostPlannedValueShape::GenericPlannedValueShape, "generic result")
-  assert(functions.parameters[1u32].shape is SelfHostPlannedValueShape::I32PlannedValueShape, "I32 parameter")
-  assert(functions.callables[1u32].result_shape is SelfHostPlannedValueShape::I64PlannedValueShape, "I64 result")
+  assert(functions.parameters[0u32].shape is GenericPlannedValueShape, "generic parameter")
+  assert(functions.callables[0u32].result_shape is GenericPlannedValueShape, "generic result")
+  assert(functions.parameters[1u32].shape is I32PlannedValueShape, "I32 parameter")
+  assert(functions.callables[1u32].result_shape is I64PlannedValueShape, "I64 result")
 }
 
 test "function plans preserve source-derived main identity" {
@@ -52,8 +52,8 @@ test "function plans substitute impl Self shapes" {
   let resolved = self_host_resolve_module_types(collected)
   let functions = self_host_plan_module_functions(collected, resolved)
   assert(functions.callables.length() == 2u32, "two methods")
-  assert(functions.callables[0u32].self_shape is SelfHostPlannedValueShape::RefPlannedValueShape, "ref Self")
-  assert(functions.callables[1u32].self_shape is SelfHostPlannedValueShape::I32PlannedValueShape, "I32 Self")
+  assert(functions.callables[0u32].self_shape is RefPlannedValueShape, "ref Self")
+  assert(functions.callables[1u32].self_shape is I32PlannedValueShape, "I32 Self")
 }
 
 test "trait requirement plans retain generic Self" {
@@ -63,8 +63,8 @@ test "trait requirement plans retain generic Self" {
   )
   let resolved = self_host_resolve_module_types(collected)
   let functions = self_host_plan_module_functions(collected, resolved)
-  assert(functions.callables[0u32].self_shape is SelfHostPlannedValueShape::GenericPlannedValueShape, "generic Self")
-  assert(functions.callables[0u32].result_shape is SelfHostPlannedValueShape::GenericPlannedValueShape, "generic result")
+  assert(functions.callables[0u32].self_shape is GenericPlannedValueShape, "generic Self")
+  assert(functions.callables[0u32].result_shape is GenericPlannedValueShape, "generic result")
 }
 
 test "function plans retain foreign and test metadata" {
@@ -83,7 +83,7 @@ test "function plans retain foreign and test metadata" {
     current => if current < functions.callables.length() {
       let callable = functions.callables[current]
       match callable.kind {
-        SelfHostPlannedCallableKind::PlannedForeignCallable(library, export_name, _) => {
+        PlannedForeignCallable(library, export_name, _) => {
           assert(self_host_bytes_equal(library, b"host"), "library")
           assert(self_host_bytes_equal(export_name, b"read"), "export")
           foreign_index = current

@@ -12,20 +12,20 @@ test "dead typed query branches are distinct from invalid live values" {
   assert(fixture.frozen.import_diagnostics.length() == 0u32, "typed branch imports must resolve")
   let lowering = self_host_plan_program_lowering(fixture.frozen)
   match self_host_validate_program_inference(lowering) {
-    Option::Some(error) => assert(false, error)
-    Option::None => {}
+    Some(error) => assert(false, error)
+    None => {}
   }
   match self_host_validate_program_lowering(lowering) {
-    Option::Some(error) => assert(false, error)
-    Option::None => {}
+    Some(error) => assert(false, error)
+    None => {}
   }
   let mut changed = false
   for module_ in lowering.modules {
     while 0u32 {
       index if index < module_.expressions.length() => {
         let expression = module_.expressions[index]
-        if !changed && expression.kind is SelfHostPlannedExpressionKind::PlannedConstruct(_, _, _) && expression.nominal != 0u64 {
-          module_.expressions[index] = self_host_compile_time_replace_kind(expression, SelfHostPlannedExpressionKind::PlannedPoisonExpression)
+        if !changed && expression.kind is PlannedConstruct(_, _, _) && expression.nominal != 0u64 {
+          module_.expressions[index] = self_host_compile_time_replace_kind(expression, PlannedPoisonExpression)
           changed = true
         }
         continue index + 1u32
@@ -35,8 +35,8 @@ test "dead typed query branches are distinct from invalid live values" {
   }
   assert(changed, "the selected branch has a typed constructor to mutate")
   match self_host_validate_program_lowering(lowering) {
-    Option::Some(error) => assert(error.starts_with("program lowering has a typed poison value"), "the live poison diagnostic remains exact")
-    Option::None => assert(false, "live typed poison must still fail validation")
+    Some(error) => assert(error.starts_with("program lowering has a typed poison value"), "the live poison diagnostic remains exact")
+    None => assert(false, "live typed poison must still fail validation")
   }
 }
 
@@ -46,8 +46,8 @@ test "ordinary forwarding does not acquire removed runtime query demand" {
   )
   assert(lowering.collected.modules.at(0u32).diagnostic_count() == 0u32, "ordinary forwarding source is valid")
   match self_host_validate_program_inference(lowering) {
-    Option::Some(error) => assert(false, error)
-    Option::None => {}
+    Some(error) => assert(false, error)
+    None => {}
   }
   let mut inner = 0u64
   let mut outer = 0u64
@@ -93,7 +93,7 @@ test "local numeric query guards retain source dependence" {
   let mut found = false
   for expression in collected.expressions {
     match expression {
-      SelfHostHirExpr::IfExpr(condition, _, _, _) => {
+      IfExpr(condition, _, _, _) => {
         found = true
         assert(inferencer.guard_condition_dependent(condition, targets), "a query in a local initializer marks its condition as dependent")
       }
@@ -104,7 +104,7 @@ test "local numeric query guards retain source dependence" {
   let result = inferencer.run()
   for diagnostic in result.diagnostics {
     match diagnostic {
-      SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => assert(false, "the retained call equation must wait for its generic argument")
+      BodyConstraintDiagnostic(_) => assert(false, "the retained call equation must wait for its generic argument")
       _ => {}
     }
   }
@@ -118,11 +118,11 @@ test "imported overloads reject independent operand errors before selection" {
   for module_ in lowering.modules {
     for diagnostic in module_.inferred.diagnostics {
       match diagnostic {
-        SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(expression, _, _) => {
+        NoMatchingDirectCall(expression, _, _) => {
           found = true
           match self_host_inference_diagnostic_expression(diagnostic) {
-            Option::Some(actual) => assert(actual == expression, "overload diagnostic retains the call expression")
-            Option::None => assert(false, "overload diagnostic lost its call expression")
+            Some(actual) => assert(actual == expression, "overload diagnostic retains the call expression")
+            None => assert(false, "overload diagnostic lost its call expression")
           }
         }
         _ => {}
@@ -164,7 +164,7 @@ test "deferred overloads keep independent operand failures" {
   let inferred = self_host_merge_module_inference(self_host_infer_basic_module_bodies(collected, self_host_resolve_module_types(collected), self_host_resolve_module_names(collected)))
   let mut found = false
   for diagnostic in inferred.diagnostics {
-    if diagnostic is SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, _) {
+    if diagnostic is NoMatchingDirectCall(_, _, _) {
       found = true
     }
   }
@@ -181,7 +181,7 @@ test "imported method bounds reject a concrete missing witness" {
   let mut found = false
   for module_ in lowering.modules {
     for diagnostic in module_.inferred.diagnostics {
-      if diagnostic is SelfHostBodyInferenceDiagnostic::TraitObligationFailure(_, _, _, _) {
+      if diagnostic is TraitObligationFailure(_, _, _, _) {
         found = true
       }
     }
@@ -200,7 +200,7 @@ test "imported method bounds reject a concrete missing witness" {
       report.append(self_host_inference_diagnostic_name(diagnostic))
     }
     for expression in module_.expressions {
-      if expression.kind is SelfHostPlannedExpressionKind::PlannedDeferredExpression {
+      if expression.kind is PlannedDeferredExpression {
         report.append(" deferred=")
         report.append_u32(expression.offset)
       }
@@ -246,7 +246,7 @@ test "guarded method bounds reject an independent concrete argument" {
   let inferred = self_host_merge_module_inference(self_host_infer_basic_module_bodies(collected, self_host_resolve_module_types(collected), self_host_resolve_module_names(collected)))
   let mut found = false
   for diagnostic in inferred.diagnostics {
-    if diagnostic is SelfHostBodyInferenceDiagnostic::TraitObligationFailure(_, _, _, _) {
+    if diagnostic is TraitObligationFailure(_, _, _, _) {
       found = true
     }
   }
@@ -296,7 +296,7 @@ test "deferred field checks use the selected owner in private instances" {
   assert(lowering.modules[0u32].inferred.diagnostics.length() == 0u32, "generic field check is deferred, not rejected")
   let mut deferred = 0u32
   for expression in lowering.modules[0u32].expressions {
-    if expression.kind is SelfHostPlannedExpressionKind::PlannedDeferredExpression {
+    if expression.kind is PlannedDeferredExpression {
       deferred = deferred + 1u32
     }
   }
@@ -304,14 +304,14 @@ test "deferred field checks use the selected owner in private instances" {
   let _ = while 0u32 {
     index => if index < fragments.specialization.requests.length() {
       match lowering.compile_time.instances.get(index) {
-        Option::Some(instance) => for body in instance.module_.bodies {
+        Some(instance) => for body in instance.module_.bodies {
           if body.declaration == instance.declaration {
             for expression in self_host_compile_time_owned_expressions(instance.module_, body) {
-              assert(!(instance.module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedDeferredExpression), "selected field check is complete")
+              assert(!(instance.module_.expressions[expression].kind is PlannedDeferredExpression), "selected field check is complete")
             }
           }
         }
-        Option::None => {}
+        None => {}
       }
       continue index + 1u32
     } else {
@@ -345,7 +345,7 @@ test "independent operator errors do not become deferred checks" {
   let merged = self_host_merge_module_inference(basic)
   assert(merged.diagnostics.length() > 0u32, "independent bad operand remains an error")
   for selection in merged.expression_selections {
-    assert(!(selection is SelfHostBasicExpressionSelection::DeferredBasicExpressionSelection), "concrete bad operands cannot be deferred")
+    assert(!(selection is DeferredBasicExpressionSelection), "concrete bad operands cannot be deferred")
   }
 }
 
@@ -366,7 +366,7 @@ test "query branch removal preserves constructor field evaluations" {
   let mut live = 0u32
   for expression in module_.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedI64Const(value) => {
+      PlannedI64Const(value) => {
         assert(value == 58u64, "only the selected constructor field remains")
         live = live + 1u32
       }
@@ -389,22 +389,22 @@ test "guarded trait calls select concrete methods in exact bodies" {
   let _ = while 0u32 {
     index => if index < fragments.specialization.requests.length() {
       match lowering.compile_time.instances.get(index) {
-        Option::Some(instance) => for expression in instance.module_.expressions {
+        Some(instance) => for expression in instance.module_.expressions {
           match expression.call_target {
-            SelfHostBasicCallTarget::SelectedBasicCallTarget(target, _) => match self_host_program_specialization_callable(instance.module_, target) {
-              Option::Some(callable) => match callable.kind {
-                SelfHostPlannedCallableKind::PlannedTraitMethodCallable(_) => assert(false, "guarded trait requirement must be replaced")
-                SelfHostPlannedCallableKind::PlannedImplMethodCallable(_, _) => {
+            SelectedBasicCallTarget(target, _) => match self_host_program_specialization_callable(instance.module_, target) {
+              Some(callable) => match callable.kind {
+                PlannedTraitMethodCallable(_) => assert(false, "guarded trait requirement must be replaced")
+                PlannedImplMethodCallable(_, _) => {
                   count = count + 1u32
                 }
                 _ => {}
               }
-              Option::None => {}
+              None => {}
             }
             _ => {}
           }
         }
-        Option::None => {}
+        None => {}
       }
       continue index + 1u32
     } else {
@@ -439,7 +439,7 @@ test "compile-time dead locals retain their logical type" {
   let _ = self_host_prune_compile_time_body(module_, module_.bodies[0u32])
   let mut count = 0u32
   for local in module_.locals {
-    if local.shape is SelfHostPlannedValueShape::I64PlannedValueShape {
+    if local.shape is I64PlannedValueShape {
       assert(local.elided, "dead I64 keeps its type but has no physical slot")
       count = count + 1u32
     } else {
@@ -459,10 +459,10 @@ test "compile-time flow cuts non-returning call operands and remains stable" {
   let mut sequences = 0u32
   for id in self_host_compile_time_owned_expressions(module_, body) {
     match module_.expressions[id].kind {
-      SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _) => {
+      PlannedDirectCall(_, _, _, _) => {
         calls = calls + 1u32
       }
-      SelfHostPlannedExpressionKind::PlannedEvaluationSequence(_) => {
+      PlannedEvaluationSequence(_) => {
         sequences = sequences + 1u32
       }
       _ => {}
@@ -478,35 +478,35 @@ test "compile-time flow cuts non-returning call operands and remains stable" {
 
 fn self_host_test_query_bool(name: Bytes, arguments: Array<SelfHostCompileTimeType>, expected: Bool) -> Unit {
   match self_host_evaluate_compile_time_query(name, arguments) {
-    Result::Ok(value) => match value {
-      Option::Some(constant) => match constant {
-        SelfHostCompileTimeConstant::BoolCompileTimeConstant(actual) => assert(actual == expected, "query Bool result")
+    Ok(value) => match value {
+      Some(constant) => match constant {
+        BoolCompileTimeConstant(actual) => assert(actual == expected, "query Bool result")
         _ => assert(false, "query must return Bool")
       }
-      Option::None => assert(false, "concrete query cannot remain pending")
+      None => assert(false, "concrete query cannot remain pending")
     }
-    Result::Err(message) => assert(false, message)
+    Err(message) => assert(false, message)
   }
 }
 
 fn self_host_test_query_u32(name: Bytes, primitive: SelfHostPrimitiveType, expected: U32) -> Unit {
-  match self_host_evaluate_compile_time_query(name, [SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive)]) {
-    Result::Ok(value) => match value {
-      Option::Some(constant) => match constant {
-        SelfHostCompileTimeConstant::U32CompileTimeConstant(actual) => assert(actual == expected, "query U32 result")
+  match self_host_evaluate_compile_time_query(name, [PrimitiveCompileTimeType(primitive)]) {
+    Ok(value) => match value {
+      Some(constant) => match constant {
+        U32CompileTimeConstant(actual) => assert(actual == expected, "query U32 result")
         _ => assert(false, "query must return U32")
       }
-      Option::None => assert(false, "concrete query cannot remain pending")
+      None => assert(false, "concrete query cannot remain pending")
     }
-    Result::Err(message) => assert(false, message)
+    Err(message) => assert(false, message)
   }
 }
 
 test "compile-time logical predicates do not test erased carriers" {
-  let unit = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::UnitType)
-  let never = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::NeverType)
-  let signed = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I8Type)
-  let unsigned = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::U8Type)
+  let unit = PrimitiveCompileTimeType(UnitType)
+  let never = PrimitiveCompileTimeType(NeverType)
+  let signed = PrimitiveCompileTimeType(I8Type)
+  let unsigned = PrimitiveCompileTimeType(U8Type)
   self_host_test_query_bool(b"types.is_unit", [unit], true)
   self_host_test_query_bool(b"types.is_unit", [never], false)
   self_host_test_query_bool(b"types.is_never", [never], true)
@@ -514,61 +514,61 @@ test "compile-time logical predicates do not test erased carriers" {
   self_host_test_query_bool(b"types.is_signed_integer", [unsigned], false)
   self_host_test_query_bool(b"types.type_equal", [signed, unsigned], false)
   self_host_test_query_bool(b"types.can_bitcast", [signed, unsigned], true)
-  self_host_test_query_bool(b"types.type_equal", [SelfHostCompileTimeType::NominalCompileTimeType(100u64), SelfHostCompileTimeType::NominalCompileTimeType(101u64)], false)
+  self_host_test_query_bool(b"types.type_equal", [NominalCompileTimeType(100u64), NominalCompileTimeType(101u64)], false)
   self_host_test_query_bool(b"types.can_bitcast", [unit, never], false)
 }
 
 test "compile-time pending facts never hide erroneous type arguments" {
-  let pending = SelfHostCompileTimeType::ParameterCompileTimeType(33u64)
+  let pending = ParameterCompileTimeType(33u64)
   match self_host_evaluate_compile_time_query(b"types.is_unit", [pending]) {
-    Result::Ok(value) => assert(value is Option::None, "generic query remains pending")
-    Result::Err(message) => assert(false, message)
+    Ok(value) => assert(value is None, "generic query remains pending")
+    Err(message) => assert(false, message)
   }
-  match self_host_evaluate_compile_time_query(b"types.type_equal", [pending, SelfHostCompileTimeType::ErrorCompileTimeType]) {
-    Result::Err(message) => assert(message == "CT-002 erroneous type query argument", "stable error code")
+  match self_host_evaluate_compile_time_query(b"types.type_equal", [pending, ErrorCompileTimeType]) {
+    Err(message) => assert(message == "CT-002 erroneous type query argument", "stable error code")
     _ => assert(false, "error must not become pending")
   }
 }
 
 test "compile-time structural identity includes nested owner arguments" {
-  let owner = SelfHostCompileTimeType::NominalCompileTimeType(70u64)
-  let signed = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I8Type)
-  let unsigned = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::U8Type)
-  let left = SelfHostCompileTimeType::AppliedCompileTimeType(owner, [SelfHostCompileTimeType::ProductCompileTimeType([signed])])
-  let same = SelfHostCompileTimeType::AppliedCompileTimeType(owner, [SelfHostCompileTimeType::ProductCompileTimeType([signed])])
-  let other = SelfHostCompileTimeType::AppliedCompileTimeType(owner, [SelfHostCompileTimeType::ProductCompileTimeType([unsigned])])
+  let owner = NominalCompileTimeType(70u64)
+  let signed = PrimitiveCompileTimeType(I8Type)
+  let unsigned = PrimitiveCompileTimeType(U8Type)
+  let left = AppliedCompileTimeType(owner, [ProductCompileTimeType([signed])])
+  let same = AppliedCompileTimeType(owner, [ProductCompileTimeType([signed])])
+  let other = AppliedCompileTimeType(owner, [ProductCompileTimeType([unsigned])])
   self_host_test_query_bool(b"types.type_equal", [left, same], true)
   self_host_test_query_bool(b"types.type_equal", [left, other], false)
 }
 
 test "compile-time scalar layouts and lanes agree with native contracts" {
-  self_host_test_query_u32(b"types.size_of", SelfHostPrimitiveType::UnitType, 0u32)
-  self_host_test_query_u32(b"types.align_of", SelfHostPrimitiveType::UnitType, 1u32)
-  self_host_test_query_u32(b"types.size_of", SelfHostPrimitiveType::I8Type, 1u32)
-  self_host_test_query_u32(b"types.size_of", SelfHostPrimitiveType::U16Type, 2u32)
-  self_host_test_query_u32(b"types.size_of", SelfHostPrimitiveType::BoolType, 4u32)
-  self_host_test_query_u32(b"types.bit_width", SelfHostPrimitiveType::I64Type, 64u32)
-  self_host_test_query_u32(b"types.lane_count", SelfHostPrimitiveType::I16x4Type, 4u32)
-  self_host_test_query_u32(b"types.lane_bit_width", SelfHostPrimitiveType::I16x4Type, 16u32)
-  self_host_test_query_u32(b"types.size_of", SelfHostPrimitiveType::V128Type, 16u32)
-  match self_host_evaluate_compile_time_query(b"types.size_of", [SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::StringType)]) {
-    Result::Err(message) => assert(message == "CT-002 type has no supported byte layout", "GC layout must not be guessed")
+  self_host_test_query_u32(b"types.size_of", UnitType, 0u32)
+  self_host_test_query_u32(b"types.align_of", UnitType, 1u32)
+  self_host_test_query_u32(b"types.size_of", I8Type, 1u32)
+  self_host_test_query_u32(b"types.size_of", U16Type, 2u32)
+  self_host_test_query_u32(b"types.size_of", BoolType, 4u32)
+  self_host_test_query_u32(b"types.bit_width", I64Type, 64u32)
+  self_host_test_query_u32(b"types.lane_count", I16x4Type, 4u32)
+  self_host_test_query_u32(b"types.lane_bit_width", I16x4Type, 16u32)
+  self_host_test_query_u32(b"types.size_of", V128Type, 16u32)
+  match self_host_evaluate_compile_time_query(b"types.size_of", [PrimitiveCompileTimeType(StringType)]) {
+    Err(message) => assert(message == "CT-002 type has no supported byte layout", "GC layout must not be guessed")
     _ => assert(false, "GC object has no exposed byte size")
   }
 }
 
 test "compile-time raw tuple layouts include padding and retain erased offsets" {
-  let type_ = SelfHostCompileTimeType::ProductCompileTimeType([
-    SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::U8Type),
-    SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::UnitType),
-    SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I64Type),
-    SelfHostCompileTimeType::ProductCompileTimeType([
-      SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::U16Type),
-      SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::U8Type),
+  let type_ = ProductCompileTimeType([
+    PrimitiveCompileTimeType(U8Type),
+    PrimitiveCompileTimeType(UnitType),
+    PrimitiveCompileTimeType(I64Type),
+    ProductCompileTimeType([
+      PrimitiveCompileTimeType(U16Type),
+      PrimitiveCompileTimeType(U8Type),
     ]),
   ])
   match self_host_compile_time_raw_layout(type_, 0u32) {
-    Result::Ok(layout) => {
+    Ok(layout) => {
       assert(layout.size == 24u32, "tail padding")
       assert(layout.alignment == 8u32, "maximum field alignment")
       assert(layout.offsets[0u32] == 0u32, "first field")
@@ -576,20 +576,20 @@ test "compile-time raw tuple layouts include padding and retain erased offsets" 
       assert(layout.offsets[2u32] == 8u32, "interior padding")
       assert(layout.offsets[3u32] == 16u32, "nested tuple")
     }
-    Result::Err(error) => assert(false, error)
+    Err(error) => assert(false, error)
   }
   match self_host_evaluate_compile_time_field_offset([type_], 2u32) {
-    Result::Ok(result) => match result {
-      Option::Some(value) => match value {
-        SelfHostCompileTimeConstant::U32CompileTimeConstant(offset) => assert(offset == 8u32, "constant byte offset")
+    Ok(result) => match result {
+      Some(value) => match value {
+        U32CompileTimeConstant(offset) => assert(offset == 8u32, "constant byte offset")
         _ => assert(false, "offset must be U32")
       }
-      Option::None => assert(false, "concrete layout must not be pending")
+      None => assert(false, "concrete layout must not be pending")
     }
-    Result::Err(error) => assert(false, error)
+    Err(error) => assert(false, error)
   }
-  assert(self_host_evaluate_compile_time_field_offset([type_], 4u32) is Result::Err(_), "invalid field remains an error")
-  assert(self_host_compile_time_raw_align(4294967295u32, 8u32) is Option::None, "layout arithmetic cannot wrap")
+  assert(self_host_evaluate_compile_time_field_offset([type_], 4u32) is Err(_), "invalid field remains an error")
+  assert(self_host_compile_time_raw_align(4294967295u32, 8u32) is None, "layout arithmetic cannot wrap")
 }
 
 test "compile-time logical keys retain nested types through generic callers" {
@@ -634,7 +634,7 @@ test "compile-time branches use private instances and erase dead call records" {
   }
   let mut original = false
   for expression in lowering.modules[0u32].expressions {
-    if expression.kind is SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _) {
+    if expression.kind is PlannedIfExpression(_, _, _) {
       original = true
     }
   }
@@ -643,7 +643,7 @@ test "compile-time branches use private instances and erase dead call records" {
   let mut request_index = 0u32
   for request in plan.requests {
     match plan.lowering.compile_time.instances.get(request_index) {
-      Option::Some(instance) => {
+      Some(instance) => {
         let module_ = instance.module_
         instances = instances + 1u32
         for body in module_.bodies {
@@ -652,9 +652,9 @@ test "compile-time branches use private instances and erase dead call records" {
             let _ = while 0u32 {
               offset => if offset < body.expressions.length {
                 let source = module_.expressions[body.expressions.start + offset]
-                assert(!(source.kind is SelfHostPlannedExpressionKind::PlannedIfExpression(_, _, _)), "constant if must be replaced")
-                assert(self_host_program_specialization_call_recipe(source) is Option::None, "folded and dead nodes must not retain call targets")
-                if source.kind is SelfHostPlannedExpressionKind::PlannedI32Const(_) {
+                assert(!(source.kind is PlannedIfExpression(_, _, _)), "constant if must be replaced")
+                assert(self_host_program_specialization_call_recipe(source) is None, "folded and dead nodes must not retain call targets")
+                if source.kind is PlannedI32Const(_) {
                   values = values + 1u32
                 }
                 continue offset + 1u32
@@ -666,7 +666,7 @@ test "compile-time branches use private instances and erase dead call records" {
           }
         }
       }
-      Option::None => {}
+      None => {}
     }
     request_index = request_index + 1u32
   }
@@ -700,7 +700,7 @@ test "compile-time implements substitutes generic prerequisites" {
   values.clear()
   for expression in lowering.modules[0u32].expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedBoolConst(value) => values.push(value)
+      PlannedBoolConst(value) => values.push(value)
       _ => {}
     }
   }
@@ -717,7 +717,7 @@ test "compile-time query errors remain source diagnostics" {
     let lowering = self_host_physical_test_lowering(source)
     assert(lowering.compile_time.diagnostics.length() == 1u32, "one source query diagnostic")
     assert(lowering.compile_time.diagnostics[0u32].starts_with(expected), "exact query error code and message")
-    assert(self_host_validate_program_lowering(lowering) is Option::Some(_), "query errors stop the next phase")
+    assert(self_host_validate_program_lowering(lowering) is Some(_), "query errors stop the next phase")
   }
 }
 
@@ -732,7 +732,7 @@ test "compile-time implements follows imported generic prerequisites" {
   }
   let mut found = false
   for expression in lowering.modules[0u32].expressions {
-    if expression.kind is SelfHostPlannedExpressionKind::PlannedBoolConst(true) {
+    if expression.kind is PlannedBoolConst(true) {
       found = true
     }
   }
@@ -753,12 +753,12 @@ fn self_host_test_associated_trait_query(source: Bytes, expected: Bool) -> Unit 
   let _ = while 0u32 {
     index => if index < plan.requests.length() {
       match plan.lowering.compile_time.instances.get(index) {
-        Option::Some(instance) => {
+        Some(instance) => {
           for body in instance.module_.bodies {
             if body.declaration == instance.declaration {
               for expression in self_host_compile_time_owned_expressions(instance.module_, body) {
                 match instance.module_.expressions[expression].kind {
-                  SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
+                  PlannedBoolConst(value) => {
                     assert(value == expected, "associated query must preserve evidence scope")
                     count = count + 1u32
                   }
@@ -768,7 +768,7 @@ fn self_host_test_associated_trait_query(source: Bytes, expected: Bool) -> Unit 
             }
           }
         }
-        Option::None => {}
+        None => {}
       }
       continue index + 1u32
     } else {
@@ -815,28 +815,28 @@ test "Self and generic parameters have separate signature binding identities" {
   let collected = self_host_collect_bytes(28141u64, b"pub fn main() -> I32 {\n  0i32\n}\n")
   let resolved = self_host_resolve_module_types(collected)
   let self_id = resolved.types.length()
-  resolved.types.push(SelfHostResolvedType::SelfType(42u64))
+  resolved.types.push(SelfType(42u64))
   let parameter = resolved.types.length()
-  resolved.types.push(SelfHostResolvedType::GenericParameterType(42u64))
+  resolved.types.push(GenericParameterType(42u64))
   let start = resolved.type_arguments.length()
   resolved.type_arguments.push(self_id)
   resolved.type_arguments.push(parameter)
   let product = resolved.types.length()
-  resolved.types.push(SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+  resolved.types.push(ProductType({
     start: start
     length: 2u32
   }))
   let bindings = self_host_empty_compile_time_bindings()
-  let i32_type = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I32Type)
-  let i64_type = SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I64Type)
+  let i32_type = PrimitiveCompileTimeType(I32Type)
+  let i64_type = PrimitiveCompileTimeType(I64Type)
   bindings.parameters.set(42u64, i32_type)
   bindings.selves.set(42u64, i64_type)
   match self_host_read_compile_time_resolved_arena(resolved, product, bindings, 0u32) {
-    Result::Ok(actual) => match self_host_compile_time_types_equal(actual, SelfHostCompileTimeType::ProductCompileTimeType([i64_type, i32_type])) {
-      Result::Ok(equal) => assert(equal, "Self and generic parameter IDs cannot overwrite each other")
-      Result::Err(error) => assert(false, error)
+    Ok(actual) => match self_host_compile_time_types_equal(actual, ProductCompileTimeType([i64_type, i32_type])) {
+      Ok(equal) => assert(equal, "Self and generic parameter IDs cannot overwrite each other")
+      Err(error) => assert(false, error)
     }
-    Result::Err(error) => assert(false, error)
+    Err(error) => assert(false, error)
   }
 }
 
@@ -867,7 +867,7 @@ test "compile-time implements does not treat depth 65 as absence" {
   }
   let mut found = false
   for expression in lowering.modules[0u32].expressions {
-    if expression.kind is SelfHostPlannedExpressionKind::PlannedBoolConst(true) {
+    if expression.kind is PlannedBoolConst(true) {
       found = true
     }
   }
@@ -885,11 +885,23 @@ test "compile-time discarded lambdas create no function or capture storage" {
   let fragments = self_host_plan_program_wasmgc_fragments(plan)
   for module_ in fragments.modules {
     for function_ in module_.functions {
-      assert(!(function_.kind is SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_)), "discarded lambda function must not be planned")
+      assert(!(function_.kind is PlannedWasmDefinedLambdaFunction(_)), "discarded lambda function must not be planned")
     }
     for type_ in module_.physical_types {
-      assert(!(type_.kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(_, _)), "discarded closure type must not be planned")
-      assert(!(type_.kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(_, _)), "discarded mutable capture must not need a cell")
+      assert(!(type_.kind is PlannedWasmLambdaClosureType(_, _)), "discarded closure type must not be planned")
+      assert(!(type_.kind is PlannedWasmCaptureCellType(_, _)), "discarded mutable capture must not need a cell")
     }
+  }
+}
+test "compile time lambda inference keeps its enclosing Unit guard" {
+  let fragments = self_host_physical_test_fragments(
+    b"builtin is_unit<t>() -> Bool = \"types.is_unit\"\nfn accept(value: Unit) -> I32 {\n  7\n}\nfn guarded<t>(value: t) -> I32 {\n  if is_unit::<t>() {\n    let read = fn() -> I32 {\n      accept(value)\n    }\n    read()\n  } else {\n    0\n  }\n}\npub fn main() -> I32 {\n  guarded::<Unit>(()) + guarded::<I64>(8i64)\n}\n",
+  )
+  let link = self_host_plan_program_wasmgc_link(fragments, false)
+  self_host_physical_test_assert_clean_inference(link)
+  assert(link.diagnostics.length() == 0u32, "guarded lambda link")
+  match build_self_host_linked_i32_module(link, 5100u64) {
+    Ok(_) => {}
+    Err(error) => assert(false, error)
   }
 }

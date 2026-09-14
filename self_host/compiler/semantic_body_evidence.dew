@@ -43,14 +43,14 @@ impl SelfHostBasicModuleEvidence {
       current => if current < limit {
         let body = array_get_unchecked(self.bodies, current)
         if self_host_u64_equal(body.body, declaration) {
-          return Option::Some(body)
+          return Some(body)
         }
         continue current + 1u32
       } else {
         break self_host_semantic_unit()
       }
     }
-    Option::None
+    None
   }
 }
 
@@ -66,12 +66,12 @@ fn self_host_basic_evidence_implementation_for_method(
         let _ = while implementation_index {
           implementation => if implementation < index.implementations.length() {
             let candidate = index.implementations[implementation]
-            let trait_implementation = candidate.kind is SelfHostIndexedImplKind::TraitIndexedImpl(_)
+            let trait_implementation = candidate.kind is TraitIndexedImpl(_)
             if trait_implementation && candidate.valid && candidate.coherent && current >= candidate.methods.start && current < self_host_u32_add(
               candidate.methods.start,
               candidate.methods.length,
             ) {
-              return Option::Some(candidate.declaration)
+              return Some(candidate.declaration)
             }
             continue implementation + 1u32
           } else {
@@ -84,17 +84,17 @@ fn self_host_basic_evidence_implementation_for_method(
       break self_host_semantic_unit()
     }
   }
-  Option::None
+  None
 }
 
 fn self_host_basic_evidence_target_declaration(
   target: SelfHostBasicCallTarget,
 ) -> Option<U64> {
   match target {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => Option::Some(
+    SelectedBasicCallTarget(declaration, _) => Some(
       declaration,
     )
-    _ => Option::None
+    _ => None
   }
 }
 
@@ -110,42 +110,42 @@ fn self_host_publish_basic_body_evidence(
   let _ = while expression {
     current => if current < inferred.expression_types.length() {
       let start = evidence.length()
-      let mut selected_implementation = Option::None
+      let mut selected_implementation = None
       match self_host_basic_evidence_target_declaration(
         inferred.call_targets[current],
       ) {
-        Option::Some(declaration) => {
+        Some(declaration) => {
           selected_implementation = self_host_basic_evidence_implementation_for_method(
             index,
             declaration,
           )
         }
-        Option::None => {}
+        None => {}
       }
       match self_host_basic_evidence_target_declaration(
         inferred.operator_targets[current],
       ) {
-        Option::Some(declaration) => match self_host_basic_evidence_implementation_for_method(
+        Some(declaration) => match self_host_basic_evidence_implementation_for_method(
           index,
           declaration,
         ) {
-          Option::Some(implementation) => {
-            selected_implementation = Option::Some(implementation)
+          Some(implementation) => {
+            selected_implementation = Some(implementation)
           }
-          Option::None => {}
+          None => {}
         }
-        Option::None => {}
+        None => {}
       }
       match selected_implementation {
-        Option::Some(implementation) => evidence.push(
-          SelfHostBasicTraitEvidence::{
+        Some(implementation) => evidence.push(
+          {
             implementation: implementation
             prerequisites: self_host_empty_hir_span(0u32)
           },
         )
-        Option::None => {}
+        None => {}
       }
-      expression_evidence.push(SelfHostHirSpan::{
+      expression_evidence.push({
         start: start
         length: evidence.length() - start
       })
@@ -154,7 +154,7 @@ fn self_host_publish_basic_body_evidence(
       break self_host_semantic_unit()
     }
   }
-  SelfHostBasicBodyEvidence::{
+  {
     body: body.declaration
     expression_evidence: expression_evidence
     evidence: evidence
@@ -183,7 +183,7 @@ fn self_host_publish_basic_module_evidence(
       break self_host_semantic_unit()
     }
   }
-  SelfHostBasicModuleEvidence::{
+  {
     module_id: collected.module_id
     bodies: bodies
   }
@@ -210,27 +210,27 @@ fn self_host_publish_merged_body_evidence(
       ]
       let mut selected = self_host_basic_evidence_target_declaration(call_target)
       match self_host_basic_evidence_target_declaration(operator_target) {
-        Option::Some(value) => {
-          selected = Option::Some(value)
+        Some(value) => {
+          selected = Some(value)
         }
-        Option::None => {}
+        None => {}
       }
       match selected {
-        Option::Some(declaration) => match self_host_basic_evidence_implementation_for_method(
+        Some(declaration) => match self_host_basic_evidence_implementation_for_method(
           index,
           declaration,
         ) {
-          Option::Some(implementation) => evidence.push(
-            SelfHostBasicTraitEvidence::{
+          Some(implementation) => evidence.push(
+            {
               implementation: implementation
               prerequisites: self_host_empty_hir_span(0u32)
             },
           )
-          Option::None => {}
+          None => {}
         }
-        Option::None => {}
+        None => {}
       }
-      expression_evidence.push(SelfHostHirSpan::{
+      expression_evidence.push({
         start: start
         length: evidence.length() - start
       })
@@ -239,7 +239,7 @@ fn self_host_publish_merged_body_evidence(
       break self_host_semantic_unit()
     }
   }
-  SelfHostBasicBodyEvidence::{
+  {
     body: body.declaration
     expression_evidence: expression_evidence
     evidence: evidence
@@ -267,7 +267,7 @@ fn self_host_publish_merged_module_evidence(
       break self_host_semantic_unit()
     }
   }
-  SelfHostBasicModuleEvidence::{
+  {
     module_id: collected.module_id
     bodies: bodies
   }

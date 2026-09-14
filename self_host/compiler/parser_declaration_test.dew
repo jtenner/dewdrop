@@ -3,7 +3,7 @@ open dew.std.testing
 fn self_host_declaration_count(module_: SelfHostParsedModule) -> U32 {
   let mut count = 0u32
   for event in module_.events {
-    if event is SelfHostParseEvent::Declaration(_, _) {
+    if event is Declaration(_, _) {
       count = count + 1u32
     } else {
     }
@@ -14,7 +14,7 @@ fn self_host_declaration_count(module_: SelfHostParsedModule) -> U32 {
 fn self_host_diagnostic_count(module_: SelfHostParsedModule) -> U32 {
   let mut count = 0u32
   for event in module_.events {
-    if event is SelfHostParseEvent::Diagnostic(_, _, _, _, _, _) {
+    if event is Diagnostic(_, _, _, _, _, _) {
       count = count + 1u32
     } else {
     }
@@ -42,21 +42,21 @@ test "self-host parser derives declaration kinds from tokens" {
   )
   assert(self_host_diagnostic_count(module_) == 0u32, "kind diagnostics")
   match module_.events.get_unchecked(0u32) {
-    SelfHostParseEvent::Declaration(SelfHostDeclaration::Struct(_), kind) => assert(
+    Declaration(Struct(_), kind) => assert(
       kind == 9u32,
       "struct kind",
     )
     _ => assert(false, "struct declaration")
   }
   match module_.events.get_unchecked(1u32) {
-    SelfHostParseEvent::Declaration(SelfHostDeclaration::Enum(_), kind) => assert(
+    Declaration(Enum(_), kind) => assert(
       kind == 10u32,
       "enum kind",
     )
     _ => assert(false, "enum declaration")
   }
   match module_.events.get_unchecked(2u32) {
-    SelfHostParseEvent::Declaration(SelfHostDeclaration::Function(_), kind) => assert(
+    Declaration(Function(_), kind) => assert(
       kind == 4u32,
       "function kind",
     )

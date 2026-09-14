@@ -29,14 +29,14 @@ fn self_host_compile_time_initialization(lowering: SelfHostPlannedProgramLowerin
   }
   for value in collected.lets {
     let source = match self_host_module_value_body(collected, value.declaration) {
-      Option::Some(body) => body
-      Option::None => self_host_initializer_dependency_failure_in_phase(value.declaration, 0u64, 4294967295u32, 3u32, 610u32, 1u64, 0u64, 29u64)
+      Some(body) => body
+      None => self_host_initializer_dependency_failure_in_phase(value.declaration, 0u64, 4294967295u32, 3u32, 610u32, 1u64, 0u64, 29u64)
     }
-    let body = self_host_initializer_dependency_body_in_phase(module_, SelfHostInitializerBodyWork::{
+    let body = self_host_initializer_dependency_body_in_phase(module_, {
       module_index: module_index
       declaration: value.declaration
       body: source.id
-      kind: SelfHostHirBodyKind::ModuleLetBody
+      kind: ModuleLetBody
       specialization: 4294967295u32
     }, 3u32)
     self_host_initializer_dependency_children_in_phase(module_, body, 3u32)
@@ -49,10 +49,10 @@ fn self_host_compile_time_initialization(lowering: SelfHostPlannedProgramLowerin
       offset if offset < body.expressions.length => {
         let expression = body.expressions.start + offset
         match module_.expressions[expression].kind {
-          SelfHostPlannedExpressionKind::PlannedModuleValueGet(declaration) => if self_host_semantic_id_module(declaration) == module_.module_id {
+          PlannedModuleValueGet(declaration) => if self_host_semantic_id_module(declaration) == module_.module_id {
             let index = match indices.get(declaration) {
-              Option::Some(value) => value
-              Option::None => self_host_initializer_dependency_failure_in_phase(body.declaration, body.body, expression, 3u32, 106u32, 1u64, 0u64, declaration)
+              Some(value) => value
+              None => self_host_initializer_dependency_failure_in_phase(body.declaration, body.body, expression, 3u32, 106u32, 1u64, 0u64, declaration)
             }
             self_host_module_value_insert_sorted_unique(selected, index)
           }
@@ -66,15 +66,15 @@ fn self_host_compile_time_initialization(lowering: SelfHostPlannedProgramLowerin
     for index in selected {
       declarations.push(collected.lets[index].declaration)
     }
-    spans.push(SelfHostHirSpan::{
+    spans.push({
       start: start
       length: declarations.length() - start
     })
   }
   let (sccs, members) = self_host_find_module_value_sccs(collected, spans, declarations)
-  let values = SelfHostInferredModuleValues::{
+  let values = {
     module_id: module_.module_id
-    dependencies: SelfHostModuleValueDependencies::{
+    dependencies: {
       module_id: module_.module_id
       let_dependencies: spans
       dependency_declarations: declarations
@@ -88,7 +88,7 @@ fn self_host_compile_time_initialization(lowering: SelfHostPlannedProgramLowerin
     diagnostics: []
   }
   let initialization = self_host_plan_module_initialization(collected, values)
-  SelfHostPlannedModuleLowering::{
+  {
     local_initializer_sources: module_.local_initializer_sources
     module_id: module_.module_id
     names: module_.names

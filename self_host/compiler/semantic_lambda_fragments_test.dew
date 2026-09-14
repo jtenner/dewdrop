@@ -9,7 +9,7 @@ fn self_host_lambda_fragment_fixture() -> SelfHostPlannedModuleLowering {
 }
 
 fn self_host_lambda_test_parameter_count(lambda: SelfHostPlannedLambdaLowering, count: U32) -> SelfHostPlannedLambdaLowering {
-  SelfHostPlannedLambdaLowering::{
+  {
     lambda: lambda.lambda
     root_body: lambda.root_body
     parameter_count: count
@@ -37,16 +37,16 @@ test "lambda fragments preserve declaration identity and erase Unit parameters i
   let values = []
   self_host_wasmgc_append_lambda_function(module_, lambda, functions, values)
   assert(values.length() == 4u32, "environment, two scalar parameters, one result")
-  assert(values[0u32] is SelfHostPlannedWasmValueType::WasmNullableEqRefValue, "environment first")
-  assert(values[1u32] is SelfHostPlannedWasmValueType::WasmI32Value, "first logical parameter")
-  assert(values[2u32] is SelfHostPlannedWasmValueType::WasmI64Value, "third logical parameter")
-  assert(values[3u32] is SelfHostPlannedWasmValueType::WasmI64Value, "result")
+  assert(values[0u32] is WasmNullableEqRefValue, "environment first")
+  assert(values[1u32] is WasmI32Value, "first logical parameter")
+  assert(values[2u32] is WasmI64Value, "third logical parameter")
+  assert(values[3u32] is WasmI64Value, "result")
   match self_host_program_specialization_body(module_, lambda.root_body) {
-    Option::Some(owner) => {
+    Some(owner) => {
       assert(self_host_u64_equal(functions[0u32].declaration, owner.declaration), "stored identity is the owning declaration")
       assert(!self_host_u64_equal(owner.declaration, lambda.root_body), "fixture distinguishes body and declaration IDs")
     }
-    Option::None => assert(false, "lambda owner is required")
+    None => assert(false, "lambda owner is required")
   }
 }
 
@@ -60,12 +60,12 @@ test "FRG-401 lambda parameters require parameter locals" expect_trap "unreachab
   let module_ = self_host_lambda_fragment_fixture()
   let lambda = module_.lambdas[0u32]
   let local = self_host_body_planned_local_identity(module_.locals[lambda.locals.start])
-  module_.locals[lambda.locals.start] = SelfHostPlannedLocal::{
+  module_.locals[lambda.locals.start] = {
     body: local.body
     lambda: local.lambda
     local_id: local.local_id
     elided: local.elided
-    kind: SelfHostBodyLocalKind::LetLocal
+    kind: LetLocal
     mutable_: local.mutable_
     type_: local.type_
     shape: local.shape
@@ -81,8 +81,8 @@ fn self_host_assert_erased_parameter_slots(plan: SelfHostPlannedPhysicalBodyCarr
   assert(self_host_u32_equal(plan.local_slots[0u32], 4294967295u32), "first Unit is erased")
   assert(self_host_u32_equal(plan.local_slots[1u32], 0u32), "I64 uses the first physical slot")
   assert(self_host_u32_equal(plan.local_slots[2u32], 4294967295u32), "last Unit is erased")
-  assert(plan.local_values[0u32].carrier is SelfHostWasmBodyCarrier::UnitBodyCarrier, "Unit does not borrow the next parameter's carrier")
-  assert(plan.local_values[1u32].carrier is SelfHostWasmBodyCarrier::I64BodyCarrier, "scalar retains its own carrier")
+  assert(plan.local_values[0u32].carrier is UnitBodyCarrier, "Unit does not borrow the next parameter's carrier")
+  assert(plan.local_values[1u32].carrier is I64BodyCarrier, "scalar retains its own carrier")
 }
 
 test "frozen parameter slots omit Unit without shifting scalar carriers" {
@@ -107,7 +107,7 @@ fn self_host_assert_generic_lambda_fragments(module_: SelfHostPlannedModuleWasmG
   let mut unit_entries = 0u32
   for type_ in module_.physical_types {
     match type_.kind {
-      SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(lambda, request) => {
+      PlannedWasmLambdaClosureType(lambda, request) => {
         assert(self_host_u32_equal(lambda, 0u32), "one source lambda")
         assert(!self_host_u32_equal(request, 4294967295u32), "no unspecialized generic environment")
         closure_count = closure_count + 1u32
@@ -117,7 +117,7 @@ fn self_host_assert_generic_lambda_fragments(module_: SelfHostPlannedModuleWasmG
   }
   for function_ in module_.functions {
     match function_.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedLambdaFunction(_) => {
+      PlannedWasmDefinedLambdaFunction(_) => {
         assert(!self_host_u32_equal(function_.specialization, 4294967295u32), "entry carries its owning request")
         assert(self_host_u32_equal(function_.parameters.length, 1u32), "only the environment parameter")
         if self_host_u32_equal(function_.results.length, 0u32) {
@@ -144,9 +144,9 @@ fn self_host_test_closure_target_mutation(link: SelfHostPlannedProgramWasmGCLink
     _ => if index < plan.expressions.length() {
       let source = self_host_body_physical_expression_at(plan.expressions, index)
       match module_.expressions[source.expression].kind {
-        SelfHostPlannedExpressionKind::PlannedLambdaClosure(lambda) => {
+        PlannedLambdaClosure(lambda) => {
           assert(self_host_lambda_construction_target_matches(link, plan, source, lambda), "valid construction target")
-          plan.expressions[index] = SelfHostPlannedPhysicalExpressionCarrier::{
+          plan.expressions[index] = {
             expression: source.expression
             value: source.value
             carrier: source.carrier

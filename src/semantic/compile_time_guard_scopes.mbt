@@ -367,29 +367,38 @@ fn BasicBodyInferencer::prepare_guard_scopes(
     }
     // Include enclosing lambda scopes. Facts are indexed by semantic source
     // expression ID, so a sibling body cannot borrow another body's evidence.
-    for id, source in self.collected.expressions {
-      match source {
-        HirIfExpr(condition, block, alternative, _) => {
-          self.mark_guard_scope(
-            GuardBlock(block),
-            self.guard_condition_facts(condition, true, targets),
-          )
-          self.mark_guard_scope(
-            GuardExpression(alternative),
-            self.guard_condition_facts(condition, false, targets),
-          )
+    for
+      scope in compile_time_source_local_scopes(
+        self.collected,
+        self.names,
+        self.body,
+      ) {
+      for offset in 0..<scope.expressions.length {
+        let id = scope.expressions.start + offset
+        let source = self.collected.expressions[id]
+        match source {
+          HirIfExpr(condition, block, alternative, _) => {
+            self.mark_guard_scope(
+              GuardBlock(block),
+              self.guard_condition_facts(condition, true, targets),
+            )
+            self.mark_guard_scope(
+              GuardExpression(alternative),
+              self.guard_condition_facts(condition, false, targets),
+            )
+          }
+          HirBinaryExpr(HirLogicalAnd, left, right, _) =>
+            self.mark_guard_scope(
+              GuardExpression(right),
+              self.guard_condition_facts(left, true, targets),
+            )
+          HirBinaryExpr(HirLogicalOr, left, right, _) =>
+            self.mark_guard_scope(
+              GuardExpression(right),
+              self.guard_condition_facts(left, false, targets),
+            )
+          _ => ()
         }
-        HirBinaryExpr(HirLogicalAnd, left, right, _) =>
-          self.mark_guard_scope(
-            GuardExpression(right),
-            self.guard_condition_facts(left, true, targets),
-          )
-        HirBinaryExpr(HirLogicalOr, left, right, _) =>
-          self.mark_guard_scope(
-            GuardExpression(right),
-            self.guard_condition_facts(left, false, targets),
-          )
-        _ => ignore(id)
       }
     }
   }

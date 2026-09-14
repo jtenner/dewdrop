@@ -1,17 +1,17 @@
 fn self_host_imported_trait_contract(consumer: Bytes, library: Bytes) -> SelfHostModuleImplIndex {
-  let program = self_host_collect_program_manifest(5700u64, SelfHostProgramManifest::{
+  let program = self_host_collect_program_manifest(5700u64, {
     modules: [
-      SelfHostManifestModule::{
+      {
         path: "app.consumer"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "consumer.dew"
           source: consumer
           test_only: false
         }]
       },
-      SelfHostManifestModule::{
+      {
         path: "app.contract"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "contract.dew"
           source: library
           test_only: false
@@ -48,14 +48,14 @@ test "imported trait contracts check return types" {
     b"open app.contract\nstruct Box {}\nimpl Read<I64> for Box {\n  fn read(self) -> I32 {\n    42i32\n  }\n}\n",
   )
   assert(index.diagnostic_count() == 1u32, "one bad return type")
-  assert(index.diagnostic_at(0u32) is SelfHostImplIndexDiagnostic::TraitMethodReturnTypeMismatch(_, _, _), "exact return diagnostic")
+  assert(index.diagnostic_at(0u32) is TraitMethodReturnTypeMismatch(_, _, _), "exact return diagnostic")
   assert(!index.implementations[0u32].coherent, "bad return cannot provide evidence")
 }
 
 test "imported trait contracts require every method" {
   let index = self_host_imported_read_contract(b"open app.contract\nstruct Box {}\nimpl Read<I64> for Box {}\n")
   assert(index.diagnostic_count() == 1u32, "one missing method")
-  assert(index.diagnostic_at(0u32) is SelfHostImplIndexDiagnostic::MissingTraitMethod(_, _, _), "exact missing diagnostic")
+  assert(index.diagnostic_at(0u32) is MissingTraitMethod(_, _, _), "exact missing diagnostic")
 }
 
 test "imported trait contracts check receiver presence" {
@@ -63,7 +63,7 @@ test "imported trait contracts check receiver presence" {
     b"open app.contract\nstruct Box {}\nimpl Read<I64> for Box {\n  fn read(value: Box) -> I64 {\n    42i64\n  }\n}\n",
   )
   assert(index.diagnostic_count() == 1u32, "one receiver mismatch")
-  assert(index.diagnostic_at(0u32) is SelfHostImplIndexDiagnostic::TraitMethodReceiverMismatch(_, _, _), "exact receiver diagnostic")
+  assert(index.diagnostic_at(0u32) is TraitMethodReceiverMismatch(_, _, _), "exact receiver diagnostic")
 }
 
 test "imported trait method generics preserve their own identities" {
@@ -80,7 +80,7 @@ test "imported trait contracts check substituted parameter types" {
     b"pub trait Convert<t> {\n  fn convert<u>(self, value: u, other: t) -> u\n}\n",
   )
   assert(index.diagnostic_count() == 1u32, "one substituted parameter mismatch")
-  assert(index.diagnostic_at(0u32) is SelfHostImplIndexDiagnostic::TraitMethodParameterTypeMismatch(_, _, 2u32, _), "exact parameter diagnostic")
+  assert(index.diagnostic_at(0u32) is TraitMethodParameterTypeMismatch(_, _, 2u32, _), "exact parameter diagnostic")
 }
 
 test "imported trait contracts check method generic counts" {
@@ -89,7 +89,7 @@ test "imported trait contracts check method generic counts" {
     b"pub trait Convert<t> {\n  fn convert<u>(self, value: u, other: t) -> u\n}\n",
   )
   assert(index.diagnostic_count() == 1u32, "one method generic count mismatch")
-  assert(index.diagnostic_at(0u32) is SelfHostImplIndexDiagnostic::TraitMethodGenericParameterCountMismatch(_, _, 1u32, 0u32, _), "exact method generic diagnostic")
+  assert(index.diagnostic_at(0u32) is TraitMethodGenericParameterCountMismatch(_, _, 1u32, 0u32, _), "exact method generic diagnostic")
 }
 
 test "ARN-106 imported generic spans cannot alias a local declaration" expect_trap "unreachable" {

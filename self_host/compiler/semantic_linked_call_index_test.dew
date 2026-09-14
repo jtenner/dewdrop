@@ -5,8 +5,8 @@ fn self_host_call_index_test_fixture() -> SelfHostLinkedCallIndex {
   self_host_body_specialized_call_index_append(index, 330712481809u64,
     self_host_body_call_key(7u32, 19u32), 31u32)
   match self_host_linked_call_index_get(index, 330712481809u64, 7u32, 19u32) {
-    Option::Some(value) => assert(value == 31u32, "valid exact call before mutation")
-    Option::None => assert(false, "valid call index entry is present")
+    Some(value) => assert(value == 31u32, "valid exact call before mutation")
+    None => assert(false, "valid call index entry is present")
   }
   index
 }
@@ -72,8 +72,8 @@ test "ARN-106 linked call edges cannot enter another body" expect_trap "unreacha
   self_host_body_specialized_call_index_append(index, 330712481809u64,
     self_host_body_call_key(7u32, 20u32), 33u32)
   match self_host_linked_call_index_get(index, 330712481809u64, 7u32, 20u32) {
-    Option::Some(value) => assert(value == 33u32, "valid newest entry before mutation")
-    Option::None => assert(false, "newest entry is present")
+    Some(value) => assert(value == 33u32, "valid newest entry before mutation")
+    None => assert(false, "newest entry is present")
   }
   index.next[2u32] = 1u32
   let _ = self_host_linked_call_index_get(index, 330712481809u64, 7u32, 20u32)
@@ -98,19 +98,19 @@ test "linked call chains preserve independent bodies and duplicate identity" {
   while 0u32 {
     offset if offset < 16u32 => {
       match self_host_linked_call_index_get(index, 330712481809u64, 7u32, 20u32 + offset) {
-        Option::Some(value) => assert(value == 100u32 + offset, "first body target")
-        Option::None => assert(false, "first body entry")
+        Some(value) => assert(value == 100u32 + offset, "first body target")
+        None => assert(false, "first body entry")
       }
       match self_host_linked_call_index_get(index, 330712481810u64, 7u32, 20u32 + offset) {
-        Option::Some(value) => assert(value == 200u32 + offset, "second body target")
-        Option::None => assert(false, "second body entry")
+        Some(value) => assert(value == 200u32 + offset, "second body target")
+        None => assert(false, "second body entry")
       }
       continue offset + 1u32
     }
     _ => break ()
   }
-  assert(self_host_linked_call_index_get(index, 330712481809u64, 8u32, 19u32) is Option::None,
+  assert(self_host_linked_call_index_get(index, 330712481809u64, 8u32, 19u32) is None,
     "another specialization remains absent")
-  assert(self_host_linked_call_index_get(index, 330712481811u64, 7u32, 19u32) is Option::None,
+  assert(self_host_linked_call_index_get(index, 330712481811u64, 7u32, 19u32) is None,
     "another body remains absent")
 }

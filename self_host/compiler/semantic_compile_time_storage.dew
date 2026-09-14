@@ -10,7 +10,7 @@ fn self_host_compile_time_storage_flag(
 ) -> Bool {
   self_host_assert_compiler_invariant_with_failure(
     type_ < flags.length(),
-    SelfHostInvariantFailure::{
+    {
       code: 104u32
       phase: 2u32
       module_id: module_id
@@ -33,7 +33,7 @@ fn self_host_compile_time_storage_span(
 ) -> Unit {
   let _ = self_host_assert_compiler_invariant_with_failure(
     self_host_array_span_is_valid(span.start, span.length, length),
-    SelfHostInvariantFailure::{
+    {
       code: 101u32
       phase: 2u32
       module_id: module_id
@@ -55,19 +55,19 @@ impl SelfHostTypeResolver {
       let mut contains = false
       let mut children = self_host_empty_hir_span(0u32)
       match type_ {
-        SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::CompileTimeTypeType) => {
+        PrimitiveType(CompileTimeTypeType) => {
           contains = true
         }
-        SelfHostResolvedType::ProductType(arguments) => {
+        ProductType(arguments) => {
           children = arguments
         }
-        SelfHostResolvedType::AppliedType(base, arguments) => {
+        AppliedType(base, arguments) => {
           contains = self_host_compile_time_storage_flag(
             flags, base, self.collected.module_id,
           )
           children = arguments
         }
-        SelfHostResolvedType::FunctionType(arguments, result) => {
+        FunctionType(arguments, result) => {
           contains = self_host_compile_time_storage_flag(
             flags, result, self.collected.module_id,
           )
@@ -102,7 +102,7 @@ impl SelfHostTypeResolver {
     offset: U32,
   ) -> Unit {
     if self_host_compile_time_storage_flag(flags, type_, self.collected.module_id) {
-      self.diagnose(SelfHostTypeDiagnostic::ComputedTypeFailure(
+      self.diagnose(ComputedTypeFailure(
         declaration,
         "CT-037 Type is compile-time-only and has no runtime storage",
         offset,

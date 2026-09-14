@@ -63,7 +63,7 @@ fn self_host_optional_u32_slots(length: U32) -> Array<Option<U32>> {
   let result = []
   let _ = while 0u32 {
     index => if index < length {
-      result.push(Option::None)
+      result.push(None)
       continue index + 1u32
     } else {
       break self_host_semantic_unit()
@@ -73,7 +73,7 @@ fn self_host_optional_u32_slots(length: U32) -> Array<Option<U32>> {
 }
 
 fn self_host_empty_alias_indices() -> Map<U64, U32> {
-  Map::empty()
+  empty()
 }
 
 struct SelfHostImportedTypeMemo {
@@ -82,7 +82,7 @@ struct SelfHostImportedTypeMemo {
 
 impl SelfHostImportedTypeMemo {
   fn new() -> SelfHostImportedTypeMemo {
-    SelfHostImportedTypeMemo::{
+    {
       values: []
     }
   }
@@ -115,7 +115,7 @@ struct SelfHostImportedTypeMemoList {
 
 impl SelfHostImportedTypeMemoList {
   fn new() -> SelfHostImportedTypeMemoList {
-    SelfHostImportedTypeMemoList::{
+    {
       values: []
     }
   }
@@ -195,7 +195,7 @@ struct SelfHostTypeResolver {
 
 impl SelfHostTypeResolver {
   fn new(collected: SelfHostCollectedModule) -> SelfHostTypeResolver {
-    SelfHostTypeResolver::new_with_imports(collected, Option::None)
+    SelfHostTypeResolver::new_with_imports(collected, None)
   }
 
   fn new_with_imports(
@@ -238,11 +238,11 @@ impl SelfHostTypeResolver {
           collected.declarations[current],
         )
         let resolved = match declaration.kind {
-          SelfHostCollectedDeclKind::StructDecl => interner.intern_nominal(declaration.id)
-          SelfHostCollectedDeclKind::EnumDecl => interner.intern_nominal(declaration.id)
-          SelfHostCollectedDeclKind::TypeAliasDecl => interner.intern_nominal(declaration.id)
-          SelfHostCollectedDeclKind::ForeignTypeDecl => interner.intern_nominal(declaration.id)
-          SelfHostCollectedDeclKind::TraitDecl => interner.intern_trait(declaration.id)
+          StructDecl => interner.intern_nominal(declaration.id)
+          EnumDecl => interner.intern_nominal(declaration.id)
+          TypeAliasDecl => interner.intern_nominal(declaration.id)
+          ForeignTypeDecl => interner.intern_nominal(declaration.id)
+          TraitDecl => interner.intern_trait(declaration.id)
           _ => interner.error_type
         }
         declaration_types[self_host_semantic_id_local(declaration.id)] = resolved
@@ -253,7 +253,7 @@ impl SelfHostTypeResolver {
     }
     let import_memos = SelfHostImportedTypeMemoList::new()
     match imports {
-      Option::Some(scope) => {
+      Some(scope) => {
         let mut index = 0u32
         let _ = while index {
           current => if current < scope.interfaces.length() {
@@ -264,9 +264,9 @@ impl SelfHostTypeResolver {
           }
         }
       }
-      Option::None => {}
+      None => {}
     }
-    SelfHostTypeResolver::{
+    {
       collected: collected
       imports: imports
       interner: interner
@@ -346,11 +346,11 @@ impl SelfHostTypeResolver {
       current => if current < end {
         let parameter = self.collected.generic_parameters[current]
         if self_host_u32_equal(parameter.name, name) {
-          break Option::Some(parameter.id)
+          break Some(parameter.id)
         }
         continue current + 1u32
       } else {
-        break Option::None
+        break None
       }
     }
   }
@@ -360,29 +360,29 @@ impl SelfHostTypeResolver {
       self.collected.generic_parameters_of(owner),
       name,
     ) {
-      Option::Some(value) => Option::Some(value)
-      Option::None => match self.collected.declaration_reference(owner) {
-        Option::Some(reference) => match reference {
-          SelfHostCollectedDeclarationReference::Method(method) => self.generic_in_span(
+      Some(value) => Some(value)
+      None => match self.collected.declaration_reference(owner) {
+        Some(reference) => match reference {
+          Method(method) => self.generic_in_span(
             self.collected.generic_parameters_of(method.parent),
             name,
           )
-          SelfHostCollectedDeclarationReference::TopLevel(_) => Option::None
+          TopLevel(_) => None
         }
-        Option::None => Option::None
+        None => None
       }
     }
   }
 
   fn self_context(self, owner: U64) -> Option<U64> {
     match self.collected.declaration_reference(owner) {
-      Option::Some(reference) => match reference {
-        SelfHostCollectedDeclarationReference::Method(method) => Option::Some(
+      Some(reference) => match reference {
+        Method(method) => Some(
           method.parent,
         )
-        SelfHostCollectedDeclarationReference::TopLevel(_) => Option::None
+        TopLevel(_) => None
       }
-      Option::None => Option::None
+      None => None
     }
   }
 
@@ -396,11 +396,11 @@ impl SelfHostTypeResolver {
       self.collected.generic_parameters_of(declaration).length
     } else {
       match self.imports {
-        Option::Some(scope) => match scope.binding_for_declaration(declaration) {
-          Option::Some(binding) => binding.generic_parameter_count
-          Option::None => 0u32
+        Some(scope) => match scope.binding_for_declaration(declaration) {
+          Some(binding) => binding.generic_parameter_count
+          None => 0u32
         }
-        Option::None => 0u32
+        None => 0u32
       }
     }
   }
@@ -424,8 +424,8 @@ impl SelfHostTypeResolver {
     root: U32,
   ) -> U32 {
     let scope = match self.imports {
-      Option::Some(value) => value
-      Option::None => {
+      Some(value) => value
+      None => {
         return self.interner.error_type
       }
     }
@@ -489,40 +489,40 @@ impl SelfHostTypeResolver {
         }
         if state == 0u32 {
           match source.types[source_type] {
-            SelfHostResolvedType::MemberTypeProjection(owner, _, _) => {
+            MemberTypeProjection(owner, _, _) => {
               self.push_import_task(source_interface, source_type, 4u32, self.import_results.length())
               self.push_import_task(source_interface, owner, 0u32, 0u32)
             }
-            SelfHostResolvedType::ErrorType => {
+            ErrorType => {
               source_memo.set(source_type, self.interner.error_type)
               self.import_results.push(self.interner.error_type)
             }
-            SelfHostResolvedType::PrimitiveType(primitive) => {
+            PrimitiveType(primitive) => {
               let imported = self.interner.intern_primitive(primitive)
               source_memo.set(source_type, imported)
               self.import_results.push(imported)
             }
-            SelfHostResolvedType::GenericParameterType(parameter) => {
+            GenericParameterType(parameter) => {
               let imported = self.interner.intern_generic(parameter)
               source_memo.set(source_type, imported)
               self.import_results.push(imported)
             }
-            SelfHostResolvedType::NominalType(declaration) => {
+            NominalType(declaration) => {
               let imported = self.interner.intern_nominal(declaration)
               source_memo.set(source_type, imported)
               self.import_results.push(imported)
             }
-            SelfHostResolvedType::TraitType(declaration) => {
+            TraitType(declaration) => {
               let imported = self.interner.intern_trait(declaration)
               source_memo.set(source_type, imported)
               self.import_results.push(imported)
             }
-            SelfHostResolvedType::SelfType(declaration) => {
+            SelfType(declaration) => {
               let imported = self.interner.intern_self(declaration)
               source_memo.set(source_type, imported)
               self.import_results.push(imported)
             }
-            SelfHostResolvedType::ProductType(fields) => {
+            ProductType(fields) => {
               self.push_import_task(
                 source_interface,
                 source_type,
@@ -545,7 +545,7 @@ impl SelfHostTypeResolver {
                 }
               }
             }
-            SelfHostResolvedType::AppliedType(base, arguments) => {
+            AppliedType(base, arguments) => {
               self.push_import_task(
                 source_interface,
                 source_type,
@@ -569,7 +569,7 @@ impl SelfHostTypeResolver {
               }
               self.push_import_task(source_interface, base, 0u32, 0u32)
             }
-            SelfHostResolvedType::FunctionType(parameters, result) => {
+            FunctionType(parameters, result) => {
               self.push_import_task(
                 source_interface,
                 source_type,
@@ -598,7 +598,7 @@ impl SelfHostTypeResolver {
         }
         if state == 4u32 {
           let (operation, selector) = match source.types[source_type] {
-            SelfHostResolvedType::MemberTypeProjection(_, operation, selector) => (operation, selector)
+            MemberTypeProjection(_, operation, selector) => (operation, selector)
             _ => {
               let _ = self_host_assert_compiler_invariant(false, "INV-001 import task requires a projection")
               unreachable()
@@ -614,7 +614,7 @@ impl SelfHostTypeResolver {
           self.import_scratch.clear()
           let mut arguments = self_host_empty_hir_span(0u32)
           match source.types[source_type] {
-            SelfHostResolvedType::AppliedType(_, span) => {
+            AppliedType(_, span) => {
               arguments = span
             }
             _ => {}
@@ -639,7 +639,7 @@ impl SelfHostTypeResolver {
         if state == 2u32 {
           let mut parameters = self_host_empty_hir_span(0u32)
           match source.types[source_type] {
-            SelfHostResolvedType::FunctionType(span, _) => {
+            FunctionType(span, _) => {
               parameters = span
             }
             _ => {}
@@ -667,7 +667,7 @@ impl SelfHostTypeResolver {
         }
         let mut fields = self_host_empty_hir_span(0u32)
         match source.types[source_type] {
-          SelfHostResolvedType::ProductType(span) => {
+          ProductType(span) => {
             fields = span
           }
           _ => {}
@@ -698,15 +698,15 @@ impl SelfHostTypeResolver {
 
   fn constructor_arity(self, type_: U32) -> Option<U32> {
     match self.interner.types[type_] {
-      SelfHostResolvedType::ErrorType => Option::None
-      SelfHostResolvedType::PrimitiveType(_) => Option::Some(0u32)
-      SelfHostResolvedType::NominalType(declaration) => Option::Some(
+      ErrorType => None
+      PrimitiveType(_) => Some(0u32)
+      NominalType(declaration) => Some(
         self.declaration_arity(declaration),
       )
-      SelfHostResolvedType::TraitType(declaration) => Option::Some(
+      TraitType(declaration) => Some(
         self.declaration_arity(declaration),
       )
-      _ => Option::None
+      _ => None
     }
   }
 
@@ -718,69 +718,69 @@ impl SelfHostTypeResolver {
     offset: U32,
   ) -> U32 {
     match self.generic_parameter(owner, name) {
-      Option::Some(parameter) => {
+      Some(parameter) => {
         return self.interner.intern_generic(parameter)
       }
-      Option::None => {}
+      None => {}
     }
     let spelling = self.collected.name(name)
     if spelling == "Self" {
       return match self_owner {
-        Option::Some(declaration) => self.interner.intern_self(declaration)
-        Option::None => {
-          self.diagnose(SelfHostTypeDiagnostic::SelfOutsideContext(owner, offset))
+        Some(declaration) => self.interner.intern_self(declaration)
+        None => {
+          self.diagnose(SelfOutsideContext(owner, offset))
           self.interner.error_type
         }
       }
     }
     match self_host_primitive_type_from_name(spelling) {
-      Option::Some(primitive) => {
+      Some(primitive) => {
         return self.interner.intern_primitive(primitive)
       }
-      Option::None => {}
+      None => {}
     }
     match self.collected.type_bindings.get(name) {
-      Option::Some(declaration) => if self.declaration_visible(owner, declaration) {
+      Some(declaration) => if self.declaration_visible(owner, declaration) {
         return self.interner.intern_nominal(declaration)
       }
-      Option::None => {}
+      None => {}
     }
     match self.collected.trait_bindings.get(name) {
-      Option::Some(declaration) => if self.declaration_visible(owner, declaration) {
+      Some(declaration) => if self.declaration_visible(owner, declaration) {
         return self.interner.intern_trait(declaration)
       }
-      Option::None => {}
+      None => {}
     }
     match self.imports {
-      Option::Some(scope) => {
+      Some(scope) => {
         match scope.lookup_type(spelling) {
-          Option::Some(binding) => {
+          Some(binding) => {
             return self.import_interface_type(
               binding.interface_index,
               binding.semantic_type,
             )
           }
-          Option::None => {}
+          None => {}
         }
         match scope.lookup_trait(spelling) {
-          Option::Some(binding) => {
+          Some(binding) => {
             return self.import_interface_type(
               binding.interface_index,
               binding.semantic_type,
             )
           }
-          Option::None => {}
+          None => {}
         }
         if scope.type_is_ambiguous(spelling) || scope.trait_is_ambiguous(spelling) {
           self.diagnose(
-            SelfHostTypeDiagnostic::AmbiguousImportedType(name, owner, offset),
+            AmbiguousImportedType(name, owner, offset),
           )
           return self.interner.error_type
         }
       }
-      Option::None => {}
+      None => {}
     }
-    self.diagnose(SelfHostTypeDiagnostic::UnknownType(name, owner, offset))
+    self.diagnose(UnknownType(name, owner, offset))
     self.interner.error_type
   }
 
@@ -791,45 +791,45 @@ impl SelfHostTypeResolver {
     offset: U32,
   ) -> U32 {
     match self.collected.trait_bindings.get(name) {
-      Option::Some(declaration) => {
+      Some(declaration) => {
         return self.interner.intern_trait(declaration)
       }
-      Option::None => {}
+      None => {}
     }
     let spelling = self.collected.name(name)
     match self.imports {
-      Option::Some(scope) => {
+      Some(scope) => {
         match scope.lookup_trait(spelling) {
-          Option::Some(binding) => {
+          Some(binding) => {
             return self.import_interface_type(
               binding.interface_index,
               binding.semantic_type,
             )
           }
-          Option::None => {}
+          None => {}
         }
         if scope.trait_is_ambiguous(spelling) {
           self.diagnose(
-            SelfHostTypeDiagnostic::AmbiguousImportedTrait(name, owner, offset),
+            AmbiguousImportedTrait(name, owner, offset),
           )
           return self.interner.error_type
         }
       }
-      Option::None => {}
+      None => {}
     }
     let imported_type = match self.imports {
-      Option::Some(scope) => scope.lookup_type(spelling) is Option::Some(_)
-      Option::None => false
+      Some(scope) => scope.lookup_type(spelling) is Some(_)
+      None => false
     }
     let non_trait = self.collected.type_bindings.contains_key(name) ||
       imported_type ||
-      self_host_primitive_type_from_name(spelling) is Option::Some(_) ||
-      self.generic_parameter(owner, name) is Option::Some(_) ||
+      self_host_primitive_type_from_name(spelling) is Some(_) ||
+      self.generic_parameter(owner, name) is Some(_) ||
       spelling == "Self"
     if non_trait {
-      self.diagnose(SelfHostTypeDiagnostic::ExpectedTraitType(name, owner, offset))
+      self.diagnose(ExpectedTraitType(name, owner, offset))
     } else {
-      self.diagnose(SelfHostTypeDiagnostic::UnknownTrait(name, owner, offset))
+      self.diagnose(UnknownTrait(name, owner, offset))
     }
     self.interner.error_type
   }
@@ -841,25 +841,25 @@ impl SelfHostTypeResolver {
     expect_trait: Bool,
   ) -> Option<SelfHostImportedDeclarationBinding> {
     let scope = match self.imports {
-      Option::Some(value) => value
-      Option::None => {
-        return Option::None
+      Some(value) => value
+      None => {
+        return None
       }
     }
     let interface_index = match scope.lookup_alias(
       self.collected.name(module_alias),
     ) {
-      Option::Some(value) => value
-      Option::None => {
-        return Option::None
+      Some(value) => value
+      None => {
+        return None
       }
     }
     if expect_trait {
       scope.lookup_module_trait(interface_index, self.collected.name(name))
     } else {
       match scope.lookup_module_type(interface_index, self.collected.name(name)) {
-        Option::Some(binding) => Option::Some(binding)
-        Option::None => scope.lookup_module_trait(
+        Some(binding) => Some(binding)
+        None => scope.lookup_module_trait(
           interface_index,
           self.collected.name(name),
         )
@@ -882,15 +882,15 @@ impl SelfHostTypeResolver {
       name,
       expect_trait,
     ) {
-      Option::Some(value) => value
-      Option::None => {
+      Some(value) => value
+      None => {
         if expect_trait {
           self.diagnose(
-            SelfHostTypeDiagnostic::UnknownTrait(name, owner, name_offset),
+            UnknownTrait(name, owner, name_offset),
           )
         } else {
           self.diagnose(
-            SelfHostTypeDiagnostic::UnknownType(name, owner, name_offset),
+            UnknownType(name, owner, name_offset),
           )
         }
         return self.interner.error_type
@@ -902,10 +902,10 @@ impl SelfHostTypeResolver {
     )
     if constructor_position || expect_trait || type_ == self.interner.error_type {
       type_
-    } else if binding.source_kind is SelfHostCollectedDeclKind::TypeAliasDecl &&
+    } else if binding.source_kind is TypeAliasDecl &&
       self_host_u32_greater(binding.generic_parameter_count, 0u32) {
       self.diagnose(
-        SelfHostTypeDiagnostic::TypeArityMismatch(
+        TypeArityMismatch(
           type_,
           binding.generic_parameter_count,
           0u32,
@@ -916,11 +916,11 @@ impl SelfHostTypeResolver {
       self.interner.error_type
     } else {
       match self.constructor_arity(type_) {
-        Option::Some(expected) => if expected == 0u32 {
+        Some(expected) => if expected == 0u32 {
           type_
         } else {
           self.diagnose(
-            SelfHostTypeDiagnostic::TypeArityMismatch(
+            TypeArityMismatch(
               type_,
               expected,
               0u32,
@@ -930,7 +930,7 @@ impl SelfHostTypeResolver {
           )
           self.interner.error_type
         }
-        Option::None => type_
+        None => type_
       }
     }
   }
@@ -951,13 +951,13 @@ impl SelfHostTypeResolver {
     }
     if !constructor_position && !expect_trait {
       match self.imports {
-        Option::Some(scope) => match scope.lookup_type(
+        Some(scope) => match scope.lookup_type(
           self.collected.name(name),
         ) {
-          Option::Some(binding) => if binding.source_kind is SelfHostCollectedDeclKind::TypeAliasDecl &&
+          Some(binding) => if binding.source_kind is TypeAliasDecl &&
             self_host_u32_greater(binding.generic_parameter_count, 0u32) {
             self.diagnose(
-              SelfHostTypeDiagnostic::TypeArityMismatch(
+              TypeArityMismatch(
                 type_,
                 binding.generic_parameter_count,
                 0u32,
@@ -967,20 +967,20 @@ impl SelfHostTypeResolver {
             )
             return self.interner.error_type
           }
-          Option::None => {}
+          None => {}
         }
-        Option::None => {}
+        None => {}
       }
     }
     if constructor_position || expect_trait || type_ == self.interner.error_type {
       type_
     } else {
       match self.constructor_arity(type_) {
-        Option::Some(expected) => if expected == 0u32 {
+        Some(expected) => if expected == 0u32 {
           type_
         } else {
           self.diagnose(
-            SelfHostTypeDiagnostic::TypeArityMismatch(
+            TypeArityMismatch(
               type_,
               expected,
               0u32,
@@ -990,7 +990,7 @@ impl SelfHostTypeResolver {
           )
           self.interner.error_type
         }
-        Option::None => type_
+        None => type_
       }
     }
   }
@@ -1013,24 +1013,24 @@ impl SelfHostTypeResolver {
     syntax: U32,
   ) -> Option<SelfHostImportedDeclarationBinding> {
     let binding = match self.collected.type_syntax[syntax] {
-      SelfHostHirTypeSyntax::NamedTypeSyntax(name, _) => match self.imports {
-        Option::Some(scope) => scope.lookup_type(self.collected.name(name))
-        Option::None => Option::None
+      NamedTypeSyntax(name, _) => match self.imports {
+        Some(scope) => scope.lookup_type(self.collected.name(name))
+        None => None
       }
-      SelfHostHirTypeSyntax::QualifiedTypeSyntax(module_alias, name, _, _) => self.qualified_import_binding(
+      QualifiedTypeSyntax(module_alias, name, _, _) => self.qualified_import_binding(
         module_alias,
         name,
         false,
       )
-      _ => Option::None
+      _ => None
     }
     match binding {
-      Option::Some(value) => if value.source_kind is SelfHostCollectedDeclKind::TypeAliasDecl {
-        Option::Some(value)
+      Some(value) => if value.source_kind is TypeAliasDecl {
+        Some(value)
       } else {
-        Option::None
+        None
       }
-      Option::None => Option::None
+      None => None
     }
   }
 
@@ -1048,13 +1048,13 @@ impl SelfHostTypeResolver {
       return
     }
     match self.imported_alias_binding(base_syntax) {
-      Option::Some(binding) => {
+      Some(binding) => {
         if !self_host_u32_equal(
           binding.generic_parameter_count,
           arguments.length,
         ) {
           self.diagnose(
-            SelfHostTypeDiagnostic::TypeArityMismatch(
+            TypeArityMismatch(
               base,
               binding.generic_parameter_count,
               arguments.length,
@@ -1090,19 +1090,19 @@ impl SelfHostTypeResolver {
         self.syntax_types[syntax] = resolved
         return
       }
-      Option::None => {}
+      None => {}
     }
     let expected = match self.constructor_arity(base) {
-      Option::Some(value) => value
-      Option::None => {
-        self.diagnose(SelfHostTypeDiagnostic::TypeNotApplicable(base, owner, offset))
+      Some(value) => value
+      None => {
+        self.diagnose(TypeNotApplicable(base, owner, offset))
         self.syntax_types[syntax] = self.interner.error_type
         return
       }
     }
     if expected != arguments.length {
       self.diagnose(
-        SelfHostTypeDiagnostic::TypeArityMismatch(
+        TypeArityMismatch(
           base,
           expected,
           arguments.length,
@@ -1140,7 +1140,7 @@ impl SelfHostTypeResolver {
   ) -> U32 {
     self_host_assert_array_index(syntax, self.syntax_types.length(), "ARN-104 computed type syntax")
     if self.computed_active[syntax] || self.computed_depth >= 256u32 {
-      self.diagnose(SelfHostTypeDiagnostic::ComputedTypeFailure(
+      self.diagnose(ComputedTypeFailure(
         owner,
         if self.computed_active[syntax] {
           "CT-033 cyclic computed type"
@@ -1191,10 +1191,10 @@ impl SelfHostTypeResolver {
         )
         self.constructor_tasks.truncate(constructor_index)
         match self.collected.type_syntax[current] {
-          SelfHostHirTypeSyntax::ComputedTypeSyntax(target, selector, offset) => {
+          ComputedTypeSyntax(target, selector, offset) => {
             self.syntax_types[current] = self.resolve_computed_type(owner, target, selector, offset)
           }
-          SelfHostHirTypeSyntax::NamedTypeSyntax(name, offset) => {
+          NamedTypeSyntax(name, offset) => {
             self.syntax_types[current] = self.resolve_named_type(
               owner,
               self_owner,
@@ -1204,7 +1204,7 @@ impl SelfHostTypeResolver {
               constructor_position,
             )
           }
-          SelfHostHirTypeSyntax::QualifiedTypeSyntax(
+          QualifiedTypeSyntax(
             module_alias,
             name,
             offset,
@@ -1221,7 +1221,7 @@ impl SelfHostTypeResolver {
             )
             self.syntax_types[current] = resolved
           }
-          SelfHostHirTypeSyntax::ProductTypeSyntax(fields, _) => if state == 0u32 {
+          ProductTypeSyntax(fields, _) => if state == 0u32 {
             self.push_syntax_task(
               current,
               1u32,
@@ -1263,7 +1263,7 @@ impl SelfHostTypeResolver {
             )
             self.syntax_types[current] = resolved
           }
-          SelfHostHirTypeSyntax::AppliedTypeSyntax(base, arguments, offset) => if state == 0u32 {
+          AppliedTypeSyntax(base, arguments, offset) => if state == 0u32 {
             self.push_syntax_task(
               current,
               1u32,
@@ -1289,7 +1289,7 @@ impl SelfHostTypeResolver {
           } else {
             self.finish_applied_type(owner, current, base, arguments, offset)
           }
-          SelfHostHirTypeSyntax::FunctionTypeSyntax(parameters, result, _) => if state == 0u32 {
+          FunctionTypeSyntax(parameters, result, _) => if state == 0u32 {
             self.push_syntax_task(
               current,
               1u32,
@@ -1353,10 +1353,10 @@ impl SelfHostTypeResolver {
           self.collected.declarations[current],
         )
         match declaration.kind {
-          SelfHostCollectedDeclKind::StructDecl => self.check_reserved_name(declaration)
-          SelfHostCollectedDeclKind::EnumDecl => self.check_reserved_name(declaration)
-          SelfHostCollectedDeclKind::TypeAliasDecl => self.check_reserved_name(declaration)
-          SelfHostCollectedDeclKind::ForeignTypeDecl => self.check_reserved_name(declaration)
+          StructDecl => self.check_reserved_name(declaration)
+          EnumDecl => self.check_reserved_name(declaration)
+          TypeAliasDecl => self.check_reserved_name(declaration)
+          ForeignTypeDecl => self.check_reserved_name(declaration)
           _ => {}
         }
         continue current + 1u32
@@ -1371,10 +1371,10 @@ impl SelfHostTypeResolver {
     declaration: SelfHostCollectedDeclaration,
   ) -> Unit {
     let spelling = self.collected.name(declaration.name)
-    if self_host_primitive_type_from_name(spelling) is Option::Some(_) ||
+    if self_host_primitive_type_from_name(spelling) is Some(_) ||
       spelling == "Self" {
       self.diagnose(
-        SelfHostTypeDiagnostic::ReservedTypeName(
+        ReservedTypeName(
           declaration.id,
           declaration.name,
           declaration.offset,
@@ -1399,17 +1399,17 @@ impl SelfHostTypeResolver {
           self.parameter_types[current] = resolved
         } else {
           match parameter.kind {
-            SelfHostCollectedParameterKind::ReceiverParameterDecl => match self.self_context(
+            ReceiverParameterDecl => match self.self_context(
               parameter.declaration,
             ) {
-              Option::Some(declaration) => {
+              Some(declaration) => {
                 self.parameter_types[current] = self.interner.intern_self(
                   declaration,
                 )
               }
-              Option::None => {
+              None => {
                 self.diagnose(
-                  SelfHostTypeDiagnostic::SelfOutsideContext(
+                  SelfOutsideContext(
                     parameter.declaration,
                     parameter.offset,
                   ),
@@ -1417,9 +1417,9 @@ impl SelfHostTypeResolver {
                 self.parameter_types[current] = self.interner.error_type
               }
             }
-            SelfHostCollectedParameterKind::ValueParameterDecl => {
+            ValueParameterDecl => {
               self.diagnose(
-                SelfHostTypeDiagnostic::UnknownType(
+                UnknownType(
                   parameter.name,
                   parameter.declaration,
                   parameter.offset,
@@ -1441,7 +1441,7 @@ impl SelfHostTypeResolver {
     let _ = while 0u32 {
       offset => if offset < expressions.length {
         let expression = expressions.start + offset
-        if self.collected.expressions[expression] is SelfHostHirExpr::TypeBindingExpr(syntax, _) {
+        if self.collected.expressions[expression] is TypeBindingExpr(syntax, _) {
           let _ = self.resolve_syntax(owner, syntax, false)
         }
         if expression < self.collected.explicit_call_type_argument_spans.length() {
@@ -1595,7 +1595,7 @@ impl SelfHostTypeResolver {
             break self_host_semantic_unit()
           }
         }
-        self.variant_payloads[current_variant] = SelfHostHirSpan::{
+        self.variant_payloads[current_variant] = {
           start: start
           length: self.signature_type_lists.length() - start
         }
@@ -1626,10 +1626,10 @@ impl SelfHostTypeResolver {
           self.collected.impls[current],
         )
         let resolved_trait = match implementation.trait_type {
-          Option::Some(type_) => Option::Some(
+          Some(type_) => Some(
             self.resolve_syntax(implementation.declaration, type_, true),
           )
-          Option::None => Option::None
+          None => None
         }
         self.impl_trait_types[current] = resolved_trait
         let resolved_target = self.resolve_syntax(

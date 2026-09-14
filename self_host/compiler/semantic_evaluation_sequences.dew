@@ -44,21 +44,21 @@ fn self_host_lowered_evaluation_sequence(context: SelfHostLoweredChildContext, e
 
 fn self_host_verify_emitted_evaluation_sequence(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32) -> Unit {
   self_host_assert_physical_body_span_in_phase(body, body.expressions, module_.expressions.length(), 1u32, 7u32)
-  let context = SelfHostLoweredChildContext::{
+  let context = {
     module_: module_
     body: body
     phase: 7u32
     lambda: 4294967295u32
     locals: body.locals
-    lambdas: SelfHostHirSpan::{
+    lambdas: {
       start: 0u32
       length: module_.lambdas.length()
     }
-    syntax_walk: Option::None
+    syntax_walk: None
   }
   self_host_lowered_child_owned(context, expression, body.expressions, expression, 1u32)
   match module_.expressions[expression].kind {
-    SelfHostPlannedExpressionKind::PlannedEvaluationSequence(children) => self_host_lowered_evaluation_sequence(context, expression, children)
+    PlannedEvaluationSequence(children) => self_host_lowered_evaluation_sequence(context, expression, children)
     _ => self_host_lowered_child_failure(context, 606u32, expression, 1u64, 0u64, 0u64)
   }
 }

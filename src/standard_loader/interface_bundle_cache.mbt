@@ -65,6 +65,7 @@ pub fn InterfaceBundlePolicy::for_compilation(
 ///|
 fn interface_bundle_cache_key(
   loaded : StandardLibraryLoad,
+  program? : @semantic.CollectedProgram? = None,
 ) -> InterfaceBundleCacheKey {
   if loaded.fingerprint == "" {
     return { fingerprint: "", }
@@ -74,6 +75,16 @@ fn interface_bundle_cache_key(
   output.write_string_utf8(loaded.fingerprint)
   output.write_byte(0)
   output.write_string_utf8(loaded.dependency_fingerprint)
+  match program {
+    Some(program) =>
+      for module_ in program.modules {
+        interface_cache_write_string(
+          output,
+          module_.constructor_evidence_fingerprint(),
+        )
+      }
+    None => ()
+  }
   {
     fingerprint: @crypto.bytes_to_hex_string(@crypto.sha256(output.to_bytes())),
   }
@@ -95,7 +106,8 @@ fn interface_bundle_module_is_cacheable(
 ) -> Bool {
   guard program.manifest_module_count >= 0 &&
     program.manifest_module_count <= program.modules.length() &&
-    index >= 0 && index < program.modules.length() else {
+    index >= 0 &&
+    index < program.modules.length() else {
     abort("interface bundle module origin is outside the collected program")
   }
   index != policy.root_module_index &&
@@ -189,7 +201,13 @@ fn workspace_interface_source_fingerprint(
 ) -> String {
   let module_ = program.modules[module_index]
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SOURCE_V1\x00")
+  output.write_bytes(
+    b"DEW_WORKSPACE_INTERFACE_SOURCE_V1_SHORT_CONSTRUCTORS\x00",
+  )
+  interface_cache_write_string(
+    output,
+    module_.constructor_evidence_fingerprint(),
+  )
   interface_cache_write_string(output, program.module_paths[module_index])
   let module_id = module_.module_id
   for shift in [0, 8, 16, 24, 32, 40, 48, 56] {
@@ -215,7 +233,7 @@ fn workspace_interface_cache_key_from_dependency_records(
 ) -> String {
   dependency_records.sort()
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1_MUTABLE_FIELDS\x00")
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1_SHORT_CONSTRUCTORS\x00")
   interface_cache_write_string(output, source_fingerprint)
   for record in dependency_records {
     interface_cache_write_string(output, record)
@@ -261,6 +279,9 @@ fn validate_workspace_interface_cache_hit(
   if interface_.module_id != program.modules[module_index].module_id ||
     interface_.path != program.module_paths[module_index] {
     return Err("workspace frozen-interface cache identity mismatch")
+  }
+  if !program.modules[module_index].constructor_interface_matches(interface_) {
+    return Ok(false)
   }
   let dependencies = graph.dependencies[module_index]
   let expected : Array[String] = []
@@ -522,7 +543,9 @@ fn workspace_interface_scc_cache_key(
   source_records.sort()
   dependency_records.sort()
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V1_MUTABLE_FIELDS\x00")
+  output.write_bytes(
+    b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V1_SHORT_CONSTRUCTORS\x00",
+  )
   for record in source_records {
     interface_cache_write_string(output, record)
   }
@@ -805,6 +828,9 @@ pub fn lookup_interface_bundle(
       return Err(
         "frozen-interface cache identity mismatch for \{interface_.path}",
       )
+    }
+    if !program.modules[index].constructor_interface_matches(interface_) {
+      return Ok(InterfaceBundleCacheMiss)
     }
     slots[index] = Some(interface_)
   }

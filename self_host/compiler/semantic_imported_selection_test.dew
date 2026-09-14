@@ -1,12 +1,18 @@
 open dew.std.testing
 
 test "imported implementation accessor preserves physical fields" {
-  let implementations = [SelfHostResolvedImportedImplementation::{
+  let implementations = [{
     declaration: 77u64
-    generic_parameters: SelfHostHirSpan::{ start: 1u32 length: 2u32 }
-    generic_bounds: SelfHostHirSpan::{ start: 3u32 length: 4u32 }
+    generic_parameters: {
+      start: 1u32
+      length: 2u32
+    }
+    generic_bounds: {
+      start: 3u32
+      length: 4u32
+    }
     requires_evidence: true
-    trait_type: Option::Some(5u32)
+    trait_type: Some(5u32)
     target_type: 6u32
   }]
   let implementation = self_host_resolved_imported_implementation_at(
@@ -69,8 +75,8 @@ test "imported selection resolves non-generic calls" {
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -81,7 +87,7 @@ test "imported selection resolves non-generic calls" {
   let _ = while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(_, _, _) => {
+        CallExpr(_, _, _) => {
           call = current
         }
         _ => {}
@@ -92,7 +98,7 @@ test "imported selection resolves non-generic calls" {
     }
   }
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+    SelectedBasicCallTarget(declaration, arguments) => {
       assert(self_host_semantic_id_module(declaration) == 2601u64, "imported declaration")
       assert(arguments.length == 0u32, "imported type arguments")
     }
@@ -129,8 +135,8 @@ test "qualified imported foreign calls stay direct" {
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "foreign imported body")
       return
     }
@@ -141,7 +147,7 @@ test "qualified imported foreign calls stay direct" {
   let _ = while hir_body.expressions.start {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(_, _, _) => {
+        CallExpr(_, _, _) => {
           call = current
         }
         _ => {}
@@ -152,7 +158,7 @@ test "qualified imported foreign calls stay direct" {
     }
   }
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => assert(
+    SelectedBasicCallTarget(_, arguments) => assert(
       arguments.length == 0u32,
       "foreign imported type arguments",
     )
@@ -202,8 +208,8 @@ test "imported selection resolves overloads" {
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -214,7 +220,7 @@ test "imported selection resolves overloads" {
   let _ = while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(_, _, _) => {
+        CallExpr(_, _, _) => {
           call = current
         }
         _ => {}
@@ -225,17 +231,17 @@ test "imported selection resolves overloads" {
     }
   }
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
+    SelectedBasicCallTarget(declaration, _) => {
       assert(self_host_semantic_id_module(declaration) == 2601u64, "imported overload declaration")
       let selected = match imports.callable(declaration) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           return
         }
       }
       assert(
         imports.parameter_type(selected.parameters.start) == resolved.primitive(
-          SelfHostPrimitiveType::I32Type,
+          I32Type,
         ),
         "imported I32 overload",
       )
@@ -285,8 +291,8 @@ test "imported selection resolves generic calls" {
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -297,7 +303,7 @@ test "imported selection resolves generic calls" {
   let _ = while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(_, _, _) => {
+        CallExpr(_, _, _) => {
           call = current
         }
         _ => {}
@@ -308,12 +314,12 @@ test "imported selection resolves generic calls" {
     }
   }
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => {
+    SelectedBasicCallTarget(_, arguments) => {
       assert(arguments.length == 1u32, "imported generic argument count")
       let argument_type = body.call_type_argument(arguments.start)
       match body.type_term(argument_type) {
-        SelfHostBodyTypeTerm::BodyResolvedType(type_) => assert(
-          type_ == resolved.primitive(SelfHostPrimitiveType::I32Type),
+        BodyResolvedType(type_) => assert(
+          type_ == resolved.primitive(I32Type),
           "imported generic I32",
         )
         _ => assert(false, "imported generic argument")
@@ -370,8 +376,8 @@ test "imported selection resolves generic inherent methods" {
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -382,7 +388,7 @@ test "imported selection resolves generic inherent methods" {
   let _ = while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(_, _, _) => {
+        CallExpr(_, _, _) => {
           call = current
         }
         _ => {}
@@ -393,7 +399,7 @@ test "imported selection resolves generic inherent methods" {
     }
   }
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+    SelectedBasicCallTarget(declaration, arguments) => {
       assert(self_host_semantic_id_module(declaration) == 2601u64, "imported method declaration")
       assert(arguments.length == 1u32, "imported method generic arguments")
     }
@@ -432,8 +438,8 @@ test "imported generic methods constrain ordinary arguments" {
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -447,7 +453,7 @@ test "imported generic methods constrain ordinary arguments" {
   let _ = while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(_, arguments, _) => if arguments.length == 1u32 {
+        CallExpr(_, arguments, _) => if arguments.length == 1u32 {
           call = current
         }
         _ => {}
@@ -458,7 +464,7 @@ test "imported generic methods constrain ordinary arguments" {
     }
   }
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => assert(
+    SelectedBasicCallTarget(_, arguments) => assert(
       arguments.length == 1u32,
       "imported method argument type",
     )
@@ -509,14 +515,14 @@ test "imported selection resolves generic tuple and unit variants" {
   let some_hir = collected.bodies[0u32]
   let none_hir = collected.bodies[1u32]
   let some_body = match inferred.body(some_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let none_body = match inferred.body(none_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -528,7 +534,7 @@ test "imported selection resolves generic tuple and unit variants" {
   let _ = while expression {
     current => if current < some_end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(_, _, _) => {
+        CallExpr(_, _, _) => {
           call = current
         }
         _ => {}
@@ -539,7 +545,7 @@ test "imported selection resolves generic tuple and unit variants" {
     }
   }
   match some_body.call_target(some_hir, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+    SelectedBasicCallTarget(declaration, arguments) => {
       assert(self_host_semantic_id_module(declaration) == 2601u64, "imported Some")
       assert(arguments.length == 1u32, "imported Some arguments")
     }
@@ -551,7 +557,7 @@ test "imported selection resolves generic tuple and unit variants" {
   let _ = while expression {
     current => if current < none_end {
       match collected.expressions[current] {
-        SelfHostHirExpr::QualifiedExpr(_, _, _) => {
+        QualifiedExpr(_, _, _) => {
           qualified = current
         }
         _ => {}
@@ -562,7 +568,7 @@ test "imported selection resolves generic tuple and unit variants" {
     }
   }
   match none_body.expression_selection(none_hir, qualified) {
-    SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+    VariantConstructionBasicExpressionSelection(
       declaration,
       kind,
       arguments,
@@ -616,8 +622,8 @@ test "imported selection resolves tuple and unit variant patterns" {
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -628,7 +634,7 @@ test "imported selection resolves tuple and unit variant patterns" {
   let _ = while pattern {
     current => if current < end {
       match body.pattern_constructor(hir_body, current) {
-        SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+        SelectedBasicPatternConstructor(
           declaration,
           is_variant,
           arguments,
@@ -693,8 +699,8 @@ test "imported selection resolves struct and struct-variant construction" {
     current_body => if current_body < 2u32 {
       let hir_body = collected.bodies[current_body]
       let body = match inferred.body(hir_body.id) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           return
         }
       }
@@ -705,7 +711,7 @@ test "imported selection resolves struct and struct-variant construction" {
       let _ = while expression {
         current => if current < end {
           match collected.expressions[current] {
-            SelfHostHirExpr::ConstructExpr(_, _, _) => {
+            ConstructExpr(_, _, _) => {
               construction = current
             }
             _ => {}
@@ -716,7 +722,7 @@ test "imported selection resolves struct and struct-variant construction" {
         }
       }
       match body.expression_selection(hir_body, construction) {
-        SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+        StructConstructionBasicExpressionSelection(
           declaration,
           arguments,
         ) => {
@@ -724,7 +730,7 @@ test "imported selection resolves struct and struct-variant construction" {
           assert(self_host_semantic_id_module(declaration) == 2601u64, "imported struct")
           assert(arguments.length == 1u32, "imported struct arguments")
         }
-        SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(
+        VariantConstructionBasicExpressionSelection(
           declaration,
           field_count,
           arguments,
@@ -788,8 +794,8 @@ test "imported selection resolves struct and struct-variant patterns" {
     current_body => if current_body < 2u32 {
       let hir_body = collected.bodies[current_body]
       let body = match inferred.body(hir_body.id) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           return
         }
       }
@@ -800,7 +806,7 @@ test "imported selection resolves struct and struct-variant patterns" {
       let _ = while pattern {
         current => if current < end {
           match body.pattern_constructor(hir_body, current) {
-            SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(
+            SelectedBasicPatternConstructor(
               declaration,
               is_variant,
               arguments,
@@ -866,8 +872,8 @@ test "imported selection resolves generic fields" {
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -878,7 +884,7 @@ test "imported selection resolves generic fields" {
   let _ = while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::FieldExpr(_, _, _) => {
+        FieldExpr(_, _, _) => {
           field_expression = current
         }
         _ => {}
@@ -889,7 +895,7 @@ test "imported selection resolves generic fields" {
     }
   }
   match body.expression_selection(hir_body, field_expression) {
-    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(field, mutable_, owner) => {
+    FieldBasicExpressionSelection(field, mutable_, owner) => {
       assert(self_host_semantic_id_module(field) == 2601u64, "imported field module")
       assert(self_host_semantic_id_module(owner) == 2601u64, "imported field owner")
       assert(!mutable_, "imported field mutability")
@@ -897,8 +903,8 @@ test "imported selection resolves generic fields" {
     _ => assert(false, "imported field selection")
   }
   match body.type_term(body.expression_type(hir_body, field_expression)) {
-    SelfHostBodyTypeTerm::BodyResolvedType(type_) => assert(
-      type_ == resolved.primitive(SelfHostPrimitiveType::I32Type),
+    BodyResolvedType(type_) => assert(
+      type_ == resolved.primitive(I32Type),
       "imported field I32",
     )
     _ => assert(false, "imported field type")
@@ -946,8 +952,8 @@ test "imported selection diagnoses non-generic call arity" {
   )
   let hir_body = collected.bodies[0u32]
   let body = match inferred.body(hir_body.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -956,7 +962,7 @@ test "imported selection diagnoses non-generic call arity" {
   let _ = while index {
     current => if current < body.diagnostic_count() {
       match body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, _, _, _) => {
+        CallArgumentCountMismatch(_, _, _, _, _) => {
           count = count + 1u32
         }
         _ => {}
@@ -975,8 +981,8 @@ fn self_host_assert_imported_module_value_body(
 ) -> Unit {
   assert(body.diagnostic_count() == 0u32, "imported module value diagnostics")
   match body.type_term(body.root_type) {
-    SelfHostBodyTypeTerm::BodyResolvedType(type_) => assert(
-      type_ == resolved.primitive(SelfHostPrimitiveType::I64Type),
+    BodyResolvedType(type_) => assert(
+      type_ == resolved.primitive(I64Type),
       "imported module value result",
     )
     _ => assert(false, "imported module value result")

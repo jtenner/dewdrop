@@ -35,3 +35,26 @@ test "compiler driver selects test planning" {
   assert_eq(compiled.source_diagnostics().length(), 0)
   assert_true(compiled.link.modules[0].emit_tests)
 }
+
+///|
+test "compiler driver reports missing constructor context before physical planning" {
+  let manifest = @semantic.ProgramManifest::new([
+    @semantic.ManifestModule::new("driver.invalid", [
+      @semantic.ManifestFile::new(
+        "missing-context.dew", b"struct Cell {\n  item: I32\n}\npub fn main() -> I32 {\n  let cell = {\n    item: 42i32\n  }\n  cell.item\n}\n",
+      ),
+    ]),
+  ])
+  match
+    compile_manifest(
+      manifest,
+      @standard_loader.StandardLibraryLoad::bootstrap(),
+      CompilerPipelineOptions::production(5002UL, 0, true),
+    ) {
+    Err(message) => {
+      assert_true(message.contains("missing-context.dew"))
+      assert_true(message.contains("error:"))
+    }
+    Ok(_) => fail("a nominal struct with no type context must be diagnosed")
+  }
+}

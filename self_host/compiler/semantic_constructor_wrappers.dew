@@ -1,0 +1,255 @@
+// Constructor function values use ordinary generated functions. The exact
+// variant-to-function map is semantic evidence, never a runtime name lookup.
+fn self_host_add_constructor_value_names(module_: SelfHostCollectedModule, names: Map<String, Bool>) -> Unit {
+  let consumed = self_host_empty_u32_bool_map()
+  for expression in module_.expressions {
+    match expression {
+      CallExpr(target, _, _) => {
+        consumed[target] = true
+      }
+      ConstructExpr(target, _, _) => {
+        consumed[target] = true
+      }
+      QualifiedExpr(base, _, _) => {
+        consumed[base] = true
+      }
+      _ => {}
+    }
+  }
+  let _ = while 0u32 {
+    index if index < module_.expressions.length() => {
+      if !consumed.contains_key(index) {
+        match module_.expressions[index] {
+          NameExpr(name, _) => {
+            names[module_.name(name)] = true
+          }
+          QualifiedExpr(_, name, _) => {
+            names[module_.name(name)] = true
+          }
+          _ => {}
+        }
+      }
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+}
+
+fn self_host_constructor_value_names(module_: SelfHostCollectedModule) -> Map<String, Bool> {
+  let names = self_host_empty_string_bool_map()
+  self_host_add_constructor_value_names(module_, names)
+  names
+}
+
+fn self_host_empty_string_bool_map() -> Map<String, Bool> {
+  empty()
+}
+
+impl SelfHostCollectedModule {
+  fn constructor_intern(self, name: String) -> U32 {
+    match self.name_lookup.get(name) {
+      Some(id) => id
+      None => {
+        let id = self.names.length()
+        self.names.push(name)
+        self.name_lookup[name] = id
+        let _ = while self.value_bindings.length() {
+          length if length < self.names.length() => {
+            self.value_bindings.push(None)
+            continue length + 1u32
+          }
+          _ => break ()
+        }
+        id
+      }
+    }
+  }
+
+  fn constructor_expression(self, expression: SelfHostHirExpr, file: U64) -> U32 {
+    let id = self.expressions.length()
+    self.expressions.push(expression)
+    self.expression_files.push(file)
+    self.explicit_call_type_argument_spans.push(self_host_empty_hir_span(self.explicit_call_type_arguments.length()))
+    id
+  }
+
+  fn constructor_type(self, type_: SelfHostHirTypeSyntax, file: U64) -> U32 {
+    let id = self.type_syntax.length()
+    self.type_syntax.push(type_)
+    self.type_syntax_files.push(file)
+    id
+  }
+
+  fn install_constructor_wrappers(self, demanded: Map<String, Bool>) -> Unit {
+    for variant in self.variants {
+      if variant.kind is TupleVariantDecl && demanded.contains_key(self.name(variant.name)) && !self.constructor_wrappers.contains_key(variant.id) {
+        let owner = match self.declaration_reference(variant.declaration) {
+          Some(TopLevel(value)) => value
+          _ => {
+            self_host_assert_compiler_invariant(false, "constructor metadata requires an exact declaration")
+            unreachable()
+          }
+        }
+        let file = self.declaration_files[self_host_semantic_id_local(owner.id)]
+        let declaration = self_host_make_semantic_id(self.module_id, self.declaration_files.length())
+        let builder = StringBuilder::new()
+        builder.append("$constructor$")
+        builder.append_u64(variant.id)
+        let name = self.constructor_intern(builder.finish())
+        self.declaration_locations.push(self.declarations.length())
+        self.declarations.push({
+          id: declaration
+          kind: FunctionDecl
+          name: name
+          visibility: ModuleVisible
+          offset: variant.offset
+        })
+        self.declaration_files.push(file)
+        self.body_by_declaration.push(Some(self.bodies.length()))
+        self.constructor_wrappers[variant.id] = declaration
+        let generics = self.generic_parameters_of(owner.id)
+        let generic_start = self.generic_parameters.length()
+        let arguments = []
+        let _ = while 0u32 {
+          index if index < generics.length => {
+            let parameter = self.generic_parameters[generics.start + index]
+            self.generic_parameters.push({
+              id: self_host_make_semantic_id(self.module_id, self.generic_parameters.length())
+              declaration: declaration
+              index: parameter.index
+              name: parameter.name
+              bounds: parameter.bounds
+              offset: parameter.offset
+            })
+            arguments.push(self.constructor_type(NamedTypeSyntax(parameter.name, variant.offset), file))
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+        self.generic_parameter_spans.push({
+          start: generic_start
+          length: generics.length
+        })
+        let nominal = self.constructor_type(NamedTypeSyntax(owner.name, variant.offset), file)
+        let result = if arguments.length() == 0u32 {
+          nominal
+        } else {
+          let start = self.type_arguments.length()
+          for argument in arguments {
+            self.type_arguments.push(argument)
+          }
+          self.constructor_type(AppliedTypeSyntax(nominal, {
+            start: start
+            length: arguments.length()
+          }, variant.offset), file)
+        }
+        let parameter_start = self.parameters.length()
+        let expression_start = self.expressions.length()
+        let child_start = self.expression_children.length()
+        let root = self.constructor_expression(NameExpr(owner.name, variant.offset), file)
+        let target = self.constructor_expression(QualifiedExpr(root, variant.name, variant.offset), file)
+        let _ = while 0u32 {
+          index if index < variant.payload_types.length => {
+            let builder = StringBuilder::new()
+            builder.append("$argument$")
+            builder.append_u32(index)
+            let name = self.constructor_intern(builder.finish())
+            self.parameters.push({
+              id: self_host_make_semantic_id(self.module_id, self.parameters.length())
+              declaration: declaration
+              index: index
+              kind: ValueParameterDecl
+              name: name
+              type_: self.type_arguments[variant.payload_types.start + index]
+              offset: variant.offset
+            })
+            self.expression_children.push(self.constructor_expression(NameExpr(name, variant.offset), file))
+            continue index + 1u32
+          }
+          _ => break ()
+        }
+        self.parameter_spans.push({
+          start: parameter_start
+          length: variant.payload_types.length
+        })
+        self.callables.push({
+          declaration: declaration
+          return_type: result
+          is_main: false
+        })
+        let call = self.constructor_expression(CallExpr(target, {
+          start: child_start
+          length: variant.payload_types.length
+        }, variant.offset), file)
+        let block = self.blocks.length()
+        let item = self.block_items.length()
+        self.block_items.push(self_host_hir_expression_item(call, variant.offset))
+        self.block_item_files.push(file)
+        self.blocks.push({
+          items: {
+            start: item
+            length: 1u32
+          }
+          offset: variant.offset
+        })
+        self.block_files.push(file)
+        self.body_files.push(file)
+        self.bodies.push({
+          id: self_host_make_semantic_id(self.module_id, self.bodies.length())
+          declaration: declaration
+          kind: FunctionBody
+          root: BlockBodyRoot(block)
+          expressions: {
+            start: expression_start
+            length: self.expressions.length() - expression_start
+          }
+          expression_children: {
+            start: child_start
+            length: variant.payload_types.length
+          }
+          blocks: {
+            start: block
+            length: 1u32
+          }
+          block_items: {
+            start: item
+            length: 1u32
+          }
+          patterns: self_host_empty_hir_span(self.patterns.length())
+          pattern_children: self_host_empty_hir_span(self.pattern_children.length())
+          pattern_arms: self_host_empty_hir_span(self.pattern_arms.length())
+          arm_children: self_host_empty_hir_span(self.arm_children.length())
+          object_fields: self_host_empty_hir_span(self.object_fields.length())
+          pattern_fields: self_host_empty_hir_span(self.pattern_fields.length())
+          offset: variant.offset
+        })
+      }
+    }
+  }
+
+  fn public_constructor_wrappers(self) -> Map<U64, Bool> {
+    let wrappers = self_host_empty_u64_bool_map()
+    for variant in self.variants {
+      match self.constructor_wrappers.get(variant.id) {
+        Some(wrapper) => match self.declaration_reference(variant.declaration) {
+          Some(TopLevel(owner)) => if owner.visibility is Public {
+            wrappers[wrapper] = true
+          }
+          _ => {}
+        }
+        None => {}
+      }
+    }
+    wrappers
+  }
+}
+
+fn self_host_install_program_constructor_wrappers(program: SelfHostCollectedProgram) -> Unit {
+  let demanded = self_host_empty_string_bool_map()
+  for module_ in program.modules.values {
+    self_host_add_constructor_value_names(module_, demanded)
+  }
+  for module_ in program.modules.values {
+    module_.install_constructor_wrappers(demanded)
+  }
+}

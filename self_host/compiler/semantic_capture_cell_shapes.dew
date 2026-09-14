@@ -4,10 +4,10 @@ fn self_host_capture_cell_physical_shape(module_: SelfHostPlannedModuleLowering,
   let error = self_host_specialization_shape_error(shape)
   if error != 0u32 {
     let declaration = match self_host_lambda_owner_callable(module_, local.body) {
-      Option::Some(owner) => owner.declaration
-      Option::None => 0u64
+      Some(owner) => owner.declaration
+      None => 0u64
     }
-    let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    let _ = self_host_assert_compiler_invariant_with_failure(false, {
       code: 301u32
       phase: 4u32
       module_id: module_.module_id

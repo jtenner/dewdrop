@@ -1,5 +1,6 @@
 open dew.std.option
 open dew.std.bytes_builder
+import dew.std.wasm.intrinsics as @probe_wasm
 
 test "unknown builtin names never become host imports" {
   let fragments = self_host_physical_test_fragments(
@@ -9,8 +10,8 @@ test "unknown builtin names never become host imports" {
   for module_ in fragments.modules {
     for function_ in module_.functions {
       match function_.kind {
-        SelfHostPlannedWasmFunctionKind::PlannedWasmImportedFunction(_, _) => assert(false, "a builtin cannot create a host import")
-        SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => {
+        PlannedWasmImportedFunction(_, _) => assert(false, "a builtin cannot create a host import")
+        PlannedWasmInlineBuiltinFunction(name) => {
           if name == b"custom.host" || name == b"wasi_snapshot_preview1.args_get" {
             found = found + 1u32
           }
@@ -41,21 +42,21 @@ test "bound calls without queries select applicable generic implementations" {
 
 test "raw array storage rejects unresolved and uninhabited nested elements" {
   let invalid = [
-    SelfHostPlannedValueShape::GenericPlannedValueShape,
-    SelfHostPlannedValueShape::ErrorPlannedValueShape,
-    SelfHostPlannedValueShape::NeverPlannedValueShape,
+    GenericPlannedValueShape,
+    ErrorPlannedValueShape,
+    NeverPlannedValueShape,
   ]
   for shape in invalid {
-    assert(self_host_raw_array_storage_carrier(shape) is Option::None, "raw invalid carrier")
-    let product = SelfHostPlannedValueShape::ProductPlannedValueShape([
-      SelfHostPlannedValueShape::I32PlannedValueShape,
-      SelfHostPlannedValueShape::ProductPlannedValueShape([shape]),
+    assert(self_host_raw_array_storage_carrier(shape) is None, "raw invalid carrier")
+    let product = ProductPlannedValueShape([
+      I32PlannedValueShape,
+      ProductPlannedValueShape([shape]),
     ])
-    assert(self_host_raw_array_storage_carrier(product) is Option::None, "raw nested invalid carrier")
+    assert(self_host_raw_array_storage_carrier(product) is None, "raw nested invalid carrier")
   }
-  match self_host_raw_array_storage_carrier(SelfHostPlannedValueShape::UnitPlannedValueShape) {
-    Option::Some(carrier) => assert(carrier == 5i32, "Unit uses a storage marker only")
-    Option::None => assert(false, "Unit storage is supported")
+  match self_host_raw_array_storage_carrier(UnitPlannedValueShape) {
+    Some(carrier) => assert(carrier == 5i32, "Unit uses a storage marker only")
+    None => assert(false, "Unit storage is supported")
   }
 }
 
@@ -63,7 +64,7 @@ test "raw array contracts reject invalid signatures before physical emission" {
   let lowering = self_host_physical_test_lowering(b"pub struct Storage<t> {}\nbuiltin read<t>(value: Storage<t>, index: I64) -> t = \"array_get\"\n")
   assert(lowering.raw_arrays.diagnostics.length() == 1u32, "one invalid raw array signature")
   match lowering.raw_arrays.diagnostics[0u32] {
-    SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(declaration, message, _) => {
+    InvalidRawArrayContract(declaration, message, _) => {
       assert(self_host_semantic_id_local(declaration) == 1u32, "the invalid builtin declaration")
       assert(message == "raw array instruction signature does not match its operands", "the exact signature diagnostic")
     }
@@ -75,7 +76,7 @@ test "raw array contracts reject ordinary storage constructors" {
   let lowering = self_host_physical_test_lowering(b"pub struct Storage<t> {}\nbuiltin create<t>(length: U32, value: t) -> Storage<t> = \"array_new\"\npub fn bad() -> Storage<I32> {\n  Storage::{}\n}\n")
   assert(lowering.raw_arrays.diagnostics.length() == 1u32, "one invalid raw array constructor")
   match lowering.raw_arrays.diagnostics[0u32] {
-    SelfHostProgramWasmGCLinkDiagnostic::InvalidRawArrayContract(_, message, _) => {
+    InvalidRawArrayContract(_, message, _) => {
       assert(message == "raw array storage must be allocated by an array instruction, not a struct constructor", "the exact storage diagnostic")
     }
     _ => assert(false, "expected InvalidRawArrayContract")
@@ -88,16 +89,16 @@ test "trait evidence identities remain part of specialization keys" {
   let heads = self_host_empty_u64_u32_map()
   let next = []
   let first = self_host_program_specialization_add_request_with_evidence(requests, shapes, heads, next, 11u64,
-    [SelfHostPlannedValueShape::RefPlannedValueShape], [SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(100u64)])
+    [RefPlannedValueShape], [NominalSpecializationEvidenceType(100u64)])
   let second = self_host_program_specialization_add_request_with_evidence(requests, shapes, heads, next, 11u64,
-    [SelfHostPlannedValueShape::RefPlannedValueShape], [SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(101u64)])
+    [RefPlannedValueShape], [NominalSpecializationEvidenceType(101u64)])
   let repeated = self_host_program_specialization_add_request_with_evidence(requests, shapes, heads, next, 11u64,
-    [SelfHostPlannedValueShape::RefPlannedValueShape], [SelfHostSpecializationEvidenceType::NominalSpecializationEvidenceType(100u64)])
+    [RefPlannedValueShape], [NominalSpecializationEvidenceType(100u64)])
   assert(first != second, "equal reference carriers do not erase trait receiver identity")
   assert(first == repeated, "equal structural evidence deduplicates")
   assert(!self_host_specialization_evidence_type_equal(
-    SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(SelfHostPrimitiveType::I32Type),
-    SelfHostSpecializationEvidenceType::PrimitiveSpecializationEvidenceType(SelfHostPrimitiveType::U32Type),
+    PrimitiveSpecializationEvidenceType(I32Type),
+    PrimitiveSpecializationEvidenceType(U32Type),
   ), "equal scalar carriers do not erase logical primitive identity")
 }
 
@@ -181,15 +182,17 @@ fn self_host_physical_test_assert_clean_inference(
         report.append_u32(diagnostic.offset())
         report.append(" kind=")
         report.append(match diagnostic {
-          SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _) => "unsupported expression"
-          SelfHostBodyInferenceDiagnostic::UnresolvedExpressionType(_, _) => "unresolved expression"
-          SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _) => "no matching method"
-          SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
-          SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) => "type constraint"
-          SelfHostBodyInferenceDiagnostic::ReturnOutsideCallable(_) => "return outside callable"
-          SelfHostBodyInferenceDiagnostic::NoMatchingDirectCall(_, _, _) => "no matching direct call"
-          SelfHostBodyInferenceDiagnostic::InvalidPatternConstructor(_, _) => "invalid pattern constructor"
-          SelfHostBodyInferenceDiagnostic::InvalidConstructionTarget(_, _) => "invalid construction target"
+          UnsupportedExpressionInference(_, _) => "unsupported expression"
+          UnresolvedExpressionType(_, _) => "unresolved expression"
+          NoMatchingMethod(_, _, _) => "no matching method"
+          AmbiguousMethod(_, _, _, _, _, _) => "ambiguous method"
+          BodyConstraintDiagnostic(_) => "type constraint"
+          ReturnOutsideCallable(_) => "return outside callable"
+          NoMatchingFunctionReference(_, _, _) => "no matching constructor function"
+    AmbiguousFunctionReference(_, _, _, _, _, _) => "ambiguous constructor function"
+    NoMatchingDirectCall(_, _, _) => "no matching direct call"
+          InvalidPatternConstructor(_, _) => "invalid pattern constructor"
+          InvalidConstructionTarget(_, _) => "invalid construction target"
           _ => self_host_inference_diagnostic_name(diagnostic)
         })
         report.append(self_host_physical_test_link_trace(link))
@@ -207,10 +210,10 @@ fn self_host_physical_test_lowering(
 ) -> SelfHostPlannedProgramLowering {
   let collected = self_host_collect_program_manifest(
     5100u64,
-    SelfHostProgramManifest::{
-      modules: [SelfHostManifestModule::{
+    {
+      modules: [{
         path: "app.main"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "main.dew"
           source: source
           test_only: false
@@ -256,19 +259,19 @@ fn self_host_physical_test_import_link(runtime: Bytes, source: Bytes) -> SelfHos
 
 fn self_host_physical_test_named_import_link(runtime_path: String, runtime: Bytes, source: Bytes) -> SelfHostPlannedProgramWasmGCLink {
   self_host_physical_test_manifest_link(
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: runtime_path
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "runtime.dew"
             source: runtime
             test_only: false
           }]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.main"
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "main.dew"
             source: source
             test_only: false
@@ -291,7 +294,7 @@ fn self_host_physical_test_manifest_link(manifest: SelfHostProgramManifest) -> S
         report.append("runtime fixture parse/collection diagnostics module=")
         report.append_u32(current)
         match module_.diagnostic_at(0u32) {
-          SelfHostCollectionDiagnostic::ParseDiagnostic(_, _, _, offset, _, token) => {
+          ParseDiagnostic(_, _, _, offset, _, token) => {
             report.append(" offset=")
             report.append_u32(offset)
             report.append(" token=")
@@ -321,9 +324,9 @@ test "frozen body accepts an unchanged expression carrier" {
   let plan = self_host_physical_test_frozen_body()
   assert(
     !self_host_linked_refine_canonical_expression_shape(
-      Option::Some(plan),
+      Some(plan),
       plan.expressions[0u32].expression,
-      SelfHostPlannedValueShape::I32PlannedValueShape,
+      I32PlannedValueShape,
     ),
     "emission must not change the plan",
   )
@@ -332,9 +335,9 @@ test "frozen body accepts an unchanged expression carrier" {
 test "BOD-605 emission cannot rewrite a frozen carrier" expect_trap "unreachable" {
   let plan = self_host_physical_test_frozen_body()
   self_host_linked_refine_canonical_expression_shape(
-    Option::Some(plan),
+    Some(plan),
     plan.expressions[0u32].expression,
-    SelfHostPlannedValueShape::I64PlannedValueShape,
+    I64PlannedValueShape,
   )
 }
 
@@ -352,11 +355,11 @@ test "physical generic method keeps receiver and specializes result" {
       assert(function_.parameters.length == 1u32, "method has one receiver")
       assert(function_.results.length == 1u32, "method has one result")
       assert(
-        module_.function_value_types[function_.parameters.start] is SelfHostPlannedWasmValueType::WasmNullableEqRefValue,
+        module_.function_value_types[function_.parameters.start] is WasmNullableEqRefValue,
         "Box<I64> receiver must remain a reference",
       )
       assert(
-        module_.function_value_types[function_.results.start] is SelfHostPlannedWasmValueType::WasmI64Value,
+        module_.function_value_types[function_.results.start] is WasmI64Value,
         "generic result must use the selected i64 shape",
       )
       found = true
@@ -387,7 +390,7 @@ test "linked result does not change for a method named get_unchecked" {
           self_host_linked_physical_function_index(function_.function_index),
         )
         assert(
-          shape is SelfHostPlannedValueShape::RefPlannedValueShape,
+          shape is RefPlannedValueShape,
           "a Box<I64> result must stay a reference regardless of method name",
         )
         found = true
@@ -403,19 +406,19 @@ test "linked result does not change for a method named get_unchecked" {
 test "builder factory locals keep their reference carrier" {
   let collected = self_host_collect_program_manifest(
     5400u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.builders"
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "builders.dew"
             source: b"foreign import \"test.text\" as TextHost {\n  pub fn string_builder_with_capacity_raw(capacity: U32) -> StringBuilder = \"string_builder_with_capacity_raw\"\n  fn bytes_builder_append_byte(builder: BytesBuilder, byte: U8) -> Unit = \"bytes_builder_append_byte\"\n}\nbuiltin builder_as_bytes(builder: StringBuilder) -> BytesBuilder = \"ref.cast\"\nbuiltin runtime_stop() -> Never = \"unreachable\"\npub fn string_builder_append_ascii(builder: StringBuilder, byte: U8) -> Unit {\n  if byte > 127u8 {\n    runtime_stop()\n  }\n  TextHost.bytes_builder_append_byte(builder_as_bytes(builder), byte)\n}\nimpl BytesBuilder {\n  fn with_capacity(capacity: U32) -> StringBuilder {\n    TextHost.string_builder_with_capacity_raw(capacity)\n  }\n}\nimpl StringBuilder {\n  fn with_capacity(capacity: U32) -> StringBuilder {\n    TextHost.string_builder_with_capacity_raw(capacity)\n  }\n}\n"
             test_only: false
           }]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.main"
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "main.dew"
             source: b"open app.builders\npub fn run() -> Unit {\n  let builder = StringBuilder::with_capacity(4u32)\n  string_builder_append_ascii(builder, 47u8)\n}\n"
             test_only: false
@@ -469,7 +472,7 @@ test "a static parameter cannot become a method receiver" {
   let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "the invalid receiver must produce one diagnostic")
   assert(
-    module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _),
+    module_.inferred.diagnostics[0u32] is NoMatchingMethod(_, _, _),
     "a value parameter is not a declared receiver",
   )
 }
@@ -529,19 +532,19 @@ test "standard publication does not expose ordinary private helpers" {
 }
 
 test "default preamble supplies core calls without changing source files" {
-  let manifest = SelfHostProgramManifest::{
+  let manifest = {
     modules: [
-      SelfHostManifestModule::{
+      {
         path: "dew.std.preamble"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "core.dew"
           source: b"pub fn core_identity(value: U32) -> U32 {\n  value\n}\n"
           test_only: false
         }]
       },
-      SelfHostManifestModule::{
+      {
         path: "app.main"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "main.dew"
           source: b"pub fn run() -> U32 {\n  core_identity(7u32)\n}\n"
           test_only: false
@@ -588,7 +591,7 @@ test "a pattern constructor cannot replace a different subject type" {
   let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
   let mut found = false
   for diagnostic in module_.inferred.diagnostics {
-    if diagnostic is SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) {
+    if diagnostic is BodyConstraintDiagnostic(_) {
       found = true
     }
   }
@@ -603,7 +606,7 @@ test "standard Option scalar payloads use ordinary declared enum storage" {
   )
   self_host_physical_test_assert_clean_inference(link)
   for variant in link.fragments.specialization.lowering.modules[0u32].type_layouts.variants {
-    assert(self_host_linked_variant_type_index(link, variant.variant) is Option::Some(_), "Option declarations must have source fragments")
+    assert(self_host_linked_variant_type_index(link, variant.variant) is Some(_), "Option declarations must have source fragments")
   }
   let plan = self_host_plan_program_wasm_bodies(link)
   assert(plan.bodies.length() == 1u32, "Option reader must be planned")
@@ -621,19 +624,19 @@ test "opened imported variants retain unqualified constructor identity" {
   let mut selected = 0u32
   for pattern in module_.patterns {
     match pattern.source {
-      SelfHostHirPattern::TuplePattern(_, _, _) => {
+      TuplePattern(_, _, _) => {
         let declaration = self_host_pattern_constructor_declaration(module_, pattern)
         assert(declaration != 0u64, "unqualified Some must retain a normal declaration")
         let expected = match self_host_linked_variant_type_index(link, declaration) {
-          Option::Some(value) => value
-          Option::None => {
+          Some(value) => value
+          None => {
             assert(false, "the selected source variant must have a fragment")
             4294967295u32
           }
         }
-        match self_host_linked_pattern_variant_type(link, module_, pattern, SelfHostPlannedValueShape::U32PlannedValueShape, 0u64) {
-          Option::Some(actual) => assert(actual == expected, "emission uses the selected source fragment")
-          Option::None => assert(false, "selected source variant is required")
+        match self_host_linked_pattern_variant_type(link, module_, pattern, U32PlannedValueShape, 0u64) {
+          Some(actual) => assert(actual == expected, "emission uses the selected source fragment")
+          None => assert(false, "selected source variant is required")
         }
         selected = selected + 1u32
       }
@@ -665,15 +668,15 @@ test "user Some and None patterns retain declaration identity" {
   let mut checked = 0u32
   for pattern in module_.patterns {
     match pattern.selected_constructor {
-      SelfHostBasicPatternConstructor::SelectedBasicPatternConstructor(declaration, _, _) => {
+      SelectedBasicPatternConstructor(declaration, _, _) => {
         let expected = self_host_linked_variant_type_index(link, declaration)
-        let actual = self_host_linked_pattern_variant_type(link, module_, pattern, SelfHostPlannedValueShape::ErrorPlannedValueShape, 0u64)
+        let actual = self_host_linked_pattern_variant_type(link, module_, pattern, ErrorPlannedValueShape, 0u64)
         match expected {
-          Option::Some(left) => match actual {
-            Option::Some(right) => assert(left == right, "source spelling cannot replace the selected variant type")
-            Option::None => assert(false, "the planned variant type must exist")
+          Some(left) => match actual {
+            Some(right) => assert(left == right, "source spelling cannot replace the selected variant type")
+            None => assert(false, "the planned variant type must exist")
           }
-          Option::None => assert(false, "the linked variant type must exist")
+          None => assert(false, "the linked variant type must exist")
         }
         checked = checked + 1u32
       }
@@ -699,10 +702,10 @@ test "a user None constructor keeps its physical type" {
   for expression in body.expressions {
     let source = self_host_planned_expression_identity(module_.expressions[expression.expression])
     match source.selection {
-      SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(declaration, _, _) => {
+      VariantConstructionBasicExpressionSelection(declaration, _, _) => {
         match self_host_linked_variant_type_index(link, declaration) {
-          Option::Some(expected) => assert(self_host_u32_equal(expression.selected_type_index, expected), "user None must not use the runtime Option type")
-          Option::None => assert(false, "user None must have a linked type")
+          Some(expected) => assert(self_host_u32_equal(expression.selected_type_index, expected), "user None must not use the runtime Option type")
+          None => assert(false, "user None must have a linked type")
         }
         checked = true
       }
@@ -772,7 +775,7 @@ test "imported index candidates with prerequisites stay diagnostic" {
   )
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "the missing Marker proof must remain a diagnostic")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _), "an unproved index candidate must not be selected")
+  assert(module_.inferred.diagnostics[0u32] is UnsupportedExpressionInference(_, _), "an unproved index candidate must not be selected")
 }
 
 test "duplicate imported index candidates remain ambiguous" {
@@ -783,7 +786,7 @@ test "duplicate imported index candidates remain ambiguous" {
   )
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "both compatible index methods must remain visible")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousOperator(_, _, _, 2u32, _), "link order cannot choose an index method")
+  assert(module_.inferred.diagnostics[0u32] is AmbiguousOperator(_, _, _, 2u32, _), "link order cannot choose an index method")
 }
 
 test "local static factories supply later method receivers" {
@@ -815,11 +818,11 @@ test "erased field adapters require declared generic storage and a concrete scal
   let fields = self_host_erased_field_layouts(module_)
   let generic = fields[0u32].field
   let concrete = fields[1u32].field
-  assert(self_host_linked_erased_field_box_type(link, generic, SelfHostWasmBodyCarrier::I64BodyCarrier) is Option::Some(_), "a declared generic field can box a proven scalar")
-  assert(self_host_linked_erased_field_box_type(link, concrete, SelfHostWasmBodyCarrier::I64BodyCarrier) is Option::None, "a concrete scalar mismatch cannot gain an adapter")
-  assert(self_host_linked_erased_field_box_type(link, generic, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) is Option::None, "missing evidence cannot gain an adapter")
-  assert(self_host_linked_erased_field_box_type(link, generic, SelfHostWasmBodyCarrier::ConflictingBodyCarrier) is Option::None, "a conflict cannot gain an adapter")
-  assert(self_host_linked_erased_field_box_type(link, 18446744073709551615u64, SelfHostWasmBodyCarrier::I64BodyCarrier) is Option::None, "an unknown field cannot gain an adapter")
+  assert(self_host_linked_erased_field_box_type(link, generic, I64BodyCarrier) is Some(_), "a declared generic field can box a proven scalar")
+  assert(self_host_linked_erased_field_box_type(link, concrete, I64BodyCarrier) is None, "a concrete scalar mismatch cannot gain an adapter")
+  assert(self_host_linked_erased_field_box_type(link, generic, UnresolvedBodyCarrier) is None, "missing evidence cannot gain an adapter")
+  assert(self_host_linked_erased_field_box_type(link, generic, ConflictingBodyCarrier) is None, "a conflict cannot gain an adapter")
+  assert(self_host_linked_erased_field_box_type(link, 18446744073709551615u64, I64BodyCarrier) is None, "an unknown field cannot gain an adapter")
 }
 
 test "generic enum storage belongs to one declared payload position" {
@@ -831,15 +834,15 @@ test "generic enum storage belongs to one declared payload position" {
   for fragment in link.fragments.modules {
     for field in fragment.fields {
       match field.role {
-        SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, index) => {
+        WasmVariantPayloadField(variant, index) => {
           assert(self_host_linked_generic_variant_storage(link, field) == (index == 0u32), "only the declared generic slot permits erasure")
-          assert((self_host_linked_variant_payload_box_type(link, field, SelfHostWasmBodyCarrier::I64BodyCarrier) is Option::Some(_)) == (index == 0u32), "concrete and Unit slots cannot gain a scalar box")
-          assert(self_host_linked_variant_payload_box_type(link, field, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier) is Option::None, "unknown carriers cannot gain a box")
-          assert(self_host_linked_variant_payload_box_type(link, field, SelfHostWasmBodyCarrier::ConflictingBodyCarrier) is Option::None, "carrier conflicts cannot gain a box")
-          assert(self_host_linked_variant_payload_box_type(link, field, SelfHostWasmBodyCarrier::UnitBodyCarrier) is Option::None, "Unit uses its marker not a scalar box")
+          assert((self_host_linked_variant_payload_box_type(link, field, I64BodyCarrier) is Some(_)) == (index == 0u32), "concrete and Unit slots cannot gain a scalar box")
+          assert(self_host_linked_variant_payload_box_type(link, field, UnresolvedBodyCarrier) is None, "unknown carriers cannot gain a box")
+          assert(self_host_linked_variant_payload_box_type(link, field, ConflictingBodyCarrier) is None, "carrier conflicts cannot gain a box")
+          assert(self_host_linked_variant_payload_box_type(link, field, UnitBodyCarrier) is None, "Unit uses its marker not a scalar box")
           if index == 0u32 {
-            let moved = SelfHostPlannedWasmField::{
-              role: SelfHostPlannedWasmFieldRole::WasmVariantPayloadField(variant, 1u32)
+            let moved = {
+              role: WasmVariantPayloadField(variant, 1u32)
               declaration: field.declaration
               physical_index: field.physical_index
               storage: field.storage
@@ -848,7 +851,7 @@ test "generic enum storage belongs to one declared payload position" {
               offset: field.offset
             }
             assert(!self_host_linked_generic_variant_storage(link, moved), "another slot cannot reuse a generic field certificate")
-            let changed = SelfHostPlannedWasmField::{
+            let changed = {
               role: field.role
               declaration: 18446744073709551615u64
               physical_index: field.physical_index
@@ -870,11 +873,11 @@ test "generic enum storage belongs to one declared payload position" {
 
 test "INV-002 rejects semantic errors before specialization" {
   let valid = self_host_physical_test_fragments(b"pub fn run() -> I32 {\n  7i32\n}\n")
-  assert(self_host_validate_program_inference(valid.specialization.lowering) is Option::None, "valid inference can cross the phase boundary")
+  assert(self_host_validate_program_inference(valid.specialization.lowering) is None, "valid inference can cross the phase boundary")
   let invalid = self_host_physical_test_fragments(b"pub fn run() -> I32 {\n  missing()\n}\n")
   match self_host_validate_program_inference(invalid.specialization.lowering) {
-    Option::Some(message) => assert(message.starts_with("INV-002:"), "the phase failure has a stable invariant ID")
-    Option::None => assert(false, "an unresolved name cannot cross the phase boundary")
+    Some(message) => assert(message.starts_with("INV-002:"), "the phase failure has a stable invariant ID")
+    None => assert(false, "an unresolved name cannot cross the phase boundary")
   }
 }
 
@@ -893,7 +896,7 @@ test "unselected imported namespace calls keep their errors" {
     b"pub fn value() -> I32 {\n  7i32\n}\n",
     b"import app.values as @values\npub fn run() -> I32 {\n  @values.missing()\n}\n",
   )
-  assert(self_host_validate_program_inference(link.fragments.specialization.lowering) is Option::Some(_), "an unselected namespace call must remain an error")
+  assert(self_host_validate_program_inference(link.fragments.specialization.lowering) is Some(_), "an unselected namespace call must remain an error")
 }
 
 test "Never call results do not constrain a completing branch" {
@@ -923,7 +926,7 @@ test "field assignment uses the selected field mutability" {
   )
   let module_ = self_host_planned_module_lowering_identity(invalid.specialization.lowering.modules[0u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "immutable field assignment has one exact error")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::ImmutableAssignmentTarget(_, _), "the selected field is immutable")
+  assert(module_.inferred.diagnostics[0u32] is ImmutableAssignmentTarget(_, _), "the selected field is immutable")
 }
 
 test "match with only diverging arms has a Never result" {
@@ -946,7 +949,7 @@ test "foreign namespace calls use their declared signature without a receiver" {
   )
   let module_ = self_host_planned_module_lowering_identity(invalid.specialization.lowering.modules[0u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "a foreign argument count error stays visible")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::CallArgumentCountMismatch(_, _, 1u32, 0u32, _), "foreign calls use the full logical signature")
+  assert(module_.inferred.diagnostics[0u32] is CallArgumentCountMismatch(_, _, 1u32, 0u32, _), "foreign calls use the full logical signature")
 }
 
 test "local trait implementations participate in method selection" {
@@ -964,7 +967,7 @@ test "local and imported trait competitors remain ambiguous" {
   )
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "one ambiguity must remain visible")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _), "both applicable implementations count")
+  assert(module_.inferred.diagnostics[0u32] is AmbiguousMethod(_, _, _, _, 2u32, _), "both applicable implementations count")
 }
 
 test "declared generic bounds preserve logical method evidence" {
@@ -975,7 +978,7 @@ test "declared generic bounds preserve logical method evidence" {
   let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
   let mut found = false
   for target in module_.inferred.call_targets {
-    if target is SelfHostBasicCallTarget::BoundTraitBasicCallTarget(_, _, _, _) {
+    if target is BoundTraitBasicCallTarget(_, _, _, _) {
       found = true
     }
   }
@@ -983,7 +986,7 @@ test "declared generic bounds preserve logical method evidence" {
   let invalid = self_host_physical_test_fragments(
     b"trait Read<t> {\n  fn read(self) -> t\n}\nfn read<t>(value: t) -> I64 {\n  value.read()\n}\npub fn run() -> I32 {\n  7i32\n}\n",
   )
-  assert(self_host_validate_program_inference(invalid.specialization.lowering) is Option::Some(_), "an undeclared bound cannot supply evidence")
+  assert(self_host_validate_program_inference(invalid.specialization.lowering) is Some(_), "an undeclared bound cannot supply evidence")
 }
 
 test "competing declared bounds stay ambiguous" {
@@ -992,7 +995,7 @@ test "competing declared bounds stay ambiguous" {
   )
   let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "both declared requirements must participate")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _), "declared bounds do not select the first method")
+  assert(module_.inferred.diagnostics[0u32] is AmbiguousMethod(_, _, _, _, 2u32, _), "declared bounds do not select the first method")
 }
 
 test "nested block results keep one shared type variable" {
@@ -1003,7 +1006,7 @@ test "nested block results keep one shared type variable" {
   let invalid = self_host_physical_test_fragments(
     b"pub fn run(flag: Bool) -> I32 {\n  if flag {\n    7i32\n  } else {\n    ()\n  }\n}\n",
   )
-  assert(self_host_validate_program_inference(invalid.specialization.lowering) is Option::Some(_), "a nested Unit result cannot become I32 by replacing a type cell")
+  assert(self_host_validate_program_inference(invalid.specialization.lowering) is Some(_), "a nested Unit result cannot become I32 by replacing a type cell")
 }
 
 pub fn self_host_emission_probe_bytes_length(bytes: Bytes) -> U32 {
@@ -1012,6 +1015,25 @@ pub fn self_host_emission_probe_bytes_length(bytes: Bytes) -> U32 {
 
 pub fn self_host_emission_probe_source_new() -> BytesBuilder {
   BytesBuilder::new()
+}
+
+pub fn self_host_emission_probe_source_with_capacity(capacity: U32) -> BytesBuilder {
+  BytesBuilder::with_capacity(capacity)
+}
+
+pub fn self_host_emission_probe_source_finish(source: BytesBuilder) -> Bytes {
+  source.finish()
+}
+
+pub fn self_host_emission_probe_source_append_memory(source: BytesBuilder, pointer: U32, length: U32) -> Unit {
+  assert(length <= 65536u32, "probe input chunk exceeds one memory page")
+  while 0u32 {
+    index if index < length => {
+      source.append_byte(@probe_wasm.wasm_u8_load(pointer + index))
+      continue index + 1u32
+    }
+    _ => break ()
+  }
 }
 
 pub fn self_host_emission_probe_source_append(source: BytesBuilder, value: U8) -> Unit {
@@ -1024,8 +1046,8 @@ pub fn self_host_emission_probe_compile_source(source: BytesBuilder) -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1036,8 +1058,8 @@ pub fn self_host_emission_probe_compile_source(source: BytesBuilder) -> Bytes {
 pub fn self_host_emission_probe_compile_request(source: BytesBuilder) -> Bytes {
   self_host_clear_invariant_failure()
   let request = match decode_self_host_compile_request(source.finish()) {
-    Result::Ok(value) => value
-    Result::Err(error) => {
+    Ok(value) => value
+    Err(error) => {
       assert(false, error)
       unreachable()
     }
@@ -1047,31 +1069,31 @@ pub fn self_host_emission_probe_compile_request(source: BytesBuilder) -> Bytes {
   assert(collected.diagnostics.length() == 0u32, "request manifest collection")
   let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(collected))
   match self_host_validate_program_inference(lowering) {
-    Option::Some(error) => {
+    Some(error) => {
       assert(false, error)
       unreachable()
     }
-    Option::None => {}
+    None => {}
   }
   match self_host_validate_program_lowering(lowering) {
-    Option::Some(error) => {
+    Some(error) => {
       assert(false, error)
       unreachable()
     }
-    Option::None => {}
+    None => {}
   }
   let link = self_host_plan_program_wasmgc_link(self_host_plan_program_wasmgc_fragments(self_host_plan_program_specialization(lowering, false)), false)
   self_host_physical_test_assert_clean_inference(link)
   let root = match request.root_module_index() {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "library probe root module is missing")
       unreachable()
     }
   }
   match build_self_host_linked_root_i32_module(link, root) {
-    Result::Ok(output) => output
-    Result::Err(error) => {
+    Ok(output) => output
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1087,8 +1109,8 @@ pub fn self_host_emit_bound_dispatch_probe() -> Bytes {
   let plan = self_host_plan_program_wasm_bodies(link)
   assert(plan.diagnostics.length() == 0u32, self_host_program_wasm_body_failure_report(link, plan))
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(message) => {
+    Ok(bytes) => bytes
+    Err(message) => {
       assert(false, message)
       b""
     }
@@ -1102,8 +1124,8 @@ pub fn self_host_emit_pattern_guard_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(message) => {
+    Ok(bytes) => bytes
+    Err(message) => {
       assert(false, message)
       b""
     }
@@ -1117,8 +1139,8 @@ pub fn self_host_emit_literal_guard_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(message) => {
+    Ok(bytes) => bytes
+    Err(message) => {
       assert(false, message)
       b""
     }
@@ -1132,8 +1154,8 @@ pub fn self_host_emit_solver_control_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(message) => {
+    Ok(bytes) => bytes
+    Err(message) => {
       assert(false, message)
       b""
     }
@@ -1147,8 +1169,8 @@ pub fn self_host_emit_raw_bitcast_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1162,8 +1184,8 @@ test "raw bitcast rejects a changed physical width before emission" {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(_) => assert(false, "invalid bitcast emitted a module")
-    Result::Err(error) => assert(error.contains("unsafe.bitcast requires equal concrete non-reference carriers"), error)
+    Ok(_) => assert(false, "invalid bitcast emitted a module")
+    Err(error) => assert(error.contains("unsafe.bitcast requires equal concrete non-reference carriers"), error)
   }
 }
 
@@ -1174,8 +1196,8 @@ pub fn self_host_emit_raw_opcode_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1189,8 +1211,8 @@ pub fn self_host_emit_raw_function_value_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1204,8 +1226,8 @@ pub fn self_host_emit_packed_into_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1219,8 +1241,8 @@ pub fn self_host_emit_raw_array_order_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1245,8 +1267,8 @@ pub fn self_host_emit_nested_raw_array_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1260,8 +1282,8 @@ pub fn self_host_emit_raw_array_name_collision_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1275,7 +1297,7 @@ test "explicit call type count mismatches remain diagnostics" {
   let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
   let mut found = false
   for diagnostic in module_.inferred.diagnostics {
-    if diagnostic is SelfHostBodyInferenceDiagnostic::CallTypeArgumentCountMismatch(_, _, 1u32, 2u32, _) {
+    if diagnostic is CallTypeArgumentCountMismatch(_, _, 1u32, 2u32, _) {
       found = true
     }
   }
@@ -1289,7 +1311,7 @@ test "explicit call types cannot contradict argument types" {
   let module_ = self_host_planned_module_lowering_identity(lowering.modules[0u32])
   let mut found = false
   for diagnostic in module_.inferred.diagnostics {
-    if diagnostic is SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(_) {
+    if diagnostic is BodyConstraintDiagnostic(_) {
       found = true
     }
   }
@@ -1310,22 +1332,22 @@ test "explicit method types exclude inferred owner parameters" {
 test "callable generic slots retain both spans and module identity" {
   let parameters = SelfHostCallableGenericParameters::{
     module_id: 11u64
-    owner: SelfHostHirSpan::{
+    owner: {
       start: 3u32
       length: 2u32
     }
-    method: SelfHostHirSpan::{
+    method: {
       start: 17u32
       length: 1u32
     }
     length: 3u32
   }
-  assert(parameters.slot(self_host_make_semantic_id(11u64, 3u32)) is Option::Some(0u32), "first owner parameter")
-  assert(parameters.slot(self_host_make_semantic_id(11u64, 4u32)) is Option::Some(1u32), "second owner parameter")
-  assert(parameters.slot(self_host_make_semantic_id(11u64, 17u32)) is Option::Some(2u32), "method follows owner parameters")
-  assert(parameters.slot(self_host_make_semantic_id(12u64, 17u32)) is Option::None, "another module is not the same parameter")
-  assert(parameters.slot(self_host_make_semantic_id(11u64, 5u32)) is Option::None, "span end is excluded")
-  assert(parameters.slot(self_host_make_semantic_id(11u64, 2u32)) is Option::None, "below span is excluded")
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 3u32)) is Some(0u32), "first owner parameter")
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 4u32)) is Some(1u32), "second owner parameter")
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 17u32)) is Some(2u32), "method follows owner parameters")
+  assert(parameters.slot(self_host_make_semantic_id(12u64, 17u32)) is None, "another module is not the same parameter")
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 5u32)) is None, "span end is excluded")
+  assert(parameters.slot(self_host_make_semantic_id(11u64, 2u32)) is None, "below span is excluded")
   assert(parameters.local(0u32) == 3u32 && parameters.local(1u32) == 4u32 && parameters.local(2u32) == 17u32, "slot mapping round trip")
 }
 
@@ -1336,7 +1358,7 @@ test "explicit local method types cannot be ignored" {
   let module_ = self_host_planned_module_lowering_identity(fragments.specialization.lowering.modules[0u32])
   let mut found = false
   for diagnostic in module_.inferred.diagnostics {
-    if diagnostic is SelfHostBodyInferenceDiagnostic::NoMatchingMethod(_, _, _) {
+    if diagnostic is NoMatchingMethod(_, _, _) {
       found = true
     }
   }
@@ -1353,12 +1375,12 @@ test "raw forwarding does not duplicate or reorder parameters" {
     for callable in module_.functions.callables {
       if self_host_bytes_equal(callable.name, b"good") {
         match self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) {
-          Option::Some(name) => assert(name.equals(b"i32.and"), "raw forwarding target")
-          Option::None => assert(false, "raw forwarding proof is missing")
+          Some(name) => assert(name.equals(b"i32.and"), "raw forwarding target")
+          None => assert(false, "raw forwarding proof is missing")
         }
         checked = checked + 1u32
       } else if self_host_bytes_equal(callable.name, b"duplicate") || self_host_bytes_equal(callable.name, b"reverse") {
-        assert(self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) is Option::None, "raw forwarding changed argument use")
+        assert(self_host_raw_forwarding_builtin(lowering, module_, callable.declaration) is None, "raw forwarding changed argument use")
         checked = checked + 1u32
       }
     }
@@ -1373,8 +1395,8 @@ test "raw opcode rejects a user declaration with the wrong signature" {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(_) => assert(false, "wrong raw opcode signature emitted a module")
-    Result::Err(error) => assert(error.contains("raw intrinsic input or result carrier does not match its opcode"), error)
+    Ok(_) => assert(false, "wrong raw opcode signature emitted a module")
+    Err(error) => assert(error.contains("raw intrinsic input or result carrier does not match its opcode"), error)
   }
 }
 
@@ -1385,8 +1407,8 @@ test "a diverging argument prevents raw intrinsic emission" {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(_) => {}
-    Result::Err(error) => assert(false, error)
+    Ok(_) => {}
+    Err(error) => assert(false, error)
   }
 }
 
@@ -1397,8 +1419,8 @@ pub fn self_host_emit_erased_field_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1414,8 +1436,8 @@ pub fn self_host_emit_short_constructor_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1429,8 +1451,8 @@ pub fn self_host_emit_nested_variant_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1444,8 +1466,8 @@ pub fn self_host_emit_nested_binding_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1459,8 +1481,8 @@ pub fn self_host_emit_nested_literal_probe() -> Bytes {
   let link = self_host_plan_program_wasmgc_link(fragments, false)
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_i32_module(link, 5100u64) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1472,27 +1494,27 @@ fn self_host_physical_array_library_fixture() -> Bytes {
 }
 
 pub fn self_host_emit_type_stack_probe() -> Bytes {
-  let link = self_host_physical_test_manifest_link(SelfHostProgramManifest::{
+  let link = self_host_physical_test_manifest_link({
     modules: [
-      SelfHostManifestModule::{
+      {
         path: "dew.std.option"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "option.dew"
           source: b"pub enum Option<t> {\n  None\n  Some(t)\n}\n"
           test_only: false
         }]
       },
-      SelfHostManifestModule::{
+      {
         path: "dew.std.array"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "array.dew"
           source: self_host_physical_array_library_fixture()
           test_only: false
         }]
       },
-      SelfHostManifestModule::{
+      {
         path: "app.main"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "main.dew"
           source: b"open dew.std.array\nopen dew.std.option\nenum Task {\n  Visit(I32)\n}\nfn self_host_array_pop<t>(values: Array<t>) -> Option<t> {\n  let length = values.length()\n  if length == 0u32 {\n    Option::None\n  } else {\n    let index = length - 1u32\n    let value = values.get_unchecked(index)\n    values.truncate(index)\n    Option::Some(value)\n  }\n}\nfn unit() -> Unit {\n}\nfn empty_tasks() -> Array<Task> {\n  []\n}\nfn empty_results() -> Array<I32> {\n  []\n}\nfn instantiate(root: I32) -> I32 {\n  let tasks = empty_tasks()\n  let results = empty_results()\n  tasks.push(Task::Visit(root))\n  let _ = while tasks.length() {\n    length => if length > 0u32 {\n      let task = match self_host_array_pop(tasks) {\n        Option::Some(value) => value\n        Option::None => Task::Visit(0i32)\n      }\n      match task {\n        Task::Visit(value) => results.push(-value - 2i32)\n      }\n      continue tasks.length()\n    } else {\n      break unit()\n    }\n  }\n  if results.length() == 1u32 {\n    results.get_unchecked(0u32)\n  } else {\n    0i32\n  }\n}\npub fn main() -> I32 {\n  instantiate(3i32) * 100i32 + instantiate(5i32)\n}\n"
           test_only: false
@@ -1502,8 +1524,8 @@ pub fn self_host_emit_type_stack_probe() -> Bytes {
   })
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_root_i32_module(link, 2u32) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       let report = StringBuilder::new()
       report.append(error)
       report.append(self_host_physical_test_link_trace(link))
@@ -1525,8 +1547,8 @@ pub fn self_host_emit_fixed_array_field_probe() -> Bytes {
   )
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_root_i32_module(link, 1u32) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1541,8 +1563,8 @@ pub fn self_host_emit_fixed_array_method_body_probe() -> Bytes {
   )
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_root_i32_module(link, 1u32) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1557,8 +1579,8 @@ pub fn self_host_emit_array_size_method_body_probe() -> Bytes {
   )
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_root_i32_module(link, 1u32) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1566,27 +1588,27 @@ pub fn self_host_emit_array_size_method_body_probe() -> Bytes {
 }
 
 pub fn self_host_emit_scalar_iterator_probe() -> Bytes {
-  let link = self_host_physical_test_manifest_link(SelfHostProgramManifest::{
+  let link = self_host_physical_test_manifest_link({
     modules: [
-      SelfHostManifestModule::{
+      {
         path: "dew.std.option"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "option.dew"
           source: b"pub enum Option<t> {\n  None\n  Some(t)\n}\n"
           test_only: false
         }]
       },
-      SelfHostManifestModule::{
+      {
         path: "dew.std.array"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "array.dew"
           source: self_host_physical_array_library_fixture()
           test_only: false
         }]
       },
-      SelfHostManifestModule::{
+      {
         path: "app.main"
-        files: [SelfHostManifestFile::{
+        files: [{
           path: "main.dew"
           source: b"open dew.std.option\nopen dew.std.array\npub fn main() -> I32 {\n  let values = []\n  values.push(1i32)\n  values.push(2i32)\n  values.push(3i32)\n  let mut total = 0i32\n  for value in values {\n    total = total + value\n  }\n  total\n}\n"
           test_only: false
@@ -1596,8 +1618,8 @@ pub fn self_host_emit_scalar_iterator_probe() -> Bytes {
   })
   self_host_physical_test_assert_clean_inference(link)
   match build_self_host_linked_root_i32_module(link, 2u32) {
-    Result::Ok(bytes) => bytes
-    Result::Err(error) => {
+    Ok(bytes) => bytes
+    Err(error) => {
       assert(false, error)
       b""
     }
@@ -1614,10 +1636,10 @@ test "a method receiver retains its field access" {
   let mut checked = 0u32
   for expression in module_.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => {
+      PlannedDirectCall(_, target, _, _) => {
         match self_host_linked_direct_receiver_expression(module_, target) {
-          Option::Some(receiver) => assert(module_.expressions[receiver].kind is SelfHostPlannedExpressionKind::PlannedFieldGet(_, _, _), "the receiver is holder.cell, not holder")
-          Option::None => assert(false, "a selected method must retain its receiver")
+          Some(receiver) => assert(module_.expressions[receiver].kind is PlannedFieldGet(_, _, _), "the receiver is holder.cell, not holder")
+          None => assert(false, "a selected method must retain its receiver")
         }
         checked = checked + 1u32
       }
@@ -1644,19 +1666,19 @@ test "field and method dependencies preserve source order" {
 test "imported fixed array permutation keeps its scalar operands" {
   let collected = self_host_collect_program_manifest(
     5100u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.arr"
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "arr.dew"
             source: b"pub struct WasmArray<t> {}\npub builtin wasm_array_get<t>(value: WasmArray<t>, index: U32) -> t = \"array_get\"\npub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = \"array_new\"\npub builtin wasm_array_set<t>(value: WasmArray<t>, index: U32, item: t) -> Unit = \"array_set\"\npub type FixedArray<t> = WasmArray<t>\nimpl<t> FixedArray<t> {\n  fn make(length: U32, value: t) -> FixedArray<t> {\n    wasm_array_new(length, value)\n  }\n  fn get_unchecked(self, index: U32) -> t {\n    wasm_array_get(self, index)\n  }\n  fn set_unchecked(self, index: U32, value: t) -> Unit {\n    wasm_array_set(self, index, value)\n  }\n}\n"
             test_only: false
           }]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.main"
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "main.dew"
             source: b"open app.arr\nfn make_input() -> FixedArray<U32> {\n  FixedArray::make(16u32, 0u32)\n}\npub fn run(message: FixedArray<U32>) -> FixedArray<U32> {\n  let permutation = make_input()\n  let output = FixedArray::make(16u32, 0u32)\n  while 0u32 {\n    index if index < 16u32 => {\n      output.set_unchecked(index, message.get_unchecked(permutation.get_unchecked(index)))\n      continue index + 1u32\n    }\n    _ => break output\n  }\n}\n"
             test_only: false
@@ -1690,19 +1712,19 @@ test "imported fixed array permutation keeps its scalar operands" {
 test "imported static factories use owner identity and arbitrary names" {
   let collected = self_host_collect_program_manifest(
     5200u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.ring"
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "ring.dew"
             source: b"pub struct WasmArray<t> {}\npub builtin wasm_array_new<t>(length: U32, value: t) -> WasmArray<t> = \"array_new\"\npub type Ring<t> = WasmArray<t>\npub struct Other {}\nimpl Other {\n  fn create(length: U32, value: I64) -> Ring<I64> {\n    wasm_array_new(length, value)\n  }\n}\nimpl<t> Ring<t> {\n  fn create(length: U32, value: t) -> Ring<t> {\n    wasm_array_new(length, value)\n  }\n}\n"
             test_only: false
           }]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.main"
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "main.dew"
             source: b"open app.ring\npub fn run() -> Ring<I64> {\n  Ring::create(1u32, 7i64)\n}\n"
             test_only: false
@@ -1732,8 +1754,8 @@ test "imported static factories use owner identity and arbitrary names" {
   let body = match self_host_program_wasm_body_plan_for_identity(
     plan, 5201u64, 5201u64 << 32u64, 4294967295u32,
   ) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "the run body must be present")
       unreachable()
     }
@@ -1742,8 +1764,8 @@ test "imported static factories use owner identity and arbitrary names" {
   let callable = match self_host_program_specialization_program_callable(
     link.fragments.specialization.lowering, body.calls[0u32].declaration,
   ) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "the selected factory must be present")
       unreachable()
     }
@@ -1760,19 +1782,19 @@ test "imported static factories use owner identity and arbitrary names" {
 fn self_host_physical_test_trait_link(source: Bytes) -> SelfHostPlannedProgramWasmGCLink {
   let collected = self_host_collect_program_manifest(
     5300u64,
-    SelfHostProgramManifest::{
+    {
       modules: [
-        SelfHostManifestModule::{
+        {
           path: "app.convert"
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "convert.dew"
             source: source
             test_only: false
           }]
         },
-        SelfHostManifestModule::{
+        {
           path: "app.main"
-          files: [SelfHostManifestFile::{
+          files: [{
             path: "main.dew"
             source: b"open app.convert\npub fn run(value: U32) -> U64 {\n  value.convert()\n}\n"
             test_only: false
@@ -1817,7 +1839,7 @@ test "ambiguous concrete trait methods stay ambiguous" {
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "one method ambiguity must be reported")
   assert(
-    module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _),
+    module_.inferred.diagnostics[0u32] is AmbiguousMethod(_, _, _, _, 2u32, _),
     "neither compatible trait method may win by link order",
   )
 }
@@ -1840,7 +1862,7 @@ test "unproved generic trait candidates cannot disappear" {
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "unproved evidence must produce a diagnostic")
   assert(
-    module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::UnsupportedExpressionInference(_, _),
+    module_.inferred.diagnostics[0u32] is UnsupportedExpressionInference(_, _),
     "a concrete competitor must not hide a candidate that still needs evidence",
   )
 }
@@ -1851,5 +1873,5 @@ test "unbounded generic trait competitors remain ambiguous" {
   )
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "both viable trait methods must remain visible")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::AmbiguousMethod(_, _, _, _, 2u32, _), "generic parameters alone do not remove a viable method")
+  assert(module_.inferred.diagnostics[0u32] is AmbiguousMethod(_, _, _, _, 2u32, _), "generic parameters alone do not remove a viable method")
 }

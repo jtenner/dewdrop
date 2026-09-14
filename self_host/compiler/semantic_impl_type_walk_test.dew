@@ -1,8 +1,8 @@
 open dew.std.testing
 
 fn self_host_impl_walk_context(resolved: SelfHostResolvedModuleTypes, parameters: SelfHostHirSpan, arguments: SelfHostHirSpan) -> SelfHostImplTypeContext {
-  SelfHostImplTypeContext::{
-    imported_parameter_ids: Option::None
+  {
+    imported_parameter_ids: None
     owner_parameters: parameters
     owner_arguments: arguments
     method_parameters: self_host_empty_hir_span(0u32)
@@ -16,7 +16,7 @@ test "implementation comparison handles deep shared graphs" {
   let collected = self_host_collect_bytes(6010u64, b"")
   let resolved = self_host_resolve_module_types(collected)
   let context = self_host_impl_walk_context(resolved, self_host_empty_hir_span(0u32), self_host_empty_hir_span(0u32))
-  let mut left = resolved.primitive(SelfHostPrimitiveType::I32Type)
+  let mut left = resolved.primitive(I32Type)
   let mut right = left
   let first = resolved.type_arguments.length()
   let _ = while 0u32 {
@@ -27,12 +27,12 @@ test "implementation comparison handles deep shared graphs" {
       resolved.type_arguments.push(right)
       resolved.type_arguments.push(right)
       left = resolved.types.length()
-      resolved.types.push(SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+      resolved.types.push(ProductType({
         start: start
         length: 2u32
       }))
       right = resolved.types.length()
-      resolved.types.push(SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+      resolved.types.push(ProductType({
         start: start + 2u32
         length: 2u32
       }))
@@ -42,7 +42,7 @@ test "implementation comparison handles deep shared graphs" {
     }
   }
   assert(self_host_impl_signature_types_equal(collected, resolved, left, context, right, context), "deep shared graphs are equal")
-  resolved.type_arguments[first + 2u32] = resolved.primitive(SelfHostPrimitiveType::I64Type)
+  resolved.type_arguments[first + 2u32] = resolved.primitive(I64Type)
   assert(!self_host_impl_signature_types_equal(collected, resolved, left, context, right, context), "deep mismatch remains visible")
 }
 
@@ -50,24 +50,24 @@ test "same product identity does not hide different substitutions" {
   let collected = self_host_collect_bytes(6011u64, b"struct Box<t> {}\n")
   let resolved = self_host_resolve_module_types(collected)
   let start = resolved.type_arguments.length()
-  resolved.type_arguments.push(resolved.primitive(SelfHostPrimitiveType::I32Type))
-  resolved.type_arguments.push(resolved.primitive(SelfHostPrimitiveType::I64Type))
+  resolved.type_arguments.push(resolved.primitive(I32Type))
+  resolved.type_arguments.push(resolved.primitive(I64Type))
   resolved.type_arguments.push(resolved.generic_parameter_types[0u32])
-  resolved.type_arguments.push(resolved.primitive(SelfHostPrimitiveType::BoolType))
+  resolved.type_arguments.push(resolved.primitive(BoolType))
   let root = resolved.types.length()
-  resolved.types.push(SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+  resolved.types.push(ProductType({
     start: start + 2u32
     length: 2u32
   }))
-  let parameters = SelfHostHirSpan::{
+  let parameters = {
     start: 0u32
     length: 1u32
   }
-  let left = self_host_impl_walk_context(resolved, parameters, SelfHostHirSpan::{
+  let left = self_host_impl_walk_context(resolved, parameters, {
     start: start
     length: 1u32
   })
-  let right = self_host_impl_walk_context(resolved, parameters, SelfHostHirSpan::{
+  let right = self_host_impl_walk_context(resolved, parameters, {
     start: start + 1u32
     length: 1u32
   })
@@ -77,8 +77,8 @@ test "same product identity does not hide different substitutions" {
 
 fn self_host_assert_impl_walk_failure(result: Result<Bool, SelfHostInvariantFailure>, module_id: U64, root: U32, code: U32, expected: U32, actual: U32, detail: U32) -> Unit {
   match result {
-    Result::Ok(_) => assert(false, "malformed graph must have a diagnostic")
-    Result::Err(failure) => {
+    Ok(_) => assert(false, "malformed graph must have a diagnostic")
+    Err(failure) => {
       assert(failure.code == code && failure.phase == 3u32, "exact failure code and phase")
       assert(failure.module_id == module_id && failure.expression == root, "exact module and type")
       assert(failure.declaration == 0u64 && failure.body == 0u64, "exact declaration and body")
@@ -97,15 +97,15 @@ test "implementation comparison checks both graphs before error recovery" {
   let start = resolved.type_arguments.length()
   resolved.type_arguments.push(resolved.error_type)
   resolved.type_arguments.push(root)
-  resolved.types.push(SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+  resolved.types.push(ProductType({
     start: start
     length: 2u32
   }))
   self_host_assert_impl_walk_failure(self_host_check_impl_signature_types_equal(collected, resolved, root, context, root, context), 6012u64, root, 211u32, 0u32, root, 1u32)
   self_host_assert_impl_walk_failure(self_host_check_impl_signature_types_equal(collected, resolved, resolved.error_type, context, root, context), 6012u64, root, 211u32, 0u32, root, 1u32)
-  resolved.type_arguments[start + 1u32] = resolved.primitive(SelfHostPrimitiveType::I32Type)
+  resolved.type_arguments[start + 1u32] = resolved.primitive(I32Type)
   assert(self_host_impl_signature_types_equal(collected, resolved, root, context, root, context), "valid graph after cycle removal")
-  resolved.types[root] = SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+  resolved.types[root] = ProductType({
     start: resolved.type_arguments.length()
     length: 1u32
   })
@@ -120,16 +120,16 @@ test "implementation substitutions diagnose cycles and invalid targets" {
   let start = resolved.type_arguments.length()
   resolved.type_arguments.push(second)
   resolved.type_arguments.push(first)
-  let context = self_host_impl_walk_context(resolved, SelfHostHirSpan::{
+  let context = self_host_impl_walk_context(resolved, {
     start: 0u32
     length: 2u32
-  }, SelfHostHirSpan::{
+  }, {
     start: start
     length: 2u32
   })
   self_host_assert_impl_walk_failure(self_host_check_impl_signature_types_equal(collected, resolved, first, context, first, context), 6013u64, first, 211u32, 0u32, first, 1u32)
-  resolved.type_arguments[start + 1u32] = resolved.primitive(SelfHostPrimitiveType::I32Type)
-  assert(self_host_impl_signature_types_equal(collected, resolved, first, context, resolved.primitive(SelfHostPrimitiveType::I32Type), context), "valid substitution chain")
+  resolved.type_arguments[start + 1u32] = resolved.primitive(I32Type)
+  assert(self_host_impl_signature_types_equal(collected, resolved, first, context, resolved.primitive(I32Type), context), "valid substitution chain")
   resolved.type_arguments[start] = resolved.types.length()
   self_host_assert_impl_walk_failure(self_host_check_impl_signature_types_equal(collected, resolved, first, context, first, context), 6013u64, first, 104u32, resolved.types.length(), resolved.types.length(), 0u32)
 }
@@ -138,11 +138,11 @@ test "EVD-211 implementation type cycles retain the type identity" expect_trap "
   let collected = self_host_collect_bytes(6014u64, b"")
   let resolved = self_host_resolve_module_types(collected)
   let context = self_host_impl_walk_context(resolved, self_host_empty_hir_span(0u32), self_host_empty_hir_span(0u32))
-  let root = resolved.primitive(SelfHostPrimitiveType::I32Type)
+  let root = resolved.primitive(I32Type)
   let start = resolved.type_arguments.length()
   resolved.type_arguments.push(root)
   assert(self_host_impl_signature_types_equal(collected, resolved, root, context, root, context), "valid graph before mutation")
-  resolved.types[root] = SelfHostResolvedType::ProductType(SelfHostHirSpan::{
+  resolved.types[root] = ProductType({
     start: start
     length: 1u32
   })

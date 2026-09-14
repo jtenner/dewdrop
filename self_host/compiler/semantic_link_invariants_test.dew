@@ -10,7 +10,7 @@ fn self_host_link_invariant_fixture() -> SelfHostPlannedProgramWasmGCLink {
 
 fn self_host_link_test_replace_function(link: SelfHostPlannedProgramWasmGCLink, index: U32, fragment: U32, declaration: U64) -> Unit {
   let original = link.functions[0u32]
-  link.functions[0u32] = SelfHostPlannedProgramWasmFunction::{
+  link.functions[0u32] = {
     module_index: original.module_index
     fragment_index: fragment
     declaration: declaration
@@ -23,7 +23,7 @@ fn self_host_link_test_replace_function(link: SelfHostPlannedProgramWasmGCLink, 
 
 test "link invariant fixture is valid before mutation" {
   let link = self_host_link_invariant_fixture()
-  assert(self_host_validate_program_wasmgc_link(link) is Option::None, "valid link")
+  assert(self_host_validate_program_wasmgc_link(link) is None, "valid link")
 }
 
 test "LNK-502 linked function index must match its table slot" expect_trap "unreachable" {
@@ -53,7 +53,7 @@ test "LNK-503 module type base cannot be missing" expect_trap "unreachable" {
 test "LNK-502 linked type index must match its table slot" expect_trap "unreachable" {
   let link = self_host_link_invariant_fixture()
   let original = link.types[0u32]
-  link.types[0u32] = SelfHostPlannedProgramWasmType::{
+  link.types[0u32] = {
     module_index: original.module_index
     fragment_index: original.fragment_index
     type_index: 99u32
@@ -64,7 +64,7 @@ test "LNK-502 linked type index must match its table slot" expect_trap "unreacha
 test "LNK-504 linked type fragment must match its owner" expect_trap "unreachable" {
   let link = self_host_link_invariant_fixture()
   let original = link.types[0u32]
-  link.types[0u32] = SelfHostPlannedProgramWasmType::{
+  link.types[0u32] = {
     module_index: original.module_index
     fragment_index: 99u32
     type_index: original.type_index

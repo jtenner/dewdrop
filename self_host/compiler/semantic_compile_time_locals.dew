@@ -2,23 +2,23 @@ open dew.std.array
 
 fn self_host_compile_time_push_pattern(module_: SelfHostPlannedModuleLowering, pattern: U32, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
   match module_.patterns[pattern].source {
-    SelfHostHirPattern::WildcardPattern(_) => {}
-    SelfHostHirPattern::BindingPattern(_, _) => {}
-    SelfHostHirPattern::ImportAliasPattern(_, _) => {}
-    SelfHostHirPattern::RestPattern(_) => {}
-    SelfHostHirPattern::LiteralPattern(value, _) => work.push(SelfHostCompileTimeReachTask::ExpressionCompileTimeReach(value))
-    SelfHostHirPattern::QualifiedPattern(base, _, _) => work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(base))
-    SelfHostHirPattern::TuplePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, Option::Some(base), children, false, work)
-    SelfHostHirPattern::ProductPattern(children, _) => self_host_compile_time_push_pattern_children(module_, Option::None, children, false, work)
-    SelfHostHirPattern::AlternativePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, Option::Some(base), children, false, work)
-    SelfHostHirPattern::StructPattern(base, fields, _, _, _) => self_host_compile_time_push_pattern_children(module_, Option::Some(base), fields, true, work)
+    WildcardPattern(_) => {}
+    BindingPattern(_, _) => {}
+    ImportAliasPattern(_, _) => {}
+    RestPattern(_) => {}
+    LiteralPattern(value, _) => work.push(ExpressionCompileTimeReach(value))
+    QualifiedPattern(base, _, _) => work.push(PatternCompileTimeReach(base))
+    TuplePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, Some(base), children, false, work)
+    ProductPattern(children, _) => self_host_compile_time_push_pattern_children(module_, None, children, false, work)
+    AlternativePattern(base, children, _) => self_host_compile_time_push_pattern_children(module_, Some(base), children, false, work)
+    StructPattern(base, fields, _, _, _) => self_host_compile_time_push_pattern_children(module_, Some(base), fields, true, work)
   }
 }
 
 fn self_host_compile_time_push_pattern_children(module_: SelfHostPlannedModuleLowering, base: Option<U32>, children: SelfHostHirSpan, fields: Bool, work: Array<SelfHostCompileTimeReachTask>) -> Unit {
   match base {
-    Option::Some(value) => work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(value))
-    Option::None => {}
+    Some(value) => work.push(PatternCompileTimeReach(value))
+    None => {}
   }
   let length = if fields {
     module_.pattern_fields.length()
@@ -33,7 +33,7 @@ fn self_host_compile_time_push_pattern_children(module_: SelfHostPlannedModuleLo
       } else {
         module_.pattern_children[children.start + index]
       }
-      work.push(SelfHostCompileTimeReachTask::PatternCompileTimeReach(child))
+      work.push(PatternCompileTimeReach(child))
       continue index + 1u32
     } else {
       break self_host_semantic_unit()
@@ -57,8 +57,8 @@ fn self_host_prune_compile_time_scope_locals(module_: SelfHostPlannedModuleLower
       let id = expressions.start + offset
       if reached[id] {
         match module_.expressions[id].kind {
-          SelfHostPlannedExpressionKind::PlannedLocalGet(local) => self_host_compile_time_mark_local(live, local)
-          SelfHostPlannedExpressionKind::PlannedLocalSet(local, _) => self_host_compile_time_mark_local(live, local)
+          PlannedLocalGet(local) => self_host_compile_time_mark_local(live, local)
+          PlannedLocalSet(local, _) => self_host_compile_time_mark_local(live, local)
           _ => {}
         }
       }
@@ -75,7 +75,7 @@ fn self_host_prune_compile_time_scope_locals(module_: SelfHostPlannedModuleLower
         let _ = while 0u32 {
           index => if index < items.length {
             match module_.block_items[items.start + index].kind {
-              SelfHostPlannedBlockItemKind::PlannedLetItem(local, _, _) => self_host_compile_time_mark_local(live, local)
+              PlannedLetItem(local, _, _) => self_host_compile_time_mark_local(live, local)
               _ => {}
             }
             continue index + 1u32
@@ -93,7 +93,7 @@ fn self_host_prune_compile_time_scope_locals(module_: SelfHostPlannedModuleLower
     offset => if offset < patterns.length {
       let id = patterns.start + offset
       let pattern = module_.patterns[id]
-      module_.patterns[id] = SelfHostPlannedPattern::{
+      module_.patterns[id] = {
         elided: !live_patterns[id]
         type_: pattern.type_
         shape: pattern.shape
@@ -104,7 +104,7 @@ fn self_host_prune_compile_time_scope_locals(module_: SelfHostPlannedModuleLower
       }
       if live_patterns[id] {
         match module_.patterns[id].reference {
-          SelfHostBodyPatternReference::PatternBindingReference(local) => self_host_compile_time_mark_local(live, local)
+          PatternBindingReference(local) => self_host_compile_time_mark_local(live, local)
           _ => {}
         }
       }
@@ -117,11 +117,11 @@ fn self_host_prune_compile_time_scope_locals(module_: SelfHostPlannedModuleLower
     offset => if offset < locals.length {
       let id = locals.start + offset
       let local = module_.locals[id]
-      module_.locals[id] = SelfHostPlannedLocal::{
+      module_.locals[id] = {
         body: local.body
         lambda: local.lambda
         local_id: local.local_id
-        elided: !(local.kind is SelfHostBodyLocalKind::ParameterLocal) && !live[offset]
+        elided: !(local.kind is ParameterLocal) && !live[offset]
         kind: local.kind
         mutable_: local.mutable_
         type_: local.type_

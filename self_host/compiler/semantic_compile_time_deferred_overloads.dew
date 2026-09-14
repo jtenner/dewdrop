@@ -18,8 +18,8 @@ impl SelfHostBasicBodyInferencer {
       self.collected.parameters_of(declaration)
     } else {
       match self.imported_callable(declaration) {
-        Option::Some(callable) => callable.parameters
-        Option::None => return false
+        Some(callable) => callable.parameters
+        None => return false
       }
     }
     if parameters.length != arguments.length {
@@ -27,13 +27,13 @@ impl SelfHostBasicBodyInferencer {
     }
     let result = if local {
       match self.local_callable_index_of_declaration(declaration) {
-        Option::Some(callable) => self.resolved.callable_return_types[callable]
-        Option::None => return false
+        Some(callable) => self.resolved.callable_return_types[callable]
+        None => return false
       }
     } else {
       match self.imported_callable(declaration) {
-        Option::Some(callable) => callable.result_type
-        Option::None => return false
+        Some(callable) => callable.result_type
+        None => return false
       }
     }
     let snapshot = self.solver.snapshot()
@@ -41,8 +41,8 @@ impl SelfHostBasicBodyInferencer {
       self.begin_signature_instantiation(declaration)
     } else {
       match self.imported_callable(declaration) {
-        Option::Some(callable) => self.begin_imported_signature_instantiation(callable)
-        Option::None => {
+        Some(callable) => self.begin_imported_signature_instantiation(callable)
+        None => {
           self_host_assert_compiler_invariant(false, "LNK-504 deferred overload declaration disappeared")
           unreachable()
         }
@@ -109,12 +109,12 @@ impl SelfHostBasicBodyInferencer {
         self_host_assert_compiler_invariant(steps < self.collected.value_binding_candidates.length(), "ARN-104 overload candidate cycle")
         steps = steps + 1u32
         let candidate = self.collected.value_binding_candidates[index]
-        if self.local_callable_index_of_declaration(candidate.declaration) is Option::Some(_) {
+        if self.local_callable_index_of_declaration(candidate.declaration) is Some(_) {
           candidates.push(candidate.declaration)
         }
         match candidate.next {
-          Option::Some(next) => continue next
-          Option::None => break self_host_semantic_unit()
+          Some(next) => continue next
+          None => break self_host_semantic_unit()
         }
       }
     }

@@ -11,18 +11,18 @@ test "basic inference compaction removes unreachable solver terms" {
   let names = self_host_resolve_module_names(collected)
   let inferred = self_host_infer_basic_module_bodies(collected, resolved, names)
   let body = match inferred.body(collected.bodies[1u32].id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let baseline = self_host_compact_basic_inferred_body(body)
   let dead_argument_start = body.type_arguments.length()
   body.type_arguments.push(-2i32)
-  body.types.push(SelfHostBodyTypeTerm::BodyVariableType(4000u32))
-  body.types.push(SelfHostBodyTypeTerm::BodyAppliedType(
+  body.types.push(BodyVariableType(4000u32))
+  body.types.push(BodyAppliedType(
     -2i32,
-    SelfHostHirSpan::{
+    {
       start: dead_argument_start
       length: 1u32
     },
@@ -51,18 +51,18 @@ test "basic inference compaction preserves a marked resolved solver term" {
   let names = self_host_resolve_module_names(collected)
   let inferred = self_host_infer_basic_module_bodies(collected, resolved, names)
   let body = match inferred.body(collected.bodies[0u32].id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let source_type = resolved.parameter_types[0u32]
   let marked = body.types.length()
-  body.types.push(SelfHostBodyTypeTerm::BodyResolvedType(source_type))
+  body.types.push(BodyResolvedType(source_type))
   body.local_types[0u32] = self_host_body_u32_to_i32(marked)
   let compact = self_host_compact_basic_inferred_body(body)
   match compact.type_term(compact.local_types[0u32]) {
-    SelfHostBodyTypeTerm::BodyResolvedType(actual) => assert(
+    BodyResolvedType(actual) => assert(
       self_host_u32_equal(actual, source_type),
       "resolved type identity",
     )
@@ -81,8 +81,8 @@ test "basic inference compaction keeps every published positive type valid" {
     self_host_infer_basic_module_bodies(collected, resolved, names),
   )
   let body = match inferred.body(collected.bodies[0u32].id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }

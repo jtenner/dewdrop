@@ -15,38 +15,38 @@ fn self_host_plan_capture_accesses(link: SelfHostPlannedProgramWasmGCLink, modul
     return result
   }
   let position = match self_host_linked_lambda_position(module_, lambda_id) {
-    Option::Some(value) => value
-    Option::None => self_host_physical_scratch_failure(module_, body, 4294967295u32, 6u32, 610u32, 1u64, 0u64, u32_into_u64(lambda_id))
+    Some(value) => value
+    None => self_host_physical_scratch_failure(module_, body, 4294967295u32, 6u32, 610u32, 1u64, 0u64, u32_into_u64(lambda_id))
   }
   let lambda = module_.lambdas[position]
   self_host_capture_cell_plan_check(self_host_array_span_is_valid(lambda.captures.start, lambda.captures.length, module_.captures.length()), module_, body, 6u32, 101u32,
     u32_into_u64(module_.captures.length()), u32_into_u64(lambda.captures.length), lambda_id)
   let fragments = link.fragments.modules[module_index]
-  let mut selected = Option::None
+  let mut selected = None
   for linked in link.types {
     if linked.module_index == module_index {
       self_host_capture_cell_plan_check(linked.fragment_index < fragments.physical_types.length(), module_, body, 6u32, 504u32,
         u32_into_u64(fragments.physical_types.length()), u32_into_u64(linked.fragment_index), lambda_id)
       match fragments.physical_types[linked.fragment_index].kind {
-        SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmLambdaClosureType(id, request) => if id == lambda_id && request == specialization {
-          self_host_capture_cell_plan_check(!(selected is Option::Some(_)), module_, body, 6u32, 504u32, 1u64, 2u64, lambda_id)
-          selected = Option::Some(linked)
+        PlannedWasmLambdaClosureType(id, request) => if id == lambda_id && request == specialization {
+          self_host_capture_cell_plan_check(!(selected is Some(_)), module_, body, 6u32, 504u32, 1u64, 2u64, lambda_id)
+          selected = Some(linked)
         }
         _ => {}
       }
     }
   }
   let linked = match selected {
-    Option::Some(value) => value
-    Option::None => self_host_physical_scratch_failure(module_, body, 4294967295u32, 6u32, 610u32, 1u64, 0u64, u32_into_u64(lambda_id))
+    Some(value) => value
+    None => self_host_physical_scratch_failure(module_, body, 4294967295u32, 6u32, 610u32, 1u64, 0u64, u32_into_u64(lambda_id))
   }
   let physical = fragments.physical_types[linked.fragment_index]
   self_host_capture_cell_plan_check(self_host_array_span_is_valid(physical.fields.start, physical.fields.length, fragments.fields.length()), module_, body, 6u32, 101u32,
     u32_into_u64(fragments.fields.length()), u32_into_u64(physical.fields.length), lambda_id)
   self_host_capture_cell_plan_check(physical.fields.length > 0u32, module_, body, 6u32, 504u32, 1u64, 0u64, lambda_id)
   let entry = fragments.fields[physical.fields.start]
-  let valid_entry = entry.role is SelfHostPlannedWasmFieldRole::WasmClosureEntryField &&
-    entry.physical_index == 0u32 && !entry.mutable_ && entry.storage is SelfHostPlannedWasmStorageType::WasmNullableFuncRefStorage
+  let valid_entry = entry.role is WasmClosureEntryField &&
+    entry.physical_index == 0u32 && !entry.mutable_ && entry.storage is WasmNullableFuncRefStorage
   self_host_capture_cell_plan_check(valid_entry, module_, body, 6u32, 504u32, 1u64, self_host_body_freeze_bool(valid_entry), lambda_id)
   let mut field_count = 1u32
   while 0u32 {
@@ -59,27 +59,27 @@ fn self_host_plan_capture_accesses(link: SelfHostPlannedProgramWasmGCLink, modul
       self_host_capture_cell_plan_check(error == 0u32, module_, body, 6u32, 301u32, 0u64, u32_into_u64(error), id)
       let erased = !self_host_capture_has_value(shape)
       let mut field_index = 4294967295u32
-      let mut field_storage = Option::None
+      let mut field_storage = None
       let mut cell_type = 4294967295u32
-      let mut cell_storage = Option::None
+      let mut cell_storage = None
       if !erased {
         while 0u32 {
           offset if offset < physical.fields.length => {
             let field = fragments.fields[physical.fields.start + offset]
             match field.role {
-              SelfHostPlannedWasmFieldRole::WasmLambdaCaptureField(owner, candidate) => if owner == lambda_id && candidate == id {
+              WasmLambdaCaptureField(owner, candidate) => if owner == lambda_id && candidate == id {
                 self_host_capture_cell_plan_check(field_index == 4294967295u32, module_, body, 6u32, 504u32, 1u64, 2u64, id)
                 self_host_capture_cell_plan_check(field.physical_index == field_count && field.physical_index == offset && !field.mutable_, module_, body, 6u32, 504u32,
                   u32_into_u64(field_count), u32_into_u64(field.physical_index), id)
                 let expected_storage = if capture.mutable_ {
-                  SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
+                  WasmNullableEqRefStorage
                 } else {
                   self_host_wasmgc_storage_type(shape)
                 }
                 self_host_capture_cell_plan_check(self_host_program_representation_storage_code(field.storage) == self_host_program_representation_storage_code(expected_storage), module_, body, 6u32, 710u32,
-                  self_host_body_freeze_storage(Option::Some(expected_storage)), self_host_body_freeze_storage(Option::Some(field.storage)), id)
+                  self_host_body_freeze_storage(Some(expected_storage)), self_host_body_freeze_storage(Some(field.storage)), id)
                 field_index = field.physical_index
-                field_storage = Option::Some(field.storage)
+                field_storage = Some(field.storage)
               }
               _ => {}
             }
@@ -91,16 +91,16 @@ fn self_host_plan_capture_accesses(link: SelfHostPlannedProgramWasmGCLink, modul
         field_count = field_count + 1u32
         if capture.mutable_ {
           let source = match self_host_capture_source_local(module_, capture.source) {
-            Option::Some(value) => value
-            Option::None => self_host_physical_scratch_failure(module_, body, 4294967295u32, 6u32, 104u32, 1u64, 0u64, u32_into_u64(id))
+            Some(value) => value
+            None => self_host_physical_scratch_failure(module_, body, 4294967295u32, 6u32, 104u32, 1u64, 0u64, u32_into_u64(id))
           }
           let cell = self_host_capture_cell_storage_record(link, module_, body, module_index, specialization, source,
             self_host_body_carrier_from_shape(self_host_physical_scalar_shape(shape)))
           cell_type = cell.type_index
-          cell_storage = Option::Some(cell.storage)
+          cell_storage = Some(cell.storage)
         }
       }
-      result.push(SelfHostPhysicalCaptureAccessPlan::{
+      result.push({
         capture: id
         source: capture.source
         erased: erased
@@ -120,7 +120,7 @@ fn self_host_plan_capture_accesses(link: SelfHostPlannedProgramWasmGCLink, modul
 }
 
 fn self_host_capture_access(plan: SelfHostPlannedPhysicalBodyCarrierPlan, capture_id: U32) -> SelfHostPhysicalCaptureAccessPlan {
-  let _ = self_host_assert_compiler_invariant_with_failure(capture_id < plan.capture_accesses.length(), SelfHostInvariantFailure::{
+  let _ = self_host_assert_compiler_invariant_with_failure(capture_id < plan.capture_accesses.length(), {
     code: 102u32
     phase: 7u32
     module_id: plan.module_id
@@ -132,7 +132,7 @@ fn self_host_capture_access(plan: SelfHostPlannedPhysicalBodyCarrierPlan, captur
     detail: u32_into_u64(plan.lambda)
   }, "capture access requires its frozen lambda entry")
   let access = plan.capture_accesses[capture_id]
-  let _ = self_host_assert_compiler_invariant_with_failure(access.capture == capture_id, SelfHostInvariantFailure::{
+  let _ = self_host_assert_compiler_invariant_with_failure(access.capture == capture_id, {
     code: 106u32
     phase: 7u32
     module_id: plan.module_id
@@ -153,9 +153,9 @@ fn self_host_capture_access_storage(plan: SelfHostPlannedPhysicalBodyCarrierPlan
     access.field_storage
   }
   match selected {
-    Option::Some(value) => value
-    Option::None => {
-      let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    Some(value) => value
+    None => {
+      let _ = self_host_assert_compiler_invariant_with_failure(false, {
         code: 610u32
         phase: 7u32
         module_id: plan.module_id

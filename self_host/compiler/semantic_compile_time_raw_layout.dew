@@ -16,30 +16,30 @@ fn self_host_compile_time_raw_align(size: U32, alignment: U32) -> Option<U32> {
     alignment - remainder
   }
   if padding > 4294967295u32 - size {
-    Option::None
+    None
   } else {
-    Option::Some(size + padding)
+    Some(size + padding)
   }
 }
 
 // Explicit linear-memory tuple encoding. It does not expose GC object bytes.
 fn self_host_compile_time_raw_layout(type_: SelfHostCompileTimeType, depth: U32) -> Result<SelfHostCompileTimeRawLayout, String> {
   if depth >= 256u32 {
-    return Result::Err("CT-006 raw layout traversal limit exceeded")
+    return Err("CT-006 raw layout traversal limit exceeded")
   }
   match type_ {
-    SelfHostCompileTimeType::PrimitiveCompileTimeType(primitive) => {
+    PrimitiveCompileTimeType(primitive) => {
       let size = if primitive.rank() == 0u32 {
         0u32
       } else if primitive.rank() == 1u32 {
         4u32
       } else {
         match self_host_compile_time_bits(primitive) {
-          Option::Some(bits) => bits / 8u32
-          Option::None => return Result::Err("CT-002 type has no supported byte layout")
+          Some(bits) => bits / 8u32
+          None => return Err("CT-002 type has no supported byte layout")
         }
       }
-      Result::Ok(SelfHostCompileTimeRawLayout::{
+      Ok({
         size: size
         alignment: if size == 0u32 {
           1u32
@@ -49,22 +49,22 @@ fn self_host_compile_time_raw_layout(type_: SelfHostCompileTimeType, depth: U32)
         offsets: self_host_u32_slots(0u32, 0u32)
       })
     }
-    SelfHostCompileTimeType::ProductCompileTimeType(fields) => {
+    ProductCompileTimeType(fields) => {
       let mut size = 0u32
       let mut alignment = 1u32
       let offsets = self_host_u32_slots(0u32, 0u32)
       for field in fields {
         let layout = match self_host_compile_time_raw_layout(field, depth + 1u32) {
-          Result::Ok(value) => value
-          Result::Err(error) => return Result::Err(error)
+          Ok(value) => value
+          Err(error) => return Err(error)
         }
         size = match self_host_compile_time_raw_align(size, layout.alignment) {
-          Option::Some(value) => value
-          Option::None => return Result::Err("CT-002 raw layout size overflows U32")
+          Some(value) => value
+          None => return Err("CT-002 raw layout size overflows U32")
         }
         offsets.push(size)
         if layout.size > 4294967295u32 - size {
-          return Result::Err("CT-002 raw layout size overflows U32")
+          return Err("CT-002 raw layout size overflows U32")
         }
         size = size + layout.size
         if layout.alignment > alignment {
@@ -72,38 +72,38 @@ fn self_host_compile_time_raw_layout(type_: SelfHostCompileTimeType, depth: U32)
         }
       }
       let total = match self_host_compile_time_raw_align(size, alignment) {
-        Option::Some(value) => value
-        Option::None => return Result::Err("CT-002 raw layout size overflows U32")
+        Some(value) => value
+        None => return Err("CT-002 raw layout size overflows U32")
       }
-      Result::Ok(SelfHostCompileTimeRawLayout::{
+      Ok({
         size: total
         alignment: alignment
         offsets: offsets
       })
     }
-    _ => Result::Err("CT-002 type has no supported byte layout")
+    _ => Err("CT-002 type has no supported byte layout")
   }
 }
 
 fn self_host_evaluate_compile_time_field_offset(types: Array<SelfHostCompileTimeType>, index: U32) -> Result<Option<SelfHostCompileTimeConstant>, String> {
   if types.length() != 1u32 {
-    return Result::Err("CT-002 field_offset requires one type argument")
+    return Err("CT-002 field_offset requires one type argument")
   }
   match self_host_compile_time_types_concrete(types) {
-    Result::Err(error) => return Result::Err(error)
-    Result::Ok(concrete) => if !concrete {
-      return Result::Ok(Option::None)
+    Err(error) => return Err(error)
+    Ok(concrete) => if !concrete {
+      return Ok(None)
     }
   }
-  if !(types[0u32] is SelfHostCompileTimeType::ProductCompileTimeType(_)) {
-    return Result::Err("CT-002 field_offset requires a raw tuple type")
+  if !(types[0u32] is ProductCompileTimeType(_)) {
+    return Err("CT-002 field_offset requires a raw tuple type")
   }
   let layout = match self_host_compile_time_raw_layout(types[0u32], 0u32) {
-    Result::Ok(value) => value
-    Result::Err(error) => return Result::Err(error)
+    Ok(value) => value
+    Err(error) => return Err(error)
   }
   if index >= layout.offsets.length() {
-    return Result::Err("CT-002 field_offset index is outside the tuple")
+    return Err("CT-002 field_offset index is outside the tuple")
   }
-  Result::Ok(Option::Some(SelfHostCompileTimeConstant::U32CompileTimeConstant(layout.offsets[index])))
+  Ok(Some(U32CompileTimeConstant(layout.offsets[index])))
 }

@@ -35,10 +35,10 @@ fn self_host_trait_signature_view(
           _ => break self_host_semantic_unit()
         }
         let callable = match self_host_impl_callable_index(collected, method.id) {
-          Option::Some(value) => value
-          Option::None => return Option::None
+          Some(value) => value
+          None => return None
         }
-        requirements.push(SelfHostTraitRequirementView::{
+        requirements.push({
           declaration: method.id
           name: collected.name(method.name)
           receiver: self_host_impl_method_has_receiver(collected, method.id)
@@ -48,23 +48,23 @@ fn self_host_trait_signature_view(
         })
       }
     }
-    return Option::Some(SelfHostTraitSignatureView::{
-      imported_parameter_ids: Option::None
+    return Some({
+      imported_parameter_ids: None
       generics: collected.generic_parameters_of(declaration)
       requirements: requirements
     })
   }
   let imported = match imports {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   let generics = match imported.type_generic_spans.get(declaration) {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   for callable in imported.callables {
     match callable.kind {
-      SelfHostFrozenInterfaceCallableKind::FrozenTraitCallable(owner) => if owner == declaration {
+      FrozenTraitCallable(owner) => if owner == declaration {
         let parameters = []
         while 0u32 {
           index if index < callable.parameters.length => {
@@ -73,7 +73,7 @@ fn self_host_trait_signature_view(
           }
           _ => break self_host_semantic_unit()
         }
-        requirements.push(SelfHostTraitRequirementView::{
+        requirements.push({
           declaration: callable.declaration
           name: callable.name
           receiver: callable.parameters.length > 0u32 && imported.parameter_receivers[callable.parameters.start]
@@ -85,8 +85,8 @@ fn self_host_trait_signature_view(
       _ => {}
     }
   }
-  Option::Some(SelfHostTraitSignatureView::{
-    imported_parameter_ids: Option::Some(imported.generic_parameter_ids)
+  Some({
+    imported_parameter_ids: Some(imported.generic_parameter_ids)
     generics: generics
     requirements: requirements
   })

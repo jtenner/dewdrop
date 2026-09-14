@@ -6,10 +6,10 @@ fn self_host_specialization_test_plan(
 ) -> SelfHostProgramSpecializationPlan {
   self_host_plan_program_specialization(
     self_host_program_lowering_test_manifest([
-      SelfHostManifestModule::{
+      {
         path: "app.main"
         files: [
-          SelfHostManifestFile::{
+          {
             path: "main.dew"
             source: source
             test_only: false
@@ -66,11 +66,11 @@ fn self_host_specialization_request_named(
   while index {
     current => if current < plan.requests.length() {
       if self_host_u64_equal(plan.requests[current].declaration, declaration) {
-        break Option::Some(current)
+        break Some(current)
       }
       continue current + 1u32
     } else {
-      break Option::None
+      break None
     }
   }
 }
@@ -88,8 +88,8 @@ test "program specialization materializes concrete generic call shapes" {
     b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn run() -> I32 {\n  identity(42)\n}\n",
   )
   let request = match self_host_specialization_request_named(plan, b"identity") {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "identity request")
       0u32
     }
@@ -100,7 +100,7 @@ test "program specialization materializes concrete generic call shapes" {
     "one generic",
   )
   match self_host_specialization_request_shape(plan, request, 0u32) {
-    SelfHostPlannedValueShape::I32PlannedValueShape => {}
+    I32PlannedValueShape => {}
     _ => assert(false, "i32 specialization")
   }
   assert(plan.calls.length() == 1u32, "one specialized call")
@@ -111,14 +111,14 @@ test "program specialization derives a static method carrier from its result" {
     b"struct Box<t> {}\nimpl<t> Box<t> {\n  fn empty() -> Box<t> {\n    Box::{\n    }\n  }\n}\npub fn run() -> Box<I32> {\n  Box::empty()\n}\n",
   )
   let request = match self_host_specialization_request_named(plan, b"empty") {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "static method request")
       0u32
     }
   }
   match self_host_specialization_request_shape(plan, request, 0u32) {
-    SelfHostPlannedValueShape::I32PlannedValueShape => {}
+    I32PlannedValueShape => {}
     _ => assert(false, "static method i32 carrier")
   }
   assert(plan.calls.length() == 1u32, "static method call edge")
@@ -129,27 +129,31 @@ test "program specialization derives a method carrier from a declared field" {
     b"struct Box<t> {\n  value: t\n}\nimpl<t> Box<t> {\n  fn get(self) -> t {\n    self.value\n  }\n}\nstruct Holder {\n  boxed: Box<I32>\n}\nimpl Holder {\n  fn read(self) -> I32 {\n    self.boxed.get()\n  }\n}\n",
   )
   let request = match self_host_specialization_request_named(plan, b"get") {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "field receiver method request")
       0u32
     }
   }
   match self_host_specialization_request_shape(plan, request, 0u32) {
-    SelfHostPlannedValueShape::I32PlannedValueShape => {}
+    I32PlannedValueShape => {}
     _ => assert(false, "field receiver i32 carrier")
   }
   assert(plan.calls.length() == 1u32, "field receiver call edge")
 }
 
-test "program specialization canonicalizes and deduplicates scalar carriers" {
+test "program specialization deduplicates wide carriers and preserves narrow types" {
   let plan = self_host_specialization_test_plan(
-    b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn first() -> I8 {\n  identity(1i8)\n}\npub fn second() -> U32 {\n  identity(2u32)\n}\n",
+    b"fn identity<t>(value: t) -> t {\n  value\n}\npub fn first() -> I8 {\n  identity(1i8)\n}\npub fn second() -> U32 {\n  identity(2u32)\n}\npub fn third() -> I32 {\n  identity(3)\n}\n",
   )
-  assert(plan.requests.length() == 1u32, "one canonical request")
-  assert(plan.calls.length() == 2u32, "two call sites")
+  assert(plan.requests.length() == 2u32, "separate narrow and wide requests")
+  assert(plan.calls.length() == 3u32, "three call sites")
   match self_host_specialization_request_shape(plan, 0u32, 0u32) {
-    SelfHostPlannedValueShape::I32PlannedValueShape => {}
+    I8PlannedValueShape => {}
+    _ => assert(false, "exact i8")
+  }
+  match self_host_specialization_request_shape(plan, 1u32, 0u32) {
+    I32PlannedValueShape => {}
     _ => assert(false, "canonical i32")
   }
 }
@@ -165,7 +169,7 @@ test "program specialization indexes requests by declaration" {
     request_head_by_declaration,
     request_next,
     11u64,
-    [SelfHostPlannedValueShape::I8PlannedValueShape],
+    [I8PlannedValueShape],
   )
   let second = self_host_program_specialization_add_request(
     requests,
@@ -173,7 +177,7 @@ test "program specialization indexes requests by declaration" {
     request_head_by_declaration,
     request_next,
     12u64,
-    [SelfHostPlannedValueShape::I8PlannedValueShape],
+    [I8PlannedValueShape],
   )
   let duplicate = self_host_program_specialization_add_request(
     requests,
@@ -181,12 +185,21 @@ test "program specialization indexes requests by declaration" {
     request_head_by_declaration,
     request_next,
     11u64,
-    [SelfHostPlannedValueShape::U32PlannedValueShape],
+    [I8PlannedValueShape],
+  )
+  let wide = self_host_program_specialization_add_request(
+    requests,
+    shapes,
+    request_head_by_declaration,
+    request_next,
+    11u64,
+    [U32PlannedValueShape],
   )
   assert(first == 0u32, "first request index")
   assert(second == 1u32, "second request index")
   assert(duplicate == first, "declaration-local canonical duplicate")
-  assert(requests.length() == 2u32, "two request records")
+  assert(wide == 2u32, "narrow and wide types stay distinct")
+  assert(requests.length() == 3u32, "three request records")
   assert(request_next.length() == requests.length(), "parallel request index")
 }
 
@@ -245,25 +258,25 @@ test "program specialization closes transitive generic calls" {
     b"fn identity<t>(value: t) -> t {\n  value\n}\nfn wrap<t>(value: t) -> t {\n  identity(value)\n}\npub fn run() -> I64 {\n  wrap(42i64)\n}\n",
   )
   let identity = match self_host_specialization_request_named(plan, b"identity") {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "transitive identity")
       0u32
     }
   }
   let wrap = match self_host_specialization_request_named(plan, b"wrap") {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "wrap request")
       0u32
     }
   }
   match self_host_specialization_request_shape(plan, wrap, 0u32) {
-    SelfHostPlannedValueShape::I64PlannedValueShape => {}
+    I64PlannedValueShape => {}
     _ => assert(false, "wrap i64")
   }
   match self_host_specialization_request_shape(plan, identity, 0u32) {
-    SelfHostPlannedValueShape::I64PlannedValueShape => {}
+    I64PlannedValueShape => {}
     _ => assert(false, "identity i64")
   }
   let mut saw_transitive = false
@@ -278,20 +291,20 @@ test "program specialization closes transitive generic calls" {
 
 test "program specialization follows imported generic calls" {
   let lowering = self_host_program_lowering_test_manifest([
-    SelfHostManifestModule::{
+    {
       path: "app.main"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "main.dew"
           source: b"open app.library\npub fn run() -> I32 {\n  identity(7)\n}\n"
           test_only: false
         },
       ]
     },
-    SelfHostManifestModule::{
+    {
       path: "app.library"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "library.dew"
           source: b"pub fn identity<t>(value: t) -> t {\n  value\n}\n"
           test_only: false
@@ -307,27 +320,27 @@ test "program specialization follows imported generic calls" {
     "library target",
   )
   match self_host_specialization_request_shape(plan, 0u32, 0u32) {
-    SelfHostPlannedValueShape::I32PlannedValueShape => {}
+    I32PlannedValueShape => {}
     _ => assert(false, "imported i32")
   }
 }
 
 test "program specialization retains canonical product shape trees" {
   let shape = self_host_specialization_canonical_shape(
-    SelfHostPlannedValueShape::ProductPlannedValueShape([
-      SelfHostPlannedValueShape::I8PlannedValueShape,
-      SelfHostPlannedValueShape::U64PlannedValueShape,
+    ProductPlannedValueShape([
+      I8PlannedValueShape,
+      U64PlannedValueShape,
     ]),
   )
   match shape {
-    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+    ProductPlannedValueShape(fields) => {
       assert(fields.length() == 2u32, "product fields")
       match fields[0u32] {
-        SelfHostPlannedValueShape::I32PlannedValueShape => {}
-        _ => assert(false, "product first")
+        I8PlannedValueShape => {}
+        _ => assert(false, "product retains its narrow field")
       }
       match fields[1u32] {
-        SelfHostPlannedValueShape::I64PlannedValueShape => {}
+        I64PlannedValueShape => {}
         _ => assert(false, "product second")
       }
     }

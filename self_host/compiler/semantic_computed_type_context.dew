@@ -3,7 +3,7 @@ impl SelfHostTypeResolver {
   fn computed_child(self) -> SelfHostTypeResolver {
     let visit_marks = self.visit_marks.copy()
     let alias_visit_marks = self.alias_visit_marks.copy()
-    SelfHostTypeResolver::{
+    {
       collected: self.collected
       imports: self.imports
       interner: self.interner

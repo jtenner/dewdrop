@@ -73,14 +73,14 @@ fn self_host_module_value_body(
     current => if current < limit {
       let body = array_get_unchecked(collected.bodies, current)
       if self_host_u64_equal(body.declaration, declaration) {
-        return Option::Some(body)
+        return Some(body)
       }
       continue current + 1u32
     } else {
       break self_host_semantic_unit()
     }
   }
-  Option::None
+  None
 }
 
 fn self_host_module_value_declaration(
@@ -88,10 +88,10 @@ fn self_host_module_value_declaration(
   name: U32,
 ) -> Option<U64> {
   match collected.value_binding(name) {
-    Option::Some(binding) => Option::Some(
+    Some(binding) => Some(
       collected.value_binding_candidates[binding.head].declaration,
     )
-    Option::None => Option::None
+    None => None
   }
 }
 
@@ -106,11 +106,11 @@ fn self_host_module_value_let_index(
         collected.lets[current].declaration,
         declaration,
       ) {
-        break Option::Some(current)
+        break Some(current)
       }
       continue current + 1u32
     } else {
-      break Option::None
+      break None
     }
   }
 }
@@ -161,7 +161,7 @@ fn self_host_collect_module_value_dependencies(
       )
       scratch.clear()
     match self_host_module_value_body(collected, value.declaration) {
-      Option::Some(body) => {
+      Some(body) => {
         let mut expression = body.expressions.start
         let end = self_host_u32_add(
           body.expressions.start,
@@ -170,21 +170,21 @@ fn self_host_collect_module_value_dependencies(
         let _ = while expression {
           current => if current < end {
             match names.expression_reference_at(current) {
-              SelfHostBodyNameReference::ModuleValueNameReference(name) => match self_host_module_value_declaration(
+              ModuleValueNameReference(name) => match self_host_module_value_declaration(
                 collected,
                 name,
               ) {
-                Option::Some(declaration) => match self_host_module_value_let_index(
+                Some(declaration) => match self_host_module_value_let_index(
                   collected,
                   declaration,
                 ) {
-                  Option::Some(dependency) => self_host_module_value_insert_sorted_unique(
+                  Some(dependency) => self_host_module_value_insert_sorted_unique(
                     scratch,
                     dependency,
                   )
-                  Option::None => {}
+                  None => {}
                 }
-                Option::None => {}
+                None => {}
               }
               _ => {}
             }
@@ -194,7 +194,7 @@ fn self_host_collect_module_value_dependencies(
           }
         }
       }
-      Option::None => {}
+      None => {}
     }
       let start = declarations.length()
       let mut dependency_index = 0u32
@@ -214,7 +214,7 @@ fn self_host_collect_module_value_dependencies(
           break self_host_semantic_unit()
         }
       }
-      spans.push(SelfHostHirSpan::{
+      spans.push({
         start: start
         length: declarations.length() - start
       })
@@ -226,334 +226,37 @@ fn self_host_collect_module_value_dependencies(
   (spans, declarations)
 }
 
-struct SelfHostModuleValueDfsTask {
-  value: U32
-  finish: Bool
-}
-
-fn self_host_module_value_task_at(
-  values: Array<SelfHostModuleValueDfsTask>,
-  index: U32,
-) -> SelfHostModuleValueDfsTask {
-  array_get_unchecked(values, index)
-}
-
-fn self_host_empty_module_value_tasks() -> Array<SelfHostModuleValueDfsTask> {
-  let values = [SelfHostModuleValueDfsTask::{
-    value: 0u32
-    finish: false
-  }]
-  values.truncate(0u32)
-  values
-}
-
-fn self_host_module_value_has_edge(
-  collected: SelfHostCollectedModule,
-  dependencies: Array<SelfHostHirSpan>,
-  dependency_declarations: Array<U64>,
-  source: U32,
-  target: U32,
-) -> Bool {
-  let edges = dependencies[source]
-  let mut edge = 0u32
-  while edge {
-    current => if current < edges.length {
-      match self_host_module_value_let_index(
-        collected,
-        dependency_declarations[self_host_u32_add(edges.start, current)],
-      ) {
-        Option::Some(value) => if self_host_u32_equal(value, target) {
-          break true
-        }
-        Option::None => {}
-      }
-      continue current + 1u32
-    } else {
-      break false
-    }
-  }
-}
-
+// Use the shared iterative graph walk. Repeated reachability scans made a
+// 1024-value chain take minutes before any body constraints could be checked.
 fn self_host_find_module_value_sccs(
   collected: SelfHostCollectedModule,
   dependencies: Array<SelfHostHirSpan>,
   dependency_declarations: Array<U64>,
 ) -> (Array<SelfHostHirSpan>, Array<U64>) {
-  let value_count = collected.lets.length()
-  let component_of = self_host_module_value_u32_slots(
-    value_count,
-    4294967295u32,
-  )
-  let raw_spans = []
-  let raw_members = []
-  let work = []
-  let mut start = 0u32
-  let _ = while start {
-    root => if root < value_count {
-      if self_host_u32_equal(component_of[root], 4294967295u32) {
-        let forward = self_host_module_value_bool_slots(value_count)
-        work.clear()
-        work.push(root)
-        forward[root] = true
-        let _ = while work.length() {
-          length => if self_host_u32_greater(length, 0u32) {
-            let value = self_host_module_value_u32_at(work, length - 1u32)
-            work.truncate(length - 1u32)
-            let edges = dependencies[value]
-            let mut edge = 0u32
-            let _ = while edge {
-              current => if current < edges.length {
-                match self_host_module_value_let_index(
-                  collected,
-                  dependency_declarations[
-                    self_host_u32_add(edges.start, current)
-                  ],
-                ) {
-                  Option::Some(dependency) => if !forward[dependency] {
-                    forward[dependency] = true
-                    work.push(dependency)
-                  }
-                  Option::None => {}
-                }
-                continue current + 1u32
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-            continue work.length()
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-        let reverse = self_host_module_value_bool_slots(value_count)
-        work.clear()
-        work.push(root)
-        reverse[root] = true
-        let _ = while work.length() {
-          length => if self_host_u32_greater(length, 0u32) {
-            let value = self_host_module_value_u32_at(work, length - 1u32)
-            work.truncate(length - 1u32)
-            let mut candidate = 0u32
-            let _ = while candidate {
-              current => if current < value_count {
-                if !reverse[current] && self_host_module_value_has_edge(
-                  collected,
-                  dependencies,
-                  dependency_declarations,
-                  current,
-                  value,
-                ) {
-                  reverse[current] = true
-                  work.push(current)
-                }
-                continue current + 1u32
-              } else {
-                break self_host_semantic_unit()
-              }
-            }
-            continue work.length()
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-        let component = raw_spans.length()
-        let member_start = raw_members.length()
-        let mut member = 0u32
-        let _ = while member {
-          current => if current < value_count {
-            if forward[current] && reverse[current] && self_host_u32_equal(
-              component_of[current],
-              4294967295u32,
-            ) {
-              component_of[current] = component
-              raw_members.push(current)
-            }
-            continue current + 1u32
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-        raw_spans.push(SelfHostHirSpan::{
-          start: member_start
-          length: raw_members.length() - member_start
-        })
+  let indices = self_host_empty_u64_u32_map()
+  let _ = while 0u32 {
+    index if index < collected.lets.length() => {
+      indices.set(collected.lets[index].declaration, index)
+      continue index + 1u32
+    }
+    _ => break ()
+  }
+  let edges = []
+  for declaration in dependency_declarations {
+    match indices.get(declaration) {
+      Some(index) => edges.push(index)
+      None => {
+        self_host_assert_compiler_invariant(false, "module value dependency must name a collected initializer")
+        unreachable()
       }
-      continue root + 1u32
-    } else {
-      break self_host_semantic_unit()
     }
   }
-
-  let component_dependencies = []
-  let component_dependency_values = []
-  let mut component = 0u32
-  let _ = while component {
-    current_component => if current_component < raw_spans.length() {
-      let scratch = []
-      let component_span = self_host_hir_span_at(raw_spans, current_component)
-      let member_start = component_span.start
-      let member_length = component_span.length
-      let mut member = 0u32
-      let _ = while member {
-        current_member => if current_member < member_length {
-          let value = self_host_module_value_u32_at(
-            raw_members,
-            self_host_u32_add(member_start, current_member),
-          )
-          let edges = dependencies[value]
-          let mut edge = 0u32
-          let _ = while edge {
-            current_edge => if current_edge < edges.length {
-              match self_host_module_value_let_index(
-                collected,
-                dependency_declarations[
-                  self_host_u32_add(edges.start, current_edge)
-                ],
-              ) {
-                Option::Some(dependency) => {
-                  let dependency_component = component_of[dependency]
-                  if !self_host_u32_equal(
-                    dependency_component,
-                    current_component,
-                  ) {
-                    self_host_module_value_insert_sorted_unique(
-                      scratch,
-                      dependency_component,
-                    )
-                  }
-                }
-                Option::None => {}
-              }
-              continue current_edge + 1u32
-            } else {
-              break self_host_semantic_unit()
-            }
-          }
-          continue current_member + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      let dependency_start = component_dependency_values.length()
-      let mut dependency_index = 0u32
-      let _ = while dependency_index {
-        current => if current < scratch.length() {
-          component_dependency_values.push(
-            self_host_module_value_u32_at(scratch, current),
-          )
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      component_dependencies.push(SelfHostHirSpan::{
-        start: dependency_start
-        length: component_dependency_values.length() - dependency_start
-      })
-      continue current_component + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
+  let (sccs, members, _) = self_host_program_module_sccs(dependencies, edges)
+  let declarations = []
+  for member in members {
+    declarations.push(collected.lets[member].declaration)
   }
-
-  let scheduled = self_host_module_value_bool_slots(raw_spans.length())
-  let schedule = []
-  let tasks = self_host_empty_module_value_tasks()
-  component = 0u32
-  let _ = while component {
-    start_component => if start_component < raw_spans.length() {
-      if !scheduled[start_component] {
-        tasks.push(SelfHostModuleValueDfsTask::{
-          value: start_component
-          finish: false
-        })
-        let _ = while tasks.length() {
-          length => if self_host_u32_greater(length, 0u32) {
-            let task = self_host_module_value_task_at(tasks, length - 1u32)
-            tasks.truncate(length - 1u32)
-            if task.finish {
-              schedule.push(task.value)
-            } else if !scheduled[task.value] {
-              scheduled[task.value] = true
-              tasks.push(SelfHostModuleValueDfsTask::{
-                value: task.value
-                finish: true
-              })
-              let dependency_span = self_host_hir_span_at(
-                component_dependencies,
-                task.value,
-              )
-              let edge_start = dependency_span.start
-              let mut edge = dependency_span.length
-              let _ = while edge {
-                current => if self_host_u32_greater(current, 0u32) {
-                  let previous = current - 1u32
-                  let dependency = self_host_module_value_u32_at(
-                    component_dependency_values,
-                    self_host_u32_add(edge_start, previous),
-                  )
-                  if !scheduled[dependency] {
-                    tasks.push(SelfHostModuleValueDfsTask::{
-                      value: dependency
-                      finish: false
-                    })
-                  }
-                  continue previous
-                } else {
-                  break self_host_semantic_unit()
-                }
-              }
-            }
-            continue tasks.length()
-          } else {
-            break self_host_semantic_unit()
-          }
-        }
-      }
-      continue start_component + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  let sccs = []
-  let scc_declarations = []
-  let mut schedule_index = 0u32
-  let _ = while schedule_index {
-    current_component => if current_component < schedule.length() {
-      let ordered_component = self_host_module_value_u32_at(
-        schedule,
-        current_component,
-      )
-      let ordered_span = self_host_hir_span_at(raw_spans, ordered_component)
-      let raw_start = ordered_span.start
-      let raw_length = ordered_span.length
-      let scc_start = scc_declarations.length()
-      let mut member = 0u32
-      let _ = while member {
-        current => if current < raw_length {
-          scc_declarations.push(
-            collected.lets[
-              self_host_module_value_u32_at(
-                raw_members,
-                self_host_u32_add(raw_start, current),
-              )
-            ].declaration,
-          )
-          continue current + 1u32
-        } else {
-          break self_host_semantic_unit()
-        }
-      }
-      sccs.push(SelfHostHirSpan::{
-        start: scc_start
-        length: scc_declarations.length() - scc_start
-      })
-      continue current_component + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  (sccs, scc_declarations)
+  (sccs, declarations)
 }
 
 fn self_host_analyze_module_value_dependencies(
@@ -569,7 +272,7 @@ fn self_host_analyze_module_value_dependencies(
     let_dependencies,
     dependency_declarations,
   )
-  SelfHostModuleValueDependencies::{
+  {
     module_id: collected.module_id
     let_dependencies: let_dependencies
     dependency_declarations: dependency_declarations

@@ -18,14 +18,14 @@ test "a nominal payload named Map retains its exact declared heap type" {
   assert(program.diagnostics.length() == 0u32, "valid user-defined Map payload")
   let declaration = 5100u64 << 32u64
   match self_host_linked_nominal_field_type_index(link, declaration, true) {
-    Option::Some(type_) => assert(type_ == 0u32, "the selected struct is the first declared heap")
-    Option::None => assert(false, "a source name cannot erase nominal field evidence")
+    Some(type_) => assert(type_ == 0u32, "the selected struct is the first declared heap")
+    None => assert(false, "a source name cannot erase nominal field evidence")
   }
   let plan = program.bodies[0u32]
   assert(plan.variant_constructor_operands.length() == 1u32, "one declared payload operand")
   match plan.variant_constructor_operands[0u32].reference_cast {
-    Option::Some(type_) => assert(type_ == 0u32, "the recipe retains the exact payload heap")
-    Option::None => assert(false, "the Map payload follows the ordinary nominal rule")
+    Some(type_) => assert(type_ == 0u32, "the recipe retains the exact payload heap")
+    None => assert(false, "the Map payload follows the ordinary nominal rule")
   }
 }
 
@@ -41,7 +41,7 @@ test "tuple variant constructors retain complete source operand recipes" {
       assert(operand.expression == 2u32 + index, "each operand keeps its exact source expression")
       assert(operand.source_ordinal == index && operand.field_index == index, "declared tuple order is exact")
       assert(operand.unit_marker == (index == 1u32), "only the Unit field gets a marker")
-      assert(!(operand.box_type is Option::Some(_)), "concrete scalar fields are unboxed")
+      assert(!(operand.box_type is Some(_)), "concrete scalar fields are unboxed")
       continue index + 1u32
     }
     _ => break ()
@@ -53,7 +53,7 @@ test "BOD-605 frozen variant constructor targets cannot change" expect_trap "unr
   let (_, plan) = self_host_variant_recipe_fixture()
   let frozen = self_host_freeze_physical_body(plan)
   let source = plan.variant_constructors[0u32]
-  plan.variant_constructors[0u32] = SelfHostPhysicalVariantConstructorPlan::{
+  plan.variant_constructors[0u32] = {
     expression: source.expression
     declaration: source.declaration
     physical_type: source.physical_type + 1u32
@@ -73,7 +73,7 @@ fn self_host_test_variant_constructor_change(kind: U32) -> Unit {
   let (_, plan) = self_host_variant_recipe_fixture()
   let frozen = self_host_freeze_physical_body(plan)
   let source = plan.variant_constructors[0u32]
-  plan.variant_constructors[0u32] = SelfHostPhysicalVariantConstructorPlan::{
+  plan.variant_constructors[0u32] = {
     expression: if kind == 0u32 {
       source.expression + 1u32
     } else {
@@ -86,13 +86,13 @@ fn self_host_test_variant_constructor_change(kind: U32) -> Unit {
     }
     physical_type: source.physical_type
     arguments: if kind == 2u32 {
-      SelfHostHirSpan::{
+      {
         start: source.arguments.start + 1u32
         length: source.arguments.length
       }
     } else {
       if kind == 3u32 {
-      SelfHostHirSpan::{
+      {
         start: source.arguments.start
         length: source.arguments.length - 1u32
       }
@@ -101,13 +101,13 @@ fn self_host_test_variant_constructor_change(kind: U32) -> Unit {
     }
     }
     operands: if kind == 4u32 {
-      SelfHostHirSpan::{
+      {
         start: source.operands.start + 1u32
         length: source.operands.length
       }
     } else {
       if kind == 5u32 {
-      SelfHostHirSpan::{
+      {
         start: source.operands.start
         length: source.operands.length - 1u32
       }
@@ -123,7 +123,7 @@ fn self_host_test_variant_operand_change(kind: U32) -> Unit {
   let (_, plan) = self_host_variant_recipe_fixture()
   let frozen = self_host_freeze_physical_body(plan)
   let source = plan.variant_constructor_operands[0u32]
-  plan.variant_constructor_operands[0u32] = SelfHostPhysicalVariantConstructorOperand::{
+  plan.variant_constructor_operands[0u32] = {
     expression: if kind == 0u32 {
       source.expression + 1u32
     } else {
@@ -145,12 +145,12 @@ fn self_host_test_variant_operand_change(kind: U32) -> Unit {
       source.field_index
     }
     storage: if kind == 4u32 {
-      SelfHostPlannedWasmStorageType::WasmI64Storage
+      WasmI64Storage
     } else {
       source.storage
     }
     box_type: if kind == 5u32 {
-      Option::Some(0u32)
+      Some(0u32)
     } else {
       source.box_type
     }
@@ -160,7 +160,7 @@ fn self_host_test_variant_operand_change(kind: U32) -> Unit {
       source.unit_marker
     }
     reference_cast: if kind == 7u32 {
-      Option::Some(0u32)
+      Some(0u32)
     } else {
       source.reference_cast
     }
@@ -236,7 +236,7 @@ test "BOD-608 variant recipe targets agree before freeze" expect_trap "unreachab
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = module_.bodies[0u32]
   let source = plan.variant_constructors[0u32]
-  plan.variant_constructors[0u32] = SelfHostPhysicalVariantConstructorPlan::{
+  plan.variant_constructors[0u32] = {
     expression: source.expression
     declaration: source.declaration
     physical_type: source.physical_type + 1u32

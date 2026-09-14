@@ -30,7 +30,7 @@ pub struct SelfHostPlannedFieldLayout {
 fn self_host_planned_field_layout_identity(
   field: SelfHostPlannedFieldLayout,
 ) -> SelfHostPlannedFieldLayout {
-  SelfHostPlannedFieldLayout::{
+  {
     field: field.field
     declaration: field.declaration
     variant: field.variant
@@ -79,12 +79,37 @@ pub struct SelfHostPlannedModuleTypeLayouts {
   payload_shapes: Array<SelfHostPlannedValueShape>
 }
 
+impl SelfHostPlannedModuleTypeLayouts {
+  fn field(self, field: U64) -> Option<SelfHostPlannedFieldLayout> {
+    if self_host_semantic_id_module(field) != self.module_id {
+      return None
+    }
+    let index = self_host_semantic_id_local(field)
+    if index >= self.fields.length() {
+      return None
+    }
+    let selected = self.fields[index]
+    self_host_assert_compiler_invariant_with_failure(selected.field == field, {
+      code: 1u32
+      phase: 4u32
+      module_id: self.module_id
+      declaration: selected.declaration
+      body: 0u64
+      expression: 4294967295u32
+      expected: field
+      actual: selected.field
+      detail: u32_into_u64(index)
+    }, "planned field identity must match its module-local arena slot")
+    Some(selected)
+  }
+}
+
 fn self_host_layout_empty_span_slots(length: U32) -> Array<SelfHostHirSpan> {
   let values = []
   let mut index = 0u32
   let _ = while index {
     current => if current < length {
-      values.push(SelfHostHirSpan::{
+      values.push({
         start: 0u32
         length: 0u32
       })
@@ -121,22 +146,22 @@ fn self_host_layout_field_spans(
     current => if current < collected.fields.length() {
       let field = collected.fields[current]
       match field.variant {
-        Option::None => {
+        None => {
           let declaration = self_host_semantic_id_local(field.declaration)
           let span = spans[declaration]
           if self_host_u32_equal(span.length, 0u32) {
-            spans[declaration] = SelfHostHirSpan::{
+            spans[declaration] = {
               start: current
               length: 1u32
             }
           } else {
-            spans[declaration] = SelfHostHirSpan::{
+            spans[declaration] = {
               start: span.start
               length: self_host_u32_add(span.length, 1u32)
             }
           }
         }
-        Option::Some(_) => {}
+        Some(_) => {}
       }
       continue current + 1u32
     } else {
@@ -159,12 +184,12 @@ fn self_host_layout_variant_spans(
       let declaration = self_host_semantic_id_local(variant.declaration)
       let span = spans[declaration]
       if self_host_u32_equal(span.length, 0u32) {
-        spans[declaration] = SelfHostHirSpan::{
+        spans[declaration] = {
               start: current
               length: 1u32
             }
       } else {
-        spans[declaration] = SelfHostHirSpan::{
+        spans[declaration] = {
           start: span.start
           length: self_host_u32_add(span.length, 1u32)
         }
@@ -186,22 +211,22 @@ fn self_host_layout_variant_field_spans(
     current => if current < collected.fields.length() {
       let field = collected.fields[current]
       match field.variant {
-        Option::Some(variant) => {
+        Some(variant) => {
           let slot = self_host_semantic_id_local(variant)
           let span = spans[slot]
           if self_host_u32_equal(span.length, 0u32) {
-            spans[slot] = SelfHostHirSpan::{
+            spans[slot] = {
               start: current
               length: 1u32
             }
           } else {
-            spans[slot] = SelfHostHirSpan::{
+            spans[slot] = {
               start: span.start
               length: self_host_u32_add(span.length, 1u32)
             }
           }
         }
-        Option::None => {}
+        None => {}
       }
       continue current + 1u32
     } else {
@@ -230,13 +255,13 @@ fn self_host_plan_module_type_layouts(
     current => if current < collected.fields.length() {
       let field = collected.fields[current]
       let index = match field.variant {
-        Option::Some(variant) => {
+        Some(variant) => {
           let slot = self_host_semantic_id_local(variant)
           let value = variant_field_counts[slot]
           variant_field_counts[slot] = self_host_u32_add(value, 1u32)
           value
         }
-        Option::None => {
+        None => {
           let slot = self_host_semantic_id_local(field.declaration)
           let value = declaration_field_counts[slot]
           declaration_field_counts[slot] = self_host_u32_add(value, 1u32)
@@ -245,7 +270,7 @@ fn self_host_plan_module_type_layouts(
       }
       let type_ = resolved.field_types[current]
       let shape = self_host_planned_resolved_value_shape(resolved, type_)
-      fields.push(SelfHostPlannedFieldLayout::{
+      fields.push({
         field: field.id
         declaration: field.declaration
         variant: field.variant
@@ -275,10 +300,10 @@ fn self_host_plan_module_type_layouts(
         tag = 0u32
       }
       let payload = match variant.kind {
-        SelfHostCollectedVariantKind::UnitVariantDecl => {
-          SelfHostPlannedVariantPayloadLayout::PlannedUnitVariantLayout
+        UnitVariantDecl => {
+          PlannedUnitVariantLayout
         }
-        SelfHostCollectedVariantKind::TupleVariantDecl => {
+        TupleVariantDecl => {
           let source = resolved.variant_payloads[current]
           let start = payload_types.length()
           let mut item = 0u32
@@ -296,20 +321,20 @@ fn self_host_plan_module_type_layouts(
               break self_host_semantic_unit()
             }
           }
-          SelfHostPlannedVariantPayloadLayout::PlannedTupleVariantLayout(
-            SelfHostHirSpan::{
+          PlannedTupleVariantLayout(
+            {
               start: start
               length: payload_types.length() - start
             },
           )
         }
-        SelfHostCollectedVariantKind::StructVariantDecl => {
-          SelfHostPlannedVariantPayloadLayout::PlannedStructVariantLayout(
+        StructVariantDecl => {
+          PlannedStructVariantLayout(
             variant_fields[current],
           )
         }
       }
-      variants.push(SelfHostPlannedVariantLayout::{
+      variants.push({
         variant: variant.id
         declaration: variant.declaration
         tag: tag
@@ -328,25 +353,25 @@ fn self_host_plan_module_type_layouts(
   )
   for declaration in collected.declarations {
     let kind = match declaration.kind {
-      SelfHostCollectedDeclKind::StructDecl => Option::Some(
-        SelfHostPlannedNominalLayoutKind::PlannedStructLayout(
+      StructDecl => Some(
+        PlannedStructLayout(
           declaration_fields[self_host_semantic_id_local(declaration.id)],
         ),
       )
-      SelfHostCollectedDeclKind::EnumDecl => Option::Some(
-        SelfHostPlannedNominalLayoutKind::PlannedEnumLayout(
+      EnumDecl => Some(
+        PlannedEnumLayout(
           declaration_variants[self_host_semantic_id_local(declaration.id)],
         ),
       )
-      SelfHostCollectedDeclKind::ForeignTypeDecl => Option::Some(
-        SelfHostPlannedNominalLayoutKind::PlannedForeignTypeLayout,
+      ForeignTypeDecl => Some(
+        PlannedForeignTypeLayout,
       )
-      _ => Option::None
+      _ => None
     }
     match kind {
-      Option::Some(layout_kind) => {
+      Some(layout_kind) => {
         layout_by_declaration[self_host_semantic_id_local(declaration.id)] = layouts.length()
-        layouts.push(SelfHostPlannedNominalLayout::{
+        layouts.push({
           declaration: declaration.id
           visibility: declaration.visibility
           generic_parameters: collected.generic_parameters_of(declaration.id)
@@ -355,10 +380,10 @@ fn self_host_plan_module_type_layouts(
           offset: declaration.offset
         })
       }
-      Option::None => {}
+      None => {}
     }
   }
-  SelfHostPlannedModuleTypeLayouts::{
+  {
     module_id: collected.module_id
     layouts: layouts
     layout_by_declaration: layout_by_declaration

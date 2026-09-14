@@ -1,5 +1,5 @@
 fn self_host_call_read_failure(module_id: U64, declaration: U64, body: U64, expression: U32, code: U32, expected: U64, actual: U64, detail: U64) -> Never {
-  self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+  self_host_assert_compiler_invariant_with_failure(false, {
     code: code
     phase: 7u32
     module_id: module_id
@@ -22,39 +22,39 @@ fn self_host_linked_canonical_call_index(
   declaration: U64,
 ) -> Option<U32> {
   let plan = match canonical {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   if plan.body != body.body || plan.specialization != caller_specialization {
-    return Option::None
+    return None
   }
   // Lambda lowering uses a body sentinel, while the plan keeps its owner.
   if plan.lambda == 4294967295u32 {
     if plan.declaration != body.declaration {
-      return Option::None
+      return None
     }
   } else if body.declaration != 18446744073709551615u64 {
-    return Option::None
+    return None
   }
   let source = match self_host_body_plan_expression(plan, expression) {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   if source.call_function_index == 4294967295u32 {
-    return Option::None
+    return None
   }
-  let mut selected = Option::None
+  let mut selected = None
   for recipe in plan.calls {
     if recipe.expression == expression {
-      if selected is Option::Some(_) {
+      if selected is Some(_) {
         self_host_call_read_failure(plan.module_id, plan.declaration, plan.body, expression, 701u32, 1u64, 2u64, 0u64)
       }
-      selected = Option::Some(recipe)
+      selected = Some(recipe)
     }
   }
   let recipe = match selected {
-    Option::Some(value) => value
-    Option::None => return Option::None
+    Some(value) => value
+    None => return None
   }
   if source.call_function_index >= link.functions.length() {
     self_host_call_read_failure(plan.module_id, plan.declaration, plan.body, expression, 502u32,
@@ -84,7 +84,7 @@ fn self_host_linked_canonical_call_index(
     self_host_call_read_failure(plan.module_id, plan.declaration, plan.body, expression, 701u32,
       declaration, recipe.declaration, u32_into_u64(handle))
   }
-  Option::Some(handle)
+  Some(handle)
 }
 
 fn self_host_missing_emitted_call_target(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, target: U32) -> Never {
@@ -92,16 +92,16 @@ fn self_host_missing_emitted_call_target(module_: SelfHostPlannedModuleLowering,
 }
 
 fn self_host_require_runtime_call_target(module_: SelfHostPlannedModuleLowering, body: SelfHostPlannedBodyLowering, expression: U32, target: U32) -> Unit {
-  if !(self_host_checked_relative_index(target, body.expressions, module_.expressions.length()) is Option::Some(_)) {
+  if !(self_host_checked_relative_index(target, body.expressions, module_.expressions.length()) is Some(_)) {
     self_host_call_read_failure(module_.module_id, body.declaration, body.body, expression, 102u32,
       u32_into_u64(body.expressions.start), u32_into_u64(target), u32_into_u64(body.expressions.length))
   }
   let source = module_.expressions[target]
   match source.kind {
-    SelfHostPlannedExpressionKind::PlannedPoisonExpression,
-    SelfHostPlannedExpressionKind::PlannedConsumedExpression,
-    SelfHostPlannedExpressionKind::PlannedDeadExpression,
-    SelfHostPlannedExpressionKind::PlannedDeferredExpression => self_host_missing_emitted_call_target(module_, body, expression, target)
+    PlannedPoisonExpression,
+    PlannedConsumedExpression,
+    PlannedDeadExpression,
+    PlannedDeferredExpression => self_host_missing_emitted_call_target(module_, body, expression, target)
     _ => {}
   }
   if self_host_body_name_reference_is_namespace(source.reference) {

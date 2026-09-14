@@ -6,7 +6,7 @@ test "ARN-104 compile-time storage requires prior child types" expect_trap "unre
 
 test "ARN-101 compile-time storage rejects invalid spans" expect_trap "unreachable" {
   self_host_compile_time_storage_span(
-    SelfHostHirSpan::{
+    {
       start: 2u32
       length: 1u32
     }, 1u32, 24702u64,
@@ -22,14 +22,14 @@ test "compile-time Type has the native identity and no runtime shape" {
   assert(resolved.diagnostic_count() == 0u32, "type-returning builtin signature")
   let result = resolved.callable_return_types[0u32]
   match resolved.types[result] {
-    SelfHostResolvedType::PrimitiveType(primitive) => {
+    PrimitiveType(primitive) => {
       assert(primitive.rank() == 41u32, "native metatype rank")
       assert(self_host_impl_primitive_key(primitive) == 41u32, "metatype impl key")
     }
     _ => assert(false, "expected the compile-time primitive")
   }
   assert(
-    self_host_planned_resolved_value_shape(resolved, result) is SelfHostPlannedValueShape::ErrorPlannedValueShape,
+    self_host_planned_resolved_value_shape(resolved, result) is ErrorPlannedValueShape,
     "Type must not acquire reference storage",
   )
   assert(self_host_bootstrap_primitive_probe() == 0u32, "complete primitive table")
@@ -54,7 +54,7 @@ test "compile-time Type storage errors retain their code and source context" {
     let mut found = false
     for diagnostic in resolved.diagnostics {
       match diagnostic {
-        SelfHostTypeDiagnostic::ComputedTypeFailure(owner, message, offset) => {
+        ComputedTypeFailure(owner, message, offset) => {
           assert(owner != 0u64, "storage error owner")
           assert(offset > 0u32, "storage error source offset")
           assert(message == "CT-037 Type is compile-time-only and has no runtime storage", "stable storage error code")

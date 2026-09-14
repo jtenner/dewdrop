@@ -11,7 +11,7 @@ fn self_host_clone_compile_time_module(source: SelfHostPlannedModuleLowering) ->
   } else {
     source.functions
   }
-  SelfHostPlannedModuleLowering::{
+  {
     local_initializer_sources: source.local_initializer_sources
     module_id: source.module_id
     names: source.names.copy()
@@ -45,12 +45,12 @@ fn self_host_clone_compile_time_module(source: SelfHostPlannedModuleLowering) ->
 fn self_host_program_function_lowering(lowering: SelfHostPlannedProgramLowering, owner: U32, specialization: U32) -> SelfHostPlannedModuleLowering {
   self_host_assert_array_index(owner, lowering.modules.length(), "ARN-104 selected module owner")
   match lowering.compile_time.instances.get(specialization) {
-    Option::Some(instance) => {
+    Some(instance) => {
       let module_ = instance.module_
       self_host_assert_compiler_invariant(module_.module_id == lowering.modules[owner].module_id, "LNK-504 selected query instance has the wrong owner")
       module_
     }
-    Option::None => lowering.modules[owner]
+    None => lowering.modules[owner]
   }
 }
 
@@ -61,15 +61,15 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
     return
   }
   match lowering.compile_time.instances.get(specialization) {
-    Option::Some(instance) => {
+    Some(instance) => {
       self_host_assert_compiler_invariant(instance.declaration == request.declaration && self_host_specialization_evidence_types_equal(instance.evidence_types, request.evidence_types), "SPC-302 query instance request identity changed")
       return
     }
-    Option::None => {}
+    None => {}
   }
   let owner = match lowering.index.declaration_owner(request.declaration) {
-    Option::Some(owner) => owner
-    Option::None => {
+    Some(owner) => owner
+    None => {
       self_host_assert_compiler_invariant(false, "LNK-504 query instance has no module owner")
       unreachable()
     }
@@ -78,8 +78,8 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
   let caller = self_host_program_specialization_callable(module_, request.declaration)
   let bindings = self_host_compile_time_caller_bindings(caller, specialization, requests)
   match caller {
-    Option::Some(callable) => match callable.kind {
-      SelfHostPlannedCallableKind::PlannedImplMethodCallable(implementation, _) => {
+    Some(callable) => match callable.kind {
+      PlannedImplMethodCallable(implementation, _) => {
         let collected = lowering.collected.modules.at(owner)
         let mut target = 4294967295u32
         let _ = while 0u32 {
@@ -96,13 +96,13 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
         }
         self_host_assert_array_index(target, module_.resolved_types.types.length(), "LNK-504 query instance implementation Self type")
         match self_host_read_compile_time_type(module_, -self_host_body_u32_to_i32(target) - 2i32, bindings, 0u32) {
-          Result::Ok(self_type) => {
+          Ok(self_type) => {
             let concrete = match self_host_compile_time_types_concrete([self_type]) {
-              Result::Ok(value) => value
-              Result::Err(_) => false
+              Ok(value) => value
+              Err(_) => false
             }
             let _ = self_host_assert_compiler_invariant_with_failure(concrete,
-              SelfHostInvariantFailure::{
+              {
                 code: 301u32
                 phase: 4u32
                 module_id: module_.module_id
@@ -119,7 +119,7 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
               }, "implementation Self type is not concrete")
             bindings.selves.set(implementation, self_type)
           }
-          Result::Err(_) => {
+          Err(_) => {
             self_host_assert_compiler_invariant(false, "SPC-301 implementation Self type could not be resolved")
             unreachable()
           }
@@ -127,9 +127,9 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
       }
       _ => {}
     }
-    Option::None => {}
+    None => {}
   }
-  lowering.compile_time.instances.set(specialization, SelfHostCompileTimeInstance::{
+  lowering.compile_time.instances.set(specialization, {
     declaration: request.declaration
     evidence_types: request.evidence_types.copy()
     module_: module_
@@ -139,7 +139,7 @@ fn self_host_prepare_compile_time_instance(lowering: SelfHostPlannedProgramLower
   let conditions = self_host_empty_u32_bool_map()
   for body in module_.bodies {
     if body.declaration == request.declaration {
-      self_host_fold_compile_time_body_with_conditions(lowering, module_, body, specialization, bindings, Option::Some(conditions))
+      self_host_fold_compile_time_body_with_conditions(lowering, module_, body, specialization, bindings, Some(conditions))
     }
   }
   if needs_recheck {

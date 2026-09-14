@@ -8,14 +8,14 @@ test "missing user payload evidence cannot be repaired by variant suffixes" {
   self_host_physical_test_assert_clean_inference(link)
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let indexes = self_host_build_physical_body_indexes(link)
-  let missing = self_host_body_physical_value(indexes, -1i32, SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, 0u64)
+  let missing = self_host_body_physical_value(indexes, -1i32, UnresolvedBodyCarrier, 0u64)
   let mut checked = 0u32
   for pattern in module_.patterns {
-    if pattern.source is SelfHostHirPattern::TuplePattern(_, _, _) {
+    if pattern.source is TuplePattern(_, _, _) {
       let present = self_host_body_pattern_payload_value(link, indexes, module_, pattern, 0u32, missing)
-      assert(!(present.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier), "the declared payload has physical storage evidence")
+      assert(!(present.carrier is UnresolvedBodyCarrier), "the declared payload has physical storage evidence")
       let absent = self_host_body_pattern_payload_value(link, indexes, module_, pattern, 1u32, missing)
-      assert(absent.carrier is SelfHostWasmBodyCarrier::UnresolvedBodyCarrier, "an absent payload must not use a generic slot selected by spelling")
+      assert(absent.carrier is UnresolvedBodyCarrier, "an absent payload must not use a generic slot selected by spelling")
       checked = checked + 1u32
     }
   }

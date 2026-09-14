@@ -14,7 +14,7 @@ test "type resolution canonicalizes primitives generics and applications" {
     "generic field",
   )
   assert(
-    resolved.field_types[1u32] == resolved.primitive(SelfHostPrimitiveType::I32Type),
+    resolved.field_types[1u32] == resolved.primitive(I32Type),
     "primitive field",
   )
   let parameters = collected.parameters_of(collected.declarations[2u32].id)
@@ -23,10 +23,10 @@ test "type resolution canonicalizes primitives generics and applications" {
     "canonical application",
   )
   match resolved.types[resolved.parameter_types[parameters.start]] {
-    SelfHostResolvedType::AppliedType(base, arguments) => {
+    AppliedType(base, arguments) => {
       assert(arguments.length == 1u32, "argument count")
       match resolved.types[base] {
-        SelfHostResolvedType::NominalType(declaration) => assert(
+        NominalType(declaration) => assert(
           declaration == collected.declarations[0u32].id,
           "Pair constructor",
         )
@@ -58,7 +58,7 @@ test "type resolution materializes every callable function type" {
       let function_type = resolved.callable_function_types[current]
       assert(function_type != 4294967295u32, "missing callable function type")
       match resolved.types[function_type] {
-        SelfHostResolvedType::FunctionType(_, _) => {}
+        FunctionType(_, _) => {}
         _ => assert(false, "expected callable function type")
       }
       continue current + 1u32
@@ -79,13 +79,13 @@ test "type resolution diagnoses unknown names and generic arity" {
   let mut not_applicable = 0u32
   for diagnostic in resolved.diagnostics {
     match diagnostic {
-      SelfHostTypeDiagnostic::UnknownType(_, _, _) => {
+      UnknownType(_, _, _) => {
         unknown = unknown + 1u32
       }
-      SelfHostTypeDiagnostic::TypeArityMismatch(_, _, _, _, _) => {
+      TypeArityMismatch(_, _, _, _, _) => {
         arity = arity + 1u32
       }
-      SelfHostTypeDiagnostic::TypeNotApplicable(_, _, _) => {
+      TypeNotApplicable(_, _, _) => {
         not_applicable = not_applicable + 1u32
       }
       _ => {}
@@ -104,9 +104,9 @@ test "trait and impl signatures resolve parent generic and Self scopes" {
   let resolved = self_host_resolve_module_types(collected)
   assert(resolved.diagnostics.length() == 0u32, "diagnostics")
   match resolved.impl_trait_types[0u32] {
-    Option::Some(type_) => match resolved.types[type_] {
-      SelfHostResolvedType::AppliedType(base, _) => match resolved.types[base] {
-        SelfHostResolvedType::TraitType(declaration) => assert(
+    Some(type_) => match resolved.types[type_] {
+      AppliedType(base, _) => match resolved.types[base] {
+        TraitType(declaration) => assert(
           declaration == collected.declarations[0u32].id,
           "trait constructor",
         )
@@ -114,11 +114,11 @@ test "trait and impl signatures resolve parent generic and Self scopes" {
       }
       _ => assert(false, "expected applied trait")
     }
-    Option::None => assert(false, "missing trait")
+    None => assert(false, "missing trait")
   }
   let trait_parameters = collected.parameters_of(collected.methods[0u32].id)
   match resolved.types[resolved.parameter_types[trait_parameters.start]] {
-    SelfHostResolvedType::SelfType(declaration) => assert(
+    SelfType(declaration) => assert(
       declaration == collected.declarations[0u32].id,
       "trait Self",
     )
@@ -138,16 +138,16 @@ test "function aliases normalize signatures canonically" {
     "normalized callback",
   )
   match resolved.types[resolved.parameter_types[0u32]] {
-    SelfHostResolvedType::FunctionType(parameters, result) => {
+    FunctionType(parameters, result) => {
       assert(parameters.length == 1u32, "parameter count")
       assert(
         resolved.type_arguments[parameters.start] == resolved.primitive(
-          SelfHostPrimitiveType::I32Type,
+          I32Type,
         ),
         "parameter type",
       )
       assert(
-        result == resolved.primitive(SelfHostPrimitiveType::I32Type),
+        result == resolved.primitive(I32Type),
         "result type",
       )
     }
@@ -167,13 +167,13 @@ test "generic aliases substitute nested applications" {
     "canonical nested alias",
   )
   match resolved.types[resolved.parameter_types[0u32]] {
-    SelfHostResolvedType::AppliedType(_, outer) => {
+    AppliedType(_, outer) => {
       match resolved.types[resolved.type_arguments[outer.start]] {
-        SelfHostResolvedType::AppliedType(_, inner) => {
+        AppliedType(_, inner) => {
           assert(inner.length == 2u32, "inner pair")
           assert(
             resolved.type_arguments[inner.start] == resolved.primitive(
-              SelfHostPrimitiveType::StringType,
+              StringType,
             ),
             "substituted String",
           )
@@ -246,13 +246,13 @@ test "reserved names and trait expectations are diagnosed" {
   let mut unknown_trait = 0u32
   for diagnostic in resolved.diagnostics {
     match diagnostic {
-      SelfHostTypeDiagnostic::ReservedTypeName(_, _, _) => {
+      ReservedTypeName(_, _, _) => {
         reserved = reserved + 1u32
       }
-      SelfHostTypeDiagnostic::ExpectedTraitType(_, _, _) => {
+      ExpectedTraitType(_, _, _) => {
         expected_trait = expected_trait + 1u32
       }
-      SelfHostTypeDiagnostic::UnknownTrait(_, _, _) => {
+      UnknownTrait(_, _, _) => {
         unknown_trait = unknown_trait + 1u32
       }
       _ => {}
@@ -342,7 +342,7 @@ test "alias normalization remains iterative at depth 1024" {
   assert(resolved.diagnostics.length() == 0u32, "diagnostics")
   assert(resolved.alias_expansion_work == 1024u32, "expansion work")
   assert(
-    resolved.parameter_types[0u32] == resolved.primitive(SelfHostPrimitiveType::I32Type),
+    resolved.parameter_types[0u32] == resolved.primitive(I32Type),
     "normalized type",
   )
 }
@@ -354,7 +354,7 @@ test "alias expansion limit emits one deterministic diagnostic" {
   )
   let resolved = self_host_resolve_module_types_with_alias_expansion_limit(
     collected,
-    Option::Some(0u32),
+    Some(0u32),
   )
   assert(resolved.parameter_types[0u32] == resolved.error_type, "poison")
   assert(resolved.diagnostics.length() == 1u32, "one diagnostic")

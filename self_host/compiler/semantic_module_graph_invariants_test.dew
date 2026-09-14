@@ -1,5 +1,5 @@
 fn self_host_module_graph_invariant_fixture() -> SelfHostProgramModuleGraph {
-  SelfHostProgramModuleGraph::{
+  {
     dependencies: [
       self_host_graph_test_span(0u32, 0u32),
       self_host_graph_test_span(0u32, 1u32),
@@ -24,7 +24,7 @@ test "module graph verification accepts ordered dependencies cycles and empties"
   graph.sccs.truncate(2u32)
   graph.module_scc[2u32] = 1u32
   self_host_verify_program_module_graph(graph, 3u32)
-  self_host_verify_program_module_graph(SelfHostProgramModuleGraph::{
+  self_host_verify_program_module_graph({
     dependencies: []
     dependency_modules: []
     sccs: []
@@ -76,7 +76,7 @@ test "LNK-501 stored component identity must match" expect_trap "unreachable" {
 }
 
 fn self_host_graph_test_span(start: U32, length: U32) -> SelfHostHirSpan {
-  SelfHostHirSpan::{
+  {
     start: start
     length: length
   }

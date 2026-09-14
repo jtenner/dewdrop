@@ -9,7 +9,7 @@ test "StringView equality retains the selected imported trait method" {
   let mut calls = 0u32
   for expression in module_.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedOperatorCall(_, SelfHostHirBinaryOperator::Equal, _, _, _) => {
+      PlannedOperatorCall(_, Equal, _, _, _) => {
         calls = calls + 1u32
       }
       _ => {}
@@ -30,7 +30,7 @@ test "operator call recipes use source operands rather than type arguments" {
   for plan in physical.bodies {
     for call in plan.calls {
       match module_.expressions[call.expression].kind {
-        SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, left, right, types) => {
+        PlannedOperatorCall(_, _, left, right, types) => {
           assert(types.length == 0u32, "concrete operator has no type arguments")
           assert(call.evaluations.length == 2u32, "operator evaluates both source operands")
           assert(call.operands.length == 2u32, "operator passes both physical operands")
@@ -53,7 +53,7 @@ test "reference primitive equality without an implementation is an error" {
   )
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "one missing operator diagnostic")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, _), "missing value equality cannot become reference identity")
+  assert(module_.inferred.diagnostics[0u32] is NoMatchingOperator(_, _), "missing value equality cannot become reference identity")
 }
 
 test "String literal patterns retain imported Eq and their String value type" {
@@ -67,7 +67,7 @@ test "String literal patterns retain imported Eq and their String value type" {
   let mut comparisons = 0u32
   for target in module_.inferred.operator_targets {
     match target {
-      SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => {
+      SelectedBasicCallTarget(_, arguments) => {
         assert(arguments.length == 0u32, "concrete String equality has no generic arguments")
         comparisons = comparisons + 1u32
       }
@@ -78,11 +78,11 @@ test "String literal patterns retain imported Eq and their String value type" {
   let mut literals = 0u32
   for expression in module_.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedStringConst(_) => {
-        assert(expression.call_target is SelfHostBasicCallTarget::SelectedBasicCallTarget(_, _), "lowering must retain the selected pattern equality")
+      PlannedStringConst(_) => {
+        assert(expression.call_target is SelectedBasicCallTarget(_, _), "lowering must retain the selected pattern equality")
         let mut linked = false
         match expression.call_target {
-          SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, _) => {
+          SelectedBasicCallTarget(declaration, _) => {
             for function_ in link.functions {
               if function_.declaration == declaration {
                 linked = true
@@ -92,7 +92,7 @@ test "String literal patterns retain imported Eq and their String value type" {
           _ => {}
         }
         assert(linked, "pattern equality target must be linked")
-        assert(expression.shape is SelfHostPlannedValueShape::RefPlannedValueShape, "pattern comparison must not change the literal to Bool")
+        assert(expression.shape is RefPlannedValueShape, "pattern comparison must not change the literal to Bool")
         literals = literals + 1u32
       }
       _ => {}
@@ -105,12 +105,12 @@ test "String literal patterns retain imported Eq and their String value type" {
   for body in physical.bodies {
     if body.module_id == module_.module_id {
       for call in body.calls {
-        if module_.expressions[call.expression].kind is SelfHostPlannedExpressionKind::PlannedStringConst(_) {
+        if module_.expressions[call.expression].kind is PlannedStringConst(_) {
           assert(call.operands.length == 2u32, "pattern equality has a subject and literal operand")
           assert(call.evaluations.length == 1u32, "the cached subject must not be evaluated again")
           assert(body.call_evaluations[call.evaluations.start] == call.expression, "only the literal is evaluated at the pattern")
           let pattern_id = match body.call_operands[call.operands.start] {
-            SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(value) => value
+            PatternSubjectPhysicalOperand(value) => value
             _ => {
               assert(false, "first operand must be the cached pattern subject")
               4294967295u32
@@ -134,8 +134,8 @@ fn self_host_test_string_pattern_call_error(
   code: U32,
 ) -> Unit {
   match self_host_check_string_pattern_call(link, body, module_, pattern, call.expression, call) {
-    Option::Some(failure) => assert(failure.context.code() == code, failure.context.description())
-    Option::None => assert(false, "a one-field pattern recipe mutation must fail")
+    Some(failure) => assert(failure.context.code() == code, failure.context.description())
+    None => assert(false, "a one-field pattern recipe mutation must fail")
   }
 }
 
@@ -146,7 +146,7 @@ fn self_host_test_string_pattern_call_mutations(
   pattern: U32,
   call: SelfHostPhysicalCallPlan,
 ) -> Unit {
-  let missing = SelfHostPhysicalCallPlan::{
+  let missing = {
     expression: call.expression
     receiver_expression: call.receiver_expression
     declaration: call.declaration
@@ -157,7 +157,7 @@ fn self_host_test_string_pattern_call_mutations(
     operands: call.operands
   }
   self_host_test_string_pattern_call_error(link, body, module_, pattern, missing, 607u32)
-  let wrong_target = SelfHostPhysicalCallPlan::{
+  let wrong_target = {
     expression: call.expression
     receiver_expression: call.receiver_expression
     declaration: 0u64
@@ -168,7 +168,7 @@ fn self_host_test_string_pattern_call_mutations(
     operands: call.operands
   }
   self_host_test_string_pattern_call_error(link, body, module_, pattern, wrong_target, 701u32)
-  let short_recipe = SelfHostPhysicalCallPlan::{
+  let short_recipe = {
     expression: call.expression
     receiver_expression: call.receiver_expression
     declaration: call.declaration
@@ -176,7 +176,7 @@ fn self_host_test_string_pattern_call_mutations(
     physical_function: call.physical_function
     emits_call: call.emits_call
     evaluations: call.evaluations
-    operands: SelfHostHirSpan::{
+    operands: {
       start: call.operands.start
       length: 1u32
     }
@@ -189,13 +189,13 @@ fn self_host_test_string_pattern_call_mutations(
   body.call_evaluations[call.evaluations.start] = evaluation
 
   let subject = body.call_operands[call.operands.start]
-  body.call_operands[call.operands.start] = SelfHostPhysicalOperandSource::PatternSubjectPhysicalOperand(4294967295u32)
+  body.call_operands[call.operands.start] = PatternSubjectPhysicalOperand(4294967295u32)
   self_host_test_string_pattern_call_error(link, body, module_, pattern, call, 704u32)
   body.call_operands[call.operands.start] = subject
 
   let target = match self_host_linked_physical_function(link, call.physical_function) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       assert(false, "valid pattern target must be present")
       return
     }
@@ -203,16 +203,16 @@ fn self_host_test_string_pattern_call_mutations(
   let fragment_module = self_host_body_fragment_module(link, target.module_index)
   let fragment = self_host_body_function_fragment(fragment_module, target.fragment_index)
   let parameter = fragment_module.function_value_types[fragment.parameters.start]
-  fragment_module.function_value_types[fragment.parameters.start] = SelfHostPlannedWasmValueType::WasmI32Value
+  fragment_module.function_value_types[fragment.parameters.start] = WasmI32Value
   self_host_test_string_pattern_call_error(link, body, module_, pattern, call, 705u32)
   fragment_module.function_value_types[fragment.parameters.start] = parameter
 
   let result = fragment_module.function_value_types[fragment.results.start]
-  fragment_module.function_value_types[fragment.results.start] = SelfHostPlannedWasmValueType::WasmNullableEqRefValue
+  fragment_module.function_value_types[fragment.results.start] = WasmNullableEqRefValue
   self_host_test_string_pattern_call_error(link, body, module_, pattern, call, 709u32)
   fragment_module.function_value_types[fragment.results.start] = result
 
-  assert(self_host_check_string_pattern_call(link, body, module_, pattern, call.expression, call) is Option::None, "restoring each mutation must restore the valid recipe")
+  assert(self_host_check_string_pattern_call(link, body, module_, pattern, call.expression, call) is None, "restoring each mutation must restore the valid recipe")
   assert(self_host_emitted_string_pattern_target(link, body, module_, pattern, call.expression) == call.physical_function, "ABI-701 call emission must receive the unchanged physical target")
 }
 
@@ -224,7 +224,7 @@ test "String literal patterns report a missing imported Eq implementation" {
   )
   let module_ = self_host_planned_module_lowering_identity(link.fragments.specialization.lowering.modules[1u32])
   assert(module_.inferred.diagnostics.length() == 1u32, "one missing pattern equality diagnostic")
-  assert(module_.inferred.diagnostics[0u32] is SelfHostBodyInferenceDiagnostic::NoMatchingOperator(_, _), "missing pattern equality cannot select an unrelated method")
+  assert(module_.inferred.diagnostics[0u32] is NoMatchingOperator(_, _), "missing pattern equality cannot select an unrelated method")
 }
 
 test "String pattern without trait evidence has a missing target diagnostic" {

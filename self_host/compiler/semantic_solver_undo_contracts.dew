@@ -1,6 +1,6 @@
 impl SelfHostLocalTypeSolver {
   fn solver_failure(self, code: U32, expected: U32, actual: U32, detail: U32) -> SelfHostInvariantFailure {
-    SelfHostInvariantFailure::{
+    {
       code: code
       phase: 2u32
       module_id: self.resolved.module_id
@@ -17,23 +17,23 @@ impl SelfHostLocalTypeSolver {
   fn check_undo_restore(self, start: U32) -> Option<SelfHostInvariantFailure> {
     let variables = self.variable_parents.length()
     if self.variable_sizes.length() != variables {
-      return Option::Some(self.solver_failure(201u32, variables, self.variable_sizes.length(), 1u32))
+      return Some(self.solver_failure(201u32, variables, self.variable_sizes.length(), 1u32))
     }
     if self.variable_bindings.length() != variables {
-      return Option::Some(self.solver_failure(201u32, variables, self.variable_bindings.length(), 2u32))
+      return Some(self.solver_failure(201u32, variables, self.variable_bindings.length(), 2u32))
     }
     if self.variable_types.length() != variables {
-      return Option::Some(self.solver_failure(201u32, variables, self.variable_types.length(), 3u32))
+      return Some(self.solver_failure(201u32, variables, self.variable_types.length(), 3u32))
     }
     let count = self.undo_kinds.length()
     if self.undo_indices.length() != count {
-      return Option::Some(self.solver_failure(205u32, count, self.undo_indices.length(), 1u32))
+      return Some(self.solver_failure(205u32, count, self.undo_indices.length(), 1u32))
     }
     if self.undo_values.length() != count {
-      return Option::Some(self.solver_failure(205u32, count, self.undo_values.length(), 2u32))
+      return Some(self.solver_failure(205u32, count, self.undo_values.length(), 2u32))
     }
     if start > count {
-      return Option::Some(self.solver_failure(205u32, count, start, 0u32))
+      return Some(self.solver_failure(205u32, count, start, 0u32))
     }
     let _ = while start {
       slot => if slot < count {
@@ -41,30 +41,30 @@ impl SelfHostLocalTypeSolver {
         let index = self.undo_indices[slot]
         let old_value = self.undo_values[slot]
         if kind > 2u32 {
-          return Option::Some(self.solver_failure(205u32, 2u32, kind, slot))
+          return Some(self.solver_failure(205u32, 2u32, kind, slot))
         }
         if index >= variables {
-          return Option::Some(self.solver_failure(205u32, variables, index, kind))
+          return Some(self.solver_failure(205u32, variables, index, kind))
         }
         if kind == 0u32 {
           let parent = self_host_body_i32_to_u32(old_value)
           if parent >= variables {
-            return Option::Some(self.solver_failure(205u32, variables, parent, index))
+            return Some(self.solver_failure(205u32, variables, parent, index))
           }
         } else if kind == 1u32 {
           let size = self_host_body_i32_to_u32(old_value)
           if size == 0u32 || size > variables {
-            return Option::Some(self.solver_failure(205u32, variables, size, index))
+            return Some(self.solver_failure(205u32, variables, size, index))
           }
         } else if old_value >= 0i32 {
           let type_ = self_host_body_i32_to_u32(old_value)
           if type_ >= self.types.length() {
-            return Option::Some(self.solver_failure(205u32, self.types.length(), type_, index))
+            return Some(self.solver_failure(205u32, self.types.length(), type_, index))
           }
         } else if old_value < -1i32 {
           let type_ = self_host_body_i32_to_u32(-(old_value + 2i32))
           if type_ >= self.resolved.types.length() {
-            return Option::Some(self.solver_failure(205u32, self.resolved.types.length(), type_, index))
+            return Some(self.solver_failure(205u32, self.resolved.types.length(), type_, index))
           }
         }
         continue slot + 1u32
@@ -72,15 +72,15 @@ impl SelfHostLocalTypeSolver {
         break self_host_semantic_unit()
       }
     }
-    Option::None
+    None
   }
 
   fn assert_undo_restore(self, start: U32) -> Unit {
     match self.check_undo_restore(start) {
-      Option::Some(failure) => {
+      Some(failure) => {
         let _ = self_host_assert_compiler_invariant_with_failure(false, failure, "solver undo record is invalid")
       }
-      Option::None => {}
+      None => {}
     }
   }
 }

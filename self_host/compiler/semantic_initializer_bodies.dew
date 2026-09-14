@@ -4,7 +4,7 @@ fn self_host_plan_initializer_bodies(link: SelfHostPlannedProgramWasmGCLink, ind
   let mut position = 0u32
   for initializer in link.initializers {
     let module_ = self_host_linked_lowering_module_at(link, initializer.module_index)
-    let identity = SelfHostPlannedProgramWasmFunction::{
+    let identity = {
       module_index: initializer.module_index
       fragment_index: 4294967295u32
       declaration: initializer.declaration
@@ -16,9 +16,9 @@ fn self_host_plan_initializer_bodies(link: SelfHostPlannedProgramWasmGCLink, ind
     }
     let source = self_host_body_require_linked_source(self_host_body_lookup(module_, initializer.body), identity, initializer.body)
     match source {
-      Option::Some(body) => {
+      Some(body) => {
         let plan = self_host_plan_physical_body_with_signature(link, indexes, identity, body, 4294967295u32,
-          SelfHostHirSpan::{
+          {
             start: 0u32
             length: 0u32
           },
@@ -27,7 +27,7 @@ fn self_host_plan_initializer_bodies(link: SelfHostPlannedProgramWasmGCLink, ind
         self_host_verify_one_physical_body(link, plan, diagnostics)
         bodies.push(plan)
       }
-      Option::None => unreachable()
+      None => unreachable()
     }
     position = position + 1u32
   }

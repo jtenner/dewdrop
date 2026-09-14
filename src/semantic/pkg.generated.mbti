@@ -35,6 +35,8 @@ pub fn check_program_specialized_call_runtime_evidence(PlannedProgramWasmGCLink,
 
 pub fn collect_bytes(UInt64, Bytes) -> CollectedModule
 
+pub fn collect_compiler_frontend_diagnostics(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering) -> Array[CompilerSourceDiagnostic]
+
 pub fn collect_compiler_source_diagnostics(CollectedProgram, AnalyzedProgramSemantics, PlannedProgramLowering, PlannedProgramWasmGCLink) -> Array[CompilerSourceDiagnostic]
 
 pub fn collect_module(UInt64, Iter[@parser.ParseEvent]) -> CollectedModule
@@ -481,6 +483,7 @@ pub enum BodyNameReference {
   ModuleTypeNameReference(UInt64)
   ModuleTraitNameReference(UInt64)
   VariantNameReference(Int)
+  ContextualFactoryNameReference(Int)
 } derive(Eq, @debug.Debug)
 
 pub enum BodyPatternReference {
@@ -647,6 +650,7 @@ pub enum CollectedMethodKind {
 } derive(Eq, @debug.Debug)
 
 pub struct CollectedModule {
+  constructor_wrappers : Map[UInt64, UInt64]
   module_id : UInt64
   preamble_declaration_count : Int
   files : Array[UInt64]
@@ -715,6 +719,8 @@ pub fn CollectedModule::block_location(Self, Int) -> SourceLocation?
 pub fn CollectedModule::body_location(Self, UInt64) -> SourceLocation?
 pub fn CollectedModule::body_of(Self, UInt64) -> HirBody?
 pub fn CollectedModule::callable_return_location(Self, UInt64) -> SourceLocation?
+pub fn CollectedModule::constructor_evidence_fingerprint(Self) -> String
+pub fn CollectedModule::constructor_interface_matches(Self, FrozenModuleInterface) -> Bool
 pub fn CollectedModule::declaration(Self, UInt64) -> CollectedDeclarationReference?
 pub fn CollectedModule::declaration_is_test_only(Self, UInt64) -> Bool
 pub fn CollectedModule::declaration_location(Self, UInt64) -> SourceLocation?
@@ -942,6 +948,7 @@ pub struct FrozenInterfaceParameter {
 } derive(Eq, @debug.Debug)
 
 pub struct FrozenInterfaceVariant {
+  constructor : UInt64?
   variant : UInt64
   declaration : UInt64
   kind : CollectedVariantKind
@@ -2578,6 +2585,7 @@ pub struct ResolvedImportedImplementation {
 } derive(Eq, @debug.Debug)
 
 pub struct ResolvedImportedVariant {
+  constructor : UInt64?
   variant : UInt64
   declaration : UInt64
   kind : CollectedVariantKind

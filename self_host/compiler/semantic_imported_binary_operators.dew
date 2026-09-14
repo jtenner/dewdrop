@@ -5,14 +5,14 @@ open dew.std.string
 impl SelfHostBasicBodyInferencer {
   fn imported_operator_trait(self, operator: SelfHostHirBinaryOperator) -> Option<U64> {
     match self.binary_operator_trait_name(operator) {
-      Option::Some(name) => match self.imported.scope {
-        Option::Some(scope) => match scope.lookup_trait(name) {
-          Option::Some(binding) => Option::Some(binding.declaration)
-          Option::None => Option::None
+      Some(name) => match self.imported.scope {
+        Some(scope) => match scope.lookup_trait(name) {
+          Some(binding) => Some(binding.declaration)
+          None => None
         }
-        Option::None => Option::None
+        None => None
       }
-      Option::None => Option::None
+      None => None
     }
   }
 
@@ -21,42 +21,42 @@ impl SelfHostBasicBodyInferencer {
   fn binary_has_scalar_fallback(self, left: U32) -> Bool {
     let type_ = self.solver.representative_type(self.expression_type(left))
     match self.solver.type_term(type_) {
-      SelfHostBodyTypeTerm::BodyResolvedType(resolved) => match self.resolved.types[resolved] {
-        SelfHostResolvedType::PrimitiveType(primitive) => match primitive {
-          SelfHostPrimitiveType::BoolType => true
-          SelfHostPrimitiveType::I8Type => true
-          SelfHostPrimitiveType::I16Type => true
-          SelfHostPrimitiveType::I32Type => true
-          SelfHostPrimitiveType::I64Type => true
-          SelfHostPrimitiveType::U8Type => true
-          SelfHostPrimitiveType::U16Type => true
-          SelfHostPrimitiveType::U32Type => true
-          SelfHostPrimitiveType::U64Type => true
-          SelfHostPrimitiveType::F32Type => true
-          SelfHostPrimitiveType::F64Type => true
-          SelfHostPrimitiveType::V128Type => true
-          SelfHostPrimitiveType::Swar32Type => true
-          SelfHostPrimitiveType::Swar64Type => true
-          SelfHostPrimitiveType::I8x4Type => true
-          SelfHostPrimitiveType::U8x4Type => true
-          SelfHostPrimitiveType::I16x2Type => true
-          SelfHostPrimitiveType::U16x2Type => true
-          SelfHostPrimitiveType::I8x8Type => true
-          SelfHostPrimitiveType::U8x8Type => true
-          SelfHostPrimitiveType::I16x4Type => true
-          SelfHostPrimitiveType::U16x4Type => true
-          SelfHostPrimitiveType::I32x2Type => true
-          SelfHostPrimitiveType::U32x2Type => true
-          SelfHostPrimitiveType::I8x16Type => true
-          SelfHostPrimitiveType::U8x16Type => true
-          SelfHostPrimitiveType::I16x8Type => true
-          SelfHostPrimitiveType::U16x8Type => true
-          SelfHostPrimitiveType::I32x4Type => true
-          SelfHostPrimitiveType::U32x4Type => true
-          SelfHostPrimitiveType::I64x2Type => true
-          SelfHostPrimitiveType::U64x2Type => true
-          SelfHostPrimitiveType::F32x4Type => true
-          SelfHostPrimitiveType::F64x2Type => true
+      BodyResolvedType(resolved) => match self.resolved.types[resolved] {
+        PrimitiveType(primitive) => match primitive {
+          BoolType => true
+          I8Type => true
+          I16Type => true
+          I32Type => true
+          I64Type => true
+          U8Type => true
+          U16Type => true
+          U32Type => true
+          U64Type => true
+          F32Type => true
+          F64Type => true
+          V128Type => true
+          Swar32Type => true
+          Swar64Type => true
+          I8x4Type => true
+          U8x4Type => true
+          I16x2Type => true
+          U16x2Type => true
+          I8x8Type => true
+          U8x8Type => true
+          I16x4Type => true
+          U16x4Type => true
+          I32x2Type => true
+          U32x2Type => true
+          I8x16Type => true
+          U8x16Type => true
+          I16x8Type => true
+          U16x8Type => true
+          I32x4Type => true
+          U32x4Type => true
+          I64x2Type => true
+          U64x2Type => true
+          F32x4Type => true
+          F64x2Type => true
           _ => false
         }
         _ => false
@@ -73,21 +73,24 @@ impl SelfHostBasicBodyInferencer {
     // specialization/evidence path must decide the operator, not this search.
     let receiver = self.solver.representative_type(self.expression_type(left))
     match self.solver.type_term(receiver) {
-      SelfHostBodyTypeTerm::BodyResolvedType(type_) => match self.resolved.types[type_] {
-        SelfHostResolvedType::GenericParameterType(_) => return
-        SelfHostResolvedType::SelfType(_) => return
+      BodyResolvedType(type_) => match self.resolved.types[type_] {
+        GenericParameterType(_) => return
+        SelfType(_) => return
         _ => {}
       }
-      SelfHostBodyTypeTerm::BodyVariableType(_) => return
+      BodyVariableType(_) => {
+        let _ = self.postpone_operator_failure(expression)
+        return
+      }
       _ => {}
     }
     let trait_ = match self.imported_operator_trait(operator) {
-      Option::Some(value) => value
-      Option::None => return
+      Some(value) => value
+      None => return
     }
     let method = match self.binary_operator_method_name(operator) {
-      Option::Some(value) => value
-      Option::None => return
+      Some(value) => value
+      None => return
     }
     let mut selected = 4294967295u32
     let mut selected_local_impl = 4294967295u32
@@ -97,8 +100,8 @@ impl SelfHostBasicBodyInferencer {
     let mut count = 0u32
     let mut needs_evidence = false
     let right = match self.collected.expressions[expression] {
-      SelfHostHirExpr::StringExpr(_, _) => expression
-      SelfHostHirExpr::BinaryExpr(_, _, value, _) => value
+      StringExpr(_, _) => expression
+      BinaryExpr(_, _, value, _) => value
       _ => return
     }
     // Local implementations of an imported trait participate in the same
@@ -106,13 +109,13 @@ impl SelfHostBasicBodyInferencer {
     let _ = while 0u32 {
       index => if index < self.collected.impls.length() {
         match self.resolved.impl_trait_types[index] {
-          Option::Some(trait_type) => match self.resolved_trait_head(trait_type) {
-            Option::Some(candidate) => if candidate == trait_ {
+          Some(trait_type) => match self.resolved_trait_head(trait_type) {
+            Some(candidate) => if candidate == trait_ {
               let owner = self.collected.impls[index].declaration
               for local_method in self.collected.methods {
                 if local_method.parent == owner && self_host_basic_string_equal(self.collected.name(local_method.name), method) {
                   match self.local_callable_index_of_declaration(local_method.id) {
-                    Option::Some(callable) => if self.binary_operator_candidate_viable(expression, left, right, offset, index, callable) {
+                    Some(callable) => if self.binary_operator_candidate_viable(expression, left, right, offset, index, callable) {
                       count = count + 1u32
                       if count == 1u32 {
                         selected_local_impl = index
@@ -122,14 +125,14 @@ impl SelfHostBasicBodyInferencer {
                         second_declaration = local_method.id
                       }
                     }
-                    Option::None => {}
+                    None => {}
                   }
                 }
               }
             }
-            Option::None => {}
+            None => {}
           }
-          Option::None => {}
+          None => {}
         }
         continue index + 1u32
       } else {
@@ -141,10 +144,10 @@ impl SelfHostBasicBodyInferencer {
         let callable = self_host_resolved_imported_callable_at(self.imported.callables, index)
         if self_host_basic_string_equal(callable.name, method) {
           match callable.kind {
-            SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(owner) => match self.imported_implementation(owner) {
-              Option::Some(implementation) => match implementation.trait_type {
-                Option::Some(trait_type) => match self.resolved_trait_head(trait_type) {
-                  Option::Some(candidate) => if candidate == trait_ {
+            FrozenImplCallable(owner) => match self.imported_implementation(owner) {
+              Some(implementation) => match implementation.trait_type {
+                Some(trait_type) => match self.resolved_trait_head(trait_type) {
+                  Some(candidate) => if candidate == trait_ {
                     let snapshot = self.solver.snapshot()
                     let viable = self.constrain_imported_operator_signature(expression, implementation, callable)
                     self.solver.rollback(snapshot)
@@ -162,11 +165,11 @@ impl SelfHostBasicBodyInferencer {
                       }
                     }
                   }
-                  Option::None => {}
+                  None => {}
                 }
-                Option::None => {}
+                None => {}
               }
-              Option::None => {}
+              None => {}
             }
             _ => {}
           }
@@ -176,9 +179,12 @@ impl SelfHostBasicBodyInferencer {
         break self_host_semantic_unit()
       }
     }
+    if (needs_evidence || count != 1u32) && self.postpone_operator_failure(expression) {
+      return
+    }
     if needs_evidence {
       self.mark_unsupported(expression)
-      self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), SelfHostBasicCallTarget::ErrorBasicCallTarget)
+      self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), ErrorBasicCallTarget)
       return
     }
     if count == 1u32 {
@@ -188,18 +194,18 @@ impl SelfHostBasicBodyInferencer {
       }
       let callable = self_host_resolved_imported_callable_at(self.imported.callables, selected)
       match callable.kind {
-        SelfHostFrozenInterfaceCallableKind::FrozenImplCallable(owner) => match self.imported_implementation(owner) {
-          Option::Some(implementation) => {
+        FrozenImplCallable(owner) => match self.imported_implementation(owner) {
+          Some(implementation) => {
             let valid = self.constrain_imported_operator_signature(expression, implementation, callable)
             let _ = self_host_assert_compiler_invariant(valid, "selected imported binary signature changed after its probe")
             let start = self.call_type_arguments.length()
             self_host_basic_copy_i32_values(self.candidate_type_arguments, self.call_type_arguments)
-            self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), SelfHostBasicCallTarget::SelectedBasicCallTarget(callable.declaration, SelfHostHirSpan::{
+            self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), SelectedBasicCallTarget(callable.declaration, {
               start: start
               length: self.candidate_type_arguments.length()
             }))
           }
-          Option::None => {
+          None => {
             let _ = self_host_assert_compiler_invariant(false, "selected imported binary implementation is missing")
           }
         }
@@ -209,12 +215,12 @@ impl SelfHostBasicBodyInferencer {
       }
       return
     }
-    self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), SelfHostBasicCallTarget::ErrorBasicCallTarget)
+    self_host_store_basic_call_target(self.operator_targets, self.expression_index(expression), ErrorBasicCallTarget)
     self.solver.poison_type(self.expression_type(expression))
     if count == 0u32 {
-      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::NoMatchingOperator(expression, offset))
+      self.diagnostics.push(NoMatchingOperator(expression, offset))
     } else {
-      self.diagnostics.push(SelfHostBodyInferenceDiagnostic::AmbiguousOperator(expression, selected_declaration, second_declaration, count, offset))
+      self.diagnostics.push(AmbiguousOperator(expression, selected_declaration, second_declaration, count, offset))
     }
   }
 }

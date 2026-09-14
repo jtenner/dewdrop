@@ -703,8 +703,54 @@ fn BodyNameResolver::resolve_expression_name(
     self.set_expression_reference(expression, VariantNameReference(name))
     return
   }
+  if expectation == name_expect_call_target && self.known_factory_name(name) {
+    self.set_expression_reference(
+      expression,
+      ContextualFactoryNameReference(name),
+    )
+    return
+  }
   self.diagnose(UnknownValueName(name, expression, offset))
   self.set_expression_reference(expression, ErrorNameReference)
+}
+
+///|
+fn BodyNameResolver::known_factory_name(
+  self : BodyNameResolver,
+  name : NameId,
+) -> Bool {
+  for method in self.collected.methods {
+    if method.kind == ImplMethodDecl &&
+      method.name == name &&
+      self.declaration_visible(method.id) {
+      let parameters = self.collected.parameters_of(method.id)
+      if parameters.length == 0 ||
+        self.collected.parameters[parameters.start].kind !=
+        ReceiverParameterDecl {
+        return true
+      }
+    }
+  }
+  match self.imports {
+    Some(imports) =>
+      for index in imports.imported_interfaces {
+        match imports.interfaces[index] {
+          Some(interface_) =>
+            for callable in interface_.callables {
+              if callable.kind is FrozenImplCallable(_) &&
+                callable.name == self.collected.name(name) {
+                if callable.parameters.length == 0 ||
+                  !interface_.parameters[callable.parameters.start].receiver {
+                  return true
+                }
+              }
+            }
+          None => ()
+        }
+      }
+    None => ()
+  }
+  false
 }
 
 ///|
@@ -818,7 +864,9 @@ fn BodyNameResolver::collect_pattern_alternative(
           }
         }
       HirBindingPattern(name, offset) =>
-        if !binding_context || self.known_pattern_constructor(name) {
+        if binding_context && self.variant_names.contains(name) {
+          self.set_pattern_reference(pattern, PatternVariantReference(name))
+        } else if !binding_context || self.known_pattern_constructor(name) {
           self.resolve_pattern_constructor(pattern, name, offset)
         } else {
           self.binding_names.push(name)

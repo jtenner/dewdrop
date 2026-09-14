@@ -11,10 +11,10 @@ test "ARN-104 closure captures require their enclosing environment" expect_trap 
   assert(index == 1u32, "the inner lambda starts at capture one")
   let source = module_.captures[index]
   assert(self_host_lambda_capture_source_equal(source.source,
-    SelfHostLambdaCaptureSource::BodyLocalCapture(5100u64 << 32u64, 0u32),
+    BodyLocalCapture(5100u64 << 32u64, 0u32),
   ), "the original first inner capture forwards seed")
   module_.captures[index] = self_host_capture_test_resourced(source,
-    SelfHostLambdaCaptureSource::LambdaLocalCapture(1u32, 0u32),
+    LambdaLocalCapture(1u32, 0u32),
   )
   for plan in program.bodies {
     if plan.lambda == 0u32 {

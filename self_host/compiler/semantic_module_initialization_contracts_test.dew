@@ -26,7 +26,7 @@ test "LNK-501 module startup SCCs cannot duplicate a value" expect_trap "unreach
 test "ARN-101 module startup checks SCC spans before access" expect_trap "unreachable" {
   let (collected, values, plan) = self_host_initialization_contract_fixture(b"let first = second\nlet second = 42i64\n")
   assert(plan.diagnostics.length() == 0u32 && plan.steps.length() == 2u32, "valid dependency-first fixture")
-  values.dependencies.sccs[0u32] = SelfHostHirSpan::{
+  values.dependencies.sccs[0u32] = {
     start: 4294967295u32
     length: 1u32
   }

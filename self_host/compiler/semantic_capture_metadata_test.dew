@@ -5,10 +5,10 @@ test "fragment metadata accepts valid capture tables" {
 
 test "fragment metadata accepts generic template capture carriers" {
   let lowering = self_host_physical_test_lowering(b"pub fn maker<t>(value: t) -> fn() -> t {\n  fn() -> t {\n    value\n  }\n}\n")
-  assert(self_host_validate_program_inference(lowering) is Option::None, "valid generic closure inference")
+  assert(self_host_validate_program_inference(lowering) is None, "valid generic closure inference")
   let module_ = lowering.modules[0u32]
   assert(module_.captures.length() == 1u32, "one generic capture")
-  assert(module_.captures[0u32].shape is SelfHostPlannedValueShape::GenericPlannedValueShape, "test pending template storage, not concrete specialization")
+  assert(module_.captures[0u32].shape is GenericPlannedValueShape, "test pending template storage, not concrete specialization")
   self_host_assert_module_capture_metadata(module_, 4u32)
 }
 
@@ -42,7 +42,7 @@ test "ARN-106 fragment capture sources retain their root body" expect_trap "unre
   let fixture = self_host_capture_test_fixture()
   let source = fixture.module_.captures[0u32]
   fixture.module_.captures[0u32] = self_host_capture_test_resourced(source,
-    SelfHostLambdaCaptureSource::BodyLocalCapture(fixture.module_.bodies[1u32].body, 0u32),
+    BodyLocalCapture(fixture.module_.bodies[1u32].body, 0u32),
   )
   self_host_assert_module_capture_metadata(fixture.module_, 4u32)
 }

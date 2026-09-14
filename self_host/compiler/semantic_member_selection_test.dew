@@ -27,7 +27,7 @@ fn self_host_member_field_expression(
   while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::FieldExpr(_, _, _) => {
+        FieldExpr(_, _, _) => {
           return current
         }
         _ => {}
@@ -48,8 +48,8 @@ fn self_host_member_call_expression(
   while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::CallExpr(target, _, _) => match collected.expressions[target] {
-          SelfHostHirExpr::FieldExpr(_, _, _) => {
+        CallExpr(target, _, _) => match collected.expressions[target] {
+          FieldExpr(_, _, _) => {
             return current
           }
           _ => {}
@@ -72,7 +72,7 @@ fn self_host_member_construct_expression(
   while expression {
     current => if current < end {
       match collected.expressions[current] {
-        SelfHostHirExpr::ConstructExpr(_, _, _) => {
+        ConstructExpr(_, _, _) => {
           return current
         }
         _ => {}
@@ -92,7 +92,7 @@ fn self_host_member_assert_primitive(
   message: String,
 ) -> Unit {
   match body.type_term(type_) {
-    SelfHostBodyTypeTerm::BodyResolvedType(resolved_type) => assert(
+    BodyResolvedType(resolved_type) => assert(
       resolved_type == resolved.primitive(primitive),
       message,
     )
@@ -113,11 +113,11 @@ test "member selection resolves local fields" {
     body,
     resolved,
     body.expression_type(hir_body, field),
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "field type",
   )
   match body.expression_selection(hir_body, field) {
-    SelfHostBasicExpressionSelection::FieldBasicExpressionSelection(declaration, mutable_, owner) => {
+    FieldBasicExpressionSelection(declaration, mutable_, owner) => {
       assert(declaration == collected.fields[0u32].id, "selected x field")
       assert(owner == collected.fields[0u32].declaration, "selected x owner")
       assert(!mutable_, "x immutable")
@@ -139,7 +139,7 @@ test "member selection substitutes generic field types" {
     body,
     resolved,
     body.expression_type(hir_body, field),
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "generic field type",
   )
 }
@@ -157,7 +157,7 @@ test "member selection follows selected call results" {
     body,
     resolved,
     body.expression_type(hir_body, field),
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "call field type",
   )
 }
@@ -175,11 +175,11 @@ test "member selection resolves inherent methods" {
     body,
     resolved,
     body.expression_type(hir_body, call),
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "method result",
   )
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(declaration, arguments) => {
+    SelectedBasicCallTarget(declaration, arguments) => {
       assert(declaration == collected.methods[0u32].id, "selected get method")
       assert(arguments.length == 0u32, "method type arguments")
     }
@@ -197,20 +197,20 @@ test "member selection instantiates impl and method generics" {
   let call = self_host_member_call_expression(collected, hir_body)
   assert(body.diagnostic_count() == 0u32, "generic method diagnostics")
   match body.call_target(hir_body, call) {
-    SelfHostBasicCallTarget::SelectedBasicCallTarget(_, arguments) => {
+    SelectedBasicCallTarget(_, arguments) => {
       assert(arguments.length == 2u32, "impl and method arguments")
       self_host_member_assert_primitive(
         body,
         resolved,
         body.call_type_arguments[arguments.start],
-        SelfHostPrimitiveType::I32Type,
+        I32Type,
         "impl generic I32",
       )
       self_host_member_assert_primitive(
         body,
         resolved,
         body.call_type_arguments[arguments.start + 1u32],
-        SelfHostPrimitiveType::BoolType,
+        BoolType,
         "method generic Bool",
       )
     }
@@ -232,11 +232,11 @@ test "member selection constructs local generic structs" {
     body,
     resolved,
     body.expression_type_arguments[0u32],
-    SelfHostPrimitiveType::I32Type,
+    I32Type,
     "construction generic I32",
   )
   match body.expression_selection(hir_body, construction) {
-    SelfHostBasicExpressionSelection::StructConstructionBasicExpressionSelection(
+    StructConstructionBasicExpressionSelection(
       declaration,
       arguments,
     ) => {
@@ -246,7 +246,7 @@ test "member selection constructs local generic structs" {
     _ => assert(false, "construction selection")
   }
   match body.object_field_target(hir_body, hir_body.object_fields.start) {
-    SelfHostBasicObjectFieldTarget::SelectedBasicObjectFieldTarget(field) => assert(
+    SelectedBasicObjectFieldTarget(field) => assert(
       field == collected.fields[0u32].id,
       "construction field target",
     )
@@ -270,14 +270,14 @@ test "member selection diagnoses construction fields" {
   let missing_hir = missing_collected.bodies[0u32]
   let unknown_hir = unknown_collected.bodies[0u32]
   let missing_body = match missing.body(missing_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let unknown_body = match unknown.body(unknown_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -287,7 +287,7 @@ test "member selection diagnoses construction fields" {
   let _ = while index {
     current => if current < missing_body.diagnostic_count() {
       match missing_body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::MissingConstructionField(_, _, _, _) => {
+        MissingConstructionField(_, _, _, _) => {
           missing_count = missing_count + 1u32
         }
         _ => {}
@@ -301,7 +301,7 @@ test "member selection diagnoses construction fields" {
   let _ = while index {
     current => if current < unknown_body.diagnostic_count() {
       match unknown_body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::UnknownConstructionField(_, _, _, _) => {
+        UnknownConstructionField(_, _, _, _) => {
           unknown_count = unknown_count + 1u32
         }
         _ => {}
@@ -331,14 +331,14 @@ test "member selection diagnoses invalid and unknown fields" {
   let invalid_hir = invalid_collected.bodies[0u32]
   let unknown_hir = unknown_collected.bodies[0u32]
   let invalid_body = match invalid.body(invalid_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
   let unknown_body = match unknown.body(unknown_hir.id) {
-    Option::Some(value) => value
-    Option::None => {
+    Some(value) => value
+    None => {
       return
     }
   }
@@ -348,7 +348,7 @@ test "member selection diagnoses invalid and unknown fields" {
   let _ = while index {
     current => if current < invalid_body.diagnostic_count() {
       match invalid_body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::FieldAccessRequiresNominal(_, _) => {
+        FieldAccessRequiresNominal(_, _) => {
           invalid_count = invalid_count + 1u32
         }
         _ => {}
@@ -362,7 +362,7 @@ test "member selection diagnoses invalid and unknown fields" {
   let _ = while index {
     current => if current < unknown_body.diagnostic_count() {
       match unknown_body.diagnostic_at(current) {
-        SelfHostBodyInferenceDiagnostic::UnknownFieldForType(_, _, _, _) => {
+        UnknownFieldForType(_, _, _, _) => {
           unknown_count = unknown_count + 1u32
         }
         _ => {}

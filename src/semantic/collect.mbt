@@ -925,7 +925,9 @@ fn CollectionBuilder::collect_foreign_library(
       EmptyForeignLogicalName(self.current_file, value.logical_name_offset),
     )
   } else if value.host_import && value.logical_name.has_prefix(b"link:") {
-    self.diagnostics.push(ReservedForeignHostNamespace(self.current_file, value.logical_name_offset))
+    self.diagnostics.push(
+      ReservedForeignHostNamespace(self.current_file, value.logical_name_offset),
+    )
   } else if !semantic_utf8_is_valid(value.logical_name) {
     self.diagnostics.push(
       InvalidUtf8ForeignLogicalName(
@@ -1376,7 +1378,8 @@ fn CollectionBuilder::collect_declaration(
 
 ///|
 fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
-  {
+  let module_ : CollectedModule = {
+    constructor_wrappers: Map::new(),
     module_id: self.module_id,
     preamble_declaration_count: self.preamble_declaration_count,
     files: self.files,
@@ -1441,6 +1444,8 @@ fn CollectionBuilder::finish(self : CollectionBuilder) -> CollectedModule {
     value_binding_candidates: self.value_binding_candidates,
     foreign_library_by_alias: self.foreign_library_by_alias,
   }
+  module_.install_constructor_wrappers(constructor_value_names(module_))
+  module_
 }
 
 ///|

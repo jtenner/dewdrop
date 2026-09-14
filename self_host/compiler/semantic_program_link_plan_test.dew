@@ -14,7 +14,7 @@ fn self_host_link_test_plan(
 
 test "program function lookup keeps one record owner across loop fields" {
   let functions = [
-    SelfHostPlannedProgramWasmFunction::{
+    {
       module_index: 0u32
       fragment_index: 0u32
       declaration: 11u64
@@ -23,7 +23,7 @@ test "program function lookup keeps one record owner across loop fields" {
       function_index: 4u32
       imported: false
     },
-    SelfHostPlannedProgramWasmFunction::{
+    {
       module_index: 0u32
       fragment_index: 1u32
       declaration: 22u64
@@ -34,9 +34,23 @@ test "program function lookup keeps one record owner across loop fields" {
     },
   ]
   match self_host_program_link_function(functions, 22u64, 3u32) {
-    Option::Some(index) => assert(self_host_u32_equal(index, 8u32), "function index")
-    Option::None => assert(false, "function lookup")
+    Some(index) => assert(self_host_u32_equal(index, 8u32), "function index")
+    None => assert(false, "function lookup")
   }
+}
+
+test "field nominal lookup distinguishes concrete scalar and nominal fields" {
+  let link = self_host_link_test_plan(
+    b"struct Item {\n  value: I32\n}\nstruct Holder {\n  count: U32\n  item: Item\n}\npub fn run(holder: Holder) -> I32 {\n  holder.item.value\n}\n",
+  )
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let fields = module_.type_layouts.fields
+  assert(self_host_body_field_value_nominal_owner(link, fields[1u32].field) == 0u64,
+    "scalar fields have no nominal owner")
+  assert(self_host_body_field_value_nominal_owner(link, fields[2u32].field) == fields[0u32].declaration,
+    "nominal fields keep their declared type owner")
+  assert(self_host_linked_declared_field_value_nominal_declaration(link, fields[2u32].field) == fields[0u32].declaration,
+    "emission reads the same nominal declaration")
 }
 
 test "program link assigns imports before defined functions" {
@@ -115,16 +129,16 @@ test "physical body call index uses a flat typed chain" {
     11u64,
     21u64,
   ) {
-    Option::Some(value) => assert(value == 31u32, "first body call")
-    Option::None => assert(false, "first body call index")
+    Some(value) => assert(value == 31u32, "first body call")
+    None => assert(false, "first body call index")
   }
   match self_host_body_specialized_call_index_get(
     index,
     12u64,
     21u64,
   ) {
-    Option::Some(value) => assert(value == 33u32, "second body call")
-    Option::None => assert(false, "second body call index")
+    Some(value) => assert(value == 33u32, "second body call")
+    None => assert(false, "second body call index")
   }
 }
 
@@ -142,26 +156,26 @@ test "physical body plan takes mutable local carriers from assignments" {
 
 test "arithmetic carrier uses a concrete result over broad operands" {
   let carrier = self_host_body_binary_operand_carrier(
-    SelfHostHirBinaryOperator::Add,
-    SelfHostWasmBodyCarrier::EqRefBodyCarrier,
-    SelfHostWasmBodyCarrier::EqRefBodyCarrier,
-    SelfHostWasmBodyCarrier::I32BodyCarrier,
+    Add,
+    EqRefBodyCarrier,
+    EqRefBodyCarrier,
+    I32BodyCarrier,
   )
   assert(
-    carrier is SelfHostWasmBodyCarrier::I32BodyCarrier,
+    carrier is I32BodyCarrier,
     "arithmetic result carrier",
   )
 }
 
 test "reference equality does not use its boolean result as an operand" {
   let carrier = self_host_body_binary_operand_carrier(
-    SelfHostHirBinaryOperator::Equal,
-    SelfHostWasmBodyCarrier::EqRefBodyCarrier,
-    SelfHostWasmBodyCarrier::EqRefBodyCarrier,
-    SelfHostWasmBodyCarrier::I32BodyCarrier,
+    Equal,
+    EqRefBodyCarrier,
+    EqRefBodyCarrier,
+    I32BodyCarrier,
   )
   assert(
-    carrier is SelfHostWasmBodyCarrier::EqRefBodyCarrier,
+    carrier is EqRefBodyCarrier,
     "reference equality carrier",
   )
 }
@@ -180,8 +194,9 @@ test "physical body plan keeps a concrete String call result" {
 
 test "physical body plan keeps a String result from a checked record array accessor" {
   let link = self_host_link_test_plan(
-    b"struct Item {\n  name: String\n  offset: U32\n}\nfn name_at(values: Array<Item>, index: U32) -> String {\n  assert(index < values.length(), \"item index\")\n  values[index].name\n}\npub fn run(values: Array<Item>) -> String {\n  let name = name_at(values, 0u32)\n  name\n}\n",
+    b"struct Item {\n  name: String\n  offset: U32\n}\nfn name_at(values: Array<Item>, index: U32) -> String {\n  assert(index < values.length(), \"item index\")\n  values[index].name\n}\npub fn run(values: Array<Item>) -> String {\n  let name = name_at(values, 0u32)\n  name\n}\nstruct Array<t> {\n  item: t\n}\ntrait IndexedGet<i, t> {\n  fn indexed_get(self, index: i) -> t\n}\nimpl<t> Array<t> {\n  fn length(self) -> U32 {\n    1u32\n  }\n}\nimpl<t> IndexedGet<U32, t> for Array<t> {\n  fn indexed_get(self, index: U32) -> t {\n    assert(index < self.length(), \"item index\")\n    self.item\n  }\n}\nbuiltin unreachable() -> Never = \"unreachable\"\nfn assert(condition: Bool, message: String) -> Unit {\n  if !condition {\n    unreachable()\n  }\n}\n",
   )
+  assert(self_host_validate_program_lowering(link.fragments.specialization.lowering) is None, "checked accessor lowering")
   assert(self_host_u32_equal(link.diagnostics.length(), 0u32), "link diagnostics")
   let body_plan = self_host_plan_program_wasm_bodies(link)
   assert(
@@ -195,23 +210,23 @@ test "program representation rejects a field carrier mismatch" {
     b"struct Box {\n  value: String\n}\npub fn run() -> Box {\n  Box::{\n    value: \"ok\"\n  }\n}\n",
   )
   match self_host_validate_program_representation(link) {
-    Option::Some(_) => assert(false, "valid field carrier")
-    Option::None => {}
+    Some(_) => assert(false, "valid field carrier")
+    None => {}
   }
   let module_ = link.fragments.modules[0u32]
   let field = module_.fields[0u32]
-  module_.fields[0u32] = SelfHostPlannedWasmField::{
+  module_.fields[0u32] = {
     role: field.role
     declaration: field.declaration
     physical_index: field.physical_index
-    storage: SelfHostPlannedWasmStorageType::WasmI32Storage
+    storage: WasmI32Storage
     mutable_: field.mutable_
     exact_nominal: field.exact_nominal
     offset: field.offset
   }
   match self_host_validate_program_representation(link) {
-    Option::Some(_) => {}
-    Option::None => assert(false, "bad field carrier was accepted")
+    Some(_) => {}
+    None => assert(false, "bad field carrier was accepted")
   }
 }
 
@@ -220,49 +235,90 @@ test "program representation rejects a function result carrier mismatch" {
     b"pub fn run() -> I64 {\n  42i64\n}\n",
   )
   match self_host_validate_program_representation(link) {
-    Option::Some(_) => assert(false, "valid function result carrier")
-    Option::None => {}
+    Some(_) => assert(false, "valid function result carrier")
+    None => {}
   }
   let module_ = link.fragments.modules[0u32]
   let function_ = module_.functions[0u32]
   assert(function_.results.length == 1u32, "one function result")
-  module_.function_value_types[function_.results.start] = SelfHostPlannedWasmValueType::WasmNullableEqRefValue
+  module_.function_value_types[function_.results.start] = WasmNullableEqRefValue
   match self_host_validate_program_representation(link) {
-    Option::Some(error) => assert(
+    Some(error) => assert(
       error.starts_with("program representation function result carrier mismatch"),
       "function result diagnostic",
     )
-    Option::None => assert(false, "bad function result carrier was accepted")
+    None => assert(false, "bad function result carrier was accepted")
   }
 }
 
-test "emitted local validation rejects a field carrier change" {
+test "emitted local validation rejects a changed local carrier" {
   let link = self_host_link_test_plan(
     b"struct Box {\n  value: I64\n}\npub fn run(box: Box) -> I64 {\n  let value = box.value\n  value\n}\n",
   )
   let body_plan = self_host_plan_program_wasm_bodies(link)
   match self_host_validate_emitted_local_carriers(link, body_plan) {
-    Option::Some(_) => assert(false, "valid emitted local carrier")
-    Option::None => {}
+    Some(_) => assert(false, "valid emitted local carrier")
+    None => {}
   }
-  let module_ = link.fragments.modules[0u32]
-  let field = module_.fields[0u32]
-  module_.fields[0u32] = SelfHostPlannedWasmField::{
-    role: field.role
-    declaration: field.declaration
-    physical_index: field.physical_index
-    storage: SelfHostPlannedWasmStorageType::WasmNullableEqRefStorage
-    mutable_: field.mutable_
-    exact_nominal: field.exact_nominal
-    offset: field.offset
-  }
+  let plan = body_plan.bodies[0u32]
+  assert(plan.local_values.length() == 2u32, "parameter and let local")
+  assert(plan.local_values[1u32].carrier is I64BodyCarrier, "field initializer I64 carrier")
+  plan.local_values[1u32] = self_host_body_value_with_carrier(
+    plan.local_values[1u32], EqRefBodyCarrier,
+  )
   match self_host_validate_emitted_local_carriers(link, body_plan) {
-    Option::Some(error) => assert(
+    Some(error) => assert(
       error.starts_with("emitted local carrier mismatch"),
       "emitted local diagnostic",
     )
-    Option::None => assert(false, "bad emitted local carrier was accepted")
+    None => assert(false, "bad emitted local carrier was accepted")
   }
+}
+
+test "field emission rejects physical storage that differs from its declared carrier" {
+  let link = self_host_link_test_plan(
+    b"struct Box {\n  value: I64\n}\npub fn run(box: Box) -> I64 {\n  let value = box.value\n  value\n}\n",
+  )
+  let physical = self_host_plan_program_wasm_bodies(link)
+  let plan = physical.bodies[0u32]
+  let module_ = link.fragments.specialization.lowering.modules[0u32]
+  let body = module_.bodies[0u32]
+  let fragment = link.fragments.modules[0u32]
+  let mut checked = false
+  for expression in plan.expressions {
+    match module_.expressions[expression.expression].kind {
+      PlannedFieldGet(field, _, _) => {
+        let selected = self_host_linked_canonical_field(Some(plan), expression.expression)
+        let field_link = match selected {
+          Some(value) => value
+          None => {
+            assert(false, "field emission certificate")
+            return
+          }
+        }
+        assert(self_host_linked_assert_field_get_carrier(link, module_, body, plan.specialization,
+          expression.expression, field, field_link) is None, "valid field emission")
+        let source = fragment.fields[0u32]
+        fragment.fields[0u32] = {
+          role: source.role
+          declaration: source.declaration
+          physical_index: source.physical_index
+          storage: WasmNullableEqRefStorage
+          mutable_: source.mutable_
+          exact_nominal: source.exact_nominal
+          offset: source.offset
+        }
+        match self_host_linked_assert_field_get_carrier(link, module_, body, plan.specialization,
+          expression.expression, field, field_link) {
+          Some(error) => assert(error.starts_with("linked field get carrier invariant failed"), "field carrier diagnostic")
+          None => assert(false, "changed physical field storage was accepted")
+        }
+        checked = true
+      }
+      _ => {}
+    }
+  }
+  assert(checked, "field read was checked")
 }
 
 test "program link emits Array capacity as ordinary Dew construction" {
@@ -275,7 +331,7 @@ test "program link emits Array capacity as ordinary Dew construction" {
     let module_ = link.fragments.modules[function_.module_index]
     let fragment = self_host_program_link_fragment_function(module_, function_.fragment_index)
     match fragment.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmDefinedFunction(_) => if function_.specialization != 4294967295u32 {
+      PlannedWasmDefinedFunction(_) => if function_.specialization != 4294967295u32 {
         found = true
       }
       _ => {}
@@ -313,7 +369,7 @@ test "builtin lookup rejects the missing fragment sentinel" {
     current => if current < module_.functions.length() {
       let fragment = self_host_program_link_fragment_function(module_, current)
       match fragment.kind {
-        SelfHostPlannedWasmFunctionKind::PlannedWasmInlineBuiltinFunction(name) => if name.equals(
+        PlannedWasmInlineBuiltinFunction(name) => if name.equals(
           b"i32.clz",
         ) {
           declaration = fragment.declaration
@@ -327,15 +383,15 @@ test "builtin lookup rejects the missing fragment sentinel" {
   }
   assert(!self_host_u64_equal(declaration, 0u64), "builtin declaration")
   match self_host_linked_builtin_name(link, declaration) {
-    Option::Some(name) => assert(name.equals(b"i32.clz"), "selected builtin")
-    Option::None => assert(false, "present builtin lookup")
+    Some(name) => assert(name.equals(b"i32.clz"), "selected builtin")
+    None => assert(false, "present builtin lookup")
   }
   module_.function_by_declaration[
     self_host_semantic_id_local(declaration)
   ] = 4294967295u32
   match self_host_linked_builtin_name(link, declaration) {
-    Option::Some(_) => assert(false, "missing builtin must not recover from a scan")
-    Option::None => {}
+    Some(_) => assert(false, "missing builtin must not recover from a scan")
+    None => {}
   }
 }
 
@@ -344,7 +400,7 @@ test "program link rejects a missing physical call target" {
     b"pub fn run() -> I32 {\n  42\n}\n",
   )
   link.diagnostics.push(
-    SelfHostProgramWasmGCLinkDiagnostic::MissingLinkedCallTarget(
+    MissingLinkedCallTarget(
       77u64,
       3u32,
       88u64,
@@ -353,30 +409,30 @@ test "program link rejects a missing physical call target" {
     ),
   )
   match self_host_validate_program_wasmgc_link(link) {
-    Option::Some(error) => assert(
+    Some(error) => assert(
       error == "program link has no physical call target declaration=77 specialization=3 module=0 local=77 caller_body=88 caller_specialization=4 expression=9",
       "missing target diagnostic",
     )
-    Option::None => assert(false, "missing target was accepted")
+    None => assert(false, "missing target was accepted")
   }
 }
 
 test "program link assigns dependency-first types and module globals" {
   let lowering = self_host_program_lowering_test_manifest([
-    SelfHostManifestModule::{
+    {
       path: "app.main"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "main.dew"
           source: b"open app.library\nstruct Root {}\npub let answer = 42\npub fn run() -> I32 {\n  answer\n}\n"
           test_only: false
         },
       ]
     },
-    SelfHostManifestModule::{
+    {
       path: "app.library"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "library.dew"
           source: b"pub struct Leaf {}\n"
           test_only: false

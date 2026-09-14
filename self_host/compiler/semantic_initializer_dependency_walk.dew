@@ -1,21 +1,21 @@
 fn self_host_initializer_selected_call(plan: SelfHostProgramSpecializationPlan, calls: Map<U64, Map<U64, U32>>, caller: SelfHostInitializerBodyWork, source: SelfHostPlannedExpression, expression: U32) -> Option<SelfHostInitializerBodyWork> {
   match source.kind {
-    SelfHostPlannedExpressionKind::PlannedDirectCall(_, _, _, _),
-    SelfHostPlannedExpressionKind::PlannedBuiltinCall(_, _, _, _, _),
-    SelfHostPlannedExpressionKind::PlannedOperatorCall(_, _, _, _, _),
-    SelfHostPlannedExpressionKind::PlannedIndexGet(_, _, _),
-    SelfHostPlannedExpressionKind::PlannedIndexSet(_, _, _, _),
-    SelfHostPlannedExpressionKind::PlannedUnresolvedCall(_, _),
-    SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) => {}
-    _ => return Option::None
+    PlannedDirectCall(_, _, _, _),
+    PlannedBuiltinCall(_, _, _, _, _),
+    PlannedOperatorCall(_, _, _, _, _),
+    PlannedIndexGet(_, _, _),
+    PlannedIndexSet(_, _, _, _),
+    PlannedUnresolvedCall(_, _),
+    PlannedFunctionValueCall(_, _, _) => {}
+    _ => return None
   }
   let expected = self_host_program_specialization_call_recipe(source)
   let selected = match calls.get(caller.body) {
-    Option::Some(entries) => entries.get((u32_into_u64(caller.specialization) << 32u64) | u32_into_u64(expression))
-    Option::None => Option::None
+    Some(entries) => entries.get((u32_into_u64(caller.specialization) << 32u64) | u32_into_u64(expression))
+    None => None
   }
   let (target, specialization) = match selected {
-    Option::Some(index) => {
+    Some(index) => {
       if index >= plan.calls.length() {
         self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 101u32, u32_into_u64(plan.calls.length()), u32_into_u64(index), 25u64)
       }
@@ -30,18 +30,18 @@ fn self_host_initializer_selected_call(plan: SelfHostProgramSpecializationPlan, 
         self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 303u32, u32_into_u64(caller.specialization), u32_into_u64(call.caller_specialization), 25u64)
       }
       match expected {
-        Option::Some(recipe) => if recipe.target != call.target {
+        Some(recipe) => if recipe.target != call.target {
           self_host_initializer_dependency_failure(caller.declaration, caller.body, expression, 106u32, recipe.target, call.target, 25u64)
         }
-        Option::None => {}
+        None => {}
       }
       (call.target, call.target_specialization)
     }
-    Option::None => match expected {
-      Option::Some(recipe) => (recipe.target, 4294967295u32)
+    None => match expected {
+      Some(recipe) => (recipe.target, 4294967295u32)
       // There is no statically selected body for a dynamic function value or
       // intrinsic index instruction. Indirect effect analysis is separate.
-      Option::None => return Option::None
+      None => return None
     }
   }
   self_host_initializer_dependency_call_target(plan, caller, expression, target, specialization)
@@ -51,20 +51,20 @@ fn self_host_initializer_body_dependencies(plan: SelfHostProgramSpecializationPl
   let result = array_new::<U32>()
   let seen_globals = self_host_empty_u64_u32_map()
   let seen_bodies = self_host_program_specialization_call_bodies()
-  let work = [SelfHostInitializerBodyWork::{
+  let work = [{
     module_index: initializer.module_index
     declaration: initializer.declaration
     body: initializer.body
-    kind: SelfHostHirBodyKind::ModuleLetBody
+    kind: ModuleLetBody
     specialization: 4294967295u32
   }]
   while work.pop() {
-    Option::Some(task) => {
+    Some(task) => {
       let module_ = self_host_initializer_dependency_instance(plan.lowering, task)
       let body = self_host_initializer_dependency_body(module_, task)
       let entries = match seen_bodies.get(task.body) {
-        Option::Some(value) => value
-        Option::None => {
+        Some(value) => value
+        None => {
           let value = self_host_empty_u64_u32_map()
           seen_bodies.set(task.body, value)
           value
@@ -80,10 +80,10 @@ fn self_host_initializer_body_dependencies(plan: SelfHostProgramSpecializationPl
           let expression = body.expressions.start + offset
           let source = module_.expressions[expression]
           match source.kind {
-            SelfHostPlannedExpressionKind::PlannedModuleValueGet(declaration) => {
+            PlannedModuleValueGet(declaration) => {
               let index = match globals.get(declaration) {
-                Option::Some(value) => value
-                Option::None => self_host_initializer_dependency_failure(task.declaration, task.body, expression, 504u32, 1u64, 0u64, declaration)
+                Some(value) => value
+                None => self_host_initializer_dependency_failure(task.declaration, task.body, expression, 504u32, 1u64, 0u64, declaration)
               }
               if index >= candidates.length() {
                 self_host_initializer_dependency_failure(task.declaration, task.body, expression, 101u32, u32_into_u64(candidates.length()), u32_into_u64(index), declaration)
@@ -97,8 +97,8 @@ fn self_host_initializer_body_dependencies(plan: SelfHostProgramSpecializationPl
               }
             }
             _ => match self_host_initializer_selected_call(plan, calls, task, source, expression) {
-              Option::Some(next) => work.push(next)
-              Option::None => {}
+              Some(next) => work.push(next)
+              None => {}
             }
           }
           continue offset + 1u32
@@ -107,7 +107,7 @@ fn self_host_initializer_body_dependencies(plan: SelfHostProgramSpecializationPl
       }
       continue work.pop()
     }
-    Option::None => break ()
+    None => break ()
   }
   result
 }

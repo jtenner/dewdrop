@@ -9,14 +9,14 @@ impl SelfHostBasicBodyInferencer {
     let mut hops = 0u32
     let _ = while true {
       _ => match self.resolved.types[current] {
-        SelfHostResolvedType::GenericParameterType(parameter) => match bindings.get(parameter) {
-          Option::Some(value) => {
+        GenericParameterType(parameter) => match bindings.get(parameter) {
+          Some(value) => {
             current = self_host_body_i32_to_u32(-(value + 2i32))
             hops = hops + 1u32
             self_host_assert_compiler_invariant(hops <= bindings.length(), "SOL-202 guarded equality parent cycle")
             continue true
           }
-          Option::None => break self_host_semantic_unit()
+          None => break self_host_semantic_unit()
         }
         _ => break self_host_semantic_unit()
       }
@@ -25,7 +25,7 @@ impl SelfHostBasicBodyInferencer {
   }
 
   fn guard_refinement_error(self, root: I32, expression: U32, message: String) -> I32 {
-    self.diagnostics.push(SelfHostBodyInferenceDiagnostic::BodyConstraintDiagnostic(SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(root, message, self_host_expression_type_origin(expression, self.collected.expressions[expression].offset()))))
+    self.diagnostics.push(BodyConstraintDiagnostic(InvalidLocalMemberProjection(root, message, self_host_expression_type_origin(expression, self.collected.expressions[expression].offset()))))
     self.solver.error_type()
   }
 
@@ -36,25 +36,25 @@ impl SelfHostBasicBodyInferencer {
     let root = self.solver.representative_type(source)
     let term = self.solver.type_term(root)
     match term {
-      SelfHostBodyTypeTerm::BodyResolvedType(id) => {
+      BodyResolvedType(id) => {
         let type_ = self.resolved.types[id]
         match type_ {
-          SelfHostResolvedType::GenericParameterType(parameter) => match bindings.get(parameter) {
-            Option::Some(value) => if value != root {
+          GenericParameterType(parameter) => match bindings.get(parameter) {
+            Some(value) => if value != root {
               return self.guard_refine(value, expression, bindings, depth + 1u32)
             }
-            Option::None => {}
+            None => {}
           }
-          _ => if type_ is SelfHostResolvedType::ProductType(_) || type_ is SelfHostResolvedType::AppliedType(_, _) || type_ is SelfHostResolvedType::FunctionType(_, _) || type_ is SelfHostResolvedType::MemberTypeProjection(_, _, _) {
+          _ => if type_ is ProductType(_) || type_ is AppliedType(_, _) || type_ is FunctionType(_, _) || type_ is MemberTypeProjection(_, _, _) {
             match self.solver.substitute_member_type(id, bindings, depth + 1u32) {
-              Result::Ok(value) => return value
-              Result::Err(message) => return self.guard_refinement_error(root, expression, message)
+              Ok(value) => return value
+              Err(message) => return self.guard_refinement_error(root, expression, message)
             }
           }
         }
         return root
       }
-      SelfHostBodyTypeTerm::BodyMemberTypeProjection(owner, operation, selector) => {
+      BodyMemberTypeProjection(owner, operation, selector) => {
         let value = self.guard_refine(owner, expression, bindings, depth + 1u32)
         if value != owner {
           return self.solver.member_projection_type(value, operation, selector)
@@ -64,9 +64,9 @@ impl SelfHostBasicBodyInferencer {
       _ => {}
     }
     let span = match term {
-      SelfHostBodyTypeTerm::BodyProductType(span) => span
-      SelfHostBodyTypeTerm::BodyAppliedType(_, span) => span
-      SelfHostBodyTypeTerm::BodyFunctionType(span, _) => span
+      BodyProductType(span) => span
+      BodyAppliedType(_, span) => span
+      BodyFunctionType(span, _) => span
       _ => return root
     }
     let values = self_host_inference_i32_slots(0u32, 0i32)
@@ -84,7 +84,7 @@ impl SelfHostBasicBodyInferencer {
       }
     }
     match term {
-      SelfHostBodyTypeTerm::BodyAppliedType(base, _) => {
+      BodyAppliedType(base, _) => {
         let value = self.guard_refine(base, expression, bindings, depth + 1u32)
         if changed || value != base {
           self.solver.applied_type(value, values)
@@ -92,7 +92,7 @@ impl SelfHostBasicBodyInferencer {
           root
         }
       }
-      SelfHostBodyTypeTerm::BodyFunctionType(_, result) => {
+      BodyFunctionType(_, result) => {
         let value = self.guard_refine(result, expression, bindings, depth + 1u32)
         if changed || value != result {
           self.solver.function_type(values, value)
@@ -114,8 +114,8 @@ impl SelfHostBasicBodyInferencer {
     }
     self.prepare_guard_scopes()
     let facts = match self.guarded_trait_scopes.get(expression) {
-      Option::Some(value) => value
-      Option::None => return root
+      Some(value) => value
+      None => return root
     }
     self.guard_refine_with_facts(root, expression, facts)
   }
@@ -128,8 +128,8 @@ impl SelfHostBasicBodyInferencer {
         let right = self.guard_representative(fact.bound, bindings)
         if left != right {
           match self.resolved.types[left] {
-            SelfHostResolvedType::GenericParameterType(parameter) => match self.resolved.types[right] {
-              SelfHostResolvedType::GenericParameterType(other) => if parameter > other {
+            GenericParameterType(parameter) => match self.resolved.types[right] {
+              GenericParameterType(other) => if parameter > other {
                 bindings.set(parameter, self.solver.resolved_type(right))
               } else if other > parameter {
                 bindings.set(other, self.solver.resolved_type(left))
@@ -137,7 +137,7 @@ impl SelfHostBasicBodyInferencer {
               _ => bindings.set(parameter, self.solver.resolved_type(right))
             }
             _ => match self.resolved.types[right] {
-              SelfHostResolvedType::GenericParameterType(parameter) => bindings.set(parameter, self.solver.resolved_type(left))
+              GenericParameterType(parameter) => bindings.set(parameter, self.solver.resolved_type(left))
               // Conflicting facts remain on the branch. They certify no read.
               _ => return root
             }
@@ -164,17 +164,17 @@ impl SelfHostBasicBodyInferencer {
     self.prepare_guard_scopes()
     let facts = self.guard_condition_facts(condition, truth, self.guard_builtin_targets())
     match self.guarded_trait_scopes.get(condition) {
-      Option::Some(outer) => for fact in outer {
+      Some(outer) => for fact in outer {
         facts.push(fact)
       }
-      Option::None => {}
+      None => {}
     }
     self.guard_refine_with_facts(root, condition, facts)
   }
 
   fn guard_is_generic_type(self, type_: I32) -> Bool {
     match self.solver.type_term(self.solver.representative_type(type_)) {
-      SelfHostBodyTypeTerm::BodyResolvedType(id) => self.resolved.types[id] is SelfHostResolvedType::GenericParameterType(_)
+      BodyResolvedType(id) => self.resolved.types[id] is GenericParameterType(_)
       _ => false
     }
   }
@@ -182,13 +182,13 @@ impl SelfHostBasicBodyInferencer {
   fn constrain_guarded_joins(self) -> Unit {
     for expression in self.pending_guarded_joins {
       match self.collected.expressions[expression] {
-        SelfHostHirExpr::IfExpr(condition, block, alternative, offset) => {
+        IfExpr(condition, block, alternative, offset) => {
           let result = self.expression_type(expression)
           let then_type = self.block_type(block)
           let else_type = self.expression_type(alternative)
           let origin = self_host_expression_type_origin(expression, offset)
-          if self.is_primitive(then_type, SelfHostPrimitiveType::NeverType) && self.is_primitive(else_type, SelfHostPrimitiveType::NeverType) {
-            self.constrain(result, self.primitive(SelfHostPrimitiveType::NeverType), origin)
+          if self.is_primitive(then_type, NeverType) && self.is_primitive(else_type, NeverType) {
+            self.constrain(result, self.primitive(NeverType), origin)
           } else if self.guard_is_generic_type(else_type) {
             self.constrain_assignable(else_type, self.guard_branch_type(result, condition, false), origin)
             self.constrain_assignable(then_type, self.guard_branch_type(result, condition, true), origin)

@@ -1,16 +1,16 @@
 fn self_host_closure_operand_kind(value: SelfHostPhysicalClosureOperand) -> U64 {
   match value {
-    SelfHostPhysicalClosureOperand::ErasedClosureOperand => 0u64
-    SelfHostPhysicalClosureOperand::LocalClosureOperand(_) => 1u64
-    SelfHostPhysicalClosureOperand::ForwardedClosureOperand(_) => 2u64
+    ErasedClosureOperand => 0u64
+    LocalClosureOperand(_) => 1u64
+    ForwardedClosureOperand(_) => 2u64
   }
 }
 
 fn self_host_closure_operand_value(value: SelfHostPhysicalClosureOperand) -> U64 {
   match value {
-    SelfHostPhysicalClosureOperand::ErasedClosureOperand => 0u64
-    SelfHostPhysicalClosureOperand::LocalClosureOperand(slot) => u32_into_u64(slot)
-    SelfHostPhysicalClosureOperand::ForwardedClosureOperand(capture) => u32_into_u64(capture)
+    ErasedClosureOperand => 0u64
+    LocalClosureOperand(slot) => u32_into_u64(slot)
+    ForwardedClosureOperand(capture) => u32_into_u64(capture)
   }
 }
 
@@ -25,7 +25,7 @@ fn self_host_closure_record_check(plan: SelfHostPlannedPhysicalBodyCarrierPlan, 
     } else {
       704u32
     }
-    let _ = self_host_assert_compiler_invariant_with_failure(false, SelfHostInvariantFailure::{
+    let _ = self_host_assert_compiler_invariant_with_failure(false, {
       code: code
       phase: phase
       module_id: plan.module_id

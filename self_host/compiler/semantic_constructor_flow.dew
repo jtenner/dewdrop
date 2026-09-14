@@ -8,10 +8,10 @@ fn self_host_lower_nonreturning_constructions(module_: SelfHostPlannedModuleLowe
       let source = module_.expressions[expression]
       if !source.flow.falls_through {
         let construction = match source.kind {
-          SelfHostPlannedExpressionKind::PlannedProductNew(_) => true
-          SelfHostPlannedExpressionKind::PlannedArrayLiteral(_) => true
-          SelfHostPlannedExpressionKind::PlannedConstruct(_, _, _) => true
-          _ => source.selection is SelfHostBasicExpressionSelection::VariantConstructionBasicExpressionSelection(_, _, _)
+          PlannedProductNew(_) => true
+          PlannedArrayLiteral(_) => true
+          PlannedConstruct(_, _, _), PlannedObjectNew(_) => true
+          _ => source.selection is VariantConstructionBasicExpressionSelection(_, _, _)
         }
         if construction {
           self_host_refresh_compile_time_strict_flow(module_, expression)

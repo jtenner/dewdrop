@@ -2,17 +2,17 @@ open dew.std.testing
 open dew.std.option
 
 fn self_host_package_identity_fixture(reverse: Bool) -> SelfHostFrozenSignatureProgram {
-  let traits = SelfHostManifestModule::{
+  let traits = {
     path: "dew.std.preamble"
-    files: [SelfHostManifestFile::{
+    files: [{
       path: "preamble.dew"
       source: b"pub trait Eq {\n  fn eq(self, other: Self) -> Bool\n}\n"
       test_only: false
     }]
   }
-  let values = SelfHostManifestModule::{
+  let values = {
     path: "dew.std.bytes"
-    files: [SelfHostManifestFile::{
+    files: [{
       path: "bytes.dew"
       source: b"open dew.std.preamble\nimpl Eq for Bytes {\n  fn eq(self, other: Bytes) -> Bool {\n    true\n  }\n}\nfn dead() -> I64 {\n  7i64\n}\n"
       test_only: false
@@ -23,7 +23,7 @@ fn self_host_package_identity_fixture(reverse: Bool) -> SelfHostFrozenSignatureP
   } else {
     [traits, values]
   }
-  let collected = self_host_collect_program_manifest(6100u64, SelfHostProgramManifest::{
+  let collected = self_host_collect_program_manifest(6100u64, {
     modules: modules
   })
   assert(collected.diagnostics.length() == 0u32, "valid package manifest")

@@ -6,7 +6,7 @@ fn self_host_body_shape_test_inferred(
   types: Array<SelfHostBodyTypeTerm>,
   arguments: Array<I32>,
 ) -> SelfHostBasicInferredBody {
-  SelfHostBasicInferredBody::{
+  {
     body: body
     root_type: root
     types: types
@@ -37,13 +37,13 @@ test "merged body value shapes retain products and rigid values" {
     b"fn value() -> Unit {\n}\n",
   )
   let resolved = self_host_resolve_module_types(collected)
-  let i32_type = resolved.primitive(SelfHostPrimitiveType::I32Type)
-  let string_type = resolved.primitive(SelfHostPrimitiveType::StringType)
+  let i32_type = resolved.primitive(I32Type)
+  let string_type = resolved.primitive(StringType)
   let body = self_host_body_shape_test_inferred(
     self_host_make_semantic_id(4000u64, 0u32),
     0i32,
     [
-      SelfHostBodyTypeTerm::BodyProductType(SelfHostHirSpan::{
+      BodyProductType({
         start: 0u32
         length: 2u32
       }),
@@ -54,17 +54,17 @@ test "merged body value shapes retain products and rigid values" {
     ],
   )
   let merged = self_host_merge_module_inference(
-    SelfHostBasicInferredModuleBodies::{
+    {
       module_id: 4000u64
       bodies: [body]
       lambdas: []
     },
   )
   match self_host_planned_merged_body_value_shape(resolved, merged, 0i32) {
-    SelfHostPlannedValueShape::ProductPlannedValueShape(fields) => {
+    ProductPlannedValueShape(fields) => {
       assert(fields.length() == 2u32, "two fields")
-      assert(fields[0u32] is SelfHostPlannedValueShape::I32PlannedValueShape, "I32 field")
-      assert(fields[1u32] is SelfHostPlannedValueShape::RefPlannedValueShape, "reference field")
+      assert(fields[0u32] is I32PlannedValueShape, "I32 field")
+      assert(fields[1u32] is RefPlannedValueShape, "reference field")
     }
     _ => assert(false, "product shape")
   }
@@ -76,21 +76,21 @@ test "merged body value shapes follow applications and functions" {
     b"fn value() -> Unit {\n}\n",
   )
   let resolved = self_host_resolve_module_types(collected)
-  let u64_type = resolved.primitive(SelfHostPrimitiveType::U64Type)
+  let u64_type = resolved.primitive(U64Type)
   let body = self_host_body_shape_test_inferred(
     self_host_make_semantic_id(4001u64, 0u32),
     1i32,
     [
-      SelfHostBodyTypeTerm::BodyResolvedType(u64_type),
-      SelfHostBodyTypeTerm::BodyAppliedType(
+      BodyResolvedType(u64_type),
+      BodyAppliedType(
         0i32,
-        SelfHostHirSpan::{
+        {
           start: 0u32
           length: 0u32
         },
       ),
-      SelfHostBodyTypeTerm::BodyFunctionType(
-        SelfHostHirSpan::{
+      BodyFunctionType(
+        {
           start: 0u32
           length: 0u32
         },
@@ -100,18 +100,18 @@ test "merged body value shapes follow applications and functions" {
     [],
   )
   let merged = self_host_merge_module_inference(
-    SelfHostBasicInferredModuleBodies::{
+    {
       module_id: 4001u64
       bodies: [body]
       lambdas: []
     },
   )
   assert(
-    self_host_planned_merged_body_value_shape(resolved, merged, 1i32) is SelfHostPlannedValueShape::U64PlannedValueShape,
+    self_host_planned_merged_body_value_shape(resolved, merged, 1i32) is U64PlannedValueShape,
     "applied base",
   )
   assert(
-    self_host_planned_merged_body_value_shape(resolved, merged, 2i32) is SelfHostPlannedValueShape::RefPlannedValueShape,
+    self_host_planned_merged_body_value_shape(resolved, merged, 2i32) is RefPlannedValueShape,
     "function reference",
   )
 }

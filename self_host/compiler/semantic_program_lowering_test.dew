@@ -8,7 +8,7 @@ fn self_host_program_lowering_test_manifest(
     self_host_freeze_program_signature_interfaces(
       self_host_collect_program_manifest(
         5100u64,
-        SelfHostProgramManifest::{
+        {
           modules: modules
         },
       ),
@@ -18,30 +18,30 @@ fn self_host_program_lowering_test_manifest(
 
 test "program lowering schedules dependency SCCs before consumers" {
   let planned = self_host_program_lowering_test_manifest([
-    SelfHostManifestModule::{
+    {
       path: "app.main"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "main.dew"
           source: b"open app.middle\npub fn run() -> I32 {\n  middle()\n}\n"
           test_only: false
         },
       ]
     },
-    SelfHostManifestModule::{
+    {
       path: "app.middle"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "middle.dew"
           source: b"open app.leaf\npub fn middle() -> I32 {\n  leaf()\n}\n"
           test_only: false
         },
       ]
     },
-    SelfHostManifestModule::{
+    {
       path: "app.leaf"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "leaf.dew"
           source: b"pub fn leaf() -> I32 {\n  7\n}\n"
           test_only: false
@@ -55,8 +55,8 @@ test "program lowering schedules dependency SCCs before consumers" {
   assert(planned.graph.scc_modules[1u32] == 1u32, "middle second")
   assert(planned.graph.scc_modules[2u32] == 0u32, "root last")
   match planned.index.module_index(5101u64) {
-    Option::Some(index) => assert(index == 1u32, "manifest index")
-    Option::None => assert(false, "module lookup")
+    Some(index) => assert(index == 1u32, "manifest index")
+    None => assert(false, "module lookup")
   }
 }
 
@@ -64,20 +64,29 @@ test "program lowering index uses contiguous ids and keeps sparse fallback" {
   let contiguous = SelfHostProgramLoweringIndex::{
     module_ids: [5100u64, 5101u64, 5102u64]
   }
-  assert(contiguous.module_index(5102u64) == Option::Some(2u32), "direct index")
-  assert(contiguous.module_index(5099u64) == Option::None, "below range")
+  assert(contiguous.module_index(5102u64) is Some(2u32), "direct index")
+  assert(contiguous.module_index(5099u64) is None, "below range")
   let sparse = SelfHostProgramLoweringIndex::{
     module_ids: [6100u64, 6102u64]
   }
-  assert(sparse.module_index(6102u64) == Option::Some(1u32), "sparse fallback")
+  assert(sparse.module_index(6102u64) is Some(1u32), "sparse fallback")
 }
 
 test "program SCC ordering matches the host graph planner" {
   let (sccs, modules, module_scc) = self_host_program_module_sccs(
     [
-      SelfHostHirSpan::{ start: 0u32 length: 1u32 },
-      SelfHostHirSpan::{ start: 1u32 length: 0u32 },
-      SelfHostHirSpan::{ start: 1u32 length: 0u32 },
+      {
+        start: 0u32
+        length: 1u32
+      },
+      {
+        start: 1u32
+        length: 0u32
+      },
+      {
+        start: 1u32
+        length: 0u32
+      },
     ],
     [2u32],
   )
@@ -101,7 +110,7 @@ test "program SCC planning handles a long chain iteratively" {
       if current + 1u32 < count {
         dependency_modules.push(current + 1u32)
       }
-      dependencies.push(SelfHostHirSpan::{
+      dependencies.push({
         start: start
         length: dependency_modules.length() - start
       })
@@ -123,20 +132,20 @@ test "program SCC planning handles a long chain iteratively" {
 
 test "program lowering groups cyclic module dependencies" {
   let planned = self_host_program_lowering_test_manifest([
-    SelfHostManifestModule::{
+    {
       path: "app.a"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "a.dew"
           source: b"open app.b\npub fn a() -> I32 {\n  b()\n}\n"
           test_only: false
         },
       ]
     },
-    SelfHostManifestModule::{
+    {
       path: "app.b"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "b.dew"
           source: b"open app.a\npub fn b() -> I32 {\n  1\n}\n"
           test_only: false
@@ -157,7 +166,7 @@ fn self_host_program_lowering_has_imported_call(
 ) -> Bool {
   for expression in module_.expressions {
     match expression.kind {
-      SelfHostPlannedExpressionKind::PlannedDirectCall(target, _, _, _) => if self_host_u64_equal(
+      PlannedDirectCall(target, _, _, _) => if self_host_u64_equal(
         self_host_semantic_id_module(target),
         owner,
       ) {
@@ -173,10 +182,10 @@ fn self_host_program_lowering_single_test_module(
   source: Bytes,
 ) -> SelfHostPlannedProgramLowering {
   self_host_program_lowering_test_manifest([
-    SelfHostManifestModule::{
+    {
       path: "app.main"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "main.dew"
           source: source
           test_only: false
@@ -193,7 +202,7 @@ test "program lowering rejects pattern arm arena corruption" {
   let module_ = planned.modules[0u32]
   assert(module_.pattern_arms.length() == 2u32, "pattern arm count")
   let source = self_host_planned_pattern_arm_at(module_.pattern_arms, 0u32)
-  module_.pattern_arms[0u32] = SelfHostPlannedPatternArm::{
+  module_.pattern_arms[0u32] = {
     pattern: source.pattern
     guard_condition: source.guard_condition
     body: module_.expressions.length()
@@ -201,7 +210,7 @@ test "program lowering rejects pattern arm arena corruption" {
     offset: source.offset
   }
   assert(
-    self_host_validate_program_lowering(planned) is Option::Some(_),
+    self_host_validate_program_lowering(planned) is Some(_),
     "pattern arm body canary",
   )
 }
@@ -213,34 +222,34 @@ test "program lowering rejects object field arena corruption" {
   let module_ = planned.modules[0u32]
   assert(module_.object_fields.length() == 1u32, "object field count")
   let source = self_host_planned_object_field_at(module_.object_fields, 0u32)
-  module_.object_fields[0u32] = SelfHostPlannedObjectField::{
+  module_.object_fields[0u32] = {
     field: source.field
     name: source.name
     value: module_.expressions.length()
     offset: source.offset
   }
   assert(
-    self_host_validate_program_lowering(planned) is Option::Some(_),
+    self_host_validate_program_lowering(planned) is Some(_),
     "object field value canary",
   )
 }
 
 test "program lowering preserves imported direct call identity" {
   let planned = self_host_program_lowering_test_manifest([
-    SelfHostManifestModule::{
+    {
       path: "app.main"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "main.dew"
           source: b"open app.library\npub fn run() -> I32 {\n  answer()\n}\n"
           test_only: false
         },
       ]
     },
-    SelfHostManifestModule::{
+    {
       path: "app.library"
       files: [
-        SelfHostManifestFile::{
+        {
           path: "library.dew"
           source: b"pub fn answer() -> I32 {\n  42\n}\n"
           test_only: false

@@ -14,17 +14,17 @@ fn self_host_raw_array_reference_mutation(mutation: U32) -> Unit {
   let mut checked = false
   for function_ in module_.functions {
     match function_.kind {
-      SelfHostPlannedWasmFunctionKind::PlannedWasmOutlinedHeapFunction(SelfHostRawHeapInstruction::RawArrayGetInstruction(recipe)) => if !function_.elided {
+      PlannedWasmOutlinedHeapFunction(RawArrayGetInstruction(recipe)) => if !function_.elided {
         let _ = self_host_verify_outlined_raw_array_get(link, module_, function_, recipe)
         if mutation == 0u32 {
-          module_.function_value_types[function_.parameters.start + 1u32] = SelfHostPlannedWasmValueType::WasmI64Value
+          module_.function_value_types[function_.parameters.start + 1u32] = WasmI64Value
         } else if mutation == 1u32 {
-          module_.function_value_types[function_.results.start] = SelfHostPlannedWasmValueType::WasmI32Value
+          module_.function_value_types[function_.results.start] = WasmI32Value
         }
-        let changed = SelfHostRawArrayGetRecipe::{
+        let changed = {
           opcode: recipe.opcode
           element_shape: if mutation == 2u32 {
-            SelfHostPlannedValueShape::ErrorPlannedValueShape
+            ErrorPlannedValueShape
           } else {
             recipe.element_shape
           }

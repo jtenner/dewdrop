@@ -8,12 +8,12 @@ open dew.std.string
 fn self_host_array_pop<t>(values: Array<t>) -> Option<t> {
   let length = values.length()
   if length == 0u32 {
-    Option::None
+    None
   } else {
     let index = length - 1u32
     let value = values.get_unchecked(index)
     values.truncate(index)
-    Option::Some(value)
+    Some(value)
   }
 }
 
@@ -62,12 +62,12 @@ pub enum SelfHostTypeExpr {
 impl SelfHostTypeExpr {
   fn offset(self) -> U32 {
     match self {
-      SelfHostTypeExpr::NamedType(_, offset) => offset
-      SelfHostTypeExpr::QualifiedType(_, _, offset, _) => offset
-      SelfHostTypeExpr::ProductType(_, offset) => offset
-      SelfHostTypeExpr::AppliedType(_, _, offset) => offset
-      SelfHostTypeExpr::FunctionType(_, _, offset) => offset
-      SelfHostTypeExpr::ComputedType(_, _, offset) => offset
+      NamedType(_, offset) => offset
+      QualifiedType(_, _, offset, _) => offset
+      ProductType(_, offset) => offset
+      AppliedType(_, _, offset) => offset
+      FunctionType(_, _, offset) => offset
+      ComputedType(_, _, offset) => offset
     }
   }
 }
@@ -220,43 +220,43 @@ pub enum SelfHostExpr {
 impl SelfHostExpr {
   fn offset(self) -> U32 {
     match self {
-      SelfHostExpr::I8Expr(_, offset) => offset
-      SelfHostExpr::I16Expr(_, offset) => offset
-      SelfHostExpr::I32Expr(_, offset) => offset
-      SelfHostExpr::I64Expr(_, offset) => offset
-      SelfHostExpr::U8Expr(_, offset) => offset
-      SelfHostExpr::U16Expr(_, offset) => offset
-      SelfHostExpr::U32Expr(_, offset) => offset
-      SelfHostExpr::U64Expr(_, offset) => offset
-      SelfHostExpr::F32Expr(_, offset) => offset
-      SelfHostExpr::F64Expr(_, offset) => offset
-      SelfHostExpr::BoolExpr(_, offset) => offset
-      SelfHostExpr::StringExpr(_, offset) => offset
-      SelfHostExpr::BytesExpr(_, offset) => offset
-      SelfHostExpr::NameExpr(_, offset) => offset
-      SelfHostExpr::ImportAliasExpr(_, offset) => offset
-      SelfHostExpr::ProductExpr(_, offset) => offset
-      SelfHostExpr::ArrayExpr(_, offset) => offset
-      SelfHostExpr::LambdaExpr(_, _, _, offset) => offset
-      SelfHostExpr::ObjectExpr(_, offset) => offset
-      SelfHostExpr::ConstructExpr(_, _, offset) => offset
-      SelfHostExpr::BlockExpr(block) => block.offset
-      SelfHostExpr::IfExpr(_, _, _, offset) => offset
-      SelfHostExpr::MatchExpr(_, _, offset) => offset
-      SelfHostExpr::IsExpr(_, _, offset) => offset
-      SelfHostExpr::IsGuardExpr(_, _, _, offset) => offset
-      SelfHostExpr::WhileExpr(_, _, offset) => offset
-      SelfHostExpr::ReturnExpr(_, offset) => offset
-      SelfHostExpr::BreakExpr(_, offset) => offset
-      SelfHostExpr::ContinueExpr(_, offset) => offset
-      SelfHostExpr::PrefixExpr(_, _, offset) => offset
-      SelfHostExpr::BinaryExpr(_, _, _, offset) => offset
-      SelfHostExpr::CallExpr(_, _, offset) => offset
-      SelfHostExpr::ExplicitTypeCallExpr(_, _, _, offset) => offset
-      SelfHostExpr::FieldExpr(_, _, offset) => offset
-      SelfHostExpr::QualifiedExpr(_, _, offset) => offset
-      SelfHostExpr::ProductFieldExpr(_, _, _, offset) => offset
-      SelfHostExpr::IndexExpr(_, _, offset) => offset
+      I8Expr(_, offset) => offset
+      I16Expr(_, offset) => offset
+      I32Expr(_, offset) => offset
+      I64Expr(_, offset) => offset
+      U8Expr(_, offset) => offset
+      U16Expr(_, offset) => offset
+      U32Expr(_, offset) => offset
+      U64Expr(_, offset) => offset
+      F32Expr(_, offset) => offset
+      F64Expr(_, offset) => offset
+      BoolExpr(_, offset) => offset
+      StringExpr(_, offset) => offset
+      BytesExpr(_, offset) => offset
+      NameExpr(_, offset) => offset
+      ImportAliasExpr(_, offset) => offset
+      ProductExpr(_, offset) => offset
+      ArrayExpr(_, offset) => offset
+      LambdaExpr(_, _, _, offset) => offset
+      ObjectExpr(_, offset) => offset
+      ConstructExpr(_, _, offset) => offset
+      BlockExpr(block) => block.offset
+      IfExpr(_, _, _, offset) => offset
+      MatchExpr(_, _, offset) => offset
+      IsExpr(_, _, offset) => offset
+      IsGuardExpr(_, _, _, offset) => offset
+      WhileExpr(_, _, offset) => offset
+      ReturnExpr(_, offset) => offset
+      BreakExpr(_, offset) => offset
+      ContinueExpr(_, offset) => offset
+      PrefixExpr(_, _, offset) => offset
+      BinaryExpr(_, _, _, offset) => offset
+      CallExpr(_, _, offset) => offset
+      ExplicitTypeCallExpr(_, _, _, offset) => offset
+      FieldExpr(_, _, offset) => offset
+      QualifiedExpr(_, _, offset) => offset
+      ProductFieldExpr(_, _, _, offset) => offset
+      IndexExpr(_, _, offset) => offset
     }
   }
 }
@@ -279,9 +279,9 @@ fn self_host_let_block_item(
   value: SelfHostExpr,
   offset: U32,
 ) -> SelfHostBlockItem {
-  SelfHostBlockItem::{
+  {
     kind: 0u32
-    type_binding: Option::None
+    type_binding: None
     mutable_: mutable_
     name: name
     name_offset: name_offset
@@ -296,9 +296,9 @@ fn self_host_assignment_block_item(
   value: SelfHostExpr,
   offset: U32,
 ) -> SelfHostBlockItem {
-  SelfHostBlockItem::{
+  {
     kind: 1u32
-    type_binding: Option::None
+    type_binding: None
     mutable_: false
     name: ""
     name_offset: offset
@@ -313,9 +313,9 @@ fn self_host_index_set_block_item(
   value: SelfHostExpr,
   offset: U32,
 ) -> SelfHostBlockItem {
-  SelfHostBlockItem::{
+  {
     kind: 2u32
-    type_binding: Option::None
+    type_binding: None
     mutable_: false
     name: ""
     name_offset: offset
@@ -329,9 +329,9 @@ fn self_host_expression_block_item(
   value: SelfHostExpr,
   offset: U32,
 ) -> SelfHostBlockItem {
-  SelfHostBlockItem::{
+  {
     kind: 3u32
-    type_binding: Option::None
+    type_binding: None
     mutable_: false
     name: ""
     name_offset: offset
@@ -346,14 +346,14 @@ fn self_host_block_item_is_let(item: SelfHostBlockItem) -> Bool {
 }
 
 fn self_host_type_binding_block_item(name: String, type_: SelfHostTypeExpr, offset: U32) -> SelfHostBlockItem {
-  SelfHostBlockItem::{
+  {
     kind: 4u32
-    type_binding: Option::Some(type_)
+    type_binding: Some(type_)
     mutable_: false
     name: name
     name_offset: offset
-    target: SelfHostExpr::BoolExpr(false, offset)
-    value: SelfHostExpr::BoolExpr(false, offset)
+    target: BoolExpr(false, offset)
+    value: BoolExpr(false, offset)
     offset: offset
   }
 }
@@ -639,54 +639,54 @@ pub enum SelfHostParseError {
 impl SelfHostParseError {
   fn offset(self) -> U32 {
     match self {
-      SelfHostParseError::ExpectedDeclaration(_, _, offset) => offset
-      SelfHostParseError::ExpectedExpression(_, offset) => offset
-      SelfHostParseError::ExpectedPattern(_, offset) => offset
-      SelfHostParseError::Lexical(_, offset) => offset
-      SelfHostParseError::ImportAfterDeclaration(offset) => offset
-      SelfHostParseError::ReceiverMustBeFirst(offset) => offset
-      SelfHostParseError::InvalidReceiverType(_, offset) => offset
-      SelfHostParseError::UnexpectedTypeCloser(offset) => offset
-      SelfHostParseError::UnclosedTrait(offset) => offset
-      SelfHostParseError::UnclosedFunction(offset) => offset
-      SelfHostParseError::UnclosedImpl(offset) => offset
-      SelfHostParseError::UnclosedStruct(offset) => offset
-      SelfHostParseError::UnclosedEnum(offset) => offset
-      SelfHostParseError::UnclosedTupleVariant(offset) => offset
-      SelfHostParseError::UnclosedStructVariant(offset) => offset
-      SelfHostParseError::EmptyTupleVariant(offset) => offset
-      SelfHostParseError::InvalidProductTypeArity(_, offset) => offset
-      SelfHostParseError::UnclosedProductType(offset) => offset
-      SelfHostParseError::PublicImplNotAllowed(offset) => offset
-      SelfHostParseError::ForeignImplRequiresTrait(offset) => offset
-      SelfHostParseError::PublicForeignLibraryNotAllowed(offset) => offset
-      SelfHostParseError::PublicForeignLibraryMemberNotAllowed(offset) => offset
-      SelfHostParseError::GenericForeignLibraryMemberNotAllowed(offset) => offset
-      SelfHostParseError::ReceiverForeignLibraryMemberNotAllowed(offset) => offset
-      SelfHostParseError::ForeignLibraryMemberBodyNotAllowed(offset) => offset
-      SelfHostParseError::ExpectedDelimiter(_, _, offset) => offset
-      SelfHostParseError::UnclosedExpression(_, offset) => offset
-      SelfHostParseError::ChainedComparison(offset) => offset
-      SelfHostParseError::InvalidProductArity(_, offset) => offset
-      SelfHostParseError::RestPatternNotAllowed(offset) => offset
-      SelfHostParseError::DuplicateRestPattern(offset) => offset
-      SelfHostParseError::EmptyTuplePattern(offset) => offset
-      SelfHostParseError::UsingDoubleDispose(_, offset) => offset
-      SelfHostParseError::UsingValueEscape(_, offset) => offset
+      ExpectedDeclaration(_, _, offset) => offset
+      ExpectedExpression(_, offset) => offset
+      ExpectedPattern(_, offset) => offset
+      Lexical(_, offset) => offset
+      ImportAfterDeclaration(offset) => offset
+      ReceiverMustBeFirst(offset) => offset
+      InvalidReceiverType(_, offset) => offset
+      UnexpectedTypeCloser(offset) => offset
+      UnclosedTrait(offset) => offset
+      UnclosedFunction(offset) => offset
+      UnclosedImpl(offset) => offset
+      UnclosedStruct(offset) => offset
+      UnclosedEnum(offset) => offset
+      UnclosedTupleVariant(offset) => offset
+      UnclosedStructVariant(offset) => offset
+      EmptyTupleVariant(offset) => offset
+      InvalidProductTypeArity(_, offset) => offset
+      UnclosedProductType(offset) => offset
+      PublicImplNotAllowed(offset) => offset
+      ForeignImplRequiresTrait(offset) => offset
+      PublicForeignLibraryNotAllowed(offset) => offset
+      PublicForeignLibraryMemberNotAllowed(offset) => offset
+      GenericForeignLibraryMemberNotAllowed(offset) => offset
+      ReceiverForeignLibraryMemberNotAllowed(offset) => offset
+      ForeignLibraryMemberBodyNotAllowed(offset) => offset
+      ExpectedDelimiter(_, _, offset) => offset
+      UnclosedExpression(_, offset) => offset
+      ChainedComparison(offset) => offset
+      InvalidProductArity(_, offset) => offset
+      RestPatternNotAllowed(offset) => offset
+      DuplicateRestPattern(offset) => offset
+      EmptyTuplePattern(offset) => offset
+      UsingDoubleDispose(_, offset) => offset
+      UsingValueEscape(_, offset) => offset
     }
   }
 }
 
 fn self_host_parse_error_kind(error: SelfHostParseError) -> U32 {
-  if error is SelfHostParseError::ExpectedDeclaration(_, _, _) {
+  if error is ExpectedDeclaration(_, _, _) {
     0u32
-  } else if error is SelfHostParseError::ExpectedExpression(_, _) {
+  } else if error is ExpectedExpression(_, _) {
     1u32
-  } else if error is SelfHostParseError::ExpectedPattern(_, _) {
+  } else if error is ExpectedPattern(_, _) {
     2u32
-  } else if error is SelfHostParseError::Lexical(_, _) {
+  } else if error is Lexical(_, _) {
     3u32
-  } else if error is SelfHostParseError::ImportAfterDeclaration(_) {
+  } else if error is ImportAfterDeclaration(_) {
     4u32
   } else {
     5u32

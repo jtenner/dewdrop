@@ -5,10 +5,10 @@ fn self_host_pattern_payload_span(pattern: SelfHostPlannedPattern) -> SelfHostHi
     TuplePattern(_, children, _) => children
     ProductPattern(children, _) => children
     StructPattern(_, fields, _, _, _) => fields
-    _ => SelfHostHirSpan::{
+    _ => ({
       start: 0u32
       length: 0u32
-    }
+    })
   }
 }
 
@@ -33,21 +33,21 @@ fn self_host_pattern_payload_field(link: SelfHostPlannedProgramWasmGCLink, modul
       let _ = self_host_pattern_payload_child(module_, pattern, index)
       let name = module_.pattern_fields[fields.start + index].name
       match self_host_linked_field_by_name(link, self_host_pattern_constructor_declaration(module_, pattern), name) {
-        Option::Some(field) => if field.type_index == type_index {
-          Option::Some(field.field_index)
+        Some(field) => if field.type_index == type_index {
+          Some(field.field_index)
         } else {
-          Option::None
+          None
         }
-        Option::None => Option::None
+        None => None
       }
     }
-    _ => Option::Some(self_host_linked_variant_payload_field_index(link, type_index, index))
+    _ => Some(self_host_linked_variant_payload_field_index(link, type_index, index))
   }
 }
 
 fn self_host_nested_pattern_payload_shape(module_: SelfHostPlannedModuleLowering, pattern: SelfHostPlannedPattern) -> SelfHostPlannedValueShape {
   match pattern.source {
-    SelfHostHirPattern::TuplePattern(_, children, _) => if children.length > 0u32 && children.start < module_.pattern_children.length() {
+    TuplePattern(_, children, _) => if children.length > 0u32 && children.start < module_.pattern_children.length() {
       let child = module_.pattern_children[children.start]
       if child < module_.patterns.length() {
         return module_.patterns[child].shape
@@ -55,7 +55,7 @@ fn self_host_nested_pattern_payload_shape(module_: SelfHostPlannedModuleLowering
     }
     _ => {}
   }
-  SelfHostPlannedValueShape::ErrorPlannedValueShape
+  ErrorPlannedValueShape
 }
 
 fn self_host_emit_pattern_path(link: SelfHostPlannedProgramWasmGCLink, scratch: U32, path: Array<SelfHostLinkedWasmFieldLink>, destination: StarshineInstructions) -> Unit {
@@ -83,7 +83,7 @@ fn self_host_emit_nested_pattern_bindings(
   // One logical product edge adds at most 31 pair-field steps (arity <= 32).
   // Divide to check that structural bound without overflowing multiplication.
   if path.length() / 32u32 > module_.patterns.length() {
-    return Option::Some("nested binding path exceeds the pattern arena")
+    return Some("nested binding path exceeds the pattern arena")
   }
   let children = self_host_pattern_payload_span(pattern)
   let mut index = 0u32
@@ -91,42 +91,42 @@ fn self_host_emit_nested_pattern_bindings(
     current => if current < children.length {
       let child_id = self_host_pattern_payload_child(module_, pattern, current)
       if child_id >= module_.patterns.length() {
-        return Option::Some("nested binding child is outside its arena")
+        return Some("nested binding child is outside its arena")
       }
       let child = self_host_specialized_pattern(link, canonical, module_, module_.patterns[child_id])
-      if child.source is SelfHostHirPattern::RestPattern(_) || child.shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+      if child.source is RestPattern(_) || child.shape is UnitPlannedValueShape {
         continue current + 1u32
       }
       let path_start = path.length()
       match self_host_pattern_push_payload_path(link, module_, pattern, type_index, current, path) {
-        Option::Some(error) => return Option::Some(error)
-        Option::None => {}
+        Some(error) => return Some(error)
+        None => {}
       }
       let field = path[path.length() - 1u32]
       match child.reference {
-        SelfHostBodyPatternReference::PatternBindingReference(local) => if bind_direct || path.length() > 1u32 || pattern.source is StructPattern(_, _, _, _, _) || pattern.source is ProductPattern(_, _) {
+        PatternBindingReference(local) => if bind_direct || path.length() > 1u32 || pattern.source is StructPattern(_, _, _, _, _) || pattern.source is ProductPattern(_, _) {
           let slot = match self_host_linked_i32_local_slot(canonical, module_, body, local) {
-            Option::Some(value) => value
-            Option::None => return Option::Some("nested binding has no physical local")
+            Some(value) => value
+            None => return Some("nested binding has no physical local")
           }
           let actual_shape = match self_host_linked_pair_field_shape(link, field.type_index, field.field_index) {
-            Option::Some(shape) => Option::Some(shape)
-            Option::None => self_host_linked_physical_field_shape(link, field.type_index, field.field_index)
+            Some(shape) => Some(shape)
+            None => self_host_linked_physical_field_shape(link, field.type_index, field.field_index)
           }
           let actual = match actual_shape {
-            Option::Some(shape) => self_host_body_carrier_from_shape(shape)
-            Option::None => return Option::Some("nested binding has no physical field")
+            Some(shape) => self_host_body_carrier_from_shape(shape)
+            None => return Some("nested binding has no physical field")
           }
           let plan = match canonical {
-            Option::Some(value) => value
-            Option::None => return Option::Some("nested binding has no frozen body plan")
+            Some(value) => value
+            None => return Some("nested binding has no frozen body plan")
           }
           let local_slot = self_host_body_local_slot(module_, body, local)
           if local_slot >= plan.local_values.length() {
-            return Option::Some("nested binding local is outside the body plan")
+            return Some("nested binding local is outside the body plan")
           }
           if !self_host_body_carrier_equal(plan.local_values[local_slot].carrier, actual) &&
-            !(self_host_linked_pattern_payload_box_type(link, field.type_index, field.field_index, plan.local_values[local_slot].carrier) is Option::Some(_)) {
+            !(self_host_linked_pattern_payload_box_type(link, field.type_index, field.field_index, plan.local_values[local_slot].carrier) is Some(_)) {
             let message = StringBuilder::new()
             message.append("ABI-710 nested binding field and local carriers disagree body=")
             message.append_u64(body.body)
@@ -144,7 +144,7 @@ fn self_host_emit_nested_pattern_bindings(
             message.append(self_host_linked_shape_name(self_host_body_carrier_shape(plan.local_values[local_slot].carrier)))
             message.append(" actual=")
             message.append(self_host_linked_shape_name(self_host_body_carrier_shape(actual)))
-            return Option::Some(message.finish())
+            return Some(message.finish())
           }
           self_host_emit_pattern_path(link, scratch, path, destination)
           self_host_emit_pattern_payload_unbox(link, field.type_index, field.field_index, plan.local_values[local_slot].carrier, destination)
@@ -152,12 +152,12 @@ fn self_host_emit_nested_pattern_bindings(
         }
         _ => if self_host_pattern_payload_span(child).length > 0u32 {
           let child_type = match self_host_pattern_nested_type(link, module_, child) {
-            Option::Some(value) => value
-            Option::None => return Option::Some("nested binding has no exact parent variant")
+            Some(value) => value
+            None => return Some("nested binding has no exact parent variant")
           }
           match self_host_emit_nested_pattern_bindings(link, module_, body, canonical, child, child_type, scratch, path, destination, true) {
-            Option::Some(error) => return Option::Some(error)
-            Option::None => {}
+            Some(error) => return Some(error)
+            None => {}
           }
         }
       }
@@ -167,7 +167,7 @@ fn self_host_emit_nested_pattern_bindings(
       break self_host_semantic_unit()
     }
   }
-  Option::None
+  None
 }
 
 // The incoming Boolean proves all parent tags. Each child test is guarded by
@@ -183,7 +183,7 @@ fn self_host_emit_nested_pattern_tests(
   destination: StarshineInstructions,
 ) -> Option<String> {
   if path.length() / 32u32 > module_.patterns.length() {
-    return Option::Some("nested pattern path exceeds the pattern arena")
+    return Some("nested pattern path exceeds the pattern arena")
   }
   let children = self_host_pattern_payload_span(pattern)
   let mut index = 0u32
@@ -191,30 +191,30 @@ fn self_host_emit_nested_pattern_tests(
     current => if current < children.length {
       let child_id = self_host_pattern_payload_child(module_, pattern, current)
       if child_id >= module_.patterns.length() {
-        return Option::Some("nested pattern child is outside its arena")
+        return Some("nested pattern child is outside its arena")
       }
       let child = self_host_specialized_pattern(link, canonical, module_, module_.patterns[child_id])
-      if child.source is SelfHostHirPattern::RestPattern(_) || child.shape is SelfHostPlannedValueShape::UnitPlannedValueShape {
+      if child.source is RestPattern(_) || child.shape is UnitPlannedValueShape {
         continue current + 1u32
       }
-      if !(child.reference is SelfHostBodyPatternReference::PatternBindingReference(_)) && !(child.source is SelfHostHirPattern::WildcardPattern(_)) {
+      if !(child.reference is PatternBindingReference(_)) && !(child.source is WildcardPattern(_)) {
         let predicate = StarshineFfi.ffi_ffi_bridge_instructions_new()
         let absent = StarshineFfi.ffi_ffi_bridge_instructions_new()
         let path_start = path.length()
         match self_host_pattern_push_payload_path(link, module_, pattern, type_index, current, path) {
-          Option::Some(error) => return Option::Some(error)
-          Option::None => {}
+          Some(error) => return Some(error)
+          None => {}
         }
         self_host_emit_pattern_path(link, scratch, path, predicate)
         let selected_field = path[path.length() - 1u32]
         self_host_emit_pattern_payload_unbox(link, selected_field.type_index, selected_field.field_index, self_host_body_carrier_from_shape(child.shape), predicate)
         match child.source {
-          SelfHostHirPattern::LiteralPattern(expression, _) => {
+          LiteralPattern(expression, _) => {
             if expression >= module_.expressions.length() {
-              return Option::Some("nested literal expression is outside its arena")
+              return Some("nested literal expression is outside its arena")
             }
             match module_.expressions[expression].kind {
-              SelfHostPlannedExpressionKind::PlannedBoolConst(value) => {
+              PlannedBoolConst(value) => {
                 let bit = if value {
                   1i32
                 } else {
@@ -223,57 +223,57 @@ fn self_host_emit_nested_pattern_tests(
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(bit)))
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_eq())
               }
-              SelfHostPlannedExpressionKind::PlannedI8Const(value),
-              SelfHostPlannedExpressionKind::PlannedU8Const(value),
-              SelfHostPlannedExpressionKind::PlannedI16Const(value),
-              SelfHostPlannedExpressionKind::PlannedU16Const(value),
-              SelfHostPlannedExpressionKind::PlannedI32Const(value) => {
+              PlannedI8Const(value),
+              PlannedU8Const(value),
+              PlannedI16Const(value),
+              PlannedU16Const(value),
+              PlannedI32Const(value) => {
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(u64_into_i32(value))))
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_eq())
               }
-              SelfHostPlannedExpressionKind::PlannedU32Const(value) => {
+              PlannedU32Const(value) => {
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(u64_into_i32(value))))
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i32_eq())
               }
-              SelfHostPlannedExpressionKind::PlannedI64Const(value) => {
+              PlannedI64Const(value) => {
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_const(StarshineFfi.ffi_lib_I64_new(self_host_u64_to_i64(value))))
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_eq())
               }
-              SelfHostPlannedExpressionKind::PlannedU64Const(value) => {
+              PlannedU64Const(value) => {
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_const(StarshineFfi.ffi_lib_I64_new(self_host_u64_to_i64(value))))
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_i64_eq())
               }
-              SelfHostPlannedExpressionKind::PlannedStringConst(value) => {
+              PlannedStringConst(value) => {
                 let equality = match canonical {
-                  Option::Some(plan) => self_host_emitted_string_pattern_target(link, plan, module_, child_id, expression)
-                  Option::None => return Option::Some("BOD-610 nested String pattern has no physical body plan")
+                  Some(plan) => self_host_emitted_string_pattern_target(link, plan, module_, child_id, expression)
+                  None => return Some("BOD-610 nested String pattern has no physical body plan")
                 }
                 self_host_emit_linked_text_constant(link, value, true, predicate)
                 StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_lib_Instruction_call(StarshineFfi.ffi_lib_FuncIdx_new(self_host_u32_to_i32(self_host_linked_emitted_function_index(equality)))))
               }
-              _ => return Option::Some("nested literal pattern has no physical comparison recipe")
+              _ => return Some("nested literal pattern has no physical comparison recipe")
             }
           }
           _ => {
             let child_type = match self_host_pattern_nested_type(link, module_, child) {
-              Option::Some(value) => value
-              Option::None => return Option::Some("nested variant pattern has no exact physical type")
+              Some(value) => value
+              None => return Some("nested variant pattern has no exact physical type")
             }
             StarshineFfi.ffi_ffi_bridge_instructions_push(predicate, StarshineFfi.ffi_ffi_bridge_instruction_ref_test_nominal(self_host_u32_to_i32(child_type)))
             match self_host_emit_nested_pattern_tests(link, canonical, module_, child, child_type, scratch, path, predicate) {
-              Option::Some(error) => return Option::Some(error)
-              Option::None => {}
+              Some(error) => return Some(error)
+              None => {}
             }
           }
         }
         path.truncate(path_start)
         StarshineFfi.ffi_ffi_bridge_instructions_push(absent, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(0i32)))
-        StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_if(self_host_linked_block_type(SelfHostPlannedValueShape::I32PlannedValueShape), predicate, absent))
+        StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_ffi_bridge_instruction_if(self_host_linked_block_type(I32PlannedValueShape), predicate, absent))
       }
       continue current + 1u32
     } else {
       break self_host_semantic_unit()
     }
   }
-  Option::None
+  None
 }

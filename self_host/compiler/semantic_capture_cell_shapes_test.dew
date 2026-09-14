@@ -3,9 +3,9 @@ fn self_host_capture_cell_shape_test(shape: SelfHostPlannedValueShape) -> Unit {
   let module_ = lowering.modules[0u32]
   assert(module_.inferred.diagnostics.length() == 0u32, "valid mutable capture source")
   let source = module_.locals[1u32]
-  assert(source.local_id == 1u32 && source.mutable_ && source.shape is SelfHostPlannedValueShape::I64PlannedValueShape, "owned I64 captured local before mutation")
+  assert(source.local_id == 1u32 && source.mutable_ && source.shape is I64PlannedValueShape, "owned I64 captured local before mutation")
   assert(self_host_local_needs_capture_cell(module_, source), "live mutable capture needs a cell")
-  module_.locals[1u32] = SelfHostPlannedLocal::{
+  module_.locals[1u32] = {
     body: source.body
     lambda: source.lambda
     local_id: source.local_id
@@ -22,29 +22,29 @@ fn self_host_capture_cell_shape_test(shape: SelfHostPlannedValueShape) -> Unit {
   let cells = self_host_wasmgc_u32_slots(module_.locals.length())
   let lambdas = self_host_wasmgc_u32_slots(module_.lambdas.length())
   let _ = self_host_wasmgc_plan_closures(module_, types, fields, cells, lambdas)
-  if shape is SelfHostPlannedValueShape::I64PlannedValueShape {
+  if shape is I64PlannedValueShape {
     assert(cells[1u32] != 4294967295u32, "concrete captured local has a cell")
     let field = fields[types[cells[1u32]].fields.start]
-    assert(field.storage is SelfHostPlannedWasmStorageType::WasmI64Storage, "cell retains I64 storage")
+    assert(field.storage is WasmI64Storage, "cell retains I64 storage")
   }
 }
 
 test "capture cells retain concrete physical storage" {
-  self_host_capture_cell_shape_test(SelfHostPlannedValueShape::I64PlannedValueShape)
+  self_host_capture_cell_shape_test(I64PlannedValueShape)
 }
 
 test "SPC-301 capture cells cannot use Generic evidence" expect_trap "unreachable" {
-  self_host_capture_cell_shape_test(SelfHostPlannedValueShape::GenericPlannedValueShape)
+  self_host_capture_cell_shape_test(GenericPlannedValueShape)
 }
 
 test "SPC-301 capture cells cannot use Error evidence" expect_trap "unreachable" {
-  self_host_capture_cell_shape_test(SelfHostPlannedValueShape::ErrorPlannedValueShape)
+  self_host_capture_cell_shape_test(ErrorPlannedValueShape)
 }
 
 test "SPC-301 capture cell products cannot hide Error evidence" expect_trap "unreachable" {
-  self_host_capture_cell_shape_test(SelfHostPlannedValueShape::ProductPlannedValueShape([
-    SelfHostPlannedValueShape::I64PlannedValueShape,
-    SelfHostPlannedValueShape::ErrorPlannedValueShape,
+  self_host_capture_cell_shape_test(ProductPlannedValueShape([
+    I64PlannedValueShape,
+    ErrorPlannedValueShape,
   ]))
 }
 
@@ -56,16 +56,16 @@ fn self_host_specialized_capture_cell_shape_test(shape: SelfHostPlannedValueShap
   assert(specialization.requests.length() == 1u32, "one exact generic owner request")
   let request = specialization.requests[0u32]
   assert(request.declaration == module_.functions.callables[0u32].declaration && request.shapes.length == 1u32, "exact make request")
-  assert(specialization.shapes[request.shapes.start] is SelfHostPlannedValueShape::I64PlannedValueShape, "concrete request before mutation")
+  assert(specialization.shapes[request.shapes.start] is I64PlannedValueShape, "concrete request before mutation")
   specialization.shapes[request.shapes.start] = shape
   let types = []
   let fields = []
   self_host_wasmgc_append_specialized_lambdas(module_, request, 0u32, specialization.shapes, types, fields, [], [])
-  if shape is SelfHostPlannedValueShape::I64PlannedValueShape {
+  if shape is I64PlannedValueShape {
     let mut cells = 0u32
     for type_ in types {
-      if type_.kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(1u32, 0u32) {
-        assert(fields[type_.fields.start].storage is SelfHostPlannedWasmStorageType::WasmI64Storage, "selected cell uses I64")
+      if type_.kind is PlannedWasmCaptureCellType(1u32, 0u32) {
+        assert(fields[type_.fields.start].storage is WasmI64Storage, "selected cell uses I64")
         cells = cells + 1u32
       }
     }
@@ -74,21 +74,21 @@ fn self_host_specialized_capture_cell_shape_test(shape: SelfHostPlannedValueShap
 }
 
 test "generic capture cells use selected physical storage" {
-  self_host_specialized_capture_cell_shape_test(SelfHostPlannedValueShape::I64PlannedValueShape)
+  self_host_specialized_capture_cell_shape_test(I64PlannedValueShape)
 }
 
 test "SPC-301 specialized capture cells cannot use Generic evidence" expect_trap "unreachable" {
-  self_host_specialized_capture_cell_shape_test(SelfHostPlannedValueShape::GenericPlannedValueShape)
+  self_host_specialized_capture_cell_shape_test(GenericPlannedValueShape)
 }
 
 test "SPC-301 specialized capture cells cannot use Error evidence" expect_trap "unreachable" {
-  self_host_specialized_capture_cell_shape_test(SelfHostPlannedValueShape::ErrorPlannedValueShape)
+  self_host_specialized_capture_cell_shape_test(ErrorPlannedValueShape)
 }
 
 test "SPC-301 specialized capture products cannot hide Error evidence" expect_trap "unreachable" {
-  self_host_specialized_capture_cell_shape_test(SelfHostPlannedValueShape::ProductPlannedValueShape([
-    SelfHostPlannedValueShape::I64PlannedValueShape,
-    SelfHostPlannedValueShape::ErrorPlannedValueShape,
+  self_host_specialized_capture_cell_shape_test(ProductPlannedValueShape([
+    I64PlannedValueShape,
+    ErrorPlannedValueShape,
   ]))
 }
 
@@ -98,6 +98,6 @@ test "Unit capture cells are erased after specialization" {
   self_host_physical_test_assert_clean_inference(link)
   assert(link.diagnostics.length() == 0u32, "Unit capture plan links")
   for type_ in fragments.modules[0u32].physical_types {
-    assert(!(type_.kind is SelfHostPlannedWasmPhysicalTypeKind::PlannedWasmCaptureCellType(_, _)), "Unit produces no physical cell")
+    assert(!(type_.kind is PlannedWasmCaptureCellType(_, _)), "Unit produces no physical cell")
   }
 }

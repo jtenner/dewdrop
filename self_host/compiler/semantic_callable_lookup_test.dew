@@ -6,20 +6,20 @@ fn self_host_callable_lookup_fixture() -> SelfHostPlannedModuleLowering {
   assert(module_.module_id == 5100u64, "callable lookup owner")
   assert(module_.functions.callables.length() == 2u32, "two distinct callables")
   match self_host_program_specialization_callable(module_, 5100u64 << 32u64) {
-    Option::Some(value) => assert(value.declaration == 5100u64 << 32u64, "exact callable before mutation")
-    Option::None => assert(false, "missing fixture callable")
+    Some(value) => assert(value.declaration == 5100u64 << 32u64, "exact callable before mutation")
+    None => assert(false, "missing fixture callable")
   }
   module_
 }
 
 test "callable lookup keeps missing and external declarations absent" {
   let module_ = self_host_callable_lookup_fixture()
-  assert(self_host_program_specialization_callable(module_, 5101u64 << 32u64) is Option::None,
+  assert(self_host_program_specialization_callable(module_, 5101u64 << 32u64) is None,
     "another module is not a local callable")
-  assert(self_host_program_specialization_callable(module_, (5100u64 << 32u64) | 99u64) is Option::None,
+  assert(self_host_program_specialization_callable(module_, (5100u64 << 32u64) | 99u64) is None,
     "an unknown declaration stays missing")
   module_.functions.callable_by_declaration[0u32] = 4294967295u32
-  assert(self_host_program_specialization_callable(module_, 5100u64 << 32u64) is Option::None,
+  assert(self_host_program_specialization_callable(module_, 5100u64 << 32u64) is None,
     "a missing callable stays missing")
 }
 
@@ -43,15 +43,15 @@ fn self_host_program_callable_lookup_fixture() -> SelfHostPlannedProgramLowering
   assert(lowering.index.module_ids.length() == 1u32, "one program owner ID")
   assert(lowering.index.module_ids[0u32] == 5100u64, "stable program owner")
   match self_host_program_specialization_program_callable(lowering, 5100u64 << 32u64) {
-    Option::Some(value) => assert(value.declaration == 5100u64 << 32u64, "exact program callable")
-    Option::None => assert(false, "fixture program callable is present")
+    Some(value) => assert(value.declaration == 5100u64 << 32u64, "exact program callable")
+    None => assert(false, "fixture program callable is present")
   }
   lowering
 }
 
 test "program callable lookup keeps unknown owners absent" {
   let lowering = self_host_program_callable_lookup_fixture()
-  assert(self_host_program_specialization_program_callable(lowering, 5101u64 << 32u64) is Option::None,
+  assert(self_host_program_specialization_program_callable(lowering, 5101u64 << 32u64) is None,
     "unknown module is not a corrupt selected module")
 }
 
@@ -76,16 +76,16 @@ fn self_host_assert_callback_result_identity(source: Bytes, check_emits: Bool) -
     while 0u32 {
       relative if relative < body.expressions.length => {
         let expression = body.expressions.start + relative
-        if module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _) {
+        if module_.expressions[expression].kind is PlannedFunctionValueCall(_, _, _) {
           calls = calls + 1u32
-          assert(module_.expressions[expression].shape is SelfHostPlannedValueShape::I64PlannedValueShape,
+          assert(module_.expressions[expression].shape is I64PlannedValueShape,
             "callback inference proves an I64 result")
           if check_emits {
             assert(self_host_linked_expression_emits_value(link, module_, body, 4294967295u32, expression),
               "the callback name cannot erase its I64 result")
           } else {
             let shape = self_host_linked_backend_expression_shape(link, module_, body, 4294967295u32, expression)
-            assert(shape is SelfHostPlannedValueShape::I64PlannedValueShape,
+            assert(shape is I64PlannedValueShape,
               "an unrelated function name cannot supply the callback result shape")
           }
         }
@@ -119,16 +119,16 @@ fn self_host_test_missing_callback_result(check_emits: Bool) -> Unit {
   let module_ = link.fragments.specialization.lowering.modules[0u32]
   let body = module_.bodies[0u32]
   let source = module_.expressions[2u32]
-  assert(source.kind is SelfHostPlannedExpressionKind::PlannedFunctionValueCall(_, _, _), "stable callback expression")
+  assert(source.kind is PlannedFunctionValueCall(_, _, _), "stable callback expression")
   assert(body.body == 5100u64 << 32u64 && body.declaration == 5100u64 << 32u64, "stable callback body")
   let initial_shape = self_host_linked_inferred_call_result_shape(link, module_, body, 4294967295u32, 2u32)
-  assert(initial_shape is SelfHostPlannedValueShape::I64PlannedValueShape, "valid result before mutation")
+  assert(initial_shape is I64PlannedValueShape, "valid result before mutation")
   module_.expressions[2u32] = self_host_test_signature_expression(source, -1i32, source.kind, source.shape)
   if check_emits {
     let _ = self_host_linked_expression_emits_value(link, module_, body, 4294967295u32, 2u32)
   } else {
     let shape = self_host_linked_backend_expression_shape(link, module_, body, 4294967295u32, 2u32)
-    assert(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape, "missing result stays missing")
+    assert(shape is ErrorPlannedValueShape, "missing result stays missing")
   }
 }
 
@@ -157,34 +157,34 @@ fn self_host_test_unresolved_result_name(name: Bytes, mutation: U32) -> Unit {
       relative if relative < body.expressions.length => {
         let expression = body.expressions.start + relative
         match module_.expressions[expression].kind {
-          SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, arguments, _) => if target < module_.expressions.length() &&
+          PlannedDirectCall(_, target, arguments, _) => if target < module_.expressions.length() &&
             module_.expressions[target].source_name < self_host_linked_module_name_count(module_) &&
             self_host_linked_module_name_at(module_, module_.expressions[target].source_name).as_bytes().equals(name) {
             let original = module_.expressions[expression]
             let callee = module_.expressions[target]
-            assert(original.shape is SelfHostPlannedValueShape::I64PlannedValueShape, "inference retains the I64 result")
+            assert(original.shape is I64PlannedValueShape, "inference retains the I64 result")
             assert(self_host_linked_expression_emits_value(link, module_, body, 4294967295u32, expression), "valid resolved call has a value")
             // Lowering consumes the method-name node after selecting a call.
             // Restore its retained syntax metadata for the unresolved form.
             assert(callee.member_base < module_.expressions.length(), "method retains its receiver")
             module_.expressions[target] = self_host_test_signature_expression(callee, callee.type_,
-              SelfHostPlannedExpressionKind::PlannedUnresolvedField(callee.member_base, callee.source_name), callee.shape)
+              PlannedUnresolvedField(callee.member_base, callee.source_name), callee.shape)
             module_.expressions[expression] = self_host_test_signature_expression(original, original.type_,
-              SelfHostPlannedExpressionKind::PlannedUnresolvedCall(target, arguments), original.shape)
+              PlannedUnresolvedCall(target, arguments), original.shape)
             if mutation != 0u32 {
               let unresolved = module_.expressions[expression]
               module_.expressions[expression] = self_host_test_signature_expression(unresolved, -1i32, unresolved.kind, unresolved.shape)
             }
             if mutation == 3u32 {
               match self_host_linked_unresolved_method_call_result_shape(link, module_, body, 4294967295u32, expression) {
-                Option::Some(shape) => assert(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape, "payload call result must retain Error")
-                Option::None => assert(false, "an unresolved call must retain its result evidence")
+                Some(shape) => assert(shape is ErrorPlannedValueShape, "payload call result must retain Error")
+                None => assert(false, "an unresolved call must retain its result evidence")
               }
               return
             }
             if mutation == 1u32 {
               let shape = self_host_linked_backend_expression_shape(link, module_, body, 4294967295u32, expression)
-              assert(shape is SelfHostPlannedValueShape::ErrorPlannedValueShape, "missing unresolved result stays Error")
+              assert(shape is ErrorPlannedValueShape, "missing unresolved result stays Error")
               return
             }
             assert(self_host_linked_expression_emits_value(link, module_, body, 4294967295u32, expression),
@@ -238,7 +238,7 @@ fn self_host_test_method_lookup_contract(check_arity: Bool) -> Unit {
     while 0u32 {
       relative if relative < body.expressions.length => {
         let expression = body.expressions.start + relative
-        if module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedLocalGet(1u32) {
+        if module_.expressions[expression].kind is PlannedLocalGet(1u32) {
           wrong_receiver = expression
         }
         continue relative + 1u32
@@ -249,18 +249,18 @@ fn self_host_test_method_lookup_contract(check_arity: Bool) -> Unit {
       relative if relative < body.expressions.length => {
         let expression = body.expressions.start + relative
         match module_.expressions[expression].kind {
-          SelfHostPlannedExpressionKind::PlannedDirectCall(_, target, _, _) => {
+          PlannedDirectCall(_, target, _, _) => {
             let receiver = module_.expressions[target].member_base
             assert(receiver < module_.expressions.length(), "method retains receiver")
             let valid = self_host_linked_method_call_index_for_receiver_arity(link, module_, body, receiver, "read", 0u32)
-            assert(valid is Option::Some(_), "exact receiver and arity resolve before mismatch")
+            assert(valid is Some(_), "exact receiver and arity resolve before mismatch")
             if check_arity {
               let absent = self_host_linked_method_call_index_for_receiver_arity(link, module_, body, receiver, "read", 1u32)
-              assert(absent is Option::None, "wrong arity cannot retry without arity")
+              assert(absent is None, "wrong arity cannot retry without arity")
             } else {
               assert(wrong_receiver < module_.expressions.length(), "fixture has the Other receiver")
               let absent = self_host_linked_method_call_index_for_receiver(link, module_, body, wrong_receiver, "read")
-              assert(absent is Option::None, "wrong receiver cannot select a global same-name method")
+              assert(absent is None, "wrong receiver cannot select a global same-name method")
             }
             checked = true
           }
@@ -295,9 +295,9 @@ fn self_host_test_ambiguous_method_lookup(check_arity: Bool) -> Unit {
       relative if relative < body.expressions.length => {
         let expression = body.expressions.start + relative
         match module_.expressions[expression].kind {
-          SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, target, _, _) => {
+          PlannedDirectCall(declaration, target, _, _) => {
             let exact = self_host_linked_i32_call_index(link, body.body, 4294967295u32, expression, declaration)
-            assert(exact is Option::Some(_), "valid call has an exact specialization")
+            assert(exact is Some(_), "valid call has an exact specialization")
             let mut candidates = 0u32
             for function_ in link.functions {
               if function_.declaration == declaration && function_.lambda == 4294967295u32 {
@@ -311,7 +311,7 @@ fn self_host_test_ambiguous_method_lookup(check_arity: Bool) -> Unit {
             } else {
               self_host_linked_method_call_index_for_receiver(link, module_, body, receiver, "read")
             }
-            assert(fallback is Option::None, "name-only lookup cannot choose the first specialization")
+            assert(fallback is None, "name-only lookup cannot choose the first specialization")
             checked = checked + 1u32
           }
           _ => {}
@@ -345,7 +345,7 @@ test "one linked generic method is not evidence for another receiver argument" {
     while 0u32 {
       relative if relative < body.expressions.length => {
         let expression = body.expressions.start + relative
-        if module_.expressions[expression].kind is SelfHostPlannedExpressionKind::PlannedLocalGet(1u32) {
+        if module_.expressions[expression].kind is PlannedLocalGet(1u32) {
           wrong_receiver = expression
         }
         continue relative + 1u32
@@ -356,9 +356,9 @@ test "one linked generic method is not evidence for another receiver argument" {
       relative if relative < body.expressions.length => {
         let expression = body.expressions.start + relative
         match module_.expressions[expression].kind {
-          SelfHostPlannedExpressionKind::PlannedDirectCall(declaration, _, _, _) => {
+          PlannedDirectCall(declaration, _, _, _) => {
             let exact = self_host_linked_i32_call_index(link, body.body, 4294967295u32, expression, declaration)
-            assert(exact is Option::Some(_), "real I32 call has an exact mapping")
+            assert(exact is Some(_), "real I32 call has an exact mapping")
             let mut candidates = 0u32
             for function_ in link.functions {
               if function_.declaration == declaration && function_.lambda == 4294967295u32 {
@@ -368,7 +368,7 @@ test "one linked generic method is not evidence for another receiver argument" {
             assert(candidates == 1u32, "only the I32 specialization is linked")
             assert(wrong_receiver < module_.expressions.length(), "fixture retains the I64 receiver")
             let absent = self_host_linked_method_call_index_for_receiver_arity(link, module_, body, wrong_receiver, "read", 0u32)
-            assert(absent is Option::None, "one I32 specialization cannot prove an I64 target")
+            assert(absent is None, "one I32 specialization cannot prove an I64 target")
             checked = true
           }
           _ => {}
@@ -384,15 +384,15 @@ test "one linked generic method is not evidence for another receiver argument" {
 test "receiver primitive lookup follows long type-head chains" {
   let module_ = self_host_specialized_shape_fixture()
   let resolved = module_.resolved_types.types.length()
-  module_.resolved_types.types.push(SelfHostResolvedType::PrimitiveType(SelfHostPrimitiveType::I64Type))
+  module_.resolved_types.types.push(PrimitiveType(I64Type))
   let mut root = -self_host_body_u32_to_i32(resolved) - 2i32
-  let expected = SelfHostPrimitiveType::I64Type.rank() + 1u32
+  let expected = I64Type.rank() + 1u32
   assert(self_host_linked_body_primitive_rank(module_, root) == expected, "direct primitive before wrappers")
   // This is a type-head walker fixture, not a source-language application.
   while 0u32 {
     depth if depth < 64u32 => {
       let next = self_host_body_u32_to_i32(module_.inferred.types.length())
-      module_.inferred.types.push(SelfHostBodyTypeTerm::BodyAppliedType(root, self_host_empty_hir_span(0u32)))
+      module_.inferred.types.push(BodyAppliedType(root, self_host_empty_hir_span(0u32)))
       root = next
       continue depth + 1u32
     }
@@ -404,9 +404,9 @@ test "receiver primitive lookup follows long type-head chains" {
 test "ARN-108 receiver primitive lookup reports a type-head cycle" expect_trap "unreachable" {
   let module_ = self_host_specialized_shape_fixture()
   assert(module_.inferred.types.length() == 1u32, "stable type-head arena")
-  module_.inferred.types.push(SelfHostBodyTypeTerm::BodyResolvedType(module_.functions.callables[0u32].result_type))
+  module_.inferred.types.push(BodyResolvedType(module_.functions.callables[0u32].result_type))
   assert(self_host_linked_body_primitive_rank(module_, 1i32) == 0u32, "valid generic type-head before mutation")
-  module_.inferred.types[1u32] = SelfHostBodyTypeTerm::BodyAppliedType(1i32, self_host_empty_hir_span(0u32))
+  module_.inferred.types[1u32] = BodyAppliedType(1i32, self_host_empty_hir_span(0u32))
   let _ = self_host_linked_body_primitive_rank(module_, 1i32)
 }
 
@@ -418,6 +418,6 @@ test "ARN-105 receiver primitive lookup checks body type indices" expect_trap "u
 
 test "SOL-207 receiver primitive lookup checks resolved encoding" expect_trap "unreachable" {
   let module_ = self_host_specialized_shape_fixture()
-  module_.inferred.types[0u32] = SelfHostBodyTypeTerm::BodyResolvedType(4294967295u32)
+  module_.inferred.types[0u32] = BodyResolvedType(4294967295u32)
   let _ = self_host_linked_body_primitive_rank(module_, 0i32)
 }

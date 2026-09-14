@@ -26,24 +26,24 @@ test "member projection cannot infer an owner or hide rollback" {
   let origin = self_host_call_type_origin(17u32, 91u32)
   let snapshot = solver.snapshot()
   assert(!solver.unify(owner, projection, origin), "projection owner cycles must fail")
-  assert(solver.diagnostics[0u32] is SelfHostLocalInferenceDiagnostic::InfiniteLocalType(_, _, _), "exact occurs-check diagnostic")
+  assert(solver.diagnostics[0u32] is InfiniteLocalType(_, _, _), "exact occurs-check diagnostic")
   solver.rollback(snapshot)
   assert(solver.diagnostics.length() == 0u32, "rollback restores diagnostics")
   assert(solver.has_unresolved_variable(projection), "rollback restores the unknown owner")
   assert(solver.zonk_type(projection) == projection, "unknown projection remains structural")
-  assert(!solver.unify(projection, solver.resolved_type(fixture.resolved.primitive(SelfHostPrimitiveType::I64Type)), origin), "member projection is not injective")
+  assert(!solver.unify(projection, solver.resolved_type(fixture.resolved.primitive(I64Type)), origin), "member projection is not injective")
   assert(solver.representative_type(owner) == owner, "output type cannot choose its owner")
 }
 
 test "invalid member owner keeps the exact constraint origin" {
   let fixture = self_host_unification_test_types()
   let solver = SelfHostLocalTypeSolver::new(fixture.resolved)
-  let scalar = solver.resolved_type(fixture.resolved.primitive(SelfHostPrimitiveType::I64Type))
+  let scalar = solver.resolved_type(fixture.resolved.primitive(I64Type))
   let projection = solver.member_projection_type(scalar, b"types.field_type", "item")
   let origin = self_host_call_type_origin(11u32, 73u32)
   assert(!solver.unify(projection, scalar, origin), "scalar member owner is invalid")
   match solver.diagnostics[0u32] {
-    SelfHostLocalInferenceDiagnostic::InvalidLocalMemberProjection(type_, message, actual_origin) => {
+    InvalidLocalMemberProjection(type_, message, actual_origin) => {
       assert(type_ == projection && message == "CT-032 member type query requires a struct or enum", "exact member diagnostic")
       assert(self_host_type_origin_equal(origin, actual_origin), "exact call origin")
     }
@@ -56,11 +56,11 @@ test "local computed type bindings keep block and lambda scope" {
     b"builtin member<t>(name: String) -> Type = \"types.field_type\"\nstruct Box<t> {\n item: t\n}\nfn identity<t>(value: t) -> t {\n value\n}\npub fn main() -> I64 {\n type Item = member<Box<I64>>(\"item\")\n let read = fn(value: Item) -> Item {\n type Inner = Item\n identity::<Inner>(value)\n }\n if true {\n type Item = I32\n identity::<Item>(1i32)\n } else {\n 0i32\n }\n read(identity::<Item>(2i64))\n}\n",
   )
   match self_host_validate_program_lowering(lowering) {
-    Option::Some(error) => assert(false, error)
-    Option::None => {}
+    Some(error) => assert(false, error)
+    None => {}
   }
   assert(lowering.modules[0u32].lambdas.length() == 1u32, "one lambda")
-  assert(lowering.modules[0u32].lambdas[0u32].result_shape is SelfHostPlannedValueShape::I64PlannedValueShape, "local type aliases are real I64 types")
+  assert(lowering.modules[0u32].lambdas[0u32].result_shape is I64PlannedValueShape, "local type aliases are real I64 types")
 }
 
 test "unused local type bindings still diagnose invalid types" {
@@ -78,8 +78,8 @@ test "computed field types substitute each owner without leaking scratch state" 
   assert(collected.diagnostics.length() == 0u32, "computed field syntax")
   let resolved = self_host_resolve_module_types(collected)
   assert(resolved.diagnostic_count() == 0u32, "computed field resolution")
-  assert(resolved.parameter_types[1u32] == resolved.primitive(SelfHostPrimitiveType::I32Type), "first member type")
-  assert(resolved.parameter_types[2u32] == resolved.primitive(SelfHostPrimitiveType::I64Type), "second member type")
+  assert(resolved.parameter_types[1u32] == resolved.primitive(I32Type), "first member type")
+  assert(resolved.parameter_types[2u32] == resolved.primitive(I64Type), "second member type")
 }
 
 test "computed variant payloads preserve order and the empty product" {
@@ -92,15 +92,15 @@ test "computed variant payloads preserve order and the empty product" {
   assert(resolved.diagnostic_count() == 0u32, "computed payload resolution")
   assert(resolved.parameter_types[1u32] == resolved.parameter_types[2u32], "tuple and named source order")
   match resolved.types[resolved.parameter_types[1u32]] {
-    SelfHostResolvedType::ProductType(span) => {
+    ProductType(span) => {
       assert(span.length == 2u32, "two payloads")
-      assert(resolved.type_arguments[span.start] == resolved.primitive(SelfHostPrimitiveType::I64Type), "first payload")
-      assert(resolved.type_arguments[span.start + 1u32] == resolved.primitive(SelfHostPrimitiveType::I32Type), "second payload")
+      assert(resolved.type_arguments[span.start] == resolved.primitive(I64Type), "first payload")
+      assert(resolved.type_arguments[span.start + 1u32] == resolved.primitive(I32Type), "second payload")
     }
     _ => assert(false, "payload must be a product")
   }
   match resolved.types[resolved.parameter_types[3u32]] {
-    SelfHostResolvedType::ProductType(span) => assert(span.length == 0u32, "unit variant has no payload")
+    ProductType(span) => assert(span.length == 0u32, "unit variant has no payload")
     _ => assert(false, "empty payload must remain a product")
   }
 }
@@ -113,7 +113,7 @@ test "computed imported members preserve generic identity" {
   assert(fixture.frozen.import_diagnostics.length() == 0u32, "member imports")
   let resolved = fixture.frozen.interfaces.at(0u32).resolved_types
   assert(resolved.diagnostic_count() == 0u32, "imported member resolution")
-  assert(resolved.parameter_types[0u32] == resolved.primitive(SelfHostPrimitiveType::I64Type), "imported generic member")
+  assert(resolved.parameter_types[0u32] == resolved.primitive(I64Type), "imported generic member")
 }
 
 test "computed types report missing members and cycles at source" {
@@ -130,7 +130,7 @@ test "computed types report missing members and cycles at source" {
     let mut found = false
     for diagnostic in resolved.diagnostics {
       match diagnostic {
-        SelfHostTypeDiagnostic::ComputedTypeFailure(owner, message, offset) => {
+        ComputedTypeFailure(owner, message, offset) => {
           assert(owner != 0u64 && offset > 0u32, "computed error context")
           if message == expected {
             found = true
@@ -152,8 +152,8 @@ test "computed parser keeps split generic closers and rejects non-string selecto
   let resolved = self_host_resolve_module_types(collected)
   assert(resolved.diagnostic_count() == 0u32, "ordinary nested generic call types")
   match self_host_parse_type_source(b"member<I64>(1)") {
-    Result::Err(_) => {}
-    Result::Ok(_) => assert(false, "non-string selector must be a parse error")
+    Err(_) => {}
+    Ok(_) => assert(false, "non-string selector must be a parse error")
   }
 }
 
@@ -166,12 +166,12 @@ test "computed generic aliases normalize explicit call arguments" {
   let resolved = self_host_resolve_module_types(collected)
   for diagnostic in resolved.diagnostics {
     match diagnostic {
-      SelfHostTypeDiagnostic::ComputedTypeFailure(_, message, _) => assert(false, message)
+      ComputedTypeFailure(_, message, _) => assert(false, message)
       _ => assert(false, "unexpected generic projection diagnostic")
     }
   }
   assert(resolved.explicit_call_type_arguments.length() == 1u32, "one explicit logical argument")
-  assert(resolved.explicit_call_type_arguments[0u32] == resolved.primitive(SelfHostPrimitiveType::I64Type), "generic projection alias must normalize to I64")
+  assert(resolved.explicit_call_type_arguments[0u32] == resolved.primitive(I64Type), "generic projection alias must normalize to I64")
 }
 
 test "imported computed builtins normalize generic aliases in calls" {
@@ -182,20 +182,20 @@ test "imported computed builtins normalize generic aliases in calls" {
   let resolved = fixture.frozen.interfaces.at(0u32).resolved_types
   for diagnostic in resolved.diagnostics {
     match diagnostic {
-      SelfHostTypeDiagnostic::ComputedTypeFailure(_, message, _) => assert(false, message)
+      ComputedTypeFailure(_, message, _) => assert(false, message)
       _ => assert(false, "unexpected imported generic projection diagnostic")
     }
   }
   assert(resolved.explicit_call_type_arguments.length() == 1u32, "one imported query call type argument")
-  assert(resolved.explicit_call_type_arguments[0u32] == resolved.primitive(SelfHostPrimitiveType::I64Type), "imported generic projection alias must normalize to I64")
+  assert(resolved.explicit_call_type_arguments[0u32] == resolved.primitive(I64Type), "imported generic projection alias must normalize to I64")
   let lowering = self_host_plan_program_lowering(fixture.frozen)
   for diagnostic in lowering.modules[0u32].inferred.diagnostics {
     assert(false, self_host_inference_diagnostic_name(diagnostic))
   }
   for type_ in lowering.modules[0u32].inferred.call_type_arguments {
     match self_host_read_compile_time_type(lowering.modules[0u32], type_, self_host_empty_compile_time_bindings(), 0u32) {
-      Result::Ok(value) => self_host_test_query_bool(b"types.type_equal", [value, SelfHostCompileTimeType::PrimitiveCompileTimeType(SelfHostPrimitiveType::I64Type)], true)
-      Result::Err(error) => assert(false, error)
+      Ok(value) => self_host_test_query_bool(b"types.type_equal", [value, PrimitiveCompileTimeType(I64Type)], true)
+      Err(error) => assert(false, error)
     }
   }
 }
