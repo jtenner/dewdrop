@@ -38,7 +38,7 @@ pub(all) enum CoreWasmLinkError {
 priv struct CoreTypeArena {
   groups : Array[@lib.RecType]
   subtypes : Array[@lib.SubType]
-  group_by_type : Array[Int]
+  has_declared_subtype : Array[Bool]
 }
 
 ///|
@@ -48,18 +48,26 @@ fn core_type_arena(module_ : @lib.Module) -> CoreTypeArena {
     None => []
   }
   let subtypes = []
-  let group_by_type = []
-  for group_index, group in groups {
+  for group in groups {
     let values = match group {
       @lib.SingleRecType(value) => [value]
       @lib.GroupRecType(values) => values
     }
     for value in values {
       subtypes.push(value)
-      group_by_type.push(group_index)
     }
   }
-  { groups, subtypes, group_by_type, }
+  let has_declared_subtype = Array::make(subtypes.length(), false)
+  for subtype in subtypes {
+    for super_ in subtype.super_types() {
+      match core_type_index(super_) {
+        Some(index) if index >= 0 && index < subtypes.length() =>
+          has_declared_subtype[index] = true
+        _ => () // Preserve the existing treatment of relative and invalid indices.
+      }
+    }
+  }
+  { groups, subtypes, has_declared_subtype, }
 }
 
 ///|
@@ -270,18 +278,9 @@ fn core_function_comp_type(
 
 ///|
 fn core_type_has_declared_subtype(arena : CoreTypeArena, index : Int) -> Bool {
-  for subtype in arena.subtypes {
-    match subtype {
-      @lib.SubType(_, supers, _, _) =>
-        for super_ in supers {
-          if core_type_index(super_) == Some(index) {
-            return true
-          }
-        }
-      _ => ()
-    }
-  }
-  false
+  index >= 0 &&
+  index < arena.has_declared_subtype.length() &&
+  arena.has_declared_subtype[index]
 }
 
 ///|

@@ -94,22 +94,14 @@ fn core_build_type_maps(
   let dew_types = Array::make(dew_arena.subtypes.length(), -1)
   let dropped_groups = Array::make(dew_arena.groups.length(), false)
   let mut next = guest_arena.subtypes.length()
+  let mut start = 0
   for group_index, group in dew_arena.groups {
     let length = match group {
       @lib.SingleRecType(_) => 1
       @lib.GroupRecType(values) => values.length()
     }
-    let start = if length == 0 {
-      0
-    } else {
-      let mut found = -1
-      for type_index in 0..<dew_arena.group_by_type.length() {
-        if dew_arena.group_by_type[type_index] == group_index {
-          found = type_index
-          break
-        }
-      }
-      found
+    guard start + length <= dew_arena.subtypes.length() else {
+      abort("core linker: recursive group exceeds type arena")
     }
     let mut bound_count = 0
     let mut bound_guest_type = -1
@@ -137,6 +129,10 @@ fn core_build_type_maps(
         next += 1
       }
     }
+    start += length
+  }
+  guard start == dew_arena.subtypes.length() else {
+    abort("core linker: recursive groups do not cover type arena")
   }
   Ok((dew_types, guest_types, dropped_groups, next))
 }

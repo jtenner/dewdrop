@@ -33,3 +33,11 @@ Propagate effects through a reverse-caller worklist. Use a direct array for
 emitted function provenance and signature facts. Exclude elided and signature-only
 functions; assert valid, unique emitted indices. Chain and inline-function
 regressions pass, as do the backend integration lanes.
+
+## Core linker
+
+Use a running cursor to map recursion groups, and index whether each type has a
+declared subtype. Keep bounds checks and the previous handling of relative and
+invalid supertype references. The 4,096-import complete-link probe fell from
+13.01 to 3.87 ms, including index construction. Marker queries agree with the
+old scan, and linked modules pass validation.
