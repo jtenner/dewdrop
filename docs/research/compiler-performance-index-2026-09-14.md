@@ -17,3 +17,12 @@ diagnostic paths while successful reads use short paths. Prehash owner sort keys
 binary-search saved cache indexes, index loaded owners, and use a set for merging.
 Full digest, corruption, duplicate-owner, and V1 ordering checks remain. The final
 cache lane passed 22 tests; loaded 4,096-entry lookup fell from 28.65 to 0.488 ms.
+
+## Semantic work
+
+Compute only the requested interface closure. Reuse content hashes only for
+modules completed in this invocation, retaining full refresh and stale-cache
+checks. Intern imported structural types with owned keys and preserve first IDs.
+Interface freezing fell from 3.86 s to 303 ms in pass two. Imported-type creation
+fell from 797.15 to 2.99 ms in pass three. New ID and scratch-ownership tests and
+all 36 existing import tests passed.

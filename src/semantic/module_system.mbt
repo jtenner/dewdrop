@@ -2286,7 +2286,14 @@ pub fn frozen_program_interfaces_with_fingerprints(
 fn frozen_available_interfaces_with_fingerprints(
   graph : ModuleDependencyGraph,
   slots : Array[FrozenModuleInterface?],
+  only_module? : Int? = None,
+  completed_content? : Array[Bool]? = None,
 ) -> Array[FrozenModuleInterface?] {
+  if completed_content is Some(completed) {
+    guard completed.length() == slots.length() else {
+      abort("interface content completion slots do not match modules")
+    }
+  }
   let available : Array[FrozenModuleInterface] = []
   for slot in slots {
     match slot {
@@ -2303,13 +2310,27 @@ fn frozen_available_interfaces_with_fingerprints(
     match slot {
       Some(interface_) =>
         content[index] = Some(
-          frozen_interface_with_content_fingerprint(interface_, identities),
+          if only_module is Some(root) &&
+            root != index &&
+            completed_content is Some(completed) &&
+            completed[index] {
+            guard interface_.content_fingerprint != "" else {
+              abort("completed module interface has no content fingerprint")
+            }
+            interface_
+          } else {
+            frozen_interface_with_content_fingerprint(interface_, identities)
+          },
         )
       None => ()
     }
   }
   let output : Array[FrozenModuleInterface?] = Array::make(slots.length(), None)
+  // Acyclic freezing needs only the new root, not every older closure.
   for module_index, slot in content {
+    if only_module is Some(selected) && selected != module_index {
+      continue
+    }
     let interface_ = match slot {
       Some(value) => value
       None => continue
@@ -2392,8 +2413,14 @@ fn frozen_module_interface_with_available_fingerprints(
   graph : ModuleDependencyGraph,
   module_index : Int,
   slots : Array[FrozenModuleInterface?],
+  completed_content? : Array[Bool]? = None,
 ) -> FrozenModuleInterface {
-  frozen_available_interfaces_with_fingerprints(graph, slots)[module_index].unwrap()
+  frozen_available_interfaces_with_fingerprints(
+    graph,
+    slots,
+    only_module=Some(module_index),
+    completed_content~,
+  )[module_index].unwrap()
 }
 
 ///|
@@ -3790,6 +3817,9 @@ fn freeze_program_interfaces_with_cached_hook(
     program.modules.length(),
     None,
   )
+  // Only hashes computed for completed modules in this invocation are trusted.
+  // Cached inputs can carry stale content fingerprints and must be recomputed.
+  let completed_content = Array::make(program.modules.length(), false)
   let cached_slots = Array::make(program.modules.length(), false)
   let stale_constructor_slots = Array::make(program.modules.length(), false)
   for index, cached_interface in cached {
@@ -3911,9 +3941,13 @@ fn freeze_program_interfaces_with_cached_hook(
         slots[module_index] = Some(interface_)
         if !repeat {
           let fingerprinted = frozen_module_interface_with_available_fingerprints(
-            graph, module_index, slots,
+            graph,
+            module_index,
+            slots,
+            completed_content=Some(completed_content),
           )
           slots[module_index] = Some(fingerprinted)
+          completed_content[module_index] = true
           on_frozen(module_index, fingerprinted)
         }
       }
@@ -3956,6 +3990,7 @@ fn freeze_program_interfaces_with_cached_hook(
       for index in 0..<scc.length {
         let module_index = graph.scc_modules[scc.start + index]
         slots[module_index] = fingerprinted[module_index]
+        completed_content[module_index] = true
       }
       on_frozen_scc(scc, graph.scc_modules, slots)
     }

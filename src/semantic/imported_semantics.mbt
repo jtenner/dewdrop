@@ -206,8 +206,47 @@ pub fn ResolvedModuleImports::value_binding(
 }
 
 ///|
+// Owned keys keep scratch argument arrays from changing interned identities.
+priv enum ImportedTypeKey {
+  Generic(UInt64)
+  Nominal(UInt64)
+  Trait(UInt64)
+  Self(UInt64)
+  Projection(Int, Bytes, String)
+  Product(Array[Int])
+  Applied(Int, Array[Int])
+  Function(Array[Int], Int)
+} derive(Eq, Hash)
+
+///|
+fn imported_type_key(
+  resolved : ResolvedModuleTypes,
+  type_ : ResolvedType,
+) -> ImportedTypeKey? {
+  fn arguments(span : HirSpan) -> Array[Int] {
+    guard arena_span_is_valid(span, resolved.type_arguments.length()) else {
+      abort("ARN-101 imported type key arguments")
+    }
+    Array::makei(span.length, i => resolved.type_arguments[span.start + i])
+  }
+  match type_ {
+    ErrorType | PrimitiveType(_) => None
+    GenericParameterType(id) => Some(Generic(id))
+    NominalType(id) => Some(Nominal(id))
+    TraitType(id) => Some(Trait(id))
+    SelfType(id) => Some(Self(id))
+    MemberTypeProjection(base, fingerprint, name) =>
+      Some(Projection(base, fingerprint, name))
+    ProductType(span) => Some(Product(arguments(span)))
+    AppliedType(base, span) => Some(Applied(base, arguments(span)))
+    FunctionType(span, result) => Some(Function(arguments(span), result))
+  }
+}
+
+///|
 priv struct InterfaceTypeImporter {
   resolved : ResolvedModuleTypes
+  interned : Map[ImportedTypeKey, ResolvedTypeId]
   interfaces : Array[FrozenModuleInterface?]
   memos : Array[Array[ResolvedTypeId]]
   task_interfaces : Array[Int]
@@ -223,12 +262,20 @@ fn InterfaceTypeImporter::new(
   resolved : ResolvedModuleTypes,
   interfaces : Array[FrozenModuleInterface?],
 ) -> InterfaceTypeImporter {
+  let interned : Map[ImportedTypeKey, ResolvedTypeId] = {}
+  for index, type_ in resolved.types {
+    if imported_type_key(resolved, type_) is Some(key) &&
+      !interned.contains(key) {
+      interned[key] = index
+    }
+  }
   let memos : Array[Array[ResolvedTypeId]] = []
   for _ in interfaces {
     memos.push([])
   }
   {
     resolved,
+    interned,
     interfaces,
     memos,
     task_interfaces: [],
@@ -268,13 +315,13 @@ fn InterfaceTypeImporter::intern_simple(
       abort("simple imported type is structural")
     _ => ()
   }
-  for index, existing in self.resolved.types {
-    if existing == type_ {
-      return index
-    }
+  let key = imported_type_key(self.resolved, type_).unwrap()
+  if self.interned.get(key) is Some(index) {
+    return index
   }
   let index = self.resolved.types.length()
   self.resolved.types.push(type_)
+  self.interned[key] = index
   index
 }
 
@@ -283,22 +330,9 @@ fn InterfaceTypeImporter::intern_product(
   self : InterfaceTypeImporter,
   fields : Array[ResolvedTypeId],
 ) -> ResolvedTypeId {
-  for index, existing in self.resolved.types {
-    if existing is ProductType(span) && span.length == fields.length() {
-      guard arena_span_is_valid(span, self.resolved.type_arguments.length()) else {
-        abort("ARN-101 imported product fields")
-      }
-      let mut same = true
-      for field in 0..<span.length {
-        if self.resolved.type_arguments[span.start + field] != fields[field] {
-          same = false
-          break
-        }
-      }
-      if same {
-        return index
-      }
-    }
+  let key : ImportedTypeKey = Product(fields.copy())
+  if self.interned.get(key) is Some(index) {
+    return index
   }
   let start = self.resolved.type_arguments.length()
   for field in fields {
@@ -306,6 +340,7 @@ fn InterfaceTypeImporter::intern_product(
   }
   let result = self.resolved.types.length()
   self.resolved.types.push(ProductType({ start, length: fields.length(), }))
+  self.interned[key] = result
   result
 }
 
@@ -315,24 +350,9 @@ fn InterfaceTypeImporter::intern_applied(
   base : ResolvedTypeId,
   arguments : Array[ResolvedTypeId],
 ) -> ResolvedTypeId {
-  for index, existing in self.resolved.types {
-    match existing {
-      AppliedType(existing_base, span) if existing_base == base &&
-        span.length == arguments.length() => {
-        let mut same = true
-        for argument_index in 0..<span.length {
-          if self.resolved.type_arguments[span.start + argument_index] !=
-            arguments[argument_index] {
-            same = false
-            break
-          }
-        }
-        if same {
-          return index
-        }
-      }
-      _ => ()
-    }
+  let key : ImportedTypeKey = Applied(base, arguments.copy())
+  if self.interned.get(key) is Some(index) {
+    return index
   }
   let start = self.resolved.type_arguments.length()
   for argument in arguments {
@@ -342,6 +362,7 @@ fn InterfaceTypeImporter::intern_applied(
   self.resolved.types.push(
     AppliedType(base, { start, length: arguments.length(), }),
   )
+  self.interned[key] = index
   index
 }
 
@@ -351,24 +372,9 @@ fn InterfaceTypeImporter::intern_function(
   parameters : Array[ResolvedTypeId],
   result : ResolvedTypeId,
 ) -> ResolvedTypeId {
-  for index, existing in self.resolved.types {
-    match existing {
-      FunctionType(span, existing_result) if existing_result == result &&
-        span.length == parameters.length() => {
-        let mut same = true
-        for parameter_index in 0..<span.length {
-          if self.resolved.type_arguments[span.start + parameter_index] !=
-            parameters[parameter_index] {
-            same = false
-            break
-          }
-        }
-        if same {
-          return index
-        }
-      }
-      _ => ()
-    }
+  let key : ImportedTypeKey = Function(parameters.copy(), result)
+  if self.interned.get(key) is Some(index) {
+    return index
   }
   let start = self.resolved.type_arguments.length()
   for parameter in parameters {
@@ -378,6 +384,7 @@ fn InterfaceTypeImporter::intern_function(
   self.resolved.types.push(
     FunctionType({ start, length: parameters.length(), }, result),
   )
+  self.interned[key] = index
   index
 }
 
