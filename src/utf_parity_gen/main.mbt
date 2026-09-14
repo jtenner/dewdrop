@@ -24,10 +24,10 @@ fn compile_utf_parity(source : Bytes) -> Bytes {
 ///|
 fn main {
   let source = @fs.read_file_to_bytes("tools/utf-parity/utf_parity.dew") catch {
-    error => abort(error.to_string())
+    error => abort(@debug.to_string(error))
   }
   let generated = @fs.read_file_to_bytes("tools/utf-parity/generated_cases.dew") catch {
-    error => abort(error.to_string())
+    error => abort(@debug.to_string(error))
   }
   let combined = Buffer(size_hint=source.length() + generated.length() + 1)
   combined.write_bytes(source)
@@ -35,7 +35,7 @@ fn main {
   combined.write_bytes(generated)
   let binary = compile_utf_parity(combined.to_bytes())
   @fs.write_bytes_to_file("tools/utf-parity/utf_parity.wasm", binary) catch {
-    error => abort(error.to_string())
+    error => abort(@debug.to_string(error))
   }
   println("wrote tools/utf-parity/utf_parity.wasm")
 }

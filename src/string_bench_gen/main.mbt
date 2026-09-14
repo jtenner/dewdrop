@@ -66,11 +66,11 @@ fn main {
   let source = @fs.read_file_to_bytes(
     "tools/wago-string-bench/string_bench.dew",
   ) catch {
-    error => abort(error.to_string())
+    error => abort(@debug.to_string(error))
   }
   let binary = compile_string_benchmark(source)
   @fs.write_bytes_to_file("tools/wago-string-bench/string_bench.wasm", binary) catch {
-    error => abort(error.to_string())
+    error => abort(@debug.to_string(error))
   }
   println("wrote tools/wago-string-bench/string_bench.wasm")
 }
