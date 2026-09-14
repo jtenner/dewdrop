@@ -5,6 +5,17 @@ fn core_remap_instruction(
 ) -> @lib.Instruction {
   match value {
     @lib.AnyConvertExtern => value
+    @lib.WaitqueueNew | @lib.WaitqueueNotify => value
+    @lib.StructWait(type_, field) =>
+      @lib.Instruction::struct_wait(core_remap_type_idx(map, type_), field)
+    @lib.StructAtomicSet(order, type_, field) =>
+      @lib.Instruction::struct_atomic_set(
+        order,
+        core_remap_type_idx(map, type_),
+        field,
+      )
+    @lib.ArrayAtomicSet(order, type_) =>
+      @lib.Instruction::array_atomic_set(order, core_remap_type_idx(map, type_))
     @lib.ArrayAtomicCmpxchg(v0, v1) =>
       @lib.Instruction::array_atomic_cmpxchg(
         core_remap_type_idx(map, v1),
@@ -46,8 +57,12 @@ fn core_remap_instruction(
         core_remap_elem_idx(map, v1),
       )
     @lib.ArrayLen => value
-    @lib.ArrayLoad(v0, v1) =>
-      @lib.Instruction::array_load(v0, core_remap_type_idx(map, v1))
+    @lib.ArrayLoad(v0, v1, argument) =>
+      @lib.Instruction::array_load(
+        v0,
+        core_remap_type_idx(map, v1),
+        memarg=argument,
+      )
     @lib.ArrayNew(v0) =>
       @lib.Instruction::array_new(core_remap_type_idx(map, v0))
     @lib.ArrayNewData(v0, v1) =>
@@ -66,8 +81,12 @@ fn core_remap_instruction(
       @lib.Instruction::array_new_fixed(core_remap_type_idx(map, v0), v1)
     @lib.ArraySet(v0) =>
       @lib.Instruction::array_set(core_remap_type_idx(map, v0))
-    @lib.ArrayStore(v0, v1) =>
-      @lib.Instruction::array_store(v0, core_remap_type_idx(map, v1))
+    @lib.ArrayStore(v0, v1, argument) =>
+      @lib.Instruction::array_store(
+        v0,
+        core_remap_type_idx(map, v1),
+        memarg=argument,
+      )
     @lib.AtomicCmpxchg(v0, v1, v2) =>
       @lib.Instruction::atomic_cmpxchg(
         v1,

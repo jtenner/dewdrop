@@ -1,4 +1,88 @@
 ///|
+test "link preserves backing array memory offsets and alignment" {
+  let map : CoreWasmIndexMap = {
+    type_indices: [7],
+    function_indices: [],
+    table_indices: [],
+    memory_indices: [],
+    global_indices: [],
+    tag_indices: [],
+    element_indices: [],
+    data_indices: [],
+  }
+  let argument = @lib.MemArg::new(@lib.U32::new(1U), None, @lib.U64::new(23UL))
+  let load = @lib.Instruction::array_load(
+    @lib.LoadOp::i32_load(),
+    @lib.TypeIdx::new(0U),
+    memarg=argument,
+  )
+  let store = @lib.Instruction::array_store(
+    @lib.StoreOp::i32_store(),
+    @lib.TypeIdx::new(0U),
+    memarg=argument,
+  )
+  assert_eq(
+    core_remap_instruction(map, load),
+    @lib.Instruction::array_load(
+      @lib.LoadOp::i32_load(),
+      @lib.TypeIdx::new(7U),
+      memarg=argument,
+    ),
+  )
+  assert_eq(
+    core_remap_instruction(map, store),
+    @lib.Instruction::array_store(
+      @lib.StoreOp::i32_store(),
+      @lib.TypeIdx::new(7U),
+      memarg=argument,
+    ),
+  )
+}
+
+///|
+test "link remaps atomic aggregate and waitqueue type indices" {
+  let map : CoreWasmIndexMap = {
+    type_indices: [9],
+    function_indices: [],
+    table_indices: [],
+    memory_indices: [],
+    global_indices: [],
+    tag_indices: [],
+    element_indices: [],
+    data_indices: [],
+  }
+  let order = @lib.AtomicOrder::acq_rel()
+  let source = @lib.TypeIdx::new(0U)
+  let target = @lib.TypeIdx::new(9U)
+  let field = @lib.U32::new(3U)
+  assert_eq(
+    core_remap_instruction(
+      map,
+      @lib.Instruction::array_atomic_set(order, source),
+    ),
+    @lib.Instruction::array_atomic_set(order, target),
+  )
+  assert_eq(
+    core_remap_instruction(
+      map,
+      @lib.Instruction::struct_atomic_set(order, source, field),
+    ),
+    @lib.Instruction::struct_atomic_set(order, target, field),
+  )
+  assert_eq(
+    core_remap_instruction(map, @lib.Instruction::struct_wait(source, field)),
+    @lib.Instruction::struct_wait(target, field),
+  )
+  for
+    instruction in [
+      @lib.Instruction::waitqueue_new(),
+      @lib.Instruction::waitqueue_notify(),
+    ] {
+    assert_eq(core_remap_instruction(map, instruction), instruction)
+  }
+}
+
+///|
 fn core_link_test_ref(index : Int) -> @lib.ValType {
   @lib.ValType::ref_type(
     @lib.RefType::new(

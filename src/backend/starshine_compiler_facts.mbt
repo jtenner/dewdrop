@@ -197,6 +197,8 @@ fn starshine_fact_heap_type(
           Some(@representation.FactHeapType::no_extern())
         @lib.NoExnAbsHeapType => Some(@representation.FactHeapType::no_exn())
         @lib.NoContAbsHeapType => Some(@representation.FactHeapType::no_cont())
+        // Compiler-facts v1 has no waitqueue heap-type encoding.
+        @lib.WaitqueueAbsHeapType | @lib.NoWaitqueueAbsHeapType => None
       }
     @lib.DefTypeHeapType(_) => None
   }
@@ -694,7 +696,7 @@ fn starshine_fact_instruction_effect(
     | @lib.ArrayGet(_)
     | @lib.ArrayGetS(_)
     | @lib.ArrayGetU(_)
-    | @lib.ArrayLoad(_, _)
+    | @lib.ArrayLoad(_, _, _)
     | @lib.ArrayLen
     | @lib.I31GetS
     | @lib.I31GetU =>
@@ -703,7 +705,7 @@ fn starshine_fact_instruction_effect(
       )
     @lib.StructSet(_, _)
     | @lib.ArraySet(_)
-    | @lib.ArrayStore(_, _)
+    | @lib.ArrayStore(_, _, _)
     | @lib.ArrayFill(_)
     | @lib.ArrayCopy(_, _)
     | @lib.ArrayInitData(_, _)
