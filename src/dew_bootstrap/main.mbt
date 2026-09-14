@@ -126,6 +126,11 @@ fn bootstrap_compiler_fingerprint(repository : String) -> String {
       files.push(path)
     }
   }
+  bootstrap_fingerprint_files(files)
+}
+
+///|
+fn bootstrap_fingerprint_files(files : Array[String]) -> String {
   files.sort()
   let hash = @crypto.SHA256::new()
   hash.update(b"DEW_COMPILER_SOURCE_FINGERPRINT_MOONBIT_V1\x00")

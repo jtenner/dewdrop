@@ -41,3 +41,10 @@ declared subtype. Keep bounds checks and the previous handling of relative and
 invalid supertype references. The 4,096-import complete-link probe fell from
 13.01 to 3.87 ms, including index construction. Marker queries agree with the
 old scan, and linked modules pass validation.
+
+## Bootstrap identity experiment
+
+Extract the existing fingerprint loop for a native benchmark. Hashing the built
+compiler plus standard sources took 128.29 ms; the current source check took
+52.28 ms. Reject the artifact-hash variant and retain production identity behavior.
+All nine bootstrap tests pass. This does not measure a generated build-time stamp.
