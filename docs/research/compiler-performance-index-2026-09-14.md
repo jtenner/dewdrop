@@ -60,9 +60,10 @@ self-host A/B/C core bytes match the baseline; B and C reach a fixed point.
 - [Second audit and hot-path probes](compile-hotpaths-2026-09-14.md)
 - [Third audit and every self-host step](compile-imports-2026-09-14.md)
 
-Remote master diverged during this work and pins another Starshine revision.
-Publish the tested snapshot on `perf/compiler-compile-times`. Next, reconcile the
-Starshine revisions with master and rerun integration and self-host checks. Then
-profile the roughly 20-second Dew compiler executions, and address the initial
-31.446-second native linker build-plus-link. Neither is fixed by the measured
-many-module gains. These steps are future work, not completed results.
+Remote master diverged during the initial audit. The
+[follow-up](self-host-performance-followup-2026-09-14.md) merges it, verifies that
+the tested Starshine pin includes all remote fixes, profiles the self-host
+compiler, and fixes direct slot allocation, indexed call lookup, and cold native
+linker compilation. The same-request self-host test improves from 18.402 to
+14.294 seconds with identical output. A fresh native linker build and first link
+total 15.580 seconds. The remaining field/type scans are future work.

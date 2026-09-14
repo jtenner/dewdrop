@@ -1,0 +1,65 @@
+{
+  "generated_c_sha256": "00483e28190ccc1c7cfa909c776c7e83ffbf316d9a8786fd87342585e99da8fd",
+  "variants": [
+    {
+      "variant": "gcc-O2",
+      "compile_seconds": 25.57580860300368,
+      "link_seconds": [
+        5.318688406005094,
+        5.325583494006423,
+        5.368613891994755
+      ],
+      "identical_output": true
+    },
+    {
+      "variant": "gcc-O1",
+      "compile_seconds": 9.846514261000266,
+      "link_seconds": [
+        5.49701963699772,
+        5.6104691799992,
+        5.44612538900401
+      ],
+      "identical_output": true
+    },
+    {
+      "variant": "clang-O2",
+      "compile_seconds": 17.850333850001334,
+      "link_seconds": [
+        5.268988395000633,
+        5.315853886997502,
+        5.343218533002073
+      ],
+      "identical_output": true
+    },
+    {
+      "variant": "gcc-O2-lto8",
+      "compile_seconds": 7.26378853499773,
+      "link_seconds": [
+        5.174924025996006,
+        5.190824396995595,
+        5.1126797209944925
+      ],
+      "identical_output": true
+    },
+    {
+      "variant": "gcc-O2-small-inline",
+      "compile_seconds": 21.85208715099725,
+      "link_seconds": [
+        5.126571476997924,
+        5.112097168996115,
+        5.092431190001662
+      ],
+      "identical_output": true
+    },
+    {
+      "variant": "gcc-O2-lto",
+      "compile_seconds": 20.092999835003866,
+      "link_seconds": [
+        5.176619193000079,
+        5.075494381999306,
+        5.1185290070061455
+      ],
+      "identical_output": true
+    }
+  ]
+}

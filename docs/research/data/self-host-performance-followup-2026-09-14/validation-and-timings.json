@@ -1,0 +1,580 @@
+{
+  "integration-merge": {
+    "timings": [
+      {
+        "step": "native integration src/backend/starshine_lane_types_wbtest.mbt",
+        "seconds": 3.102
+      },
+      {
+        "step": "native integration src/backend/starshine_packed_primitives_wbtest.mbt",
+        "seconds": 6.484
+      },
+      {
+        "step": "native integration src/backend/starshine_program_link_wbtest.mbt",
+        "seconds": 14.163
+      },
+      {
+        "step": "native integration src/semantic/frozen_interface_cache_wbtest.mbt",
+        "seconds": 1.433
+      },
+      {
+        "step": "native integration src/semantic/imported_semantics_wbtest.mbt",
+        "seconds": 8.367
+      },
+      {
+        "step": "native integration src/semantic/module_system_wbtest.mbt",
+        "seconds": 7.275
+      },
+      {
+        "step": "native integration src/semantic/program_link_plan_wbtest.mbt",
+        "seconds": 13.831
+      },
+      {
+        "step": "native integration src/semantic/program_optimization_wbtest.mbt",
+        "seconds": 16.27
+      },
+      {
+        "step": "native integration src/semantic/queue_wbtest.mbt",
+        "seconds": 0.408
+      },
+      {
+        "step": "native integration src/semantic/red_black_tree_wbtest.mbt",
+        "seconds": 0.449
+      },
+      {
+        "step": "native integration src/semantic/set_wbtest.mbt",
+        "seconds": 1.298
+      },
+      {
+        "step": "native integration src/semantic/show_wbtest.mbt",
+        "seconds": 0.42
+      },
+      {
+        "step": "native integration src/semantic/stack_wbtest.mbt",
+        "seconds": 0.381
+      },
+      {
+        "step": "native integration src/semantic/standard_preamble_wbtest.mbt",
+        "seconds": 1.994
+      },
+      {
+        "step": "native integration src/semantic/text_hash_wbtest.mbt",
+        "seconds": 0.443
+      },
+      {
+        "step": "native integration src/semantic/text_iteration_wbtest.mbt",
+        "seconds": 0.368
+      },
+      {
+        "step": "native integration src/semantic/text_ordering_wbtest.mbt",
+        "seconds": 0.419
+      }
+    ],
+    "results": [
+      "Total tests: 7, passed: 7, failed: 0.",
+      "Total tests: 19, passed: 19, failed: 0.",
+      "Total tests: 42, passed: 42, failed: 0.",
+      "Total tests: 6, passed: 6, failed: 0.",
+      "Total tests: 36, passed: 36, failed: 0.",
+      "Total tests: 26, passed: 26, failed: 0.",
+      "Total tests: 45, passed: 45, failed: 0.",
+      "Total tests: 55, passed: 55, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 4, passed: 4, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 24, passed: 24, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0."
+    ]
+  },
+  "profile-bootstrap": {
+    "timings": [
+      {
+        "step": "MoonBit time provider build",
+        "seconds": 0.003
+      },
+      {
+        "step": "compiler A source build",
+        "seconds": 12.228
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 4.654
+      },
+      {
+        "step": "compiler A raw validation",
+        "seconds": 0.019
+      },
+      {
+        "step": "compiler A validation",
+        "seconds": 0.018
+      },
+      {
+        "step": "compiler request build: a",
+        "seconds": 0.1
+      },
+      {
+        "step": "compiler execution (node-facet): a",
+        "seconds": 20.174
+      },
+      {
+        "step": "compiler B core validation",
+        "seconds": 0.01
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 5.36
+      },
+      {
+        "step": "compiler B raw validation",
+        "seconds": 0.019
+      },
+      {
+        "step": "compiler B validation",
+        "seconds": 0.019
+      },
+      {
+        "step": "compiler B semantic probes",
+        "seconds": 0.062
+      },
+      {
+        "step": "compiler request build: b",
+        "seconds": 0.102
+      },
+      {
+        "step": "compiler execution (node-facet): b",
+        "seconds": 20.253
+      },
+      {
+        "step": "compiler C core validation",
+        "seconds": 0.011
+      },
+      {
+        "step": "compiler output link: b",
+        "seconds": 5.374
+      },
+      {
+        "step": "compiler C raw validation",
+        "seconds": 0.019
+      },
+      {
+        "step": "compiler C validation",
+        "seconds": 0.018
+      }
+    ],
+    "results": [
+      "self-host fixed point passed",
+      "compiler B sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf",
+      "compiler C sha256: 215f26625c8e00510b3428a11f350c94919a40fec828d76f03c42a0bbc24aacf"
+    ]
+  },
+  "names-after": {
+    "timings": [
+      {
+        "step": "native src/core_linker tests",
+        "seconds": 3.711
+      }
+    ],
+    "results": [
+      "Total tests: 19, passed: 19, failed: 0."
+    ]
+  },
+  "slot-tests-after": {
+    "timings": [
+      {
+        "step": "slot tests native generator build",
+        "seconds": 0.023
+      },
+      {
+        "step": "slot test generation",
+        "seconds": 5.09
+      },
+      {
+        "step": "slot test link",
+        "seconds": 4.256
+      },
+      {
+        "step": "slot tests execution",
+        "seconds": 0.046
+      }
+    ],
+    "results": [
+      "Dew tests passed: 1 selected from 1"
+    ]
+  },
+  "call-index-tests-generic": {
+    "timings": [
+      {
+        "step": "slot tests native generator build",
+        "seconds": 0.026
+      },
+      {
+        "step": "slot test generation",
+        "seconds": 5.013
+      },
+      {
+        "step": "slot test link",
+        "seconds": 4.232
+      },
+      {
+        "step": "slot tests execution",
+        "seconds": 0.057
+      }
+    ],
+    "results": [
+      "Dew tests passed: 2 selected from 2"
+    ]
+  },
+  "slots-bootstrap": {
+    "timings": [
+      {
+        "step": "MoonBit time provider build",
+        "seconds": 0.003
+      },
+      {
+        "step": "compiler A source build",
+        "seconds": 15.379
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 4.432
+      },
+      {
+        "step": "compiler A raw validation",
+        "seconds": 0.019
+      },
+      {
+        "step": "compiler A validation",
+        "seconds": 0.019
+      },
+      {
+        "step": "compiler request build: a",
+        "seconds": 0.101
+      },
+      {
+        "step": "compiler execution (node-facet): a",
+        "seconds": 18.177
+      },
+      {
+        "step": "compiler B core validation",
+        "seconds": 0.01
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 5.263
+      },
+      {
+        "step": "compiler B raw validation",
+        "seconds": 0.019
+      },
+      {
+        "step": "compiler B validation",
+        "seconds": 0.019
+      },
+      {
+        "step": "compiler B semantic probes",
+        "seconds": 0.062
+      },
+      {
+        "step": "compiler request build: b",
+        "seconds": 0.102
+      },
+      {
+        "step": "compiler execution (node-facet): b",
+        "seconds": 16.772
+      },
+      {
+        "step": "compiler C core validation",
+        "seconds": 0.008
+      },
+      {
+        "step": "compiler output link: b",
+        "seconds": 5.151
+      },
+      {
+        "step": "compiler C raw validation",
+        "seconds": 0.018
+      },
+      {
+        "step": "compiler C validation",
+        "seconds": 0.018
+      }
+    ],
+    "results": [
+      "self-host fixed point passed",
+      "compiler B sha256: 7b35f41fb9556348cc1ff3d837eff65e31f173212b3465b6319f1a5df3ca195c",
+      "compiler C sha256: 7b35f41fb9556348cc1ff3d837eff65e31f173212b3465b6319f1a5df3ca195c"
+    ]
+  },
+  "final-bootstrap": {
+    "timings": [
+      {
+        "step": "MoonBit time provider build",
+        "seconds": 0.003
+      },
+      {
+        "step": "compiler A source build",
+        "seconds": 12.845
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 12.414
+      },
+      {
+        "step": "compiler A raw validation",
+        "seconds": 0.017
+      },
+      {
+        "step": "compiler A validation",
+        "seconds": 0.018
+      },
+      {
+        "step": "compiler request build: a",
+        "seconds": 0.098
+      },
+      {
+        "step": "compiler execution (node-facet): a",
+        "seconds": 15.277
+      },
+      {
+        "step": "compiler B core validation",
+        "seconds": 0.008
+      },
+      {
+        "step": "compiler output link: a",
+        "seconds": 5.129
+      },
+      {
+        "step": "compiler B raw validation",
+        "seconds": 0.018
+      },
+      {
+        "step": "compiler B validation",
+        "seconds": 0.017
+      },
+      {
+        "step": "compiler B semantic probes",
+        "seconds": 0.06
+      },
+      {
+        "step": "compiler request build: b",
+        "seconds": 0.099
+      },
+      {
+        "step": "compiler execution (node-facet): b",
+        "seconds": 15.385
+      },
+      {
+        "step": "compiler C core validation",
+        "seconds": 0.008
+      },
+      {
+        "step": "compiler output link: b",
+        "seconds": 5.127
+      },
+      {
+        "step": "compiler C raw validation",
+        "seconds": 0.019
+      },
+      {
+        "step": "compiler C validation",
+        "seconds": 0.018
+      }
+    ],
+    "results": [
+      "self-host fixed point passed",
+      "compiler B sha256: 5d73b8e16eaaef0fdabd2a62d27f5f2fcd0f42bbff239dc7c161e9bda9edaefc",
+      "compiler C sha256: 5d73b8e16eaaef0fdabd2a62d27f5f2fcd0f42bbff239dc7c161e9bda9edaefc"
+    ]
+  },
+  "cold-clang": {
+    "timings": [
+      {
+        "step": "cold Clang native linker build",
+        "seconds": 19.754
+      },
+      {
+        "step": "Clang native linker run 1",
+        "seconds": 10.564
+      },
+      {
+        "step": "Clang native linker run 2",
+        "seconds": 10.521
+      },
+      {
+        "step": "Clang native linker run 3",
+        "seconds": 10.504
+      }
+    ],
+    "results": []
+  },
+  "cold-lto": {
+    "timings": [
+      {
+        "step": "cold optimized native linker build",
+        "seconds": 10.442
+      },
+      {
+        "step": "cold optimized linker execution",
+        "seconds": 5.138
+      }
+    ],
+    "results": []
+  },
+  "core-tests-final": {
+    "timings": [
+      {
+        "step": "native src/core_linker tests",
+        "seconds": 0.025
+      }
+    ],
+    "results": [
+      "Total tests: 19, passed: 19, failed: 0."
+    ]
+  },
+  "integration-final": {
+    "timings": [
+      {
+        "step": "native integration src/backend/starshine_lane_types_wbtest.mbt",
+        "seconds": 2.787
+      },
+      {
+        "step": "native integration src/backend/starshine_packed_primitives_wbtest.mbt",
+        "seconds": 5.898
+      },
+      {
+        "step": "native integration src/backend/starshine_program_link_wbtest.mbt",
+        "seconds": 12.794
+      },
+      {
+        "step": "native integration src/semantic/frozen_interface_cache_wbtest.mbt",
+        "seconds": 1.266
+      },
+      {
+        "step": "native integration src/semantic/imported_semantics_wbtest.mbt",
+        "seconds": 7.621
+      },
+      {
+        "step": "native integration src/semantic/module_system_wbtest.mbt",
+        "seconds": 6.802
+      },
+      {
+        "step": "native integration src/semantic/program_link_plan_wbtest.mbt",
+        "seconds": 12.995
+      },
+      {
+        "step": "native integration src/semantic/program_optimization_wbtest.mbt",
+        "seconds": 15.593
+      },
+      {
+        "step": "native integration src/semantic/queue_wbtest.mbt",
+        "seconds": 0.382
+      },
+      {
+        "step": "native integration src/semantic/red_black_tree_wbtest.mbt",
+        "seconds": 0.427
+      },
+      {
+        "step": "native integration src/semantic/set_wbtest.mbt",
+        "seconds": 1.225
+      },
+      {
+        "step": "native integration src/semantic/show_wbtest.mbt",
+        "seconds": 0.397
+      },
+      {
+        "step": "native integration src/semantic/stack_wbtest.mbt",
+        "seconds": 0.367
+      },
+      {
+        "step": "native integration src/semantic/standard_preamble_wbtest.mbt",
+        "seconds": 1.907
+      },
+      {
+        "step": "native integration src/semantic/text_hash_wbtest.mbt",
+        "seconds": 0.424
+      },
+      {
+        "step": "native integration src/semantic/text_iteration_wbtest.mbt",
+        "seconds": 0.346
+      },
+      {
+        "step": "native integration src/semantic/text_ordering_wbtest.mbt",
+        "seconds": 0.403
+      }
+    ],
+    "results": [
+      "Total tests: 7, passed: 7, failed: 0.",
+      "Total tests: 19, passed: 19, failed: 0.",
+      "Total tests: 42, passed: 42, failed: 0.",
+      "Total tests: 6, passed: 6, failed: 0.",
+      "Total tests: 36, passed: 36, failed: 0.",
+      "Total tests: 26, passed: 26, failed: 0.",
+      "Total tests: 45, passed: 45, failed: 0.",
+      "Total tests: 55, passed: 55, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 4, passed: 4, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 24, passed: 24, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0.",
+      "Total tests: 1, passed: 1, failed: 0."
+    ]
+  },
+  "check-final": {
+    "timings": [
+      {
+        "step": "final native check",
+        "seconds": 7.161
+      }
+    ],
+    "results": [
+      "Finished. moon: ran 47 tasks, now up to date (722 warnings, 0 errors)"
+    ]
+  },
+  "reproducible-tests": {
+    "timings": [
+      {
+        "step": "performance test generator build",
+        "seconds": 0.023
+      },
+      {
+        "step": "performance test generation",
+        "seconds": 4.987
+      },
+      {
+        "step": "performance test time provider",
+        "seconds": 0.003
+      },
+      {
+        "step": "performance test linker build",
+        "seconds": 0.022
+      },
+      {
+        "step": "performance test link",
+        "seconds": 4.322
+      },
+      {
+        "step": "performance test execution",
+        "seconds": 0.059
+      }
+    ],
+    "results": [
+      "Dew tests passed: 2 selected from 2"
+    ]
+  },
+  "profile-after": {
+    "timings": [
+      {
+        "step": "profile optimized compiler B",
+        "seconds": 15.432
+      }
+    ],
+    "results": []
+  }
+}
