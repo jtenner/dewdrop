@@ -243,20 +243,24 @@ test "lowering plans products and product fields" {
   assert(saw_product, "product")
 }
 
-test "lowering plans array literals" {
-  let planned = self_host_lowering_test_plan(
-    b"fn values() -> Array<I32> {\n  [1, 2]\n}\n",
+test "lowering plans array literals as ordinary library calls" {
+  let program = self_host_array_literal_test_program(
+    b"import dew.std.array as @array\nfn values() -> @array.Array<I32> {\n  [1, 2]\n}\n",
   )
-  let mut saw_array = false
-  for expression in planned.expressions {
+  let lowering = self_host_plan_program_lowering(self_host_freeze_program_signature_interfaces(program))
+  assert(self_host_validate_program_lowering(lowering) is None, "valid array lowering")
+  let mut calls = 0u32
+  for expression in lowering.modules[0u32].expressions {
     match expression.kind {
-      PlannedArrayLiteral(_) => {
-        saw_array = true
+      PlannedDirectCall(_, _, _, _) => {
+        calls = calls + 1u32
       }
+      PlannedArrayLiteral(_) => assert(false, "legacy literal planning")
+      PlannedUnresolvedCall(_, _) => assert(false, "unresolved literal call")
       _ => {}
     }
   }
-  assert(saw_array, "array")
+  assert(calls == 3u32, "one allocation and two appends")
 }
 
 test "lowering plans local assignments" {

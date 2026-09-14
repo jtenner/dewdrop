@@ -221,7 +221,6 @@ enum SelfHostLinkedI32EmitTask {
   EmitLinkedArrayCopy(U32, StarshineInstructions)
   EmitLinkedRawArrayCast(StarshineInstructions)
   EmitLinkedArrayLen(StarshineInstructions)
-  EmitLinkedArrayLiteral(U32, U32, U32, StarshineInstructions)
   EmitLinkedArraySet(U32, StarshineInstructions)
   EmitLinkedFixedArrayGetPrefix(U32, StarshineInstructions)
   EmitLinkedRawArrayGet(SelfHostRawArrayStorage, StarshineInstructions)
@@ -8998,15 +8997,6 @@ fn self_host_emit_linked_i32_expression(
         ClearLinkedI32Discard(expression) => if expression < discarded_expressions.length() {
           discarded_expressions[expression] = false
         }
-        EmitLinkedArrayLiteral(array_type, wrapper_type, length, destination) => {
-          StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_array_new_fixed(
-            StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(array_type)),
-            StarshineFfi.ffi_lib_U32_new(self_host_u32_to_i32(length)),
-          ))
-          StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(self_host_u32_to_i32(length))))
-          StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_i32_const(StarshineFfi.ffi_lib_I32_new(self_host_u32_to_i32(length))))
-          StarshineFfi.ffi_ffi_bridge_instructions_push(destination, StarshineFfi.ffi_lib_Instruction_struct_new(StarshineFfi.ffi_lib_TypeIdx_new(self_host_u32_to_i32(wrapper_type))))
-        }
         VisitLinkedI32Expression(
           expression,
           destination,
@@ -11689,46 +11679,7 @@ fn self_host_emit_linked_i32_expression(
                 }
               }
             }
-            PlannedArrayLiteral(children) => {
-              let storage = match self_host_linked_expression_raw_array_storage(link, module_, caller_specialization, expression) {
-                Some(value) => value
-                None => return Some("SPC-301 array literal element storage is not concrete")
-              }
-              tasks.push(EmitLinkedArrayLiteral(
-                storage.type_index,
-                self_host_linked_array_wrapper_type(link),
-                children.length,
-                destination,
-              ))
-              let mut child = children.length
-              let _ = while child {
-                current => if self_host_u32_greater(current, 0u32) {
-                  let previous = current - 1u32
-                  let child_index = self_host_u32_add(children.start, previous)
-                  if child_index >= module_.expression_children.length() {
-                    return Some("linked array literal child is outside its arena")
-                  }
-                  match self_host_linked_canonical_expression_shape(canonical_body_plan, module_.expression_children[child_index]) {
-                    Some(shape) => if shape is UnitPlannedValueShape {
-                      // Only storage receives this marker. Evaluate the Unit
-                      // child first, with its effects and control flow intact.
-                      tasks.push(EmitLinkedRefNull(destination))
-                    }
-                    None => return Some("BOD-610 array literal child has no frozen shape")
-                  }
-                  self_host_linked_i32_schedule_expression(
-                    tasks,
-                    expression_depths,
-                    module_.expression_children[child_index],
-                    destination,
-                    depth,
-                  )
-                  continue previous
-                } else {
-                  break self_host_semantic_unit()
-                }
-              }
-            }
+            PlannedArrayLiteral(_) => return Some("COL-101: array literal reached emission without ordinary-call lowering")
             PlannedLambdaClosure(lambda_id) => {
               match self_host_emit_planned_closure(link, canonical_body_plan, module_, body, expression, lambda_id, destination) {
                 Some(error) => return Some(error)

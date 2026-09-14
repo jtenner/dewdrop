@@ -351,6 +351,23 @@ fn selected_standard_modules(
       }
     }
   }
+  // Source discovery: bracket expressions can require the literal library even
+  // without an explicit import. Strings and comments are not tokenized as brackets.
+  if !array {
+    for file in files {
+      for token in @tokenizer.tokens(file.source) {
+        if token
+          is @tokenizer.Token(@tokenizer.Symbol(@tokenizer.LeftBracket), _, _) {
+          array = true
+          fixed_array = true
+          break
+        }
+      }
+      if array {
+        break
+      }
+    }
+  }
   // Map's Dew implementation imports types and raw storage. The types module
   // declares Array-valued name queries, so retain that source dependency too.
   if set {

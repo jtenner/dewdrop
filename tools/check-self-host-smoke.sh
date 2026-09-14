@@ -41,6 +41,7 @@ semantic_sources=(
   self_host/compiler/semantic_model.dew
   self_host/compiler/semantic_collection.dew
   self_host/compiler/semantic_body_lowering.dew
+  self_host/compiler/semantic_array_literal_calls.dew
   self_host/compiler/semantic_resolved_types.dew
   self_host/compiler/semantic_module_interfaces.dew
   self_host/compiler/semantic_type_resolution.dew
@@ -114,6 +115,7 @@ tools/dew test \
   self_host/compiler/semantic_inference_compaction_test.dew \
   self_host/compiler/semantic_inference_merge_test.dew \
   self_host/compiler/semantic_body_value_shapes_test.dew \
+  self_host/compiler/semantic_array_literal_calls_test.dew \
   self_host/compiler/semantic_lowering_plan_test.dew \
   self_host/compiler/semantic_program_lowering_test.dew \
   self_host/compiler/semantic_program_specialization_test.dew \

@@ -202,7 +202,7 @@ fn workspace_interface_source_fingerprint(
   let module_ = program.modules[module_index]
   let output = Buffer()
   output.write_bytes(
-    b"DEW_WORKSPACE_INTERFACE_SOURCE_V1_SHORT_CONSTRUCTORS\x00",
+    b"DEW_WORKSPACE_INTERFACE_SOURCE_V1_ARRAY_LITERAL_CALLS\x00",
   )
   interface_cache_write_string(
     output,
@@ -233,7 +233,7 @@ fn workspace_interface_cache_key_from_dependency_records(
 ) -> String {
   dependency_records.sort()
   let output = Buffer()
-  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1_SHORT_CONSTRUCTORS\x00")
+  output.write_bytes(b"DEW_WORKSPACE_INTERFACE_KEY_V1_ARRAY_LITERAL_CALLS\x00")
   interface_cache_write_string(output, source_fingerprint)
   for record in dependency_records {
     interface_cache_write_string(output, record)
@@ -544,7 +544,7 @@ fn workspace_interface_scc_cache_key(
   dependency_records.sort()
   let output = Buffer()
   output.write_bytes(
-    b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V1_SHORT_CONSTRUCTORS\x00",
+    b"DEW_WORKSPACE_INTERFACE_SCC_KEY_V1_ARRAY_LITERAL_CALLS\x00",
   )
   for record in source_records {
     interface_cache_write_string(output, record)

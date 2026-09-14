@@ -1,0 +1,76 @@
+open dew.std.array
+open dew.std.option
+
+// A private exact import binds the ordinary library constructor. Neither the
+// alias nor the generated local can be written as a source identifier.
+impl SelfHostCollectionBuilder {
+  fn lower_array_literal_calls(
+    self,
+    elements: Array<SelfHostExpr>,
+    offset: U32,
+  ) -> U32 {
+    let alias = "$array_literal_library"
+    if !self.state.name_lookup.contains_key(alias) {
+      self.imports.push({
+        path: "dew.std.array"
+        path_segments: ["dew", "std", "array"]
+        open_: false
+        wildcard: false
+        import_alias: Some(alias)
+        import_alias_offset: offset
+        file: self.state.current_file
+        offset: offset
+      })
+    }
+    let alias_name = self.intern(alias)
+    let lowered = self_host_empty_semantic_ids()
+    for element in elements {
+      lowered.push(self.lower_expression(element))
+    }
+    let name_builder = StringBuilder::new()
+    name_builder.append("$array_literal$")
+    name_builder.append_u32(self.expressions.length())
+    let local_name = self.intern(name_builder.finish())
+    let root = self.emit_expression(ImportAliasExpr(alias_name, offset))
+    let factory = self.emit_expression(QualifiedExpr(
+      root,
+      self.intern("array_with_capacity"),
+      offset,
+    ))
+    let capacity = self.emit_expression(U32Expr(u32_into_u64(elements.length()), offset))
+    let arguments = self.expression_children.length()
+    self.expression_children.push(capacity)
+    let allocated = self.emit_expression(CallExpr(factory, {
+      start: arguments
+      length: 1u32
+    }, offset))
+    let item_start = self.block_items.length()
+    self.block_items.push(self_host_hir_let_item(false, local_name, offset, allocated, offset))
+    self.block_item_files.push(self.state.current_file)
+    for element in lowered {
+      let receiver = self.emit_expression(NameExpr(local_name, offset))
+      let target = self.emit_expression(FieldExpr(receiver, self.intern("push"), offset))
+      let arguments = self.expression_children.length()
+      self.expression_children.push(element)
+      let call = self.emit_expression(CallExpr(target, {
+        start: arguments
+        length: 1u32
+      }, offset))
+      self.block_items.push(self_host_hir_expression_item(call, offset))
+      self.block_item_files.push(self.state.current_file)
+    }
+    let result = self.emit_expression(NameExpr(local_name, offset))
+    self.block_items.push(self_host_hir_expression_item(result, offset))
+    self.block_item_files.push(self.state.current_file)
+    let block = self.blocks.length()
+    self.blocks.push({
+      items: {
+        start: item_start
+        length: elements.length() + 2u32
+      }
+      offset: offset
+    })
+    self.block_files.push(self.state.current_file)
+    self.emit_expression(BlockExpr(block, offset))
+  }
+}

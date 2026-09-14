@@ -326,12 +326,7 @@ impl SelfHostCollectionBuilder {
           offset,
         ),
       )
-      ArrayExpr(elements, offset) => self.emit_expression(
-        ArrayExpr(
-          self.append_expression_list(elements),
-          offset,
-        ),
-      )
+      ArrayExpr(elements, offset) => self.lower_array_literal_calls(elements, offset)
       LambdaExpr(parameters, return_type, body, offset) => self.emit_expression(
         LambdaExpr(
           self.record_lambda(parameters, return_type, body, offset),

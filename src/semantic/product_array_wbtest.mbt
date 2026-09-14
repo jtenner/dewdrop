@@ -1,7 +1,9 @@
 ///|
 fn semantic_large_array_source(length : Int) -> Bytes {
   let output = Buffer(size_hint=length * 2 + 64)
-  output.write_string_utf8("fn values() -> Array<I32> {\n  [")
+  output.write_string_utf8(
+    "open dew.std.array\nfn values() -> Array<I32> {\n  [",
+  )
   for index in 0..<length {
     if index > 0 {
       output.write_byte(b',')
@@ -13,7 +15,7 @@ fn semantic_large_array_source(length : Int) -> Bytes {
 }
 
 ///|
-test "product and array syntax lower into compact HIR spans" {
+test "products keep compact spans and arrays lower into ordinary calls" {
   let collected = collect_bytes(
     28101UL, b"fn pair() -> (I32, Bool) {\n  (1, true)\n}\nfn values() -> Unit {\n  let items = [1, 2, 3]\n}\n",
   )
@@ -41,8 +43,21 @@ test "product and array syntax lower into compact HIR spans" {
     _ => abort("expected array binding")
   }
   match collected.expressions[array_expression] {
-    HirArrayExpr(elements, _) => assert_eq(elements.length, 3)
-    _ => fail("expected array HIR")
+    HirBlockExpr(block, _) => {
+      let items = collected.blocks[block].items
+      assert_eq(items.length, 5)
+      for index in 1..<4 {
+        match collected.block_items[items.start + index] {
+          HirExpressionItem(call, _) =>
+            match collected.expressions[call] {
+              HirCallExpr(_, arguments, _) => assert_eq(arguments.length, 1)
+              _ => fail("expected append call")
+            }
+          _ => fail("expected append item")
+        }
+      }
+    }
+    _ => fail("expected array construction block")
   }
 }
 
@@ -96,12 +111,20 @@ test "large array literal inference remains iterative" {
 
 ///|
 test "product and array expressions infer structural types" {
-  let collected = collect_bytes(
-    28102UL, b"fn pair() -> (I32, Bool) {\n  (1, true)\n}\nfn values() -> Unit {\n  let items = [1, 2, 3]\n}\n",
+  let program = collect_program_manifest(
+    28102UL,
+    ProgramManifest::new([
+      ManifestModule::new("app.main", [
+        ManifestFile::new(
+          "main.dew", b"fn pair() -> (I32, Bool) {\n  (1, true)\n}\nfn values() -> Unit {\n  let items = [1, 2, 3]\n}\n",
+        ),
+      ]),
+    ]),
   )
-  let resolved = resolve_module_types(collected)
-  let names = resolve_module_names(collected)
-  let inferred = infer_module_bodies(collected, resolved, names)
+  let analyzed = analyze_program_semantics(program)
+  let collected = program.modules[0]
+  let resolved = analyzed.frozen.interfaces[0].resolved_types
+  let inferred = analyzed.modules[0].inferred
   assert_eq(resolved.diagnostics.length(), 0)
   assert_eq(inferred.diagnostics.length(), 0)
   match resolved.types[resolved.callable_return_types[0]] {

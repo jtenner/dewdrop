@@ -56,7 +56,7 @@ fn parse_event_cache_key_digest(
   source_digest : FixedArray[Byte],
 ) -> FixedArray[Byte] {
   let output = Buffer()
-  output.write_bytes(b"DEW_PARSE_EVENT_KEY_V1_SHORT_CONSTRUCTORS\x00")
+  output.write_bytes(b"DEW_PARSE_EVENT_KEY_V1_ARRAY_LITERAL_CALLS\x00")
   parse_event_cache_write_string(output, owner_path)
   parse_event_cache_write_string(output, file.path)
   for byte in source_digest {
@@ -132,7 +132,7 @@ fn parse_event_pack_context(
   file : @semantic.ManifestFile,
 ) -> FixedArray[Byte] {
   let output = Buffer()
-  output.write_bytes(b"DEW_PARSE_EVENT_PACK_CONTEXT_V1_SHORT_CONSTRUCTORS\x00")
+  output.write_bytes(b"DEW_PARSE_EVENT_PACK_CONTEXT_V1_ARRAY_LITERAL_CALLS\x00")
   parse_event_cache_write_string(output, owner_path)
   parse_event_cache_write_string(output, file.path)
   @cache_binary.blake3(output.to_bytes())

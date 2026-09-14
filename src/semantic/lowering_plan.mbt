@@ -927,16 +927,8 @@ fn plan_expression_kind(
     HirProductExpr(elements, _) => PlannedProductNew(elements)
     HirProductFieldExpr(base, index, arity, _) =>
       PlannedProductField(base, index, arity)
-    HirArrayExpr(elements, _) => {
-      let element_type = planned_array_element_type(
-        resolved, inferred, expression,
-      )
-      PlannedArrayLiteral(
-        elements,
-        element_type,
-        planned_value_shape(resolved, inferred, element_type),
-      )
-    }
+    HirArrayExpr(_, _) =>
+      abort("COL-101: array literal was not lowered during collection")
     HirLambdaExpr(lambda, _) =>
       PlannedLambdaClosure(lambda, names.lambda(lambda).unwrap().captures)
     HirObjectExpr(_, _) | HirConstructExpr(_, _, _) => PlannedPoisonExpression

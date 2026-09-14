@@ -42,6 +42,16 @@ fn bulk_generic_copy<t>(source: Array<t>) -> Array<t> {
   result
 }
 
+fn bulk_literal_item(cell: BulkCell, digit: I32) -> I32 {
+  cell.value = cell.value * 10i32 + digit
+  cell.value
+}
+
+fn bulk_literal_early_return(cell: BulkCell) -> I32 {
+  let values = [bulk_literal_item(cell, 1i32), return 42i32, bulk_literal_item(cell, 3i32)]
+  0i32
+}
+
 pub fn main(case: U32) -> I32 {
   if case == 0u32 {
     let values = bulk_values()
@@ -294,6 +304,38 @@ pub fn main(case: U32) -> I32 {
     cell.value = 43i32
     if refs[0u32].value == 43i32 && integers[0u32] == 42i64 &&
       units.length() == 1u32 && nested[0u32][0u32] == 42i64 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 29u32 {
+    let Array = 7i32
+    let cell = BulkCell::{
+      value: 0i32
+    }
+    let values = [bulk_literal_item(cell, 1i32), bulk_literal_item(cell, 2i32)]
+    if Array == 7i32 && cell.value == 12i32 && values[0u32] == 1i32 &&
+      values[1u32] == 12i32 && values.capacity() == 2u32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 30u32 {
+    let cell = BulkCell::{
+      value: 0i32
+    }
+    let result = bulk_literal_early_return(cell)
+    if result == 42i32 && cell.value == 1i32 {
+      1i32
+    } else {
+      0i32
+    }
+  } else if case == 31u32 {
+    let Array = 40i32
+    let values = [fn() -> I32 {
+      Array + 2i32
+    }]
+    if values[0u32]() == 42i32 {
       1i32
     } else {
       0i32

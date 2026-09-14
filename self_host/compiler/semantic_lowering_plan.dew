@@ -512,7 +512,10 @@ fn self_host_lowering_expression_kind(
     ImportAliasExpr(_, _) => PlannedPoisonExpression
     ProductExpr(children, _) => PlannedProductNew(children)
     TypeBindingExpr(_, _) => PlannedUnitConst
-    ArrayExpr(children, _) => PlannedArrayLiteral(children)
+    ArrayExpr(_, _) => {
+      let _ = self_host_assert_compiler_invariant(false, "COL-101: array literal was not lowered during collection")
+      PlannedPoisonExpression
+    }
     LambdaExpr(lambda, _) => PlannedLambdaClosure(lambda)
     ObjectExpr(fields, _) => PlannedObjectNew(fields)
     ConstructExpr(target, fields, _) => PlannedConstruct(target, fields, selection)

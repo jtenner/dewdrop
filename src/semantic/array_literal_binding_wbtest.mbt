@@ -11,6 +11,16 @@ fn check_array_literal_binding(source : Bytes) -> Unit raise {
   for module_ in analyzed.modules {
     assert_eq(module_.inferred.diagnostics, [])
   }
+  let lowering = plan_program_lowering(program, analyzed)
+  for module_ in lowering.modules {
+    for expression in module_.expressions {
+      match expression.kind {
+        PlannedArrayLiteral(_, _, _) =>
+          fail("array literal still uses the legacy wrapper emitter")
+        _ => ()
+      }
+    }
+  }
 }
 
 ///|

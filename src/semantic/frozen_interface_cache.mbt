@@ -1,5 +1,5 @@
 ///|
-let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V1_SHORT_CONSTRUCTORS\x00"
+let frozen_interface_cache_magic : Bytes = b"DEW_FROZEN_INTERFACES_V1_ARRAY_LITERAL_CALLS\x00"
 
 ///|
 fn cache_write_int(output : @cache_binary.Writer, value : Int) -> Unit {

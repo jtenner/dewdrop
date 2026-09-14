@@ -74,6 +74,9 @@ Correctness comes first. Keep these timing defects visible after query completio
   and capture IDs tied to their owning body; do not reintroduce ID guessing.
 - [ ] Reduce compiler builds, test lanes, and bootstrap stages that exceed
   30 seconds. Record both cold and warm timings; do not hide or skip slow tests.
+  September 14: integration program-link tests took 43.759 seconds; cold
+  hardening generation took 40.235 seconds. All Array bootstrap stages were
+  below 30 seconds. See the [measurement log](docs/research/array-literal-calls-2026-09-14.md).
 
 ### Finish the standard-library migration
 
@@ -97,26 +100,25 @@ Correctness comes first. Keep these timing defects visible after query completio
   Both compilers pass 28 shared Array checks and the clean B/C fixed point.
   Native method/operation ordinal dispatch and the iterator layout override are
   removed. See the [algorithm log](docs/research/array-library-algorithms-2026-09-06.md).
-- [ ] Remove the old Array wrapper layout and literal shortcuts. Use declared
-  fields and exact construction recipes, not a guessed three-field layout.
-  An ordinary-call lowering trial passes the native Array corpus, but fails
-  three name-binding tests: local Array, unopened Array, and an unrelated
-  user Array. The trial is not enabled. Carry a bound constructor identity
-  into ordinary calls before removing the old emitter; see the
-  [literal call trial](docs/research/array-literal-calls-2026-09-09.md).
+- [x] Lower source Array literals through ordinary library calls in both
+  compilers. Private exact imports close all three binding failures; constructor
+  identity and declared fields replace the source-literal emitter. See the
+  [implementation and tests](docs/research/array-literal-calls-2026-09-14.md).
+- [ ] Remove the remaining synthetic Array wrapper used to materialize
+  compile-time name-array constants. Source bracket literals no longer use it.
   The tuple substitution and specialized Unit storage fixes pass 884 self-host
   tests, 463 exact records, 276 shared callback checks, and the clean B/C
-  bootstrap. The literal transformation remains separate work; see the
+  bootstrap. These were prerequisites for the completed literal change; see the
   [nested call log](docs/research/nested-call-specialization-2026-09-09.md).
-  Unused native Array operation nodes and emitters are now removed; literal
-  construction remains; shared ring producers are now removed. See the
+  Unused native Array operation nodes, source-literal emitters, and shared
+  ring producers are now removed. See the
   [cleanup log](docs/research/array-legacy-ir-cleanup-2026-09-06.md).
   Literal storage now rejects unresolved evidence and preserves packed integer
   widths; all 29 shared checks pass. The unused opcode switch/helpers are gone.
   See the [literal storage log](docs/research/array-literal-storage-2026-09-06.md).
   Narrow raw arrays now retain packed width and signed reads through ordinary
   generic calls, literals, and growth. The literal's reference/first-child
-  storage guesses are removed; its wrapper recipe remains. All 34 shared raw
+  storage guesses and source-literal wrapper recipe are removed. All 34 shared raw
   array checks pass. See the
   [narrow storage log](docs/research/narrow-array-storage-2026-09-08.md).
   The stack, iterator, accessor, and link fixtures now use declared Dew bodies,

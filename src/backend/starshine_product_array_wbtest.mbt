@@ -1,4 +1,35 @@
 ///|
+test "array literals use declared library fields and constructor identity" {
+  let program = @semantic.collect_program_manifest_with_standard_sources(
+    28119UL,
+    @semantic.ProgramManifest::new([
+      @semantic.ManifestModule::new("app.main", [
+        @semantic.ManifestFile::new(
+          "main.dew", b"pub fn run() -> I32 {\n  let values = [1i32, 2i32, 3i32]\n  if values.count == 3u32 && values.marker == 37i32 {\n    42i32\n  } else {\n    0i32\n  }\n}\n",
+        ),
+      ]),
+    ]),
+    @semantic.StandardLibrarySources::new([
+      @semantic.ManifestFile::new(
+        "std/array.dew", b"pub struct BeforeArray {}\npub struct Array<t> {\n  marker: I32\n  mut count: U32\n}\npub fn array_with_capacity<t>(capacity: U32) -> Array<t> {\n  Array::{\n    marker: 37i32\n    count: 0u32\n  }\n}\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {\n    self.count = self.count + 1u32\n  }\n}\n",
+      ),
+    ]),
+    true,
+  )
+  let analyzed = @semantic.analyze_program_semantics(program)
+  let lowering = @semantic.plan_program_lowering(program, analyzed)
+  let link = @semantic.plan_program_wasmgc_link(analyzed, lowering, 0)
+  let stages : BackendCompilerTestStages = {
+    program,
+    analyzed,
+    lowering,
+    link,
+  }
+  assert_eq(stages.diagnostic_count(), 0)
+  assert_eq(@validate.validate_module(stages.emit_module()), Ok(()))
+}
+
+///|
 test "array literals emit exact-capacity WasmGC arrays" {
   let stages = backend_test_single_module_stages(
     28111UL, b"open dew.std.array\npub fn run() -> I32 {\n  let values = [10, 20, 30]\n  values[0u32] + values[2u32]\n}\npub fn pairs() -> Array<(I32, I64)> {\n  [(1, 2L), (3, 4L)]\n}\npub fn first_pair() -> (I32, I64) {\n  let values = pairs()\n  values[0u32]\n}\npub fn empty() -> Array<I32> {\n  []\n}\npub fn empty_pairs() -> Array<(I32, I64)> {\n  []\n}\n",
@@ -31,8 +62,7 @@ test "products use multivalue ABIs and box only at storage boundaries" {
 ///|
 test "dynamic closure calls may return products" {
   let stages = backend_test_single_module_stages(
-    28114UL,
-    b"fn make_pair(offset: I32) -> fn(I32) -> (I32, I64) {\n  fn(value: I32) -> (I32, I64) {\n    (value + offset, 9L)\n  }\n}\npub fn run() -> (I32, I64) {\n  let callback = make_pair(1)\n  callback(7)\n}\n",
+    28114UL, b"fn make_pair(offset: I32) -> fn(I32) -> (I32, I64) {\n  fn(value: I32) -> (I32, I64) {\n    (value + offset, 9L)\n  }\n}\npub fn run() -> (I32, I64) {\n  let callback = make_pair(1)\n  callback(7)\n}\n",
   )
   assert_eq(stages.diagnostic_count(), 0)
   match emit_starshine_program_module(stages.lowering, stages.link) {
@@ -47,8 +77,7 @@ test "dynamic closure calls may return products" {
 ///|
 test "product arguments do not suppress later nominal casts" {
   let stages = backend_test_single_module_stages(
-    28116UL,
-    b"struct Holder {\n  value: I32\n}\nfn read(pair: (I32, I32), holder: Holder) -> I32 {\n  let (first, second) = pair\n  holder.value + first + second\n}\npub fn run(flag: Bool) -> I32 {\n  read(\n    (1, 2),\n    if flag {\n      Holder::{\n        value: 7\n      }\n    } else {\n      Holder::{\n        value: 9\n      }\n    },\n  )\n}\n",
+    28116UL, b"struct Holder {\n  value: I32\n}\nfn read(pair: (I32, I32), holder: Holder) -> I32 {\n  let (first, second) = pair\n  holder.value + first + second\n}\npub fn run(flag: Bool) -> I32 {\n  read(\n    (1, 2),\n    if flag {\n      Holder::{\n        value: 7\n      }\n    } else {\n      Holder::{\n        value: 9\n      }\n    },\n  )\n}\n",
   )
   assert_eq(stages.diagnostic_count(), 0)
   match emit_starshine_program_module(stages.lowering, stages.link) {
@@ -63,8 +92,7 @@ test "product arguments do not suppress later nominal casts" {
 ///|
 test "Unit functions discard every product root value" {
   let stages = backend_test_single_module_stages(
-    28117UL,
-    b"open dew.std.array\npub fn ignore(value: (I32, I64)) -> Unit {\n  value\n}\nfn discard<t>(value: t) -> Unit {\n  value\n}\nfn use<t>(value: t) -> I32 {\n  value\n  7\n}\npub fn discard_generic() -> Unit {\n  discard((1, 2L))\n}\npub fn use_generic() -> I32 {\n  use((3, 4L))\n}\npub fn visit(values: Array<(I32, I64)>) -> Unit {\n  for value in values {\n    value\n  }\n}\n",
+    28117UL, b"open dew.std.array\npub fn ignore(value: (I32, I64)) -> Unit {\n  value\n}\nfn discard<t>(value: t) -> Unit {\n  value\n}\nfn use<t>(value: t) -> I32 {\n  value\n  7\n}\npub fn discard_generic() -> Unit {\n  discard((1, 2L))\n}\npub fn use_generic() -> I32 {\n  use((3, 4L))\n}\npub fn visit(values: Array<(I32, I64)>) -> Unit {\n  for value in values {\n    value\n  }\n}\n",
   )
   assert_eq(stages.diagnostic_count(), 0)
   match emit_starshine_program_module(stages.lowering, stages.link) {
@@ -79,8 +107,7 @@ test "Unit functions discard every product root value" {
 ///|
 test "parameter selection discards the value arity, not instruction count" {
   let stages = backend_test_single_module_stages(
-    28118UL,
-    b"foreign impl \"host\" as Host {\n  fn effect() -> Unit = \"effect\"\n}\nstruct UnitField {\n  ignored: Unit\n  kept: I32\n}\nstruct ProductField {\n  ignored: (I32, I64)\n  kept: I32\n}\npub fn keep_after_effect() -> I32 {\n  UnitField::{\n    ignored: Host.effect()\n    kept: 7\n  }.kept\n}\npub fn keep_after_product() -> I32 {\n  ProductField::{\n    ignored: (1, 2L)\n    kept: 9\n  }.kept\n}\n",
+    28118UL, b"foreign impl \"host\" as Host {\n  fn effect() -> Unit = \"effect\"\n}\nstruct UnitField {\n  ignored: Unit\n  kept: I32\n}\nstruct ProductField {\n  ignored: (I32, I64)\n  kept: I32\n}\npub fn keep_after_effect() -> I32 {\n  UnitField::{\n    ignored: Host.effect()\n    kept: 7\n  }.kept\n}\npub fn keep_after_product() -> I32 {\n  ProductField::{\n    ignored: (1, 2L)\n    kept: 9\n  }.kept\n}\n",
   )
   assert_eq(stages.diagnostic_count(), 0)
   match emit_starshine_program_module(stages.lowering, stages.link) {

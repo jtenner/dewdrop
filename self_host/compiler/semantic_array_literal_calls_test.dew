@@ -1,0 +1,79 @@
+open dew.std.testing
+
+fn self_host_array_literal_test_program(source: Bytes) -> SelfHostCollectedProgram {
+  self_host_collect_program_manifest(28400u64, {
+    modules: [
+      {
+        path: "app.main"
+        files: [{
+          path: "main.dew"
+          source: source
+          test_only: false
+        }]
+      },
+      {
+        path: "dew.std.array"
+        files: [{
+          path: "array.dew"
+          source: b"pub struct BeforeArray {}\npub struct Array<t> {}\npub fn array_with_capacity<t>(capacity: U32) -> Array<t> {\n  Array::{}\n}\nimpl<t> Array<t> {\n  fn push(self, value: t) -> Unit {}\n}\n"
+          test_only: false
+        }]
+      },
+    ]
+  })
+}
+
+fn self_host_array_literal_call_check(source: Bytes) -> Unit {
+  let program = self_host_array_literal_test_program(source)
+  assert(program.diagnostics.length() == 0u32, "literal manifest")
+  for module_ in program.modules.values {
+    assert(module_.diagnostics.length() == 0u32, "literal source collection")
+  }
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  assert(frozen.import_diagnostics.length() == 0u32, "literal imports")
+  let lowering = self_host_plan_program_lowering(frozen)
+  assert(self_host_validate_program_lowering(lowering) is None, "literal lowering")
+  for diagnostic in lowering.modules[0u32].inferred.diagnostics {
+    match diagnostic {
+      NoMatchingMethod(_, _, _) => assert(false, "literal append has no matching method")
+      BodyConstraintDiagnostic(_) => assert(false, "literal has a type constraint error")
+      NoMatchingDirectCall(_, _, _) => assert(false, "literal factory has no matching direct call")
+      _ => assert(false, "literal has another inference diagnostic")
+    }
+  }
+  let mut calls = 0u32
+  for expression in lowering.modules[0u32].expressions {
+    match expression.kind {
+      PlannedArrayLiteral(_) => assert(false, "literal reached legacy wrapper emitter")
+      PlannedDirectCall(declaration, _, _, _) => {
+        assert(self_host_semantic_id_module(declaration) == program.modules.at(1u32).module_id, "literal calls belong to the imported library")
+        calls = calls + 1u32
+      }
+      PlannedUnresolvedCall(target, _) => {
+        match program.modules.at(0u32).expressions[target] {
+          QualifiedExpr(_, _, _) => assert(false, "literal factory is unresolved")
+          FieldExpr(_, _, _) => assert(false, "literal append is unresolved")
+          _ => assert(false, "literal other call is unresolved")
+        }
+      }
+      _ => {}
+    }
+  }
+  let message = StringBuilder::new()
+  message.append("one allocation and one append; got ")
+  message.append_u32(calls)
+  assert(calls == 2u32, message.finish())
+}
+
+
+test "array literal calls keep their exact imported constructor" {
+  self_host_array_literal_call_check(b"struct Array {}\npub fn run() -> Unit {\n  let Array = 2u32\n  let values = [42i32]\n}\n")
+}
+
+test "array literal calls work without an open name" {
+  self_host_array_literal_call_check(b"pub fn run() -> Unit {\n  let values = [42i32]\n}\n")
+}
+
+test "ordinary imported factory and append calls keep generic context" {
+  self_host_array_literal_call_check(b"import dew.std.array as @library\npub fn run() -> Unit {\n  let values = @library.array_with_capacity(1u32)\n  values.push(42i32)\n}\n")
+}

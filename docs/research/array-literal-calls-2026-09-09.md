@@ -1,4 +1,8 @@
-# Array literal construction through ordinary calls (in progress)
+# Array literal construction through ordinary calls (historical trial)
+
+The [September 14 implementation](array-literal-calls-2026-09-14.md) closes the
+binding failures below with private exact imports and ordinary calls in both
+compilers. This note retains the original failed trial and its measurements.
 
 The remaining literal emitters construct a wrapper directly from backing,
 length, and capacity, without an ordinary constructor plan. The native trial

@@ -95,7 +95,7 @@ fn load_standard_source_closure(
   let files : Array[@semantic.ManifestFile] = []
   let fingerprint = Buffer()
   fingerprint.write_bytes(
-    b"DEW_STD_FROZEN_INTERFACE_KEY_V1_SHORT_CONSTRUCTORS\x00",
+    b"DEW_STD_FROZEN_INTERFACE_KEY_V1_ARRAY_LITERAL_CALLS\x00",
   )
   let work : Array[String] = []
   let seen : Map[String, Bool] = Map([])

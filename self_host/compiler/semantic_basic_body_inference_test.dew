@@ -293,10 +293,15 @@ test "basic body inference reports direct call arity mismatches" {
 }
 
 test "basic body inference constrains typed array literals" {
-  let (_, resolved, _, inferred) = self_host_basic_infer_source(
-    832u64,
-    b"struct Array<t> {}\nfn values() -> Array<I32> {\n  [1, 2, 3]\n}\n",
+  let program = self_host_array_literal_test_program(
+    b"import dew.std.array as @array\nfn values() -> @array.Array<I32> {\n  [1, 2, 3]\n}\n",
   )
+  let frozen = self_host_freeze_program_signature_interfaces(program)
+  let collected = program.modules.at(0u32)
+  let imports = self_host_resolve_module_imports(frozen.interfaces.at(0u32).resolved_types, frozen.import_scopes.at(0u32))
+  let resolved = imports.resolved
+  let names = self_host_resolve_module_names_with_imports(collected, imports.scope)
+  let inferred = self_host_infer_program_module_bodies(collected, imports, names)
   let body = inferred.bodies[0u32]
   assert(body.diagnostics.length() == 0u32, "array diagnostics")
   match body.type_term(body.root_type) {
