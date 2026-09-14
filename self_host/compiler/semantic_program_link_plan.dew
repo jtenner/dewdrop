@@ -97,20 +97,8 @@ pub struct SelfHostPlannedProgramWasmGCLink {
   diagnostics: Array<SelfHostProgramWasmGCLinkDiagnostic>
 }
 
-fn self_host_program_link_u32_slots(
-  length: U32,
-) -> Array<U32> {
-  let values = []
-  let mut index = 0u32
-  let _ = while index {
-    current => if current < length {
-      values.push(4294967295u32)
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  values
+fn self_host_program_link_u32_slots(length: U32) -> Array<U32> {
+  self_host_u32_slots(length, 4294967295u32)
 }
 
 fn self_host_program_link_is_imported(

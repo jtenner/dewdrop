@@ -441,17 +441,7 @@ fn self_host_inference_call_target_slots(
 }
 
 fn self_host_inference_bool_slots(length: U32) -> Array<Bool> {
-  let slots = []
-  let mut index = 0u32
-  let _ = while index {
-    current => if current < length {
-      slots.push(false)
-      continue current + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
-  }
-  slots
+  self_host_bool_slots(length, false)
 }
 
 fn self_host_basic_empty_type_declaration_map() -> Map<U64, U32> {

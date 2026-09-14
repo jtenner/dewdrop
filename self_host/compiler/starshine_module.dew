@@ -6887,27 +6887,27 @@ fn self_host_linked_call_returns_array_element(
   caller_specialization: U32,
   expression: U32,
 ) -> Bool {
-  for call in link.specialized_calls {
-    if self_host_u64_equal(call.caller_body, caller_body) &&
-      self_host_u32_equal(call.caller_specialization, caller_specialization) &&
-      self_host_u32_equal(call.expression, expression) {
-      for function_ in link.functions {
-        if self_host_u32_equal(function_.function_index, call.function_index) {
-          let fragment_module = link.fragments.modules[function_.module_index]
-          let fragment = self_host_program_link_fragment_function(
-            fragment_module,
-            function_.fragment_index,
-          )
-          return self_host_linked_function_returns_array_element(
-            link,
-            function_,
-            fragment,
-          )
-        }
-      }
-    }
+  let function_index = match self_host_linked_call_index_get(
+    link.call_index, caller_body, caller_specialization, expression,
+  ) {
+    Some(value) => value
+    None => return false
   }
-  false
+  let _ = self_host_assert_compiler_invariant(
+    function_index < link.functions.length(),
+    "array-element call target is outside the linked function table",
+  )
+  let function_ = link.functions[function_index]
+  let _ = self_host_assert_compiler_invariant(
+    function_.function_index == function_index,
+    "array-element call target does not match its linked function slot",
+  )
+  let fragment_module = link.fragments.modules[function_.module_index]
+  let fragment = self_host_program_link_fragment_function(
+    fragment_module,
+    function_.fragment_index,
+  )
+  self_host_linked_function_returns_array_element(link, function_, fragment)
 }
 
 

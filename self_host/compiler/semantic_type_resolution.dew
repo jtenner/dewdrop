@@ -1,3 +1,4 @@
+open dew.std.wasm.intrinsics
 open dew.std.array
 open dew.std.map
 open dew.std.option
@@ -21,29 +22,19 @@ fn self_host_type_resolution_bool_at(
 }
 
 fn self_host_u32_slots(length: U32, value: U32) -> Array<U32> {
-  let result = []
-  let _ = while 0u32 {
-    index => if index < length {
-      result.push(value)
-      continue index + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
+  Array::{
+    backing: wasm_array_new(length, value)
+    count: length
+    limit: length
   }
-  result
 }
 
 fn self_host_bool_slots(length: U32, value: Bool) -> Array<Bool> {
-  let result = []
-  let _ = while 0u32 {
-    index => if index < length {
-      result.push(value)
-      continue index + 1u32
-    } else {
-      break self_host_semantic_unit()
-    }
+  Array::{
+    backing: wasm_array_new(length, value)
+    count: length
+    limit: length
   }
-  result
 }
 
 fn self_host_span_slots(length: U32) -> Array<SelfHostHirSpan> {

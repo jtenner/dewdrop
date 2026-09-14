@@ -26,3 +26,17 @@ tests pass. Invalid debug indices remain non-semantic. The baseline compiler wit
 names has identical executable sections and resolves the numeric Node samples.
 `tools/summarize-self-host-profile.py` reads those names and can verify executable
 sections against the original compiler before mapping profile samples.
+
+## Self-host compiler fixes
+
+Allocate known-size Bool and U32 arrays directly, with count and capacity equal to
+the requested length. Reuse the existing exact call index and assert valid,
+matching function slots. Two Dew tests check fill, growth, mutation, and generic
+call classification against the old scan, including misses. Both pass through
+`tools/test-self-host-performance.sh`.
+
+The same-request benchmark alternates saved compilers, discards one warm-up pair,
+and measures three pairs. Median compilation falls from 18.402 to 14.294 seconds.
+All eight executions produce identical output. The full A/B/C bootstrap also
+passes and reaches a fixed point. `tools/benchmark-self-host-compile.py` provides
+the repeated measurement and exact output check.

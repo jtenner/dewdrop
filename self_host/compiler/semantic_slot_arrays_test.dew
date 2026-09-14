@@ -1,0 +1,124 @@
+open dew.std.array
+
+test "slot arrays preserve fill values and grow after exact allocation" {
+  for length in [0u32, 1u32, 17u32, 4096u32] {
+    let flags = self_host_bool_slots(length, true)
+    let clear = self_host_inference_bool_slots(length)
+    let values = self_host_u32_slots(length, 73u32)
+    let missing = self_host_program_link_u32_slots(length)
+    assert(flags.length() == length, "flag length")
+    assert(clear.length() == length, "clear flag length")
+    assert(values.length() == length, "value length")
+    assert(missing.length() == length, "missing value length")
+    let _ = while 0u32 {
+      index if index < length => {
+        assert(flags[index], "true fill")
+        assert(!clear[index], "false fill")
+        assert(values[index] == 73u32, "numeric fill")
+        assert(missing[index] == 4294967295u32, "missing sentinel")
+        continue index + 1u32
+      }
+      _ => break ()
+    }
+    flags.push(false)
+    values.push(99u32)
+    assert(!flags[length], "append flag")
+    assert(values[length] == 99u32, "append value")
+    assert(flags.length() == length + 1u32, "grown length")
+    flags[length] = true
+    assert(flags[length], "mutable last flag")
+    if length > 0u32 {
+      values[0u32] = 42u32
+      assert(values[0u32] == 42u32, "mutable first value")
+      assert(values[length] == 99u32, "distinct slots")
+    }
+  }
+}
+
+fn self_host_test_scan_array_element_calls(
+  link: SelfHostPlannedProgramWasmGCLink,
+  caller_body: U64,
+  caller_specialization: U32,
+  expression: U32,
+) -> Bool {
+  for call in link.specialized_calls {
+    if self_host_u64_equal(call.caller_body, caller_body) &&
+      self_host_u32_equal(call.caller_specialization, caller_specialization) &&
+      self_host_u32_equal(call.expression, expression) {
+      for function_ in link.functions {
+        if self_host_u32_equal(function_.function_index, call.function_index) {
+          let fragment_module = link.fragments.modules[function_.module_index]
+          let fragment = self_host_program_link_fragment_function(
+            fragment_module,
+            function_.fragment_index,
+          )
+          return self_host_linked_function_returns_array_element(
+            link,
+            function_,
+            fragment,
+          )
+        }
+      }
+    }
+  }
+  false
+}
+
+fn self_host_test_array_call_link() -> SelfHostPlannedProgramWasmGCLink {
+  let collected = self_host_collect_program_manifest(5100u64, {
+    modules: [{
+      path: "app.main"
+      files: [{
+        path: "main.dew"
+        source: b"pub struct WasmArray<t> {}\npub builtin get<t>(values: WasmArray<t>, index: U32) -> t = \"array_get\"\nfn first<t>(values: WasmArray<t>) -> t {\n  get(values, 0u32)\n}\nfn constant<t>(value: t) -> I32 {\n  7\n}\npub fn run(values: WasmArray<I32>) -> I32 {\n  first(values) + constant(values)\n}\n"
+        test_only: false
+      }]
+    }]
+  })
+  assert(collected.diagnostics.length() == 0u32, "call fixture manifest")
+  assert(collected.modules.at(0u32).diagnostic_count() == 0u32, "call fixture source")
+  let lowering = self_host_plan_program_lowering(
+    self_host_freeze_program_signature_interfaces(collected),
+  )
+  for module_ in lowering.modules {
+    assert(module_.inferred.diagnostics.length() == 0u32, "call fixture inference")
+  }
+  let link = self_host_plan_program_wasmgc_link(
+    self_host_plan_program_wasmgc_fragments(
+      self_host_plan_program_specialization(lowering, false),
+    ), false,
+  )
+  assert(link.diagnostics.length() == 0u32, "call fixture link")
+  link
+}
+
+test "slot arrays indexed call classification matches the old scan" {
+  let link = self_host_test_array_call_link()
+  assert(link.specialized_calls.length() > 1u32, "fixture has specialized calls")
+  let mut positives = 0u32
+  let mut negatives = 0u32
+  for call in link.specialized_calls {
+    let expected = self_host_test_scan_array_element_calls(
+      link, call.caller_body, call.caller_specialization, call.expression,
+    )
+    assert(self_host_linked_call_returns_array_element(
+      link, call.caller_body, call.caller_specialization, call.expression,
+    ) == expected, "indexed result matches scan")
+    if expected {
+      positives = positives + 1u32
+    } else {
+      negatives = negatives + 1u32
+    }
+    assert(!self_host_linked_call_returns_array_element(
+      link, call.caller_body, 4294967294u32, call.expression,
+    ), "different specialization has no call")
+    assert(!self_host_linked_call_returns_array_element(
+      link, 0u64, call.caller_specialization, call.expression,
+    ), "different body has no call")
+    assert(!self_host_linked_call_returns_array_element(
+      link, call.caller_body, call.caller_specialization, 4294967294u32,
+    ), "different expression has no call")
+  }
+  assert(positives > 0u32, "fixture has an array element result")
+  assert(negatives > 0u32, "fixture has a different result")
+}
