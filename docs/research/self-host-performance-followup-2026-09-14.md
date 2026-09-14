@@ -40,3 +40,13 @@ and measures three pairs. Median compilation falls from 18.402 to 14.294 seconds
 All eight executions produce identical output. The full A/B/C bootstrap also
 passes and reaches a fixed point. `tools/benchmark-self-host-compile.py` provides
 the repeated measurement and exact output check.
+
+## Cold linker build fix
+
+The native linker fixture now selects GCC with `-O2 -pipe -flto=8`, retaining
+wrapping arithmetic, aliasing flags, and the MoonBit mimalloc configuration.
+The same-C-file build falls from 25.576 to 7.264 seconds. Median linker runtime
+also improves from 5.326 to 5.175 seconds, with identical output in every run.
+A fresh MoonBit target directory takes 10.442 seconds to build the whole tool;
+the first B/provider link takes 5.138 seconds. The combined 15.580 seconds stays
+below the 30-second limit. This setting is scoped to the native linker fixture.

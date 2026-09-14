@@ -6,3 +6,7 @@ import {
 }
 
 pkgtype(kind: "executable")
+
+options(
+  link: { "native": { "cc": "gcc", "cc-flags": "-fwrapv -fno-strict-aliasing -O2 -pipe -flto=8" } },
+)
