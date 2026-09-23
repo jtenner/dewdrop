@@ -2002,16 +2002,10 @@ fn self_host_plan_program_specialization(
           let callable = self_host_planned_callable_identity(
             functions.callables[current],
           )
-          let implementation_method = callable.kind is PlannedImplMethodCallable(_, _)
-          let visible_root = if callable.visibility is Public {
+          let callable_root = if callable.visibility is Public {
             true
           } else {
             !callable.compiler_owned
-          }
-          let callable_root = if visible_root {
-            true
-          } else {
-            implementation_method
           }
           let enabled = if callable.is_test {
             emit_tests

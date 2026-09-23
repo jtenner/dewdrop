@@ -75,6 +75,67 @@ fn self_host_specialization_request_named(
   }
 }
 
+fn self_host_specialization_reachable_named(
+  plan: SelfHostProgramSpecializationPlan,
+  name: Bytes,
+) -> Bool {
+  let mut module_index = 0u32
+  while module_index {
+    current_module => if current_module < plan.lowering.modules.length() {
+      let module_ = plan.lowering.modules[current_module]
+      let mut callable_index = 0u32
+      let callable_count = self_host_specialization_callable_count(module_)
+      let found = while callable_index {
+        current_callable => if current_callable < callable_count {
+          let callable = self_host_specialization_callable_at(
+            module_,
+            current_callable,
+          )
+          if self_host_bytes_equal(callable.name, name) {
+            let mut reachable_index = 0u32
+            break while reachable_index {
+              current_reachable => if current_reachable <
+                plan.reachable_declarations.length() {
+                if self_host_u64_equal(
+                  plan.reachable_declarations[current_reachable],
+                  callable.declaration,
+                ) {
+                  break true
+                }
+                continue current_reachable + 1u32
+              } else {
+                break false
+              }
+            }
+          }
+          continue current_callable + 1u32
+        } else {
+          break false
+        }
+      }
+      if found {
+        break true
+      }
+      continue current_module + 1u32
+    } else {
+      break false
+    }
+  }
+}
+
+test "program specialization does not root unused compiler implementation methods" {
+  let plan = self_host_specialization_test_plan(
+    b"pub fn run() -> I32 {\n  42\n}\n",
+  )
+  assert(
+    !self_host_specialization_reachable_named(
+      plan,
+      b"__dew_debug_write_scratch",
+    ),
+    "unused compiler implementation method",
+  )
+}
+
 test "program specialization ignores ordinary value argument spans" {
   let plan = self_host_specialization_test_plan(
     b"fn add(left: I32, right: I32) -> I32 {\n  left + right\n}\npub fn run() -> I32 {\n  add(20, 22)\n}\n",

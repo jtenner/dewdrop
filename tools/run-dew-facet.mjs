@@ -39,6 +39,21 @@ const OPEN_TRUNCATE = 1 << 2;
 const OPEN_DIRECTORY = 1 << 3;
 const OPEN_APPEND = 1 << 5;
 
+function hostModuleWithFallback(moduleName, implemented = {}) {
+  return new Proxy(implemented, {
+    get(target, importName) {
+      if (Reflect.has(target, importName)) {
+        return Reflect.get(target, importName);
+      }
+      return () => {
+        throw new Error(
+          `unexpected call to unused host import ${moduleName}.${String(importName)}`,
+        );
+      };
+    },
+  });
+}
+
 class FacetExit extends Error {
   constructor(status) {
     super(`Facet exit ${status}`);
@@ -264,12 +279,14 @@ const facet = {
 try {
   const module = await WebAssembly.compile(fs.readFileSync(wasmPath));
   instance = await WebAssembly.instantiate(module, {
-    facet,
+    facet: hostModuleWithFallback("facet", facet),
+    __moonbit_fs_unstable: hostModuleWithFallback("__moonbit_fs_unstable"),
     __moonbit_time_unstable: {
       now() {
         return BigInt(Date.now());
       },
     },
+    spectest: hostModuleWithFallback("spectest"),
   });
   if (!(instance.exports.memory instanceof WebAssembly.Memory)) {
     throw new Error("compiler must export memory for the Node Facet runner");
