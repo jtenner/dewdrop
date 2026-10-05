@@ -102,6 +102,7 @@ python3 tools/generate_std_tests.py --check
 python3 tools/test_dew_registry_cli.py
 python3 tools/module-snapshots/test_run.py
 python3 tools/test_check_architecture_cases.py
+python3 tools/test_cli_fixtures.py
 node --test tools/dew-test/metadata.test.mjs tools/dew-abi-metadata.test.mjs
 node --check tools/dew-abi-metadata.mjs
 node --check tools/dew-abi.mjs

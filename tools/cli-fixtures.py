@@ -28,6 +28,7 @@ def run(command: list[str]) -> subprocess.CompletedProcess[str]:
         command,
         cwd=ROOT,
         text=True,
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         check=False,
